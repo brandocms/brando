@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.AI
+  alias Brando.SEO.Analytics
   alias Brando.SEO.Analyze
   alias Brando.SEO.Audit
   alias Brando.SEO.Generate
@@ -106,6 +107,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
           batch_confirm={@batch_confirm}
           accepting_all={@accepting_all}
           critiques={@critiques}
+          sort={@sort}
+          queries={@queries}
         />
       </div>
     </div>
@@ -142,8 +145,15 @@ defmodule BrandoAdmin.Sites.SEOLive do
   attr :batch_confirm, :boolean
   attr :accepting_all, :boolean
   attr :critiques, :map
+  attr :sort, :string
+  attr :queries, :map
 
   defp content_audit(assigns) do
+    assigns =
+      assigns
+      |> assign(:plausible?, source?(assigns.audit, :plausible))
+      |> assign(:search_console?, source?(assigns.audit, :search_console))
+
     ~H"""
     <section class="workspace-panel seo-audit">
       <header class="workspace-panel-heading">
@@ -186,6 +196,36 @@ defmodule BrandoAdmin.Sites.SEOLive do
         >
           {gettext("Include drafts")}
         </button>
+      </div>
+
+      <div :if={@audit && @audit.analytics} class="seo-sources">
+        <p>
+          {gettext("Traffic from %{sources}, last %{days} days.",
+            sources: Enum.map_join(@audit.analytics.sources, ", ", &source_label/1),
+            days: @audit.analytics.period_days
+          )}
+        </p>
+        <p :for={{source, error} <- @audit.analytics.errors} class="error" role="alert">
+          {gettext("%{source} could not be read: %{error}", source: source_name(source), error: error)}
+        </p>
+        <div
+          :if={@plausible? or @search_console?}
+          class="seo-sort"
+          role="group"
+          aria-label={gettext("Sort entries")}
+        >
+          <span>{gettext("Sort")}</span>
+          <button
+            :for={{value, label} <- sort_options(@plausible?, @search_console?)}
+            type="button"
+            class="seo-chip"
+            aria-pressed={to_string(@sort == value)}
+            phx-click="sort"
+            phx-value-sort={value}
+          >
+            {label}
+          </button>
+        </div>
       </div>
 
       <.context_picker
@@ -233,12 +273,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
                 <th>{gettext("Entry")}</th>
                 <th>{gettext("URL")}</th>
                 <th>{gettext("Score")}</th>
+                <th :if={@plausible?}>{gettext("Visitors")}</th>
+                <th :if={@search_console?}>{gettext("Search")}</th>
                 <th>{gettext("Issues")}</th>
                 <th><span class="sr-only">{gettext("Details")}</span></th>
               </tr>
             </thead>
             <tbody>
-              <%= for row <- @audit.rows do %>
+              <%= for row <- sort_rows(@audit.rows, @sort) do %>
                 <% key = row_key(row) %>
                 <% open? = MapSet.member?(@expanded, key) %>
                 <tr class="seo-audit-row" data-open={to_string(open?)}>
@@ -251,6 +293,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
                   </td>
                   <td class="workspace-mono">{row.url || "—"}</td>
                   <td><.score_badge score={row.score} /></td>
+                  <td :if={@plausible?} class="seo-number">{figure(row.traffic, :visitors)}</td>
+                  <td :if={@search_console?} class="seo-number">
+                    {figure(row.traffic, :clicks)}
+                    <small>{gettext("of %{impressions}", impressions: figure(row.traffic, :impressions))}</small>
+                  </td>
                   <td>{issues_summary(row)}</td>
                   <td>
                     <button
@@ -266,7 +313,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
                   </td>
                 </tr>
                 <tr :if={open?} id={"seo-row-#{key}"} class="seo-audit-details">
-                  <td colspan="5">
+                  <td colspan={5 + Enum.count([@plausible?, @search_console?], & &1)}>
                     <div class="seo-audit-details-grid">
                       <div class="seo-check-card">
                         <table class="seo-check-table">
@@ -324,6 +371,13 @@ defmodule BrandoAdmin.Sites.SEOLive do
                           </button>
                         </div>
                         <.critique :if={@critiques[key]} critique={@critiques[key]} />
+                        <.traffic
+                          :if={@plausible? or @search_console?}
+                          traffic={row.traffic}
+                          plausible?={@plausible?}
+                          search_console?={@search_console?}
+                          queries={@queries[key]}
+                        />
                       </div>
                     </div>
                   </td>
@@ -451,6 +505,70 @@ defmodule BrandoAdmin.Sites.SEOLive do
     """
   end
 
+  attr :traffic, :map
+  attr :plausible?, :boolean
+  attr :search_console?, :boolean
+  attr :queries, :any
+
+  defp traffic(assigns) do
+    ~H"""
+    <div class="seo-traffic">
+      <dl>
+        <div :if={@plausible?}>
+          <dt>{gettext("Visitors")}</dt>
+          <dd>{figure(@traffic, :visitors)}</dd>
+        </div>
+        <div :if={@search_console?}>
+          <dt>{gettext("Search impressions")}</dt>
+          <dd>{figure(@traffic, :impressions)}</dd>
+        </div>
+        <div :if={@search_console?}>
+          <dt>{gettext("Clicks")}</dt>
+          <dd>{figure(@traffic, :clicks)}</dd>
+        </div>
+        <div :if={@search_console? and @traffic[:impressions]}>
+          <dt>{gettext("Click-through")}</dt>
+          <dd>{Brando.SEO.Checks.percent(@traffic.ctr)}</dd>
+        </div>
+        <div :if={@search_console? and @traffic[:impressions]}>
+          <dt>{gettext("Average position")}</dt>
+          <dd>{:erlang.float_to_binary(@traffic.position / 1, decimals: 1)}</dd>
+        </div>
+      </dl>
+      <div :if={@search_console?} class="seo-queries">
+        <h4>{gettext("Top searches")}</h4>
+        <%= case @queries do %>
+          <% {:ok, []} -> %>
+            <p>{gettext("Google has not shown this page for any search in the period.")}</p>
+          <% {:ok, queries} -> %>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{gettext("Search")}</th>
+                  <th scope="col">{gettext("Impressions")}</th>
+                  <th scope="col">{gettext("Clicks")}</th>
+                  <th scope="col">{gettext("Position")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr :for={query <- queries}>
+                  <td>{query.query}</td>
+                  <td>{query.impressions}</td>
+                  <td>{query.clicks}</td>
+                  <td>{:erlang.float_to_binary(query.position / 1, decimals: 1)}</td>
+                </tr>
+              </tbody>
+            </table>
+          <% {:error, message} -> %>
+            <p class="error">{message}</p>
+          <% _ -> %>
+            <p><span class="seo-spinner" aria-hidden="true"></span>{gettext("Loading searches…")}</p>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
   attr :critique, :any
 
   defp critique(assigns) do
@@ -545,6 +663,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
         <div class="seo-stat" data-warn={to_string(@audit.thin_content > 0)}>
           <dt>{gettext("Thin content")}</dt>
           <dd>{@audit.thin_content}</dd>
+        </div>
+        <div :if={source?(@audit, :plausible)} class="seo-stat" data-warn={to_string(@audit.unvisited > 0)}>
+          <dt>{gettext("Not visited")}</dt>
+          <dd>{@audit.unvisited}</dd>
+        </div>
+        <div :if={source?(@audit, :search_console)} class="seo-stat" data-warn={to_string(@audit.low_click_through > 0)}>
+          <dt>{gettext("Low click-through")}</dt>
+          <dd>{@audit.low_click_through}</dd>
         </div>
         <div class="seo-stat">
           <dt>{gettext("Drafts not audited")}</dt>
@@ -648,7 +774,13 @@ defmodule BrandoAdmin.Sites.SEOLive do
     {:noreply, socket |> update(:include_drafts, &(!&1)) |> start_audit()}
   end
 
-  def handle_event("rerun_audit", _params, socket), do: {:noreply, start_audit(socket)}
+  def handle_event("rerun_audit", _params, socket) do
+    {:noreply, socket |> assign(:queries, %{}) |> start_audit(refresh_analytics: true)}
+  end
+
+  def handle_event("sort", %{"sort" => sort}, socket) when sort in ~w(score visitors impressions) do
+    {:noreply, assign(socket, :sort, sort)}
+  end
 
   def handle_event("create_redirect", %{"from" => from, "to" => to}, socket) do
     %{current_user: user, audit_language: language, audit: audit} = socket.assigns
@@ -721,7 +853,19 @@ defmodule BrandoAdmin.Sites.SEOLive do
     row = audit && Enum.find(audit.rows, &(row_key(&1) == key))
 
     if available? and row do
-      run = fn -> Analyze.critique(row.schema, row.id) end
+      search_console? = source?(audit, :search_console)
+
+      # The searches a page is found by say more about what its description
+      # should promise than anything on the page itself.
+      run = fn ->
+        queries =
+          case search_console? && Analytics.top_queries(row.traffic || row.url) do
+            {:ok, queries} -> queries
+            _ -> []
+          end
+
+        Analyze.critique(row.schema, row.id, queries: queries)
+      end
 
       {:noreply,
        socket
@@ -777,10 +921,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
   def handle_event("toggle_row", %{"key" => key}, socket) do
     expanded = socket.assigns.expanded
 
-    expanded =
-      if MapSet.member?(expanded, key), do: MapSet.delete(expanded, key), else: MapSet.put(expanded, key)
-
-    {:noreply, assign(socket, :expanded, expanded)}
+    if MapSet.member?(expanded, key) do
+      {:noreply, assign(socket, :expanded, MapSet.delete(expanded, key))}
+    else
+      {:noreply, socket |> assign(:expanded, MapSet.put(expanded, key)) |> load_queries(key)}
+    end
   end
 
   def handle_async(:audit, {:ok, %Audit.Result{} = result}, socket) do
@@ -814,6 +959,15 @@ defmodule BrandoAdmin.Sites.SEOLive do
   def handle_async({:generate, key}, {:exit, _reason}, socket) do
     send(self(), {:toast, AI.error_message(:failed)})
     {:noreply, update(socket, :generating, &MapSet.delete(&1, key))}
+  end
+
+  def handle_async({:queries, key}, {:ok, result}, socket) do
+    result = if result == :not_configured, do: {:ok, []}, else: result
+    {:noreply, update(socket, :queries, &Map.put(&1, key, result))}
+  end
+
+  def handle_async({:queries, key}, {:exit, _reason}, socket) do
+    {:noreply, update(socket, :queries, &Map.put(&1, key, {:error, gettext("Could not read the searches")}))}
   end
 
   def handle_async({:critique, key}, {:ok, {:ok, points}}, socket) do
@@ -871,6 +1025,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
     |> assign(:expanded, MapSet.new())
     |> assign(:generating, MapSet.new())
     |> assign(:critiques, %{})
+    |> assign(:sort, "score")
+    |> assign(:queries, %{})
     |> assign(:suggestions, [])
     |> assign(:batch_confirm, false)
     |> assign(:accepting_all, false)
@@ -890,12 +1046,15 @@ defmodule BrandoAdmin.Sites.SEOLive do
   # the tenant prefix, the authorization scope the reads must be made under,
   # the Gettext locale the check labels are translated in, and — on a
   # sandboxed e2e server — the SQL sandbox owner. Carry all four across.
-  defp start_audit(socket) do
+  defp start_audit(socket, opts \\ []) do
     language = content_language(socket)
     schemas = socket.assigns.selected_schemas
     include_drafts? = socket.assigns.include_drafts
+    refresh? = Keyword.get(opts, :refresh_analytics, false)
 
-    run = fn -> Audit.run(language, schemas: schemas, include_drafts: include_drafts?) end
+    run = fn ->
+      Audit.run(language, schemas: schemas, include_drafts: include_drafts?, refresh_analytics: refresh?)
+    end
 
     socket
     |> assign(:audit_status, :running)
@@ -930,6 +1089,49 @@ defmodule BrandoAdmin.Sites.SEOLive do
       schema -> Brando.Blueprint.get_singular(schema)
     end
   end
+
+  # Search Console is asked for a page's searches only when the row opens:
+  # one request each, cached for an hour.
+  defp load_queries(socket, key) do
+    %{audit: audit, queries: queries} = socket.assigns
+    row = audit && Enum.find(audit.rows, &(row_key(&1) == key))
+
+    if row && row.url && source?(audit, :search_console) && not Map.has_key?(queries, key) do
+      page = row.traffic || row.url
+
+      socket
+      |> update(:queries, &Map.put(&1, key, :loading))
+      |> start_async({:queries, key}, in_captured_context(socket, fn -> Analytics.top_queries(page) end))
+    else
+      socket
+    end
+  end
+
+  defp source?(%{analytics: %{sources: sources}}, source), do: Enum.any?(sources, &(&1.source == source))
+  defp source?(_audit, _source), do: false
+
+  defp source_name(:plausible), do: "Plausible"
+  defp source_name(:search_console), do: "Google Search Console"
+
+  defp source_label(%{source: source, target: target}), do: "#{source_name(source)} (#{target})"
+
+  defp sort_options(plausible?, search_console?) do
+    [{"score", gettext("Lowest score")}] ++
+      if(plausible?, do: [{"visitors", gettext("Most visited")}], else: []) ++
+      if(search_console?, do: [{"impressions", gettext("Most seen in search")}], else: [])
+  end
+
+  # Busy pages with a poor score first is the order worth fixing in; the
+  # audit's own order (lowest score) stays the default.
+  defp sort_rows(rows, "score"), do: rows
+
+  defp sort_rows(rows, field) do
+    field = String.to_existing_atom(field)
+    Enum.sort_by(rows, &{-((&1.traffic || %{})[field] || 0), &1.score || 0})
+  end
+
+  defp figure(nil, _field), do: "—"
+  defp figure(traffic, field), do: traffic |> Map.get(field) |> then(&if(is_nil(&1), do: "—", else: to_string(&1)))
 
   defp save_error(:not_found), do: gettext("This suggestion was already reviewed")
   defp save_error(:empty), do: gettext("Write a description before accepting it")

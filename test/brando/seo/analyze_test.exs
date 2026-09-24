@@ -24,6 +24,15 @@ defmodule Brando.SEO.AnalyzeTest do
     assert prompt =~ "Do not suggest keyword density"
   end
 
+  test "the searches a page is shown for are added to the prompt" do
+    queries = [%{query: "web agency oslo", impressions: 320, clicks: 4, position: 7.25}]
+    prompt = Analyze.prompt(Pages.Page, %Pages.Page{title: "Om oss", language: "no"}, "en", queries)
+
+    assert prompt =~ "Google searches that showed this page"
+    assert prompt =~ "- web agency oslo (320 impressions, 4 clicks, position 7.3)"
+    refute Analyze.prompt(Pages.Page, %Pages.Page{title: "Om oss"}, "en") =~ "Google searches"
+  end
+
   test "keeps at most three points, whatever the model marks them with" do
     assert Analyze.points("- One\n* Two\n\n1. Three\n• Four") == ["One", "Two", "Three"]
   end

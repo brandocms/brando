@@ -65,6 +65,60 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     refute html =~ "seo_form"
   end
 
+  describe "traffic" do
+    test "figures, sorting and a page's searches, when the sources are configured", %{conn: conn} do
+      user = Factory.insert(:random_user)
+
+      {:ok, busy} =
+        Pages.create_page(
+          %{title: "Busy page", uri: "busy-page", language: "en", template: "default.html", status: :published},
+          user
+        )
+
+      {:ok, _quiet} =
+        Pages.create_page(
+          %{title: "Quiet page", uri: "quiet-page", language: "en", template: "default.html", status: :published},
+          user
+        )
+
+      path = Brando.SEO.Analytics.path(Pages.Page.__absolute_url__(busy))
+      Brando.Cache.del({:seo_analytics_queries, 28, "https://stub.test" <> path})
+
+      Brando.AnalyticsStub.configure(
+        pages: %{path => %{visitors: 1200, clicks: 2, impressions: 900, ctr: 0.0022, position: 5.0}},
+        queries: [%{query: "busy things", clicks: 2, impressions: 700, ctr: 0.003, position: 4.2}]
+      )
+
+      {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+      render_async(view, 5_000)
+
+      assert has_element?(view, ".seo-sources", "Plausible (stub.test)")
+      assert has_element?(view, ".seo-sources", "Google Search Console (sc-domain:stub.test)")
+      assert has_element?(view, ".seo-audit-table th", "Visitors")
+      assert has_element?(view, ".seo-stats", "Low click-through")
+
+      view |> element(".seo-sort button[phx-value-sort=visitors]") |> render_click()
+      assert has_element?(view, ".seo-sort button[phx-value-sort=visitors][aria-pressed=true]")
+      # Most visited first.
+      assert view |> element(".seo-audit-table tbody tr.seo-audit-row:first-child") |> render() =~ "Busy page"
+
+      view |> element(".seo-audit-table tbody tr.seo-audit-row:first-child button.seo-row-toggle") |> render_click()
+      render_async(view, 5_000)
+
+      assert has_element?(view, ".seo-traffic dd", "1200")
+      assert has_element?(view, ".seo-queries td", "busy things")
+      assert has_element?(view, ".seo-check-table tr[data-status=warn]", "Search click-through")
+    end
+
+    test "nothing about traffic shows when no source is configured", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+      render_async(view, 5_000)
+
+      refute has_element?(view, ".seo-sources")
+      refute has_element?(view, ".seo-audit-table th", "Visitors")
+    end
+  end
+
   describe "AI actions" do
     test "a site without an AI provider gets the audit and none of the actions", %{conn: conn} do
       user = Factory.insert(:random_user)
