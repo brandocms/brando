@@ -14,6 +14,7 @@ defmodule Brando.SEO.Audit do
   Blueprints may add their own checks through `__seo_checks__/1`.
   """
 
+  alias Brando.SEO.Analytics
   alias Brando.SEO.Check
   alias Brando.SEO.Checks
   alias Brando.SEO.ContentStats
@@ -55,6 +56,9 @@ defmodule Brando.SEO.Audit do
               missing_images: 0,
               missing_urls: 0,
               thin_content: 0,
+              unvisited: 0,
+              low_click_through: 0,
+              analytics: nil,
               sitemap?: false,
               redirect_suggestions: []
   end
@@ -75,6 +79,10 @@ defmodule Brando.SEO.Audit do
 
     * `:schemas` — the blueprints to include
     * `:include_drafts` — audit unpublished entries too (default `false`)
+    * `:analytics` — traffic figures as returned by
+      `Brando.SEO.Analytics.page_stats/1`; read from the configured sources
+      when left out, `nil` for none
+    * `:refresh_analytics` — read the sources again rather than the cache
   """
   @spec run(String.t() | atom(), keyword()) :: Result.t()
   def run(language, opts \\ []) do
@@ -88,11 +96,13 @@ defmodule Brando.SEO.Audit do
       |> Enum.split_with(&(include_drafts? or &1.status == :published))
 
     sitemap = sitemap_paths()
-    ctx = context(rows, language, sitemap)
+    analytics = Keyword.get_lazy(opts, :analytics, fn -> analytics(opts) end)
+    ctx = rows |> context(language, sitemap) |> Map.put(:search_console?, search_console?(analytics))
 
     rows =
       rows
       |> with_content_stats()
+      |> with_traffic(analytics)
       |> Enum.map(&score_row(&1, ctx))
       |> Enum.sort_by(&{&1.score || 0, String.downcase(&1.title || "")})
 
@@ -108,6 +118,9 @@ defmodule Brando.SEO.Audit do
       missing_images: count_failing(rows, :meta_image),
       missing_urls: count_failing(rows, :url_resolves),
       thin_content: count_failing(rows, :thin_content, [:warn, :fail]),
+      unvisited: unvisited(rows, analytics),
+      low_click_through: count_failing(rows, :search_click_through, [:warn]),
+      analytics: analytics && Map.delete(analytics, :pages),
       sitemap?: sitemap != nil,
       redirect_suggestions: Brando.SEO.RedirectSuggestions.suggest(Brando.Sites.FourOhFour.list(), rows, language)
     }
@@ -271,6 +284,32 @@ defmodule Brando.SEO.Audit do
 
   defp count_failing(rows, key, statuses \\ [:fail]) do
     Enum.count(rows, fn row -> Enum.any?(row.checks, &(&1.key == key and &1.status in statuses)) end)
+  end
+
+  defp analytics(opts) do
+    if Analytics.configured?(), do: Analytics.page_stats(refresh: opts[:refresh_analytics])
+  end
+
+  defp search_console?(nil), do: false
+  defp search_console?(analytics), do: Enum.any?(analytics.sources, &(&1.source == :search_console))
+
+  defp with_traffic(rows, nil), do: rows
+
+  defp with_traffic(rows, %{pages: pages}) do
+    Enum.map(rows, &%{&1 | traffic: Map.get(pages, Analytics.path(&1.url))})
+  end
+
+  # Published pages nobody opened in the period. Only Plausible counts
+  # visits; without it, or when it failed, there is nothing to count.
+  defp unvisited(_rows, nil), do: 0
+
+  defp unvisited(rows, analytics) do
+    if Enum.any?(analytics.sources, &(&1.source == :plausible)) and
+         not Enum.any?(analytics.errors, &match?({:plausible, _}, &1)) do
+      Enum.count(rows, &(&1.url && (&1.traffic || %{})[:visitors] in [nil, 0]))
+    else
+      0
+    end
   end
 
   # Two queries per schema over the audited ids: the entries' own block

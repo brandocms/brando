@@ -29,6 +29,11 @@ defmodule Brando.SEO.Checks do
   # Alt text that names the file, or says only that it is a picture.
   @filename_alt ~r/(\.(jpe?g|png|gif|webp|avif|svg|heic)$)|^(img|image|dsc|photo|pxl)[-_ ]?\d+$/i
   @generic_alts ~w(image picture photo photograph img bilde foto illustrasjon illustration)
+  # A first-page result clicked by fewer than one in a hundred searchers is
+  # being passed over; below a hundred impressions the rate is noise.
+  @ctr_min_impressions 100
+  @ctr_max_position 10
+  @ctr_floor 0.01
 
   @type ctx :: %{
           fallback_title: String.t() | nil,
@@ -58,7 +63,7 @@ defmodule Brando.SEO.Checks do
       heading_structure(row),
       image_alt(row),
       translation_parity(row)
-    ]
+    ] ++ if(ctx[:search_console?], do: [search_click_through(row)], else: [])
   end
 
   @doc """
@@ -277,6 +282,34 @@ defmodule Brando.SEO.Checks do
       hint: if(hints != [], do: Enum.join(hints, " "))
     }
   end
+
+  @doc """
+  Search Console only: a page shown on Google's first page at least a
+  hundred times, but clicked by under 1% of searchers. The title and
+  description are what those searchers read, so that is where to look.
+  """
+  def search_click_through(%{traffic: %{impressions: impressions, ctr: ctr, position: position}})
+      when impressions >= @ctr_min_impressions and position <= @ctr_max_position do
+    %Check{
+      key: :search_click_through,
+      status: if(ctr < @ctr_floor, do: :warn, else: :pass),
+      weight: :normal,
+      label: gettext("Search click-through"),
+      hint:
+        gettext(
+          "Shown in Google %{impressions} times at position %{position}, but clicked by %{ctr} of searchers. A title and description that match what people search for earn more clicks.",
+          impressions: impressions,
+          position: :erlang.float_to_binary(position / 1, decimals: 1),
+          ctr: percent(ctr)
+        ),
+      value: percent(ctr)
+    }
+  end
+
+  def search_click_through(_row), do: skip(:search_click_through, :normal, gettext("Search click-through"))
+
+  @doc "A 0–1 rate as a percentage with one decimal."
+  def percent(rate), do: :erlang.float_to_binary(rate * 100.0, decimals: 1) <> "%"
 
   defp parity_issues(row, alternate) do
     language = Brando.AI.language_name(alternate.language)

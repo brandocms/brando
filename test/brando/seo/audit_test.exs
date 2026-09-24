@@ -124,6 +124,44 @@ defmodule Brando.SEO.AuditTest do
     assert Enum.find(row.checks, &(&1.key == :image_alt)).value == "2/3"
   end
 
+  test "traffic figures are matched to rows by path and feed the click-through check" do
+    user = Factory.insert(:random_user)
+    seen = create_page(user, %{title: "Seen", uri: "seo-seen"})
+    quiet = create_page(user, %{title: "Quiet", uri: "seo-quiet"})
+    seen_path = Brando.SEO.Analytics.path(Pages.Page.__absolute_url__(seen))
+
+    analytics = %{
+      sources: [%{source: :plausible, target: "x"}, %{source: :search_console, target: "sc-domain:x"}],
+      errors: [],
+      period_days: 28,
+      pages: %{seen_path => %{visitors: 30, pageviews: 41, clicks: 1, impressions: 500, ctr: 0.002, position: 4.5}}
+    }
+
+    result = Audit.run("en", schemas: [Pages.Page], analytics: analytics)
+    by_id = Map.new(result.rows, &{&1.id, &1})
+
+    assert by_id[seen.id].traffic.visitors == 30
+    assert by_id[quiet.id].traffic == nil
+
+    ctr = Enum.find(by_id[seen.id].checks, &(&1.key == :search_click_through))
+    assert ctr.status == :warn
+    assert ctr.value == "0.2%"
+    assert Enum.find(by_id[quiet.id].checks, &(&1.key == :search_click_through)).status == :skip
+
+    assert result.low_click_through >= 1
+    assert result.unvisited >= 1
+    assert result.analytics.sources == analytics.sources
+    refute Map.has_key?(result.analytics, :pages)
+  end
+
+  test "without Search Console the click-through check is left out" do
+    create_page(Factory.insert(:random_user), %{title: "No console", uri: "seo-no-console"})
+    result = Audit.run("en", schemas: [Pages.Page], analytics: nil)
+    assert result.rows != []
+    refute Enum.any?(result.rows, fn row -> Enum.any?(row.checks, &(&1.key == :search_click_through)) end)
+    assert result.unvisited == 0
+  end
+
   test "include_drafts audits unpublished entries too" do
     user = Factory.insert(:random_user)
     create_page(user, %{title: "Only draft", uri: "seo-only-draft", status: :draft})
