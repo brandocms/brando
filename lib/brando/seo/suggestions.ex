@@ -97,14 +97,19 @@ defmodule Brando.SEO.Suggestions do
     {:ok, length(rows)}
   end
 
-  @doc "Suggestions in `language` that still need attention: queued, pending review, or failed."
-  @spec list_open(String.t()) :: [Suggestion.t()]
-  def list_open(language) do
-    Brando.Repo.all(
+  @doc """
+  Suggestions in `language` that still need attention: queued, pending
+  review, or failed. `fields` narrows them to those fields.
+  """
+  @spec list_open(String.t(), [atom()] | nil) :: [Suggestion.t()]
+  def list_open(language, fields \\ nil) do
+    query =
       from s in Suggestion,
         where: s.language == ^to_string(language) and s.status in ^@open,
         order_by: [asc: s.title, asc: s.id]
-    )
+
+    query = if fields, do: from(s in query, where: s.field in ^fields), else: query
+    Brando.Repo.all(query)
   end
 
   @doc "Fills in a queued suggestion with generated text."
@@ -139,18 +144,21 @@ defmodule Brando.SEO.Suggestions do
          {:ok, schema} <- schema(suggestion),
          text = text |> Kernel.||(suggestion.text) |> String.trim(),
          true <- text != "" or {:error, :empty},
-         {:ok, _entry} <- Generate.write(schema, suggestion.entry_id, suggestion.field, text, user) do
+         {:ok, _entry} <- write(schema, suggestion, text, user) do
       suggestion
       |> Suggestion.changeset(%{status: :accepted, text: text, reviewed_by_id: user_id(user)})
       |> Brando.Repo.update()
     end
   end
 
-  @doc "Accepts every pending suggestion in `language` as written. Returns `{accepted, failed}`."
-  @spec accept_all(String.t(), map()) :: {non_neg_integer(), non_neg_integer()}
-  def accept_all(language, user) do
+  @doc """
+  Accepts every pending suggestion in `language` — for `fields`, when given —
+  as written. Returns `{accepted, failed}`.
+  """
+  @spec accept_all(String.t(), map(), [atom()] | nil) :: {non_neg_integer(), non_neg_integer()}
+  def accept_all(language, user, fields \\ nil) do
     language
-    |> list_open()
+    |> list_open(fields)
     |> Enum.filter(&(&1.status == :pending))
     |> Enum.reduce({0, 0}, fn suggestion, {accepted, failed} ->
       case accept(suggestion.id, nil, user) do
@@ -173,6 +181,16 @@ defmodule Brando.SEO.Suggestions do
         {:error, :not_found}
     end
   end
+
+  # Meta fields go through Generate's writer; alt text through the image's own
+  # context. Both are the entry's normal update, as the reviewing user.
+  defp write(schema, %Suggestion{field: :alt} = suggestion, text, user) do
+    context = schema.__modules__().context
+    apply(context, :"update_#{schema.__naming__().singular}", [suggestion.entry_id, %{alt: text}, user])
+  end
+
+  defp write(schema, suggestion, text, user),
+    do: Generate.write(schema, suggestion.entry_id, suggestion.field, text, user)
 
   defp get_pending(id) do
     case Brando.Repo.get(Suggestion, id) do

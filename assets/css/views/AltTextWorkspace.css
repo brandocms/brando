@@ -1,0 +1,20 @@
+/* Images → Alt text. */
+.admin-workspace.alt-text-workspace {
+  max-width: 1120px;
+
+  .alt-text-panel .workspace-panel-heading > span { font-size: 18px; color: var(--workspace-ink); }
+  .alt-text-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 14px 18px; border-bottom: 1px solid var(--workspace-line); font-size: 12px; }
+  .alt-text-filter label { color: var(--workspace-muted); }
+  .alt-text-filter .admin-select { min-width: 220px; }
+  .alt-text-body { display: grid; gap: 12px; padding: 18px; border-bottom: 1px solid var(--workspace-line); font-size: 13px; }
+  .alt-text-body p { margin: 0; padding: 0; max-width: 72ch; line-height: 1.5; }
+  .alt-text-body p.error { color: #8f4834; }
+  .alt-text-body .workspace-empty { padding: 24px; }
+  .alt-text-estimate { display: grid; gap: 8px; }
+  .alt-text-note { color: var(--workspace-muted); font-size: 12px; }
+  .alt-text-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+  .ai-suggestions { border-bottom: 0; }
+}
+
+/* The count beside the library's "Alt text" link. */
+.alt-text-missing { padding: 0 6px; border-radius: 9px; background: #fbeee9; color: #8f4834; font-size: 11px; font-weight: 400; line-height: 18px; font-variant-numeric: tabular-nums; }

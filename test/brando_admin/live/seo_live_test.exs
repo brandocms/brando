@@ -197,8 +197,8 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
       # Oban runs inline in tests, so the suggestions are written by now.
       render_async(view, 5_000)
-      assert has_element?(view, ".seo-suggestion[data-status=pending]", "Bulk first")
-      assert has_element?(view, ".seo-suggestion textarea", "About the second")
+      assert has_element?(view, ".ai-suggestion[data-status=pending]", "Bulk first")
+      assert has_element?(view, ".ai-suggestion textarea", "About the second")
       # Nothing is waiting any more, so there is nothing left to offer.
       refute has_element?(view, ".seo-batch")
       assert Enum.all?(pages, &(description(&1) == nil))
@@ -206,18 +206,18 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
       [first, second] = Brando.SEO.Suggestions.list_open("en")
 
       view
-      |> form("#seo-suggestion-#{first.id} form", %{"text" => "Edited before saving"})
+      |> form("#suggestion-#{first.id} form", %{"text" => "Edited before saving"})
       |> render_submit()
 
       render_async(view, 5_000)
       assert description(Enum.find(pages, &(&1.id == first.entry_id))) == "Edited before saving"
-      refute has_element?(view, "#seo-suggestion-#{first.id}")
+      refute has_element?(view, "#suggestion-#{first.id}")
 
-      view |> element(".seo-suggestions button[phx-click=accept_all_suggestions]") |> render_click()
+      view |> element(".ai-suggestions button[phx-click=accept_all_suggestions]") |> render_click()
       render_async(view, 5_000)
 
       assert description(Enum.find(pages, &(&1.id == second.entry_id))) == "About the second"
-      refute has_element?(view, ".seo-suggestions")
+      refute has_element?(view, ".ai-suggestions")
     end
 
     test "an entry's meta can be reviewed by AI, advisory only", %{conn: conn} do

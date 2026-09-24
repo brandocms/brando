@@ -85,6 +85,32 @@ With `Brando.AI` configured, the tab can:
 "What the AI reads" picks, per content type, which fields a generated
 description is written from. The choice is stored on the SEO settings.
 
+## Write alt text for images
+
+**Assets → Images → Alt text** lists the images in the library that have no
+alt text. With `Brando.AI` configured, it shows what describing them would
+cost — from the model's published prices and each image's size — and then
+describes them in the background, one request per image. As with meta
+descriptions, nothing is saved until each suggestion is accepted, edited
+first if needed. The same `max_batch` cap applies to a run.
+
+The text goes on the image itself, in the site's default language, and is
+what every placement of the image shows. An image asset has one alt text:
+on translated pages, override it on the picture block or gallery placement.
+
+Each image is sent at a mid-sized rendition (the smallest configured size at
+least 512px wide), not the original, which keeps the cost down. The images
+are sent to the AI provider. The model must accept image input — the page
+says so when it does not — and can be set apart from the rest:
+
+```elixir
+config :brando, Brando.AI,
+  fields: [alt: [model: "anthropic:claude-haiku-4-5"]]
+```
+
+The Content SEO **Image descriptions** check links here from any entry whose
+body has images without usable alt text.
+
 ## Traffic from Plausible and Google Search Console
 
 Configure either source, or both, to add traffic to the audit:

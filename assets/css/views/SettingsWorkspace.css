@@ -387,26 +387,9 @@
   .seo-batch p span { color: var(--workspace-muted); }
   .seo-batch-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-  .seo-suggestions { display: grid; gap: 12px; padding: 18px; border-bottom: 1px solid var(--workspace-line); }
-  .seo-suggestions-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-  .seo-suggestions-heading h3 { font-size: 13px; font-weight: 500; }
-  .seo-suggestions-heading p { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 4px 0 0; padding: 0; color: var(--workspace-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-  .seo-suggestion-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--workspace-line); border-radius: 7px; background: #fff; }
-  .seo-suggestion { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 8px 16px; padding: 12px 14px; border-bottom: 1px solid #eef2ec; font-size: 12px; }
-  .seo-suggestion:last-child { border-bottom: 0; }
-  .seo-suggestion-entry { line-height: 18px; }
-  .seo-suggestion-entry small { display: block; margin-top: 2px; color: var(--workspace-muted); font-size: 11px; }
-  .seo-suggestion-note { display: flex; gap: 8px; align-items: center; margin: 0; padding: 0; color: var(--workspace-muted); }
-  .seo-suggestion-failed { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
-  .seo-suggestion-failed p { margin: 0; padding: 0; color: #8f4834; }
-  .seo-suggestion-form { display: grid; gap: 8px; }
-  .seo-suggestion-form textarea { width: 100%; min-height: 58px; padding: 7px 9px; border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
-  .seo-suggestion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
   @media (max-width: 800px) {
     .seo-audit-details-grid { grid-template-columns: minmax(0, 1fr); }
     .seo-audit .workspace-panel-heading { flex-direction: column; }
-    .seo-suggestion { grid-template-columns: minmax(0, 1fr); }
-    .seo-suggestions-heading { flex-direction: column; }
   }
 }

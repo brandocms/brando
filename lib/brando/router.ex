@@ -108,6 +108,7 @@ defmodule Brando.Router do
           # brando routes
           live "/sites", BrandoAdmin.Sites.SiteLive
           live "/assets/images", BrandoAdmin.Images.ImageListLive
+          live "/assets/images/alt-text", BrandoAdmin.Images.AltTextLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update
           live "/assets/videos", BrandoAdmin.Videos.VideoListLive
           live "/assets/videos/update/:entry_id", BrandoAdmin.Videos.VideoFormLive, :update

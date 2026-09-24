@@ -25,7 +25,10 @@ defmodule Brando.Worker.SEOSuggestionGenerator do
     :invalid_model,
     :no_context,
     :unsupported_field,
-    :unknown_schema
+    :unknown_schema,
+    :unsupported_format,
+    :image_file_missing,
+    :no_image_input
   ]
 
   @impl Oban.Worker
@@ -47,6 +50,9 @@ defmodule Brando.Worker.SEOSuggestionGenerator do
       case Suggestion.schema_module(suggestion) do
         nil ->
           {:error, :unknown_schema}
+
+        _schema when suggestion.field == :alt ->
+          Brando.Images.AltText.describe(suggestion.entry_id)
 
         schema ->
           # Written as :system — and not persisted, so no edit is attributed.

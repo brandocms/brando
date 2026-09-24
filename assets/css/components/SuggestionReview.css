@@ -1,0 +1,26 @@
+/* AI suggestions waiting for review: bulk meta descriptions in Content SEO,
+   and image alt text in the image library. */
+.ai-suggestions { display: grid; gap: 12px; padding: 18px; border-bottom: 1px solid var(--workspace-line); }
+.ai-suggestions-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.ai-suggestions-heading h3 { font-size: 13px; font-weight: 500; }
+.ai-suggestions-heading p { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 4px 0 0; padding: 0; color: var(--workspace-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ai-suggestion-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--workspace-line); border-radius: 7px; background: #fff; }
+.ai-suggestion { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 8px 16px; padding: 12px 14px; border-bottom: 1px solid #eef2ec; font-size: 12px; }
+.ai-suggestion[data-thumbnail="true"] { grid-template-columns: 96px minmax(0, 200px) minmax(0, 1fr); }
+.ai-suggestion:last-child { border-bottom: 0; }
+.ai-suggestion-thumbnail { width: 96px; height: 72px; object-fit: cover; border-radius: 4px; background: var(--workspace-wash); }
+.ai-suggestion-entry { min-width: 0; line-height: 18px; overflow-wrap: anywhere; }
+.ai-suggestion-entry small { display: block; margin-top: 2px; color: var(--workspace-muted); font-size: 11px; }
+.ai-suggestion-note { display: flex; gap: 8px; align-items: center; margin: 0; padding: 0; color: var(--workspace-muted); }
+.ai-suggestion-failed { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.ai-suggestion-failed p { margin: 0; padding: 0; color: #8f4834; }
+.ai-suggestion-form { display: grid; gap: 8px; }
+.ai-suggestion-form textarea { width: 100%; min-height: 58px; padding: 7px 9px; border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
+.ai-suggestion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-spinner { flex: 0 0 15px; width: 15px; height: 15px; border: 2px solid #b5c7aa; border-top-color: #456138; border-radius: 50%; animation: ai-spin .8s linear infinite; }
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 800px) {
+  .ai-suggestion, .ai-suggestion[data-thumbnail="true"] { grid-template-columns: minmax(0, 1fr); }
+  .ai-suggestions-heading { flex-direction: column; }
+}

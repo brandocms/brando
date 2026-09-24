@@ -23,6 +23,7 @@
 @import "./components/Content/SelectedRows.css";
 @import "./components/Dialog.css";
 @import "./components/TextDiff.css";
+@import "./components/SuggestionReview.css";
 @import "./components/Drawer.css";
 @import "./components/ImageEditor.css";
 @import "./components/Form.css";
@@ -87,6 +88,7 @@
 @import "./views/Users.css";
 @import "./views/ContentWorkspace.css";
 @import "./views/SettingsWorkspace.css";
+@import "./views/AltTextWorkspace.css";
 @import "./views/assets/Images.css";
 @import "./components/MediaWorkspace.css";
 @import "./components/EditorWorkspace.css";

@@ -11,6 +11,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
   alias Brando.SEO.Suggestions
   alias Brando.Sites
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.SuggestionReview
+
+  # Image alt text shares the suggestion queue; it is reviewed in the image library.
+  @meta_fields [:meta_description, :meta_title]
 
   def mount(_params, %{"user_token" => token}, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), Suggestions.topic())
@@ -252,7 +256,15 @@ defmodule BrandoAdmin.Sites.SEOLive do
           confirm={@batch_confirm}
           max={Suggestions.max_batch()}
         />
-        <.suggestions :if={@suggestions != []} suggestions={@suggestions} accepting_all={@accepting_all} />
+        <SuggestionReview.review
+          :if={@suggestions != []}
+          id="seo-suggestions"
+          heading={gettext("Suggested descriptions")}
+          suggestions={@suggestions}
+          accepting_all={@accepting_all}
+          subtitle={&suggestion_schema_name/1}
+          label={&gettext("Suggested description for %{title}", title: &1.title)}
+        />
 
         <BrandoAdmin.Components.Workspace.empty
           :if={@audit.rows == []}
@@ -361,6 +373,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
                               {if row.meta_description, do: gettext("Rewrite description"), else: gettext("Write description")}
                             <% end %>
                           </button>
+                          <.link
+                            :if={warns?(row, :image_alt)}
+                            navigate={
+                              Brando.routes().admin_live_path(Brando.RuntimeConfig.endpoint(), BrandoAdmin.Images.AltTextLive)
+                            }
+                          >
+                            {gettext("Write alt text")}
+                          </.link>
                           <button
                             :if={@ai_available and row.meta_description}
                             type="button"
@@ -433,77 +453,6 @@ defmodule BrandoAdmin.Sites.SEOLive do
         </button>
       </div>
     </div>
-    """
-  end
-
-  attr :suggestions, :list
-  attr :accepting_all, :boolean
-
-  defp suggestions(assigns) do
-    assigns =
-      assign(assigns, :counts, Enum.frequencies_by(assigns.suggestions, & &1.status))
-
-    ~H"""
-    <section class="seo-suggestions" id="seo-suggestions" aria-labelledby="seo-suggestions-heading">
-      <header class="seo-suggestions-heading">
-        <div>
-          <h3 id="seo-suggestions-heading">{gettext("Suggested descriptions")}</h3>
-          <p role="status" aria-live="polite">
-            <span :if={@counts[:queued]}>{gettext("%{count} being written", count: @counts[:queued])}</span>
-            <span :if={@counts[:pending]}>{gettext("%{count} to review", count: @counts[:pending])}</span>
-            <span :if={@counts[:failed]}>{gettext("%{count} failed", count: @counts[:failed])}</span>
-          </p>
-        </div>
-        <button
-          :if={@counts[:pending]}
-          type="button"
-          class="workspace-button primary"
-          phx-click="accept_all_suggestions"
-          disabled={@accepting_all}
-        >
-          {if @accepting_all, do: gettext("Saving…"), else: gettext("Accept all")}
-        </button>
-      </header>
-      <ul class="seo-suggestion-list">
-        <li
-          :for={suggestion <- @suggestions}
-          id={"seo-suggestion-#{suggestion.id}"}
-          class="seo-suggestion"
-          data-status={suggestion.status}
-        >
-          <div class="seo-suggestion-entry">
-            <strong>{suggestion.title}</strong>
-            <small>{suggestion_schema_name(suggestion)}</small>
-          </div>
-          <p :if={suggestion.status == :queued} class="seo-suggestion-note">
-            <span class="seo-spinner" aria-hidden="true"></span>{gettext("Writing…")}
-          </p>
-          <div :if={suggestion.status == :failed} class="seo-suggestion-failed">
-            <p role="alert">{suggestion.error}</p>
-            <button type="button" class="workspace-button" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
-              {gettext("Dismiss")}
-            </button>
-          </div>
-          <form :if={suggestion.status == :pending} class="seo-suggestion-form" phx-submit="accept_suggestion">
-            <input type="hidden" name="suggestion_id" value={suggestion.id} />
-            <%!-- Ignored after mount so an edit survives other suggestions arriving. --%>
-            <textarea
-              id={"seo-suggestion-text-#{suggestion.id}"}
-              name="text"
-              rows="3"
-              phx-update="ignore"
-              aria-label={gettext("Suggested description for %{title}", title: suggestion.title)}
-            >{suggestion.text}</textarea>
-            <div class="seo-suggestion-actions">
-              <button type="submit" class="workspace-button primary">{gettext("Accept")}</button>
-              <button type="button" class="workspace-button" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
-                {gettext("Reject")}
-              </button>
-            </div>
-          </form>
-        </li>
-      </ul>
-    </section>
     """
   end
 
@@ -912,7 +861,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   def handle_event("accept_all_suggestions", _params, socket) do
     %{audit_language: language, current_user: user} = socket.assigns
-    run = fn -> Suggestions.accept_all(language, user) end
+    run = fn -> Suggestions.accept_all(language, user, @meta_fields) end
 
     {:noreply,
      socket
@@ -1066,7 +1015,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   defp assign_suggestions(socket) do
-    assign(socket, :suggestions, Suggestions.list_open(socket.assigns.audit_language))
+    assign(socket, :suggestions, Suggestions.list_open(socket.assigns.audit_language, @meta_fields))
   end
 
   # Entries with no description of their own, less those a suggestion is
@@ -1108,6 +1057,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
       socket
     end
   end
+
+  defp warns?(row, key), do: Enum.any?(row.checks, &(&1.key == key and &1.status in [:warn, :fail]))
 
   defp source?(%{analytics: %{sources: sources}}, source), do: Enum.any?(sources, &(&1.source == source))
   defp source?(_audit, _source), do: false

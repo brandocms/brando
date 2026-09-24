@@ -1,10 +1,10 @@
 defmodule Brando.SEO.Suggestion do
   @moduledoc """
-  A meta value written by AI for one entry, waiting for an editor's verdict.
+  A value written by AI for one entry — a meta title or description, or an
+  image's alt text — waiting for an editor's verdict.
 
-  Bulk generation from the Content SEO tab never writes to entries: each job
-  fills in one of these, and only accepting it (`Brando.SEO.Suggestions.accept/3`)
-  updates the entry. One row per entry, field and language — asking again
+  Bulk generation never writes to entries: each job fills in one of these,
+  and only accepting it (`Brando.SEO.Suggestions.accept/3`) updates the entry. One row per entry, field and language — asking again
   replaces it.
 
     * `:queued` — a job is on its way
@@ -22,7 +22,7 @@ defmodule Brando.SEO.Suggestion do
   @type t :: %__MODULE__{}
 
   @statuses [:queued, :pending, :accepted, :rejected, :failed]
-  @fields [:meta_description, :meta_title]
+  @fields [:meta_description, :meta_title, :alt]
 
   schema "seo_meta_suggestions" do
     field :schema, :string
