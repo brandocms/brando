@@ -8,7 +8,10 @@ defmodule Brando.Trait.Translatable.Compiler do
       parent_table_name = @table_name
       @translatable_alternates Keyword.get(unquote(config), :alternates, true)
 
+      @translatable_config Brando.Trait.Translatable.config(unquote(config))
+
       def has_alternates?, do: @translatable_alternates
+      def __translatable_config__, do: @translatable_config
 
       attributes do
         attribute :language, :language, required: true
@@ -54,6 +57,8 @@ defmodule Brando.Trait.Translatable.Compiler do
 
             CacheQuery.evict_entry(unquote(parent_module), id)
             CacheQuery.evict_entry(unquote(parent_module), parent_id)
+
+            Brando.Translations.alternate_added(unquote(parent_module), id, parent_id)
 
             :ok
           end

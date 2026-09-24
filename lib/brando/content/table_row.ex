@@ -23,6 +23,11 @@ defmodule Brando.Content.TableRow do
   identifier false
   persist_identifier false
 
+  attributes do
+    # See `Brando.Content.Block`'s `sync_uid`.
+    attribute :sync_uid, :string
+  end
+
   relations do
     relation :block, :belongs_to, module: Brando.Content.Block
 

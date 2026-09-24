@@ -1247,6 +1247,7 @@ defmodule Brando.Content.Blocks do
     |> Map.merge(%{
       id: nil,
       uid: uid,
+      sync_uid: nil,
       sequence: sequence,
       creator_id: user_id,
       parent_id: nil,
@@ -1345,6 +1346,7 @@ defmodule Brando.Content.Blocks do
   def duplicate_var(var, current_user_id) do
     var
     |> Map.merge(%{id: nil, block_id: nil})
+    |> clone_ref_gallery(current_user_id)
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     |> Var.changeset(%{
       creator_id: current_user_id,
@@ -1412,6 +1414,7 @@ defmodule Brando.Content.Blocks do
   # the id AND the loaded struct onto the ref's *data* keeps both the save and
   # the editor's own gallery mutations (which read `gallery.id` back off the
   # loaded assoc) pointed at the copy.
+  # Refs and gallery vars both own their gallery.
   defp clone_ref_gallery(%{gallery_id: nil} = ref, _user_id), do: ref
 
   defp clone_ref_gallery(%{gallery_id: gallery_id} = ref, user_id) do

@@ -216,6 +216,7 @@ defmodule Brando.Query.Mutations do
         duplicate_opts
         |> Enum.into(%{})
         |> Map.merge(override_opts)
+        |> maybe_merge_change_fields(duplicate_opts, override_opts)
 
       has_blocks? = module.has_trait(Trait.Blocks)
 
@@ -224,16 +225,179 @@ defmodule Brando.Query.Mutations do
         |> maybe_change_fields(merged_opts)
         |> maybe_delete_fields(merged_opts)
         |> maybe_set_status()
-        |> maybe_duplicate_blocks(module, has_blocks?)
+        |> maybe_duplicate_blocks(module, has_blocks?, Map.get(merged_opts, :keep_sync_uid, false))
         |> maybe_merge_fields(merged_opts)
         |> maybe_put_creator(user)
+        |> detach_has_many(module)
         |> drop_fields()
         |> update_meta()
 
       with :ok <- Boundary.change(user, :create, Ecto.Changeset.change(cloned_entry)),
+           {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
            do: Brando.Repo.insert(cloned_entry)
     end
   end
+
+  # A loaded `has_many` row that still has its id would be re-pointed at the
+  # copy on insert — the original entry loses it. Rows the entry owns (subform
+  # relations with `cast: true`) are copied, keeping everything but their id and
+  # foreign key, so a row `uid` still pairs it with the original. Rows it merely
+  # links to, like alternates, are dropped. Rows a `change_fields` handler has
+  # already built (nil id) are left alone.
+  defp detach_has_many(entry, module) do
+    owned =
+      for %{type: :has_many, name: name, opts: %{cast: true}} <- Brando.Blueprint.Relations.__relations__(module),
+          do: name
+
+    Enum.reduce(module.__schema__(:associations), entry, fn name, acc ->
+      case {module.__schema__(:association, name), Map.get(acc, name)} do
+        {%Ecto.Association.Has{cardinality: :many, related_key: related_key}, rows} when is_list(rows) ->
+          Map.put(acc, name, detach_rows(rows, related_key, name in owned))
+
+        {%Ecto.Association.HasThrough{cardinality: :many}, rows} when is_list(rows) ->
+          Map.put(acc, name, [])
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  defp detach_rows(rows, related_key, owned?) do
+    Enum.flat_map(rows, fn
+      %{id: nil} = row -> [row]
+      row when owned? -> [row |> Map.merge(%{:id => nil, related_key => nil}) |> update_meta()]
+      _row -> []
+    end)
+  end
+
+  # A gallery belongs to the ref, var or asset that points at it — see
+  # `Brando.Content.Blocks.duplicate_ref/2`. A copy that kept the original's
+  # `gallery_id` would edit the original's gallery, and for a translation that
+  # means changing a published page behind the editor's back.
+  defp clone_galleries(entry, module, user) do
+    gallery_ids = entry |> gallery_ids(module) |> Enum.uniq()
+
+    Enum.reduce_while(gallery_ids, {:ok, %{}}, fn gallery_id, {:ok, clones} ->
+      case Brando.Galleries.duplicate_gallery(gallery_id, user) do
+        {:ok, gallery} -> {:cont, {:ok, Map.put(clones, gallery_id, gallery)}}
+        {:error, reason} -> {:halt, {:error, {:gallery, gallery_id, reason}}}
+      end
+    end)
+    |> case do
+      {:ok, clones} when map_size(clones) == 0 -> {:ok, entry}
+      {:ok, clones} -> {:ok, put_galleries(entry, module, clones)}
+      error -> error
+    end
+  end
+
+  defp gallery_ids(entry, module) do
+    asset_ids = for name <- gallery_assets(module), id = Map.get(entry, :"#{name}_id"), do: id
+    asset_ids ++ Enum.flat_map(gallery_holders(entry, module), &holder_gallery_ids/1)
+  end
+
+  defp holder_gallery_ids(%{gallery_id: id}) when not is_nil(id), do: [id]
+  defp holder_gallery_ids(_), do: []
+
+  defp put_galleries(entry, module, clones) do
+    entry =
+      Enum.reduce(gallery_assets(module), entry, fn name, acc ->
+        case clones[Map.get(acc, :"#{name}_id")] do
+          nil -> acc
+          gallery -> acc |> Map.put(:"#{name}_id", gallery.id) |> Map.put(name, gallery)
+        end
+      end)
+
+    map_gallery_holders(entry, module, fn
+      %{gallery_id: id} = holder when is_map_key(clones, id) ->
+        %{holder | gallery_id: clones[id].id, gallery: clones[id]}
+
+      holder ->
+        holder
+    end)
+  end
+
+  defp gallery_assets(module) do
+    for %{type: :gallery, name: name} <- Brando.Blueprint.Assets.__assets__(module), do: name
+  end
+
+  # Refs and vars inside blocks, table rows and entry-level var relations.
+  defp gallery_holders(entry, module) do
+    {_, holders} = map_gallery_holders(entry, module, fn holder -> holder end, [])
+    holders
+  end
+
+  defp map_gallery_holders(entry, module, fun) do
+    {entry, _} = map_gallery_holders(entry, module, fun, [])
+    entry
+  end
+
+  defp map_gallery_holders(entry, module, fun, acc) do
+    block_fields =
+      if module.has_trait(Trait.Blocks), do: Enum.map(module.__blocks_fields__(), &:"entry_#{&1.name}"), else: []
+
+    var_fields =
+      for %{type: :has_many, name: name, opts: %{module: Brando.Content.Var}} <-
+            Brando.Blueprint.Relations.__relations__(module),
+          do: name
+
+    {entry, acc} =
+      Enum.reduce(block_fields, {entry, acc}, fn field, {entry, acc} ->
+        {joins, acc} =
+          Enum.map_reduce(loaded_list(Map.get(entry, field)), acc, fn join, acc ->
+            {block, acc} = map_block_galleries(join.block, fun, acc)
+            {%{join | block: block}, acc}
+          end)
+
+        {Map.put(entry, field, joins), acc}
+      end)
+
+    Enum.reduce(var_fields, {entry, acc}, fn field, {entry, acc} ->
+      {vars, acc} = map_holders(Map.get(entry, field), fun, acc)
+      {Map.put(entry, field, vars), acc}
+    end)
+  end
+
+  defp map_block_galleries(block, fun, acc) do
+    {refs, acc} = map_holders(block.refs, fun, acc)
+    {vars, acc} = map_holders(block.vars, fun, acc)
+
+    {rows, acc} =
+      Enum.map_reduce(loaded_list(block.table_rows), acc, fn row, acc ->
+        {vars, acc} = map_holders(row.vars, fun, acc)
+        {%{row | vars: vars}, acc}
+      end)
+
+    {children, acc} = Enum.map_reduce(loaded_list(block.children), acc, &map_block_galleries(&1, fun, &2))
+    {%{block | refs: refs, vars: vars, table_rows: rows, children: children}, acc}
+  end
+
+  defp map_holders(holders, fun, acc) do
+    Enum.map_reduce(loaded_list(holders), acc, fn holder, acc -> {fun.(holder), [holder | acc]} end)
+  end
+
+  defp loaded_list(list) when is_list(list), do: list
+  defp loaded_list(_), do: []
+
+  # Override `change_fields` replace the context's by default. With
+  # `merge_change_fields: true` the context's handlers are kept for every field
+  # the override does not name — a copy that must still clone its subform rows.
+  defp maybe_merge_change_fields(merged, duplicate_opts, %{merge_change_fields: true, change_fields: overrides}) do
+    overridden = Enum.map(overrides, &change_field_name/1)
+
+    kept =
+      duplicate_opts
+      |> Map.new()
+      |> Map.get(:change_fields, [])
+      |> Enum.reject(&(change_field_name(&1) in overridden))
+
+    Map.put(merged, :change_fields, kept ++ overrides)
+  end
+
+  defp maybe_merge_change_fields(merged, _duplicate_opts, _override_opts), do: merged
+
+  defp change_field_name({name, _}), do: name
+  defp change_field_name(name), do: name
 
   defp maybe_put_creator(%{creator_id: _} = entry, %{id: user_id}) do
     Map.put(entry, :creator_id, user_id)
@@ -251,7 +415,11 @@ defmodule Brando.Query.Mutations do
   defp maybe_set_status(%{status: _} = entry), do: Map.put(entry, :status, :draft)
   defp maybe_set_status(entry), do: entry
 
-  defp maybe_duplicate_blocks(entry, module, true) do
+  # `keep_sync_uid: true` makes the copy a synchronized translation of the
+  # original (`Brando.Translations.create_target/4`): each block and table row
+  # keeps the identity that pairs it with its source counterpart. An ordinary
+  # duplicate is independent and gets fresh identities.
+  defp maybe_duplicate_blocks(entry, module, true, keep_sync_uid?) do
     block_fields = Enum.map(module.__blocks_fields__(), &:"entry_#{&1.name}")
 
     updated_entry =
@@ -262,7 +430,7 @@ defmodule Brando.Query.Mutations do
           Enum.map(blocks, fn entry_block ->
             entry_block = %{entry_block | id: nil, entry_id: nil, block_id: nil}
             entry_block = update_meta(entry_block)
-            updated_block = duplicate_block(entry_block.block)
+            updated_block = duplicate_block(entry_block.block, keep_sync_uid?)
             %{entry_block | block: updated_block}
           end)
 
@@ -272,17 +440,19 @@ defmodule Brando.Query.Mutations do
     updated_entry
   end
 
-  defp maybe_duplicate_blocks(entry, _module, false), do: entry
+  defp maybe_duplicate_blocks(entry, _module, false, _keep_sync_uid?), do: entry
 
-  defp duplicate_block(block) do
+  @doc false
+  def duplicate_block(block, keep_sync_uid?) do
     %{
       block
       | id: nil,
         uid: Brando.Utils.generate_uid(),
+        sync_uid: if(keep_sync_uid?, do: block.sync_uid || block.uid),
         vars: Enum.map(block.vars || [], &duplicate_var/1),
-        table_rows: Enum.map(block.table_rows || [], &duplicate_table_row/1),
+        table_rows: Enum.map(block.table_rows || [], &duplicate_table_row(&1, keep_sync_uid?)),
         block_identifiers: Enum.map(block.block_identifiers || [], &duplicate_block_identifiers/1),
-        children: Enum.map(block.children || [], &duplicate_block/1),
+        children: Enum.map(block.children || [], &duplicate_block(&1, keep_sync_uid?)),
         refs: duplicate_refs(block.refs || []),
         creator: nil,
         fragment: nil,
@@ -292,8 +462,10 @@ defmodule Brando.Query.Mutations do
     |> update_meta()
   end
 
-  defp duplicate_table_row(table_row) do
-    %{table_row | id: nil, vars: Enum.map(table_row.vars || [], &duplicate_var/1)}
+  defp duplicate_table_row(table_row, keep_sync_uid?) do
+    sync_uid = if keep_sync_uid? && table_row.sync_uid, do: table_row.sync_uid, else: Brando.Utils.generate_uid()
+
+    %{table_row | id: nil, sync_uid: sync_uid, vars: Enum.map(table_row.vars || [], &duplicate_var/1)}
     |> update_meta()
   end
 
@@ -375,6 +547,7 @@ defmodule Brando.Query.Mutations do
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
          :ok <- Boundary.authorize(user, :delete, entry),
          :ok <- authorize_deletion(user, entry),
+         :ok <- Brando.Translations.guard_delete(module, entry),
          soft_deletable? = module.__trait__(Trait.SoftDelete),
          {:ok, entry} <-
            if(soft_deletable?,

@@ -28,6 +28,12 @@ defmodule Brando.AI.Translation do
   # which contains the actual Data struct at .data (e.g. TextBlock.Data)
   @text_ref_wrapper_types [TextBlock, HtmlBlock, HeaderBlock, MarkdownBlock]
 
+  @doc "Var types whose `value` is text to translate."
+  def translatable_var_types, do: @translatable_var_types
+
+  @doc "Ref data wrappers whose `data.text` is text to translate."
+  def text_ref_wrapper_types, do: @text_ref_wrapper_types
+
   @doc """
   Translates all text content in an entry from `source_lang` to `target_lang`.
 

@@ -74,6 +74,11 @@ defmodule Brando.Content.Block do
     # an entry editor opened before a module migration cannot save its way to
     # claiming it is current. See `Brando.Content.Blocks.sync_module/2`.
     attribute :module_version, :integer
+    # Identifies "the same block" across the language versions of a
+    # synchronized translation group (`Brando.Translations`). Server-controlled
+    # like `module_version`: a new block takes its own `uid`, and only
+    # `Brando.Translations` copies a source's value into a translation.
+    attribute :sync_uid, :string
 
     attribute :module_origin, :enum, values: [:local, :shared], default: :local
     attribute :container_origin, :enum, values: [:local, :shared], default: :local
@@ -189,9 +194,17 @@ defmodule Brando.Content.Block do
       |> Ecto.Changeset.update_change(:vars, fn var_changesets ->
         Enum.reject(var_changesets, &(&1.action == :replace))
       end)
+      |> put_new_sync_uid()
       |> Map.put(:action, :insert)
     else
       changeset
+    end
+  end
+
+  defp put_new_sync_uid(changeset) do
+    case Ecto.Changeset.get_field(changeset, :sync_uid) do
+      nil -> put_change(changeset, :sync_uid, Ecto.Changeset.get_field(changeset, :uid))
+      _ -> changeset
     end
   end
 
@@ -238,12 +251,20 @@ defmodule Brando.Content.Block do
   def table_row_changeset(table_row, attrs, position, user) do
     table_row
     |> cast(attrs, [:block_id])
+    |> put_table_row_sync_uid()
     |> cast_assoc(:vars,
       with: &var_changeset(&1, &2, &3, user),
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids
     )
     |> change(sequence: position)
+  end
+
+  defp put_table_row_sync_uid(changeset) do
+    case Ecto.Changeset.get_field(changeset, :sync_uid) do
+      nil -> put_change(changeset, :sync_uid, Brando.Utils.generate_uid())
+      _ -> changeset
+    end
   end
 
   def block_identifier_changeset(block_identifier, attrs, position, _user) do
