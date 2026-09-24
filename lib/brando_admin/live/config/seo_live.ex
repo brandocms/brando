@@ -296,7 +296,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
                   <td :if={@plausible?} class="seo-number">{figure(row.traffic, :visitors)}</td>
                   <td :if={@search_console?} class="seo-number">
                     {figure(row.traffic, :clicks)}
-                    <small>{gettext("of %{impressions}", impressions: figure(row.traffic, :impressions))}</small>
+                    <small :if={(row.traffic || %{})[:impressions]}>
+                      {gettext("of %{impressions}", impressions: row.traffic.impressions)}
+                    </small>
                   </td>
                   <td>{issues_summary(row)}</td>
                   <td>

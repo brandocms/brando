@@ -9912,3 +9912,168 @@ msgstr "Oppføringen har ingen tekst å beskrive"
 #, elixir-autogen, elixir-format
 msgid "The entry cannot be saved until these fields are fixed: %{fields}"
 msgstr "Oppføringen kan ikke lagres før disse feltene er rettet: %{fields}"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Traffic from %{sources}, last %{days} days."
+msgstr "Trafikk fra %{sources}, siste %{days} dager."
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{source} could not be read: %{error}"
+msgstr "Klarte ikke lese %{source}: %{error}"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sort entries"
+msgstr "Sorter oppføringer"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sort"
+msgstr "Sorter"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Visitors"
+msgstr "Besøkende"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search"
+msgstr "Søk"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "of %{impressions}"
+msgstr "av %{impressions}"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search impressions"
+msgstr "Visninger i søk"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Clicks"
+msgstr "Klikk"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Click-through"
+msgstr "Klikkrate"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Average position"
+msgstr "Gjennomsnittlig plassering"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Top searches"
+msgstr "Vanligste søk"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Google has not shown this page for any search in the period."
+msgstr "Google har ikke vist denne siden for noe søk i perioden."
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Impressions"
+msgstr "Visninger"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Loading searches…"
+msgstr "Henter søk …"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not visited"
+msgstr "Ikke besøkt"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Low click-through"
+msgstr "Lav klikkrate"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not read the searches"
+msgstr "Klarte ikke hente søkene"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lowest score"
+msgstr "Lavest poengsum"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Most visited"
+msgstr "Mest besøkt"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Most seen in search"
+msgstr "Mest vist i søk"
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Heading structure"
+msgstr "Overskriftsstruktur"
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "The content has %{count} H1 headings; a page should have one, usually its title."
+msgstr "Innholdet har %{count} H1-overskrifter; en side bør ha én, vanligvis tittelen."
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Heading levels skip from %{levels}."
+msgstr "Overskriftsnivåene hopper fra %{levels}."
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Image descriptions"
+msgstr "Bildebeskrivelser"
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library."
+msgstr "%{missing} av %{total} bilder mangler alt-tekst, og %{poor} har bare et filnavn eller et generelt ord. Beskriv dem i bildebiblioteket."
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Language versions"
+msgstr "Språkversjoner"
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Search click-through"
+msgstr "Klikkrate i søk"
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Shown in Google %{impressions} times at position %{position}, but clicked by %{ctr} of searchers. A title and description that match what people search for earn more clicks."
+msgstr "Vist i Google %{impressions} ganger på plass %{position}, men klikket av %{ctr} av de som søkte. En tittel og beskrivelse som svarer til det folk søker etter, gir flere klikk."
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Much shorter than the %{language} version (%{words} against %{other} words)."
+msgstr "Mye kortere enn versjonen på %{language} (%{words} mot %{other} ord)."
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} fewer images than the %{language} version."
+msgstr "%{count} færre bilder enn versjonen på %{language}."
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} headings, against %{other} in the %{language} version."
+msgstr "%{count} overskrifter, mot %{other} i versjonen på %{language}."
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "The %{language} version was edited %{days} days after this one."
+msgstr "Versjonen på %{language} ble redigert %{days} dager etter denne."
