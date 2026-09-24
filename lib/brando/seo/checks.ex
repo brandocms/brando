@@ -18,6 +18,17 @@ defmodule Brando.SEO.Checks do
   # rank and readers little reason to stay. Coverage floor, not a ranking
   # factor: a contact page may legitimately sit under it, hence a warning.
   @thin_content_words 300
+  # A language version this much shorter than its longest sibling has likely
+  # lost sections in translation; ratios between languages rarely differ by
+  # more than a third.
+  @parity_word_ratio 0.7
+  @parity_min_words 150
+  # Edits to one language version this long after another's suggest the
+  # other was not brought along.
+  @parity_stale_days 90
+  # Alt text that names the file, or says only that it is a picture.
+  @filename_alt ~r/(\.(jpe?g|png|gif|webp|avif|svg|heic)$)|^(img|image|dsc|photo|pxl)[-_ ]?\d+$/i
+  @generic_alts ~w(image picture photo photograph img bilde foto illustrasjon illustration)
 
   @type ctx :: %{
           fallback_title: String.t() | nil,
@@ -43,7 +54,10 @@ defmodule Brando.SEO.Checks do
       duplicate_description(row, ctx),
       url_resolves(row),
       in_sitemap(row, ctx),
-      thin_content(row, ctx)
+      thin_content(row, ctx),
+      heading_structure(row),
+      image_alt(row),
+      translation_parity(row)
     ]
   end
 
@@ -182,6 +196,142 @@ defmodule Brando.SEO.Checks do
       hint: gettext("Thin content: aim for at least %{count} words of body text.", count: minimum),
       value: gettext("%{count} words", count: row.word_count)
     }
+  end
+
+  @doc """
+  One H1 at most in the body — the page title is normally the template's
+  H1 — and no skipped levels, counting from that title. Warns only: the
+  template is out of sight, so this reads the content alone.
+  """
+  def heading_structure(%{headings: nil}), do: skip(:heading_structure, :low, gettext("Heading structure"))
+
+  def heading_structure(%{headings: headings}) do
+    h1s = Enum.count(headings, &(&1 == 1))
+    skips = skipped_levels(headings)
+
+    hints =
+      Enum.reject(
+        [
+          h1s > 1 &&
+            gettext("The content has %{count} H1 headings; a page should have one, usually its title.", count: h1s),
+          skips != [] &&
+            gettext("Heading levels skip from %{levels}.",
+              levels: Enum.map_join(skips, ", ", fn {from, to} -> "H#{from} → H#{to}" end)
+            )
+        ],
+        &(&1 == false)
+      )
+
+    %Check{
+      key: :heading_structure,
+      status: if(hints == [], do: :pass, else: :warn),
+      weight: :low,
+      label: gettext("Heading structure"),
+      hint: if(hints != [], do: Enum.join(hints, " "))
+    }
+  end
+
+  @doc """
+  Every image in the body needs alt text that describes it: not empty, not
+  a filename, not just "image".
+  """
+  def image_alt(%{image_alts: alts}) when alts in [nil, []], do: skip(:image_alt, :normal, gettext("Image descriptions"))
+
+  def image_alt(%{image_alts: alts}) do
+    missing = Enum.count(alts, &(not present?(&1)))
+    poor = Enum.count(alts, &(present?(&1) and poor_alt?(&1)))
+    total = length(alts)
+
+    %Check{
+      key: :image_alt,
+      status: if(missing + poor == 0, do: :pass, else: :warn),
+      weight: :normal,
+      label: gettext("Image descriptions"),
+      hint:
+        gettext(
+          "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library.",
+          missing: missing,
+          total: total,
+          poor: poor
+        ),
+      value: if(missing + poor > 0, do: "#{missing + poor}/#{total}")
+    }
+  end
+
+  @doc """
+  Compares an entry with its published language versions: much shorter,
+  fewer images, a different number of headings, or not edited for months
+  after another version was.
+  """
+  def translation_parity(%{alternates: alternates}) when alternates in [nil, []],
+    do: skip(:translation_parity, :normal, gettext("Language versions"))
+
+  def translation_parity(row) do
+    hints = Enum.flat_map(row.alternates, &parity_issues(row, &1))
+
+    %Check{
+      key: :translation_parity,
+      status: if(hints == [], do: :pass, else: :warn),
+      weight: :normal,
+      label: gettext("Language versions"),
+      hint: if(hints != [], do: Enum.join(hints, " "))
+    }
+  end
+
+  defp parity_issues(row, alternate) do
+    language = Brando.AI.language_name(alternate.language)
+    other = alternate.stats
+
+    [
+      other && row.word_count && other.words >= @parity_min_words &&
+        row.word_count < other.words * @parity_word_ratio &&
+        gettext("Much shorter than the %{language} version (%{words} against %{other} words).",
+          language: language,
+          words: row.word_count,
+          other: other.words
+        ),
+      other && row.image_alts && length(row.image_alts) < length(other.image_alts) &&
+        gettext("%{count} fewer images than the %{language} version.",
+          count: length(other.image_alts) - length(row.image_alts),
+          language: language
+        ),
+      other && row.headings && abs(length(row.headings) - length(other.headings)) > 1 &&
+        gettext("%{count} headings, against %{other} in the %{language} version.",
+          count: length(row.headings),
+          other: length(other.headings),
+          language: language
+        ),
+      stale_days(row.edited_at, alternate.edited_at) > @parity_stale_days &&
+        gettext("The %{language} version was edited %{days} days after this one.",
+          language: language,
+          days: stale_days(row.edited_at, alternate.edited_at)
+        )
+    ]
+    |> Enum.filter(&is_binary/1)
+  end
+
+  defp stale_days(%_{} = own, %_{} = other) do
+    div(max(to_unix(other) - to_unix(own), 0), 86_400)
+  end
+
+  defp stale_days(_, _), do: 0
+
+  defp to_unix(%DateTime{} = at), do: DateTime.to_unix(at)
+  defp to_unix(%NaiveDateTime{} = at), do: at |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_unix()
+
+  # The template's title is the H1 the body continues from.
+  defp skipped_levels(headings) do
+    {skips, _} =
+      Enum.reduce(headings, {[], 1}, fn level, {skips, previous} ->
+        if level > previous + 1, do: {[{previous, level} | skips], level}, else: {skips, level}
+      end)
+
+    Enum.reverse(skips)
+  end
+
+  defp poor_alt?(alt) do
+    alt = String.trim(alt)
+    Regex.match?(@filename_alt, alt) or String.downcase(alt) in @generic_alts
   end
 
   defp duplicate(key, value, counts, label) do
