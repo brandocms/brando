@@ -711,6 +711,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   defp build_override_info(object_id_str, object_type, media_object, object_override) do
+    # An image's own texts are language maps; show the default language's.
+    media_object = Brando.Images.resolve_texts(media_object, nil)
     default_title = media_object.title || ""
     default_credits = Map.get(media_object, :credits) || ""
     default_alt = if object_type == :image, do: media_object.alt || "", else: ""

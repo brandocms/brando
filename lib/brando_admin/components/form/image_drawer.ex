@@ -215,9 +215,9 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
               <h3>{gettext("Library details")}</h3>
               <p>{gettext("Changes apply wherever this image is used.")}</p>
             </div>
-            <Input.text field={image_form[:alt]} label={gettext("Alternative text")} />
-            <Input.text field={image_form[:title]} label={gettext("Caption")} />
-            <Input.text field={image_form[:credits]} label={gettext("Credits")} />
+            <Input.i18n_text field={image_form[:alt]} label={gettext("Alternative text")} opts={[languages: :content]} />
+            <Input.i18n_text field={image_form[:title]} label={gettext("Caption")} opts={[languages: :content]} />
+            <Input.i18n_text field={image_form[:credits]} label={gettext("Credits")} opts={[languages: :content]} />
           </section>
         <% end %>
       </.form>

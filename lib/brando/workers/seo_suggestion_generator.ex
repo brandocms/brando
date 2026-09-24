@@ -28,7 +28,8 @@ defmodule Brando.Worker.SEOSuggestionGenerator do
     :unknown_schema,
     :unsupported_format,
     :image_file_missing,
-    :no_image_input
+    :no_image_input,
+    :invalid_response
   ]
 
   @impl Oban.Worker
@@ -60,6 +61,11 @@ defmodule Brando.Worker.SEOSuggestionGenerator do
       end
 
     case result do
+      {:ok, %{values: values, model: model}} ->
+        {:ok, _} = Suggestions.fill_values(suggestion, values, model)
+        Suggestions.broadcast(suggestion.language)
+        :ok
+
       {:ok, %{text: text, model: model}} ->
         {:ok, _} = Suggestions.fill(suggestion, text, model)
         Suggestions.broadcast(suggestion.language)

@@ -14,6 +14,19 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
 
+- **Image alt text, title and credits are translated.** `Brando.Images.Image`'s
+  `alt`, `title` and `credits` are now maps of content language → text
+  (`:i18n_string`). The `brando_180` migration moves existing text under the
+  default language. Brando's own rendering picks the entry's language — the
+  page's, falling back to the default — and placement overrides still win.
+  Application code that read `image.alt`, `image.title` or `image.credits`
+  as a string now gets a map: use `Brando.Images.text(image, :alt, language)`,
+  or `Brando.Images.resolve_texts(image, language)` for all three.
+  `<.picture>` takes a `language:` opt and otherwise uses the request's
+  locale. `Brando.Villain.map_images/2` takes the language for Liquid
+  templates. Run `mix brando.gen.migrations` for `brando_180` and
+  `brando_181`.
+
 - **`trait :creator` adds two columns.** Every schema with the creator trait now
   has `updated_by_id` and `edited_at`. Run `mix brando.gen.migrations` for
   Brando's tables and `mix brando.gen.blueprint_migration MyApp.Domain.Schema`
@@ -406,12 +419,20 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   description against its content — at most three points, in the admin
   language, never written anywhere.
 - The Content SEO tab and its checks are translated into Norwegian.
+- `:i18n_string` inputs (`:i18n_text`, `:i18n_textarea`) show one tab per
+  language, mark the empty ones, and take `languages: :content` for content
+  languages (admin languages remain the default). A plain string cast to the
+  type lands under the default content language instead of `"en"`.
+- AI entry translation leaves a placement alone when the image it inherits
+  from already has text in the target language.
 - **Write alt text with AI**: Assets → Images → Alt text lists images without
-  alt text, estimates what describing them would cost with the configured
+  alt text in any content language, estimates what describing them would cost with the configured
   model (from ReqLLM's catalogue prices and each image's size, via
   `Brando.AI.Cost`), and describes them in the background from a mid-sized
   rendition. Suggestions wait for review — edit, accept, reject or accept all —
-  and accepting writes the image's own `alt`, in the default language. Uses
+  and accepting fills in the image's own `alt` for every language it lacks —
+  one request per image covers all of them, since the image, not the extra
+  sentences, is what costs. Uses
   the `:alt` field's AI options (`config :brando, Brando.AI, fields: [alt:
   [model: ...]]`) and refuses models that cannot read images. The image
   library links to it with the missing count, and so does the Content SEO

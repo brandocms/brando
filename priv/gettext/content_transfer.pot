@@ -630,7 +630,7 @@ msgid "Fields, metadata & content"
 msgstr ""
 
 #: lib/brando/content/transfer/labels.ex:47
-#: lib/brando_admin/content_preview.ex:201
+#: lib/brando_admin/content_preview.ex:214
 #, elixir-autogen, elixir-format
 msgid "File"
 msgstr ""
@@ -671,7 +671,7 @@ msgid "From bundle"
 msgstr ""
 
 #: lib/brando/content/transfer/labels.ex:49
-#: lib/brando_admin/content_preview.ex:203
+#: lib/brando_admin/content_preview.ex:216
 #, elixir-autogen, elixir-format
 msgid "Gallery"
 msgstr ""
@@ -697,7 +697,7 @@ msgid "Height"
 msgstr ""
 
 #: lib/brando/content/transfer/labels.ex:46
-#: lib/brando_admin/content_preview.ex:200
+#: lib/brando_admin/content_preview.ex:213
 #, elixir-autogen, elixir-format
 msgid "Image"
 msgstr ""
@@ -1347,12 +1347,12 @@ msgstr ""
 msgid "Select entry"
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:325
+#: lib/brando/content/transfer/dependencies.ex:326
 #, elixir-autogen, elixir-format
 msgid "Selected-entry metadata has an invalid reference."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:322
+#: lib/brando/content/transfer/dependencies.ex:323
 #, elixir-autogen, elixir-format
 msgid "Selected-entry metadata references a missing identifier."
 msgstr ""
@@ -1676,7 +1676,7 @@ msgstr ""
 msgid "URL"
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:319
+#: lib/brando/content/transfer/dependencies.ex:320
 #, elixir-autogen, elixir-format
 msgid "Unknown selected-entry metadata schema."
 msgstr ""
@@ -1763,7 +1763,7 @@ msgid "Verifying and importing content…"
 msgstr ""
 
 #: lib/brando/content/transfer/labels.ex:48
-#: lib/brando_admin/content_preview.ex:202
+#: lib/brando_admin/content_preview.ex:215
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr ""
@@ -2085,7 +2085,7 @@ msgstr ""
 msgid "Unavailable media"
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:190
+#: lib/brando_admin/content_preview.ex:192
 #, elixir-autogen, elixir-format
 msgid "Unnamed media"
 msgstr ""

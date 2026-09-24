@@ -163,6 +163,7 @@ defmodule Brando.AI do
   def error_message(:no_image_input), do: gettext("The configured AI model cannot read images")
   def error_message(:unsupported_format), do: gettext("The image is in a format the AI model cannot read")
   def error_message(:image_file_missing), do: gettext("The image file could not be read")
+  def error_message(:invalid_response), do: gettext("The AI reply could not be read")
   def error_message(_), do: gettext("Failed to generate text with AI")
 
   def normalize_ai_opts(nil), do: []

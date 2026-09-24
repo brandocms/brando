@@ -18,17 +18,25 @@ defmodule Brando.AI.Cost do
   @doc """
   Estimated cost in USD of describing images of the given `{width, height}`
   sizes, one request each, with the model `ai_opts` resolve to.
+
+  ## Options
+
+    * `:prompt_tokens` — the instructions around each image (default 150)
+    * `:reply_tokens` — each reply (default 60, one sentence)
   """
-  @spec images([{pos_integer(), pos_integer()}], keyword()) ::
+  @spec images([{pos_integer(), pos_integer()}], keyword(), keyword()) ::
           {:ok, %{total: float(), per_image: float(), spec: String.t(), count: non_neg_integer()}}
           | {:error, :no_image_input | :unknown_price | term()}
-  def images(dimensions, ai_opts \\ []) do
+  def images(dimensions, ai_opts \\ [], opts \\ []) do
+    prompt_tokens = Keyword.get(opts, :prompt_tokens, @prompt_tokens)
+    reply_tokens = Keyword.get(opts, :reply_tokens, @reply_tokens)
+
     with {:ok, info} <- Brando.AI.model_info(ai_opts),
          :ok <- check(info) do
       totals =
         Enum.map(dimensions, fn {width, height} ->
-          input = image_tokens(info, width, height) + @prompt_tokens
-          (input * info.input_price + @reply_tokens * info.output_price) / 1_000_000
+          input = image_tokens(info, width, height) + prompt_tokens
+          (input * info.input_price + reply_tokens * info.output_price) / 1_000_000
         end)
 
       count = length(totals)

@@ -98,6 +98,14 @@ defmodule Brando.HTML.Images do
 
   def picture(%{src: %struct_type{} = image_struct, opts: opts} = assigns)
       when struct_type in [Brando.Images.Image, Brando.Villain.Blocks.PictureBlock.Data] do
+    # An image's title/credits/alt are language → text maps. Block rendering
+    # passes the entry's language; a request-time template falls back to the
+    # request's locale, which `Brando.Plugs.I18n` sets to the page language.
+    image_struct =
+      Brando.Images.resolve_texts(image_struct, Keyword.get(opts, :language) || Gettext.get_locale(Brando.Gettext))
+
+    assigns = assign(assigns, :src, image_struct)
+
     initial_map = %{
       img: %{},
       picture: %{},

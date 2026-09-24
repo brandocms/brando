@@ -94,9 +94,12 @@ describes them in the background, one request per image. As with meta
 descriptions, nothing is saved until each suggestion is accepted, edited
 first if needed. The same `max_batch` cap applies to a run.
 
-The text goes on the image itself, in the site's default language, and is
-what every placement of the image shows. An image asset has one alt text:
-on translated pages, override it on the picture block or gallery placement.
+The text goes on the image itself, in every content language it lacks —
+one request per image writes all of them; the image is what costs, so the
+extra languages add only a sentence of output each. Each page shows the alt
+text in its own language, falling back to the default language, unless a
+picture block or gallery placement overrides it. An image missing alt text
+in any language is listed.
 
 Each image is sent at a mid-sized rendition (the smallest configured size at
 least 512px wide), not the original, which keeps the cost down. The images

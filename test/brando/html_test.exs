@@ -98,6 +98,46 @@ defmodule Brando.HTMLTest do
     assert active(conn, "/some/other/link") == ""
   end
 
+  describe "picture/1 with an image's translated texts" do
+    setup do
+      image = %Brando.Images.Image{
+        path: "images/i18n/ferry.jpg",
+        sizes: %{"small" => "images/i18n/small/ferry.jpg", "thumb" => "images/i18n/thumb/ferry.jpg"},
+        width: 300,
+        height: 200,
+        alt: %{"en" => "A ferry", "no" => "En ferje"},
+        title: %{"en" => "Harbour", "no" => "Havna"},
+        config_target: "default"
+      }
+
+      {:ok, image: image}
+    end
+
+    defp render_picture(image, opts) do
+      assigns = %{image: image, opts: opts}
+
+      Phoenix.LiveViewTest.rendered_to_string(~H"""
+      <Brando.HTML.Images.picture src={@image} opts={@opts} />
+      """)
+    end
+
+    test "renders the language it is given", %{image: image} do
+      html = render_picture(image, key: :small, language: "no", caption: true)
+      assert html =~ ~s(alt="En ferje")
+      assert html =~ "Havna"
+    end
+
+    test "falls back to the request's locale, then the default language", %{image: image} do
+      Gettext.with_locale(Brando.Gettext, "no", fn ->
+        assert render_picture(image, key: :small) =~ ~s(alt="En ferje")
+      end)
+
+      Gettext.with_locale(Brando.Gettext, "de", fn ->
+        assert render_picture(image, key: :small) =~ ~s(alt="A ferry")
+      end)
+    end
+  end
+
   test "video_tag with invalid poster" do
     opts = [
       width: 400,

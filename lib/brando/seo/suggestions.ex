@@ -126,6 +126,28 @@ defmodule Brando.SEO.Suggestions do
     |> Brando.Repo.update()
   end
 
+  @doc """
+  Fills in a queued suggestion with text per language — image alt text.
+  `text` becomes the default language's, else the first, for display.
+  """
+  @spec fill_values(Suggestion.t(), %{String.t() => String.t()}, String.t() | nil) ::
+          {:ok, Suggestion.t()} | {:error, Ecto.Changeset.t()}
+  def fill_values(%Suggestion{} = suggestion, values, model) do
+    default = to_string(Brando.config(:default_language))
+    text = Map.get(values, default) || values |> Map.values() |> List.first()
+
+    suggestion
+    |> Suggestion.changeset(%{
+      text: text,
+      values: values,
+      model: model,
+      status: :pending,
+      error: nil,
+      generated_at: DateTime.utc_now(:second)
+    })
+    |> Brando.Repo.update()
+  end
+
   @doc "Marks a suggestion as failed, keeping a message an editor can read."
   @spec fail(Suggestion.t(), String.t()) :: {:ok, Suggestion.t()} | {:error, Ecto.Changeset.t()}
   def fail(%Suggestion{} = suggestion, message) do
@@ -136,19 +158,40 @@ defmodule Brando.SEO.Suggestions do
 
   @doc """
   Writes a pending suggestion to its entry, as `user`, and marks it accepted.
-  `text` overrides the suggested text when the editor changed it first.
+  `edited` overrides the suggestion when the editor changed it first: a
+  string, or for per-language suggestions a map of language → text.
   """
-  @spec accept(integer() | String.t(), String.t() | nil, map()) :: {:ok, Suggestion.t()} | {:error, term()}
-  def accept(id, text, user) do
+  @spec accept(integer() | String.t(), String.t() | map() | nil, map()) :: {:ok, Suggestion.t()} | {:error, term()}
+  def accept(id, edited, user) do
     with {:ok, suggestion} <- get_pending(id),
          {:ok, schema} <- schema(suggestion),
-         text = text |> Kernel.||(suggestion.text) |> String.trim(),
-         true <- text != "" or {:error, :empty},
-         {:ok, _entry} <- write(schema, suggestion, text, user) do
+         {:ok, value} <- accepted_value(suggestion, edited),
+         {:ok, _entry} <- write(schema, suggestion, value, user) do
+      attrs =
+        if is_map(value),
+          do: %{values: value, text: Map.get(value, to_string(Brando.config(:default_language)), suggestion.text)},
+          else: %{text: value}
+
       suggestion
-      |> Suggestion.changeset(%{status: :accepted, text: text, reviewed_by_id: user_id(user)})
+      |> Suggestion.changeset(Map.merge(attrs, %{status: :accepted, reviewed_by_id: user_id(user)}))
       |> Brando.Repo.update()
     end
+  end
+
+  # Per-language suggestions keep only the languages with text in them.
+  defp accepted_value(%Suggestion{values: %{} = values}, edited) do
+    values =
+      if(is_map(edited), do: edited, else: values)
+      |> Enum.map(fn {language, text} -> {to_string(language), String.trim(to_string(text))} end)
+      |> Enum.reject(fn {_language, text} -> text == "" end)
+      |> Map.new()
+
+    if values == %{}, do: {:error, :empty}, else: {:ok, values}
+  end
+
+  defp accepted_value(suggestion, edited) do
+    text = if(is_binary(edited), do: edited, else: suggestion.text) |> to_string() |> String.trim()
+    if text == "", do: {:error, :empty}, else: {:ok, text}
   end
 
   @doc """
@@ -184,9 +227,16 @@ defmodule Brando.SEO.Suggestions do
 
   # Meta fields go through Generate's writer; alt text through the image's own
   # context. Both are the entry's normal update, as the reviewing user.
-  defp write(schema, %Suggestion{field: :alt} = suggestion, text, user) do
+  # Alt text merges into the languages the image already has.
+  defp write(schema, %Suggestion{field: :alt} = suggestion, value, user) do
     context = schema.__modules__().context
-    apply(context, :"update_#{schema.__naming__().singular}", [suggestion.entry_id, %{alt: text}, user])
+    singular = schema.__naming__().singular
+
+    with {:ok, entry} <- apply(context, :"get_#{singular}", [suggestion.entry_id]) do
+      existing = if is_map(entry.alt), do: entry.alt, else: %{}
+      value = if is_map(value), do: value, else: %{to_string(suggestion.language) => value}
+      apply(context, :"update_#{singular}", [suggestion.entry_id, %{alt: Map.merge(existing, value)}, user])
+    end
   end
 
   defp write(schema, suggestion, text, user),

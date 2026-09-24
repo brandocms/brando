@@ -453,9 +453,10 @@ defmodule Brando.Villain do
   defp maybe_put_timestamps(entry), do: entry
 
   @doc """
-  Map out images
+  Maps images for a Liquid template, with sizes as URLs and title, credits
+  and alt as text in `language` (the default language when `nil`).
   """
-  def map_images(images) do
+  def map_images(images, language \\ nil) do
     Enum.map(images, fn image ->
       sizes = Map.new(image.sizes, fn {key, path} -> {key, MediaURL.resolve(path)} end)
 
@@ -465,9 +466,9 @@ defmodule Brando.Villain do
         sizes: sizes,
         dominant_color: image.dominant_color,
         formats: image.formats,
-        alt: image.alt,
-        title: image.title,
-        credits: image.credits,
+        alt: Brando.Images.text(image, :alt, language),
+        title: Brando.Images.text(image, :title, language),
+        credits: Brando.Images.text(image, :credits, language),
         inserted_at: image.inserted_at,
         width: image.width,
         height: image.height

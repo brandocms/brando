@@ -1,8 +1,11 @@
 defmodule Brando.Type.I18nString do
   @moduledoc """
-  Defines a type for casting to i18n string stored as a jsonb field.
-  The field contains a map of locales as keys and translated strings as values.
-  It automatically returns the string in the current Gettext locale when loaded.
+  Text in several languages, stored as a jsonb map of language → text.
+
+  Loading returns the map. Read one language with `get/2`, which falls back
+  to the default content language. A plain string — older data, a transfer
+  bundle, a form that sent one value — is cast under the default content
+  language.
   """
   use Ecto.Type
 
@@ -11,7 +14,7 @@ defmodule Brando.Type.I18nString do
 
   @impl true
   def cast(string) when is_binary(string) do
-    {:ok, %{"en" => string}}
+    {:ok, %{default_language() => string}}
   end
 
   def cast(map) when is_map(map) do
@@ -26,10 +29,11 @@ defmodule Brando.Type.I18nString do
   end
 
   def load(nil), do: {:ok, nil}
+  def load(string) when is_binary(string), do: {:ok, %{default_language() => string}}
 
   @impl true
   def dump(string) when is_binary(string) do
-    {:ok, %{"en" => string}}
+    {:ok, %{default_language() => string}}
   end
 
   def dump(nil), do: {:ok, nil}
@@ -48,4 +52,24 @@ defmodule Brando.Type.I18nString do
   end
 
   def dump(_), do: :error
+
+  @doc """
+  The text for `language`: that language's, else the default content
+  language's, else `nil`. Blank text counts as none. A plain string is
+  returned as it is, so values that were never translated still read.
+  """
+  @spec get(map() | String.t() | nil, String.t() | atom() | nil) :: String.t() | nil
+  def get(nil, _language), do: nil
+  def get(value, _language) when is_binary(value), do: present(value)
+
+  def get(map, language) when is_map(map) do
+    present(language && Map.get(map, to_string(language))) || present(Map.get(map, default_language()))
+  end
+
+  def get(_value, _language), do: nil
+
+  defp default_language, do: to_string(Brando.config(:default_language) || "en")
+
+  defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)
+  defp present(_), do: nil
 end

@@ -2,10 +2,11 @@ defmodule Brando.Images.AltText do
   @moduledoc """
   Writes alt text for images in the library by showing them to an AI model.
 
-  The text is written for the image asset's own `alt`, in the site's default
-  language: it is what every placement shows unless a picture block or
-  gallery overrides it. Asset alt text has one language; placements on
-  translated pages override it per entry.
+  The text is written for the image asset's own `alt` — a map of content
+  language → text — in every language the image lacks, in one request: the
+  image is what costs, so extra languages only add a sentence of output
+  each. It is what every placement shows in its entry's language, unless a
+  picture block or gallery overrides it.
 
   Each image is sent at a mid-sized rendition rather than the original, which
   is enough to describe it and keeps the cost down. Bulk runs go through
@@ -16,12 +17,15 @@ defmodule Brando.Images.AltText do
       config :brando, Brando.AI,
         fields: [alt: [model: "anthropic:claude-haiku-4-5", prompt: "…"]]
   """
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query, only: [from: 2, dynamic: 1, dynamic: 2]
 
   alias Brando.AI
   alias Brando.Images.Image
 
   @alt_length 125
+  # Per requested language: the reply's sentence, and the prompt's mention.
+  @reply_tokens_per_language 60
+  @prompt_tokens_per_language 25
   # The rendition sent: the smallest configured size at least this wide.
   @target_width 512
   @fallback_sizes ~w(medium small large xlarge)
@@ -37,17 +41,41 @@ defmodule Brando.Images.AltText do
   @spec ai_opts() :: keyword()
   def ai_opts, do: AI.field_ai_opts(Image, :alt)
 
+  @doc "The content languages alt text is written in, the default first."
+  @spec languages() :: [String.t()]
+  def languages do
+    default = to_string(Brando.config(:default_language))
+    configured = Enum.map(Brando.config(:languages) || [], &to_string(&1[:value]))
+    Enum.uniq([default | configured])
+  end
+
+  @doc "The content languages `image` has no alt text in."
+  @spec missing_languages(map()) :: [String.t()]
+  def missing_languages(image) do
+    Enum.filter(languages(), &blank?(lookup(image, &1)))
+  end
+
+  defp lookup(image, language) do
+    case Map.get(image, :alt) do
+      %{} = alt -> Map.get(alt, language)
+      _ -> nil
+    end
+  end
+
+  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
+  defp blank?(_), do: true
+
   @doc """
-  Images without alt text that can be described: processed, not deleted,
-  and in a format the models read (not SVG). `folder_id` narrows it to one
-  folder.
+  Images missing alt text in any content language that can be described:
+  processed, not deleted, and in a format the models read (not SVG).
+  `folder_id` narrows it to one folder.
   """
   @spec missing(integer() | nil) :: [Image.t()]
   def missing(folder_id \\ nil) do
     query =
       from i in missing_query(),
         order_by: [desc: i.id],
-        select: struct(i, [:id, :path, :title, :width, :height, :sizes, :config_target, :folder_id, :cdn])
+        select: struct(i, [:id, :path, :title, :alt, :width, :height, :sizes, :config_target, :folder_id, :cdn])
 
     query = if folder_id, do: from(i in query, where: i.folder_id == ^folder_id), else: query
     Brando.Repo.all(query)
@@ -58,50 +86,127 @@ defmodule Brando.Images.AltText do
   def missing_count, do: Brando.Repo.aggregate(missing_query(), :count)
 
   defp missing_query do
+    missing_any =
+      Enum.reduce(languages(), dynamic(false), fn language, acc ->
+        dynamic([i], ^acc or fragment("coalesce(btrim(? ->> ?), '') = ''", i.alt, ^language))
+      end)
+
     from i in Image,
-      where: (is_nil(i.alt) or fragment("trim(?) = ''", i.alt)) and is_nil(i.deleted_at),
-      where: i.status == :processed and not ilike(i.path, "%.svg")
+      where: ^missing_any,
+      where: is_nil(i.deleted_at) and i.status == :processed and not ilike(i.path, "%.svg")
   end
 
-  @doc "What describing `images` would cost, per `Brando.AI.Cost.images/2`."
+  @doc """
+  What describing `images` would cost, per `Brando.AI.Cost.images/3`, with
+  the output for every language each lacks.
+  """
   @spec estimate([Image.t()]) :: {:ok, map()} | {:error, term()}
-  def estimate(images), do: Brando.AI.Cost.images(Enum.map(images, &sent_dimensions/1), ai_opts())
+  def estimate(images) do
+    languages = images |> Enum.map(&length(missing_languages(&1))) |> Enum.max(fn -> 1 end) |> max(1)
+
+    Brando.AI.Cost.images(Enum.map(images, &sent_dimensions/1), ai_opts(),
+      reply_tokens: @reply_tokens_per_language * languages,
+      prompt_tokens: 150 + @prompt_tokens_per_language * languages
+    )
+  end
 
   @doc """
-  Describes image `id` and returns the text, without saving it.
+  Describes image `id` in every content language it lacks alt text in (all
+  of them when it lacks none), without saving: `{:ok, %{values: %{language
+  => text}, model: model}}`.
   """
-  @spec describe(integer() | String.t()) :: {:ok, %{text: String.t(), model: String.t()}} | {:error, term()}
+  @spec describe(integer() | String.t()) :: {:ok, %{values: map(), model: String.t()}} | {:error, term()}
   def describe(id) do
     ai_opts = ai_opts()
 
     with {:ok, image} <- fetch(id),
+         languages = requested_languages(image),
          {:ok, binary, media_type} <- read(image),
-         {:ok, %{text: text, model: model}} <- AI.generate_text(messages(image, binary, media_type, ai_opts), ai_opts) do
-      {:ok, %{text: trim(text), model: model}}
+         {:ok, %{text: text, model: model}} <-
+           AI.generate_text(messages(image, languages, binary, media_type, ai_opts), ai_opts),
+         {:ok, values} <- parse(text, languages) do
+      {:ok, %{values: values, model: model}}
     end
   end
 
-  @doc "The prompt an image is described with."
-  @spec prompt(map(), keyword()) :: String.t()
-  def prompt(image, ai_opts \\ []) do
-    base =
+  defp requested_languages(image) do
+    case missing_languages(image) do
+      [] -> languages()
+      missing -> missing
+    end
+  end
+
+  @doc """
+  The prompt an image is described with, asking for `languages` as one JSON
+  object. Alt text the image already has in other languages is included, so
+  the new ones say the same thing.
+  """
+  @spec prompt(map(), [String.t()], keyword()) :: String.t()
+  def prompt(image, languages, ai_opts \\ []) do
+    instructions =
       case ai_opts |> Keyword.get(:prompt) |> to_string() |> String.trim() do
         "" ->
           """
-          Write the alt text for this image, in #{AI.language_name(Brando.config(:default_language))}. \
-          Describe what it shows that matters to someone who cannot see it, in one sentence \
-          of at most #{@alt_length} characters. Do not begin with "Image of" or "Picture of". \
-          If the image is mostly text, give the text. Plain text, no quotes. \
-          Reply with the alt text only.\
+          Write alt text for this image. Describe what it shows that matters to someone \
+          who cannot see it, in one sentence of at most #{@alt_length} characters. Do not \
+          begin with "Image of" or "Picture of". If the image is mostly text, give the text. \
+          Plain text, no quotes.\
           """
 
         prompt ->
           prompt
       end
 
-    case Map.get(image, :title) do
-      title when is_binary(title) and title != "" -> base <> "\n\nThe image's title: " <> title
-      _ -> base
+    wanted = Enum.map_join(languages, ", ", fn language -> "\"#{language}\" (#{AI.language_name(language)})" end)
+    keys = Enum.map_join(languages, ", ", fn language -> "\"#{language}\": \"…\"" end)
+
+    known =
+      for language <- languages() -- languages,
+          text = lookup(image, language),
+          not blank?(text),
+          do: "- #{AI.language_name(language)}: #{text}"
+
+    title =
+      case Brando.Images.text(image, :title, nil) do
+        nil -> ""
+        title -> "\n\nThe image's title: " <> title
+      end
+
+    existing = if known == [], do: "", else: "\n\nIts alt text in other languages:\n" <> Enum.join(known, "\n")
+
+    """
+    #{instructions}
+
+    Write it in these languages: #{wanted}. Reply with one JSON object and nothing else: {#{keys}}#{title}#{existing}\
+    """
+  end
+
+  @doc false
+  # The model's reply as language → text, keeping only the languages asked
+  # for. A reply that is not JSON is taken as the text for a single
+  # requested language.
+  def parse(text, languages) do
+    json = text |> String.trim() |> String.replace(~r/^```(?:json)?\s*|\s*```$/, "")
+
+    case Jason.decode(json) do
+      {:ok, %{} = map} ->
+        values =
+          for language <- languages,
+              value = Map.get(map, language),
+              is_binary(value) and String.trim(value) != "",
+              into: %{},
+              do: {language, trim(value)}
+
+        if values == %{}, do: {:error, :empty_response}, else: {:ok, values}
+
+      _ when length(languages) == 1 ->
+        case trim(text) do
+          "" -> {:error, :empty_response}
+          value -> {:ok, %{hd(languages) => value}}
+        end
+
+      _ ->
+        {:error, :invalid_response}
     end
   end
 
@@ -150,10 +255,10 @@ defmodule Brando.Images.AltText do
     if target && target < width, do: {target, max(round(height * target / width), 1)}, else: {width, height}
   end
 
-  defp messages(image, binary, media_type, ai_opts) do
+  defp messages(image, languages, binary, media_type, ai_opts) do
     [
       ReqLLM.Context.user([
-        ReqLLM.Message.ContentPart.text(prompt(image, ai_opts)),
+        ReqLLM.Message.ContentPart.text(prompt(image, languages, ai_opts)),
         ReqLLM.Message.ContentPart.image(binary, media_type)
       ])
     ]

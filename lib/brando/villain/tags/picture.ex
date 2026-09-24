@@ -27,6 +27,9 @@ defmodule Brando.Villain.Tags.Picture do
         {String.to_existing_atom(key), val}
       end)
 
+    # The entry's language, so an image's text renders in it rather than in
+    # whatever locale the renderer runs under (the admin's, on save).
+    evaled_args = Keyword.put_new(evaled_args, :language, Liquex.Context.get(context, "language"))
     assigns = %{src: evaled_source, opts: evaled_args}
 
     comp = ~H"""

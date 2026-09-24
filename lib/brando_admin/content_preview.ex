@@ -148,7 +148,7 @@ defmodule BrandoAdmin.ContentPreview do
 
     text =
       Enum.flat_map(fields, fn {field, label} ->
-        if value = present(metadata[field]),
+        if value = present(text_value(metadata[field])),
           do: [line("#{label}: #{plain(value)}", {key, field}, :detail)],
           else: []
       end)
@@ -187,7 +187,20 @@ defmodule BrandoAdmin.ContentPreview do
   end
 
   defp media_name(media),
-    do: present(media["title"]) || present(media["preview_label"]) || dgettext("content_transfer", "Unnamed media")
+    do:
+      present(Brando.Type.I18nString.get(media["title"], nil)) || present(media["preview_label"]) ||
+        dgettext("content_transfer", "Unnamed media")
+
+  # An image's texts are language → text maps: show every language, so a
+  # difference in any of them is visible in the comparison.
+  defp text_value(%{} = values) do
+    values
+    |> Enum.reject(fn {_language, text} -> text in [nil, ""] end)
+    |> Enum.sort()
+    |> Enum.map_join(" · ", fn {language, text} -> "#{String.upcase(to_string(language))}: #{text}" end)
+  end
+
+  defp text_value(value), do: value
 
   defp basename(path) when is_binary(path) and path != "", do: Path.basename(path)
   defp basename(_), do: nil

@@ -4,8 +4,9 @@ defmodule BrandoAdmin.Components.SuggestionReview do
   one queued, failed, or waiting to be edited, accepted or rejected, with an
   "Accept all" for the lot.
 
-  The hosting LiveView handles `accept_suggestion` (params `suggestion_id` and
-  `text`), `reject_suggestion` (`id`) and `accept_all_suggestions`.
+  The hosting LiveView handles `accept_suggestion` (params `suggestion_id`,
+  and `text` — or `values`, language → text, for suggestions written in
+  several languages), `reject_suggestion` (`id`) and `accept_all_suggestions`.
   """
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
@@ -74,12 +75,26 @@ defmodule BrandoAdmin.Components.SuggestionReview do
             <input type="hidden" name="suggestion_id" value={suggestion.id} />
             <%!-- Ignored after mount so an edit survives other suggestions arriving. --%>
             <textarea
+              :if={!is_map(suggestion.values)}
               id={"suggestion-text-#{suggestion.id}"}
               name="text"
               rows="3"
               phx-update="ignore"
               aria-label={@label.(suggestion)}
             >{suggestion.text}</textarea>
+            <div :if={is_map(suggestion.values)} class="ai-suggestion-languages">
+              <label :for={{language, text} <- Enum.sort_by(suggestion.values, &language_order/1)}>
+                <span>{language}</span>
+                <textarea
+                  id={"suggestion-text-#{suggestion.id}-#{language}"}
+                  name={"values[#{language}]"}
+                  rows="2"
+                  lang={language}
+                  phx-update="ignore"
+                  aria-label={"#{@label.(suggestion)} (#{Brando.AI.language_name(language)})"}
+                >{text}</textarea>
+              </label>
+            </div>
             <div class="ai-suggestion-actions">
               <button type="submit" class="workspace-button primary">{gettext("Accept")}</button>
               <button type="button" class="workspace-button" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
@@ -91,5 +106,11 @@ defmodule BrandoAdmin.Components.SuggestionReview do
       </ul>
     </section>
     """
+  end
+
+  # The default language first, then as configured.
+  defp language_order({language, _text}) do
+    languages = [Brando.config(:default_language) | Enum.map(Brando.config(:languages) || [], & &1[:value])]
+    Enum.find_index(Enum.map(languages, &to_string/1), &(&1 == language)) || 99
   end
 end

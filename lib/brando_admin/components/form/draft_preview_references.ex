@@ -122,7 +122,11 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.References do
     %__MODULE__{
       kind: :image,
       id: image.id,
-      title: if(present(image.path), do: Path.basename(image.path), else: present(image.title) || kind_label(:image)),
+      title:
+        if(present(image.path),
+          do: Path.basename(image.path),
+          else: present(Brando.Images.text(image, :title, nil)) || kind_label(:image)
+        ),
       detail: details([kind_label(:image), dimensions(image)]),
       thumbnail: image_url(image)
     }

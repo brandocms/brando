@@ -18,6 +18,10 @@
 .ai-suggestion-form { display: grid; gap: 8px; }
 .ai-suggestion-form textarea { width: 100%; min-height: 58px; padding: 7px 9px; border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
 .ai-suggestion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-suggestion-languages { display: grid; gap: 6px; }
+.ai-suggestion-languages label { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; align-items: start; }
+.ai-suggestion-languages span { padding-top: 8px; color: var(--workspace-muted); font-family: "Mono"; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+.ai-suggestion-languages textarea { width: 100%; min-height: 44px; padding: 7px 9px; border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
 .ai-spinner { flex: 0 0 15px; width: 15px; height: 15px; border: 2px solid #b5c7aa; border-top-color: #456138; border-radius: 50%; animation: ai-spin .8s linear infinite; }
 @keyframes ai-spin { to { transform: rotate(360deg); } }
 

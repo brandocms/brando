@@ -202,20 +202,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   <Input.rich_text
                     field={block_data[:title]}
                     label={gettext("Caption")}
-                    default_value={@image && @image.title}
+                    default_value={Brando.Images.text(@image, :title, nil)}
                     reset
                     opts={[]}
                   />
                   <Input.override_text
                     field={block_data[:alt]}
                     label={gettext("Alternative text")}
-                    default_value={@image && @image.alt}
+                    default_value={Brando.Images.text(@image, :alt, nil)}
                     target={@myself}
                   />
                   <Input.override_text
                     field={block_data[:credits]}
                     label={gettext("Credits")}
-                    default_value={@image && @image.credits}
+                    default_value={Brando.Images.text(@image, :credits, nil)}
                     target={@myself}
                   />
                   <Input.text field={block_data[:link]} label={gettext("Link")} />

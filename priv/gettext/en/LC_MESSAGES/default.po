@@ -75,7 +75,7 @@ msgid "Configuration"
 msgstr ""
 
 #: lib/brando/galleries/gallery.ex:51
-#: lib/brando/images/image.ex:118
+#: lib/brando/images/image.ex:129
 #: lib/brando/videos/video.ex:103
 #: lib/brando_admin/components/form/draft_recovery.ex:90
 #: lib/brando_admin/components/form/draft_recovery.ex:314
@@ -276,7 +276,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex:3185
 #: lib/brando_admin/components/form.ex:3197
-#: lib/brando_admin/components/form.ex:4781
+#: lib/brando_admin/components/form.ex:4779
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr ""
@@ -501,7 +501,7 @@ msgid "Edit global set"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/gallery.ex:421
-#: lib/brando_admin/components/form/input/image.ex:423
+#: lib/brando_admin/components/form/input/image.ex:425
 #: lib/brando_admin/components/image_picker.ex:537
 #: lib/brando_admin/live/images/image_form_live.ex:15
 #, elixir-autogen, elixir-format
@@ -625,8 +625,8 @@ msgstr ""
 msgid "Picture"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5472
-#: lib/brando_admin/components/form.ex:5475
+#: lib/brando_admin/components/form.ex:5470
+#: lib/brando_admin/components/form.ex:5473
 #: lib/brando_admin/live/config/asset_live.ex:46
 #: lib/brando_admin/live/config/environment_live.ex:65
 #: lib/brando_admin/live/config/publishing_live.ex:55
@@ -636,7 +636,7 @@ msgstr ""
 msgid "Refresh"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4350
+#: lib/brando_admin/components/form.ex:4348
 #, elixir-autogen, elixir-format
 msgid "Refreshing Live Preview..."
 msgstr ""
@@ -707,7 +707,7 @@ msgid "Uploading..."
 msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex:245
-#: lib/brando_admin/components/form/draft_preview_references.ex:183
+#: lib/brando_admin/components/form/draft_preview_references.ex:187
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:211
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:472
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1284
@@ -801,12 +801,12 @@ msgstr ""
 msgid "Current content language"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/image.ex:436
+#: lib/brando_admin/components/form/input/image.ex:438
 #, elixir-autogen, elixir-format
 msgid "Add image"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/image.ex:434
+#: lib/brando_admin/components/form/input/image.ex:436
 #, elixir-autogen, elixir-format
 msgid "No image associated with field"
 msgstr ""
@@ -1132,7 +1132,7 @@ msgstr ""
 msgid "Entry ID"
 msgstr ""
 
-#: lib/brando_admin/components/form/draft_preview_references.ex:182
+#: lib/brando_admin/components/form/draft_preview_references.ex:186
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:223
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:467
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1234
@@ -1233,7 +1233,7 @@ msgstr ""
 msgid "Moonwalk"
 msgstr ""
 
-#: lib/brando/images/image.ex:107
+#: lib/brando/images/image.ex:115
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex:125
 #: lib/brando_admin/components/form/input/gallery.ex:393
 #, elixir-autogen, elixir-format
@@ -1270,7 +1270,7 @@ msgstr ""
 msgid "Entry revisions"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4448
+#: lib/brando_admin/components/form.ex:4446
 #, elixir-autogen, elixir-format
 msgid "Notice"
 msgstr ""
@@ -1280,7 +1280,7 @@ msgstr ""
 msgid "Set a future publishing date for this entry. Leave blank for immediate publishing."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4451
+#: lib/brando_admin/components/form.ex:4449
 #, elixir-autogen, elixir-format
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr ""
@@ -1353,7 +1353,7 @@ msgstr ""
 msgid "None selected"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5483
+#: lib/brando_admin/components/form.ex:5481
 #, elixir-autogen, elixir-format
 msgid "Open preview in new window"
 msgstr ""
@@ -1383,14 +1383,14 @@ msgstr ""
 msgid "Edit file"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5033
-#: lib/brando_admin/components/form.ex:5058
-#: lib/brando_admin/components/form.ex:5067
+#: lib/brando_admin/components/form.ex:5031
+#: lib/brando_admin/components/form.ex:5056
+#: lib/brando_admin/components/form.ex:5065
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Error uploading"
 msgstr ""
 
-#: lib/brando_admin/components/form/draft_preview_references.ex:184
+#: lib/brando_admin/components/form/draft_preview_references.ex:188
 #: lib/brando_admin/components/form/input/blocks/file_block.ex:107
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex:64
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:464
@@ -1471,7 +1471,7 @@ msgstr ""
 msgid "Reset all variables"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4785
+#: lib/brando_admin/components/form.ex:4783
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
 msgstr ""
@@ -1876,7 +1876,7 @@ msgstr ""
 msgid "Block variables"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4787
+#: lib/brando_admin/components/form.ex:4785
 #, elixir-autogen, elixir-format
 msgid "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
 msgstr ""
@@ -2020,7 +2020,7 @@ msgstr ""
 msgid "GMaps"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4254
+#: lib/brando_admin/components/form.ex:4252
 #, elixir-autogen, elixir-format
 msgid "Gathering blocks for sharing..."
 msgstr ""
@@ -2103,8 +2103,8 @@ msgstr ""
 msgid "Open link in new window/tab"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4399
-#: lib/brando_admin/components/form.ex:4411
+#: lib/brando_admin/components/form.ex:4397
+#: lib/brando_admin/components/form.ex:4409
 #, elixir-autogen, elixir-format
 msgid "Opening stand alone live preview window..."
 msgstr ""
@@ -2140,7 +2140,7 @@ msgstr ""
 msgid "Show instructions"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4392
+#: lib/brando_admin/components/form.ex:4390
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview — fetching initial render..."
 msgstr ""
@@ -2682,7 +2682,7 @@ msgstr ""
 msgid "Show controls"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4374
+#: lib/brando_admin/components/form.ex:4372
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview..."
 msgstr ""
@@ -2897,13 +2897,13 @@ msgstr ""
 msgid "Changes saved. Image is reprocessing."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4974
+#: lib/brando_admin/components/form.ex:4972
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Error creating image"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3972
-#: lib/brando_admin/components/form.ex:4954
+#: lib/brando_admin/components/form.ex:3970
+#: lib/brando_admin/components/form.ex:4952
 #, elixir-autogen, elixir-format
 msgid "New image created."
 msgstr ""
@@ -3009,7 +3009,7 @@ msgstr ""
 msgid "Could not resolve AI settings for this field"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5060
+#: lib/brando_admin/components/form.ex:5058
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file. Check upload settings and try again."
 msgstr ""
@@ -3090,7 +3090,7 @@ msgstr ""
 msgid "Element"
 msgstr ""
 
-#: lib/brando/ai.ex:166
+#: lib/brando/ai.ex:167
 #, elixir-autogen, elixir-format
 msgid "Failed to generate text with AI"
 msgstr ""
@@ -3123,7 +3123,7 @@ msgstr ""
 msgid "Founding date"
 msgstr ""
 
-#: lib/brando_admin/components/form/input.ex:1231
+#: lib/brando_admin/components/form/input.ex:1202
 #, elixir-autogen, elixir-format
 msgid "Generate with AI"
 msgstr ""
@@ -3327,7 +3327,7 @@ msgid "Rename"
 msgstr ""
 
 #: lib/brando_admin/components/form/input.ex:444
-#: lib/brando_admin/components/form/input.ex:1070
+#: lib/brando_admin/components/form/input.ex:1041
 #, elixir-autogen, elixir-format
 msgid "Reset to default"
 msgstr ""
@@ -3337,7 +3337,7 @@ msgstr ""
 msgid "Root"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5036
+#: lib/brando_admin/components/form.ex:5034
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr ""
@@ -3418,18 +3418,18 @@ msgstr ""
 msgid "e.g. Free, $$"
 msgstr ""
 
+#: lib/brando_admin/components/form.ex:5072
 #: lib/brando_admin/components/form.ex:5074
-#: lib/brando_admin/components/form.ex:5076
 #, elixir-autogen, elixir-format, fuzzy
 msgid "file"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5073
+#: lib/brando_admin/components/form.ex:5071
 #, elixir-autogen, elixir-format, fuzzy
 msgid "image"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5075
+#: lib/brando_admin/components/form.ex:5073
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1421
 #, elixir-autogen, elixir-format, fuzzy
 msgid "video"
@@ -3524,7 +3524,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex:1938
 #: lib/brando_admin/components/form/transformer.ex:470
-#: lib/brando_admin/components/suggestion_review.ex:70
+#: lib/brando_admin/components/suggestion_review.ex:71
 #: lib/brando_admin/live/content/shared_library_live.ex:272
 #: lib/brando_admin/live/upload_manager.ex:796
 #, elixir-autogen, elixir-format
@@ -4142,7 +4142,7 @@ msgstr ""
 msgid "Could not save module. Check the highlighted fields."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4746
+#: lib/brando_admin/components/form.ex:4744
 #, elixir-autogen, elixir-format
 msgid "Could not save revision"
 msgstr ""
@@ -4574,7 +4574,7 @@ msgstr ""
 msgid "Everything"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4103
+#: lib/brando_admin/components/form.ex:4101
 #, elixir-autogen, elixir-format
 msgid "External video URLs are disabled for this field"
 msgstr ""
@@ -5267,7 +5267,7 @@ msgstr ""
 msgid "Revision error"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4714
+#: lib/brando_admin/components/form.ex:4712
 #, elixir-autogen, elixir-format
 msgid "Revision saved"
 msgstr ""
@@ -5308,7 +5308,7 @@ msgstr ""
 msgid "Save deployment settings"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4261
+#: lib/brando_admin/components/form.ex:4259
 #, elixir-autogen, elixir-format
 msgid "Saving a revision..."
 msgstr ""
@@ -5650,7 +5650,7 @@ msgstr ""
 msgid "The revision could not be activated."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4747
+#: lib/brando_admin/components/form.ex:4745
 #, elixir-autogen, elixir-format
 msgid "The revision was not saved. Please try again."
 msgstr ""
@@ -5854,7 +5854,7 @@ msgstr ""
 msgid "live"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4862
+#: lib/brando_admin/components/form.ex:4860
 #, elixir-autogen, elixir-format
 msgid "or"
 msgstr ""
@@ -6023,7 +6023,7 @@ msgstr ""
 
 #: lib/brando_admin/components/file_picker.ex:219
 #: lib/brando_admin/components/video_picker.ex:638
-#: lib/brando_admin/live/images/alt_text_live.ex:286
+#: lib/brando_admin/live/images/alt_text_live.ex:287
 #: lib/brando_admin/live/images/image_list_live.ex:242
 #, elixir-format, elixir-autogen
 msgid "Root folder"
@@ -6039,12 +6039,12 @@ msgstr ""
 msgid "Choose a folder, upload an image, or adjust your search."
 msgstr ""
 
-#: lib/brando/images/image.ex:108
+#: lib/brando/images/image.ex:113
 #, elixir-format, elixir-autogen
 msgid "Alt text added"
 msgstr ""
 
-#: lib/brando/images/image.ex:109
+#: lib/brando/images/image.ex:120
 #, elixir-format, elixir-autogen
 msgid "Processing"
 msgstr ""
@@ -6094,12 +6094,12 @@ msgstr ""
 msgid "Build"
 msgstr ""
 
-#: lib/brando/images/image.ex:99
+#: lib/brando/images/image.ex:103
 #, elixir-format, elixir-autogen
 msgid "Formats"
 msgstr ""
 
-#: lib/brando/images/image.ex:104
+#: lib/brando/images/image.ex:108
 #, elixir-format, elixir-autogen
 msgid "%{count} size"
 msgid_plural "%{count} sizes"
@@ -7263,7 +7263,7 @@ msgstr ""
 msgid "The configured site was not found. Check the site configuration before preparing groups."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4659
+#: lib/brando_admin/components/form.ex:4657
 #, elixir-autogen, elixir-format
 msgid "The entry was saved, but an existing redirect on its new URL could not be removed. Please check the SEO redirect settings."
 msgstr ""
@@ -7379,7 +7379,7 @@ msgstr ""
 msgid "Unreferenced footnote"
 msgstr ""
 
-#: lib/brando_admin/components/form/draft_preview_references.ex:157
+#: lib/brando_admin/components/form/draft_preview_references.ex:161
 #: lib/brando_admin/components/form/draft_recovery.ex:404
 #, elixir-autogen, elixir-format
 msgid "Untitled entry"
@@ -7779,12 +7779,12 @@ msgstr ""
 msgid "Replace the video while keeping this reference’s settings."
 msgstr ""
 
-#: lib/brando_admin/components/form/input.ex:1146
+#: lib/brando_admin/components/form/input.ex:1117
 #, elixir-autogen, elixir-format
 msgid "Reset %{label} to default"
 msgstr ""
 
-#: lib/brando_admin/components/form/input.ex:1117
+#: lib/brando_admin/components/form/input.ex:1088
 #, elixir-autogen, elixir-format
 msgid "Reset all to defaults"
 msgstr ""
@@ -8471,7 +8471,7 @@ msgstr ""
 msgid "Review permission changes"
 msgstr ""
 
-#: lib/brando_admin/components/suggestion_review.ex:42
+#: lib/brando_admin/components/suggestion_review.ex:43
 #: lib/brando_admin/live/users/groups_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Saving…"
@@ -9218,7 +9218,7 @@ msgid "Finding Markdown files…"
 msgstr ""
 
 #: lib/brando_admin/live/config/markdown_sources_live.ex:132
-#: lib/brando_admin/live/images/alt_text_live.ex:84
+#: lib/brando_admin/live/images/alt_text_live.ex:85
 #, elixir-autogen, elixir-format
 msgid "Folder"
 msgstr ""
@@ -9503,7 +9503,7 @@ msgid "No content changes in this preview."
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_preview.ex:203
-#: lib/brando_admin/components/form/draft_preview_references.ex:185
+#: lib/brando_admin/components/form/draft_preview_references.ex:189
 #, elixir-autogen
 msgid "Related entry"
 msgstr ""
@@ -9701,7 +9701,7 @@ msgstr ""
 msgid "Open entry"
 msgstr ""
 
-#: lib/brando_admin/components/suggestion_review.ex:65
+#: lib/brando_admin/components/suggestion_review.ex:66
 #: lib/brando_admin/live/config/seo_live.ex:371
 #, elixir-autogen, elixir-format
 msgid "Writing…"
@@ -9737,7 +9737,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/config/seo_live.ex:441
-#: lib/brando_admin/live/images/alt_text_live.ex:113
+#: lib/brando_admin/live/images/alt_text_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "At most %{max} per run; run it again for the rest."
 msgstr ""
@@ -9759,22 +9759,22 @@ msgstr[1] ""
 msgid "Suggested descriptions"
 msgstr ""
 
-#: lib/brando_admin/components/suggestion_review.ex:30
+#: lib/brando_admin/components/suggestion_review.ex:31
 #, elixir-autogen, elixir-format
 msgid "%{count} being written"
 msgstr ""
 
-#: lib/brando_admin/components/suggestion_review.ex:31
+#: lib/brando_admin/components/suggestion_review.ex:32
 #, elixir-autogen, elixir-format
 msgid "%{count} to review"
 msgstr ""
 
-#: lib/brando_admin/components/suggestion_review.ex:32
+#: lib/brando_admin/components/suggestion_review.ex:33
 #, elixir-autogen, elixir-format
 msgid "%{count} failed"
 msgstr ""
 
-#: lib/brando_admin/components/suggestion_review.ex:42
+#: lib/brando_admin/components/suggestion_review.ex:43
 #, elixir-autogen, elixir-format
 msgid "Accept all"
 msgstr ""
@@ -9785,12 +9785,12 @@ msgid "Suggested description for %{title}"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:65
-#: lib/brando_admin/components/suggestion_review.ex:84
+#: lib/brando_admin/components/suggestion_review.ex:99
 #, elixir-autogen, elixir-format
 msgid "Accept"
 msgstr ""
 
-#: lib/brando_admin/components/suggestion_review.ex:86
+#: lib/brando_admin/components/suggestion_review.ex:101
 #, elixir-autogen, elixir-format
 msgid "Reject"
 msgstr ""
@@ -9920,7 +9920,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/config/seo_live.ex:944
-#: lib/brando_admin/live/images/alt_text_live.ex:238
+#: lib/brando_admin/live/images/alt_text_live.ex:239
 #, elixir-autogen, elixir-format
 msgid "%{accepted} saved, %{failed} could not be saved"
 msgstr ""
@@ -9931,7 +9931,7 @@ msgid "Could not save the descriptions"
 msgstr ""
 
 #: lib/brando_admin/live/config/seo_live.ex:1089
-#: lib/brando_admin/live/images/alt_text_live.ex:207
+#: lib/brando_admin/live/images/alt_text_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "This suggestion was already reviewed"
 msgstr ""
@@ -10951,7 +10951,7 @@ msgid_plural "%{count} missing"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:86
+#: lib/brando_admin/live/images/alt_text_live.ex:87
 #, elixir-autogen, elixir-format
 msgid "All folders"
 msgstr ""
@@ -10961,12 +10961,12 @@ msgstr ""
 msgid "Alt text describes an image to people who cannot see it, and to search engines. It is written on the image and used wherever the image appears, unless a placement overrides it."
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:204
+#: lib/brando_admin/live/images/alt_text_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Alt text saved"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:160
+#: lib/brando_admin/live/images/alt_text_live.ex:161
 #, elixir-autogen, elixir-format
 msgid "An estimate from the model's published prices and each image's size; your provider bills what is actually used. The images are sent to the provider."
 msgstr ""
@@ -10976,44 +10976,44 @@ msgstr ""
 msgid "Back to images"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:105
+#: lib/brando_admin/live/images/alt_text_live.ex:106
 #, elixir-autogen, elixir-format
 msgid "Connect an AI provider to write alt text from the images themselves, or add it on each image in the library."
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:213
-#: lib/brando_admin/live/images/alt_text_live.ex:242
+#: lib/brando_admin/live/images/alt_text_live.ex:214
+#: lib/brando_admin/live/images/alt_text_live.ex:243
 #, elixir-autogen, elixir-format
 msgid "Could not save the alt text"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:122
+#: lib/brando_admin/live/images/alt_text_live.ex:123
 #, elixir-autogen, elixir-format
 msgid "Describe one image"
 msgid_plural "Describe %{count} images"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:194
+#: lib/brando_admin/live/images/alt_text_live.ex:195
 #, elixir-autogen, elixir-format
 msgid "Describing one image"
 msgid_plural "Describing %{count} images"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:150
+#: lib/brando_admin/live/images/alt_text_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Describing one image with %{model} costs about %{total}."
 msgid_plural "Describing %{count} images with %{model} costs about %{total} — roughly %{each} per image."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:96
+#: lib/brando_admin/live/images/alt_text_live.ex:97
 #, elixir-autogen, elixir-format
 msgid "Every image has alt text"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:101
+#: lib/brando_admin/live/images/alt_text_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Every image without alt text already has a suggestion below."
 msgstr ""
@@ -11023,36 +11023,31 @@ msgstr ""
 msgid "Images without alt text"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:97
+#: lib/brando_admin/live/images/alt_text_live.ex:98
 #, elixir-autogen, elixir-format
 msgid "New uploads without alt text will be listed here."
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:170
+#: lib/brando_admin/live/images/alt_text_live.ex:171
 #, elixir-autogen, elixir-format
 msgid "No price is known for the configured AI model. Check your provider's pricing before describing many images."
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:233
+#: lib/brando_admin/live/images/alt_text_live.ex:234
 #, elixir-autogen, elixir-format
 msgid "One alt text saved"
 msgid_plural "%{count} alt texts saved"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:131
+#: lib/brando_admin/live/images/alt_text_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "Suggested alt text"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:135
+#: lib/brando_admin/live/images/alt_text_live.ex:136
 #, elixir-autogen, elixir-format
 msgid "Suggested alt text for %{title}"
-msgstr ""
-
-#: lib/brando_admin/live/images/alt_text_live.ex:75
-#, elixir-autogen, elixir-format
-msgid "Text is written in %{language}, the site's default language."
 msgstr ""
 
 #: lib/brando/ai.ex:163
@@ -11060,7 +11055,7 @@ msgstr ""
 msgid "The configured AI model cannot read images"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:166
+#: lib/brando_admin/live/images/alt_text_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "The configured AI model cannot read images. Configure one that can for the alt field."
 msgstr ""
@@ -11080,7 +11075,22 @@ msgstr ""
 msgid "Write alt text"
 msgstr ""
 
-#: lib/brando_admin/live/images/alt_text_live.ex:210
+#: lib/brando_admin/live/images/alt_text_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Write the alt text before accepting it"
+msgstr ""
+
+#: lib/brando_admin/live/images/alt_text_live.ex:75
+#, elixir-autogen, elixir-format
+msgid "Missing in at least one of %{languages}. Each image is described in every language it lacks, in one request."
+msgstr ""
+
+#: lib/brando/images/image.ex:117
+#, elixir-autogen, elixir-format
+msgid "No alt text in %{languages}"
+msgstr ""
+
+#: lib/brando/ai.ex:166
+#, elixir-autogen, elixir-format
+msgid "The AI reply could not be read"
 msgstr ""

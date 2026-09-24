@@ -37,21 +37,21 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.ImageConfig do
             <Input.override_text
               field={@form[:title]}
               label={gettext("Title")}
-              default_value={@image.title || ""}
+              default_value={Brando.Images.text(@image, :title, nil) || ""}
               target={@myself}
             />
 
             <Input.override_text
               field={@form[:alt]}
               label={gettext("Alt text")}
-              default_value={@image.alt || ""}
+              default_value={Brando.Images.text(@image, :alt, nil) || ""}
               target={@myself}
             />
 
             <Input.override_text
               field={@form[:credits]}
               label={gettext("Credits")}
-              default_value={@image.credits || ""}
+              default_value={Brando.Images.text(@image, :credits, nil) || ""}
               target={@myself}
             />
           </div>

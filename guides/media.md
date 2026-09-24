@@ -91,7 +91,12 @@ integration; verify that integration before depending on deferred `data-srcset`
 attributes. The example above works without that deferred-loading behavior.
 
 The image's alt text is the default; `alt: "..."` overrides it for this placement,
-and `alt: ""` marks a decorative image. Use a meaningful caption only when it adds
+and `alt: ""` marks a decorative image. An image's alt text, title and credits
+are kept per content language: the component renders the request's language
+(set by `Brando.Plugs.I18n`), falling back to the default language. Pass
+`language: "no"` to choose it. To read the text yourself, use
+`Brando.Images.text(image, :alt, language)` — the fields hold maps of
+language → text, not strings. Use a meaningful caption only when it adds
 information. `caption: true` uses the image title; a string supplies an explicit
 caption. Captions are rendered as HTML, so only pass trusted editorial content.
 A nil image renders nothing. An **unloaded** association renders a diagnostic:

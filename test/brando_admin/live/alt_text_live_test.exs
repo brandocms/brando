@@ -26,9 +26,9 @@ defmodule BrandoAdmin.Images.AltTextLiveTest do
     refute has_element?(view, "button[phx-click=describe]")
   end
 
-  test "estimates the cost, describes the images, and saves what is accepted", %{conn: conn} do
+  test "estimates the cost, describes the images in every language, and saves what is accepted", %{conn: conn} do
     Brando.AIStub.configure(shared: true)
-    Brando.AIStub.reply("A lighthouse on a rocky shore")
+    Brando.AIStub.reply(~s({"en": "A lighthouse on a rocky shore", "no": "Et fyr på en steinete strand"}))
     first = insert_image(%{path: "images/alt-live/first.jpg"})
     second = insert_image(%{path: "images/alt-live/second.jpg"})
 
@@ -39,20 +39,26 @@ defmodule BrandoAdmin.Images.AltTextLiveTest do
     view |> element("button[phx-click=describe]") |> render_click()
 
     # Oban runs inline in tests, so the suggestions are written by now.
-    assert has_element?(view, "#suggestion-" <> suggestion_id(first) <> " textarea", "A lighthouse on a rocky shore")
+    id = suggestion_id(first)
+    assert has_element?(view, "#suggestion-text-#{id}-en", "A lighthouse on a rocky shore")
+    assert has_element?(view, "#suggestion-text-#{id}-no", "Et fyr på en steinete strand")
     assert has_element?(view, ".ai-suggestion img.ai-suggestion-thumbnail")
     refute has_element?(view, "button[phx-click=describe]")
 
     view
-    |> form("#suggestion-#{suggestion_id(first)} form", %{"text" => "A red lighthouse"})
+    |> form("#suggestion-#{id} form", %{"values" => %{"en" => "A red lighthouse", "no" => "Et rødt fyr"}})
     |> render_submit()
 
-    assert Brando.Repo.get!(Image, first.id).alt == "A red lighthouse"
+    assert Brando.Repo.get!(Image, first.id).alt == %{"en" => "A red lighthouse", "no" => "Et rødt fyr"}
 
     view |> element(".ai-suggestions button[phx-click=accept_all_suggestions]") |> render_click()
     render_async(view, 5_000)
 
-    assert Brando.Repo.get!(Image, second.id).alt == "A lighthouse on a rocky shore"
+    assert Brando.Repo.get!(Image, second.id).alt == %{
+             "en" => "A lighthouse on a rocky shore",
+             "no" => "Et fyr på en steinete strand"
+           }
+
     refute has_element?(view, ".ai-suggestions")
   end
 
