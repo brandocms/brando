@@ -83,6 +83,8 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
       view |> element("button.seo-row-toggle", "Details") |> render_click()
       refute has_element?(view, "button[phx-click=generate_description]")
+      refute has_element?(view, "button[phx-click=critique]")
+      refute has_element?(view, ".seo-batch")
     end
 
     test "a configured site can pick what the prompt reads, and store it", %{conn: conn} do
@@ -115,19 +117,91 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
       view |> element("button.seo-row-toggle", "Details") |> render_click()
       assert has_element?(view, "button[phx-click=generate_description]", "Write description")
     end
+
+    test "missing descriptions are written in bulk and saved only once accepted", %{conn: conn} do
+      configure_ai()
+      Brando.AIStub.reply(fn prompt -> if prompt =~ "Bulk first", do: "About the first", else: "About the second" end)
+      user = Factory.insert(:random_user)
+
+      pages =
+        for {title, uri} <- [{"Bulk first", "bulk-first"}, {"Bulk second", "bulk-second"}] do
+          {:ok, page} =
+            Pages.create_page(
+              %{title: title, uri: uri, language: "en", template: "default.html", status: :published},
+              user
+            )
+
+          page
+        end
+
+      {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+      render_async(view)
+
+      assert has_element?(view, ".seo-batch")
+      view |> element(".seo-batch button[phx-click=confirm_batch]") |> render_click()
+      view |> element(".seo-batch button[phx-click=start_batch]") |> render_click()
+
+      # Oban runs inline in tests, so the suggestions are written by now.
+      render_async(view)
+      assert has_element?(view, ".seo-suggestion[data-status=pending]", "Bulk first")
+      assert has_element?(view, ".seo-suggestion textarea", "About the second")
+      # Nothing is waiting any more, so there is nothing left to offer.
+      refute has_element?(view, ".seo-batch")
+      assert Enum.all?(pages, &(description(&1) == nil))
+
+      [first, second] = Brando.SEO.Suggestions.list_open("en")
+
+      view
+      |> form("#seo-suggestion-#{first.id} form", %{"text" => "Edited before saving"})
+      |> render_submit()
+
+      render_async(view)
+      assert description(Enum.find(pages, &(&1.id == first.entry_id))) == "Edited before saving"
+      refute has_element?(view, "#seo-suggestion-#{first.id}")
+
+      view |> element(".seo-suggestions button[phx-click=accept_all_suggestions]") |> render_click()
+      render_async(view)
+
+      assert description(Enum.find(pages, &(&1.id == second.entry_id))) == "About the second"
+      refute has_element?(view, ".seo-suggestions")
+    end
+
+    test "an entry's meta can be reviewed by AI, advisory only", %{conn: conn} do
+      configure_ai()
+      Brando.AIStub.reply("- The description is generic.\n- It repeats the title.\n- Name the city.\n- A fourth point")
+      user = Factory.insert(:random_user)
+
+      {:ok, page} =
+        Pages.create_page(
+          %{
+            title: "Reviewed",
+            uri: "reviewed",
+            language: "en",
+            template: "default.html",
+            status: :published,
+            meta_description: "Reviewed page with a description"
+          },
+          user
+        )
+
+      {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+      render_async(view)
+
+      view |> element("button.seo-row-toggle", "Details") |> render_click()
+      view |> element("button[phx-click=critique]") |> render_click()
+      render_async(view)
+
+      assert has_element?(view, ".seo-critique li", "The description is generic.")
+      assert has_element?(view, ".seo-critique li", "Name the city.")
+      refute has_element?(view, ".seo-critique li", "A fourth point")
+      assert description(page) == "Reviewed page with a description"
+    end
   end
 
-  defp configure_ai do
-    previous = Application.get_env(:brando, Brando.AI)
-
-    Application.put_env(:brando, Brando.AI,
-      enabled: true,
-      default_model: "openai:gpt-4o-mini",
-      providers: [openai: [api_key: "test-key"]]
-    )
-
-    on_exit(fn ->
-      if previous, do: Application.put_env(:brando, Brando.AI, previous), else: Application.delete_env(:brando, Brando.AI)
-    end)
+  defp description(page) do
+    {:ok, page} = Pages.get_page(%{matches: %{id: page.id}})
+    page.meta_description
   end
+
+  defp configure_ai, do: Brando.AIStub.configure(shared: true)
 end

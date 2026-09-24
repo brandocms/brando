@@ -34,8 +34,9 @@ defmodule Brando.SEO.Generate do
   @doc """
   Generates `field` for one entry and writes it.
 
-  Returns `{:ok, %{text: text, entry: entry}}` with the updated entry, so the
-  caller can re-score the row it came from without reading it again.
+  Returns `{:ok, %{text: text, entry: entry, model: model}}` with the updated
+  entry, so the caller can re-score the row it came from without reading it
+  again.
 
   ## Options
 
@@ -44,7 +45,7 @@ defmodule Brando.SEO.Generate do
     * `:persist` — set to `false` to return the text without writing it.
   """
   @spec generate(module(), integer() | String.t(), atom(), map() | atom(), keyword()) ::
-          {:ok, %{text: String.t(), entry: map() | nil}} | {:error, term()}
+          {:ok, %{text: String.t(), entry: map() | nil, model: String.t()}} | {:error, term()}
   def generate(schema, id, field \\ :meta_description, user \\ :system, opts \\ [])
 
   def generate(_schema, _id, field, _user, _opts) when field not in @fields,
@@ -53,17 +54,30 @@ defmodule Brando.SEO.Generate do
   def generate(schema, id, field, user, opts) do
     with {:ok, entry} <- fetch(schema, id),
          {:ok, prompt, ai_opts} <- prompt_for(schema, entry, field, opts),
-         {:ok, %{text: text}} <- AI.generate_text(prompt, ai_opts) do
+         {:ok, %{text: text, model: model}} <- AI.generate_text(prompt, ai_opts) do
       text = trim_to_length(text, field)
 
       if Keyword.get(opts, :persist, true) do
-        with {:ok, entry} <- persist(schema, id, field, text, user) do
-          {:ok, %{text: text, entry: entry}}
+        with {:ok, entry} <- write(schema, id, field, text, user) do
+          {:ok, %{text: text, entry: entry, model: model}}
         end
       else
-        {:ok, %{text: text, entry: entry}}
+        {:ok, %{text: text, entry: entry, model: model}}
       end
     end
+  end
+
+  @doc """
+  Writes `text` to `field` on the entry through its context's update, so
+  revisions and `updated_by` apply as for any other edit.
+  """
+  @spec write(module(), integer() | String.t(), atom(), String.t(), map() | atom()) ::
+          {:ok, map()} | {:error, term()}
+  def write(schema, id, field, text, user) when field in @fields do
+    context = schema.__modules__().context
+    singular = schema.__naming__().singular
+
+    apply(context, :"update_#{singular}", [id, %{field => text}, user])
   end
 
   @doc """
@@ -76,7 +90,11 @@ defmodule Brando.SEO.Generate do
           {:ok, String.t(), keyword()} | {:error, term()}
   def prompt_for(schema, entry, field, opts \\ []) do
     ai_opts = AI.field_ai_opts(schema, field)
-    fields = Keyword.get(opts, :context_fields) || context_fields(schema, ai_opts)
+
+    fields =
+      Keyword.get(opts, :context_fields) || stored_context_fields(schema, entry_language(entry)) ||
+        context_fields(schema, ai_opts)
+
     values = Context.for_entry(entry, fields, length: @context_length)
 
     case values do
@@ -153,7 +171,9 @@ defmodule Brando.SEO.Generate do
     end
   end
 
-  defp fetch(schema, id) do
+  @doc "Reads entry `id` of `schema` through its context."
+  @spec fetch(module(), integer() | String.t()) :: {:ok, map()} | {:error, term()}
+  def fetch(schema, id) do
     context = schema.__modules__().context
     singular = schema.__naming__().singular
 
@@ -162,13 +182,6 @@ defmodule Brando.SEO.Generate do
       {:error, _} = error -> error
       _ -> {:error, :not_found}
     end
-  end
-
-  defp persist(schema, id, field, text, user) do
-    context = schema.__modules__().context
-    singular = schema.__naming__().singular
-
-    apply(context, :"update_#{singular}", [id, %{field => text}, user])
   end
 
   @doc """
@@ -220,12 +233,9 @@ defmodule Brando.SEO.Generate do
     end
   end
 
-  defp language_name(entry) do
-    entry
-    |> Map.get(:language)
-    |> Kernel.||(Brando.config(:default_language))
-    |> AI.language_name()
-  end
+  defp language_name(entry), do: entry |> entry_language() |> AI.language_name()
+
+  defp entry_language(entry), do: to_string(Map.get(entry, :language) || Brando.config(:default_language))
 
   defp to_trimmed(value) when is_binary(value), do: String.trim(value)
   defp to_trimmed(_), do: ""

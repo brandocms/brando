@@ -4,12 +4,16 @@ defmodule BrandoAdmin.Sites.SEOLive do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.AI
+  alias Brando.SEO.Analyze
   alias Brando.SEO.Audit
   alias Brando.SEO.Generate
+  alias Brando.SEO.Suggestions
   alias Brando.Sites
   alias BrandoAdmin.Components.Form
 
   def mount(_params, %{"user_token" => token}, socket) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), Suggestions.topic())
+
     {:ok,
      socket
      |> assign_current_user(token)
@@ -98,6 +102,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
           ai_context_fields={@ai_context_fields}
           picker_open={@picker_open}
           generating={@generating}
+          suggestions={@suggestions}
+          batch_confirm={@batch_confirm}
+          accepting_all={@accepting_all}
+          critiques={@critiques}
         />
       </div>
     </div>
@@ -130,6 +138,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
   attr :ai_context_fields, :map
   attr :picker_open, :boolean
   attr :generating, :any
+  attr :suggestions, :list
+  attr :batch_confirm, :boolean
+  attr :accepting_all, :boolean
+  attr :critiques, :map
 
   defp content_audit(assigns) do
     ~H"""
@@ -193,6 +205,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
       <%= if @audit && @audit_status == :done do %>
         <.overview audit={@audit} />
+
+        <.batch
+          :if={@ai_available}
+          candidates={batch_candidates(@audit, @suggestions)}
+          confirm={@batch_confirm}
+          max={Suggestions.max_batch()}
+        />
+        <.suggestions :if={@suggestions != []} suggestions={@suggestions} accepting_all={@accepting_all} />
 
         <BrandoAdmin.Components.Workspace.empty
           :if={@audit.rows == []}
@@ -292,7 +312,18 @@ defmodule BrandoAdmin.Sites.SEOLive do
                               {if row.meta_description, do: gettext("Rewrite description"), else: gettext("Write description")}
                             <% end %>
                           </button>
+                          <button
+                            :if={@ai_available and row.meta_description}
+                            type="button"
+                            class="seo-row-action"
+                            phx-click="critique"
+                            phx-value-key={key}
+                            disabled={@critiques[key] == :running}
+                          >
+                            {gettext("Review with AI")}
+                          </button>
                         </div>
+                        <.critique :if={@critiques[key]} critique={@critiques[key]} />
                       </div>
                     </div>
                   </td>
@@ -303,6 +334,140 @@ defmodule BrandoAdmin.Sites.SEOLive do
         </div>
       <% end %>
     </section>
+    """
+  end
+
+  attr :candidates, :list
+  attr :confirm, :boolean
+  attr :max, :integer
+
+  # Bulk writing asks first: every entry is a paid request, and the count and
+  # the cap should be read before anything is sent.
+  defp batch(assigns) do
+    assigns = assign(assigns, :count, min(length(assigns.candidates), assigns.max))
+
+    ~H"""
+    <div :if={@candidates != []} class="seo-batch" id="seo-batch">
+      <p :if={!@confirm}>
+        {ngettext(
+          "One entry has no meta description.",
+          "%{count} entries have no meta description.",
+          length(@candidates)
+        )}
+      </p>
+      <p :if={@confirm}>
+        {ngettext(
+          "Writes a description for one entry. Nothing is saved until you accept it.",
+          "Writes descriptions for %{count} entries. Nothing is saved until you accept them.",
+          @count
+        )}
+        <span :if={length(@candidates) > @max}>
+          {gettext("At most %{max} per run; run it again for the rest.", max: @max)}
+        </span>
+      </p>
+      <div class="seo-batch-actions">
+        <button :if={!@confirm} type="button" class="workspace-button" phx-click="confirm_batch">
+          {gettext("Write missing descriptions")}
+        </button>
+        <button :if={@confirm} type="button" class="workspace-button primary" phx-click="start_batch">
+          {ngettext("Write one description", "Write %{count} descriptions", @count)}
+        </button>
+        <button :if={@confirm} type="button" class="workspace-button" phx-click="cancel_batch">
+          {gettext("Cancel")}
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  attr :suggestions, :list
+  attr :accepting_all, :boolean
+
+  defp suggestions(assigns) do
+    assigns =
+      assign(assigns, :counts, Enum.frequencies_by(assigns.suggestions, & &1.status))
+
+    ~H"""
+    <section class="seo-suggestions" id="seo-suggestions" aria-labelledby="seo-suggestions-heading">
+      <header class="seo-suggestions-heading">
+        <div>
+          <h3 id="seo-suggestions-heading">{gettext("Suggested descriptions")}</h3>
+          <p role="status" aria-live="polite">
+            <span :if={@counts[:queued]}>{gettext("%{count} being written", count: @counts[:queued])}</span>
+            <span :if={@counts[:pending]}>{gettext("%{count} to review", count: @counts[:pending])}</span>
+            <span :if={@counts[:failed]}>{gettext("%{count} failed", count: @counts[:failed])}</span>
+          </p>
+        </div>
+        <button
+          :if={@counts[:pending]}
+          type="button"
+          class="workspace-button primary"
+          phx-click="accept_all_suggestions"
+          disabled={@accepting_all}
+        >
+          {if @accepting_all, do: gettext("Saving…"), else: gettext("Accept all")}
+        </button>
+      </header>
+      <ul class="seo-suggestion-list">
+        <li
+          :for={suggestion <- @suggestions}
+          id={"seo-suggestion-#{suggestion.id}"}
+          class="seo-suggestion"
+          data-status={suggestion.status}
+        >
+          <div class="seo-suggestion-entry">
+            <strong>{suggestion.title}</strong>
+            <small>{suggestion_schema_name(suggestion)}</small>
+          </div>
+          <p :if={suggestion.status == :queued} class="seo-suggestion-note">
+            <span class="seo-spinner" aria-hidden="true"></span>{gettext("Writing…")}
+          </p>
+          <div :if={suggestion.status == :failed} class="seo-suggestion-failed">
+            <p role="alert">{suggestion.error}</p>
+            <button type="button" class="workspace-button" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
+              {gettext("Dismiss")}
+            </button>
+          </div>
+          <form :if={suggestion.status == :pending} class="seo-suggestion-form" phx-submit="accept_suggestion">
+            <input type="hidden" name="suggestion_id" value={suggestion.id} />
+            <%!-- Ignored after mount so an edit survives other suggestions arriving. --%>
+            <textarea
+              id={"seo-suggestion-text-#{suggestion.id}"}
+              name="text"
+              rows="3"
+              phx-update="ignore"
+              aria-label={gettext("Suggested description for %{title}", title: suggestion.title)}
+            >{suggestion.text}</textarea>
+            <div class="seo-suggestion-actions">
+              <button type="submit" class="workspace-button primary">{gettext("Accept")}</button>
+              <button type="button" class="workspace-button" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
+                {gettext("Reject")}
+              </button>
+            </div>
+          </form>
+        </li>
+      </ul>
+    </section>
+    """
+  end
+
+  attr :critique, :any
+
+  defp critique(assigns) do
+    ~H"""
+    <div class="seo-critique" role="status" aria-live="polite">
+      <%= case @critique do %>
+        <% :running -> %>
+          <p><span class="seo-spinner" aria-hidden="true"></span>{gettext("Reviewing…")}</p>
+        <% {:ok, points} -> %>
+          <h4>{gettext("AI review")}</h4>
+          <ul>
+            <li :for={point <- points}>{point}</li>
+          </ul>
+        <% {:error, message} -> %>
+          <p class="error">{message}</p>
+      <% end %>
+    </div>
     """
   end
 
@@ -551,6 +716,64 @@ defmodule BrandoAdmin.Sites.SEOLive do
     end
   end
 
+  def handle_event("critique", %{"key" => key}, socket) do
+    %{audit: audit, ai_available: available?} = socket.assigns
+    row = audit && Enum.find(audit.rows, &(row_key(&1) == key))
+
+    if available? and row do
+      run = fn -> Analyze.critique(row.schema, row.id) end
+
+      {:noreply,
+       socket
+       |> update(:critiques, &Map.put(&1, key, :running))
+       |> start_async({:critique, key}, in_captured_context(socket, run))}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("confirm_batch", _params, socket), do: {:noreply, assign(socket, :batch_confirm, true)}
+  def handle_event("cancel_batch", _params, socket), do: {:noreply, assign(socket, :batch_confirm, false)}
+
+  def handle_event("start_batch", _params, socket) do
+    %{audit: audit, suggestions: suggestions, audit_language: language, current_user: user} = socket.assigns
+
+    if socket.assigns.ai_available and audit do
+      {:ok, count} = Suggestions.enqueue(batch_candidates(audit, suggestions), language, user)
+      send(self(), {:toast, ngettext("Writing one description", "Writing %{count} descriptions", count)})
+      {:noreply, socket |> assign(:batch_confirm, false) |> assign_suggestions()}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("accept_suggestion", %{"suggestion_id" => id} = params, socket) do
+    case Suggestions.accept(id, params["text"], socket.assigns.current_user) do
+      {:ok, suggestion} ->
+        send(self(), {:toast, gettext("Description saved")})
+        {:noreply, socket |> forget_critique(suggestion) |> assign_suggestions() |> start_audit()}
+
+      {:error, reason} ->
+        send(self(), {:toast, save_error(reason)})
+        {:noreply, assign_suggestions(socket)}
+    end
+  end
+
+  def handle_event("reject_suggestion", %{"id" => id}, socket) do
+    Suggestions.reject(id, socket.assigns.current_user)
+    {:noreply, assign_suggestions(socket)}
+  end
+
+  def handle_event("accept_all_suggestions", _params, socket) do
+    %{audit_language: language, current_user: user} = socket.assigns
+    run = fn -> Suggestions.accept_all(language, user) end
+
+    {:noreply,
+     socket
+     |> assign(:accepting_all, true)
+     |> start_async(:accept_all, in_captured_context(socket, run))}
+  end
+
   def handle_event("toggle_row", %{"key" => key}, socket) do
     expanded = socket.assigns.expanded
 
@@ -574,7 +797,12 @@ defmodule BrandoAdmin.Sites.SEOLive do
   # description up from the database rather than from the reply.
   def handle_async({:generate, key}, {:ok, {:ok, _generated}}, socket) do
     send(self(), {:toast, gettext("Description written")})
-    {:noreply, socket |> update(:generating, &MapSet.delete(&1, key)) |> start_audit()}
+
+    {:noreply,
+     socket
+     |> update(:generating, &MapSet.delete(&1, key))
+     |> update(:critiques, &Map.delete(&1, key))
+     |> start_audit()}
   end
 
   def handle_async({:generate, key}, {:ok, {:error, reason}}, socket) do
@@ -585,6 +813,36 @@ defmodule BrandoAdmin.Sites.SEOLive do
   def handle_async({:generate, key}, {:exit, _reason}, socket) do
     send(self(), {:toast, AI.error_message(:failed)})
     {:noreply, update(socket, :generating, &MapSet.delete(&1, key))}
+  end
+
+  def handle_async({:critique, key}, {:ok, {:ok, points}}, socket) do
+    {:noreply, update(socket, :critiques, &Map.put(&1, key, {:ok, points}))}
+  end
+
+  def handle_async({:critique, key}, {:ok, {:error, reason}}, socket) do
+    {:noreply, update(socket, :critiques, &Map.put(&1, key, {:error, AI.error_message(reason)}))}
+  end
+
+  def handle_async({:critique, key}, {:exit, _reason}, socket) do
+    {:noreply, update(socket, :critiques, &Map.put(&1, key, {:error, AI.error_message(:failed)}))}
+  end
+
+  def handle_async(:accept_all, result, socket) do
+    case result do
+      {:ok, {accepted, 0}} ->
+        send(self(), {:toast, ngettext("One description saved", "%{count} descriptions saved", accepted)})
+
+      {:ok, {accepted, failed}} ->
+        send(
+          self(),
+          {:toast, gettext("%{accepted} saved, %{failed} could not be saved", accepted: accepted, failed: failed)}
+        )
+
+      {:exit, _reason} ->
+        send(self(), {:toast, gettext("Could not save the descriptions")})
+    end
+
+    {:noreply, socket |> assign(:accepting_all, false) |> assign_suggestions() |> start_audit()}
   end
 
   defp assign_current_user(socket, token) do
@@ -611,6 +869,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
     |> assign(:include_drafts, false)
     |> assign(:expanded, MapSet.new())
     |> assign(:generating, MapSet.new())
+    |> assign(:critiques, %{})
+    |> assign(:suggestions, [])
+    |> assign(:batch_confirm, false)
+    |> assign(:accepting_all, false)
     |> assign(:ai_available, AI.configured?())
     |> assign(:picker_open, false)
     |> assign(:audit_language, content_language(socket))
@@ -637,8 +899,40 @@ defmodule BrandoAdmin.Sites.SEOLive do
     socket
     |> assign(:audit_status, :running)
     |> assign(:audit_language, language)
+    |> assign_suggestions()
     |> start_async(:audit, in_captured_context(socket, run))
   end
+
+  defp assign_suggestions(socket) do
+    assign(socket, :suggestions, Suggestions.list_open(socket.assigns.audit_language))
+  end
+
+  # Entries with no description of their own, less those a suggestion is
+  # already on its way for or waiting on review.
+  defp batch_candidates(audit, suggestions) do
+    waiting = MapSet.new(suggestions, &{&1.schema, &1.entry_id})
+
+    Enum.filter(audit.rows, fn row ->
+      not MapSet.member?(waiting, {inspect(row.schema), row.id}) and
+        Enum.any?(row.checks, &(&1.key == :meta_description_present and &1.status == :fail))
+    end)
+  end
+
+  defp forget_critique(socket, suggestion) do
+    key = "#{String.replace(suggestion.schema, ".", "-")}-#{suggestion.entry_id}"
+    update(socket, :critiques, &Map.delete(&1, key))
+  end
+
+  defp suggestion_schema_name(suggestion) do
+    case Brando.SEO.Suggestion.schema_module(suggestion) do
+      nil -> suggestion.schema
+      schema -> Brando.Blueprint.get_singular(schema)
+    end
+  end
+
+  defp save_error(:not_found), do: gettext("This suggestion was already reviewed")
+  defp save_error(:empty), do: gettext("Write a description before accepting it")
+  defp save_error(_), do: gettext("Could not save the description")
 
   defp in_captured_context(socket, fun) do
     scope = Brando.Authorization.Boundary.current_scope()
@@ -723,6 +1017,12 @@ defmodule BrandoAdmin.Sites.SEOLive do
     else
       {:noreply, assign(socket, audit: nil, audit_status: :idle)}
     end
+  end
+
+  def handle_info({:seo_suggestions_updated, language}, socket) do
+    if language == socket.assigns.audit_language,
+      do: {:noreply, assign_suggestions(socket)},
+      else: {:noreply, socket}
   end
 
   def handle_info({:EXIT, _port, :normal}, socket) do
