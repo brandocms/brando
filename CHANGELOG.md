@@ -406,6 +406,16 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   description against its content — at most three points, in the admin
   language, never written anywhere.
 - The Content SEO tab and its checks are translated into Norwegian.
+- **Write alt text with AI**: Assets → Images → Alt text lists images without
+  alt text, estimates what describing them would cost with the configured
+  model (from ReqLLM's catalogue prices and each image's size, via
+  `Brando.AI.Cost`), and describes them in the background from a mid-sized
+  rendition. Suggestions wait for review — edit, accept, reject or accept all —
+  and accepting writes the image's own `alt`, in the default language. Uses
+  the `:alt` field's AI options (`config :brando, Brando.AI, fields: [alt:
+  [model: ...]]`) and refuses models that cannot read images. The image
+  library links to it with the missing count, and so does the Content SEO
+  image check. `Brando.AI.generate_text/2` now also takes ReqLLM messages.
 - Content SEO checks **heading structure** (at most one H1 in the body, no
   skipped levels), **image alt text** (present, not a filename or a generic
   word) and **language versions** (a published translation much longer, with

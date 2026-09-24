@@ -35,6 +35,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       |> assign(:visible_image_count, 0)
       |> assign(:current_folder_config_target, "default")
       |> assign(:clipboard_ids, [])
+      |> assign(:missing_alt_count, Brando.Images.AltText.missing_count())
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -199,7 +200,18 @@ defmodule BrandoAdmin.Images.ImageListLive do
       <Workspace.header
         title={gettext("Images")}
         subtitle={gettext("Browse folders, upload images, and manage your library.")}
-      />
+      >
+        <.link
+          navigate={Brando.routes().admin_live_path(@socket, BrandoAdmin.Images.AltTextLive)}
+          class="workspace-button"
+          data-testid="alt-text-link"
+        >
+          {gettext("Alt text")}
+          <span :if={@missing_alt_count > 0} class="alt-text-missing">
+            {ngettext("%{count} missing", "%{count} missing", @missing_alt_count)}
+          </span>
+        </.link>
+      </Workspace.header>
 
       <.live_component
         module={FileBrowser}

@@ -78,7 +78,12 @@ defmodule Brando.AI do
     end
   end
 
-  def generate_text(prompt, ai_opts \\ []) when is_binary(prompt) do
+  @doc """
+  Sends `prompt` to the configured model. `prompt` is a string, or a list of
+  `ReqLLM.Message`s / a `ReqLLM.Context` when it carries more than text, such
+  as an image (`ReqLLM.Message.ContentPart.image/2`).
+  """
+  def generate_text(prompt, ai_opts \\ []) when is_binary(prompt) or is_list(prompt) or is_struct(prompt) do
     ai_opts = normalize_ai_opts(ai_opts)
 
     with true <- enabled?(),
@@ -101,6 +106,32 @@ defmodule Brando.AI do
       false -> {:error, :disabled}
       error -> {:error, error}
     end
+  end
+
+  @doc """
+  What the model `ai_opts` resolve to costs and can read, from ReqLLM's model
+  catalogue: `{:ok, %{spec, input_price, output_price, image_input?}}`, prices
+  in USD per million tokens and `nil` when the catalogue has none.
+  """
+  @spec model_info(keyword() | map()) :: {:ok, map()} | {:error, term()}
+  def model_info(ai_opts \\ []) do
+    with {:ok, spec} <- resolve_model(normalize_ai_opts(ai_opts)),
+         {:ok, model} <- ReqLLM.model(spec) do
+      cost = Map.get(model, :cost) || %{}
+      input_modalities = get_in(Map.get(model, :modalities) || %{}, [:input]) || []
+
+      {:ok,
+       %{
+         spec: spec,
+         provider: model.provider,
+         model_id: model.id,
+         input_price: cost[:input],
+         output_price: cost[:output],
+         image_input?: :image in input_modalities
+       }}
+    end
+  rescue
+    _ -> {:error, :unknown_model}
   end
 
   @doc """
@@ -129,6 +160,9 @@ defmodule Brando.AI do
   def error_message(:empty_response), do: gettext("AI returned an empty response")
   def error_message(:invalid_field_name), do: gettext("Could not update this field from AI response")
   def error_message(:no_context), do: gettext("This entry has no text to describe")
+  def error_message(:no_image_input), do: gettext("The configured AI model cannot read images")
+  def error_message(:unsupported_format), do: gettext("The image is in a format the AI model cannot read")
+  def error_message(:image_file_missing), do: gettext("The image file could not be read")
   def error_message(_), do: gettext("Failed to generate text with AI")
 
   def normalize_ai_opts(nil), do: []
