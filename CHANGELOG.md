@@ -25,7 +25,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `<.picture>` takes a `language:` opt and otherwise uses the request's
   locale. `Brando.Villain.map_images/2` takes the language for Liquid
   templates. Run `mix brando.gen.migrations` for `brando_180` and
-  `brando_181`.
+  `brando_181`. `mix brando.migrate55` lists application code that looks like
+  it reads these fields as strings (by name: the Blueprints' image asset
+  fields and common image variable names), and `mix brando.check.image_texts`
+  lists module, container and menu templates in the database that print them
+  without the `i18n` filter — `{{ entry.cover.alt | i18n }}`. Both only
+  report. Neither can see JSON built from an image, which now carries the
+  maps.
 
 - **`trait :creator` adds two columns.** Every schema with the creator trait now
   has `updated_by_id` and `edited_at`. Run `mix brando.gen.migrations` for
