@@ -11,10 +11,15 @@ defmodule E2eProjectWeb.Endpoint do
   ]
 
   if Application.compile_env(:e2e_project, :sql_sandbox) do
+    # The Playwright fixture checks each test's sandbox back in at teardown
+    # (test-support/setupAuth.js), so this timeout is only a backstop for a
+    # leaked sandbox. It must outlast the longest `test.setTimeout` (240s):
+    # once it fires, every query the test's LiveViews make fails, and a slow
+    # test dies on its database instead of finishing within its own budget.
     plug Phoenix.Ecto.SQL.Sandbox,
       at: "/sandbox",
       repo: E2eProject.Repo,
-      timeout: 60_000
+      timeout: 300_000
   end
 
   socket "/admin/socket", BrandoAdmin.AdminSocket,

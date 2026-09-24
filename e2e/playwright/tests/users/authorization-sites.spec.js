@@ -91,11 +91,16 @@ test('simultaneous editors never share fields or blocks across environments', as
 
   await owner.getByLabel('Title', { exact: true }).fill('Private production draft')
   await owner.getByLabel('Title', { exact: true }).blur()
+  // The picked module renders after the click is answered, so wait for the new
+  // block before typing — until then `last()` is the page's existing header.
+  const ownerHeaders = owner.locator('.header-block textarea')
+  const ownerHeaderCount = await ownerHeaders.count()
   await owner.getByRole('button', { name: 'Add block', exact: true }).last().click()
   await owner.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
   await owner.getByRole('button', { name: 'Styled Header' }).click()
-  await owner.locator('.header-block textarea').last().fill('Private production block')
-  await owner.locator('.header-block textarea').last().blur()
+  await expect(ownerHeaders).toHaveCount(ownerHeaderCount + 1)
+  await ownerHeaders.last().fill('Private production block')
+  await ownerHeaders.last().blur()
   await awaitBlockShip(owner)
 
   // Saving the receiver exposes any leaked field or block snapshot as a real write.
