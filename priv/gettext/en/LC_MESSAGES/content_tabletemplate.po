@@ -11,22 +11,22 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
 
-#: lib/brando/content/table_template.ex:50
+#: lib/brando/content/table_template.ex:53
 #, elixir-autogen, elixir-format
 msgid "Columns"
 msgstr ""
 
-#: lib/brando/content/table_template.ex:42
+#: lib/brando/content/table_template.ex:45
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/content/table_template.ex:76
+#: lib/brando/content/table_template.ex:79
 #, elixir-autogen, elixir-format
 msgid "table template"
 msgstr ""
 
-#: lib/brando/content/table_template.ex:77
+#: lib/brando/content/table_template.ex:80
 #, elixir-autogen, elixir-format
 msgid "table templates"
 msgstr ""

@@ -1,0 +1,82 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/brando/sites/identity.ex:243
+#, elixir-autogen, elixir-format
+msgid "Alternate names"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:253
+#, elixir-autogen, elixir-format
+msgid "Area served"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:232
+#, elixir-autogen, elixir-format
+msgid "Description"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:254
+#, elixir-autogen, elixir-format
+msgid "Leave empty to inherit the organization's markets"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:233
+#, elixir-autogen, elixir-format
+msgid "Leave empty to use the linked page's meta description"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:229
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:250
+#, elixir-autogen, elixir-format
+msgid "Only when the service has no page of its own"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:244
+#, elixir-autogen, elixir-format
+msgid "Other phrasings and the other language's wording, one per row"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:238
+#, elixir-autogen, elixir-format
+msgid "Page"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:246
+#, elixir-autogen, elixir-format
+msgid "Service type"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:240
+#, elixir-autogen, elixir-format
+msgid "The page that presents this service; supplies its URL and description"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:249
+#, elixir-autogen, elixir-format
+msgid "URL"
+msgstr ""
+
+#: lib/brando/sites/service.ex:51
+#, elixir-autogen, elixir-format
+msgid "service"
+msgstr ""
+
+#: lib/brando/sites/service.ex:52
+#, elixir-autogen, elixir-format
+msgid "services"
+msgstr ""

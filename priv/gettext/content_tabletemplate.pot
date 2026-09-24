@@ -11,22 +11,22 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/table_template.ex:51
+#: lib/brando/content/table_template.ex:53
 #, elixir-autogen, elixir-format
 msgid "Columns"
 msgstr ""
 
-#: lib/brando/content/table_template.ex:43
+#: lib/brando/content/table_template.ex:45
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/content/table_template.ex:77
+#: lib/brando/content/table_template.ex:79
 #, elixir-autogen, elixir-format
 msgid "table template"
 msgstr ""
 
-#: lib/brando/content/table_template.ex:78
+#: lib/brando/content/table_template.ex:80
 #, elixir-autogen, elixir-format
 msgid "table templates"
 msgstr ""

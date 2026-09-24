@@ -11,73 +11,73 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
 
-#: lib/brando/images/image.ex:82
+#: lib/brando/images/image.ex:123
 #, elixir-autogen, elixir-format
 msgid "Alt. text"
 msgstr ""
 
-#: lib/brando/images/image.ex:91
+#: lib/brando/images/image.ex:132
 #, elixir-autogen, elixir-format
 msgid "Asset has been transferred to CDN"
 msgstr ""
 
-#: lib/brando/images/image.ex:90
+#: lib/brando/images/image.ex:131
 #, elixir-autogen, elixir-format
 msgid "CDN"
 msgstr ""
 
-#: lib/brando/images/image.ex:52
+#: lib/brando/images/image.ex:68
 #, elixir-autogen, elixir-format
 msgid "Config target"
 msgstr ""
 
-#: lib/brando/images/image.ex:96
+#: lib/brando/images/image.ex:137
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr ""
 
-#: lib/brando/images/image.ex:81
+#: lib/brando/images/image.ex:122
 #, elixir-autogen, elixir-format
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/images/image.ex:95
+#: lib/brando/images/image.ex:136
 #, elixir-autogen, elixir-format
 msgid "Dominant color"
 msgstr ""
 
-#: lib/brando/images/image.ex:94
+#: lib/brando/images/image.ex:135
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr ""
 
-#: lib/brando/images/image.ex:51
-#: lib/brando/images/image.ex:83
+#: lib/brando/images/image.ex:67
+#: lib/brando/images/image.ex:124
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr ""
 
-#: lib/brando/images/image.ex:80
+#: lib/brando/images/image.ex:121
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/images/image.ex:93
+#: lib/brando/images/image.ex:134
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""
 
-#: lib/brando/images/image.ex:99
+#: lib/brando/images/image.ex:140
 #, elixir-autogen, elixir-format
 msgid "Focal"
 msgstr ""
 
-#: lib/brando/images/image.ex:114
+#: lib/brando/images/image.ex:155
 #, elixir-autogen, elixir-format
 msgid "image"
 msgstr ""
 
-#: lib/brando/images/image.ex:115
+#: lib/brando/images/image.ex:156
 #, elixir-autogen, elixir-format
 msgid "images"
 msgstr ""

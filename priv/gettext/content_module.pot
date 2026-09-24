@@ -31,12 +31,12 @@ msgstr ""
 msgid "Namespace"
 msgstr ""
 
-#: lib/brando/content/module.ex:235
+#: lib/brando/content/module.ex:241
 #, elixir-autogen, elixir-format
 msgid "module"
 msgstr ""
 
-#: lib/brando/content/module.ex:236
+#: lib/brando/content/module.ex:242
 #, elixir-autogen, elixir-format
 msgid "modules"
 msgstr ""
@@ -44,4 +44,9 @@ msgstr ""
 #: lib/brando/content/module.ex:146
 #, elixir-autogen, elixir-format
 msgid "Code"
+msgstr ""
+
+#: lib/brando/content/module.ex:157
+#, elixir-autogen, elixir-format
+msgid "Export DSL files"
 msgstr ""

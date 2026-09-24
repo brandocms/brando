@@ -11,17 +11,17 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
 
-#: lib/brando/sites/seo.ex:84
+#: lib/brando/sites/seo.ex:98
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:85
+#: lib/brando/sites/seo.ex:99
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:86
+#: lib/brando/sites/seo.ex:100
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr ""
