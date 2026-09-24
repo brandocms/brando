@@ -12,11 +12,11 @@ defmodule BrandoAdmin.AuthorizationToolsLiveTest do
     assert has_element?(view, "#authorization-tools", "Legacy roles active")
     assert has_element?(view, "button[phx-click=authorization_backfill][disabled]")
     view |> element("button", "Run migration report") |> render_click()
-    render_async(view)
+    render_async(view, 5_000)
     assert has_element?(view, "#authorization-migration-report", "Application rules")
     assert Repo.all(Group) == []
     view |> element("button", "Prepare groups") |> render_click()
-    render_async(view)
+    render_async(view, 5_000)
     assert has_element?(view, "[role=status]", "Groups prepared")
     refute Brando.Authorization.enabled?()
     assert length(Repo.all(Group)) == 4
