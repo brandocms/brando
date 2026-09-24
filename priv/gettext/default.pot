@@ -9589,3 +9589,468 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Crop settings"
 msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "SEO sections"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Content SEO"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Score %{score} of 100"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Published entries with a page of their own, checked for a meta title and description, an image, a URL and copy shared with other entries. Language: %{language}."
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Run again"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Include drafts"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Auditing entries…"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "The audit could not run."
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to audit"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "No published entries in the selected content types for this language."
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Audited entries"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Score"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Issues"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Hide"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Check"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "(no description — the site fallback is shown)"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open entry"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Writing…"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rewrite description"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Write description"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review with AI"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "One entry has no meta description."
+msgid_plural "%{count} entries have no meta description."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Writes a description for one entry. Nothing is saved until you accept it."
+msgid_plural "Writes descriptions for %{count} entries. Nothing is saved until you accept them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "At most %{max} per run; run it again for the rest."
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Write missing descriptions"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Write one description"
+msgid_plural "Write %{count} descriptions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Suggested descriptions"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} being written"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} to review"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} failed"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Accept all"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Suggested description for %{title}"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Accept"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reject"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reviewing…"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "AI review"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "What the AI reads"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry fields a generated description is written from. Block fields are read from the last rendered version of the entry."
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Audited"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Missing description"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Missing image"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "No URL"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Thin content"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drafts not audited"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "checked"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "not generated"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Missing redirects"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requested URLs that no longer exist but match an entry's slug. Creating a redirect adds it to the settings."
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requested"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Suggested destination"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Close match — check before creating"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicates"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the redirect"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not store the AI context fields"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Writing one description"
+msgid_plural "Writing %{count} descriptions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Description saved"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Description written"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "One description saved"
+msgid_plural "%{count} descriptions saved"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{accepted} saved, %{failed} could not be saved"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the descriptions"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "This suggestion was already reviewed"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Write a description before accepting it"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the description"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} +%{count}"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Warning"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not checked"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Meta title"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Set a meta title; the site fallback is used otherwise."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Meta title length"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Meta description"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Write a meta description; search results show the site fallback otherwise."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Meta description length"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Own description"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "This entry repeats the site fallback description; write one about this page."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Add a meta image or a cover image so shares get a picture."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "The meta title and description are identical."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "The description opens by repeating the title."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Title differs from description"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Unique title"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Unique description"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "The entry has no resolvable URL; check its slug and the blueprint's absolute_url."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "In sitemap"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Not in the generated sitemap. Check the sitemap module, or regenerate it."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Content length"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Thin content: aim for at least %{count} words of body text."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} words"
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Shared with %{count} other entries in this language."
+msgstr ""
+
+#: lib/brando/seo/checks.ex
+#, elixir-autogen, elixir-format
+msgid "Aim for %{min}–%{max} characters."
+msgstr ""
+
+#: lib/brando/ai.ex
+#, elixir-autogen, elixir-format
+msgid "This entry has no text to describe"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry cannot be saved until these fields are fixed: %{fields}"
+msgstr ""

@@ -54,6 +54,17 @@ test('the content SEO tab audits published pages', async ({ page }, testInfo) =>
 
     await chip.click()
     await syncLV(page)
+
+    // Bulk writing asks before it sends anything; cancelling leaves it unasked.
+    const batch = audit.locator('.seo-batch')
+    if (await batch.count()) {
+      await batch.locator('button[phx-click="confirm_batch"]').click()
+      await syncLV(page)
+      await expect(batch.locator('button[phx-click="start_batch"]')).toBeVisible()
+      await batch.locator('button[phx-click="cancel_batch"]').click()
+      await syncLV(page)
+      await expect(batch.locator('button[phx-click="confirm_batch"]')).toBeVisible()
+    }
   }
 
   // Drafts toggle re-runs the audit; the table stays populated.
