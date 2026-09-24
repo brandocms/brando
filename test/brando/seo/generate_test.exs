@@ -32,6 +32,17 @@ defmodule Brando.SEO.GenerateTest do
       refute prompt =~ "Vi lager nettsteder"
     end
 
+    test "reads the site's stored pick when the caller passes none" do
+      user = Factory.insert(:random_user)
+      {:ok, _seo} = Generate.store_context_fields(Pages.Page, "en", [:title], user)
+      entry = %Pages.Page{title: "Stored pick", language: "en", rendered_blocks: "<p>Left out</p>"}
+
+      {:ok, prompt, _ai_opts} = Generate.prompt_for(Pages.Page, entry, :meta_description)
+
+      assert prompt =~ "Context:\ntitle: Stored pick"
+      refute prompt =~ "Left out"
+    end
+
     test "refuses an entry with nothing to describe" do
       entry = %Pages.Page{title: nil, language: "en"}
 

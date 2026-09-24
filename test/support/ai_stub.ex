@@ -5,7 +5,9 @@ defmodule Brando.AIStub do
   `Brando.AI` forwards `default_opts` to ReqLLM untouched, so the stub is
   plain configuration: ReqLLM hands `req_http_options: [plug: …]` to Req, and
   the reply below is what OpenAI's Responses API sends back. `Req.Test` stubs
-  follow `$callers`, so `start_async` tasks and inline Oban jobs see them.
+  follow `$callers`, which covers inline Oban jobs; LiveView tests pass
+  `shared: true`, the way `Brando.LiveCase` shares the SQL sandbox, so the
+  view's `start_async` tasks see the stub too.
 
       setup do
         Brando.AIStub.configure()
@@ -14,9 +16,17 @@ defmodule Brando.AIStub do
   """
   import ExUnit.Callbacks, only: [on_exit: 1]
 
-  @doc "Configures a provider and restores the previous configuration on exit."
-  def configure do
+  @doc """
+  Configures a provider and restores the previous configuration on exit.
+  `shared: true` makes the stub global — only for tests that are not async.
+  """
+  def configure(opts \\ []) do
     previous = Application.get_env(:brando, Brando.AI)
+
+    if opts[:shared] do
+      Req.Test.set_req_test_to_shared(%{async: false})
+      on_exit(fn -> Req.Test.set_req_test_to_private() end)
+    end
 
     Application.put_env(:brando, Brando.AI,
       enabled: true,
