@@ -47,7 +47,15 @@ export default app => ({
         labels: readJSON(this.el.dataset.tiptapLabels), labelMode: this.el.dataset.tiptapLabelMode || 'compact', typography: readJSON(this.el.dataset.tiptapTypography),
         accessibility: this._a11y(),
         onFocus: () => this.pushEditorEvent('focus', { field: this._field }),
-        onBlur: () => { if (this.el.dataset.footnotes === 'true' || this.el.closest('.block-slot-drawer')) this.commitInput() },
+        // The hidden input carries phx-debounce but never has focus itself, so
+        // leaving the editor must flush it: otherwise a click on Done, Duplicate
+        // or Add is answered first and the late change re-casts the form from
+        // params that predate it. LiveView sends a pending debounce on the
+        // input's blur event, and does nothing when none is pending.
+        onBlur: () => {
+          if (this.el.dataset.footnotes === 'true' || this.el.closest('.block-slot-drawer')) this.commitInput()
+          else this._input.dispatchEvent(new Event('blur'))
+        },
         onToggleLink: onToggle('link'), onToggleButton: onToggle('button'),
         footnotes: this.el.dataset.footnotes === 'true', footnoteLabels: readFootnoteLabels(this.el),
         onOpenFootnote: (uid, number) => {
