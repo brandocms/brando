@@ -297,6 +297,10 @@
   .seo-duplicate ul { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 0; padding: 0; }
   .seo-duplicate li small { margin-left: 4px; color: var(--workspace-muted); }
 
+  /* The table scrolls inside its region. Without containment its width —
+     long URLs, the traffic columns — propagates up and widens the page. */
+  .seo-audit .workspace-table-scroll { contain: inline-size; }
+
   /* Direct rows and direct children only — the expanded row holds a table of its own. */
   .seo-audit-table > tbody > tr > td > small { display: block; margin-top: 2px; color: var(--workspace-muted); font-size: 11px; }
   .seo-audit-table > tbody > tr > td:nth-child(2) { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
