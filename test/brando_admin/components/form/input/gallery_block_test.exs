@@ -240,6 +240,30 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       assert resulting_overrides(socket) == [{{:image, id}, "Image caption"}, {{:video, id}, nil}]
     end
 
+    test "adding an image the gallery already holds leaves the gallery as it was", ctx do
+      socket = block_socket(ctx.entry_block, ctx.user)
+      before = resulting_media(socket)
+      assert {:image, ctx.shared_id} in before
+
+      {:ok, socket} =
+        Block.update(%{event: "update_ref_data", ref_name: "gallery", add_gallery_image_id: ctx.shared_id}, socket)
+
+      assert resulting_media(socket) == before
+    end
+
+    defp resulting_media(socket) do
+      [ref] =
+        socket.assigns.form.source
+        |> Changeset.apply_changes()
+        |> Map.fetch!(:block)
+        |> Map.fetch!(:refs)
+
+      Enum.map(ref.gallery.gallery_objects, fn
+        %{image_id: id} when not is_nil(id) -> {:image, id}
+        %{video_id: id} -> {:video, id}
+      end)
+    end
+
     defp drop_video_override(entry_block) do
       [ref] = entry_block.block.refs
       overrides = Enum.reject(ref.data.data.gallery_object_overrides, &(&1.object_type == :video))

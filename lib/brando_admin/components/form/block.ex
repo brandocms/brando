@@ -3025,6 +3025,29 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # Add an image to a gallery ref association
   defp add_media_to_gallery_ref(ref_changeset, media_type, media_id, current_user) do
+    if gallery_contains_media?(Changeset.get_field(ref_changeset, :gallery), media_type, media_id) do
+      ref_changeset
+    else
+      do_add_media_to_gallery_ref(ref_changeset, media_type, media_id, current_user)
+    end
+  end
+
+  # A gallery holds each image or video once: its caption override is keyed by
+  # the media, and removing it removes every copy. A second add (a double
+  # click, or a picker selection racing another editor's) is a no-op rather
+  # than a duplicate the editor cannot render.
+  defp gallery_contains_media?(nil, _media_type, _media_id), do: false
+
+  defp gallery_contains_media?(gallery, media_type, media_id) do
+    id_field = media_id_field(media_type)
+    media_id = to_string(media_id)
+
+    Enum.any?(gallery.gallery_objects || [], fn object ->
+      to_string(Map.get(object, id_field)) == media_id
+    end)
+  end
+
+  defp do_add_media_to_gallery_ref(ref_changeset, media_type, media_id, current_user) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
 
     {:ok, media} =
