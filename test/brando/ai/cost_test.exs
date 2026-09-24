@@ -43,7 +43,8 @@ defmodule Brando.AI.CostTest do
   end
 
   test "formats small amounts without rounding them to nothing" do
-    assert Cost.format(0.004) == "< $0.01"
+    assert Cost.format(0.0013) == "$0.0013"
+    assert Cost.format(0.00397) == "$0.0040"
     assert Cost.format(0.126) == "$0.13"
     assert Cost.format(12.5) == "$12.50"
   end

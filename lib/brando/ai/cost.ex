@@ -80,10 +80,19 @@ defmodule Brando.AI.Cost do
 
   def image_tokens(_info, _width, _height), do: @fallback_image_tokens
 
-  @doc "A cost in USD for display, to the cent; under a cent reads as such, not as zero."
-  @spec format(float()) :: String.t()
-  def format(usd) when usd < 0.01, do: "< $0.01"
-  def format(usd), do: "$" <> :erlang.float_to_binary(usd, decimals: 2)
+  @doc """
+  A cost in USD for display: to the cent from a cent up, and to two
+  significant digits below that, so a small amount is shown rather than
+  rounded to nothing.
+  """
+  @spec format(number()) :: String.t()
+  def format(usd) when usd >= 0.01, do: "$" <> :erlang.float_to_binary(usd / 1, decimals: 2)
+  def format(usd) when usd <= 0, do: "$0.00"
+
+  def format(usd) do
+    decimals = 1 - floor(:math.log10(usd))
+    "$" <> :erlang.float_to_binary(Float.round(usd / 1, decimals), decimals: decimals)
+  end
 
   defp check(%{image_input?: false}), do: {:error, :no_image_input}
   defp check(%{input_price: input, output_price: output}) when is_number(input) and is_number(output), do: :ok

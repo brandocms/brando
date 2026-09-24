@@ -8,7 +8,8 @@
 .ai-suggestion { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 8px 16px; padding: 12px 14px; border-bottom: 1px solid #eef2ec; font-size: 12px; }
 .ai-suggestion[data-thumbnail="true"] { grid-template-columns: 96px minmax(0, 200px) minmax(0, 1fr); }
 .ai-suggestion:last-child { border-bottom: 0; }
-.ai-suggestion-thumbnail { width: 96px; height: 72px; object-fit: cover; border-radius: 4px; background: var(--workspace-wash); }
+/* The global img reset sets min-width: 100%, which stretches it in one column. */
+.ai-suggestion-thumbnail { width: 96px; min-width: 0; height: 72px; object-fit: cover; border-radius: 4px; background: var(--workspace-wash); }
 .ai-suggestion-entry { min-width: 0; line-height: 18px; overflow-wrap: anywhere; }
 .ai-suggestion-entry small { display: block; margin-top: 2px; color: var(--workspace-muted); font-size: 11px; }
 .ai-suggestion-note { display: flex; gap: 8px; align-items: center; margin: 0; padding: 0; color: var(--workspace-muted); }

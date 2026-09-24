@@ -8,7 +8,9 @@ defmodule BrandoAdmin.Images.AltTextLiveTest do
   @fixture Path.expand("../../fixtures/sample.jpg", __DIR__)
 
   defp insert_image(attrs) do
-    image = Factory.insert(:image, Map.merge(%{status: :processed, alt: nil}, attrs))
+    base = Path.rootname(attrs.path)
+    sizes = Map.new(~w(thumb small medium large xlarge), &{&1, "#{base}/#{&1}.jpg"})
+    image = Factory.insert(:image, Map.merge(%{status: :processed, alt: nil, sizes: sizes}, attrs))
     target = Path.join(Brando.Tenant.Storage.current_media_root(), AltText.rendition(image))
     File.mkdir_p!(Path.dirname(target))
     File.cp!(@fixture, target)
