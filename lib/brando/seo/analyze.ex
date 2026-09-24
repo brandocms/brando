@@ -21,6 +21,9 @@ defmodule Brando.SEO.Analyze do
   ## Options
 
     * `:language` — the language to answer in. Defaults to the admin locale.
+    * `:queries` — the Google searches the page is shown for
+      (`Brando.SEO.Analytics.top_queries/2`), which the critique then weighs
+      the description against
   """
   @spec critique(module(), integer() | String.t(), keyword()) :: {:ok, [String.t()]} | {:error, term()}
   def critique(schema, id, opts \\ []) do
@@ -28,7 +31,8 @@ defmodule Brando.SEO.Analyze do
 
     with {:ok, entry} <- Generate.fetch(schema, id),
          ai_opts = schema |> AI.field_ai_opts(:meta_description) |> Keyword.take([:model, :api_key]),
-         {:ok, %{text: text}} <- AI.generate_text(prompt(schema, entry, language), ai_opts) do
+         {:ok, %{text: text}} <-
+           AI.generate_text(prompt(schema, entry, language, Keyword.get(opts, :queries, [])), ai_opts) do
       case points(text) do
         [] -> {:error, :empty_response}
         points -> {:ok, points}
@@ -37,8 +41,8 @@ defmodule Brando.SEO.Analyze do
   end
 
   @doc "The prompt `critique/3` sends. Public so it can be read, and tested, without a request."
-  @spec prompt(module(), map(), String.t() | atom()) :: String.t()
-  def prompt(schema, entry, language) do
+  @spec prompt(module(), map(), String.t() | atom(), [map()]) :: String.t()
+  def prompt(schema, entry, language, queries \\ []) do
     """
     You review how one web page appears in search results. Reply in #{language_name(language)}.
 
@@ -57,6 +61,25 @@ defmodule Brando.SEO.Analyze do
     Meta title: #{Map.get(entry, :meta_title) || "(none — the site's fallback title is used)"}
     Meta description: #{Map.get(entry, :meta_description) || "(none — the site's fallback description is used)"}
     Content: #{Context.block_text(entry, length: @content_length) || "(no body text)"}
+    #{searches(queries)}\
+    """
+  end
+
+  # Given, the model can say whether the snippet answers what people are
+  # actually looking for when Google shows them the page.
+  defp searches([]), do: ""
+
+  defp searches(queries) do
+    lines =
+      queries
+      |> Enum.take(10)
+      |> Enum.map_join("\n", fn query ->
+        "- #{query.query} (#{query.impressions} impressions, #{query.clicks} clicks, position #{Float.round(query.position / 1, 1)})"
+      end)
+
+    """
+    Google searches that showed this page recently — judge whether the title and description answer them:
+    #{lines}
     """
   end
 

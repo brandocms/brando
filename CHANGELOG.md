@@ -406,6 +406,19 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   description against its content — at most three points, in the admin
   language, never written anywhere.
 - The Content SEO tab and its checks are translated into Norwegian.
+- Content SEO checks **heading structure** (at most one H1 in the body, no
+  skipped levels), **image alt text** (present, not a filename or a generic
+  word) and **language versions** (a published translation much longer, with
+  more images or headings, or edited months later). All three are measured by
+  the database from `rendered_<field>`.
+- Content SEO reads traffic from **Plausible** and **Google Search Console**
+  when configured (`config :brando, Brando.SEO.Analytics, ...`): visitors and
+  search clicks per entry, sorting by the busiest pages, a count of pages
+  nobody visited, the searches a page is shown for, and a click-through check
+  for first-page results few searchers click. The AI review weighs the
+  description against those searches. Search Console signs in with a service
+  account; site and property default to the SEO base URL's host. Setup is in
+  the new [Content SEO guide](guides/content_seo.md).
 - The Content SEO audit flags **thin content**: an entry whose rendered blocks
   hold fewer than 300 words warns, and one with no body text fails. The words
   are counted by the database from the `rendered_<field>` columns, so the HTML

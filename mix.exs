@@ -49,6 +49,7 @@ defmodule Brando.Mixfile do
           "guides/meta.md",
           "guides/jsonld.md",
           "guides/sitemaps.md",
+          "guides/content_seo.md",
           "guides/users.md",
           "guides/authorization.md",
           "guides/i18n.md",
@@ -89,7 +90,8 @@ defmodule Brando.Mixfile do
             "guides/identity_and_seo.md",
             "guides/meta.md",
             "guides/jsonld.md",
-            "guides/sitemaps.md"
+            "guides/sitemaps.md",
+            "guides/content_seo.md"
           ],
           Operations: [
             "guides/tenancy_and_environments.md",
