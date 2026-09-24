@@ -90,7 +90,11 @@ module.exports = defineConfig({
     // },
     {
       name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: 'chromium' },
+      // No `channel`: Playwright's default headless shell. `channel: 'chromium'`
+      // opts into Chrome's new headless mode, where a screenshot or evaluate
+      // taken right after `setViewportSize` intermittently never returned on
+      // CI (tiptap-editor, groups, modal-design, block-media-fields).
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
 })
