@@ -39,11 +39,19 @@ export default (app) => ({
         }
 
         if (this.sortablePushEvent) {
+          // `order` is the complete new sequence, read from each item's
+          // data-{orderKey}. Sortable's indices count every child of the list,
+          // including hidden inputs rendered between the items.
+          const orderKey = this.el.dataset.sortableOrderKey || 'id'
+          const selector = this.sortableSelector || '.draggable'
           let params = {
             old: e.oldIndex,
             new: e.newIndex,
             to: e.to.dataset,
             ...e.item.dataset,
+            order: Array.from(this.el.children)
+              .filter((el) => el.matches(selector))
+              .map((el) => el.dataset[orderKey]),
           }
 
           const eventName = this.el.dataset['drop'] || 'reposition'

@@ -321,6 +321,30 @@ defmodule BrandoAdmin.FormRecoveryTest do
 
       assert Floki.attribute(title_input, "value") == ["Edited title"]
     end
+
+    # A delivered asset is owned by the process that received it, and params
+    # never override it there. A fresh process owns nothing, so the recovery
+    # replay is still what brings an unsaved upload back.
+    test "recovery restores an unsaved delivered image", %{conn: conn, page: page, current_user: user} do
+      image = Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+
+      send(view.pid, {:asset_ready, %{"kind" => "entry_field", "field" => "meta_image"}, image})
+      await_selector(view, "#page_meta_image-media img")
+
+      captured = recovery_params(render(view), "#page_form_form")
+      assert captured["page"]["meta_image_id"] == to_string(image.id)
+
+      kill_live(view)
+
+      {view, html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      assert form_params(html, "#page_form_form")["page"]["meta_image_id"] == ""
+
+      recovered = render_change(view |> element("#page_form_form"), captured)
+
+      assert form_params(recovered, "#page_form_form")["page"]["meta_image_id"] == to_string(image.id)
+      assert has_element?(view, "#page_meta_image-media img")
+    end
   end
 
   describe "recovery-critical DOM" do

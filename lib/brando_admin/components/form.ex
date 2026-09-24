@@ -92,6 +92,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_ready?, true)
      |> assign(:entry_load_status, nil)
      |> assign(:dirty_fields, [])
+     |> assign(:server_owned_assets, %{})
      |> assign(:draft, nil)
      |> assign(:draft_save_checked?, false)
      |> assign(:editing_image?, false)
@@ -220,6 +221,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:form, to_form(updated_changeset, []))
+     |> own_changed_assets(Enum.map(changes, & &1.field))
      |> Drafts.dirty()
      |> force_svelte_remounts(Enum.map(changes, & &1.field))}
   end
@@ -592,13 +594,18 @@ defmodule BrandoAdmin.Components.Form do
   # while an image was still processing, which is what the guard exists to stop.
   def update(%{event: "clear_entry_field_asset", field: field, path: path}, socket) do
     relation_key = String.to_existing_atom("#{field}_id")
-    changeset = EctoNestedChangeset.update_at(socket.assigns.form.source, path ++ [relation_key], fn _ -> nil end)
+
+    changeset =
+      socket.assigns.form.source
+      |> EctoNestedChangeset.update_at(path ++ [relation_key], fn _ -> nil end)
+      |> put_asset_in_data(path, field, nil)
 
     {:ok,
      socket
      |> assign(:form, to_form(changeset, []))
      |> update_entry_with_relation(path ++ [field], nil)
      |> update_entry_assocs(path ++ [field], nil)
+     |> own_asset(path, relation_key, :id)
      |> ship_all_field_changes()
      |> push_event("b:validate", %{})}
   end
@@ -823,6 +830,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(new_changeset, []))
+     |> clear_owned_assets()
      |> assign(:block_map, [])
      |> force_svelte_remounts(:all)}
   end
@@ -981,6 +989,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(updated_changeset))
+     |> clear_owned_assets()
      |> force_svelte_remounts(:all)}
   end
 
@@ -1277,6 +1286,7 @@ defmodule BrandoAdmin.Components.Form do
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(full_path, fn _ -> asset.id end)
+      |> put_asset_in_data(path, field, asset)
 
     entry_or_default = socket.assigns.entry || struct(socket.assigns.schema)
     updated_entry = Map.put(entry_or_default, field, asset)
@@ -1284,6 +1294,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:entry, updated_entry)
     |> assign(:form, to_form(updated_changeset, []))
+    |> own_asset(path, relation_key, :id)
     |> Drafts.dirty()
     # Ship while the FK is still a change — the drawer-save path re-bakes the
     # changeset (apply_changes/change), after which there is nothing to ship.
@@ -1293,6 +1304,13 @@ defmodule BrandoAdmin.Components.Form do
       value: asset.id
     })
   end
+
+  # Change tracking re-renders an input only when `@form[field]` changes, and
+  # the asset inputs are keyed on the association, not the id. Without the
+  # asset in `data` the field kept showing the previous asset until some later
+  # validate happened to re-render it.
+  defp put_asset_in_data(changeset, [], field, asset), do: %{changeset | data: Map.put(changeset.data, field, asset)}
+  defp put_asset_in_data(changeset, _nested_path, _field, _asset), do: changeset
 
   # Append a delivered asset to the gallery assoc: existing objects are
   # slimmed to plain maps (put_assoc with mixed nil-ID structs would raise
@@ -1327,7 +1345,17 @@ defmodule BrandoAdmin.Components.Form do
   # changeset. `path == []` is the entry's own field; anything deeper is a
   # gallery on a nested (subform) record, which only `update_at/3` can reach.
   defp put_gallery_at(socket, path, key, new_gallery) do
-    changeset = socket.assigns.form.source
+    updated_changeset = put_gallery_into(socket.assigns.form.source, path, key, new_gallery)
+
+    socket
+    |> assign(:form, to_form(updated_changeset, []))
+    |> own_asset(path, key, :gallery)
+    |> Drafts.dirty()
+  end
+
+  defp put_gallery_into(changeset, [], key, nil), do: put_assoc(changeset, key, nil)
+
+  defp put_gallery_into(changeset, path, key, new_gallery) do
     current_gallery = gallery_at(changeset, path, key) || %Brando.Galleries.Gallery{}
 
     gallery_changeset =
@@ -1336,14 +1364,11 @@ defmodule BrandoAdmin.Components.Form do
       |> change(%{config_target: new_gallery.config_target})
       |> put_assoc(:gallery_objects, new_gallery.gallery_objects)
 
-    updated_changeset =
-      if path == [] do
-        put_assoc(changeset, key, gallery_changeset)
-      else
-        EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> gallery_changeset end)
-      end
-
-    socket |> assign(:form, to_form(updated_changeset, [])) |> Drafts.dirty()
+    if path == [] do
+      put_assoc(changeset, key, gallery_changeset)
+    else
+      EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> gallery_changeset end)
+    end
   end
 
   # `gallery_at/3` reads the *applied* gallery, so objects the editor added but
@@ -1367,6 +1392,100 @@ defmodule BrandoAdmin.Components.Form do
 
   defp gallery_at(changeset, [], key), do: get_field(changeset, key)
   defp gallery_at(changeset, path, key), do: EctoNestedChangeset.get_at(changeset, path ++ [key])
+
+  # -- Server-owned asset fields --
+  #
+  # Asset ids and galleries only ever change through server events (upload
+  # delivery, picker selection, removal, gallery edits, remote sync, draft
+  # restore). The hidden inputs that carry them in the DOM lag behind those
+  # events by a render, so a `validate` or `save` the browser serialized before
+  # that render still holds the previous value — and casting it onto `entry`
+  # (which never receives the unsaved asset) silently drops the asset.
+  #
+  # Once this process has written such a field it owns it: params never supply
+  # it again, and every cast carries the value over from the current
+  # changeset. The set starts empty in a fresh process, so the recovery
+  # `validate` after a reconnect still restores unsaved assets from the DOM,
+  # and it is cleared whenever the form is rebuilt from a stored entry.
+  #
+  # Only top-level fields are tracked. Nested (subform) records are addressed
+  # by list index, and their order and membership are still decided by params,
+  # so a carried-over value could land on the wrong row.
+  #
+  #     %{meta_image_id: :id, photos: :gallery}
+  defp own_asset(socket, [], key, kind) do
+    assign(socket, :server_owned_assets, Map.put(owned_assets(socket), key, kind))
+  end
+
+  defp own_asset(socket, _nested_path, _key, _kind), do: socket
+
+  defp own_changed_assets(socket, changed_fields) do
+    socket.assigns.schema
+    |> asset_field_kinds()
+    |> Map.take(changed_fields)
+    |> Enum.reduce(socket, fn {key, kind}, socket -> own_asset(socket, [], key, kind) end)
+  end
+
+  defp clear_owned_assets(socket), do: assign(socket, :server_owned_assets, %{})
+
+  defp owned_assets(socket), do: socket.assigns[:server_owned_assets] || %{}
+
+  defp asset_field_kinds(schema) do
+    gallery_fields =
+      if function_exported?(schema, :__gallery_fields__, 0),
+        do: Enum.map(schema.__gallery_fields__(), &{&1.name, :gallery}),
+        else: []
+
+    schema
+    |> build_asset_fk_map()
+    |> Map.new(fn {key, _} -> {key, :id} end)
+    |> Map.merge(Map.new(gallery_fields))
+  end
+
+  # The one place entry params become a changeset (validate, commit_tiptap and
+  # both save paths).
+  defp cast_entry_params(socket, entry, params) do
+    %{schema: schema, current_user: current_user} = socket.assigns
+    owned = owned_assets(socket)
+    current = socket.assigns.form.source
+
+    entry
+    |> schema.changeset(owned_params(params, owned, current), current_user)
+    |> reapply_owned_assets(owned, current)
+  end
+
+  # Ids are substituted rather than dropped so the schema's own validations
+  # (a required asset) still see them. Galleries are dropped and put back
+  # after the cast.
+  defp owned_params(params, owned, current) when is_map(params) do
+    Enum.reduce(owned, params, fn
+      {key, :id}, params -> Map.put(params, Atom.to_string(key), id_param(get_field(current, key)))
+      {key, :gallery}, params -> Map.delete(params, Atom.to_string(key))
+    end)
+  end
+
+  defp owned_params(params, _owned, _current), do: params
+
+  defp id_param(nil), do: ""
+  defp id_param(id), do: to_string(id)
+
+  defp reapply_owned_assets(changeset, owned, current) do
+    Enum.reduce(owned, changeset, fn
+      {key, :id}, changeset -> put_change(changeset, key, get_field(current, key))
+      {key, :gallery}, changeset -> put_gallery_into(changeset, [], key, owned_gallery(get_field(current, key)))
+    end)
+  end
+
+  defp owned_gallery(nil), do: nil
+
+  defp owned_gallery(gallery) do
+    objects = if is_list(gallery.gallery_objects), do: gallery.gallery_objects, else: []
+
+    %{
+      config_target: gallery.config_target,
+      gallery_objects: objects |> Enum.map(&Brando.Galleries.slim_gallery_object/1) |> sequence()
+    }
+  end
 
   defp assign_entry(%{assigns: %{initial_update: false}} = socket) do
     socket
@@ -2783,6 +2902,7 @@ defmodule BrandoAdmin.Components.Form do
          socket
          |> assign(:draft, draft)
          |> assign(:form, form)
+         |> own_changed_assets(Map.keys(changeset.changes))
          |> assign_entry_for_blocks()
          |> force_svelte_remounts(:all)
          |> Drafts.dirty()}
@@ -2808,7 +2928,7 @@ defmodule BrandoAdmin.Components.Form do
     entry_params = Map.get(params, singular)
     entry_or_default = entry || struct(schema)
 
-    changeset = validate(schema, entry_or_default, entry_params, current_user)
+    changeset = socket |> cast_entry_params(entry_or_default, entry_params) |> Map.put(:action, :validate)
     changed_fields = Map.keys(changeset.changes)
 
     socket =
@@ -3107,8 +3227,8 @@ defmodule BrandoAdmin.Components.Form do
     entry_or_default = entry || struct(schema)
 
     changeset =
-      entry_or_default
-      |> schema.changeset(entry_params, current_user)
+      socket
+      |> cast_entry_params(entry_or_default, entry_params)
       |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
 
@@ -3279,8 +3399,8 @@ defmodule BrandoAdmin.Components.Form do
     entry_or_default = entry || struct(schema)
 
     changeset =
-      entry_or_default
-      |> schema.changeset(entry_params, current_user)
+      socket
+      |> cast_entry_params(entry_or_default, entry_params)
       |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
       |> assoc_all_transformer_fields(socket.assigns.transformer_changesets)
@@ -3514,7 +3634,11 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
     full_path = edit_video.path ++ [relation_key]
-    changeset = EctoNestedChangeset.update_at(form.source, full_path, fn _ -> nil end)
+
+    changeset =
+      form.source
+      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_asset_in_data(edit_video.path, edit_video.field, nil)
 
     {:noreply,
      socket
@@ -3523,6 +3647,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
      |> assign(:form, to_form(changeset, []))
+     |> own_asset(edit_video.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
   end
@@ -3580,7 +3705,12 @@ defmodule BrandoAdmin.Components.Form do
     changeset = form.source
     relation_key = relation_field_key(edit_file.relation_field, edit_file.field)
     full_path = edit_file.path ++ [relation_key]
-    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
+
+    updated_changeset =
+      changeset
+      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_asset_in_data(edit_file.path, edit_file.field, nil)
+
     updated_edit_file = Map.put(edit_file, :file, nil)
 
     {:noreply,
@@ -3593,6 +3723,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_file?, false)
      |> assign(:edit_file, updated_edit_file)
      |> assign(:form, to_form(updated_changeset, []))
+     |> own_asset(edit_file.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: "#{singular}[#{relation_key}]",
@@ -3609,7 +3740,12 @@ defmodule BrandoAdmin.Components.Form do
     changeset = form.source
     relation_key = relation_field_key(edit_image.relation_field, edit_image.field)
     full_path = edit_image.path ++ [relation_key]
-    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
+
+    updated_changeset =
+      changeset
+      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_asset_in_data(edit_image.path, edit_image.field, nil)
+
     updated_edit_image = Map.put(edit_image, :image, nil)
 
     {:noreply,
@@ -3621,6 +3757,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_image?, false)
      |> assign(:edit_image, updated_edit_image)
      |> assign(:form, to_form(updated_changeset, []))
+     |> own_asset(edit_image.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: "#{singular}[#{relation_key}]",
@@ -4546,12 +4683,6 @@ defmodule BrandoAdmin.Components.Form do
     Callback.call(after_save, [entry, current_user])
   end
 
-  defp validate(schema, entry, params, user) do
-    entry
-    |> schema.changeset(params, user)
-    |> Map.put(:action, :validate)
-  end
-
   defp assoc_all_block_fields(block_changesets, changeset) do
     Enum.reduce(block_changesets, changeset, fn {field_name, block_cs}, updated_changeset ->
       updated_block_cs =
@@ -4986,7 +5117,9 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def assign_refreshed_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
-    assign(socket, :form, to_form(schema.changeset(entry, %{}, current_user), []))
+    socket
+    |> assign(:form, to_form(schema.changeset(entry, %{}, current_user), []))
+    |> clear_owned_assets()
   end
 
   @doc """

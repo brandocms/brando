@@ -21,6 +21,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Thumb do
   attr :gallery_object_field, :any, required: true
   attr :form_name, :string, required: true
 
+  attr :remove, :any,
+    default: nil,
+    doc: "A server event that removes the object. Without it the button submits the gallery's drop param."
+
   def thumb(assigns) do
     object = find(assigns)
     thumb_url = if object && loaded_assoc?(object, :video), do: Brando.Videos.Helpers.thumbnail_url(object.video)
@@ -51,7 +55,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Thumb do
           </div>
         <% end %>
       <% end %>
+      <button :if={@remove} type="button" class="delete-object" data-sortable-filter phx-click={@remove}>
+        <.icon name="hero-x-mark" />
+      </button>
       <button
+        :if={!@remove}
         type="button"
         class="delete-object"
         name={"#{@form_name}[drop_gallery_object_ids][]"}

@@ -29,6 +29,12 @@ For form declarations, use `guides/blueprints.md` instead.
   do not exercise this path. The regression in
   `test/brando_admin/live_view/form/transformer_routing_test.exs` demonstrates the
   silent delivery failure when those IDs diverge.
+- Top-level asset ids and galleries become server-owned once Form writes them
+  (`own_asset/4`): `cast_entry_params/3` keeps their current value when params
+  arrive, because the hidden inputs lag one render behind delivery. New writers
+  of those fields must go through Form and mark ownership. Do not read them back
+  from `validate` params. Coverage lives in
+  `test/brando_admin/live/stale_validate_asset_race_test.exs`.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the

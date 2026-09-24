@@ -217,6 +217,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 data-sortable-id={"#{@field.id}-sortable-gallery"}
                 data-sortable-handle=".sort-handle"
                 data-sortable-selector=".gallery-object"
+                data-sortable-push-event="true"
+                data-sortable-order-key="index"
                 class={"gallery-objects gallery-objects--#{@preview_layout}"}
               >
                 <.inputs_for :let={gallery_form} field={@field}>
@@ -226,6 +228,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     <figure
                       class="gallery-object sort-handle draggable"
                       data-id={Thumb.media_id(gallery_object)}
+                      data-index={gallery_object.index}
                     >
                       <.gallery_object
                         id={@id}
@@ -438,9 +441,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               <button
                 type="button"
                 class="delete-action"
-                name={"#{@parent_form_name}[drop_gallery_object_ids][]"}
-                value={@gallery_object_field.index}
-                phx-click={JS.dispatch("change")}
+                phx-click={remove_object(@gallery_object, @myself) |> hide_dropdown("##{@menu_id}")}
               >
                 <.icon name="hero-trash" />
                 {gettext("Remove from gallery")}
@@ -457,13 +458,31 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   # editor renders too (`Gallery.Thumb`). The list layout above is this
   # component's alone, so it stays here.
   def gallery_object(assigns) do
+    gallery_object = Thumb.find(assigns)
+    assigns = assign(assigns, :remove, gallery_object && remove_object(gallery_object, assigns.myself))
+
     ~H"""
     <Thumb.thumb
       gallery_objects={@gallery_objects}
       gallery_object_field={@gallery_object_field}
       form_name={@parent_form_name}
+      remove={@remove}
     />
     """
+  end
+
+  # Removal is a server event rather than the gallery's drop param: the entry
+  # form owns the gallery once it has written it, and never reads it back from
+  # params. The object is named by its media, which is unique within a gallery,
+  # so a render that has not reached the browser yet cannot remove the wrong one.
+  defp remove_object(gallery_object, myself) do
+    {type, id} =
+      case Map.get(gallery_object, :image_id) do
+        nil -> {"video", gallery_object.video_id}
+        image_id -> {"image", image_id}
+      end
+
+    JS.push("remove_object", target: myself, value: %{type: type, id: id})
   end
 
   defp assign_list_object_data(assigns, nil), do: assigns
@@ -606,8 +625,42 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      })}
   end
 
+  # The order is committed to the entry form like any other gallery edit, so
+  # the form owns the gallery from here on and never re-reads it from params.
+  def handle_event("reposition", %{"order" => order}, socket) when is_list(order) do
+    %{field: field, gallery_objects: gallery_objects} = socket.assigns
+    indices = Enum.map(order, &parse_index/1)
+    current_order = Enum.to_list(0..(length(gallery_objects) - 1)//1)
+
+    if indices != current_order and Enum.sort(indices) == current_order do
+      reordered = Enum.map(indices, &Enum.at(gallery_objects, &1))
+      gallery = Ecto.Changeset.get_field(field.form.source, field.field)
+
+      update_form_changeset(socket, %{
+        config_target: gallery.config_target,
+        gallery_objects: Media.slim(reordered)
+      })
+
+      {:noreply, assign(socket, :gallery_objects, reordered)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("reposition", _, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("remove_object", %{"type" => type, "id" => id}, socket) when type in ["image", "video"] do
+    media_type = String.to_existing_atom(type)
+    media_id = parse_index(id)
+    selected = Media.selected_ids(socket.assigns.gallery_objects, Media.id_field(media_type))
+
+    if media_id in selected do
+      {:noreply, remove_gallery_media(socket, media_type, media_id)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("set_target", _, socket) do
@@ -717,6 +770,17 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       gallery: new_gallery
     )
   end
+
+  defp parse_index(value) when is_integer(value), do: value
+
+  defp parse_index(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {index, ""} -> index
+      _ -> nil
+    end
+  end
+
+  defp parse_index(_), do: nil
 
   # `Primitives.input/1` threads the entry form component's own id down as `@form_id`
   # (`form.ex`, `form_id={@id}`), so it is authoritative — no derivation needed.
