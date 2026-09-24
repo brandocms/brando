@@ -92,6 +92,38 @@ defmodule Brando.SEO.AuditTest do
     assert result.thin_content >= 2
   end
 
+  test "headings, image alt text and language versions are read from the rendered blocks" do
+    user = Factory.insert(:random_user)
+    en = create_page(user, %{title: "Structured", uri: "seo-structured"})
+    no = create_page(user, %{title: "Strukturert", uri: "seo-strukturert", language: "no"})
+    draft = create_page(user, %{title: "Utkast", uri: "seo-utkast", language: "no", status: :draft})
+
+    set_rendered_blocks(
+      en,
+      ~s(<h2 class="x">One</h2><p>Text</p><h4>Deep</h4><img src="a.jpg" alt="A harbour"><img src="b.jpg"><picture><img alt="" src="c.jpg"/></picture>)
+    )
+
+    set_rendered_blocks(no, "<h2>En</h2><h2>To</h2><h2>Tre</h2><p>" <> String.duplicate("ord ", 400) <> "</p>")
+    Pages.Page.Alternate.add(en.id, no.id)
+    Pages.Page.Alternate.add(en.id, draft.id)
+
+    result = Audit.run("en", schemas: [Pages.Page])
+    row = Enum.find(result.rows, &(&1.id == en.id))
+
+    assert row.headings == [2, 4]
+    assert row.image_alts == ["A harbour", nil, ""]
+    # The draft version is not live, so it is not compared against.
+    assert [%{language: "no", id: no_id, stats: %{words: 403}}] = row.alternates
+    assert no_id == no.id
+
+    parity = Enum.find(row.checks, &(&1.key == :translation_parity))
+    assert parity.status == :warn
+    assert parity.hint =~ "403"
+
+    assert Enum.find(row.checks, &(&1.key == :heading_structure)).status == :warn
+    assert Enum.find(row.checks, &(&1.key == :image_alt)).value == "2/3"
+  end
+
   test "include_drafts audits unpublished entries too" do
     user = Factory.insert(:random_user)
     create_page(user, %{title: "Only draft", uri: "seo-only-draft", status: :draft})

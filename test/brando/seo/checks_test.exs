@@ -117,6 +117,65 @@ defmodule Brando.SEO.ChecksTest do
     assert status(Checks.run(row(%{word_count: 60}), ctx()), :thin_content) == :pass
   end
 
+  test "heading structure warns on several H1s and on skipped levels, counting from the title" do
+    assert status(Checks.run(row(%{headings: [2, 3, 3, 2]}), ctx()), :heading_structure) == :pass
+    assert status(Checks.run(row(%{headings: nil}), ctx()), :heading_structure) == :skip
+
+    check = Enum.find(Checks.run(row(%{headings: [1, 1, 2]}), ctx()), &(&1.key == :heading_structure))
+    assert check.status == :warn
+    assert check.hint =~ "2 H1"
+
+    check = Enum.find(Checks.run(row(%{headings: [3, 4, 2, 4]}), ctx()), &(&1.key == :heading_structure))
+    assert check.hint =~ "H1 → H3"
+    assert check.hint =~ "H2 → H4"
+  end
+
+  test "images need alt text that is neither empty, a filename nor a generic word" do
+    assert status(Checks.run(row(%{image_alts: ["A ferry leaving Oslo harbour"]}), ctx()), :image_alt) == :pass
+    assert status(Checks.run(row(%{image_alts: []}), ctx()), :image_alt) == :skip
+
+    check =
+      Enum.find(
+        Checks.run(row(%{image_alts: [nil, "", "IMG_2041.jpg", "Bilde", "A real description"]}), ctx()),
+        &(&1.key == :image_alt)
+      )
+
+    assert check.status == :warn
+    assert check.value == "4/5"
+    assert check.hint =~ "2 of 5"
+  end
+
+  test "language versions are compared for length, images, headings and freshness" do
+    other = %{
+      id: 2,
+      language: "no",
+      edited_at: ~N[2026-06-01 00:00:00],
+      stats: %Brando.SEO.ContentStats{words: 900, headings: [2, 2, 2, 2], image_alts: ["a", "b", "c"]}
+    }
+
+    ok =
+      row(%{
+        word_count: 800,
+        headings: [2, 2, 2],
+        image_alts: ["a", "b", "c"],
+        edited_at: ~N[2026-05-01 00:00:00],
+        alternates: [other]
+      })
+
+    assert status(Checks.run(ok, ctx()), :translation_parity) == :pass
+
+    behind = %{ok | word_count: 300, headings: [2], image_alts: ["a"], edited_at: ~N[2026-01-01 00:00:00]}
+    check = Enum.find(Checks.run(behind, ctx()), &(&1.key == :translation_parity))
+
+    assert check.status == :warn
+    assert check.hint =~ "300"
+    assert check.hint =~ "2 fewer images"
+    assert check.hint =~ "1 headings, against 4"
+    assert check.hint =~ "151 days"
+
+    assert status(Checks.run(row(%{alternates: []}), ctx()), :translation_parity) == :skip
+  end
+
   test "scoring weights failures by importance and ignores skips" do
     all_pass = [%Check{key: :a, status: :pass, weight: :critical, label: "a"}, %Check{key: :b, status: :skip, label: "b"}]
     assert Check.score(all_pass) == 100

@@ -9,14 +9,14 @@ defmodule Brando.SEO.Audit do
   an `absolute_url` and carries `Brando.Trait.Meta`. Rows come from one
   read per schema that leaves the rendered block HTML out, with the title and
   URL taken from the blueprint's own identifier and `absolute_url` templates.
-  Body length is counted by the database, so the rendered HTML never leaves
-  it. Blueprints may add their own checks through `__seo_checks__/1`.
+  Body text, headings and images are measured by the database
+  (`Brando.SEO.ContentStats`), so the rendered HTML never leaves it.
+  Blueprints may add their own checks through `__seo_checks__/1`.
   """
-
-  import Ecto.Query, only: [from: 2]
 
   alias Brando.SEO.Check
   alias Brando.SEO.Checks
+  alias Brando.SEO.ContentStats
 
   defmodule Row do
     @moduledoc "One audited entry: what the checks look at, plus their verdict."
@@ -31,7 +31,12 @@ defmodule Brando.SEO.Audit do
               meta_title: nil,
               meta_description: nil,
               has_meta_image: false,
+              edited_at: nil,
               word_count: nil,
+              headings: nil,
+              image_alts: nil,
+              alternates: [],
+              traffic: nil,
               checks: [],
               score: nil
   end
@@ -87,7 +92,7 @@ defmodule Brando.SEO.Audit do
 
     rows =
       rows
-      |> with_word_counts()
+      |> with_content_stats()
       |> Enum.map(&score_row(&1, ctx))
       |> Enum.sort_by(&{&1.score || 0, String.downcase(&1.title || "")})
 
@@ -173,7 +178,8 @@ defmodule Brando.SEO.Audit do
       cover: cover(schema, entry),
       meta_title: Map.get(entry, :meta_title),
       meta_description: Map.get(entry, :meta_description),
-      has_meta_image: not is_nil(Map.get(entry, :meta_image_id))
+      has_meta_image: not is_nil(Map.get(entry, :meta_image_id)),
+      edited_at: ContentStats.edited_at(entry)
     }
   end
 
@@ -267,41 +273,34 @@ defmodule Brando.SEO.Audit do
     Enum.count(rows, fn row -> Enum.any?(row.checks, &(&1.key == key and &1.status in statuses)) end)
   end
 
-  # Words of visible text in a rendered block column: tags and entities
-  # become spaces, and only tokens with a letter or digit count, so a lone
-  # dash or bullet is not a word.
-  defmacrop word_count(html) do
-    quote do
-      fragment(
-        "(SELECT count(*) FROM regexp_split_to_table(regexp_replace(regexp_replace(coalesce(?, ''), '<[^>]*>', ' ', 'g'), '&[#[:alnum:]]+;', ' ', 'g'), '\\s+') AS w WHERE w ~ '[[:alnum:]]')",
-        unquote(html)
-      )
-    end
-  end
+  # Two queries per schema over the audited ids: the entries' own block
+  # HTML, and that of their published language versions. Schemas without
+  # block fields keep `nil`, which the content checks skip.
+  defp with_content_stats(rows) do
+    by_schema = Enum.group_by(rows, & &1.schema, & &1.id)
 
-  # One query per block field of each schema, over the audited ids only.
-  # Schemas without block fields keep `nil`, which the check skips.
-  defp with_word_counts(rows) do
-    counts =
-      rows
-      |> Enum.group_by(& &1.schema, & &1.id)
-      |> Enum.flat_map(fn {schema, ids} -> word_counts(schema, ids) end)
-      |> Map.new()
+    stats =
+      Map.new(by_schema, fn {schema, ids} ->
+        {schema, {ContentStats.for_ids(schema, ids), ContentStats.alternates(schema, ids)}}
+      end)
 
-    Enum.map(rows, &%{&1 | word_count: Map.get(counts, {&1.schema, &1.id})})
-  end
+    Enum.map(rows, fn row ->
+      {own, alternates} = Map.fetch!(stats, row.schema)
 
-  defp word_counts(schema, ids) do
-    columns = schema.__schema__(:fields)
+      case Map.get(own, row.id) do
+        nil ->
+          %{row | alternates: Map.get(alternates, row.id, [])}
 
-    schema
-    |> Brando.AI.Context.block_fields()
-    |> Enum.map(&:"rendered_#{&1}")
-    |> Enum.filter(&(&1 in columns))
-    |> Enum.flat_map(fn column ->
-      Brando.Repo.all(from(e in schema, where: e.id in ^ids, select: {e.id, word_count(field(e, ^column))}))
+        %ContentStats{} = content ->
+          %{
+            row
+            | word_count: content.words,
+              headings: content.headings,
+              image_alts: content.image_alts,
+              alternates: Map.get(alternates, row.id, [])
+          }
+      end
     end)
-    |> Enum.reduce(%{}, fn {id, count}, acc -> Map.update(acc, {schema, id}, count, &(&1 + count)) end)
   end
 
   defp locs(file) do
