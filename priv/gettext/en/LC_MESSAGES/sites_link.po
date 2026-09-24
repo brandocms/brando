@@ -11,12 +11,12 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
 
-#: lib/brando/sites/identity.ex:183
+#: lib/brando/sites/identity.ex:199
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:184
+#: lib/brando/sites/identity.ex:200
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr ""

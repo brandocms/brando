@@ -12,72 +12,72 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/seo.ex:80
+#: lib/brando/sites/seo.ex:84
 #, elixir-autogen, elixir-format
 msgid "Base URL"
 msgstr "Primær URL-adresse"
 
-#: lib/brando/sites/seo.ex:56
+#: lib/brando/sites/seo.ex:60
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/sites/seo.ex:65
-#: lib/brando/sites/seo.ex:66
+#: lib/brando/sites/seo.ex:69
+#: lib/brando/sites/seo.ex:70
 #, elixir-autogen, elixir-format
 msgid "Fallback META description"
 msgstr "Metabeskrivelse (reserve)"
 
-#: lib/brando/sites/seo.ex:69
-#: lib/brando/sites/seo.ex:70
+#: lib/brando/sites/seo.ex:73
+#: lib/brando/sites/seo.ex:74
 #, elixir-autogen, elixir-format
 msgid "Fallback META image"
 msgstr "Metabilde (reserve)"
 
-#: lib/brando/sites/seo.ex:61
-#: lib/brando/sites/seo.ex:62
+#: lib/brando/sites/seo.ex:65
+#: lib/brando/sites/seo.ex:66
 #, elixir-autogen, elixir-format
 msgid "Fallback META title"
 msgstr "Metatittel (reserve)"
 
-#: lib/brando/sites/seo.ex:88
+#: lib/brando/sites/seo.ex:92
 #, elixir-autogen, elixir-format
 msgid "Redirects"
 msgstr "Omdirigeringer"
 
-#: lib/brando/sites/seo.ex:81
-#: lib/brando/sites/seo.ex:81
+#: lib/brando/sites/seo.ex:85
+#: lib/brando/sites/seo.ex:85
 #, elixir-autogen, elixir-format
 msgid "Robots"
 msgstr "Roboter"
 
-#: lib/brando/sites/seo.ex:105
-#: lib/brando/sites/seo.ex:106
+#: lib/brando/sites/seo.ex:109
+#: lib/brando/sites/seo.ex:110
 #, elixir-autogen, elixir-format
 msgid "SEO"
 msgstr "SEO"
 
-#: lib/brando/sites/seo.ex:91
+#: lib/brando/sites/seo.ex:95
 #, elixir-autogen, elixir-format
 msgid "Use `$` at the end of test to prevent matching beyond string."
 msgstr "Bruk `$` på slutten av testkoden for å forhindre match etter."
 
-#: lib/brando/sites/seo.ex:80
+#: lib/brando/sites/seo.ex:84
 #, elixir-autogen, elixir-format
 msgid "https://yoursite.com"
 msgstr "https://din-side.no"
 
-#: lib/brando/sites/seo.ex:58
+#: lib/brando/sites/seo.ex:62
 #, elixir-autogen, elixir-format
 msgid "Default metadata"
 msgstr "Standard metadata"
 
-#: lib/brando/sites/seo.ex:79
+#: lib/brando/sites/seo.ex:83
 #, elixir-autogen, elixir-format
 msgid "Indexing"
 msgstr "Indeksering"
 
-#: lib/brando/sites/seo.ex:74
+#: lib/brando/sites/seo.ex:78
 #, elixir-autogen, elixir-format
 msgid "Search preview"
 msgstr "Søkeforhåndsvisning"

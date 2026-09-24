@@ -11,85 +11,85 @@
 msgid ""
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:359
-#: lib/brando_admin/live/config/content_transfer_live.ex:679
+#: lib/brando_admin/live/config/content_transfer_live.ex:401
+#: lib/brando_admin/live/config/content_transfer_live.ex:751
 #, elixir-autogen, elixir-format
 msgid "%{count} block"
 msgid_plural "%{count} blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1617
+#: lib/brando_admin/live/config/content_transfer_live.ex:1725
 #, elixir-autogen, elixir-format
 msgid "%{count} entry"
 msgid_plural "%{count} entries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1103
+#: lib/brando_admin/live/config/content_transfer_live.ex:1186
 #, elixir-autogen, elixir-format
 msgid "%{count} entry imported"
 msgid_plural "%{count} entries imported"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1053
+#: lib/brando_admin/live/config/content_transfer_live.ex:1136
 #, elixir-autogen, elixir-format
 msgid "%{count} entry saved. Your recovery snapshot is ready."
 msgid_plural "%{count} entries saved. Your recovery snapshot is ready."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1622
+#: lib/brando_admin/live/config/content_transfer_live.ex:1730
 #, elixir-autogen, elixir-format
 msgid "%{count} entry selected"
 msgid_plural "%{count} entries selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1619
+#: lib/brando_admin/live/config/content_transfer_live.ex:1727
 #, elixir-autogen, elixir-format
 msgid "%{count} field"
 msgid_plural "%{count} fields"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1110
+#: lib/brando_admin/live/config/content_transfer_live.ex:1193
 #, elixir-autogen, elixir-format
 msgid "%{count} field imported"
 msgid_plural "%{count} fields imported"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1060
+#: lib/brando_admin/live/config/content_transfer_live.ex:1143
 #, elixir-autogen, elixir-format
 msgid "%{count} field saved. Your recovery snapshot is ready."
 msgid_plural "%{count} fields saved. Your recovery snapshot is ready."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1625
+#: lib/brando_admin/live/config/content_transfer_live.ex:1733
 #, elixir-autogen, elixir-format
 msgid "%{count} field selected"
 msgid_plural "%{count} fields selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:580
+#: lib/brando_admin/live/config/content_transfer_live.ex:652
 #, elixir-autogen, elixir-format
 msgid "%{count} incoming block"
 msgid_plural "%{count} incoming blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1027
+#: lib/brando_admin/live/config/content_transfer_live.ex:1110
 #, elixir-autogen, elixir-format
 msgid "%{count} item needs attention"
 msgid_plural "%{count} items need attention"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando/content/transfer/entries.ex:366
+#: lib/brando/content/transfer/entries.ex:399
 #, elixir-autogen, elixir-format
 msgid "%{value1} is already in use. Update the matching entry or choose another value."
 msgstr ""
@@ -104,12 +104,12 @@ msgstr ""
 msgid "%{value1} is not allowed by the destination media configuration."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:560
+#: lib/brando/content/transfer.ex:556
 #, elixir-autogen, elixir-format
 msgid "%{value1}: %{value2}"
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:148
+#: lib/brando/content/transfer/portable.ex:258
 #, elixir-autogen, elixir-format
 msgid "A bundle can contain up to 100 saved block fields."
 msgstr ""
@@ -119,42 +119,42 @@ msgstr ""
 msgid "A database constraint rejected the import. No content was committed."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:171
+#: lib/brando/content/transfer/portable.ex:281
 #, elixir-autogen, elixir-format
 msgid "A field exceeds 5,000 blocks."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:166
+#: lib/brando/content/transfer/portable.ex:276
 #, elixir-autogen, elixir-format
 msgid "A field must contain an ordered block list."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:363
+#: lib/brando/content/transfer/portable.ex:476
 #, elixir-autogen, elixir-format
 msgid "A footnote points outside its owned field."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:498
+#: lib/brando_admin/live/config/content_transfer_live.ex:570
 #, elixir-autogen, elixir-format
 msgid "A review before every import"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:931
+#: lib/brando_admin/live/config/content_transfer_live.ex:1014
 #, elixir-autogen, elixir-format
 msgid "A separate gallery is created for every placement. Map its images and videos below."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:132
+#: lib/brando_admin/live/config/content_transfer_live.ex:134
 #, elixir-autogen, elixir-format
 msgid "Advanced export options"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:813
+#: lib/brando_admin/live/config/content_transfer_live.ex:896
 #, elixir-autogen, elixir-format
 msgid "After import"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:65
+#: lib/brando/content/transfer/labels.ex:67
 #, elixir-autogen, elixir-format
 msgid "Alternative text"
 msgstr ""
@@ -174,7 +174,7 @@ msgstr ""
 msgid "An entry relationship is missing from the bundle."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:937
+#: lib/brando_admin/live/config/content_transfer_live.ex:1020
 #, elixir-autogen, elixir-format
 msgid "An identical original was imported recently. Choose it above to reuse the asset."
 msgstr ""
@@ -184,86 +184,81 @@ msgstr ""
 msgid "An included relationship points to an incompatible entry type."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:176
+#: lib/brando/content/transfer/portable.ex:286
 #, elixir-autogen, elixir-format
 msgid "An unknown dependency type was found."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:285
+#: lib/brando/content/transfer/portable.ex:398
 #, elixir-autogen, elixir-format
 msgid "An unresolved %{value1} reference was found. Database IDs are not portable references."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:621
+#: lib/brando_admin/live/config/content_transfer_live.ex:693
 #, elixir-autogen, elixir-format
 msgid "Append to existing blocks"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:392
+#: lib/brando_admin/live/config/content_transfer_live.ex:464
 #, elixir-autogen, elixir-format
 msgid "Application code, CSS, JavaScript and service credentials use your normal deployment."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1043
+#: lib/brando_admin/live/config/content_transfer_live.ex:1126
 #, elixir-autogen, elixir-format
 msgid "Apply content import"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:978
+#: lib/brando_admin/live/config/content_transfer_live.ex:1061
 #, elixir-autogen, elixir-format
 msgid "Assets used by included definitions"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:34
+#: lib/brando/content/transfer/labels.ex:36
 #, elixir-autogen, elixir-format
 msgid "Block"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:602
+#: lib/brando_admin/live/config/content_transfer_live.ex:674
 #, elixir-autogen, elixir-format
 msgid "Block field"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:140
+#: lib/brando_admin/live/config/content_transfer_live.ex:142
 #, elixir-autogen, elixir-format
 msgid "Block fields only"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:33
-#: lib/brando_admin/live/config/content_transfer_live.ex:332
+#: lib/brando/content/transfer/labels.ex:35
+#: lib/brando_admin/live/config/content_transfer_live.ex:374
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:415
+#: lib/brando_admin/live/config/content_transfer_live.ex:487
 #, elixir-autogen, elixir-format
 msgid "Bring your content here"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:450
+#: lib/brando_admin/live/config/content_transfer_live.ex:522
 #, elixir-autogen, elixir-format
 msgid "Bundle uploaded"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:18
-#: lib/brando_admin/live/config/content_transfer_live.ex:1703
+#: lib/brando/content/transfer/labels.ex:20
+#: lib/brando_admin/live/config/content_transfer_live.ex:1911
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1140
+#: lib/brando_admin/live/config/content_transfer_live.ex:1223
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:529
+#: lib/brando_admin/live/config/content_transfer_live.ex:601
 #, elixir-autogen, elixir-format
 msgid "Cancel import"
-msgstr ""
-
-#: lib/brando/content/transfer/entries.ex:134
-#, elixir-autogen, elixir-format
-msgid "Choose Create new or Update existing."
 msgstr ""
 
 #: lib/brando/content/transfer.ex:150
@@ -271,12 +266,12 @@ msgstr ""
 msgid "Choose Replace or Append."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1683
+#: lib/brando_admin/live/config/content_transfer_live.ex:1891
 #, elixir-autogen, elixir-format
 msgid "Choose a .zip content bundle."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:429
+#: lib/brando_admin/live/config/content_transfer_live.ex:501
 #, elixir-autogen, elixir-format
 msgid "Choose a content bundle"
 msgstr ""
@@ -286,81 +281,81 @@ msgstr ""
 msgid "Choose a destination entry and block field."
 msgstr ""
 
-#: lib/brando/content/transfer/catalog.ex:216
-#: lib/brando/content/transfer/catalog.ex:220
+#: lib/brando/content/transfer/catalog.ex:231
+#: lib/brando/content/transfer/catalog.ex:235
 #, elixir-autogen, elixir-format
 msgid "Choose a destination record."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:650
+#: lib/brando_admin/live/config/content_transfer_live.ex:722
 #, elixir-autogen, elixir-format
 msgid "Choose a destination to compare."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:917
+#: lib/brando_admin/live/config/content_transfer_live.ex:1000
 #, elixir-autogen, elixir-format
 msgid "Choose a destination…"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:593
-#: lib/brando_admin/live/config/content_transfer_live.ex:734
+#: lib/brando_admin/live/config/content_transfer_live.ex:665
+#: lib/brando_admin/live/config/content_transfer_live.ex:807
 #, elixir-autogen, elixir-format
 msgid "Choose an entry…"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:500
-#: lib/brando_admin/live/config/content_transfer_live.ex:539
+#: lib/brando_admin/live/config/content_transfer_live.ex:572
+#: lib/brando_admin/live/config/content_transfer_live.ex:611
 #, elixir-autogen, elixir-format
 msgid "Choose destinations"
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:153
+#: lib/brando/content/transfer/entries.ex:169
 #, elixir-autogen, elixir-format
 msgid "Choose how to publish this entry."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:258
+#: lib/brando_admin/live/config/content_transfer_live.ex:300
 #, elixir-autogen, elixir-format
 msgid "Choose the entries you want to move. Review related content before downloading."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:124
+#: lib/brando_admin/live/config/content_transfer_live.ex:126
 #, elixir-autogen, elixir-format
 msgid "Choose your content"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:75
+#: lib/brando/content/transfer/labels.ex:77
 #, elixir-autogen, elixir-format
 msgid "Collection"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:510
+#: lib/brando_admin/live/config/content_transfer_live.ex:582
 #, elixir-autogen, elixir-format
 msgid "Compare changes and apply. A recovery snapshot is saved with every import."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:648
+#: lib/brando_admin/live/config/content_transfer_live.ex:720
 #, elixir-autogen, elixir-format
 msgid "Compare content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1096
+#: lib/brando_admin/live/config/content_transfer_live.ex:1179
 #, elixir-autogen, elixir-format
 msgid "Completed imports and their recovery snapshots will appear here."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:69
+#: lib/brando_admin/live/config/content_transfer_live.ex:71
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:42
+#: lib/brando/content/transfer/labels.ex:44
 #, elixir-autogen, elixir-format
 msgid "Container"
 msgstr ""
 
-#: lib/brando/content/transfer.ex:856
-#: lib/brando/content/transfer/entries.ex:729
+#: lib/brando/content/transfer.ex:847
+#: lib/brando/content/transfer/entries.ex:775
 #, elixir-autogen, elixir-format
 msgid "Content changed after this import. Recovery would overwrite newer edits."
 msgstr ""
@@ -370,7 +365,7 @@ msgstr ""
 msgid "Content changed during import. Review a new preview."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1049
+#: lib/brando_admin/live/config/content_transfer_live.ex:1132
 #, elixir-autogen, elixir-format
 msgid "Content imported"
 msgstr ""
@@ -380,27 +375,27 @@ msgstr ""
 msgid "Content manifest exceeds 8 MB. Export fewer fields."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1744
+#: lib/brando_admin/live/config/content_transfer_live.ex:1952
 #, elixir-autogen, elixir-format
 msgid "Content rendered and identifiers refreshed."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1737
+#: lib/brando_admin/live/config/content_transfer_live.ex:1945
 #, elixir-autogen, elixir-format
 msgid "Content saved; media processing needs a retry."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1742
+#: lib/brando_admin/live/config/content_transfer_live.ex:1950
 #, elixir-autogen, elixir-format
 msgid "Content saved; rendering needs a retry."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:924
+#: lib/brando/content/transfer.ex:915
 #, elixir-autogen, elixir-format
 msgid "Content transfer requires an authenticated actor."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:81
+#: lib/brando_admin/live/config/content_transfer_live.ex:83
 #, elixir-autogen, elixir-format
 msgid "Content transfer workflows"
 msgstr ""
@@ -410,140 +405,135 @@ msgstr ""
 msgid "Content validation failed: %{errors}"
 msgstr ""
 
-#: lib/brando/content/transfer.ex:804
+#: lib/brando/content/transfer.ex:795
 #, elixir-autogen, elixir-format
 msgid "Content was removed while applying. Review a new preview."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:700
+#: lib/brando_admin/live/config/content_transfer_live.ex:770
 #, elixir-autogen, elixir-format
 msgid "Create a new entry"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:500
+#: lib/brando_admin/live/config/content_transfer_live.ex:572
 #, elixir-autogen, elixir-format
 msgid "Create entries or choose existing destinations in this workspace."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:916
-#: lib/brando_admin/live/config/content_transfer_live.ex:1693
+#: lib/brando_admin/live/config/content_transfer_live.ex:999
+#: lib/brando_admin/live/config/content_transfer_live.ex:1901
 #, elixir-autogen, elixir-format
 msgid "Create from bundle"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:688
+#: lib/brando_admin/live/config/content_transfer_live.ex:1745
 #, elixir-autogen, elixir-format
 msgid "Create new"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:543
-#, elixir-autogen, elixir-format
-msgid "Create new entries or update existing ones. Review their keys, publication and content."
-msgstr ""
-
-#: lib/brando_admin/live/config/content_transfer_live.ex:780
+#: lib/brando_admin/live/config/content_transfer_live.ex:854
 #, elixir-autogen, elixir-format
 msgid "Create this entry with its authored fields, metadata and owned content."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:66
-#: lib/brando_admin/content_preview.ex:139
+#: lib/brando/content/transfer/labels.ex:68
+#: lib/brando_admin/content_preview.ex:145
 #, elixir-autogen, elixir-format
 msgid "Credits"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:810
+#: lib/brando_admin/live/config/content_transfer_live.ex:893
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1790
+#: lib/brando_admin/live/config/content_transfer_live.ex:1998
 #, elixir-autogen, elixir-format
 msgid "Current site"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:76
+#: lib/brando_admin/live/config/content_transfer_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Current workspace"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:78
+#: lib/brando/content/transfer/labels.ex:80
 #, elixir-autogen, elixir-format
 msgid "Datasource"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:57
+#: lib/brando/content/transfer/labels.ex:59
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:56
+#: lib/brando/content/transfer/labels.ex:58
 #, elixir-autogen, elixir-format
 msgid "Date and time"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1002
+#: lib/brando_admin/live/config/content_transfer_live.ex:1085
 #, elixir-autogen, elixir-format
 msgid "Definition changes"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:336
+#: lib/brando_admin/live/config/content_transfer_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "Dependencies"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:53
+#: lib/brando/content/transfer/labels.ex:55
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:949
+#: lib/brando_admin/live/config/content_transfer_live.ex:1032
 #, elixir-autogen, elixir-format
 msgid "Destination definition differs"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:589
-#: lib/brando_admin/live/config/content_transfer_live.ex:728
+#: lib/brando_admin/live/config/content_transfer_live.ex:661
+#: lib/brando_admin/live/config/content_transfer_live.ex:801
 #, elixir-autogen, elixir-format
 msgid "Destination entry"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:903
+#: lib/brando_admin/live/config/content_transfer_live.ex:986
 #, elixir-autogen, elixir-format
 msgid "Destination for %{label}"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1699
+#: lib/brando_admin/live/config/content_transfer_live.ex:1907
 #, elixir-autogen, elixir-format
 msgid "Destination selected"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1033
+#: lib/brando_admin/live/config/content_transfer_live.ex:1116
 #, elixir-autogen, elixir-format
 msgid "Destination: %{scope}. A recovery snapshot is saved before content changes."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1657
+#: lib/brando_admin/live/config/content_transfer_live.ex:1865
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:407
+#: lib/brando_admin/live/config/content_transfer_live.ex:479
 #, elixir-autogen, elixir-format
 msgid "Download content bundle"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:338
+#: lib/brando_admin/live/config/content_transfer_live.ex:380
 #, elixir-autogen, elixir-format
 msgid "Download size"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1655
+#: lib/brando_admin/live/config/content_transfer_live.ex:1863
 #, elixir-autogen, elixir-format
 msgid "Draft"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:399
+#: lib/brando_admin/live/config/content_transfer_live.ex:471
 #, elixir-autogen, elixir-format
 msgid "Edit selection"
 msgstr ""
@@ -553,67 +543,68 @@ msgstr ""
 msgid "English"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:326
+#: lib/brando_admin/live/config/content_transfer_live.ex:368
 #, elixir-autogen, elixir-format
 msgid "Entries"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:300
+#: lib/brando_admin/live/config/content_transfer_live.ex:342
 #, elixir-autogen, elixir-format
 msgid "Entries include authored fields, metadata, owned records and all blocks. Shared references can travel with the bundle or be mapped on arrival."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:35
+#: lib/brando/content/transfer/labels.ex:37
+#: lib/brando_admin/live/config/content_transfer_live.ex:1763
 #, elixir-autogen, elixir-format
 msgid "Entry"
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:206
+#: lib/brando/content/transfer/portable.ex:316
 #, elixir-autogen, elixir-format
 msgid "Entry content requires bundle version 2."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:804
+#: lib/brando_admin/live/config/content_transfer_live.ex:887
 #, elixir-autogen, elixir-format
 msgid "Entry field changes"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:384
+#: lib/brando_admin/live/config/content_transfer_live.ex:1794
 #, elixir-autogen, elixir-format
 msgid "Entry included"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:39
+#: lib/brando/content/transfer/labels.ex:41
 #, elixir-autogen, elixir-format
 msgid "Entry link"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:212
+#: lib/brando_admin/live/config/content_transfer_live.ex:254
 #, elixir-autogen, elixir-format
 msgid "Entry selected"
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:323
+#: lib/brando/content/transfer/entries.ex:356
 #, elixir-autogen, elixir-format
 msgid "Entry validation: %{value1}"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:91
+#: lib/brando_admin/live/config/content_transfer_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "Export"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:86
+#: lib/brando_admin/live/config/content_transfer_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "Export content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:134
+#: lib/brando_admin/live/config/content_transfer_live.ex:136
 #, elixir-autogen, elixir-format
 msgid "Export scope"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:807
+#: lib/brando_admin/live/config/content_transfer_live.ex:890
 #, elixir-autogen, elixir-format
 msgid "Field"
 msgstr ""
@@ -623,171 +614,166 @@ msgstr ""
 msgid "Field validation: %{value1}"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:327
+#: lib/brando_admin/live/config/content_transfer_live.ex:369
 #, elixir-autogen, elixir-format
 msgid "Fields"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:197
+#: lib/brando_admin/live/config/content_transfer_live.ex:239
 #, elixir-autogen, elixir-format
 msgid "Fields to export from %{title}"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:354
+#: lib/brando_admin/live/config/content_transfer_live.ex:396
 #, elixir-autogen, elixir-format
 msgid "Fields, metadata & content"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:45
-#: lib/brando_admin/content_preview.ex:195
+#: lib/brando/content/transfer/labels.ex:47
+#: lib/brando_admin/content_preview.ex:201
 #, elixir-autogen, elixir-format
 msgid "File"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:127
+#: lib/brando_admin/live/config/content_transfer_live.ex:129
 #, elixir-autogen, elixir-format
 msgid "Find an entry, then select the block fields to take with you."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:887
+#: lib/brando_admin/live/config/content_transfer_live.ex:970
 #, elixir-autogen, elixir-format
 msgid "Find destination dependencies"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:562
+#: lib/brando_admin/live/config/content_transfer_live.ex:634
 #, elixir-autogen, elixir-format
 msgid "Find destination entries"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:569
+#: lib/brando_admin/live/config/content_transfer_live.ex:641
 #, elixir-autogen, elixir-format
 msgid "Find destination entries…"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:892
+#: lib/brando_admin/live/config/content_transfer_live.ex:975
 #, elixir-autogen, elixir-format
 msgid "Find destination modules, media or references…"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:40
+#: lib/brando/content/transfer/labels.ex:42
 #, elixir-autogen, elixir-format
 msgid "Fragment"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:577
+#: lib/brando_admin/live/config/content_transfer_live.ex:649
 #, elixir-autogen, elixir-format
 msgid "From bundle"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:47
-#: lib/brando_admin/content_preview.ex:197
+#: lib/brando/content/transfer/labels.ex:49
+#: lib/brando_admin/content_preview.ex:203
 #, elixir-autogen, elixir-format
 msgid "Gallery"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:68
+#: lib/brando/content/transfer/labels.ex:70
 #, elixir-autogen, elixir-format
 msgid "Gallery items"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:73
+#: lib/brando/content/transfer/labels.ex:75
 #, elixir-autogen, elixir-format
 msgid "HTML"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:72
+#: lib/brando/content/transfer/labels.ex:74
 #, elixir-autogen, elixir-format
 msgid "Heading"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:64
+#: lib/brando/content/transfer/labels.ex:66
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:44
-#: lib/brando_admin/content_preview.ex:194
+#: lib/brando/content/transfer/labels.ex:46
+#: lib/brando_admin/content_preview.ex:200
 #, elixir-autogen, elixir-format
 msgid "Image"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:278
+#: lib/brando_admin/live/config/content_transfer_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "Images, files and uploaded videos. Sizes are regenerated on arrival."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:102
+#: lib/brando_admin/live/config/content_transfer_live.ex:104
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:71
+#: lib/brando_admin/live/config/content_transfer_live.ex:73
 #, elixir-autogen, elixir-format
 msgid "Import/Export"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:614
-#: lib/brando_admin/live/config/content_transfer_live.ex:693
+#: lib/brando_admin/live/config/content_transfer_live.ex:686
+#: lib/brando_admin/live/config/content_transfer_live.ex:763
 #, elixir-autogen, elixir-format
 msgid "Import action"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1080
+#: lib/brando_admin/live/config/content_transfer_live.ex:1163
 #, elixir-autogen, elixir-format
 msgid "Import another bundle"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:97
+#: lib/brando_admin/live/config/content_transfer_live.ex:99
 #, elixir-autogen, elixir-format
 msgid "Import content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:373
+#: lib/brando_admin/live/config/content_transfer_live.ex:431
 #, elixir-autogen, elixir-format
 msgid "Include entry"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:369
-#, elixir-autogen, elixir-format
-msgid "Include these entries too, or choose their destination when you import."
-msgstr ""
-
-#: lib/brando_admin/live/config/content_transfer_live.ex:378
+#: lib/brando_admin/live/config/content_transfer_live.ex:436
 #, elixir-autogen, elixir-format
 msgid "Included dependencies"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1691
+#: lib/brando_admin/live/config/content_transfer_live.ex:1899
 #, elixir-autogen, elixir-format
 msgid "Included entry"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:526
+#: lib/brando_admin/live/config/content_transfer_live.ex:598
 #, elixir-autogen, elixir-format
 msgid "Incoming bundle"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1019
+#: lib/brando_admin/live/config/content_transfer_live.ex:1102
 #, elixir-autogen, elixir-format
 msgid "Install missing definitions"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1419
+#: lib/brando_admin/live/config/content_transfer_live.ex:1527
 #, elixir-autogen, elixir-format
 msgid "Installing missing definitions…"
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:224
+#: lib/brando/content/transfer/portable.ex:334
 #, elixir-autogen, elixir-format
 msgid "Invalid %{value1} collection."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:163
+#: lib/brando/content/transfer/portable.ex:273
 #, elixir-autogen, elixir-format
 msgid "Invalid content matching hints."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:179
+#: lib/brando/content/transfer/portable.ex:289
 #, elixir-autogen, elixir-format
 msgid "Invalid dependency token."
 msgstr ""
@@ -807,7 +793,7 @@ msgstr ""
 msgid "Invalid entry relationship %{value1}."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:69
+#: lib/brando/content/transfer/dependencies.ex:68
 #, elixir-autogen, elixir-format
 msgid "Invalid gallery object list."
 msgstr ""
@@ -818,12 +804,12 @@ msgstr ""
 msgid "Invalid import operation ID."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:41
+#: lib/brando/content/transfer/dependencies.ex:40
 #, elixir-autogen, elixir-format
 msgid "Invalid module compatibility contract."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:192
+#: lib/brando/content/transfer/portable.ex:302
 #, elixir-autogen, elixir-format
 msgid "Invalid module set membership."
 msgstr ""
@@ -833,48 +819,48 @@ msgstr ""
 msgid "Invalid owned collection %{value1}."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:628
+#: lib/brando_admin/live/config/content_transfer_live.ex:700
 #, elixir-autogen, elixir-format
 msgid "Keep %{count} current blocks and add %{incoming}."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:718
+#: lib/brando_admin/live/config/content_transfer_live.ex:791
 #, elixir-autogen, elixir-format
 msgid "Keep destination status"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:285
+#: lib/brando_admin/live/config/content_transfer_live.ex:327
 #, elixir-autogen, elixir-format
 msgid "Keep module lineage and include child modules and table templates."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:29
+#: lib/brando/content/transfer/labels.ex:31
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:60
+#: lib/brando/content/transfer/labels.ex:62
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:27
+#: lib/brando/content/transfer/labels.ex:29
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1698
+#: lib/brando_admin/live/config/content_transfer_live.ex:1906
 #, elixir-autogen, elixir-format
 msgid "Lineage matched"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:70
-#: lib/brando_admin/content_preview.ex:140
+#: lib/brando/content/transfer/labels.ex:72
+#: lib/brando_admin/content_preview.ex:146
 #, elixir-autogen, elixir-format
 msgid "Link"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:61
+#: lib/brando/content/transfer/labels.ex:63
 #, elixir-autogen, elixir-format
 msgid "Link text"
 msgstr ""
@@ -889,7 +875,7 @@ msgstr ""
 msgid "Map the gallery's media assets; its owned gallery is recreated from the bundle."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:405
+#: lib/brando/content/transfer/entries.ex:438
 #, elixir-autogen, elixir-format
 msgid "Map the table template used by the destination module."
 msgstr ""
@@ -899,22 +885,22 @@ msgstr ""
 msgid "Map the table template used by the selected destination module."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:48
+#: lib/brando/content/transfer/labels.ex:50
 #, elixir-autogen, elixir-format
 msgid "Markdown source"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:49
+#: lib/brando/content/transfer/labels.ex:51
 #, elixir-autogen, elixir-format
 msgid "Markdown version"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:76
+#: lib/brando/content/transfer/labels.ex:78
 #, elixir-autogen, elixir-format
 msgid "Media"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:67
+#: lib/brando/content/transfer/labels.ex:69
 #, elixir-autogen, elixir-format
 msgid "Media configuration"
 msgstr ""
@@ -929,12 +915,12 @@ msgstr ""
 msgid "Media integrity check failed."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1739
+#: lib/brando_admin/live/config/content_transfer_live.ex:1947
 #, elixir-autogen, elixir-format
 msgid "Media is ready or queued for processing."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:275
+#: lib/brando_admin/live/config/content_transfer_live.ex:317
 #, elixir-autogen, elixir-format
 msgid "Media originals"
 msgstr ""
@@ -944,7 +930,7 @@ msgstr ""
 msgid "Media path is outside this site's storage."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1069
+#: lib/brando_admin/live/config/content_transfer_live.ex:1152
 #, elixir-autogen, elixir-format
 msgid "Media processing and static-site deployment may finish separately. Use your normal publishing workflow for a static site."
 msgstr ""
@@ -959,87 +945,87 @@ msgstr ""
 msgid "Media transfer does not follow symlinks."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:856
+#: lib/brando_admin/live/config/content_transfer_live.ex:939
 #, elixir-autogen, elixir-format
 msgid "Metadata, assets & owned records"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:36
+#: lib/brando/content/transfer/labels.ex:38
 #, elixir-autogen, elixir-format
 msgid "Module"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:43
+#: lib/brando/content/transfer/labels.ex:45
 #, elixir-autogen, elixir-format
 msgid "Module collection"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:980
+#: lib/brando_admin/live/config/content_transfer_live.ex:1063
 #, elixir-autogen, elixir-format
 msgid "Module defaults need existing destination assets before their definitions can be installed. Map them here; content media is reviewed above."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:964
+#: lib/brando_admin/live/config/content_transfer_live.ex:1047
 #, elixir-autogen, elixir-format
 msgid "Module definitions are included. Review them if a required module is missing on this site."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:37
+#: lib/brando/content/transfer/labels.ex:39
 #, elixir-autogen, elixir-format
 msgid "Module entry"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:870
+#: lib/brando_admin/live/config/content_transfer_live.ex:953
 #, elixir-autogen, elixir-format
 msgid "Module lineage matches automatically. Other references need a reviewed destination."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:132
+#: lib/brando/content/transfer/dependencies.ex:125
 #, elixir-autogen, elixir-format
 msgid "Module set “%{value1}” is missing."
 msgstr ""
 
-#: lib/brando/content/transfer/contracts.ex:57
+#: lib/brando/content/transfer/contracts.ex:58
 #, elixir-autogen, elixir-format
 msgid "Module “%{value1}” has incompatible settings: %{value2}."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:72
+#: lib/brando_admin/live/config/content_transfer_live.ex:74
 #, elixir-autogen, elixir-format
 msgid "Move entries and their content between sites and environments."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:26
+#: lib/brando/content/transfer/labels.ex:28
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1692
+#: lib/brando_admin/live/config/content_transfer_live.ex:1900
 #, elixir-autogen, elixir-format
 msgid "Needs attention"
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:485
+#: lib/brando/content/transfer/entries.ex:527
 #, elixir-autogen, elixir-format
 msgid "New entries refer to each other in a cycle. Map one of those references to an existing entry, then review again."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1641
+#: lib/brando_admin/live/config/content_transfer_live.ex:1849
 #, elixir-autogen, elixir-format
 msgid "No"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1095
+#: lib/brando_admin/live/config/content_transfer_live.ex:1178
 #, elixir-autogen, elixir-format
 msgid "No imports yet"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:169
+#: lib/brando_admin/live/config/content_transfer_live.ex:197
 #, elixir-autogen, elixir-format
 msgid "No matching content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1642
+#: lib/brando_admin/live/config/content_transfer_live.ex:1850
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr ""
@@ -1049,7 +1035,7 @@ msgstr ""
 msgid "Norwegian"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1003
+#: lib/brando_admin/live/config/content_transfer_live.ex:1086
 #, elixir-autogen, elixir-format
 msgid "Only new definitions and identical existing definitions can be installed here. Changes to existing definitions require the module migration workflow."
 msgstr ""
@@ -1059,12 +1045,12 @@ msgstr ""
 msgid "Only saved Blueprint entries can be transferred."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:24
+#: lib/brando/content/transfer/labels.ex:26
 #, elixir-autogen, elixir-format
 msgid "Order"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:381
+#: lib/brando_admin/live/config/content_transfer_live.ex:1791
 #, elixir-autogen, elixir-format
 msgid "Original included"
 msgstr ""
@@ -1074,7 +1060,7 @@ msgstr ""
 msgid "Original “%{value1}” is unavailable locally. Restore it from storage, or export without originals and map an existing destination asset."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:891
+#: lib/brando/content/transfer/entries.ex:937
 #, elixir-autogen, elixir-format
 msgid "Other content now references an entry created by this import. Remove those references before recovering."
 msgstr ""
@@ -1086,129 +1072,124 @@ msgstr ""
 msgid "Owned entry content exceeds 20 nested levels."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:41
-#: lib/brando/content/transfer/labels.ex:69
+#: lib/brando/content/transfer/labels.ex:43
+#: lib/brando/content/transfer/labels.ex:71
 #, elixir-autogen, elixir-format
 msgid "Palette"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:30
+#: lib/brando/content/transfer/labels.ex:32
 #, elixir-autogen, elixir-format
 msgid "Parent key"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1656
+#: lib/brando_admin/live/config/content_transfer_live.ex:1864
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:295
+#: lib/brando_admin/live/config/content_transfer_live.ex:337
 #, elixir-autogen, elixir-format
 msgid "Prepare export"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1274
+#: lib/brando_admin/live/config/content_transfer_live.ex:1382
 #, elixir-autogen, elixir-format
 msgid "Preparing your saved content and media…"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:22
+#: lib/brando/content/transfer/labels.ex:24
 #, elixir-autogen, elixir-format
 msgid "Public URL"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:708
+#: lib/brando_admin/live/config/content_transfer_live.ex:781
 #, elixir-autogen, elixir-format
 msgid "Publication"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:23
+#: lib/brando/content/transfer/labels.ex:25
 #, elixir-autogen, elixir-format
 msgid "Publication date"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1654
+#: lib/brando_admin/live/config/content_transfer_live.ex:1862
 #, elixir-autogen, elixir-format
 msgid "Published"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:639
+#: lib/brando_admin/live/config/content_transfer_live.ex:711
 #, elixir-autogen, elixir-format
 msgid "Published entry: the imported content becomes live after rendering."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1025
+#: lib/brando_admin/live/config/content_transfer_live.ex:1108
 #, elixir-autogen, elixir-format
 msgid "Ready to import"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:459
+#: lib/brando_admin/live/config/content_transfer_live.ex:531
 #, elixir-autogen, elixir-format
 msgid "Ready to review"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:112
-#: lib/brando_admin/live/config/content_transfer_live.ex:1087
+#: lib/brando_admin/live/config/content_transfer_live.ex:114
+#: lib/brando_admin/live/config/content_transfer_live.ex:1170
 #, elixir-autogen, elixir-format
 msgid "Recent imports"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1132
+#: lib/brando_admin/live/config/content_transfer_live.ex:1215
 #, elixir-autogen, elixir-format
 msgid "Recover previous content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1118
+#: lib/brando_admin/live/config/content_transfer_live.ex:1201
 #, elixir-autogen, elixir-format
 msgid "Recovered"
 msgstr ""
 
-#: lib/brando/content/transfer.ex:880
+#: lib/brando/content/transfer.ex:871
 #, elixir-autogen, elixir-format
 msgid "Recovery is no longer authorized."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:371
-#, elixir-autogen, elixir-format
-msgid "Referenced content"
-msgstr ""
-
-#: lib/brando/content/transfer/labels.ex:51
+#: lib/brando/content/transfer/labels.ex:53
 #, elixir-autogen, elixir-format
 msgid "References"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:368
+#: lib/brando_admin/live/config/content_transfer_live.ex:410
 #, elixir-autogen, elixir-format
 msgid "Related entries"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:270
+#: lib/brando_admin/live/config/content_transfer_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "Remove %{title}"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:466
+#: lib/brando_admin/live/config/content_transfer_live.ex:538
 #, elixir-autogen, elixir-format
 msgid "Remove file"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:633
+#: lib/brando_admin/live/config/content_transfer_live.ex:705
 #, elixir-autogen, elixir-format
 msgid "Replace %{count} current blocks with %{incoming}."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:619
+#: lib/brando_admin/live/config/content_transfer_live.ex:691
 #, elixir-autogen, elixir-format
 msgid "Replace field contents"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:782
+#: lib/brando_admin/live/config/content_transfer_live.ex:863
 #, elixir-autogen, elixir-format
 msgid "Replace this entry’s authored fields, metadata and owned content with the bundle values."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:282
+#: lib/brando_admin/live/config/content_transfer_live.ex:324
 #, elixir-autogen, elixir-format
 msgid "Required definitions"
 msgstr ""
@@ -1218,26 +1199,21 @@ msgstr ""
 msgid "Resolve %{value1} “%{value2}” on the destination."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:505
-#: lib/brando_admin/live/config/content_transfer_live.ex:869
+#: lib/brando_admin/live/config/content_transfer_live.ex:577
+#: lib/brando_admin/live/config/content_transfer_live.ex:952
 #, elixir-autogen, elixir-format
 msgid "Resolve dependencies"
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:399
+#: lib/brando/content/transfer/portable.ex:512
 #, elixir-autogen, elixir-format
 msgid "Resolve dependency %{value1} before importing."
 msgstr ""
 
 #: lib/brando/content/transfer.ex:404
-#: lib/brando/content/transfer/entries.ex:500
+#: lib/brando/content/transfer/entries.ex:542
 #, elixir-autogen, elixir-format
 msgid "Resolve every blocking problem before importing."
-msgstr ""
-
-#: lib/brando_admin/live/config/content_transfer_live.ex:385
-#, elixir-autogen, elixir-format
-msgid "Resolve on destination"
 msgstr ""
 
 #: lib/brando/content/transfer/entry_codec.ex:394
@@ -1246,117 +1222,117 @@ msgid "Resolve the entry's referenced content before importing."
 msgstr ""
 
 #: lib/brando/content/transfer.ex:339
-#: lib/brando/content/transfer/entries.ex:395
+#: lib/brando/content/transfer/entries.ex:428
 #, elixir-autogen, elixir-format
 msgid "Resolve the required modules before reviewing content."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1149
+#: lib/brando_admin/live/config/content_transfer_live.ex:1232
 #, elixir-autogen, elixir-format
 msgid "Restore previous content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1135
+#: lib/brando_admin/live/config/content_transfer_live.ex:1218
 #, elixir-autogen, elixir-format
 msgid "Restore updated content and remove entries created by this import? Published entries are affected too. Newer edits will block recovery."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1433
+#: lib/brando_admin/live/config/content_transfer_live.ex:1541
 #, elixir-autogen, elixir-format
 msgid "Restoring previous content…"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1126
+#: lib/brando_admin/live/config/content_transfer_live.ex:1209
 #, elixir-autogen, elixir-format
 msgid "Retry rendering and media"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1441
+#: lib/brando_admin/live/config/content_transfer_live.ex:1549
 #, elixir-autogen, elixir-format
 msgid "Retrying rendering…"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:505
+#: lib/brando_admin/live/config/content_transfer_live.ex:577
 #, elixir-autogen, elixir-format
 msgid "Reuse matching modules, bring media, and map referenced content."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:510
+#: lib/brando_admin/live/config/content_transfer_live.ex:582
 #, elixir-autogen, elixir-format
 msgid "Review and apply"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:492
+#: lib/brando_admin/live/config/content_transfer_live.ex:564
 #, elixir-autogen, elixir-format
 msgid "Review bundle"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:799
+#: lib/brando_admin/live/config/content_transfer_live.ex:882
 #, elixir-autogen, elixir-format
 msgid "Review fields & content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:484
+#: lib/brando_admin/live/config/content_transfer_live.ex:556
 #, elixir-autogen, elixir-format
 msgid "Review first. Apply when you’re ready."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:968
+#: lib/brando_admin/live/config/content_transfer_live.ex:1051
 #, elixir-autogen, elixir-format
 msgid "Review included definitions"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:164
+#: lib/brando_admin/live/config/content_transfer_live.ex:192
 #, elixir-autogen, elixir-format
 msgid "Review selection"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:318
+#: lib/brando_admin/live/config/content_transfer_live.ex:360
 #, elixir-autogen, elixir-format
 msgid "Review what is included, then download it for the destination workspace."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:538
+#: lib/brando_admin/live/config/content_transfer_live.ex:610
 #, elixir-autogen, elixir-format
 msgid "Review your entries"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:52
+#: lib/brando/content/transfer/labels.ex:54
 #, elixir-autogen, elixir-format
 msgid "Rows"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:21
+#: lib/brando/content/transfer/labels.ex:23
 #, elixir-autogen, elixir-format
 msgid "SEO description"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:20
+#: lib/brando/content/transfer/labels.ex:22
 #, elixir-autogen, elixir-format
 msgid "SEO title"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:74
+#: lib/brando/content/transfer/labels.ex:76
 #, elixir-autogen, elixir-format
 msgid "SVG"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:715
+#: lib/brando_admin/live/config/content_transfer_live.ex:788
 #, elixir-autogen, elixir-format
 msgid "Save as draft"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:155
+#: lib/brando_admin/live/config/content_transfer_live.ex:157
 #, elixir-autogen, elixir-format
 msgid "Search pages, fragments and content…"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:147
+#: lib/brando_admin/live/config/content_transfer_live.ex:149
 #, elixir-autogen, elixir-format
 msgid "Search saved content"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:206
+#: lib/brando_admin/live/config/content_transfer_live.ex:248
 #, elixir-autogen, elixir-format
 msgid "Select %{title}"
 msgstr ""
@@ -1366,114 +1342,114 @@ msgstr ""
 msgid "Select at least one entry."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:217
+#: lib/brando_admin/live/config/content_transfer_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Select entry"
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:337
+#: lib/brando/content/transfer/dependencies.ex:325
 #, elixir-autogen, elixir-format
 msgid "Selected-entry metadata has an invalid reference."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:334
+#: lib/brando/content/transfer/dependencies.ex:322
 #, elixir-autogen, elixir-format
 msgid "Selected-entry metadata references a missing identifier."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:182
+#: lib/brando/content/transfer/dependencies.ex:170
 #, elixir-autogen, elixir-format
 msgid "Shared module overrides are not supported by content transfer."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:33
+#: lib/brando/content/transfer/portable.ex:34
 #, elixir-autogen, elixir-format
 msgid "Shared-library blocks must be installed as local definitions before transfer."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:242
+#: lib/brando_admin/live/config/content_transfer_live.ex:284
 #, elixir-autogen, elixir-format
 msgid "Showing up to 60 matches. Search to narrow the list. Unsaved editor changes are not included."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:31
+#: lib/brando/content/transfer/labels.ex:33
 #, elixir-autogen, elixir-format
 msgid "Slug"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:28
+#: lib/brando/content/transfer/labels.ex:30
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:19
+#: lib/brando/content/transfer/labels.ex:21
 #, elixir-autogen, elixir-format
 msgid "Structured data type"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:548
+#: lib/brando_admin/live/config/content_transfer_live.ex:620
 #, elixir-autogen, elixir-format
 msgid "Suggestions use content keys and language. Confirm each destination before applying."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:77
+#: lib/brando/content/transfer/labels.ex:79
 #, elixir-autogen, elixir-format
 msgid "Table"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:38
+#: lib/brando/content/transfer/labels.ex:40
 #, elixir-autogen, elixir-format
 msgid "Table template"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:126
+#: lib/brando_admin/live/config/content_transfer_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Take complete entries with their fields, metadata and block content."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:32
+#: lib/brando/content/transfer/labels.ex:34
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:58
-#: lib/brando/content/transfer/labels.ex:71
+#: lib/brando/content/transfer/labels.ex:60
+#: lib/brando/content/transfer/labels.ex:73
 #, elixir-autogen, elixir-format
 msgid "Text"
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:150
+#: lib/brando/content/transfer/dependencies.ex:143
 #, elixir-autogen, elixir-format
 msgid "The %{value1} dependency has been deleted."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:147
+#: lib/brando/content/transfer/dependencies.ex:140
 #, elixir-autogen, elixir-format
 msgid "The %{value1} dependency is missing."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:934
+#: lib/brando/content/transfer.ex:925
 #, elixir-autogen, elixir-format
 msgid "The actor does not belong to the selected site/environment."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:248
+#: lib/brando/content/transfer/portable.ex:358
 #, elixir-autogen, elixir-format
 msgid "The block tree is malformed or exceeds 40 nesting levels."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1681
+#: lib/brando_admin/live/config/content_transfer_live.ex:1889
 #, elixir-autogen, elixir-format
 msgid "The bundle exceeds 128 MB. Export fewer fields or omit media originals."
 msgstr ""
 
 #: lib/brando/content/transfer.ex:347
-#: lib/brando/content/transfer/entries.ex:401
+#: lib/brando/content/transfer/entries.ex:434
 #, elixir-autogen, elixir-format
 msgid "The child module belongs to a different destination parent."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:305
+#: lib/brando_admin/live/config/content_transfer_live.ex:347
 #, elixir-autogen, elixir-format
 msgid "The complete saved field travels with you, including nested blocks and retained unused content."
 msgstr ""
@@ -1488,27 +1464,27 @@ msgstr ""
 msgid "The dependency manifest has an undeclared relationship."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:151
+#: lib/brando/content/transfer/portable.ex:261
 #, elixir-autogen, elixir-format
 msgid "The dependency manifest is invalid or too large."
 msgstr ""
 
-#: lib/brando/content/transfer/contracts.ex:87
+#: lib/brando/content/transfer/contracts.ex:88
 #, elixir-autogen, elixir-format
 msgid "The destination %{value1} “%{value2}” is missing or has a different type."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:533
+#: lib/brando/content/transfer/entries.ex:575
 #, elixir-autogen, elixir-format
 msgid "The destination changed after preview. Review the import again."
 msgstr ""
 
-#: lib/brando/content/transfer/contracts.ex:71
+#: lib/brando/content/transfer/contracts.ex:72
 #, elixir-autogen, elixir-format
 msgid "The destination table columns differ from the source. Reconcile the table template first."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:951
+#: lib/brando_admin/live/config/content_transfer_live.ex:1034
 #, elixir-autogen, elixir-format
 msgid "The destination uses different %{changes}. Imported content keeps its values; new references and variables use destination defaults."
 msgstr ""
@@ -1543,7 +1519,7 @@ msgstr ""
 msgid "The image exceeds the 100 megapixel import limit."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:439
+#: lib/brando/content/transfer/entries.ex:481
 #, elixir-autogen, elixir-format
 msgid "The included entry does not support content links."
 msgstr ""
@@ -1553,32 +1529,32 @@ msgstr ""
 msgid "The media original is missing from the archive."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1490
+#: lib/brando_admin/live/config/content_transfer_live.ex:1598
 #, elixir-autogen, elixir-format
 msgid "The operation could not finish. Check recent imports before retrying."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:288
+#: lib/brando/content/transfer/dependencies.ex:276
 #, elixir-autogen, elixir-format
 msgid "The originals exceed the bundle limit. Export fewer fields or omit media originals."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:906
+#: lib/brando/content/transfer.ex:897
 #, elixir-autogen, elixir-format
 msgid "The recovery module contract is unavailable."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:159
+#: lib/brando/content/transfer/dependencies.ex:152
 #, elixir-autogen, elixir-format
 msgid "The referenced content type is not registered."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:162
+#: lib/brando/content/transfer/dependencies.ex:155
 #, elixir-autogen, elixir-format
 msgid "The referenced entry is missing."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:164
+#: lib/brando/content/transfer/dependencies.ex:157
 #, elixir-autogen, elixir-format
 msgid "The referenced entry was deleted."
 msgstr ""
@@ -1598,12 +1574,12 @@ msgstr ""
 msgid "The selected entry is no longer available."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1686
+#: lib/brando_admin/live/config/content_transfer_live.ex:1894
 #, elixir-autogen, elixir-format
 msgid "The upload could not be completed. Remove the file and try again."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:636
+#: lib/brando/content/transfer/entries.ex:680
 #, elixir-autogen, elixir-format
 msgid "This Blueprint needs a generated integer entry ID."
 msgstr ""
@@ -1613,33 +1589,33 @@ msgstr ""
 msgid "This block field does not exist on the destination."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:878
+#: lib/brando_admin/live/config/content_transfer_live.ex:961
 #, elixir-autogen, elixir-format
 msgid "This bundle has no external dependencies."
 msgstr ""
 
 #: lib/brando/content/transfer/catalog.ex:29
-#: lib/brando/content/transfer/catalog.ex:175
+#: lib/brando/content/transfer/catalog.ex:190
 #, elixir-autogen, elixir-format
 msgid "This content type is not registered on this site."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:791
+#: lib/brando_admin/live/config/content_transfer_live.ex:873
 #, elixir-autogen, elixir-format
 msgid "This entry will be published. Imported content becomes live after rendering."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:841
+#: lib/brando/content/transfer.ex:832
 #, elixir-autogen, elixir-format
 msgid "This import has already been restored."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:709
+#: lib/brando/content/transfer.ex:700
 #, elixir-autogen, elixir-format
 msgid "This import is not available in the current workspace."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:138
+#: lib/brando/content/transfer/portable.ex:248
 #, elixir-autogen, elixir-format
 msgid "This is not a supported Brando content bundle (versions 1 and 2)."
 msgstr ""
@@ -1649,33 +1625,33 @@ msgstr ""
 msgid "This original exceeds the 256 MB content bundle limit. Export without originals and map a destination asset."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:919
+#: lib/brando/content/transfer.ex:910
 #, elixir-autogen, elixir-format
 msgid "This preview belongs to another actor, site or environment."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:838
+#: lib/brando/content/transfer.ex:829
 #, elixir-autogen, elixir-format
 msgid "This recovery snapshot is not available."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:25
-#: lib/brando_admin/content_preview.ex:136
+#: lib/brando/content/transfer/labels.ex:27
+#: lib/brando_admin/content_preview.ex:142
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:171
+#: lib/brando_admin/live/config/content_transfer_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "Try another title or change the export scope."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:253
+#: lib/brando/content/transfer/entries.ex:286
 #, elixir-autogen, elixir-format
 msgid "Two entries point to the same destination. Choose distinct destinations."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:242
+#: lib/brando/content/transfer/entries.ex:275
 #, elixir-autogen, elixir-format
 msgid "Two incoming entries use the same unique key. Choose distinct values before importing."
 msgstr ""
@@ -1685,22 +1661,22 @@ msgstr ""
 msgid "Two source fields point to the same destination field. Choose distinct destinations."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:59
+#: lib/brando/content/transfer/labels.ex:61
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:17
+#: lib/brando/content/transfer/labels.ex:19
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:62
+#: lib/brando/content/transfer/labels.ex:64
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:331
+#: lib/brando/content/transfer/dependencies.ex:319
 #, elixir-autogen, elixir-format
 msgid "Unknown selected-entry metadata schema."
 msgstr ""
@@ -1710,116 +1686,116 @@ msgstr ""
 msgid "Unsafe media path."
 msgstr ""
 
-#: lib/brando/content/transfer/portable.ex:220
+#: lib/brando/content/transfer/portable.ex:330
 #, elixir-autogen, elixir-format
 msgid "Unsupported block type."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:79
+#: lib/brando/content/transfer/dependencies.ex:78
 #, elixir-autogen, elixir-format
 msgid "Unsupported dependency %{value1}."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:703
+#: lib/brando_admin/live/config/content_transfer_live.ex:773
 #, elixir-autogen, elixir-format
 msgid "Update an existing entry"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:689
+#: lib/brando_admin/live/config/content_transfer_live.ex:1747
 #, elixir-autogen, elixir-format
 msgid "Update existing"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:416
+#: lib/brando_admin/live/config/content_transfer_live.ex:488
 #, elixir-autogen, elixir-format
 msgid "Upload a content bundle to review entries, destinations and dependencies."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:447
+#: lib/brando_admin/live/config/content_transfer_live.ex:519
 #, elixir-autogen, elixir-format
 msgid "Upload needs attention"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:515
+#: lib/brando_admin/live/config/content_transfer_live.ex:587
 #, elixir-autogen, elixir-format
 msgid "Uploading and previewing do not change saved content or definitions."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:453
+#: lib/brando_admin/live/config/content_transfer_live.ex:525
 #, elixir-autogen, elixir-format
 msgid "Uploading bundle…"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:143
+#: lib/brando_admin/live/config/content_transfer_live.ex:145
 #, elixir-autogen, elixir-format
 msgid "Use block fields to move a layout into an entry you already have."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:913
+#: lib/brando_admin/live/config/content_transfer_live.ex:996
 #, elixir-autogen, elixir-format
 msgid "Use included entry"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:721
+#: lib/brando_admin/live/config/content_transfer_live.ex:794
 #, elixir-autogen, elixir-format
 msgid "Use source status: %{status}"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:989
+#: lib/brando_admin/live/config/content_transfer_live.ex:1072
 #, elixir-autogen, elixir-format
 msgid "Use the content mapping if available"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:54
-#: lib/brando/content/transfer/labels.ex:55
+#: lib/brando/content/transfer/labels.ex:56
+#: lib/brando/content/transfer/labels.ex:57
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:50
+#: lib/brando/content/transfer/labels.ex:52
 #, elixir-autogen, elixir-format
 msgid "Variables"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1379
+#: lib/brando_admin/live/config/content_transfer_live.ex:1487
 #, elixir-autogen, elixir-format
 msgid "Verifying and importing content…"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:46
-#: lib/brando_admin/content_preview.ex:196
+#: lib/brando/content/transfer/labels.ex:48
+#: lib/brando_admin/content_preview.ex:202
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1074
+#: lib/brando_admin/live/config/content_transfer_live.ex:1157
 #, elixir-autogen, elixir-format
 msgid "View recovery snapshot"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1313
+#: lib/brando_admin/live/config/content_transfer_live.ex:1421
 #, elixir-autogen, elixir-format
 msgid "Wait for the upload to finish, then review the bundle."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:137
+#: lib/brando_admin/live/config/content_transfer_live.ex:139
 #, elixir-autogen, elixir-format
 msgid "Whole entries"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:264
-#: lib/brando_admin/live/config/content_transfer_live.ex:347
-#: lib/brando_admin/live/config/content_transfer_live.ex:675
+#: lib/brando_admin/live/config/content_transfer_live.ex:306
+#: lib/brando_admin/live/config/content_transfer_live.ex:389
+#: lib/brando_admin/live/config/content_transfer_live.ex:747
 #, elixir-autogen, elixir-format
 msgid "Whole entry"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:63
+#: lib/brando/content/transfer/labels.ex:65
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1640
+#: lib/brando_admin/live/config/content_transfer_live.ex:1848
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr ""
@@ -1829,12 +1805,12 @@ msgstr ""
 msgid "You cannot import media into this destination configuration."
 msgstr ""
 
-#: lib/brando/content/transfer/dependencies.ex:175
+#: lib/brando/content/transfer/dependencies.ex:163
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to access this Markdown source."
 msgstr ""
 
-#: lib/brando/content/transfer.ex:569
+#: lib/brando/content/transfer.ex:565
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to change these fields or publish this entry."
 msgstr ""
@@ -1844,43 +1820,43 @@ msgstr ""
 msgid "You do not have permission to change this field."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:331
+#: lib/brando/content/transfer/entries.ex:364
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to save or publish this entry."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:317
+#: lib/brando_admin/live/config/content_transfer_live.ex:359
 #, elixir-autogen, elixir-format
 msgid "Your bundle is ready"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:252
-#: lib/brando_admin/live/config/content_transfer_live.ex:254
+#: lib/brando_admin/live/config/content_transfer_live.ex:294
+#: lib/brando_admin/live/config/content_transfer_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Your export"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1088
+#: lib/brando_admin/live/config/content_transfer_live.ex:1171
 #, elixir-autogen, elixir-format
 msgid "Your last 10 imports in this workspace. Recovery refuses to overwrite newer edits."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:432
+#: lib/brando_admin/live/config/content_transfer_live.ex:504
 #, elixir-autogen, elixir-format
 msgid "or drop a ZIP file here · up to 128 MB"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1704
+#: lib/brando_admin/live/config/content_transfer_live.ex:1912
 #, elixir-autogen, elixir-format
 msgid "reference defaults"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1702
+#: lib/brando_admin/live/config/content_transfer_live.ex:1910
 #, elixir-autogen, elixir-format
 msgid "render code"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1705
+#: lib/brando_admin/live/config/content_transfer_live.ex:1913
 #, elixir-autogen, elixir-format
 msgid "variable defaults"
 msgstr ""
@@ -2001,52 +1977,52 @@ msgstr ""
 msgid "unsupported compression or inconsistent file sizes"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1708
+#: lib/brando_admin/live/config/content_transfer_live.ex:1916
 #, elixir-autogen, elixir-format
 msgid "Already installed"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1710
+#: lib/brando_admin/live/config/content_transfer_live.ex:1918
 #, elixir-autogen, elixir-format
 msgid "Conflict"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1707
+#: lib/brando_admin/live/config/content_transfer_live.ex:1915
 #, elixir-autogen, elixir-format
 msgid "Create"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1724
+#: lib/brando_admin/live/config/content_transfer_live.ex:1932
 #, elixir-autogen, elixir-format
 msgid "Export the destination definition first so changes can be compared safely."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:943
+#: lib/brando_admin/live/config/content_transfer_live.ex:1026
 #, elixir-autogen, elixir-format
 msgid "Map this Markdown source and immutable version on the destination; service credentials are not included."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1711
+#: lib/brando_admin/live/config/content_transfer_live.ex:1919
 #, elixir-autogen, elixir-format
 msgid "Migration required"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1715
+#: lib/brando_admin/live/config/content_transfer_live.ex:1923
 #, elixir-autogen, elixir-format
 msgid "Review structural changes in the module migration workflow before importing this content."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1727
+#: lib/brando_admin/live/config/content_transfer_live.ex:1935
 #, elixir-autogen, elixir-format
 msgid "The destination definition changed since export. Review a new bundle."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1721
+#: lib/brando_admin/live/config/content_transfer_live.ex:1929
 #, elixir-autogen, elixir-format
 msgid "The exported definition was deleted from the destination."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:1709
+#: lib/brando_admin/live/config/content_transfer_live.ex:1917
 #, elixir-autogen, elixir-format
 msgid "Update"
 msgstr ""
@@ -2056,60 +2032,60 @@ msgstr ""
 msgid "You do not have permission to access this content."
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:658
-#: lib/brando_admin/live/config/content_transfer_live.ex:841
+#: lib/brando_admin/live/config/content_transfer_live.ex:730
+#: lib/brando_admin/live/config/content_transfer_live.ex:924
 #, elixir-autogen, elixir-format
 msgid "Current → after import"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:840
+#: lib/brando_admin/live/config/content_transfer_live.ex:923
 #, elixir-autogen, elixir-format
 msgid "New entry · all content is added"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:659
-#: lib/brando_admin/live/config/content_transfer_live.ex:843
+#: lib/brando_admin/live/config/content_transfer_live.ex:731
+#: lib/brando_admin/live/config/content_transfer_live.ex:926
 #, elixir-autogen, elixir-format
 msgid "No block content"
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:137
+#: lib/brando_admin/content_preview.ex:143
 #, elixir-autogen, elixir-format
 msgid "Alt text"
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:138
+#: lib/brando_admin/content_preview.ex:144
 #, elixir-autogen, elixir-format
 msgid "Caption"
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:153
+#: lib/brando_admin/content_preview.ex:159
 #, elixir-autogen, elixir-format
 msgid "Focal point: %{x}% / %{y}%"
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:128
+#: lib/brando_admin/content_preview.ex:134
 #, elixir-autogen, elixir-format
 msgid "Poster"
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:77
+#: lib/brando_admin/content_preview.ex:78
 #, elixir-autogen, elixir-format
 msgid "Row %{number}"
 msgstr ""
 
-#: lib/brando_admin/live/config/content_transfer_live.ex:661
-#: lib/brando_admin/live/config/content_transfer_live.ex:845
+#: lib/brando_admin/live/config/content_transfer_live.ex:733
+#: lib/brando_admin/live/config/content_transfer_live.ex:928
 #, elixir-autogen, elixir-format
 msgid "Text and media references. Moves appear as removal and addition. Review layout and other settings separately."
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:171
+#: lib/brando_admin/content_preview.ex:177
 #, elixir-autogen, elixir-format
 msgid "Unavailable media"
 msgstr ""
 
-#: lib/brando_admin/content_preview.ex:184
+#: lib/brando_admin/content_preview.ex:190
 #, elixir-autogen, elixir-format
 msgid "Unnamed media"
 msgstr ""

@@ -1,64 +1,71 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
 msgid ""
 msgstr ""
-"Content-Type: text/plain; charset=UTF-8\n"
-"Language: no\n"
+"Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: lib/brando_admin/components/text_diff.ex:55
 #, elixir-autogen, elixir-format
 msgid "%{count} line added"
 msgid_plural "%{count} lines added"
-msgstr[0] "%{count} linje lagt til"
-msgstr[1] "%{count} linjer lagt til"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/text_diff.ex:47
 #, elixir-autogen, elixir-format
 msgid "%{count} line removed"
 msgid_plural "%{count} lines removed"
-msgstr[0] "%{count} linje fjernet"
-msgstr[1] "%{count} linjer fjernet"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/text_diff.ex:201
 #, elixir-autogen, elixir-format
 msgid "Added:"
-msgstr "Lagt til:"
+msgstr ""
 
 #: lib/brando_admin/components/text_diff.ex:42
 #, elixir-autogen, elixir-format
 msgid "Before → after"
-msgstr "Før → etter"
+msgstr ""
 
 #: lib/brando_admin/components/module_files.ex:194
 #, elixir-autogen, elixir-format
 msgid "Current → imported"
-msgstr "Nåværende → importert"
+msgstr ""
 
 #: lib/brando_admin/components/text_diff.ex:92
 #, elixir-autogen, elixir-format
 msgid "No content"
-msgstr "Ikke noe innhold"
+msgstr ""
 
 #: lib/brando_admin/components/text_diff.ex:95
 #, elixir-autogen, elixir-format
 msgid "Preview shortened. More content exists beyond the lines shown."
-msgstr "Forhåndsvisningen er forkortet. Det finnes mer innhold enn linjene som vises."
+msgstr ""
 
 #: lib/brando_admin/components/text_diff.ex:202
 #, elixir-autogen, elixir-format
 msgid "Removed:"
-msgstr "Fjernet:"
+msgstr ""
 
 #: lib/brando_admin/components/text_diff.ex:203
 #, elixir-autogen, elixir-format
 msgid "Unchanged:"
-msgstr "Uendret:"
+msgstr ""
 
 #: lib/brando_admin/components/text_diff.ex:71
 #, elixir-autogen, elixir-format
 msgid "Changes in %{field}"
-msgstr "Endringer i %{field}"
+msgstr ""
 
 #: lib/brando_admin/components/text_diff.ex:63
 #, elixir-autogen, elixir-format
 msgid "No changes in this preview"
-msgstr "Ingen endringer i denne forhåndsvisningen"
+msgstr ""
