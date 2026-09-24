@@ -35,4 +35,63 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
     attribute :use_default_controls, :boolean, default: true
     attribute :use_default_preload, :boolean, default: true
   end
+
+  # `object_id` is the id of the image or video, and images and videos are
+  # numbered by separate sequences — image 45 and video 45 can sit in the same
+  # gallery. An override therefore only identifies its media together with
+  # `object_type`. An override stored without a type matches on the id alone.
+
+  @doc """
+  Returns `{object_type, object_id}` for an override given as a struct, a plain
+  map or a changeset. `object_type` is `nil` when the override has none.
+  """
+  def media_key(%Ecto.Changeset{} = override) do
+    media_key(%{
+      object_id: Ecto.Changeset.get_field(override, :object_id),
+      object_type: Ecto.Changeset.get_field(override, :object_type)
+    })
+  end
+
+  def media_key(%{object_id: id} = override) when not is_nil(id) and id != "",
+    do: {media_type(Map.get(override, :object_type)), to_string(id)}
+
+  def media_key(_), do: nil
+
+  @doc """
+  Whether `override` applies to the `type` media (`:image` or `:video`) with `id`.
+  """
+  def for_media?(override, type, id) do
+    case media_key(override) do
+      {nil, override_id} -> override_id == to_string(id)
+      {override_type, override_id} -> override_type == type && override_id == to_string(id)
+      nil -> false
+    end
+  end
+
+  @doc """
+  Indexes overrides by media for `lookup/3`. A later override for the same media
+  replaces an earlier one.
+  """
+  def index(overrides) do
+    Enum.reduce(overrides || [], %{}, fn override, acc ->
+      case media_key(override) do
+        nil -> acc
+        key -> Map.put(acc, key, override)
+      end
+    end)
+  end
+
+  @doc """
+  Finds the override for the `type` media with `id` in an `index/1` map,
+  preferring a typed override over one stored without a type.
+  """
+  def lookup(index, type, id) do
+    id = to_string(id)
+    Map.get(index, {type, id}) || Map.get(index, {nil, id})
+  end
+
+  defp media_type(type) when type in [:image, :video], do: type
+  defp media_type("image"), do: :image
+  defp media_type("video"), do: :video
+  defp media_type(_), do: nil
 end

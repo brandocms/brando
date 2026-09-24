@@ -101,5 +101,42 @@ defmodule Brando.AI.TranslationTest do
       fields = Translation.translatable_text_fields(Brando.Pages.Page)
       assert is_list(fields)
     end
+
+    # Overrides point at the image or video, and images and videos are numbered
+    # separately, so image 7 and video 7 each fall back to their own text.
+    test "falls back to each gallery override's own media text" do
+      overrides = [
+        %Brando.Villain.Blocks.GalleryObjectOverride{object_id: "7", object_type: :image},
+        %Brando.Villain.Blocks.GalleryObjectOverride{object_id: "7", object_type: :video}
+      ]
+
+      gallery = %Brando.Galleries.Gallery{
+        gallery_objects: [
+          %Brando.Galleries.GalleryObject{id: 1, image: %Brando.Images.Image{id: 7, title: "Image title"}, video: nil},
+          %Brando.Galleries.GalleryObject{id: 2, image: nil, video: %Brando.Videos.Video{id: 7, title: "Video title"}}
+        ]
+      }
+
+      ref = %Brando.Content.Ref{
+        id: 11,
+        gallery: gallery,
+        data: %Brando.Villain.Blocks.GalleryBlock{
+          data: %Brando.Villain.Blocks.GalleryBlock.Data{gallery_object_overrides: overrides}
+        }
+      }
+
+      block = %Brando.Content.Block{vars: [], refs: [ref], table_rows: [], children: []}
+      entry = %Brando.Pages.Page{entry_blocks: [%{block: block}]}
+
+      items =
+        entry
+        |> Translation.collect_translatable_content(Brando.Pages.Page)
+        |> Enum.filter(&(elem(&1, 0) == :ref_gallery))
+
+      assert items == [
+               {:ref_gallery, 11, 0, :title, "Image title"},
+               {:ref_gallery, 11, 1, :title, "Video title"}
+             ]
+    end
   end
 end

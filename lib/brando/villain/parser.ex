@@ -219,6 +219,7 @@ defmodule Brando.Villain.Parser do
   alias Brando.Content.BlockSlots
   alias Brando.RuntimeConfig
   alias Brando.Utils
+  alias Brando.Villain.Blocks.GalleryObjectOverride
   alias Brando.Villain.TemplateAdapter
   alias Ecto.Changeset
 
@@ -1802,29 +1803,22 @@ defmodule Brando.Villain.Parser do
   end
 
   defp apply_gallery_caption_overrides(gallery, override_data) do
-    gallery_object_overrides = Map.get(override_data, :gallery_object_overrides, [])
-
-    overrides_map =
-      Enum.reduce(gallery_object_overrides, %{}, fn override, acc ->
-        case override_object_id(override) do
-          nil -> acc
-          object_id -> Map.put(acc, object_id, override)
-        end
-      end)
+    overrides_index =
+      override_data
+      |> Map.get(:gallery_object_overrides, [])
+      |> GalleryObjectOverride.index()
 
     updated_gallery_objects =
       Enum.map(gallery.gallery_objects || [], fn gallery_object ->
         image = get_loaded_assoc(gallery_object, :image)
         video = get_loaded_assoc(gallery_object, :video)
 
-        media_id =
+        object_override =
           cond do
-            image -> to_string(image.id)
-            video -> to_string(video.id)
+            image -> GalleryObjectOverride.lookup(overrides_index, :image, image.id)
+            video -> GalleryObjectOverride.lookup(overrides_index, :video, video.id)
             true -> nil
           end
-
-        object_override = Map.get(overrides_map, media_id)
 
         gallery_object =
           gallery_object
@@ -1901,16 +1895,6 @@ defmodule Brando.Villain.Parser do
       _ -> fallback
     end
   end
-
-  defp override_object_id(%Changeset{} = override) do
-    Changeset.get_field(override, :object_id)
-  end
-
-  defp override_object_id(%{object_id: object_id}) do
-    object_id
-  end
-
-  defp override_object_id(_), do: nil
 
   defp apply_caption_overrides(media_object, %Changeset{} = override) do
     media_object

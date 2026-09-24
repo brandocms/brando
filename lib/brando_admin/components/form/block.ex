@@ -46,6 +46,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
+  alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.Block.LiquidPreview
   alias BrandoAdmin.Components.Form.BlockField
@@ -794,13 +795,13 @@ defmodule BrandoAdmin.Components.Form.Block do
                 Map.has_key?(params, :remove_gallery_image_id) ->
                   id = params.remove_gallery_image_id
                   updated_ref = remove_media_from_gallery_ref(updated_ref, :image, id)
-                  updated_block = remove_gallery_object_override(updated_block, id)
+                  updated_block = remove_gallery_object_override(updated_block, :image, id)
                   {updated_ref, updated_block}
 
                 Map.has_key?(params, :remove_gallery_video_id) ->
                   id = params.remove_gallery_video_id
                   updated_ref = remove_media_from_gallery_ref(updated_ref, :video, id)
-                  updated_block = remove_gallery_object_override(updated_block, id)
+                  updated_block = remove_gallery_object_override(updated_block, :video, id)
                   {updated_ref, updated_block}
 
                 true ->
@@ -814,7 +815,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   {old_image_id, new_image} = params.replace_gallery_image
                   current_user = %{id: socket.assigns.current_user_id}
                   updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
-                  updated_block = replace_gallery_media_override(updated_block, old_image_id, new_image.id)
+                  updated_block = replace_gallery_media_override(updated_block, :image, old_image_id, new_image.id)
                   {updated_ref, updated_block}
 
                 Map.has_key?(params, :replace_gallery_image_id) ->
@@ -822,7 +823,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   current_user = %{id: socket.assigns.current_user_id}
                   {:ok, new_image} = fetch_media(:image, new_image_id)
                   updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
-                  updated_block = replace_gallery_media_override(updated_block, old_image_id, new_image_id)
+                  updated_block = replace_gallery_media_override(updated_block, :image, old_image_id, new_image_id)
                   {updated_ref, updated_block}
 
                 true ->
@@ -3124,18 +3125,22 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defp replace_gallery_media_override(block_changeset, old_media_id, new_media_id) do
+  defp replace_gallery_media_override(block_changeset, media_type, old_media_id, new_media_id) do
     current_data = Changeset.get_field(block_changeset, :data)
     {current_overrides, data_map} = extract_gallery_data(current_data)
-    old_id_str = to_string(old_media_id)
     new_id_str = to_string(new_media_id)
 
     updated_overrides =
       Enum.map(current_overrides, fn override ->
-        if get_override_object_id(override) == old_id_str do
+        if GalleryObjectOverride.for_media?(override, media_type, old_media_id) do
           case override do
-            %Changeset{} -> Changeset.put_change(override, :object_id, new_id_str)
-            %{} -> Map.put(override, :object_id, new_id_str)
+            %Changeset{} ->
+              override
+              |> Changeset.put_change(:object_id, new_id_str)
+              |> Changeset.put_change(:object_type, media_type)
+
+            %{} ->
+              Map.merge(override, %{object_id: new_id_str, object_type: media_type})
           end
         else
           override
@@ -3199,9 +3204,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     object_id_str = to_string(media_id)
 
     override_exists =
-      Enum.any?(current_overrides, fn override ->
-        get_override_object_id(override) == object_id_str
-      end)
+      Enum.any?(current_overrides, &GalleryObjectOverride.for_media?(&1, media_type, media_id))
 
     if override_exists do
       block_changeset
@@ -3223,15 +3226,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defp remove_gallery_object_override(block_changeset, object_id) do
+  defp remove_gallery_object_override(block_changeset, media_type, media_id) do
     current_data = Changeset.get_field(block_changeset, :data)
     {current_overrides, data_map} = extract_gallery_data(current_data)
-    object_id_str = to_string(object_id)
 
     updated_overrides =
-      Enum.reject(current_overrides, fn override ->
-        get_override_object_id(override) == object_id_str
-      end)
+      Enum.reject(current_overrides, &GalleryObjectOverride.for_media?(&1, media_type, media_id))
 
     updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
     Changeset.put_change(block_changeset, :data, updated_data_map)
@@ -3274,13 +3274,5 @@ defmodule BrandoAdmin.Components.Form.Block do
     Map.take(obj, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
     |> maybe_add_association(:image, obj)
     |> maybe_add_association(:video, obj)
-  end
-
-  defp get_override_object_id(override) do
-    case override do
-      %Changeset{} -> Changeset.get_field(override, :object_id)
-      %{object_id: id} -> id
-      _ -> nil
-    end
   end
 end

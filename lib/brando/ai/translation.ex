@@ -13,6 +13,7 @@ defmodule Brando.AI.Translation do
   alias Brando.Content.Var
   alias Brando.Repo
   alias Brando.Villain.Blocks.GalleryBlock
+  alias Brando.Villain.Blocks.GalleryObjectOverride
   alias Brando.Villain.Blocks.HeaderBlock
   alias Brando.Villain.Blocks.HtmlBlock
   alias Brando.Villain.Blocks.MarkdownBlock
@@ -330,7 +331,7 @@ defmodule Brando.AI.Translation do
           override_val
         else
           # Fall back to gallery object's image/video text
-          find_gallery_object_text(gallery_objects, override.object_id, field)
+          find_gallery_object_text(gallery_objects, override, field)
         end
 
       if is_binary(text) and text != "" do
@@ -342,20 +343,19 @@ defmodule Brando.AI.Translation do
     |> Enum.reverse()
   end
 
-  defp find_gallery_object_text(gallery_objects, object_id, field) do
-    object_id_str = to_string(object_id)
+  # An override points at its image or video, not at the gallery object, and
+  # images and videos are numbered separately.
+  defp find_gallery_object_text(gallery_objects, override, field) do
+    Enum.find_value(gallery_objects, fn
+      %{image: %Brando.Images.Image{id: id} = image} ->
+        if GalleryObjectOverride.for_media?(override, :image, id), do: Map.get(image, field)
 
-    case Enum.find(gallery_objects, fn go -> to_string(go.id) == object_id_str end) do
-      nil ->
+      %{video: %Brando.Videos.Video{id: id} = video} ->
+        if GalleryObjectOverride.for_media?(override, :video, id), do: Map.get(video, field)
+
+      _ ->
         nil
-
-      gallery_object ->
-        cond do
-          gallery_object.image -> Map.get(gallery_object.image, field)
-          gallery_object.video -> Map.get(gallery_object.video, field)
-          true -> nil
-        end
-    end
+    end)
   end
 
   defp collect_from_table_rows(table_rows) do

@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   import Brando.Utils, only: [loaded_assoc?: 2]
   import Phoenix.HTML, only: [raw: 1]
 
+  alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm
@@ -27,16 +28,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     obj = Enum.at(assigns.gallery_objects, assigns.gallery_object_form.index)
     object_modal_id = "gallery-object-modal-#{assigns.uid}-#{assigns.gallery_object_form.index}"
 
-    # Get the override info for this object to determine what values to display
-    object_id_str =
-      cond do
-        obj && loaded_assoc?(obj, :image) -> to_string(obj.image.id)
-        obj && loaded_assoc?(obj, :video) -> to_string(obj.video.id)
-        true -> nil
-      end
-
     # Get the current override form data from the block_data form
-    current_override = get_current_override_from_form(assigns.block_data, object_id_str)
+    current_override = get_current_override_from_form(assigns.block_data, media_key(obj))
 
     # Determine the actual display values (considering current form overrides)
     display_values = compute_display_values_from_form(obj, current_override)
@@ -47,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
     ~H"""
     <div
-      id={"gallery-object-#{@uid}-#{@gallery_object_form[:image_id].value || @gallery_object_form[:video_id].value}"}
+      id={"gallery-object-#{@uid}-#{gallery_object_dom_key(@gallery_object_form)}"}
       class="gallery-object preview sort-handle-gallery-object draggable"
       data-id={@gallery_object_form.index}
     >
@@ -167,26 +160,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
   ## Private functions
 
-  defp get_current_override_from_form(block_data_form, object_id_str) do
-    # Get the current changeset from the form source
-    changeset = block_data_form.source
+  defp get_current_override_from_form(_block_data_form, nil), do: nil
 
-    # Get the current gallery_object_overrides from the changeset
-    overrides = Changeset.get_field(changeset, :gallery_object_overrides, [])
+  defp get_current_override_from_form(block_data_form, {object_type, object_id_str}) do
+    block_data_form.source
+    |> Changeset.get_field(:gallery_object_overrides, [])
+    |> Enum.find(&GalleryObjectOverride.for_media?(&1, object_type, object_id_str))
+  end
 
-    # Find the override for this specific object
-    Enum.find(overrides, fn override ->
-      case override do
-        %Changeset{} ->
-          Changeset.get_field(override, :object_id) == object_id_str
+  # Images and videos are numbered separately, so the id alone is not unique
+  # within a gallery.
+  defp media_key(obj) do
+    cond do
+      obj && loaded_assoc?(obj, :image) -> {:image, to_string(obj.image.id)}
+      obj && loaded_assoc?(obj, :video) -> {:video, to_string(obj.video.id)}
+      true -> nil
+    end
+  end
 
-        %{object_id: id} ->
-          id == object_id_str
+  defp gallery_object_dom_key(gallery_object_form) do
+    case gallery_object_form[:image_id].value do
+      nil -> "video-#{gallery_object_form[:video_id].value}"
+      image_id -> "image-#{image_id}"
+    end
+  end
 
-        _ ->
-          false
-      end
-    end)
+  defp override_form_for_media?(override_form, {object_type, object_id_str}) do
+    GalleryObjectOverride.for_media?(
+      %{object_id: override_form[:object_id].value, object_type: override_form[:object_type].value},
+      object_type,
+      object_id_str
+    )
   end
 
   defp compute_display_values_from_form(nil, _), do: %{title: nil, alt: nil, credits: nil}
@@ -251,29 +255,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   attr :block_data, :any, required: true
 
   def gallery_caption_overrides(assigns) do
-    # Extract object ID and look up precomputed data
-    object_id_str =
-      cond do
-        loaded_assoc?(assigns.obj, :image) -> to_string(assigns.obj.image.id)
-        loaded_assoc?(assigns.obj, :video) -> to_string(assigns.obj.video.id)
-        true -> nil
-      end
+    media_key = media_key(assigns.obj)
 
     # Get the precomputed override info for this object
-    override_info = Map.get(assigns.override_data, object_id_str)
+    override_info = media_key && Map.get(assigns.override_data, media_key)
 
     if override_info do
-      assigns = assign(assigns, :override_info, override_info)
-      assigns = assign(assigns, :object_id_str, object_id_str)
+      {object_type, object_id_str} = media_key
+
+      assigns =
+        assign(assigns,
+          override_info: override_info,
+          media_key: media_key,
+          component_id: "override-inline-#{assigns.uid}-#{object_type}-#{object_id_str}"
+        )
 
       ~H"""
       <div>
         {# With initialized overrides, we can always use standard inputs_for}
         <.inputs_for :let={override_form} field={@block_data[:gallery_object_overrides]}>
-          <%= if override_form[:object_id].value == @object_id_str do %>
+          <%= if override_form_for_media?(override_form, @media_key) do %>
             <.live_component
               module={OverrideForm}
-              id={"override-inline-#{@uid}-#{@object_id_str}"}
+              id={@component_id}
               form={override_form}
               override_info={@override_info}
               variant={:inline}

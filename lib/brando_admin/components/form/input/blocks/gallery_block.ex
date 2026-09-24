@@ -5,10 +5,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   import Brando.Utils, only: [loaded_assoc?: 2]
 
+  alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object
-  alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
@@ -467,47 +467,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      )}
   end
 
-  ## Function components
-
-  attr :obj, :map, required: true
-  attr :uid, :string, required: true
-  attr :override_data, :map, required: true
-  attr :block_data, :any, required: true
-
-  def gallery_caption_overrides(assigns) do
-    # Extract object ID and look up precomputed data
-    object_id_str =
-      cond do
-        loaded_assoc?(assigns.obj, :image) -> to_string(assigns.obj.image.id)
-        loaded_assoc?(assigns.obj, :video) -> to_string(assigns.obj.video.id)
-        true -> nil
-      end
-
-    # Get the precomputed override info for this object
-    override_info = Map.get(assigns.override_data, object_id_str)
-
-    assigns = assign(assigns, :override_info, override_info)
-    assigns = assign(assigns, :object_id_str, object_id_str)
-
-    ~H"""
-    <div>
-      <h4>{gettext("Caption Overrides")}</h4>
-
-      <.inputs_for :let={override_form} field={@block_data[:gallery_object_overrides]}>
-        <%= if override_form[:object_id].value == @object_id_str do %>
-          <.live_component
-            module={OverrideForm}
-            id={"override-modal-#{@uid}-#{@object_id_str}"}
-            form={override_form}
-            override_info={@override_info}
-            variant={:modal}
-          />
-        <% end %>
-      </.inputs_for>
-    </div>
-    """
-  end
-
   ## Private functions
 
   defp update_block_with_overrides(block_form, initialized_overrides) do
@@ -537,52 +496,53 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   defp initialize_gallery_overrides(gallery_objects, block_data_cs) do
-    existing_overrides = Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
-
-    # Build a map of existing overrides by object_id
-    existing_map =
-      Enum.reduce(existing_overrides, %{}, fn override, acc ->
-        case extract_override_object_id(override) do
-          nil -> acc
-          object_id -> Map.put(acc, object_id, override)
-        end
-      end)
+    existing_overrides =
+      block_data_cs
+      |> Changeset.get_field(:gallery_object_overrides, [])
+      |> GalleryObjectOverride.index()
 
     # Create override entries for all gallery objects
-    all_overrides =
-      Enum.map(gallery_objects, fn obj ->
-        object_id_str =
-          cond do
-            loaded_assoc?(obj, :image) -> to_string(obj.image.id)
-            loaded_assoc?(obj, :video) -> to_string(obj.video.id)
-            true -> nil
-          end
+    gallery_objects
+    |> Enum.map(fn obj ->
+      case gallery_object_media(obj) do
+        {object_type, object_id_str, _media} ->
+          existing_overrides
+          |> GalleryObjectOverride.lookup(object_type, object_id_str)
+          |> typed_override(object_type, object_id_str)
 
-        object_type =
-          cond do
-            loaded_assoc?(obj, :image) -> :image
-            loaded_assoc?(obj, :video) -> :video
-            true -> nil
-          end
+        nil ->
+          nil
+      end
+    end)
+    |> Enum.filter(& &1)
+  end
 
-        if object_id_str do
-          # Use existing override or create a new default one
-          Map.get(existing_map, object_id_str, %Brando.Villain.Blocks.GalleryObjectOverride{
-            object_id: object_id_str,
-            object_type: object_type,
-            title: nil,
-            credits: nil,
-            alt: nil,
-            use_default_title: true,
-            use_default_credits: true,
-            use_default_alt: true
-          })
-        end
-      end)
-      |> Enum.filter(& &1)
+  # An override stored without a type takes the type of the media it is found
+  # for, so image N and video N never end up sharing one override entry.
+  defp typed_override(nil, object_type, object_id_str) do
+    %GalleryObjectOverride{
+      object_id: object_id_str,
+      object_type: object_type,
+      title: nil,
+      credits: nil,
+      alt: nil,
+      use_default_title: true,
+      use_default_credits: true,
+      use_default_alt: true
+    }
+  end
 
-    # Return the complete overrides list - will be applied to changeset in render
-    all_overrides
+  defp typed_override(%Changeset{} = override, object_type, _object_id_str),
+    do: Changeset.put_change(override, :object_type, object_type)
+
+  defp typed_override(override, object_type, _object_id_str), do: Map.put(override, :object_type, object_type)
+
+  defp gallery_object_media(obj) do
+    cond do
+      loaded_assoc?(obj, :image) -> {:image, to_string(obj.image.id), obj.image}
+      loaded_assoc?(obj, :video) -> {:video, to_string(obj.video.id), obj.video}
+      true -> nil
+    end
   end
 
   defp current_selected_image_ids(socket) do
@@ -723,38 +683,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     end
   end
 
+  # Keyed by `{object_type, object_id}`: an image and a video may share an id.
   defp precompute_override_data(gallery_objects, block_data_cs) do
-    current_overrides = Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
-
-    overrides_map =
-      Enum.reduce(current_overrides, %{}, fn override, acc ->
-        case extract_override_object_id(override) do
-          nil -> acc
-          object_id -> Map.put(acc, object_id, override)
-        end
-      end)
+    overrides =
+      block_data_cs
+      |> Changeset.get_field(:gallery_object_overrides, [])
+      |> GalleryObjectOverride.index()
 
     # Gallery objects should already have media loaded via batch_load_media
     Enum.reduce(gallery_objects, %{}, fn obj, acc ->
-      {object_id_str, object_type, media_object} =
-        cond do
-          loaded_assoc?(obj, :image) -> {to_string(obj.image.id), :image, obj.image}
-          loaded_assoc?(obj, :video) -> {to_string(obj.video.id), :video, obj.video}
-          true -> {nil, nil, nil}
-        end
+      case gallery_object_media(obj) do
+        {object_type, object_id_str, media_object} ->
+          override_info =
+            build_override_info(
+              object_id_str,
+              object_type,
+              media_object,
+              GalleryObjectOverride.lookup(overrides, object_type, object_id_str)
+            )
 
-      if object_id_str do
-        override_info =
-          build_override_info(
-            object_id_str,
-            object_type,
-            media_object,
-            Map.get(overrides_map, object_id_str)
-          )
+          Map.put(acc, {object_type, object_id_str}, override_info)
 
-        Map.put(acc, object_id_str, override_info)
-      else
-        acc
+        nil ->
+          acc
       end
     end)
   end
@@ -836,14 +787,4 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     Map.merge(base, video_defaults)
   end
-
-  defp extract_override_object_id(%Changeset{} = override) do
-    Changeset.get_field(override, :object_id)
-  end
-
-  defp extract_override_object_id(%{object_id: object_id}) do
-    object_id
-  end
-
-  defp extract_override_object_id(_), do: nil
 end

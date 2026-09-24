@@ -961,6 +961,45 @@ defmodule Brando.Villain.RefRenderingTest do
       Brando.Villain.parse([block], %Brando.Pages.Page{})
     end
 
+    # Prints each gallery object's resolved title (and alt for images), so both
+    # the image and the video side of an override can be asserted.
+    defp render_gallery_titles(user, gallery, block_data) do
+      code = """
+      {% assign objects = refs.g | gallery %}{% for o in objects %}{% if o.image %}[image:{{ o.image.title }}|{{ o.image.alt }}]{% endif %}{% if o.video %}[video:{{ o.video.title }}]{% endif %}{% endfor %}
+      """
+
+      module_params =
+        Factory.params_for(:module, %{
+          code: code,
+          refs: [
+            %{name: "g", uid: Utils.generate_uid(), data: %{type: "gallery", data: %{}}}
+          ]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = %{
+        block: %{
+          type: :module,
+          module_id: module.id,
+          uid: Utils.generate_uid(),
+          vars: [],
+          refs: [
+            %{
+              name: "g",
+              description: nil,
+              uid: Utils.generate_uid(),
+              gallery_id: gallery.id,
+              gallery: gallery,
+              data: %Brando.Villain.Blocks.GalleryBlock{type: "gallery", data: block_data}
+            }
+          ]
+        }
+      }
+
+      Brando.Villain.parse([block], %Brando.Pages.Page{})
+    end
+
     test "render their images", %{user: user} do
       image = Factory.insert(:image, creator: user)
       gallery = gallery_with([{:image, image}])
@@ -1033,6 +1072,62 @@ defmodule Brando.Villain.RefRenderingTest do
 
       assert html =~ ~s(data-gallery="my-gallery")
       assert html =~ "data-lightbox"
+    end
+
+    # Images and videos are numbered by separate sequences, so an override's
+    # `object_id` only identifies its media together with `object_type`.
+    test "apply each override to its own media when an image and a video share an id", %{user: user} do
+      shared_id = 900_000 + System.unique_integer([:positive])
+      image = Factory.insert(:image, id: shared_id, creator: user, title: "Image default", alt: "Image alt default")
+      video = Factory.insert(:upload_video, id: shared_id, creator: user, title: "Video default")
+      gallery = gallery_with([{:image, image}, {:video, video}])
+
+      overrides = [
+        %Brando.Villain.Blocks.GalleryObjectOverride{
+          object_id: to_string(shared_id),
+          object_type: :image,
+          title: "Image caption",
+          alt: "Image alt",
+          use_default_title: false,
+          use_default_alt: false
+        },
+        %Brando.Villain.Blocks.GalleryObjectOverride{
+          object_id: to_string(shared_id),
+          object_type: :video,
+          title: "Video caption",
+          use_default_title: false
+        }
+      ]
+
+      html =
+        render_gallery_titles(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          gallery_object_overrides: overrides
+        })
+
+      assert html =~ "[image:Image caption|Image alt]"
+      assert html =~ "[video:Video caption]"
+    end
+
+    test "apply an override stored without a type by id alone", %{user: user} do
+      image = Factory.insert(:image, creator: user, title: "Image default")
+      gallery = gallery_with([{:image, image}])
+
+      overrides = [
+        %Brando.Villain.Blocks.GalleryObjectOverride{
+          object_id: to_string(image.id),
+          title: "Untyped caption",
+          use_default_title: false
+        }
+      ]
+
+      html =
+        render_gallery_titles(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          gallery_object_overrides: overrides
+        })
+
+      assert html =~ "[image:Untyped caption|"
     end
 
     test "render an empty gallery as empty", %{user: user} do
