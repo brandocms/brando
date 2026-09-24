@@ -11,6 +11,13 @@ defmodule E2eProjectWeb.Endpoint do
   ]
 
   if Application.compile_env(:e2e_project, :sql_sandbox) do
+    # Rows a test writes are rolled back with its sandbox, but pages and 404
+    # lookups rendered from them stay in Brando's query caches for 15 minutes,
+    # so the next test (or a retry of the same one) is served content that no
+    # longer exists. Both caches only memoize database reads, so emptying them
+    # when a test checks out its sandbox is always safe.
+    plug :clear_query_caches_on_checkout
+
     # The Playwright fixture checks each test's sandbox back in at teardown
     # (test-support/setupAuth.js), so this timeout is only a backstop for a
     # leaked sandbox. It must outlast the longest `test.setTimeout` (240s):
@@ -79,4 +86,17 @@ defmodule E2eProjectWeb.Endpoint do
   plug Plug.Session, @session_options
   plug Brando.Plug.LivePreview
   plug E2eProjectWeb.Router
+
+  if Application.compile_env(:e2e_project, :sql_sandbox) do
+    defp clear_query_caches_on_checkout(
+           %Plug.Conn{method: "POST", path_info: ["sandbox"]} = conn,
+           _opts
+         ) do
+      Cachex.clear(:query)
+      Cachex.clear(:four_oh_four)
+      conn
+    end
+
+    defp clear_query_caches_on_checkout(conn, _opts), do: conn
+  end
 end
