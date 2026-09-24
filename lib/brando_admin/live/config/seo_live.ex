@@ -377,6 +377,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
           <dt>{gettext("No URL")}</dt>
           <dd>{@audit.missing_urls}</dd>
         </div>
+        <div class="seo-stat" data-warn={to_string(@audit.thin_content > 0)}>
+          <dt>{gettext("Thin content")}</dt>
+          <dd>{@audit.thin_content}</dd>
+        </div>
         <div class="seo-stat">
           <dt>{gettext("Drafts not audited")}</dt>
           <dd>{@audit.drafts}</dd>

@@ -17,6 +17,12 @@ defmodule Brando.SEO.AuditTest do
     page
   end
 
+  defp set_rendered_blocks(page, html) do
+    page |> Ecto.Changeset.change(rendered_blocks: html) |> Brando.Repo.update!()
+  end
+
+  defp thin_status(row), do: Enum.find(row.checks, &(&1.key == :thin_content)).status
+
   test "pages are auditable; fragments are not" do
     assert Brando.Pages.Page in Audit.schemas()
     refute Brando.Pages.Fragment in Audit.schemas()
@@ -53,13 +59,37 @@ defmodule Brando.SEO.AuditTest do
     # whether another test generated a sitemap, so it may fail too; nothing else may.
     fails = good_row.checks |> Enum.filter(&(&1.status == :fail)) |> Enum.map(& &1.key)
     assert :meta_image in fails
-    assert fails -- [:meta_image, :in_sitemap] == []
+    # The page has no blocks, so no body text: thin content fails too.
+    assert fails -- [:meta_image, :in_sitemap, :thin_content] == []
 
     bare_row = Enum.find(result.rows, &(&1.title == "Bare"))
     assert bare_row.score < good_row.score
     assert Enum.any?(bare_row.checks, &(&1.key == :meta_description_present and &1.status == :fail))
     assert result.missing_descriptions >= 1
     assert is_integer(result.score)
+  end
+
+  test "counts the words of the rendered blocks without loading them" do
+    user = Factory.insert(:random_user)
+    thin = create_page(user, %{title: "Thin", uri: "seo-thin"})
+    full = create_page(user, %{title: "Full", uri: "seo-full"})
+    empty = create_page(user, %{title: "Empty", uri: "seo-empty"})
+
+    set_rendered_blocks(thin, "<h2>Short</h2><p>Only a few&nbsp;words — here.</p>")
+    set_rendered_blocks(full, "<p>" <> String.duplicate("word ", 320) <> "</p>")
+
+    result = Audit.run("en", schemas: [Pages.Page])
+    by_id = Map.new(result.rows, &{&1.id, &1})
+
+    # "—" is not a word; the entity separates two that are.
+    assert by_id[thin.id].word_count == 6
+    assert by_id[full.id].word_count == 320
+    assert by_id[empty.id].word_count == 0
+
+    assert thin_status(by_id[thin.id]) == :warn
+    assert thin_status(by_id[full.id]) == :pass
+    assert thin_status(by_id[empty.id]) == :fail
+    assert result.thin_content >= 2
   end
 
   test "include_drafts audits unpublished entries too" do

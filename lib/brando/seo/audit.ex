@@ -8,9 +8,12 @@ defmodule Brando.SEO.Audit do
   Runs on demand, per content language, over every blueprint that both has
   an `absolute_url` and carries `Brando.Trait.Meta`. Rows come from one
   read per schema that leaves the rendered block HTML out, with the title and
-  URL taken from the blueprint's own identifier and `absolute_url` templates. Blueprints may add their own checks through
-  `__seo_checks__/1`.
+  URL taken from the blueprint's own identifier and `absolute_url` templates.
+  Body length is counted by the database, so the rendered HTML never leaves
+  it. Blueprints may add their own checks through `__seo_checks__/1`.
   """
+
+  import Ecto.Query, only: [from: 2]
 
   alias Brando.SEO.Check
   alias Brando.SEO.Checks
@@ -28,6 +31,7 @@ defmodule Brando.SEO.Audit do
               meta_title: nil,
               meta_description: nil,
               has_meta_image: false,
+              word_count: nil,
               checks: [],
               score: nil
   end
@@ -45,6 +49,7 @@ defmodule Brando.SEO.Audit do
               missing_descriptions: 0,
               missing_images: 0,
               missing_urls: 0,
+              thin_content: 0,
               sitemap?: false,
               redirect_suggestions: []
   end
@@ -82,6 +87,7 @@ defmodule Brando.SEO.Audit do
 
     rows =
       rows
+      |> with_word_counts()
       |> Enum.map(&score_row(&1, ctx))
       |> Enum.sort_by(&{&1.score || 0, String.downcase(&1.title || "")})
 
@@ -96,6 +102,7 @@ defmodule Brando.SEO.Audit do
       missing_descriptions: count_failing(rows, :meta_description_present),
       missing_images: count_failing(rows, :meta_image),
       missing_urls: count_failing(rows, :url_resolves),
+      thin_content: count_failing(rows, :thin_content, [:warn, :fail]),
       sitemap?: sitemap != nil,
       redirect_suggestions: Brando.SEO.RedirectSuggestions.suggest(Brando.Sites.FourOhFour.list(), rows, language)
     }
@@ -214,7 +221,8 @@ defmodule Brando.SEO.Audit do
       fallback_description: Map.get(seo, :fallback_meta_description),
       title_counts: counts(rows, :meta_title),
       description_counts: counts(rows, :meta_description),
-      sitemap: sitemap
+      sitemap: sitemap,
+      thin_content_words: Checks.thin_content_words()
     }
   end
 
@@ -255,8 +263,45 @@ defmodule Brando.SEO.Audit do
     |> Enum.sort_by(fn {_value, group} -> -length(group) end)
   end
 
-  defp count_failing(rows, key) do
-    Enum.count(rows, fn row -> Enum.any?(row.checks, &(&1.key == key and &1.status == :fail)) end)
+  defp count_failing(rows, key, statuses \\ [:fail]) do
+    Enum.count(rows, fn row -> Enum.any?(row.checks, &(&1.key == key and &1.status in statuses)) end)
+  end
+
+  # Words of visible text in a rendered block column: tags and entities
+  # become spaces, and only tokens with a letter or digit count, so a lone
+  # dash or bullet is not a word.
+  defmacrop word_count(html) do
+    quote do
+      fragment(
+        "(SELECT count(*) FROM regexp_split_to_table(regexp_replace(regexp_replace(coalesce(?, ''), '<[^>]*>', ' ', 'g'), '&[#[:alnum:]]+;', ' ', 'g'), '\\s+') AS w WHERE w ~ '[[:alnum:]]')",
+        unquote(html)
+      )
+    end
+  end
+
+  # One query per block field of each schema, over the audited ids only.
+  # Schemas without block fields keep `nil`, which the check skips.
+  defp with_word_counts(rows) do
+    counts =
+      rows
+      |> Enum.group_by(& &1.schema, & &1.id)
+      |> Enum.flat_map(fn {schema, ids} -> word_counts(schema, ids) end)
+      |> Map.new()
+
+    Enum.map(rows, &%{&1 | word_count: Map.get(counts, {&1.schema, &1.id})})
+  end
+
+  defp word_counts(schema, ids) do
+    columns = schema.__schema__(:fields)
+
+    schema
+    |> Brando.AI.Context.block_fields()
+    |> Enum.map(&:"rendered_#{&1}")
+    |> Enum.filter(&(&1 in columns))
+    |> Enum.flat_map(fn column ->
+      Brando.Repo.all(from(e in schema, where: e.id in ^ids, select: {e.id, word_count(field(e, ^column))}))
+    end)
+    |> Enum.reduce(%{}, fn {id, count}, acc -> Map.update(acc, {schema, id}, count, &(&1 + count)) end)
   end
 
   defp locs(file) do
