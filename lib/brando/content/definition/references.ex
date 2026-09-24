@@ -11,7 +11,6 @@ defmodule Brando.Content.Definition.References do
     "gallery" => Brando.Galleries.Gallery,
     "palette" => Brando.Content.Palette,
     "identifier" => Brando.Content.Identifier,
-    "gallery_object" => Brando.Galleries.GalleryObject,
     "markdown_source" => Brando.MarkdownSources.Source,
     "markdown_version" => Brando.MarkdownSources.Version
   }
@@ -31,7 +30,7 @@ defmodule Brando.Content.Definition.References do
   end
 
   def bind!(bundle, supplied, actor) do
-    declared = collect!(bundle["modules"] || [], %{}) |> then(&collect!(bundle["table_templates"] || [], &1))
+    declared = declared!(bundle)
 
     bindings =
       Map.new(declared, fn {token, kind} ->
@@ -63,19 +62,50 @@ defmodule Brando.Content.Definition.References do
     end)
   end
 
+  @doc """
+  Reads bundles written before gallery overrides were bound by media. They
+  recorded an override's (media) id under a `gallery_object` reference kind;
+  it becomes the kind of the image or video the override is for.
+  """
+  def upgrade(%{"references" => references} = bundle) when is_map(references) do
+    if Enum.any?(references, &match?({_, %{"kind" => "gallery_object"}}, &1)) do
+      declared = declared!(bundle)
+
+      references =
+        Map.new(references, fn
+          {token, %{"kind" => "gallery_object"} = binding} when is_map_key(declared, token) ->
+            {token, Map.put(binding, "kind", declared[token])}
+
+          pair ->
+            pair
+        end)
+
+      Map.put(bundle, "references", references)
+    else
+      bundle
+    end
+  end
+
+  def upgrade(bundle), do: bundle
+
+  defp declared!(bundle),
+    do: collect!(bundle["modules"] || [], %{}) |> then(&collect!(bundle["table_templates"] || [], &1))
+
   defp collect!(value, bindings) when is_list(value), do: Enum.reduce(value, bindings, &collect!/2)
 
   defp collect!(%{"type" => "markdown_source", "data" => data}, bindings) do
     Enum.reduce(@markdown_fields, bindings, fn {field, kind}, bindings -> declare!(data[field], kind, bindings) end)
   end
 
+  defp collect!(%{"object_id" => token} = override, bindings) when not is_nil(token) do
+    bindings = declare!(token, override_kind!(override), bindings)
+    collect!(Map.delete(override, "object_id"), bindings)
+  end
+
   defp collect!(value, bindings) when is_map(value) do
     Enum.reduce(value, bindings, fn
       {"assets", assets}, bindings ->
         Enum.reduce(assets, bindings, fn {kind, token}, bindings -> declare!(token, kind, bindings) end)
-
-      {"object_id", token}, bindings ->
-        declare!(token, "gallery_object", bindings)
 
       {_key, nested}, bindings ->
         collect!(nested, bindings)
@@ -100,7 +130,6 @@ defmodule Brando.Content.Definition.References do
   defp authorize!(actor, kind, schema, record) do
     {schema, id} =
       case kind do
-        "gallery_object" -> {Brando.Galleries.Gallery, record.gallery_id}
         "identifier" -> {record.schema, record.entry_id}
         _ -> {schema, record.id}
       end
@@ -155,18 +184,20 @@ defmodule Brando.Content.Definition.References do
     {Map.put(ref, "data", data), bindings}
   end
 
+  def encode_data(%{"object_id" => id} = override, bindings) when not is_nil(id) do
+    id =
+      case Integer.parse(to_string(id)) do
+        {id, ""} -> id
+        _ -> Error.raise!("gallery override", "invalid image or video ID")
+      end
+
+    {token, bindings} = token(override_kind!(override), id, bindings)
+    {override, bindings} = encode_data(Map.delete(override, "object_id"), bindings)
+    {Map.put(override, "object_id", token), bindings}
+  end
+
   def encode_data(data, bindings) when is_map(data) do
     Enum.reduce(data, {%{}, bindings}, fn
-      {"object_id", id}, {map, refs} when not is_nil(id) ->
-        id =
-          case Integer.parse(to_string(id)) do
-            {id, ""} -> id
-            _ -> Error.raise!("gallery object", "invalid object ID")
-          end
-
-        {token, refs} = token("gallery_object", id, refs)
-        {Map.put(map, "object_id", token), refs}
-
       {key, value}, {map, refs} ->
         {value, refs} = encode_data(value, refs)
         {Map.put(map, key, value), refs}
@@ -186,16 +217,25 @@ defmodule Brando.Content.Definition.References do
     Map.put(ref, "data", data)
   end
 
-  def decode_data!(data, bindings) when is_map(data) do
-    Map.new(data, fn
-      {"object_id", token} when not is_nil(token) ->
-        {"object_id", token |> resolve!("gallery_object", bindings) |> to_string()}
-
-      {key, value} ->
-        {key, decode_data!(value, bindings)}
-    end)
+  def decode_data!(%{"object_id" => token} = override, bindings) when not is_nil(token) do
+    override
+    |> Map.delete("object_id")
+    |> decode_data!(bindings)
+    |> Map.put("object_id", token |> resolve!(override_kind!(override), bindings) |> to_string())
   end
+
+  def decode_data!(data, bindings) when is_map(data),
+    do: Map.new(data, fn {key, value} -> {key, decode_data!(value, bindings)} end)
 
   def decode_data!(data, bindings) when is_list(data), do: Enum.map(data, &decode_data!(&1, bindings))
   def decode_data!(data, _bindings), do: data
+
+  # A gallery override's `object_id` is the id of an image or a video, told
+  # apart by `object_type`.
+  defp override_kind!(override) do
+    case Brando.Villain.Blocks.GalleryObjectOverride.media_key(override) do
+      {type, _id} when type in [:image, :video] -> Atom.to_string(type)
+      _ -> Error.raise!("gallery override", "object_type must be image or video")
+    end
+  end
 end

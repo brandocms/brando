@@ -31,6 +31,7 @@ defmodule Brando.Content.Definition.Importer do
       Snapshot.ensure_scope!()
       ensure_actor_scope!(actor)
       creator = creator!(actor, opts)
+      bundle = References.upgrade(bundle)
       bindings = References.bind!(bundle, Keyword.get(opts, :references, %{}), actor)
       {plan, _records} = plan!(bundle, actor, creator, bindings)
       plan

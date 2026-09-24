@@ -1,7 +1,5 @@
 defmodule Brando.Content.Transfer.Ownership do
-  use Gettext, backend: Brando.Gettext
   @moduledoc false
-  alias Brando.Content.Transfer.Error
   alias Brando.Repo
 
   # A newly inserted bundle gallery can be claimed once. Existing galleries
@@ -27,6 +25,8 @@ defmodule Brando.Content.Transfer.Ownership do
 
       Brando.Content.Transfer.Catalog.authorize!(actor, :create, Brando.Galleries.Gallery)
 
+      # The copy holds the same images and videos, so gallery overrides (keyed
+      # by media) carry over unchanged.
       gallery =
         %Brando.Galleries.Gallery{}
         |> Brando.Galleries.Gallery.changeset(
@@ -34,13 +34,8 @@ defmodule Brando.Content.Transfer.Ownership do
           actor
         )
         |> Repo.insert!()
-        |> Repo.preload(:gallery_objects)
 
-      mapping =
-        Enum.zip(original["gallery_objects"], gallery.gallery_objects)
-        |> Map.new(fn {old, new} -> {to_string(old["id"]), to_string(new.id)} end)
-
-      {value |> Map.delete("gallery") |> Map.put("gallery_id", gallery.id) |> remap_objects(mapping), available}
+      {value |> Map.delete("gallery") |> Map.put("gallery_id", gallery.id), available}
     end
   end
 
@@ -56,21 +51,6 @@ defmodule Brando.Content.Transfer.Ownership do
 
   defp copy(value, actor, seen) when is_list(value), do: Enum.map_reduce(value, seen, &copy(&1, actor, &2))
   defp copy(value, _, seen), do: {value, seen}
-
-  defp remap_objects(map, mapping) when is_map(map),
-    do:
-      Map.new(map, fn
-        {"object_id", id} ->
-          {"object_id",
-           Map.get(mapping, to_string(id)) ||
-             Error.fail!(dgettext("content_transfer", "A gallery override references an unknown placement."))}
-
-        {key, value} ->
-          {key, remap_objects(value, mapping)}
-      end)
-
-  defp remap_objects(list, mapping) when is_list(list), do: Enum.map(list, &remap_objects(&1, mapping))
-  defp remap_objects(value, _), do: value
 
   def retained_slots(%{"type" => "slot", "uid" => uid} = params),
     do: [uid | retained_slots(Map.delete(params, "type"))]

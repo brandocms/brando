@@ -531,12 +531,8 @@ defmodule Brando.Content.Transfer do
             actor
           )
           |> Repo.insert!()
-          |> Repo.preload(:gallery_objects)
 
-        bindings = Map.put(bindings, token, gallery)
-
-        Enum.zip(dep["objects"], gallery.gallery_objects)
-        |> Enum.reduce(bindings, fn {source, object}, acc -> Map.put(acc, source["key"], object) end)
+        Map.put(bindings, token, gallery)
 
       _, bindings ->
         bindings
@@ -619,12 +615,7 @@ defmodule Brando.Content.Transfer do
       else
         record = struct(Dependencies.schema!(dep["kind"]), id: -n)
         record = if dep["kind"] == "gallery", do: %{record | config_target: dep["config_target"]}, else: record
-        acc = Map.put(acc, token, record)
-
-        Enum.with_index(dep["objects"] || [], 1)
-        |> Enum.reduce(acc, fn {object, i}, acc ->
-          Map.put(acc, object["key"], %Brando.Galleries.GalleryObject{id: -(n * 10_000 + i)})
-        end)
+        Map.put(acc, token, record)
       end
     end)
   end

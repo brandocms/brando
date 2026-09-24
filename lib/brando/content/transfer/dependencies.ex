@@ -18,7 +18,6 @@ defmodule Brando.Content.Transfer.Dependencies do
     "file" => Brando.Files.File,
     "video" => Brando.Videos.Video,
     "gallery" => Brando.Galleries.Gallery,
-    "gallery_object" => Brando.Galleries.GalleryObject,
     "module_set" => Brando.Content.ModuleSet,
     "markdown_source" => Brando.MarkdownSources.Source,
     "markdown_version" => Brando.MarkdownSources.Version
@@ -105,12 +104,6 @@ defmodule Brando.Content.Transfer.Dependencies do
 
   def add(_, nil, state), do: {nil, state}
 
-  def add("gallery_object", id, state) do
-    object = load!("gallery_object", Catalog.id!(id), state.actor, :export)
-    {_, state} = add("gallery", object.gallery_id, state)
-    {"gallery_object:#{id}", state}
-  end
-
   def add(kind, id, state) do
     id = Catalog.id!(id)
     token = "#{kind}:#{id}"
@@ -163,11 +156,6 @@ defmodule Brando.Content.Transfer.Dependencies do
 
     if Map.get(entry, :deleted_at), do: Error.fail!(dgettext("content_transfer", "The referenced entry was deleted."))
     Catalog.authorize!(actor, action, entry)
-  end
-
-  defp authorize!("gallery_object", record, actor, action) do
-    load!("gallery", record.gallery_id, actor, action)
-    :ok
   end
 
   defp authorize!(kind, _record, actor, action) when kind in ~w(markdown_source markdown_version) do
@@ -467,13 +455,6 @@ defmodule Brando.Content.Transfer.Dependencies do
       Brando.Authorization.Boundary.with_scope(Brando.Authorization.Boundary.actor_scope(actor), fn ->
         Brando.Authorization.Boundary.identifiers(query)
       end)
-
-  defp scope_options(query, "gallery_object", _, actor) do
-    galleries =
-      from(g in Brando.Galleries.Gallery, select: g.id) |> Catalog.scoped_query(Brando.Galleries.Gallery, actor, :read)
-
-    from(o in query, where: o.gallery_id in subquery(galleries))
-  end
 
   defp scope_options(query, kind, _, actor) when kind in ~w(markdown_source markdown_version),
     do: if(Brando.MarkdownSources.authorize(actor, :read) == :ok, do: query, else: from(r in query, where: false))

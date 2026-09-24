@@ -4,6 +4,7 @@ defmodule Brando.Content.TransferTest do
   alias Brando.Content.Transfer.{Catalog, Receipt}
   alias Brando.{Factory, Repo}
   alias Brando.Pages.Page
+  alias Brando.Villain.Blocks.GalleryObjectOverride
   alias Ecto.Changeset
 
   setup do
@@ -532,9 +533,6 @@ defmodule Brando.Content.TransferTest do
         c.user
       )
       |> Repo.insert!()
-      |> Repo.preload(:gallery_objects)
-
-    object = hd(gallery.gallery_objects)
 
     gallery_ref = %{
       name: "gallery",
@@ -543,7 +541,7 @@ defmodule Brando.Content.TransferTest do
       data: %{
         type: "gallery",
         data: %{
-          gallery_object_overrides: [%{object_id: to_string(object.id), object_type: "image", title: "Default title"}]
+          gallery_object_overrides: [%{object_id: to_string(image.id), object_type: "image", title: "Default title"}]
         }
       }
     }
@@ -576,7 +574,7 @@ defmodule Brando.Content.TransferTest do
             "data" => %{
               "gallery_object_overrides" => [
                 %{
-                  "object_id" => to_string(object.id),
+                  "object_id" => to_string(image.id),
                   "object_type" => "image",
                   "title" => "My crop",
                   "use_default_title" => false
@@ -602,7 +600,7 @@ defmodule Brando.Content.TransferTest do
     assert copied_object.image_id != image.id
     assert copied_object.config["caption"] == "Gallery placement"
     [override] = ref.data.data.gallery_object_overrides
-    assert override.object_id == to_string(copied_object.id)
+    assert override.object_id == to_string(copied_object.image_id)
     assert override.title == "My crop"
     original = Brando.Content.Transfer.Media.read_original!("image", image)
     assert original == Brando.Content.Transfer.Media.read_original!("image", copied_object.image)
@@ -666,8 +664,139 @@ defmodule Brando.Content.TransferTest do
     assert recovered_ref.gallery_id != ref.gallery_id
     [recovered_object] = recovered_ref.gallery.gallery_objects
     assert recovered_object.image_id == copied_object.image_id
-    assert hd(recovered_ref.data.data.gallery_object_overrides).object_id == to_string(recovered_object.id)
+    assert hd(recovered_ref.data.data.gallery_object_overrides).object_id == to_string(recovered_object.image_id)
     assert hd(recovered_ref.data.data.gallery_object_overrides).title == "My crop"
+  end
+
+  # Image and video ids come from separate sequences; give both the same id so
+  # an override only lands on the right item if it is matched by type as well.
+  defp colliding_gallery_block(c) do
+    image = c.user.avatar
+    video = Factory.insert(:video, id: image.id, title: "Clip", creator_id: c.user.id)
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT setval('videos_id_seq', (SELECT max(id) FROM videos))")
+
+    gallery =
+      %Brando.Galleries.Gallery{}
+      |> Brando.Galleries.Gallery.changeset(
+        %{
+          "config_target" => "default",
+          "gallery_objects" => [
+            %{"image_id" => image.id, "sequence" => 0},
+            %{"video_id" => video.id, "sequence" => 1}
+          ]
+        },
+        c.user
+      )
+      |> Repo.insert!()
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module,
+          name: %{"en" => "Gallery"},
+          namespace: %{},
+          help_text: %{},
+          code: "Gallery",
+          refs: [%{name: "gallery", uid: Brando.Utils.generate_uid(), data: %{type: "gallery", data: %{}}}]
+        ),
+        c.user
+      )
+
+    overrides = [
+      %{"object_id" => to_string(image.id), "object_type" => "image", "title" => "Image caption"},
+      %{"object_id" => to_string(video.id), "object_type" => "video", "title" => "Video caption"},
+      # No longer in the gallery, so it has nothing to travel with.
+      %{"object_id" => "999999", "object_type" => "image", "title" => "Removed image"}
+    ]
+
+    params = %{
+      "uid" => Brando.Utils.generate_uid(),
+      "type" => "module",
+      "module_id" => module.id,
+      "source" => to_string(Page.Blocks),
+      "creator_id" => c.user.id,
+      "refs" => [
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "name" => "gallery",
+          "gallery_id" => gallery.id,
+          "data" => %{
+            "type" => "gallery",
+            "data" => %{
+              "gallery_object_overrides" => Enum.map(overrides, &Map.put(&1, "use_default_title", false))
+            }
+          }
+        }
+      ]
+    }
+
+    block = %Block{} |> Block.recursive_block_changeset(params, c.user) |> Repo.insert!()
+    Repo.insert!(struct(Page.Blocks, %{entry_id: c.source.id, block_id: block.id, sequence: 1}))
+    %{image: image, video: video}
+  end
+
+  defp archive_overrides(archive) do
+    [field] = archive.bundle["fields"]
+    [_text, gallery_block] = field["blocks"]
+    [ref] = gallery_block["refs"]
+    ref["data"]["data"]["gallery_object_overrides"]
+  end
+
+  defp assert_overrides_follow_media(c) do
+    [_text, imported] = blocks(c.target, c.user)
+    [ref] = imported.refs
+    objects = ref.gallery.gallery_objects
+    image_object = Enum.find(objects, & &1.image_id)
+    video_object = Enum.find(objects, & &1.video_id)
+    overrides = ref.data.data.gallery_object_overrides
+    index = GalleryObjectOverride.index(overrides)
+
+    assert length(overrides) == 2
+    assert GalleryObjectOverride.lookup(index, :image, image_object.image_id).title == "Image caption"
+    assert GalleryObjectOverride.lookup(index, :video, video_object.video_id).title == "Video caption"
+    ref
+  end
+
+  test "gallery overrides follow their image or video to the destination", c do
+    %{image: image, video: video} = colliding_gallery_block(c)
+    archive = export(c)
+
+    assert Enum.map(archive_overrides(archive), &{&1["object_type"], &1["object_id"], &1["title"]}) == [
+             {"image", "image:#{image.id}", "Image caption"},
+             {"video", "video:#{video.id}", "Video caption"}
+           ]
+
+    plan = preview(c, archive)
+    assert plan.problems == []
+    assert {:ok, _} = Transfer.apply(plan, c.user)
+    ref = assert_overrides_follow_media(c)
+    assert Enum.all?(ref.gallery.gallery_objects, &(&1.image_id != image.id && &1.video_id != video.id))
+  end
+
+  test "archives exported before overrides were tokenized by media still import", c do
+    %{image: image, video: video} = colliding_gallery_block(c)
+    archive = export(c)
+
+    # The previous exporter prefixed the stored media id with `gallery_object:`.
+    legacy =
+      update_in(archive, [:bundle, "fields", Access.at(0), "blocks", Access.at(1), "refs", Access.at(0)], fn ref ->
+        update_in(ref, ["data", "data", "gallery_object_overrides"], fn overrides ->
+          id = %{"image" => image.id, "video" => video.id}
+          Enum.map(overrides, &Map.put(&1, "object_id", "gallery_object:#{id[&1["object_type"]]}"))
+        end)
+      end)
+
+    assert {:ok, binary} = Brando.Content.Transfer.Archive.export(legacy.bundle, legacy.files)
+    assert {:ok, read} = Transfer.read(binary)
+
+    assert Enum.map(archive_overrides(read), &{&1["object_type"], &1["object_id"]}) == [
+             {"image", "image:#{image.id}"},
+             {"video", "video:#{video.id}"}
+           ]
+
+    plan = preview(c, read)
+    assert plan.problems == []
+    assert {:ok, _} = Transfer.apply(plan, c.user)
+    assert_overrides_follow_media(c)
   end
 
   test "all destination mappings must be distinct and valid before any content is written", c do

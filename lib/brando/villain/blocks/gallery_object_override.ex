@@ -43,7 +43,8 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
 
   @doc """
   Returns `{object_type, object_id}` for an override given as a struct, a plain
-  map or a changeset. `object_type` is `nil` when the override has none.
+  map (atom or string keys) or a changeset. `object_type` is `nil` when the
+  override has none.
   """
   def media_key(%Ecto.Changeset{} = override) do
     media_key(%{
@@ -54,6 +55,9 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
 
   def media_key(%{object_id: id} = override) when not is_nil(id) and id != "",
     do: {media_type(Map.get(override, :object_type)), to_string(id)}
+
+  def media_key(%{"object_id" => id} = override) when not is_nil(id) and id != "",
+    do: {media_type(Map.get(override, "object_type")), to_string(id)}
 
   def media_key(_), do: nil
 

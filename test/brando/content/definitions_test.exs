@@ -201,6 +201,57 @@ defmodule Brando.Content.DefinitionsTest do
     assert Repo.aggregate(TableTemplate, :count) == 1
   end
 
+  test "gallery override references bind to the image or video the override is for", c do
+    # Images and videos are numbered separately; give both the same id.
+    image = Factory.insert(:image)
+    video = Factory.insert(:video, id: image.id)
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT setval('videos_id_seq', (SELECT max(id) FROM videos))")
+
+    overrides = [
+      %{"object_id" => "still", "object_type" => "image", "title" => "Still"},
+      %{"object_id" => "clip", "object_type" => "video", "title" => "Clip"}
+    ]
+
+    bundle =
+      c.bundle
+      |> edit(fn definition ->
+        put_in(definition, ["refs", Access.at(0), "data"], %{
+          "type" => "gallery",
+          "data" => %{"gallery_object_overrides" => overrides}
+        })
+      end)
+      |> Map.put("source", "another-installation")
+
+    assert {:ok, plan} = Definitions.plan(bundle, c.user, references: %{"still" => image.id, "clip" => video.id})
+    assert {:ok, _} = Definitions.apply(plan, c.user)
+    [ref] = hero().refs
+
+    assert Enum.map(ref.data.data.gallery_object_overrides, &{&1.object_type, &1.object_id, &1.title}) == [
+             {:image, to_string(image.id), "Still"},
+             {:video, to_string(video.id), "Clip"}
+           ]
+
+    exported = snapshot()
+    [definition] = exported["modules"]
+    tokens = Enum.map(hd(definition["refs"])["data"]["data"]["gallery_object_overrides"], & &1["object_id"])
+
+    assert Enum.map(tokens, &exported["references"][&1]) == [
+             %{"kind" => "image", "id" => image.id},
+             %{"kind" => "video", "id" => video.id}
+           ]
+
+    assert %{changes: []} = apply_bundle!(exported, c.user)
+
+    # Earlier exports recorded the same (media) ids under a `gallery_object` kind.
+    legacy =
+      Map.update!(exported, "references", fn references ->
+        Map.new(references, fn {token, binding} -> {token, %{binding | "kind" => "gallery_object"}} end)
+      end)
+
+    assert %{changes: []} = apply_bundle!(legacy, c.user)
+    assert hero().refs == [ref]
+  end
+
   test "new installations require explicit external asset mappings", c do
     image = Factory.insert(:image)
     destination = Factory.insert(:image)

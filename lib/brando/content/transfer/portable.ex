@@ -4,6 +4,7 @@ defmodule Brando.Content.Transfer.Portable do
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Content.Definition.Value
   alias Brando.Drafts.Params
+  alias Brando.Villain.Blocks.GalleryObjectOverride
 
   @block ~w(uid type active collapsed anchor description multi datasource sequence slot_name slot_kind slot_module_set module_id container_id palette_id fragment_id identifier_metas)
   @ref ~w(uid name description active collapsed sequence data image_id video_id file_id gallery_id)
@@ -39,10 +40,7 @@ defmodule Brando.Content.Transfer.Portable do
     params = Params.snapshot(block)
     {base, state} = params |> Map.take(@block) |> encode_values(state)
 
-    {refs, state} =
-      Enum.map_reduce(block.refs, state, fn ref, acc ->
-        ref |> Params.snapshot() |> Map.take(@ref) |> Map.update!("data", &strip_embed_ids/1) |> encode_values(acc)
-      end)
+    {refs, state} = Enum.map_reduce(block.refs, state, &encode_ref/2)
 
     {vars, state} = encode_vars(block.vars, state)
 
@@ -69,6 +67,121 @@ defmodule Brando.Content.Transfer.Portable do
      }), state}
   end
 
+  defp encode_ref(ref, state) do
+    {params, state} =
+      ref |> Params.snapshot() |> Map.take(@ref) |> Map.update!("data", &strip_embed_ids/1) |> encode_values(state)
+
+    case params do
+      %{"data" => %{"data" => %{"gallery_object_overrides" => [_ | _] = overrides}}} ->
+        {media, state} =
+          ref
+          |> Brando.Repo.preload(gallery: :gallery_objects)
+          |> Map.get(:gallery)
+          |> gallery_media()
+          |> Enum.map_reduce(state, fn {type, id}, acc ->
+            {token, acc} = Dependencies.add(to_string(type), id, acc)
+            {{type, id, token}, acc}
+          end)
+
+        {put_in(params, ["data", "data", "gallery_object_overrides"], place_overrides(overrides, media)), state}
+
+      _ ->
+        {params, state}
+    end
+  end
+
+  defp gallery_media(nil), do: []
+
+  defp gallery_media(gallery) do
+    gallery.gallery_objects
+    |> Enum.sort_by(&{&1.sequence || 0, &1.id})
+    |> Enum.flat_map(fn
+      %{image_id: id} when not is_nil(id) -> [{:image, id}]
+      %{video_id: id} when not is_nil(id) -> [{:video, id}]
+      _ -> []
+    end)
+  end
+
+  # An override's `object_id` is the id of its image or video, matched together
+  # with `object_type`. In a bundle it is that media's dependency token, so it
+  # follows whatever the media becomes at the destination. `media` lists
+  # `{type, id, token}` for each gallery item; overrides for media that is no
+  # longer in the gallery have no effect and are left out.
+  defp place_overrides(overrides, media) do
+    index = GalleryObjectOverride.index(overrides)
+
+    media
+    |> Enum.uniq_by(&elem(&1, 2))
+    |> Enum.flat_map(fn {type, id, token} ->
+      case GalleryObjectOverride.lookup(index, type, id) do
+        nil -> []
+        override -> [Map.merge(override, %{"object_id" => token, "object_type" => to_string(type)})]
+      end
+    end)
+  end
+
+  @doc """
+  Reads bundles exported before gallery overrides were tokenized by media. Their
+  overrides carry the stored media id as `gallery_object:<id>`, which becomes the
+  token of the gallery's image or video with that id and type.
+  """
+  def upgrade(%{"dependencies" => deps} = bundle) when is_map(deps) do
+    bundle
+    |> update_present("fields", &upgrade_overrides(&1, deps))
+    |> update_present("entries", &upgrade_overrides(&1, deps))
+    |> update_present("definitions", &upgrade_definitions/1)
+    |> Map.put("dependencies", Map.reject(deps, &match?({_, %{"kind" => "gallery_object"}}, &1)))
+  end
+
+  def upgrade(bundle), do: bundle
+
+  defp update_present(map, key, fun),
+    do: if(Map.has_key?(map, key), do: Map.update!(map, key, fun), else: map)
+
+  defp upgrade_definitions(definitions) when is_map(definitions),
+    do: Brando.Content.Definition.References.upgrade(definitions)
+
+  defp upgrade_definitions(definitions), do: definitions
+
+  defp upgrade_overrides(value, deps) when is_list(value), do: Enum.map(value, &upgrade_overrides(&1, deps))
+
+  defp upgrade_overrides(value, deps) when is_map(value) do
+    value = Map.new(value, fn {key, nested} -> {key, upgrade_overrides(nested, deps)} end)
+
+    case value do
+      %{"gallery_id" => gallery, "data" => %{"data" => %{"gallery_object_overrides" => [_ | _] = overrides}}} ->
+        if Enum.any?(overrides, &legacy_override?/1),
+          do: put_in(value, ["data", "data", "gallery_object_overrides"], upgrade_gallery(overrides, gallery, deps)),
+          else: value
+
+      _ ->
+        value
+    end
+  end
+
+  defp upgrade_overrides(value, _), do: value
+
+  defp upgrade_gallery(overrides, gallery, deps) do
+    overrides =
+      Enum.map(overrides, fn
+        %{"object_id" => "gallery_object:" <> id} = override -> Map.put(override, "object_id", id)
+        override -> override
+      end)
+
+    objects = if is_map(deps[gallery]), do: deps[gallery]["objects"], else: nil
+
+    media =
+      for object <- List.wrap(objects),
+          {type, token} <- [{:image, object["image_id"]}, {:video, object["video_id"]}],
+          is_binary(token) and is_map(deps[token]) and not is_nil(deps[token]["source_id"]),
+          do: {type, deps[token]["source_id"], token}
+
+    place_overrides(overrides, media)
+  end
+
+  defp legacy_override?(%{"object_id" => "gallery_object:" <> _}), do: true
+  defp legacy_override?(_), do: false
+
   def encode_vars(vars, state),
     do:
       Enum.map_reduce(vars, state, fn var, acc ->
@@ -91,9 +204,6 @@ defmodule Brando.Content.Transfer.Portable do
           key in ~w(slot_module_set module_set footnote_module_set) and value not in [nil, "", "all"] and
               (key != "footnote_module_set" or whole["footnotes"] == true) ->
             Dependencies.add_set(value, acc)
-
-          key == "object_id" and value not in [nil, ""] ->
-            {"gallery_object:#{value}", acc}
 
           key in ~w(source_id version_id) and not is_nil(value) ->
             kind = if key == "source_id", do: "markdown_source", else: "markdown_version"
@@ -262,6 +372,9 @@ defmodule Brando.Content.Transfer.Portable do
 
         key in ~w(source_id version_id) and not is_nil(value) ->
           reference!(value, if(key == "source_id", do: "markdown_source", else: "markdown_version"), deps)
+
+        key == "object_id" and value not in [nil, ""] ->
+          reference!(value, to_string(map["object_type"]), deps)
 
         true ->
           validate_references!(value, deps)

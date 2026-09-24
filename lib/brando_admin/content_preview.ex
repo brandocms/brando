@@ -9,6 +9,7 @@ defmodule BrandoAdmin.ContentPreview do
   use Gettext, backend: Brando.Gettext
   alias Brando.Content.Transfer.Labels
   alias Brando.Drafts.Params
+  alias Brando.Villain.Blocks.GalleryObjectOverride
 
   @media ~w(image file video gallery)
   @associations ~w(image file video thumbnail gallery gallery_objects refs vars table_rows children)a
@@ -91,13 +92,18 @@ defmodule BrandoAdmin.ContentPreview do
   defp media_lines("gallery", gallery, overrides, label, assets, location) do
     objects = Enum.sort_by(gallery["gallery_objects"] || [], &(&1["sequence"] || 0))
     location = location ++ [{:gallery, label}]
+    index = GalleryObjectOverride.index(overrides["gallery_object_overrides"])
 
     [line(media_label("gallery", label), location, :media)] ++
       Enum.flat_map(objects, fn object ->
-        key = object["key"] || to_string(object["id"])
-
+        # Saved objects hold media ids and bundle objects hold media tokens;
+        # overrides carry the same kind of value in `object_id`.
         override =
-          Enum.find(overrides["gallery_object_overrides"] || [], %{}, &(to_string(&1["object_id"]) == key))
+          cond do
+            id = object["image_id"] -> GalleryObjectOverride.lookup(index, :image, id)
+            id = object["video_id"] -> GalleryObjectOverride.lookup(index, :video, id)
+            true -> nil
+          end || %{}
 
         defaults = Map.reject(object["config"] || %{}, fn {_, value} -> value in [nil, ""] end)
 

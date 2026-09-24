@@ -127,11 +127,6 @@ msgstr "Et felt må inneholde en ordnet liste med blokker."
 msgid "A footnote points outside its owned field."
 msgstr "En fotnote peker utenfor feltet den tilhører."
 
-#: lib/brando/content/transfer/ownership.ex:66
-#, elixir-autogen, elixir-format
-msgid "A gallery override references an unknown placement."
-msgstr "En galleritilpasning viser til en ukjent plassering."
-
 #: lib/brando_admin/live/config/content_transfer_live.ex:498
 #, elixir-autogen, elixir-format
 msgid "A review before every import"

@@ -40,7 +40,7 @@ defmodule Brando.Content.Transfer.Archive do
 
       bundle =
         case Jason.decode(json) do
-          {:ok, bundle} when is_map(bundle) -> bundle
+          {:ok, bundle} when is_map(bundle) -> Brando.Content.Transfer.Portable.upgrade(bundle)
           _ -> Error.raise!("content.json", dgettext("content_transfer", "expected a JSON object"))
         end
 

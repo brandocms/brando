@@ -76,7 +76,7 @@ defmodule BrandoAdmin.ContentPreviewTest do
     refute Enum.join(text(after_lines)) =~ "secret"
   end
 
-  test "gallery order and placement overrides survive portable object identities" do
+  test "gallery order and placement overrides survive portable media identities" do
     deps = %{
       "gallery:1" => %{
         "kind" => "gallery",
@@ -100,8 +100,13 @@ defmodule BrandoAdmin.ContentPreviewTest do
       "data" => %{
         "data" => %{
           "gallery_object_overrides" => [
-            %{"object_id" => "gallery_object:10", "alt" => "Placement caption", "use_default_alt" => false},
-            %{"object_id" => "gallery_object:20", "alt" => "Ignored caption", "use_default_alt" => true}
+            %{
+              "object_id" => "image:1",
+              "object_type" => "image",
+              "alt" => "Placement caption",
+              "use_default_alt" => false
+            },
+            %{"object_id" => "image:2", "object_type" => "image", "alt" => "Ignored caption", "use_default_alt" => true}
           ]
         }
       }
@@ -123,6 +128,57 @@ defmodule BrandoAdmin.ContentPreviewTest do
     diff = TextDiff.compare(before, after_lines)
     assert diff.added > 0 && diff.removed > 0
     assert hd(tl(tl(text(after_lines)))) == "Image: two.jpg"
+  end
+
+  test "saved gallery overrides apply to the image or video with their id and type" do
+    image = %Brando.Images.Image{id: 7, path: "images/still.jpg"}
+    video = %Brando.Videos.Video{id: 7, title: "Clip", source_url: "https://example.com/clip"}
+
+    gallery = %Brando.Galleries.Gallery{
+      id: 3,
+      gallery_objects: [
+        %Brando.Galleries.GalleryObject{id: 90, sequence: 0, image_id: 7, image: image},
+        %Brando.Galleries.GalleryObject{id: 91, sequence: 1, video_id: 7, video: video}
+      ]
+    }
+
+    overrides =
+      Enum.map(
+        [{"7", :video, "Video caption"}, {"90", :image, "Placement id"}],
+        fn {id, type, title} ->
+          %Brando.Villain.Blocks.GalleryObjectOverride{
+            object_id: id,
+            object_type: type,
+            title: title,
+            use_default_title: false
+          }
+        end
+      )
+
+    saved = %Brando.Content.Block{
+      description: "Collection",
+      refs: [
+        %Brando.Content.Ref{
+          name: "Photos",
+          gallery_id: 3,
+          gallery: gallery,
+          data: %Brando.Villain.Blocks.GalleryBlock{
+            data: %Brando.Villain.Blocks.GalleryBlock.Data{gallery_object_overrides: overrides}
+          }
+        }
+      ],
+      vars: [],
+      table_rows: [],
+      children: []
+    }
+
+    assert text(ContentPreview.lines([saved])) == [
+             "Collection",
+             "Gallery · Photos",
+             "Image: still.jpg",
+             "Video: https://example.com/clip",
+             "Title: Video caption"
+           ]
   end
 
   test "files, uploaded and external videos, posters, table vars and nested blocks are readable" do

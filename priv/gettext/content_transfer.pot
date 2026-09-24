@@ -134,11 +134,6 @@ msgstr ""
 msgid "A footnote points outside its owned field."
 msgstr ""
 
-#: lib/brando/content/transfer/ownership.ex:66
-#, elixir-autogen, elixir-format
-msgid "A gallery override references an unknown placement."
-msgstr ""
-
 #: lib/brando_admin/live/config/content_transfer_live.ex:498
 #, elixir-autogen, elixir-format
 msgid "A review before every import"
