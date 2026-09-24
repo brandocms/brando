@@ -148,6 +148,7 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> image_configuration(project, tenancy)
       |> Config.configure_new("config.exs", project.otp_app, [:hmr], false)
+      |> Config.configure_new("dev.exs", project.otp_app, [:hmr], true)
       |> Config.configure_new(
         "brando.exs",
         :brando,

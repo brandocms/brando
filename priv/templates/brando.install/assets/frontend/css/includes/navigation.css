@@ -2,8 +2,8 @@
  * Site header.
  *
  * Markup comes from the CMS root layout: a brand link and the "main" menu,
- * rendered with `<.menu>` / `<.menu_item>`. `--header-height` is what `main`
- * reserves at the top of the page.
+ * rendered with `<.menu>` / `<.menu_item>`. `--nav-height` sizes the bar and
+ * is what `main` reserves at the top of the page.
  */
 
 header[data-nav] {
@@ -23,7 +23,7 @@ header[data-nav] {
     @space container;
     @display flex/row/nowrap;
 
-    height: var(--header-height);
+    height: var(--nav-height);
     align-items: center;
     justify-content: space-between;
   }

@@ -21,6 +21,7 @@ import {
 /**
  * APP SPECIFIC MODULE IMPORTS
  */
+import highlight from './modules/highlight'
 
 /**
  * CONFIG IMPORTS
@@ -58,6 +59,7 @@ app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
   }
   app.cookies = new Cookies(app)
   app.typo = new Typography()
+  highlight()
 })
 
 app.registerCallback(Events.APPLICATION_REVEALED, () => {

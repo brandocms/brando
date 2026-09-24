@@ -10,7 +10,7 @@ main {
   @display flex/column/nowrap;
   @space gap blocks;
 
-  padding-top: var(--header-height);
+  padding-top: var(--nav-height);
 }
 
 /**
@@ -221,17 +221,50 @@ main > [b-tpl] > .inner {
       max-width: 34ch;
     }
 
+    /* One command per step, coloured by `js/modules/highlight.js`. */
     .cmd {
       @font mono;
       @fontsize text/sm;
       @space margin-top md;
-      @space padding-y xxs;
-      @space padding-x xs;
+      @color fg bone.full;
       @color bg bone.wash;
       @color border bone.hair;
 
-      display: inline-block;
+      display: inline-flex;
+      padding: 0.55em 0.9em;
       border: 1px solid;
+      line-height: 1.4;
+
+      /* The command is a text ref, so it arrives as a paragraph. Until the
+         highlighter replaces it, it must not take the step copy's styles. */
+      p {
+        margin: 0;
+        max-width: none;
+        font: inherit;
+        color: inherit;
+      }
+
+      code {
+        font: inherit;
+        white-space: pre;
+      }
+
+      .tok-sigil,
+      .tok-keyword {
+        @color fg live;
+      }
+
+      .tok-name {
+        @color fg accent;
+      }
+
+      .tok-flag {
+        @color fg bone.muted;
+      }
+
+      .tok-punct {
+        @color fg bone.faint;
+      }
     }
   }
 }

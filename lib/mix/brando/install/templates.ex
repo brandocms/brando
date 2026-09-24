@@ -206,7 +206,7 @@ defmodule Mix.Brando.Install.Templates do
 
     # Frontend JS
 
-    {:keep, "assets/frontend/js/modules", "assets/frontend/js/modules"},
+    {:copy, "assets/frontend/js/modules/highlight.js", "assets/frontend/js/modules/highlight.js"},
     {:copy, "assets/frontend/js/index.js", "assets/frontend/js/index.js"},
     {:copy, "assets/frontend/js/critical.js", "assets/frontend/js/critical.js"},
     {:copy, "assets/frontend/js/config/BREAKPOINTS.js", "assets/frontend/js/config/BREAKPOINTS.js"},

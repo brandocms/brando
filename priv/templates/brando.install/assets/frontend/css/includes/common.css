@@ -1,10 +1,14 @@
-/* The header reserves this at the top of the page; `main` and anchor targets
-   read it back. */
+/* `--nav-height` is the bar's designed height: the header and the room `main`
+   reserves for it are sized from it. `--header-height` is how much of the bar
+   is showing. `FixedHeader` rewrites it on :root, down to 0 while the bar is
+   retracted, so only things that should follow the bar may read it, like
+   anchor targets. The header must never size itself from it. */
 html {
-  --header-height: 72px;
+  --nav-height: 72px;
+  --header-height: var(--nav-height);
 
   @responsive $sm {
-    --header-height: 60px;
+    --nav-height: 60px;
   }
 }
 
@@ -74,47 +78,58 @@ h5 {
 }
 
 /**
- * Section head: a mono index, a title, a hairline running out to an aside.
- * Every seeded module opens with one.
+ * Section head: a mono meta line — the index, a hairline, an optional aside —
+ * with the title set below it. The hairline only ever runs between two mono
+ * labels, or out to the edge when there is no aside, so it always connects
+ * things of the same size. Every seeded module opens with one.
  */
 .section-head {
-  @display flex/row/nowrap;
-  @space gap md;
   @space margin-bottom lg;
+  @space column-gap sm;
+  @space row-gap sm;
 
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
 
-  .label,
-  .note {
-    flex: none;
-  }
-
-  h2 {
-    flex: none;
+  .label {
+    grid-area: 1 / 1;
   }
 
   .rule {
-    @color bg bone.hairStrong;
+    @color bg bone.hair;
 
-    flex: 1;
+    grid-area: 1 / 2;
     height: 1px;
-    align-self: center;
+
+    /* No aside: run out to the edge. */
+    &:last-child {
+      grid-column: 2 / -1;
+    }
   }
 
   .note {
-    @fontsize text/sm;
-    @color fg bone.dim;
+    @font mono;
+    @fontsize text/xs;
+    @color fg bone.faint;
+
+    grid-area: 1 / 3;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  h2 {
+    grid-area: 2 / 1 / 3 / -1;
   }
 
   @responsive $sm {
-    @display flex/column/nowrap;
-    @space gap xs;
-
-    align-items: stretch;
-
-    .rule,
     .note {
       display: none;
+    }
+
+    .rule {
+      grid-column: 2 / -1;
     }
   }
 }
