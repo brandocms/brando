@@ -198,7 +198,8 @@ defmodule Brando.SEO.Checks do
           weight: :normal,
           label: label,
           hint: gettext("Shared with %{count} other entries in this language.", count: count - 1),
-          value: count
+          # Only a shared value is worth a number; "1" beside a pass reads as a problem.
+          value: if(count > 1, do: count)
         }
     end
   end

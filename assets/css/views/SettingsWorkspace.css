@@ -352,7 +352,7 @@
 
   .seo-critique { display: grid; gap: 6px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--workspace-line); border-radius: 6px; background: var(--workspace-wash); font-size: 12px; }
   .seo-critique h4 { margin: 0; font-size: 12px; font-weight: 500; }
-  .seo-critique ul { display: grid; gap: 4px; margin: 0; padding-left: 16px; line-height: 1.5; }
+  .seo-critique ul { display: grid; gap: 4px; margin: 0; padding-left: 16px; list-style: disc; line-height: 1.5; }
   .seo-critique p { display: flex; gap: 8px; align-items: center; margin: 0; padding: 0; color: var(--workspace-muted); }
   .seo-critique p.error { color: #8f4834; }
 

@@ -20,7 +20,7 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     view |> element("nav.seo-tabs button", "Content SEO") |> render_click()
     assert_patch(view, "/admin/config/seo?tab=content")
 
-    html = render_async(view)
+    html = render_async(view, 5_000)
     assert html =~ "Audited page"
     assert has_element?(view, ".seo-audit-table")
     assert has_element?(view, ".seo-stats")
@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     Brando.Sites.FourOhFour.add_404(%Plug.Conn{path_info: ["blog", "moved-page"]})
 
     {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
-    html = render_async(view)
+    html = render_async(view, 5_000)
     assert html =~ "/blog/moved-page"
 
     view |> element(~s(.seo-redirects button[phx-value-from="/blog/moved-page"])) |> render_click()
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
   test "opening the content tab directly runs the audit", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
-    html = render_async(view)
+    html = render_async(view, 5_000)
     assert html =~ "seo-audit"
     refute html =~ "seo_form"
   end
@@ -76,7 +76,7 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
         )
 
       {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
-      html = render_async(view)
+      html = render_async(view, 5_000)
 
       assert html =~ "Unassisted"
       refute has_element?(view, ".seo-context-picker")
@@ -98,7 +98,7 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
         )
 
       {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
-      render_async(view)
+      render_async(view, 5_000)
 
       assert has_element?(view, ".seo-context-picker")
       view |> element(".seo-context-summary") |> render_click()
@@ -135,14 +135,14 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
         end
 
       {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
-      render_async(view)
+      render_async(view, 5_000)
 
       assert has_element?(view, ".seo-batch")
       view |> element(".seo-batch button[phx-click=confirm_batch]") |> render_click()
       view |> element(".seo-batch button[phx-click=start_batch]") |> render_click()
 
       # Oban runs inline in tests, so the suggestions are written by now.
-      render_async(view)
+      render_async(view, 5_000)
       assert has_element?(view, ".seo-suggestion[data-status=pending]", "Bulk first")
       assert has_element?(view, ".seo-suggestion textarea", "About the second")
       # Nothing is waiting any more, so there is nothing left to offer.
@@ -155,12 +155,12 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
       |> form("#seo-suggestion-#{first.id} form", %{"text" => "Edited before saving"})
       |> render_submit()
 
-      render_async(view)
+      render_async(view, 5_000)
       assert description(Enum.find(pages, &(&1.id == first.entry_id))) == "Edited before saving"
       refute has_element?(view, "#seo-suggestion-#{first.id}")
 
       view |> element(".seo-suggestions button[phx-click=accept_all_suggestions]") |> render_click()
-      render_async(view)
+      render_async(view, 5_000)
 
       assert description(Enum.find(pages, &(&1.id == second.entry_id))) == "About the second"
       refute has_element?(view, ".seo-suggestions")
@@ -185,11 +185,11 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
         )
 
       {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
-      render_async(view)
+      render_async(view, 5_000)
 
       view |> element("button.seo-row-toggle", "Details") |> render_click()
       view |> element("button[phx-click=critique]") |> render_click()
-      render_async(view)
+      render_async(view, 5_000)
 
       assert has_element?(view, ".seo-critique li", "The description is generic.")
       assert has_element?(view, ".seo-critique li", "Name the city.")

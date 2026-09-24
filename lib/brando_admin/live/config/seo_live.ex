@@ -806,7 +806,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   def handle_async({:generate, key}, {:ok, {:error, reason}}, socket) do
-    send(self(), {:toast, AI.error_message(reason)})
+    message = if match?(%Ecto.Changeset{}, reason), do: save_error(reason), else: AI.error_message(reason)
+    send(self(), {:toast, message})
     {:noreply, update(socket, :generating, &MapSet.delete(&1, key))}
   end
 
@@ -932,6 +933,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   defp save_error(:not_found), do: gettext("This suggestion was already reviewed")
   defp save_error(:empty), do: gettext("Write a description before accepting it")
+
+  # The entry's own validation still applies, so an entry saved before a field
+  # became required cannot take a description until that field is filled in.
+  defp save_error(%Ecto.Changeset{errors: errors}) do
+    fields = errors |> Keyword.keys() |> Enum.uniq() |> Enum.join(", ")
+    gettext("The entry cannot be saved until these fields are fixed: %{fields}", fields: fields)
+  end
+
   defp save_error(_), do: gettext("Could not save the description")
 
   defp in_captured_context(socket, fun) do

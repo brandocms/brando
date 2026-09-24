@@ -393,6 +393,19 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `Brando.SEO.Check` structs. Recorded 404s whose slug matches an audited
   entry are listed as missing redirects with a one-click "Create redirect"
   that appends to the SEO settings.
+- **Write missing meta descriptions in bulk** from the Content SEO tab. The
+  tab says how many entries it will send to the model — at most
+  `config :brando, Brando.SEO, max_batch: 200` per run — and asks first. Each
+  entry is written by a background job into a suggestion (new table
+  `seo_meta_suggestions`, migration `brando_179`), never into the entry;
+  suggestions appear in a review list as they finish, and can be edited,
+  accepted, rejected or all accepted at once. Accepting saves through the
+  entry's own context as the reviewing user, so revisions and "edited by"
+  apply, and an entry that fails its own validation says which fields to fix.
+- **Review with AI**: an advisory critique of an entry's meta title and
+  description against its content — at most three points, in the admin
+  language, never written anywhere.
+- The Content SEO tab and its checks are translated into Norwegian.
 - The Content SEO audit flags **thin content**: an entry whose rendered blocks
   hold fewer than 300 words warns, and one with no body text fails. The words
   are counted by the database from the `rendered_<field>` columns, so the HTML
