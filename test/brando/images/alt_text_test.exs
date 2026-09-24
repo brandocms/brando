@@ -10,8 +10,15 @@ defmodule Brando.Images.AltTextTest do
 
   @fixture Path.expand("../../fixtures/sample.jpg", __DIR__)
 
+  # The factory gives every image the same size paths; tests that place
+  # files on disk need their own, or one test's file answers for another's.
   defp insert_image(attrs) do
-    Factory.insert(:image, Map.merge(%{status: :processed, alt: nil}, attrs))
+    Factory.insert(:image, Map.merge(%{status: :processed, alt: nil, sizes: sizes(attrs[:path])}, attrs))
+  end
+
+  defp sizes(path) do
+    base = Path.rootname(path)
+    Map.new(~w(thumb small medium large xlarge), &{&1, "#{base}/#{&1}.jpg"})
   end
 
   # Puts the fixture where the image's rendition is read from.
