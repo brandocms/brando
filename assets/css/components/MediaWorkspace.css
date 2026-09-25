@@ -254,6 +254,22 @@
   .content-list .list-tools-wrapper:not(:has(button, input, select, a)) { display: none; }
   .gallery-description { display: block; margin-top: 4px; font-size: 12px; color: var(--workspace-muted); }
   .content-list .main-content > .listing-gallery-count { flex: 0 0 160px; }
+  /* Up to three images in a stack, the first on top and the others peeking
+     out behind it, so a row reads as a set rather than one picture. */
+  .content-list .main-content > .cover.gallery-stack { position: relative; flex-basis: 64px; height: 64px; }
+  .content-list .cover.gallery-stack > :is(.image-content, .img-placeholder) {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    width: 50px;
+    height: 58px;
+    border: 2px solid #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
+  }
+  .content-list .cover.gallery-stack > :nth-child(1) { z-index: 3; }
+  .content-list .cover.gallery-stack > :nth-child(2) { z-index: 2; transform: translate(6px, -2px) rotate(4deg); }
+  .content-list .cover.gallery-stack > :nth-child(3) { z-index: 1; transform: translate(11px, -3px) rotate(8deg); }
   @media (max-width: 600px) {
     .content-list .list-row .main-content:has(> .cover) { grid-template-columns: 48px minmax(0, 1fr) 30px; gap: 8px 12px; padding-inline: 0; }
     .content-list .list-row .main-content > .cover { grid-column: 1; grid-row: 1 / 3; }

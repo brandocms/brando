@@ -13,6 +13,8 @@ defmodule Brando.Galleries.Gallery do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
   import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
+
+  alias BrandoAdmin.Components.Image
   import Ecto.Query, only: [from: 2]
 
   trait :timestamped
@@ -71,22 +73,28 @@ defmodule Brando.Galleries.Gallery do
   Listing row component for gallery entries
   """
   def listing_row(assigns) do
-    first_image =
-      case assigns.entry.gallery_objects do
-        [%{image: %Brando.Images.Image{} = image} | _] -> image
-        [%{video: %{thumbnail: %Brando.Images.Image{} = image}} | _] -> image
-        _ -> nil
-      end
+    images =
+      (assigns.entry.gallery_objects || [])
+      |> Enum.flat_map(fn
+        %{image: %Brando.Images.Image{} = image} -> [image]
+        %{video: %{thumbnail: %Brando.Images.Image{} = image}} -> [image]
+        _ -> []
+      end)
+      |> Enum.take(3)
 
     object_count = length(assigns.entry.gallery_objects || [])
 
     assigns =
       assigns
-      |> assign(:first_image, first_image)
+      |> assign(:images, images)
       |> assign(:object_count, object_count)
 
     ~H"""
-    <.cover image={@first_image} columns={2} size={:smallest} />
+    <.cover :if={length(@images) < 2} image={List.first(@images)} columns={2} size={:smallest} />
+    <%!-- More than one image: the first three lie in a stack, so the row reads as a set. --%>
+    <div :if={length(@images) > 1} class="cover col-2 gallery-stack" data-count={length(@images)}>
+      <Image.image :for={image <- @images} image={image} size={:smallest} />
+    </div>
     <.update_link entry={@entry} columns={7}>
       {gettext("Gallery")} #{@entry.id}
       <:outside>
