@@ -89,6 +89,31 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert id == small.id
   end
 
+  test "the image picker browses the whole library, and picking toggles an attachment", %{conn: conn} = c do
+    {:ok, conversation} = Agent.start_conversation(c.current_user)
+    {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+
+    image =
+      Brando.Factory.insert(:image,
+        creator_id: c.current_user.id,
+        path: "images/ferry.jpg",
+        config_target: "image:Other:cover",
+        status: :processed
+      )
+
+    view |> element("button[title='Attach images from the media library']") |> render_click()
+    assert has_element?(view, "#image-picker [data-id='#{image.id}']")
+
+    render_click(view, "select_image", %{"id" => to_string(image.id)})
+    {:ok, conversation} = Agent.get_conversation(conversation.id, c.current_user)
+    assert [%{"alias" => "image1", "kind" => "image", "id" => id}] = conversation.attachments
+    assert id == image.id
+
+    render_click(view, "select_image", %{"id" => to_string(image.id)})
+    {:ok, conversation} = Agent.get_conversation(conversation.id, c.current_user)
+    assert conversation.attachments == []
+  end
+
   test "another user's conversation is not shown", %{conn: conn} do
     other = Brando.Factory.insert(:random_user)
     {:ok, conversation} = Agent.start_conversation(other)

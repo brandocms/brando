@@ -132,11 +132,15 @@ defmodule BrandoAdmin.Components.ImagePicker do
     assign(socket, :config_target, resolve_config_target(socket.assigns.config_target))
   end
 
+  # `config_target: :all` browses the whole library from the images root, for
+  # pickers that are not choosing for a field (the AI assistant's attachments).
   defp list_images(config_target) do
+    filter = if config_target == :all, do: %{}, else: %{config_target: config_target}
+
     {:ok, images} =
       Brando.Images.list_images(%{
         select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal],
-        filter: %{config_target: config_target, status: :processed},
+        filter: Map.put(filter, :status, :processed),
         order: "desc id"
       })
 
@@ -147,6 +151,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # For example, "ref:gallery" has no registered config, so images are stored
   # with config_target "default". We need to query with the resolved target.
   defp resolve_config_target(nil), do: "default"
+  defp resolve_config_target(:all), do: :all
 
   defp resolve_config_target(config_target) do
     case Brando.Images.get_config_for(config_target) do
@@ -586,7 +591,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   defp assign_folder_state(socket, requested_folder) do
-    upload_root = FolderBrowser.upload_root(socket.assigns.config_target)
+    upload_root = picker_upload_root(socket.assigns.config_target)
     images = list_images(socket.assigns.config_target)
 
     folders =
@@ -636,6 +641,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders_for_root, recent_folders_for_root)
   end
+
+  defp picker_upload_root(:all), do: FolderBrowser.scope_for(nil)
+  defp picker_upload_root(config_target), do: FolderBrowser.upload_root(config_target)
 
   # -- PickerHelpers callbacks --
 

@@ -18,9 +18,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.Review
   alias Brando.Repo
+  alias BrandoAdmin.Components.ImagePicker
+  alias BrandoAdmin.Components.VideoPicker
   alias Phoenix.LiveView.JS
-
-  @library_limit 30
 
   def __authorization__, do: {:use, :assistant}
 
@@ -49,7 +49,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
        receipt: nil,
        error: nil,
        draft: "",
-       library: nil,
        show_history: false,
        applying: false,
        preview: nil,
@@ -209,11 +208,20 @@ defmodule BrandoAdmin.AI.AssistantLive do
               <button
                 type="button"
                 class="assistant-tool"
-                phx-click="open_library"
+                phx-click={JS.push("browse_library", value: %{kind: "image"}) |> toggle_drawer("#image-picker")}
                 disabled={!@available?}
-                title={gettext("Attach from the media library")}
+                title={gettext("Attach images from the media library")}
               >
-                <.icon name="hero-photo" /><span class="visually-hidden">{gettext("From library")}</span>
+                <.icon name="hero-photo" /><span class="visually-hidden">{gettext("Images")}</span>
+              </button>
+              <button
+                type="button"
+                class="assistant-tool"
+                phx-click={JS.push("browse_library", value: %{kind: "video"}) |> toggle_drawer("#video-picker")}
+                disabled={!@available?}
+                title={gettext("Attach videos from the media library")}
+              >
+                <.icon name="hero-film" /><span class="visually-hidden">{gettext("Videos")}</span>
               </button>
               <span :if={attached_count(@conversation) > 0} class="assistant-attached-count">
                 {ngettext("%{count} attached", "%{count} attached", attached_count(@conversation))}
@@ -245,7 +253,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </section>
       </div>
 
-      <.library :if={@library} library={@library} conversation={@conversation} />
+      <.live_component module={ImagePicker} id="image-picker" />
+      <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
     </div>
     """
   end
@@ -273,7 +282,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     ~H"""
     <div class="assistant-message is-assistant">
       <span class="assistant-author"><.icon name="hero-sparkles" />{gettext("Assistant")}</span>
-      <div class="assistant-text">{@item.content}</div>
+      <div class="assistant-text">{markdown(@item.content)}</div>
     </div>
     """
   end
@@ -798,72 +807,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
-  attr :library, :map, required: true
-  attr :conversation, :any, required: true
-
-  defp library(assigns) do
-    attached =
-      MapSet.new((assigns.conversation && assigns.conversation.attachments) || [], &{&1["kind"], &1["id"]})
-
-    assigns = assign(assigns, :attached, attached)
-
-    ~H"""
-    <div
-      class="assistant-library"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="assistant-library-title"
-      phx-window-keydown="close_library"
-      phx-key="Escape"
-    >
-      <div class="assistant-library-panel">
-        <header>
-          <h2 id="assistant-library-title">{gettext("Attach from the media library")}</h2>
-          <button type="button" class="assistant-icon-button" phx-click="close_library" aria-label={gettext("Close")}>
-            <.icon name="hero-x-mark" />
-          </button>
-        </header>
-        <form class="assistant-library-filter" phx-change="library_search" phx-submit="library_search">
-          <div class="assistant-segmented" role="radiogroup" aria-label={gettext("Media type")}>
-            <label :for={{value, label} <- [{"image", gettext("Images")}, {"video", gettext("Videos")}]}>
-              <input type="radio" name="kind" value={value} checked={@library.kind == value} />
-              <span>{label}</span>
-            </label>
-          </div>
-          <input
-            type="search"
-            name="q"
-            value={@library.query}
-            placeholder={gettext("Search by title or filename")}
-            phx-debounce="250"
-          />
-        </form>
-        <p :if={@library.items == []} class="assistant-library-empty">{gettext("Nothing matches this search.")}</p>
-        <ul class="assistant-library-grid">
-          <li :for={item <- @library.items}>
-            <button
-              type="button"
-              phx-click="attach"
-              phx-value-kind={@library.kind}
-              phx-value-id={item.id}
-              aria-pressed={to_string(MapSet.member?(@attached, {@library.kind, item.id}))}
-            >
-              <span class="assistant-thumb">
-                <img :if={item.url} src={item.url} alt="" loading="lazy" />
-                <.icon :if={!item.url} name={if @library.kind == "video", do: "hero-film", else: "hero-photo"} />
-              </span>
-              <span class="assistant-library-label">{item.label}</span>
-              <span :if={MapSet.member?(@attached, {@library.kind, item.id})} class="assistant-library-check">
-                <.icon name="hero-check" />
-              </span>
-            </button>
-          </li>
-        </ul>
-      </div>
-    </div>
-    """
-  end
-
   ## Events
 
   def handle_event("draft", %{"message" => text}, socket), do: {:noreply, assign(socket, :draft, text)}
@@ -950,31 +893,36 @@ defmodule BrandoAdmin.AI.AssistantLive do
   def handle_event("toggle_highlight", _, socket), do: {:noreply, update(socket, :preview, &%{&1 | show: !&1.show})}
   def handle_event("close_preview", _, socket), do: {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
-  def handle_event("open_library", _, socket),
-    do: {:noreply, assign(socket, :library, library("image", "", socket.assigns.current_user))}
+  # The pickers browse the whole library; choosing an item attaches it, and
+  # choosing it again detaches it.
+  def handle_event("browse_library", %{"kind" => kind}, socket) when kind in ~w(image video) do
+    ids = attached_ids(socket.assigns.conversation, kind)
 
-  def handle_event("close_library", _, socket), do: {:noreply, assign(socket, :library, nil)}
+    case kind do
+      "image" ->
+        send_update(ImagePicker,
+          id: "image-picker",
+          config_target: :all,
+          event_target: nil,
+          multi: true,
+          selected_images: ids
+        )
 
-  def handle_event("library_search", params, socket) do
-    kind = if params["kind"] == "video", do: "video", else: "image"
-    {:noreply, assign(socket, :library, library(kind, params["q"] || "", socket.assigns.current_user))}
-  end
-
-  def handle_event("attach", %{"kind" => kind, "id" => id}, socket) when kind in ~w(image video) do
-    user = socket.assigns.current_user
-
-    with {:ok, conversation} <- ensure_conversation(socket),
-         {:ok, _alias} <- Agent.attach(conversation.id, {String.to_existing_atom(kind), String.to_integer(id)}, user) do
-      socket =
-        if socket.assigns.conversation,
-          do: socket,
-          else: push_patch(socket, to: "/admin/assistant/#{conversation.id}")
-
-      {:noreply, socket |> assign(:conversation, reload(conversation, user)) |> assign_media()}
-    else
-      {:error, message} -> {:noreply, put_toast(socket, :error, message)}
+      "video" ->
+        send_update(VideoPicker,
+          id: "video-picker",
+          config_target: :all,
+          event_target: nil,
+          multi: true,
+          selected_videos: ids
+        )
     end
+
+    {:noreply, socket}
   end
+
+  def handle_event("select_image", %{"id" => id}, socket), do: toggle_attachment(socket, "image", id)
+  def handle_event("select_video", %{"id" => id}, socket), do: toggle_attachment(socket, "video", id)
 
   def handle_event("detach", %{"alias" => alias}, socket) do
     if conversation = socket.assigns.conversation,
@@ -1207,28 +1155,55 @@ defmodule BrandoAdmin.AI.AssistantLive do
     )
   end
 
-  defp library(kind, query, user) do
-    ids =
-      kind
-      |> Brando.Content.Transfer.Dependencies.options(user, query)
-      |> Enum.take(@library_limit)
-      |> Enum.map(& &1.id)
+  defp attach(socket, kind, id) do
+    user = socket.assigns.current_user
 
-    items =
-      case kind do
-        "image" ->
-          from(i in Brando.Images.Image, where: i.id in ^ids and is_nil(i.deleted_at), order_by: [desc: i.inserted_at])
-          |> Repo.all()
-          |> Enum.map(&%{id: &1.id, url: image_url(&1), label: asset_label(&1)})
+    with {:ok, conversation} <- ensure_conversation(socket),
+         {:ok, _alias} <- Agent.attach(conversation.id, {String.to_existing_atom(kind), id}, user) do
+      socket =
+        if socket.assigns.conversation,
+          do: socket,
+          else: push_patch(socket, to: "/admin/assistant/#{conversation.id}")
 
-        "video" ->
-          from(v in Brando.Videos.Video, where: v.id in ^ids, preload: [:thumbnail], order_by: [desc: v.inserted_at])
-          |> Repo.all()
-          |> Enum.map(&%{id: &1.id, url: video_url(&1), label: asset_label(&1)})
+      socket |> assign(:conversation, reload(conversation, user)) |> assign_media()
+    else
+      {:error, message} -> put_toast(socket, :error, message)
+    end
+  end
+
+  defp toggle_attachment(socket, kind, id) do
+    id = if is_integer(id), do: id, else: String.to_integer(id)
+    conversation = socket.assigns.conversation
+
+    socket =
+      case conversation && Enum.find(conversation.attachments, &(&1["kind"] == kind and &1["id"] == id)) do
+        %{"alias" => alias} ->
+          Agent.detach(conversation.id, alias, socket.assigns.current_user)
+          refresh_conversation(socket)
+
+        _ ->
+          attach(socket, kind, id)
       end
 
-    %{kind: kind, query: query, items: items}
+    ids = attached_ids(socket.assigns.conversation, kind)
+
+    case kind do
+      "image" -> send_update(ImagePicker, id: "image-picker", selected_images: ids)
+      "video" -> send_update(VideoPicker, id: "video-picker", selected_videos: ids)
+    end
+
+    {:noreply, socket}
   end
+
+  defp attached_ids(nil, _kind), do: []
+
+  defp attached_ids(conversation, kind),
+    do: for(%{"kind" => ^kind, "id" => id} <- conversation.attachments || [], do: id)
+
+  # The model's reply is Markdown. It is not trusted like an editor's text, so
+  # raw HTML is left out.
+  defp markdown(nil), do: ""
+  defp markdown(text), do: text |> Brando.Markdown.to_html!(breaks: true, safe: true) |> Phoenix.HTML.raw()
 
   # A fresh upload has no sizes until processing finishes; show the original.
   defp image_url(image) do
@@ -1240,16 +1215,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp video_url(%{thumbnail: %Brando.Images.Image{} = thumbnail}), do: image_url(thumbnail)
   defp video_url(_), do: nil
-
-  defp asset_label(asset) do
-    Enum.find_value([:title, :filename, :path, :source_url], fn key ->
-      case Map.get(asset, key) do
-        %{} = text -> text |> Map.values() |> Enum.find(&(&1 not in [nil, ""]))
-        value when value not in [nil, ""] -> Path.basename(to_string(value))
-        _ -> nil
-      end
-    end) || "##{asset.id}"
-  end
 
   ## Helpers
 

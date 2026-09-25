@@ -27,7 +27,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
           assigns,
         socket
       ) do
-    {resolved_config, resolved_target} = Brando.Uploads.resolve_video_config(config_target)
+    {resolved_config, resolved_target} = resolve_video_config(config_target)
 
     {:ok,
      socket
@@ -102,10 +102,20 @@ defmodule BrandoAdmin.Components.VideoPicker do
     )
   end
 
+  # `config_target: :all` browses every video without adding any, for pickers
+  # that are not choosing for a field (the AI assistant's attachments).
+  defp resolve_video_config(:all) do
+    {%{Brando.Type.VideoConfig.default_config() | allow_uploads: false, allow_external_urls: false}, :all}
+  end
+
+  defp resolve_video_config(config_target), do: Brando.Uploads.resolve_video_config(config_target)
+
   defp assign_videos(socket) do
+    filter = if socket.assigns.config_target == :all, do: %{}, else: %{config_target: socket.assigns.config_target}
+
     {:ok, videos} =
       Brando.Videos.list_videos(%{
-        filter: %{config_target: socket.assigns.config_target},
+        filter: filter,
         order: "desc id",
         preload: [:thumbnail, :file]
       })

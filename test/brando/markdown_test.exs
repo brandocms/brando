@@ -34,4 +34,12 @@ defmodule Brando.MarkdownTest do
     assert Markdown.to_html!(~s(<div class="notice">Content</div>)) ==
              ~s(<div class="notice">Content</div>)
   end
+
+  test "leaves out raw HTML and unsafe links in safe mode" do
+    html = Markdown.to_html!(~s(**Hi** <script>x</script> [a]\(javascript:alert\(1\)\)), safe: true)
+
+    assert html =~ "<strong>Hi</strong>"
+    refute html =~ "<script>"
+    refute html =~ "javascript:"
+  end
 end

@@ -188,8 +188,34 @@
   [data-icon] { width: 14px; height: 14px; color: var(--assistant-accent); }
 }
 
+/* The assistant signs in the AI purple used for AI actions elsewhere. */
+.is-assistant .assistant-author {
+  color: #6d4de3;
+
+  [data-icon] { color: currentColor; }
+}
+
 .assistant-bubble { padding: 12px 16px; border-radius: 8px; background: var(--assistant-surface); white-space: pre-wrap; overflow-wrap: anywhere; }
-.assistant-text { font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Replies are rendered Markdown; the flow is set by the blocks, not by pre-wrap. */
+.assistant-text {
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+
+  > * + * { margin-top: 10px; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  ul, ol { padding-left: 20px; }
+  ul { list-style: disc; }
+  ol { list-style: decimal; }
+  li + li { margin-top: 4px; }
+  a { color: var(--assistant-accent); text-decoration: underline; text-underline-offset: 2px; }
+  code { padding: 1px 4px; border-radius: 4px; background: var(--assistant-surface); font-size: .9em; }
+  pre { padding: 10px 12px; border-radius: 6px; background: var(--assistant-surface); overflow-x: auto; }
+  pre code { padding: 0; background: none; }
+  blockquote { padding-left: 12px; border-left: 2px solid var(--assistant-accent); color: var(--assistant-muted); }
+  h1, h2, h3, h4 { font-size: 15px; font-weight: 600; }
+}
 
 .assistant-steps {
   display: grid;
@@ -725,71 +751,6 @@
   li > [data-icon] { margin-top: 3px; color: var(--assistant-accent); }
   li > div { display: grid; gap: 8px; min-width: 0; flex: 1; }
 }
-
-/* Library */
-
-.assistant-library {
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(20, 30, 25, .32);
-}
-
-.assistant-library-panel {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 16px;
-  width: min(880px, 100%);
-  max-height: min(720px, 100%);
-  padding: 20px 24px 24px;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 24px 64px rgba(20, 30, 25, .18);
-
-  header { display: flex; justify-content: space-between; align-items: center; }
-  h2 { font-size: 18px; }
-}
-
-.assistant-library-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-
-  input[type="search"] { flex: 1 1 220px; min-height: 34px; padding: 6px 10px; border: 1px solid var(--assistant-line); border-radius: 6px; font-size: 13px; }
-}
-
-.assistant-library-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
-  gap: 12px;
-  overflow: auto;
-
-  button { position: relative; display: grid; gap: 6px; width: 100%; padding: 6px; border: 1px solid transparent; border-radius: 8px; background: none; text-align: left; }
-  button:hover { background: var(--assistant-surface); }
-  button[aria-pressed="true"] { border-color: var(--assistant-accent); background: var(--assistant-sage); }
-}
-
-.assistant-library-check {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--assistant-accent);
-  color: #fff;
-
-  [data-icon] { width: 14px; height: 14px; }
-}
-
-.assistant-library-label { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.assistant-library-empty { color: var(--assistant-muted); font-size: 13px; }
 
 /* Narrow screens: one column, nothing sticky, nothing wider than the screen. */
 @media (max-width: 960px) {
