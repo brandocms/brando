@@ -13,13 +13,16 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
 
   def render(assigns) do
     ~H"""
-    <fieldset class={[
-      @fieldset.size,
-      @fieldset.label && "labelled",
-      @fieldset.align == :end && "align-end",
-      @fieldset.style == :inline && "inline",
-      @fieldset.shaded && "shaded"
-    ]}>
+    <fieldset
+      :if={!@fieldset.superuser or superuser?(@current_user)}
+      class={[
+        @fieldset.size,
+        @fieldset.label && "labelled",
+        @fieldset.align == :end && "align-end",
+        @fieldset.style == :inline && "inline",
+        @fieldset.shaded && "shaded"
+      ]}
+    >
       <legend :if={@fieldset.label}>{g(@form.source.data.__struct__, @fieldset.label)}</legend>
       {if @fieldset.component, do: @fieldset.component.(assigns)}
       <Fieldset.Field.render
@@ -34,4 +37,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
     </fieldset>
     """
   end
+
+  defp superuser?(%{role: :superuser}), do: true
+  defp superuser?(_), do: false
 end

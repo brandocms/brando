@@ -179,6 +179,12 @@ defmodule Brando.Blueprint.Forms.Dsl do
         default: false,
         doc: "Shaded"
       ],
+      superuser: [
+        type: :boolean,
+        required: false,
+        default: false,
+        doc: "Shown only to superusers, for technical settings editors have no use for"
+      ],
       style: [
         type: {:in, [:regular, :inline]},
         required: false,

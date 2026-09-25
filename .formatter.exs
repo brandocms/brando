@@ -75,6 +75,7 @@ spark_locals_without_parens = [
   selection_action: 0,
   selection_action: 1,
   shaded: 1,
+  superuser: 1,
   size: 1,
   sort: 1,
   sort: 2,

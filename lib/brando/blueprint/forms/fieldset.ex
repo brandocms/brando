@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Forms.Fieldset do
             size: :full,
             align: :start,
             shaded: false,
+            superuser: false,
             style: :regular,
             fields: []
 end
