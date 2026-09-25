@@ -5,7 +5,10 @@ conversation: which entries to change, which media to use and where it goes.
 A model prepares the changes as a proposal. The editor reviews it entry by
 entry and applies it with one explicit click. Nothing is saved before that.
 
-Screenshots: [review](../docs/admin-ui/assistant-review-desktop.png),
+Screenshots: [empty workspace](../docs/admin-ui/assistant-empty-desktop.png),
+[review](../docs/admin-ui/assistant-review-desktop.png),
+[needs changes](../docs/admin-ui/assistant-needs-changes-desktop.png),
+[media library](../docs/admin-ui/assistant-library-desktop.png),
 [page preview](../docs/admin-ui/assistant-preview-desktop.png),
 [applied](../docs/admin-ui/assistant-applied-desktop.png) and
 [mobile](../docs/admin-ui/assistant-applied-mobile.png).

@@ -103,11 +103,3 @@ config :brando, :markdown_sources,
 
 config :brando, :markdown_sources_provider, E2E.MarkdownProvider
 
-# The content assistant runs against a scripted model (E2eProject.AssistantModel)
-# that drives the real tools. Only the agent is configured; other AI features
-# stay unconfigured, as the rest of the suite expects.
-config :brando, Brando.AI.Agent,
-  model: "anthropic:claude-opus-5-5",
-  api_key: "e2e-scripted",
-  client: E2eProject.AssistantModel,
-  prices: [input: 5.0, output: 25.0]

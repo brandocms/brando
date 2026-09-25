@@ -53,7 +53,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert html =~ "Prepared a text block for Identity."
     assert html =~ "Add a Text block"
     assert html =~ "Written in the assistant"
-    assert html =~ "Live page changes"
+    assert html =~ "Live page"
     assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 3
 
     view |> element("button.assistant-apply") |> render_click()

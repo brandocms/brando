@@ -39,7 +39,7 @@ defmodule Brando.Content.Proposals.Review do
   defp entry({:new, ref} = target, schema, proposal) do
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
 
-    changes = [%{type: :create, fields: Enum.map(fields, fn {k, v} -> %{name: k, value: shorten(v)} end)}]
+    changes = [%{type: :create, fields: fields |> order_fields() |> Enum.map(fn {k, v} -> field_view(schema, k, v) end)}]
     changes = changes ++ block_changes(target, nil, proposal)
 
     %{
@@ -88,7 +88,12 @@ defmodule Brando.Content.Proposals.Review do
     fields =
       for %SetFields{target: ^target, fields: fields} <- proposal.operations,
           {name, value} <- fields,
-          do: %{name: name, before: shorten(current(entry, name)), value: shorten(value)}
+          do:
+            Map.put(
+              field_view(entry.__struct__, name, value),
+              :before,
+              display(entry.__struct__, name, current(entry, name))
+            )
 
     if fields == [], do: [], else: [%{type: :fields, fields: fields}]
   end
@@ -151,13 +156,42 @@ defmodule Brando.Content.Proposals.Review do
     end)
   end
 
-  defp placement(:append, _entry, _field, _proposal), do: dgettext("content_proposals", "At the end")
+  # Where a new block goes, relative to a neighbour the editor recognises.
+  defp placement(:append, entry, field, _proposal) do
+    anchor =
+      case entry && Map.get(entry, :"entry_#{field}", []) do
+        [_ | _] = joins -> block_anchor(List.last(joins).block)
+        _ -> nil
+      end
 
-  defp placement({:before, uid}, entry, field, proposal),
-    do: dgettext("content_proposals", "Before %{block}", block: block_label(entry, field, uid, proposal))
+    %{position: :end, anchor: anchor, text: dgettext("content_proposals", "At the end")}
+  end
 
-  defp placement({:after, uid}, entry, field, proposal),
-    do: dgettext("content_proposals", "After %{block}", block: block_label(entry, field, uid, proposal))
+  defp placement({side, uid}, entry, field, proposal) do
+    label = block_label(entry, field, uid, proposal)
+
+    text =
+      if side == :before,
+        do: dgettext("content_proposals", "Before %{block}", block: label),
+        else: dgettext("content_proposals", "After %{block}", block: label)
+
+    anchor =
+      case saved_block(entry, field, uid) do
+        nil -> %{module: label, excerpt: nil}
+        block -> block_anchor(block)
+      end
+
+    %{position: side, anchor: anchor, text: text}
+  end
+
+  defp block_anchor(block) do
+    %{
+      module:
+        (block.module_id && module_label({block.module_origin || :local, block.module_id})) ||
+          dgettext("content_proposals", "Block"),
+      excerpt: block.refs |> Enum.find_value(&text_of/1) |> excerpt()
+    }
+  end
 
   # A saved block is named by its module and the start of its text; a block
   # the proposal inserts, by its module.
@@ -207,7 +241,11 @@ defmodule Brando.Content.Proposals.Review do
   # The blocks a page preview outlines: inserted blocks and changed ones.
   defp uids_of(changes), do: changes |> Enum.map(&Map.get(&1, :uid)) |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
-  defp media_of(changes), do: for(%{media: media} <- changes, %{kind: kind, id: id} <- media, do: {kind, id})
+  defp media_of(changes) do
+    fields = for %{fields: fields} <- changes, %{media: %{kind: kind, id: id}} <- fields, do: {kind, id}
+    blocks = for %{media: media} <- changes, is_list(media), %{kind: kind, id: id} <- media, do: {kind, id}
+    Enum.uniq(fields ++ blocks)
+  end
 
   defp problems(proposal, target) do
     key = Proposal.key(target)
@@ -219,6 +257,61 @@ defmodule Brando.Content.Proposals.Review do
         (is_integer(problem[:operation]) && Map.get(Enum.at(proposal.operations, problem.operation), :target) == target)
     end)
   end
+
+  # Fields in the order an editor reads them: title first, then the rest.
+  defp order_fields(fields) do
+    Enum.sort_by(fields, fn {name, _} ->
+      {Enum.find_index(~w(title name slug uri language), &(&1 == name)) || 99, name}
+    end)
+  end
+
+  # A field as the editor knows it: its label, and its value as text or as
+  # media. Asset ids show the asset; related ids the record's title.
+  defp field_view(schema, name, value) do
+    case asset_kind(schema, name) do
+      nil -> %{name: label_for(name), value: display(schema, name, value), media: nil}
+      kind -> %{name: label_for(String.replace_suffix(name, "_id", "")), value: nil, media: media_ref(kind, value)}
+    end
+  end
+
+  defp label_for(name), do: Brando.Content.Transfer.Labels.field(name)
+
+  defp asset_kind(schema, name) do
+    Enum.find_value(Brando.Blueprint.Assets.__assets__(schema), fn
+      %{name: asset, type: type} when type in [:image, :video] -> if "#{asset}_id" == name, do: type
+      _ -> nil
+    end)
+  rescue
+    _ -> nil
+  end
+
+  defp media_ref(kind, id) when is_integer(id), do: %{kind: kind, id: id}
+  defp media_ref(_, _), do: nil
+
+  defp display(_schema, "language", value) when is_binary(value) or (is_atom(value) and not is_nil(value)) do
+    code = to_string(value)
+
+    case Enum.find(Brando.config(:languages) || [], &(to_string(&1[:value]) == code)) do
+      nil -> code
+      language -> Brando.Content.Transfer.Labels.language(code, language[:text])
+    end
+  end
+
+  defp display(schema, name, id) when is_integer(id) do
+    with true <- String.ends_with?(name, "_id"),
+         relation = String.to_existing_atom(String.replace_suffix(name, "_id", "")),
+         %{related: related} <- schema.__schema__(:association, relation),
+         %{} = record <- Brando.Repo.get(related, id) do
+      Map.get(record, :title) || Map.get(record, :name) || "##{id}"
+    else
+      _ -> id
+    end
+  rescue
+    _ -> id
+  end
+
+  defp display(_schema, _name, value) when is_binary(value), do: excerpt(value)
+  defp display(_schema, _name, value), do: shorten(value)
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn

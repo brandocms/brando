@@ -18,6 +18,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.Review
   alias Brando.Repo
+  alias Phoenix.LiveView.JS
 
   @library_limit 30
 
@@ -99,7 +100,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
           </div>
         </div>
         <div class="assistant-header-actions">
-          <span class="assistant-scope">{@scope_label}</span>
+          <span class="assistant-scope">
+            <.icon name="hero-globe-alt" />{@scope_label}<span aria-hidden="true">·</span>{language_label(@conversation)}
+          </span>
           <div class="assistant-history">
             <button
               type="button"
@@ -158,7 +161,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             </div>
           </div>
 
-          <.attachments conversation={@conversation} media={@media} />
+          <.attachments conversation={@conversation} media={@media} used={used_aliases(@proposal)} />
 
           <form id="assistant-composer" class="assistant-composer" phx-submit="send" phx-change="draft">
             <label for="assistant-input" class="visually-hidden">{gettext("Message")}</label>
@@ -187,8 +190,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 data-click-mode="trigger"
                 class="assistant-upload"
               >
-                <button type="button" class="assistant-icon-button upload-trigger" disabled={!@available?}>
-                  <.icon name="hero-arrow-up-tray" /><span>{gettext("Upload")}</span>
+                <button
+                  type="button"
+                  class="assistant-tool upload-trigger"
+                  disabled={!@available?}
+                  title={gettext("Upload images or videos")}
+                >
+                  <.icon name="hero-arrow-up-tray" /><span class="visually-hidden">{gettext("Upload")}</span>
                 </button>
                 <input
                   type="file"
@@ -198,9 +206,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
                   aria-label={gettext("Upload media")}
                 />
               </div>
-              <button type="button" class="assistant-icon-button" phx-click="open_library" disabled={!@available?}>
-                <.icon name="hero-photo" /><span>{gettext("From library")}</span>
+              <button
+                type="button"
+                class="assistant-tool"
+                phx-click="open_library"
+                disabled={!@available?}
+                title={gettext("Attach from the media library")}
+              >
+                <.icon name="hero-photo" /><span class="visually-hidden">{gettext("From library")}</span>
               </button>
+              <span :if={attached_count(@conversation) > 0} class="assistant-attached-count">
+                {ngettext("%{count} attached", "%{count} attached", attached_count(@conversation))}
+              </span>
               <button
                 type="submit"
                 class="assistant-send"
@@ -263,9 +280,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   attr :conversation, :any, required: true
   attr :media, :map, required: true
+  attr :used, :any, default: nil
 
   defp attachments(assigns) do
-    assigns = assign(assigns, :items, (assigns.conversation && assigns.conversation.attachments) || [])
+    items = (assigns.conversation && assigns.conversation.attachments) || []
+    used = assigns.used && Enum.count(items, &used?(assigns.used, &1))
+    assigns = assign(assigns, items: items, used_count: used)
 
     ~H"""
     <div :if={@items != []} class="assistant-attachments">
@@ -274,8 +294,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <span>{ngettext("%{count} item", "%{count} items", length(@items))}</span>
       </div>
       <ul class="assistant-attachment-grid">
-        <li :for={item <- @items} class={["assistant-attachment", !item["id"] && "is-pending"]}>
+        <li
+          :for={item <- @items}
+          class={[
+            "assistant-attachment",
+            !item["id"] && "is-pending",
+            @used && used?(@used, item) && "is-used"
+          ]}
+        >
           <.thumb media={@media} kind={item["kind"]} id={item["id"]} label={item["label"]} />
+          <span :if={@used && used?(@used, item)} class="assistant-used" title={gettext("Used in the proposal")}>
+            <.icon name="hero-check" />
+          </span>
           <span class="assistant-alias">{item["alias"]}</span>
           <span :if={!item["id"]} class="assistant-attachment-status">{gettext("Uploading…")}</span>
           <button
@@ -289,6 +319,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
           </button>
         </li>
       </ul>
+      <p :if={@used} class="assistant-attachments-note">
+        {gettext("%{used} used in the proposal · %{free} not used", used: @used_count, free: length(@items) - @used_count)}
+      </p>
     </div>
     """
   end
@@ -322,13 +355,30 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp review(%{proposal: nil} = assigns) do
     ~H"""
     <div class="assistant-empty">
-      <.icon name="hero-document-magnifying-glass" />
+      <span class="assistant-empty-mark" aria-hidden="true"><.icon name="hero-document-magnifying-glass" /></span>
       <h2>{gettext("No proposal yet")}</h2>
       <p>
         {gettext(
-          "When the assistant has prepared changes, they appear here for review, entry by entry. Nothing is saved until you apply them."
+          "Describe the changes in the conversation. The assistant prepares them here for review, entry by entry, and nothing is saved until you apply them."
         )}
       </p>
+      <div class="assistant-suggestions">
+        <span>{gettext("For example")}</span>
+        <button
+          :for={
+            text <- [
+              gettext("Put image1 on the Index page, after the introduction"),
+              gettext("Create a case called Sommerro with image1 as its cover"),
+              gettext("Rewrite the introduction on the About page to be shorter")
+            ]
+          }
+          type="button"
+          phx-click="suggest"
+          phx-value-text={text}
+        >
+          {text}
+        </button>
+      </div>
     </div>
     """
   end
@@ -339,42 +389,34 @@ defmodule BrandoAdmin.AI.AssistantLive do
         live: length(assigns.proposal.effects[:live] || []),
         entry_changes: (assigns.proposal.effects[:creates] || 0) + (assigns.proposal.effects[:updates] || 0),
         problems?: assigns.proposal.problems != [],
-        general_problems: Enum.filter(assigns.proposal.problems, &(is_nil(&1[:operation]) and is_nil(&1[:target])))
+        general_problems: Enum.filter(assigns.proposal.problems, &(is_nil(&1[:operation]) and is_nil(&1[:target]))),
+        entry_problems: for(entry <- assigns.review, problem <- entry.problems, do: {entry, problem})
       )
 
     ~H"""
-    <div class="assistant-proposal" id={"proposal-#{@proposal.id}"}>
+    <div class={["assistant-proposal", @preview && "is-previewing"]} id={"proposal-#{@proposal.id}"}>
       <div class="assistant-proposal-head">
         <span class="assistant-eyebrow">
           {gettext("Proposal · version %{version}", version: @proposal.version)}
+          <span :if={is_nil(@receipt) and @proposal.status in ~w(pending approved)}> · {gettext("not applied")}</span>
         </span>
-        <h2>{proposal_title(@proposal, @receipt)}</h2>
-        <p :if={@proposal.summary}>{@proposal.summary}</p>
-        <dl class="assistant-counts">
-          <div>
-            <dt>{gettext("New entries")}</dt><dd>{@proposal.effects[:creates]}</dd>
-          </div>
-          <div>
-            <dt>{gettext("Updated entries")}</dt><dd>{@proposal.effects[:updates]}</dd>
-          </div>
-          <div>
-            <dt>{gettext("New blocks")}</dt><dd>{@proposal.effects[:inserted_blocks]}</dd>
-          </div>
-          <div>
-            <dt>{gettext("Changed blocks")}</dt><dd>{@proposal.effects[:updated_blocks]}</dd>
-          </div>
-          <div>
-            <dt>{gettext("Deletions")}</dt><dd>{@proposal.effects[:deletions]}</dd>
-          </div>
-        </dl>
+        <h2 :if={!@preview}>{proposal_title(@proposal, @receipt)}</h2>
+        <p :if={@proposal.summary && !@preview} class="assistant-summary">{@proposal.summary}</p>
+        <p :if={!@preview} class="assistant-counts">
+          <span :for={{count, label} <- counts(@proposal.effects)}><strong>{count}</strong> {label}</span>
+        </p>
       </div>
 
       <div :if={@error} class="assistant-feedback is-error" role="alert">{@error}</div>
 
       <div :if={@problems? and !@receipt} class="assistant-feedback is-warning" role="status">
-        {gettext(
-          "The assistant needs to fix these problems before the proposal can be applied. Ask it to adjust the proposal."
-        )}
+        <p>{gettext("This proposal cannot be applied yet. Ask the assistant to adjust it.")}</p>
+        <ul class="assistant-feedback-problems">
+          <li :for={{entry, problem} <- @entry_problems}>
+            <a href={"#card-#{entry.key}"}>{entry.title}</a> {problem.message}
+          </li>
+          <li :for={problem <- @general_problems}>{problem.message}</li>
+        </ul>
       </div>
 
       <div :if={@receipt} class="assistant-feedback is-success" role="status">
@@ -392,45 +434,51 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
       <.page_preview :if={@preview} preview={@preview} review={@review} media={@media} aliases={@aliases} />
 
-      <h3 :if={!@preview} class="assistant-section-title">{gettext("Changes by entry")}</h3>
+      <div :if={!@preview} class="assistant-section-head">
+        <h3>{gettext("Changes by entry")}</h3>
+      </div>
       <div :if={!@preview} class="assistant-cards">
         <article
           :for={entry <- @review}
           class={["assistant-card", entry.problems != [] && "has-problems"]}
           id={"card-#{entry.key}"}
         >
-          <header>
-            <span class="assistant-card-type">{entry.content_type}</span>
-            <span class={["assistant-badge", "is-#{entry.action}"]}>
-              {if entry.action == :create, do: gettext("Create"), else: gettext("Update")}
-            </span>
-          </header>
-          <h4>
-            <.link :if={entry.admin_url} navigate={entry.admin_url}>{entry.title}</.link>
-            <span :if={!entry.admin_url}>{entry.title}</span>
-          </h4>
-          <p :if={entry.url} class="assistant-card-url">{entry.url}</p>
+          <div :if={entry.media != []} class="assistant-card-cover">
+            <.thumb media={@media} kind={elem(hd(entry.media), 0)} id={elem(hd(entry.media), 1)} />
+            <span class="assistant-cover-label">{media_label(media_map(hd(entry.media)), @aliases)}</span>
+          </div>
+          <div class="assistant-card-body">
+            <header>
+              <span class="assistant-card-type">{entry.content_type}</span>
+              <span class={["assistant-badge", "is-#{entry.action}"]}>
+                {if entry.action == :create, do: gettext("Create"), else: gettext("Update")}
+              </span>
+            </header>
+            <h4>
+              <.link :if={entry.admin_url} navigate={entry.admin_url}>{entry.title}</.link>
+              <span :if={!entry.admin_url}>{entry.title}</span>
+            </h4>
+            <p :if={entry.url} class="assistant-card-url">{entry.url}</p>
 
-          <div :if={entry.media != []} class="assistant-card-media">
-            <.thumb :for={{kind, id} <- entry.media} media={@media} kind={kind} id={id} />
+            <ul class="assistant-changes">
+              <li :for={change <- entry.changes}>
+                <.change change={change} aliases={@aliases} media={@media} applied={!is_nil(@receipt)} />
+              </li>
+            </ul>
+
+            <ul :if={entry.problems != []} class="assistant-problems">
+              <li :for={problem <- entry.problems}><.icon name="hero-exclamation-triangle" />{problem.message}</li>
+            </ul>
           </div>
 
-          <ul class="assistant-changes">
-            <li :for={change <- entry.changes}><.change change={change} aliases={@aliases} /></li>
-          </ul>
-
-          <ul :if={entry.problems != []} class="assistant-problems">
-            <li :for={problem <- entry.problems}><.icon name="hero-exclamation-triangle" />{problem.message}</li>
-          </ul>
-
           <footer>
-            <span :if={entry.live?} class="assistant-live"><.icon name="hero-globe-alt" />{gettext("Live page changes")}</span>
+            <span :if={entry.live?} class="assistant-live"><.icon name="hero-globe-alt" />{gettext("Live page")}</span>
             <span :if={entry.action == :create} class="assistant-draft"><.icon name="hero-lock-closed" />{gettext("New draft")}</span>
             <span :if={entry.action == :update and !entry.live?} class="assistant-draft">{gettext("Not published")}</span>
             <button
               :if={entry.preview? and is_nil(@receipt)}
               type="button"
-              class="assistant-link-button assistant-preview-link"
+              class="assistant-preview-link"
               phx-click="preview"
               phx-value-key={entry.key}
             >
@@ -440,24 +488,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </article>
       </div>
 
-      <ul :if={@general_problems != []} class="assistant-problems is-general">
-        <li :for={problem <- @general_problems}>
-          <.icon name="hero-exclamation-triangle" />{problem.message}
-        </li>
-      </ul>
-
       <div :if={!@receipt and @proposal.status in ~w(pending approved)} class="assistant-apply-bar">
         <div class="assistant-apply-summary">
-          <strong>
-            {ngettext("%{count} entry change", "%{count} entry changes", @entry_changes)}
-          </strong>
-          <span>
-            {live_summary(@live, @proposal.effects[:creates] || 0)}
-          </span>
+          <strong>{entry_summary(@proposal.effects)}</strong>
+          <span>{block_summary(@proposal.effects)}</span>
         </div>
         <div class="assistant-apply-actions">
           <button type="button" class="assistant-quiet-button" phx-click="cancel_proposal">
             {gettext("Discard")}
+          </button>
+          <button type="button" class="assistant-button" phx-click={JS.focus(to: "#assistant-input")}>
+            {gettext("Adjust")}
           </button>
           <button
             type="button"
@@ -569,8 +610,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
       <div class={["assistant-frame", "is-#{@preview.viewport}"]}>
         <div class="assistant-frame-bar">
-          <span>{@entry && (@entry.url || @entry.title)}</span>
-          <span>{if @preview.version == "before", do: gettext("Saved version"), else: gettext("Proposed")}</span>
+          <span class="assistant-frame-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="assistant-frame-url">
+            <.icon name="hero-lock-closed" />{frame_url(@entry)}
+          </span>
+          <span class={["assistant-frame-version", @preview.version == "proposed" && "is-proposed"]}>
+            {if @preview.version == "before", do: gettext("Saved version"), else: gettext("Proposed")}
+          </span>
         </div>
         <.frame preview={@preview} entry={@entry} />
       </div>
@@ -596,14 +642,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
       )
 
     ~H"""
-    <iframe
-      id={"assistant-preview-frame-#{@key}"}
-      src={"/__livepreview?key=#{@key}"}
-      title={gettext("Page preview of %{title}", title: @entry && @entry.title)}
-      phx-hook="Brando.ProposalPreview"
-      data-highlight={Jason.encode!(@highlight)}
-      data-show={to_string(@preview.show)}
-    ></iframe>
+    <div class="assistant-frame-viewport">
+      <iframe
+        id={"assistant-preview-frame-#{@key}"}
+        src={"/__livepreview?key=#{@key}"}
+        title={gettext("Page preview of %{title}", title: @entry && @entry.title)}
+        phx-hook="Brando.ProposalPreview"
+        data-highlight={Jason.encode!(@highlight)}
+        data-show={to_string(@preview.show)}
+        data-viewport={@preview.viewport}
+      ></iframe>
+    </div>
     """
   end
 
@@ -641,13 +690,23 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   attr :change, :map, required: true
   attr :aliases, :map, default: %{}
+  attr :media, :map, default: %{}
+  # After apply the entry already holds the new block, so the outline's
+  # neighbour would be the block itself; the placement text stays true.
+  attr :applied, :boolean, default: false
 
   defp change(%{change: %{type: :create}} = assigns) do
     ~H"""
-    <span class="assistant-change-title">{gettext("Create the entry")}</span>
+    <span class="assistant-change-title">{gettext("Create the entry as a draft")}</span>
     <dl class="assistant-fields">
       <div :for={field <- @change.fields}>
-        <dt>{field.name}</dt><dd>{field.value}</dd>
+        <dt>{field.name}</dt>
+        <dd>
+          <span :if={field.media} class="assistant-inline-media">
+            <.thumb media={@media} kind={field.media.kind} id={field.media.id} />{media_label(field.media, @aliases)}
+          </span>
+          <span :if={!field.media}>{to_string(field.value)}</span>
+        </dd>
       </div>
     </dl>
     """
@@ -659,7 +718,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <dl class="assistant-fields">
       <div :for={field <- @change.fields}>
         <dt>{field.name}</dt>
-        <dd><del :if={field.before not in [nil, ""]}>{field.before}</del> <ins>{field.value}</ins></dd>
+        <dd>
+          <del :if={field.before not in [nil, ""]}>{to_string(field.before)}</del>
+          <ins :if={!field.media}>{to_string(field.value)}</ins>
+          <span :if={field.media} class="assistant-inline-media">
+            <.thumb media={@media} kind={field.media.kind} id={field.media.id} />{media_label(field.media, @aliases)}
+          </span>
+        </dd>
       </div>
     </dl>
     """
@@ -668,16 +733,29 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp change(%{change: %{type: :insert_block}} = assigns) do
     ~H"""
     <span class="assistant-change-title">{gettext("Add a %{module} block", module: @change.module || gettext("module"))}</span>
-    <span class="assistant-placement">{@change.placement}</span>
+    <div :if={!@applied} class="assistant-outline" aria-label={@change.placement.text}>
+      <span :if={@change.placement.position == :before} class="is-new">+ {@change.module}</span>
+      <span :if={@change.placement.position == :before} class="assistant-outline-arrow" aria-hidden="true">→</span>
+      <span :if={@change.placement.anchor} class="is-anchor" title={@change.placement.anchor.excerpt}>
+        {@change.placement.anchor.module}
+      </span>
+      <span :if={is_nil(@change.placement.anchor)} class="is-anchor is-empty">{gettext("Empty field")}</span>
+      <span :if={@change.placement.position != :before} class="assistant-outline-arrow" aria-hidden="true">→</span>
+      <span :if={@change.placement.position != :before} class="is-new">+ {@change.module}</span>
+    </div>
+    <p class="assistant-placement">{@change.placement.text}</p>
     <dl :if={@change.texts != [] or @change.values != [] or @change.media != []} class="assistant-fields">
+      <div :for={media <- @change.media}>
+        <dt>{humanize(media.ref)}</dt>
+        <dd class="assistant-inline-media">
+          <.thumb media={@media} kind={media.kind} id={media.id} />{media_label(media, @aliases)}
+        </dd>
+      </div>
       <div :for={text <- @change.texts}>
-        <dt>{text.ref}</dt><dd>{text.text}</dd>
+        <dt>{humanize(text.ref)}</dt><dd>{text.text}</dd>
       </div>
       <div :for={value <- @change.values}>
-        <dt>{value.name}</dt><dd>{to_string(value.value)}</dd>
-      </div>
-      <div :for={media <- @change.media}>
-        <dt>{media.ref}</dt><dd>{media_label(media, @aliases)}</dd>
+        <dt>{humanize(value.name)}</dt><dd>{to_string(value.value)}</dd>
       </div>
     </dl>
     """
@@ -688,7 +766,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <span class="assistant-change-title">{gettext("Replace media in %{block}", block: @change.block)}</span>
     <dl class="assistant-fields">
       <div :for={media <- @change.media}>
-        <dt>{media.ref}</dt><dd>{media_label(media, @aliases)}</dd>
+        <dt>{humanize(media.ref)}</dt>
+        <dd class="assistant-inline-media">
+          <.thumb media={@media} kind={media.kind} id={media.id} />{media_label(media, @aliases)}
+        </dd>
       </div>
     </dl>
     """
@@ -699,7 +780,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <span class="assistant-change-title">{gettext("Rewrite text in %{block}", block: @change.block)}</span>
     <dl class="assistant-fields">
       <div>
-        <dt>{@change.ref}</dt>
+        <dt>{humanize(@change.ref)}</dt>
         <dd><del :if={@change.before not in [nil, ""]}>{@change.before}</del> <ins>{@change.text}</ins></dd>
       </div>
     </dl>
@@ -711,7 +792,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <span class="assistant-change-title">{gettext("Change settings of %{block}", block: @change.block)}</span>
     <dl class="assistant-fields">
       <div :for={value <- @change.values}>
-        <dt>{value.name}</dt><dd>{to_string(value.value)}</dd>
+        <dt>{humanize(value.name)}</dt><dd>{to_string(value.value)}</dd>
       </div>
     </dl>
     """
@@ -772,6 +853,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 <.icon :if={!item.url} name={if @library.kind == "video", do: "hero-film", else: "hero-photo"} />
               </span>
               <span class="assistant-library-label">{item.label}</span>
+              <span :if={MapSet.member?(@attached, {@library.kind, item.id})} class="assistant-library-check">
+                <.icon name="hero-check" />
+              </span>
             </button>
           </li>
         </ul>
@@ -783,6 +867,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   ## Events
 
   def handle_event("draft", %{"message" => text}, socket), do: {:noreply, assign(socket, :draft, text)}
+
+  def handle_event("suggest", %{"text" => text}, socket),
+    do: {:noreply, socket |> assign(:draft, text) |> push_event("b:assistant:fill", %{text: text})}
 
   def handle_event("send", %{"message" => text}, socket) do
     user = socket.assigns.current_user
@@ -847,6 +934,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     preview = socket.assigns.preview || %{version: "proposed", viewport: "desktop", show: true, target: nil}
     # A named view belongs to one content type; another entry starts on its default.
     preview = if preview[:key] == key, do: preview, else: %{preview | target: nil}
+    socket = if socket.assigns.preview, do: socket, else: push_event(socket, "b:assistant:review_top", %{})
     {:noreply, render_preview(socket, Map.put(preview, :key, key))}
   end
 
@@ -965,7 +1053,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
             {:error, message} -> {:error, to_string(message)}
           end
 
-        keys = with {:ok, key} <- frame, do: [key], else: (_ -> [])
+        keys =
+          case frame do
+            {:ok, key} -> [key]
+            _ -> []
+          end
+
         assign(socket, preview: Map.put(preview, :frame, frame), preview_keys: keys)
     end
   end
@@ -979,6 +1072,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
     Proposals.Preview.discard(socket.assigns[:preview_keys] || [])
     :ok
   end
+
+  defp frame_url(nil), do: nil
+  defp frame_url(%{url: "/" <> _ = path}), do: String.replace(Brando.endpoint().url(), ~r{^https?://}, "") <> path
+  defp frame_url(%{url: url}) when is_binary(url), do: String.replace(url, ~r{^https?://}, "")
+  defp frame_url(%{title: title}), do: gettext("%{title} (no address yet)", title: title)
 
   defp default_target(%{preview_targets: targets}) do
     if Enum.any?(targets, &(elem(&1, 0) == "default")), do: "default", else: targets |> List.first({nil, nil}) |> elem(0)
@@ -1199,6 +1297,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
+  defp language_label(conversation) do
+    code = to_string((conversation && conversation.language) || Brando.config(:default_language))
+
+    case Enum.find(Brando.config(:languages) || [], &(to_string(&1[:value]) == code)) do
+      nil -> String.upcase(code)
+      language -> Brando.Content.Transfer.Labels.language(code, language[:text])
+    end
+  end
+
   defp put_toast(socket, level, message) do
     BrandoAdmin.Toast.send_to(socket.assigns.current_user, message, %{
       level: if(level == :error, do: :error, else: :success),
@@ -1222,23 +1329,73 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
+  defp counts(effects) do
+    [
+      {effects[:creates] || 0, ngettext("new entry", "new entries", effects[:creates] || 0)},
+      {effects[:updates] || 0, ngettext("updated entry", "updated entries", effects[:updates] || 0)},
+      {effects[:inserted_blocks] || 0, ngettext("new block", "new blocks", effects[:inserted_blocks] || 0)},
+      {effects[:updated_blocks] || 0, ngettext("changed block", "changed blocks", effects[:updated_blocks] || 0)},
+      {effects[:deletions] || 0, ngettext("deletion", "deletions", effects[:deletions] || 0)}
+    ]
+    # Deletions are always shown: "0 deletions" is a fact worth stating.
+    |> Enum.with_index()
+    |> Enum.filter(fn {{count, _}, index} -> count > 0 or index == 4 end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp entry_summary(effects) do
+    [
+      (effects[:creates] || 0) > 0 && ngettext("%{count} new entry", "%{count} new entries", effects[:creates]),
+      (effects[:updates] || 0) > 0 && ngettext("%{count} updated entry", "%{count} updated entries", effects[:updates])
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(" · ")
+  end
+
+  defp block_summary(effects) do
+    [
+      (effects[:inserted_blocks] || 0) > 0 &&
+        ngettext("%{count} new block", "%{count} new blocks", effects[:inserted_blocks]),
+      (effects[:updated_blocks] || 0) > 0 &&
+        ngettext("%{count} changed block", "%{count} changed blocks", effects[:updated_blocks]),
+      gettext("no deletions")
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(" · ")
+  end
+
+  # The media a proposal places, as `{kind, id}`.
+  defp used_aliases(nil), do: nil
+
+  defp used_aliases(proposal) do
+    fields =
+      for %Proposals.CreateEntry{fields: fields} <- proposal.operations,
+          {name, id} <- fields,
+          is_integer(id) and String.ends_with?(name, "image_id"),
+          do: {:image, id}
+
+    placed =
+      for op <- proposal.operations,
+          asset <- Map.values(Map.get(op, :media) || %{}) ++ List.wrap(Map.get(op, :asset)),
+          do: asset
+
+    MapSet.new(fields ++ placed)
+  end
+
+  defp used?(used, item), do: item["id"] && MapSet.member?(used, {to_kind(item["kind"]), item["id"]})
+
+  defp attached_count(nil), do: 0
+  defp attached_count(conversation), do: length(conversation.attachments)
+
+  defp media_map({kind, id}), do: %{kind: kind, id: id}
+
+  defp humanize(name), do: name |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
   defp apply_label(changes, 0), do: ngettext("Apply %{count} entry change", "Apply %{count} entry changes", changes)
 
   defp apply_label(changes, live) do
     ngettext("Apply %{count} entry change", "Apply %{count} entry changes", changes) <>
       " · " <> ngettext("affects %{count} live page", "affects %{count} live pages", live)
-  end
-
-  defp live_summary(live, creates) do
-    [
-      if(live > 0, do: ngettext("%{count} live page changes", "%{count} live pages change", live)),
-      if(creates > 0,
-        do: ngettext("%{count} new entry is saved as a draft", "%{count} new entries are saved as drafts", creates)
-      ),
-      gettext("nothing is removed")
-    ]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(" · ")
   end
 
   # Media the user attached is named by its alias and file; other library

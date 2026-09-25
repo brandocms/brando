@@ -8,12 +8,23 @@
  *
  * data-highlight   JSON array of block uids to outline
  * data-show        "true" to show the outlines
+ * data-viewport    "desktop" renders the page 1280px wide, scaled to fit the
+ *                  frame; "mobile" renders it 390px wide
  */
+const DESKTOP_WIDTH = 1280
+const MOBILE_WIDTH = 390
 const OVERLAY_CLASS = 'brando-proposal-highlight'
 
 export default () => ({
   mounted() {
+    this.fit()
+    this.resizeObserver = new ResizeObserver(() => this.fit())
+    this.resizeObserver.observe(this.el.parentElement)
     this.onLoad = () => {
+      // A proposal preview is static: show content that scroll-reveal
+      // animations would otherwise keep hidden, as the editor's live preview
+      // does once it has updated.
+      this.el.contentDocument?.documentElement.classList.add('is-updated-live-preview')
       this.highlight(true)
       this.watchLayout()
     }
@@ -21,12 +32,29 @@ export default () => ({
   },
 
   updated() {
+    this.fit()
     this.highlight(false)
   },
 
   destroyed() {
     this.el.removeEventListener('load', this.onLoad)
     this.observer?.disconnect()
+    this.resizeObserver?.disconnect()
+  },
+
+  // The page is laid out at a real viewport width and scaled down to the
+  // frame, so a desktop page looks like a desktop page.
+  fit() {
+    const box = this.el.parentElement
+    const width = this.el.dataset.viewport === 'mobile' ? MOBILE_WIDTH : DESKTOP_WIDTH
+    const scale = Math.min(1, box.clientWidth / width)
+    Object.assign(this.el.style, {
+      width: `${width}px`,
+      height: `${box.clientHeight / scale}px`,
+      transform: `scale(${scale})`,
+      transformOrigin: 'top left',
+      marginLeft: scale < 1 ? '0' : `${(box.clientWidth - width) / 2}px`,
+    })
   },
 
   // Lazy images and embeds change the page's layout after load; keep the

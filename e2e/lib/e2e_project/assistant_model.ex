@@ -34,7 +34,8 @@ defmodule E2eProject.AssistantModel do
       results["prepare_proposal"] ->
         case results["prepare_proposal"] do
           %{"applicable" => true} ->
-            {:text, "I prepared a proposal that adds #{attachment(results)} to #{page(results)["title"]}. " <>
+            {:text,
+             "I prepared a proposal that adds #{attachment(results)} to #{page(results)["title"]}. " <>
                "The page is published, so the change goes live when you apply it."}
 
           %{"error" => error} ->
@@ -50,15 +51,16 @@ defmodule E2eProject.AssistantModel do
 
         {:call, "prepare_proposal",
          %{
-           "summary" => "#{summary} to #{page(results)["title"]}",
-           "operations" => [
-             %{
-               "op" => "insert_block",
-               "target" => %{"content_type" => "Brando.Pages.Page", "id" => page(results)["id"]},
-               "module" => module["module"],
-               "media" => %{"media" => attachment(results)}
-             }
-           ]
+           "summary" => "#{summary} to #{page(results)["title"]}" <> case_summary(request),
+           "operations" =>
+             [
+               %{
+                 "op" => "insert_block",
+                 "target" => %{"content_type" => "Brando.Pages.Page", "id" => page(results)["id"]},
+                 "module" => module["module"],
+                 "media" => %{"media" => attachment(results)}
+               }
+             ] ++ case_operations(request, module, results)
          }}
 
       results["list_modules"] ->
@@ -69,6 +71,43 @@ defmodule E2eProject.AssistantModel do
           nil -> {:text, "I could not find that page."}
           _ -> {:call, "list_modules", %{"content_type" => "Brando.Pages.Page"}}
         end
+    end
+  end
+
+  # "… and create a case called Sommerro with image2" adds a draft case whose
+  # listing image and first block use that attachment.
+  defp case_operations(request, module, results) do
+    with [_, title, alias] <- Regex.run(~r/case called (\w+) with (\w+)/i, request),
+         %{"id" => id} <- Enum.find(results["list_attachments"]["attachments"], &(&1["alias"] == alias)) do
+      [
+        %{
+          "op" => "create_entry",
+          "content_type" => "E2eProject.Projects.Project",
+          "ref" => "case",
+          "fields" => %{
+            "title" => title,
+            "slug" => String.downcase(title),
+            "language" => "en",
+            "introduction" => "<p>#{title}</p>",
+            "listing_image_id" => id
+          }
+        },
+        %{
+          "op" => "insert_block",
+          "target" => %{"new" => "case"},
+          "module" => module["module"],
+          "media" => %{"media" => alias}
+        }
+      ]
+    else
+      _ -> []
+    end
+  end
+
+  defp case_summary(request) do
+    case Regex.run(~r/case called (\w+)/i, request) do
+      [_, title] -> ", and create the #{title} case"
+      _ -> ""
     end
   end
 

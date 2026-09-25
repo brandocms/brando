@@ -43,8 +43,8 @@ test('uploads media, prepares a proposal from a message and applies it', async (
   const card = review.locator('.assistant-card').filter({ hasText: 'Index' })
   await expect(card).toContainText('Add a Single Asset block')
   await expect(card).toContainText('At the end')
-  await expect(card).toContainText('Live page changes')
-  await expect(card.locator('.assistant-card-media img')).toHaveCount(1)
+  await expect(card).toContainText('Live page')
+  await expect(card.locator('.assistant-card-cover img')).toHaveCount(1)
   await page.screenshot({ path: testInfo.outputPath('assistant-review-desktop.png'), fullPage: true })
 
   // The page preview renders the proposed page in the site's own template and
