@@ -12,7 +12,12 @@ defmodule Brando.Images.AltText do
   is enough to describe it and keeps the cost down. Bulk runs go through
   `Brando.SEO.Suggestions`, so nothing is saved before an editor accepts it.
 
-  Configure a different model or prompt for this through the `:alt` field:
+  It uses the `:image` model when one is named, else the default:
+
+      config :brando, Brando.AI,
+        models: [default: "anthropic:claude-opus-5-5", image: "anthropic:claude-haiku-4-5"]
+
+  The `:alt` field overrides model or prompt for this job alone:
 
       config :brando, Brando.AI,
         fields: [alt: [model: "anthropic:claude-haiku-4-5", prompt: "…"]]
@@ -37,9 +42,9 @@ defmodule Brando.Images.AltText do
     ".gif" => "image/gif"
   }
 
-  @doc "The AI options for alt text: the `:alt` field's, or the defaults."
+  @doc "The AI options for alt text: the `:alt` field's, over the `:image` model."
   @spec ai_opts() :: keyword()
-  def ai_opts, do: AI.field_ai_opts(Image, :alt)
+  def ai_opts, do: Image |> AI.field_ai_opts(:alt) |> Keyword.put_new(:model, :image)
 
   @doc "The content languages alt text is written in, the default first."
   @spec languages() :: [String.t()]

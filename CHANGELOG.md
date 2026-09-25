@@ -382,6 +382,18 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- `Brando.AI` takes named models: `models: [default: "...", image: "..."]`.
+  Alt text asks for `:image`, so a cheaper model that reads images can write
+  it while a stronger one writes copy; a name that is not set falls back to
+  `:default`, and a field's `model:` accepts a name or a full spec.
+  `default_model:` still works. App `fields` config now fills in what a
+  trait's AI options leave out (a `model:` for Page's meta fields, say)
+  instead of being ignored whenever the trait has any. A model outside the
+  `llm_db` catalogue is reported as unknown (price and image input) rather
+  than as unable to read images, which blocked alt text for Claude Opus 5.5
+  on the 2026.9.1 catalogue; run `mix deps.update llm_db` for its prices. The
+  alt text page and the Content SEO tab name the model each job uses.
+
 - `absolute_url ..., only: %{field: value}` names the entries that have a URL on
   this site; the rest (a case that only links to the client, say) get `nil`
   from `__absolute_url__/1` and are left out of the content SEO audit. The same

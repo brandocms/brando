@@ -11,23 +11,39 @@ defmodule Brando.AI do
       # usually in config/brando.exs
       config :brando, Brando.AI,
         enabled: true,
-        default_model: "openai:gpt-4o-mini",
+        models: [
+          default: "anthropic:claude-opus-5-5",
+          # Jobs that read images (alt text) use this when it is set
+          image: "anthropic:claude-haiku-4-5"
+        ],
         providers: [
-          openai: [api_key: System.get_env("OPENAI_API_KEY")]
+          anthropic: [api_key: System.get_env("ANTHROPIC_API_KEY")]
         ],
         # Optional per-field defaults
         fields: [
-          summary: [prompt: "Summarize title + intro", context: [:title, :intro]]
+          summary: [prompt: "Summarize title + intro", context: [:title, :intro]],
+          meta_description: [model: :default]
         ],
         default_opts: [temperature: 0.4]
 
+  ## Named models
+
+  `models:` names the models a site uses. `:default` does everything unless
+  told otherwise; a job that needs something particular asks for a name —
+  image jobs ask for `:image`, so a cheaper model that reads images can
+  write alt text while a stronger one writes copy. A name that is not
+  configured falls back to `:default`. A field's `model:` takes a name or a
+  full `"provider:model"` spec. `default_model: "..."` is still read, as
+  `models: [default: "..."]`.
+
   ## Resolution order
 
-  - Model: field `:model` -> app `:default_model`
+  - Model: field `:model` (a spec, or a name in `models:`) -> the job's own
+    name (`:image` for alt text) -> `models[:default]` / `:default_model`
   - API key: field `:api_key` -> provider config `providers[provider][:api_key]` ->
     app `<provider>_api_key` -> `ReqLLM.get_key(:"<provider>_api_key")`
-  - Field AI defaults: blueprint `input ... ai: [...]` -> trait-provided defaults ->
-    app `fields[field_name]`
+  - Field AI defaults: blueprint `input ... ai: [...]` -> trait-provided defaults,
+    with app `fields[field_name]` filling in what they leave out (a `model:`, say)
 
   ## Field options
 
@@ -116,23 +132,38 @@ defmodule Brando.AI do
   @spec model_info(keyword() | map()) :: {:ok, map()} | {:error, term()}
   def model_info(ai_opts \\ []) do
     with {:ok, spec} <- resolve_model(normalize_ai_opts(ai_opts)),
-         {:ok, model} <- ReqLLM.model(spec) do
-      cost = Map.get(model, :cost) || %{}
-      input_modalities = get_in(Map.get(model, :modalities) || %{}, [:input]) || []
-
-      {:ok,
-       %{
-         spec: spec,
-         provider: model.provider,
-         model_id: model.id,
-         input_price: cost[:input],
-         output_price: cost[:output],
-         image_input?: :image in input_modalities
-       }}
+         {:ok, provider} <- provider_from_model(spec) do
+      {:ok, catalogue_info(spec, provider, LLMDB.model(spec))}
     end
   rescue
     _ -> {:error, :unknown_model}
   end
+
+  # Straight from the catalogue ReqLLM reads, which, unlike ReqLLM.model/1,
+  # answers a model it does not know without a warning per lookup. Outside the
+  # catalogue nothing is known: no prices, and image input nil.
+  defp catalogue_info(spec, _provider, {:ok, model}) do
+    cost = Map.get(model, :cost) || %{}
+
+    %{
+      spec: spec,
+      provider: model.provider,
+      model_id: model.id,
+      input_price: cost[:input],
+      output_price: cost[:output],
+      image_input?: image_input?(model.modalities)
+    }
+  end
+
+  defp catalogue_info(spec, provider, _not_found) do
+    [_provider, model_id] = String.split(spec, ":", parts: 2)
+    %{spec: spec, provider: provider, model_id: model_id, input_price: nil, output_price: nil, image_input?: nil}
+  end
+
+  # nil, not false, for a model outside the catalogue: whether it reads images
+  # is unknown then, and a new model usually does.
+  defp image_input?(%{input: inputs}) when is_list(inputs), do: :image in inputs
+  defp image_input?(_modalities), do: nil
 
   @doc """
   The human name configured for `language`, for prompts that must name it.
@@ -161,6 +192,10 @@ defmodule Brando.AI do
   def error_message(:invalid_field_name), do: gettext("Could not update this field from AI response")
   def error_message(:no_context), do: gettext("This entry has no text to describe")
   def error_message(:no_image_input), do: gettext("The configured AI model cannot read images")
+
+  def error_message(:unknown_model),
+    do: gettext("The configured AI model is not in the model catalogue, so its price and abilities are unknown")
+
   def error_message(:unsupported_format), do: gettext("The image is in a format the AI model cannot read")
   def error_message(:image_file_missing), do: gettext("The image file could not be read")
   def error_message(:invalid_response), do: gettext("The AI reply could not be read")
@@ -173,18 +208,14 @@ defmodule Brando.AI do
 
   def field_ai_opts(field_name) when is_atom(field_name), do: field_ai_opts(nil, field_name)
 
+  # The trait's options win; the app's `fields` config fills in what the trait
+  # leaves out, so a site can pick a model for a field whose prompt a trait
+  # provides.
   def field_ai_opts(schema, field_name) when is_atom(field_name) do
-    sources = [
-      Brando.Trait.get_trait_ai_field_opts(schema, field_name),
-      get_field_config(Keyword.get(config(), :fields, %{}), field_name)
-    ]
+    trait = normalize_ai_opts(Brando.Trait.get_trait_ai_field_opts(schema, field_name))
+    app = normalize_ai_opts(get_field_config(Keyword.get(config(), :fields, %{}), field_name))
 
-    Enum.find_value(sources, [], fn source ->
-      case normalize_ai_opts(source) do
-        [] -> nil
-        opts -> opts
-      end
-    end)
+    Keyword.merge(app, trait)
   end
 
   def field_ai_opts(_, _), do: []
@@ -200,15 +231,32 @@ defmodule Brando.AI do
     Keyword.merge(default_opts, request_opts)
   end
 
-  defp resolve_model(ai_opts) do
-    case Keyword.get(ai_opts, :model) || Keyword.get(config(), :default_model) do
-      model when is_binary(model) and model != "" ->
-        {:ok, model}
-
-      _ ->
-        {:error, :missing_model}
+  @doc """
+  The `"provider:model"` spec `ai_opts` resolve to, or `nil` when none is
+  configured. `ai_opts[:model]` is a spec or a name in `models:`; a name that
+  is not configured, and no `:model` at all, give the `:default` model.
+  """
+  @spec model_spec(keyword() | map()) :: String.t() | nil
+  def model_spec(ai_opts \\ []) do
+    case resolve_model(normalize_ai_opts(ai_opts)) do
+      {:ok, spec} -> spec
+      _ -> nil
     end
   end
+
+  defp resolve_model(ai_opts) do
+    case model_for(Keyword.get(ai_opts, :model)) do
+      spec when is_binary(spec) and spec != "" -> {:ok, spec}
+      _ -> {:error, :missing_model}
+    end
+  end
+
+  defp model_for(spec) when is_binary(spec) and spec != "", do: spec
+  defp model_for(name) when is_atom(name) and name not in [nil, :default], do: named_model(name) || default_model()
+  defp model_for(_), do: default_model()
+
+  defp named_model(name), do: config() |> Keyword.get(:models, []) |> Keyword.get(name)
+  defp default_model, do: named_model(:default) || Keyword.get(config(), :default_model)
 
   defp provider_from_model(model) when is_binary(model) do
     case String.split(model, ":", parts: 2) do

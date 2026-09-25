@@ -42,6 +42,11 @@ defmodule Brando.AI.CostTest do
     assert Cost.images([{512, 384}]) == {:error, :no_image_input}
   end
 
+  test "a model outside the catalogue is unknown, not refused" do
+    model("anthropic:claude-imaginary-9")
+    assert Cost.images([{512, 384}]) == {:error, :unknown_model}
+  end
+
   test "formats small amounts without rounding them to nothing" do
     assert Cost.format(0.0013) == "$0.0013"
     assert Cost.format(0.00397) == "$0.0040"

@@ -1042,12 +1042,19 @@ input :meta_description, :textarea,
   ]
 ```
 
-If `model` is omitted in field options, Brando uses `Brando.AI` app config:
+If `model` is omitted in field options, Brando uses `Brando.AI` app config.
+`models:` names the models a site uses: `:default` for everything, and a name
+per kind of job — alt text asks for `:image` — that falls back to `:default`
+when it is not set. A field's `model:` takes such a name or a full spec.
+`default_model: "..."` is still read, as `models: [default: "..."]`.
 
 ```elixir
 config :brando, Brando.AI,
   enabled: true,
-  default_model: "openai:gpt-4o-mini",
+  models: [
+    default: "openai:gpt-4o-mini",
+    image: "openai:gpt-4o-mini"
+  ],
   providers: [
     openai: [api_key: System.get_env("OPENAI_API_KEY")]
   ],

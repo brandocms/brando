@@ -104,6 +104,9 @@ defmodule Brando.AI.Cost do
 
   defp check(%{image_input?: false}), do: {:error, :no_image_input}
   defp check(%{input_price: input, output_price: output}) when is_number(input) and is_number(output), do: :ok
+  # Outside the catalogue: neither price nor image support is known. Not a
+  # reason to refuse; the editor is told and decides.
+  defp check(%{image_input?: nil}), do: {:error, :unknown_model}
   defp check(_info), do: {:error, :unknown_price}
 
   # OpenAI's high-detail tiling: fit 2048, shortest side down to 768, 512px tiles.
