@@ -53,7 +53,9 @@
   .workspace-panel-heading > span { color: var(--workspace-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .workspace-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 24px; text-align: center; }
   .workspace-empty p { max-width: 420px; color: var(--workspace-muted); font-size: 13px; }
-  .workspace-table-scroll { position: relative; overflow-x: auto; padding: 0 16px; }
+  /* The inset lives on the outer cells, not the wrapper, so a row's hover
+     wash and an expanded row reach the panel's frame. */
+  .workspace-table-scroll { position: relative; overflow-x: auto; }
   .workspace-table {
     width: 100%; border-collapse: collapse; margin: 0; font-size: 13px;
     /* Own rows only: an expanded row may hold a table of its own, and these
@@ -61,8 +63,8 @@
     > :is(thead, tbody) > tr > :is(th, td) { text-align: left; vertical-align: middle; border: 0; }
     > thead > tr > th { font-size: 12px; color: var(--workspace-muted); font-weight: 400; padding: 10px 12px; border-bottom: 1px solid var(--workspace-line); white-space: nowrap; }
     > tbody > tr > td { padding: 12px; border-bottom: 1px solid #ecf0ea; }
-    > :is(thead, tbody) > tr > :is(th, td):first-child { padding-left: 0; }
-    > :is(thead, tbody) > tr > :is(th, td):last-child { padding-right: 0; }
+    > :is(thead, tbody) > tr > :is(th, td):first-child { padding-left: 16px; }
+    > :is(thead, tbody) > tr > :is(th, td):last-child { padding-right: 16px; }
     > tbody > tr:last-child > td { border: 0; }
     > tbody > tr:hover { background: #fafbf8; }
     code { font-family: theme(typography.families.mono); font-size: 12px; }
@@ -86,7 +88,6 @@
     > #content-header > .content { align-items: flex-start; flex-direction: column; gap: 16px; }
     > #content-header .actions { justify-content: flex-start; }
     .workspace-panel-heading { padding: 16px; flex-wrap: wrap; }
-    .workspace-table-scroll { padding-inline: 16px; }
   }
   @media (pointer: coarse) { :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) { min-height: 40px; } }
 }

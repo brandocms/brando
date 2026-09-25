@@ -25,10 +25,8 @@
   .frontend-assets-empty p { max-width: 480px; font-size: 13px; color: var(--workspace-muted); }
   .frontend-assets-current__meta > div:last-child { min-width: 160px; }
   .frontend-assets-current__meta > div:last-child dd { white-space: nowrap; }
-  .frontend-assets-list.workspace-table-scroll { padding: 0; border-radius: 0 0 7px 7px; }
+  .frontend-assets-list.workspace-table-scroll { border-radius: 0 0 7px 7px; }
   .frontend-assets-table { min-width: 760px; }
-  .frontend-assets-table :is(th, td):first-child { padding-left: 16px; }
-  .frontend-assets-table :is(th, td):last-child { padding-right: 16px; }
   .frontend-assets-build.active { background: #fafcf8; }
   .frontend-assets-table .frontend-assets-build__identity { width: auto; min-width: 180px; }
   .frontend-assets-build__identity h3 { font-size: 13px; overflow-wrap: anywhere; }
