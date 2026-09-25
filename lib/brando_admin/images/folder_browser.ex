@@ -115,6 +115,26 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     if "" in folders, do: folders, else: ["" | folders]
   end
 
+  @doc """
+  Ids of stored folders that resolve to `upload_root` itself. Entries in them
+  belong at the root, alongside entries without a folder: the video backfill
+  filed every video under its config's upload path, which is also the root of
+  the video list.
+  """
+  def root_folder_ids(upload_root) do
+    case normalize_folder(upload_root) do
+      nil ->
+        []
+
+      root ->
+        Folder
+        |> select([f], {f.id, f.scope, f.path})
+        |> Repo.all()
+        |> Enum.filter(fn {_id, scope, path} -> absolute_folder(path, scope) == root end)
+        |> Enum.map(fn {id, _scope, _path} -> id end)
+    end
+  end
+
   def child_folders(folders, current_folder) do
     current = normalize_folder(current_folder) || ""
 

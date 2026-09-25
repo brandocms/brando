@@ -61,6 +61,10 @@ defmodule Brando.Videos do
               ilike(q.title, ^encoded_pattern) or ilike(q.source_url, ^encoded_pattern) or
               ilike(q.remote_id, ^encoded_pattern)
 
+      # The root: entries without a folder, and those in a folder that is the root itself.
+      {:folder_id, {:root, root_folder_ids}}, query ->
+        from(t in query, where: is_nil(t.folder_id) or t.folder_id in ^root_folder_ids)
+
       {:folder_id, folder_id}, query ->
         case normalize_folder_id(folder_id) do
           nil -> from(t in query, where: is_nil(t.folder_id))

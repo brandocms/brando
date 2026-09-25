@@ -54,6 +54,10 @@ defmodule Brando.Files do
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
 
+      # The root: entries without a folder, and those in a folder that is the root itself.
+      {:folder_id, {:root, root_folder_ids}}, query ->
+        from(t in query, where: is_nil(t.folder_id) or t.folder_id in ^root_folder_ids)
+
       {:folder_id, folder_id}, query ->
         case normalize_folder_id(folder_id) do
           nil -> from(t in query, where: is_nil(t.folder_id))

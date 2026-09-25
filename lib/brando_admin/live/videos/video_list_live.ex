@@ -30,6 +30,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       |> assign(:show_new_folder_form, false)
       |> assign(:visible_video_count, 0)
       |> assign(:clipboard_ids, [])
+      |> assign(:root_folder_ids, [])
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -219,7 +220,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
           schema={@schema}
           current_user={@current_user}
           uri={@uri}
-          params={AssetListHelpers.list_params(@params)}
+          params={AssetListHelpers.list_params(@params, @root_folder_ids)}
           listing={:default}
           hidden_filters={[:folder_id]}
           empty_title={gettext("No videos in this view")}
@@ -256,6 +257,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
         FolderBrowser.absolute_folder(current_folder, socket.assigns.upload_root)
       end
 
+    root_folder_ids = FolderBrowser.root_folder_ids(socket.assigns.upload_root)
     child_folders = FolderBrowser.child_folders(folders, current_folder)
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
     visible_videos = FolderBrowser.entries_in_folder(folder_entries, current_folder, socket.assigns.upload_root)
@@ -268,6 +270,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       end
 
     socket
+    |> assign(:root_folder_ids, root_folder_ids)
     |> assign(:folders, folders)
     |> assign(:child_folders, child_folders)
     |> assign(:current_folder, current_folder)
@@ -276,7 +279,10 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     |> assign(:recent_folders, recent_folders)
     |> assign(
       :visible_video_count,
-      if(current_folder == "", do: Enum.count(videos, &is_nil(&1.folder_id)), else: length(visible_videos))
+      if(current_folder == "",
+        do: Enum.count(videos, &(is_nil(&1.folder_id) or &1.folder_id in root_folder_ids)),
+        else: length(visible_videos)
+      )
     )
   end
 

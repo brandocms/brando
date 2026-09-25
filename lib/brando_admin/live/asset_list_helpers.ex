@@ -144,8 +144,11 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   def listing_id(schema), do: "content_listing_#{schema}_default"
 
   @doc "Adds default folder filter to listing params."
-  def list_params(params) when is_map(params) do
-    Map.put_new(params, "filter:folder_id", "root")
+  def list_params(params, root_folder_ids \\ []) when is_map(params) do
+    case Map.get(params, "filter:folder_id") do
+      folder when folder in [nil, "", "root"] -> Map.put(params, "filter:folder_id", {:root, root_folder_ids})
+      _ -> params
+    end
   end
 
   @doc "Toggles children row visibility for the navigation component and legacy child buttons."

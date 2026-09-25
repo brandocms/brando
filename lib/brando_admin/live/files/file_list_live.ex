@@ -38,6 +38,7 @@ defmodule BrandoAdmin.Files.FileListLive do
       |> assign(:visible_file_count, 0)
       |> assign(:current_folder_config_target, "default")
       |> assign(:clipboard_ids, [])
+      |> assign(:root_folder_ids, [])
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -347,7 +348,7 @@ defmodule BrandoAdmin.Files.FileListLive do
           schema={@schema}
           current_user={@current_user}
           uri={@uri}
-          params={AssetListHelpers.list_params(@params)}
+          params={AssetListHelpers.list_params(@params, @root_folder_ids)}
           listing={:default}
           hidden_filters={[:folder_id]}
           empty_title={gettext("No files in this view")}
@@ -381,6 +382,7 @@ defmodule BrandoAdmin.Files.FileListLive do
         FolderBrowser.absolute_folder(current_folder, socket.assigns.upload_root)
       end
 
+    root_folder_ids = FolderBrowser.root_folder_ids(socket.assigns.upload_root)
     child_folders = FolderBrowser.child_folders(folders, current_folder)
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
     visible_files = FolderBrowser.entries_in_folder(files, current_folder, socket.assigns.upload_root)
@@ -396,6 +398,7 @@ defmodule BrandoAdmin.Files.FileListLive do
       end
 
     socket
+    |> assign(:root_folder_ids, root_folder_ids)
     |> assign(:folders, folders)
     |> assign(:child_folders, child_folders)
     |> assign(:current_folder, current_folder)
@@ -404,7 +407,10 @@ defmodule BrandoAdmin.Files.FileListLive do
     |> assign(:recent_folders, recent_folders)
     |> assign(
       :visible_file_count,
-      if(current_folder == "", do: Enum.count(files, &is_nil(&1.folder_id)), else: length(visible_files))
+      if(current_folder == "",
+        do: Enum.count(files, &(is_nil(&1.folder_id) or &1.folder_id in root_folder_ids)),
+        else: length(visible_files)
+      )
     )
     |> assign(:current_folder_config_target, current_folder_config_target)
   end
