@@ -612,6 +612,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :identifier, :map, required: true
   attr :select, :any, default: false
   slot :delete
+  slot :inner_block
 
   def dumb_identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
     assigns =
