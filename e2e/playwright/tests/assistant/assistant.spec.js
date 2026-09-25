@@ -47,6 +47,27 @@ test('uploads media, prepares a proposal from a message and applies it', async (
   await expect(card.locator('.assistant-card-media img')).toHaveCount(1)
   await page.screenshot({ path: testInfo.outputPath('assistant-review-desktop.png'), fullPage: true })
 
+  // The page preview renders the proposed page in the site's own template and
+  // outlines the new block outside the page's content.
+  await card.getByRole('button', { name: 'Preview page' }).click()
+  await expect(review.getByRole('heading', { name: 'Page preview' })).toBeVisible()
+  const frame = page.frameLocator('.assistant-frame iframe')
+  await expect(frame.locator('.brando-proposal-highlight')).toHaveCount(1, { timeout: 15000 })
+  await expect(frame.locator('article[b-tpl="asset"] img, article[b-tpl="asset"] picture').first()).toBeAttached()
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: testInfo.outputPath('assistant-preview-desktop.png') })
+
+  await review.getByRole('button', { name: 'Before' }).click()
+  await expect(review.locator('.assistant-frame-bar')).toContainText('Saved version')
+  await expect(frame.locator('article[b-tpl="asset"]')).toHaveCount(0, { timeout: 15000 })
+  await expect(frame.locator('.brando-proposal-highlight')).toHaveCount(0)
+
+  await review.getByRole('button', { name: 'Proposed' }).click()
+  await review.getByRole('button', { name: 'Mobile' }).click()
+  await expect(page.locator('.assistant-frame iframe')).toHaveCSS('width', '390px')
+  await review.getByRole('button', { name: 'All changes' }).click()
+  await expect(review.locator('.assistant-card')).toHaveCount(1)
+
   // A refinement replaces the proposal with version 2.
   await input.fill('Put image1 on the Index page instead')
   await input.press('Enter')

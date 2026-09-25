@@ -50,7 +50,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
        draft: "",
        library: nil,
        show_history: false,
-       applying: false
+       applying: false,
+       preview: nil,
+       preview_keys: []
      )}
   end
 
@@ -221,6 +223,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             receipt={@receipt}
             error={@error}
             applying={@applying}
+            preview={@preview}
           />
         </section>
       </div>
@@ -314,6 +317,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :receipt, :any, required: true
   attr :error, :any, required: true
   attr :applying, :boolean, required: true
+  attr :preview, :any, default: nil
 
   defp review(%{proposal: nil} = assigns) do
     ~H"""
@@ -386,8 +390,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </ul>
       </div>
 
-      <h3 class="assistant-section-title">{gettext("Changes by entry")}</h3>
-      <div class="assistant-cards">
+      <.page_preview :if={@preview} preview={@preview} review={@review} media={@media} aliases={@aliases} />
+
+      <h3 :if={!@preview} class="assistant-section-title">{gettext("Changes by entry")}</h3>
+      <div :if={!@preview} class="assistant-cards">
         <article
           :for={entry <- @review}
           class={["assistant-card", entry.problems != [] && "has-problems"]}
@@ -421,6 +427,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <span :if={entry.live?} class="assistant-live"><.icon name="hero-globe-alt" />{gettext("Live page changes")}</span>
             <span :if={entry.action == :create} class="assistant-draft"><.icon name="hero-lock-closed" />{gettext("New draft")}</span>
             <span :if={entry.action == :update and !entry.live?} class="assistant-draft">{gettext("Not published")}</span>
+            <button
+              :if={entry.preview? and is_nil(@receipt)}
+              type="button"
+              class="assistant-link-button assistant-preview-link"
+              phx-click="preview"
+              phx-value-key={entry.key}
+            >
+              {gettext("Preview page")}<.icon name="hero-chevron-right" />
+            </button>
           </footer>
         </article>
       </div>
@@ -457,6 +472,169 @@ defmodule BrandoAdmin.AI.AssistantLive do
           </button>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  attr :preview, :map, required: true
+  attr :review, :list, required: true
+  attr :media, :map, required: true
+  attr :aliases, :map, default: %{}
+
+  defp page_preview(assigns) do
+    assigns = assign(assigns, :entry, Enum.find(assigns.review, &(&1.key == assigns.preview.key)))
+
+    ~H"""
+    <section class="assistant-preview" aria-labelledby="assistant-preview-title">
+      <div class="assistant-preview-head">
+        <button type="button" class="assistant-link-button assistant-back" phx-click="close_preview">
+          <.icon name="hero-arrow-left" />{gettext("All changes")}
+        </button>
+        <h3 id="assistant-preview-title">{gettext("Page preview")}</h3>
+        <p>{gettext("The proposed content in the site's own templates. Nothing is saved.")}</p>
+      </div>
+
+      <nav class="assistant-preview-tabs" aria-label={gettext("Entries in this proposal")}>
+        <button
+          :for={entry <- @review}
+          type="button"
+          phx-click="preview"
+          phx-value-key={entry.key}
+          aria-current={entry.key == @preview.key && "true"}
+        >
+          <.thumb :if={entry.media != []} media={@media} kind={elem(hd(entry.media), 0)} id={elem(hd(entry.media), 1)} />
+          <span>
+            <strong>{entry.title}</strong>
+            <small>{tab_summary(entry)}</small>
+          </span>
+        </button>
+      </nav>
+
+      <div class="assistant-preview-controls">
+        <div class="assistant-segmented" role="group" aria-label={gettext("Version")}>
+          <button
+            :for={{value, label} <- [{"before", gettext("Before")}, {"proposed", gettext("Proposed")}]}
+            type="button"
+            phx-click="preview_version"
+            phx-value-version={value}
+            aria-pressed={to_string(@preview.version == value)}
+          >
+            {label}
+          </button>
+        </div>
+        <div
+          :if={@entry && length(@entry.preview_targets) > 1}
+          class="assistant-segmented"
+          role="group"
+          aria-label={gettext("View")}
+        >
+          <button
+            :for={{name, label} <- @entry.preview_targets}
+            type="button"
+            phx-click="preview_target"
+            phx-value-target={name}
+            aria-pressed={to_string((@preview.target || default_target(@entry)) == name)}
+          >
+            {label}
+          </button>
+        </div>
+        <div class="assistant-preview-options">
+          <div class="assistant-segmented" role="group" aria-label={gettext("Viewport")}>
+            <button
+              :for={
+                {value, label, icon} <- [
+                  {"desktop", gettext("Desktop"), "hero-computer-desktop"},
+                  {"mobile", gettext("Mobile"), "hero-device-phone-mobile"}
+                ]
+              }
+              type="button"
+              phx-click="preview_viewport"
+              phx-value-viewport={value}
+              aria-pressed={to_string(@preview.viewport == value)}
+            >
+              <.icon name={icon} />{label}
+            </button>
+          </div>
+          <label class="assistant-check">
+            <input
+              type="checkbox"
+              phx-click="toggle_highlight"
+              checked={@preview.show}
+              disabled={@preview.version == "before"}
+            />
+            {gettext("Show changes")}
+          </label>
+        </div>
+      </div>
+
+      <div class={["assistant-frame", "is-#{@preview.viewport}"]}>
+        <div class="assistant-frame-bar">
+          <span>{@entry && (@entry.url || @entry.title)}</span>
+          <span>{if @preview.version == "before", do: gettext("Saved version"), else: gettext("Proposed")}</span>
+        </div>
+        <.frame preview={@preview} entry={@entry} />
+      </div>
+
+      <ul :if={@entry} class="assistant-preview-summary">
+        <li :for={change <- @entry.changes}>
+          <.icon name="hero-check" />
+          <div><.change change={change} aliases={@aliases} /></div>
+        </li>
+      </ul>
+    </section>
+    """
+  end
+
+  attr :preview, :map, required: true
+  attr :entry, :any, required: true
+
+  defp frame(%{preview: %{frame: {:ok, key}}} = assigns) do
+    assigns =
+      assign(assigns,
+        key: key,
+        highlight: if(assigns.preview.version == "proposed" and assigns.entry, do: assigns.entry.highlight, else: [])
+      )
+
+    ~H"""
+    <iframe
+      id={"assistant-preview-frame-#{@key}"}
+      src={"/__livepreview?key=#{@key}"}
+      title={gettext("Page preview of %{title}", title: @entry && @entry.title)}
+      phx-hook="Brando.ProposalPreview"
+      data-highlight={Jason.encode!(@highlight)}
+      data-show={to_string(@preview.show)}
+    ></iframe>
+    """
+  end
+
+  defp frame(%{preview: %{frame: :not_created}} = assigns) do
+    ~H"""
+    <div class="assistant-frame-state">
+      <.icon name="hero-document-plus" />
+      <p>{gettext("This page has not been created yet. Switch to Proposed to see it.")}</p>
+    </div>
+    """
+  end
+
+  defp frame(%{preview: %{frame: :no_preview_target}} = assigns) do
+    ~H"""
+    <div class="assistant-frame-state">
+      <.icon name="hero-eye-slash" />
+      <p>{gettext("Page preview is not configured for this content type. Review the changes in the entry card.")}</p>
+    </div>
+    """
+  end
+
+  defp frame(%{preview: %{frame: {:error, message}}} = assigns) do
+    assigns = assign(assigns, :message, message)
+
+    ~H"""
+    <div class="assistant-frame-state is-error" role="alert">
+      <.icon name="hero-exclamation-triangle" />
+      <p>{gettext("The page could not be rendered: %{message}", message: @message)}</p>
+      <button type="button" class="assistant-button" phx-click="preview" phx-value-key={@preview.key}>
+        {gettext("Try again")}
+      </button>
     </div>
     """
   end
@@ -649,6 +827,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
       {:noreply,
        socket
        |> assign(applying: false, receipt: receipt)
+       |> discard_previews()
+       |> assign(:preview, nil)
        |> assign_proposal()
        |> put_toast(:info, gettext("Changes applied"))}
     else
@@ -662,6 +842,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     {:noreply, assign_proposal(socket)}
   end
+
+  def handle_event("preview", %{"key" => key}, socket) do
+    preview = socket.assigns.preview || %{version: "proposed", viewport: "desktop", show: true, target: nil}
+    # A named view belongs to one content type; another entry starts on its default.
+    preview = if preview[:key] == key, do: preview, else: %{preview | target: nil}
+    {:noreply, render_preview(socket, Map.put(preview, :key, key))}
+  end
+
+  def handle_event("preview_version", %{"version" => version}, socket) when version in ~w(before proposed),
+    do: {:noreply, render_preview(socket, %{socket.assigns.preview | version: version})}
+
+  def handle_event("preview_target", %{"target" => target}, socket),
+    do: {:noreply, render_preview(socket, %{socket.assigns.preview | target: target})}
+
+  def handle_event("preview_viewport", %{"viewport" => viewport}, socket) when viewport in ~w(desktop mobile),
+    do: {:noreply, update(socket, :preview, &%{&1 | viewport: viewport})}
+
+  def handle_event("toggle_highlight", _, socket), do: {:noreply, update(socket, :preview, &%{&1 | show: !&1.show})}
+  def handle_event("close_preview", _, socket), do: {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
   def handle_event("open_library", _, socket),
     do: {:noreply, assign(socket, :library, library("image", "", socket.assigns.current_user))}
@@ -701,8 +900,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
   def handle_info({:agent, _id, {:progress, text}}, socket), do: {:noreply, assign(socket, :progress, text)}
   def handle_info({:agent, _id, {:message, _}}, socket), do: {:noreply, assign_messages(socket)}
 
-  def handle_info({:agent, _id, {:proposal, _}}, socket),
-    do: {:noreply, socket |> refresh_conversation() |> assign_proposal()}
+  def handle_info({:agent, _id, {:proposal, _}}, socket) do
+    socket = socket |> refresh_conversation() |> assign_proposal()
+    {:noreply, if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)}
+  end
 
   def handle_info({:agent, _id, {:attachments, _}}, socket), do: {:noreply, refresh_conversation(socket)}
 
@@ -737,6 +938,61 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  ## Page preview
+
+  # Renders the chosen entry of the proposal on screen through the site's own
+  # preview target. Only the latest frame's cache key is kept.
+  defp render_preview(%{assigns: %{proposal: nil}} = socket, _preview), do: assign(socket, :preview, nil)
+
+  defp render_preview(socket, preview) do
+    socket = discard_previews(socket)
+
+    case Enum.find(socket.assigns.proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end) do
+      nil ->
+        assign(socket, :preview, nil)
+
+      {target, _} ->
+        version = String.to_existing_atom(preview.version)
+
+        frame =
+          case Proposals.Preview.render(socket.assigns.proposal, target, socket.assigns.current_user,
+                 version: version,
+                 preview_target: preview.target
+               ) do
+            {:ok, %{key: key}} -> {:ok, key}
+            {:error, reason} when reason in [:not_created, :no_preview_target] -> reason
+            {:error, message} -> {:error, to_string(message)}
+          end
+
+        keys = with {:ok, key} <- frame, do: [key], else: (_ -> [])
+        assign(socket, preview: Map.put(preview, :frame, frame), preview_keys: keys)
+    end
+  end
+
+  defp discard_previews(socket) do
+    Proposals.Preview.discard(socket.assigns.preview_keys)
+    assign(socket, :preview_keys, [])
+  end
+
+  def terminate(_reason, socket) do
+    Proposals.Preview.discard(socket.assigns[:preview_keys] || [])
+    :ok
+  end
+
+  defp default_target(%{preview_targets: targets}) do
+    if Enum.any?(targets, &(elem(&1, 0) == "default")), do: "default", else: targets |> List.first({nil, nil}) |> elem(0)
+  end
+
+  defp tab_summary(%{action: :create}), do: gettext("New entry")
+
+  defp tab_summary(entry) do
+    blocks = Enum.count(entry.changes, &(&1.type == :insert_block))
+
+    if blocks > 0,
+      do: ngettext("%{count} block added", "%{count} blocks added", blocks),
+      else: ngettext("%{count} change", "%{count} changes", length(entry.changes))
+  end
 
   ## Data
 

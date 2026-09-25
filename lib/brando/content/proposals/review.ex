@@ -54,6 +54,9 @@ defmodule Brando.Content.Proposals.Review do
       live?: false,
       changes: changes,
       media: media_of(changes),
+      highlight: uids_of(changes),
+      preview?: Brando.LivePreview.has_live_preview_target(schema),
+      preview_targets: preview_targets(schema),
       problems: problems(proposal, target)
     }
   end
@@ -74,6 +77,9 @@ defmodule Brando.Content.Proposals.Review do
       live?: target in (proposal.effects[:live] || []),
       changes: changes,
       media: media_of(changes),
+      highlight: uids_of(changes),
+      preview?: Brando.LivePreview.has_live_preview_target(schema),
+      preview_targets: preview_targets(schema),
       problems: problems(proposal, target)
     }
   end
@@ -190,6 +196,16 @@ defmodule Brando.Content.Proposals.Review do
     do: text
 
   defp text_of(_), do: nil
+
+  # Named preview targets, for content types with more than one view.
+  defp preview_targets(schema) do
+    for target <- Brando.LivePreview.get_targets(schema) do
+      {to_string(target.name), target.label || Brando.Utils.humanize(to_string(target.name))}
+    end
+  end
+
+  # The blocks a page preview outlines: inserted blocks and changed ones.
+  defp uids_of(changes), do: changes |> Enum.map(&Map.get(&1, :uid)) |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
   defp media_of(changes), do: for(%{media: media} <- changes, %{kind: kind, id: id} <- media, do: {kind, id})
 

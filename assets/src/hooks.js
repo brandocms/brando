@@ -2,6 +2,7 @@
 import AuthorizationHook from './hooks/Authorization'
 import AdminHook from './hooks/Admin'
 import AssistantComposerHook from './hooks/AssistantComposer'
+import ProposalPreviewHook from './hooks/ProposalPreview'
 import AssetFolderDropHook from './hooks/AssetFolderDrop'
 import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
@@ -55,6 +56,7 @@ export default (app) => {
     'Brando.Authorization': AuthorizationHook(app),
     'Brando.Admin': AdminHook(app),
     'Brando.AssistantComposer': AssistantComposerHook(app),
+    'Brando.ProposalPreview': ProposalPreviewHook(app),
     'Brando.AssetFolderDrop': AssetFolderDropHook(app),
     'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),

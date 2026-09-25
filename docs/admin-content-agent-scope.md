@@ -594,3 +594,28 @@ Stage 1 took about a day, not the estimated 2–3.
     owner otherwise hid the LiveView's rows.
 - **Not done:** Norwegian translations of the new `ai_agent`/`content_proposals`
   strings, and folder attachments.
+
+## Stage 5: page previews (25 September 2026)
+
+- **Preview page** on an entry card replaces the cards with the preview. It has
+  entry tabs, Before / Proposed, named views (when a content type has more than
+  one preview target), Desktop / Mobile, Show changes, and All changes. The
+  apply bar stays and still describes the whole batch.
+- **Frames are ordinary private live-preview keys** rendered by
+  `Proposals.Preview.render/4`, in the proposing user's scope, and served by
+  `/__livepreview`.
+  - Before is the saved baseline. It is refused if the entry has changed since
+    the proposal.
+  - A new entry has no Before ("This page has not been created yet").
+  - A content type without targets says so. A render error shows the message
+    and a retry.
+  - Only the latest frame's key is kept. Keys are discarded when the frame is
+    replaced, the preview closed, the proposal applied, or the LiveView ends.
+- **The `Brando.ProposalPreview` hook** finds each changed block between its
+  `[+:B<uid>]` … `[-:B<uid>]` annotations. It draws an outline over the block,
+  outside the page's content and layout, and scrolls it into view. A
+  ResizeObserver keeps the outline on the block as lazy media loads. The frame
+  stays keyboard-scrollable.
+- **Not done:** overlays for arbitrary cross-entry queries in templates, as
+  scoped in the issue. A category preview that lists cases does not include a
+  case the same proposal creates.

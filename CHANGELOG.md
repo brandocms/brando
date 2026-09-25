@@ -389,7 +389,9 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   endpoint. The editor applies a proposal with one click, which approves
   exactly that version and applies it atomically. New entries are drafts.
   Configure `Brando.AI.Agent` with a model and budgets, and grant
-  `brando.assistant.use` with groups authorization. See
+  `brando.assistant.use` with groups authorization. **Preview page** renders
+  each entry as proposed, or as saved, through the site's own live-preview
+  targets, and outlines the changed blocks. See
   [Content assistant](guides/content_assistant.md).
 - `Brando.Content.Proposals` stores, validates, previews and applies these
   proposals, and can be used without the assistant.

@@ -6,6 +6,7 @@ A model prepares the changes as a proposal. The editor reviews it entry by
 entry and applies it with one explicit click. Nothing is saved before that.
 
 Screenshots: [review](../docs/admin-ui/assistant-review-desktop.png),
+[page preview](../docs/admin-ui/assistant-preview-desktop.png),
 [applied](../docs/admin-ui/assistant-applied-desktop.png) and
 [mobile](../docs/admin-ui/assistant-applied-mobile.png).
 
@@ -66,6 +67,30 @@ may publish.
   chosen, not the order uploads finish. Refer to these names in messages.
 - **Content is data.** Titles, texts and file names the assistant reads never
   change its instructions.
+
+## Page previews
+
+**Preview page** on an entry card renders the entry as proposed, through the
+site's own [live preview](live_preview.md) targets and templates. Nothing is
+saved to do this.
+
+- **Entry tabs** switch between the entries in the proposal. The apply bar
+  keeps describing the whole batch.
+- **Before / Proposed** compare the saved version with the proposal. Before is
+  the version the proposal was prepared from; if the entry has changed since,
+  the preview says so and the proposal must be prepared again. A new entry has
+  no Before.
+- **Views** appear when a content type has more than one preview target, for
+  example the page and its listing.
+- **Desktop / Mobile** set the frame width. **Show changes** outlines the
+  inserted and changed blocks. The outline is drawn over the page, not into
+  it, so it does not change the layout.
+
+Content types without a preview target show their changes in the card only.
+A template that fails to render shows the error and a retry, never a
+substitute image. Previews are private to the editor who prepared the
+proposal, and are removed when another preview replaces them or the proposal
+is applied.
 
 ## What a proposal can do
 

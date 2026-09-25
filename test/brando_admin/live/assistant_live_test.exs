@@ -94,4 +94,80 @@ defmodule BrandoAdmin.AssistantLiveTest do
     {:ok, conversation} = Agent.start_conversation(other)
     assert {:error, {:live_redirect, %{to: "/admin/assistant"}}} = live(conn, "/admin/assistant/#{conversation.id}")
   end
+
+  describe "page preview" do
+    setup %{current_user: user} = c do
+      uid = Brando.Utils.generate_uid()
+
+      ops = [
+        %Brando.Content.Proposals.CreateEntry{
+          schema: Page,
+          ref: "sommerro",
+          fields: %{title: "Sommerro", uri: "sommerro", language: "en", template: "default.html"}
+        },
+        %Brando.Content.Proposals.InsertBlock{
+          target: {Page, c.identity.id},
+          module: c.text_module.id,
+          uid: uid,
+          texts: %{body: "<p>Written in the assistant</p>"}
+        }
+      ]
+
+      {:ok, conversation} = Agent.start_conversation(user)
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, user, conversation_id: conversation.id)
+
+      conversation
+      |> Ecto.Changeset.change(proposal_id: proposal.id)
+      |> Brando.Repo.update!()
+
+      %{conversation: conversation, uid: uid, proposal: proposal}
+    end
+
+    defp frame_key(html) do
+      [key] = Regex.run(~r/__livepreview\?key=([A-Za-z0-9_-]+)/, html, capture: :all_but_first)
+      key
+    end
+
+    test "renders the proposed page and its saved version without saving", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      identity = "Brando.Pages.Page:#{c.identity.id}"
+
+      view |> element(~s(footer button[phx-value-key="#{identity}"])) |> render_click()
+      html = render(view)
+      assert html =~ "Page preview"
+
+      # The test app's default Page view cannot render these pages: the error
+      # is shown honestly, with a retry, and the named views stay available.
+      assert html =~ "The page could not be rendered"
+      assert has_element?(view, ~s(button[phx-click="preview"][phx-value-key="#{identity}"]), "Try again")
+
+      html = view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+      proposed_key = frame_key(html)
+      assert {:ok, proposed} = Brando.LivePreview.get_cache(proposed_key)
+      assert proposed =~ "Written in the assistant"
+      assert proposed =~ "<!-- [+:B<#{c.uid}>] -->"
+      assert html =~ ~s(data-highlight="[&quot;#{c.uid}&quot;]")
+
+      html = view |> element(~s(button[phx-value-version="before"])) |> render_click()
+      before_key = frame_key(html)
+      assert before_key != proposed_key
+      assert {:ok, before} = Brando.LivePreview.get_cache(before_key)
+      refute before =~ "Written in the assistant"
+      assert html =~ ~s(data-highlight="[]")
+
+      html = view |> element(~s(nav button[phx-value-key="new:sommerro"])) |> render_click()
+      assert html =~ "This page has not been created yet"
+
+      # Another entry starts on its content type's default view.
+      view |> element(~s(button[phx-value-version="proposed"])) |> render_click()
+      html = view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+      new_key = frame_key(html)
+      assert {:ok, created} = Brando.LivePreview.get_cache(new_key)
+      assert created =~ "Sommerro"
+
+      view |> element("button", "All changes") |> render_click()
+      assert has_element?(view, ".assistant-cards")
+      assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 3
+    end
+  end
 end
