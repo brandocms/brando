@@ -130,8 +130,39 @@ defmodule Brando.Images.AltText do
          {:ok, %{text: text, model: model}} <-
            AI.generate_text(messages(image, languages, binary, media_type, ai_opts), ai_opts),
          {:ok, values} <- parse(text, languages) do
-      {:ok, %{values: values, model: model}}
+      {:ok, %{values: fit(values, ai_opts), model: model}}
     end
+  end
+
+  # A reply over the limit is sent back once to be shortened, as text only;
+  # whatever is still too long after that is cut at a clause (see trim/1).
+  defp fit(values, ai_opts) do
+    long = for {language, text} <- values, String.length(text) > @alt_length, into: %{}, do: {language, text}
+
+    shortened =
+      with true <- long != %{},
+           {:ok, %{text: reply}} <- AI.generate_text(shorten_prompt(long), ai_opts),
+           {:ok, shorter} <- parse(reply, Map.keys(long)) do
+        shorter
+      else
+        _ -> %{}
+      end
+
+    Map.new(values, fn {language, text} -> {language, trim(Map.get(shortened, language, text))} end)
+  end
+
+  defp shorten_prompt(long) do
+    keys = Enum.map_join(long, ", ", fn {language, _} -> "\"#{language}\": \"…\"" end)
+    texts = Enum.map_join(long, "\n", fn {language, text} -> "- #{AI.language_name(language)}: #{text}" end)
+
+    """
+    This alt text is longer than #{@alt_length} characters. Rewrite each as one complete sentence of \
+    at most #{@alt_length} characters, keeping what matters most. Keep each in its language.
+
+    #{texts}
+
+    Reply with one JSON object and nothing else: {#{keys}}\
+    """
   end
 
   defp requested_languages(image) do
@@ -153,7 +184,8 @@ defmodule Brando.Images.AltText do
         "" ->
           """
           Write alt text for this image. Describe what it shows that matters to someone \
-          who cannot see it, in one sentence of at most #{@alt_length} characters. Do not \
+          who cannot see it, in one complete sentence of at most #{@alt_length} characters \
+          — count them; a short sentence that ends is better than a long one. Do not \
           begin with "Image of" or "Picture of". If the image is mostly text, give the text. \
           Plain text, no quotes.\
           """
@@ -200,12 +232,12 @@ defmodule Brando.Images.AltText do
               value = Map.get(map, language),
               is_binary(value) and String.trim(value) != "",
               into: %{},
-              do: {language, trim(value)}
+              do: {language, clean(value)}
 
         if values == %{}, do: {:error, :empty_response}, else: {:ok, values}
 
       _ when length(languages) == 1 ->
-        case trim(text) do
+        case clean(text) do
           "" -> {:error, :empty_response}
           value -> {:ok, %{hd(languages) => value}}
         end
@@ -328,14 +360,39 @@ defmodule Brando.Images.AltText do
 
   defp extension(path), do: path |> Path.extname() |> String.downcase()
 
-  # One sentence, cut back a word at a time if the model ran long.
-  defp trim(text) do
-    text = text |> String.trim() |> String.trim(~s(")) |> String.trim()
+  defp clean(text), do: text |> String.trim() |> String.trim(~s(")) |> String.trim()
 
-    if String.length(text) <= @alt_length do
-      text
+  @doc false
+  # The last resort for text still over the limit: cut at the last sentence or
+  # clause that fits and end it with a full stop, so it reads as finished.
+  # Only when no clause keeps half the limit does it cut at a word, with an
+  # ellipsis to show the cut.
+  def trim(text) do
+    text = clean(text)
+    if String.length(text) <= @alt_length, do: text, else: cut(text)
+  end
+
+  defp cut(text) do
+    head = String.slice(text, 0, @alt_length)
+
+    clause =
+      ~r/[.!?;:,\x{2013}\x{2014}](?=\s|$)/u
+      |> Regex.scan(head <> " ", return: :index)
+      |> List.last()
+      |> case do
+        [{at, length}] -> head |> binary_part(0, at + length) |> finish()
+        nil -> ""
+      end
+
+    if String.length(clause) >= div(@alt_length, 2) do
+      clause
     else
-      text |> String.slice(0, @alt_length) |> String.replace(~r/\s+\S*$/u, "") |> String.trim_trailing(",")
+      String.replace(head, ~r/\s+\S*$/u, "") <> "\u2026"
     end
+  end
+
+  defp finish(clause) do
+    clause = String.replace(clause, ~r/[\s,;:\x{2013}\x{2014}]+$/u, "")
+    if String.ends_with?(clause, [".", "!", "?"]), do: clause, else: clause <> "."
   end
 end
