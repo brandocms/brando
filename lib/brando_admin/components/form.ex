@@ -1129,11 +1129,15 @@ defmodule BrandoAdmin.Components.Form do
       # fresh connection escapes the per-test sandbox transaction and cannot
       # see test-created entries (same class of problem as
       # :sql_sandbox_serial_preloads) — load in-process instead.
-      entry = load_entry_with_progress(nil, form_id, schema, form_blueprint, entry_id, singular, context)
+      case load_entry_with_progress(nil, form_id, schema, form_blueprint, entry_id, singular, context) do
+        {:ok, entry} ->
+          socket
+          |> assign(:entry, entry)
+          |> finish_form_update()
 
-      socket
-      |> assign(:entry, entry)
-      |> finish_form_update()
+        :not_found ->
+          entry_not_found(socket)
+      end
     else
       lv_pid = self()
       has_blocks? = schema.has_trait(Brando.Trait.Blocks)
@@ -1157,7 +1161,8 @@ defmodule BrandoAdmin.Components.Form do
   # progress: the entry itself (fast) first, then the heavy recursive block
   # preloads — with a cheap count in between so the overlay can say how many
   # blocks are coming. Custom form queries pass through untouched (we can't
-  # split preloads we don't own), so they load in one step.
+  # split preloads we don't own), so they load in one step. A missing entry is
+  # an expected answer, not a failure, so it comes back as `:not_found`.
   defp load_entry_with_progress(lv_pid, form_id, schema, form_blueprint, entry_id, singular, context) do
     has_blocks? = schema.has_trait(Brando.Trait.Blocks)
     split_blocks? = has_blocks? && is_nil(form_blueprint.query)
@@ -1168,30 +1173,33 @@ defmodule BrandoAdmin.Components.Form do
       |> add_preloads(schema, form_blueprint, skip_blocks: split_blocks?)
       |> Map.put(:with_deleted, true)
 
-    entry =
-      case apply(context, :"get_#{singular}", [query_params]) do
-        {:ok, entry} -> entry
-        {:error, _err} -> raise Brando.Exception.EntryNotFoundError
-      end
+    case apply(context, :"get_#{singular}", [query_params]) do
+      {:ok, entry} when split_blocks? ->
+        if lv_pid do
+          block_count = Brando.Content.Blocks.count_entry_blocks(schema, entry_id)
 
-    if split_blocks? do
-      if lv_pid do
-        block_count = Brando.Content.Blocks.count_entry_blocks(schema, entry_id)
+          send_update(lv_pid, __MODULE__,
+            id: form_id,
+            action: :entry_load_progress,
+            status: %{phase: :blocks, blocks?: true, block_count: block_count}
+          )
+        end
 
-        send_update(lv_pid, __MODULE__,
-          id: form_id,
-          action: :entry_load_progress,
-          status: %{phase: :blocks, blocks?: true, block_count: block_count}
-        )
-      end
+        {:ok, Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema))}
 
-      Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema))
-    else
-      entry
+      {:ok, entry} ->
+        {:ok, entry}
+
+      {:error, _err} ->
+        :not_found
     end
   end
 
-  def handle_async(:entry_load, {:ok, entry}, socket) do
+  def handle_async(:entry_load, {:ok, :not_found}, socket) do
+    {:noreply, entry_not_found(socket)}
+  end
+
+  def handle_async(:entry_load, {:ok, {:ok, entry}}, socket) do
     socket =
       socket
       |> assign(:entry, entry)
@@ -1225,6 +1233,25 @@ defmodule BrandoAdmin.Components.Form do
       {exception, stacktrace} when is_exception(exception) -> reraise(exception, stacktrace)
       other -> exit(other)
     end
+  end
+
+  # A missing entry (a stale link, or one deleted in another tab) is not a crash.
+  # Raising for it took the LiveView down after it had connected, and the
+  # client's rejoin mounted it again straight into the same load — forever. Say
+  # so and go back to the listing instead.
+  defp entry_not_found(socket) do
+    %{schema: schema, current_user: current_user} = socket.assigns
+
+    BrandoAdmin.Toast.send_to(
+      current_user,
+      gettext("%{name} #%{id} was not found. It may have been deleted.",
+        name: Brando.Blueprint.get_singular(schema),
+        id: socket.assigns.entry_id
+      ),
+      %{level: :error, type: :notification}
+    )
+
+    push_navigate(socket, to: schema.__admin_route__(:list, [schema.__modules__().admin_list_view]))
   end
 
   # Commit exactly like handle_event("save_file") does: write the FK into a
