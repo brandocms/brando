@@ -31,6 +31,8 @@ defmodule Brando.Sitemap do
   To generate an initial sitemap, call `Brando.Sitemap.generate_sitemap/0`
   """
 
+  require Logger
+
   @doc """
   Convenience macro for creating a sitemap function
   """
@@ -65,6 +67,34 @@ defmodule Brando.Sitemap do
   def check_lastmod(%Sitemapper.URL{lastmod: %DateTime{}} = url), do: url
 
   @doc """
+  Drops URLs without a `loc` from one sitemap's entries, logging how many.
+
+  An entry without a URL on this site (`absolute_url ..., only: ...`) has a
+  `nil` URL; listed anyway, it would stop the whole generation. Filter such
+  entries in the query instead — `filter: Schema.__url_filter__()` — so they
+  are never loaded.
+  """
+  @spec reject_without_loc(Enumerable.t(), atom() | String.t()) :: Enumerable.t()
+  def reject_without_loc(urls, sitemap) do
+    Stream.transform(
+      urls,
+      fn -> 0 end,
+      fn
+        %{loc: loc}, skipped when loc in [nil, ""] -> {[], skipped + 1}
+        url, skipped -> {[url], skipped}
+      end,
+      fn skipped ->
+        if skipped > 0 do
+          Logger.warning("Sitemap #{sitemap}: skipped #{skipped} entries without a URL. Filter them in its query.")
+        end
+
+        {[], skipped}
+      end,
+      fn _skipped -> :ok end
+    )
+  end
+
+  @doc """
   Check if sitemap exists
   """
   def exists? do
@@ -87,7 +117,11 @@ defmodule Brando.Sitemap do
   def generate_sitemap(opts \\ []) do
     sitemap_module = Brando.web_module(Sitemap)
     sitemap_functions = sitemap_module.__info__(:functions)
-    entries = Stream.flat_map(sitemap_functions, &apply(sitemap_module, elem(&1, 0), []))
+
+    entries =
+      Stream.flat_map(sitemap_functions, fn {fun, _arity} ->
+        sitemap_module |> apply(fun, []) |> reject_without_loc(fun)
+      end)
 
     sitemap_path = Path.join([Brando.Tenant.Storage.current_media_root(), "sitemaps"])
     File.mkdir_p!(sitemap_path)

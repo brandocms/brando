@@ -217,36 +217,33 @@ defmodule Brando.Plug.HTML do
     conn
   end
 
+  # An entry without a URL of its own (the 404 and 410 pages) gets neither a
+  # canonical nor alternates: pointing them at a URL would claim the page is
+  # that URL. `render_hreflangs/1` then falls back to the request URL.
+  # Alternates without a URL of their own are skipped quietly; one that should
+  # have a URL but resolves to none is logged, as that is a missing preload.
   def put_hreflang(conn, %{alternate_entries: alternate_entries} = entry) when is_list(alternate_entries) do
-    canonical = {entry.language, URL.resolve(entry, :with_host)}
+    case URL.resolve(entry, :with_host) do
+      nil ->
+        conn
 
-    hreflangs =
-      Enum.reduce(entry.alternate_entries, [], fn
-        %{status: :published} = alt, acc ->
-          case URL.resolve(alt) do
-            nil ->
-              log_no_valid_hreflang(alt)
-              acc
+      canonical_url ->
+        hreflangs =
+          alternate_entries
+          |> Enum.filter(&(Map.get(&1, :status, :published) == :published and URL.has_url?(&1)))
+          |> Enum.flat_map(fn alt ->
+            case URL.resolve(alt) do
+              url when url in [nil, ""] ->
+                log_no_valid_hreflang(alt)
+                []
 
-            url ->
-              acc ++ [{alt.language, Brando.Utils.hostname(url)}]
-          end
+              url ->
+                [{alt.language, Brando.Utils.hostname(url)}]
+            end
+          end)
 
-        %{status: _}, acc ->
-          acc
-
-        alt, acc ->
-          case URL.resolve(alt) do
-            nil ->
-              log_no_valid_hreflang(alt)
-              acc
-
-            url ->
-              acc ++ [{alt.language, Brando.Utils.hostname(url)}]
-          end
-      end)
-
-    put_private(conn, :brando_hreflangs, [canonical] ++ hreflangs)
+        put_private(conn, :brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
+    end
   end
 
   def put_hreflang(conn, _), do: conn

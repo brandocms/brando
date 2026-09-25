@@ -53,6 +53,48 @@ defmodule Brando.AlternatesTest do
     assert p2.alternate_entries == []
   end
 
+  test "a page without a URL gets no canonical or alternates of its own" do
+    usr = Factory.insert(:random_user)
+
+    {:ok, en} =
+      Pages.create_page(Factory.params_for(:page, title: "Not found", uri: "404", language: :en, has_url: false), usr)
+
+    {:ok, no} =
+      Pages.create_page(Factory.params_for(:page, title: "Ikke funnet", uri: "404", language: :no, has_url: false), usr)
+
+    Page.Alternate.add(en.id, no.id)
+    {:ok, en} = Pages.get_page(%{matches: %{id: en.id}, preload: [:alternate_entries]})
+
+    conn = Brando.Plug.HTML.put_hreflang(%Plug.Conn{assigns: %{}, request_path: "en/missing"}, en)
+    refute Map.has_key?(conn.private, :brando_hreflangs)
+
+    assigns = %{conn: conn}
+
+    assert rendered_to_string(~H"<Brando.HTML.render_hreflangs conn={@conn} />") =~
+             ~s(<link rel="canonical" href="http://localhost/en/missing">)
+  end
+
+  test "an alternate without a URL is skipped without an error" do
+    usr = Factory.insert(:random_user)
+
+    {:ok, public} =
+      Pages.create_page(Factory.params_for(:page, title: "Public", uri: "public0", language: :en), usr)
+
+    {:ok, hidden} =
+      Pages.create_page(Factory.params_for(:page, title: "Skjult", uri: "public0", language: :no, has_url: false), usr)
+
+    Page.Alternate.add(public.id, hidden.id)
+    {:ok, public} = Pages.get_page(%{matches: %{id: public.id}, preload: [:alternate_entries]})
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        conn = Brando.Plug.HTML.put_hreflang(%Plug.Conn{assigns: %{}}, public)
+        assert conn.private.brando_hreflangs == [{:en, "http://localhost/en/public0"}]
+      end)
+
+    refute log =~ "No valid url found"
+  end
+
   test "put_hreflang and render_hreflang" do
     usr = Factory.insert(:random_user)
 

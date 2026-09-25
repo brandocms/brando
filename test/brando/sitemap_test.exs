@@ -30,6 +30,8 @@ defmodule Brando.SitemapTest do
   alias Brando.Sitemap
   alias Sitemapper.URL
 
+  require Logger
+
   test "check_lastmod/1" do
     url = %URL{lastmod: ~N[2023-12-20 14:00:00], loc: "/"}
     checked_url = Sitemap.check_lastmod(url)
@@ -37,6 +39,21 @@ defmodule Brando.SitemapTest do
     url = %URL{lastmod: checked_url.lastmod, loc: "/"}
     checked_url = Sitemap.check_lastmod(url)
     assert DateTime.to_iso8601(checked_url.lastmod) == "2023-12-20T15:00:00+01:00"
+  end
+
+  test "reject_without_loc/2 drops entries without a URL and says how many" do
+    previous = Logger.level()
+    Logger.configure(level: :warning)
+    on_exit(fn -> Logger.configure(level: previous) end)
+
+    urls = [%URL{loc: "http://localhost/a"}, %URL{loc: nil}, %URL{loc: ""}]
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert [%URL{loc: "http://localhost/a"}] = urls |> Sitemap.reject_without_loc("pages") |> Enum.to_list()
+      end)
+
+    assert log =~ "Sitemap pages: skipped 2 entries without a URL"
   end
 
   test "sitemap/1" do

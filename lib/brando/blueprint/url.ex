@@ -18,8 +18,12 @@ defmodule Brando.Blueprint.URL do
 
   @doc """
   Resolves an entry's Blueprint URL and prefixes the configured endpoint host.
+
+  An entry without a URL on this site (`absolute_url ..., only: ...`, or a
+  blueprint without one) gives `nil`. It used to give the bare host, so a
+  missing page was indistinguishable from a link to the front page.
   """
-  @spec resolve(struct() | term(), :with_host) :: binary()
+  @spec resolve(struct() | term(), :with_host) :: binary() | nil
   def resolve(%{__struct__: module} = entry, :with_host) do
     entry
     |> module.__absolute_url__()
@@ -28,7 +32,18 @@ defmodule Brando.Blueprint.URL do
 
   def resolve(_entry, :with_host), do: ""
 
-  defp with_hostname(nil), do: hostname()
+  @doc """
+  Whether an entry has a URL on this site, as its Blueprint's `__has_url__/1`
+  says. Anything that is not a Blueprint struct has none.
+  """
+  @spec has_url?(term()) :: boolean()
+  def has_url?(%{__struct__: module} = entry) do
+    function_exported?(module, :__has_url__, 1) and module.__has_url__(entry) == true
+  end
+
+  def has_url?(_entry), do: false
+
+  defp with_hostname(path) when path in [nil, ""], do: nil
   defp with_hostname(path), do: Path.join(hostname(), path)
 
   defp hostname do
