@@ -111,10 +111,10 @@ defmodule BrandoAdmin.Components.Content.List do
 
   # Toggle boolean filter
   def handle_event("toggle_boolean_filter", %{"filter" => filter_key}, socket) do
+    filter = Enum.find(socket.assigns.listing.filters, &(&1.key == filter_key))
     current_value = get_in(socket.assigns, [:list_opts, :filter, String.to_existing_atom(filter_key)])
-    # Off means the filter no longer applies, not "only false": the empty value
-    # drops it from the URL, so it leaves no active-filter chip behind.
-    new_value = if current_value == "true", do: "", else: "true"
+    # What off sends is the filter's to decide (see `Listings.off_value/1`).
+    new_value = if current_value in [true, "true"], do: Listings.off_value(filter), else: "true"
     {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => new_value})}
   end
 
@@ -435,7 +435,8 @@ defmodule BrandoAdmin.Components.Content.List do
       |> build_list_opts(schema, content_language)
       |> params_to_list_opts(params, schema)
 
-    sanitized_list_opts = sanitize_list_opts(list_opts)
+    # "off" only overrides a switched-on default; the context never sees it.
+    sanitized_list_opts = list_opts |> Listings.drop_switched_off(listing) |> sanitize_list_opts()
 
     {:ok, entries} = apply(context, :"list_#{plural}", [sanitized_list_opts])
     entries = decorate(entries, listing.decorate)
@@ -635,12 +636,27 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
+  # The filters to show as chips: not hidden, and changed from where they rest.
+  defp display_filters(filters, listing_filters, hidden) do
+    filters
+    |> Map.drop(hidden)
+    |> Enum.reject(fn {key, value} ->
+      case Enum.find(listing_filters, &(to_string(&1.key) == to_string(key))) do
+        nil -> false
+        filter -> resting?(filter, value)
+      end
+    end)
+    |> Map.new()
+  end
+
   # A filter reads by its label: a switched-on toggle as the label alone, any
   # other filter as "Label: value". Keys the listing does not declare keep
   # their key.
   defp filter_chip(schema, filters, name, value) do
     case Enum.find(filters, &(to_string(&1.key) == to_string(name))) do
       %{type: :boolean} = filter when value in [true, "true"] -> label(schema, filter)
+      %{type: :boolean} = filter when value in [false, "false"] -> "#{label(schema, filter)}: #{gettext("no")}"
+      %{type: :boolean} = filter -> "#{label(schema, filter)}: #{gettext("off")}"
       %{} = filter -> "#{label(schema, filter)}: #{value}"
       nil -> "#{name}: #{inspect(value)}"
     end
@@ -873,12 +889,19 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
+  # Active means changed from where the filter rests when untouched.
   defp has_active_advanced_filters?(list_opts, filters) do
     Enum.any?(filters, fn f ->
       filter_atom = String.to_existing_atom(f.key)
       value = Map.get(list_opts[:filter] || %{}, filter_atom)
-      value not in [nil, ""]
+      not resting?(f, value)
     end)
+  end
+
+  defp resting?(filter, value) do
+    blank = &(&1 in [nil, ""])
+    resting = Listings.resting_value(filter)
+    if blank.(resting), do: blank.(value), else: to_string(value) == to_string(resting)
   end
 
   # Boolean filter component (toggle switch)
@@ -986,7 +1009,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:active_filter, assigns.active_filter)
       |> assign(:active_sort, assigns.active_sort)
       |> assign(:list_opts, assigns.list_opts)
-      |> assign(:display_filters, Map.drop(assigns.list_opts[:filter] || %{}, assigns.hidden_filters))
+      |> assign(:display_filters, display_filters(assigns.list_opts[:filter] || %{}, all_filters, assigns.hidden_filters))
       |> assign(:advanced_filters, adv_filters)
       |> assign(:has_active_advanced_filters?, has_active_advanced_filters?(assigns.list_opts, adv_filters))
       |> assign_new(:has_status?, fn -> assigns.schema.has_trait(Brando.Trait.Status) end)

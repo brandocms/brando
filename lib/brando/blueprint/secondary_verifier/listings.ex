@@ -97,7 +97,8 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
 
     with :ok <- Support.verify_non_empty_string(dsl_state, path, filter, "filter label", filter.label),
          :ok <- verify_parameter_key(dsl_state, path, filter),
-         :ok <- verify_filter_options(dsl_state, path, filter) do
+         :ok <- verify_filter_options(dsl_state, path, filter),
+         :ok <- verify_filter_off(dsl_state, path, filter) do
       verify_filter_default(dsl_state, path, filter)
     end
   end
@@ -148,6 +149,12 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
   defp verify_option(dsl_state, path, option) do
     Support.verify_non_empty_string(dsl_state, path ++ [:options], option, "select option label", option.label)
   end
+
+  defp verify_filter_off(_dsl_state, _path, %{off: :all}), do: :ok
+  defp verify_filter_off(_dsl_state, _path, %{type: :boolean}), do: :ok
+
+  defp verify_filter_off(dsl_state, path, filter),
+    do: Support.error(dsl_state, path, filter, "only a :boolean filter can set off:")
 
   defp verify_filter_default(_dsl_state, _path, %{type: :text, default: default})
        when is_nil(default) or is_binary(default),

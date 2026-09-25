@@ -189,7 +189,7 @@ msgstr "Blokkmoduler"
 msgid "Class"
 msgstr "Klasse"
 
-#: lib/brando_admin/components/content/list.ex:1198
+#: lib/brando_admin/components/content/list.ex:1237
 #, elixir-autogen, elixir-format
 msgid "Clear selection"
 msgstr "Nullstill utvalg"
@@ -230,7 +230,7 @@ msgstr "Datakilde"
 msgid "Deactivated"
 msgstr "Deaktivert"
 
-#: lib/brando_admin/components/content/list.ex:1375
+#: lib/brando_admin/components/content/list.ex:1414
 #: lib/brando_admin/components/content/list/row.ex:583
 #: lib/brando_admin/components/content/list/row.ex:713
 #: lib/brando_admin/components/content/select_identifier.ex:542
@@ -238,7 +238,7 @@ msgstr "Deaktivert"
 msgid "Deleted"
 msgstr "Slettet"
 
-#: lib/brando_admin/components/content/list.ex:1371
+#: lib/brando_admin/components/content/list.ex:1410
 #: lib/brando_admin/components/content/list/row.ex:709
 #: lib/brando_admin/components/content/select_identifier.ex:541
 #: lib/brando_admin/components/dashboard.ex:99
@@ -246,7 +246,7 @@ msgstr "Slettet"
 msgid "Disabled"
 msgstr "Deaktivert"
 
-#: lib/brando_admin/components/content/list.ex:1372
+#: lib/brando_admin/components/content/list.ex:1411
 #: lib/brando_admin/components/content/list/row.ex:710
 #: lib/brando_admin/components/content/select_identifier.ex:539
 #: lib/brando_admin/components/dashboard.ex:97
@@ -279,7 +279,7 @@ msgstr "Oppdater side"
 msgid "Error"
 msgstr "Feil"
 
-#: lib/brando_admin/components/content/list.ex:783
+#: lib/brando_admin/components/content/list.ex:814
 #, elixir-autogen, elixir-format
 msgid "Filter"
 msgstr "Filter"
@@ -326,7 +326,7 @@ msgstr "Oversikt"
 msgid "Page not found"
 msgstr "Fant ikke siden"
 
-#: lib/brando_admin/components/content/list.ex:1373
+#: lib/brando_admin/components/content/list.ex:1412
 #: lib/brando_admin/components/content/list/row.ex:711
 #: lib/brando_admin/components/content/select_identifier.ex:540
 #: lib/brando_admin/components/dashboard.ex:98
@@ -335,7 +335,7 @@ msgstr "Fant ikke siden"
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando_admin/components/content/list.ex:1374
+#: lib/brando_admin/components/content/list.ex:1413
 #: lib/brando_admin/components/content/list/row.ex:712
 #: lib/brando_admin/components/content/select_identifier.ex:538
 #: lib/brando_admin/components/dashboard.ex:96
@@ -364,7 +364,7 @@ msgstr "Maler"
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando_admin/components/content/list.ex:715
+#: lib/brando_admin/components/content/list.ex:746
 #, elixir-autogen, elixir-format
 msgid "entries"
 msgstr "objekter"
@@ -428,7 +428,7 @@ msgstr "Klikk “+” for å legge til innholdsblokker"
 #: lib/brando_admin/components/content.ex:84
 #: lib/brando_admin/components/content.ex:86
 #: lib/brando_admin/components/content.ex:105
-#: lib/brando_admin/components/content/list.ex:1328
+#: lib/brando_admin/components/content/list.ex:1367
 #: lib/brando_admin/components/form/block/render.ex:1397
 #: lib/brando_admin/components/form/block/render.ex:1464
 #: lib/brando_admin/components/form/block/render.ex:1827
@@ -739,7 +739,7 @@ msgstr "Du har valgt for mange filer"
 msgid "Your timezone is"
 msgstr "Din tidssone er"
 
-#: lib/brando_admin/components/content/list.ex:717
+#: lib/brando_admin/components/content/list.ex:748
 #, elixir-autogen, elixir-format
 msgid "showing"
 msgstr "viser"
@@ -781,7 +781,7 @@ msgstr "Versjoner"
 msgid "Unprotect version"
 msgstr "Fjern beskyttelse"
 
-#: lib/brando_admin/components/content/list.ex:627
+#: lib/brando_admin/components/content/list.ex:630
 #, elixir-autogen, elixir-format
 msgid "Active filters"
 msgstr "Aktive filtre"
@@ -1038,8 +1038,8 @@ msgstr "SVG"
 msgid "Selection"
 msgstr "Utvalg"
 
-#: lib/brando_admin/components/content/list.ex:204
-#: lib/brando_admin/components/content/list.ex:209
+#: lib/brando_admin/components/content/list.ex:206
+#: lib/brando_admin/components/content/list.ex:211
 #, elixir-autogen, elixir-format
 msgid "Sequence updated"
 msgstr "Rekkefølge oppdatert"
@@ -1142,7 +1142,7 @@ msgstr "Oppførings-ID"
 msgid "Image"
 msgstr "Bilde"
 
-#: lib/brando_admin/components/content/list.ex:1065
+#: lib/brando_admin/components/content/list.ex:1104
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:470
 #: lib/brando_admin/components/form/input/multi_select.ex:111
 #: lib/brando_admin/components/form/input/select.ex:80
@@ -1284,7 +1284,7 @@ msgstr "Angi en fremtidig publiseringsdato for denne oppføringen. La stå tomt 
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr "For å opprette og administrere revisjoner, må oppføringen lagres minst én gang først."
 
-#: lib/brando_admin/components/content/list.ex:722
+#: lib/brando_admin/components/content/list.ex:753
 #, elixir-autogen, elixir-format
 msgid "All"
 msgstr "Alle"
@@ -1294,7 +1294,7 @@ msgstr "Alle"
 msgid "Meta properties"
 msgstr "Meta egenskaper"
 
-#: lib/brando_admin/components/content/list.ex:719
+#: lib/brando_admin/components/content/list.ex:750
 #, elixir-autogen, elixir-format
 msgid "Per page:"
 msgstr "Per side:"
@@ -1522,12 +1522,12 @@ msgstr "Planlagt versjon for publisering"
 msgid "Save and continue editing"
 msgstr "Lagre og redigér videre"
 
-#: lib/brando_admin/components/content/list.ex:1232
+#: lib/brando_admin/components/content/list.ex:1271
 #, elixir-autogen, elixir-format
 msgid "Delete selected"
 msgstr "Slett valgte"
 
-#: lib/brando_admin/components/content/list.ex:1224
+#: lib/brando_admin/components/content/list.ex:1263
 #, elixir-autogen, elixir-format
 msgid "Duplicate selected to"
 msgstr "Dupliser valgte til"
@@ -1681,22 +1681,22 @@ msgstr "Velg coverbilde"
 msgid "Show native player controls"
 msgstr "Vis innebygde spillerkontroller"
 
-#: lib/brando_admin/components/content/list.ex:311
+#: lib/brando_admin/components/content/list.ex:313
 #, elixir-autogen, elixir-format
 msgid "Download"
 msgstr "Last ned"
 
-#: lib/brando_admin/components/content/list.ex:309
+#: lib/brando_admin/components/content/list.ex:311
 #, elixir-autogen, elixir-format
 msgid "Download exports: "
 msgstr "Last ned eksport: "
 
-#: lib/brando_admin/components/content/list.ex:317
+#: lib/brando_admin/components/content/list.ex:319
 #, elixir-autogen, elixir-format
 msgid "Download ready"
 msgstr "Klar for nedlasting"
 
-#: lib/brando_admin/components/content/list.ex:277
+#: lib/brando_admin/components/content/list.ex:279
 #, elixir-autogen, elixir-format
 msgid "Exporting entries..."
 msgstr "Eksporterer oppføringer..."
@@ -1754,7 +1754,7 @@ msgstr "Applikasjonen har for øyeblikket ingen globaler konfigurert"
 msgid "This might occur during a server update or reboot"
 msgstr "Dette kan skje under en serveroppdatering eller omstart"
 
-#: lib/brando_admin/components/content/list.ex:947
+#: lib/brando_admin/components/content/list.ex:985
 #: lib/brando_admin/live/users/groups_live.ex:1042
 #, elixir-autogen, elixir-format
 msgid "Export"
@@ -2344,7 +2344,7 @@ msgstr "Kommentar — vises ikke i frontend"
 msgid "Current user activity"
 msgstr "Brukeraktivitet"
 
-#: lib/brando_admin/components/content/list.ex:1050
+#: lib/brando_admin/components/content/list.ex:1089
 #, elixir-autogen, elixir-format
 msgid "Sort by"
 msgstr "Sortering"
@@ -2649,7 +2649,7 @@ msgstr "Lim inn YouTube, Vimeo eller direkte video-URL"
 msgid "Remove thumbnail"
 msgstr "Fjern miniatyrbilde"
 
-#: lib/brando_admin/components/content/list.ex:855
+#: lib/brando_admin/components/content/list.ex:886
 #, elixir-autogen, elixir-format
 msgid "Reset filters"
 msgstr "Nullstill filtre"
@@ -2953,7 +2953,7 @@ msgstr[1] "%{count} videoer valgt for organisering"
 msgid "AI returned an empty response"
 msgstr "KI returnerte et tomt svar"
 
-#: lib/brando_admin/components/content/list.ex:1211
+#: lib/brando_admin/components/content/list.ex:1250
 #: lib/brando_admin/components/form/input/gallery.ex:404
 #: lib/brando_admin/components/form/revisions_drawer.ex:126
 #: lib/brando_admin/live/config/asset_live.ex:134
@@ -3477,7 +3477,7 @@ msgstr "Velg bruker..."
 msgid "Remove link"
 msgstr "Fjern lenke"
 
-#: lib/brando_admin/components/content/list.ex:1340
+#: lib/brando_admin/components/content/list.ex:1379
 #, elixir-autogen, elixir-format
 msgid "Applying translations..."
 msgstr "Legger inn oversettelser..."
@@ -3502,12 +3502,12 @@ msgstr "Tøm utklippstavle"
 msgid "Collapse root blocks"
 msgstr "Kollaps rotblokker"
 
-#: lib/brando_admin/components/content/list.ex:1338
+#: lib/brando_admin/components/content/list.ex:1377
 #, elixir-autogen, elixir-format
 msgid "Collecting content..."
 msgstr "Samler innhold..."
 
-#: lib/brando_admin/components/content/list.ex:1342
+#: lib/brando_admin/components/content/list.ex:1381
 #, elixir-autogen, elixir-format
 msgid "Complete!"
 msgstr "Fullført!"
@@ -3527,7 +3527,7 @@ msgstr "Kunne ikke lagre opplastet fil"
 msgid "Dismiss"
 msgstr "Fjern"
 
-#: lib/brando_admin/components/content/list.ex:1336
+#: lib/brando_admin/components/content/list.ex:1375
 #, elixir-autogen, elixir-format
 msgid "Duplicating entry..."
 msgstr "Dupliserer oppføring..."
@@ -3547,7 +3547,7 @@ msgstr "Utvid multiblokker"
 msgid "Expand root blocks"
 msgstr "Utvid rotblokker"
 
-#: lib/brando_admin/components/content/list.ex:1337
+#: lib/brando_admin/components/content/list.ex:1376
 #, elixir-autogen, elixir-format
 msgid "Fetching entry..."
 msgstr "Henter oppføring..."
@@ -3562,7 +3562,7 @@ msgstr "Bildeprosessering feilet"
 msgid "No blocks yet"
 msgstr "Ingen blokker ennå"
 
-#: lib/brando_admin/components/content/list.ex:1325
+#: lib/brando_admin/components/content/list.ex:1364
 #, elixir-autogen, elixir-format
 msgid "Open translated entry"
 msgstr "Åpne oversatt oppføring"
@@ -3588,7 +3588,7 @@ msgstr "Velg videoer"
 msgid "Processing…"
 msgstr "Prosesserer…"
 
-#: lib/brando_admin/components/content/list.ex:1341
+#: lib/brando_admin/components/content/list.ex:1380
 #, elixir-autogen, elixir-format
 msgid "Re-rendering entry..."
 msgstr "Gjengir oppføring på nytt..."
@@ -3603,22 +3603,22 @@ msgstr "Avvist filtype [%{rejected}]. Tillatt: %{allowed}"
 msgid "Translate to"
 msgstr "Oversett til"
 
-#: lib/brando_admin/components/content/list.ex:1339
+#: lib/brando_admin/components/content/list.ex:1378
 #, elixir-autogen, elixir-format
 msgid "Translating content..."
 msgstr "Oversetter innhold..."
 
-#: lib/brando_admin/components/content/list.ex:1300
+#: lib/brando_admin/components/content/list.ex:1339
 #, elixir-autogen, elixir-format
 msgid "Translating entry"
 msgstr "Oversetter oppføring"
 
-#: lib/brando_admin/components/content/list.ex:1298
+#: lib/brando_admin/components/content/list.ex:1337
 #, elixir-autogen, elixir-format
 msgid "Translation complete!"
 msgstr "Oversettelse fullført!"
 
-#: lib/brando_admin/components/content/list.ex:1321
+#: lib/brando_admin/components/content/list.ex:1360
 #, elixir-autogen, elixir-format
 msgid "Translation failed:"
 msgstr "Oversettelse feilet:"
@@ -5912,7 +5912,7 @@ msgstr "Ingen brukere funnet"
 msgid "Try another name or email address."
 msgstr "Prøv et annet navn eller en annen e-postadresse."
 
-#: lib/brando_admin/components/content/list.ex:784
+#: lib/brando_admin/components/content/list.ex:815
 #, elixir-format, elixir-autogen
 msgid "Filter by %{field}"
 msgstr "Filtrer etter %{field}"
@@ -6573,7 +6573,7 @@ msgstr "Den nye filen erstatter innholdet i denne filen overalt hvor den brukes.
 msgid "These accounts have no site assignment and will receive no site access: %{ids}."
 msgstr "Disse kontoene er ikke knyttet til noe nettsted og får ingen nettstedstilgang: %{ids}."
 
-#: lib/brando_admin/components/content/list.ex:271
+#: lib/brando_admin/components/content/list.ex:273
 #, elixir-autogen, elixir-format
 msgid "This export is not available."
 msgstr "Denne eksporten er ikke tilgjengelig."
@@ -9470,7 +9470,7 @@ msgstr "kan ha høyst %{count} tegn"
 msgid "Select image"
 msgstr "Velg bilde"
 
-#: lib/brando_admin/components/content/list.ex:1202
+#: lib/brando_admin/components/content/list.ex:1241
 #, elixir-autogen
 msgid "Selected"
 msgstr "valgt"
@@ -11798,3 +11798,13 @@ msgstr "Nytt galleri"
 #, elixir-autogen, elixir-format
 msgid "Not in use anywhere yet."
 msgstr "Ikke i bruk noe sted ennå."
+
+#: lib/brando_admin/components/content/list.ex:658
+#, elixir-autogen, elixir-format
+msgid "no"
+msgstr "nei"
+
+#: lib/brando_admin/components/content/list.ex:659
+#, elixir-autogen, elixir-format
+msgid "off"
+msgstr "av"

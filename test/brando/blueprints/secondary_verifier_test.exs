@@ -251,6 +251,17 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
     )
 
     assert_compile_error(
+      ~r/only a :boolean filter can set off:/,
+      quote do
+        listings do
+          listing do
+            filter label: "Title", key: "title", off: false
+          end
+        end
+      end
+    )
+
+    assert_compile_error(
       ~r/declares duplicate filter "title"/,
       quote do
         listings do

@@ -839,6 +839,22 @@ end
 sort :newest, label: t("Newest"), order: [{:desc, :inserted_at}]
 ```
 
+A `:boolean` filter is a toggle. Switched on, the context filter receives
+`"true"`. Switched off, it no longer applies and every entry shows, the same as
+before anyone touched it. Set `off: false` when off should mean "only entries
+without the value": the context filter then receives `"false"` when off, and
+the filter starts there. `default: true` starts the toggle on. The listing shows
+an active-filter chip, and offers to reset, only while a filter differs from
+where it starts.
+
+```elixir
+# Off: all entries
+filter label: t("Not in use"), key: "unused", type: :boolean
+
+# Off: only entries that are not featured
+filter label: t("Featured"), key: "featured", type: :boolean, off: false
+```
+
 ### Actions and exports
 
 `action` adds a row-level action and `selection_action` adds an action for the

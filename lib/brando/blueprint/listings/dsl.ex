@@ -107,6 +107,17 @@ defmodule Brando.Blueprint.Listings.Dsl do
         required: false,
         default: nil,
         doc: "Default value. For :boolean, typically false. For :select, typically nil."
+      ],
+      off: [
+        type: {:in, [:all, false]},
+        required: false,
+        default: :all,
+        doc: """
+        What a :boolean filter switched off means. `:all` (the default): the
+        filter no longer applies and every entry shows. `false`: the context
+        filter receives `"false"`, so only entries without the value show; the
+        filter then starts off, filtering on false, unless `default: true`.
+        """
       ]
     ]
   }

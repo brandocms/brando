@@ -12,5 +12,6 @@ defmodule Brando.Blueprint.Listings.Filter do
             key: nil,
             type: :text,
             options: [],
-            default: nil
+            default: nil,
+            off: :all
 end

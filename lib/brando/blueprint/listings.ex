@@ -62,8 +62,9 @@ defmodule Brando.Blueprint.Listings do
   def merge_filter_defaults(query, listing) do
     defaults =
       listing.filters
-      |> Enum.reject(&(&1.default in [nil, false, ""]))
-      |> Map.new(&{String.to_atom(&1.key), &1.default})
+      |> Enum.map(&{&1, resting_value(&1)})
+      |> Enum.reject(fn {_filter, value} -> value in [nil, ""] end)
+      |> Map.new(fn {filter, value} -> {String.to_atom(filter.key), value} end)
 
     case defaults do
       empty when map_size(empty) == 0 ->
@@ -76,4 +77,41 @@ defmodule Brando.Blueprint.Listings do
         end)
     end
   end
+
+  @doc """
+  The value a filter holds when nobody has touched it, as the context filter
+  receives it; `nil` when it does not apply.
+
+  A :boolean filter rests at `"true"` with `default: true`, at `"false"` with
+  `off: false`, and otherwise does not apply.
+  """
+  def resting_value(%{type: :boolean, default: default}) when default in [true, "true"], do: "true"
+  def resting_value(%{type: :boolean, off: false}), do: "false"
+  def resting_value(%{type: :boolean}), do: nil
+  def resting_value(%{default: default}) when default in [nil, false, ""], do: nil
+  def resting_value(%{default: default}), do: default
+
+  @doc """
+  The value a :boolean filter switched off sends: `"false"` with `off: false`.
+  With `off: :all` the filter stops applying: an empty value drops it from the
+  URL, and `"off"` does so over a `default: true` (see `drop_switched_off/2`).
+  """
+  def off_value(%{off: false}), do: "false"
+  def off_value(%{default: default}) when default in [true, "true"], do: "off"
+  def off_value(_filter), do: ""
+
+  @doc """
+  Drops the :boolean filters switched off over a `default: true`, so the
+  context never receives `"off"`.
+  """
+  def drop_switched_off(%{filter: filters} = list_opts, listing) when is_map(filters) do
+    off =
+      for %{type: :boolean, key: key} <- listing.filters,
+          Map.get(filters, String.to_atom(key)) == "off",
+          do: String.to_atom(key)
+
+    %{list_opts | filter: Map.drop(filters, off)}
+  end
+
+  def drop_switched_off(list_opts, _listing), do: list_opts
 end

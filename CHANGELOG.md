@@ -14,6 +14,14 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
 
+- **A `:boolean` listing filter switched off stops applying.** Switching a
+  toggle off used to send `"false"` to the context filter, so the same off
+  position showed every entry before the toggle was touched and only entries
+  without the value after. Off now means all entries. Set `off: false` on the
+  filter to keep filtering on false; it then starts there. `default: true`
+  toggles can now be switched off. Active-filter chips and the reset button show
+  only while a filter differs from where it starts.
+
 - **Image alt text, title and credits are translated.** `Brando.Images.Image`'s
   `alt`, `title` and `credits` are now maps of content language → text
   (`:i18n_string`). The `brando_180` migration moves existing text under the
