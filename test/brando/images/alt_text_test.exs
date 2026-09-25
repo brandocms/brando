@@ -117,6 +117,37 @@ defmodule Brando.Images.AltTextTest do
     assert AltText.parse(~s({"en": ""}), ["en"]) == {:error, :empty_response}
   end
 
+  test "a reply over the limit is sent back once to be shortened" do
+    Brando.AIStub.configure()
+    image = insert_image(%{path: "images/alt/long.jpg"})
+    place_file(image)
+    long = String.duplicate("A very long description of a harbour ", 5)
+
+    Brando.AIStub.reply(fn prompt ->
+      if prompt =~ "longer than 125 characters",
+        do: ~s({"en": "Boats in Oslo harbour at dusk", "no": "Båter i Oslo havn i skumringen"}),
+        else: ~s({"en": "#{long}", "no": "Kort nok"})
+    end)
+
+    assert {:ok, %{values: values}} = AltText.describe(image.id)
+    assert values == %{"en" => "Boats in Oslo harbour at dusk", "no" => "Kort nok"}
+  end
+
+  test "text still over the limit is cut at a clause, never mid-word" do
+    short = "A ferry at dusk"
+    assert AltText.trim(~s("#{short}")) == short
+
+    clause = "Two people row a small wooden boat across a still fjord at dawn"
+    tail = ", with mist over the water and snow-capped mountains rising steeply behind them"
+    assert AltText.trim(clause <> tail) == clause <> "."
+
+    # No clause keeps half the limit: cut at a word and mark the cut.
+    words = String.duplicate("harbour ", 20)
+    cut = AltText.trim("Boats, " <> words)
+    assert String.ends_with?(cut, "harbour…")
+    assert String.length(cut) <= 126
+  end
+
   test "a missing file fails the suggestion with a reason, instead of retrying" do
     Brando.AIStub.configure()
     Brando.AIStub.reply("never asked")

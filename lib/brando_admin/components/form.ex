@@ -3279,10 +3279,14 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:progress_popup, "Associating block fields..."})
 
+    # The blocks join the entry only here, after its changeset ran, so the
+    # creator trait is asked again whether this save edited anything — before
+    # rendering, which would otherwise read as an edit.
     new_changeset =
       block_changesets
       |> assoc_all_block_fields(changeset)
       |> then(&assoc_all_transformer_fields(&1, socket.assigns.transformer_changesets))
+      |> Brando.Trait.Creator.stamp_if_edited(schema, current_user)
 
     entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
 
@@ -3301,7 +3305,7 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, entry} ->
         send(self(), {:progress_popup, "Entry saved."})
 
-        Brando.Trait.run_trait_after_save_callbacks(
+        Brando.Blueprint.AfterSave.run(
           schema,
           entry,
           rendered_changeset,
@@ -3451,7 +3455,7 @@ defmodule BrandoAdmin.Components.Form do
 
     case apply(context, :"#{mutation_type}_#{singular}", [changeset, current_user]) do
       {:ok, entry} ->
-        Brando.Trait.run_trait_after_save_callbacks(schema, entry, changeset, current_user)
+        Brando.Blueprint.AfterSave.run(schema, entry, changeset, current_user)
         maybe_run_form_after_save(form_blueprint, entry, current_user)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
@@ -3883,7 +3887,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok, updated_file} = Brando.Files.update_file(validated_changeset, current_user)
 
-    Brando.Trait.run_trait_after_save_callbacks(
+    Brando.Blueprint.AfterSave.run(
       Brando.Files.File,
       updated_file,
       validated_changeset,
@@ -3971,7 +3975,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok, new_image} = Images.create_image(validated_changeset, current_user)
 
-    Brando.Trait.run_trait_after_save_callbacks(
+    Brando.Blueprint.AfterSave.run(
       Images.Image,
       new_image,
       validated_changeset,
@@ -4035,7 +4039,7 @@ defmodule BrandoAdmin.Components.Form do
     # status/sizes since the drawer was opened.
     {:ok, updated_image} = Images.get_image(image.id)
 
-    Brando.Trait.run_trait_after_save_callbacks(
+    Brando.Blueprint.AfterSave.run(
       Images.Image,
       updated_image,
       validated_changeset,
@@ -4190,7 +4194,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok, updated_video} = Brando.Videos.update_video(validated_changeset, current_user)
 
-    Brando.Trait.run_trait_after_save_callbacks(
+    Brando.Blueprint.AfterSave.run(
       Brando.Videos.Video,
       updated_video,
       validated_changeset,

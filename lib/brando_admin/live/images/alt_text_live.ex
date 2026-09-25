@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
     |> set_admin_locale()
     |> assign(:language, to_string(Brando.config(:default_language)))
     |> assign(:ai_available, AI.configured?(AltText.ai_opts()))
+    |> assign(:model_spec, AI.model_spec(AltText.ai_opts()))
     |> assign(:folder_id, nil)
     |> assign(:accepting_all, false)
     |> assign(:max_batch, Suggestions.max_batch())
@@ -109,7 +110,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
           </p>
 
           <div :if={@ai_available and @candidates != []} class="alt-text-estimate">
-            <.estimate estimate={@estimate} count={min(length(@candidates), @max_batch)} />
+            <.estimate estimate={@estimate} count={min(length(@candidates), @max_batch)} model={@model_spec} />
             <p :if={length(@candidates) > @max_batch} class="alt-text-note">
               {gettext("At most %{max} per run; run it again for the rest.", max: @max_batch)}
             </p>
@@ -142,6 +143,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
 
   attr :estimate, :any
   attr :count, :integer
+  attr :model, :string, default: nil
 
   defp estimate(assigns) do
     ~H"""
@@ -164,7 +166,16 @@ defmodule BrandoAdmin.Images.AltTextLive do
         </p>
       <% {:error, :no_image_input} -> %>
         <p class="error">
-          {gettext("The configured AI model cannot read images. Configure one that can for the alt field.")}
+          {gettext("%{model} cannot read images. Name one that can as the image model (models: [image: ...]).",
+            model: @model
+          )}
+        </p>
+      <% {:error, :unknown_model} -> %>
+        <p>
+          {gettext(
+            "%{model} is not in the model catalogue Brando reads, so its price and whether it reads images are unknown. Check with your provider before describing many images.",
+            model: @model
+          )}
         </p>
       <% _ -> %>
         <p>

@@ -105,5 +105,52 @@ defmodule Brando.AITest do
   end
 
   defp restore_env(app, key, nil), do: Application.delete_env(app, key)
+
+  describe "named models" do
+    test "a job's name picks its model, and an unnamed or unknown one the default" do
+      Application.put_env(:brando, Brando.AI,
+        models: [default: "anthropic:claude-opus-5-5", image: "anthropic:claude-haiku-4-5"]
+      )
+
+      assert Brando.AI.model_spec([]) == "anthropic:claude-opus-5-5"
+      assert Brando.AI.model_spec(model: :image) == "anthropic:claude-haiku-4-5"
+      assert Brando.AI.model_spec(model: :nonexistent) == "anthropic:claude-opus-5-5"
+      assert Brando.AI.model_spec(model: "openai:gpt-4o-mini") == "openai:gpt-4o-mini"
+    end
+
+    test "default_model still sets the default, and an image job falls back to it" do
+      Application.put_env(:brando, Brando.AI, default_model: "anthropic:claude-opus-5-5")
+
+      assert Brando.AI.model_spec([]) == "anthropic:claude-opus-5-5"
+      assert Brando.AI.model_spec(model: :image) == "anthropic:claude-opus-5-5"
+    end
+
+    test "alt text asks for the image model" do
+      Application.put_env(:brando, Brando.AI,
+        models: [default: "anthropic:claude-opus-5-5", image: "anthropic:claude-haiku-4-5"]
+      )
+
+      assert Brando.AI.model_spec(Brando.Images.AltText.ai_opts()) == "anthropic:claude-haiku-4-5"
+    end
+  end
+
+  test "field_ai_opts/2 lets app config fill in what the trait leaves out" do
+    Application.put_env(:brando, Brando.AI, fields: [meta_description: [model: :default, prompt: "General field prompt"]])
+
+    opts = Brando.AI.field_ai_opts(TraitConfiguredMetaSchema, :meta_description)
+
+    assert opts[:prompt] == "Trait configured meta prompt"
+    assert opts[:model] == :default
+  end
+
+  # A model newer than the catalogue has unknown abilities, not none.
+  test "model_info/1 reports image input as unknown for a model outside the catalogue" do
+    Application.put_env(:brando, Brando.AI, default_model: "anthropic:claude-imaginary-9")
+    assert {:ok, %{image_input?: nil, input_price: nil}} = Brando.AI.model_info()
+
+    Application.put_env(:brando, Brando.AI, default_model: "anthropic:claude-opus-5-5")
+    assert {:ok, %{image_input?: true}} = Brando.AI.model_info()
+  end
+
   defp restore_env(app, key, value), do: Application.put_env(app, key, value)
 end

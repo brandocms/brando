@@ -120,12 +120,22 @@ in any language is listed.
 Each image is sent at a mid-sized rendition (the smallest configured size at
 least 512px wide), not the original, which keeps the cost down. The images
 are sent to the AI provider. The model must accept image input — the page
-says so when it does not — and can be set apart from the rest:
+says so when the catalogue says it does not, and says when a model is too new
+for the catalogue to know its price or abilities. Alt text uses the `:image`
+model when one is named, so a cheaper model that reads images can do this
+while a stronger one writes copy:
 
 ```elixir
 config :brando, Brando.AI,
-  fields: [alt: [model: "anthropic:claude-haiku-4-5"]]
+  models: [
+    default: "anthropic:claude-opus-5-5",
+    image: "anthropic:claude-haiku-4-5"
+  ]
 ```
+
+`fields: [alt: [model: "..."]]` overrides it for alt text alone. Prices and
+abilities come from the `llm_db` catalogue that ReqLLM reads; after switching
+to a newly released model, `mix deps.update llm_db` picks it up.
 
 The Content SEO **Image descriptions** check links here from any entry whose
 body has images without usable alt text.

@@ -571,6 +571,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
             "The entry fields a generated description is written from. Block fields are read from the last rendered version of the entry."
           )}
         </p>
+        <p :if={AI.model_spec(AI.field_ai_opts(:meta_description))} class="seo-context-model">
+          {gettext("Written by %{model}.", model: AI.model_spec(AI.field_ai_opts(:meta_description)))}
+        </p>
         <div :for={schema <- @schemas} class="seo-context-schema">
           <h4>{Brando.Blueprint.get_plural(schema)}</h4>
           <div class="seo-audit-filters" role="group" aria-label={Brando.Blueprint.get_plural(schema)}>
