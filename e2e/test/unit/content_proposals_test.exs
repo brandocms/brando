@@ -118,7 +118,7 @@ defmodule E2eProject.ContentProposalsTest do
       }
     ]
 
-    {:ok, proposal} = Proposals.prepare(ops, actor)
+    {:ok, proposal} = Proposals.propose(ops, actor)
     assert proposal.problems == []
     assert proposal.effects.live == [{Page, page.id}]
     projects = Repo.aggregate(Project, :count)
@@ -149,7 +149,8 @@ defmodule E2eProject.ContentProposalsTest do
     Preview.discard([case_key, page_key])
     assert Repo.aggregate(Project, :count) == projects
 
-    {:ok, receipt} = Proposals.apply(proposal, actor)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, actor)
+    {:ok, receipt} = Proposals.apply(proposal.id, proposal.version, actor)
     project = Repo.get!(Project, receipt.mappings["created"]["sommerro"])
     assert project.status == :draft
     assert project.listing_image_id == image.id

@@ -486,3 +486,33 @@ order, with new entries first.
 | 5. Page preview integration | 2–4 days | 2–3 days | The adapter, baseline/proposed rendering and block annotations for highlighting already work; the remaining work is UI controls, cache lifecycle per proposal version and a per-target template audit |
 
 Stage 1 took about a day, not the estimated 2–3.
+
+## Stage 2: proposal services and tools (25 September 2026)
+
+- **Stored, versioned proposals** (`content_proposals`, brando_184).
+  `Proposals.propose/3` prepares the operations and stores them frozen, in
+  `Proposals.Codec` form. A refinement (`supersedes:`) gets the next version and
+  marks the previous one `superseded`.
+- **Approval and apply.** `approve/3` records the user's approval of one exact
+  version. It works only on a pending version without problems whose entries and
+  modules are unchanged. `apply/3` takes only the proposal id and version, never
+  operations from the client, and requires that approval. It checks the approval
+  again under the row lock and marks the version `applied` in the same
+  transaction. Other statuses: `cancel/2` and expiry (24 hours).
+  Applying in-memory, unstored proposals is no longer possible.
+- **Block contract additions.** Text refs take safe rich text (the editor's
+  `RichText.safe_html?/1`); header refs take plain text (`texts` on `InsertBlock`,
+  and `SetBlockText`). Select vars take one of their options. Multi modules are
+  not insertable: proposals do not build children yet.
+- **Tool registry: `Brando.Content.Proposals.Tools`.**
+  - Tools: `list_content_types`, `describe_content_type`, `search_entries`,
+    `entry_outline`, `list_modules`, `describe_module`, `list_attachments`,
+    `search_assets` and `prepare_proposal`.
+  - They run with the actor from `Tools.Context`, never from arguments.
+  - Results are compact and bounded (20 results, 160-character excerpts).
+  - Only `prepare_proposal` stores anything. Nothing approves or applies.
+- **BrandoMCP** (sibling repository) exposes the same tools as
+  `brando_content_*`. They work only for the actor the host puts in the handler
+  state. `BrandoMCP.Embedded.call_tool/4` calls them as plain functions, with every
+  transport disabled. The admin's agent calls `Proposals.Tools` directly and does
+  not need BrandoMCP.

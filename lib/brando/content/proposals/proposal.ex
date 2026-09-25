@@ -11,11 +11,17 @@ defmodule Brando.Content.Proposals.Proposal do
       proposal can be applied
     * `effects` — counts for review, and the published entries the proposal
       changes live
+    * `status`, `version`, `conversation_id`, `summary`, `expires_at` — set
+      once the proposal is stored with `Brando.Content.Proposals.propose/3`
   """
   defstruct [
     :id,
     :scope,
     :actor_id,
+    :status,
+    :conversation_id,
+    :summary,
+    :expires_at,
     version: 1,
     operations: [],
     targets: %{},

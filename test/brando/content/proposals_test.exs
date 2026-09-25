@@ -2,7 +2,18 @@ defmodule Brando.Content.ProposalsTest do
   use Brando.ConnCase, async: false
   alias Brando.Content.Block
   alias Brando.Content.Proposals
-  alias Brando.Content.Proposals.{CreateEntry, InsertBlock, Preview, Receipt, SetBlockMedia, SetBlockValues, SetFields}
+
+  alias Brando.Content.Proposals.{
+    CreateEntry,
+    InsertBlock,
+    Preview,
+    Receipt,
+    SetBlockMedia,
+    SetBlockText,
+    SetBlockValues,
+    SetFields
+  }
+
   alias Brando.Content.Transfer.Catalog
   alias Brando.{Factory, Repo}
   alias Brando.Pages.Page
@@ -10,101 +21,15 @@ defmodule Brando.Content.ProposalsTest do
   alias Ecto.Changeset
   import Ecto.Query, only: [from: 2]
 
+  import Brando.ProposalFixtures, only: [module!: 4]
+
   setup do
-    user = Factory.insert(:random_user)
-    image = Factory.insert(:image, creator_id: user.id)
-    video = Factory.insert(:video)
-
-    text_module =
-      module!(user, "Text", "<p>{{ heading }}</p>{% ref refs.body %}",
-        refs: [ref("body", %{type: "text", data: %{text: "Default body"}})]
-      )
-
-    case_module =
-      module!(
-        user,
-        "Case",
-        ~s(<div class="case">{{ heading }}{% ref refs.cover %}{% ref refs.clip %}{% ref refs.slot %}</div>),
-        refs: [
-          ref("cover", %{type: "picture", data: %{}}),
-          ref("clip", %{type: "video", data: %{}}),
-          ref("slot", %{
-            type: "media",
-            data: %{
-              available_blocks: ["picture", "video"],
-              template_picture: %{title: "Slot picture"},
-              template_video: %{}
-            }
-          })
-        ],
-        vars: [
-          %{type: "string", key: "heading", label: "Heading", value: "Default heading"},
-          %{type: "boolean", key: "wide", label: "Wide", value_boolean: false}
-        ]
-      )
-
-    identity = page!(user, "Identity", text_module)
-    naming = page!(user, "Naming", text_module)
-
-    %{
-      user: user,
-      image: image,
-      video: video,
-      text_module: text_module,
-      case_module: case_module,
-      identity: identity,
-      naming: naming
-    }
+    Brando.ProposalFixtures.context()
   end
 
-  defp ref(name, data), do: %{name: name, uid: Brando.Utils.generate_uid(), data: data}
-
-  defp module!(user, name, code, opts) do
-    {:ok, module} =
-      Brando.Content.create_module(
-        Factory.params_for(:module,
-          name: %{"en" => name},
-          namespace: %{"en" => "Content"},
-          help_text: %{"en" => "Help"},
-          code: code,
-          refs: opts[:refs] || [],
-          vars: opts[:vars] || []
-        ),
-        user
-      )
-
-    module
-  end
-
-  defp page!(user, title, module) do
-    page = Factory.insert(:page, creator: user, title: title, uri: String.downcase(title))
-
-    for n <- 0..2 do
-      block =
-        %Block{}
-        |> Block.recursive_block_changeset(
-          %{
-            "uid" => Brando.Utils.generate_uid(),
-            "type" => "module",
-            "module_id" => module.id,
-            "creator_id" => user.id,
-            "source" => to_string(Page.Blocks),
-            "refs" => [
-              %{
-                "uid" => Brando.Utils.generate_uid(),
-                "name" => "body",
-                "data" => %{"type" => "text", "data" => %{"text" => "<p>#{title} #{n}</p>"}}
-              }
-            ]
-          },
-          user
-        )
-        |> Repo.insert!()
-
-      struct(Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: n}) |> Repo.insert!()
-    end
-
-    page
+  defp approve_and_apply(proposal, user) do
+    with {:ok, _} <- Proposals.approve(proposal.id, proposal.version, user),
+         do: Proposals.apply(proposal.id, proposal.version, user)
   end
 
   defp load(page, user), do: Catalog.load!(Page, page.id, user)
@@ -146,7 +71,7 @@ defmodule Brando.Content.ProposalsTest do
     blocks = block_count()
     revisions = {revisions(c.identity), revisions(c.naming)}
 
-    assert {:ok, proposal} = Proposals.prepare(workflow(c), c.user)
+    assert {:ok, proposal} = Proposals.propose(workflow(c), c.user)
     assert proposal.problems == []
 
     assert %{creates: 1, updates: 2, inserted_blocks: 2, updated_blocks: 0, deletions: 0, live: live} =
@@ -161,7 +86,7 @@ defmodule Brando.Content.ProposalsTest do
     assert roots(c.identity, c.user) == before_identity
 
     [_, identity_op, naming_op] = proposal.operations
-    assert {:ok, %Receipt{} = receipt} = Proposals.apply(proposal, c.user)
+    assert {:ok, %Receipt{} = receipt} = approve_and_apply(proposal, c.user)
 
     identity = load(c.identity, c.user)
     [first, inserted | rest] = identity.entry_blocks
@@ -199,7 +124,7 @@ defmodule Brando.Content.ProposalsTest do
              Enum.sort(["Brando.Pages.Page:#{c.identity.id}", "Brando.Pages.Page:#{c.naming.id}"])
 
     # A second apply finds the receipt and writes nothing.
-    assert {:ok, again} = Proposals.apply(proposal, c.user)
+    assert {:ok, again} = Proposals.apply(proposal.id, proposal.version, c.user)
     assert again.id == receipt.id
     assert block_count() == blocks + 2
     assert Repo.aggregate(from(p in Page, where: p.uri == "sommerro"), :count) == 1
@@ -207,8 +132,8 @@ defmodule Brando.Content.ProposalsTest do
 
   test "a media slot takes an image through its picture template", c do
     op = %InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id, media: %{slot: {:image, c.image.id}}}
-    assert {:ok, proposal} = Proposals.prepare([op], c.user)
-    assert {:ok, _} = Proposals.apply(proposal, c.user)
+    assert {:ok, proposal} = Proposals.propose([op], c.user)
+    assert {:ok, _} = approve_and_apply(proposal, c.user)
 
     slot =
       load(c.identity, c.user).entry_blocks |> List.last() |> then(& &1.block.refs) |> Enum.find(&(&1.name == "slot"))
@@ -229,10 +154,10 @@ defmodule Brando.Content.ProposalsTest do
       %SetFields{target: {Page, c.naming.id}, fields: %{title: "Naming, renamed"}}
     ]
 
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
     assert proposal.problems == []
     assert proposal.effects.updated_blocks == 0
-    assert {:ok, _} = Proposals.apply(proposal, c.user)
+    assert {:ok, _} = approve_and_apply(proposal, c.user)
 
     [inserted | _] = load(c.identity, c.user).entry_blocks
     assert inserted.block.uid == uid
@@ -243,7 +168,7 @@ defmodule Brando.Content.ProposalsTest do
     # A saved block without the ref is reported, not changed.
     [saved | _] = uids(c.naming, c.user)
     op = %SetBlockMedia{target: {Page, c.naming.id}, block_uid: saved, ref: :cover, asset: {:image, c.image.id}}
-    assert {:ok, proposal} = Proposals.prepare([op], c.user)
+    assert {:ok, proposal} = Proposals.propose([op], c.user)
     assert [%{code: :unknown_ref}] = proposal.problems
   end
 
@@ -266,7 +191,7 @@ defmodule Brando.Content.ProposalsTest do
       %InsertBlock{target: {Page, c.naming.id}, module: c.case_module.id, values: %{heading: {:new, "case"}}}
     ]
 
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
 
     assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [
              {0, :wrong_media_type},
@@ -281,30 +206,30 @@ defmodule Brando.Content.ProposalsTest do
              {8, :draft_dependency}
            ]
 
-    assert {:error, _} = Proposals.apply(proposal, c.user)
+    assert {:error, _} = approve_and_apply(proposal, c.user)
     assert block_count() == blocks
   end
 
   test "a URI in use is a problem, not silently renamed", c do
     ops = [%SetFields{target: {Page, c.naming.id}, fields: %{uri: "identity"}}]
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
     assert [%{code: :taken, target: {Page, _}}] = proposal.problems
   end
 
   test "an invalid entry is a problem, found before anything is written", c do
     ops = [%CreateEntry{schema: Page, ref: "untitled", fields: %{uri: "untitled", language: "xx"}}]
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
     assert [%{code: :invalid, target: {:new, "untitled"}}] = proposal.problems
   end
 
   test "an entry edited after prepare is refused on apply and on preview", c do
     ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
     blocks = block_count()
 
     Repo.get!(Page, c.identity.id) |> Changeset.change(title: "Edited meanwhile") |> Repo.update!()
 
-    assert {:error, message} = Proposals.apply(proposal, c.user)
+    assert {:error, message} = approve_and_apply(proposal, c.user)
     assert message =~ "changed"
     assert {:error, _} = Preview.render(proposal, {Page, c.identity.id}, c.user)
     assert block_count() == blocks
@@ -313,11 +238,11 @@ defmodule Brando.Content.ProposalsTest do
 
   test "a module changed after prepare is refused", c do
     ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
     {:ok, _} = Brando.Content.update_module(c.case_module, %{code: "<div>changed</div>"}, c.user)
     assert Brando.Content.fetch_module(c.case_module.id).version == c.case_module.version + 1
 
-    assert {:error, message} = Proposals.apply(proposal, c.user)
+    assert {:error, message} = approve_and_apply(proposal, c.user)
     assert message =~ "module"
   end
 
@@ -327,7 +252,7 @@ defmodule Brando.Content.ProposalsTest do
       %SetFields{target: {Page, c.naming.id}, fields: %{uri: "naming-renamed"}}
     ]
 
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
     assert proposal.problems == []
     blocks = block_count()
     revisions = revisions(c.identity)
@@ -337,7 +262,7 @@ defmodule Brando.Content.ProposalsTest do
     # rather than the URI being renamed on save.
     Factory.insert(:page, uri: "naming-renamed", language: :en, creator: c.user)
 
-    assert {:error, message} = Proposals.apply(proposal, c.user)
+    assert {:error, message} = approve_and_apply(proposal, c.user)
     assert message =~ "already in use"
     assert Repo.get!(Page, c.naming.id).uri == "naming"
     assert block_count() == blocks
@@ -347,9 +272,9 @@ defmodule Brando.Content.ProposalsTest do
 
   test "another user or a revoked grant cannot apply the proposal", c do
     ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
-    assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
     other = Factory.insert(:random_user)
-    assert {:error, message} = Proposals.apply(proposal, other)
+    assert {:error, message} = approve_and_apply(proposal, other)
     assert message =~ "another user"
 
     put_test_env(:authorization_mode, :groups)
@@ -369,9 +294,9 @@ defmodule Brando.Content.ProposalsTest do
     {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
 
     # Changing a published page also needs the publish grant.
-    assert {:ok, %{problems: [%{code: :forbidden}]}} = Proposals.prepare(ops, editor)
+    assert {:ok, %{problems: [%{code: :forbidden}]}} = Proposals.propose(ops, editor)
     Repo.get!(Page, c.identity.id) |> Changeset.change(status: :draft) |> Repo.update!()
-    assert {:ok, proposal} = Proposals.prepare(ops, editor)
+    assert {:ok, proposal} = Proposals.propose(ops, editor)
     assert proposal.problems == []
 
     # Creating is outside the editor's grants.
@@ -381,17 +306,161 @@ defmodule Brando.Content.ProposalsTest do
       fields: %{title: "X", uri: "x", language: "en", template: "default.html"}
     }
 
-    assert {:ok, %{problems: [%{code: :forbidden}]}} = Proposals.prepare([create], editor)
+    assert {:ok, %{problems: [%{code: :forbidden}]}} = Proposals.propose([create], editor)
 
     blocks = block_count()
     assert {:ok, :ok} = Groups.remove_member(scope, group.id, editor.id)
-    assert {:error, _} = Proposals.apply(proposal, editor)
+    assert {:error, _} = approve_and_apply(proposal, editor)
     assert block_count() == blocks
+  end
+
+  describe "stored proposals" do
+    test "apply needs the actor's approval of that exact version", c do
+      ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user, summary: "One case")
+      assert proposal.status == "pending"
+      assert proposal.version == 1
+      blocks = block_count()
+
+      assert {:error, message} = Proposals.apply(proposal.id, 1, c.user)
+      assert message =~ "Approve"
+      assert {:error, _} = Proposals.approve(proposal.id, 2, c.user)
+      assert {:error, _} = Proposals.approve(proposal.id, 1, Factory.insert(:random_user))
+      assert {:ok, %{status: "approved"}} = Proposals.approve(proposal.id, 1, c.user)
+      assert {:error, _} = Proposals.approve(proposal.id, 1, c.user)
+      assert block_count() == blocks
+
+      assert {:ok, receipt} = Proposals.apply(proposal.id, 1, c.user)
+      assert {:ok, %{status: "applied"}} = Proposals.get(proposal.id, c.user)
+      assert {:ok, ^receipt} = Proposals.apply(proposal.id, 1, c.user)
+      assert block_count() == blocks + 1
+    end
+
+    test "a refinement supersedes the previous version and its approval", c do
+      ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      conversation = Ecto.UUID.generate()
+      assert {:ok, first} = Proposals.propose(ops, c.user, conversation_id: conversation)
+      assert {:ok, _} = Proposals.approve(first.id, 1, c.user)
+
+      refined = [%InsertBlock{target: {Page, c.naming.id}, module: c.case_module.id, values: %{heading: "Refined"}}]
+      assert {:ok, second} = Proposals.propose(refined, c.user, supersedes: first.id)
+      assert second.version == 2
+      assert second.conversation_id == conversation
+      assert [%{version: 2}, %{version: 1, status: "superseded"}] = Proposals.list(conversation, c.user)
+
+      assert {:error, message} = Proposals.apply(first.id, 1, c.user)
+      assert message =~ "newer version"
+      assert {:error, _} = Proposals.propose(refined, c.user, supersedes: first.id)
+
+      assert {:ok, _} = Proposals.approve(second.id, 2, c.user)
+      assert {:ok, _} = Proposals.apply(second.id, 2, c.user)
+
+      assert List.last(load(c.naming, c.user).entry_blocks).block.vars
+             |> Enum.find(&(&1.key == "heading"))
+             |> Map.get(:value) == "Refined"
+
+      assert length(load(c.identity, c.user).entry_blocks) == 3
+    end
+
+    test "expired and cancelled proposals cannot be approved", c do
+      ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      assert {:ok, expired} = Proposals.propose(ops, c.user)
+
+      Repo.get!(Proposals.Record, expired.id)
+      |> Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -60))
+      |> Repo.update!()
+
+      assert {:error, message} = Proposals.approve(expired.id, 1, c.user)
+      assert message =~ "expired"
+
+      assert {:ok, cancelled} = Proposals.propose(ops, c.user)
+      assert :ok = Proposals.cancel(cancelled.id, c.user)
+      assert {:error, _} = Proposals.approve(cancelled.id, 1, c.user)
+    end
+
+    test "problems are stored with the proposal and block approval", c do
+      ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id, media: %{cover: {:video, c.video.id}}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert {:ok, stored} = Proposals.get(proposal.id, c.user)
+      assert [%{code: :wrong_media_type, operation: 0}] = stored.problems
+      assert {:error, _} = Proposals.approve(proposal.id, 1, c.user)
+    end
+
+    test "stored operations decode to the frozen operations", c do
+      assert {:ok, proposal} = Proposals.propose(workflow(c), c.user)
+      assert {:ok, stored} = Proposals.get(proposal.id, c.user)
+      assert stored.operations == proposal.operations
+      assert stored.fingerprints == proposal.fingerprints
+      assert stored.module_versions == proposal.module_versions
+      assert stored.effects == proposal.effects
+    end
+  end
+
+  describe "text refs and select vars" do
+    test "insert a block with text and replace the text of a saved block", c do
+      [saved | _] = uids(c.naming, c.user)
+
+      ops = [
+        %InsertBlock{
+          target: {Page, c.identity.id},
+          module: c.text_module.id,
+          texts: %{body: "<p>Written by the agent</p>"}
+        },
+        %SetBlockText{target: {Page, c.naming.id}, block_uid: saved, ref: :body, text: "<p>Rewritten</p>"}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert proposal.effects.updated_blocks == 1
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      assert List.last(load(c.identity, c.user).entry_blocks).block.refs |> hd() |> then(& &1.data.data.text) ==
+               "<p>Written by the agent</p>"
+
+      [first | _] = load(c.naming, c.user).entry_blocks
+      assert first.block.uid == saved
+      assert hd(first.block.refs).data.data.text == "<p>Rewritten</p>"
+      assert Repo.get!(Page, c.naming.id).rendered_blocks =~ "Rewritten"
+    end
+
+    test "unsafe rich text and unknown text slots are problems", c do
+      ops = [
+        %InsertBlock{
+          target: {Page, c.identity.id},
+          module: c.text_module.id,
+          texts: %{body: ~s{<p onclick="x()">Hi</p>}}
+        },
+        %InsertBlock{target: {Page, c.identity.id}, module: c.text_module.id, texts: %{missing: "Hi"}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [{0, :unsafe_text}, {1, :unknown_ref}]
+    end
+
+    test "a select var takes one of its options", c do
+      module =
+        module!(c.user, "Choice", "<p>{{ tone }}</p>",
+          vars: [
+            %{
+              type: "select",
+              key: "tone",
+              label: "Tone",
+              value: "light",
+              options: [%{label: "Light", value: "light"}, %{label: "Dark", value: "dark"}]
+            }
+          ]
+        )
+
+      ok = %InsertBlock{target: {Page, c.identity.id}, module: module.id, values: %{tone: "dark"}}
+      bad = %InsertBlock{target: {Page, c.identity.id}, module: module.id, values: %{tone: "neon"}}
+      assert {:ok, %{problems: []}} = Proposals.propose([ok], c.user)
+      assert {:ok, %{problems: [%{code: :unsupported_value}]}} = Proposals.propose([bad], c.user)
+    end
   end
 
   describe "preview" do
     test "renders the proposed page and its saved baseline without writing", c do
-      assert {:ok, proposal} = Proposals.prepare(workflow(c), c.user)
+      assert {:ok, proposal} = Proposals.propose(workflow(c), c.user)
       blocks = block_count()
       target = {Page, c.identity.id}
 
@@ -422,7 +491,7 @@ defmodule Brando.Content.ProposalsTest do
 
     test "a content type without a preview target says so", c do
       ops = [%CreateEntry{schema: Brando.Pages.Fragment, ref: "f", fields: %{key: "f", parent_key: "p", language: "en"}}]
-      assert {:ok, proposal} = Proposals.prepare(ops, c.user)
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
       assert {:error, :no_preview_target} = Preview.render(proposal, {:new, "f"}, c.user)
     end
   end

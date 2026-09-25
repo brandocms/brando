@@ -26,13 +26,25 @@ defmodule Brando.Content.Proposals.InsertBlock do
     * `placement` — `:append`, `{:before, uid}` or `{:after, uid}`, where `uid`
       is a root block of the field
     * `values` — var values by key
+    * `texts` — `%{ref_name => text}` for text refs (safe rich-text HTML) and
+      header refs (plain text)
     * `media` — `%{ref_name => {:image, id} | {:video, id}}`
 
   `uid` and `ref_uids` are frozen when the proposal is prepared, so every
   materialization — review, preview and apply — builds the same block.
   """
   @enforce_keys [:target, :module]
-  defstruct [:target, :module, :uid, field: "blocks", placement: :append, values: %{}, media: %{}, ref_uids: %{}]
+  defstruct [
+    :target,
+    :module,
+    :uid,
+    field: "blocks",
+    placement: :append,
+    values: %{},
+    texts: %{},
+    media: %{},
+    ref_uids: %{}
+  ]
 end
 
 defmodule Brando.Content.Proposals.SetBlockMedia do
@@ -48,4 +60,13 @@ defmodule Brando.Content.Proposals.SetBlockValues do
   @moduledoc "Set var values by key on the root block `block_uid`."
   @enforce_keys [:target, :block_uid, :values]
   defstruct [:target, :block_uid, :values, field: "blocks"]
+end
+
+defmodule Brando.Content.Proposals.SetBlockText do
+  @moduledoc """
+  Replace the text of ref `ref` on the root block `block_uid`: safe rich-text
+  HTML for a text ref, plain text for a header ref.
+  """
+  @enforce_keys [:target, :block_uid, :ref, :text]
+  defstruct [:target, :block_uid, :ref, :text, field: "blocks"]
 end

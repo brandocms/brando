@@ -5,7 +5,7 @@ defmodule Brando.Content.Proposals do
   Reviewed content changes across several saved entries.
 
   A proposal is a list of semantic operations — `CreateEntry`, `SetFields`,
-  `InsertBlock`, `SetBlockMedia` and `SetBlockValues` — that `prepare/2`
+  `InsertBlock`, `SetBlockMedia`, `SetBlockValues` and `SetBlockText` — that `prepare/2`
   resolves against the actor's content, validates and freezes. Nothing is
   written until `apply/2`:
 
@@ -27,15 +27,19 @@ defmodule Brando.Content.Proposals do
   would be a draft — so such a value is a blocking `:draft_dependency`.
   """
   import Ecto.Query, only: [from: 2]
+  import Kernel, except: [apply: 3]
 
   alias Brando.Authorization.Boundary
   alias Brando.Content
   alias Brando.Content.Blocks
+  alias Brando.Content.Proposals.Codec
   alias Brando.Content.Proposals.CreateEntry
   alias Brando.Content.Proposals.InsertBlock
   alias Brando.Content.Proposals.Proposal
   alias Brando.Content.Proposals.Receipt
+  alias Brando.Content.Proposals.Record
   alias Brando.Content.Proposals.SetBlockMedia
+  alias Brando.Content.Proposals.SetBlockText
   alias Brando.Content.Proposals.SetBlockValues
   alias Brando.Content.Proposals.SetFields
   alias Brando.Content.Transfer
@@ -109,8 +113,10 @@ defmodule Brando.Content.Proposals do
       op
       | target: target(op.target),
         field: to_string(op.field),
+        module: module_reference(op.module),
         uid: op.uid || Utils.generate_uid(),
         values: stringify(op.values),
+        texts: stringify(op.texts),
         media: stringify(op.media),
         ref_uids: Map.new(refs, &{&1.name, op.ref_uids[&1.name] || Utils.generate_uid()})
     }
@@ -118,8 +124,16 @@ defmodule Brando.Content.Proposals do
 
   defp freeze(%SetBlockMedia{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
 
+  defp freeze(%SetBlockText{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
+
   defp freeze(%SetBlockValues{} = op),
     do: %{op | target: target(op.target), field: to_string(op.field), values: stringify(op.values)}
+
+  defp module_reference(reference) do
+    Content.SharedLibrary.reference(reference)
+  rescue
+    _ -> reference
+  end
 
   defp target({:new, ref}), do: {:new, to_string(ref)}
   defp target(target), do: target
@@ -167,6 +181,7 @@ defmodule Brando.Content.Proposals do
          {:ok, module} <- allowed_module(op.module, schema, op.field),
          :ok <- placement(op, proposal) do
       values(op.values, module.vars) ++
+        Enum.flat_map(op.texts, fn {name, text} -> text(name, text, module) end) ++
         Enum.flat_map(op.media, fn {name, asset} -> media(name, asset, module, actor) end) ++
         draft_dependencies(op.values, proposal)
     else
@@ -181,6 +196,7 @@ defmodule Brando.Content.Proposals do
       case op do
         %SetBlockMedia{ref: name, asset: asset} -> media(to_string(name), asset, module, actor)
         %SetBlockValues{values: values} -> values(values, module.vars) ++ draft_dependencies(values, proposal)
+        %SetBlockText{ref: name, text: text} -> text(to_string(name), text, module)
       end
     else
       {:error, problem} -> [problem]
@@ -235,7 +251,7 @@ defmodule Brando.Content.Proposals do
       is_nil(module) ->
         {:error, problem(:unknown_module, dgettext("content_proposals", "This module does not exist."))}
 
-      module.parent_id || module_id(module) not in allowed_module_ids(schema, field, module) ->
+      module.parent_id || module.multi || module_id(module) not in allowed_module_ids(schema, field, module) ->
         {:error,
          problem(:module_not_allowed, dgettext("content_proposals", "This module is not available in this block field."))}
 
@@ -244,24 +260,30 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  # The block field's `module_set` form option limits the root modules the
-  # editor's picker offers; without one, every root module is available.
   defp allowed_module_ids(schema, field, module) do
-    set =
-      with %{blocks: inputs} <- schema.__form__(),
-           %{opts: opts} <- Enum.find(inputs, &(to_string(&1.name) == field)) do
-        opts[:module_set]
-      else
-        _ -> nil
-      end
+    case module_set(schema, field) do
+      set when set in [nil, "", "all"] ->
+        [module_id(module)]
 
-    if set in [nil, "", "all"] do
-      [module_id(module)]
+      set ->
+        case Content.get_module_set(%{matches: %{title: set}, preload: [module_set_modules: :module]}) do
+          {:ok, set} -> Enum.map(set.module_set_modules, &module_id(&1.module))
+          _ -> []
+        end
+    end
+  end
+
+  @doc """
+  The module set a block field's form declares (`blocks :blocks, module_set: …`).
+  It limits the root modules the editor's picker offers; `nil` allows all.
+  """
+  @spec module_set(module(), String.t()) :: String.t() | nil
+  def module_set(schema, field) do
+    with %{blocks: inputs} <- schema.__form__(),
+         %{opts: opts} <- Enum.find(inputs, &(to_string(&1.name) == field)) do
+      opts[:module_set]
     else
-      case Content.get_module_set(%{matches: %{title: set}, preload: [module_set_modules: :module]}) do
-        {:ok, set} -> Enum.map(set.module_set_modules, &module_id(&1.module))
-        _ -> []
-      end
+      _ -> nil
     end
   end
 
@@ -325,21 +347,46 @@ defmodule Brando.Content.Proposals do
   end
 
   defp values(values, vars) do
-    Enum.flat_map(values, fn {key, value} ->
-      case Enum.find(vars || [], &(&1.key == key)) do
-        nil ->
-          [problem(:unknown_var, dgettext("content_proposals", "The module has no variable %{key}.", key: key))]
+    Enum.flat_map(values, fn {key, value} -> value_problems(Enum.find(vars || [], &(&1.key == key)), key, value) end)
+  end
 
-        %{type: :boolean} when is_boolean(value) ->
-          []
+  defp value_problems(nil, key, _value),
+    do: [problem(:unknown_var, dgettext("content_proposals", "The module has no variable %{key}.", key: key))]
 
-        %{type: type} when type in @text_vars and is_binary(value) ->
-          []
+  defp value_problems(var, key, value), do: if(settable?(var, value), do: [], else: [unsupported(var, key, value)])
 
-        _ ->
-          [problem(:unsupported_value, dgettext("content_proposals", "%{key} cannot be set to this value.", key: key))]
-      end
-    end)
+  defp settable?(%{type: :boolean}, value), do: is_boolean(value)
+  defp settable?(%{type: type}, value) when type in @text_vars, do: is_binary(value)
+  defp settable?(%{type: :select, options: options}, value), do: Enum.any?(options || [], &(&1.value == value))
+  defp settable?(_, _), do: false
+
+  defp unsupported(%{type: :select}, key, value) when is_binary(value),
+    do:
+      problem(
+        :unsupported_value,
+        dgettext("content_proposals", "%{key} has no option %{value}.", key: key, value: value)
+      )
+
+  defp unsupported(_var, key, _value),
+    do: problem(:unsupported_value, dgettext("content_proposals", "%{key} cannot be set to this value.", key: key))
+
+  # Text refs hold rich text that must pass the same safety check as the
+  # editor; header refs hold plain text.
+  defp text(name, text, module) do
+    case Enum.find(module.refs || [], &(&1.name == name)) do
+      %{data: %{type: "text"}} when is_binary(text) ->
+        if Brando.RichText.safe_html?(text),
+          do: [],
+          else: [problem(:unsafe_text, dgettext("content_proposals", "%{name} contains unsafe rich text.", name: name))]
+
+      %{data: %{type: "header"}} when is_binary(text) ->
+        if String.contains?(text, ["<", ">"]),
+          do: [problem(:unsafe_text, dgettext("content_proposals", "%{name} takes plain text.", name: name))],
+          else: []
+
+      _ ->
+        [problem(:unknown_ref, dgettext("content_proposals", "The module has no text slot %{name}.", name: name))]
+    end
   end
 
   defp media(name, {kind, id}, module, actor) when kind in [:image, :video] do
@@ -521,6 +568,7 @@ defmodule Brando.Content.Proposals do
       |> update_refs(fn ref ->
         name = Changeset.get_field(ref, :name)
         ref = Changeset.put_change(ref, :uid, Map.fetch!(op.ref_uids, name))
+        ref = if text = op.texts[name], do: put_text(ref, text), else: ref
         if asset = op.media[name], do: put_media(ref, asset, module), else: ref
       end)
       |> put_values(op.values)
@@ -551,6 +599,16 @@ defmodule Brando.Content.Proposals do
 
       update_refs(block, &if(Changeset.get_field(&1, :name) == name, do: put_media(&1, op.asset, module), else: &1))
     end)
+  end
+
+  defp block_op(%SetBlockText{} = op, joins, _join_schema, _user) do
+    name = to_string(op.ref)
+
+    update_block(
+      joins,
+      op.block_uid,
+      &update_refs(&1, fn ref -> if Changeset.get_field(ref, :name) == name, do: put_text(ref, op.text), else: ref end)
+    )
   end
 
   defp block_op(%SetBlockValues{} = op, joins, _join_schema, _user),
@@ -586,6 +644,11 @@ defmodule Brando.Content.Proposals do
     Changeset.put_change(ref, :"#{kind}_id", id)
   end
 
+  defp put_text(ref, text) do
+    %{data: inner} = block = Changeset.get_field(ref, :data)
+    Changeset.put_change(ref, :data, %{block | data: %{inner | text: text}})
+  end
+
   defp template(%{data: %{type: "media", data: data}}, "picture"),
     do: %Brando.Villain.Blocks.PictureBlock{
       type: "picture",
@@ -615,21 +678,267 @@ defmodule Brando.Content.Proposals do
     Changeset.put_assoc(block, :vars, vars)
   end
 
-  ## Apply
+  ## Store, approve and apply
+
+  @ttl :timer.hours(24)
 
   @doc """
-  Apply a validated proposal atomically and return its receipt.
+  Prepare `operations` and store them as a proposal version for review.
+
+  Options:
+
+    * `:conversation_id` — the conversation the proposal belongs to
+    * `:supersedes` — the id of the proposal this one refines. It is marked
+      `superseded`, its approval lapses, and this proposal takes the next version.
+    * `:summary` — a short description for review
+
+  Validation problems do not fail; they are stored and block approval.
+  """
+  @spec propose([struct()], term(), keyword()) :: {:ok, Proposal.t()} | {:error, String.t()}
+  def propose(operations, actor, opts \\ []) do
+    with {:ok, proposal} <- prepare(operations, actor) do
+      Error.protect(fn -> store!(proposal, actor, opts) end)
+    end
+  end
+
+  defp store!(proposal, actor, opts) do
+    {:ok, record} =
+      Repo.transaction(fn ->
+        previous = supersede!(opts[:supersedes], actor)
+        Repo.insert!(new_record(proposal, previous, opts))
+      end)
+
+    with_record(proposal, record)
+  end
+
+  defp supersede!(nil, _actor), do: nil
+
+  defp supersede!(id, actor) do
+    previous = record!(id, actor, lock: true)
+
+    if previous.status not in ~w(pending approved),
+      do: Error.fail!(dgettext("content_proposals", "Only a proposal under review can be refined."))
+
+    previous |> Changeset.change(status: "superseded") |> Repo.update!()
+  end
+
+  defp new_record(proposal, previous, opts) do
+    %Record{
+      id: proposal.id,
+      conversation_id: if(previous, do: previous.conversation_id, else: opts[:conversation_id]),
+      version: if(previous, do: previous.version + 1, else: 1),
+      supersedes_id: previous && previous.id,
+      scope: proposal.scope,
+      actor_id: proposal.actor_id,
+      summary: opts[:summary],
+      operations: Enum.map(proposal.operations, &Codec.encode/1),
+      fingerprints: Map.new(proposal.fingerprints, fn {target, digest} -> {Proposal.key(target), digest} end),
+      module_versions:
+        for(
+          {{origin, id}, version} <- proposal.module_versions,
+          do: %{"origin" => to_string(origin), "id" => id, "version" => version}
+        ),
+      problems: Enum.map(proposal.problems, &encode_problem/1),
+      effects: encode_effects(proposal.effects),
+      status: "pending",
+      expires_at: DateTime.add(DateTime.utc_now(), @ttl, :millisecond)
+    }
+  end
+
+  @doc """
+  Load a stored proposal version. Its entries are read as they are now; the
+  fingerprints are the ones captured when it was prepared, so a preview or
+  apply of changed content is refused.
+  """
+  @spec get(Ecto.UUID.t(), term()) :: {:ok, Proposal.t()} | {:error, String.t()}
+  def get(id, actor), do: Error.protect(fn -> rebuild!(record!(id, actor), actor) end)
+
+  @doc "The stored proposal versions of a conversation, newest first."
+  @spec list(Ecto.UUID.t(), term()) :: [Record.t()]
+  def list(conversation_id, actor) do
+    Repo.all(
+      from(r in Record,
+        where: r.conversation_id == ^conversation_id and r.scope == ^Transfer.scope() and r.actor_id == ^user!(actor).id,
+        order_by: [desc: r.version]
+      )
+    )
+  end
+
+  @doc """
+  Record the actor's approval of exactly `version` of proposal `id`.
+
+  Only a pending, unexpired proposal without problems can be approved, and
+  only while its entries and modules are unchanged. The approval is what
+  `apply/3` requires; a model cannot approve on the user's behalf.
+  """
+  @spec approve(Ecto.UUID.t(), integer(), term()) :: {:ok, Proposal.t()} | {:error, String.t()}
+  def approve(id, version, actor) do
+    Error.protect(fn ->
+      {:ok, record} = Repo.transaction(fn -> approve!(id, version, actor) end)
+      rebuild!(record, actor)
+    end)
+  end
+
+  defp approve!(id, version, actor) do
+    record = record!(id, actor, lock: true)
+    reviewable!(record, version, "pending")
+
+    if record.problems != [],
+      do: Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
+
+    record |> rebuild!(actor) |> current!(actor)
+
+    record
+    |> Changeset.change(status: "approved", approved_at: DateTime.utc_now())
+    |> Repo.update!()
+  end
+
+  @doc "Cancel a proposal under review. Content is untouched."
+  @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
+  def cancel(id, actor) do
+    with {:ok, _} <- Error.protect(fn -> cancel!(record!(id, actor)) end), do: :ok
+  end
+
+  defp cancel!(%Record{status: status} = record) when status in ~w(pending approved),
+    do: record |> Changeset.change(status: "cancelled") |> Repo.update!()
+
+  defp cancel!(record), do: record
+
+  @doc """
+  Apply the approved `version` of proposal `id` atomically and return its receipt.
 
   Entries are locked and compared with the proposal's fingerprints; a changed
-  entry or module aborts without writing. Applying the same proposal again
-  returns the stored receipt.
+  entry or module aborts without writing. Applying an applied proposal again
+  returns its receipt.
   """
-  @spec apply(Proposal.t(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
-  def apply(%Proposal{} = proposal, actor) do
-    with {:ok, {receipt, saved}} <- Error.protect(fn -> apply!(proposal, actor) end) do
+  @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
+  def apply(id, version, actor) do
+    result =
+      Error.protect(fn ->
+        record = record!(id, actor)
+
+        if record.status == "applied" do
+          {receipt(id, actor), []}
+        else
+          reviewable!(record, version, "approved")
+          record |> rebuild!(actor) |> apply!(actor)
+        end
+      end)
+
+    with {:ok, {receipt, saved}} <- result do
       Enum.each(saved, &announce(&1, actor))
       {:ok, receipt}
     end
+  end
+
+  defp reviewable!(record, version, status) do
+    cond do
+      record.version != version or record.status == "superseded" ->
+        Error.fail!(dgettext("content_proposals", "A newer version of this proposal exists. Review it instead."))
+
+      record.status != status and status == "approved" ->
+        Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
+
+      record.status != status ->
+        Error.fail!(dgettext("content_proposals", "This proposal is no longer under review."))
+
+      DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt ->
+        Error.fail!(dgettext("content_proposals", "This proposal has expired. Prepare it again."))
+
+      true ->
+        :ok
+    end
+  end
+
+  defp record!(id, actor, opts \\ []) do
+    query =
+      from(r in Record,
+        where: r.id == ^id and r.scope == ^Transfer.scope() and r.actor_id == ^user!(actor).id
+      )
+
+    query = if opts[:lock], do: from(r in query, lock: "FOR UPDATE"), else: query
+
+    Repo.one(query) ||
+      Error.fail!(dgettext("content_proposals", "This proposal belongs to another user, site or environment."))
+  rescue
+    Ecto.Query.CastError ->
+      Error.fail!(dgettext("content_proposals", "This proposal belongs to another user, site or environment."))
+  end
+
+  defp rebuild!(record, actor) do
+    {:ok, operations} = Codec.decode_all(record.operations)
+    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {{:new, op.ref}, op.schema}
+
+    entries =
+      for op <- operations,
+          target = Map.get(op, :target),
+          match?({schema, id} when schema != :new and is_integer(id), target),
+          uniq: true,
+          into: %{},
+          do: {target, load!(target, actor)}
+
+    proposal = %Proposal{
+      id: record.id,
+      scope: record.scope,
+      actor_id: record.actor_id,
+      operations: operations,
+      targets: Map.merge(entries, creates),
+      fingerprints: Map.new(entries, fn {target, _} -> {target, record.fingerprints[Proposal.key(target)]} end),
+      module_versions:
+        Map.new(record.module_versions, fn %{"origin" => origin, "id" => id, "version" => version} ->
+          {Content.SharedLibrary.reference("#{origin}:#{id}"), version}
+        end),
+      problems: Enum.map(record.problems, &decode_problem/1)
+    }
+
+    effects = decode_effects(record.effects, Map.keys(proposal.targets))
+    with_record(%{proposal | effects: effects}, record)
+  end
+
+  defp with_record(proposal, record) do
+    %{
+      proposal
+      | version: record.version,
+        status: record.status,
+        conversation_id: record.conversation_id,
+        summary: record.summary,
+        expires_at: record.expires_at
+    }
+  end
+
+  defp encode_problem(problem) do
+    problem
+    |> Map.update(:target, nil, &(&1 && Proposal.key(&1)))
+    |> Map.new(fn {key, value} -> {to_string(key), if(key == :code, do: to_string(value), else: value)} end)
+  end
+
+  defp decode_problem(problem) do
+    %{
+      code: String.to_existing_atom(problem["code"]),
+      message: problem["message"],
+      operation: problem["operation"],
+      target: problem["target"]
+    }
+  end
+
+  defp encode_effects(effects) do
+    Map.new(effects, fn
+      {:live, targets} -> {"live", Enum.map(targets, &Proposal.key/1)}
+      {key, value} -> {to_string(key), value}
+    end)
+  end
+
+  defp decode_effects(effects, targets) do
+    live = Enum.filter(targets, &(Proposal.key(&1) in (effects["live"] || [])))
+
+    %{
+      creates: effects["creates"],
+      updates: effects["updates"],
+      inserted_blocks: effects["inserted_blocks"],
+      updated_blocks: effects["updated_blocks"],
+      deletions: effects["deletions"],
+      live: live
+    }
   end
 
   defp apply!(proposal, actor) do
@@ -661,6 +970,11 @@ defmodule Brando.Content.Proposals do
   end
 
   defp apply_locked!(proposal, actor, user) do
+    record = record!(proposal.id, actor, lock: true)
+
+    unless record.status == "approved" and record.version == proposal.version,
+      do: Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
+
     locked =
       proposal.fingerprints
       |> Map.keys()
@@ -688,14 +1002,11 @@ defmodule Brando.Content.Proposals do
         after: Map.new(saved, &saved_fingerprint(&1, actor)),
         mappings: %{
           "created" => for({{:new, ref}, entry} <- saved, into: %{}, do: {ref, entry.id}),
-          "effects" =>
-            Map.new(proposal.effects, fn
-              {:live, targets} -> {"live", Enum.map(targets, &Proposal.key/1)}
-              {key, value} -> {to_string(key), value}
-            end)
+          "effects" => encode_effects(proposal.effects)
         }
       })
 
+    record |> Changeset.change(status: "applied") |> Repo.update!()
     {receipt, saved}
   end
 
@@ -728,8 +1039,8 @@ defmodule Brando.Content.Proposals do
 
     result =
       case target do
-        {:new, _} -> apply(context, :"create_#{singular}", [changeset, user, [notify?: false, pubsub?: false]])
-        _ -> apply(context, :"update_#{singular}", [changeset, user, [show_notification: false, pubsub: false]])
+        {:new, _} -> Kernel.apply(context, :"create_#{singular}", [changeset, user, [notify?: false, pubsub?: false]])
+        _ -> Kernel.apply(context, :"update_#{singular}", [changeset, user, [show_notification: false, pubsub: false]])
       end
 
     case result do
