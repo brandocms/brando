@@ -12,235 +12,235 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/pages/page.ex:282
+#: lib/brando/pages/page.ex:285
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "Avansert"
 
-#: lib/brando/pages/page.ex:161
-#: lib/brando/pages/page.ex:169
+#: lib/brando/pages/page.ex:164
+#: lib/brando/pages/page.ex:172
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#: lib/brando/pages/page.ex:253
+#: lib/brando/pages/page.ex:256
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr "Blokker"
 
-#: lib/brando/pages/page.ex:299
+#: lib/brando/pages/page.ex:302
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr "CSS klasser"
 
-#: lib/brando/pages/page.ex:255
+#: lib/brando/pages/page.ex:258
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/pages/page.ex:150
+#: lib/brando/pages/page.ex:153
 #, elixir-autogen, elixir-format
 msgid "Create fragment"
 msgstr "Opprett fragment"
 
-#: lib/brando/pages/page.ex:149
+#: lib/brando/pages/page.ex:152
 #, elixir-autogen, elixir-format
 msgid "Create subpage"
 msgstr "Opprett underside"
 
-#: lib/brando/pages/page.ex:161
+#: lib/brando/pages/page.ex:164
 #, elixir-autogen, elixir-format
 msgid "Delete fragment"
 msgstr "Slett sidefragment"
 
-#: lib/brando/pages/page.ex:169
+#: lib/brando/pages/page.ex:172
 #, elixir-autogen, elixir-format
 msgid "Delete sub page"
 msgstr "Slett underside"
 
-#: lib/brando/pages/page.ex:160
+#: lib/brando/pages/page.ex:163
 #, elixir-autogen, elixir-format
 msgid "Duplicate fragment"
 msgstr "Dupliser fragment"
 
-#: lib/brando/pages/page.ex:168
+#: lib/brando/pages/page.ex:171
 #, elixir-autogen, elixir-format
 msgid "Duplicate sub page"
 msgstr "Dupliser underside"
 
-#: lib/brando/pages/page.ex:159
+#: lib/brando/pages/page.ex:162
 #, elixir-autogen, elixir-format
 msgid "Edit fragment"
 msgstr "Oppdater fragment"
 
-#: lib/brando/pages/page.ex:167
+#: lib/brando/pages/page.ex:170
 #, elixir-autogen, elixir-format
 msgid "Edit sub page"
 msgstr "Rediger underside"
 
-#: lib/brando/pages/page.ex:291
+#: lib/brando/pages/page.ex:294
 #, elixir-autogen, elixir-format
 msgid "Has URL"
 msgstr "Har URL"
 
-#: lib/brando/pages/page.ex:287
+#: lib/brando/pages/page.ex:290
 #, elixir-autogen, elixir-format
 msgid "Homepage"
 msgstr "Hjemmeside"
 
-#: lib/brando/pages/page.ex:272
+#: lib/brando/pages/page.ex:275
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/pages/page.ex:292
+#: lib/brando/pages/page.ex:295
 #, elixir-autogen, elixir-format
 msgid "Page has an URL and should be included in sitemap"
 msgstr "Siden har en URL og skal inkluderes i nettstedkartet"
 
-#: lib/brando/pages/page.ex:288
+#: lib/brando/pages/page.ex:291
 #, elixir-autogen, elixir-format
 msgid "Page is loaded at root address"
 msgstr "Siden lastes inn på rotadressen"
 
-#: lib/brando/pages/page.ex:317
+#: lib/brando/pages/page.ex:320
 #, elixir-autogen, elixir-format
 msgid "Page variables"
 msgstr "Sidevariabler"
 
-#: lib/brando/pages/page.ex:278
+#: lib/brando/pages/page.ex:281
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr "Overordnet side"
 
-#: lib/brando/pages/page.ex:257
+#: lib/brando/pages/page.ex:260
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr "Status"
 
-#: lib/brando/pages/page.ex:297
+#: lib/brando/pages/page.ex:300
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr "Mal"
 
-#: lib/brando/pages/page.ex:147
-#: lib/brando/pages/page.ex:262
+#: lib/brando/pages/page.ex:150
+#: lib/brando/pages/page.ex:265
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/pages/page.ex:146
-#: lib/brando/pages/page.ex:263
+#: lib/brando/pages/page.ex:149
+#: lib/brando/pages/page.ex:266
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr "URI"
 
-#: lib/brando/pages/page.ex:351
+#: lib/brando/pages/page.ex:354
 #, elixir-autogen, elixir-format
 msgid "page"
 msgstr "side"
 
-#: lib/brando/pages/page.ex:352
+#: lib/brando/pages/page.ex:355
 #, elixir-autogen, elixir-format
 msgid "pages"
 msgstr "sider"
 
-#: lib/brando/pages/page.ex:142
+#: lib/brando/pages/page.ex:145
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr "Standard"
 
-#: lib/brando/pages/page.ex:143
+#: lib/brando/pages/page.ex:146
 #, elixir-autogen, elixir-format
 msgid "Title &darr;"
 msgstr "Tittel &darr;"
 
-#: lib/brando/pages/page.ex:144
+#: lib/brando/pages/page.ex:147
 #, elixir-autogen, elixir-format
 msgid "Title &uarr;"
 msgstr "Tittel &uarr;"
 
-#: lib/brando/pages/page.ex:304
+#: lib/brando/pages/page.ex:307
 #, elixir-autogen, elixir-format
 msgid "About Page"
 msgstr "Om-side"
 
-#: lib/brando/pages/page.ex:304
+#: lib/brando/pages/page.ex:307
 #, elixir-autogen, elixir-format
 msgid "About the organization"
 msgstr "Om organisasjonen"
 
-#: lib/brando/pages/page.ex:305
+#: lib/brando/pages/page.ex:308
 #, elixir-autogen, elixir-format
 msgid "Collection Page"
 msgstr "Samlingsside"
 
-#: lib/brando/pages/page.ex:306
+#: lib/brando/pages/page.ex:309
 #, elixir-autogen, elixir-format
 msgid "Contact Page"
 msgstr "Kontaktside"
 
-#: lib/brando/pages/page.ex:306
+#: lib/brando/pages/page.ex:309
 #, elixir-autogen, elixir-format
 msgid "Contact information"
 msgstr "Kontaktinformasjon"
 
-#: lib/brando/pages/page.ex:303
+#: lib/brando/pages/page.ex:306
 #, elixir-autogen, elixir-format
 msgid "Default. Generic web page"
 msgstr "Standard. Generisk nettside"
 
-#: lib/brando/pages/page.ex:308
+#: lib/brando/pages/page.ex:311
 #, elixir-autogen, elixir-format
 msgid "Individual item in a collection"
 msgstr "Enkeltelement i en samling"
 
-#: lib/brando/pages/page.ex:308
+#: lib/brando/pages/page.ex:311
 #, elixir-autogen, elixir-format
 msgid "Item Page"
 msgstr "Elementside"
 
-#: lib/brando/pages/page.ex:305
+#: lib/brando/pages/page.ex:308
 #, elixir-autogen, elixir-format
 msgid "Listings, archives, indexes"
 msgstr "Oversikter, arkiver, indekser"
 
-#: lib/brando/pages/page.ex:309
+#: lib/brando/pages/page.ex:312
 #, elixir-autogen, elixir-format
 msgid "Person or user profile"
 msgstr "Person- eller brukerprofil"
 
-#: lib/brando/pages/page.ex:309
+#: lib/brando/pages/page.ex:312
 #, elixir-autogen, elixir-format
 msgid "Profile Page"
 msgstr "Profilside"
 
-#: lib/brando/pages/page.ex:312
+#: lib/brando/pages/page.ex:315
 #, elixir-autogen, elixir-format
 msgid "Structured data type"
 msgstr "Strukturert datatype"
 
-#: lib/brando/pages/page.ex:303
+#: lib/brando/pages/page.ex:306
 #, elixir-autogen, elixir-format
 msgid "Web Page"
 msgstr "Nettside"
 
-#: lib/brando/pages/page.ex:307
+#: lib/brando/pages/page.ex:310
 #, elixir-autogen, elixir-format
 msgid "FAQ Page"
 msgstr "FAQ-side"
 
-#: lib/brando/pages/page.ex:307
+#: lib/brando/pages/page.ex:310
 #, elixir-autogen, elixir-format
 msgid "Frequently asked questions"
 msgstr "Ofte stilte spørsmål"
 
-#: lib/brando/pages/page.ex:310
+#: lib/brando/pages/page.ex:313
 #, elixir-autogen, elixir-format
 msgid "Search Results Page"
 msgstr "Søkeresultatside"
 
-#: lib/brando/pages/page.ex:310
+#: lib/brando/pages/page.ex:313
 #, elixir-autogen, elixir-format
 msgid "Search results"
 msgstr "Søkeresultater"
