@@ -387,3 +387,13 @@ button.primary.submit-button {
     }
   }
 }
+
+/* An icon placed straight in a control takes the control's text size. The
+   icon classes default to 1.25rem, which dwarfs the 12–14px text of admin
+   buttons, and every new button with an icon came out oversized until a rule
+   sized it. :where keeps this at the icon's own specificity, so any rule that
+   sizes an icon on purpose still wins. */
+:where(button, a.workspace-button, .folder-action, .media-button) > span[data-icon] {
+  width: 1.3em;
+  height: 1.3em;
+}

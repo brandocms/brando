@@ -100,6 +100,7 @@
   .image-picker-browser .image-picker-main .image-picker-main-header h3 { color: var(--workspace-ink); font-size: 14px; font-family: inherit; text-transform: none; letter-spacing: 0; }
   .image-picker-main-header .image-picker-main-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
   .image-picker-main-header .image-picker-main-actions > span { color: var(--workspace-muted); font-size: 12px; font-family: inherit; text-transform: none; letter-spacing: 0; }
+  .image-picker-main-actions .folder-action { display: inline-flex; align-items: center; gap: 6px; }
   .image-picker-main-actions label.folder-action { position: relative; overflow: hidden; background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; cursor: pointer; }
   .image-picker-main .image-picker-main-header .image-picker-main-actions label.folder-action > span { color: inherit; font: inherit; text-transform: none; letter-spacing: 0; }
   .image-picker-main-actions label.folder-action:hover { background: #163c2e; color: #fff; }
@@ -196,6 +197,14 @@
   }
 }
 
+/* The asset lists' filters, as in the other workspaces. */
+.media-workspace {
+  .advanced-filters-bar { gap: 12px; }
+  .boolean-filter .tiny-toggle-label { font-family: inherit; font-size: 12px; text-transform: none; }
+  .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: 12px; text-transform: none; color: var(--workspace-muted); }
+  .reset-filters-btn:hover { background: var(--workspace-wash); color: var(--workspace-accent); }
+}
+
 /* Videos: the thumbnail plays the video, the title is renamed in place, and
    each row says where the video is used. */
 .videos-workspace {
@@ -253,19 +262,6 @@
     input:focus { border-color: var(--workspace-accent); background: #fff; outline: none; }
   }
 
-  .library-video-usage {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 6px;
-    color: var(--workspace-muted);
-    font-size: 11px;
-
-    a { color: var(--workspace-ink); text-decoration: underline; text-decoration-color: var(--workspace-line); text-underline-offset: 2px; }
-    a:hover { text-decoration-color: currentColor; }
-    [aria-hidden] { margin-left: -6px; }
-  }
-
-  .library-video-unused { color: #87662d; }
 }
 
 /* As wide as the dialog allows while the height stays within the screen, so a

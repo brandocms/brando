@@ -112,7 +112,9 @@ defmodule BrandoAdmin.Components.Content.List do
   # Toggle boolean filter
   def handle_event("toggle_boolean_filter", %{"filter" => filter_key}, socket) do
     current_value = get_in(socket.assigns, [:list_opts, :filter, String.to_existing_atom(filter_key)])
-    new_value = if current_value == "true", do: "false", else: "true"
+    # Off means the filter no longer applies, not "only false": the empty value
+    # drops it from the URL, so it leaves no active-filter chip behind.
+    new_value = if current_value == "true", do: "", else: "true"
     {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => new_value})}
   end
 
@@ -627,11 +629,24 @@ defmodule BrandoAdmin.Components.Content.List do
       {gettext("Active filters")} &rarr;
       <button :for={{name, value} <- @active_filters} :key={name} class="filter" phx-click={@delete} phx-value-filter={name}>
         <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
-        {name}: {inspect(value)}
+        {filter_chip(@schema, @filters, name, value)}
       </button>
     </div>
     """
   end
+
+  # A filter reads by its label: a switched-on toggle as the label alone, any
+  # other filter as "Label: value". Keys the listing does not declare keep
+  # their key.
+  defp filter_chip(schema, filters, name, value) do
+    case Enum.find(filters, &(to_string(&1.key) == to_string(name))) do
+      %{type: :boolean} = filter when value in [true, "true"] -> label(schema, filter)
+      %{} = filter -> "#{label(schema, filter)}: #{value}"
+      nil -> "#{name}: #{inspect(value)}"
+    end
+  end
+
+  defp label(schema, filter), do: schema |> g(filter.label) |> Phoenix.HTML.safe_to_string()
 
   # Pagination button component
   attr :page_number, :integer, required: true
@@ -1033,7 +1048,8 @@ defmodule BrandoAdmin.Components.Content.List do
     <.active_filters
       :if={@display_filters != %{}}
       active_filters={@display_filters}
-      filters={@filters}
+      filters={@listing.filters}
+      schema={@schema}
       delete={@delete_filter}
     />
     """

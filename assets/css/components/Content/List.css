@@ -746,6 +746,9 @@
   align-items: center;
   gap: 1.5rem;
   flex-wrap: wrap;
+  /* As tall as the reset button, so the bar keeps its height when the button
+     appears. */
+  min-height: 30px;
 }
 
 /* Uses tiny-toggle pattern from form/input - just add label styling */
