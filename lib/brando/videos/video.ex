@@ -105,7 +105,7 @@ defmodule Brando.Videos.Video do
 
   forms do
     form do
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset do
           size :half
           input :title, :text, label: t("Title")

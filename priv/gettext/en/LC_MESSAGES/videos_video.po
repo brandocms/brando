@@ -100,3 +100,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr ""
+
+#: lib/brando/videos/video.ex:108
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr ""

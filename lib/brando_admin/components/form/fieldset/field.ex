@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   @moduledoc false
   use BrandoAdmin, :component
+  use BrandoAdmin.Translator
   # use Phoenix.HTML
 
   alias Brando.Blueprint.Forms.Input, as: BlueprintInput
@@ -20,8 +21,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   def render(assigns) do
     assigns =
       assigns
-      |> assign(:label, nil)
-      |> assign(:instructions, nil)
+      |> assign(:label, subform_text(assigns, :label))
+      |> assign(:instructions, subform_text(assigns, :instructions))
       |> assign(:placeholder, nil)
       |> assign(:hidden, hidden?(assigns.input, assigns.form))
       # Already resolved at Blueprint compile time by `Forms.Dsl.transform_form/1`.
@@ -139,4 +140,15 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   defp equivalent?(left, right) when is_atom(left) and is_binary(right), do: Atom.to_string(left) == right
   defp equivalent?(left, right) when is_binary(left) and is_atom(right), do: left == Atom.to_string(right)
   defp equivalent?(_, _), do: false
+
+  # A subform's label and instructions from the form DSL, translated in the
+  # schema's domain. Plain inputs resolve theirs in `Primitives.input/1`.
+  defp subform_text(%{input: %Brando.Blueprint.Forms.Subform{} = subform, form: form}, key) do
+    case Map.get(subform, key) do
+      nil -> nil
+      text -> form.source.data.__struct__ |> g(text) |> Phoenix.HTML.safe_to_string()
+    end
+  end
+
+  defp subform_text(_assigns, _key), do: nil
 end

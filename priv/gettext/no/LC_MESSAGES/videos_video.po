@@ -101,3 +101,8 @@ msgstr "Tittel eller kilde"
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr "Ikke i bruk"
+
+#: lib/brando/videos/video.ex:108
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr "Innhold"

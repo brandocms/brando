@@ -126,7 +126,7 @@ defmodule Brando.Images.Image do
 
   forms do
     form do
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset do
           size :half
           input :title, :i18n_text, label: t("Title"), languages: :content
