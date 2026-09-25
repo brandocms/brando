@@ -361,7 +361,6 @@ msgstr "Maler"
 #: lib/brando_admin/components/form/input/gallery/image_config.ex:39
 #: lib/brando_admin/components/form/input/gallery/video_config.ex:51
 #: lib/brando_admin/components/form/video_drawer.ex:63
-#: lib/brando_admin/live/config/seo_live.ex:682
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
@@ -862,7 +861,6 @@ msgstr "Krediteringer"
 #: lib/brando_admin/components/form/input/blocks/file_block.ex:101
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:271
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:404
-#: lib/brando_admin/live/config/seo_live.ex:678
 #: lib/brando_admin/live/users/groups_live.ex:152
 #: lib/brando_admin/live/users/groups_live.ex:265
 #: lib/brando_admin/live/users/groups_live.ex:268
@@ -1088,7 +1086,7 @@ msgstr "Tittel/Bildetekst"
 msgid "Type"
 msgstr "Type"
 
-#: lib/brando/seo/checks.ex:190
+#: lib/brando/seo/checks.ex:232
 #: lib/brando_admin/components/content/select_identifier.ex:348
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1087
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1146
@@ -1658,7 +1656,7 @@ msgid "More info"
 msgstr "Mer informasjon"
 
 #: lib/brando/html.ex:372
-#: lib/brando_admin/live/config/seo_live.ex:1165
+#: lib/brando_admin/live/config/seo_live.ex:1222
 #, elixir-autogen, elixir-format
 msgid "OK"
 msgstr "OK"
@@ -2049,7 +2047,7 @@ msgid "High"
 msgstr "Høy"
 
 #: lib/brando_admin/live/config/seo_live.ex:84
-#: lib/brando_admin/live/config/seo_live.ex:646
+#: lib/brando_admin/live/config/seo_live.ex:647
 #, elixir-autogen, elixir-format
 msgid "Hits"
 msgstr "Treff"
@@ -2523,7 +2521,7 @@ msgstr "Overstyring av sideforhold"
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:47
 #: lib/brando_admin/components/image_picker.ex:455
 #: lib/brando_admin/live/config/environment_live.ex:297
-#: lib/brando_admin/live/config/seo_live.ex:452
+#: lib/brando_admin/live/config/seo_live.ex:455
 #: lib/brando_admin/live/content/module_form_live.ex:164
 #: lib/brando_admin/live/upload_manager.ex:786
 #: lib/brando_admin/live/users/groups_live.ex:431
@@ -6006,7 +6004,7 @@ msgid "Retrying"
 msgstr "Prøver på nytt"
 
 #: lib/brando_admin/live/config/scheduled_publishing_live.ex:110
-#: lib/brando_admin/live/config/seo_live.ex:1167
+#: lib/brando_admin/live/config/seo_live.ex:1224
 #, elixir-format, elixir-autogen
 msgid "Failed"
 msgstr "Mislyktes"
@@ -6062,6 +6060,7 @@ msgstr[0] "%{count} jobb"
 msgstr[1] "%{count} jobber"
 
 #: lib/brando_admin/live/config/cache_live.ex:47
+#: lib/brando_admin/live/config/seo_live.ex:720
 #, elixir-format, elixir-autogen
 msgid "%{count} entry"
 msgid_plural "%{count} entries"
@@ -6389,7 +6388,7 @@ msgstr "Ingen videoer i denne visningen"
 #: lib/brando_admin/components/authorization_tools.ex:267
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:43
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:68
-#: lib/brando_admin/live/config/seo_live.ex:1155
+#: lib/brando_admin/live/config/seo_live.ex:1212
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Ingen"
@@ -6663,7 +6662,7 @@ msgstr "uendret"
 msgid "updated"
 msgstr "oppdatert"
 
-#: lib/brando/seo/checks.ex:141
+#: lib/brando/seo/checks.ex:183
 #: lib/brando/sites/seo.ex:130
 #, elixir-autogen, elixir-format
 msgid "Sharing image"
@@ -6857,7 +6856,7 @@ msgid "Could not switch preview"
 msgstr "Kunne ikke bytte forhåndsvisning"
 
 #: lib/brando_admin/components/form.ex:2323
-#: lib/brando_admin/live/config/seo_live.ex:666
+#: lib/brando_admin/live/config/seo_live.ex:667
 #, elixir-autogen, elixir-format
 msgid "Create redirect"
 msgstr "Opprett omdirigering"
@@ -7099,7 +7098,7 @@ msgid "Recovery storage is unavailable"
 msgstr "Lagring av gjenopprettingskopier er utilgjengelig"
 
 #: lib/brando_admin/components/form.ex:3171
-#: lib/brando_admin/live/config/seo_live.ex:743
+#: lib/brando_admin/live/config/seo_live.ex:791
 #, elixir-autogen, elixir-format
 msgid "Redirect created"
 msgstr "Omdirigering opprettet"
@@ -7220,7 +7219,7 @@ msgstr "Innstillinger"
 msgid "Share preview"
 msgstr "Del forhåndsvisning"
 
-#: lib/brando_admin/live/config/seo_live.ex:631
+#: lib/brando_admin/live/config/seo_live.ex:632
 #: lib/brando_admin/live/config/utils_live.ex:108
 #, elixir-autogen, elixir-format
 msgid "Sitemap"
@@ -9544,7 +9543,7 @@ msgid "Order changed"
 msgstr "Rekkefølge endret"
 
 #: lib/brando_admin/components/form/draft_recovery.ex:315
-#: lib/brando_admin/live/config/seo_live.ex:501
+#: lib/brando_admin/live/config/seo_live.ex:504
 #, elixir-autogen
 msgid "Position"
 msgstr "Plassering"
@@ -9670,7 +9669,7 @@ msgid "Audited entries"
 msgstr "Sjekkede oppføringer"
 
 #: lib/brando_admin/live/config/seo_live.ex:287
-#: lib/brando_admin/live/config/seo_live.ex:595
+#: lib/brando_admin/live/config/seo_live.ex:600
 #, elixir-autogen, elixir-format
 msgid "Score"
 msgstr "Poengsum"
@@ -9701,58 +9700,60 @@ msgstr "Sjekk"
 msgid "(no description — the site fallback is shown)"
 msgstr "(ingen beskrivelse — nettstedets standardbeskrivelse vises)"
 
-#: lib/brando_admin/live/config/seo_live.ex:361
+#: lib/brando_admin/live/config/seo_live.ex:362
+#: lib/brando_admin/live/config/seo_live.ex:745
 #, elixir-autogen, elixir-format
 msgid "Open entry"
 msgstr "Åpne oppføring"
 
 #: lib/brando_admin/components/suggestion_review.ex:66
-#: lib/brando_admin/live/config/seo_live.ex:371
+#: lib/brando_admin/live/config/seo_live.ex:373
+#: lib/brando_admin/live/config/seo_live.ex:742
 #, elixir-autogen, elixir-format
 msgid "Writing…"
 msgstr "Skriver …"
 
-#: lib/brando_admin/live/config/seo_live.ex:373
+#: lib/brando_admin/live/config/seo_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "Rewrite description"
 msgstr "Skriv beskrivelsen på nytt"
 
-#: lib/brando_admin/live/config/seo_live.ex:373
+#: lib/brando_admin/live/config/seo_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "Write description"
 msgstr "Skriv beskrivelse"
 
-#: lib/brando_admin/live/config/seo_live.ex:392
+#: lib/brando_admin/live/config/seo_live.ex:395
 #, elixir-autogen, elixir-format
 msgid "Review with AI"
 msgstr "Vurder med KI"
 
-#: lib/brando_admin/live/config/seo_live.ex:428
+#: lib/brando_admin/live/config/seo_live.ex:431
 #, elixir-autogen, elixir-format
 msgid "One entry has no meta description."
 msgid_plural "%{count} entries have no meta description."
 msgstr[0] "Én oppføring mangler metabeskrivelse."
 msgstr[1] "%{count} oppføringer mangler metabeskrivelse."
 
-#: lib/brando_admin/live/config/seo_live.ex:435
+#: lib/brando_admin/live/config/seo_live.ex:438
 #, elixir-autogen, elixir-format
 msgid "Writes a description for one entry. Nothing is saved until you accept it."
 msgid_plural "Writes descriptions for %{count} entries. Nothing is saved until you accept them."
 msgstr[0] "Skriver en beskrivelse for én oppføring. Ingenting lagres før du godtar den."
 msgstr[1] "Skriver beskrivelser for %{count} oppføringer. Ingenting lagres før du godtar dem."
 
-#: lib/brando_admin/live/config/seo_live.ex:441
+#: lib/brando_admin/live/config/seo_live.ex:444
 #: lib/brando_admin/live/images/alt_text_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "At most %{max} per run; run it again for the rest."
 msgstr "Høyst %{max} per kjøring; kjør igjen for resten."
 
-#: lib/brando_admin/live/config/seo_live.ex:446
+#: lib/brando_admin/live/config/seo_live.ex:449
 #, elixir-autogen, elixir-format
 msgid "Write missing descriptions"
 msgstr "Skriv manglende beskrivelser"
 
-#: lib/brando_admin/live/config/seo_live.ex:449
+#: lib/brando_admin/live/config/seo_live.ex:452
 #, elixir-autogen, elixir-format
 msgid "Write one description"
 msgid_plural "Write %{count} descriptions"
@@ -9800,283 +9801,282 @@ msgstr "Godta"
 msgid "Reject"
 msgstr "Avvis"
 
-#: lib/brando_admin/live/config/seo_live.ex:530
+#: lib/brando_admin/live/config/seo_live.ex:533
 #, elixir-autogen, elixir-format
 msgid "Reviewing…"
 msgstr "Vurderer …"
 
-#: lib/brando_admin/live/config/seo_live.ex:532
+#: lib/brando_admin/live/config/seo_live.ex:535
 #, elixir-autogen, elixir-format
 msgid "AI review"
 msgstr "KI-vurdering"
 
-#: lib/brando_admin/live/config/seo_live.ex:559
+#: lib/brando_admin/live/config/seo_live.ex:562
 #, elixir-autogen, elixir-format
 msgid "What the AI reads"
 msgstr "Hva KI-en leser"
 
-#: lib/brando_admin/live/config/seo_live.ex:563
+#: lib/brando_admin/live/config/seo_live.ex:566
 #, elixir-autogen, elixir-format
 msgid "The entry fields a generated description is written from. Block fields are read from the last rendered version of the entry."
 msgstr "Feltene i oppføringen som en generert beskrivelse skrives ut fra. Blokkfelter leses fra sist rendrede versjon av oppføringen."
 
-#: lib/brando_admin/live/config/seo_live.ex:599
+#: lib/brando_admin/live/config/seo_live.ex:604
 #, elixir-autogen, elixir-format
 msgid "Audited"
 msgstr "Sjekket"
 
-#: lib/brando_admin/live/config/seo_live.ex:603
+#: lib/brando_admin/live/config/seo_live.ex:608
 #, elixir-autogen, elixir-format
 msgid "Missing description"
 msgstr "Mangler beskrivelse"
 
-#: lib/brando_admin/live/config/seo_live.ex:607
+#: lib/brando_admin/live/config/seo_live.ex:612
 #, elixir-autogen, elixir-format
 msgid "Missing image"
 msgstr "Mangler bilde"
 
-#: lib/brando_admin/live/config/seo_live.ex:611
+#: lib/brando_admin/live/config/seo_live.ex:616
 #, elixir-autogen, elixir-format
 msgid "No URL"
 msgstr "Ingen URL"
 
-#: lib/brando_admin/live/config/seo_live.ex:615
+#: lib/brando_admin/live/config/seo_live.ex:620
 #, elixir-autogen, elixir-format
 msgid "Thin content"
 msgstr "Tynt innhold"
 
-#: lib/brando_admin/live/config/seo_live.ex:627
-#, elixir-autogen, elixir-format
-msgid "Drafts not audited"
-msgstr "Utkast som ikke er sjekket"
-
-#: lib/brando_admin/live/config/seo_live.ex:632
+#: lib/brando_admin/live/config/seo_live.ex:633
 #, elixir-autogen, elixir-format
 msgid "checked"
 msgstr "sjekket"
 
-#: lib/brando_admin/live/config/seo_live.ex:632
+#: lib/brando_admin/live/config/seo_live.ex:633
 #, elixir-autogen, elixir-format
 msgid "not generated"
 msgstr "ikke generert"
 
-#: lib/brando_admin/live/config/seo_live.ex:637
+#: lib/brando_admin/live/config/seo_live.ex:638
 #, elixir-autogen, elixir-format
 msgid "Missing redirects"
 msgstr "Manglende omdirigeringer"
 
-#: lib/brando_admin/live/config/seo_live.ex:639
+#: lib/brando_admin/live/config/seo_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "Requested URLs that no longer exist but match an entry's slug. Creating a redirect adds it to the settings."
 msgstr "Etterspurte URL-er som ikke lenger finnes, men som passer med en oppførings slug. En ny omdirigering legges til i innstillingene."
 
-#: lib/brando_admin/live/config/seo_live.ex:646
+#: lib/brando_admin/live/config/seo_live.ex:647
 #, elixir-autogen, elixir-format
 msgid "Requested"
 msgstr "Etterspurt"
 
-#: lib/brando_admin/live/config/seo_live.ex:646
+#: lib/brando_admin/live/config/seo_live.ex:647
 #, elixir-autogen, elixir-format
 msgid "Suggested destination"
 msgstr "Foreslått mål"
 
-#: lib/brando_admin/live/config/seo_live.ex:656
+#: lib/brando_admin/live/config/seo_live.ex:657
 #, elixir-autogen, elixir-format
 msgid "Close match — check before creating"
 msgstr "Nær treff — sjekk før du oppretter"
 
-#: lib/brando_admin/live/config/seo_live.ex:675
+#: lib/brando_admin/live/config/seo_live.ex:676
 #, elixir-autogen, elixir-format
 msgid "Duplicates"
 msgstr "Duplikater"
 
-#: lib/brando_admin/live/config/seo_live.ex:751
+#: lib/brando_admin/live/config/seo_live.ex:799
 #, elixir-autogen, elixir-format
 msgid "Could not create the redirect"
 msgstr "Klarte ikke opprette omdirigeringen"
 
-#: lib/brando_admin/live/config/seo_live.ex:777
+#: lib/brando_admin/live/config/seo_live.ex:825
 #, elixir-autogen, elixir-format
 msgid "Could not store the AI context fields"
 msgstr "Klarte ikke lagre KI-kontekstfeltene"
 
-#: lib/brando_admin/live/config/seo_live.ex:838
+#: lib/brando_admin/live/config/seo_live.ex:894
 #, elixir-autogen, elixir-format
 msgid "Writing one description"
 msgid_plural "Writing %{count} descriptions"
 msgstr[0] "Skriver én beskrivelse"
 msgstr[1] "Skriver %{count} beskrivelser"
 
-#: lib/brando_admin/live/config/seo_live.ex:848
+#: lib/brando_admin/live/config/seo_live.ex:904
 #, elixir-autogen, elixir-format
 msgid "Description saved"
 msgstr "Beskrivelsen er lagret"
 
-#: lib/brando_admin/live/config/seo_live.ex:895
+#: lib/brando_admin/live/config/seo_live.ex:951
 #, elixir-autogen, elixir-format
 msgid "Description written"
 msgstr "Beskrivelsen er skrevet"
 
-#: lib/brando_admin/live/config/seo_live.ex:939
+#: lib/brando_admin/live/config/seo_live.ex:996
 #, elixir-autogen, elixir-format
 msgid "One description saved"
 msgid_plural "%{count} descriptions saved"
 msgstr[0] "Én beskrivelse lagret"
 msgstr[1] "%{count} beskrivelser lagret"
 
-#: lib/brando_admin/live/config/seo_live.ex:944
+#: lib/brando_admin/live/config/seo_live.ex:1001
 #: lib/brando_admin/live/images/alt_text_live.ex:239
 #, elixir-autogen, elixir-format
 msgid "%{accepted} saved, %{failed} could not be saved"
 msgstr "%{accepted} lagret, %{failed} kunne ikke lagres"
 
-#: lib/brando_admin/live/config/seo_live.ex:948
+#: lib/brando_admin/live/config/seo_live.ex:1005
 #, elixir-autogen, elixir-format
 msgid "Could not save the descriptions"
 msgstr "Klarte ikke lagre beskrivelsene"
 
-#: lib/brando_admin/live/config/seo_live.ex:1089
+#: lib/brando_admin/live/config/seo_live.ex:1146
 #: lib/brando_admin/live/images/alt_text_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "This suggestion was already reviewed"
 msgstr "Dette forslaget er allerede gjennomgått"
 
-#: lib/brando_admin/live/config/seo_live.ex:1090
+#: lib/brando_admin/live/config/seo_live.ex:1147
 #, elixir-autogen, elixir-format
 msgid "Write a description before accepting it"
 msgstr "Skriv en beskrivelse før du godtar den"
 
-#: lib/brando_admin/live/config/seo_live.ex:1099
+#: lib/brando_admin/live/config/seo_live.ex:1156
 #, elixir-autogen, elixir-format
 msgid "Could not save the description"
 msgstr "Klarte ikke lagre beskrivelsen"
 
-#: lib/brando_admin/live/config/seo_live.ex:1157
+#: lib/brando_admin/live/config/seo_live.ex:1214
 #, elixir-autogen, elixir-format
 msgid "%{label} +%{count}"
 msgstr "%{label} +%{count}"
 
-#: lib/brando_admin/live/config/seo_live.ex:1166
+#: lib/brando_admin/live/config/seo_live.ex:1223
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr "Advarsel"
 
-#: lib/brando_admin/live/config/seo_live.ex:1168
+#: lib/brando_admin/live/config/seo_live.ex:1225
 #, elixir-autogen, elixir-format
 msgid "Not checked"
 msgstr "Ikke sjekket"
 
-#: lib/brando/seo/checks.ex:91
+#: lib/brando/seo/checks.ex:98
+#: lib/brando/seo/checks.ex:105
+#: lib/brando/seo/checks.ex:110
 #, elixir-autogen, elixir-format
 msgid "Meta title"
 msgstr "Metatittel"
 
-#: lib/brando/seo/checks.ex:92
+#: lib/brando/seo/checks.ex:111
 #, elixir-autogen, elixir-format
 msgid "Set a meta title; the site fallback is used otherwise."
 msgstr "Angi en metatittel; ellers brukes nettstedets standardtittel."
 
-#: lib/brando/seo/checks.ex:97
-#: lib/brando/seo/checks.ex:100
+#: lib/brando/seo/checks.ex:117
+#: lib/brando/seo/checks.ex:120
 #, elixir-autogen, elixir-format
 msgid "Meta title length"
 msgstr "Lengde på metatittel"
 
-#: lib/brando/seo/checks.ex:104
+#: lib/brando/seo/checks.ex:131
+#: lib/brando/seo/checks.ex:138
+#: lib/brando/seo/checks.ex:145
 #, elixir-autogen, elixir-format
 msgid "Meta description"
 msgstr "Metabeskrivelse"
 
-#: lib/brando/seo/checks.ex:105
+#: lib/brando/seo/checks.ex:146
 #, elixir-autogen, elixir-format
 msgid "Write a meta description; search results show the site fallback otherwise."
 msgstr "Skriv en metabeskrivelse; ellers viser søkeresultatene nettstedets standardbeskrivelse."
 
-#: lib/brando/seo/checks.ex:114
-#: lib/brando/seo/checks.ex:119
+#: lib/brando/seo/checks.ex:156
+#: lib/brando/seo/checks.ex:161
 #, elixir-autogen, elixir-format
 msgid "Meta description length"
 msgstr "Lengde på metabeskrivelse"
 
-#: lib/brando/seo/checks.ex:131
+#: lib/brando/seo/checks.ex:173
 #, elixir-autogen, elixir-format
 msgid "Own description"
 msgstr "Egen beskrivelse"
 
-#: lib/brando/seo/checks.ex:135
+#: lib/brando/seo/checks.ex:177
 #, elixir-autogen, elixir-format
 msgid "This entry repeats the site fallback description; write one about this page."
 msgstr "Oppføringen gjentar nettstedets standardbeskrivelse; skriv en om denne siden."
 
-#: lib/brando/seo/checks.ex:142
+#: lib/brando/seo/checks.ex:184
 #, elixir-autogen, elixir-format
 msgid "Add a meta image or a cover image so shares get a picture."
 msgstr "Legg til et metabilde eller forsidebilde, så delinger får et bilde."
 
-#: lib/brando/seo/checks.ex:155
+#: lib/brando/seo/checks.ex:197
 #, elixir-autogen, elixir-format
 msgid "The meta title and description are identical."
 msgstr "Metatittelen og -beskrivelsen er like."
 
-#: lib/brando/seo/checks.ex:156
+#: lib/brando/seo/checks.ex:198
 #, elixir-autogen, elixir-format
 msgid "The description opens by repeating the title."
 msgstr "Beskrivelsen begynner med å gjenta tittelen."
 
-#: lib/brando/seo/checks.ex:164
+#: lib/brando/seo/checks.ex:206
 #, elixir-autogen, elixir-format
 msgid "Title differs from description"
 msgstr "Tittelen skiller seg fra beskrivelsen"
 
-#: lib/brando/seo/checks.ex:175
+#: lib/brando/seo/checks.ex:217
 #, elixir-autogen, elixir-format
 msgid "Unique title"
 msgstr "Unik tittel"
 
-#: lib/brando/seo/checks.ex:185
+#: lib/brando/seo/checks.ex:227
 #, elixir-autogen, elixir-format
 msgid "Unique description"
 msgstr "Unik beskrivelse"
 
-#: lib/brando/seo/checks.ex:191
+#: lib/brando/seo/checks.ex:233
 #, elixir-autogen, elixir-format
 msgid "The entry has no resolvable URL; check its slug and the blueprint's absolute_url."
 msgstr "Oppføringen har ingen gyldig URL; sjekk slug og blueprintens absolute_url."
 
-#: lib/brando/seo/checks.ex:196
-#: lib/brando/seo/checks.ex:199
+#: lib/brando/seo/checks.ex:238
+#: lib/brando/seo/checks.ex:241
 #, elixir-autogen, elixir-format
 msgid "In sitemap"
 msgstr "I nettstedskartet"
 
-#: lib/brando/seo/checks.ex:200
+#: lib/brando/seo/checks.ex:242
 #, elixir-autogen, elixir-format
 msgid "Not in the generated sitemap. Check the sitemap module, or regenerate it."
 msgstr "Ikke med i det genererte nettstedskartet. Sjekk sitemap-modulen, eller generer kartet på nytt."
 
-#: lib/brando/seo/checks.ex:210
-#: lib/brando/seo/checks.ex:226
+#: lib/brando/seo/checks.ex:252
+#: lib/brando/seo/checks.ex:268
 #, elixir-autogen, elixir-format
 msgid "Content length"
 msgstr "Innholdslengde"
 
-#: lib/brando/seo/checks.ex:227
+#: lib/brando/seo/checks.ex:269
 #, elixir-autogen, elixir-format
 msgid "Thin content: aim for at least %{count} words of body text."
 msgstr "Tynt innhold: sikt mot minst %{count} ord brødtekst."
 
-#: lib/brando/seo/checks.ex:228
+#: lib/brando/seo/checks.ex:270
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:70
 #, elixir-autogen, elixir-format
 msgid "%{count} words"
 msgstr "%{count} ord"
 
-#: lib/brando/seo/checks.ex:426
+#: lib/brando/seo/checks.ex:468
 #, elixir-autogen, elixir-format
 msgid "Shared with %{count} other entries in this language."
 msgstr "Deles med %{count} andre oppføringer på dette språket."
 
-#: lib/brando/seo/checks.ex:442
+#: lib/brando/seo/checks.ex:484
 #, elixir-autogen, elixir-format
 msgid "Aim for %{min}–%{max} characters."
 msgstr "Sikt mot %{min}–%{max} tegn."
@@ -10086,7 +10086,7 @@ msgstr "Sikt mot %{min}–%{max} tegn."
 msgid "This entry has no text to describe"
 msgstr "Oppføringen har ingen tekst å beskrive"
 
-#: lib/brando_admin/live/config/seo_live.ex:1096
+#: lib/brando_admin/live/config/seo_live.ex:1153
 #, elixir-autogen, elixir-format
 msgid "The entry cannot be saved until these fields are fixed: %{fields}"
 msgstr "Oppføringen kan ikke lagres før disse feltene er rettet: %{fields}"
@@ -10112,13 +10112,13 @@ msgid "Sort"
 msgstr "Sorter"
 
 #: lib/brando_admin/live/config/seo_live.ex:288
-#: lib/brando_admin/live/config/seo_live.ex:469
+#: lib/brando_admin/live/config/seo_live.ex:472
 #, elixir-autogen, elixir-format
 msgid "Visitors"
 msgstr "Besøkende"
 
 #: lib/brando_admin/live/config/seo_live.ex:289
-#: lib/brando_admin/live/config/seo_live.ex:498
+#: lib/brando_admin/live/config/seo_live.ex:501
 #, elixir-autogen, elixir-format
 msgid "Search"
 msgstr "Søk"
@@ -10128,138 +10128,138 @@ msgstr "Søk"
 msgid "of %{impressions}"
 msgstr "av %{impressions}"
 
-#: lib/brando_admin/live/config/seo_live.ex:473
+#: lib/brando_admin/live/config/seo_live.ex:476
 #, elixir-autogen, elixir-format
 msgid "Search impressions"
 msgstr "Visninger i søk"
 
-#: lib/brando_admin/live/config/seo_live.ex:477
-#: lib/brando_admin/live/config/seo_live.ex:500
+#: lib/brando_admin/live/config/seo_live.ex:480
+#: lib/brando_admin/live/config/seo_live.ex:503
 #, elixir-autogen, elixir-format
 msgid "Clicks"
 msgstr "Klikk"
 
-#: lib/brando_admin/live/config/seo_live.ex:481
+#: lib/brando_admin/live/config/seo_live.ex:484
 #, elixir-autogen, elixir-format
 msgid "Click-through"
 msgstr "Klikkrate"
 
-#: lib/brando_admin/live/config/seo_live.ex:485
+#: lib/brando_admin/live/config/seo_live.ex:488
 #, elixir-autogen, elixir-format
 msgid "Average position"
 msgstr "Gjennomsnittlig plassering"
 
-#: lib/brando_admin/live/config/seo_live.ex:490
+#: lib/brando_admin/live/config/seo_live.ex:493
 #, elixir-autogen, elixir-format
 msgid "Top searches"
 msgstr "Vanligste søk"
 
-#: lib/brando_admin/live/config/seo_live.ex:493
+#: lib/brando_admin/live/config/seo_live.ex:496
 #, elixir-autogen, elixir-format
 msgid "Google has not shown this page for any search in the period."
 msgstr "Google har ikke vist denne siden for noe søk i perioden."
 
-#: lib/brando_admin/live/config/seo_live.ex:499
+#: lib/brando_admin/live/config/seo_live.ex:502
 #, elixir-autogen, elixir-format
 msgid "Impressions"
 msgstr "Visninger"
 
-#: lib/brando_admin/live/config/seo_live.ex:516
+#: lib/brando_admin/live/config/seo_live.ex:519
 #, elixir-autogen, elixir-format
 msgid "Loading searches…"
 msgstr "Henter søk …"
 
-#: lib/brando_admin/live/config/seo_live.ex:619
+#: lib/brando_admin/live/config/seo_live.ex:624
 #, elixir-autogen, elixir-format
 msgid "Not visited"
 msgstr "Ikke besøkt"
 
-#: lib/brando_admin/live/config/seo_live.ex:623
+#: lib/brando_admin/live/config/seo_live.ex:628
 #, elixir-autogen, elixir-format
 msgid "Low click-through"
 msgstr "Lav klikkrate"
 
-#: lib/brando_admin/live/config/seo_live.ex:921
+#: lib/brando_admin/live/config/seo_live.ex:978
 #, elixir-autogen, elixir-format
 msgid "Could not read the searches"
 msgstr "Klarte ikke hente søkene"
 
-#: lib/brando_admin/live/config/seo_live.ex:1072
+#: lib/brando_admin/live/config/seo_live.ex:1129
 #, elixir-autogen, elixir-format
 msgid "Lowest score"
 msgstr "Lavest poengsum"
 
-#: lib/brando_admin/live/config/seo_live.ex:1073
+#: lib/brando_admin/live/config/seo_live.ex:1130
 #, elixir-autogen, elixir-format
 msgid "Most visited"
 msgstr "Mest besøkt"
 
-#: lib/brando_admin/live/config/seo_live.ex:1074
+#: lib/brando_admin/live/config/seo_live.ex:1131
 #, elixir-autogen, elixir-format
 msgid "Most seen in search"
 msgstr "Mest vist i søk"
 
-#: lib/brando/seo/checks.ex:238
-#: lib/brando/seo/checks.ex:261
+#: lib/brando/seo/checks.ex:280
+#: lib/brando/seo/checks.ex:303
 #, elixir-autogen, elixir-format
 msgid "Heading structure"
 msgstr "Overskriftsstruktur"
 
-#: lib/brando/seo/checks.ex:248
+#: lib/brando/seo/checks.ex:290
 #, elixir-autogen, elixir-format
 msgid "The content has %{count} H1 headings; a page should have one, usually its title."
 msgstr "Innholdet har %{count} H1-overskrifter; en side bør ha én, vanligvis tittelen."
 
-#: lib/brando/seo/checks.ex:250
+#: lib/brando/seo/checks.ex:292
 #, elixir-autogen, elixir-format
 msgid "Heading levels skip from %{levels}."
 msgstr "Overskriftsnivåene hopper fra %{levels}."
 
-#: lib/brando/seo/checks.ex:270
-#: lib/brando/seo/checks.ex:273
-#: lib/brando/seo/checks.ex:284
+#: lib/brando/seo/checks.ex:312
+#: lib/brando/seo/checks.ex:315
+#: lib/brando/seo/checks.ex:326
 #, elixir-autogen, elixir-format
 msgid "Image descriptions"
 msgstr "Bildebeskrivelser"
 
-#: lib/brando/seo/checks.ex:286
+#: lib/brando/seo/checks.ex:328
 #, elixir-autogen, elixir-format
 msgid "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library."
 msgstr "%{missing} av %{total} bilder mangler alt-tekst, og %{poor} har bare et filnavn eller et generelt ord. Beskriv dem i bildebiblioteket."
 
-#: lib/brando/seo/checks.ex:306
-#: lib/brando/seo/checks.ex:317
+#: lib/brando/seo/checks.ex:348
+#: lib/brando/seo/checks.ex:359
 #, elixir-autogen, elixir-format
 msgid "Language versions"
 msgstr "Språkversjoner"
 
-#: lib/brando/seo/checks.ex:333
-#: lib/brando/seo/checks.ex:349
+#: lib/brando/seo/checks.ex:375
+#: lib/brando/seo/checks.ex:391
 #, elixir-autogen, elixir-format
 msgid "Search click-through"
 msgstr "Klikkrate i søk"
 
-#: lib/brando/seo/checks.ex:335
+#: lib/brando/seo/checks.ex:377
 #, elixir-autogen, elixir-format
 msgid "Shown in Google %{impressions} times at position %{position}, but clicked by %{ctr} of searchers. A title and description that match what people search for earn more clicks."
 msgstr "Vist i Google %{impressions} ganger på plass %{position}, men klikket av %{ctr} av de som søkte. En tittel og beskrivelse som svarer til det folk søker etter, gir flere klikk."
 
-#: lib/brando/seo/checks.ex:364
+#: lib/brando/seo/checks.ex:406
 #, elixir-autogen, elixir-format
 msgid "Much shorter than the %{language} version (%{words} against %{other} words)."
 msgstr "Mye kortere enn versjonen på %{language} (%{words} mot %{other} ord)."
 
-#: lib/brando/seo/checks.ex:370
+#: lib/brando/seo/checks.ex:412
 #, elixir-autogen, elixir-format
 msgid "%{count} fewer images than the %{language} version."
 msgstr "%{count} færre bilder enn versjonen på %{language}."
 
-#: lib/brando/seo/checks.ex:375
+#: lib/brando/seo/checks.ex:417
 #, elixir-autogen, elixir-format
 msgid "%{count} headings, against %{other} in the %{language} version."
 msgstr "%{count} overskrifter, mot %{other} i versjonen på %{language}."
 
-#: lib/brando/seo/checks.ex:381
+#: lib/brando/seo/checks.ex:423
 #, elixir-autogen, elixir-format
 msgid "The %{language} version was edited %{days} days after this one."
 msgstr "Versjonen på %{language} ble redigert %{days} dager etter denne."
@@ -11076,7 +11076,7 @@ msgstr "Klarte ikke lese bildefilen"
 msgid "The image is in a format the AI model cannot read"
 msgstr "Bildet er i et format KI-modellen ikke kan lese"
 
-#: lib/brando_admin/live/config/seo_live.ex:382
+#: lib/brando_admin/live/config/seo_live.ex:385
 #, elixir-autogen, elixir-format
 msgid "Write alt text"
 msgstr "Skriv alt-tekst"
@@ -11106,52 +11106,88 @@ msgstr "Klarte ikke lese KI-svaret"
 msgid "%{name} #%{id} was not found. It may have been deleted."
 msgstr "Fant ikke %{name} #%{id}. Den kan ha blitt slettet."
 
-#: lib/brando/seo/checks.ex:350
+#: lib/brando/seo/checks.ex:392
 #, elixir-autogen, elixir-format
 msgid "Needs at least %{count} impressions on Google's first page."
 msgstr "Krever minst %{count} visninger på Googles første side."
 
-#: lib/brando/seo/checks.ex:196
+#: lib/brando/seo/checks.ex:238
 #, elixir-autogen, elixir-format
 msgid "No sitemap has been generated for this site yet."
 msgstr "Det er ikke generert noe nettstedskart for dette nettstedet ennå."
 
-#: lib/brando/seo/checks.ex:273
+#: lib/brando/seo/checks.ex:315
 #, elixir-autogen, elixir-format
 msgid "The content has no images."
 msgstr "Innholdet har ingen bilder."
 
-#: lib/brando/seo/checks.ex:307
+#: lib/brando/seo/checks.ex:349
 #, elixir-autogen, elixir-format
 msgid "There are no other published language versions to compare with."
 msgstr "Det finnes ingen andre publiserte språkversjoner å sammenligne med."
 
-#: lib/brando/seo/checks.ex:186
+#: lib/brando/seo/checks.ex:228
 #, elixir-autogen, elixir-format
 msgid "There is no meta description to compare with other entries."
 msgstr "Det er ingen metabeskrivelse å sammenligne med andre oppføringer."
 
-#: lib/brando/seo/checks.ex:134
+#: lib/brando/seo/checks.ex:176
 #, elixir-autogen, elixir-format
 msgid "There is no meta description to compare with the site fallback."
 msgstr "Det er ingen metabeskrivelse å sammenligne med nettstedets standardbeskrivelse."
 
-#: lib/brando/seo/checks.ex:115
+#: lib/brando/seo/checks.ex:157
 #, elixir-autogen, elixir-format
 msgid "There is no meta description to measure."
 msgstr "Det er ingen metabeskrivelse å måle."
 
-#: lib/brando/seo/checks.ex:176
+#: lib/brando/seo/checks.ex:218
 #, elixir-autogen, elixir-format
 msgid "There is no meta title to compare with other entries."
 msgstr "Det er ingen metatittel å sammenligne med andre oppføringer."
 
-#: lib/brando/seo/checks.ex:97
+#: lib/brando/seo/checks.ex:117
 #, elixir-autogen, elixir-format
 msgid "There is no meta title to measure."
 msgstr "Det er ingen metatittel å måle."
 
-#: lib/brando/seo/checks.ex:456
+#: lib/brando/seo/checks.ex:498
 #, elixir-autogen, elixir-format
 msgid "This content type has no block content to read."
 msgstr "Denne innholdstypen har ikke blokkinnhold å lese."
+
+#: lib/brando/seo/checks.ex:141
+#, elixir-autogen, elixir-format
+msgid "Search results show text taken from the entry; a description written for them usually does better."
+msgstr "Søkeresultatene viser tekst hentet fra oppføringen; en beskrivelse skrevet for dem gjør det som regel bedre."
+
+#: lib/brando/seo/checks.ex:106
+#: lib/brando/seo/checks.ex:139
+#, elixir-autogen, elixir-format
+msgid "from the entry"
+msgstr "fra oppføringen"
+
+#: lib/brando_admin/live/config/seo_live.ex:679
+#, elixir-autogen, elixir-format
+msgid "Same description"
+msgstr "Samme beskrivelse"
+
+#: lib/brando_admin/live/config/seo_live.ex:689
+#, elixir-autogen, elixir-format
+msgid "Same title"
+msgstr "Samme tittel"
+
+#: lib/brando_admin/live/config/seo_live.ex:951
+#, elixir-autogen, elixir-format
+msgid "Title written"
+msgstr "Tittel skrevet"
+
+#: lib/brando_admin/live/config/seo_live.ex:681
+#, elixir-autogen, elixir-format
+msgid "Write a new description"
+msgstr "Skriv ny beskrivelse"
+
+#: lib/brando_admin/live/config/seo_live.ex:691
+#, elixir-autogen, elixir-format
+msgid "Write a new title"
+msgstr "Skriv ny tittel"
