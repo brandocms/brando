@@ -82,6 +82,12 @@ config :brando, Oban,
   repo: BrandoIntegration.Repo,
   testing: :inline
 
+# Videos added in tests are not looked up at their source unless a test asks
+# for it, and lookups go to a stub.
+config :brando, Brando.Videos.Metadata,
+  fetch_on_create: false,
+  req_options: [plug: {Req.Test, Brando.Videos.Metadata}]
+
 config :brando, :admin_languages, [
   [value: "no", text: "Norsk"],
   [value: "en", text: "English"]

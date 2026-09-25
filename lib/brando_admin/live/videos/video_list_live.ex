@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.VideoPlayer
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
@@ -30,6 +31,8 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       |> assign(:show_new_folder_form, false)
       |> assign(:visible_video_count, 0)
       |> assign(:clipboard_ids, [])
+      |> assign(:playing, nil)
+      |> assign(:missing_metadata_count, length(Videos.list_video_ids_missing_metadata()))
       |> assign(:root_folder_ids, [])
       |> assign_folder_state(nil)
 
@@ -155,11 +158,74 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     {:noreply, assign(socket, :clipboard_ids, [])}
   end
 
+  def handle_event("rename_video", %{"video_id" => id, "title" => title}, socket) do
+    title = String.trim(title)
+
+    with {id, ""} <- Integer.parse(id),
+         {:ok, video} <- Videos.get_video(%{matches: %{id: id}}),
+         true <- title != (video.title || "") do
+      case Videos.update_video(id, %{title: blank_to_nil(title)}, socket.assigns.current_user) do
+        {:ok, _} ->
+          {:noreply, socket}
+
+        {:error, _} ->
+          send(self(), {:toast, gettext("Could not rename the video")})
+          {:noreply, socket}
+      end
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("play_video", %{"id" => id}, socket) do
+    case Videos.get_video(%{matches: %{id: id}, preload: [:file]}) do
+      {:ok, video} -> {:noreply, assign(socket, :playing, video)}
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_video", _, socket), do: {:noreply, assign(socket, :playing, nil)}
+
+  def handle_event("fetch_metadata", _, socket) do
+    {:ok, count} = Videos.enqueue_metadata(Videos.list_video_ids_missing_metadata(), socket.assigns.current_user)
+
+    send(self(), {:toast, ngettext("Looking up %{count} video", "Looking up %{count} videos", count)})
+    {:noreply, assign(socket, :missing_metadata_count, 0)}
+  end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(title), do: title
+
   @impl true
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list media-workspace videos-workspace">
-      <Workspace.header title={gettext("Videos")} />
+      <Workspace.header title={gettext("Videos")}>
+        <button
+          :if={@missing_metadata_count > 0}
+          type="button"
+          class="workspace-button"
+          phx-click="fetch_metadata"
+          title={gettext("Look up thumbnails, titles and durations at each video's source")}
+        >
+          {gettext("Fetch thumbnails and titles")}
+          <span class="alt-text-missing">
+            {ngettext("%{count} missing", "%{count} missing", @missing_metadata_count)}
+          </span>
+        </button>
+      </Workspace.header>
+
+      <Content.modal
+        :if={@playing}
+        id="video-player-modal"
+        title={Brando.Videos.display_title(@playing) || gettext("Untitled")}
+        icon="hero-film"
+        show
+        wide
+        close={JS.push("close_video")}
+      >
+        <VideoPlayer.player video={@playing} />
+      </Content.modal>
 
       <.live_component
         module={FileBrowser}

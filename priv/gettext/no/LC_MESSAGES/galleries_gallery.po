@@ -12,12 +12,12 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/galleries/gallery.ex:54
+#: lib/brando/galleries/gallery.ex:56
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr "Konfigurasjonsmål"
 
-#: lib/brando/galleries/gallery.ex:61
+#: lib/brando/galleries/gallery.ex:63
 #, elixir-autogen, elixir-format
 msgid "Gallery objects"
 msgstr "Galleriobjekter"

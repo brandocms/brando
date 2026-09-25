@@ -150,12 +150,12 @@ msgid "Default"
 msgstr ""
 
 #: lib/brando/pages/page.ex:146
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Title &darr;"
 msgstr ""
 
 #: lib/brando/pages/page.ex:147
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Title &uarr;"
 msgstr ""
 

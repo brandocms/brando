@@ -97,6 +97,9 @@ importers:
       gsap:
         specifier: ^3.15.0
         version: 3.15.0
+      hls.js:
+        specifier: ^1.6.0
+        version: 1.7.3
       idle-js:
         specifier: ^1.2.0
         version: 1.2.0
@@ -494,42 +497,36 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-musl@1.2.8':
     resolution: {integrity: sha512-jFJTifHnNPY+yzOoNZQfSIysrVyXzEQPhPnOUjmD1bcQGHH6s7c8cViKWar8YplQImE5N9JRqMCLrM2CdxOrZA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-linux-ppc64-gnu@1.2.8':
     resolution: {integrity: sha512-FhiOziBDWPBjbcmRzfLyIJnaP7AVMFXT7YCXPjXxj7wKU3vx24RjrCNN/zjvVa+N2vVoHJwCoUBvsrN/DG3zIA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.2.8':
     resolution: {integrity: sha512-WnHfADMzOV2Y55wlx1hzzQnar/wDt/VdvWSD99r18Mz9ylNieIGOkRx3UV21h7m/eJvjySYJkO26VvGNFkwsIQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.2.8':
     resolution: {integrity: sha512-H9tRr5ibfXFVLxbPOseVewewFpl28zcEdjRDt2FTUZU7odxP0gEv1ki4/kGmcGOh78oRwZuuQllGLZ9zTJp84g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-musl@1.2.8':
     resolution: {integrity: sha512-UefiqfM3D6IVNlZ8tSGs9+Ejjud2T+oxO0IHADU45Y+lyEjD2dVFyZHbkfX0LUb5Zugo/oIv1eCO/KVYhgYJYA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-openharmony-arm64@1.2.8':
     resolution: {integrity: sha512-637Ke4kWSy6rp9cxQ9gMOXlxPgIw/c1beASV4M//3+9I4uwBVOOl74G+e3zyU3u19U7RkRl/HuewixZ/Z6+Rjg==}
@@ -945,6 +942,9 @@ packages:
     resolution: {integrity: sha512-sKJf1+ceQBr4SMkvQnBDNDtf4TXpVhVGateu0t918bl30FnbE2m4vNLX+VWe/dpjlb+HugGYzW7uQXH98HPEYw==}
     engines: {node: '>=4'}
 
+  hls.js@1.7.3:
+    resolution: {integrity: sha512-MsPlx6yVW4Qv4C7mEVou4/gk/5cN2dVxOTnrNjPSmyH2f0Ln+/UkG10Ax1PE6OvrmTVPKgQYozTtBaPOuCzq7A==}
+
   idle-js@1.2.0:
     resolution: {integrity: sha512-ssRtcpcg8WMvXHOkNaq04NXftpuVR+npN0ke8d7EDSxoPyCxcpeZv1EkKft9KmB/v/Q1Q47z89d/9+5VKkvpxw==}
 
@@ -1006,28 +1006,24 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.33.0:
     resolution: {integrity: sha512-yiO5ROMuYQgXbC60yjZU5CYSFZGKXL0HFATXt9mHJn1+zW55oCtMI9NfcVhYLMFDL7gV7oBPon/EmMMGg2OvtQ==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-linux-x64-gnu@1.33.0:
     resolution: {integrity: sha512-ar+Ju7LmcN0Jo4FpL4hpFybwNG9/3A/Br5KW2n2jyODg3MEZXaDYADdemoNS+BDNfMgKvylJLj4S5tyRActuAg==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-x64-musl@1.33.0:
     resolution: {integrity: sha512-RYiYbkokw0trfKqqzfF55lginwEPrD3OJDfTuJzFs1MK6iFnDenaz1fqLLtX4ITG3OktJQXOeTaw1awrBAlZPw==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-win32-arm64-msvc@1.33.0:
     resolution: {integrity: sha512-1K+MPfLSFVpphzpdbfkhlWk6wBrTObBzS2T6db10PNOZgR9GoVsAWzwNyuhUYYbTp23j+4RrncfujZ4uAzXvwA==}
@@ -1158,8 +1154,8 @@ packages:
     resolution: {integrity: sha512-gMlRmW52Y86Lct+KTr+gMjxk0aUSuTyjtvelIH3a7UdaXONaKH6qSmj8KAXCW4+nhTlAsOw5JdkRjCdZ/Kjb3Q==}
     engines: {node: '>=8.0.0'}
 
-  postcss-functions@git+https://github.com/twined/postcss-functions.git#7cc41392a686f59c1f0d9fd946fd03f9e11a0158:
-    resolution: {commit: 7cc41392a686f59c1f0d9fd946fd03f9e11a0158, repo: https://github.com/twined/postcss-functions.git, type: git}
+  postcss-functions@git+https://git@github.com:twined/postcss-functions.git#7cc41392a686f59c1f0d9fd946fd03f9e11a0158:
+    resolution: {commit: 7cc41392a686f59c1f0d9fd946fd03f9e11a0158, repo: git@github.com:twined/postcss-functions.git, type: git}
     version: 4.0.0
 
   postcss-nested@4.2.3:
@@ -1448,7 +1444,7 @@ snapshots:
       normalize.css: 8.0.1
       postcss: 7.0.39
       postcss-extend-rule: 3.0.0
-      postcss-functions: git+https://github.com/twined/postcss-functions.git#7cc41392a686f59c1f0d9fd946fd03f9e11a0158
+      postcss-functions: git+https://git@github.com:twined/postcss-functions.git#7cc41392a686f59c1f0d9fd946fd03f9e11a0158
       postcss-nested: 4.2.3
       postcss-reporter: 6.0.1
       reduce-css-calc: 2.1.8
@@ -2164,6 +2160,8 @@ snapshots:
 
   has-flag@3.0.0: {}
 
+  hls.js@1.7.3: {}
+
   idle-js@1.2.0:
     dependencies:
       '@babel/polyfill': 7.12.1
@@ -2332,7 +2330,7 @@ snapshots:
       postcss-nesting: 7.0.1
       postcss-tape: 5.0.2
 
-  postcss-functions@git+https://github.com/twined/postcss-functions.git#7cc41392a686f59c1f0d9fd946fd03f9e11a0158:
+  postcss-functions@git+https://git@github.com:twined/postcss-functions.git#7cc41392a686f59c1f0d9fd946fd03f9e11a0158:
     dependencies:
       glob: 7.2.3
       object-assign: 4.1.1

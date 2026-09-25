@@ -69,6 +69,9 @@ defmodule Brando.Videos.Video do
 
     attribute :meta, :map, default: %{}
 
+    # Where the video is used, filled in by the listing (see `Brando.Videos.put_usage/1`).
+    attribute :usage, :map, virtual: true
+
     # Block-level presentation settings, declared on
     # `Brando.Villain.Blocks.VideoBlock.Data` and merged onto the video at render
     # time by `Brando.Content.OverrideResolver`. They describe how *this
@@ -94,6 +97,8 @@ defmodule Brando.Videos.Video do
     listing do
       query %{order: [{:desc, :id}], preload: [:file, :thumbnail]}
       filter label: t("Title or source"), key: "path"
+      filter label: t("Not in use"), key: "unused", type: :boolean
+      decorate &__MODULE__.put_usage/1
       component &__MODULE__.listing_row/1
     end
   end
@@ -140,32 +145,97 @@ defmodule Brando.Videos.Video do
     end
   end
 
+  # A local capture: the listing DSL keeps the function at compile time, and a
+  # capture of `Brando.Videos` would make this Blueprint compile against the
+  # whole videos context (issue #2737).
+  @doc false
+  def put_usage(videos), do: Brando.Videos.put_usage(videos)
+
   def listing_row(assigns) do
+    assigns = assign(assigns, :title, Brando.Videos.display_title(assigns.entry))
+
     ~H"""
     <.field columns={1} class="library-thumbnail library-video-thumbnail">
-      <img :if={@entry.thumbnail} width="64" height="52" alt="" src={Brando.Utils.img_url(@entry.thumbnail, :smallest)} />
-      <Brando.HTML.Icon.icon :if={!@entry.thumbnail} name="hero-film" />
+      <button
+        type="button"
+        class="library-video-play"
+        phx-click="play_video"
+        phx-value-id={@entry.id}
+        aria-label={gettext("Play %{title}", title: @title || gettext("Untitled"))}
+      >
+        <img
+          :if={@entry.thumbnail}
+          width="64"
+          height="52"
+          alt=""
+          src={Brando.Utils.img_url(@entry.thumbnail, :smallest, prefix: Brando.Utils.media_url())}
+        />
+        <Brando.HTML.Icon.icon :if={!@entry.thumbnail} name="hero-film" />
+        <span class="library-video-play-icon" aria-hidden="true"><Brando.HTML.Icon.icon name="hero-play-solid" /></span>
+      </button>
     </.field>
-    <.update_link entry={@entry} columns={8} class="library-image-info">
-      {if @entry.title, do: URI.decode(@entry.title), else: gettext("Untitled")}
+    <.update_link entry={@entry} columns={8} class="library-image-info library-video-info" skip_style>
+      <:before>
+        <%!-- The title is renamed in place; the empty click keeps the row from being selected. --%>
+        <form
+          id={"video-rename-#{@entry.id}"}
+          class="library-video-rename"
+          phx-submit="rename_video"
+          phx-change="rename_video"
+          phx-click={%Phoenix.LiveView.JS{}}
+        >
+          <input type="hidden" name="video_id" value={@entry.id} />
+          <input
+            type="text"
+            name="title"
+            value={@title}
+            placeholder={gettext("Untitled")}
+            aria-label={gettext("Title")}
+            autocomplete="off"
+            phx-debounce="blur"
+          />
+        </form>
+      </:before>
+      <span class="library-image-title">
+        <%= case @entry.type do %>
+          <% :upload -> %>
+            {if @entry.file, do: URI.decode(@entry.file.filename)}
+          <% _ -> %>
+            {video_source(@entry)}
+        <% end %>
+      </span>
       <:outside>
-        <div class="library-image-title">
-          <%= case @entry.type do %>
-            <% :upload -> %>
-              {if @entry.file, do: URI.decode(@entry.file.filename)}
-            <% _ -> %>
-              {video_source(@entry)}
-          <% end %>
-        </div>
         <div class="library-image-meta">
           <span class="library-format">{video_type_label(@entry.type)}</span>
           <span :if={@entry.width && @entry.height}>{@entry.width} × {@entry.height}</span>
-          <span :if={@entry.duration && @entry.duration != ""}>{@entry.duration}</span>
+          <span :if={@entry.duration && @entry.duration != ""}>{short_duration(@entry.duration)}</span>
           <span :if={@entry.type == :upload && @entry.file}>{Brando.Utils.human_size(@entry.file.filesize)}</span>
+        </div>
+        <div :if={is_list(@entry.usage)} class="library-video-usage">
+          <%= if @entry.usage == [] do %>
+            <span class="library-video-unused">{gettext("Not in use")}</span>
+          <% else %>
+            <span>{gettext("Used in")}</span>
+            <%= for {usage, index} <- Enum.with_index(@entry.usage) do %>
+              <.link :if={usage.url} navigate={usage.url}>{usage.label}</.link><span :if={!usage.url}>{usage.label}</span><span
+                :if={index < length(@entry.usage) - 1}
+                aria-hidden="true"
+              >,</span>
+            <% end %>
+          <% end %>
         </div>
       </:outside>
     </.update_link>
     """
+  end
+
+  # "00:01:05" reads as "1:05"; hours stay when there are any.
+  defp short_duration(duration) do
+    case String.split(duration, ":") do
+      ["00", "0" <> minutes, seconds] -> "#{minutes}:#{seconds}"
+      ["00", minutes, seconds] -> "#{minutes}:#{seconds}"
+      _ -> duration
+    end
   end
 
   defp video_source(%{source_url: url}) when is_binary(url) and url != "" do

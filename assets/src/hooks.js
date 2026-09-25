@@ -49,6 +49,7 @@ import UploadTriggerHook from './hooks/UploadTrigger'
 import VarLayoutHook from './hooks/VarLayout'
 import VideoPickerGridHook from './hooks/VideoPickerGrid'
 import VideoURLParserHook from './hooks/VideoURLParser'
+import VideoPlayerHook from './hooks/VideoPlayer'
 
 // Brando hooks
 export default (app) => {
@@ -103,5 +104,6 @@ export default (app) => {
     'Brando.VarLayout': VarLayoutHook(app),
     'Brando.VideoPickerGrid': VideoPickerGridHook(app),
     'Brando.VideoURLParser': VideoURLParserHook(app),
+    'Brando.VideoPlayer': VideoPlayerHook(app),
   }
 }

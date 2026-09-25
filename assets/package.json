@@ -36,6 +36,7 @@
     "dompurify": "^3.4.3",
     "flatpickr": "^4.6.13",
     "gsap": "^3.15.0",
+    "hls.js": "^1.6.0",
     "idle-js": "^1.2.0",
     "izitoast": "^1.4.0",
     "linkifyjs": "^4.3.3",

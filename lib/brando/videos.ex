@@ -7,6 +7,7 @@ defmodule Brando.Videos do
 
   use BrandoAdmin, :context
   use Brando.Query
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Query
 
@@ -62,6 +63,13 @@ defmodule Brando.Videos do
               ilike(q.remote_id, ^encoded_pattern)
 
       # The root: entries without a folder, and those in a folder that is the root itself.
+      {:unused, value}, query when value in [true, "true"] ->
+        used = from(v in Video, select: v.id) |> Brando.Repo.all() |> list_usage() |> Map.keys()
+        from(t in query, where: t.id not in ^used)
+
+      {:unused, _}, query ->
+        query
+
       {:folder_id, {:root, root_folder_ids}}, query ->
         from(t in query, where: is_nil(t.folder_id) or t.folder_id in ^root_folder_ids)
 
@@ -93,7 +101,242 @@ defmodule Brando.Videos do
     %Video{}
     |> Video.changeset(params, user)
     |> Brando.Repo.insert()
+    |> tap(fn
+      {:ok, video} -> maybe_fetch_metadata_on_create(video, user)
+      _ -> :ok
+    end)
   end
+
+  # Videos added by URL arrive without a thumbnail or a real title; look them up
+  # in the background. Off in tests, which stub the lookups where they need them.
+  defp maybe_fetch_metadata_on_create(%Video{type: type} = video, user)
+       when type in [:external_file, :vimeo, :youtube] do
+    if Keyword.get(Application.get_env(:brando, Brando.Videos.Metadata, []), :fetch_on_create, true),
+      do: enqueue_metadata([video.id], user)
+  end
+
+  defp maybe_fetch_metadata_on_create(_video, _user), do: :ok
+
+  @doc """
+  Queues a lookup of each video's thumbnail, title, duration and size at its
+  source (see `fetch_metadata/2`). Returns how many were queued.
+  """
+  @spec enqueue_metadata([integer()], user) :: {:ok, non_neg_integer()}
+  def enqueue_metadata(video_ids, %{id: user_id}) do
+    jobs =
+      Enum.map(video_ids, fn id ->
+        %{"video_id" => id, "user_id" => user_id}
+        |> Brando.Tenant.Job.attach()
+        |> Brando.Worker.VideoMetadata.new()
+      end)
+
+    Oban.insert_all(jobs)
+    {:ok, length(jobs)}
+  end
+
+  @doc """
+  Ids of the videos whose source can tell us more than the video knows: no
+  thumbnail, or no real title from a source that has one.
+  """
+  @spec list_video_ids_missing_metadata() :: [integer()]
+  def list_video_ids_missing_metadata do
+    from(v in Video,
+      where: is_nil(v.deleted_at) and v.type in [:external_file, :vimeo, :youtube],
+      select: v
+    )
+    |> Brando.Repo.all()
+    |> Enum.filter(&(is_nil(&1.thumbnail_id) or (placeholder_title?(&1) and Brando.Videos.Metadata.gives_title?(&1))))
+    |> Enum.map(& &1.id)
+  end
+
+  @doc """
+  Fills in what the video's source knows and the video lacks: a thumbnail,
+  stored as an image, and the title, duration and size. What is already set is
+  kept, except a title that is only the file name from the URL.
+  """
+  @spec fetch_metadata(Video.t(), user) :: {:ok, Video.t()} | {:error, term()}
+  def fetch_metadata(%Video{} = video, user) do
+    with {:ok, found} <- Brando.Videos.Metadata.lookup(video) do
+      params =
+        %{
+          thumbnail_id: is_nil(video.thumbnail_id) && store_thumbnail(video, found[:thumbnail_url], user),
+          title: placeholder_title?(video) && found[:title],
+          duration: blank?(video.duration) && found[:duration] && Brando.Videos.Helpers.format_duration(found.duration),
+          width: is_nil(video.width) && found[:width],
+          height: is_nil(video.height) && found[:height]
+        }
+        |> Enum.reject(fn {_, value} -> value in [nil, false] end)
+        |> Map.new()
+
+      if params == %{}, do: {:ok, video}, else: update_video(video.id, params, user)
+    end
+  end
+
+  @doc """
+  Puts each video's usage (see `list_usage/1`) in its `:usage` field. The
+  video listing's `decorate`, so one page costs one lookup.
+  """
+  @spec put_usage([Video.t()]) :: [Video.t()]
+  def put_usage(videos) do
+    usage = videos |> Enum.map(& &1.id) |> list_usage()
+    Enum.map(videos, &%{&1 | usage: Map.get(usage, &1.id, [])})
+  end
+
+  @doc """
+  Where each video is used: entries whose blocks place it, galleries holding
+  it, and entries holding it in a video field. Returns `%{video_id => usages}`,
+  each usage `%{label: String.t(), url: String.t() | nil}`; videos used nowhere
+  are left out.
+  """
+  @spec list_usage([integer()]) :: %{optional(integer()) => [%{label: String.t(), url: String.t() | nil}]}
+  def list_usage([]), do: %{}
+
+  def list_usage(video_ids) do
+    refs =
+      from(r in Brando.Content.Ref,
+        where: r.video_id in ^video_ids and not is_nil(r.block_id),
+        select: {r.video_id, r.block_id}
+      )
+      |> Brando.Repo.all()
+
+    entries_by_block =
+      refs |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> Brando.Content.BlockReferences.list_entries_for_block_ids()
+
+    in_blocks = for {video_id, block_id} <- refs, entry <- Map.get(entries_by_block, block_id, []), do: {video_id, entry}
+
+    in_galleries =
+      from(o in Brando.Galleries.GalleryObject,
+        where: o.video_id in ^video_ids,
+        select: {o.video_id, o.gallery_id},
+        distinct: true
+      )
+      |> Brando.Repo.all()
+      |> Enum.map(fn {video_id, gallery_id} -> {video_id, {Brando.Galleries.Gallery, gallery_id}} end)
+
+    usages = Enum.uniq(in_blocks ++ in_galleries ++ list_field_usage(video_ids))
+    labels = entry_labels(Enum.map(usages, &elem(&1, 1)))
+
+    usages
+    |> Enum.group_by(&elem(&1, 0), fn {_, entry} -> Map.fetch!(labels, entry) end)
+    |> Map.new(fn {video_id, entries} -> {video_id, Enum.sort_by(entries, & &1.label)} end)
+  end
+
+  # A video picked in a Blueprint's video field carries that field as its
+  # config target ("video:MyApp.Case:cover_video"); the entry holds its id.
+  defp list_field_usage(video_ids) do
+    from(v in Video, where: v.id in ^video_ids and like(v.config_target, "video:%"), select: {v.id, v.config_target})
+    |> Brando.Repo.all()
+    |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+    |> Enum.flat_map(fn {config_target, ids} ->
+      with ["video", schema, field] <- String.split(config_target, ":"),
+           {:ok, schema} <- ConfigTarget.schema_module(schema),
+           foreign_key = String.to_existing_atom("#{field}_id"),
+           true <- foreign_key in schema.__schema__(:fields) do
+        from(e in schema, where: field(e, ^foreign_key) in ^ids, select: {field(e, ^foreign_key), e.id})
+        |> Brando.Repo.all()
+        |> Enum.map(fn {video_id, entry_id} -> {video_id, {schema, entry_id}} end)
+      else
+        _ -> []
+      end
+    end)
+  rescue
+    ArgumentError -> []
+  end
+
+  defp entry_labels(entries) do
+    titles =
+      entries
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.flat_map(fn {schema, ids} ->
+        from(i in Brando.Content.Identifier,
+          where: i.schema == ^schema and i.entry_id in ^ids,
+          select: {i.entry_id, i.title}
+        )
+        |> Brando.Repo.all()
+        |> Enum.map(fn {id, title} -> {{schema, id}, title} end)
+      end)
+      |> Map.new()
+
+    Map.new(entries, fn {schema, id} = entry ->
+      label =
+        case {schema, Map.get(titles, entry)} do
+          {Brando.Galleries.Gallery, _} -> gettext("Gallery #%{id}", id: id)
+          {_, title} when is_binary(title) and title != "" -> title
+          _ -> "##{id}"
+        end
+
+      {entry, %{label: label, url: admin_url(schema, id)}}
+    end)
+  end
+
+  defp admin_url(schema, id) do
+    schema.__admin_route__(:update, [id])
+  rescue
+    _ -> nil
+  end
+
+  @doc """
+  The video's title as a person would call it: `nil` when it is only the file
+  name from its URL (see `placeholder_title?/1`).
+  """
+  @spec display_title(Video.t()) :: String.t() | nil
+  def display_title(%Video{} = video), do: if(placeholder_title?(video), do: nil, else: URI.decode(video.title))
+
+  @doc """
+  Whether the video's title says nothing: empty, or just the file name of its
+  URL, which is what adding a file by URL puts there.
+  """
+  @spec placeholder_title?(Video.t()) :: boolean()
+  def placeholder_title?(%Video{title: title} = video) do
+    blank?(title) or normalize_title(title) == normalize_title(url_file_name(video.source_url))
+  end
+
+  defp url_file_name(url) when is_binary(url) do
+    case URI.parse(url).path do
+      nil -> nil
+      path -> path |> Path.basename() |> Path.rootname()
+    end
+  end
+
+  defp url_file_name(_), do: nil
+
+  defp normalize_title(nil), do: nil
+
+  defp normalize_title(title),
+    do: title |> URI.decode() |> String.replace(~r/[_\-\s]+/, " ") |> String.trim() |> String.downcase()
+
+  defp blank?(value), do: value in [nil, ""]
+
+  defp store_thumbnail(_video, nil, _user), do: nil
+
+  defp store_thumbnail(video, url, user) do
+    config_target = ConfigTarget.serialize({"image", Video, :thumbnail})
+
+    with {:ok, body, content_type} <- Brando.Videos.Metadata.download(url),
+         {:ok, cfg} <- Brando.Images.get_config_for(config_target),
+         tmp = Path.join(System.tmp_dir!(), "brando-video-#{video.id}-#{System.unique_integer([:positive])}"),
+         :ok <- File.write(tmp, body) do
+      try do
+        meta = %{path: tmp, config_target: config_target}
+        entry = %{client_name: "video-#{video.id}#{extension(content_type)}", client_type: content_type}
+
+        with {:ok, image} <- Brando.Upload.handle_upload(meta, entry, cfg, user),
+             {:ok, image} <- Brando.Upload.process_upload(image, cfg, user) do
+          image.id
+        else
+          _ -> nil
+        end
+      after
+        File.rm(tmp)
+      end
+    else
+      _ -> nil
+    end
+  end
+
+  defp extension("image/png"), do: ".png"
+  defp extension("image/webp"), do: ".webp"
+  defp extension(_), do: ".jpg"
 
   @doc """
   Create new video without user (used by uploaders)

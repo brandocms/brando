@@ -195,3 +195,88 @@
     .library-thumbnail .image-content, .library-thumbnail img { width: 48px; }
   }
 }
+
+/* Videos: the thumbnail plays the video, the title is renamed in place, and
+   each row says where the video is used. */
+.videos-workspace {
+  .library-video-play {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #849486;
+    cursor: pointer;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+
+  .library-video-play-icon {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, .28);
+    color: #fff;
+    opacity: 0;
+    transition: opacity .15s ease;
+
+    [data-icon] { width: 22px; height: 22px; }
+  }
+
+  .library-video-play:is(:hover, :focus-visible) .library-video-play-icon { opacity: 1; }
+
+  .library-video-info > a { color: var(--workspace-muted); text-decoration: none; }
+  .library-video-info > a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+  .library-video-rename {
+    width: 100%;
+
+    input {
+      width: 100%;
+      margin-left: -6px;
+      padding: 2px 6px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--workspace-ink);
+      font: inherit;
+      font-size: 15px;
+      line-height: 22px;
+    }
+
+    input::placeholder { color: var(--workspace-muted); font-style: italic; }
+    input:hover { border-color: var(--workspace-line); }
+    input:focus { border-color: var(--workspace-accent); background: #fff; outline: none; }
+  }
+
+  .library-video-usage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 6px;
+    color: var(--workspace-muted);
+    font-size: 11px;
+
+    a { color: var(--workspace-ink); text-decoration: underline; text-decoration-color: var(--workspace-line); text-underline-offset: 2px; }
+    a:hover { text-decoration-color: currentColor; }
+    [aria-hidden] { margin-left: -6px; }
+  }
+
+  .library-video-unused { color: #87662d; }
+}
+
+/* As wide as the dialog allows while the height stays within the screen, so a
+   portrait video is not cut off. */
+.video-player {
+  width: min(100%, calc(70vh * var(--video-ratio)));
+  aspect-ratio: var(--video-ratio);
+  margin-inline: auto;
+  background: #000;
+
+  iframe, video { display: block; width: 100%; height: 100%; border: 0; }
+}
+
+.video-player-unavailable { padding: 24px; color: #fff; }
