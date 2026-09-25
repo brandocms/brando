@@ -110,6 +110,69 @@ defmodule Brando.Content.BlockReferences do
   end
 
   @doc """
+  Resolves each block to the entries that own it, keeping which block led
+  where. Returns `%{block_id => [{schema, entry_id}]}`; blocks no entry owns
+  are left out.
+  """
+  @spec list_entries_for_block_ids([integer()]) :: %{optional(integer()) => [{module(), integer()}]}
+  def list_entries_for_block_ids([]), do: %{}
+
+  def list_entries_for_block_ids(block_ids) when is_list(block_ids) do
+    roots = list_roots_for_block_ids(block_ids)
+
+    entries_by_root =
+      roots
+      |> Enum.group_by(fn {_block_id, _root_id, source} -> source end, fn {_block_id, root_id, _} -> root_id end)
+      |> Enum.reject(fn {source, _} -> is_nil(source) end)
+      |> Enum.flat_map(fn {source, root_ids} -> list_entries_by_root(Module.concat([source]), Enum.uniq(root_ids)) end)
+      |> Enum.group_by(fn {root_id, _entry} -> root_id end, fn {_root_id, entry} -> entry end)
+
+    roots
+    |> Enum.flat_map(fn {block_id, root_id, _} -> Enum.map(Map.get(entries_by_root, root_id, []), &{block_id, &1}) end)
+    |> Enum.group_by(fn {block_id, _} -> block_id end, fn {_, entry} -> entry end)
+    |> Map.new(fn {block_id, entries} -> {block_id, Enum.uniq(entries)} end)
+  end
+
+  # Walks up from each block to its root, carrying the block it started from.
+  defp list_roots_for_block_ids(block_ids) do
+    base_case =
+      from block in "content_blocks",
+        select: %{origin: block.id, id: block.id, parent_id: block.parent_id, source: block.source},
+        where: block.id in ^block_ids
+
+    recursive_case =
+      from block in "content_blocks",
+        join: chain in "block_chain",
+        on: chain.parent_id == block.id,
+        select: %{origin: chain.origin, id: block.id, parent_id: block.parent_id, source: block.source}
+
+    "block_chain"
+    |> recursive_ctes(true)
+    |> with_cte("block_chain", as: ^union_all(base_case, ^recursive_case))
+    |> where([chain], is_nil(chain.parent_id))
+    |> select([chain], {chain.origin, chain.id, chain.source})
+    |> distinct(true)
+    |> repo().all()
+  end
+
+  defp list_entries_by_root(join_source, root_ids) do
+    {:assoc, %{queryable: schema}} = Map.fetch!(join_source.__changeset__(), :entry)
+
+    query =
+      from join_entry in join_source,
+        join: entry in ^schema,
+        on: entry.id == join_entry.entry_id,
+        where: join_entry.block_id in ^root_ids,
+        select: {join_entry.block_id, join_entry.entry_id},
+        distinct: true
+
+    query
+    |> maybe_reject_deleted(schema)
+    |> repo().all()
+    |> Enum.map(fn {root_id, entry_id} -> {root_id, {schema, entry_id}} end)
+  end
+
+  @doc """
   Resolves `block_ids` to owning entries and removes `entry` from the result.
   """
   @spec reject_blocks_belonging_to_entry([integer()], struct() | nil) :: %{
