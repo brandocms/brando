@@ -30,8 +30,6 @@ defmodule Brando.SitemapTest do
   alias Brando.Sitemap
   alias Sitemapper.URL
 
-  require Logger
-
   test "check_lastmod/1" do
     url = %URL{lastmod: ~N[2023-12-20 14:00:00], loc: "/"}
     checked_url = Sitemap.check_lastmod(url)
