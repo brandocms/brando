@@ -22,6 +22,13 @@ defmodule Brando.Uploads.AssetIntentTest do
     assert target["deliver_topic"] == @topic
   end
 
+  test "a conversation accepts images and videos, not files" do
+    target = %{"kind" => "ai_conversation", "component_id" => "assistant", "deliver_topic" => @topic}
+    assert {:ok, _} = AssetIntent.normalize(Map.put(target, "asset_type", "image"))
+    assert {:ok, _} = AssetIntent.normalize(Map.put(target, "asset_type", "video"))
+    assert {:error, _} = AssetIntent.normalize(Map.put(target, "asset_type", "file"))
+  end
+
   test "rejects mismatched asset and destination types" do
     assert {:error, "Asset type is not valid" <> _} =
              AssetIntent.normalize(%{

@@ -71,7 +71,7 @@ defmodule Brando.AI.Agent.Loop do
     opts =
       Keyword.merge(request.req_opts, tools: tools(), max_tokens: Agent.config()[:max_tokens])
 
-    case ReqLLM.generate_text(request.model, context, opts) do
+    case Agent.config()[:client].generate_text(request.model, context, opts) do
       {:ok, response} ->
         run = Budget.reconcile(run, Response.usage(response), request.model)
         respond(run, user, request, conversation, response, n)
@@ -137,10 +137,11 @@ defmodule Brando.AI.Agent.Loop do
       actor: user,
       conversation_id: conversation.id,
       proposal_id: conversation.proposal_id,
+      # Uploads still in progress have an alias but no asset yet.
       attachments:
-        Map.new(conversation.attachments, fn a ->
+        for a <- conversation.attachments, a["id"], into: %{} do
           {a["alias"], %{kind: String.to_existing_atom(a["kind"]), id: a["id"], label: a["label"]}}
-        end)
+        end
     }
   end
 

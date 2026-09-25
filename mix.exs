@@ -33,6 +33,7 @@ defmodule Brando.Mixfile do
           "guides/markdown_sources.md",
           "guides/module_definitions.md",
           "guides/content_transfer.md",
+          "guides/content_assistant.md",
           "guides/villain_parser.md",
           "guides/villain_text_styles.md",
           "guides/live_preview.md",

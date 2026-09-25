@@ -102,6 +102,7 @@
 @import "./views/config/ScheduledPublishing.css";
 @import "./views/config/Utils.css";
 @import "./views/config/ContentTransfer.css";
+@import "./views/Assistant.css";
 
 html.moonwalk [data-moonwalk-run].moonwalked {
   opacity: 1 !important;

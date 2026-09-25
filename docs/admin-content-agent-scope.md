@@ -557,3 +557,40 @@ Stage 1 took about a day, not the estimated 2–3.
   tested offline through ReqLLM's real encoders and decoders (`Req.Test`
   stubs): tool definitions go out, `tool_use`/`function_call` comes in, and
   matching `tool_result`/`function_call_output` goes back.
+
+## Stage 4: Workspace UI (25 September 2026)
+
+- **`BrandoAdmin.AI.AssistantLive`** at `/admin/assistant` implements concept A:
+  the conversation on the left, the proposal under review on the right, and a
+  sticky apply bar.
+  - Tool calls collapse into a checklist of steps; a progress line has a Stop
+    button.
+  - Recent conversations are listed.
+  - The menu item appears under System when a model is configured and the user
+    may use the assistant (`brando.assistant.use`, a new capability).
+- **Review cards come from `Proposals.Review`**, which is derived only from the
+  stored, frozen operations. There is one card per entry, in operation order.
+  - Each card shows its action (Create/Update), links, thumbnails of the placed
+    media, and each change: the new block and its placement, text, media and
+    values, and field before/after.
+  - Problems appear per entry. Live pages and new drafts are labelled.
+  - The apply bar counts entry changes and live pages
+    (`Apply 1 entry change · affects 1 live page`).
+  - That click approves exactly the version on screen and applies it. The
+    receipt links to each saved entry.
+- **Attachments** can be uploaded through the sticky UploadManager, or picked
+  from a media-library dialog.
+  - Uploads use a new intent kind, `ai_conversation`.
+  - At intake the manager announces the accepted files in selection order, and
+    the conversation reserves `image1`, `image2`, … for them.
+  - Each delivery carries its file's ref, so a small file finishing first
+    cannot take a larger file's name.
+  - Pending uploads are shown and are not offered to the model.
+- **E2E runs against a scripted model.** `E2eProject.AssistantModel` implements
+  ReqLLM's `generate_text/3` and drives the real tools.
+  - `Brando.AI.Agent` got a `client` seam and its own `api_key`, so the e2e
+    configuration touches nothing else.
+  - Spawned runs join their LiveView's SQL sandbox. The pool's shared-mode
+    owner otherwise hid the LiveView's rows.
+- **Not done:** Norwegian translations of the new `ai_agent`/`content_proposals`
+  strings, and folder attachments.

@@ -105,6 +105,49 @@ defmodule Brando.AI.AgentTest do
     assert {:error, _} = Agent.attach(c.conversation.id, {:image, c.image.id}, Factory.insert(:random_user))
   end
 
+  test "uploads keep the aliases reserved in selection order", c do
+    uploads = [
+      %{ref: "a", asset_type: "image", filename: "large.jpg"},
+      %{ref: "b", asset_type: "video", filename: "clip.mp4"},
+      %{ref: "c", asset_type: "image", filename: "small.jpg"}
+    ]
+
+    assert {:ok, ~w(image1 video1 image2)} = Agent.reserve(c.conversation.id, uploads, c.user)
+
+    small = Factory.insert(:image, creator_id: c.user.id, title: nil, path: "images/x/small.jpg")
+    assert {:ok, "image2"} = Agent.fulfil(c.conversation.id, "c", small, c.user)
+    assert {:error, _} = Agent.fulfil(c.conversation.id, "missing", small, c.user)
+
+    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+
+    assert [
+             %{"alias" => "image1", "id" => nil},
+             %{"alias" => "video1", "id" => nil},
+             %{"alias" => "image2", "id" => id, "label" => "small.jpg"}
+           ] = conversation.attachments
+
+    assert id == small.id
+  end
+
+  test "the assistant needs its permission when groups authorization is on", c do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+    editor = Factory.insert(:random_user, role: :user)
+    scope = Scope.standalone(c.user)
+    {:ok, group} = Groups.create(scope, %{name: "Editors"}, [Catalog.get(:access, :backend).key])
+    {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+
+    refute Agent.allowed?(editor)
+    assert {:error, message} = Agent.start_conversation(editor)
+    assert message =~ "permission"
+
+    {:ok, assistants} = Groups.create(scope, %{name: "Assistant users"}, [Catalog.get(:use, :assistant).key])
+    {:ok, :ok} = Groups.add_member(scope, assistants.id, editor.id)
+    assert Agent.allowed?(editor)
+    assert {:ok, _} = Agent.start_conversation(editor)
+  end
+
   test "conversations belong to their user", c do
     other = Factory.insert(:random_user)
     assert {:error, _} = Agent.get_conversation(c.conversation.id, other)

@@ -22,12 +22,15 @@ defmodule Brando.AI.Agent do
 
       config :brando, Brando.AI.Agent,
         model: "anthropic:claude-opus-5-5",   # defaults to Brando.AI's default model
+        api_key: nil,                         # defaults to Brando.AI's provider key
         max_steps: 12,                        # model calls per run
         max_tokens: 4096,                     # output tokens per model call
         run_token_budget: 300_000,            # input + output tokens per run
         monthly_token_budget: 5_000_000,      # per site/environment; nil for none
-        prices: [input: 5.0, output: 25.0]    # USD per million tokens; otherwise the
+        prices: [input: 5.0, output: 25.0],   # USD per million tokens; otherwise the
                                               # provider's or catalogue's price
+        client: ReqLLM                        # anything with ReqLLM's generate_text/3,
+                                              # e.g. a scripted model for end-to-end tests
 
   Keys come from `Brando.AI`'s provider configuration.
   """
@@ -45,7 +48,14 @@ defmodule Brando.AI.Agent do
   @spec config() :: keyword()
   def config do
     Keyword.merge(
-      [model: nil, max_steps: 12, max_tokens: 4096, run_token_budget: 300_000, monthly_token_budget: nil],
+      [
+        model: nil,
+        client: ReqLLM,
+        max_steps: 12,
+        max_tokens: 4096,
+        run_token_budget: 300_000,
+        monthly_token_budget: nil
+      ],
       Application.get_env(:brando, __MODULE__, [])
     )
   end
@@ -56,7 +66,10 @@ defmodule Brando.AI.Agent do
 
   @doc "The `Brando.AI` options for the agent's model."
   @spec model_opts() :: keyword()
-  def model_opts, do: if(model = config()[:model], do: [model: model], else: [])
+  def model_opts do
+    config = config()
+    Enum.reject([model: config[:model], api_key: config[:api_key]], &is_nil(elem(&1, 1)))
+  end
 
   ## Conversations
 
@@ -65,6 +78,7 @@ defmodule Brando.AI.Agent do
   def start_conversation(actor, opts \\ []) do
     Error.protect(fn ->
       Transfer.ensure_scope!(actor)
+      authorize!(actor)
 
       Repo.insert!(%Conversation{
         scope: Transfer.scope(),
@@ -151,6 +165,75 @@ defmodule Brando.AI.Agent do
     end
   end
 
+  @doc """
+  Reserve aliases for uploads the user just chose, in the order they chose
+  them. `uploads` are `%{ref: upload_ref, asset_type: "image" | "video",
+  filename: name}`; `fulfil/4` fills each one in when its upload completes.
+  """
+  @spec reserve(Ecto.UUID.t(), [map()], term()) :: {:ok, [String.t()]} | {:error, String.t()}
+  def reserve(conversation_id, uploads, actor) do
+    Error.protect(fn ->
+      {:ok, aliases} =
+        Repo.transaction(fn ->
+          conversation = conversation!(conversation_id, actor, lock: true)
+
+          {entries, attachments} =
+            Enum.map_reduce(uploads, conversation.attachments, fn upload, attachments ->
+              kind = if to_string(upload[:asset_type]) == "video", do: "video", else: "image"
+              n = Enum.count(attachments, &(&1["kind"] == kind)) + 1
+
+              entry = %{
+                "alias" => next_alias(attachments, kind, n),
+                "kind" => kind,
+                "id" => nil,
+                "upload_ref" => to_string(upload[:ref]),
+                "label" => to_string(upload[:filename])
+              }
+
+              {entry, attachments ++ [entry]}
+            end)
+
+          conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
+          Enum.map(entries, & &1["alias"])
+        end)
+
+      broadcast(conversation_id, {:attachments, aliases})
+      aliases
+    end)
+  end
+
+  @doc "Fill the alias reserved for upload `upload_ref` with the uploaded asset."
+  @spec fulfil(Ecto.UUID.t(), String.t(), struct(), term()) :: {:ok, String.t()} | {:error, String.t()}
+  def fulfil(conversation_id, upload_ref, %{id: id} = asset, actor) do
+    kind = if match?(%Brando.Videos.Video{}, asset), do: "video", else: "image"
+
+    Error.protect(fn ->
+      {:ok, alias} =
+        Repo.transaction(fn ->
+          conversation = conversation!(conversation_id, actor, lock: true)
+          asset = Dependencies.load!(kind, id, actor)
+
+          case Enum.find(conversation.attachments, &(&1["upload_ref"] == upload_ref and &1["kind"] == kind)) do
+            nil ->
+              Error.fail!(dgettext("ai_agent", "This upload was not reserved in the conversation."))
+
+            reserved ->
+              attachments =
+                Enum.map(conversation.attachments, fn
+                  ^reserved -> %{reserved | "id" => asset.id, "label" => title(asset) || reserved["label"]}
+                  other -> other
+                end)
+
+              conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
+              reserved["alias"]
+          end
+        end)
+
+      broadcast(conversation_id, {:attachments, alias})
+      alias
+    end)
+  end
+
   @doc "Remove an attachment. Other aliases keep their names."
   @spec detach(Ecto.UUID.t(), String.t(), term()) :: :ok | {:error, String.t()}
   def detach(conversation_id, alias, actor) do
@@ -171,13 +254,21 @@ defmodule Brando.AI.Agent do
   end
 
   defp asset_label(asset) do
-    Enum.find_value([:title, :filename, :path, :source_url], fn key ->
-      case Map.get(asset, key) do
-        %{} = text -> text |> Map.values() |> Enum.find(&(&1 not in [nil, ""]))
-        value when value not in [nil, ""] -> to_string(value)
-        _ -> nil
-      end
-    end) || "##{asset.id}"
+    title(asset) ||
+      Enum.find_value([:filename, :path, :source_url], fn key ->
+        case Map.get(asset, key) do
+          value when value not in [nil, ""] -> Path.basename(to_string(value))
+          _ -> nil
+        end
+      end) || "##{asset.id}"
+  end
+
+  defp title(asset) do
+    case Map.get(asset, :title) do
+      %{} = text -> text |> Map.values() |> Enum.find(&(&1 not in [nil, ""]))
+      value when value not in [nil, ""] -> to_string(value)
+      _ -> nil
+    end
   end
 
   ## Runs
@@ -186,8 +277,9 @@ defmodule Brando.AI.Agent do
   Add a user message and start a run that answers it.
 
   The run executes in a supervised process; follow it with `subscribe/1`.
-  `sync: true` runs it in the caller instead, for tests and scripts. Only one
-  run per conversation at a time.
+  `sync: true` runs it in the caller instead, for tests and scripts;
+  `sandbox:` names the LiveView whose SQL sandbox connection the run uses in
+  end-to-end tests. Only one run per conversation at a time.
   """
   @spec send_message(Ecto.UUID.t(), String.t(), term(), keyword()) :: {:ok, Run.t()} | {:error, String.t()}
   def send_message(conversation_id, text, actor, opts \\ []) do
@@ -196,23 +288,44 @@ defmodule Brando.AI.Agent do
     with {:ok, {run, message}} <- Error.protect(fn -> start_run!(conversation_id, text, actor) end) do
       broadcast(conversation_id, {:message, message})
       broadcast(conversation_id, {:run, run})
-      execute(run, user_id(actor), opts[:sync])
+      execute(run, user_id(actor), opts)
     end
   end
 
-  defp execute(run, user_id, true), do: {:ok, Loop.run(run.id, user_id)}
+  defp execute(run, user_id, opts) do
+    if opts[:sync] do
+      {:ok, Loop.run(run.id, user_id)}
+    else
+      sandbox = opts[:sandbox]
 
-  defp execute(run, user_id, _sync) do
-    work = Brando.Tenant.capture_context(fn -> Loop.run(run.id, user_id) end)
-    {:ok, _pid} = Task.Supervisor.start_child(Brando.AI.Agent.Supervisor, work)
-    {:ok, run}
+      work =
+        Brando.Tenant.capture_context(fn ->
+          allow_sandbox(sandbox)
+          Loop.run(run.id, user_id)
+        end)
+
+      {:ok, _pid} = Task.Supervisor.start_child(Brando.AI.Agent.Supervisor, work)
+      {:ok, run}
+    end
   end
+
+  # End-to-end tests run each browser session in its own SQL sandbox, which a
+  # spawned process does not inherit. The run uses the connection of the
+  # LiveView that started it.
+  defp allow_sandbox(parent) when is_pid(parent) do
+    if Application.get_env(Brando.otp_app(), :sql_sandbox, false),
+      do: Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
+  end
+
+  defp allow_sandbox(_), do: :ok
 
   defp start_run!(conversation_id, text, actor) do
     if text == "", do: Error.fail!(dgettext("ai_agent", "Write a message first."))
 
     unless available?(),
       do: Error.fail!(dgettext("ai_agent", "The assistant has no AI model configured for this site."))
+
+    authorize!(actor)
 
     {:ok, result} =
       Repo.transaction(fn ->
@@ -295,6 +408,15 @@ defmodule Brando.AI.Agent do
     Repo.one(query) || Error.fail!(dgettext("ai_agent", "This conversation is not available."))
   rescue
     Ecto.Query.CastError -> Error.fail!(dgettext("ai_agent", "This conversation is not available."))
+  end
+
+  @doc "Whether `actor` may use the assistant (`brando.assistant` with groups authorization)."
+  @spec allowed?(term()) :: boolean()
+  def allowed?(actor), do: Brando.Authorization.Boundary.authorize(actor, :use, :assistant) == :ok
+
+  defp authorize!(actor) do
+    unless allowed?(actor),
+      do: Error.fail!(dgettext("ai_agent", "You do not have permission to use the assistant."))
   end
 
   defp user_id(%{id: id}) when is_integer(id), do: id
