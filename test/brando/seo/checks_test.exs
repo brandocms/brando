@@ -18,9 +18,10 @@ defmodule Brando.SEO.ChecksTest do
     )
   end
 
+  # What the page shows is its own meta fields unless a test says otherwise,
+  # as when the blueprint falls back to the entry's title or intro.
   defp row(overrides \\ %{}) do
-    struct(
-      Row,
+    fields =
       Map.merge(
         %{
           title: "Entry",
@@ -30,6 +31,12 @@ defmodule Brando.SEO.ChecksTest do
         },
         overrides
       )
+
+    struct(
+      Row,
+      fields
+      |> Map.put_new(:shown_title, fields.meta_title)
+      |> Map.put_new(:shown_description, fields.meta_description)
     )
   end
 
@@ -60,6 +67,28 @@ defmodule Brando.SEO.ChecksTest do
 
     assert skipped != []
     assert Enum.all?(skipped, &(is_binary(&1.hint) and &1.hint != "")), inspect(Enum.reject(skipped, & &1.hint))
+  end
+
+  test "a title the page takes from the entry passes; only the site fallback fails" do
+    from_entry = Checks.run(row(%{meta_title: nil, shown_title: "Projects we have made for clients"}), ctx())
+    assert status(from_entry, :meta_title_present) == :pass
+    assert Enum.find(from_entry, &(&1.key == :meta_title_present)).value
+    assert status(from_entry, :meta_title_length) == :pass
+
+    assert status(Checks.run(row(%{meta_title: nil}), ctx()), :meta_title_present) == :fail
+  end
+
+  test "a description the page takes from the entry warns rather than fails" do
+    intro = String.duplicate("i", 140)
+    checks = Checks.run(row(%{meta_description: nil, shown_description: intro}), ctx())
+
+    assert status(checks, :meta_description_present) == :warn
+    assert status(checks, :meta_description_length) == :pass
+  end
+
+  test "duplicates are counted on what the pages show" do
+    checks = Checks.run(row(%{meta_title: nil, shown_title: "Shared"}), ctx(%{title_counts: %{"shared" => 2}}))
+    assert status(checks, :duplicate_title) == :fail
   end
 
   test "lengths outside the display range warn, with the measured value" do

@@ -58,11 +58,30 @@ defmodule Brando.SEO.Analyze do
     bullet saying so. Do not suggest keyword density targets, llms.txt, or rewriting for AI crawlers.
 
     Page title: #{title(schema, entry)}
-    Meta title: #{Map.get(entry, :meta_title) || "(none — the site's fallback title is used)"}
-    Meta description: #{Map.get(entry, :meta_description) || "(none — the site's fallback description is used)"}
+    Meta title: #{meta(schema, entry, :meta_title, "title")}
+    Meta description: #{meta(schema, entry, :meta_description, "description")}
     Content: #{Context.block_text(entry, length: @content_length) || "(no body text)"}
     #{searches(queries)}\
     """
+  end
+
+  # Without its own meta field the page still shows what the blueprint's
+  # meta_schema falls back to (usually the entry's title or intro); the model
+  # should judge that, not be told the site fallback is used.
+  defp meta(schema, entry, field, key) do
+    case Map.get(entry, field) do
+      value when is_binary(value) and value != "" ->
+        value
+
+      _ ->
+        case schema |> Brando.Blueprint.Meta.extract_meta(entry, only: [key]) |> List.keyfind(key, 0) do
+          {_, shown} when is_binary(shown) and shown != "" ->
+            "(none — the page shows text taken from the entry: #{shown})"
+
+          _ ->
+            "(none — the site's fallback is used)"
+        end
+    end
   end
 
   # Given, the model can say whether the snippet answers what people are

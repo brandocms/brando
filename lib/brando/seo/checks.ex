@@ -87,26 +87,68 @@ defmodule Brando.SEO.Checks do
     end
   end
 
+  @doc """
+  The page needs a title of its own. Most blueprints fall back from the meta
+  title to the entry's title, which is exactly what a page should show; only
+  the site-wide fallback title fails.
+  """
   def meta_title_present(row) do
-    check(:meta_title_present, present?(row.meta_title), :normal, gettext("Meta title"),
-      hint: gettext("Set a meta title; the site fallback is used otherwise.")
-    )
+    cond do
+      present?(row.meta_title) ->
+        check(:meta_title_present, true, :normal, gettext("Meta title"), [])
+
+      present?(row.shown_title) ->
+        %Check{
+          key: :meta_title_present,
+          status: :pass,
+          weight: :normal,
+          label: gettext("Meta title"),
+          value: gettext("from the entry")
+        }
+
+      true ->
+        check(:meta_title_present, false, :normal, gettext("Meta title"),
+          hint: gettext("Set a meta title; the site fallback is used otherwise.")
+        )
+    end
   end
 
-  def meta_title_length(%{meta_title: title}) when title in [nil, ""],
+  def meta_title_length(%{shown_title: title}) when title in [nil, ""],
     do: skip(:meta_title_length, :low, gettext("Meta title length"), gettext("There is no meta title to measure."))
 
   def meta_title_length(row) do
-    length_check(:meta_title_length, row.meta_title, @title_range, gettext("Meta title length"))
+    length_check(:meta_title_length, row.shown_title, @title_range, gettext("Meta title length"))
   end
 
+  @doc """
+  A description written for search results passes. Text the blueprint takes
+  from the entry instead (an intro, say) is a real description but not one
+  written for a result, so it warns; only the site-wide fallback fails.
+  """
   def meta_description_present(row) do
-    check(:meta_description_present, present?(row.meta_description), :critical, gettext("Meta description"),
-      hint: gettext("Write a meta description; search results show the site fallback otherwise.")
-    )
+    cond do
+      present?(row.meta_description) ->
+        check(:meta_description_present, true, :critical, gettext("Meta description"), [])
+
+      present?(row.shown_description) ->
+        %Check{
+          key: :meta_description_present,
+          status: :warn,
+          weight: :critical,
+          label: gettext("Meta description"),
+          value: gettext("from the entry"),
+          hint:
+            gettext("Search results show text taken from the entry; a description written for them usually does better.")
+        }
+
+      true ->
+        check(:meta_description_present, false, :critical, gettext("Meta description"),
+          hint: gettext("Write a meta description; search results show the site fallback otherwise.")
+        )
+    end
   end
 
-  def meta_description_length(%{meta_description: desc}) when desc in [nil, ""],
+  def meta_description_length(%{shown_description: desc}) when desc in [nil, ""],
     do:
       skip(
         :meta_description_length,
@@ -116,12 +158,12 @@ defmodule Brando.SEO.Checks do
       )
 
   def meta_description_length(row) do
-    length_check(:meta_description_length, row.meta_description, @description_range, gettext("Meta description length"))
+    length_check(:meta_description_length, row.shown_description, @description_range, gettext("Meta description length"))
   end
 
   def meta_description_not_fallback(row, ctx) do
     fallback = normalize(ctx[:fallback_description])
-    own = normalize(row.meta_description)
+    own = normalize(row.shown_description)
     status = if own && fallback && own == fallback, do: :fail, else: :pass
 
     %Check{
@@ -146,8 +188,8 @@ defmodule Brando.SEO.Checks do
   # Identical copy fails; a description that merely opens with the title
   # wastes the first words a search result shows, and only warns.
   def title_not_description(row) do
-    title = normalize(row.meta_title)
-    description = normalize(row.meta_description)
+    title = normalize(row.shown_title)
+    description = normalize(row.shown_description)
 
     {status, hint} =
       cond do
@@ -170,7 +212,7 @@ defmodule Brando.SEO.Checks do
     do:
       duplicate(
         :duplicate_title,
-        row.meta_title,
+        row.shown_title,
         ctx.title_counts,
         gettext("Unique title"),
         gettext("There is no meta title to compare with other entries.")
@@ -180,7 +222,7 @@ defmodule Brando.SEO.Checks do
     do:
       duplicate(
         :duplicate_description,
-        row.meta_description,
+        row.shown_description,
         ctx.description_counts,
         gettext("Unique description"),
         gettext("There is no meta description to compare with other entries.")

@@ -65,6 +65,9 @@ defmodule Brando.SEO.AuditTest do
     bare_row = Enum.find(result.rows, &(&1.title == "Bare"))
     assert bare_row.score < good_row.score
     assert Enum.any?(bare_row.checks, &(&1.key == :meta_description_present and &1.status == :fail))
+    # Page's meta_schema falls back to the page title, which is what renders.
+    assert bare_row.shown_title == "Bare"
+    assert Enum.any?(bare_row.checks, &(&1.key == :meta_title_present and &1.status == :pass))
     assert result.missing_descriptions >= 1
     assert is_integer(result.score)
   end

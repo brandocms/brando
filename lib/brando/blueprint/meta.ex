@@ -30,19 +30,25 @@ defmodule Brando.Blueprint.Meta do
   A field is omitted when its value function returns `nil` or reads a missing key.
   Other exceptions propagate so invalid metadata functions remain visible during
   development instead of being silently discarded.
+
+  `only: ["title"]` evaluates just the fields that target one of those keys,
+  so a caller that needs the title does not run the image or locale functions.
   """
-  @spec extract_meta(module(), term()) :: [{String.t(), term()}]
-  def extract_meta(module, data) do
+  @spec extract_meta(module(), term(), keyword()) :: [{String.t(), term()}]
+  def extract_meta(module, data, opts \\ []) do
     module
     |> Spark.Dsl.Extension.get_entities(:meta_schemas)
     |> List.first()
-    |> extract_fields(data)
+    |> extract_fields(data, opts[:only])
   end
 
-  defp extract_fields(nil, _data), do: []
+  defp extract_fields(nil, _data, _only), do: []
 
-  defp extract_fields(meta_schema, data) do
-    Enum.flat_map(meta_schema.fields, &extract_field(&1, data))
+  defp extract_fields(meta_schema, data, only) do
+    meta_schema.fields
+    |> Enum.filter(&(is_nil(only) or Enum.any?(List.wrap(&1.targets), fn target -> target in only end)))
+    |> Enum.flat_map(&extract_field(&1, data))
+    |> Enum.filter(fn {target, _value} -> is_nil(only) or target in only end)
   end
 
   defp extract_field(%{targets: targets, value_fn: value_fn}, data) do

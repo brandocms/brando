@@ -355,10 +355,12 @@ defmodule BrandoAdmin.Sites.SEOLive do
                       </div>
                       <div class="seo-search-preview">
                         <span class="seo-preview-url">{row.url}</span>
-                        <div class="seo-preview-title">{row.meta_title || row.title}</div>
-                        <p>{row.meta_description || gettext("(no description — the site fallback is shown)")}</p>
+                        <div class="seo-preview-title">{row.shown_title || row.title}</div>
+                        <p>{row.shown_description || gettext("(no description — the site fallback is shown)")}</p>
                         <div class="seo-preview-actions">
-                          <.link navigate={row.schema.__admin_route__(:update, [row.id])}>{gettext("Open entry")}</.link>
+                          <.link class="seo-row-action" navigate={row.schema.__admin_route__(:update, [row.id])}>
+                            {gettext("Open entry")}
+                          </.link>
                           <button
                             :if={@ai_available}
                             type="button"

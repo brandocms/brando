@@ -31,6 +31,8 @@ defmodule Brando.SEO.Audit do
               cover: nil,
               meta_title: nil,
               meta_description: nil,
+              shown_title: nil,
+              shown_description: nil,
               has_meta_image: false,
               edited_at: nil,
               word_count: nil,
@@ -112,8 +114,8 @@ defmodule Brando.SEO.Audit do
       rows: rows,
       score: aggregate(rows),
       drafts: length(drafts),
-      duplicate_titles: duplicates(rows, :meta_title),
-      duplicate_descriptions: duplicates(rows, :meta_description),
+      duplicate_titles: duplicates(rows, :shown_title),
+      duplicate_descriptions: duplicates(rows, :shown_description),
       missing_descriptions: count_failing(rows, :meta_description_present),
       missing_images: count_failing(rows, :meta_image),
       missing_urls: count_failing(rows, :url_resolves),
@@ -181,20 +183,41 @@ defmodule Brando.SEO.Audit do
   end
 
   defp row(schema, entry) do
+    url = url(schema, entry)
+    shown = shown_meta(schema, entry, url)
+
     %Row{
       schema: schema,
       id: entry.id,
       title: title(schema, entry),
-      url: url(schema, entry),
+      url: url,
       language: entry |> Map.get(:language) |> then(&(&1 && to_string(&1))),
       status: Map.get(entry, :status, :published),
       cover: cover(schema, entry),
       meta_title: Map.get(entry, :meta_title),
       meta_description: Map.get(entry, :meta_description),
+      shown_title: text(shown["title"]) || text(Map.get(entry, :meta_title)),
+      shown_description: text(shown["description"]) || text(Map.get(entry, :meta_description)),
       has_meta_image: not is_nil(Map.get(entry, :meta_image_id)),
       edited_at: ContentStats.edited_at(entry)
     }
   end
+
+  # The title and description the page renders: the blueprint's meta_schema
+  # usually falls back from the meta fields to the entry's own title or intro,
+  # and only when that yields nothing does the site fallback show. Evaluated
+  # like `Brando.Plug.HTML.put_meta/3` does, on the narrow audit read; a
+  # meta function that needs more than that read loaded drops to the meta
+  # fields rather than taking the whole audit down.
+  defp shown_meta(schema, entry, url) do
+    data = Map.merge(entry, %{__meta__: %{current_url: url}})
+    schema |> Brando.Blueprint.Meta.extract_meta(data, only: ["title", "description"]) |> Map.new()
+  rescue
+    _ -> %{}
+  end
+
+  defp text(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)
+  defp text(_value), do: nil
 
   defp title(schema, entry) do
     if Code.ensure_loaded?(schema) and function_exported?(schema, :__has_identifier__, 0) and
@@ -238,8 +261,8 @@ defmodule Brando.SEO.Audit do
     %{
       fallback_title: Map.get(seo, :fallback_meta_title),
       fallback_description: Map.get(seo, :fallback_meta_description),
-      title_counts: counts(rows, :meta_title),
-      description_counts: counts(rows, :meta_description),
+      title_counts: counts(rows, :shown_title),
+      description_counts: counts(rows, :shown_description),
       sitemap: sitemap,
       thin_content_words: Checks.thin_content_words()
     }
