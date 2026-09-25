@@ -11,6 +11,8 @@ defmodule Brando.Content.Proposals.Record do
 
   @statuses ~w(pending approved applied superseded cancelled)
 
+  @type t :: %__MODULE__{}
+
   @primary_key {:id, :binary_id, autogenerate: false}
   @schema_prefix "public"
   schema "content_proposals" do

@@ -6,6 +6,8 @@ defmodule Brando.AI.Agent.Message do
   """
   use Ecto.Schema
 
+  @type t :: %__MODULE__{}
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @schema_prefix "public"
   schema "ai_messages" do

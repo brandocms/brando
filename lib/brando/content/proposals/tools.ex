@@ -26,6 +26,7 @@ defmodule Brando.Content.Proposals.Tools do
     `%{kind: :image | :video, id: id, label: label}`. `proposal_id` is the
     conversation's proposal under review; `prepare_proposal` refines it.
     """
+    @type t :: %__MODULE__{}
     defstruct [:actor, :conversation_id, :proposal_id, attachments: %{}]
   end
 
