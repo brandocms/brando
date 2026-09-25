@@ -273,9 +273,9 @@ msgstr ""
 msgid "Edit page"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3185
-#: lib/brando_admin/components/form.ex:3197
-#: lib/brando_admin/components/form.ex:4779
+#: lib/brando_admin/components/form.ex:3212
+#: lib/brando_admin/components/form.ex:3224
+#: lib/brando_admin/components/form.ex:4806
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr ""
@@ -624,8 +624,8 @@ msgstr ""
 msgid "Picture"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5470
-#: lib/brando_admin/components/form.ex:5473
+#: lib/brando_admin/components/form.ex:5497
+#: lib/brando_admin/components/form.ex:5500
 #: lib/brando_admin/live/config/asset_live.ex:46
 #: lib/brando_admin/live/config/environment_live.ex:65
 #: lib/brando_admin/live/config/publishing_live.ex:55
@@ -635,7 +635,7 @@ msgstr ""
 msgid "Refresh"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4348
+#: lib/brando_admin/components/form.ex:4375
 #, elixir-autogen, elixir-format
 msgid "Refreshing Live Preview..."
 msgstr ""
@@ -658,9 +658,9 @@ msgstr ""
 msgid "Reset value"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2485
-#: lib/brando_admin/components/form.ex:2486
-#: lib/brando_admin/components/form.ex:2495
+#: lib/brando_admin/components/form.ex:2512
+#: lib/brando_admin/components/form.ex:2513
+#: lib/brando_admin/components/form.ex:2522
 #: lib/brando_admin/components/form/input/gallery/image_config.ex:61
 #: lib/brando_admin/components/form/input/gallery/video_config.ex:78
 #: lib/brando_admin/components/form/input/multi_select.ex:266
@@ -676,9 +676,9 @@ msgid "Scheduled Publishing"
 msgstr ""
 
 #: lib/brando_admin/components/dashboard.ex:49
-#: lib/brando_admin/components/form.ex:2371
-#: lib/brando_admin/components/form.ex:2372
-#: lib/brando_admin/components/form.ex:2375
+#: lib/brando_admin/components/form.ex:2398
+#: lib/brando_admin/components/form.ex:2399
+#: lib/brando_admin/components/form.ex:2402
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:18
 #: lib/brando_admin/menu.ex:283
 #, elixir-autogen, elixir-format
@@ -768,9 +768,9 @@ msgstr ""
 msgid "Purge inactive versions"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2360
-#: lib/brando_admin/components/form.ex:2361
-#: lib/brando_admin/components/form.ex:2364
+#: lib/brando_admin/components/form.ex:2387
+#: lib/brando_admin/components/form.ex:2388
+#: lib/brando_admin/components/form.ex:2391
 #, elixir-autogen, elixir-format
 msgid "Revisions"
 msgstr ""
@@ -1086,7 +1086,7 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:166
+#: lib/brando/seo/checks.ex:190
 #: lib/brando_admin/components/content/select_identifier.ex:348
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1087
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1146
@@ -1269,7 +1269,7 @@ msgstr ""
 msgid "Entry revisions"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4446
+#: lib/brando_admin/components/form.ex:4473
 #, elixir-autogen, elixir-format
 msgid "Notice"
 msgstr ""
@@ -1279,7 +1279,7 @@ msgstr ""
 msgid "Set a future publishing date for this entry. Leave blank for immediate publishing."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4449
+#: lib/brando_admin/components/form.ex:4476
 #, elixir-autogen, elixir-format
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr ""
@@ -1352,7 +1352,7 @@ msgstr ""
 msgid "None selected"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5481
+#: lib/brando_admin/components/form.ex:5508
 #, elixir-autogen, elixir-format
 msgid "Open preview in new window"
 msgstr ""
@@ -1382,9 +1382,9 @@ msgstr ""
 msgid "Edit file"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5031
-#: lib/brando_admin/components/form.ex:5056
-#: lib/brando_admin/components/form.ex:5065
+#: lib/brando_admin/components/form.ex:5058
+#: lib/brando_admin/components/form.ex:5083
+#: lib/brando_admin/components/form.ex:5092
 #, elixir-autogen, elixir-format
 msgid "Error uploading"
 msgstr ""
@@ -1470,12 +1470,12 @@ msgstr ""
 msgid "Reset all variables"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4783
+#: lib/brando_admin/components/form.ex:4810
 #, elixir-autogen, elixir-format
 msgid "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3502
+#: lib/brando_admin/components/form.ex:3529
 #, elixir-autogen, elixir-format
 msgid "Image duplicated"
 msgstr ""
@@ -1517,7 +1517,7 @@ msgstr ""
 msgid "Scheduled revision for publishing"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2498
+#: lib/brando_admin/components/form.ex:2525
 #, elixir-autogen, elixir-format
 msgid "Save and continue editing"
 msgstr ""
@@ -1532,7 +1532,7 @@ msgstr ""
 msgid "Duplicate selected to"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2501
+#: lib/brando_admin/components/form.ex:2528
 #, elixir-autogen, elixir-format
 msgid "Save and create new"
 msgstr ""
@@ -1542,7 +1542,7 @@ msgstr ""
 msgid "Save (⇧⌘S)"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:1933
+#: lib/brando_admin/components/form.ex:1960
 #, elixir-autogen, elixir-format
 msgid "Get shareable link"
 msgstr ""
@@ -1782,7 +1782,7 @@ msgstr ""
 msgid "Videos"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3187
+#: lib/brando_admin/components/form.ex:3214
 #, elixir-autogen, elixir-format
 msgid "You must close the image drawer before saving this form. You might have changes to an image that has not been processed, which might lead to broken image links. Close the image drawer, allow processing to finish (if any), then try to save again."
 msgstr ""
@@ -1822,7 +1822,7 @@ msgstr ""
 msgid "<p>\n  This block has variables, which can influence settings like size and colors,\n  and allow you to add images, files, and text. Adjusting these variables\n  lets you customize and manipulate the block's rendering.\n</p>\n"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:1925
+#: lib/brando_admin/components/form.ex:1952
 #, elixir-autogen, elixir-format
 msgid "A shareable time limited URL has been created. The URL will expire %{expiration_days} days from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>"
 msgstr ""
@@ -1875,7 +1875,7 @@ msgstr ""
 msgid "Block variables"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4785
+#: lib/brando_admin/components/form.ex:4812
 #, elixir-autogen, elixir-format
 msgid "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
 msgstr ""
@@ -2019,7 +2019,7 @@ msgstr ""
 msgid "GMaps"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4252
+#: lib/brando_admin/components/form.ex:4279
 #, elixir-autogen, elixir-format
 msgid "Gathering blocks for sharing..."
 msgstr ""
@@ -2102,14 +2102,14 @@ msgstr ""
 msgid "Open link in new window/tab"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4397
-#: lib/brando_admin/components/form.ex:4409
+#: lib/brando_admin/components/form.ex:4424
+#: lib/brando_admin/components/form.ex:4436
 #, elixir-autogen, elixir-format
 msgid "Opening stand alone live preview window..."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2064
-#: lib/brando_admin/components/form.ex:2095
+#: lib/brando_admin/components/form.ex:2091
+#: lib/brando_admin/components/form.ex:2122
 #, elixir-autogen, elixir-format
 msgid "Opening standalone live preview..."
 msgstr ""
@@ -2119,7 +2119,7 @@ msgstr ""
 msgid "Processing. Please wait..."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2215
+#: lib/brando_admin/components/form.ex:2242
 #, elixir-autogen, elixir-format
 msgid "Received unknown event tag"
 msgstr ""
@@ -2129,7 +2129,7 @@ msgstr ""
 msgid "Reposition block (click&drag)"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2643
+#: lib/brando_admin/components/form.ex:2670
 #, elixir-autogen, elixir-format
 msgid "Save (⌘S)"
 msgstr ""
@@ -2139,7 +2139,7 @@ msgstr ""
 msgid "Show instructions"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4390
+#: lib/brando_admin/components/form.ex:4417
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview — fetching initial render..."
 msgstr ""
@@ -2443,7 +2443,7 @@ msgstr ""
 msgid "Not acceptable."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3199
+#: lib/brando_admin/components/form.ex:3226
 #, elixir-autogen, elixir-format
 msgid "You must close the file drawer before saving this form. You might have changes to a file that has not been processed, which might lead to broken links. Close the file drawer, allow processing to finish (if any), then try to save again."
 msgstr ""
@@ -2681,7 +2681,7 @@ msgstr ""
 msgid "Show controls"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4372
+#: lib/brando_admin/components/form.ex:4399
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview..."
 msgstr ""
@@ -2696,12 +2696,12 @@ msgstr ""
 msgid "Thumbnail"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3692
+#: lib/brando_admin/components/form.ex:3719
 #, elixir-autogen, elixir-format
 msgid "Thumbnail extraction not yet implemented"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3686
+#: lib/brando_admin/components/form.ex:3713
 #, elixir-autogen, elixir-format
 msgid "URL parsing not yet implemented"
 msgstr ""
@@ -2891,18 +2891,18 @@ msgstr ""
 msgid "Edit/Crop"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3580
+#: lib/brando_admin/components/form.ex:3607
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Image is reprocessing."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4972
+#: lib/brando_admin/components/form.ex:4999
 #, elixir-autogen, elixir-format
 msgid "Error creating image"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3970
-#: lib/brando_admin/components/form.ex:4952
+#: lib/brando_admin/components/form.ex:3997
+#: lib/brando_admin/components/form.ex:4979
 #, elixir-autogen, elixir-format
 msgid "New image created."
 msgstr ""
@@ -3008,7 +3008,7 @@ msgstr ""
 msgid "Could not resolve AI settings for this field"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5058
+#: lib/brando_admin/components/form.ex:5085
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file. Check upload settings and try again."
 msgstr ""
@@ -3336,7 +3336,7 @@ msgstr ""
 msgid "Root"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5034
+#: lib/brando_admin/components/form.ex:5061
 #, elixir-autogen, elixir-format
 msgid "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr ""
@@ -3417,18 +3417,18 @@ msgstr ""
 msgid "e.g. Free, $$"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5072
-#: lib/brando_admin/components/form.ex:5074
+#: lib/brando_admin/components/form.ex:5099
+#: lib/brando_admin/components/form.ex:5101
 #, elixir-autogen, elixir-format
 msgid "file"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5071
+#: lib/brando_admin/components/form.ex:5098
 #, elixir-autogen, elixir-format
 msgid "image"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:5073
+#: lib/brando_admin/components/form.ex:5100
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1421
 #, elixir-autogen, elixir-format
 msgid "video"
@@ -4002,7 +4002,7 @@ msgstr ""
 msgid "Build, preview, deploy, and roll back versioned static artifacts"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2698
+#: lib/brando_admin/components/form.ex:2725
 #, elixir-autogen, elixir-format
 msgid "Building block editor"
 msgstr ""
@@ -4131,7 +4131,7 @@ msgstr ""
 msgid "Could not queue the static build."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3675
+#: lib/brando_admin/components/form.ex:3702
 #, elixir-autogen, elixir-format
 msgid "Could not reset video thumbnail"
 msgstr ""
@@ -4141,7 +4141,7 @@ msgstr ""
 msgid "Could not save module. Check the highlighted fields."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4744
+#: lib/brando_admin/components/form.ex:4771
 #, elixir-autogen, elixir-format
 msgid "Could not save revision"
 msgstr ""
@@ -4573,7 +4573,7 @@ msgstr ""
 msgid "Everything"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4101
+#: lib/brando_admin/components/form.ex:4128
 #, elixir-autogen, elixir-format
 msgid "External video URLs are disabled for this field"
 msgstr ""
@@ -4583,7 +4583,7 @@ msgstr ""
 msgid "Failed to load revisions."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2688
+#: lib/brando_admin/components/form.ex:2715
 #, elixir-autogen, elixir-format
 msgid "Fetching content"
 msgstr ""
@@ -4707,8 +4707,8 @@ msgstr ""
 msgid "Its schema version differs from the current schema, so some fields may not restore correctly."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2382
-#: lib/brando_admin/components/form.ex:2383
+#: lib/brando_admin/components/form.ex:2409
+#: lib/brando_admin/components/form.ex:2410
 #: lib/brando_admin/live/config/site_live.ex:60
 #, elixir-autogen, elixir-format
 msgid "Languages"
@@ -4771,14 +4771,14 @@ msgstr ""
 msgid "Load revision %{revision} into the editor? Unsaved editor changes will be replaced."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2692
+#: lib/brando_admin/components/form.ex:2719
 #, elixir-autogen, elixir-format
 msgid "Loading %{count} block"
 msgid_plural "Loading %{count} blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/components/form.ex:2694
+#: lib/brando_admin/components/form.ex:2721
 #, elixir-autogen, elixir-format
 msgid "Loading blocks"
 msgstr ""
@@ -4977,7 +4977,7 @@ msgstr ""
 msgid "Open site"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2684
+#: lib/brando_admin/components/form.ex:2711
 #, elixir-autogen, elixir-format
 msgid "Opening entry"
 msgstr ""
@@ -5266,7 +5266,7 @@ msgstr ""
 msgid "Revision error"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4712
+#: lib/brando_admin/components/form.ex:4739
 #, elixir-autogen, elixir-format
 msgid "Revision saved"
 msgstr ""
@@ -5307,7 +5307,7 @@ msgstr ""
 msgid "Save deployment settings"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4259
+#: lib/brando_admin/components/form.ex:4286
 #, elixir-autogen, elixir-format
 msgid "Saving a revision..."
 msgstr ""
@@ -5649,7 +5649,7 @@ msgstr ""
 msgid "The revision could not be activated."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4745
+#: lib/brando_admin/components/form.ex:4772
 #, elixir-autogen, elixir-format
 msgid "The revision was not saved. Please try again."
 msgstr ""
@@ -5853,7 +5853,7 @@ msgstr ""
 msgid "live"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4860
+#: lib/brando_admin/components/form.ex:4887
 #, elixir-autogen, elixir-format
 msgid "or"
 msgstr ""
@@ -6657,7 +6657,7 @@ msgstr ""
 msgid "updated"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:131
+#: lib/brando/seo/checks.ex:141
 #: lib/brando/sites/seo.ex:130
 #, elixir-autogen, elixir-format
 msgid "Sharing image"
@@ -6731,8 +6731,8 @@ msgstr ""
 msgid "Block settings"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:1940
-#: lib/brando_admin/components/form.ex:1949
+#: lib/brando_admin/components/form.ex:1967
+#: lib/brando_admin/components/form.ex:1976
 #, elixir-autogen, elixir-format
 msgid "Cannot share preview"
 msgstr ""
@@ -6762,7 +6762,7 @@ msgstr ""
 msgid "Choose one replacement file at a time"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2413
+#: lib/brando_admin/components/form.ex:2440
 #, elixir-autogen, elixir-format
 msgid "Choose preview"
 msgstr ""
@@ -6787,7 +6787,7 @@ msgstr ""
 msgid "Close entry"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2467
+#: lib/brando_admin/components/form.ex:2494
 #, elixir-autogen, elixir-format
 msgid "Close preview"
 msgstr ""
@@ -6835,7 +6835,7 @@ msgstr ""
 msgid "Content will remain in the CMS. Ownership will transfer to the selected user."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2288
+#: lib/brando_admin/components/form.ex:2315
 #, elixir-autogen, elixir-format
 msgid "Continue without redirect"
 msgstr ""
@@ -6845,18 +6845,18 @@ msgstr ""
 msgid "Continue without restoring"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2140
+#: lib/brando_admin/components/form.ex:2167
 #, elixir-autogen, elixir-format
 msgid "Could not switch preview"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2296
+#: lib/brando_admin/components/form.ex:2323
 #: lib/brando_admin/live/config/seo_live.ex:666
 #, elixir-autogen, elixir-format
 msgid "Create redirect"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2294
+#: lib/brando_admin/components/form.ex:2321
 #, elixir-autogen, elixir-format
 msgid "Creating redirect..."
 msgstr ""
@@ -6928,7 +6928,7 @@ msgstr ""
 msgid "Footnotes"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2265
+#: lib/brando_admin/components/form.ex:2292
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr ""
@@ -6958,9 +6958,9 @@ msgstr ""
 msgid "Last generated: %{last_updated}"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2392
-#: lib/brando_admin/components/form.ex:2394
-#: lib/brando_admin/components/form.ex:2410
+#: lib/brando_admin/components/form.ex:2419
+#: lib/brando_admin/components/form.ex:2421
+#: lib/brando_admin/components/form.ex:2437
 #, elixir-autogen, elixir-format
 msgid "Live preview"
 msgstr ""
@@ -7025,7 +7025,7 @@ msgstr ""
 msgid "Open saved version"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2284
+#: lib/brando_admin/components/form.ex:2311
 #, elixir-autogen, elixir-format
 msgid "Permanent redirect (301)"
 msgstr ""
@@ -7035,7 +7035,7 @@ msgstr ""
 msgid "Pick up where you left off"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2439
+#: lib/brando_admin/components/form.ex:2466
 #, elixir-autogen, elixir-format
 msgid "Preview as"
 msgstr ""
@@ -7092,7 +7092,7 @@ msgstr ""
 msgid "Recovery storage is unavailable"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3144
+#: lib/brando_admin/components/form.ex:3171
 #: lib/brando_admin/live/config/seo_live.ex:743
 #, elixir-autogen, elixir-format
 msgid "Redirect created"
@@ -7159,7 +7159,7 @@ msgstr ""
 msgid "Save anyway"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2490
+#: lib/brando_admin/components/form.ex:2517
 #, elixir-autogen, elixir-format
 msgid "Save options"
 msgstr ""
@@ -7208,8 +7208,8 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2476
-#: lib/brando_admin/components/form.ex:2477
+#: lib/brando_admin/components/form.ex:2503
+#: lib/brando_admin/components/form.ex:2504
 #, elixir-autogen, elixir-format
 msgid "Share preview"
 msgstr ""
@@ -7262,12 +7262,12 @@ msgstr ""
 msgid "The configured site was not found. Check the site configuration before preparing groups."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:4657
+#: lib/brando_admin/components/form.ex:4684
 #, elixir-autogen, elixir-format
 msgid "The entry was saved, but an existing redirect on its new URL could not be removed. Please check the SEO redirect settings."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3152
+#: lib/brando_admin/components/form.ex:3179
 #, elixir-autogen, elixir-format
 msgid "The entry was saved, but the redirect could not be created. Please try again or continue without it."
 msgstr ""
@@ -7282,7 +7282,7 @@ msgstr ""
 msgid "The operation could not be completed. Check the application logs and try again."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2142
+#: lib/brando_admin/components/form.ex:2169
 #, elixir-autogen, elixir-format
 msgid "The previous preview is still open. Check the target configuration and your access, then try again."
 msgstr ""
@@ -7343,7 +7343,7 @@ msgstr ""
 msgid "This workspace"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2275
+#: lib/brando_admin/components/form.ex:2302
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr ""
@@ -7363,7 +7363,7 @@ msgstr ""
 msgid "Transfer ownership to"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2258
+#: lib/brando_admin/components/form.ex:2285
 #, elixir-autogen, elixir-format
 msgid "URL changed"
 msgstr ""
@@ -7399,7 +7399,7 @@ msgstr ""
 msgid "User to delete"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:1941
+#: lib/brando_admin/components/form.ex:1968
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to export this entry."
 msgstr ""
@@ -7409,12 +7409,12 @@ msgstr ""
 msgid "You have an unsaved recovery copy for this entry."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2263
+#: lib/brando_admin/components/form.ex:2290
 #, elixir-autogen, elixir-format
 msgid "Your changes have been saved. Create a permanent redirect from the previous URL?"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2309
+#: lib/brando_admin/components/form.ex:2336
 #, elixir-autogen, elixir-format
 msgid "Your latest edits have not reached recovery storage. Leave this editor anyway?"
 msgstr ""
@@ -9986,91 +9986,91 @@ msgstr ""
 msgid "Write a meta description; search results show the site fallback otherwise."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:110
-#: lib/brando/seo/checks.ex:113
+#: lib/brando/seo/checks.ex:114
+#: lib/brando/seo/checks.ex:119
 #, elixir-autogen, elixir-format
 msgid "Meta description length"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:125
+#: lib/brando/seo/checks.ex:131
 #, elixir-autogen, elixir-format
 msgid "Own description"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:126
+#: lib/brando/seo/checks.ex:135
 #, elixir-autogen, elixir-format
 msgid "This entry repeats the site fallback description; write one about this page."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:132
+#: lib/brando/seo/checks.ex:142
 #, elixir-autogen, elixir-format
 msgid "Add a meta image or a cover image so shares get a picture."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:145
+#: lib/brando/seo/checks.ex:155
 #, elixir-autogen, elixir-format
 msgid "The meta title and description are identical."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:146
+#: lib/brando/seo/checks.ex:156
 #, elixir-autogen, elixir-format
 msgid "The description opens by repeating the title."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:154
+#: lib/brando/seo/checks.ex:164
 #, elixir-autogen, elixir-format
 msgid "Title differs from description"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:160
+#: lib/brando/seo/checks.ex:175
 #, elixir-autogen, elixir-format
 msgid "Unique title"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:163
+#: lib/brando/seo/checks.ex:185
 #, elixir-autogen, elixir-format
 msgid "Unique description"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:167
+#: lib/brando/seo/checks.ex:191
 #, elixir-autogen, elixir-format
 msgid "The entry has no resolvable URL; check its slug and the blueprint's absolute_url."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:171
-#: lib/brando/seo/checks.ex:174
+#: lib/brando/seo/checks.ex:196
+#: lib/brando/seo/checks.ex:199
 #, elixir-autogen, elixir-format
 msgid "In sitemap"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:175
+#: lib/brando/seo/checks.ex:200
 #, elixir-autogen, elixir-format
 msgid "Not in the generated sitemap. Check the sitemap module, or regenerate it."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:184
-#: lib/brando/seo/checks.ex:200
+#: lib/brando/seo/checks.ex:210
+#: lib/brando/seo/checks.ex:226
 #, elixir-autogen, elixir-format
 msgid "Content length"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:201
+#: lib/brando/seo/checks.ex:227
 #, elixir-autogen, elixir-format
 msgid "Thin content: aim for at least %{count} words of body text."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:202
+#: lib/brando/seo/checks.ex:228
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:70
 #, elixir-autogen, elixir-format
 msgid "%{count} words"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:383
+#: lib/brando/seo/checks.ex:426
 #, elixir-autogen, elixir-format
 msgid "Shared with %{count} other entries in this language."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:399
+#: lib/brando/seo/checks.ex:442
 #, elixir-autogen, elixir-format
 msgid "Aim for %{min}–%{max} characters."
 msgstr ""
@@ -10193,66 +10193,67 @@ msgstr ""
 msgid "Most seen in search"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:211
-#: lib/brando/seo/checks.ex:234
+#: lib/brando/seo/checks.ex:238
+#: lib/brando/seo/checks.ex:261
 #, elixir-autogen, elixir-format
 msgid "Heading structure"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:221
+#: lib/brando/seo/checks.ex:248
 #, elixir-autogen, elixir-format
 msgid "The content has %{count} H1 headings; a page should have one, usually its title."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:223
+#: lib/brando/seo/checks.ex:250
 #, elixir-autogen, elixir-format
 msgid "Heading levels skip from %{levels}."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:243
-#: lib/brando/seo/checks.ex:254
+#: lib/brando/seo/checks.ex:270
+#: lib/brando/seo/checks.ex:273
+#: lib/brando/seo/checks.ex:284
 #, elixir-autogen, elixir-format
 msgid "Image descriptions"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:256
+#: lib/brando/seo/checks.ex:286
 #, elixir-autogen, elixir-format
 msgid "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:272
-#: lib/brando/seo/checks.ex:281
+#: lib/brando/seo/checks.ex:306
+#: lib/brando/seo/checks.ex:317
 #, elixir-autogen, elixir-format
 msgid "Language versions"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:297
-#: lib/brando/seo/checks.ex:309
+#: lib/brando/seo/checks.ex:333
+#: lib/brando/seo/checks.ex:349
 #, elixir-autogen, elixir-format
 msgid "Search click-through"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:299
+#: lib/brando/seo/checks.ex:335
 #, elixir-autogen, elixir-format
 msgid "Shown in Google %{impressions} times at position %{position}, but clicked by %{ctr} of searchers. A title and description that match what people search for earn more clicks."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:321
+#: lib/brando/seo/checks.ex:364
 #, elixir-autogen, elixir-format
 msgid "Much shorter than the %{language} version (%{words} against %{other} words)."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:327
+#: lib/brando/seo/checks.ex:370
 #, elixir-autogen, elixir-format
 msgid "%{count} fewer images than the %{language} version."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:332
+#: lib/brando/seo/checks.ex:375
 #, elixir-autogen, elixir-format
 msgid "%{count} headings, against %{other} in the %{language} version."
 msgstr ""
 
-#: lib/brando/seo/checks.ex:338
+#: lib/brando/seo/checks.ex:381
 #, elixir-autogen, elixir-format
 msgid "The %{language} version was edited %{days} days after this one."
 msgstr ""
@@ -10853,7 +10854,7 @@ msgstr ""
 msgid "The definition is unchanged."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:1951
+#: lib/brando_admin/components/form.ex:1978
 #, elixir-autogen, elixir-format
 msgid "The frontend assets for this preview could not be captured, so no link was created. Check the server log and try again."
 msgstr ""
@@ -11092,4 +11093,59 @@ msgstr ""
 #: lib/brando/ai.ex:166
 #, elixir-autogen, elixir-format
 msgid "The AI reply could not be read"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex:1247
+#, elixir-autogen, elixir-format
+msgid "%{name} #%{id} was not found. It may have been deleted."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:350
+#, elixir-autogen, elixir-format
+msgid "Needs at least %{count} impressions on Google's first page."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:196
+#, elixir-autogen, elixir-format
+msgid "No sitemap has been generated for this site yet."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:273
+#, elixir-autogen, elixir-format
+msgid "The content has no images."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:307
+#, elixir-autogen, elixir-format
+msgid "There are no other published language versions to compare with."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:186
+#, elixir-autogen, elixir-format
+msgid "There is no meta description to compare with other entries."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:134
+#, elixir-autogen, elixir-format
+msgid "There is no meta description to compare with the site fallback."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:115
+#, elixir-autogen, elixir-format
+msgid "There is no meta description to measure."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:176
+#, elixir-autogen, elixir-format
+msgid "There is no meta title to compare with other entries."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:97
+#, elixir-autogen, elixir-format
+msgid "There is no meta title to measure."
+msgstr ""
+
+#: lib/brando/seo/checks.ex:456
+#, elixir-autogen, elixir-format
+msgid "This content type has no block content to read."
 msgstr ""

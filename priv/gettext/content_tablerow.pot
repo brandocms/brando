@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/table_row.ex:38
+#: lib/brando/content/table_row.ex:43
 #, elixir-autogen, elixir-format
 msgid "table row"
 msgstr ""
 
-#: lib/brando/content/table_row.ex:39
+#: lib/brando/content/table_row.ex:44
 #, elixir-autogen, elixir-format
 msgid "table rows"
 msgstr ""
