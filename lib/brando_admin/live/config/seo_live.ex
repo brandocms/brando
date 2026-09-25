@@ -341,7 +341,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
                             <tr :for={check <- row.checks} data-status={check.status}>
                               <td class="seo-check-label">
                                 {check.label}
-                                <small :if={check.status in [:warn, :fail] and check.hint}>{check.hint}</small>
+                                <small :if={check.status in [:warn, :fail, :skip] and check.hint}>{check.hint}</small>
                               </td>
                               <td class="seo-check-verdict">
                                 <span :if={check.value} class="seo-check-value">{check.value}</span>

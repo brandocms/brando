@@ -94,7 +94,7 @@ defmodule Brando.SEO.Checks do
   end
 
   def meta_title_length(%{meta_title: title}) when title in [nil, ""],
-    do: skip(:meta_title_length, :low, gettext("Meta title length"))
+    do: skip(:meta_title_length, :low, gettext("Meta title length"), gettext("There is no meta title to measure."))
 
   def meta_title_length(row) do
     length_check(:meta_title_length, row.meta_title, @title_range, gettext("Meta title length"))
@@ -107,7 +107,13 @@ defmodule Brando.SEO.Checks do
   end
 
   def meta_description_length(%{meta_description: desc}) when desc in [nil, ""],
-    do: skip(:meta_description_length, :low, gettext("Meta description length"))
+    do:
+      skip(
+        :meta_description_length,
+        :low,
+        gettext("Meta description length"),
+        gettext("There is no meta description to measure.")
+      )
 
   def meta_description_length(row) do
     length_check(:meta_description_length, row.meta_description, @description_range, gettext("Meta description length"))
@@ -123,7 +129,11 @@ defmodule Brando.SEO.Checks do
       status: if(is_nil(own), do: :skip, else: status),
       weight: :normal,
       label: gettext("Own description"),
-      hint: gettext("This entry repeats the site fallback description; write one about this page.")
+      hint:
+        if(is_nil(own),
+          do: gettext("There is no meta description to compare with the site fallback."),
+          else: gettext("This entry repeats the site fallback description; write one about this page.")
+        )
     }
   end
 
@@ -157,10 +167,24 @@ defmodule Brando.SEO.Checks do
   end
 
   def duplicate_title(row, ctx),
-    do: duplicate(:duplicate_title, row.meta_title, ctx.title_counts, gettext("Unique title"))
+    do:
+      duplicate(
+        :duplicate_title,
+        row.meta_title,
+        ctx.title_counts,
+        gettext("Unique title"),
+        gettext("There is no meta title to compare with other entries.")
+      )
 
   def duplicate_description(row, ctx),
-    do: duplicate(:duplicate_description, row.meta_description, ctx.description_counts, gettext("Unique description"))
+    do:
+      duplicate(
+        :duplicate_description,
+        row.meta_description,
+        ctx.description_counts,
+        gettext("Unique description"),
+        gettext("There is no meta description to compare with other entries.")
+      )
 
   def url_resolves(row) do
     check(:url_resolves, present?(row.url), :critical, gettext("URL"),
@@ -168,7 +192,8 @@ defmodule Brando.SEO.Checks do
     )
   end
 
-  def in_sitemap(_row, %{sitemap: nil}), do: skip(:in_sitemap, :normal, gettext("In sitemap"))
+  def in_sitemap(_row, %{sitemap: nil}),
+    do: skip(:in_sitemap, :normal, gettext("In sitemap"), gettext("No sitemap has been generated for this site yet."))
 
   def in_sitemap(row, %{sitemap: sitemap}) do
     check(:in_sitemap, present?(row.url) and MapSet.member?(sitemap, path(row.url)), :normal, gettext("In sitemap"),
@@ -181,7 +206,8 @@ defmodule Brando.SEO.Checks do
   no text at all fails. Skipped for schemas without block fields, where the
   audit has no body to count.
   """
-  def thin_content(%{word_count: nil}, _ctx), do: skip(:thin_content, :normal, gettext("Content length"))
+  def thin_content(%{word_count: nil}, _ctx),
+    do: skip(:thin_content, :normal, gettext("Content length"), no_blocks())
 
   def thin_content(row, ctx) do
     minimum = Map.get(ctx, :thin_content_words) || thin_content_words()
@@ -208,7 +234,8 @@ defmodule Brando.SEO.Checks do
   H1 — and no skipped levels, counting from that title. Warns only: the
   template is out of sight, so this reads the content alone.
   """
-  def heading_structure(%{headings: nil}), do: skip(:heading_structure, :low, gettext("Heading structure"))
+  def heading_structure(%{headings: nil}),
+    do: skip(:heading_structure, :low, gettext("Heading structure"), no_blocks())
 
   def heading_structure(%{headings: headings}) do
     h1s = Enum.count(headings, &(&1 == 1))
@@ -240,7 +267,10 @@ defmodule Brando.SEO.Checks do
   Every image in the body needs alt text that describes it: not empty, not
   a filename, not just "image".
   """
-  def image_alt(%{image_alts: alts}) when alts in [nil, []], do: skip(:image_alt, :normal, gettext("Image descriptions"))
+  def image_alt(%{image_alts: nil}), do: skip(:image_alt, :normal, gettext("Image descriptions"), no_blocks())
+
+  def image_alt(%{image_alts: []}),
+    do: skip(:image_alt, :normal, gettext("Image descriptions"), gettext("The content has no images."))
 
   def image_alt(%{image_alts: alts}) do
     missing = Enum.count(alts, &(not present?(&1)))
@@ -269,7 +299,13 @@ defmodule Brando.SEO.Checks do
   after another version was.
   """
   def translation_parity(%{alternates: alternates}) when alternates in [nil, []],
-    do: skip(:translation_parity, :normal, gettext("Language versions"))
+    do:
+      skip(
+        :translation_parity,
+        :normal,
+        gettext("Language versions"),
+        gettext("There are no other published language versions to compare with.")
+      )
 
   def translation_parity(row) do
     hints = Enum.flat_map(row.alternates, &parity_issues(row, &1))
@@ -306,7 +342,14 @@ defmodule Brando.SEO.Checks do
     }
   end
 
-  def search_click_through(_row), do: skip(:search_click_through, :normal, gettext("Search click-through"))
+  def search_click_through(_row) do
+    skip(
+      :search_click_through,
+      :normal,
+      gettext("Search click-through"),
+      gettext("Needs at least %{count} impressions on Google's first page.", count: @ctr_min_impressions)
+    )
+  end
 
   @doc "A 0–1 rate as a percentage with one decimal."
   def percent(rate), do: :erlang.float_to_binary(rate * 100.0, decimals: 1) <> "%"
@@ -367,10 +410,10 @@ defmodule Brando.SEO.Checks do
     Regex.match?(@filename_alt, alt) or String.downcase(alt) in @generic_alts
   end
 
-  defp duplicate(key, value, counts, label) do
+  defp duplicate(key, value, counts, label, missing) do
     case normalize(value) do
       nil ->
-        skip(key, :normal, label)
+        skip(key, :normal, label, missing)
 
       normalized ->
         count = Map.get(counts, normalized, 1)
@@ -405,7 +448,12 @@ defmodule Brando.SEO.Checks do
     %Check{key: key, status: if(ok?, do: :pass, else: :fail), weight: weight, label: label, hint: opts[:hint]}
   end
 
-  defp skip(key, weight, label), do: %Check{key: key, status: :skip, weight: weight, label: label}
+  # A skipped check says why, or "Not checked" reads as something the audit
+  # forgot rather than a check with nothing to look at.
+  defp skip(key, weight, label, reason),
+    do: %Check{key: key, status: :skip, weight: weight, label: label, hint: reason}
+
+  defp no_blocks, do: gettext("This content type has no block content to read.")
 
   defp present?(value), do: is_binary(value) and String.trim(value) != ""
 

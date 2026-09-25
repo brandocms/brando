@@ -49,6 +49,19 @@ defmodule Brando.SEO.ChecksTest do
     assert status(checks, :meta_description_not_fallback) == :skip
   end
 
+  # "Not checked" alone reads as something the audit forgot.
+  test "every skipped check says why it could not run" do
+    bare = row(%{meta_title: nil, meta_description: nil, word_count: nil, headings: nil, alternates: []})
+
+    skipped =
+      [Checks.run(bare, ctx(%{search_console?: true})), Checks.run(row(%{image_alts: []}), ctx())]
+      |> List.flatten()
+      |> Enum.filter(&(&1.status == :skip))
+
+    assert skipped != []
+    assert Enum.all?(skipped, &(is_binary(&1.hint) and &1.hint != "")), inspect(Enum.reject(skipped, & &1.hint))
+  end
+
   test "lengths outside the display range warn, with the measured value" do
     checks = Checks.run(row(%{meta_title: "Hi", meta_description: String.duplicate("y", 200)}), ctx())
     assert status(checks, :meta_title_length) == :warn

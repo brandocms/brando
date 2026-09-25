@@ -10,7 +10,8 @@ defmodule Brando.SEO.Check do
       not run (no sitemap generated yet, say); skipped checks do not count
     * `weight` — `:low`, `:normal` or `:critical`; see `weight_value/1`
     * `label` — short translated name
-    * `hint` — what to do about it, translated; optional
+    * `hint` — what to do about it, translated; optional. On a skipped
+      check it says why the check could not run
     * `value` — what was measured, for display; optional
   """
 
