@@ -26,6 +26,27 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     end
   end
 
+  defmodule TestI18n do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :position, :map
+    end
+  end
+
+  describe "i18n_text/1" do
+    # Blueprint labels can arrive HTML-safe; interpolating one into an
+    # aria-label crashed the whole form.
+    test "renders with an HTML-safe label, its text in each tab's aria-label" do
+      form = %TestI18n{} |> cast(%{"position" => %{"en" => "Designer"}}, [:position]) |> to_form(as: :employee)
+
+      html = render_component(&Input.i18n_text/1, field: form[:position], label: {:safe, "Position"}, opts: [])
+
+      assert html =~ ~s(value="Designer")
+      assert html =~ ~r/aria-label="Position \(/
+    end
+  end
+
   describe "input/1 with type :string_list" do
     defp markets_form(params) do
       %TestMarkets{}

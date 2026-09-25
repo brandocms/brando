@@ -1238,6 +1238,12 @@ defmodule BrandoAdmin.Components.Form.Input do
     |> Enum.map(fn language -> {to_string(language[:value]), language[:text] || to_string(language[:value])} end)
   end
 
+  # A blueprint label may arrive HTML-safe ({:safe, iodata}); an attribute
+  # built by interpolation needs its text.
+  defp label_text({:safe, _} = label), do: Phoenix.HTML.safe_to_string(label)
+  defp label_text(nil), do: ""
+  defp label_text(label), do: to_string(label)
+
   # One tab per language over a single input area. Which tab is open lives
   # in the browser (JS class commands, which survive patches); every
   # language's input is always in the form, so all of them submit.
@@ -1253,6 +1259,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:rows, opts[:rows] || 3)
       |> assign(:i18n_id, "#{assigns.field.id}-i18n")
       |> assign(:first, languages |> List.first() |> then(&(&1 && elem(&1, 0))))
+      |> assign(:label_text, label_text(assigns[:label]))
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
@@ -1288,7 +1295,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             value={@value[language]}
             class="text"
             lang={language}
-            aria-label={"#{@label} (#{name})"}
+            aria-label={"#{@label_text} (#{name})"}
             phx-debounce={@debounce}
             phx-target={@target}
             data-watch-focus
@@ -1300,7 +1307,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             class="text"
             rows={@rows}
             lang={language}
-            aria-label={"#{@label} (#{name})"}
+            aria-label={"#{@label_text} (#{name})"}
             disabled={@disabled}
             phx-debounce={@debounce}
             phx-target={@target}
