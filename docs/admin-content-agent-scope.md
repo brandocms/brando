@@ -516,3 +516,44 @@ Stage 1 took about a day, not the estimated 2–3.
   state. `BrandoMCP.Embedded.call_tool/4` calls them as plain functions, with every
   transport disabled. The admin's agent calls `Proposals.Tools` directly and does
   not need BrandoMCP.
+
+## Stage 3: agent runtime (25 September 2026)
+
+- **`Brando.AI.Agent`** manages conversations, attachments and runs.
+  - Conversations belong to one user in one site/environment.
+  - Attachment aliases (`image1`, `video1` …) follow the order in which media
+    is attached, and survive detaching other media.
+  - `send_message/4` stores the user's message and starts a run under
+    `Brando.AI.Agent.Supervisor`, with the tenant context captured. One run per
+    conversation at a time. A run left behind by a restart is marked
+    `interrupted` after ten minutes.
+- **`Agent.Loop`** is the tool loop on ReqLLM.
+  - Each step calls the model, stores every message as it happens, and runs the
+    requested tools in-process through `Proposals.Tools` as the conversation's
+    user.
+  - A successful `prepare_proposal` becomes the conversation's proposal under
+    review, and the next one refines it.
+  - The context is rebuilt from stored messages on every call, so runs are
+    stateless.
+  - Progress, messages, proposals and run status are broadcast on a scoped
+    PubSub topic.
+- **Limits and cost:** a step limit (12) and an output-token limit per call
+  (4096).
+  - `Agent.Budget` reserves an estimate before each call, against a per-run
+    budget and an optional monthly budget per site/environment. The estimate is
+    about four characters per token plus the output limit. Reservations happen
+    under an advisory lock.
+  - After each call, the provider's reported usage replaces the reservation.
+    Input, output, cached and reasoning tokens are recorded.
+  - Cost is estimated from configured `prices`, then the cost ReqLLM reports,
+    then the model catalogue.
+  - Cancel stops the run before its next model or tool call. A call already in
+    flight is still charged.
+- **Model:** `config :brando, Brando.AI.Agent, model: "anthropic:claude-opus-5-5"`,
+  with keys from `Brando.AI`. The llm_db catalogue in ReqLLM 1.22 does not list
+  `claude-opus-5-5`, so without `prices` its cost shows as zero.
+- **Not verified against a live provider:** no API key was available.
+  Instead, the OpenAI Responses and Anthropic Messages tool exchanges are
+  tested offline through ReqLLM's real encoders and decoders (`Req.Test`
+  stubs): tool definitions go out, `tool_use`/`function_call` comes in, and
+  matching `tool_result`/`function_call_output` goes back.

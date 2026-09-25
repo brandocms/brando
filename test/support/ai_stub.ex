@@ -62,6 +62,54 @@ defmodule Brando.AIStub do
     end)
   end
 
+  @doc """
+  Answers successive requests with `turns`, in order: `{:text, text}` for a
+  final answer, or `{:tools, [{name, args}]}` for function calls. Every
+  request body is sent to the test process as `{:ai_request, body}`.
+  """
+  def script(turns) when is_list(turns) do
+    test = self()
+    {:ok, counter} = Elixir.Agent.start_link(fn -> 0 end)
+
+    Req.Test.stub(Brando.AI, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(test, {:ai_request, Jason.decode!(body)})
+      n = Elixir.Agent.get_and_update(counter, &{&1, &1 + 1})
+
+      case Enum.at(turns, n) do
+        {:text, text} -> Req.Test.json(conn, response(text))
+        {:tools, calls} -> Req.Test.json(conn, tool_response(calls, n))
+        {:error, status} -> conn |> Plug.Conn.put_status(status) |> Req.Test.json(%{"error" => %{"message" => "stubbed"}})
+        nil -> Req.Test.json(conn, response("(script exhausted)"))
+      end
+    end)
+  end
+
+  defp tool_response(calls, n) do
+    output =
+      calls
+      |> Enum.with_index()
+      |> Enum.map(fn {{name, args}, i} ->
+        %{
+          "type" => "function_call",
+          "id" => "fc_#{n}_#{i}",
+          "call_id" => "call_#{n}_#{i}",
+          "name" => name,
+          "arguments" => Jason.encode!(args),
+          "status" => "completed"
+        }
+      end)
+
+    %{
+      "id" => "resp_#{n}",
+      "object" => "response",
+      "status" => "completed",
+      "model" => "gpt-4o-mini",
+      "output" => output,
+      "usage" => %{"input_tokens" => 100, "output_tokens" => 20, "total_tokens" => 120}
+    }
+  end
+
   defp prompt(body) do
     body
     |> Jason.decode!()

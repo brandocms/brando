@@ -86,11 +86,7 @@ defmodule Brando.AI do
   def generate_text(prompt, ai_opts \\ []) when is_binary(prompt) or is_list(prompt) or is_struct(prompt) do
     ai_opts = normalize_ai_opts(ai_opts)
 
-    with true <- enabled?(),
-         {:ok, model} <- resolve_model(ai_opts),
-         {:ok, provider} <- provider_from_model(model),
-         {:ok, api_key} <- resolve_api_key(provider, ai_opts),
-         req_opts <- build_req_opts(ai_opts, api_key),
+    with {:ok, %{model: model, provider: provider, req_opts: req_opts}} <- request(ai_opts),
          {:ok, response} <- ReqLLM.generate_text(model, prompt, req_opts),
          text <- response |> Response.text() |> normalize_text(),
          true <- text != "" or {:error, :empty_response} do
@@ -105,6 +101,24 @@ defmodule Brando.AI do
       {:error, _} = error -> error
       false -> {:error, :disabled}
       error -> {:error, error}
+    end
+  end
+
+  @doc """
+  Resolve `ai_opts` to a model, its provider and the ReqLLM request options,
+  including the API key. For callers that drive ReqLLM themselves, such as the
+  content agent's tool loop.
+  """
+  @spec request(keyword() | map()) ::
+          {:ok, %{model: String.t(), provider: atom(), req_opts: keyword()}} | {:error, term()}
+  def request(ai_opts \\ []) do
+    ai_opts = normalize_ai_opts(ai_opts)
+
+    with true <- enabled?() || {:error, :disabled},
+         {:ok, model} <- resolve_model(ai_opts),
+         {:ok, provider} <- provider_from_model(model),
+         {:ok, api_key} <- resolve_api_key(provider, ai_opts) do
+      {:ok, %{model: model, provider: provider, req_opts: build_req_opts(ai_opts, api_key)}}
     end
   end
 

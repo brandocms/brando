@@ -22,6 +22,9 @@ defmodule Brando.Tenant.SharedTables do
     authorization_user_groups
     authorization_legacy_mappings
     authorization_audit_events
+    ai_conversations
+    ai_messages
+    ai_runs
     content_proposal_receipts
     content_proposals
     content_transfer_receipts
