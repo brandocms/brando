@@ -17,6 +17,8 @@
   }
   .drawer-form input.text, .drawer-form .datetime-wrapper input:not([type="hidden"]) { height: 44px; padding: 0 12px; }
   .drawer-form textarea { padding: 10px 12px; }
+  /* Keep text clear of the AI button in the field's top right corner. */
+  .drawer-form :is(input.text, textarea).has-ai-action { padding-right: 46px; }
   .drawer-form .datetime-wrapper input:not([type="hidden"]) { padding-right: 80px; }
   .datetime-wrapper .clear-datetime { top: 7px; right: 8px; min-height: 30px; padding: 4px 10px; border: 1px solid var(--workspace-line); border-radius: 4px; background: #f5f7f3; color: var(--workspace-ink); font: 12px/20px "Main", sans-serif; }
   .datetime-wrapper .clear-datetime:hover { background: #e8f0e3; color: var(--workspace-accent); }

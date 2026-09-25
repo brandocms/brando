@@ -118,8 +118,8 @@ textarea.text {
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     border-radius: 999px;
     border: 1px dashed color-mix(in srgb, #6d4de3 45%, transparent);
     background: transparent;
@@ -154,13 +154,22 @@ textarea.text {
     }
 
     .hero-sparkles {
-      width: 0.9rem;
-      height: 0.9rem;
+      width: 0.8rem;
+      height: 0.8rem;
     }
+  }
+
+  /* A single-line field centres the button whatever the field's height; a
+     textarea keeps it in the top corner, beside the first line. */
+  input.text ~ .ai-generate-button {
+    top: 50%;
+    translate: 0 -50%;
   }
 }
 
-.drawer {
+/* Azure is for the dark blue drawers only; the light and workspace drawers
+   are white, where it made the button all but invisible. */
+.drawer:not(.light, .admin-workspace) {
   .input-with-action {
     .ai-generate-button {
       background: transparent;
