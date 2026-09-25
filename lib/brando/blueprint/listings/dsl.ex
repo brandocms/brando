@@ -199,6 +199,15 @@ defmodule Brando.Blueprint.Listings.Dsl do
         required: false,
         doc: "Listing row component"
       ],
+      decorate: [
+        type: {:fun, 1},
+        required: false,
+        doc: """
+        Receives each page of loaded entries and returns them, for rows that show
+        data the listing query cannot load. Runs once per page, so the lookup can
+        be batched instead of made per row.
+        """
+      ],
       default_actions: [
         type: :boolean,
         required: false,

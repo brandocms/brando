@@ -436,12 +436,18 @@ defmodule BrandoAdmin.Components.Content.List do
     sanitized_list_opts = sanitize_list_opts(list_opts)
 
     {:ok, entries} = apply(context, :"list_#{plural}", [sanitized_list_opts])
+    entries = decorate(entries, listing.decorate)
 
     socket
     |> assign(:list_opts, list_opts)
     |> assign(:entries, entries)
     |> assign(:content_language, content_language)
   end
+
+  # A paginated listing wraps the page in a map; decorate only the entries.
+  defp decorate(entries, nil), do: entries
+  defp decorate(%{entries: page} = paginated, decorate), do: %{paginated | entries: decorate.(page)}
+  defp decorate(entries, decorate) when is_list(entries), do: decorate.(entries)
 
   defp sanitize_list_opts(%{filter: filters} = list_opts) do
     sanitized_filters =

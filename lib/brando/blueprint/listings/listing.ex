@@ -21,5 +21,6 @@ defmodule Brando.Blueprint.Listings.Listing do
             exports: [],
             child_listings: [],
             component: nil,
+            decorate: nil,
             limit: 25
 end

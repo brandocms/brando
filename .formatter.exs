@@ -17,6 +17,7 @@ spark_locals_without_parens = [
   child_listing: 0,
   child_listing: 1,
   component: 1,
+  decorate: 1,
   confirm: 1,
   content: 1,
   datasource: 1,
