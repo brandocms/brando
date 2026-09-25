@@ -113,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
               data-sortable-id="sortable-gallery-edit"
               data-sortable-handle=".sort-handle"
               data-sortable-selector=".gallery-object"
-              class="gallery-objects"
+              class="gallery-objects gallery-objects--tiles"
             >
               <.inputs_for :let={gallery_object} field={@field}>
                 <figure

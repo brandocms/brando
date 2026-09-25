@@ -39,6 +39,24 @@
     }
   }
 
+  /* Tiles: the gallery's own form, where the objects are all there is, so as
+     many small squares as fit a row. */
+  &.gallery-objects--tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+
+    .gallery-object img,
+    .gallery-object .img-placeholder {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+  }
+
   /* Grid layout (default) */
   &.gallery-objects--grid {
     display: grid;
