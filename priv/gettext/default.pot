@@ -500,7 +500,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/gallery.ex:421
 #: lib/brando_admin/components/form/input/image.ex:425
 #: lib/brando_admin/components/image_picker.ex:542
-#: lib/brando_admin/live/images/image_form_live.ex:15
+#: lib/brando_admin/live/images/image_form_live.ex:16
 #, elixir-autogen, elixir-format
 msgid "Edit image"
 msgstr ""
@@ -532,7 +532,7 @@ msgstr ""
 msgid "Filter options"
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:101
+#: lib/brando/galleries/gallery.ex:112
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:227
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:205
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:465
@@ -1230,7 +1230,7 @@ msgstr ""
 msgid "Moonwalk"
 msgstr ""
 
-#: lib/brando/images/image.ex:115
+#: lib/brando/images/image.ex:126
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex:125
 #: lib/brando_admin/components/form/input/gallery.ex:393
 #, elixir-autogen, elixir-format
@@ -1764,7 +1764,7 @@ msgid "Sort by filename"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/video.ex:425
-#: lib/brando_admin/live/videos/video_form_live.ex:15
+#: lib/brando_admin/live/videos/video_form_live.ex:16
 #, elixir-autogen, elixir-format
 msgid "Edit video"
 msgstr ""
@@ -2249,7 +2249,7 @@ msgstr ""
 msgid "Create container"
 msgstr ""
 
-#: lib/brando_admin/live/images/image_form_live.ex:13
+#: lib/brando_admin/live/images/image_form_live.ex:14
 #, elixir-autogen, elixir-format
 msgid "Create image"
 msgstr ""
@@ -2265,7 +2265,7 @@ msgid "Create module set"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex:727
-#: lib/brando_admin/live/videos/video_form_live.ex:13
+#: lib/brando_admin/live/videos/video_form_live.ex:14
 #, elixir-autogen, elixir-format
 msgid "Create video"
 msgstr ""
@@ -2473,7 +2473,7 @@ msgstr ""
 msgid "Pink"
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:107
+#: lib/brando/galleries/gallery.ex:118
 #: lib/brando_admin/components/form/input/gallery_objects.ex:88
 #, elixir-autogen, elixir-format
 msgid "1 object"
@@ -6036,12 +6036,12 @@ msgstr ""
 msgid "Choose a folder, upload an image, or adjust your search."
 msgstr ""
 
-#: lib/brando/images/image.ex:113
+#: lib/brando/images/image.ex:124
 #, elixir-format, elixir-autogen
 msgid "Alt text added"
 msgstr ""
 
-#: lib/brando/images/image.ex:120
+#: lib/brando/images/image.ex:131
 #, elixir-format, elixir-autogen
 msgid "Processing"
 msgstr ""
@@ -6092,12 +6092,12 @@ msgstr ""
 msgid "Build"
 msgstr ""
 
-#: lib/brando/images/image.ex:103
+#: lib/brando/images/image.ex:114
 #, elixir-format, elixir-autogen
 msgid "Formats"
 msgstr ""
 
-#: lib/brando/images/image.ex:108
+#: lib/brando/images/image.ex:119
 #, elixir-format, elixir-autogen
 msgid "%{count} size"
 msgid_plural "%{count} sizes"
@@ -6212,7 +6212,7 @@ msgstr ""
 msgid "Export configuration"
 msgstr ""
 
-#: lib/brando/videos/video.ex:253
+#: lib/brando/videos/video.ex:241
 #: lib/brando_admin/components/video_picker.ex:979
 #, elixir-autogen, elixir-format
 msgid "External file"
@@ -6398,12 +6398,12 @@ msgstr ""
 msgid "Nothing scheduled"
 msgstr ""
 
-#: lib/brando/files/file.ex:63
+#: lib/brando/files/file.ex:75
 #, elixir-autogen, elixir-format
 msgid "Open %{filename}"
 msgstr ""
 
-#: lib/brando/files/file.ex:64
+#: lib/brando/files/file.ex:76
 #, elixir-autogen, elixir-format
 msgid "Open file"
 msgstr ""
@@ -6621,7 +6621,7 @@ msgstr ""
 msgid "Upload a JSON export to review changes before applying them."
 msgstr ""
 
-#: lib/brando/videos/video.ex:252
+#: lib/brando/videos/video.ex:240
 #: lib/brando_admin/components/video_picker.ex:978
 #, elixir-autogen, elixir-format
 msgid "Uploaded file"
@@ -9241,7 +9241,6 @@ msgstr ""
 msgid "Image and video collections used in your content."
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:103
 #: lib/brando_admin/components/form/draft_preview.ex:229
 #, elixir-autogen, elixir-format
 msgid "Images and videos"
@@ -11087,7 +11086,7 @@ msgstr ""
 msgid "Missing in at least one of %{languages}. Each image is described in every language it lacks, in one request."
 msgstr ""
 
-#: lib/brando/images/image.ex:117
+#: lib/brando/images/image.ex:128
 #, elixir-autogen, elixir-format
 msgid "No alt text in %{languages}"
 msgstr ""
@@ -11746,8 +11745,7 @@ msgstr ""
 msgid "Fetch thumbnails and titles"
 msgstr ""
 
-#: lib/brando/videos.ex:263
-#: lib/brando_admin/live/galleries/gallery_form_live.ex:22
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:21
 #, elixir-autogen, elixir-format
 msgid "Gallery #%{id}"
 msgstr ""
@@ -11764,7 +11762,7 @@ msgid_plural "Looking up %{count} videos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando/videos/video.ex:216
+#: lib/brando_admin/components/usage.ex:24
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr ""
@@ -11779,13 +11777,18 @@ msgstr ""
 msgid "This video cannot be played here."
 msgstr ""
 
-#: lib/brando/videos/video.ex:218
-#: lib/brando_admin/live/galleries/gallery_form_live.ex:30
+#: lib/brando_admin/components/usage.ex:26
+#: lib/brando_admin/components/usage.ex:48
 #, elixir-autogen, elixir-format
 msgid "Used in"
 msgstr ""
 
-#: lib/brando_admin/live/galleries/gallery_form_live.ex:24
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:23
 #, elixir-autogen, elixir-format
 msgid "New gallery"
+msgstr ""
+
+#: lib/brando_admin/components/usage.ex:49
+#, elixir-autogen, elixir-format
+msgid "Not in use anywhere yet."
 msgstr ""

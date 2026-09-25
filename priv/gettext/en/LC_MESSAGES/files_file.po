@@ -11,22 +11,27 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
 
-#: lib/brando/files/file.ex:37
+#: lib/brando/files/file.ex:40
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr ""
 
-#: lib/brando/files/file.ex:71
+#: lib/brando/files/file.ex:83
 #, elixir-autogen, elixir-format
 msgid "file"
 msgstr ""
 
-#: lib/brando/files/file.ex:72
+#: lib/brando/files/file.ex:84
 #, elixir-autogen, elixir-format
 msgid "files"
 msgstr ""
 
-#: lib/brando/files/file.ex:38
+#: lib/brando/files/file.ex:42
 #, elixir-autogen, elixir-format
 msgid "Replace file"
+msgstr ""
+
+#: lib/brando/files/file.ex:41
+#, elixir-autogen, elixir-format
+msgid "Not in use"
 msgstr ""

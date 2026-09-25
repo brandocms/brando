@@ -69,6 +69,12 @@ defmodule Brando.Images do
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
 
+      {:unused, value}, query when value in [true, "true"] ->
+        from(t in query, where: t.id not in ^Brando.Content.Usage.used_ids(:image))
+
+      {:unused, _}, query ->
+        query
+
       # The root: entries without a folder, and those in a folder that is the root itself.
       {:folder_id, {:root, root_folder_ids}}, query ->
         from(t in query, where: is_nil(t.folder_id) or t.folder_id in ^root_folder_ids)

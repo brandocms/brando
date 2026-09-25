@@ -25,6 +25,9 @@ defmodule Brando.Galleries.Gallery do
 
   attributes do
     attribute :config_target, :text
+
+    # Where it is used, filled in by the listing (see `Brando.Content.Usage`).
+    attribute :usage, :map, virtual: true
   end
 
   relations do
@@ -44,6 +47,8 @@ defmodule Brando.Galleries.Gallery do
         preload: [{:gallery_objects, [:image, video: [:thumbnail]]}]
       }
 
+      filter label: t("Not in use"), key: "unused", type: :boolean
+      decorate &__MODULE__.put_usage/1
       component &__MODULE__.listing_row/1
     end
   end
@@ -70,6 +75,12 @@ defmodule Brando.Galleries.Gallery do
       end
     end
   end
+
+  # A local capture: the listing DSL keeps the function at compile time, and a
+  # remote capture would make this Blueprint compile against the usage lookup
+  # and all it reaches (issue #2737).
+  @doc false
+  def put_usage(entries), do: Brando.Content.Usage.put(entries, :gallery)
 
   @doc """
   Listing row component for gallery entries
@@ -100,7 +111,7 @@ defmodule Brando.Galleries.Gallery do
     <.update_link entry={@entry} columns={7}>
       {gettext("Gallery")} #{@entry.id}
       <:outside>
-        <span class="gallery-description">{gettext("Images and videos")}</span>
+        <BrandoAdmin.Components.Usage.inline usages={@entry.usage} />
       </:outside>
     </.update_link>
     <.field columns={3} class="listing-gallery-count">

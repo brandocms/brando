@@ -11,78 +11,83 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
 
-#: lib/brando/images/image.ex:134
+#: lib/brando/images/image.ex:146
 #, elixir-autogen, elixir-format
 msgid "Alt. text"
 msgstr ""
 
-#: lib/brando/images/image.ex:143
+#: lib/brando/images/image.ex:155
 #, elixir-autogen, elixir-format
 msgid "Asset has been transferred to CDN"
 msgstr ""
 
-#: lib/brando/images/image.ex:142
+#: lib/brando/images/image.ex:154
 #, elixir-autogen, elixir-format
 msgid "CDN"
 msgstr ""
 
-#: lib/brando/images/image.ex:69
+#: lib/brando/images/image.ex:72
 #, elixir-autogen, elixir-format
 msgid "Config target"
 msgstr ""
 
-#: lib/brando/images/image.ex:148
+#: lib/brando/images/image.ex:160
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr ""
 
-#: lib/brando/images/image.ex:133
+#: lib/brando/images/image.ex:145
 #, elixir-autogen, elixir-format
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/images/image.ex:147
+#: lib/brando/images/image.ex:159
 #, elixir-autogen, elixir-format
 msgid "Dominant color"
 msgstr ""
 
-#: lib/brando/images/image.ex:146
+#: lib/brando/images/image.ex:158
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr ""
 
-#: lib/brando/images/image.ex:68
-#: lib/brando/images/image.ex:135
+#: lib/brando/images/image.ex:71
+#: lib/brando/images/image.ex:147
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr ""
 
-#: lib/brando/images/image.ex:132
+#: lib/brando/images/image.ex:144
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/images/image.ex:145
+#: lib/brando/images/image.ex:157
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""
 
-#: lib/brando/images/image.ex:151
+#: lib/brando/images/image.ex:163
 #, elixir-autogen, elixir-format
 msgid "Focal"
 msgstr ""
 
-#: lib/brando/images/image.ex:166
+#: lib/brando/images/image.ex:178
 #, elixir-autogen, elixir-format
 msgid "image"
 msgstr ""
 
-#: lib/brando/images/image.ex:167
+#: lib/brando/images/image.ex:179
 #, elixir-autogen, elixir-format
 msgid "images"
 msgstr ""
 
-#: lib/brando/images/image.ex:129
+#: lib/brando/images/image.ex:141
 #, elixir-autogen, elixir-format
 msgid "Content"
+msgstr ""
+
+#: lib/brando/images/image.ex:73
+#, elixir-autogen, elixir-format
+msgid "Not in use"
 msgstr ""

@@ -29,6 +29,12 @@ defmodule Brando.Galleries do
 
   filters Gallery do
     fn
+      {:unused, value}, query when value in [true, "true"] ->
+        from(t in query, where: t.id not in ^Brando.Content.Usage.used_ids(:gallery))
+
+      {:unused, _}, query ->
+        query
+
       {:ids, ids}, query when is_list(ids) ->
         from t in query, where: t.id in ^ids
 

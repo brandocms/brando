@@ -1,8 +1,9 @@
-defmodule Brando.Videos.UsageTest do
+defmodule Brando.Content.UsageTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
   alias Brando.Content.Block
+  alias Brando.Content.Usage
   alias Brando.Factory
   alias Brando.Pages.Page
   alias Brando.Videos
@@ -24,7 +25,7 @@ defmodule Brando.Videos.UsageTest do
     gallery = Factory.insert(:gallery)
     Factory.insert(:gallery_object, gallery_id: gallery.id, video_id: in_gallery.id)
 
-    usage = Videos.list_usage([in_block.id, in_gallery.id, unused.id])
+    usage = Usage.list(:video, [in_block.id, in_gallery.id, unused.id])
 
     assert [%{label: "Om oss"}] = usage[in_block.id]
     assert [%{label: label}] = usage[in_gallery.id]
@@ -36,5 +37,25 @@ defmodule Brando.Videos.UsageTest do
     assert unused.id in ids
     refute in_block.id in ids
     refute in_gallery.id in ids
+  end
+
+  test "an image is used by a video it is the thumbnail of, named by the video's title" do
+    image = Factory.insert(:image)
+    unused = Factory.insert(:image)
+    video = Factory.insert(:video, title: "Sommerro", thumbnail_id: image.id)
+
+    assert [%{label: "Sommerro", url: url}] = Usage.list(:image, [image.id, unused.id])[image.id]
+    assert url =~ "#{video.id}"
+    assert image.id in Usage.used_ids(:image)
+    refute unused.id in Usage.used_ids(:image)
+
+    {:ok, images} = Brando.Images.list_images(%{filter: %{unused: "true"}})
+    assert unused.id in Enum.map(images, & &1.id)
+    refute image.id in Enum.map(images, & &1.id)
+  end
+
+  test "put/2 fills in each entry's usage, empty where it is used nowhere" do
+    image = Factory.insert(:image)
+    assert [%{usage: []}] = Usage.put([image], :image)
   end
 end

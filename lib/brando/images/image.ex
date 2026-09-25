@@ -53,6 +53,9 @@ defmodule Brando.Images.Image do
     attribute :img_class, :text, virtual: true
     attribute :link, :text, virtual: true
     attribute :srcset, :text, virtual: true
+
+    # Where it is used, filled in by the listing (see `Brando.Content.Usage`).
+    attribute :usage, :map, virtual: true
     attribute :lazyload, :boolean, virtual: true, default: false
     attribute :moonwalk, :boolean, virtual: true, default: false
     attribute :placeholder, :any, virtual: true
@@ -67,9 +70,17 @@ defmodule Brando.Images.Image do
       query %{order: [{:desc, :id}]}
       filter label: t("Path"), key: "path"
       filter label: t("Config target"), key: "config_target_search"
+      filter label: t("Not in use"), key: "unused", type: :boolean
+      decorate &__MODULE__.put_usage/1
       component &__MODULE__.listing_row/1
     end
   end
+
+  # A local capture: the listing DSL keeps the function at compile time, and a
+  # remote capture would make this Blueprint compile against the usage lookup
+  # and all it reaches (issue #2737).
+  @doc false
+  def put_usage(entries), do: Brando.Content.Usage.put(entries, :image)
 
   def listing_row(assigns) do
     formats =
@@ -119,6 +130,7 @@ defmodule Brando.Images.Image do
           </span>
           <span :if={@entry.status != :processed}>{gettext("Processing")}</span>
         </div>
+        <BrandoAdmin.Components.Usage.inline usages={@entry.usage} />
       </:outside>
     </.update_link>
     """

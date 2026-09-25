@@ -12,22 +12,27 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/files/file.ex:37
+#: lib/brando/files/file.ex:40
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr "Filnavn"
 
-#: lib/brando/files/file.ex:71
+#: lib/brando/files/file.ex:83
 #, elixir-autogen, elixir-format
 msgid "file"
 msgstr "fil"
 
-#: lib/brando/files/file.ex:72
+#: lib/brando/files/file.ex:84
 #, elixir-autogen, elixir-format
 msgid "files"
 msgstr "filer"
 
-#: lib/brando/files/file.ex:38
+#: lib/brando/files/file.ex:42
 #, elixir-autogen, elixir-format
 msgid "Replace file"
 msgstr "Erstatt fil"
+
+#: lib/brando/files/file.ex:41
+#, elixir-autogen, elixir-format
+msgid "Not in use"
+msgstr "Ikke i bruk"

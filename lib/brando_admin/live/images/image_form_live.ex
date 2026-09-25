@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Images.ImageFormLive do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Usage
 
   def render(assigns) do
     ~H"""
@@ -16,6 +17,15 @@ defmodule BrandoAdmin.Images.ImageFormLive do
         <% end %>
       </:header>
     </.live_component>
+
+    <Usage.list :if={@entry_id} usages={@usage} />
     """
   end
+
+  def handle_params(%{"entry_id" => entry_id}, _url, socket) do
+    id = String.to_integer(entry_id)
+    {:noreply, assign(socket, :usage, Map.get(Brando.Content.Usage.list(:image, [id]), id, []))}
+  end
+
+  def handle_params(_params, _url, socket), do: {:noreply, assign(socket, :usage, [])}
 end

@@ -64,8 +64,7 @@ defmodule Brando.Videos do
 
       # The root: entries without a folder, and those in a folder that is the root itself.
       {:unused, value}, query when value in [true, "true"] ->
-        used = from(v in Video, select: v.id) |> Brando.Repo.all() |> list_usage() |> Map.keys()
-        from(t in query, where: t.id not in ^used)
+        from(t in query, where: t.id not in ^Brando.Content.Usage.used_ids(:video))
 
       {:unused, _}, query ->
         query
@@ -170,109 +169,6 @@ defmodule Brando.Videos do
 
       if params == %{}, do: {:ok, video}, else: update_video(video.id, params, user)
     end
-  end
-
-  @doc """
-  Puts each video's usage (see `list_usage/1`) in its `:usage` field. The
-  video listing's `decorate`, so one page costs one lookup.
-  """
-  @spec put_usage([Video.t()]) :: [Video.t()]
-  def put_usage(videos) do
-    usage = videos |> Enum.map(& &1.id) |> list_usage()
-    Enum.map(videos, &%{&1 | usage: Map.get(usage, &1.id, [])})
-  end
-
-  @doc """
-  Where each video is used: entries whose blocks place it, galleries holding
-  it, and entries holding it in a video field. Returns `%{video_id => usages}`,
-  each usage `%{label: String.t(), url: String.t() | nil}`; videos used nowhere
-  are left out.
-  """
-  @spec list_usage([integer()]) :: %{optional(integer()) => [%{label: String.t(), url: String.t() | nil}]}
-  def list_usage([]), do: %{}
-
-  def list_usage(video_ids) do
-    refs =
-      from(r in Brando.Content.Ref,
-        where: r.video_id in ^video_ids and not is_nil(r.block_id),
-        select: {r.video_id, r.block_id}
-      )
-      |> Brando.Repo.all()
-
-    entries_by_block =
-      refs |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> Brando.Content.BlockReferences.list_entries_for_block_ids()
-
-    in_blocks = for {video_id, block_id} <- refs, entry <- Map.get(entries_by_block, block_id, []), do: {video_id, entry}
-
-    in_galleries =
-      from(o in Brando.Galleries.GalleryObject,
-        where: o.video_id in ^video_ids,
-        select: {o.video_id, o.gallery_id},
-        distinct: true
-      )
-      |> Brando.Repo.all()
-      |> Enum.map(fn {video_id, gallery_id} -> {video_id, {Brando.Galleries.Gallery, gallery_id}} end)
-
-    usages = Enum.uniq(in_blocks ++ in_galleries ++ list_field_usage(video_ids))
-    labels = entry_labels(Enum.map(usages, &elem(&1, 1)))
-
-    usages
-    |> Enum.group_by(&elem(&1, 0), fn {_, entry} -> Map.fetch!(labels, entry) end)
-    |> Map.new(fn {video_id, entries} -> {video_id, Enum.sort_by(entries, & &1.label)} end)
-  end
-
-  # A video picked in a Blueprint's video field carries that field as its
-  # config target ("video:MyApp.Case:cover_video"); the entry holds its id.
-  defp list_field_usage(video_ids) do
-    from(v in Video, where: v.id in ^video_ids and like(v.config_target, "video:%"), select: {v.id, v.config_target})
-    |> Brando.Repo.all()
-    |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
-    |> Enum.flat_map(fn {config_target, ids} ->
-      with ["video", schema, field] <- String.split(config_target, ":"),
-           {:ok, schema} <- ConfigTarget.schema_module(schema),
-           foreign_key = String.to_existing_atom("#{field}_id"),
-           true <- foreign_key in schema.__schema__(:fields) do
-        from(e in schema, where: field(e, ^foreign_key) in ^ids, select: {field(e, ^foreign_key), e.id})
-        |> Brando.Repo.all()
-        |> Enum.map(fn {video_id, entry_id} -> {video_id, {schema, entry_id}} end)
-      else
-        _ -> []
-      end
-    end)
-  rescue
-    ArgumentError -> []
-  end
-
-  defp entry_labels(entries) do
-    titles =
-      entries
-      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-      |> Enum.flat_map(fn {schema, ids} ->
-        from(i in Brando.Content.Identifier,
-          where: i.schema == ^schema and i.entry_id in ^ids,
-          select: {i.entry_id, i.title}
-        )
-        |> Brando.Repo.all()
-        |> Enum.map(fn {id, title} -> {{schema, id}, title} end)
-      end)
-      |> Map.new()
-
-    Map.new(entries, fn {schema, id} = entry ->
-      label =
-        case {schema, Map.get(titles, entry)} do
-          {Brando.Galleries.Gallery, _} -> gettext("Gallery #%{id}", id: id)
-          {_, title} when is_binary(title) and title != "" -> title
-          _ -> "##{id}"
-        end
-
-      {entry, %{label: label, url: admin_url(schema, id)}}
-    end)
-  end
-
-  defp admin_url(schema, id) do
-    schema.__admin_route__(:update, [id])
-  rescue
-    _ -> nil
   end
 
   @doc """

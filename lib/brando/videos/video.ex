@@ -146,10 +146,10 @@ defmodule Brando.Videos.Video do
   end
 
   # A local capture: the listing DSL keeps the function at compile time, and a
-  # capture of `Brando.Videos` would make this Blueprint compile against the
-  # whole videos context (issue #2737).
+  # remote capture would make this Blueprint compile against the usage lookup
+  # and all it reaches (issue #2737).
   @doc false
-  def put_usage(videos), do: Brando.Videos.put_usage(videos)
+  def put_usage(videos), do: Brando.Content.Usage.put(videos, :video)
 
   def listing_row(assigns) do
     assigns = assign(assigns, :title, Brando.Videos.display_title(assigns.entry))
@@ -211,19 +211,7 @@ defmodule Brando.Videos.Video do
           <span :if={@entry.duration && @entry.duration != ""}>{short_duration(@entry.duration)}</span>
           <span :if={@entry.type == :upload && @entry.file}>{Brando.Utils.human_size(@entry.file.filesize)}</span>
         </div>
-        <div :if={is_list(@entry.usage)} class="library-video-usage">
-          <%= if @entry.usage == [] do %>
-            <span class="library-video-unused">{gettext("Not in use")}</span>
-          <% else %>
-            <span>{gettext("Used in")}</span>
-            <%= for {usage, index} <- Enum.with_index(@entry.usage) do %>
-              <.link :if={usage.url} navigate={usage.url}>{usage.label}</.link><span :if={!usage.url}>{usage.label}</span><span
-                :if={index < length(@entry.usage) - 1}
-                aria-hidden="true"
-              >,</span>
-            <% end %>
-          <% end %>
-        </div>
+        <BrandoAdmin.Components.Usage.inline usages={@entry.usage} />
       </:outside>
     </.update_link>
     """

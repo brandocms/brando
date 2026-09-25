@@ -29,16 +29,27 @@ defmodule Brando.Files.File do
     attribute :config_target, :text, required: true
     attribute :cdn, :boolean, default: false
     attribute :folder_id, :integer
+
+    # Where it is used, filled in by the listing (see `Brando.Content.Usage`).
+    attribute :usage, :map, virtual: true
   end
 
   listings do
     listing do
       query %{order: [{:desc, :id}]}
       filter label: t("Filename"), key: "filename"
+      filter label: t("Not in use"), key: "unused", type: :boolean
       action label: t("Replace file"), event: "replace_file"
+      decorate &__MODULE__.put_usage/1
       component &__MODULE__.listing_row/1
     end
   end
+
+  # A local capture: the listing DSL keeps the function at compile time, and a
+  # remote capture would make this Blueprint compile against the usage lookup
+  # and all it reaches (issue #2737).
+  @doc false
+  def put_usage(entries), do: Brando.Content.Usage.put(entries, :file)
 
   def listing_row(assigns) do
     ~H"""
@@ -53,6 +64,7 @@ defmodule Brando.Files.File do
         <span>{Brando.Utils.human_size(@entry.filesize)}</span>
         <span :if={@entry.mime_type}>{@entry.mime_type}</span>
       </div>
+      <BrandoAdmin.Components.Usage.inline usages={@entry.usage} />
     </.field>
     <.field columns={1} class="library-file-action">
       <a
