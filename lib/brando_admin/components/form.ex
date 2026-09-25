@@ -3279,10 +3279,14 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:progress_popup, "Associating block fields..."})
 
+    # The blocks join the entry only here, after its changeset ran, so the
+    # creator trait is asked again whether this save edited anything — before
+    # rendering, which would otherwise read as an edit.
     new_changeset =
       block_changesets
       |> assoc_all_block_fields(changeset)
       |> then(&assoc_all_transformer_fields(&1, socket.assigns.transformer_changesets))
+      |> Brando.Trait.Creator.stamp_if_edited(schema, current_user)
 
     entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
 

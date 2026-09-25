@@ -51,6 +51,30 @@ defmodule Brando.Trait.Creator do
     |> put_editor(user_id, Map.get(cfg, :derived, []))
   end
 
+  @doc """
+  Stamps `changeset` with `user` as the entry's last editor when it carries a
+  human edit, counting changes on its associations too.
+
+  For changes put on a changeset after `changeset/3` ran, which the mutator
+  above cannot see: the admin form associates an entry's blocks that way, so
+  editing only a block used to leave the entry unstamped. A no-op for
+  `:system`, for new entries and for schemas without this trait.
+  """
+  @spec stamp_if_edited(changeset, module(), map() | atom() | integer()) :: changeset
+  def stamp_if_edited(changeset, _schema, :system), do: changeset
+  def stamp_if_edited(%{data: %{id: nil}} = changeset, _schema, _user), do: changeset
+
+  def stamp_if_edited(changeset, schema, user) do
+    case List.keyfind(schema.__traits__(), __MODULE__, 0) do
+      {_trait, opts} ->
+        derived = opts |> Map.new() |> Map.get(:derived, [])
+        if edited?(changeset, derived), do: stamp_editor(changeset, user_id(user)), else: changeset
+
+      nil ->
+        changeset
+    end
+  end
+
   defp user_id(%{id: id}), do: id
   defp user_id(id), do: id
 
@@ -76,10 +100,18 @@ defmodule Brando.Trait.Creator do
 
   # A re-render writes only rendered_<field> and rendered_<field>_at, and a
   # processing pipeline only its derived fields; neither is a human edit even
-  # when it comes through a user-scoped save.
+  # when it comes through a user-scoped save. Association changes count when a
+  # nested changeset holds such an edit, or adds, replaces or removes a row;
+  # a block that was only re-rendered does not.
   defp edited?(%{changes: changes}, derived) do
-    Enum.any?(changes, fn {key, _} -> not render_field?(key) and key not in derived end)
+    Enum.any?(changes, fn {key, value} -> not render_field?(key) and key not in derived and edit?(value) end)
   end
+
+  defp edit?(%Changeset{action: action}) when action in [:insert, :replace, :delete], do: true
+  defp edit?(%Changeset{} = changeset), do: edited?(changeset, [])
+  defp edit?([]), do: true
+  defp edit?(values) when is_list(values), do: Enum.any?(values, &edit?/1)
+  defp edit?(_value), do: true
 
   defp render_field?(key), do: key |> Atom.to_string() |> String.starts_with?("rendered_")
 end

@@ -163,4 +163,62 @@ defmodule Brando.Trait.CreatorTest do
     {:ok, edited} = Brando.Images.update_image(processed, %{alt: "Described"}, user)
     assert edited.updated_by_id == user.id
   end
+
+  describe "stamp_if_edited/3" do
+    # The admin form puts an entry's blocks on its changeset after changeset/3
+    # ran; an edit to a block alone must still mark the entry as edited.
+    defp saved_page do
+      user = Factory.insert(:random_user)
+      {:ok, page} = Pages.create_page(page_params(), user)
+      {page, user}
+    end
+
+    defp with_blocks(page, block_changesets) do
+      page |> Ecto.Changeset.change() |> Map.update!(:changes, &Map.put(&1, :entry_blocks, block_changesets))
+    end
+
+    defp block_cs(changes, action \\ :update) do
+      %{Ecto.Changeset.change(%Brando.Content.Block{id: 1}, changes) | action: action}
+    end
+
+    test "a block that was only re-rendered is not an edit" do
+      {page, user} = saved_page()
+
+      cs =
+        page
+        |> with_blocks([block_cs(%{rendered_html: "<p>x</p>"})])
+        |> Brando.Trait.Creator.stamp_if_edited(Pages.Page, user)
+
+      refute Map.has_key?(cs.changes, :edited_at)
+    end
+
+    test "a changed block marks the entry as edited by the user" do
+      {page, user} = saved_page()
+
+      cs =
+        page
+        |> with_blocks([block_cs(%{description: "Changed"})])
+        |> Brando.Trait.Creator.stamp_if_edited(Pages.Page, user)
+
+      assert cs.changes.updated_by_id == user.id
+      assert %DateTime{} = cs.changes.edited_at
+    end
+
+    test "an added block is an edit" do
+      {page, user} = saved_page()
+      cs = page |> with_blocks([block_cs(%{}, :insert)]) |> Brando.Trait.Creator.stamp_if_edited(Pages.Page, user)
+      assert cs.changes.updated_by_id == user.id
+    end
+
+    test ":system does not stamp" do
+      {page, _user} = saved_page()
+
+      cs =
+        page
+        |> with_blocks([block_cs(%{description: "Changed"})])
+        |> Brando.Trait.Creator.stamp_if_edited(Pages.Page, :system)
+
+      refute Map.has_key?(cs.changes, :updated_by_id)
+    end
+  end
 end
