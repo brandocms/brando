@@ -74,9 +74,6 @@ msgstr ""
 msgid "Configuration"
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:53
-#: lib/brando/images/image.ex:129
-#: lib/brando/videos/video.ex:108
 #: lib/brando_admin/components/form/draft_recovery.ex:90
 #: lib/brando_admin/components/form/draft_recovery.ex:314
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1186
@@ -353,7 +350,7 @@ msgstr ""
 
 #: lib/brando/content/container.ex:124
 #: lib/brando/content/module_set.ex:69
-#: lib/brando/videos/video.ex:187
+#: lib/brando/videos/video.ex:193
 #: lib/brando_admin/components/content/select_identifier.ex:348
 #: lib/brando_admin/components/form/file_drawer.ex:122
 #: lib/brando_admin/components/form/input/blocks/file_block.ex:91
@@ -536,7 +533,7 @@ msgstr ""
 msgid "Filter options"
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:99
+#: lib/brando/galleries/gallery.ex:101
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:227
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:205
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:465
@@ -2477,7 +2474,8 @@ msgstr ""
 msgid "Pink"
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:105
+#: lib/brando/galleries/gallery.ex:107
+#: lib/brando_admin/components/form/input/gallery_objects.ex:88
 #, elixir-autogen, elixir-format
 msgid "1 object"
 msgid_plural "%{count} objects"
@@ -2552,11 +2550,6 @@ msgstr ""
 #: lib/brando_admin/components/form/input/select.ex:195
 #, elixir-autogen, elixir-format
 msgid "Custom value"
-msgstr ""
-
-#: lib/brando_admin/live/galleries/gallery_form_live.ex:22
-#, elixir-autogen, elixir-format
-msgid "Edit gallery"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/select.ex:204
@@ -2710,8 +2703,8 @@ msgstr ""
 msgid "URL parsing not yet implemented"
 msgstr ""
 
-#: lib/brando/videos/video.ex:158
-#: lib/brando/videos/video.ex:186
+#: lib/brando/videos/video.ex:164
+#: lib/brando/videos/video.ex:192
 #: lib/brando_admin/components/video_picker.ex:901
 #: lib/brando_admin/live/ai/assistant_live.ex:122
 #: lib/brando_admin/live/videos/video_list_live.ex:221
@@ -2787,11 +2780,6 @@ msgstr ""
 #: lib/brando_admin/components/form/video_drawer.ex:318
 #, elixir-autogen, elixir-format
 msgid "Vimeo"
-msgstr ""
-
-#: lib/brando_admin/live/galleries/gallery_form_live.ex:27
-#, elixir-autogen, elixir-format
-msgid "Where used"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:197
@@ -6225,7 +6213,7 @@ msgstr ""
 msgid "Export configuration"
 msgstr ""
 
-#: lib/brando/videos/video.ex:247
+#: lib/brando/videos/video.ex:253
 #: lib/brando_admin/components/video_picker.ex:979
 #, elixir-autogen, elixir-format
 msgid "External file"
@@ -6634,7 +6622,7 @@ msgstr ""
 msgid "Upload a JSON export to review changes before applying them."
 msgstr ""
 
-#: lib/brando/videos/video.ex:246
+#: lib/brando/videos/video.ex:252
 #: lib/brando_admin/components/video_picker.ex:978
 #, elixir-autogen, elixir-format
 msgid "Uploaded file"
@@ -7497,7 +7485,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:255
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1360
-#: lib/brando_admin/components/form/input/gallery_objects.ex:93
+#: lib/brando_admin/components/form/input/gallery_objects.ex:97
 #, elixir-autogen, elixir-format
 msgid "Browse images"
 msgstr ""
@@ -7510,7 +7498,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:263
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1368
-#: lib/brando_admin/components/form/input/gallery_objects.ex:100
+#: lib/brando_admin/components/form/input/gallery_objects.ex:104
 #, elixir-autogen, elixir-format
 msgid "Browse videos"
 msgstr ""
@@ -7655,12 +7643,12 @@ msgstr ""
 msgid "Drop images or videos here to add them."
 msgstr ""
 
-#: lib/brando_admin/components/form/input/gallery_objects.ex:106
+#: lib/brando_admin/components/form/input/gallery_objects.ex:111
 #, elixir-autogen, elixir-format
 msgid "Drop images or videos to add"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/gallery_objects.ex:106
+#: lib/brando_admin/components/form/input/gallery_objects.ex:111
 #, elixir-autogen, elixir-format
 msgid "Drop images to add"
 msgstr ""
@@ -7885,7 +7873,7 @@ msgstr[1] ""
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:993
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1353
 #: lib/brando_admin/components/form/input/gallery.ex:324
-#: lib/brando_admin/components/form/input/gallery_objects.ex:87
+#: lib/brando_admin/components/form/input/gallery_objects.ex:91
 #: lib/brando_admin/live/ai/assistant_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Upload media"
@@ -9254,7 +9242,7 @@ msgstr ""
 msgid "Image and video collections used in your content."
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:101
+#: lib/brando/galleries/gallery.ex:103
 #: lib/brando_admin/components/form/draft_preview.ex:229
 #, elixir-autogen, elixir-format
 msgid "Images and videos"
@@ -11760,6 +11748,7 @@ msgid "Fetch thumbnails and titles"
 msgstr ""
 
 #: lib/brando/videos.ex:263
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Gallery #%{id}"
 msgstr ""
@@ -11776,12 +11765,12 @@ msgid_plural "Looking up %{count} videos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando/videos/video.ex:210
+#: lib/brando/videos/video.ex:216
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr ""
 
-#: lib/brando/videos/video.ex:158
+#: lib/brando/videos/video.ex:164
 #, elixir-autogen, elixir-format
 msgid "Play %{title}"
 msgstr ""
@@ -11791,7 +11780,13 @@ msgstr ""
 msgid "This video cannot be played here."
 msgstr ""
 
-#: lib/brando/videos/video.ex:212
+#: lib/brando/videos/video.ex:218
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:30
 #, elixir-autogen, elixir-format
 msgid "Used in"
+msgstr ""
+
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:24
+#, elixir-autogen, elixir-format
+msgid "New gallery"
 msgstr ""

@@ -6,36 +6,42 @@ defmodule BrandoAdmin.Galleries.GalleryFormLive do
   import Ecto.Query
 
   alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.Input.Entries
-  alias Phoenix.LiveView.JS
 
   def render(assigns) do
     ~H"""
-    <.live_component
-      module={Form}
-      id="gallery_form"
-      entry_id={@entry_id}
-      current_user={@current_user}
-      schema={@schema}
-    >
-      <:header>
-        {gettext("Edit gallery")}
-      </:header>
-    </.live_component>
+    <div class="admin-workspace settings-workspace gallery-workspace">
+      <.live_component
+        module={Form}
+        id="gallery_form"
+        entry_id={@entry_id}
+        current_user={@current_user}
+        schema={@schema}
+      >
+        <:header>
+          <%= if @entry_id do %>
+            {gettext("Gallery #%{id}", id: @entry_id)}
+          <% else %>
+            {gettext("New gallery")}
+          <% end %>
+        </:header>
+      </.live_component>
 
-    <div :if={@gallery_usage != %{}} class="shaded" style="margin-top: 15px;">
-      <h2 class="subheader">{gettext("Where used")}</h2>
-      <div :for={{schema, identifiers} <- @gallery_usage} :key={schema} class="usage-group">
-        <h3 class="usage-schema-label">{Brando.Blueprint.get_plural(schema)}</h3>
-        <div class="selected-entries">
-          <Entries.dumb_identifier
-            :for={identifier <- identifiers}
-            :key={identifier.id}
-            identifier={identifier}
-            select={JS.navigate(edit_url(identifier))}
-          />
-        </div>
-      </div>
+      <section :if={@gallery_usage != []} class="gallery-usage" aria-labelledby="gallery-usage-title">
+        <h2 id="gallery-usage-title">{gettext("Used in")}</h2>
+        <ul>
+          <li :for={identifier <- @gallery_usage} :key={"#{identifier.schema}-#{identifier.entry_id}"}>
+            <.link navigate={edit_url(identifier)}>
+              <span class="gallery-usage-cover">
+                <img :if={identifier.cover} src={identifier.cover} alt="" loading="lazy" />
+              </span>
+              <span class="gallery-usage-title">{identifier.title}</span>
+              <span class="gallery-usage-type">{Brando.Blueprint.get_singular(identifier.schema)}</span>
+              <span class={["gallery-usage-status", "status-#{identifier.status}"]} title={to_string(identifier.status)}></span>
+              <.icon name="hero-arrow-right" />
+            </.link>
+          </li>
+        </ul>
+      </section>
     </div>
     """
   end
@@ -46,25 +52,18 @@ defmodule BrandoAdmin.Galleries.GalleryFormLive do
   end
 
   def handle_params(_params, _url, socket) do
-    {:noreply, assign(socket, :gallery_usage, %{})}
+    {:noreply, assign(socket, :gallery_usage, [])}
   end
 
+  # The entries using the gallery, as one list sorted by title.
   defp load_gallery_usage(gallery_id) do
-    usage_map = Brando.Galleries.list_gallery_usage(gallery_id)
-
-    Enum.reduce(usage_map, %{}, fn {schema, entry_ids}, acc ->
-      identifiers =
-        from(i in Brando.Content.Identifier,
-          where: i.schema == ^schema and i.entry_id in ^entry_ids
-        )
-        |> Brando.Repo.all()
-
-      if identifiers == [] do
-        acc
-      else
-        Map.put(acc, schema, identifiers)
-      end
+    gallery_id
+    |> Brando.Galleries.list_gallery_usage()
+    |> Enum.flat_map(fn {schema, entry_ids} ->
+      from(i in Brando.Content.Identifier, where: i.schema == ^schema and i.entry_id in ^entry_ids)
+      |> Brando.Repo.all()
     end)
+    |> Enum.sort_by(&String.downcase(&1.title || ""))
   end
 
   defp edit_url(identifier) do

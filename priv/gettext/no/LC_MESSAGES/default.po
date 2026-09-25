@@ -75,9 +75,6 @@ msgstr "Mellomlagring"
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
-#: lib/brando/galleries/gallery.ex:53
-#: lib/brando/images/image.ex:129
-#: lib/brando/videos/video.ex:108
 #: lib/brando_admin/components/form/draft_recovery.ex:90
 #: lib/brando_admin/components/form/draft_recovery.ex:314
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1186
@@ -354,7 +351,7 @@ msgstr "Maler"
 
 #: lib/brando/content/container.ex:124
 #: lib/brando/content/module_set.ex:69
-#: lib/brando/videos/video.ex:187
+#: lib/brando/videos/video.ex:193
 #: lib/brando_admin/components/content/select_identifier.ex:348
 #: lib/brando_admin/components/form/file_drawer.ex:122
 #: lib/brando_admin/components/form/input/blocks/file_block.ex:91
@@ -537,7 +534,7 @@ msgstr "Filen er for stor"
 msgid "Filter options"
 msgstr "Filtrér valg"
 
-#: lib/brando/galleries/gallery.ex:99
+#: lib/brando/galleries/gallery.ex:101
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:227
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:205
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:465
@@ -2478,7 +2475,8 @@ msgstr "Fersken"
 msgid "Pink"
 msgstr "Rosa"
 
-#: lib/brando/galleries/gallery.ex:105
+#: lib/brando/galleries/gallery.ex:107
+#: lib/brando_admin/components/form/input/gallery_objects.ex:88
 #, elixir-autogen, elixir-format
 msgid "1 object"
 msgid_plural "%{count} objects"
@@ -2554,11 +2552,6 @@ msgstr "Nåværende skjemaversjon"
 #, elixir-autogen, elixir-format
 msgid "Custom value"
 msgstr "Egendefinert verdi"
-
-#: lib/brando_admin/live/galleries/gallery_form_live.ex:22
-#, elixir-autogen, elixir-format
-msgid "Edit gallery"
-msgstr "Rediger galleri"
 
 #: lib/brando_admin/components/form/input/select.ex:204
 #, elixir-autogen, elixir-format
@@ -2711,8 +2704,8 @@ msgstr "Uttrekk av miniatyrbilde er ikke implementert ennå"
 msgid "URL parsing not yet implemented"
 msgstr "URL-lesing er ikke implementert ennå"
 
-#: lib/brando/videos/video.ex:158
-#: lib/brando/videos/video.ex:186
+#: lib/brando/videos/video.ex:164
+#: lib/brando/videos/video.ex:192
 #: lib/brando_admin/components/video_picker.ex:901
 #: lib/brando_admin/live/ai/assistant_live.ex:122
 #: lib/brando_admin/live/videos/video_list_live.ex:221
@@ -2789,11 +2782,6 @@ msgstr "Videotype støttes ikke for forhåndsvisning"
 #, elixir-autogen, elixir-format
 msgid "Vimeo"
 msgstr "Vimeo"
-
-#: lib/brando_admin/live/galleries/gallery_form_live.ex:27
-#, elixir-autogen, elixir-format
-msgid "Where used"
-msgstr "Hvor brukt"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:197
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:72
@@ -6230,7 +6218,7 @@ msgstr "Aktiver gruppebasert tilgangsstyring"
 msgid "Export configuration"
 msgstr "Eksporter konfigurasjon"
 
-#: lib/brando/videos/video.ex:247
+#: lib/brando/videos/video.ex:253
 #: lib/brando_admin/components/video_picker.ex:979
 #, elixir-autogen, elixir-format
 msgid "External file"
@@ -6639,7 +6627,7 @@ msgstr "Oppdaterte tillatelser gjelder umiddelbart for eksisterende medlemmer."
 msgid "Upload a JSON export to review changes before applying them."
 msgstr "Last opp en JSON-eksport for å gjennomgå endringene før du tar dem i bruk."
 
-#: lib/brando/videos/video.ex:246
+#: lib/brando/videos/video.ex:252
 #: lib/brando_admin/components/video_picker.ex:978
 #, elixir-autogen, elixir-format
 msgid "Uploaded file"
@@ -7502,7 +7490,7 @@ msgstr "Blokk %{number}"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:255
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1360
-#: lib/brando_admin/components/form/input/gallery_objects.ex:93
+#: lib/brando_admin/components/form/input/gallery_objects.ex:97
 #, elixir-autogen, elixir-format
 msgid "Browse images"
 msgstr "Bla gjennom bilder"
@@ -7515,7 +7503,7 @@ msgstr "Bla gjennom biblioteket"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:263
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1368
-#: lib/brando_admin/components/form/input/gallery_objects.ex:100
+#: lib/brando_admin/components/form/input/gallery_objects.ex:104
 #, elixir-autogen, elixir-format
 msgid "Browse videos"
 msgstr "Bla gjennom videoer"
@@ -7660,12 +7648,12 @@ msgstr "Slipp et bilde for å erstatte"
 msgid "Drop images or videos here to add them."
 msgstr "Slipp bilder eller videoer her for å legge dem til."
 
-#: lib/brando_admin/components/form/input/gallery_objects.ex:106
+#: lib/brando_admin/components/form/input/gallery_objects.ex:111
 #, elixir-autogen, elixir-format
 msgid "Drop images or videos to add"
 msgstr "Slipp bilder eller videoer for å legge til"
 
-#: lib/brando_admin/components/form/input/gallery_objects.ex:106
+#: lib/brando_admin/components/form/input/gallery_objects.ex:111
 #, elixir-autogen, elixir-format
 msgid "Drop images to add"
 msgstr "Slipp bilder for å legge til"
@@ -7890,7 +7878,7 @@ msgstr[1] "Last opp %{count} filer til denne mappen"
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:993
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1353
 #: lib/brando_admin/components/form/input/gallery.ex:324
-#: lib/brando_admin/components/form/input/gallery_objects.ex:87
+#: lib/brando_admin/components/form/input/gallery_objects.ex:91
 #: lib/brando_admin/live/ai/assistant_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Upload media"
@@ -9259,7 +9247,7 @@ msgstr "GitHub-tilkoblinger settes opp av en utvikler i prosjektets runtime.exs.
 msgid "Image and video collections used in your content."
 msgstr "Samlinger av bilder og videoer som brukes i innholdet."
 
-#: lib/brando/galleries/gallery.ex:101
+#: lib/brando/galleries/gallery.ex:103
 #: lib/brando_admin/components/form/draft_preview.ex:229
 #, elixir-autogen, elixir-format
 msgid "Images and videos"
@@ -11765,6 +11753,7 @@ msgid "Fetch thumbnails and titles"
 msgstr "Hent miniatyrbilder og titler"
 
 #: lib/brando/videos.ex:263
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Gallery #%{id}"
 msgstr "Galleri #%{id}"
@@ -11781,12 +11770,12 @@ msgid_plural "Looking up %{count} videos"
 msgstr[0] "Slår opp %{count} video"
 msgstr[1] "Slår opp %{count} videoer"
 
-#: lib/brando/videos/video.ex:210
+#: lib/brando/videos/video.ex:216
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr "Ikke i bruk"
 
-#: lib/brando/videos/video.ex:158
+#: lib/brando/videos/video.ex:164
 #, elixir-autogen, elixir-format
 msgid "Play %{title}"
 msgstr "Spill av %{title}"
@@ -11796,7 +11785,13 @@ msgstr "Spill av %{title}"
 msgid "This video cannot be played here."
 msgstr "Denne videoen kan ikke spilles av her."
 
-#: lib/brando/videos/video.ex:212
+#: lib/brando/videos/video.ex:218
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:30
 #, elixir-autogen, elixir-format
 msgid "Used in"
 msgstr "Brukt i"
+
+#: lib/brando_admin/live/galleries/gallery_form_live.ex:24
+#, elixir-autogen, elixir-format
+msgid "New gallery"
+msgstr "Nytt galleri"

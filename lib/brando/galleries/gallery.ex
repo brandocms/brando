@@ -50,20 +50,22 @@ defmodule Brando.Galleries.Gallery do
 
   forms do
     form do
-      tab gettext("Content") do
-        fieldset do
-          size :full
-          input :config_target, :text, label: t("Configuration target"), monospace: true
-        end
-
+      tab t("Content") do
         fieldset do
           size :full
 
           inputs_for :gallery_objects do
-            label t("Gallery objects")
+            label t("Images and videos")
             cardinality :many
             component :gallery_objects
           end
+        end
+
+        fieldset do
+          size :full
+          label t("Technical")
+          superuser true
+          input :config_target, :text, label: t("Configuration target"), monospace: true
         end
       end
     end

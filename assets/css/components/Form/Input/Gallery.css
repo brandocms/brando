@@ -355,3 +355,128 @@
     }
   }
 }
+
+/* A gallery's own page: the settings workspace's form, the objects as the
+   main section and where the gallery is used below it. */
+.admin-workspace.settings-workspace.gallery-workspace {
+  /* The objects are the page, not a subform inside it: a heading like the
+     other sections, and one panel. */
+  .brando-form .subform { padding: 0; border: 0; background: none; box-shadow: none; }
+  .subform > .label-wrapper { margin-bottom: 12px; }
+  .subform > .label-wrapper label { font-size: 18px; line-height: 26px; font-weight: 500; color: var(--workspace-ink); }
+
+  .media-gallery {
+    padding: 16px;
+    border: 1px solid var(--workspace-line);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .gallery-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .gallery-toolbar .actions { margin: 0; }
+
+  /* Uploading leads the group, filled, with the group's size and corners. */
+  .segmented-buttons .media-button.primary { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
+  .segmented-buttons .media-button.primary:hover { background: #163c2e; border-color: #163c2e; }
+
+  .gallery-count {
+    order: 2;
+    margin-left: auto;
+    color: var(--workspace-muted);
+    font-size: 12px;
+  }
+
+  .gallery-objects--tiles {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 10px;
+    margin: 0;
+
+    .gallery-object {
+      border-radius: 6px;
+      box-shadow: 0 1px 2px rgba(35, 61, 46, .08);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .gallery-object:hover { box-shadow: 0 4px 12px rgba(35, 61, 46, .16); }
+
+    .gallery-object img,
+    .gallery-object .img-placeholder { border-radius: 6px; }
+
+    .delete-object {
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: rgba(255, 255, 255, .92);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+      color: #b42318;
+
+      [data-icon] { width: 14px; height: 14px; }
+    }
+
+    .delete-object:hover { background: #fff; }
+  }
+
+  .media-gallery-empty {
+    padding: 32px;
+    border: 1px dashed #cfd8d1;
+    border-radius: 8px;
+    color: var(--workspace-muted);
+    text-align: center;
+  }
+
+  .gallery-usage {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--workspace-line);
+
+    h2 { margin: 0 0 12px; font-size: 18px; line-height: 26px; font-weight: 500; color: var(--workspace-ink); }
+    ul { display: grid; gap: 0; border: 1px solid var(--workspace-line); border-radius: 8px; overflow: hidden; background: #fff; }
+    li + li { border-top: 1px solid var(--workspace-line); }
+
+    a {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) auto 8px 16px;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      color: var(--workspace-ink);
+      text-decoration: none;
+    }
+
+    a:hover { background: var(--workspace-wash); }
+    a > [data-icon] { width: 16px; height: 16px; color: var(--workspace-muted); }
+  }
+
+  .gallery-usage-cover {
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: 5px;
+    background: var(--workspace-wash);
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+
+  .gallery-usage-title { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+  .gallery-usage-type { color: var(--workspace-muted); font-size: 12px; text-transform: capitalize; }
+
+  .gallery-usage-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #b8c0ba;
+
+    &.status-published { background: #3aa76d; }
+    &.status-pending { background: #e2a93b; }
+    &.status-disabled { background: #d4574e; }
+  }
+}

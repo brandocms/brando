@@ -337,6 +337,29 @@ a.tiny {
   width: fit-content;
 }
 
+/* The form's save button in the admin's green, at the size of the other
+   primary actions rather than the old tall blue pill. */
+button.primary.submit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 20px;
+  border: 1px solid #254e3f;
+  border-radius: 6px;
+  background-color: #254e3f;
+  color: #fff;
+  font-size: 14px;
+  line-height: 20px;
+
+  &:hover:not(:disabled) { background-color: #163c2e; border-color: #163c2e; }
+  &:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, #254e3f 25%, transparent); }
+  &:disabled { background-color: #8a968e; border-color: #8a968e; }
+}
+
 .add-entry-button {
   border: 1px solid var(--brando-color-dark);
   font-size: 14px;

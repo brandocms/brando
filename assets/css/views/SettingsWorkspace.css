@@ -46,8 +46,9 @@
   .brando-form .subform-tools button { min-height: 26px; padding: 5px; background: #f0edf8; color: #6a5a89; }
   .brando-form .subform-tools button:hover { background: #e5ddf3; }
   .brando-form .subform-tools button [data-icon] { background-color: currentColor; }
-  .brando-form button.primary, .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
-  .brando-form button.primary { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
+  /* A button in a media group takes the group's size and corners. */
+  .brando-form button.primary:not(.media-button), .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
+  .brando-form button.primary:not(.media-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
   .brando-form .submit-button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 116px; margin-top: 24px; }
   .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid #d9d4e7; border-radius: 6px; background: #fff; color: #5b4b77; font-family: inherit; font-size: 13px; line-height: 18px; }
   .add-entry-button [data-icon] { display: block; width: 14px; height: 14px; margin: 0; }
