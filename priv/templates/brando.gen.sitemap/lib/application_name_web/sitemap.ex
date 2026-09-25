@@ -1,13 +1,14 @@
 defmodule <%= web_module %>.Sitemap do
   import Brando.Sitemap
   alias Brando.Pages
+  alias Brando.Pages.Page
 
   sitemap "pages" do
     Pages.list_pages(
       %{
-        filter: %{has_url: true},
+        filter: Page.__url_filter__(),
         status: :published,
-        select: {:struct, [:title, :uri, :updated_at, :language]},
+        select: {:struct, [:title, :uri, :updated_at, :language, :has_url]},
         order: "asc language, asc title"
       },
       :stream

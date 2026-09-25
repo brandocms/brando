@@ -239,6 +239,15 @@ defmodule Brando.Blueprint do
       def __seo_checks__(_row), do: []
       defoverridable __seo_checks__: 1
 
+      # Every entry of a blueprint with an absolute_url has a URL on this site,
+      # unless `absolute_url ..., only: ...` narrows it (see
+      # `Brando.Blueprint.AbsoluteURL`).
+      def __has_url__(_entry), do: __has_absolute_url__()
+      defoverridable __has_url__: 1
+
+      def __url_filter__, do: nil
+      defoverridable __url_filter__: 0
+
       def __has_identifier__, do: false
       defoverridable __has_identifier__: 0
 

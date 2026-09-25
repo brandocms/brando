@@ -48,6 +48,32 @@ defmodule Brando.Blueprint.AbsoluteURL do
   ## Disabling
 
       absolute_url false
+
+  ## Only some entries have a URL
+
+  Some entries have no page on this site — a case that only links to the
+  client, say. `only:` names the ones that do, in any of the forms above:
+
+      absolute_url ~H"/projects/{@entry.slug}", only: %{type: :full_case}
+
+  A map lists fields and the values they must equal, and gives both halves
+  of the question from one declaration:
+
+    * `__has_url__/1` — whether one entry has a URL on this site
+    * `__url_filter__/0` — the same map, for a list query's `filter:`, as a
+      sitemap needs
+
+  `__absolute_url__/1` returns `nil` for the others, so nothing links to,
+  sitemaps or audits a page that does not exist. A link elsewhere (an
+  external URL field) is content, not the entry's URL.
+
+  A one-arity function covers rules that are not plain equality. It answers
+  `__has_url__/1` only; `__url_filter__/0` is `nil`, since a function
+  cannot become a query:
+
+      absolute_url ~H"/projects/{@entry.slug}", only: &(&1.external_url in [nil, ""])
+
+  Without `only:` every entry has a URL, and `__url_filter__/0` is `nil`.
   """
   alias Brando.Blueprint.TemplateParser
   alias Brando.Exception.BlueprintError
@@ -241,5 +267,49 @@ defmodule Brando.Blueprint.AbsoluteURL do
     raise BlueprintError,
       message:
         "absolute_url expects a Liquid string, HEEx template, deprecated i18n tuple, or false, got: #{Macro.to_string(value)}"
+  end
+
+  defmacro absolute_url(false, _opts) do
+    raise BlueprintError, message: "absolute_url false takes no options"
+  end
+
+  defmacro absolute_url(tpl, opts) do
+    only =
+      case opts do
+        [only: only] -> only
+        _ -> raise BlueprintError, message: "absolute_url accepts only: as its option, got: #{Macro.to_string(opts)}"
+      end
+
+    quote location: :keep do
+      absolute_url(unquote(tpl))
+      unquote(url_filter(only))
+
+      defoverridable __absolute_url__: 1
+
+      def __absolute_url__(entry) do
+        if __has_url__(entry), do: super(entry)
+      end
+    end
+  end
+
+  defp url_filter({:%{}, _, _} = filter) do
+    quote location: :keep do
+      @url_filter unquote(filter)
+
+      def __has_url__(entry) when is_map(entry) do
+        Enum.all?(@url_filter, fn {key, value} -> Map.get(entry, key) == value end)
+      end
+
+      def __has_url__(_entry), do: false
+
+      def __url_filter__, do: @url_filter
+    end
+  end
+
+  defp url_filter(fun) do
+    quote location: :keep do
+      def __has_url__(entry), do: unquote(fun).(entry) == true
+      def __url_filter__, do: nil
+    end
   end
 end

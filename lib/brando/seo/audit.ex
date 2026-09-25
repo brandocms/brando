@@ -11,7 +11,8 @@ defmodule Brando.SEO.Audit do
   URL taken from the blueprint's own identifier and `absolute_url` templates.
   Body text, headings and images are measured by the database
   (`Brando.SEO.ContentStats`), so the rendered HTML never leaves it.
-  Blueprints may add their own checks through `__seo_checks__/1`.
+  Blueprints may add their own checks through `__seo_checks__/1`. Entries
+  without a URL on this site (`absolute_url ..., only: ...`) are left out.
   """
 
   alias Brando.SEO.Analytics
@@ -164,7 +165,17 @@ defmodule Brando.SEO.Audit do
   defp rows_for(schema, language) do
     schema
     |> entries(language)
+    |> Enum.filter(&has_url?(schema, &1))
     |> Enum.map(&row(schema, &1))
+  end
+
+  @doc """
+  Whether `entry` has a URL on this site, as its blueprint's `__has_url__/1`
+  says. Schemas without the function are taken to have one.
+  """
+  @spec has_url?(module(), map()) :: boolean()
+  def has_url?(schema, entry) do
+    if function_exported?(schema, :__has_url__, 1), do: schema.__has_url__(entry) != false, else: true
   end
 
   defp entries(schema, language) do

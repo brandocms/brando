@@ -112,8 +112,10 @@ for the URI used by the controller.
 `about` needs `uri: "about/team"` to resolve at `/about/team`. Changing the parent
 does not concatenate or rewrite the child's URI. The parent selector limits its
 choices to the page's language; keep that boundary in programmatic writes too.
-Use `has_url: false` for organizational content that should not be public, and
-filter that flag in your controllers and [sitemap](sitemaps.md).
+Use `has_url: false` for organizational content that should not be public. Such
+a page has no URL: `Page.__absolute_url__/1` returns `nil` for it, and the
+content SEO audit leaves it out. Filter the flag in your controllers, and use
+`Page.__url_filter__/0` in your [sitemap](sitemaps.md).
 
 Page context creates and updates recompute `breadcrumbs` for the page and its
 non-deleted descendants. Each element has string keys `"title"` and `"uri"`.

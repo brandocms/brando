@@ -83,12 +83,15 @@ defmodule Brando.Pages.Page do
 
   identifier "{{ entry.title }}"
 
+  # A page with has_url: false (an organisational section, the 404 and 410
+  # pages) has no public URL.
   absolute_url ~H"""
-  {if(@entry.uri == "index",
-    do: route_i18n(@entry, :page_path, :index),
-    else: route_i18n(@entry, :page_path, :show, [@entry.uri])
-  )}
-  """
+               {if(@entry.uri == "index",
+                 do: route_i18n(@entry, :page_path, :index),
+                 else: route_i18n(@entry, :page_path, :show, [@entry.uri])
+               )}
+               """,
+               only: %{has_url: true}
 
   attributes do
     attribute :title, :string, required: true

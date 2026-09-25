@@ -18,9 +18,9 @@ defmodule MyAppWeb.Sitemap do
 
   sitemap "pages" do
     Brando.Pages.list_pages(%{
-      filter: %{has_url: true},
+      filter: Brando.Pages.Page.__url_filter__(),
       status: :published,
-      select: {:struct, [:id, :title, :uri, :language, :updated_at]},
+      select: {:struct, [:id, :title, :uri, :language, :updated_at, :has_url]},
       order: [{:asc, :id}]
     }, :stream)
     |> Stream.map(fn page ->
@@ -41,8 +41,12 @@ functions and calls them with zero arguments. Helpers should be private or live
 in another module.
 
 The query excludes soft-deleted pages through the standard query defaults and
-explicitly excludes drafts, pending/disabled entries, and pages with `has_url:
-false`. It includes every language. Keep the returned Blueprint structs: selecting
+explicitly excludes drafts, pending/disabled entries, and pages without a public
+URL. `Page.__url_filter__/0` is `%{has_url: true}`: the `only:` of Page's
+`absolute_url`, so the sitemap asks the blueprint rather than repeating the
+rule. Use the same for a schema of your own that declares `only:`, and keep the
+filter's fields in any `select`, since the URL is only resolved for entries
+that match. It includes every language. Keep the returned Blueprint structs: selecting
 a plain map of fields would make the URL resolver return an empty string. The
 resolver uses each entry’s language and URI, including the homepage. Add another
 `sitemap "products"` block for a custom schema, with equivalent public filters

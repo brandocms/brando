@@ -91,6 +91,7 @@ spark_locals_without_parens = [
 
 locals_without_parens = [
   absolute_url: 1,
+  absolute_url: 2,
   identifier: 1,
   persist_identifier: 1,
   meta: 2,

@@ -33,6 +33,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   report. Neither can see JSON built from an image, which now carries the
   maps.
 
+- **A page with `has_url: false` has no URL.** Page's `absolute_url` now
+  declares `only: %{has_url: true}`, so `Page.__absolute_url__/1` returns
+  `nil` for organisational sections and the 404 and 410 pages instead of a
+  path nobody can open, and the content SEO audit leaves them out. Code that
+  built a link for such a page from its URL gets `nil` now.
+
 - **`trait :creator` adds two columns.** Every schema with the creator trait now
   has `updated_by_id` and `edited_at`. Run `mix brando.gen.migrations` for
   Brando's tables and `mix brando.gen.blueprint_migration MyApp.Domain.Schema`
@@ -375,6 +381,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   Not yet done: associating a field's `help-text` instructions with its control.
 
 #### Features
+
+- `absolute_url ..., only: %{field: value}` names the entries that have a URL on
+  this site; the rest (a case that only links to the client, say) get `nil`
+  from `__absolute_url__/1` and are left out of the content SEO audit. The same
+  map is `__url_filter__/0` for a sitemap's list query, and `__has_url__/1`
+  answers for one entry, so the rule is declared once. A one-arity function
+  works too, without the query filter.
 
 - Services are configurable on the identity. A new **Services** tab in
   Configuration → Identity takes a repeatable list (name, description,

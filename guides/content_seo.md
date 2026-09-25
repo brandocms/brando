@@ -66,6 +66,22 @@ end
 The argument is a `Brando.SEO.Audit.Row`: the entry's meta fields, URL, word
 count, headings and image alt text — not the whole entry.
 
+## Leave out entries without a page
+
+An entry that only links elsewhere — a case that points at the client's own
+site, say — has no page to audit. Name the entries that have a URL with
+`only:` on `absolute_url`, and the audit leaves the rest out:
+
+```elixir
+absolute_url "{% route case_path detail { entry.slug } %}", only: %{type: :full_case}
+```
+
+The same declaration answers `__has_url__/1` for one entry and
+`__url_filter__/0` for list queries, such as a sitemap's, and makes
+`__absolute_url__/1` return `nil` for the rest. Pages with `has_url: false` are
+left out the same way. See `Brando.Blueprint.AbsoluteURL` for the function
+form.
+
 ## Write and review meta descriptions with AI
 
 With `Brando.AI` configured, the tab can:

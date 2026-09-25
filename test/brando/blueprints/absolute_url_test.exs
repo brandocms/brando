@@ -55,6 +55,49 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
     end
   end
 
+  defmodule OnlyByFunction do
+    use Phoenix.Component
+    import Brando.Blueprint.AbsoluteURL
+
+    absolute_url ~H"/things/{@entry.slug}", only: &(&1.external_url in [nil, ""])
+  end
+
+  describe "absolute_url only:" do
+    test "an entry outside the map has no URL on this site" do
+      assert Page.__absolute_url__(%Page{language: "no", uri: "om-oss", has_url: true}) == "/no/om-oss"
+      assert Page.__absolute_url__(%Page{language: "no", uri: "om-oss", has_url: false}) == nil
+      assert Page.__has_url__(%Page{has_url: true})
+      refute Page.__has_url__(%Page{has_url: false})
+    end
+
+    test "the map doubles as the list query filter" do
+      assert Page.__url_filter__() == %{has_url: true}
+    end
+
+    test "without only: every entry has a URL; without absolute_url none does" do
+      assert Brando.BlueprintTest.Project.__has_url__(%{})
+      assert Brando.BlueprintTest.Project.__url_filter__() == nil
+      refute Brando.Content.Var.__has_url__(%{})
+    end
+
+    test "a function answers per entry and gives no filter" do
+      assert OnlyByFunction.__absolute_url__(%{slug: "a", external_url: nil}) == "/things/a"
+      assert OnlyByFunction.__absolute_url__(%{slug: "a", external_url: "https://example.com"}) == nil
+      assert OnlyByFunction.__url_filter__() == nil
+    end
+
+    test "only: is the one option" do
+      assert_raise Brando.Exception.BlueprintError, ~r/only:/, fn ->
+        Code.compile_string("""
+        defmodule Brando.Blueprint.AbsoluteURLTest.BadOption do
+          import Brando.Blueprint.AbsoluteURL
+          absolute_url "/x", where: %{a: 1}
+        end
+        """)
+      end
+    end
+  end
+
   describe "__absolute_url__/1" do
     test "generates URL from HEEx template with route_i18n for pages" do
       assert Page.__absolute_url__(%Page{language: "no", uri: "om-oss"}) == "/no/om-oss"

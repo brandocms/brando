@@ -23,6 +23,13 @@ defmodule Brando.SEO.AuditTest do
 
   defp thin_status(row), do: Enum.find(row.checks, &(&1.key == :thin_content)).status
 
+  test "an entry without a URL on this site is left out" do
+    assert Audit.has_url?(Brando.Pages.Page, %{has_url: true})
+    refute Audit.has_url?(Brando.Pages.Page, %{has_url: false})
+    # Schemas without the function are taken to have one.
+    assert Audit.has_url?(String, %{})
+  end
+
   test "pages are auditable; fragments are not" do
     assert Brando.Pages.Page in Audit.schemas()
     refute Brando.Pages.Fragment in Audit.schemas()
