@@ -63,14 +63,14 @@ msgid "Fragment contains circular reference to itself, %{ref_string}"
 msgstr "Fragmentet inneholder en referanse til seg selv, %{ref_string}"
 
 #: lib/brando_admin/live/config/cache_live.ex:35
-#: lib/brando_admin/menu.ex:295
+#: lib/brando_admin/menu.ex:302
 #, elixir-autogen, elixir-format
 msgid "Cache"
 msgstr "Mellomlagring"
 
 #: lib/brando_admin/live/config/markdown_sources_live.ex:45
 #: lib/brando_admin/live/config/utils_live.ex:65
-#: lib/brando_admin/menu.ex:262
+#: lib/brando_admin/menu.ex:269
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr "Konfigurasjon"
@@ -84,13 +84,13 @@ msgstr "Konfigurasjon"
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:165
 #: lib/brando_admin/live/config/scheduled_publishing_live.ex:65
 #: lib/brando_admin/live/users/groups_live.ex:1057
-#: lib/brando_admin/menu.ex:360
+#: lib/brando_admin/menu.ex:367
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
 #: lib/brando_admin/components/dashboard.ex:15
-#: lib/brando_admin/menu.ex:257
+#: lib/brando_admin/menu.ex:263
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
 msgstr "Dashbord"
@@ -100,7 +100,7 @@ msgstr "Dashbord"
 msgid "Email"
 msgstr "Epost"
 
-#: lib/brando_admin/menu.ex:271
+#: lib/brando_admin/menu.ex:278
 #, elixir-autogen, elixir-format
 msgid "Identity"
 msgstr "Identitet"
@@ -130,13 +130,13 @@ msgstr "Navn"
 
 #: lib/brando_admin/dashboard.ex:108
 #: lib/brando_admin/live/navigation/menu_list_live.ex:12
-#: lib/brando_admin/menu.ex:267
+#: lib/brando_admin/menu.ex:274
 #, elixir-autogen, elixir-format
 msgid "Navigation"
 msgstr "Navigasjon"
 
 #: lib/brando_admin/live/pages/page_list_live.ex:13
-#: lib/brando_admin/menu.ex:364
+#: lib/brando_admin/menu.ex:371
 #, elixir-autogen, elixir-format
 msgid "Pages & Sections"
 msgstr "Sider & seksjoner"
@@ -146,19 +146,19 @@ msgstr "Sider & seksjoner"
 msgid "Password"
 msgstr "Passord"
 
-#: lib/brando_admin/menu.ex:275
+#: lib/brando_admin/menu.ex:282
 #, elixir-autogen, elixir-format
 msgid "SEO"
 msgstr "SEO"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex:182
-#: lib/brando_admin/menu.ex:253
+#: lib/brando_admin/menu.ex:259
 #, elixir-autogen, elixir-format
 msgid "System"
 msgstr "System"
 
 #: lib/brando_admin/live/users/user_list_live.ex:23
-#: lib/brando_admin/menu.ex:353
+#: lib/brando_admin/menu.ex:360
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Brukere"
@@ -171,12 +171,12 @@ msgstr "Brukere"
 msgid "Add entry"
 msgstr "Ny rad"
 
-#: lib/brando_admin/menu.ex:331
+#: lib/brando_admin/menu.ex:338
 #, elixir-autogen, elixir-format
 msgid "Assets"
 msgstr "Ressurser"
 
-#: lib/brando_admin/menu.ex:303
+#: lib/brando_admin/menu.ex:310
 #, elixir-autogen, elixir-format
 msgid "Block modules"
 msgstr "Blokkmoduler"
@@ -290,12 +290,13 @@ msgstr "Filter"
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1025
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:317
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:536
-#: lib/brando_admin/components/image_picker.ex:275
-#: lib/brando_admin/components/image_picker.ex:294
+#: lib/brando_admin/components/image_picker.ex:280
+#: lib/brando_admin/components/image_picker.ex:299
 #: lib/brando_admin/dashboard.ex:101
-#: lib/brando_admin/live/images/image_list_live.ex:201
-#: lib/brando_admin/live/images/image_list_live.ex:220
-#: lib/brando_admin/menu.ex:335
+#: lib/brando_admin/live/ai/assistant_live.ex:215
+#: lib/brando_admin/live/images/image_list_live.ex:202
+#: lib/brando_admin/live/images/image_list_live.ex:221
+#: lib/brando_admin/menu.ex:342
 #, elixir-autogen, elixir-format
 msgid "Images"
 msgstr "Bilder"
@@ -346,7 +347,7 @@ msgstr "Venter"
 msgid "Published"
 msgstr "Publisert"
 
-#: lib/brando_admin/menu.ex:320
+#: lib/brando_admin/menu.ex:327
 #, elixir-autogen, elixir-format
 msgid "Templates"
 msgstr "Maler"
@@ -408,12 +409,12 @@ msgstr "Bildetekst"
 
 #: lib/brando_admin/components/form/input.ex:157
 #: lib/brando_admin/components/form/input.ex:187
-#: lib/brando_admin/components/image_picker.ex:395
-#: lib/brando_admin/components/video_picker.ex:771
+#: lib/brando_admin/components/image_picker.ex:400
+#: lib/brando_admin/components/video_picker.ex:781
 #: lib/brando_admin/live/config/cache_live.ex:113
-#: lib/brando_admin/live/files/file_list_live.ex:338
-#: lib/brando_admin/live/images/image_list_live.ex:291
-#: lib/brando_admin/live/videos/video_list_live.ex:210
+#: lib/brando_admin/live/files/file_list_live.ex:339
+#: lib/brando_admin/live/images/image_list_live.ex:292
+#: lib/brando_admin/live/videos/video_list_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Clear"
 msgstr "Tøm"
@@ -436,7 +437,7 @@ msgstr "Klikk “+” for å legge til innholdsblokker"
 #: lib/brando_admin/components/form/input/multi_select.ex:109
 #: lib/brando_admin/components/form/input/select.ex:78
 #: lib/brando_admin/components/form/input/select.ex:90
-#: lib/brando_admin/live/files/file_list_live.ex:269
+#: lib/brando_admin/live/files/file_list_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Lukk"
@@ -502,7 +503,7 @@ msgstr "Oppdater globalsett"
 
 #: lib/brando_admin/components/form/input/gallery.ex:421
 #: lib/brando_admin/components/form/input/image.ex:425
-#: lib/brando_admin/components/image_picker.ex:537
+#: lib/brando_admin/components/image_picker.ex:542
 #: lib/brando_admin/live/images/image_form_live.ex:15
 #, elixir-autogen, elixir-format
 msgid "Edit image"
@@ -563,8 +564,8 @@ msgstr "Globalsett"
 
 #: lib/brando_admin/dashboard.ex:115
 #: lib/brando_admin/live/globals/globals_live.ex:19
-#: lib/brando_admin/menu.ex:279
-#: lib/brando_admin/menu.ex:368
+#: lib/brando_admin/menu.ex:286
+#: lib/brando_admin/menu.ex:375
 #, elixir-autogen, elixir-format
 msgid "Globals"
 msgstr "Globaler"
@@ -613,7 +614,7 @@ msgid "No selection"
 msgstr "Inget valgt"
 
 #: lib/brando_admin/live/content/shared_library_live.ex:710
-#: lib/brando_admin/menu.ex:324
+#: lib/brando_admin/menu.ex:331
 #, elixir-autogen, elixir-format
 msgid "Palettes"
 msgstr "Paletter"
@@ -681,7 +682,7 @@ msgstr "Planlagt publisering"
 #: lib/brando_admin/components/form.ex:2399
 #: lib/brando_admin/components/form.ex:2402
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:18
-#: lib/brando_admin/menu.ex:283
+#: lib/brando_admin/menu.ex:290
 #, elixir-autogen, elixir-format
 msgid "Scheduled publishing"
 msgstr "Planlagt publisering"
@@ -701,7 +702,7 @@ msgstr "Velg innholdstype"
 msgid "Select entries"
 msgstr "Velg innlegg"
 
-#: lib/brando_admin/components/video_picker.ex:733
+#: lib/brando_admin/components/video_picker.ex:743
 #, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Laster opp…"
@@ -934,8 +935,8 @@ msgstr "Lenke"
 
 #: lib/brando_admin/components/form/module_props.ex:488
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:60
-#: lib/brando_admin/components/image_picker.ex:317
-#: lib/brando_admin/components/video_picker.ex:611
+#: lib/brando_admin/components/image_picker.ex:322
+#: lib/brando_admin/components/video_picker.ex:621
 #: lib/brando_admin/live/config/cache_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "List"
@@ -957,7 +958,7 @@ msgid "META title"
 msgstr "META tittel"
 
 #: lib/brando_admin/components/form/block/render.ex:2586
-#: lib/brando_admin/components/form/block_field.ex:2205
+#: lib/brando_admin/components/form/block_field.ex:2161
 #: lib/brando_admin/components/form/block_field/outline.ex:133
 #: lib/brando_admin/live/config/cache_live.ex:64
 #, elixir-autogen, elixir-format
@@ -1249,7 +1250,7 @@ msgstr "Ingen bildetekst"
 msgid "Select images"
 msgstr "Velg bilder"
 
-#: lib/brando_admin/live/images/image_list_live.ex:275
+#: lib/brando_admin/live/images/image_list_live.ex:276
 #, elixir-autogen, elixir-format
 msgid "Upload images"
 msgstr "Last opp bilder"
@@ -1402,9 +1403,9 @@ msgid "File"
 msgstr "Fil"
 
 #: lib/brando_admin/components/file_picker.ex:191
-#: lib/brando_admin/live/files/file_list_live.ex:219
-#: lib/brando_admin/live/files/file_list_live.ex:277
-#: lib/brando_admin/menu.ex:339
+#: lib/brando_admin/live/files/file_list_live.ex:220
+#: lib/brando_admin/live/files/file_list_live.ex:278
+#: lib/brando_admin/menu.ex:346
 #, elixir-autogen, elixir-format
 msgid "Files"
 msgstr "Filer"
@@ -1424,8 +1425,8 @@ msgstr "Ingen fil tilknyttet feltet"
 msgid "Select file"
 msgstr "Velg fil"
 
-#: lib/brando_admin/components/video_picker.ex:674
-#: lib/brando_admin/components/video_picker.ex:691
+#: lib/brando_admin/components/video_picker.ex:684
+#: lib/brando_admin/components/video_picker.ex:701
 #, elixir-autogen, elixir-format
 msgid "Upload file"
 msgstr "Last opp fil"
@@ -1704,7 +1705,7 @@ msgstr "Eksporterer oppføringer..."
 #: lib/brando/pages/page.ex:221
 #: lib/brando_admin/components/form/block/render.ex:1383
 #: lib/brando_admin/components/form/block/render.ex:2595
-#: lib/brando_admin/components/form/block_field.ex:2208
+#: lib/brando_admin/components/form/block_field.ex:2164
 #: lib/brando_admin/components/form/block_field/module_picker.ex:64
 #: lib/brando_admin/components/form/block_field/outline.ex:136
 #, elixir-autogen, elixir-format
@@ -1774,10 +1775,11 @@ msgstr "Rediger video"
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1025
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:317
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:536
-#: lib/brando_admin/components/video_picker.ex:588
-#: lib/brando_admin/live/videos/video_list_live.ex:161
-#: lib/brando_admin/live/videos/video_list_live.ex:167
-#: lib/brando_admin/menu.ex:343
+#: lib/brando_admin/components/video_picker.ex:598
+#: lib/brando_admin/live/ai/assistant_live.ex:225
+#: lib/brando_admin/live/videos/video_list_live.ex:162
+#: lib/brando_admin/live/videos/video_list_live.ex:168
+#: lib/brando_admin/menu.ex:350
 #, elixir-autogen, elixir-format
 msgid "Videos"
 msgstr "Videoer"
@@ -1854,7 +1856,7 @@ msgid "Auto"
 msgstr "Auto"
 
 #: lib/brando_admin/components/form/block/render.ex:2387
-#: lib/brando_admin/components/form/block_field.ex:2209
+#: lib/brando_admin/components/form/block_field.ex:2165
 #: lib/brando_admin/components/form/var_layout.ex:238
 #, elixir-autogen, elixir-format
 msgid "Block"
@@ -1919,7 +1921,7 @@ msgid "Configure block"
 msgstr "Konfigurer blokk"
 
 #: lib/brando_admin/components/form/block/render.ex:2592
-#: lib/brando_admin/components/form/block_field.ex:2207
+#: lib/brando_admin/components/form/block_field.ex:2163
 #: lib/brando_admin/components/form/block_field/module_picker.ex:56
 #: lib/brando_admin/components/form/block_field/outline.ex:135
 #, elixir-autogen, elixir-format
@@ -1933,7 +1935,7 @@ msgstr "Seksjonsmal"
 
 #: lib/brando_admin/live/content/container_list_live.ex:10
 #: lib/brando_admin/live/content/shared_library_live.ex:709
-#: lib/brando_admin/menu.ex:312
+#: lib/brando_admin/menu.ex:319
 #, elixir-autogen, elixir-format
 msgid "Containers"
 msgstr "Seksjoner"
@@ -1995,7 +1997,7 @@ msgid "Enter the Embed URL"
 msgstr "Kartets embed URL"
 
 #: lib/brando_admin/components/form/block/render.ex:2589
-#: lib/brando_admin/components/form/block_field.ex:2206
+#: lib/brando_admin/components/form/block_field.ex:2162
 #: lib/brando_admin/components/form/block_field/outline.ex:134
 #: lib/brando_admin/components/form/draft_recovery.ex:88
 #: lib/brando_admin/live/config/seo_live.ex:285
@@ -2145,7 +2147,7 @@ msgid "Starting Live Preview — fetching initial render..."
 msgstr "Starter Live Preview — henter data…"
 
 #: lib/brando_admin/live/content/table_template_list_live.ex:10
-#: lib/brando_admin/menu.ex:316
+#: lib/brando_admin/menu.ex:323
 #, elixir-autogen, elixir-format
 msgid "Table Templates"
 msgstr "Tabellmaler"
@@ -2240,7 +2242,7 @@ msgstr "f.eks: `image:Elixir.MyApp.Schema:function:fn_name`"
 msgid "menu items"
 msgstr "menypunkter"
 
-#: lib/brando_admin/menu.ex:308
+#: lib/brando_admin/menu.ex:315
 #, elixir-autogen, elixir-format
 msgid "Block module sets"
 msgstr "Blokkmodulsett"
@@ -2265,7 +2267,7 @@ msgstr "Opprett menypunkt"
 msgid "Create module set"
 msgstr "Opprett modulsett"
 
-#: lib/brando_admin/components/video_picker.ex:717
+#: lib/brando_admin/components/video_picker.ex:727
 #: lib/brando_admin/live/videos/video_form_live.ex:13
 #, elixir-autogen, elixir-format
 msgid "Create video"
@@ -2369,7 +2371,7 @@ msgid "New"
 msgstr "Ny"
 
 #: lib/brando_admin/live/config/utils_live.ex:66
-#: lib/brando_admin/menu.ex:299
+#: lib/brando_admin/menu.ex:306
 #, elixir-autogen, elixir-format
 msgid "Utilities"
 msgstr "Verktøy"
@@ -2406,6 +2408,7 @@ msgstr "Språk"
 msgid "Timezone"
 msgstr "Tidssone"
 
+#: lib/brando_admin/live/ai/assistant_live.ex:565
 #: lib/brando_admin/live/config/publishing_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Version"
@@ -2489,12 +2492,12 @@ msgstr "Legg til video"
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex:81
 #: lib/brando_admin/components/form/input/gallery/image_config.ex:46
 #: lib/brando_admin/live/images/alt_text_live.ex:59
-#: lib/brando_admin/live/images/image_list_live.ex:209
+#: lib/brando_admin/live/images/image_list_live.ex:210
 #, elixir-autogen, elixir-format
 msgid "Alt text"
 msgstr "Alternativ tekst"
 
-#: lib/brando_admin/components/video_picker.ex:722
+#: lib/brando_admin/components/video_picker.ex:732
 #, elixir-autogen, elixir-format
 msgid "Analyzing video..."
 msgstr "Analyserer video..."
@@ -2519,11 +2522,11 @@ msgstr "Overstyring av sideforhold"
 #: lib/brando_admin/components/form/input/gallery/video_config.ex:79
 #: lib/brando_admin/components/form/input/multi_select.ex:274
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:47
-#: lib/brando_admin/components/image_picker.ex:455
+#: lib/brando_admin/components/image_picker.ex:460
 #: lib/brando_admin/live/config/environment_live.ex:297
 #: lib/brando_admin/live/config/seo_live.ex:459
 #: lib/brando_admin/live/content/module_form_live.ex:164
-#: lib/brando_admin/live/upload_manager.ex:786
+#: lib/brando_admin/live/upload_manager.ex:808
 #: lib/brando_admin/live/users/groups_live.ex:431
 #: lib/brando_admin/live/users/user_list_live.ex:144
 #, elixir-autogen, elixir-format
@@ -2535,7 +2538,7 @@ msgstr "Avbryt"
 msgid "Caption overrides not available - no override data"
 msgstr "Bildetekstoverstyringer er ikke tilgjengelige – ingen overstyringsdata"
 
-#: lib/brando_admin/components/video_picker.ex:715
+#: lib/brando_admin/components/video_picker.ex:725
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr "Oppretter..."
@@ -2581,12 +2584,12 @@ msgid "Failed to import modules: %{reason}"
 msgstr "Klarte ikke importere moduler: %{reason}"
 
 #: lib/brando_admin/live/galleries/gallery_list_live.ex:11
-#: lib/brando_admin/menu.ex:347
+#: lib/brando_admin/menu.ex:354
 #, elixir-autogen, elixir-format
 msgid "Galleries"
 msgstr "Gallerier"
 
-#: lib/brando_admin/components/video_picker.ex:652
+#: lib/brando_admin/components/video_picker.ex:662
 #, elixir-autogen, elixir-format
 msgid "Hide URL input"
 msgstr "Skjul URL-felt"
@@ -2596,7 +2599,7 @@ msgstr "Skjul URL-felt"
 msgid "Loading revisions..."
 msgstr "Laster versjoner …"
 
-#: lib/brando_admin/components/video_picker.ex:837
+#: lib/brando_admin/components/video_picker.ex:847
 #, elixir-autogen, elixir-format
 msgid "Loading video..."
 msgstr "Laster video..."
@@ -2641,7 +2644,7 @@ msgstr "Les URL og trekk ut metadata"
 msgid "Parsed Information"
 msgstr "Hentet informasjon"
 
-#: lib/brando_admin/components/video_picker.ex:711
+#: lib/brando_admin/components/video_picker.ex:721
 #, elixir-autogen, elixir-format
 msgid "Paste YouTube, Vimeo or direct video URL"
 msgstr "Lim inn YouTube, Vimeo eller direkte video-URL"
@@ -2671,7 +2674,7 @@ msgstr "Velg eksisterende video"
 msgid "Select thumbnail from library"
 msgstr "Velg miniatyrbilde fra biblioteket"
 
-#: lib/brando_admin/components/video_picker.ex:573
+#: lib/brando_admin/components/video_picker.ex:583
 #, elixir-autogen, elixir-format
 msgid "Select video"
 msgstr "Velg video"
@@ -2707,7 +2710,8 @@ msgid "URL parsing not yet implemented"
 msgstr "URL-lesing er ikke implementert ennå"
 
 #: lib/brando/videos/video.ex:150
-#: lib/brando_admin/components/video_picker.ex:891
+#: lib/brando_admin/components/video_picker.ex:901
+#: lib/brando_admin/live/ai/assistant_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "Untitled"
 msgstr "Uten tittel"
@@ -2749,7 +2753,7 @@ msgstr "Bruker aktivert."
 msgid "Video Information"
 msgstr "Videoinformasjon"
 
-#: lib/brando_admin/components/video_picker.ex:795
+#: lib/brando_admin/components/video_picker.ex:805
 #, elixir-autogen, elixir-format
 msgid "Video Preview"
 msgstr "Videoforhåndsvisning"
@@ -2765,12 +2769,12 @@ msgid "Video Settings (Defaults)"
 msgstr "Videoinnstillinger (standard)"
 
 #: lib/brando_admin/components/form/video_drawer.ex:327
-#: lib/brando_admin/components/video_picker.ex:706
+#: lib/brando_admin/components/video_picker.ex:716
 #, elixir-autogen, elixir-format
 msgid "Video URL"
 msgstr "Video-URL"
 
-#: lib/brando_admin/components/video_picker.ex:832
+#: lib/brando_admin/components/video_picker.ex:842
 #, elixir-autogen, elixir-format
 msgid "Video type not supported for preview"
 msgstr "Videotype støttes ikke for forhåndsvisning"
@@ -2794,7 +2798,7 @@ msgstr "Hvor brukt"
 msgid "YouTube"
 msgstr "YouTube"
 
-#: lib/brando_admin/components/video_picker.ex:828
+#: lib/brando_admin/components/video_picker.ex:838
 #, elixir-autogen, elixir-format
 msgid "Your browser does not support the video tag."
 msgstr "Nettleseren din støtter ikke video-taggen."
@@ -2915,44 +2919,44 @@ msgstr "Lagre endringer"
 #: lib/brando_admin/components/file_picker.ex:221
 #: lib/brando_admin/live/config/asset_live.ex:74
 #: lib/brando_admin/live/config/asset_live.ex:150
-#: lib/brando_admin/live/files/file_list_live.ex:301
+#: lib/brando_admin/live/files/file_list_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "%{count} file"
 msgid_plural "%{count} files"
 msgstr[0] "%{count} fil"
 msgstr[1] "%{count} filer"
 
-#: lib/brando_admin/components/image_picker.ex:357
-#: lib/brando_admin/live/images/image_list_live.ex:245
+#: lib/brando_admin/components/image_picker.ex:362
+#: lib/brando_admin/live/images/image_list_live.ex:246
 #, elixir-autogen, elixir-format
 msgid "%{count} image"
 msgid_plural "%{count} images"
 msgstr[0] "%{count} bilde"
 msgstr[1] "%{count} bilder"
 
-#: lib/brando_admin/components/image_picker.ex:381
+#: lib/brando_admin/components/image_picker.ex:386
 #, elixir-autogen, elixir-format
 msgid "%{count} image selected for organizing"
 msgid_plural "%{count} images selected for organizing"
 msgstr[0] "%{count} bilde valgt for organisering"
 msgstr[1] "%{count} bilder valgt for organisering"
 
-#: lib/brando_admin/components/video_picker.ex:641
-#: lib/brando_admin/live/videos/video_list_live.ex:191
+#: lib/brando_admin/components/video_picker.ex:651
+#: lib/brando_admin/live/videos/video_list_live.ex:192
 #, elixir-autogen, elixir-format
 msgid "%{count} video"
 msgid_plural "%{count} videos"
 msgstr[0] "%{count} video"
 msgstr[1] "%{count} videoer"
 
-#: lib/brando_admin/components/video_picker.ex:757
+#: lib/brando_admin/components/video_picker.ex:767
 #, elixir-autogen, elixir-format
 msgid "%{count} video selected for organizing"
 msgid_plural "%{count} videos selected for organizing"
 msgstr[0] "%{count} video valgt for organisering"
 msgstr[1] "%{count} videoer valgt for organisering"
 
-#: lib/brando/ai.ex:191
+#: lib/brando/ai.ex:205
 #, elixir-autogen, elixir-format
 msgid "AI returned an empty response"
 msgstr "KI returnerte et tomt svar"
@@ -2975,7 +2979,7 @@ msgstr "Handlinger"
 msgid "Add block"
 msgstr "Legg til blokk"
 
-#: lib/brando_admin/components/video_picker.ex:654
+#: lib/brando_admin/components/video_picker.ex:664
 #, elixir-autogen, elixir-format
 msgid "Add from URL"
 msgstr "Legg til fra URL"
@@ -3003,7 +3007,7 @@ msgstr "Stengt"
 msgid "Controls"
 msgstr "Kontroller"
 
-#: lib/brando/ai.ex:186
+#: lib/brando/ai.ex:200
 #, elixir-autogen, elixir-format
 msgid "Could not resolve AI settings for this field"
 msgstr "Fant ikke KI-innstillinger for dette feltet"
@@ -3013,12 +3017,12 @@ msgstr "Fant ikke KI-innstillinger for dette feltet"
 msgid "Could not store uploaded file. Check upload settings and try again."
 msgstr "Klarte ikke lagre den opplastede filen. Sjekk opplastingsinnstillingene og prøv igjen."
 
-#: lib/brando/ai.ex:192
+#: lib/brando/ai.ex:206
 #, elixir-autogen, elixir-format
 msgid "Could not update this field from AI response"
 msgstr "Klarte ikke oppdatere dette feltet fra KI-svaret"
 
-#: lib/brando_admin/components/video_picker.ex:747
+#: lib/brando_admin/components/video_picker.ex:757
 #, elixir-autogen, elixir-format
 msgid "Create a video from URL or choose another folder"
 msgstr "Opprett en video fra URL eller velg en annen mappe"
@@ -3029,57 +3033,57 @@ msgstr "Opprett en video fra URL eller velg en annen mappe"
 msgid "Create folder"
 msgstr "Opprett mappe"
 
-#: lib/brando_admin/live/files/file_list_live.ex:150
+#: lib/brando_admin/live/files/file_list_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Cut %{count} files"
 msgstr "Klipp ut %{count} filer"
 
-#: lib/brando_admin/live/images/image_list_live.ex:127
+#: lib/brando_admin/live/images/image_list_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Cut %{count} images"
 msgstr "Klipp ut %{count} bilder"
 
-#: lib/brando_admin/live/videos/video_list_live.ex:113
+#: lib/brando_admin/live/videos/video_list_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "Cut %{count} videos"
 msgstr "Klipp ut %{count} videoer"
 
-#: lib/brando_admin/live/files/file_list_live.ex:304
-#: lib/brando_admin/live/images/image_list_live.ex:248
-#: lib/brando_admin/live/videos/video_list_live.ex:194
+#: lib/brando_admin/live/files/file_list_live.ex:305
+#: lib/brando_admin/live/images/image_list_live.ex:249
+#: lib/brando_admin/live/videos/video_list_live.ex:195
 #, elixir-autogen, elixir-format
 msgid "Cut queue"
 msgstr "Utklippskø"
 
-#: lib/brando_admin/live/files/file_list_live.ex:356
-#: lib/brando_admin/live/images/image_list_live.ex:309
-#: lib/brando_admin/live/videos/video_list_live.ex:228
+#: lib/brando_admin/live/files/file_list_live.ex:357
+#: lib/brando_admin/live/images/image_list_live.ex:310
+#: lib/brando_admin/live/videos/video_list_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Cut selected"
 msgstr "Klipp ut valgte"
 
-#: lib/brando_admin/components/image_picker.ex:551
+#: lib/brando_admin/components/image_picker.ex:556
 #, elixir-autogen, elixir-format
 msgid "Delete image"
 msgstr "Slett bilde"
 
-#: lib/brando_admin/components/image_picker.ex:544
+#: lib/brando_admin/components/image_picker.ex:549
 #, elixir-autogen, elixir-format
 msgid "Delete this image?"
 msgstr "Slette dette bildet?"
 
-#: lib/brando_admin/components/video_picker.ex:948
+#: lib/brando_admin/components/video_picker.ex:958
 #, elixir-autogen, elixir-format
 msgid "Delete this video?"
 msgstr "Slette denne videoen?"
 
-#: lib/brando_admin/components/video_picker.ex:958
+#: lib/brando_admin/components/video_picker.ex:968
 #, elixir-autogen, elixir-format
 msgid "Delete video"
 msgstr "Slett video"
 
-#: lib/brando_admin/components/image_picker.ex:388
-#: lib/brando_admin/components/video_picker.ex:764
+#: lib/brando_admin/components/image_picker.ex:393
+#: lib/brando_admin/components/video_picker.ex:774
 #, elixir-autogen, elixir-format
 msgid "Drag to a folder"
 msgstr "Dra til en mappe"
@@ -3089,7 +3093,7 @@ msgstr "Dra til en mappe"
 msgid "Element"
 msgstr "Element"
 
-#: lib/brando/ai.ex:202
+#: lib/brando/ai.ex:216
 #, elixir-autogen, elixir-format
 msgid "Failed to generate text with AI"
 msgstr "Klarte ikke generere tekst med KI"
@@ -3128,8 +3132,8 @@ msgid "Generate with AI"
 msgstr "Generer med KI"
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:59
-#: lib/brando_admin/components/image_picker.ex:309
-#: lib/brando_admin/components/video_picker.ex:603
+#: lib/brando_admin/components/image_picker.ex:314
+#: lib/brando_admin/components/video_picker.ex:613
 #, elixir-autogen, elixir-format
 msgid "Grid"
 msgstr "Rutenett"
@@ -3139,7 +3143,7 @@ msgstr "Rutenett"
 msgid "Icon"
 msgstr "Ikon"
 
-#: lib/brando_admin/components/image_picker.ex:519
+#: lib/brando_admin/components/image_picker.ex:524
 #, elixir-autogen, elixir-format
 msgid "Image actions"
 msgstr "Bildehandlinger"
@@ -3149,7 +3153,7 @@ msgstr "Bildehandlinger"
 msgid "Image configuration"
 msgstr "Bildekonfigurasjon"
 
-#: lib/brando_admin/components/image_picker.ex:204
+#: lib/brando_admin/components/image_picker.ex:209
 #, elixir-autogen, elixir-format
 msgid "Image deleted"
 msgstr "Bildet ble slettet"
@@ -3189,49 +3193,49 @@ msgstr "Medisinsk spesialitet"
 msgid "Menu URL"
 msgstr "Meny-URL"
 
-#: lib/brando/ai.ex:189
+#: lib/brando/ai.ex:203
 #, elixir-autogen, elixir-format
 msgid "Missing AI model configuration"
 msgstr "Mangler konfigurasjon av KI-modell"
 
-#: lib/brando/ai.ex:188
+#: lib/brando/ai.ex:202
 #, elixir-autogen, elixir-format
 msgid "Missing AI prompt configuration"
 msgstr "Mangler konfigurasjon av KI-ledetekst"
 
-#: lib/brando/ai.ex:190
+#: lib/brando/ai.ex:204
 #, elixir-autogen, elixir-format
 msgid "Missing API key for selected AI provider"
 msgstr "Mangler API-nøkkel for valgt KI-leverandør"
 
-#: lib/brando_admin/live/files/file_list_live.ex:132
+#: lib/brando_admin/live/files/file_list_live.ex:133
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} files"
 msgstr "Flyttet %{count} filer"
 
-#: lib/brando_admin/live/files/file_list_live.ex:177
+#: lib/brando_admin/live/files/file_list_live.ex:178
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} files to %{folder}"
 msgstr "Flyttet %{count} filer til %{folder}"
 
-#: lib/brando_admin/components/image_picker.ex:258
-#: lib/brando_admin/live/images/image_list_live.ex:109
+#: lib/brando_admin/components/image_picker.ex:263
+#: lib/brando_admin/live/images/image_list_live.ex:110
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} images"
 msgstr "Flyttet %{count} bilder"
 
-#: lib/brando_admin/live/images/image_list_live.ex:154
+#: lib/brando_admin/live/images/image_list_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} images to %{folder}"
 msgstr "Flyttet %{count} bilder til %{folder}"
 
-#: lib/brando_admin/components/video_picker.ex:302
-#: lib/brando_admin/live/videos/video_list_live.ex:95
+#: lib/brando_admin/components/video_picker.ex:312
+#: lib/brando_admin/live/videos/video_list_live.ex:96
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} videos"
 msgstr "Flyttet %{count} videoer"
 
-#: lib/brando_admin/live/videos/video_list_live.ex:140
+#: lib/brando_admin/live/videos/video_list_live.ex:141
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} videos to %{folder}"
 msgstr "Flyttet %{count} videoer til %{folder}"
@@ -3246,17 +3250,17 @@ msgstr "Naviger og opprett mapper"
 msgid "New folder"
 msgstr "Ny mappe"
 
-#: lib/brando/ai.ex:187
+#: lib/brando/ai.ex:201
 #, elixir-autogen, elixir-format
 msgid "No AI configuration was found for this field"
 msgstr "Ingen KI-konfigurasjon ble funnet for dette feltet"
 
-#: lib/brando_admin/components/image_picker.ex:350
+#: lib/brando_admin/components/image_picker.ex:355
 #, elixir-autogen, elixir-format
 msgid "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
 msgstr "Kun bilder som er satt opp for dette feltet. Resten av biblioteket er beskåret til andre størrelser og tilbys ikke her."
 
-#: lib/brando_admin/components/image_picker.ex:370
+#: lib/brando_admin/components/image_picker.ex:375
 #, elixir-autogen, elixir-format
 msgid "No images in this folder"
 msgstr "Ingen bilder i denne mappen"
@@ -3266,7 +3270,7 @@ msgstr "Ingen bilder i denne mappen"
 msgid "No subfolders in this location"
 msgstr "Ingen undermapper på dette stedet"
 
-#: lib/brando_admin/components/video_picker.ex:746
+#: lib/brando_admin/components/video_picker.ex:756
 #, elixir-autogen, elixir-format
 msgid "No videos in this folder"
 msgstr "Ingen videoer i denne mappen"
@@ -3287,14 +3291,14 @@ msgstr "Antall ansatte"
 msgid "Opening hours"
 msgstr "Åpningstider"
 
-#: lib/brando_admin/live/files/file_list_live.ex:330
-#: lib/brando_admin/live/images/image_list_live.ex:283
-#: lib/brando_admin/live/videos/video_list_live.ex:202
+#: lib/brando_admin/live/files/file_list_live.ex:331
+#: lib/brando_admin/live/images/image_list_live.ex:284
+#: lib/brando_admin/live/videos/video_list_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Paste"
 msgstr "Lim inn"
 
-#: lib/brando_admin/components/video_picker.ex:941
+#: lib/brando_admin/components/video_picker.ex:951
 #: lib/brando_admin/live/config/publishing_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "Preview"
@@ -3320,7 +3324,7 @@ msgstr "Nylige mapper"
 msgid "Remove from gallery"
 msgstr "Fjern fra galleriet"
 
-#: lib/brando_admin/components/video_picker.ex:925
+#: lib/brando_admin/components/video_picker.ex:935
 #, elixir-autogen, elixir-format
 msgid "Rename"
 msgstr "Gi nytt navn"
@@ -3370,18 +3374,19 @@ msgstr "Opp"
 #: lib/brando_admin/components/assets/media_field.ex:117
 #: lib/brando_admin/components/form/file_drawer.ex:109
 #: lib/brando_admin/components/form/image_drawer.ex:180
-#: lib/brando_admin/live/files/file_list_live.ex:319
-#: lib/brando_admin/live/images/image_list_live.ex:272
+#: lib/brando_admin/live/ai/assistant_live.ex:198
+#: lib/brando_admin/live/files/file_list_live.ex:320
+#: lib/brando_admin/live/images/image_list_live.ex:273
 #, elixir-autogen, elixir-format
 msgid "Upload"
 msgstr "Last opp"
 
-#: lib/brando_admin/components/image_picker.ex:449
+#: lib/brando_admin/components/image_picker.ex:454
 #, elixir-autogen, elixir-format
 msgid "Upload here"
 msgstr "Last opp her"
 
-#: lib/brando_admin/components/video_picker.ex:908
+#: lib/brando_admin/components/video_picker.ex:918
 #, elixir-autogen, elixir-format
 msgid "Video actions"
 msgstr "Videohandlinger"
@@ -3391,7 +3396,7 @@ msgstr "Videohandlinger"
 msgid "Video configuration"
 msgstr "Videokonfigurasjon"
 
-#: lib/brando_admin/components/video_picker.ex:549
+#: lib/brando_admin/components/video_picker.ex:559
 #, elixir-autogen, elixir-format
 msgid "Video deleted"
 msgstr "Video slettet"
@@ -3516,7 +3521,7 @@ msgid "Complete!"
 msgstr "Fullført!"
 
 #: lib/brando/uploads.ex:144
-#: lib/brando_admin/live/upload_manager.ex:992
+#: lib/brando_admin/live/upload_manager.ex:1014
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file"
 msgstr "Kunne ikke lagre opplastet fil"
@@ -3525,7 +3530,7 @@ msgstr "Kunne ikke lagre opplastet fil"
 #: lib/brando_admin/components/form/transformer.ex:470
 #: lib/brando_admin/components/suggestion_review.ex:71
 #: lib/brando_admin/live/content/shared_library_live.ex:272
-#: lib/brando_admin/live/upload_manager.ex:796
+#: lib/brando_admin/live/upload_manager.ex:818
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr "Fjern"
@@ -3555,7 +3560,7 @@ msgstr "Utvid rotblokker"
 msgid "Fetching entry..."
 msgstr "Henter oppføring..."
 
-#: lib/brando_admin/live/upload_manager.ex:722
+#: lib/brando_admin/live/upload_manager.ex:744
 #, elixir-autogen, elixir-format
 msgid "Image processing failed"
 msgstr "Bildeprosessering feilet"
@@ -3586,7 +3591,7 @@ msgid "Pick videos"
 msgstr "Velg videoer"
 
 #: lib/brando_admin/components/assets/media_field.ex:79
-#: lib/brando_admin/live/upload_manager.ex:778
+#: lib/brando_admin/live/upload_manager.ex:800
 #, elixir-autogen, elixir-format
 msgid "Processing…"
 msgstr "Prosesserer…"
@@ -3631,7 +3636,7 @@ msgstr "Oversettelse feilet:"
 msgid "Upload failed"
 msgstr "Opplasting feilet"
 
-#: lib/brando_admin/live/upload_manager.ex:771
+#: lib/brando_admin/live/upload_manager.ex:793
 #, elixir-autogen, elixir-format
 msgid "Uploads"
 msgstr "Opplastinger"
@@ -3718,7 +3723,7 @@ msgstr "Florist registrerer hvert bygg her. Å aktivere et bygg virker umiddelba
 
 #: lib/brando_admin/live/config/asset_live.ex:43
 #: lib/brando_admin/live/users/groups_live.ex:1070
-#: lib/brando_admin/menu.ex:396
+#: lib/brando_admin/menu.ex:403
 #, elixir-autogen, elixir-format
 msgid "Frontend assets"
 msgstr "Frontend-ressurser"
@@ -4161,6 +4166,7 @@ msgid "Could not update gallery: %{error}"
 msgstr "Klarte ikke oppdatere galleriet: %{error}"
 
 #: lib/brando_admin/components/module_files.ex:411
+#: lib/brando_admin/live/ai/assistant_live.ex:464
 #: lib/brando_admin/live/content/shared_library_live.ex:355
 #: lib/brando_admin/live/users/groups_live.ex:145
 #: lib/brando_admin/live/users/groups_live.ex:1036
@@ -4567,7 +4573,7 @@ msgstr "Miljøoperasjonen feilet: %{reason}"
 #: lib/brando_admin/live/config/environment_live.ex:61
 #: lib/brando_admin/live/config/site_live.ex:95
 #: lib/brando_admin/live/users/groups_live.ex:1068
-#: lib/brando_admin/menu.ex:391
+#: lib/brando_admin/menu.ex:398
 #, elixir-autogen, elixir-format
 msgid "Environments"
 msgstr "Miljøer"
@@ -5082,7 +5088,7 @@ msgstr "Publiser versjon"
 
 #: lib/brando_admin/live/config/publishing_live.ex:52
 #: lib/brando_admin/live/config/scheduled_publishing_live.ex:107
-#: lib/brando_admin/menu.ex:379
+#: lib/brando_admin/menu.ex:386
 #, elixir-autogen, elixir-format
 msgid "Publishing"
 msgstr "Publisering"
@@ -5208,7 +5214,7 @@ msgstr "Erstatt"
 msgid "Replace content"
 msgstr "Erstatt innhold"
 
-#: lib/brando_admin/live/files/file_list_live.ex:224
+#: lib/brando_admin/live/files/file_list_live.ex:225
 #, elixir-autogen, elixir-format
 msgid "Replace file"
 msgstr "Erstatt fil"
@@ -5400,7 +5406,7 @@ msgstr "Delte fargesystemer for kontainerblokker."
 
 #: lib/brando_admin/live/content/shared_library_live.ex:66
 #: lib/brando_admin/live/users/groups_live.ex:1071
-#: lib/brando_admin/menu.ex:401
+#: lib/brando_admin/menu.ex:408
 #, elixir-autogen, elixir-format
 msgid "Shared content library"
 msgstr "Delt innholdsbibliotek"
@@ -5473,7 +5479,7 @@ msgstr "Nettstedstilgangen ble trukket tilbake."
 msgid "Site access updated."
 msgstr "Nettstedstilgangen ble oppdatert."
 
-#: lib/brando_admin/menu.ex:401
+#: lib/brando_admin/menu.ex:408
 #, elixir-autogen, elixir-format
 msgid "Site content library"
 msgstr "Innholdsbibliotek for nettstedet"
@@ -5498,7 +5504,7 @@ msgstr "Nettstedsbrukere"
 
 #: lib/brando_admin/live/config/site_live.ex:39
 #: lib/brando_admin/live/users/groups_live.ex:1067
-#: lib/brando_admin/menu.ex:386
+#: lib/brando_admin/menu.ex:393
 #, elixir-autogen, elixir-format
 msgid "Sites"
 msgstr "Nettsteder"
@@ -5712,6 +5718,7 @@ msgstr "Overstyr tittel"
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:67
 #: lib/brando_admin/components/form/revisions_drawer.ex:99
+#: lib/brando_admin/live/ai/assistant_live.ex:695
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr "Prøv igjen"
@@ -5738,12 +5745,13 @@ msgid "Untitled video"
 msgstr "Video uten tittel"
 
 #: lib/brando_admin/components/form/transformer.ex:416
-#: lib/brando_admin/live/files/file_list_live.ex:322
+#: lib/brando_admin/live/files/file_list_live.ex:323
 #, elixir-autogen, elixir-format
 msgid "Upload files"
 msgstr "Last opp filer"
 
 #: lib/brando_admin/components/form/transformer.ex:1343
+#: lib/brando_admin/live/ai/assistant_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "Uploading…"
 msgstr "Laster opp …"
@@ -5897,7 +5905,7 @@ msgstr "Administrer brukerkontoer og tilgang."
 #: lib/brando_admin/live/users/groups_live.ex:63
 #: lib/brando_admin/live/users/groups_live.ex:277
 #: lib/brando_admin/live/users/user_list_live.ex:29
-#: lib/brando_admin/menu.ex:287
+#: lib/brando_admin/menu.ex:294
 #, elixir-format, elixir-autogen
 msgid "Permissions"
 msgstr "Tillatelser"
@@ -6014,30 +6022,30 @@ msgstr "Mislyktes"
 msgid "Cancelled"
 msgstr "Avbrutt"
 
-#: lib/brando_admin/live/images/image_list_live.ex:202
+#: lib/brando_admin/live/images/image_list_live.ex:203
 #, elixir-format, elixir-autogen
 msgid "Browse folders, upload images, and manage your library."
 msgstr "Bla gjennom mapper, last opp bilder og administrer bildebiblioteket."
 
-#: lib/brando_admin/live/images/image_list_live.ex:221
+#: lib/brando_admin/live/images/image_list_live.ex:222
 #, elixir-format, elixir-autogen
 msgid "Browse this location"
 msgstr "Bla gjennom denne mappen"
 
 #: lib/brando_admin/components/file_picker.ex:219
-#: lib/brando_admin/components/video_picker.ex:638
+#: lib/brando_admin/components/video_picker.ex:648
 #: lib/brando_admin/live/images/alt_text_live.ex:298
-#: lib/brando_admin/live/images/image_list_live.ex:242
+#: lib/brando_admin/live/images/image_list_live.ex:243
 #, elixir-format, elixir-autogen
 msgid "Root folder"
 msgstr "Rotmappe"
 
-#: lib/brando_admin/live/images/image_list_live.ex:306
+#: lib/brando_admin/live/images/image_list_live.ex:307
 #, elixir-format, elixir-autogen
 msgid "No images in this view"
 msgstr "Ingen bilder i denne visningen"
 
-#: lib/brando_admin/live/images/image_list_live.ex:307
+#: lib/brando_admin/live/images/image_list_live.ex:308
 #, elixir-format, elixir-autogen
 msgid "Choose a folder, upload an image, or adjust your search."
 msgstr "Velg en mappe, last opp et bilde eller juster søket."
@@ -6152,13 +6160,13 @@ msgstr "Velg en JSON-fil"
 msgid "Choose a file with the .json extension."
 msgstr "Velg en fil med filtypen .json."
 
-#: lib/brando_admin/live/files/file_list_live.ex:354
-#: lib/brando_admin/live/videos/video_list_live.ex:226
+#: lib/brando_admin/live/files/file_list_live.ex:355
+#: lib/brando_admin/live/videos/video_list_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Choose a folder or adjust your search."
 msgstr "Velg en mappe eller endre søket."
 
-#: lib/brando_admin/live/files/file_list_live.ex:266
+#: lib/brando_admin/live/files/file_list_live.ex:267
 #, elixir-autogen, elixir-format
 msgid "Choose file"
 msgstr "Velg fil"
@@ -6203,7 +6211,7 @@ msgstr "Last ned gruppene og tillatelsene i dette området som en versjonert JSO
 msgid "Drafts"
 msgstr "Utkast"
 
-#: lib/brando_admin/live/files/file_list_live.ex:264
+#: lib/brando_admin/live/files/file_list_live.ex:265
 #, elixir-autogen, elixir-format
 msgid "Drop a %{extension} file here"
 msgstr "Slipp en %{extension}-fil her"
@@ -6219,12 +6227,12 @@ msgid "Export configuration"
 msgstr "Eksporter konfigurasjon"
 
 #: lib/brando/videos/video.ex:183
-#: lib/brando_admin/components/video_picker.ex:969
+#: lib/brando_admin/components/video_picker.ex:979
 #, elixir-autogen, elixir-format
 msgid "External file"
 msgstr "Ekstern fil"
 
-#: lib/brando_admin/live/files/file_list_live.ex:197
+#: lib/brando_admin/live/files/file_list_live.ex:198
 #, elixir-autogen, elixir-format
 msgid "File replaced"
 msgstr "Filen er erstattet"
@@ -6260,7 +6268,7 @@ msgid "Groups prepared"
 msgstr "Grupper er klargjort"
 
 #: lib/brando_admin/components/authorization_tools.ex:140
-#: lib/brando_admin/menu.ex:293
+#: lib/brando_admin/menu.ex:300
 #, elixir-autogen, elixir-format
 msgid "Import/Export"
 msgstr "Import/Eksport"
@@ -6315,8 +6323,8 @@ msgstr "Tidligere roller forblir aktive til du tar i bruk gruppebasert tilgangss
 msgid "Legacy rules are not translated automatically. Review each rule against the group grants and map custom restrictions to application policies before cutover."
 msgstr "Tidligere regler konverteres ikke automatisk. Sammenlign hver regel med gruppenes tillatelser og overfør egne begrensninger til applikasjonens tilgangsregler før overgangen."
 
-#: lib/brando_admin/live/files/file_list_live.ex:298
-#: lib/brando_admin/live/videos/video_list_live.ex:188
+#: lib/brando_admin/live/files/file_list_live.ex:299
+#: lib/brando_admin/live/videos/video_list_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "Library root"
 msgstr "Rotmappe"
@@ -6349,7 +6357,7 @@ msgstr "Ny gruppe"
 msgid "No drafts"
 msgstr "Ingen utkast"
 
-#: lib/brando_admin/live/files/file_list_live.ex:353
+#: lib/brando_admin/live/files/file_list_live.ex:354
 #, elixir-autogen, elixir-format
 msgid "No files in this view"
 msgstr "Ingen filer i denne visningen"
@@ -6379,7 +6387,7 @@ msgstr "Ingen sider i denne visningen"
 msgid "No recent content"
 msgstr "Ingen nylig oppdatert innhold"
 
-#: lib/brando_admin/live/videos/video_list_live.ex:225
+#: lib/brando_admin/live/videos/video_list_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "No videos in this view"
 msgstr "Ingen videoer i denne visningen"
@@ -6482,7 +6490,7 @@ msgstr "Nylig oppdatert"
 msgid "Refresh report"
 msgstr "Oppdater rapport"
 
-#: lib/brando_admin/live/files/file_list_live.ex:262
+#: lib/brando_admin/live/files/file_list_live.ex:263
 #, elixir-autogen, elixir-format
 msgid "Replacement file"
 msgstr "Erstatningsfil"
@@ -6553,7 +6561,7 @@ msgstr "Modulen med applikasjonsregler kunne ikke undersøkes. Gjennomgå applik
 msgid "The file could not be uploaded. Remove it and try again."
 msgstr "Filen kunne ikke lastes opp. Fjern den og prøv igjen."
 
-#: lib/brando_admin/live/files/file_list_live.ex:73
+#: lib/brando_admin/live/files/file_list_live.ex:74
 #, elixir-autogen, elixir-format
 msgid "The file is no longer available"
 msgstr "Filen er ikke lenger tilgjengelig"
@@ -6563,7 +6571,7 @@ msgstr "Filen er ikke lenger tilgjengelig"
 msgid "The file is too large. Choose a JSON file under 1 MB."
 msgstr "Filen er for stor. Velg en JSON-fil under 1 MB."
 
-#: lib/brando_admin/live/files/file_list_live.ex:230
+#: lib/brando_admin/live/files/file_list_live.ex:231
 #, elixir-autogen, elixir-format
 msgid "The new file takes over this one's contents everywhere it is used. Its filename, URL and references stay as they are."
 msgstr "Den nye filen erstatter innholdet i denne filen overalt hvor den brukes. Filnavn, URL og referanser beholdes."
@@ -6611,6 +6619,7 @@ msgstr "Kommende publiseringer du har tilgang til, vises her."
 
 #: lib/brando_admin/components/authorization_tools.ex:304
 #: lib/brando_admin/components/module_files.ex:413
+#: lib/brando_admin/live/ai/assistant_live.ex:464
 #: lib/brando_admin/live/users/groups_live.ex:145
 #, elixir-autogen, elixir-format
 msgid "Update"
@@ -6627,7 +6636,7 @@ msgid "Upload a JSON export to review changes before applying them."
 msgstr "Last opp en JSON-eksport for å gjennomgå endringene før du tar dem i bruk."
 
 #: lib/brando/videos/video.ex:182
-#: lib/brando_admin/components/video_picker.ex:968
+#: lib/brando_admin/components/video_picker.ex:978
 #, elixir-autogen, elixir-format
 msgid "Uploaded file"
 msgstr "Opplastet fil"
@@ -7439,7 +7448,7 @@ msgstr "Alt innhold"
 msgid "Search by title or URL…"
 msgstr "Søk etter tittel eller URL…"
 
-#: lib/brando_admin/components/image_picker.ex:424
+#: lib/brando_admin/components/image_picker.ex:429
 #, elixir-autogen, elixir-format
 msgid "%{count} image to this folder"
 msgid_plural "%{count} images to this folder"
@@ -7448,13 +7457,14 @@ msgstr[1] "%{count} bilder til denne mappen"
 
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:988
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1348
+#: lib/brando_admin/live/ai/assistant_live.ex:304
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
 msgstr[0] "%{count} element"
 msgstr[1] "%{count} elementer"
 
-#: lib/brando_admin/components/image_picker.ex:431
+#: lib/brando_admin/components/image_picker.ex:436
 #, elixir-autogen, elixir-format
 msgid "%{count} video to %{folder}"
 msgid_plural "%{count} videos to %{folder}"
@@ -7531,7 +7541,7 @@ msgstr "Velg en mappe før du laster opp"
 msgid "Choose a folder when uploading"
 msgstr "Velg en mappe ved opplasting"
 
-#: lib/brando_admin/components/image_picker.ex:371
+#: lib/brando_admin/components/image_picker.ex:376
 #, elixir-autogen, elixir-format
 msgid "Choose another folder to find an image"
 msgstr "Velg en annen mappe for å finne et bilde"
@@ -7546,12 +7556,12 @@ msgstr "Velg medier fra biblioteket"
 msgid "Choose one file for this field"
 msgstr "Velg én fil for dette feltet"
 
-#: lib/brando_admin/components/image_picker.ex:275
+#: lib/brando_admin/components/image_picker.ex:280
 #, elixir-autogen, elixir-format
 msgid "Choose upload folder"
 msgstr "Velg opplastingsmappe"
 
-#: lib/brando_admin/components/image_picker.ex:284
+#: lib/brando_admin/components/image_picker.ex:289
 #, elixir-autogen, elixir-format
 msgid "Choose where to store these images."
 msgstr "Velg hvor disse bildene skal lagres."
@@ -7798,12 +7808,12 @@ msgstr "Tilbakestill alle til standard"
 msgid "Select a file from your library."
 msgstr "Velg en fil fra biblioteket ditt."
 
-#: lib/brando_admin/components/video_picker.ex:580
+#: lib/brando_admin/components/video_picker.ex:590
 #, elixir-autogen, elixir-format
 msgid "Select a video from your library."
 msgstr "Velg en video fra biblioteket ditt."
 
-#: lib/brando_admin/components/image_picker.ex:285
+#: lib/brando_admin/components/image_picker.ex:290
 #, elixir-autogen, elixir-format
 msgid "Select an image from your library."
 msgstr "Velg et bilde fra biblioteket ditt."
@@ -7864,7 +7874,7 @@ msgstr "Disse innstillingene gjelder for denne bruken av filen."
 msgid "Up to %{size}"
 msgstr "Opptil %{size}"
 
-#: lib/brando_admin/components/image_picker.ex:436
+#: lib/brando_admin/components/image_picker.ex:441
 #, elixir-autogen, elixir-format
 msgid "Upload %{count} file to this folder"
 msgid_plural "Upload %{count} files to this folder"
@@ -7877,6 +7887,7 @@ msgstr[1] "Last opp %{count} filer til denne mappen"
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1353
 #: lib/brando_admin/components/form/input/gallery.ex:324
 #: lib/brando_admin/components/form/input/gallery_objects.ex:87
+#: lib/brando_admin/live/ai/assistant_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Upload media"
 msgstr "Last opp medier"
@@ -7892,7 +7903,7 @@ msgstr "Last opp medier eller velg fra biblioteket ditt."
 msgid "Upload replacement"
 msgstr "Last opp erstatning"
 
-#: lib/brando_admin/live/images/image_list_live.ex:266
+#: lib/brando_admin/live/images/image_list_live.ex:267
 #, elixir-autogen, elixir-format
 msgid "Upload to %{folder}"
 msgstr "Last opp til %{folder}"
@@ -8546,6 +8557,7 @@ msgstr "Brukergrupper"
 msgid "Utilities & caches"
 msgstr "Verktøy og hurtigbuffere"
 
+#: lib/brando_admin/live/ai/assistant_live.ex:580
 #: lib/brando_admin/live/users/groups_live.ex:1032
 #, elixir-autogen, elixir-format
 msgid "View"
@@ -9013,6 +9025,7 @@ msgstr "Teksten ble endret mens dialogen var åpen. Avbryt og velg teksten på n
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:245
 #: lib/brando_admin/components/module_files.ex:258
+#: lib/brando_admin/live/ai/assistant_live.ex:520
 #, elixir-autogen, elixir-format
 msgid "Applying…"
 msgstr "Legger til…"
@@ -9270,7 +9283,7 @@ msgid "Markdown file"
 msgstr "Markdown-fil"
 
 #: lib/brando_admin/live/config/markdown_sources_live.ex:47
-#: lib/brando_admin/menu.ex:291
+#: lib/brando_admin/menu.ex:298
 #, elixir-autogen, elixir-format
 msgid "Markdown sources"
 msgstr "Markdown-kilder"
@@ -10081,7 +10094,7 @@ msgstr "Deles med %{count} andre oppføringer på dette språket."
 msgid "Aim for %{min}–%{max} characters."
 msgstr "Sikt mot %{min}–%{max} tegn."
 
-#: lib/brando/ai.ex:193
+#: lib/brando/ai.ex:207
 #, elixir-autogen, elixir-format
 msgid "This entry has no text to describe"
 msgstr "Oppføringen har ingen tekst å beskrive"
@@ -10496,6 +10509,7 @@ msgid "Destination reference mappings"
 msgstr "Referansekoblinger på målet"
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:66
+#: lib/brando_admin/live/ai/assistant_live.ex:508
 #, elixir-autogen, elixir-format
 msgid "Discard"
 msgstr "Forkast"
@@ -10950,7 +10964,7 @@ msgstr "Du har ikke tilgang til å importere moduldefinisjoner."
 msgid "e.g. Example AS"
 msgstr "f.eks. Eksempel AS"
 
-#: lib/brando_admin/live/images/image_list_live.ex:211
+#: lib/brando_admin/live/images/image_list_live.ex:212
 #, elixir-autogen, elixir-format
 msgid "%{count} missing"
 msgid_plural "%{count} missing"
@@ -11056,17 +11070,17 @@ msgstr "Foreslått alt-tekst"
 msgid "Suggested alt text for %{title}"
 msgstr "Foreslått alt-tekst for %{title}"
 
-#: lib/brando/ai.ex:194
+#: lib/brando/ai.ex:208
 #, elixir-autogen, elixir-format
 msgid "The configured AI model cannot read images"
 msgstr "Den konfigurerte KI-modellen kan ikke lese bilder"
 
-#: lib/brando/ai.ex:200
+#: lib/brando/ai.ex:214
 #, elixir-autogen, elixir-format
 msgid "The image file could not be read"
 msgstr "Klarte ikke lese bildefilen"
 
-#: lib/brando/ai.ex:199
+#: lib/brando/ai.ex:213
 #, elixir-autogen, elixir-format
 msgid "The image is in a format the AI model cannot read"
 msgstr "Bildet er i et format KI-modellen ikke kan lese"
@@ -11091,7 +11105,7 @@ msgstr "Mangler på minst ett av %{languages}. Hvert bilde beskrives på alle sp
 msgid "No alt text in %{languages}"
 msgstr "Ingen alt-tekst på %{languages}"
 
-#: lib/brando/ai.ex:201
+#: lib/brando/ai.ex:215
 #, elixir-autogen, elixir-format
 msgid "The AI reply could not be read"
 msgstr "Klarte ikke lese KI-svaret"
@@ -11197,7 +11211,7 @@ msgstr "%{model} kan ikke lese bilder. Angi en som kan, som bildemodell (models:
 msgid "%{model} is not in the model catalogue Brando reads, so its price and whether it reads images are unknown. Check with your provider before describing many images."
 msgstr "%{model} står ikke i modellkatalogen Brando leser, så prisen og om den kan lese bilder, er ukjent. Sjekk hos leverandøren før du beskriver mange bilder."
 
-#: lib/brando/ai.ex:197
+#: lib/brando/ai.ex:211
 #, elixir-autogen, elixir-format
 msgid "The configured AI model is not in the model catalogue, so its price and abilities are unknown"
 msgstr "Den konfigurerte KI-modellen står ikke i modellkatalogen, så prisen og hva den kan, er ukjent"
@@ -11206,3 +11220,531 @@ msgstr "Den konfigurerte KI-modellen står ikke i modellkatalogen, så prisen og
 #, elixir-autogen, elixir-format
 msgid "Written by %{model}."
 msgstr "Skrives av %{model}."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:228
+#, elixir-autogen, elixir-format
+msgid "%{count} attached"
+msgid_plural "%{count} attached"
+msgstr[0] "%{count} vedlagt"
+msgstr[1] "%{count} vedlagt"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1040
+#, elixir-autogen, elixir-format
+msgid "%{count} block added"
+msgid_plural "%{count} blocks added"
+msgstr[0] "%{count} blokk lagt til"
+msgstr[1] "%{count} blokker lagt til"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1041
+#, elixir-autogen, elixir-format
+msgid "%{count} change"
+msgid_plural "%{count} changes"
+msgstr[0] "%{count} endring"
+msgstr[1] "%{count} endringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1326
+#, elixir-autogen, elixir-format
+msgid "%{count} changed block"
+msgid_plural "%{count} changed blocks"
+msgstr[0] "%{count} endret blokk"
+msgstr[1] "%{count} endrede blokker"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1324
+#, elixir-autogen, elixir-format
+msgid "%{count} new block"
+msgid_plural "%{count} new blocks"
+msgstr[0] "%{count} ny blokk"
+msgstr[1] "%{count} nye blokker"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1314
+#, elixir-autogen, elixir-format
+msgid "%{count} new entry"
+msgid_plural "%{count} new entries"
+msgstr[0] "%{count} ny oppføring"
+msgstr[1] "%{count} nye oppføringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1315
+#, elixir-autogen, elixir-format
+msgid "%{count} updated entry"
+msgid_plural "%{count} updated entries"
+msgstr[0] "%{count} oppdatert oppføring"
+msgstr[1] "%{count} oppdaterte oppføringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1028
+#, elixir-autogen, elixir-format
+msgid "%{title} (no address yet)"
+msgstr "%{title} (ingen adresse ennå)"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:333
+#, elixir-autogen, elixir-format
+msgid "%{used} used in the proposal · %{free} not used"
+msgstr "%{used} brukt i forslaget · %{free} ikke brukt"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:745
+#, elixir-autogen, elixir-format
+msgid "Add a %{module} block"
+msgstr "Legg til en %{module}-blokk"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:511
+#, elixir-autogen, elixir-format
+msgid "Adjust"
+msgstr "Juster"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:542
+#, elixir-autogen, elixir-format
+msgid "All changes"
+msgstr "Alle endringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1287
+#, elixir-autogen, elixir-format
+msgid "Applied"
+msgstr "Utført"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1360
+#: lib/brando_admin/live/ai/assistant_live.ex:1363
+#, elixir-autogen, elixir-format
+msgid "Apply %{count} entry change"
+msgid_plural "Apply %{count} entry changes"
+msgstr[0] "Utfør %{count} endring"
+msgstr[1] "Utfør %{count} endringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:174
+#, elixir-autogen, elixir-format
+msgid "Ask for an adjustment…"
+msgstr "Be om en justering …"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:97
+#: lib/brando_admin/live/ai/assistant_live.ex:285
+#: lib/brando_admin/menu.ex:251
+#, elixir-autogen, elixir-format
+msgid "Assistant"
+msgstr "Assistent"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:213
+#, elixir-autogen, elixir-format
+msgid "Attach images from the media library"
+msgstr "Legg ved bilder fra mediebiblioteket"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:223
+#, elixir-autogen, elixir-format
+msgid "Attach videos from the media library"
+msgstr "Legg ved videoer fra mediebiblioteket"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:303
+#, elixir-autogen, elixir-format
+msgid "Attached to this conversation"
+msgstr "Lagt ved denne samtalen"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:567
+#, elixir-autogen, elixir-format
+msgid "Before"
+msgstr "Før"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:727
+#, elixir-autogen, elixir-format
+msgid "Change fields"
+msgstr "Endre felter"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:802
+#, elixir-autogen, elixir-format
+msgid "Change settings of %{block}"
+msgstr "Endre innstillinger for %{block}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:864
+#, elixir-autogen, elixir-format
+msgid "Changes applied"
+msgstr "Endringene er utført"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:240
+#, elixir-autogen, elixir-format
+msgid "Changes are only applied after your confirmation."
+msgstr "Endringene utføres først når du bekrefter dem."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:448
+#, elixir-autogen, elixir-format
+msgid "Changes by entry"
+msgstr "Endringer per oppføring"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1256
+#, elixir-autogen, elixir-format
+msgid "Checked a content type's fields"
+msgstr "Sjekket feltene i en innholdstype"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1258
+#, elixir-autogen, elixir-format
+msgid "Checked a module's slots"
+msgstr "Sjekket plassene i en modul"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:141
+#, elixir-autogen, elixir-format
+msgid "Conversation"
+msgstr "Samtale"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:381
+#, elixir-autogen, elixir-format
+msgid "Create a case called Sommerro with image1 as its cover"
+msgstr "Lag en case som heter Sommerro, med image1 som forsidebilde"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:98
+#, elixir-autogen, elixir-format
+msgid "Create and edit content across entries. Nothing changes until you apply it."
+msgstr "Lag og rediger innhold på tvers av oppføringer. Ingenting endres før du utfører det."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:710
+#, elixir-autogen, elixir-format
+msgid "Create the entry as a draft"
+msgstr "Opprett oppføringen som utkast"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:439
+#, elixir-autogen, elixir-format
+msgid "Created as draft"
+msgstr "Opprettet som utkast"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1398
+#, elixir-autogen, elixir-format
+msgid "Current site"
+msgstr "Nåværende nettsted"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:371
+#, elixir-autogen, elixir-format
+msgid "Describe the changes in the conversation. The assistant prepares them here for review, entry by entry, and nothing is saved until you apply them."
+msgstr "Beskriv endringene i samtalen. Assistenten gjør dem klare til gjennomgang her, oppføring for oppføring, og ingenting lagres før du utfører dem."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:150
+#, elixir-autogen, elixir-format
+msgid "Describe the changes you want: which entries, which media and where it goes. Attach media first and refer to it as image1, video1 and so on."
+msgstr "Beskriv endringene du vil ha: hvilke oppføringer, hvilke medier og hvor de skal. Legg ved mediene først og vis til dem som image1, video1 og så videre."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:175
+#, elixir-autogen, elixir-format
+msgid "Describe the content changes…"
+msgstr "Beskriv innholdsendringene …"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:597
+#, elixir-autogen, elixir-format
+msgid "Desktop"
+msgstr "Desktop"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1291
+#, elixir-autogen, elixir-format
+msgid "Discarded"
+msgstr "Forkastet"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:752
+#, elixir-autogen, elixir-format
+msgid "Empty field"
+msgstr "Tomt felt"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:548
+#, elixir-autogen, elixir-format
+msgid "Entries in this proposal"
+msgstr "Oppføringer i dette forslaget"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:376
+#, elixir-autogen, elixir-format
+msgid "For example"
+msgstr "For eksempel"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:485
+#, elixir-autogen, elixir-format
+msgid "Live page"
+msgstr "Publisert side"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1257
+#, elixir-autogen, elixir-format
+msgid "Looked at the available modules"
+msgstr "Så på tilgjengelige moduler"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1255
+#, elixir-autogen, elixir-format
+msgid "Looked at the content types"
+msgstr "Så på innholdstypene"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1262
+#, elixir-autogen, elixir-format
+msgid "Looked at the site's content"
+msgstr "Så på innholdet på nettstedet"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1259
+#, elixir-autogen, elixir-format
+msgid "Matched the attached media"
+msgstr "Fant de vedlagte mediene"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:166
+#, elixir-autogen, elixir-format
+msgid "Message"
+msgstr "Melding"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:598
+#, elixir-autogen, elixir-format
+msgid "Mobile"
+msgstr "Mobil"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1293
+#, elixir-autogen, elixir-format
+msgid "Needs changes"
+msgstr "Trenger endringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:129
+#: lib/brando_admin/live/ai/assistant_live.ex:143
+#, elixir-autogen, elixir-format
+msgid "New conversation"
+msgstr "Ny samtale"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:486
+#, elixir-autogen, elixir-format
+msgid "New draft"
+msgstr "Nytt utkast"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1034
+#, elixir-autogen, elixir-format
+msgid "New entry"
+msgstr "Ny oppføring"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:135
+#, elixir-autogen, elixir-format
+msgid "No AI model is configured for this site. Add a model and key to the Brando.AI configuration to use the assistant."
+msgstr "Ingen KI-modell er satt opp for dette nettstedet. Legg til en modell og en nøkkel i Brando.AI-konfigurasjonen for å bruke assistenten."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:116
+#, elixir-autogen, elixir-format
+msgid "No conversations yet"
+msgstr "Ingen samtaler ennå"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:369
+#, elixir-autogen, elixir-format
+msgid "No proposal yet"
+msgstr "Ingen forslag ennå"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:487
+#, elixir-autogen, elixir-format
+msgid "Not published"
+msgstr "Ikke publisert"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:544
+#, elixir-autogen, elixir-format
+msgid "Page preview"
+msgstr "Forhåndsvisning"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:682
+#, elixir-autogen, elixir-format
+msgid "Page preview is not configured for this content type. Review the changes in the entry card."
+msgstr "Forhåndsvisning er ikke satt opp for denne innholdstypen. Se gjennom endringene i kortet for oppføringen."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:659
+#, elixir-autogen, elixir-format
+msgid "Page preview of %{title}"
+msgstr "Forhåndsvisning av %{title}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1261
+#, elixir-autogen, elixir-format
+msgid "Prepared the proposal"
+msgstr "Gjorde klar forslaget"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:495
+#, elixir-autogen, elixir-format
+msgid "Preview page"
+msgstr "Forhåndsvis siden"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:243
+#, elixir-autogen, elixir-format
+msgid "Proposal"
+msgstr "Forslag"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:410
+#, elixir-autogen, elixir-format
+msgid "Proposal · version %{version}"
+msgstr "Forslag · versjon %{version}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:567
+#: lib/brando_admin/live/ai/assistant_live.ex:628
+#, elixir-autogen, elixir-format
+msgid "Proposed"
+msgstr "Foreslått"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:380
+#, elixir-autogen, elixir-format
+msgid "Put image1 on the Index page, after the introduction"
+msgstr "Sett image1 på forsiden, etter ingressen"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1254
+#, elixir-autogen, elixir-format
+msgid "Read an entry"
+msgstr "Leste en oppføring"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1294
+#, elixir-autogen, elixir-format
+msgid "Ready for your review"
+msgstr "Klar til gjennomgang"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:113
+#, elixir-autogen, elixir-format
+msgid "Recent conversations"
+msgstr "Siste samtaler"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:326
+#, elixir-autogen, elixir-format
+msgid "Remove %{alias}"
+msgstr "Fjern %{alias}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:776
+#, elixir-autogen, elixir-format
+msgid "Replace media in %{block}"
+msgstr "Bytt media i %{block}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1292
+#, elixir-autogen, elixir-format
+msgid "Replaced by a newer version"
+msgstr "Erstattet av en nyere versjon"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:790
+#, elixir-autogen, elixir-format
+msgid "Rewrite text in %{block}"
+msgstr "Skriv om teksten i %{block}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:382
+#, elixir-autogen, elixir-format
+msgid "Rewrite the introduction on the About page to be shorter"
+msgstr "Skriv om ingressen på Om oss-siden så den blir kortere"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:628
+#, elixir-autogen, elixir-format
+msgid "Saved version"
+msgstr "Lagret versjon"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1253
+#, elixir-autogen, elixir-format
+msgid "Searched for “%{query}”"
+msgstr "Søkte etter «%{query}»"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1260
+#, elixir-autogen, elixir-format
+msgid "Searched the media library"
+msgstr "Søkte i mediebiblioteket"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:234
+#, elixir-autogen, elixir-format
+msgid "Send"
+msgstr "Send"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:616
+#, elixir-autogen, elixir-format
+msgid "Show changes"
+msgstr "Vis endringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:158
+#, elixir-autogen, elixir-format
+msgid "Stop"
+msgstr "Stopp"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:433
+#, elixir-autogen, elixir-format
+msgid "The changes are saved. Pages are re-rendered in the background."
+msgstr "Endringene er lagret. Sidene rendres på nytt i bakgrunnen."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:693
+#, elixir-autogen, elixir-format
+msgid "The page could not be rendered: %{message}"
+msgstr "Siden kunne ikke rendres: %{message}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:545
+#, elixir-autogen, elixir-format
+msgid "The proposed content in the site's own templates. Nothing is saved."
+msgstr "Det foreslåtte innholdet i nettstedets egne maler. Ingenting lagres."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:831
+#, elixir-autogen, elixir-format
+msgid "Thinking"
+msgstr "Tenker"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:673
+#, elixir-autogen, elixir-format
+msgid "This page has not been created yet. Switch to Proposed to see it."
+msgstr "Denne siden er ikke opprettet ennå. Bytt til Foreslått for å se den."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:423
+#, elixir-autogen, elixir-format
+msgid "This proposal cannot be applied yet. Ask the assistant to adjust it."
+msgstr "Dette forslaget kan ikke utføres ennå. Be assistenten justere det."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:440
+#, elixir-autogen, elixir-format
+msgid "Updated"
+msgstr "Oppdatert"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:196
+#, elixir-autogen, elixir-format
+msgid "Upload images or videos"
+msgstr "Last opp bilder eller videoer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:316
+#, elixir-autogen, elixir-format
+msgid "Used in the proposal"
+msgstr "Brukt i forslaget"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:593
+#, elixir-autogen, elixir-format
+msgid "Viewport"
+msgstr "Visning"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:268
+#, elixir-autogen, elixir-format
+msgid "You"
+msgstr "Du"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1364
+#, elixir-autogen, elixir-format
+msgid "affects %{count} live page"
+msgid_plural "affects %{count} live pages"
+msgstr[0] "berører %{count} publisert side"
+msgstr[1] "berører %{count} publiserte sider"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1303
+#, elixir-autogen, elixir-format
+msgid "changed block"
+msgid_plural "changed blocks"
+msgstr[0] "endret blokk"
+msgstr[1] "endrede blokker"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1304
+#, elixir-autogen, elixir-format
+msgid "deletion"
+msgid_plural "deletions"
+msgstr[0] "sletting"
+msgstr[1] "slettinger"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:745
+#, elixir-autogen, elixir-format
+msgid "module"
+msgstr "modul"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1302
+#, elixir-autogen, elixir-format
+msgid "new block"
+msgid_plural "new blocks"
+msgstr[0] "ny blokk"
+msgstr[1] "nye blokker"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1300
+#, elixir-autogen, elixir-format
+msgid "new entry"
+msgid_plural "new entries"
+msgstr[0] "ny oppføring"
+msgstr[1] "nye oppføringer"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1327
+#, elixir-autogen, elixir-format
+msgid "no deletions"
+msgstr "ingen slettinger"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:411
+#, elixir-autogen, elixir-format
+msgid "not applied"
+msgstr "ikke utført"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1301
+#, elixir-autogen, elixir-format
+msgid "updated entry"
+msgid_plural "updated entries"
+msgstr[0] "oppdatert oppføring"
+msgstr[1] "oppdaterte oppføringer"

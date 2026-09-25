@@ -89,7 +89,7 @@ msgid_plural "%{count} items need attention"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando/content/transfer/entries.ex:399
+#: lib/brando/content/transfer/entries.ex:405
 #, elixir-autogen, elixir-format
 msgid "%{value1} is already in use. Update the matching entry or choose another value."
 msgstr ""
@@ -355,7 +355,7 @@ msgid "Container"
 msgstr ""
 
 #: lib/brando/content/transfer.ex:847
-#: lib/brando/content/transfer/entries.ex:775
+#: lib/brando/content/transfer/entries.ex:781
 #, elixir-autogen, elixir-format
 msgid "Content changed after this import. Recovery would overwrite newer edits."
 msgstr ""
@@ -875,7 +875,7 @@ msgstr ""
 msgid "Map the gallery's media assets; its owned gallery is recreated from the bundle."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:438
+#: lib/brando/content/transfer/entries.ex:444
 #, elixir-autogen, elixir-format
 msgid "Map the table template used by the destination module."
 msgstr ""
@@ -1005,7 +1005,7 @@ msgstr ""
 msgid "Needs attention"
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:527
+#: lib/brando/content/transfer/entries.ex:533
 #, elixir-autogen, elixir-format
 msgid "New entries refer to each other in a cycle. Map one of those references to an existing entry, then review again."
 msgstr ""
@@ -1060,7 +1060,7 @@ msgstr ""
 msgid "Original “%{value1}” is unavailable locally. Restore it from storage, or export without originals and map an existing destination asset."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:937
+#: lib/brando/content/transfer/entries.ex:943
 #, elixir-autogen, elixir-format
 msgid "Other content now references an entry created by this import. Remove those references before recovering."
 msgstr ""
@@ -1211,7 +1211,7 @@ msgid "Resolve dependency %{value1} before importing."
 msgstr ""
 
 #: lib/brando/content/transfer.ex:404
-#: lib/brando/content/transfer/entries.ex:542
+#: lib/brando/content/transfer/entries.ex:548
 #, elixir-autogen, elixir-format
 msgid "Resolve every blocking problem before importing."
 msgstr ""
@@ -1222,7 +1222,7 @@ msgid "Resolve the entry's referenced content before importing."
 msgstr ""
 
 #: lib/brando/content/transfer.ex:339
-#: lib/brando/content/transfer/entries.ex:428
+#: lib/brando/content/transfer/entries.ex:434
 #, elixir-autogen, elixir-format
 msgid "Resolve the required modules before reviewing content."
 msgstr ""
@@ -1444,7 +1444,7 @@ msgid "The bundle exceeds 128 MB. Export fewer fields or omit media originals."
 msgstr ""
 
 #: lib/brando/content/transfer.ex:347
-#: lib/brando/content/transfer/entries.ex:434
+#: lib/brando/content/transfer/entries.ex:440
 #, elixir-autogen, elixir-format
 msgid "The child module belongs to a different destination parent."
 msgstr ""
@@ -1474,7 +1474,7 @@ msgstr ""
 msgid "The destination %{value1} “%{value2}” is missing or has a different type."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:575
+#: lib/brando/content/transfer/entries.ex:581
 #, elixir-autogen, elixir-format
 msgid "The destination changed after preview. Review the import again."
 msgstr ""
@@ -1519,7 +1519,7 @@ msgstr ""
 msgid "The image exceeds the 100 megapixel import limit."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:481
+#: lib/brando/content/transfer/entries.ex:487
 #, elixir-autogen, elixir-format
 msgid "The included entry does not support content links."
 msgstr ""
@@ -1579,7 +1579,7 @@ msgstr ""
 msgid "The upload could not be completed. Remove the file and try again."
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:680
+#: lib/brando/content/transfer/entries.ex:686
 #, elixir-autogen, elixir-format
 msgid "This Blueprint needs a generated integer entry ID."
 msgstr ""
@@ -2146,7 +2146,7 @@ msgstr ""
 msgid "Parent"
 msgstr ""
 
-#: lib/brando/content/transfer/entries.ex:463
+#: lib/brando/content/transfer/entries.ex:469
 #, elixir-autogen, elixir-format
 msgid "The existing entry has no saved link identifier. Run Sync identifiers in Utilities, then review the import again."
 msgstr ""

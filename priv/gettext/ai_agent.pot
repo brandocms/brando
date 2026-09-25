@@ -1,0 +1,108 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:194
+#, elixir-autogen, elixir-format
+msgid "Checking a module's slots"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:197
+#, elixir-autogen, elixir-format
+msgid "Checking the proposal"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:89
+#, elixir-autogen, elixir-format
+msgid "Done."
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:53
+#, elixir-autogen, elixir-format
+msgid "I stopped after %{steps} steps. Tell me how to continue."
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:195
+#, elixir-autogen, elixir-format
+msgid "Looking at the available modules"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:198
+#, elixir-autogen, elixir-format
+msgid "Looking at the site's content"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:193
+#, elixir-autogen, elixir-format
+msgid "Reading an entry"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:192
+#, elixir-autogen, elixir-format
+msgid "Searching for “%{query}”"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:196
+#, elixir-autogen, elixir-format
+msgid "Searching the media library"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:238
+#, elixir-autogen, elixir-format
+msgid "Something went wrong: %{error}"
+msgstr ""
+
+#: lib/brando/ai/agent.ex:326
+#, elixir-autogen, elixir-format
+msgid "The assistant has no AI model configured for this site."
+msgstr ""
+
+#: lib/brando/ai/agent.ex:342
+#, elixir-autogen, elixir-format
+msgid "The assistant is still working on the previous message."
+msgstr ""
+
+#: lib/brando/ai/agent.ex:424
+#, elixir-autogen, elixir-format
+msgid "The assistant requires an authenticated user."
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:209
+#, elixir-autogen, elixir-format
+msgid "The assistant's token budget is used up. Nothing more was sent to the model."
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:69
+#, elixir-autogen, elixir-format
+msgid "Thinking"
+msgstr ""
+
+#: lib/brando/ai/agent.ex:408
+#: lib/brando/ai/agent.ex:410
+#, elixir-autogen, elixir-format
+msgid "This conversation is not available."
+msgstr ""
+
+#: lib/brando/ai/agent.ex:218
+#, elixir-autogen, elixir-format
+msgid "This upload was not reserved in the conversation."
+msgstr ""
+
+#: lib/brando/ai/agent.ex:323
+#, elixir-autogen, elixir-format
+msgid "Write a message first."
+msgstr ""
+
+#: lib/brando/ai/agent.ex:419
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to use the assistant."
+msgstr ""

@@ -82,7 +82,7 @@ msgid_plural "%{count} items need attention"
 msgstr[0] "%{count} element må gjennomgås"
 msgstr[1] "%{count} elementer må gjennomgås"
 
-#: lib/brando/content/transfer/entries.ex:399
+#: lib/brando/content/transfer/entries.ex:405
 #, elixir-autogen, elixir-format
 msgid "%{value1} is already in use. Update the matching entry or choose another value."
 msgstr "%{value1} er allerede i bruk. Oppdater den eksisterende oppføringen eller velg en annen verdi."
@@ -348,7 +348,7 @@ msgid "Container"
 msgstr "Seksjon"
 
 #: lib/brando/content/transfer.ex:847
-#: lib/brando/content/transfer/entries.ex:775
+#: lib/brando/content/transfer/entries.ex:781
 #, elixir-autogen, elixir-format
 msgid "Content changed after this import. Recovery would overwrite newer edits."
 msgstr "Innholdet er endret etter importen. Gjenoppretting ville overskrevet nyere endringer."
@@ -868,7 +868,7 @@ msgstr "Koble til en eksisterende mediefil på målstedet. Originalen er ikke in
 msgid "Map the gallery's media assets; its owned gallery is recreated from the bundle."
 msgstr "Koble galleriets mediefiler. Et eget galleri opprettes fra pakken."
 
-#: lib/brando/content/transfer/entries.ex:438
+#: lib/brando/content/transfer/entries.ex:444
 #, elixir-autogen, elixir-format
 msgid "Map the table template used by the destination module."
 msgstr "Koble tabellmalen som brukes av modulen på målstedet."
@@ -998,7 +998,7 @@ msgstr "Navn"
 msgid "Needs attention"
 msgstr "Må gjennomgås"
 
-#: lib/brando/content/transfer/entries.ex:527
+#: lib/brando/content/transfer/entries.ex:533
 #, elixir-autogen, elixir-format
 msgid "New entries refer to each other in a cycle. Map one of those references to an existing entry, then review again."
 msgstr "Nye oppføringer viser til hverandre i en sirkel. Koble en av referansene til en eksisterende oppføring, og gjennomgå på nytt."
@@ -1053,7 +1053,7 @@ msgstr "Original inkludert"
 msgid "Original “%{value1}” is unavailable locally. Restore it from storage, or export without originals and map an existing destination asset."
 msgstr "Originalen «%{value1}» er ikke tilgjengelig lokalt. Hent den fra lagringen, eller eksporter uten originaler og koble til en eksisterende mediefil på målstedet."
 
-#: lib/brando/content/transfer/entries.ex:937
+#: lib/brando/content/transfer/entries.ex:943
 #, elixir-autogen, elixir-format
 msgid "Other content now references an entry created by this import. Remove those references before recovering."
 msgstr "Annet innhold viser nå til en oppføring opprettet av denne importen. Fjern referansene før gjenoppretting."
@@ -1204,7 +1204,7 @@ msgid "Resolve dependency %{value1} before importing."
 msgstr "Avklar avhengigheten %{value1} før import."
 
 #: lib/brando/content/transfer.ex:404
-#: lib/brando/content/transfer/entries.ex:542
+#: lib/brando/content/transfer/entries.ex:548
 #, elixir-autogen, elixir-format
 msgid "Resolve every blocking problem before importing."
 msgstr "Løs alle blokkerende problemer før import."
@@ -1215,7 +1215,7 @@ msgid "Resolve the entry's referenced content before importing."
 msgstr "Avklar innholdet oppføringen viser til, før import."
 
 #: lib/brando/content/transfer.ex:339
-#: lib/brando/content/transfer/entries.ex:428
+#: lib/brando/content/transfer/entries.ex:434
 #, elixir-autogen, elixir-format
 msgid "Resolve the required modules before reviewing content."
 msgstr "Avklar nødvendige moduler før du gjennomgår innholdet."
@@ -1437,7 +1437,7 @@ msgid "The bundle exceeds 128 MB. Export fewer fields or omit media originals."
 msgstr "Pakken overstiger 128 MB. Eksporter færre felt eller utelat originale mediefiler."
 
 #: lib/brando/content/transfer.ex:347
-#: lib/brando/content/transfer/entries.ex:434
+#: lib/brando/content/transfer/entries.ex:440
 #, elixir-autogen, elixir-format
 msgid "The child module belongs to a different destination parent."
 msgstr "Undermodulen tilhører en annen overordnet modul på målstedet."
@@ -1467,7 +1467,7 @@ msgstr "Avhengighetsmanifestet er ugyldig eller for stort."
 msgid "The destination %{value1} “%{value2}” is missing or has a different type."
 msgstr "Målstedets %{value1} «%{value2}» mangler eller har en annen type."
 
-#: lib/brando/content/transfer/entries.ex:575
+#: lib/brando/content/transfer/entries.ex:581
 #, elixir-autogen, elixir-format
 msgid "The destination changed after preview. Review the import again."
 msgstr "Målet er endret etter forhåndsvisningen. Gjennomgå importen på nytt."
@@ -1512,7 +1512,7 @@ msgstr "Oppføringens Blueprint er ikke registrert på dette nettstedet."
 msgid "The image exceeds the 100 megapixel import limit."
 msgstr "Bildet overstiger importgrensen på 100 megapiksler."
 
-#: lib/brando/content/transfer/entries.ex:481
+#: lib/brando/content/transfer/entries.ex:487
 #, elixir-autogen, elixir-format
 msgid "The included entry does not support content links."
 msgstr "Den inkluderte oppføringen støtter ikke innholdslenker."
@@ -1572,7 +1572,7 @@ msgstr "Den valgte oppføringen er ikke lenger tilgjengelig."
 msgid "The upload could not be completed. Remove the file and try again."
 msgstr "Opplastingen kunne ikke fullføres. Fjern filen og prøv på nytt."
 
-#: lib/brando/content/transfer/entries.ex:680
+#: lib/brando/content/transfer/entries.ex:686
 #, elixir-autogen, elixir-format
 msgid "This Blueprint needs a generated integer entry ID."
 msgstr "Denne Blueprint-typen krever en generert oppførings-ID som heltall."
@@ -2139,7 +2139,7 @@ msgstr "Opprett nye oppføringer, oppdater eksisterende eller bruk eksisterende 
 msgid "Parent"
 msgstr "Forelder"
 
-#: lib/brando/content/transfer/entries.ex:463
+#: lib/brando/content/transfer/entries.ex:469
 #, elixir-autogen, elixir-format
 msgid "The existing entry has no saved link identifier. Run Sync identifiers in Utilities, then review the import again."
 msgstr "Den eksisterende oppføringen mangler en lagret lenkeidentifikator. Kjør Synkroniser identifikatorer i Verktøy, og gjennomgå importen på nytt."
