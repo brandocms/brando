@@ -22,6 +22,79 @@ defmodule Brando.Content.Blocks do
   @type changeset :: Ecto.Changeset.t()
   @fragment_module Module.concat(["Brando", "Pages", "Fragment"])
 
+  # --- Block Construction ---
+
+  @doc """
+  Build an insert changeset for a new block from a module definition.
+
+  `module_reference` is a module id or a shared-library reference. Refs get
+  fresh UIDs and vars are copied without primary keys, so the block owns its
+  own rows. The block is stamped with the module's current version: a block
+  built from the definition as it stands has nothing to migrate.
+  """
+  @spec build_module_block(term(), integer() | nil, integer() | nil, module(), atom()) :: changeset
+  def build_module_block(module_reference, user_id, parent_id, source, type) do
+    {module_origin, module_id} = Content.SharedLibrary.reference(module_reference)
+    module = Content.fetch_module(module_id, module_origin)
+
+    refs =
+      (module.refs || [])
+      |> remove_pk_from_refs()
+      |> Enum.map(fn ref ->
+        %Ref{
+          name: ref.name,
+          description: ref.description,
+          data: ref.data,
+          sequence: ref.sequence,
+          uid: Utils.generate_uid()
+        }
+      end)
+
+    %Block{}
+    |> Changeset.change(%{
+      uid: Utils.generate_uid(),
+      type: type,
+      creator_id: user_id,
+      module_id: module_id,
+      module_origin: module_origin,
+      module_version: module.version || 1,
+      parent_id: parent_id,
+      multi: module.multi,
+      source: source,
+      children: [],
+      block_identifiers: [],
+      table_rows: []
+    })
+    |> Changeset.put_assoc(:vars, remove_pk_from_vars(module.vars))
+    |> Changeset.put_assoc(:refs, refs)
+    |> Map.put(:action, :insert)
+  end
+
+  @doc """
+  Render every block field of an entry changeset into its `rendered_*` columns.
+
+  The generated `create_*`/`update_*` mutations save what they are given; the
+  admin form renders before calling them, and so must any other writer that
+  changes blocks.
+  """
+  @spec render_block_fields(changeset) :: changeset
+  def render_block_fields(%Changeset{data: %{__struct__: schema}} = changeset) do
+    fields = schema.__blocks_fields__()
+
+    dropped =
+      Enum.flat_map(fields, &[&1.name, :"entry_#{&1.name}", :"rendered_#{&1.name}", :"rendered_#{&1.name}_at"])
+
+    entry = changeset |> Changeset.apply_changes() |> Map.drop(dropped)
+
+    Enum.reduce(fields, changeset, fn %{name: name}, acc ->
+      blocks = changeset |> Changeset.get_assoc(:"entry_#{name}") |> Utils.apply_changes_recursively()
+
+      acc
+      |> Changeset.put_change(:"rendered_#{name}", Villain.parse(blocks, entry, []))
+      |> Changeset.put_change(:"rendered_#{name}_at", DateTime.truncate(DateTime.utc_now(), :second))
+    end)
+  end
+
   # --- Block Queries ---
 
   @doc """

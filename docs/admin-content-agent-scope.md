@@ -397,3 +397,92 @@ screenshots. Open the offline prototype and choose **Preview page** on any card.
 Recommended next implementation step: prove the domain proposal/apply path for
 the actual site's Case definition and category schemas. That will establish the
 block contract, publication dependencies and side effects the chat must support.
+
+## Stage 1 findings (25 September 2026)
+
+Stage 1 is implemented as `Brando.Content.Proposals` (prepare, materialize, apply,
+receipts) and `Brando.Content.Proposals.Preview`, with no LLM involved. Proposals are
+hand-written operation lists. Coverage:
+
+- `test/brando/content/proposals_test.exs`: `Pages.Page` and the test live-preview
+  targets.
+- `e2e/test/unit/content_proposals_test.exs`: the real `Projects.Project` (Case) and a
+  page as the category. The unsaved case renders through the site's own template.
+
+### Block contract for the stage-2 module-contract tool
+
+| Part | Contract |
+| --- | --- |
+| Module | Module id or shared-library reference, plus its `version`. Only root modules (`parent_id` nil). The block field's `module_set` form option limits the choice; `"all"` or no option allows every root module. |
+| Placement | `:append`, or `{:before, uid}` / `{:after, uid}` next to a root block of the field. Blocks the same proposal inserted earlier can also be addressed. |
+| Media refs | A `picture` ref accepts an image and sets `image_id`. A `video` ref accepts a video and sets `video_id`. A `media` ref accepts the kinds in its `available_blocks` and is retyped from the definition's `template_picture`/`template_video`, as the editor does. Gallery and SVG are not supported yet. |
+| Vars | `string`, `text` and `html` take a string; `boolean` takes a boolean. Other var types are reported as unsupported. |
+| Frozen identity | The block UID, ref UIDs and module version are fixed at prepare, so review, preview and apply build the same block. A module whose version changes invalidates the proposal. |
+| Links to new entries | A value `{:new, ref}` is a blocking `:draft_dependency`. The new entry is always a draft. |
+
+**Gap for stage 2:** ref *content* such as a text ref's body cannot be set; only vars and
+media can. Most real modules keep their copy in text refs, so the stage-2 contract needs
+settable text/header refs before the planner is useful for writing.
+
+### Side effects inside the apply transaction
+
+Entries are saved through the generated `create_*`/`update_*` mutations, in operation
+order, with new entries first.
+
+| Effect | Rolls back with the transaction? |
+| --- | --- |
+| Entry, blocks, refs, vars, identifiers, revisions | Yes: same repo |
+| Oban jobs: entry cascade, scheduled publishing, Markdown-source publish | Yes: Oban inserts through the same repo |
+| Query-cache eviction (`Brando.Query.update/insert`) | No, but harmless: evicted entries are fetched again |
+| Mutation PubSub broadcast and toast notification | Suppressed inside the transaction (`pubsub: false`, `show_notification: false` / `notify?: false`) and sent after commit |
+| Proposal receipt | Yes: inserted in the same transaction under an advisory lock, so a second apply finds it |
+
+### What broke for unsaved (nil-id) previews, and the fixes
+
+- **An entry with no block operations reached the renderer with its block fields
+  unloaded** (`NotLoaded` in `Villain.parse`). Materialization now gives a new entry an
+  empty list for every block field.
+- **`belongs_to` assets preload through their foreign key**, so
+  `schema_preloads [:listing_image]` works for an entry without an id. No change was
+  needed.
+- **The e2e Case template was stale.** It read `@entry.cover`, a field the schema no
+  longer has, and did not render blocks. The template now renders `listing_image` and
+  `rendered_blocks`, and `E2eProjectWeb.LivePreview` has a `Projects.Project` target.
+- **Not exercised yet:** templates that call `absolute_url/1`, read alternates or query
+  other entries by the preview entry's id. Stage 5 must check each real target for
+  these.
+- **Preview authority:** `LivePreview.initialize/4` generates a random key and registers
+  it through `Authorization.Preview.register/2`, which reads the current scope.
+  `Preview.render/4` wraps it in the proposing user's scope. Keys are cleaned up with
+  `Preview.discard/1`.
+
+### Other decisions the spike forced
+
+- **Unique keys that `prevent_collision` would rename are a problem, not a rename.** A
+  URI or slug that clashes is reported as `:taken` at prepare, and checked again before
+  each save. What is saved is what was reviewed. This reuses
+  `Content.Transfer.Entries.unique!/1`.
+- **Changing a published entry needs the publish grant.** An editor without it gets
+  `:forbidden` at prepare, even with the update grant. The review UI has to explain this
+  instead of offering an apply that will fail.
+- **The generated mutations do not render blocks.** Proposals render
+  `rendered_<field>` before saving, as the form does
+  (`Brando.Content.Blocks.render_block_fields/1`).
+- **Changesets need a user record, not a `Scope`.** The Creator trait would otherwise
+  store the scope as the creator. Proposals accept either and resolve the user.
+- `BlockField.build_block/5` now delegates to `Brando.Content.Blocks.build_module_block/5`.
+- Receipts live in `content_proposal_receipts` (brando_183). The table is in `public`,
+  scoped by site/environment and never copied between environments, like
+  content-transfer receipts. Recovery from a receipt's `before` snapshot is not built;
+  it belongs with stage 2's approval records.
+
+### Revised estimates for stages 2–5
+
+| Stage | Before | Now | Why |
+| --- | --- | --- | --- |
+| 2. Proposal services and MCP tools | 5–8 days | 6–9 days | Settable text refs, more var types, persisted proposals/approvals, module-set resolution under the tenant shared library, scoped MCP adapter |
+| 3. Agent runtime | 3–5 days | 3–5 days | Unchanged |
+| 4. Admin experience | 5–8 days | 5–8 days | Unchanged; the review data (`effects`, problems with targets) now exists |
+| 5. Page preview integration | 2–4 days | 2–3 days | The adapter, baseline/proposed rendering and block annotations for highlighting already work; the remaining work is UI controls, cache lifecycle per proposal version and a per-target template audit |
+
+Stage 1 took about a day, not the estimated 2–3.

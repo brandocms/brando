@@ -1966,53 +1966,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     )
   end
 
-  def build_block(module_reference, user_id, parent_id, source, type) do
-    {module_origin, module_id} = Brando.Content.SharedLibrary.reference(module_reference)
-    module = get_module(module_id, module_origin)
-    # Generate fresh refs with new UIDs when creating blocks from modules
-    fresh_refs =
-      (module.refs || [])
-      |> Brando.Content.Blocks.remove_pk_from_refs()
-      |> Enum.map(&Map.put(&1, :uid, Brando.Utils.generate_uid()))
-
-    cleaned_vars = Brando.Content.Blocks.remove_pk_from_vars(module.vars)
-
-    # Create clean ref structs
-    cleaned_refs =
-      Enum.map(fresh_refs, fn ref ->
-        %Brando.Content.Ref{
-          name: ref.name,
-          description: ref.description,
-          data: ref.data,
-          sequence: ref.sequence,
-          uid: ref.uid
-        }
-      end)
-
-    block_changeset =
-      %Brando.Content.Block{}
-      |> Changeset.change(%{
-        uid: Brando.Utils.generate_uid(),
-        type: type,
-        creator_id: user_id,
-        module_id: module_id,
-        module_origin: module_origin,
-        # Born at the module's current revision — a block built from the
-        # definition as it stands now has nothing to migrate.
-        module_version: module.version || 1,
-        parent_id: parent_id,
-        multi: module.multi,
-        source: source,
-        children: [],
-        block_identifiers: [],
-        table_rows: []
-      })
-      |> Changeset.put_assoc(:vars, cleaned_vars)
-      |> Changeset.put_assoc(:refs, cleaned_refs)
-      |> Map.put(:action, :insert)
-
-    block_changeset
-  end
+  defdelegate build_block(module_reference, user_id, parent_id, source, type),
+    to: ContentBlocks,
+    as: :build_module_block
 
   def build_fragment(user_id, parent_id, source) do
     Changeset.change(

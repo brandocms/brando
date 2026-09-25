@@ -1,6 +1,7 @@
 defmodule E2eProjectWeb.LivePreview do
   use Brando.LivePreview
   alias Brando.Pages
+  alias E2eProject.Projects
 
   preview_target Pages.Page do
     label "Page"
@@ -21,7 +22,12 @@ defmodule E2eProjectWeb.LivePreview do
     reassign_on_change [{:pages, [:title]}, {:pages, [:uri]}]
 
     assign :pages, fn entry, language ->
-      pages = Pages.list_pages!(%{filter: %{language: language}, status: :published, order: "asc sequence"})
+      pages =
+        Pages.list_pages!(%{
+          filter: %{language: language},
+          status: :published,
+          order: "asc sequence"
+        })
 
       if Enum.any?(pages, &(&1.id == entry.id)) do
         Enum.map(pages, fn page -> if page.id == entry.id, do: entry, else: page end)
@@ -29,5 +35,15 @@ defmodule E2eProjectWeb.LivePreview do
         [entry | pages]
       end
     end
+  end
+
+  preview_target Projects.Project do
+    label "Case"
+    description "The case page with its layout"
+    layout {E2eProjectWeb.Layouts, "app"}
+    template {E2eProjectWeb.ProjectHTML, "detail"}
+    template_section "project"
+    template_prop :entry
+    schema_preloads [:listing_image]
   end
 end
