@@ -248,7 +248,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
       </div>
 
       <%= if @audit && @audit_status == :done do %>
-        <.overview audit={@audit} />
+        <.overview audit={@audit} ai_available={@ai_available} generating={@generating} />
 
         <.batch
           :if={@ai_available}
@@ -369,6 +369,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
                             phx-value-key={key}
                             disabled={MapSet.member?(@generating, key)}
                           >
+                            <.ai_icon />
                             <%= if MapSet.member?(@generating, key) do %>
                               {gettext("Writing…")}
                             <% else %>
@@ -377,6 +378,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
                           </button>
                           <.link
                             :if={warns?(row, :image_alt)}
+                            class="seo-row-action"
                             navigate={
                               Brando.routes().admin_live_path(Brando.RuntimeConfig.endpoint(), BrandoAdmin.Images.AltTextLive)
                             }
@@ -391,6 +393,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
                             phx-value-key={key}
                             disabled={@critiques[key] == :running}
                           >
+                            <.ai_icon />
                             {gettext("Review with AI")}
                           </button>
                         </div>
@@ -445,9 +448,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
       </p>
       <div class="seo-batch-actions">
         <button :if={!@confirm} type="button" class="workspace-button" phx-click="confirm_batch">
+          <.ai_icon />
           {gettext("Write missing descriptions")}
         </button>
         <button :if={@confirm} type="button" class="workspace-button primary" phx-click="start_batch">
+          <.ai_icon />
           {ngettext("Write one description", "Write %{count} descriptions", @count)}
         </button>
         <button :if={@confirm} type="button" class="workspace-button" phx-click="cancel_batch">
@@ -588,6 +593,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   attr :audit, :any
+  attr :ai_available, :boolean, default: false
+  attr :generating, :any, default: MapSet.new()
 
   defp overview(assigns) do
     ~H"""
@@ -624,10 +631,6 @@ defmodule BrandoAdmin.Sites.SEOLive do
         <div :if={source?(@audit, :search_console)} class="seo-stat" data-warn={to_string(@audit.low_click_through > 0)}>
           <dt>{gettext("Low click-through")}</dt>
           <dd>{@audit.low_click_through}</dd>
-        </div>
-        <div class="seo-stat">
-          <dt>{gettext("Drafts not audited")}</dt>
-          <dd>{@audit.drafts}</dd>
         </div>
         <div class="seo-stat">
           <dt>{gettext("Sitemap")}</dt>
@@ -677,31 +680,87 @@ defmodule BrandoAdmin.Sites.SEOLive do
         <h3>{gettext("Duplicates")}</h3>
         <.duplicate_group
           :for={{value, rows} <- @audit.duplicate_descriptions}
-          kind={gettext("Description")}
+          kind={gettext("Same description")}
+          field="meta_description"
+          action={gettext("Write a new description")}
           value={value}
           rows={rows}
+          ai_available={@ai_available}
+          generating={@generating}
         />
-        <.duplicate_group :for={{value, rows} <- @audit.duplicate_titles} kind={gettext("Title")} value={value} rows={rows} />
+        <.duplicate_group
+          :for={{value, rows} <- @audit.duplicate_titles}
+          kind={gettext("Same title")}
+          field="meta_title"
+          action={gettext("Write a new title")}
+          value={value}
+          rows={rows}
+          ai_available={@ai_available}
+          generating={@generating}
+        />
       </div>
     </div>
     """
   end
 
+  # Marks an action that writes or judges with AI, as the AI button in form
+  # fields does.
+  defp ai_icon(assigns) do
+    ~H"""
+    <Brando.HTML.Icon.icon name="hero-sparkles" class="ai-icon" />
+    """
+  end
+
   attr :kind, :string
+  attr :field, :string
+  attr :action, :string
   attr :value, :string
   attr :rows, :list
+  attr :ai_available, :boolean
+  attr :generating, :any
 
+  # One card per shared value: what is shared and how widely, the text itself
+  # (clamped, in full on hover), then a row per entry to go and fix it. Each
+  # entry can have its copy rewritten on its own, so one can keep the text
+  # while the others get new; a rewritten entry drops out on the re-audit.
   defp duplicate_group(assigns) do
     ~H"""
-    <div class="seo-duplicate">
-      <p><strong>{@kind}:</strong> <q>{@value}</q></p>
+    <section class="seo-duplicate">
+      <header>
+        <h4>{@kind}</h4>
+        <span class="workspace-badge warning">
+          {ngettext("%{count} entry", "%{count} entries", length(@rows))}
+        </span>
+      </header>
+      <blockquote title={@value}>{@value}</blockquote>
       <ul>
         <li :for={row <- @rows}>
-          <.link navigate={row.schema.__admin_route__(:update, [row.id])}>{row.title}</.link>
-          <small>{Brando.Blueprint.get_singular(row.schema)}</small>
+          <div>
+            <.link navigate={row.schema.__admin_route__(:update, [row.id])}>{row.title}</.link>
+            <small>
+              {Brando.Blueprint.get_singular(row.schema)}<span :if={row.url}> · <code>{row.url}</code></span>
+            </small>
+          </div>
+          <div class="seo-duplicate-actions">
+            <button
+              :if={@ai_available}
+              type="button"
+              class="seo-row-action"
+              phx-click="generate_description"
+              phx-value-key={row_key(row)}
+              phx-value-field={@field}
+              disabled={MapSet.member?(@generating, row_key(row))}
+            >
+              <.ai_icon />
+              {if MapSet.member?(@generating, row_key(row)), do: gettext("Writing…"), else: @action}
+            </button>
+            <.link class="seo-row-action" navigate={row.schema.__admin_route__(:update, [row.id])}>
+              {gettext("Open entry")}
+            </.link>
+          </div>
         </li>
       </ul>
-    </div>
+    </section>
     """
   end
 
@@ -784,13 +843,21 @@ defmodule BrandoAdmin.Sites.SEOLive do
     end
   end
 
-  def handle_event("generate_description", %{"key" => key}, socket) do
+  # Writes the meta description, or the meta title when a duplicate-title card
+  # asks for one.
+  def handle_event("generate_description", %{"key" => key} = params, socket) do
     %{audit: audit, current_user: user, ai_available: available?} = socket.assigns
     row = audit && Enum.find(audit.rows, &(row_key(&1) == key))
+    field = if params["field"] == "meta_title", do: :meta_title, else: :meta_description
 
     if available? and row do
       fields = Map.get(socket.assigns.ai_context_fields, row.schema)
-      run = fn -> Generate.generate(row.schema, row.id, :meta_description, user, context_fields: fields) end
+
+      run = fn ->
+        with {:ok, generated} <- Generate.generate(row.schema, row.id, field, user, context_fields: fields) do
+          {:ok, Map.put(generated, :field, field)}
+        end
+      end
 
       {:noreply,
        socket
@@ -893,8 +960,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   # The entry is written before the audit re-runs, so the row picks the new
   # description up from the database rather than from the reply.
-  def handle_async({:generate, key}, {:ok, {:ok, _generated}}, socket) do
-    send(self(), {:toast, gettext("Description written")})
+  def handle_async({:generate, key}, {:ok, {:ok, generated}}, socket) do
+    message = if generated[:field] == :meta_title, do: gettext("Title written"), else: gettext("Description written")
+    send(self(), {:toast, message})
 
     {:noreply,
      socket
