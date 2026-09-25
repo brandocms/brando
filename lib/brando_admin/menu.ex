@@ -245,6 +245,12 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
+  # Shown when a model is configured and the user may use the assistant.
+  defp assistant_menu_item(current_user) do
+    if current_user && Brando.AI.Agent.available?() && Brando.AI.Agent.allowed?(current_user),
+      do: %{name: gettext("Assistant"), url: "/admin/assistant"}
+  end
+
   def get_menu(current_user \\ nil, current_site \\ nil) do
     content_menus = Brando.admin_module(Menus).__menus__()
 
@@ -257,6 +263,7 @@ defmodule BrandoAdmin.Menu do
               name: gettext("Dashboard"),
               url: "/admin"
             },
+            assistant_menu_item(current_user),
             sites_menu_item(current_user),
             %{
               name: gettext("Configuration"),

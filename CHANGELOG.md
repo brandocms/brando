@@ -382,6 +382,21 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **System → Assistant** turns a conversation into reviewed content changes
+  across entries: create entries, insert blocks, and place text, images and
+  videos. The model runs in the backend and only reads content and prepares
+  proposals, through in-process tools called as the editor. There is no MCP
+  endpoint. The editor applies a proposal with one click, which approves
+  exactly that version and applies it atomically. New entries are drafts.
+  Configure `Brando.AI.Agent` with a model and budgets, and grant
+  `brando.assistant.use` with groups authorization. **Preview page** renders
+  each entry as proposed, or as saved, through the site's own live-preview
+  targets, and outlines the changed blocks. See
+  [Content assistant](guides/content_assistant.md).
+- `Brando.Content.Proposals` stores, validates, previews and applies these
+  proposals, and can be used without the assistant.
+- Run `mix brando.gen.migrations` for `brando_183`–`brando_185`, which add
+  proposals, their receipts, and assistant conversations. All live in `public`.
 - `Brando.AI` takes named models: `models: [default: "...", image: "..."]`.
   Alt text asks for `:image`, so a cheaper model that reads images can write
   it while a stronger one writes copy; a name that is not set falls back to

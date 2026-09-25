@@ -397,3 +397,225 @@ screenshots. Open the offline prototype and choose **Preview page** on any card.
 Recommended next implementation step: prove the domain proposal/apply path for
 the actual site's Case definition and category schemas. That will establish the
 block contract, publication dependencies and side effects the chat must support.
+
+## Stage 1 findings (25 September 2026)
+
+Stage 1 is implemented as `Brando.Content.Proposals` (prepare, materialize, apply,
+receipts) and `Brando.Content.Proposals.Preview`, with no LLM involved. Proposals are
+hand-written operation lists. Coverage:
+
+- `test/brando/content/proposals_test.exs`: `Pages.Page` and the test live-preview
+  targets.
+- `e2e/test/unit/content_proposals_test.exs`: the real `Projects.Project` (Case) and a
+  page as the category. The unsaved case renders through the site's own template.
+
+### Block contract for the stage-2 module-contract tool
+
+| Part | Contract |
+| --- | --- |
+| Module | Module id or shared-library reference, plus its `version`. Only root modules (`parent_id` nil). The block field's `module_set` form option limits the choice; `"all"` or no option allows every root module. |
+| Placement | `:append`, or `{:before, uid}` / `{:after, uid}` next to a root block of the field. Blocks the same proposal inserted earlier can also be addressed. |
+| Media refs | A `picture` ref accepts an image and sets `image_id`. A `video` ref accepts a video and sets `video_id`. A `media` ref accepts the kinds in its `available_blocks` and is retyped from the definition's `template_picture`/`template_video`, as the editor does. Gallery and SVG are not supported yet. |
+| Vars | `string`, `text` and `html` take a string; `boolean` takes a boolean. Other var types are reported as unsupported. |
+| Frozen identity | The block UID, ref UIDs and module version are fixed at prepare, so review, preview and apply build the same block. A module whose version changes invalidates the proposal. |
+| Links to new entries | A value `{:new, ref}` is a blocking `:draft_dependency`. The new entry is always a draft. |
+
+**Gap for stage 2:** ref *content* such as a text ref's body cannot be set; only vars and
+media can. Most real modules keep their copy in text refs, so the stage-2 contract needs
+settable text/header refs before the planner is useful for writing.
+
+### Side effects inside the apply transaction
+
+Entries are saved through the generated `create_*`/`update_*` mutations, in operation
+order, with new entries first.
+
+| Effect | Rolls back with the transaction? |
+| --- | --- |
+| Entry, blocks, refs, vars, identifiers, revisions | Yes: same repo |
+| Oban jobs: entry cascade, scheduled publishing, Markdown-source publish | Yes: Oban inserts through the same repo |
+| Query-cache eviction (`Brando.Query.update/insert`) | No, but harmless: evicted entries are fetched again |
+| Mutation PubSub broadcast and toast notification | Suppressed inside the transaction (`pubsub: false`, `show_notification: false` / `notify?: false`) and sent after commit |
+| Proposal receipt | Yes: inserted in the same transaction under an advisory lock, so a second apply finds it |
+
+### What broke for unsaved (nil-id) previews, and the fixes
+
+- **An entry with no block operations reached the renderer with its block fields
+  unloaded** (`NotLoaded` in `Villain.parse`). Materialization now gives a new entry an
+  empty list for every block field.
+- **`belongs_to` assets preload through their foreign key**, so
+  `schema_preloads [:listing_image]` works for an entry without an id. No change was
+  needed.
+- **The e2e Case template was stale.** It read `@entry.cover`, a field the schema no
+  longer has, and did not render blocks. The template now renders `listing_image` and
+  `rendered_blocks`, and `E2eProjectWeb.LivePreview` has a `Projects.Project` target.
+- **Not exercised yet:** templates that call `absolute_url/1`, read alternates or query
+  other entries by the preview entry's id. Stage 5 must check each real target for
+  these.
+- **Preview authority:** `LivePreview.initialize/4` generates a random key and registers
+  it through `Authorization.Preview.register/2`, which reads the current scope.
+  `Preview.render/4` wraps it in the proposing user's scope. Keys are cleaned up with
+  `Preview.discard/1`.
+
+### Other decisions the spike forced
+
+- **Unique keys that `prevent_collision` would rename are a problem, not a rename.** A
+  URI or slug that clashes is reported as `:taken` at prepare, and checked again before
+  each save. What is saved is what was reviewed. This reuses
+  `Content.Transfer.Entries.unique!/1`.
+- **Changing a published entry needs the publish grant.** An editor without it gets
+  `:forbidden` at prepare, even with the update grant. The review UI has to explain this
+  instead of offering an apply that will fail.
+- **The generated mutations do not render blocks.** Proposals render
+  `rendered_<field>` before saving, as the form does
+  (`Brando.Content.Blocks.render_block_fields/1`).
+- **Changesets need a user record, not a `Scope`.** The Creator trait would otherwise
+  store the scope as the creator. Proposals accept either and resolve the user.
+- `BlockField.build_block/5` now delegates to `Brando.Content.Blocks.build_module_block/5`.
+- Receipts live in `content_proposal_receipts` (brando_183). The table is in `public`,
+  scoped by site/environment and never copied between environments, like
+  content-transfer receipts. Recovery from a receipt's `before` snapshot is not built;
+  it belongs with stage 2's approval records.
+
+### Revised estimates for stages 2–5
+
+| Stage | Before | Now | Why |
+| --- | --- | --- | --- |
+| 2. Proposal services and MCP tools | 5–8 days | 6–9 days | Settable text refs, more var types, persisted proposals/approvals, module-set resolution under the tenant shared library, scoped MCP adapter |
+| 3. Agent runtime | 3–5 days | 3–5 days | Unchanged |
+| 4. Admin experience | 5–8 days | 5–8 days | Unchanged; the review data (`effects`, problems with targets) now exists |
+| 5. Page preview integration | 2–4 days | 2–3 days | The adapter, baseline/proposed rendering and block annotations for highlighting already work; the remaining work is UI controls, cache lifecycle per proposal version and a per-target template audit |
+
+Stage 1 took about a day, not the estimated 2–3.
+
+## Stage 2: proposal services and tools (25 September 2026)
+
+- **Stored, versioned proposals** (`content_proposals`, brando_184).
+  `Proposals.propose/3` prepares the operations and stores them frozen, in
+  `Proposals.Codec` form. A refinement (`supersedes:`) gets the next version and
+  marks the previous one `superseded`.
+- **Approval and apply.** `approve/3` records the user's approval of one exact
+  version. It works only on a pending version without problems whose entries and
+  modules are unchanged. `apply/3` takes only the proposal id and version, never
+  operations from the client, and requires that approval. It checks the approval
+  again under the row lock and marks the version `applied` in the same
+  transaction. Other statuses: `cancel/2` and expiry (24 hours).
+  Applying in-memory, unstored proposals is no longer possible.
+- **Block contract additions.** Text refs take safe rich text (the editor's
+  `RichText.safe_html?/1`); header refs take plain text (`texts` on `InsertBlock`,
+  and `SetBlockText`). Select vars take one of their options. Multi modules are
+  not insertable: proposals do not build children yet.
+- **Tool registry: `Brando.Content.Proposals.Tools`.**
+  - Tools: `list_content_types`, `describe_content_type`, `search_entries`,
+    `entry_outline`, `list_modules`, `describe_module`, `list_attachments`,
+    `search_assets` and `prepare_proposal`.
+  - They run with the actor from `Tools.Context`, never from arguments.
+  - Results are compact and bounded (20 results, 160-character excerpts).
+  - Only `prepare_proposal` stores anything. Nothing approves or applies.
+- **BrandoMCP** (sibling repository) exposes the same tools as
+  `brando_content_*`. They work only for the actor the host puts in the handler
+  state. `BrandoMCP.Embedded.call_tool/4` calls them as plain functions, with every
+  transport disabled. The admin's agent calls `Proposals.Tools` directly and does
+  not need BrandoMCP.
+
+## Stage 3: agent runtime (25 September 2026)
+
+- **`Brando.AI.Agent`** manages conversations, attachments and runs.
+  - Conversations belong to one user in one site/environment.
+  - Attachment aliases (`image1`, `video1` …) follow the order in which media
+    is attached, and survive detaching other media.
+  - `send_message/4` stores the user's message and starts a run under
+    `Brando.AI.Agent.Supervisor`, with the tenant context captured. One run per
+    conversation at a time. A run left behind by a restart is marked
+    `interrupted` after ten minutes.
+- **`Agent.Loop`** is the tool loop on ReqLLM.
+  - Each step calls the model, stores every message as it happens, and runs the
+    requested tools in-process through `Proposals.Tools` as the conversation's
+    user.
+  - A successful `prepare_proposal` becomes the conversation's proposal under
+    review, and the next one refines it.
+  - The context is rebuilt from stored messages on every call, so runs are
+    stateless.
+  - Progress, messages, proposals and run status are broadcast on a scoped
+    PubSub topic.
+- **Limits and cost:** a step limit (12) and an output-token limit per call
+  (4096).
+  - `Agent.Budget` reserves an estimate before each call, against a per-run
+    budget and an optional monthly budget per site/environment. The estimate is
+    about four characters per token plus the output limit. Reservations happen
+    under an advisory lock.
+  - After each call, the provider's reported usage replaces the reservation.
+    Input, output, cached and reasoning tokens are recorded.
+  - Cost is estimated from configured `prices`, then the cost ReqLLM reports,
+    then the model catalogue.
+  - Cancel stops the run before its next model or tool call. A call already in
+    flight is still charged.
+- **Model:** `config :brando, Brando.AI.Agent, model: "anthropic:claude-opus-5-5"`,
+  with keys from `Brando.AI`. The llm_db catalogue in ReqLLM 1.22 does not list
+  `claude-opus-5-5`, so without `prices` its cost shows as zero.
+- **Not verified against a live provider:** no API key was available.
+  Instead, the OpenAI Responses and Anthropic Messages tool exchanges are
+  tested offline through ReqLLM's real encoders and decoders (`Req.Test`
+  stubs): tool definitions go out, `tool_use`/`function_call` comes in, and
+  matching `tool_result`/`function_call_output` goes back.
+
+## Stage 4: Workspace UI (25 September 2026)
+
+- **`BrandoAdmin.AI.AssistantLive`** at `/admin/assistant` implements concept A:
+  the conversation on the left, the proposal under review on the right, and a
+  sticky apply bar.
+  - Tool calls collapse into a checklist of steps; a progress line has a Stop
+    button.
+  - Recent conversations are listed.
+  - The menu item appears under System when a model is configured and the user
+    may use the assistant (`brando.assistant.use`, a new capability).
+- **Review cards come from `Proposals.Review`**, which is derived only from the
+  stored, frozen operations. There is one card per entry, in operation order.
+  - Each card shows its action (Create/Update), links, thumbnails of the placed
+    media, and each change: the new block and its placement, text, media and
+    values, and field before/after.
+  - Problems appear per entry. Live pages and new drafts are labelled.
+  - The apply bar counts entry changes and live pages
+    (`Apply 1 entry change · affects 1 live page`).
+  - That click approves exactly the version on screen and applies it. The
+    receipt links to each saved entry.
+- **Attachments** can be uploaded through the sticky UploadManager, or picked
+  from a media-library dialog.
+  - Uploads use a new intent kind, `ai_conversation`.
+  - At intake the manager announces the accepted files in selection order, and
+    the conversation reserves `image1`, `image2`, … for them.
+  - Each delivery carries its file's ref, so a small file finishing first
+    cannot take a larger file's name.
+  - Pending uploads are shown and are not offered to the model.
+- **E2E runs against a scripted model.** `E2eProject.AssistantModel` implements
+  ReqLLM's `generate_text/3` and drives the real tools.
+  - `Brando.AI.Agent` got a `client` seam and its own `api_key`, so the e2e
+    configuration touches nothing else.
+  - Spawned runs join their LiveView's SQL sandbox. The pool's shared-mode
+    owner otherwise hid the LiveView's rows.
+- **Not done:** Norwegian translations of the new `ai_agent`/`content_proposals`
+  strings, and folder attachments.
+
+## Stage 5: page previews (25 September 2026)
+
+- **Preview page** on an entry card replaces the cards with the preview. It has
+  entry tabs, Before / Proposed, named views (when a content type has more than
+  one preview target), Desktop / Mobile, Show changes, and All changes. The
+  apply bar stays and still describes the whole batch.
+- **Frames are ordinary private live-preview keys** rendered by
+  `Proposals.Preview.render/4`, in the proposing user's scope, and served by
+  `/__livepreview`.
+  - Before is the saved baseline. It is refused if the entry has changed since
+    the proposal.
+  - A new entry has no Before ("This page has not been created yet").
+  - A content type without targets says so. A render error shows the message
+    and a retry.
+  - Only the latest frame's key is kept. Keys are discarded when the frame is
+    replaced, the preview closed, the proposal applied, or the LiveView ends.
+- **The `Brando.ProposalPreview` hook** finds each changed block between its
+  `[+:B<uid>]` … `[-:B<uid>]` annotations. It draws an outline over the block,
+  outside the page's content and layout, and scrolls it into view. A
+  ResizeObserver keeps the outline on the block as lazy media loads. The frame
+  stays keyboard-scrollable.
+- **Not done:** overlays for arbitrary cross-entry queries in templates, as
+  scoped in the issue. A category preview that lists cases does not include a
+  case the same proposal creates.

@@ -399,8 +399,24 @@ defmodule BrandoAdmin.UploadManager do
         end
       end)
 
+    announce_reservations(target, decisions, files)
     {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
   end
+
+  # A conversation names its attachments in the order the user chose them.
+  # Tell it which files were accepted, in that order, before any of them
+  # finishes — completion order depends on file size and must not decide names.
+  defp announce_reservations(%{"kind" => "ai_conversation", "deliver_topic" => topic} = target, decisions, files) do
+    accepted =
+      for %{ref: ref, index: index} = decision <- decisions, !Map.has_key?(decision, :error) do
+        file = Enum.find(files, &(Map.get(&1, "index", 0) == index)) || %{}
+        %{ref: ref, filename: Map.get(file, "name", ""), asset_type: target["asset_type"]}
+      end
+
+    Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:assets_reserved, target, accepted})
+  end
+
+  defp announce_reservations(_target, _decisions, _files), do: :ok
 
   defp initiate_upload(:file, %{"kind" => "file_replace", "file_id" => file_id}, meta, user),
     do: Brando.Files.Replacement.initiate(file_id, meta, user)
@@ -682,6 +698,12 @@ defmodule BrandoAdmin.UploadManager do
   # Pair this line with the one `form.ex` logs at mount: same topic means the
   # delivery could land, different means it could not. See D2.
   defp deliver(%{superseded: true}, _asset), do: :ok
+
+  # A conversation matches the asset to the alias it reserved for this file.
+  defp deliver(%{ref: ref, target: %{"kind" => "ai_conversation", "deliver_topic" => topic} = target}, asset)
+       when is_binary(topic) do
+    Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:asset_ready, Map.put(target, "upload_ref", ref), asset})
+  end
 
   defp deliver(%{target: %{"deliver_topic" => topic} = target}, asset) when is_binary(topic) do
     Logger.info("==> UploadManager: delivering asset ##{asset.id} to #{topic_ref(topic)}")

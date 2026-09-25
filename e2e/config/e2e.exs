@@ -102,3 +102,4 @@ config :brando, :markdown_sources,
   }
 
 config :brando, :markdown_sources_provider, E2E.MarkdownProvider
+

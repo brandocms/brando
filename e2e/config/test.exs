@@ -48,3 +48,12 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   debug_tags_location: true,
   enable_expensive_runtime_checks: true
+
+# The content assistant runs against a scripted model (E2eProject.AssistantModel)
+# that drives the real tools. Only the agent is configured; other AI features
+# stay unconfigured, as the rest of the suite expects.
+config :brando, Brando.AI.Agent,
+  model: "anthropic:claude-opus-5-5",
+  api_key: "e2e-scripted",
+  client: E2eProject.AssistantModel,
+  prices: [input: 5.0, output: 25.0]

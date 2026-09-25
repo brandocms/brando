@@ -366,9 +366,15 @@ defmodule Brando.Content.Transfer.Entries do
     cs
   end
 
-  # Collision callbacks normally rename a key during insertion. A transfer must
-  # review the actual key, so catch those collisions before any write occurs.
-  defp unique!(cs) do
+  @doc """
+  Raise if a unique attribute of `cs` is already taken.
+
+  Collision callbacks normally rename a key during insertion. Reviewed writers
+  (transfers and content proposals) must save the key that was reviewed, so
+  they catch those collisions before any write occurs.
+  """
+  @spec unique!(Changeset.t()) :: :ok
+  def unique!(cs) do
     schema = cs.data.__struct__
 
     Enum.each(Brando.Blueprint.Attributes.__attributes__(schema), fn attribute ->

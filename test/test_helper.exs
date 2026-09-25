@@ -186,6 +186,14 @@ defmodule BrandoIntegrationWeb.LivePreview do
   end
 
   preview_target Brando.Pages.Page do
+    name :blocks
+    label "Blocks"
+    description "The page's rendered blocks"
+    template {BrandoIntegrationWeb.PageHTML, "blocks"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+  end
+
+  preview_target Brando.Pages.Page do
     name :broken
     template fn _ -> raise "Broken preview template" end
     layout {BrandoIntegrationWeb.Layouts, "app"}

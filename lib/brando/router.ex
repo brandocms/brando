@@ -105,6 +105,8 @@ defmodule Brando.Router do
                 {BrandoAdmin.Authorization, :default}
               ] do
           live "/groups", BrandoAdmin.Users.GroupsLive
+          live "/assistant", BrandoAdmin.AI.AssistantLive
+          live "/assistant/:conversation_id", BrandoAdmin.AI.AssistantLive, :show
           # brando routes
           live "/sites", BrandoAdmin.Sites.SiteLive
           live "/assets/images", BrandoAdmin.Images.ImageListLive

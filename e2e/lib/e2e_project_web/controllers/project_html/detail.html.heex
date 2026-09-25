@@ -1,12 +1,13 @@
 <main id="content">
   <div class="project-header">
     <h2><%= @entry.title %></h2>
-    <.picture src={@entry.cover} opts={[
+    <.picture :if={@entry.listing_image} src={@entry.listing_image} opts={[
       prefix: media_url(),
       lazyload: true,
-      srcset: {E2eProject.Projects.Project, :cover},
+      srcset: {E2eProject.Projects.Project, :listing_image},
       placeholder: :dominant_color,
       moonwalk: true
     ]} />
   </div>
+  <%= Phoenix.HTML.raw(@entry.rendered_blocks) %>
 </main>

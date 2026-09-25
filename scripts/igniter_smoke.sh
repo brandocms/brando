@@ -82,6 +82,9 @@ if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix run "$framework_dir/scripts/igniter_smoke/check_customized.exs" > "$smoke_root/logs/check-customized.log" 2>&1
 fi
 
+# The installer enables HMR in dev.exs; the smoke serves the built manifests
+# checked above instead of a Vite dev server.
+printf '\nconfig :igniter_smoke, hmr: false\n' >> config/dev.exs
 PORT="$smoke_port" mix phx.server > "$smoke_root/logs/server.log" 2>&1 &
 smoke_server_pid=$!
 smoke_ready=false

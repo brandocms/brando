@@ -14,7 +14,7 @@ defmodule Brando.LivePreview.TargetsTest do
   test "legacy targets remain the default and named targets resolve without browser atom conversion" do
     assert LivePreview.get_target_config(Page).name == :default
     assert LivePreview.get_target_config(Page, "listing").label == "Listing"
-    assert Enum.map(LivePreview.get_targets(Page), & &1.name) == [:default, :listing, :broken]
+    assert Enum.map(LivePreview.get_targets(Page), & &1.name) == [:default, :listing, :blocks, :broken]
 
     assert_raise Brando.Exception.LivePreviewError, fn ->
       LivePreview.get_target_config(Page, "not-a-declared-target")
