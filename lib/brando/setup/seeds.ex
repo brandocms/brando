@@ -357,7 +357,7 @@ defmodule Brando.Setup.Seeds do
         [header_ref("heading", 2, "Section heading", 0)] ++
           Enum.flat_map(1..6, fn n ->
             [
-              header_ref("tip_#{n}_title", 4, "Tip #{n}", n * 2 - 1),
+              header_ref("tip_#{n}_title", 3, "Tip #{n}", n * 2 - 1),
               text_ref("tip_#{n}_text", "<p>Tip description</p>", n * 2)
             ]
           end)
@@ -484,7 +484,7 @@ defmodule Brando.Setup.Seeds do
         ] ++
           Enum.flat_map(1..4, fn n ->
             [
-              header_ref("rail_#{n}_title", 4, "Note #{n}", n * 2),
+              header_ref("rail_#{n}_title", 3, "Note #{n}", n * 2),
               text_ref("rail_#{n}_text", "<p>Note description</p>", n * 2 + 1)
             ]
           end)
@@ -752,7 +752,7 @@ defmodule Brando.Setup.Seeds do
        |> Enum.with_index(1)
        |> Enum.flat_map(fn {{title, text}, n} ->
          [
-           header_ref("tip_#{n}_title", 4, title, n * 2 - 1),
+           header_ref("tip_#{n}_title", 3, title, n * 2 - 1),
            text_ref("tip_#{n}_text", "<p>#{text}</p>", n * 2)
          ]
        end))
@@ -784,7 +784,7 @@ defmodule Brando.Setup.Seeds do
        |> Enum.with_index(1)
        |> Enum.flat_map(fn {{title, text}, n} ->
          [
-           header_ref("rail_#{n}_title", 4, title, n * 2),
+           header_ref("rail_#{n}_title", 3, title, n * 2),
            text_ref("rail_#{n}_text", "<p>#{text}</p>", n * 2 + 1)
          ]
        end))

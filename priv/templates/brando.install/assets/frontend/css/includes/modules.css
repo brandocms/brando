@@ -369,6 +369,14 @@ main > [b-tpl] > .inner {
       letter-spacing: 0.1em;
     }
 
+    /* An H3 under the section's H2, set at the H4 size: a short list title,
+       not a subsection. */
+    h3 {
+      @fontsize heading/xl;
+
+      letter-spacing: -0.022em;
+    }
+
     p {
       @space margin-top xxs;
       @fontsize text/sm;
@@ -618,6 +626,12 @@ main > [b-tpl] > .inner {
 
     &:first-child {
       @color border-top bone.hairStrong;
+    }
+
+    h3 {
+      @fontsize heading/xl;
+
+      letter-spacing: -0.022em;
     }
 
     p {
