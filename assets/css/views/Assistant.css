@@ -13,6 +13,7 @@
   --assistant-new: #e6f1ea;
   --assistant-new-line: #6a9b80;
   --assistant-warning: #8a5a14;
+  --assistant-danger: #b42318;
   --assistant-error: #9b2c2c;
   --assistant-chat-width: 380px;
   padding-top: 32px;
@@ -623,7 +624,19 @@
 }
 
 .assistant-apply-summary { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; strong { font-weight: 500; white-space: nowrap; } span { color: var(--assistant-muted); font-size: 12px; } }
-.assistant-apply-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; margin-left: auto; }
+.assistant-apply-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+
+  /* One size for every action in the bar; the apply button sets it. */
+  > button { min-height: 40px; padding: 9px 18px; font-size: 13px; font-weight: 500; }
+  /* Discarding throws the proposal away, so it reads as destructive. */
+  > .assistant-discard { border-color: transparent; background: transparent; color: var(--assistant-danger); }
+  > .assistant-discard:hover { background: #fdf0ef; }
+}
 
 /* Page preview */
 

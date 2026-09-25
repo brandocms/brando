@@ -503,7 +503,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span>{block_summary(@proposal.effects)}</span>
         </div>
         <div class="assistant-apply-actions">
-          <button type="button" class="assistant-quiet-button" phx-click="cancel_proposal">
+          <button type="button" class="assistant-button assistant-discard" phx-click="cancel_proposal">
             {gettext("Discard")}
           </button>
           <button type="button" class="assistant-button" phx-click={JS.focus(to: "#assistant-input")}>
