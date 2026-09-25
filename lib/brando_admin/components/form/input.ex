@@ -1260,6 +1260,9 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:i18n_id, "#{assigns.field.id}-i18n")
       |> assign(:first, languages |> List.first() |> then(&(&1 && elem(&1, 0))))
       |> assign(:label_text, label_text(assigns[:label]))
+      # A language is only missing once another has text; an empty field is
+      # just empty, not missing a translation in every language.
+      |> assign(:written?, Enum.any?(languages, fn {language, _} -> !blank_i18n?(value[language]) end))
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
@@ -1274,7 +1277,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             aria-selected={to_string(language == @first)}
             aria-controls={"#{@i18n_id}-panel-#{language}"}
             title={name}
-            data-empty={to_string(blank_i18n?(@value[language]))}
+            data-missing={to_string(@written? and blank_i18n?(@value[language]))}
             phx-click={select_i18n_tab(@i18n_id, language)}
           >
             {language}
