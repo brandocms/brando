@@ -305,6 +305,9 @@
   .seo-audit-table > tbody > tr > td > small { display: block; margin-top: 2px; color: var(--workspace-muted); font-size: 11px; }
   .seo-audit-table > tbody > tr > td:nth-child(2) { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .seo-audit-table > tbody > tr > td:nth-child(3) { white-space: nowrap; }
+  /* The toggle column hugs its button against the table's right edge. */
+  .seo-audit-table > thead > tr > th:last-child,
+  .seo-audit-table > tbody > .seo-audit-row > td:last-child { width: 1%; text-align: right; }
   .seo-row-toggle, .seo-row-action { border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; padding: 4px 10px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
   .seo-row-toggle:hover, .seo-row-action:hover { background: #f4f7f2; }
   /* The expanded row is a wash band holding two cards of equal weight: the
