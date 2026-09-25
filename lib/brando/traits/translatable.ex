@@ -28,7 +28,6 @@ defmodule Brando.Trait.Translatable do
 
   alias Brando.Blueprint.Assets
   alias Brando.Blueprint.Attributes
-  alias Brando.Blueprint.Relations
   alias Brando.Exception.BlueprintError
   alias Brando.Trait.Translatable.Compiler
 
@@ -90,18 +89,17 @@ defmodule Brando.Trait.Translatable do
     end
   end
 
-  @impl true
-  def after_save(entry, _changeset, _user) do
-    # `minor: true` arrives with the editor's "Save minor text corrections".
-    Brando.Translations.source_saved(entry, minor: false)
-  end
-
+  # Runs while each translatable Blueprint compiles. Relations are read off
+  # Spark, not through `Brando.Blueprint.Relations.__relations__/1`: that module
+  # depends on `Brando.Repo`, which reaches the whole application, so the
+  # compile-time call put every translatable Blueprint in a compile-connected
+  # cycle with itself (see brandocms/brando#2737).
   defp controllable_fields(module) do
     attributes = Enum.map(Attributes.__attributes__(module), & &1.name)
     assets = Enum.map(Assets.__assets__(module), & &1.name)
 
     relations =
-      for %{type: :belongs_to, name: name} <- Relations.__relations__(module), do: name
+      for %{type: :belongs_to, name: name} <- Spark.Dsl.Extension.get_entities(module, [:relations]), do: name
 
     attributes ++ assets ++ relations
   end
