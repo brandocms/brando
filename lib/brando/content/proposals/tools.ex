@@ -49,6 +49,8 @@ defmodule Brando.Content.Proposals.Tools do
   @system_fields ~w(id status publish_at deleted_at marked_as_deleted creator_id updated_by_id inserted_at updated_at
                     sequence edited_at rendered_blocks rendered_blocks_at)
 
+  @statuses ~w(published draft disabled pending)
+
   @definitions [
     %{
       name: "list_content_types",
@@ -265,7 +267,8 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp run("list_content_types", _args, %{actor: actor}) do
     types =
-      for schema <- Catalog.schemas(), Brando.Authorization.Boundary.authorize(actor, :update, schema) == :ok do
+      for schema <- Catalog.editable_schemas(),
+          Brando.Authorization.Boundary.authorize(actor, :update, schema) == :ok do
         %{
           content_type: Codec.content_type(schema),
           label: Brando.Blueprint.get_singular(schema),
@@ -297,12 +300,19 @@ defmodule Brando.Content.Proposals.Tools do
         %{name: "#{name}_id", type: "#{type} id", required: false}
       end
 
+    status =
+      if :status in schema.__schema__(:fields),
+        do: [%{name: "status", type: "one of #{Enum.join(@statuses, ", ")}", required: false}],
+        else: []
+
     %{
       content_type: Codec.content_type(schema),
       label: Brando.Blueprint.get_singular(schema),
-      fields: attributes ++ references ++ assets ++ EntryFields.describe(schema),
+      fields: attributes ++ references ++ assets ++ EntryFields.describe(schema) ++ status,
       block_fields: block_fields(schema),
-      publication: "New entries are created as drafts. Existing entries keep their status."
+      publication:
+        "New entries are created as drafts. Set an existing entry's status to change it: published shows it, " <>
+          "disabled deactivates it (hidden from the site, kept in the admin), draft takes it back to work on."
     }
   end
 
@@ -1039,7 +1049,7 @@ defmodule Brando.Content.Proposals.Tools do
   defp schema!(name) do
     case Codec.schema(name) do
       {:ok, schema} ->
-        if schema in Catalog.schemas(), do: schema, else: Error.fail!("#{name} has no block fields.")
+        if schema in Catalog.editable_schemas(), do: schema, else: Error.fail!("#{name} cannot be changed here.")
 
       :error ->
         Error.fail!("Unknown content type #{inspect(name)}. Use list_content_types.")

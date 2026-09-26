@@ -874,6 +874,16 @@ defmodule Brando.Content.Proposals.Review do
   defp media_ref(kind, id) when is_integer(id), do: %{kind: kind, id: id}
   defp media_ref(_, _), do: nil
 
+  defp display(_schema, "status", value) when is_binary(value) or (is_atom(value) and not is_nil(value)) do
+    case to_string(value) do
+      "published" -> dgettext("content_proposals", "Published")
+      "draft" -> dgettext("content_proposals", "Draft")
+      "disabled" -> dgettext("content_proposals", "Deactivated")
+      "pending" -> dgettext("content_proposals", "Pending")
+      other -> other
+    end
+  end
+
   defp display(_schema, "language", value) when is_binary(value) or (is_atom(value) and not is_nil(value)) do
     code = to_string(value)
 

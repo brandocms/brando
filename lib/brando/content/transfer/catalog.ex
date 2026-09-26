@@ -14,6 +14,9 @@ defmodule Brando.Content.Transfer.Catalog do
     |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
   end
 
+  @doc "Content types a proposal can change: those with block fields, and other entries."
+  def editable_schemas, do: (schemas() ++ entry_schemas()) |> Enum.uniq() |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
+
   def entry_schemas do
     Brando.Authorization.Catalog.schemas()
     |> Enum.filter(&is_binary(&1.__schema__(:source)))
@@ -25,7 +28,7 @@ defmodule Brando.Content.Transfer.Catalog do
   end
 
   def schema!(name) do
-    Enum.find(schemas(), &(to_string(&1) == to_string(name))) ||
+    Enum.find(editable_schemas(), &(to_string(&1) == to_string(name))) ||
       Error.fail!(dgettext("content_transfer", "This content type is not registered on this site."))
   end
 

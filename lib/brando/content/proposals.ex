@@ -292,8 +292,10 @@ defmodule Brando.Content.Proposals do
 
   defp check(%SetFields{} = op, proposal, actor) do
     {schema, _} = op.target
+    {status, fields} = Map.split(op.fields, ["status"])
 
-    protected_fields(op.fields, schema) ++
+    protected_fields(fields, schema) ++
+      status_problems(status, schema, proposal.targets[op.target], actor) ++
       asset_fields(op.fields, schema, actor) ++
       list_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
   end
@@ -727,6 +729,35 @@ defmodule Brando.Content.Proposals do
         :protected_field,
         dgettext("content_proposals", "%{field} cannot be changed by a proposal.", field: key)
       )
+    end
+  end
+
+  # An existing entry's status: a real one for its type, and publishing —
+  # into or out of published — needs the publish permission.
+  defp status_problems(status, _schema, _entry, _actor) when status == %{}, do: []
+
+  defp status_problems(%{"status" => value}, schema, entry, actor) do
+    new = if is_binary(value) or is_atom(value), do: to_string(value)
+    old = entry && to_string(Map.get(entry, :status))
+
+    cond do
+      :status not in schema.__schema__(:fields) ->
+        [problem(:protected_field, dgettext("content_proposals", "This content type has no status."))]
+
+      new not in ~w(published draft disabled pending) ->
+        [
+          problem(
+            :unsupported_value,
+            dgettext("content_proposals", "The status is published, draft, disabled or pending.")
+          )
+        ]
+
+      "published" in [new, old] and new != old and
+          Brando.Authorization.Boundary.authorize(actor, :publish, schema) != :ok ->
+        [problem(:forbidden, dgettext("content_proposals", "You cannot publish or unpublish this content type."))]
+
+      true ->
+        []
     end
   end
 

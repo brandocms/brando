@@ -109,7 +109,7 @@ defmodule Brando.Content.ProposalsTest do
     assert Brando.Content.Transfer.Labels.field(Page, "related_cases") == "Related cases"
   end
 
-    test "creates one draft and inserts a block into two saved entries, leaving their other blocks alone", c do
+  test "creates one draft and inserts a block into two saved entries, leaving their other blocks alone", c do
     before_identity = roots(c.identity, c.user)
     before_naming = roots(c.naming, c.user)
     blocks = block_count()
@@ -228,7 +228,7 @@ defmodule Brando.Content.ProposalsTest do
       %InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id, placement: {:after, "nope"}},
       %InsertBlock{target: {:new, "ghost"}, module: c.case_module.id},
       %InsertBlock{target: {Page, c.identity.id}, module: -1},
-      %SetFields{target: {Page, c.naming.id}, fields: %{status: "draft", title: "x"}},
+      %SetFields{target: {Page, c.naming.id}, fields: %{creator_id: 1, title: "x"}},
       %CreateEntry{
         schema: Page,
         ref: "case",
@@ -1270,6 +1270,23 @@ defmodule Brando.Content.ProposalsTest do
   end
 
   describe "publishing, undo, sharing and language versions" do
+    test "an existing entry is deactivated by its status, which must be a real one", c do
+      target = {Page, c.work.id}
+      assert {:ok, proposal} = Proposals.propose([%SetFields{target: target, fields: %{status: "disabled"}}], c.user)
+      assert proposal.problems == []
+      assert [%{fields: [%{name: "Status", value: "Deactivated"}]}] = hd(Review.entries(proposal)).changes
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert Repo.get!(Page, c.work.id).status == :disabled
+
+      assert {:ok, %{problems: [%{code: :unsupported_value}]}} =
+               Proposals.propose([%SetFields{target: target, fields: %{status: "gone"}}], c.user)
+
+      # New entries stay drafts.
+      create = %CreateEntry{schema: Page, ref: :x, fields: %{title: "X", uri: "x", language: "en", status: "published"}}
+      assert {:ok, %{problems: [%{code: :protected_field}]}} = Proposals.propose([create], c.user)
+    end
+
     setup c, do: Brando.ProposalFixtures.multi_context(c)
 
     test "the reviewer publishes a new entry as the proposal is applied", c do

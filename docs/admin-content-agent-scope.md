@@ -803,3 +803,14 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
 - With several entries, "Share for review" first asks which entries the
   link shows. The token carries their keys, and the shared view shows and
   previews only those.
+
+## Entries without blocks, and status (26 September 2026)
+
+- The tools cover every entry type the admin can edit
+  (`Catalog.editable_schemas/0`), not only those with block fields, so the
+  assistant can change employees, clients and the like.
+- An existing entry's `status` can be set by a proposal. It must be one of
+  published, draft, disabled or pending. Moving into or out of published
+  needs the publish permission, which the authorization engine checks again
+  at apply. New entries are still created as drafts. The review shows the
+  status as the admin names it ("Deactivated" for disabled).

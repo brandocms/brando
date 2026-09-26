@@ -46,7 +46,15 @@ defmodule Brando.Content.Proposals.ToolsTest do
     %{fields: fields} = call!("describe_content_type", %{"content_type" => "Brando.Pages.Page"}, c.context)
     names = Enum.map(fields, & &1.name)
     assert "title" in names and "uri" in names
-    refute "status" in names
+    assert %{type: "one of published, draft, disabled, pending"} = Enum.find(fields, &(&1.name == "status"))
+
+    # Entries without block fields are listed too.
+    assert %{block_fields: []} = Enum.find(types, &(&1.content_type == "Brando.Content.Palette"))
+
+    palette = Brando.Factory.insert(:palette)
+
+    %{content_type: "Brando.Content.Palette"} =
+      call!("entry_outline", %{"content_type" => "Brando.Content.Palette", "id" => palette.id}, c.context)
 
     %{entries: entries} =
       call!(
