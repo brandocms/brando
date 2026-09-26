@@ -16,7 +16,7 @@ msgstr ""
 msgid "Checking a module's slots"
 msgstr "Sjekker plassene i en modul"
 
-#: lib/brando/ai/agent/loop.ex:197
+#: lib/brando/ai/agent/loop.ex:199
 #, elixir-autogen, elixir-format
 msgid "Checking the proposal"
 msgstr "Sjekker forslaget"
@@ -36,7 +36,7 @@ msgstr "Jeg stoppet etter %{steps} steg. Si fra hvordan jeg skal fortsette."
 msgid "Looking at the available modules"
 msgstr "Ser på tilgjengelige moduler"
 
-#: lib/brando/ai/agent/loop.ex:198
+#: lib/brando/ai/agent/loop.ex:200
 #, elixir-autogen, elixir-format
 msgid "Looking at the site's content"
 msgstr "Ser på innholdet på nettstedet"
@@ -56,27 +56,27 @@ msgstr "Søker etter «%{query}»"
 msgid "Searching the media library"
 msgstr "Søker i mediebiblioteket"
 
-#: lib/brando/ai/agent/loop.ex:238
+#: lib/brando/ai/agent/loop.ex:240
 #, elixir-autogen, elixir-format
 msgid "Something went wrong: %{error}"
 msgstr "Noe gikk galt: %{error}"
 
-#: lib/brando/ai/agent.ex:326
+#: lib/brando/ai/agent.ex:439
 #, elixir-autogen, elixir-format
 msgid "The assistant has no AI model configured for this site."
 msgstr "Assistenten har ingen KI-modell satt opp for dette nettstedet."
 
-#: lib/brando/ai/agent.ex:342
+#: lib/brando/ai/agent.ex:455
 #, elixir-autogen, elixir-format
 msgid "The assistant is still working on the previous message."
 msgstr "Assistenten jobber fortsatt med forrige melding."
 
-#: lib/brando/ai/agent.ex:424
+#: lib/brando/ai/agent.ex:537
 #, elixir-autogen, elixir-format
 msgid "The assistant requires an authenticated user."
 msgstr "Assistenten krever en innlogget bruker."
 
-#: lib/brando/ai/agent/loop.ex:209
+#: lib/brando/ai/agent/loop.ex:211
 #, elixir-autogen, elixir-format
 msgid "The assistant's token budget is used up. Nothing more was sent to the model."
 msgstr "Assistentens tokenbudsjett er brukt opp. Ingenting mer ble sendt til modellen."
@@ -86,23 +86,73 @@ msgstr "Assistentens tokenbudsjett er brukt opp. Ingenting mer ble sendt til mod
 msgid "Thinking"
 msgstr "Tenker"
 
-#: lib/brando/ai/agent.ex:408
-#: lib/brando/ai/agent.ex:410
+#: lib/brando/ai/agent.ex:521
+#: lib/brando/ai/agent.ex:523
 #, elixir-autogen, elixir-format
 msgid "This conversation is not available."
 msgstr "Denne samtalen er ikke tilgjengelig."
 
-#: lib/brando/ai/agent.ex:218
+#: lib/brando/ai/agent.ex:331
 #, elixir-autogen, elixir-format
 msgid "This upload was not reserved in the conversation."
 msgstr "Denne opplastingen var ikke reservert i samtalen."
 
-#: lib/brando/ai/agent.ex:323
+#: lib/brando/ai/agent.ex:436
 #, elixir-autogen, elixir-format
 msgid "Write a message first."
 msgstr "Skriv en melding først."
 
-#: lib/brando/ai/agent.ex:419
+#: lib/brando/ai/agent.ex:532
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to use the assistant."
 msgstr "Du har ikke tilgang til å bruke assistenten."
+
+#: lib/brando/ai/agent/loop.ex:198
+#, elixir-autogen, elixir-format
+msgid "Attaching the folder's media"
+msgstr "Legger ved mediene i mappen"
+
+#: lib/brando/ai/agent/loop.ex:197
+#, elixir-autogen, elixir-format
+msgid "Looking for the folder"
+msgstr "Ser etter mappen"
+
+#: lib/brando/ai/agent.ex:127
+#, elixir-autogen, elixir-format
+msgid "Save the entry before you open it in the assistant."
+msgstr "Lagre oppføringen før du åpner den i assistenten."
+
+#: lib/brando/ai/agent.ex:123
+#, elixir-autogen, elixir-format
+msgid "The assistant cannot work on this kind of content."
+msgstr "Assistenten kan ikke arbeide med denne typen innhold."
+
+#: lib/brando/ai/agent.ex:144
+#, elixir-autogen, elixir-format
+msgid "This entry has no block field %{field}."
+msgstr "Oppføringen har ikke blokkfeltet %{field}."
+
+#: lib/brando/ai/agent.ex:137
+#, elixir-autogen, elixir-format
+msgid "This entry is not available, or you do not have permission to change it."
+msgstr "Oppføringen er ikke tilgjengelig, eller du har ikke tilgang til å endre den."
+
+#: lib/brando/ai/agent/guidance.ex:142
+#, elixir-autogen, elixir-format
+msgid "Guidance can be at most %{count} characters."
+msgstr "Veiledningen kan være på høyst %{count} tegn."
+
+#: lib/brando/ai/agent/guidance.ex:194
+#, elixir-autogen, elixir-format
+msgid "This guidance is not available."
+msgstr "Denne veiledningen er ikke tilgjengelig."
+
+#: lib/brando/ai/agent/guidance.ex:203
+#, elixir-autogen, elixir-format
+msgid "This site"
+msgstr "Dette nettstedet"
+
+#: lib/brando/ai/agent/guidance.ex:235
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to change the assistant's guidance."
+msgstr "Du har ikke tilgang til å endre assistentens veiledning."

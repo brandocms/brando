@@ -194,6 +194,8 @@ defmodule Brando.AI.Agent.Loop do
   defp progress("describe_module", _), do: dgettext("ai_agent", "Checking a module's slots")
   defp progress("list_modules", _), do: dgettext("ai_agent", "Looking at the available modules")
   defp progress("search_assets", _), do: dgettext("ai_agent", "Searching the media library")
+  defp progress("find_media_folders", _), do: dgettext("ai_agent", "Looking for the folder")
+  defp progress("attach_folder", _), do: dgettext("ai_agent", "Attaching the folder's media")
   defp progress("prepare_proposal", _), do: dgettext("ai_agent", "Checking the proposal")
   defp progress(_, _), do: dgettext("ai_agent", "Looking at the site's content")
 

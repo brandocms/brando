@@ -39,6 +39,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
        video_uploads?: Brando.default_video_upload_strategy() == :local,
        scope_label: scope_label(socket),
        conversation: nil,
+       target: nil,
+       guidance: [],
+       configurable?: Agent.Guidance.configurable?(socket.assigns.current_user),
        conversations: [],
        messages: [],
        run: nil,
@@ -71,18 +74,35 @@ defmodule BrandoAdmin.AI.AssistantLive do
          |> assign(conversation: conversation, run: Agent.latest_run(id, user), progress: nil, error: nil, receipt: nil)
          |> assign_conversations()
          |> assign_messages()
-         |> assign_proposal()}
+         |> assign_proposal()
+         |> assign_guidance()}
 
       {:error, message} ->
         {:noreply, socket |> put_toast(:error, message) |> push_patch(to: "/admin/assistant")}
     end
   end
 
-  def handle_params(_params, _uri, socket) do
+  # `?content_type=…&id=…&field=…` comes from the block editor's Build with
+  # AI action: the conversation started here works on that entry.
+  def handle_params(params, _uri, socket) do
+    {target, socket} =
+      case params do
+        %{"content_type" => _, "id" => _} ->
+          case Agent.target(params, socket.assigns.current_user) do
+            {:ok, target} -> {target, socket}
+            {:error, message} -> {nil, put_toast(socket, :error, message)}
+          end
+
+        _ ->
+          {nil, socket}
+      end
+
     {:noreply,
      socket
      |> assign(conversation: nil, messages: [], run: nil, proposal: nil, review: [], receipt: nil, error: nil)
-     |> assign_conversations()}
+     |> assign(:target, target)
+     |> assign_conversations()
+     |> assign_guidance()}
   end
 
   ## Render
@@ -100,7 +120,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </div>
         <div class="assistant-header-actions">
           <span class="assistant-scope">
-            <.icon name="hero-globe-alt" />{@scope_label}<span aria-hidden="true">·</span>{language_label(@conversation)}
+            <.icon name="hero-globe-alt" />{@scope_label}<span aria-hidden="true">·</span>{language_label(
+              @conversation || (@target && @target["language"])
+            )}
           </span>
           <div class="assistant-history">
             <button
@@ -131,6 +153,30 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </div>
       </header>
 
+      <details :if={@guidance != [] or @configurable?} class="assistant-guidance" id="assistant-guidance">
+        <summary>
+          <.icon name="hero-book-open" />
+          <span :if={@guidance != []}>{gettext("Site guidance in use")}</span>
+          <span :if={@guidance == []}>{gettext("No site guidance")}</span>
+        </summary>
+        <div class="assistant-guidance-body">
+          <p>
+            {gettext(
+              "The assistant follows this guidance for the site. Your own requests take precedence, and every proposal is still reviewed."
+            )}
+          </p>
+          <div :for={part <- @guidance} class="assistant-guidance-part">
+            <h3>
+              {if part.source == :admin, do: gettext("From the administrators"), else: gettext("From the site's code")}
+            </h3>
+            <pre>{part.text}</pre>
+          </div>
+          <.link :if={@configurable?} navigate="/admin/config/assistant" class="assistant-link-button">
+            {gettext("Edit guidance")}
+          </.link>
+        </div>
+      </details>
+
       <div :if={!@available?} class="assistant-notice" role="status">
         {gettext(
           "No AI model is configured for this site. Add a model and key to the Brando.AI configuration to use the assistant."
@@ -143,6 +189,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <h2>{(@conversation && @conversation.title) || gettext("New conversation")}</h2>
             <span :if={@conversation}>{Calendar.strftime(@conversation.inserted_at, "%d.%m.%Y %H:%M")}</span>
           </div>
+
+          <.destination target={(@conversation && @conversation.target) || @target} />
 
           <div class="assistant-messages" id="assistant-messages" tabindex="0" aria-live="polite">
             <div class="assistant-messages-inner">
@@ -284,6 +332,56 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <span class="assistant-author"><.icon name="hero-sparkles" />{gettext("Assistant")}</span>
       <div class="assistant-text">{markdown(@item.content)}</div>
     </div>
+    """
+  end
+
+  attr :target, :map, default: nil
+
+  # The entry the conversation was opened for from the block editor.
+  defp destination(%{target: nil} = assigns), do: ~H""
+
+  defp destination(assigns) do
+    assigns =
+      assign(assigns,
+        type:
+          case Proposals.Codec.schema(assigns.target["content_type"]) do
+            {:ok, schema} -> Brando.Blueprint.get_singular(schema)
+            :error -> assigns.target["content_type"]
+          end,
+        url:
+          case Proposals.Codec.schema(assigns.target["content_type"]) do
+            {:ok, schema} -> admin_url(schema, assigns.target["id"])
+            :error -> nil
+          end
+      )
+
+    ~H"""
+    <section class="assistant-destination" id="assistant-destination" aria-label={gettext("Selected entry")}>
+      <span class="assistant-destination-label">{gettext("Working on")}</span>
+      <p class="assistant-destination-title">
+        <.link :if={@url} navigate={@url}>{@target["title"]}</.link>
+        <span :if={!@url}>{@target["title"]}</span>
+      </p>
+      <dl class="assistant-destination-meta">
+        <div>
+          <dt>{gettext("Type")}</dt>
+          <dd>{@type}</dd>
+        </div>
+        <div>
+          <dt>{gettext("Block field")}</dt>
+          <dd>{field_label(@target["field"])}</dd>
+        </div>
+        <div :if={@target["language"]}>
+          <dt>{gettext("Language")}</dt>
+          <dd>{language_label(@target["language"])}</dd>
+        </div>
+      </dl>
+      <p class="assistant-destination-note">
+        {gettext(
+          "The assistant reads the saved entry. Unsaved changes in the editor are not included; save them first if the assistant should build on them."
+        )}
+      </p>
+    </section>
     """
   end
 
@@ -1047,7 +1145,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp ensure_conversation(socket) do
     user = socket.assigns.current_user
 
-    with {:ok, conversation} <- Agent.start_conversation(user, language: socket.assigns[:content_language]) do
+    opts =
+      if target = socket.assigns.target,
+        do: [target: Map.take(target, ~w(content_type id field))],
+        else: [language: socket.assigns[:content_language]]
+
+    with {:ok, conversation} <- Agent.start_conversation(user, opts) do
       if connected?(socket), do: Agent.subscribe(conversation.id)
       {:ok, conversation}
     end
@@ -1066,6 +1169,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
     socket
     |> assign(:conversation, reload(socket.assigns.conversation, socket.assigns.current_user))
     |> assign_media()
+  end
+
+  # The guidance the assistant follows here: for the conversation, or for the
+  # entry a new conversation will be opened for.
+  defp assign_guidance(socket) do
+    conversation =
+      socket.assigns.conversation ||
+        %Agent.Conversation{scope: Brando.Content.Transfer.scope(), target: socket.assigns.target}
+
+    assign(socket, :guidance, Agent.Guidance.for_conversation(conversation))
   end
 
   defp assign_conversations(socket),
@@ -1257,19 +1370,22 @@ defmodule BrandoAdmin.AI.AssistantLive do
       "describe_module" -> gettext("Checked a module's slots")
       "list_attachments" -> gettext("Matched the attached media")
       "search_assets" -> gettext("Searched the media library")
+      "find_media_folders" -> gettext("Looked for the folder")
+      "attach_folder" -> gettext("Attached the folder's media")
       "prepare_proposal" -> gettext("Prepared the proposal")
       _ -> gettext("Looked at the site's content")
     end
   end
 
-  defp language_label(conversation) do
-    code = to_string((conversation && conversation.language) || Brando.config(:default_language))
-
+  defp language_label(code) when is_binary(code) do
     case Enum.find(Brando.config(:languages) || [], &(to_string(&1[:value]) == code)) do
       nil -> String.upcase(code)
       language -> Brando.Content.Transfer.Labels.language(code, language[:text])
     end
   end
+
+  defp language_label(conversation),
+    do: language_label(to_string((conversation && conversation.language) || Brando.config(:default_language)))
 
   defp put_toast(socket, level, message) do
     BrandoAdmin.Toast.send_to(socket.assigns.current_user, message, %{
@@ -1353,6 +1469,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp attached_count(conversation), do: length(conversation.attachments)
 
   defp media_map({kind, id}), do: %{kind: kind, id: id}
+
+  # The block editor labels the usual field "Blocks"; others by their name.
+  defp field_label("blocks"), do: gettext("Blocks")
+  defp field_label(field), do: humanize(field)
 
   defp humanize(name), do: name |> to_string() |> String.replace("_", " ") |> String.capitalize()
 

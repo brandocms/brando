@@ -135,6 +135,7 @@ defmodule Brando.Router do
             live "/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
             live "/seo", BrandoAdmin.Sites.SEOLive
             live "/utils", BrandoAdmin.Sites.UtilsLive
+            live "/assistant", BrandoAdmin.AI.GuidanceLive
             live "/import-export", BrandoAdmin.Sites.ContentTransferLive
 
             live "/navigation/menus", BrandoAdmin.Navigation.MenuListLive

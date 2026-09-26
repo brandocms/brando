@@ -925,7 +925,30 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:blocks_initialized, true)
     |> assign(:footnote_fields, assigns.opts[:footnote_fields] || %{})
     |> assign(:note_collection?, !!assigns.opts[:footnote_fields])
+    |> assign(:assistant?, assistant?(assigns))
     |> request_blocks_sync()
+  end
+
+  # Build with AI opens the content assistant for this entry and field. It is
+  # offered when the assistant has a model, the user may use it, and the
+  # content type is one the assistant can change.
+  defp assistant?(%{opts: opts}) when is_map_key(opts, :footnote_fields), do: false
+  defp assistant?(%{entry: nil}), do: false
+
+  defp assistant?(%{entry: entry, current_user: user}) do
+    entry.__struct__ in Brando.Content.Transfer.Catalog.schemas() and Brando.AI.Agent.allowed?(user) and
+      Brando.AI.Agent.available?()
+  end
+
+  defp assistant_url(entry, block_field) do
+    query =
+      URI.encode_query(%{
+        "content_type" => Brando.Content.Proposals.Codec.content_type(entry.__struct__),
+        "id" => entry.id,
+        "field" => block_field
+      })
+
+    "/admin/assistant?" <> query
   end
 
   # The changeset base for materializing a root block: its persisted entry
@@ -1773,6 +1796,27 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <span>{gettext("Blocks")}</span>
           <div class="field-presence" phx-update="ignore" id={"#{@form_name}[#{@block_field}]-field-presence"}></div>
         </label>
+        <div :if={@assistant?} class="block-field-assistant">
+          <span :if={@entry.id && @blocks_changed?} class="block-field-assistant-hint">
+            {gettext("The assistant reads the saved entry, without your unsaved changes")}
+          </span>
+          <span :if={!@entry.id} class="block-field-assistant-hint">
+            {gettext("Save the entry to build it with AI")}
+          </span>
+          <.link
+            :if={@entry.id}
+            href={assistant_url(@entry, @block_field)}
+            target="_blank"
+            rel="noopener"
+            class="block-field-assistant-button"
+            data-testid="build-with-ai"
+          >
+            <.icon name="hero-sparkles" />{gettext("Build with AI")}
+          </.link>
+          <button :if={!@entry.id} type="button" class="block-field-assistant-button" disabled>
+            <.icon name="hero-sparkles" />{gettext("Build with AI")}
+          </button>
+        </div>
       </div>
       <div class="blocks-content">
         <div :if={!@note_collection? && (@root_order != [] or @clipboard_meta)} class="blocks-actions">

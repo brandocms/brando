@@ -27,6 +27,8 @@ defmodule Brando.AI.Agent do
         max_tokens: 4096,                     # output tokens per model call
         run_token_budget: 300_000,            # input + output tokens per run
         monthly_token_budget: 5_000_000,      # per site/environment; nil for none
+        guidance: MyApp.AssistantGuidance,    # site guidance: a string or a module,
+                                              # see Brando.AI.Agent.Guidance
         prices: [input: 5.0, output: 25.0],   # USD per million tokens; otherwise the
                                               # provider's or catalogue's price
         client: ReqLLM                        # anything with ReqLLM's generate_text/3,
@@ -37,7 +39,9 @@ defmodule Brando.AI.Agent do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.AI.Agent.{Conversation, Loop, Message, Run}
+  alias Brando.Content.Proposals.Codec
   alias Brando.Content.Transfer
+  alias Brando.Content.Transfer.Catalog
   alias Brando.Content.Transfer.{Dependencies, Error}
   alias Brando.Repo
   alias Ecto.Changeset
@@ -73,20 +77,79 @@ defmodule Brando.AI.Agent do
 
   ## Conversations
 
-  @doc "Start a conversation for `actor` in the current site/environment."
+  @doc """
+  Start a conversation for `actor` in the current site/environment.
+
+  `target: %{"content_type" => type, "id" => id, "field" => field}` selects the
+  entry and block field the conversation works on, as `target/2` resolves it.
+  The conversation then uses the entry's language unless `language:` is given.
+  """
   @spec start_conversation(term(), keyword()) :: {:ok, Conversation.t()} | {:error, String.t()}
   def start_conversation(actor, opts \\ []) do
     Error.protect(fn ->
       Transfer.ensure_scope!(actor)
       authorize!(actor)
+      target = if params = opts[:target], do: target!(params, actor)
 
       Repo.insert!(%Conversation{
         scope: Transfer.scope(),
         actor_id: user_id(actor),
         title: opts[:title],
-        language: to_string(opts[:language] || Brando.config(:default_language))
+        target: target,
+        language: to_string(opts[:language] || (target && target["language"]) || Brando.config(:default_language))
       })
     end)
+  end
+
+  @doc """
+  Resolve the entry a conversation is opened for: a saved entry of a content
+  type with block fields, which `actor` may update, and one of its block
+  fields (the first when `"field"` is not given).
+
+  Returns the target as it is stored on the conversation: `content_type`,
+  `id`, `field`, `title` and `language`.
+  """
+  @spec target(map(), term()) :: {:ok, map()} | {:error, String.t()}
+  def target(params, actor), do: Error.protect(fn -> target!(params, actor) end)
+
+  defp target!(params, actor) do
+    params = Map.new(params, fn {key, value} -> {to_string(key), value} end)
+
+    schema =
+      with {:ok, schema} <- Codec.schema(params["content_type"]),
+           true <- schema in Catalog.schemas() do
+        schema
+      else
+        _ -> Error.fail!(dgettext("ai_agent", "The assistant cannot work on this kind of content."))
+      end
+
+    if params["id"] in [nil, ""],
+      do: Error.fail!(dgettext("ai_agent", "Save the entry before you open it in the assistant."))
+
+    # Missing, deleted and forbidden entries read alike, so the answer does
+    # not reveal which entries exist.
+    entry =
+      case Error.protect(fn -> Catalog.load!(schema, params["id"], actor, :update) end) do
+        {:ok, entry} ->
+          entry
+
+        {:error, _} ->
+          Error.fail!(dgettext("ai_agent", "This entry is not available, or you do not have permission to change it."))
+      end
+
+    fields = Enum.map(schema.__blocks_fields__(), &to_string(&1.name))
+    field = to_string(params["field"] || List.first(fields))
+
+    unless field in fields,
+      do: Error.fail!(dgettext("ai_agent", "This entry has no block field %{field}.", field: field))
+
+    %{
+      "content_type" => Codec.content_type(schema),
+      "id" => entry.id,
+      "field" => field,
+      "title" => Catalog.describe(entry).title,
+      "language" => entry |> Map.get(:language) |> then(&(&1 && to_string(&1)))
+    }
   end
 
   @doc "A conversation of `actor`, or an error for anyone else's."
@@ -151,17 +214,67 @@ defmodule Brando.AI.Agent do
   defp attach!(conversation_id, kind, id, actor) do
     conversation = conversation!(conversation_id, actor, lock: true)
     asset = Dependencies.load!(to_string(kind), id, actor)
-    attachments = conversation.attachments
+    {alias, attachments, _new?} = put_attachment(conversation.attachments, kind, asset)
 
+    if attachments != conversation.attachments,
+      do: conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
+
+    alias
+  end
+
+  @doc """
+  Attach several library images or videos, in the order given, in one step.
+
+  Each asset is checked like `attach/3`, and one that is already attached
+  keeps its alias. An asset the actor may not read, or that has been deleted,
+  is reported under `unavailable` and the others are still attached.
+  """
+  @spec attach_many(Ecto.UUID.t(), [{:image | :video, integer()}], term()) ::
+          {:ok, %{attached: [map()], unavailable: [map()]}} | {:error, String.t()}
+  def attach_many(conversation_id, refs, actor) do
+    Error.protect(fn ->
+      {:ok, result} =
+        Repo.transaction(fn ->
+          conversation = conversation!(conversation_id, actor, lock: true)
+
+          {results, attachments} =
+            Enum.map_reduce(refs, conversation.attachments, &attach_one(&1, &2, actor))
+
+          if attachments != conversation.attachments,
+            do: conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
+
+          %{
+            attached: for({:attached, item} <- results, do: item),
+            unavailable: for({:unavailable, item} <- results, do: item)
+          }
+        end)
+
+      if result.attached != [], do: broadcast(conversation_id, {:attachments, Enum.map(result.attached, & &1.alias)})
+      result
+    end)
+  end
+
+  defp attach_one({kind, id}, attachments, actor) do
+    case Error.protect(fn -> Dependencies.load!(to_string(kind), id, actor) end) do
+      {:ok, asset} ->
+        {alias, attachments, new?} = put_attachment(attachments, kind, asset)
+        {{:attached, %{alias: alias, kind: kind, id: asset.id, label: asset_label(asset), new: new?}}, attachments}
+
+      {:error, reason} ->
+        {{:unavailable, %{kind: kind, id: id, reason: reason}}, attachments}
+    end
+  end
+
+  # The alias of `asset` in `attachments`, adding it at the end when it is new.
+  defp put_attachment(attachments, kind, asset) do
     case Enum.find(attachments, &(&1["kind"] == to_string(kind) and &1["id"] == asset.id)) do
       %{"alias" => alias} ->
-        alias
+        {alias, attachments, false}
 
       nil ->
         alias = next_alias(attachments, kind, Enum.count(attachments, &(&1["kind"] == to_string(kind))) + 1)
         entry = %{"alias" => alias, "kind" => to_string(kind), "id" => asset.id, "label" => asset_label(asset)}
-        conversation |> Changeset.change(attachments: attachments ++ [entry]) |> Repo.update!()
-        alias
+        {alias, attachments ++ [entry], true}
     end
   end
 

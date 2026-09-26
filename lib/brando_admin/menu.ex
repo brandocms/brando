@@ -251,6 +251,12 @@ defmodule BrandoAdmin.Menu do
       do: %{name: gettext("Assistant"), url: "/admin/assistant"}
   end
 
+  # Shown to users who may configure the assistant; superusers by default.
+  defp assistant_guidance_menu_item(current_user) do
+    if current_user && Brando.AI.Agent.Guidance.configurable?(current_user),
+      do: %{name: gettext("Assistant guidance"), url: "/admin/config/assistant"}
+  end
+
   def get_menu(current_user \\ nil, current_site \\ nil) do
     content_menus = Brando.admin_module(Menus).__menus__()
 
@@ -306,6 +312,7 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Utilities"),
                     url: "/admin/config/utils"
                   },
+                  assistant_guidance_menu_item(current_user),
                   %{
                     name: gettext("Block modules"),
                     url: "/admin/config/content/modules"

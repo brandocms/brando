@@ -102,6 +102,7 @@
 @import "./views/config/Globals.css";
 @import "./views/config/ScheduledPublishing.css";
 @import "./views/config/Utils.css";
+@import "./views/config/AssistantGuidance.css";
 @import "./views/config/ContentTransfer.css";
 @import "./views/Assistant.css";
 

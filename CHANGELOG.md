@@ -403,8 +403,18 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   [Content assistant](guides/content_assistant.md).
 - `Brando.Content.Proposals` stores, validates, previews and applies these
   proposals, and can be used without the assistant.
-- Run `mix brando.gen.migrations` for `brando_183`–`brando_185`, which add
+- Run `mix brando.gen.migrations` for `brando_183`–`brando_187`, which add
   proposals, their receipts, and assistant conversations. All live in `public`.
+- **Build with AI** in the block editor opens the assistant for that entry
+  and block field. The assistant reads the saved entry and says so.
+- `config :brando, Brando.AI.Agent, guidance: …` gives the assistant the
+  site's conventions for its modules, per site, environment and content type.
+  See `Brando.AI.Agent.Guidance`. **Configuration → Assistant guidance**
+  edits it per site and environment, with history and copying from other
+  sites. It needs the new `brando.assistant.configure` capability, which only
+  superusers have by default.
+- The assistant can attach every image or video in a named media folder,
+  page by page, and asks when a folder name is ambiguous.
 - `Brando.AI` takes named models: `models: [default: "...", image: "..."]`.
   Alt text asks for `:image`, so a cheaper model that reads images can write
   it while a stronger one writes copy; a name that is not set falls back to

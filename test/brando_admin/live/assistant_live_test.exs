@@ -28,6 +28,103 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert html =~ "Describe the changes you want"
   end
 
+  describe "opened from the block editor" do
+    test "shows the selected entry and starts the conversation on it", %{conn: conn} = c do
+      AIStub.script([{:text, "Which part of Identity should change?"}])
+      path = "/admin/assistant?content_type=Brando.Pages.Page&id=#{c.identity.id}&field=blocks"
+      {:ok, view, html} = live(conn, path)
+
+      assert html =~ "Working on"
+      assert has_element?(view, "#assistant-destination a[href='/admin/pages/update/#{c.identity.id}']", "Identity")
+      assert has_element?(view, "#assistant-destination dd", "Blocks")
+      assert html =~ "The assistant reads the saved entry. Unsaved changes in the editor are not included"
+      # Opening the workspace writes nothing, not even a conversation.
+      assert Agent.list_conversations(c.current_user) == []
+
+      view |> form("#assistant-composer", %{message: "Tighten the introduction"}) |> render_submit()
+      [conversation] = Agent.list_conversations(c.current_user)
+      assert_patch(view, "/admin/assistant/#{conversation.id}")
+      assert %{"content_type" => "Brando.Pages.Page", "field" => "blocks", "title" => "Identity"} = conversation.target
+
+      eventually(view, &(&1 =~ "Which part of Identity should change?"))
+      assert has_element?(view, "#assistant-destination", "Identity")
+      assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 3
+
+      # A new conversation starts without the entry.
+      view |> element("a", "New conversation") |> render_click()
+      refute has_element?(view, "#assistant-destination")
+    end
+
+    test "an entry that cannot be used is not selected", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant?content_type=Brando.Pages.Page&id=-1&field=blocks")
+      refute has_element?(view, "#assistant-destination")
+
+      {:ok, view, _} = live(conn, "/admin/assistant?content_type=Brando.Pages.Page&id=#{c.identity.id}&field=nope")
+      refute has_element?(view, "#assistant-destination")
+    end
+  end
+
+  describe "Build with AI in the block editor" do
+    test "links to the assistant for the saved entry and field", %{conn: conn} = c do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+      html = await_selector(view, "[data-testid=build-with-ai]")
+      [href] = html |> Floki.parse_document!() |> Floki.attribute("[data-testid=build-with-ai]", "href")
+
+      assert %URI{path: "/admin/assistant", query: query} = URI.parse(href)
+
+      assert URI.decode_query(query) == %{
+               "content_type" => "Brando.Pages.Page",
+               "id" => to_string(c.identity.id),
+               "field" => "blocks"
+             }
+
+      # A new tab: the editor, and anything unsaved in it, stays open.
+      assert has_element?(view, "a[data-testid=build-with-ai][target=_blank]", "Build with AI")
+    end
+
+    test "asks to save a new entry first", %{conn: conn} do
+      {view, _html} = live_form(conn, "/admin/pages/create")
+      await_selector(view, ".block-field-assistant")
+      assert has_element?(view, ".block-field-assistant button[disabled]", "Build with AI")
+      assert has_element?(view, ".block-field-assistant-hint", "Save the entry to build it with AI")
+      refute has_element?(view, "[data-testid=build-with-ai]")
+    end
+
+    test "is hidden without a model", %{conn: conn} = c do
+      Application.delete_env(:brando, Brando.AI)
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+      await_selector(view, ".blocks-wrapper")
+      refute has_element?(view, ".block-field-assistant")
+    end
+
+    test "is hidden for users without the assistant permission", %{conn: conn} = c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      alias Brando.Authorization.{Catalog, Groups, Scope}
+      editor = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      scope = Scope.standalone(c.current_user)
+
+      {:ok, group} =
+        Groups.create(scope, %{name: "Page editors"}, [
+          Catalog.get(:access, :backend).key,
+          Catalog.get(:read, Page).key,
+          Catalog.get(:update, Page).key
+        ])
+
+      {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+      conn = log_in_user(build_conn(), editor)
+
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+      await_selector(view, ".blocks-wrapper")
+      refute has_element?(view, ".block-field-assistant")
+
+      {:ok, assistants} = Groups.create(scope, %{name: "Assistant users"}, [Catalog.get(:use, :assistant).key])
+      {:ok, :ok} = Groups.add_member(scope, assistants.id, editor.id)
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+      await_selector(view, "[data-testid=build-with-ai]")
+    end
+  end
+
   test "a message produces a reviewed proposal that one click applies", %{conn: conn} = c do
     op = %{
       "op" => "insert_block",

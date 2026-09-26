@@ -782,3 +782,83 @@
   .assistant-apply { flex: 1 1 100%; white-space: normal; text-align: center; }
   .assistant-frame-viewport { height: 70vh; min-height: 360px; }
 }
+
+/* The entry a conversation was opened for from the block editor. */
+
+.assistant-destination {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--assistant-line);
+  border-radius: 6px;
+  background: var(--assistant-sage);
+}
+
+.assistant-destination-label { color: var(--assistant-muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.assistant-destination-title { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.assistant-destination-title a { color: var(--assistant-accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.assistant-destination-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  font-size: 12px;
+
+  dt { color: var(--assistant-muted); }
+  dd { margin: 0; }
+}
+
+.assistant-destination-note { color: var(--assistant-muted); font-size: 12px; }
+
+/* The site guidance the assistant follows, readable by every editor. */
+
+.assistant-guidance {
+  margin-top: 16px;
+  border: 1px solid var(--assistant-line);
+  border-radius: 6px;
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    color: var(--assistant-muted);
+    font-size: 13px;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+    [data-icon] { width: 16px; height: 16px; }
+  }
+
+  &[open] summary { border-bottom: 1px solid var(--assistant-line); }
+}
+
+.assistant-guidance-body {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+
+  > p { color: var(--assistant-muted); font-size: 12px; }
+}
+
+.assistant-guidance-part {
+  display: grid;
+  gap: 4px;
+
+  h3 { font-size: 12px; font-weight: 500; }
+
+  pre {
+    max-height: 240px;
+    overflow: auto;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--assistant-surface);
+    font-family: var(--brando-font-mono, ui-monospace, monospace);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

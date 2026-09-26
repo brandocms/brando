@@ -17,6 +17,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
+  alias Brando.Media.Folders
 
   defmodule Context do
     @moduledoc """
@@ -31,6 +32,9 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   @max_results 20
+  # `Brando.Media.Folders.max_page/0`; a literal keeps this module free of a
+  # compile-time dependency on it.
+  @max_folder_page 100
   @text_limit 160
   @system_fields ~w(id status publish_at deleted_at marked_as_deleted creator_id updated_by_id inserted_at updated_at
                     sequence edited_at rendered_blocks rendered_blocks_at)
@@ -106,6 +110,32 @@ defmodule Brando.Content.Proposals.Tools do
           limit: %{type: "integer", maximum: @max_results}
         },
         required: ["kind"]
+      }
+    },
+    %{
+      name: "find_media_folders",
+      description:
+        "Find media library folders by name or path. Returns each folder's id, full path and how many images or videos it holds, with and without its subfolders. Several results mean the name is ambiguous: ask the user which folder.",
+      parameters: %{
+        type: "object",
+        properties: %{kind: %{type: "string", enum: ["image", "video"]}, name: %{type: "string"}},
+        required: ["kind", "name"]
+      }
+    },
+    %{
+      name: "attach_folder",
+      description:
+        "Attach the images or videos in one folder to this conversation, as aliases (image1, image2, …) in a fixed order: images by file name, videos in upload order. Already attached media keeps its alias. Returns the total and one page; when next_offset is set, call again with it to attach the rest. Subfolders are only included with subfolders: true.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          kind: %{type: "string", enum: ["image", "video"]},
+          folder_id: %{type: "integer"},
+          subfolders: %{type: "boolean", default: false},
+          offset: %{type: "integer", default: 0},
+          limit: %{type: "integer", maximum: @max_folder_page}
+        },
+        required: ["kind", "folder_id"]
       }
     },
     %{
@@ -314,6 +344,44 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp run("search_assets", _args, _context), do: Error.fail!("kind is image or video.")
 
+  defp run("find_media_folders", args, %{actor: actor}),
+    do: Folders.find(media_kind!(args["kind"]), args["name"], actor)
+
+  defp run("attach_folder", _args, %{conversation_id: nil}),
+    do: Error.fail!("Media can only be attached in a conversation.")
+
+  defp run("attach_folder", args, %{actor: actor, conversation_id: conversation_id}) do
+    kind = media_kind!(args["kind"])
+    offset = max(integer(args["offset"]) || 0, 0)
+
+    page =
+      Folders.assets(kind, integer(args["folder_id"]), actor,
+        subfolders: args["subfolders"] == true,
+        offset: offset,
+        limit: integer(args["limit"])
+      )
+
+    {:ok, %{attached: attached, unavailable: unavailable}} =
+      case Brando.AI.Agent.attach_many(conversation_id, Enum.map(page.ids, &{kind, &1}), actor) do
+        {:ok, _} = ok -> ok
+        {:error, message} -> Error.fail!(message)
+      end
+
+    next = offset + length(page.ids)
+
+    %{
+      folder: page.folder,
+      subfolders: args["subfolders"] == true,
+      total: page.total,
+      offset: offset,
+      attached: Enum.map(attached, &Map.take(&1, [:alias, :id, :label, :new])),
+      unavailable: Enum.map(unavailable, &Map.take(&1, [:id, :reason])),
+      next_offset: if(next < page.total, do: next),
+      remaining: max(page.total - next, 0)
+    }
+    |> Map.put(:note, folder_note(page.total, next))
+  end
+
   defp run("prepare_proposal", args, context) do
     aliases = Map.new(context.attachments, fn {alias, a} -> {alias, {a.kind, a.id}} end)
 
@@ -418,6 +486,27 @@ defmodule Brando.Content.Proposals.Tools do
         Error.fail!("Unknown content type #{inspect(name)}. Use list_content_types.")
     end
   end
+
+  defp media_kind!("image"), do: :image
+  defp media_kind!("video"), do: :video
+  defp media_kind!(_), do: Error.fail!("kind is image or video.")
+
+  defp integer(value) when is_integer(value), do: value
+
+  defp integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {n, ""} -> n
+      _ -> nil
+    end
+  end
+
+  defp integer(_), do: nil
+
+  defp folder_note(0, _next), do: "The folder is empty."
+  defp folder_note(total, next) when next >= total, do: "All #{total} are attached."
+
+  defp folder_note(total, next),
+    do: "#{next} of #{total} are attached so far. Call attach_folder again with next_offset to attach the rest."
 
   defp limit(args), do: min(max(args["limit"] || 10, 1), @max_results)
 

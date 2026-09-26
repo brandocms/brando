@@ -27,6 +27,7 @@ config :brando, Brando.AI.Agent,
   max_tokens: 4096,                 # output tokens per model call
   run_token_budget: 300_000,        # input + output tokens per message
   monthly_token_budget: 5_000_000,  # per site/environment; nil for none
+  guidance: MyApp.AssistantGuidance, # see "Site guidance" below
   prices: [input: 5.0, output: 25.0]
 ```
 
@@ -43,7 +44,10 @@ explains what is missing.
 
 With groups authorization, the assistant needs **Content assistant → use**
 (`brando.assistant.use`). New capabilities are never added to existing groups
-automatically, so grant it to the groups that should have it. Everything the
+automatically, so grant it to the groups that should have it. Editing the
+site guidance needs **Content assistant → configure**
+(`brando.assistant.configure`), which only superusers have until a group is
+granted it; without groups authorization, only superusers. Everything the
 assistant reads or proposes is also checked against the editor's own
 permissions. It cannot see entries the editor cannot edit, create content
 types the editor cannot create, or change a published page unless the editor
@@ -68,8 +72,128 @@ may publish.
 - **Attachments keep their names.** Media uploaded or picked in the
   conversation is named `image1`, `image2`, `video1` … in the order it was
   chosen, not the order uploads finish. Refer to these names in messages.
+  Attaching the same image again keeps its name.
 - **Content is data.** Titles, texts and file names the assistant reads never
   change its instructions.
+
+## Build with AI from the block editor
+
+A block field shows **Build with AI** next to its label when the assistant
+has a model and the editor may use it. It opens the assistant in a new tab,
+with that entry and block field selected. The conversation panel shows the
+entry, its content type, the block field and the language. Unless you name
+other entries, the assistant proposes its changes there.
+
+- **The assistant reads the saved entry.** Edits you have not saved stay in
+  the editor's tab and are not included. The block field says so while it has
+  unsaved block changes. Save first if the assistant should build on them.
+- **A new entry has to be saved first.** Until then the button is disabled
+  and says why.
+- **Opening the assistant changes nothing.** The conversation starts with your
+  first message. The proposal is reviewed and applied in the assistant as
+  usual, and applying fails if the entry was saved again after the proposal
+  was prepared.
+
+The entry is checked like any other target: the editor needs permission to
+change it. Direct insertion into an open, unsaved editor is not supported.
+
+## Site guidance and instructions
+
+Sites usually have conventions for building content from their modules.
+There are two places for them, and the assistant reads both.
+
+### In the admin
+
+**Configuration → Assistant guidance** holds the guidance of the current
+site and environment. Staging and production each have their own.
+
+- **Every save is a version.** The history shows who saved what and when.
+  **Load into editor** brings back an earlier version; save it to use it
+  again.
+- **Copy from another site or environment** loads that guidance into the
+  editor. It lists the sites and environments where you may also edit
+  guidance. Nothing changes until you save, and the version records where it
+  was copied from.
+- **Editors can read it.** The assistant shows the guidance in use under
+  **Site guidance in use**, so nobody has to guess what steers it.
+- Only users who may configure the assistant see the screen: superusers by
+  default (see [Permissions](#permissions)). Guidance is trusted as
+  instructions for everyone's assistant, so grant this sparingly.
+
+### In the code
+
+Developers can ship a baseline in `guidance`, as a string or as a module
+implementing `Brando.AI.Agent.Guidance`. The admin screen shows it
+read-only. Where the two conflict, the admin guidance applies: it is the one
+kept up to date as modules change.
+
+```elixir
+defmodule MyApp.AssistantGuidance do
+  @behaviour Brando.AI.Agent.Guidance
+
+  @impl true
+  def guidance(%{content_type: MyApp.Articles.Article}) do
+    """
+    - Start an article with the "Article lede" module for its introduction.
+    - A long introduction goes partly in "Article lede" and continues in
+      "Article text".
+    - Portrait image pairs use "Two images" with the narrow setting on.
+    """
+  end
+
+  def guidance(_scope), do: nil
+end
+```
+
+The module is called for every model call, with the site and environment keys
+(`nil` without tenancy) and the content type of the selected entry, if the
+conversation has one. One application can give each site its own guidance.
+Guidance is limited to 12,000 characters. A guidance module that fails is
+logged and left out.
+
+Name modules, slots and settings the way editors see them. The assistant
+matches the names against the modules the block field allows. If a name
+matches nothing, matches several modules, or needs a setting the module does
+not have, the assistant says so and asks. It does not invent module ids, and
+every proposal is still checked and reviewed.
+
+**Instructions for one entry or request** are written in the conversation:
+"Put image3 and image4 after the lede", "Use the quote module for the last
+paragraph". Open the conversation from the entry's block editor so the
+assistant knows which entry you mean.
+
+When instructions conflict, this order applies, highest first:
+
+1. Permissions, the proposal checks and your approval. Nothing overrides them.
+2. Your messages. A later message replaces an earlier one where they conflict.
+3. The selected entry.
+4. The site guidance: the admin guidance, then the guidance in the code.
+
+Guidance is written by the site's developers and administrators and is
+trusted as instructions.
+Entry text, file names, captions and other content the assistant reads are
+data: instructions in them are ignored.
+
+## Media from a folder
+
+Ask for "all the images in the a_form folder" and the assistant attaches the
+folder's media to the conversation:
+
+- **The folder is looked up by name** in the media library of the current
+  site/environment, the same folders the image and video pickers show. A path
+  such as `projects/a_form` narrows it down. When several folders match, the
+  assistant asks which one you mean. An empty folder is reported as empty.
+- **All means all.** The assistant attaches up to 100 items at a time and
+  continues until the folder is done, then says how many it attached.
+- **Subfolders are only included when you ask for them.**
+- **The order is fixed:** images by file name, videos in upload order. The
+  media gets the next free names (`image1`, `image2` …); media that was
+  already attached keeps its name, so asking again changes nothing.
+- **Only media you may see is attached.** Deleted items are left out, and
+  anything that cannot be attached is reported.
+
+The attached media appears under the conversation, and the proposal shows
+which of it is used. Nothing is placed until you apply the proposal.
 
 ## Page previews
 

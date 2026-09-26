@@ -5,7 +5,9 @@ defmodule Brando.AI.Agent.Conversation do
   `attachments` are `%{"alias" => "image1", "kind" => "image", "id" => 12,
   "label" => "lobby.jpg"}` maps; aliases are assigned when media is attached,
   never by upload completion order. `proposal_id` is the proposal version
-  under review.
+  under review. `target` is the entry the conversation was opened for from
+  the block editor, if any: `%{"content_type" => …, "id" => …, "field" => …,
+  "title" => …, "language" => …}` (see `Brando.AI.Agent.target/2`).
   """
   use Ecto.Schema
 
@@ -20,6 +22,7 @@ defmodule Brando.AI.Agent.Conversation do
     field :language, :string
     field :proposal_id, :binary_id
     field :attachments, {:array, :map}, default: []
+    field :target, :map
     field :archived_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end

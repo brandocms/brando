@@ -129,4 +129,175 @@ defmodule Brando.Content.Proposals.ToolsTest do
 
     assert message =~ "image9"
   end
+
+  test "guidance cannot make the assistant invent modules or settings", c do
+    # Guidance names modules and settings the way editors see them. Whatever
+    # the model makes of it, a setting the module lacks or a module the field
+    # does not allow is a problem, never a write.
+    base = %{
+      "op" => "insert_block",
+      "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+      "module" => "local:#{c.case_module.id}"
+    }
+
+    narrow =
+      call!(
+        "prepare_proposal",
+        %{"summary" => "Portrait pair", "operations" => [Map.put(base, "values", %{"narrow" => true})]},
+        c.context
+      )
+
+    assert %{applicable: false, problems: [%{operation: 0}]} = narrow
+
+    invented =
+      call!(
+        "prepare_proposal",
+        %{"summary" => "Lede", "operations" => [Map.put(base, "module", "local:999999")]},
+        c.context
+      )
+
+    assert %{applicable: false, problems: [%{operation: 0}]} = invented
+
+    assert length(Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, c.user).entry_blocks) == 3
+  end
+
+  describe "media by folder" do
+    alias Brando.AI.Agent
+    alias Brando.Factory
+    alias Brando.Media.Folder
+    alias Brando.Repo
+
+    setup c do
+      {:ok, conversation} = Agent.start_conversation(c.user)
+
+      folder = fn scope, path, parent ->
+        Repo.insert!(%Folder{scope: scope, name: Path.basename(path), path: path, parent_id: parent && parent.id})
+      end
+
+      a_form = folder.("images/default", "a_form", nil)
+      details = folder.("images/default", "a_form/details", a_form)
+      other = folder.("images/default", "clients/a_form", nil)
+      empty = folder.("images/default", "empty", nil)
+
+      image = fn folder, name ->
+        Factory.insert(:image, creator_id: c.user.id, folder_id: folder.id, path: "images/default/#{folder.path}/#{name}")
+      end
+
+      # Inserted out of name order: the folder's order is by file name.
+      images = for n <- Enum.shuffle(1..25), do: image.(a_form, "photo-#{String.pad_leading("#{n}", 2, "0")}.jpg")
+      nested = [image.(details, "detail-1.jpg"), image.(details, "detail-2.jpg")]
+      image.(other, "client.jpg")
+
+      Factory.insert(:image,
+        creator_id: c.user.id,
+        folder_id: a_form.id,
+        path: "images/default/a_form/zz-gone.jpg",
+        deleted_at: DateTime.utc_now()
+      )
+
+      ordered = Enum.sort_by(images, & &1.path)
+      context = %{c.context | conversation_id: conversation.id, attachments: %{}}
+
+      %{
+        conversation: conversation,
+        context: context,
+        a_form: a_form,
+        details: details,
+        other: other,
+        empty: empty,
+        ordered: ordered,
+        nested: nested
+      }
+    end
+
+    test "a folder name resolves to exact folders, and an ambiguous name returns every match", c do
+      %{folders: folders, more: false} = call!("find_media_folders", %{"kind" => "image", "name" => "A_Form"}, c.context)
+
+      assert [
+               %{id: a_form, path: "images/default/a_form", items: 25, items_with_subfolders: 27, subfolders: 1},
+               %{id: other, path: "images/default/clients/a_form", items: 1, subfolders: 0}
+             ] = folders
+
+      assert {a_form, other} == {c.a_form.id, c.other.id}
+
+      assert %{folders: [%{id: id}]} =
+               call!("find_media_folders", %{"kind" => "image", "name" => "default/a_form/"}, c.context)
+
+      assert id == c.a_form.id
+
+      # A partial name matches paths.
+      assert %{folders: [%{id: id}]} = call!("find_media_folders", %{"kind" => "image", "name" => "detail"}, c.context)
+      assert id == c.details.id
+
+      # An empty folder is still found, and reported as empty.
+      assert %{folders: [%{items: 0, items_with_subfolders: 0}]} =
+               call!("find_media_folders", %{"kind" => "image", "name" => "empty"}, c.context)
+
+      assert %{folders: []} = call!("find_media_folders", %{"kind" => "image", "name" => "nowhere"}, c.context)
+
+      # No images in them: video folders are empty here.
+      assert %{folders: [%{items: 0}, %{items: 0}]} =
+               call!("find_media_folders", %{"kind" => "video", "name" => "a_form"}, c.context)
+
+      assert {:error, _} = Tools.call("find_media_folders", %{"kind" => "image", "name" => " "}, c.context)
+    end
+
+    test "all of a folder is attached page by page, in file name order, and never stops at 20", c do
+      first = call!("attach_folder", %{"kind" => "image", "folder_id" => c.a_form.id, "limit" => 10}, c.context)
+
+      assert %{total: 25, offset: 0, next_offset: 10, remaining: 15, subfolders: false} = first
+      assert first.note =~ "10 of 25"
+      assert Enum.map(first.attached, & &1.alias) == Enum.map(1..10, &"image#{&1}")
+      assert Enum.map(first.attached, & &1.id) == Enum.map(Enum.take(c.ordered, 10), & &1.id)
+
+      rest =
+        call!("attach_folder", %{"kind" => "image", "folder_id" => c.a_form.id, "offset" => 10, "limit" => 50}, c.context)
+
+      assert %{total: 25, next_offset: nil, remaining: 0, unavailable: []} = rest
+      assert rest.note == "All 25 are attached."
+      assert Enum.map(rest.attached, & &1.alias) == Enum.map(11..25, &"image#{&1}")
+
+      {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+      assert Enum.map(conversation.attachments, & &1["id"]) == Enum.map(c.ordered, & &1.id)
+
+      # Selecting the folder again keeps every alias.
+      again = call!("attach_folder", %{"kind" => "image", "folder_id" => c.a_form.id}, c.context)
+      assert Enum.all?(again.attached, &(&1.new == false))
+      assert Enum.map(again.attached, & &1.alias) == Enum.map(1..25, &"image#{&1}")
+      {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+      assert length(conversation.attachments) == 25
+    end
+
+    test "subfolders are only included when asked for", c do
+      with_nested =
+        call!("attach_folder", %{"kind" => "image", "folder_id" => c.a_form.id, "subfolders" => true}, c.context)
+
+      assert %{total: 27, subfolders: true, next_offset: nil} = with_nested
+      ids = Enum.map(with_nested.attached, & &1.id)
+      assert Enum.all?(c.nested, &(&1.id in ids))
+
+      assert %{total: 0, attached: [], note: "The folder is empty."} =
+               call!("attach_folder", %{"kind" => "image", "folder_id" => c.empty.id}, c.context)
+    end
+
+    test "folders are attached only in the user's own conversation", c do
+      assert {:error, message} =
+               Tools.call("attach_folder", %{"kind" => "image", "folder_id" => c.a_form.id}, %{
+                 c.context
+                 | conversation_id: nil
+               })
+
+      assert message =~ "conversation"
+
+      someone = Factory.insert(:random_user)
+
+      assert {:error, _} =
+               Tools.call("attach_folder", %{"kind" => "image", "folder_id" => c.a_form.id}, %{c.context | actor: someone})
+
+      assert {:error, _} = Tools.call("attach_folder", %{"kind" => "image", "folder_id" => -1}, c.context)
+
+      {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+      assert conversation.attachments == []
+    end
+  end
 end

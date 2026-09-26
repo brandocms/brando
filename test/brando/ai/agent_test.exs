@@ -129,6 +129,97 @@ defmodule Brando.AI.AgentTest do
     assert id == small.id
   end
 
+  test "attach_many attaches in order, keeps existing aliases and reports what it cannot attach", c do
+    first = Factory.insert(:image, creator_id: c.user.id, path: "images/a/first.jpg")
+    second = Factory.insert(:image, creator_id: c.user.id, path: "images/a/second.jpg")
+    deleted = Factory.insert(:image, creator_id: c.user.id, deleted_at: DateTime.utc_now())
+    assert {:ok, "image1"} = Agent.attach(c.conversation.id, {:image, second.id}, c.user)
+    Agent.subscribe(c.conversation.id)
+
+    assert {:ok, %{attached: attached, unavailable: unavailable}} =
+             Agent.attach_many(
+               c.conversation.id,
+               [{:image, first.id}, {:image, deleted.id}, {:image, second.id}, {:image, -1}],
+               c.user
+             )
+
+    assert Enum.map(unavailable, & &1.id) == [deleted.id, -1]
+    assert Enum.all?(unavailable, &is_binary(&1.reason))
+    assert [%{alias: "image2", new: true}, %{alias: "image1", new: false}] = attached
+    assert_received {:agent, _, {:attachments, ~w(image2 image1)}}
+
+    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+    assert Enum.map(conversation.attachments, &{&1["alias"], &1["id"]}) == [{"image1", second.id}, {"image2", first.id}]
+
+    # Nothing new, nothing written, nothing broadcast.
+    assert {:ok, %{attached: [%{alias: "image2", new: false}]}} =
+             Agent.attach_many(c.conversation.id, [{:image, first.id}], c.user)
+
+    assert {:error, _} = Agent.attach_many(c.conversation.id, [{:image, first.id}], Factory.insert(:random_user))
+  end
+
+  describe "a conversation opened for an entry" do
+    test "records the entry, its block field and its language", c do
+      assert {:ok, conversation} =
+               Agent.start_conversation(c.user,
+                 target: %{"content_type" => "Brando.Pages.Page", "id" => to_string(c.identity.id), "field" => "blocks"}
+               )
+
+      id = c.identity.id
+
+      assert %{"content_type" => "Brando.Pages.Page", "id" => ^id, "field" => "blocks", "title" => "Identity"} =
+               conversation.target
+
+      assert conversation.language == to_string(c.identity.language)
+
+      # The first block field is the default.
+      assert {:ok, %{"field" => "blocks"}} = Agent.target(%{content_type: "Brando.Pages.Page", id: id}, c.user)
+    end
+
+    test "rejects entries that are not saved, not changeable or not there", c do
+      assert {:error, message} = Agent.target(%{"content_type" => "Brando.Pages.Page", "id" => ""}, c.user)
+      assert message =~ "Save the entry"
+
+      assert {:error, _} = Agent.target(%{"content_type" => "Brando.Pages.Page", "id" => "-1"}, c.user)
+      assert {:error, _} = Agent.target(%{"content_type" => "Brando.Users.User", "id" => c.user.id}, c.user)
+      assert {:error, _} = Agent.target(%{"content_type" => "Nope", "id" => 1}, c.user)
+
+      assert {:error, message} =
+               Agent.target(%{"content_type" => "Brando.Pages.Page", "id" => c.identity.id, "field" => "nope"}, c.user)
+
+      assert message =~ "no block field nope"
+
+      assert {:error, _} =
+               Agent.start_conversation(c.user, target: %{"content_type" => "Brando.Pages.Page", "id" => "-1"})
+
+      assert [_] = Agent.list_conversations(c.user)
+    end
+
+    test "needs permission to change the entry with groups authorization", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      alias Brando.Authorization.{Catalog, Groups, Scope}
+      editor = Factory.insert(:random_user, role: :user)
+      scope = Scope.standalone(c.user)
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+
+      {:ok, group} =
+        Groups.create(scope, %{name: "Readers"}, [
+          Catalog.get(:access, :backend).key,
+          Catalog.get(:use, :assistant).key,
+          Catalog.get(:read, Page).key
+        ])
+
+      {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+      assert {:error, message} = Agent.start_conversation(editor, target: target)
+      assert message =~ "permission"
+
+      {:ok, editors} = Groups.create(scope, %{name: "Page editors"}, [Catalog.get(:update, Page).key])
+      {:ok, :ok} = Groups.add_member(scope, editors.id, editor.id)
+      assert {:ok, %{target: %{"title" => "Identity"}}} = Agent.start_conversation(editor, target: target)
+    end
+  end
+
   test "the assistant needs its permission when groups authorization is on", c do
     put_test_env(:authorization_mode, :groups)
     {:ok, _} = Brando.Authorization.Migration.run()
