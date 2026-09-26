@@ -89,6 +89,7 @@ defmodule Brando.Content.Proposals.Review do
       highlight: uids_of(changes),
       preview?: Brando.LivePreview.has_live_preview_target(schema),
       preview_targets: preview_targets(schema),
+      placeholders: placeholders(target, schema, proposal),
       problems: problems(proposal, target)
     }
   end
@@ -113,8 +114,42 @@ defmodule Brando.Content.Proposals.Review do
       highlight: uids_of(changes),
       preview?: Brando.LivePreview.has_live_preview_target(schema),
       preview_targets: preview_targets(schema),
+      placeholders: placeholders(target, schema, proposal),
       problems: problems(proposal, target)
     }
+  end
+
+  @placeholder ~r/\[\[(.+?)\]\]/s
+
+  @doc "The `[[…]]` placeholders in `text`: what the editor is asked to fill in."
+  @spec placeholders_in(term()) :: [String.t()]
+  def placeholders_in(text) when is_binary(text),
+    do: for([_, inner] <- Regex.scan(@placeholder, text), do: inner |> strip_tags() |> String.trim())
+
+  def placeholders_in(_), do: []
+
+  defp strip_tags(html), do: String.replace(html, ~r/<[^>]*>/, "")
+
+  # Facts the assistant could not know, left as `[[…]]` for the editor: where
+  # each is, and what it asks for.
+  defp placeholders(target, schema, proposal) do
+    Enum.flat_map(proposal.operations, fn
+      %CreateEntry{fields: fields} = op when target == {:new, op.ref} -> field_placeholders(schema, fields)
+      %SetFields{target: ^target, fields: fields} -> field_placeholders(schema, fields)
+      %InsertBlock{target: ^target} = op -> block_placeholders(module_label(op.module), op.texts, op.values)
+      %SetBlockText{target: ^target} = op -> block_placeholders(nil, %{op.ref => op.text}, %{})
+      %SetBlockValues{target: ^target} = op -> block_placeholders(nil, %{}, op.values)
+      _ -> []
+    end)
+  end
+
+  defp field_placeholders(schema, fields),
+    do: for({name, value} <- fields, text <- placeholders_in(value), do: %{where: label_for(schema, name), text: text})
+
+  defp block_placeholders(module, texts, values) do
+    for {name, value} <- Enum.concat(texts, values), text <- placeholders_in(value) do
+      %{where: Enum.join(Enum.reject([module, Brando.Content.Transfer.Labels.field(name)], &is_nil/1), " · "), text: text}
+    end
   end
 
   # The entry's other language versions, and what the proposal does to them:
@@ -188,14 +223,21 @@ defmodule Brando.Content.Proposals.Review do
         uid: op.uid,
         field: op.field,
         module: module && label(module.name),
-        placement: placement(op.placement, op.parent, entry, op.field, proposal),
+        # In a new entry the order of the cards is the order of the page.
+        placement:
+          if(is_nil(entry) and is_nil(op.parent) and op.placement == :append,
+            do: nil,
+            else: placement(op.placement, op.parent, entry, op.field, proposal)
+          ),
         values: Enum.map(op.values, &value_view(&1, nil, op.uid, proposal)),
         texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: excerpt(text)} end),
         media: Enum.flat_map(op.media, fn {ref, asset} -> media_items(ref, asset) end),
         settings:
-          Enum.flat_map(op.configs, fn {ref, config} ->
-            Enum.map(config, fn {key, value} -> %{ref: ref, name: key, before: nil, value: shorten(value)} end)
-          end)
+          for {ref, config} <- op.configs,
+              {key, value} <- config,
+              !default_setting?(module, ref, op.media[ref], key, value) do
+            %{ref: ref, name: key, before: nil, value: shorten(value)}
+          end
       }
     ]
   end
@@ -339,6 +381,27 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp block_change(_op, _target, _entry, _proposal), do: []
+
+  # A setting a new block gets anyway, from its module, is not a change.
+  defp default_setting?(nil, _ref, _asset, _key, _value), do: false
+
+  defp default_setting?(module, ref, asset, key, value) do
+    data =
+      case Enum.find(List.wrap(module.refs), &(&1.name == ref)) do
+        %{data: %{type: "media", data: data}} ->
+          if match?({:video, _}, asset), do: data.template_video, else: data.template_picture
+
+        %{data: %{data: data}} ->
+          data
+
+        _ ->
+          nil
+      end
+
+    is_map(data) and to_string(Map.get(data, String.to_existing_atom(key))) == to_string(value)
+  rescue
+    _ -> false
+  end
 
   defp identifier_titles(ids) do
     case Content.list_identifiers(ids) do
@@ -791,12 +854,12 @@ defmodule Brando.Content.Proposals.Review do
   # media. Asset ids show the asset; related ids the record's title.
   defp field_view(schema, name, value) do
     case asset_kind(schema, name) do
-      nil -> %{name: label_for(name), value: display(schema, name, value), media: nil}
-      kind -> %{name: label_for(String.replace_suffix(name, "_id", "")), value: nil, media: media_ref(kind, value)}
+      nil -> %{name: label_for(schema, name), value: display(schema, name, value), media: nil}
+      kind -> %{name: label_for(schema, name), value: nil, media: media_ref(kind, value)}
     end
   end
 
-  defp label_for(name), do: Brando.Content.Transfer.Labels.field(name)
+  defp label_for(schema, name), do: Brando.Content.Transfer.Labels.field(schema, name)
 
   defp asset_kind(schema, name) do
     Enum.find_value(Brando.Blueprint.Assets.__assets__(schema), fn

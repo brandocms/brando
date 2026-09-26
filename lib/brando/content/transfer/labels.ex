@@ -4,6 +4,34 @@ defmodule Brando.Content.Transfer.Labels do
 
   def field(name), do: label(to_string(name))
 
+  @doc """
+  The label an entry's form gives field `name` of `schema`, in the admin's
+  language; the general label when the form has none.
+  """
+  def field(schema, name) do
+    name = to_string(name)
+    labels = form(schema)
+    Map.get(labels, name) || Map.get(labels, String.replace_suffix(name, "_id", "")) || label(name)
+  end
+
+  @doc "The labels of `schema`'s form inputs, by field name, translated."
+  def form(schema) do
+    naming = schema.__naming__()
+    domain = String.downcase("#{naming.domain}_#{naming.schema}")
+    gettext = schema.__modules__().gettext
+
+    for %{tabs: tabs} <- [schema.__form__()],
+        tab <- tabs,
+        fieldset <- tab.fields,
+        input <- Map.get(fieldset, :fields, []),
+        text = (Map.get(input, :opts) || [])[:label],
+        is_binary(text),
+        into: %{},
+        do: {to_string(input.name), Gettext.dgettext(gettext, domain, text)}
+  rescue
+    _ -> %{}
+  end
+
   def schema(schema) do
     naming = schema.__naming__()
     domain = String.downcase("#{naming.domain}_#{naming.schema}")
@@ -20,6 +48,10 @@ defmodule Brando.Content.Transfer.Labels do
   defp label("css_classes"), do: dgettext("content_transfer", "CSS classes")
   defp label("json_ld_type"), do: dgettext("content_transfer", "Structured data type")
   defp label("meta_title"), do: dgettext("content_transfer", "SEO title")
+  defp label("meta_image"), do: dgettext("content_transfer", "Sharing image")
+  defp label("meta_image_id"), do: dgettext("content_transfer", "Sharing image")
+  defp label("listing_image"), do: dgettext("content_transfer", "Listing image")
+  defp label("listing_image_id"), do: dgettext("content_transfer", "Listing image")
   defp label("meta_description"), do: dgettext("content_transfer", "SEO description")
   defp label("has_url"), do: dgettext("content_transfer", "Public URL")
   defp label("publish_at"), do: dgettext("content_transfer", "Publication date")

@@ -307,7 +307,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
       identity = "Brando.Pages.Page:#{c.identity.id}"
 
-      view |> element(~s(footer button[phx-value-key="#{identity}"])) |> render_click()
+      view |> element(~s(button.assistant-card-preview[phx-value-key="#{identity}"])) |> render_click()
       html = render(view)
       assert html =~ "Page preview"
 
@@ -506,6 +506,61 @@ defmodule BrandoAdmin.AssistantLiveTest do
       view |> element("button.assistant-apply") |> render_click()
       assert has_element?(view, ".assistant-receipt .assistant-badge", "Published")
       assert Brando.Repo.get_by!(Page, uri: "news").status == :published
+    end
+
+    test "an entry with placeholders lists them and stays a draft", %{conn: conn} = c do
+      ops = [
+        %Brando.Content.Proposals.CreateEntry{
+          schema: Page,
+          ref: "news",
+          fields: %{
+            title: "News",
+            uri: "news",
+            language: "en",
+            template: "default.html",
+            meta_description: "Opened in [[year]]"
+          }
+        }
+      ]
+
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, c.current_user, conversation_id: c.conversation.id)
+      c.conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      assert has_element?(view, ".assistant-placeholders", "1 place needs your input")
+      assert has_element?(view, ".assistant-placeholders mark", "year")
+      assert has_element?(view, ~s(.assistant-publish input[phx-value-key="new:news"][disabled]))
+
+      # Even if it was ticked before, it is applied as a draft.
+      render_click(view, "toggle_publish", %{"key" => "new:news"})
+      view |> element("button.assistant-apply") |> render_click()
+      assert Brando.Repo.get_by!(Page, uri: "news").status == :draft
+    end
+
+    test "a review link can show some of the entries", %{conn: conn} = c do
+      ops = [
+        %Brando.Content.Proposals.SetFields{target: {Page, c.work.id}, fields: %{title: "Work, renamed"}},
+        %Brando.Content.Proposals.CreateEntry{
+          schema: Page,
+          ref: "news",
+          fields: %{title: "News", uri: "news", language: "en", template: "default.html"}
+        }
+      ]
+
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, c.current_user, conversation_id: c.conversation.id)
+      c.conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      view |> element("button", "Share for review") |> render_click()
+      assert has_element?(view, ".assistant-share-choice input[value='new:news'][checked]")
+
+      view |> form(".assistant-share-choice", %{"keys" => ["new:news"]}) |> render_submit()
+      [link] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#assistant-review-link", "value")
+
+      colleague = Brando.Factory.insert(:random_user, config: %Brando.Users.UserConfig{})
+      {:ok, shared, _html} = live(log_in_user(build_conn(), colleague), URI.parse(link).path)
+      assert has_element?(shared, ".assistant-card", "News")
+      refute has_element?(shared, ".assistant-card", "Work, renamed")
     end
   end
 end

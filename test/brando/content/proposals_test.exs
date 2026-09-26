@@ -75,7 +75,41 @@ defmodule Brando.Content.ProposalsTest do
     ]
   end
 
-  test "creates one draft and inserts a block into two saved entries, leaving their other blocks alone", c do
+  test "the review of a new entry lists placeholders and leaves out what a block gets anyway", c do
+    ops = [
+      %CreateEntry{
+        schema: Page,
+        ref: :essay,
+        fields: %{title: "Essay", uri: "essay", language: "en", meta_description: "Drawn in [[year]]"}
+      },
+      %InsertBlock{
+        target: {:new, :essay},
+        module: c.case_module.id,
+        values: %{heading: "Weights: [[the typeface's weights]]"},
+        media: %{slot: {:image, c.image.id}},
+        configs: %{slot: %{title: "Slot picture", alt: "The typeface"}}
+      }
+    ]
+
+    assert {:ok, proposal} = Proposals.propose(ops, c.user)
+    assert proposal.problems == []
+    [card] = Review.entries(proposal)
+
+    assert [%{where: "SEO description", text: "year"}, %{where: "Case · Heading", text: "the typeface's weights"}] =
+             card.placeholders
+
+    # Blocks of a new entry follow each other; the slot's own title is no change.
+    assert [_, %{type: :insert_block, placement: nil, settings: [%{name: "alt", value: "The typeface"}]}] =
+             card.changes
+
+    assert Review.placeholders_in("<p>[[<strong>a</strong> name]] and [[date]]</p>") == ["a name", "date"]
+
+    # Fields are named as the entry's form names them.
+    assert Brando.Content.Transfer.Labels.field(Page, "parent_id") == "Parent page"
+    assert Brando.Content.Transfer.Labels.field(Page, "related_cases") == "Related cases"
+  end
+
+    test "creates one draft and inserts a block into two saved entries, leaving their other blocks alone", c do
     before_identity = roots(c.identity, c.user)
     before_naming = roots(c.naming, c.user)
     blocks = block_count()
@@ -1313,9 +1347,13 @@ defmodule Brando.Content.ProposalsTest do
       assert {:ok, proposal} = Proposals.propose(ops, c.user)
 
       token = Proposals.share_token(proposal)
-      assert {:ok, {id, version}} = Proposals.verify_share_token(token)
+      assert {:ok, {id, version, nil}} = Proposals.verify_share_token(token)
       assert {id, version} == {proposal.id, proposal.version}
       assert {:error, _} = Proposals.verify_share_token(token <> "x")
+
+      # A link can name the entries it shows.
+      keyed = Proposals.share_token(proposal, ["Brando.Pages.Page:#{c.work.id}"])
+      assert {:ok, {^id, ^version, ["Brando.Pages.Page:" <> _]}} = Proposals.verify_share_token(keyed)
 
       colleague = Factory.insert(:random_user)
       assert {:ok, shared} = Proposals.get_shared(id, version, colleague)

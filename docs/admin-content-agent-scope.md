@@ -781,3 +781,25 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
   look from before the editor's latest message becomes stale like other
   reads. `Budget.estimate` counts each picture at its token cost, not its
   byte size.
+
+## Review polish (26 September 2026)
+
+- Media requests have one main action under the suggestions: use the media
+  attached so far. It is disabled until something is attached. The other
+  answers (browse, upload, let the assistant choose) sit below it as a list.
+- Review cards are 480–720px wide, side by side when there is room. Their
+  body and changes use `minmax(0, 1fr)` tracks so long values wrap instead
+  of widening the card and being clipped.
+- A new block's settings that equal its module's defaults are not listed.
+  Blocks inserted at the root of a new entry show no placement: the order
+  of the cards is the order of the page.
+- Fields are labelled as the entry's form labels them
+  (`Labels.field/2`), with general labels for trait fields such as the
+  listing and sharing images.
+- Each card has a "Preview page" button under its title, for new entries too.
+- The assistant writes facts it cannot find as `[[…]]` placeholders. The
+  review lists them per entry, and an entry holding one is applied as a
+  draft even if publishing was ticked.
+- With several entries, "Share for review" first asks which entries the
+  link shows. The token carries their keys, and the shared view shows and
+  previews only those.

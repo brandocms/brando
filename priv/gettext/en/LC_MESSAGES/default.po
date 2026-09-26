@@ -290,7 +290,7 @@ msgstr ""
 #: lib/brando_admin/components/image_picker.ex:280
 #: lib/brando_admin/components/image_picker.ex:299
 #: lib/brando_admin/dashboard.ex:101
-#: lib/brando_admin/live/ai/assistant_live.ex:348
+#: lib/brando_admin/live/ai/assistant_live.ex:350
 #: lib/brando_admin/live/images/image_list_live.ex:202
 #: lib/brando_admin/live/images/image_list_live.ex:221
 #: lib/brando_admin/menu.ex:349
@@ -340,7 +340,7 @@ msgstr ""
 #: lib/brando_admin/components/content/select_identifier.ex:538
 #: lib/brando_admin/components/dashboard.ex:96
 #: lib/brando_admin/components/form/input.ex:795
-#: lib/brando_admin/live/ai/assistant_live.ex:1637
+#: lib/brando_admin/live/ai/assistant_live.ex:1700
 #, elixir-autogen, elixir-format
 msgid "Published"
 msgstr ""
@@ -1084,7 +1084,7 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:296
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:516
 #: lib/brando_admin/components/form/video_drawer.ex:342
-#: lib/brando_admin/live/ai/assistant_live.ex:538
+#: lib/brando_admin/live/ai/assistant_live.ex:541
 #: lib/brando_admin/live/config/cache_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Type"
@@ -1779,7 +1779,7 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:317
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:536
 #: lib/brando_admin/components/video_picker.ex:598
-#: lib/brando_admin/live/ai/assistant_live.ex:357
+#: lib/brando_admin/live/ai/assistant_live.ex:359
 #: lib/brando_admin/live/videos/video_list_live.ex:203
 #: lib/brando_admin/live/videos/video_list_live.ex:234
 #: lib/brando_admin/menu.ex:357
@@ -2006,7 +2006,7 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex:2258
 #: lib/brando_admin/components/form/block_field/outline.ex:134
 #: lib/brando_admin/components/form/draft_recovery.ex:88
-#: lib/brando_admin/live/ai/assistant_live.ex:531
+#: lib/brando_admin/live/ai/assistant_live.ex:534
 #: lib/brando_admin/live/config/seo_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "Entry"
@@ -2372,7 +2372,7 @@ msgstr ""
 msgid "Identifiers synced."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1227
+#: lib/brando_admin/live/ai/assistant_live.ex:1268
 #: lib/brando_admin/live_view/form/hooks.ex:1486
 #, elixir-autogen, elixir-format
 msgid "New"
@@ -2391,7 +2391,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex:1844
 #: lib/brando_admin/components/form/module_props.ex:19
-#: lib/brando_admin/live/ai/assistant_live.ex:2152
+#: lib/brando_admin/live/ai/assistant_live.ex:2221
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
@@ -2417,7 +2417,7 @@ msgstr ""
 msgid "Timezone"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:900
+#: lib/brando_admin/live/ai/assistant_live.ex:941
 #: lib/brando_admin/live/config/publishing_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Version"
@@ -2533,6 +2533,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/multi_select.ex:274
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:47
 #: lib/brando_admin/components/image_picker.ex:460
+#: lib/brando_admin/live/ai/assistant_live.ex:718
 #: lib/brando_admin/live/config/environment_live.ex:297
 #: lib/brando_admin/live/config/seo_live.ex:459
 #: lib/brando_admin/live/content/module_form_live.ex:164
@@ -2717,7 +2718,7 @@ msgstr ""
 #: lib/brando/videos/video.ex:164
 #: lib/brando/videos/video.ex:192
 #: lib/brando_admin/components/video_picker.ex:901
-#: lib/brando_admin/live/ai/assistant_live.ex:223
+#: lib/brando_admin/live/ai/assistant_live.ex:225
 #: lib/brando_admin/live/videos/video_list_live.ex:221
 #, elixir-autogen, elixir-format
 msgid "Untitled"
@@ -2840,7 +2841,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/components/form/block/render.ex:2742
-#: lib/brando_admin/live/ai/assistant_live.ex:1226
+#: lib/brando_admin/live/ai/assistant_live.ex:1267
 #, elixir-autogen, elixir-format
 msgid "Copy"
 msgstr ""
@@ -3377,8 +3378,8 @@ msgstr ""
 #: lib/brando_admin/components/assets/media_field.ex:117
 #: lib/brando_admin/components/form/file_drawer.ex:109
 #: lib/brando_admin/components/form/image_drawer.ex:180
-#: lib/brando_admin/live/ai/assistant_live.ex:331
-#: lib/brando_admin/live/ai/assistant_live.ex:465
+#: lib/brando_admin/live/ai/assistant_live.ex:333
+#: lib/brando_admin/live/ai/assistant_live.ex:468
 #: lib/brando_admin/live/files/file_list_live.ex:320
 #: lib/brando_admin/live/images/image_list_live.ex:273
 #, elixir-autogen, elixir-format
@@ -3655,7 +3656,7 @@ msgstr[1] ""
 
 #: lib/brando_admin/components/form/block_field.ex:2027
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:35
-#: lib/brando_admin/live/ai/assistant_live.ex:736
+#: lib/brando_admin/live/ai/assistant_live.ex:756
 #, elixir-autogen, elixir-format
 msgid "Undo"
 msgstr ""
@@ -4168,7 +4169,7 @@ msgid "Could not update gallery: %{error}"
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex:411
-#: lib/brando_admin/live/ai/assistant_live.ex:767
+#: lib/brando_admin/live/ai/assistant_live.ex:787
 #: lib/brando_admin/live/content/shared_library_live.ex:355
 #: lib/brando_admin/live/users/groups_live.ex:145
 #: lib/brando_admin/live/users/groups_live.ex:1036
@@ -5721,7 +5722,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:67
 #: lib/brando_admin/components/form/revisions_drawer.ex:99
-#: lib/brando_admin/live/ai/assistant_live.ex:1058
+#: lib/brando_admin/live/ai/assistant_live.ex:1099
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr ""
@@ -5755,7 +5756,7 @@ msgid "Upload files"
 msgstr ""
 
 #: lib/brando_admin/components/form/transformer.ex:1343
-#: lib/brando_admin/live/ai/assistant_live.ex:588
+#: lib/brando_admin/live/ai/assistant_live.ex:591
 #, elixir-autogen, elixir-format
 msgid "Uploading…"
 msgstr ""
@@ -6623,7 +6624,7 @@ msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex:304
 #: lib/brando_admin/components/module_files.ex:413
-#: lib/brando_admin/live/ai/assistant_live.ex:767
+#: lib/brando_admin/live/ai/assistant_live.ex:787
 #: lib/brando_admin/live/users/groups_live.ex:145
 #, elixir-autogen, elixir-format
 msgid "Update"
@@ -7034,7 +7035,7 @@ msgid "Only an active Superuser can use authorization tools."
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex:497
-#: lib/brando_admin/live/ai/assistant_live.ex:992
+#: lib/brando_admin/live/ai/assistant_live.ex:1033
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
@@ -7463,7 +7464,7 @@ msgstr[1] ""
 
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:988
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1348
-#: lib/brando_admin/live/ai/assistant_live.ex:572
+#: lib/brando_admin/live/ai/assistant_live.ex:575
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
@@ -7893,7 +7894,7 @@ msgstr[1] ""
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1353
 #: lib/brando_admin/components/form/input/gallery.ex:324
 #: lib/brando_admin/components/form/input/gallery_objects.ex:91
-#: lib/brando_admin/live/ai/assistant_live.ex:338
+#: lib/brando_admin/live/ai/assistant_live.ex:340
 #, elixir-autogen, elixir-format
 msgid "Upload media"
 msgstr ""
@@ -8565,7 +8566,7 @@ msgstr ""
 msgid "Utilities & caches"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:915
+#: lib/brando_admin/live/ai/assistant_live.ex:956
 #: lib/brando_admin/live/users/groups_live.ex:1032
 #, elixir-autogen, elixir-format
 msgid "View"
@@ -8996,7 +8997,7 @@ msgid "Appearance"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:296
-#: lib/brando_admin/live/ai/assistant_live.ex:972
+#: lib/brando_admin/live/ai/assistant_live.ex:1013
 #, elixir-autogen, elixir-format
 msgid "Open in a new tab"
 msgstr ""
@@ -9034,7 +9035,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:245
 #: lib/brando_admin/components/module_files.ex:258
-#: lib/brando_admin/live/ai/assistant_live.ex:854
+#: lib/brando_admin/live/ai/assistant_live.ex:895
 #, elixir-autogen, elixir-format
 msgid "Applying…"
 msgstr ""
@@ -10524,7 +10525,7 @@ msgid "Destination reference mappings"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:66
-#: lib/brando_admin/live/ai/assistant_live.ex:842
+#: lib/brando_admin/live/ai/assistant_live.ex:883
 #, elixir-autogen, elixir-format
 msgid "Discard"
 msgstr ""
@@ -11237,521 +11238,521 @@ msgstr ""
 msgid "Written by %{model}."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:360
+#: lib/brando_admin/live/ai/assistant_live.ex:362
 #, elixir-autogen, elixir-format
 msgid "%{count} attached"
 msgid_plural "%{count} attached"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1673
+#: lib/brando_admin/live/ai/assistant_live.ex:1742
 #, elixir-autogen, elixir-format
 msgid "%{count} block added"
 msgid_plural "%{count} blocks added"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1674
+#: lib/brando_admin/live/ai/assistant_live.ex:1743
 #, elixir-autogen, elixir-format
 msgid "%{count} change"
 msgid_plural "%{count} changes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2114
+#: lib/brando_admin/live/ai/assistant_live.ex:2183
 #, elixir-autogen, elixir-format
 msgid "%{count} changed block"
 msgid_plural "%{count} changed blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2112
+#: lib/brando_admin/live/ai/assistant_live.ex:2181
 #, elixir-autogen, elixir-format
 msgid "%{count} new block"
 msgid_plural "%{count} new blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2102
+#: lib/brando_admin/live/ai/assistant_live.ex:2171
 #, elixir-autogen, elixir-format
 msgid "%{count} new entry"
 msgid_plural "%{count} new entries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2103
+#: lib/brando_admin/live/ai/assistant_live.ex:2172
 #, elixir-autogen, elixir-format
 msgid "%{count} updated entry"
 msgid_plural "%{count} updated entries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1661
+#: lib/brando_admin/live/ai/assistant_live.ex:1730
 #, elixir-autogen, elixir-format
 msgid "%{title} (no address yet)"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:601
+#: lib/brando_admin/live/ai/assistant_live.ex:604
 #, elixir-autogen, elixir-format
 msgid "%{used} used in the proposal · %{free} not used"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1108
+#: lib/brando_admin/live/ai/assistant_live.ex:1149
 #, elixir-autogen, elixir-format
 msgid "Add a %{module} block"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:845
+#: lib/brando_admin/live/ai/assistant_live.ex:886
 #, elixir-autogen, elixir-format
 msgid "Adjust"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:877
+#: lib/brando_admin/live/ai/assistant_live.ex:918
 #, elixir-autogen, elixir-format
 msgid "All changes"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2074
+#: lib/brando_admin/live/ai/assistant_live.ex:2143
 #, elixir-autogen, elixir-format
 msgid "Applied"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2157
-#: lib/brando_admin/live/ai/assistant_live.ex:2160
+#: lib/brando_admin/live/ai/assistant_live.ex:2226
+#: lib/brando_admin/live/ai/assistant_live.ex:2229
 #, elixir-autogen, elixir-format
 msgid "Apply %{count} entry change"
 msgid_plural "Apply %{count} entry changes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:307
+#: lib/brando_admin/live/ai/assistant_live.ex:309
 #, elixir-autogen, elixir-format
 msgid "Ask for an adjustment…"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:196
-#: lib/brando_admin/live/ai/assistant_live.ex:500
+#: lib/brando_admin/live/ai/assistant_live.ex:198
+#: lib/brando_admin/live/ai/assistant_live.ex:503
 #: lib/brando_admin/menu.ex:251
 #, elixir-autogen, elixir-format
 msgid "Assistant"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:346
+#: lib/brando_admin/live/ai/assistant_live.ex:348
 #, elixir-autogen, elixir-format
 msgid "Attach images from the media library"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:355
+#: lib/brando_admin/live/ai/assistant_live.ex:357
 #, elixir-autogen, elixir-format
 msgid "Attach videos from the media library"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:571
+#: lib/brando_admin/live/ai/assistant_live.ex:574
 #, elixir-autogen, elixir-format
 msgid "Attached to this conversation"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:902
+#: lib/brando_admin/live/ai/assistant_live.ex:943
 #, elixir-autogen, elixir-format
 msgid "Before"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1090
+#: lib/brando_admin/live/ai/assistant_live.ex:1131
 #, elixir-autogen, elixir-format
 msgid "Change fields"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1188
+#: lib/brando_admin/live/ai/assistant_live.ex:1229
 #, elixir-autogen, elixir-format
 msgid "Change settings of %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1396
+#: lib/brando_admin/live/ai/assistant_live.ex:1437
 #, elixir-autogen, elixir-format
 msgid "Changes applied"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:373
+#: lib/brando_admin/live/ai/assistant_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "Changes are only applied after your confirmation."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:751
+#: lib/brando_admin/live/ai/assistant_live.ex:771
 #, elixir-autogen, elixir-format
 msgid "Changes by entry"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1982
+#: lib/brando_admin/live/ai/assistant_live.ex:2051
 #, elixir-autogen, elixir-format
 msgid "Checked a module's slots"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:266
+#: lib/brando_admin/live/ai/assistant_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "Conversation"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:654
+#: lib/brando_admin/live/ai/assistant_live.ex:658
 #, elixir-autogen, elixir-format
 msgid "Create a case called Sommerro with image1 as its cover"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:197
+#: lib/brando_admin/live/ai/assistant_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "Create and edit content across entries. Nothing changes until you apply it."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1073
+#: lib/brando_admin/live/ai/assistant_live.ex:1114
 #, elixir-autogen, elixir-format
 msgid "Create the entry as a draft"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1638
+#: lib/brando_admin/live/ai/assistant_live.ex:1701
 #, elixir-autogen, elixir-format
 msgid "Created as draft"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2199
+#: lib/brando_admin/live/ai/assistant_live.ex:2268
 #, elixir-autogen, elixir-format
 msgid "Current site"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:644
+#: lib/brando_admin/live/ai/assistant_live.ex:648
 #, elixir-autogen, elixir-format
 msgid "Describe the changes in the conversation. The assistant prepares them here for review, entry by entry, and nothing is saved until you apply them."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:277
+#: lib/brando_admin/live/ai/assistant_live.ex:279
 #, elixir-autogen, elixir-format
 msgid "Describe the changes you want: which entries, which media and where it goes. Attach media first and refer to it as image1, video1 and so on."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:308
+#: lib/brando_admin/live/ai/assistant_live.ex:310
 #, elixir-autogen, elixir-format
 msgid "Describe the content changes…"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:932
+#: lib/brando_admin/live/ai/assistant_live.ex:973
 #, elixir-autogen, elixir-format
 msgid "Desktop"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2078
+#: lib/brando_admin/live/ai/assistant_live.ex:2147
 #, elixir-autogen, elixir-format
 msgid "Discarded"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1115
+#: lib/brando_admin/live/ai/assistant_live.ex:1156
 #, elixir-autogen, elixir-format
 msgid "Empty field"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:883
+#: lib/brando_admin/live/ai/assistant_live.ex:924
 #, elixir-autogen, elixir-format
 msgid "Entries in this proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:649
+#: lib/brando_admin/live/ai/assistant_live.ex:653
 #, elixir-autogen, elixir-format
 msgid "For example"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:819
+#: lib/brando_admin/live/ai/assistant_live.ex:869
 #, elixir-autogen, elixir-format
 msgid "Live page"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1972
+#: lib/brando_admin/live/ai/assistant_live.ex:2041
 #, elixir-autogen, elixir-format
 msgid "Looked at the content types"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2021
+#: lib/brando_admin/live/ai/assistant_live.ex:2090
 #, elixir-autogen, elixir-format
 msgid "Looked at the site's content"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1987
+#: lib/brando_admin/live/ai/assistant_live.ex:2056
 #, elixir-autogen, elixir-format
 msgid "Matched the attached media"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:299
+#: lib/brando_admin/live/ai/assistant_live.ex:301
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:933
+#: lib/brando_admin/live/ai/assistant_live.ex:974
 #, elixir-autogen, elixir-format
 msgid "Mobile"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2080
+#: lib/brando_admin/live/ai/assistant_live.ex:2149
 #, elixir-autogen, elixir-format
 msgid "Needs changes"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:230
-#: lib/brando_admin/live/ai/assistant_live.ex:268
+#: lib/brando_admin/live/ai/assistant_live.ex:232
+#: lib/brando_admin/live/ai/assistant_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "New conversation"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:820
+#: lib/brando_admin/live/ai/assistant_live.ex:870
 #, elixir-autogen, elixir-format
 msgid "New draft"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1667
+#: lib/brando_admin/live/ai/assistant_live.ex:1736
 #, elixir-autogen, elixir-format
 msgid "New entry"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:260
+#: lib/brando_admin/live/ai/assistant_live.ex:262
 #, elixir-autogen, elixir-format
 msgid "No AI model is configured for this site. Add a model and key to the Brando.AI configuration to use the assistant."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:217
+#: lib/brando_admin/live/ai/assistant_live.ex:219
 #, elixir-autogen, elixir-format
 msgid "No conversations yet"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:642
+#: lib/brando_admin/live/ai/assistant_live.ex:646
 #, elixir-autogen, elixir-format
 msgid "No proposal yet"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:821
+#: lib/brando_admin/live/ai/assistant_live.ex:871
 #, elixir-autogen, elixir-format
 msgid "Not published"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:879
+#: lib/brando_admin/live/ai/assistant_live.ex:920
 #, elixir-autogen, elixir-format
 msgid "Page preview"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1045
+#: lib/brando_admin/live/ai/assistant_live.ex:1086
 #, elixir-autogen, elixir-format
 msgid "Page preview is not configured for this content type. Review the changes in the entry card."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1022
+#: lib/brando_admin/live/ai/assistant_live.ex:1063
 #, elixir-autogen, elixir-format
 msgid "Page preview of %{title}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2020
+#: lib/brando_admin/live/ai/assistant_live.ex:2089
 #, elixir-autogen, elixir-format
 msgid "Prepared the proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:829
+#: lib/brando_admin/live/ai/assistant_live.ex:802
 #, elixir-autogen, elixir-format
 msgid "Preview page"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:170
-#: lib/brando_admin/live/ai/assistant_live.ex:380
+#: lib/brando_admin/live/ai/assistant_live.ex:172
+#: lib/brando_admin/live/ai/assistant_live.ex:382
 #, elixir-autogen, elixir-format
 msgid "Proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:689
+#: lib/brando_admin/live/ai/assistant_live.ex:693
 #, elixir-autogen, elixir-format
 msgid "Proposal · version %{version}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:902
-#: lib/brando_admin/live/ai/assistant_live.ex:963
-#: lib/brando_admin/live/ai/assistant_live.ex:1163
-#: lib/brando_admin/live/ai/assistant_live.ex:1280
+#: lib/brando_admin/live/ai/assistant_live.ex:943
+#: lib/brando_admin/live/ai/assistant_live.ex:1004
+#: lib/brando_admin/live/ai/assistant_live.ex:1204
+#: lib/brando_admin/live/ai/assistant_live.ex:1321
 #, elixir-autogen, elixir-format
 msgid "Proposed"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:653
+#: lib/brando_admin/live/ai/assistant_live.ex:657
 #, elixir-autogen, elixir-format
 msgid "Put image1 on the Index page, after the introduction"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1971
+#: lib/brando_admin/live/ai/assistant_live.ex:2040
 #, elixir-autogen, elixir-format
 msgid "Read an entry"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2081
+#: lib/brando_admin/live/ai/assistant_live.ex:2150
 #, elixir-autogen, elixir-format
 msgid "Ready for your review"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:214
+#: lib/brando_admin/live/ai/assistant_live.ex:216
 #, elixir-autogen, elixir-format
 msgid "Recent conversations"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:594
+#: lib/brando_admin/live/ai/assistant_live.ex:597
 #, elixir-autogen, elixir-format
 msgid "Remove %{alias}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1152
+#: lib/brando_admin/live/ai/assistant_live.ex:1193
 #, elixir-autogen, elixir-format
 msgid "Replace media in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2079
+#: lib/brando_admin/live/ai/assistant_live.ex:2148
 #, elixir-autogen, elixir-format
 msgid "Replaced by a newer version"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1176
+#: lib/brando_admin/live/ai/assistant_live.ex:1217
 #, elixir-autogen, elixir-format
 msgid "Rewrite text in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:655
+#: lib/brando_admin/live/ai/assistant_live.ex:659
 #, elixir-autogen, elixir-format
 msgid "Rewrite the introduction on the About page to be shorter"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:963
+#: lib/brando_admin/live/ai/assistant_live.ex:1004
 #, elixir-autogen, elixir-format
 msgid "Saved version"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1966
+#: lib/brando_admin/live/ai/assistant_live.ex:2035
 #, elixir-autogen, elixir-format
 msgid "Searched for “%{query}”"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1999
+#: lib/brando_admin/live/ai/assistant_live.ex:2068
 #, elixir-autogen, elixir-format
 msgid "Searched the media library"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:366
+#: lib/brando_admin/live/ai/assistant_live.ex:368
 #, elixir-autogen, elixir-format
 msgid "Send"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:951
+#: lib/brando_admin/live/ai/assistant_live.ex:992
 #, elixir-autogen, elixir-format
 msgid "Show changes"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:291
+#: lib/brando_admin/live/ai/assistant_live.ex:293
 #, elixir-autogen, elixir-format
 msgid "Stop"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:721
+#: lib/brando_admin/live/ai/assistant_live.ex:741
 #, elixir-autogen, elixir-format
 msgid "The changes are saved. Pages are re-rendered in the background."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1056
+#: lib/brando_admin/live/ai/assistant_live.ex:1097
 #, elixir-autogen, elixir-format
 msgid "The page could not be rendered: %{message}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:880
+#: lib/brando_admin/live/ai/assistant_live.ex:921
 #, elixir-autogen, elixir-format
 msgid "The proposed content in the site's own templates. Nothing is saved."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1362
+#: lib/brando_admin/live/ai/assistant_live.ex:1403
 #, elixir-autogen, elixir-format
 msgid "Thinking"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1036
+#: lib/brando_admin/live/ai/assistant_live.ex:1077
 #, elixir-autogen, elixir-format
 msgid "This page has not been created yet. Switch to Proposed to see it."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:711
+#: lib/brando_admin/live/ai/assistant_live.ex:731
 #, elixir-autogen, elixir-format
 msgid "This proposal cannot be applied yet. Ask the assistant to adjust it."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1639
+#: lib/brando_admin/live/ai/assistant_live.ex:1702
 #, elixir-autogen, elixir-format
 msgid "Updated"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:329
+#: lib/brando_admin/live/ai/assistant_live.ex:331
 #, elixir-autogen, elixir-format
 msgid "Upload images or videos"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:584
+#: lib/brando_admin/live/ai/assistant_live.ex:587
 #, elixir-autogen, elixir-format
 msgid "Used in the proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:928
+#: lib/brando_admin/live/ai/assistant_live.ex:969
 #, elixir-autogen, elixir-format
 msgid "Viewport"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:483
+#: lib/brando_admin/live/ai/assistant_live.ex:486
 #, elixir-autogen, elixir-format
 msgid "You"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2161
+#: lib/brando_admin/live/ai/assistant_live.ex:2230
 #, elixir-autogen, elixir-format
 msgid "affects %{count} live page"
 msgid_plural "affects %{count} live pages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2090
+#: lib/brando_admin/live/ai/assistant_live.ex:2159
 #, elixir-autogen, elixir-format
 msgid "changed block"
 msgid_plural "changed blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2092
+#: lib/brando_admin/live/ai/assistant_live.ex:2161
 #, elixir-autogen, elixir-format
 msgid "deletion"
 msgid_plural "deletions"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1108
+#: lib/brando_admin/live/ai/assistant_live.ex:1149
 #, elixir-autogen, elixir-format
 msgid "module"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2089
+#: lib/brando_admin/live/ai/assistant_live.ex:2158
 #, elixir-autogen, elixir-format
 msgid "new block"
 msgid_plural "new blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2087
+#: lib/brando_admin/live/ai/assistant_live.ex:2156
 #, elixir-autogen, elixir-format
 msgid "new entry"
 msgid_plural "new entries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2119
+#: lib/brando_admin/live/ai/assistant_live.ex:2188
 #, elixir-autogen, elixir-format
 msgid "no deletions"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:690
+#: lib/brando_admin/live/ai/assistant_live.ex:694
 #, elixir-autogen, elixir-format
 msgid "not applied"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2088
+#: lib/brando_admin/live/ai/assistant_live.ex:2157
 #, elixir-autogen, elixir-format
 msgid "updated entry"
 msgid_plural "updated entries"
@@ -11826,12 +11827,12 @@ msgstr ""
 msgid "off"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2012
+#: lib/brando_admin/live/ai/assistant_live.ex:2081
 #, elixir-autogen, elixir-format
 msgid "Attached the folder's media"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:542
+#: lib/brando_admin/live/ai/assistant_live.ex:545
 #, elixir-autogen, elixir-format
 msgid "Block field"
 msgstr ""
@@ -11842,12 +11843,12 @@ msgstr ""
 msgid "Build with AI"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:546
+#: lib/brando_admin/live/ai/assistant_live.ex:549
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2004
+#: lib/brando_admin/live/ai/assistant_live.ex:2073
 #, elixir-autogen, elixir-format
 msgid "Looked for the folder"
 msgstr ""
@@ -11857,7 +11858,7 @@ msgstr ""
 msgid "Save the entry to build it with AI"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:527
+#: lib/brando_admin/live/ai/assistant_live.ex:530
 #, elixir-autogen, elixir-format
 msgid "Selected entry"
 msgstr ""
@@ -11867,12 +11868,12 @@ msgstr ""
 msgid "The assistant reads the saved entry, without your unsaved changes"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:551
+#: lib/brando_admin/live/ai/assistant_live.ex:554
 #, elixir-autogen, elixir-format
 msgid "The assistant reads the saved entry. Unsaved changes in the editor are not included; save them first if the assistant should build on them."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:528
+#: lib/brando_admin/live/ai/assistant_live.ex:531
 #, elixir-autogen, elixir-format
 msgid "Working on"
 msgstr ""
@@ -11913,7 +11914,7 @@ msgstr ""
 msgid "Copy into editor"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:254
+#: lib/brando_admin/live/ai/assistant_live.ex:256
 #, elixir-autogen, elixir-format
 msgid "Edit guidance"
 msgstr ""
@@ -11923,12 +11924,12 @@ msgstr ""
 msgid "For example: Portrait image pairs use the Two images module with the narrow setting on."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:249
+#: lib/brando_admin/live/ai/assistant_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "From the administrators"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:249
+#: lib/brando_admin/live/ai/assistant_live.ex:251
 #: lib/brando_admin/live/ai/guidance_live.ex:129
 #, elixir-autogen, elixir-format
 msgid "From the site's code"
@@ -11969,7 +11970,7 @@ msgstr ""
 msgid "No guidance has been saved here yet."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:239
+#: lib/brando_admin/live/ai/assistant_live.ex:241
 #, elixir-autogen, elixir-format
 msgid "No site guidance"
 msgstr ""
@@ -12004,12 +12005,12 @@ msgstr ""
 msgid "Set by the developers in the site's configuration. Where it conflicts with the guidance above, the guidance above applies."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:238
+#: lib/brando_admin/live/ai/assistant_live.ex:240
 #, elixir-autogen, elixir-format
 msgid "Site guidance in use"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:243
+#: lib/brando_admin/live/ai/assistant_live.ex:245
 #, elixir-autogen, elixir-format
 msgid "The assistant follows this guidance for the site. Your own requests take precedence, and every proposal is still reviewed."
 msgstr ""
@@ -12247,386 +12248,408 @@ msgstr ""
 msgid "media"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2118
+#: lib/brando_admin/live/ai/assistant_live.ex:2187
 #, elixir-autogen, elixir-format
 msgid "%{count} deletion"
 msgid_plural "%{count} deletions"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2116
+#: lib/brando_admin/live/ai/assistant_live.ex:2185
 #, elixir-autogen, elixir-format
 msgid "%{count} moved block"
 msgid_plural "%{count} moved blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1331
+#: lib/brando_admin/live/ai/assistant_live.ex:1372
 #, elixir-autogen, elixir-format
 msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1329
+#: lib/brando_admin/live/ai/assistant_live.ex:1370
 #, elixir-autogen, elixir-format
 msgid "Remove %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2091
+#: lib/brando_admin/live/ai/assistant_live.ex:2160
 #, elixir-autogen, elixir-format
 msgid "moved block"
 msgid_plural "moved blocks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1228
+#: lib/brando_admin/live/ai/assistant_live.ex:1269
 #, elixir-autogen, elixir-format
 msgid "Moved"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1212
+#: lib/brando_admin/live/ai/assistant_live.ex:1253
 #, elixir-autogen, elixir-format
 msgid "New order in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1213
+#: lib/brando_admin/live/ai/assistant_live.ex:1254
 #, elixir-autogen, elixir-format
 msgid "New order of the blocks"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1316
+#: lib/brando_admin/live/ai/assistant_live.ex:1357
 #, elixir-autogen, elixir-format
 msgid "It is kept, but not shown on the page."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1315
+#: lib/brando_admin/live/ai/assistant_live.ex:1356
 #, elixir-autogen, elixir-format
 msgid "It is shown on the page again."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1310
+#: lib/brando_admin/live/ai/assistant_live.ex:1351
 #, elixir-autogen, elixir-format
 msgid "Turn off %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1304
+#: lib/brando_admin/live/ai/assistant_live.ex:1345
 #, elixir-autogen, elixir-format
 msgid "Turn off %{ref} in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1307
+#: lib/brando_admin/live/ai/assistant_live.ex:1348
 #, elixir-autogen, elixir-format
 msgid "Turn on %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1301
+#: lib/brando_admin/live/ai/assistant_live.ex:1342
 #, elixir-autogen, elixir-format
 msgid "Turn on %{ref} in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1252
+#: lib/brando_admin/live/ai/assistant_live.ex:1293
 #, elixir-autogen, elixir-format
 msgid "(cleared)"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1238
+#: lib/brando_admin/live/ai/assistant_live.ex:1279
 #, elixir-autogen, elixir-format
 msgid "Change %{ref} settings in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1239
+#: lib/brando_admin/live/ai/assistant_live.ex:1280
 #, elixir-autogen, elixir-format
 msgid "Change the details of %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1155
-#: lib/brando_admin/live/ai/assistant_live.ex:1276
+#: lib/brando_admin/live/ai/assistant_live.ex:1196
+#: lib/brando_admin/live/ai/assistant_live.ex:1317
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1963
+#: lib/brando_admin/live/ai/assistant_live.ex:2032
 #, elixir-autogen, elixir-format
 msgid "%{step} (did not work)"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2008
+#: lib/brando_admin/live/ai/assistant_live.ex:2077
 #, elixir-autogen, elixir-format
 msgid "Attached %{count} item from %{folder}"
 msgid_plural "Attached %{count} items from %{folder}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1975
+#: lib/brando_admin/live/ai/assistant_live.ex:2044
 #, elixir-autogen, elixir-format
 msgid "Checked the fields of %{type}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1983
+#: lib/brando_admin/live/ai/assistant_live.ex:2052
 #, elixir-autogen, elixir-format
 msgid "Checked the module “%{module}”"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:375
+#: lib/brando_admin/live/ai/assistant_live.ex:377
 #, elixir-autogen, elixir-format
 msgid "Estimated cost so far: %{cost}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:374
+#: lib/brando_admin/live/ai/assistant_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Estimated from the model's token prices"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1978
+#: lib/brando_admin/live/ai/assistant_live.ex:2047
 #, elixir-autogen, elixir-format
 msgid "Looked at the modules for %{type}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2002
+#: lib/brando_admin/live/ai/assistant_live.ex:2071
 #, elixir-autogen, elixir-format
 msgid "Looked for the folder “%{name}”"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2018
+#: lib/brando_admin/live/ai/assistant_live.ex:2087
 #, elixir-autogen, elixir-format
 msgid "Prepared version %{version} of the proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2015
+#: lib/brando_admin/live/ai/assistant_live.ex:2084
 #, elixir-autogen, elixir-format
 msgid "Prepared version %{version}, with problems to fix"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1969
+#: lib/brando_admin/live/ai/assistant_live.ex:2038
 #, elixir-autogen, elixir-format
 msgid "Read “%{title}”"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1997
+#: lib/brando_admin/live/ai/assistant_live.ex:2066
 #, elixir-autogen, elixir-format
 msgid "Searched the media library for “%{query}”"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:458
+#: lib/brando_admin/live/ai/assistant_live.ex:461
 #, elixir-autogen, elixir-format
 msgid "Browse the library"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:470
+#: lib/brando_admin/live/ai/assistant_live.ex:473
 #, elixir-autogen, elixir-format
 msgid "Choose suitable ones from the library yourself."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1273
+#: lib/brando_admin/live/ai/assistant_live.ex:1314
 #, elixir-autogen, elixir-format
 msgid "Choose the entries shown in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1290
+#: lib/brando_admin/live/ai/assistant_live.ex:1331
 #, elixir-autogen, elixir-format
 msgid "Copy %{block} to %{entry}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:443
+#: lib/brando_admin/live/ai/assistant_live.ex:446
 #, elixir-autogen, elixir-format
 msgid "I have attached the media. Use it."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1263
+#: lib/brando_admin/live/ai/assistant_live.ex:1304
 #, elixir-autogen, elixir-format
 msgid "It has %{count} row now."
 msgid_plural "It has %{count} rows now."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:788
+#: lib/brando_admin/live/ai/assistant_live.ex:837
 #, elixir-autogen, elixir-format
 msgid "Leave out"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:786
+#: lib/brando_admin/live/ai/assistant_live.ex:835
 #, elixir-autogen, elixir-format
 msgid "Leave this change out of the proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1409
+#: lib/brando_admin/live/ai/assistant_live.ex:1450
 #, elixir-autogen, elixir-format
 msgid "Left out of the proposal: %{change}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:473
+#: lib/brando_admin/live/ai/assistant_live.ex:476
 #, elixir-autogen, elixir-format
 msgid "Let the assistant choose"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1988
+#: lib/brando_admin/live/ai/assistant_live.ex:2057
 #, elixir-autogen, elixir-format
 msgid "Looked at the entries a block can show"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1261
+#: lib/brando_admin/live/ai/assistant_live.ex:1302
 #, elixir-autogen, elixir-format
 msgid "Replace the table in %{block}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:417
+#: lib/brando_admin/live/ai/assistant_live.ex:420
 #, elixir-autogen, elixir-format
 msgid "The assistant asks for images"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:411
+#: lib/brando_admin/live/ai/assistant_live.ex:414
 #, elixir-autogen, elixir-format
 msgid "The assistant asks for media"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:416
+#: lib/brando_admin/live/ai/assistant_live.ex:419
 #, elixir-autogen, elixir-format
 msgid "The assistant asks for videos"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1292
+#: lib/brando_admin/live/ai/assistant_live.ex:1333
 #, elixir-autogen, elixir-format
 msgid "The original stays here."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1627
+#: lib/brando_admin/live/ai/assistant_live.ex:1690
 #, elixir-autogen, elixir-format
 msgid "a change"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1626
+#: lib/brando_admin/live/ai/assistant_live.ex:1689
 #, elixir-autogen, elixir-format
 msgid "a new %{module} block"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1624
+#: lib/brando_admin/live/ai/assistant_live.ex:1687
 #, elixir-autogen, elixir-format
 msgid "the entry's fields"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1989
+#: lib/brando_admin/live/ai/assistant_live.ex:2058
 #, elixir-autogen, elixir-format
 msgid "Looked at an entry's media"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:985
+#: lib/brando_admin/live/ai/assistant_live.ex:1026
 #, elixir-autogen, elixir-format
 msgid "Anyone with this link can see the proposed page for %{count} day:"
 msgid_plural "Anyone with this link can see the proposed page for %{count} days:"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:702
+#: lib/brando_admin/live/ai/assistant_live.ex:722
 #, elixir-autogen, elixir-format
 msgid "Colleagues with access to the admin can review it for a day:"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:798
+#: lib/brando_admin/live/ai/assistant_live.ex:847
 #, elixir-autogen, elixir-format
 msgid "Other languages"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:161
+#: lib/brando_admin/live/ai/assistant_live.ex:163
 #, elixir-autogen, elixir-format
 msgid "Proposal for review"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:814
+#: lib/brando_admin/live/ai/assistant_live.ex:864
 #, elixir-autogen, elixir-format
 msgid "Publish when applied"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:980
+#: lib/brando_admin/live/ai/assistant_live.ex:1021
 #, elixir-autogen, elixir-format
 msgid "Share a link"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:699
+#: lib/brando_admin/live/ai/assistant_live.ex:703
 #, elixir-autogen, elixir-format
 msgid "Share for review"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:163
+#: lib/brando_admin/live/ai/assistant_live.ex:165
 #, elixir-autogen, elixir-format
 msgid "Shared by %{name}. You can look at the changes and the pages; only %{name} can apply them."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1435
+#: lib/brando_admin/live/ai/assistant_live.ex:1476
 #, elixir-autogen, elixir-format
 msgid "The proposal is undone"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:91
+#: lib/brando_admin/live/ai/assistant_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "This review link has expired or the proposal is no longer available."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:734
+#: lib/brando_admin/live/ai/assistant_live.ex:754
 #, elixir-autogen, elixir-format
 msgid "Undo the proposal? Each entry goes back to how it was before, and new entries are deleted."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:2073
+#: lib/brando_admin/live/ai/assistant_live.ex:2142
 #, elixir-autogen, elixir-format
 msgid "Undone"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:738
+#: lib/brando_admin/live/ai/assistant_live.ex:758
 #, elixir-autogen, elixir-format
 msgid "Undone: the entries are back to how they were."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1456
+#: lib/brando_admin/live/ai/assistant_live.ex:1513
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to share pages."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:164
+#: lib/brando_admin/live/ai/assistant_live.ex:166
 #, elixir-autogen, elixir-format
 msgid "a colleague"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1646
+#: lib/brando_admin/live/ai/assistant_live.ex:1715
 #, elixir-autogen, elixir-format
 msgid "changed in this proposal too"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1647
+#: lib/brando_admin/live/ai/assistant_live.ex:1716
 #, elixir-autogen, elixir-format
 msgid "follows when applied, with text to translate"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1648
+#: lib/brando_admin/live/ai/assistant_live.ex:1717
 #, elixir-autogen, elixir-format
 msgid "not changed"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1992
+#: lib/brando_admin/live/ai/assistant_live.ex:2061
 #, elixir-autogen, elixir-format
 msgid "Looked at %{count} picture"
 msgid_plural "Looked at %{count} pictures"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1994
+#: lib/brando_admin/live/ai/assistant_live.ex:2063
 #, elixir-autogen, elixir-format
 msgid "Looked at pictures"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:452
+#: lib/brando_admin/live/ai/assistant_live.ex:455
 #, elixir-autogen, elixir-format
 msgid "Or"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:447
+#: lib/brando_admin/live/ai/assistant_live.ex:450
 #, elixir-autogen, elixir-format
 msgid "Pick some above, or choose another way"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex:448
+#: lib/brando_admin/live/ai/assistant_live.ex:451
 #, elixir-autogen, elixir-format
 msgid "Use the %{count} I attached"
 msgid_plural "Use the %{count} I attached"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex:716
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Create link"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex:815
+#, elixir-autogen, elixir-format
+msgid "The assistant marked what it could not know with [[ ]]. Fill it in on the entry before publishing."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex:707
+#, elixir-autogen, elixir-format
+msgid "Which entries should the link show?"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex:808
+#, elixir-autogen, elixir-format
+msgid "%{count} place needs your input"
+msgid_plural "%{count} places need your input"
 msgstr[0] ""
 msgstr[1] ""

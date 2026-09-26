@@ -49,6 +49,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        shared: nil,
        publish: MapSet.new(),
        review_link: nil,
+       share_choice: nil,
        share_url: nil,
        run: nil,
        progress: nil,
@@ -69,16 +70,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
   def handle_params(%{"token" => token}, _uri, socket) do
     user = socket.assigns.current_user
 
-    with {:ok, {id, version}} <- Proposals.verify_share_token(token),
+    with {:ok, {id, version, keys}} <- Proposals.verify_share_token(token),
          {:ok, proposal} <- Proposals.get_shared(id, version, user) do
       owner = Brando.Repo.get(Brando.Users.User, proposal.actor_id)
 
       {:noreply,
        socket
        |> assign(
-         shared: %{by: owner && owner.name, token: token},
+         # A link made for some entries shows, and previews, only those.
+         shared: %{by: owner && owner.name, token: token, keys: keys},
          proposal: proposal,
-         review: Review.entries(proposal),
+         review: proposal |> Review.entries() |> Enum.filter(&(is_nil(keys) or &1.key in keys)),
          receipt: nil,
          error: nil,
          preview: nil
@@ -390,6 +392,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             preview={@preview}
             publish={@publish}
             review_link={@review_link}
+            share_choice={@share_choice}
             share_url={@share_url}
           />
         </section>
@@ -633,6 +636,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :shared, :boolean, default: false
   attr :publish, :any, default: MapSet.new()
   attr :review_link, :string, default: nil
+  attr :share_choice, :list, default: nil
   attr :share_url, :string, default: nil
 
   defp review(%{proposal: nil} = assigns) do
@@ -695,9 +699,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span :for={{count, label} <- counts(@proposal.effects)}><strong>{count}</strong> {label}</span>
         </p>
         <div :if={!@shared and !@preview and @under_review?} class="assistant-share">
-          <button :if={!@review_link} type="button" class="assistant-button" phx-click="share_review">
+          <button :if={!@review_link and !@share_choice} type="button" class="assistant-button" phx-click="share_review">
             <.icon name="hero-user-plus" />{gettext("Share for review")}
           </button>
+          <form :if={@share_choice} class="assistant-share-choice" phx-submit="share_review">
+            <fieldset>
+              <legend>{gettext("Which entries should the link show?")}</legend>
+              <label :for={entry <- @review} class="assistant-check">
+                <input type="checkbox" name="keys[]" value={entry.key} checked={entry.key in @share_choice} />
+                <span>{entry.title}</span>
+                <small>{entry.content_type}</small>
+              </label>
+            </fieldset>
+            <div>
+              <button type="submit" class="assistant-button">
+                <.icon name="hero-link" />{gettext("Create link")}
+              </button>
+              <button type="button" class="assistant-quiet-button" phx-click="cancel_share">{gettext("Cancel")}</button>
+            </div>
+          </form>
           <div :if={@review_link} class="assistant-share-link">
             <label for="assistant-review-link">{gettext("Colleagues with access to the admin can review it for a day:")}</label>
             <input id="assistant-review-link" type="text" readonly value={@review_link} />
@@ -772,6 +792,35 @@ defmodule BrandoAdmin.AI.AssistantLive do
               <span :if={!entry.admin_url}>{entry.title}</span>
             </h4>
             <p :if={entry.url} class="assistant-card-url">{entry.url}</p>
+            <button
+              :if={entry.preview? and is_nil(@receipt)}
+              type="button"
+              class="assistant-button assistant-card-preview"
+              phx-click="preview"
+              phx-value-key={entry.key}
+            >
+              <.icon name="hero-eye" />{gettext("Preview page")}
+            </button>
+
+            <div :if={entry.placeholders != []} class="assistant-placeholders">
+              <strong>
+                <.icon name="hero-pencil-square" />
+                {ngettext(
+                  "%{count} place needs your input",
+                  "%{count} places need your input",
+                  length(entry.placeholders)
+                )}
+              </strong>
+              <p>
+                {gettext("The assistant marked what it could not know with [[ ]]. Fill it in on the entry before publishing.")}
+              </p>
+              <ul>
+                <li :for={placeholder <- entry.placeholders}>
+                  <span>{placeholder.where}</span>
+                  <mark>{placeholder.text}</mark>
+                </li>
+              </ul>
+            </div>
 
             <ul class="assistant-changes">
               <li :for={change <- entry.changes} class={change[:operations] && @can_leave_out? && "can-leave-out"}>
@@ -809,7 +858,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 type="checkbox"
                 phx-click="toggle_publish"
                 phx-value-key={entry.key}
-                checked={MapSet.member?(@publish, entry.key)}
+                disabled={entry.placeholders != []}
+                checked={MapSet.member?(@publish, entry.key) and entry.placeholders == []}
               />
               {gettext("Publish when applied")}
             </label>
@@ -819,15 +869,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <span :if={entry.live?} class="assistant-live"><.icon name="hero-globe-alt" />{gettext("Live page")}</span>
             <span :if={entry.action == :create} class="assistant-draft"><.icon name="hero-lock-closed" />{gettext("New draft")}</span>
             <span :if={entry.action == :update and !entry.live?} class="assistant-draft">{gettext("Not published")}</span>
-            <button
-              :if={entry.preview? and is_nil(@receipt)}
-              type="button"
-              class="assistant-preview-link"
-              phx-click="preview"
-              phx-value-key={entry.key}
-            >
-              {gettext("Preview page")}<.icon name="hero-chevron-right" />
-            </button>
           </footer>
         </article>
       </div>
@@ -1106,7 +1147,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp change(%{change: %{type: :insert_block}} = assigns) do
     ~H"""
     <span class="assistant-change-title">{gettext("Add a %{module} block", module: @change.module || gettext("module"))}</span>
-    <div :if={!@applied} class="assistant-outline" aria-label={@change.placement.text}>
+    <div :if={!@applied and @change.placement} class="assistant-outline" aria-label={@change.placement.text}>
       <span :if={@change.placement.position == :before} class="is-new">+ {@change.module}</span>
       <span :if={@change.placement.position == :before} class="assistant-outline-arrow" aria-hidden="true">→</span>
       <span :if={@change.placement.anchor} class="is-anchor" title={@change.placement.anchor.excerpt}>
@@ -1116,7 +1157,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <span :if={@change.placement.position != :before} class="assistant-outline-arrow" aria-hidden="true">→</span>
       <span :if={@change.placement.position != :before} class="is-new">+ {@change.module}</span>
     </div>
-    <p class="assistant-placement">{@change.placement.text}</p>
+    <p :if={@change.placement} class="assistant-placement">{@change.placement.text}</p>
     <dl
       :if={@change.texts != [] or @change.values != [] or @change.media != [] or @change.settings != []}
       class="assistant-fields"
@@ -1140,7 +1181,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </dd>
       </div>
       <div :for={setting <- @change.settings}>
-        <dt>{humanize(setting.ref)} · {humanize(setting.name)}</dt>
+        <dt>{humanize(setting.ref)} · {Brando.Content.Transfer.Labels.field(setting.name)}</dt>
         <dd>{to_string(setting.value)}</dd>
       </div>
     </dl>
@@ -1386,7 +1427,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     # then applies that version.
     with {:ok, _} <- Proposals.approve(id, version, user),
          {:ok, receipt} <-
-           Proposals.apply(id, version, user, publish: MapSet.to_list(socket.assigns.publish)) do
+           Proposals.apply(id, version, user, publish: publishing(socket.assigns)) do
       {:noreply,
        socket
        |> assign(applying: false, receipt: receipt)
@@ -1439,10 +1480,26 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
-  def handle_event("share_review", _, socket) do
-    token = Proposals.share_token(socket.assigns.proposal)
-    {:noreply, assign(socket, :review_link, Brando.endpoint().url() <> "/admin/assistant/shared/" <> token)}
+  # With several entries, the editor first chooses which ones the link shows.
+  def handle_event("share_review", %{"keys" => keys}, socket) when is_list(keys) and keys != [] do
+    all = Enum.map(socket.assigns.review, & &1.key)
+    keys = Enum.filter(all, &(&1 in keys))
+    token = Proposals.share_token(socket.assigns.proposal, if(keys == all, do: nil, else: keys))
+
+    {:noreply,
+     assign(socket, share_choice: nil, review_link: Brando.endpoint().url() <> "/admin/assistant/shared/" <> token)}
   end
+
+  def handle_event("share_review", %{"keys" => _}, socket), do: {:noreply, socket}
+
+  def handle_event("share_review", _, socket) do
+    case socket.assigns.review do
+      [_, _ | _] = review -> {:noreply, assign(socket, :share_choice, Enum.map(review, & &1.key))}
+      _ -> handle_event("share_review", %{"keys" => Enum.map(socket.assigns.review, & &1.key)}, socket)
+    end
+  end
+
+  def handle_event("cancel_share", _, socket), do: {:noreply, assign(socket, :share_choice, nil)}
 
   def handle_event("share_page", _, socket) do
     %{proposal: proposal, preview: preview, current_user: user} = socket.assigns
@@ -1575,7 +1632,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # preview target. Only the latest frame's cache key is kept.
   defp render_preview(%{assigns: %{proposal: nil}} = socket, _preview), do: assign(socket, :preview, nil)
 
-  defp render_preview(socket, preview) do
+  defp render_preview(%{assigns: %{shared: %{keys: [_ | _] = keys}}} = socket, preview) do
+    if preview.key in keys, do: preview!(socket, preview), else: assign(socket, :preview, nil)
+  end
+
+  defp render_preview(socket, preview), do: preview!(socket, preview)
+
+  defp preview!(socket, preview) do
     socket = discard_previews(socket)
 
     case Enum.find(socket.assigns.proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end) do
@@ -1642,6 +1705,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # New entries and drafts can be published as the proposal is applied.
   defp publishable?(entry), do: entry.action == :create or entry.status == "draft"
+
+  # Entries still holding placeholders stay drafts, whatever was ticked.
+  defp publishing(%{publish: publish, review: review}) do
+    unfinished = for %{placeholders: [_ | _], key: key} <- review || [], do: key
+    publish |> MapSet.to_list() |> Enum.reject(&(&1 in unfinished))
+  end
 
   defp language_state(:changed), do: gettext("changed in this proposal too")
   defp language_state(:follows), do: gettext("follows when applied, with text to translate")

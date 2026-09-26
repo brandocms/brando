@@ -509,25 +509,32 @@
   h4 a:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 
+.assistant-card-preview { justify-self: start; }
+.assistant-card-preview [data-icon] { width: 14px; height: 14px; }
+
+/* Facts the assistant left for the editor, as [[…]] in the content. */
+.assistant-placeholders {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #ecd9a8;
+  border-radius: 6px;
+  background: #fdf8ec;
+  color: var(--assistant-warning);
+  font-size: 12px;
+
+  strong { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  strong [data-icon] { width: 14px; height: 14px; }
+  p { color: var(--assistant-muted); }
+  ul { display: grid; gap: 4px; }
+  li { display: grid; grid-template-columns: minmax(80px, 160px) minmax(0, 1fr); gap: 12px; }
+  li span { color: var(--assistant-muted); overflow-wrap: anywhere; }
+  mark { justify-self: start; padding: 0 4px; border-radius: 3px; background: #f6e7bd; color: var(--assistant-ink); }
+}
+
 .assistant-card-type { color: var(--assistant-muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .assistant-card-url { margin-top: -8px; color: var(--assistant-muted); font-size: 12px; overflow-wrap: anywhere; }
 .assistant-live { color: var(--assistant-accent); }
-
-.assistant-preview-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: auto;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--assistant-ink);
-  font-size: 12px;
-  font-weight: 500;
-
-  &:hover { color: var(--assistant-accent); }
-  [data-icon] { width: 14px; height: 14px; }
-}
 
 .assistant-badge {
   padding: 2px 8px;
@@ -1041,6 +1048,23 @@
    and opening the preview in its own tab. */
 .assistant-share { margin-top: 12px; }
 .assistant-share .assistant-button [data-icon] { width: 14px; height: 14px; }
+
+/* Choosing the entries a review link shows. */
+.assistant-share-choice {
+  display: grid;
+  gap: 10px;
+  max-width: 64ch;
+  padding: 12px 14px;
+  border: 1px solid var(--assistant-line);
+  border-radius: 6px;
+
+  fieldset { display: grid; gap: 6px; }
+  legend { margin-bottom: 6px; font-size: 12px; font-weight: 500; }
+  .assistant-check { color: var(--assistant-ink); font-size: 13px; }
+  small { color: var(--assistant-muted); font-size: 11px; }
+  > div { display: flex; gap: 8px; }
+  [data-icon] { width: 14px; height: 14px; }
+}
 
 .assistant-share-link {
   display: grid;

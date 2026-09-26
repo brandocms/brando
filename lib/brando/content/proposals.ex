@@ -1958,16 +1958,26 @@ defmodule Brando.Content.Proposals do
 
   @share_salt "brando-proposal-share"
 
-  @doc "A token that lets colleagues review `version` of proposal `id` for a day."
-  @spec share_token(Proposal.t()) :: String.t()
-  def share_token(%Proposal{id: id, version: version}),
-    do: Phoenix.Token.sign(Brando.endpoint(), @share_salt, %{"id" => id, "version" => version})
+  @doc """
+  A token that lets colleagues review `version` of proposal `id` for a day:
+  all of its entries, or only those with the given keys.
+  """
+  @spec share_token(Proposal.t(), [String.t()] | nil) :: String.t()
+  def share_token(%Proposal{id: id, version: version}, keys \\ nil) do
+    payload = %{"id" => id, "version" => version}
+    payload = if keys, do: Map.put(payload, "keys", keys), else: payload
+    Phoenix.Token.sign(Brando.endpoint(), @share_salt, payload)
+  end
 
-  @doc "The proposal id and version a share token names, while it is valid."
-  @spec verify_share_token(String.t()) :: {:ok, {Ecto.UUID.t(), integer()}} | {:error, atom()}
+  @doc """
+  The proposal id and version a share token names, while it is valid, and
+  the keys of the entries it shows (`nil` for all).
+  """
+  @spec verify_share_token(String.t()) ::
+          {:ok, {Ecto.UUID.t(), integer(), [String.t()] | nil}} | {:error, atom()}
   def verify_share_token(token) do
     case Phoenix.Token.verify(Brando.endpoint(), @share_salt, token, max_age: div(@ttl, 1000)) do
-      {:ok, %{"id" => id, "version" => version}} -> {:ok, {id, version}}
+      {:ok, %{"id" => id, "version" => version} = payload} -> {:ok, {id, version, payload["keys"]}}
       {:error, reason} -> {:error, reason}
     end
   end

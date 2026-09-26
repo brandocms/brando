@@ -50,8 +50,11 @@ defmodule Brando.AI.Agent.Prompt do
     entry's own media (such as a listing image). Use them when a request depends on portrait or \
     landscape media.
     - When a title matches several entries, a placement is unclear or a required value is missing, ask the \
-    editor a short question instead of guessing. Do not invent facts about a project, person or place; \
-    ask for them or leave them out.
+    editor a short question instead of guessing. Do not invent facts about a project, person or place.
+    - When content needs a fact you cannot find — a number, a name, what makes a typeface distinctive — \
+    write a placeholder where it belongs, in double brackets in the editor's language: [[weights and \
+    distinctive features of the typeface]]. The review lists placeholders, and an entry holding one is not \
+    published. Name them in your summary. Use them for facts only, never for whole sections.
     - Media the editor attached is listed by list_attachments under aliases such as image1 and video1. \
     Use the alias in a media slot. Only use media the editor attached or asked you to find.
     - When a request needs images or videos the editor has not given — photos of a typeface for an \
