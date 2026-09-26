@@ -71,7 +71,7 @@ defmodule BrandoAdmin.AssistantGuidanceLiveTest do
     assert has_element?(view, ".guidance-code pre", "From the code: keep headings short.")
   end
 
-  test "users who may not configure the assistant are sent away, and do not see it in the menu", %{conn: conn} do
+  test "users who may not configure the assistant are sent away, and do not see it in the menu" do
     admin = Factory.insert(:random_user, role: :admin, config: %Brando.Users.UserConfig{})
     conn = log_in_user(build_conn(), admin)
     assert {:error, {:redirect, %{to: "/admin"}}} = live(conn, "/admin/config/assistant")

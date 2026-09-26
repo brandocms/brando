@@ -97,7 +97,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       refute has_element?(view, ".block-field-assistant")
     end
 
-    test "is hidden for users without the assistant permission", %{conn: conn} = c do
+    test "is hidden for users without the assistant permission", c do
       put_test_env(:authorization_mode, :groups)
       {:ok, _} = Brando.Authorization.Migration.run()
       alias Brando.Authorization.{Catalog, Groups, Scope}
