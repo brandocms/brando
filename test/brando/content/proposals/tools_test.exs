@@ -432,6 +432,74 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert {:error, _} = Tools.call("list_selection_options", %{"module" => "local:#{table.id}"}, c.context)
     end
 
+    test "media requests suggest an entry's own media, which the assistant can also list", c do
+      result =
+        call!(
+          "request_media",
+          %{
+            "kind" => "video",
+            "reason" => "Clips from the project",
+            "from_entry" => %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}
+          },
+          c.context
+        )
+
+      assert c.video.id in result.suggested
+
+      %{media: media} =
+        call!("list_entry_media", %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}, c.context)
+
+      assert %{kind: :video, id: id} = Enum.find(media, &(&1.kind == :video))
+      assert id == c.video.id
+    end
+
+    test "a long entry's outline shrinks to fit, and one part reads in full", c do
+      long = String.duplicate("A long paragraph of text. ", 12)
+
+      for n <- 1..200 do
+        block =
+          %Brando.Content.Block{}
+          |> Brando.Content.Block.recursive_block_changeset(
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "type" => "module",
+              "module_id" => c.text_module.id,
+              "creator_id" => c.user.id,
+              "source" => to_string(Page.Blocks),
+              "refs" => [
+                %{
+                  "uid" => Brando.Utils.generate_uid(),
+                  "name" => "body",
+                  "data" => %{"type" => "text", "data" => %{"text" => "<p>#{n}. #{long}</p>"}}
+                }
+              ]
+            },
+            c.user
+          )
+          |> Brando.Repo.insert!()
+
+        Brando.Repo.insert!(struct(Page.Blocks, %{entry_id: c.naming.id, block_id: block.id, sequence: 10 + n}))
+      end
+
+      outline = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}, c.context)
+      assert byte_size(Jason.encode!(outline)) <= 20_000
+      assert outline.note =~ "block_uid"
+      assert length(outline.blocks.blocks) == 203
+
+      last = List.last(outline.blocks.blocks)
+      refute Map.has_key?(last, :texts)
+
+      part =
+        call!(
+          "entry_outline",
+          %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id, "block_uid" => last.uid},
+          c.context
+        )
+
+      assert [%{uid: uid, texts: %{"body" => "200. " <> _}}] = part.blocks.part
+      assert uid == last.uid
+    end
+
     test "list_modules offers multi modules at the root", c do
       %{modules: modules} = call!("list_modules", %{"content_type" => "Brando.Pages.Page"}, c.context)
       assert %{multi: true, name: "Projects"} = Enum.find(modules, &(&1.module == "local:#{c.projects_module.id}"))

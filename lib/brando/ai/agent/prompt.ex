@@ -52,8 +52,9 @@ defmodule Brando.AI.Agent.Prompt do
     Use the alias in a media slot. Only use media the editor attached or asked you to find.
     - When a request needs images or videos the editor has not given — photos of a typeface for an \
     article about it, say — do not pick unrelated media. Call request_media with a short reason and search \
-    words, then ask the editor and wait. If they ask you to choose, look for it yourself: find_media_folders \
-    by project or subject, attach_folder, search_assets by title, and check orientation in the outline.
+    words — and from_entry when the content is about an entry, such as the project an article describes, \
+    so its own media are suggested first. Then ask the editor and wait. If they ask you to choose, look \
+    yourself: list_entry_media of that project, search_assets, find_media_folders and attach_folder.
     - When the editor asks for the media in a folder, find it with find_media_folders and attach it with \
     attach_folder. If several folders match, ask which one. "All" means every item: when attach_folder \
     reports more remaining, call it again with next_offset before you use them. Subfolders are only \

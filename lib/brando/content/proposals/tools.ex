@@ -17,6 +17,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content
   alias Brando.Content.BlockSlots
   alias Brando.Content.Proposals
+  alias Brando.Content.Proposals.BlockTree
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.RefConfig
@@ -40,9 +41,11 @@ defmodule Brando.Content.Proposals.Tools do
   # compile-time dependency on it.
   @max_folder_page 100
   @text_limit 160
-  # Blocks an outline describes in full; the rest are listed by uid and module
-  # only, so a long page stays within a model's budget.
-  @outline_budget 150
+  # Blocks an outline describes in full, tried in turn until the outline fits
+  # `@outline_bytes`; the rest are listed by uid and module only, so a long
+  # page stays within a model's budget.
+  @outline_budgets [150, 80, 40, 20, 10, 0]
+  @outline_bytes 20_000
   @system_fields ~w(id status publish_at deleted_at marked_as_deleted creator_id updated_by_id inserted_at updated_at
                     sequence edited_at rendered_blocks rendered_blocks_at)
 
@@ -82,7 +85,11 @@ defmodule Brando.Content.Proposals.Tools do
         "Read one entry: its fields, its own media (such as a listing image) and an outline of its blocks — root blocks and their children, nested (uid, module, active, short text, media, refs_off, settings that differ from the defaults, variable values, anchor, description). Media carries width, height and orientation. refs_off lists refs that are switched off. Children are the entries of a multi module, or the blocks of a container or slot. Use block uids for placement and block edits; every block at any depth can be edited, switched on or off, moved or deleted.",
       parameters: %{
         type: "object",
-        properties: %{content_type: %{type: "string"}, id: %{type: "integer"}},
+        properties: %{
+          content_type: %{type: "string"},
+          id: %{type: "integer"},
+          block_uid: %{type: "string", description: "Read only this block and everything below it, in full."}
+        },
         required: ["content_type", "id"]
       }
     },
@@ -111,10 +118,29 @@ defmodule Brando.Content.Proposals.Tools do
         properties: %{
           kind: %{type: "string", enum: ["image", "video"]},
           reason: %{type: "string", description: "One sentence the editor reads: what the media is for."},
-          query: %{type: "string", description: "Words to suggest library media by (title, file name)."},
+          query: %{type: "string", description: "Words to suggest library media by (title, file name, folder)."},
+          from_entry: %{
+            type: "object",
+            description:
+              ~s(An entry whose media to suggest first, such as the project an article is about: {"content_type":T,"id":N}.)
+          },
           count: %{type: "integer", description: "How many you need, if you know."}
         },
         required: ["kind", "reason"]
+      }
+    },
+    %{
+      name: "list_entry_media",
+      description:
+        "List the images and videos an entry uses — in its blocks, galleries and media fields — with title, width, height and orientation. Use it to choose media for related content, such as an article about a project.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          content_type: %{type: "string"},
+          id: %{type: "integer"},
+          kind: %{type: "string", enum: ["image", "video"]}
+        },
+        required: ["content_type", "id"]
       }
     },
     %{
@@ -297,16 +323,23 @@ defmodule Brando.Content.Proposals.Tools do
         {name, Enum.map(Map.fetch!(entry, :"entry_#{name}"), & &1.block)}
       end)
 
+    # One part of a long entry, in full: a block and everything below it.
+    roots =
+      case args["block_uid"] do
+        uid when is_binary(uid) ->
+          case roots |> Map.values() |> List.flatten() |> BlockTree.find_saved(uid) do
+            {block, _parent, _index} -> %{part: [block]}
+            nil -> Error.fail!("No block #{uid} in this entry.")
+          end
+
+        _ ->
+          roots
+      end
+
     assets = entry_assets(schema, entry)
     dimensions = dimensions(roots |> Map.values() |> List.flatten(), Map.values(assets))
 
-    {blocks, described} =
-      Enum.map_reduce(roots, 0, fn {name, blocks}, described ->
-        {blocks, described} = outline(blocks, dimensions, described)
-        {{name, blocks}, described}
-      end)
-
-    outline = %{
+    head = %{
       content_type: Codec.content_type(schema),
       id: entry.id,
       title: Catalog.describe(entry).title,
@@ -321,18 +354,30 @@ defmodule Brando.Content.Proposals.Tools do
           into: %{},
           do: {name, current}
         ),
-      media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end),
-      blocks: Map.new(blocks)
+      media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end)
     }
 
-    if described > @outline_budget,
-      do:
-        Map.put(
-          outline,
-          :note,
-          "Only the first #{@outline_budget} blocks are described in full; the rest show uid and module. Ask the editor which part to look at."
-        ),
-      else: outline
+    Enum.find_value(@outline_budgets, fn budget ->
+      {blocks, described} =
+        Enum.map_reduce(roots, 0, fn {name, blocks}, described ->
+          {blocks, described} = outline(blocks, dimensions, described, budget)
+          {{name, blocks}, described}
+        end)
+
+      outline = Map.put(head, :blocks, Map.new(blocks))
+
+      outline =
+        if described > budget,
+          do:
+            Map.put(
+              outline,
+              :note,
+              "Only the first #{budget} blocks are described in full; the rest show uid and module. Read one part in full with entry_outline and block_uid."
+            ),
+          else: outline
+
+      if budget == 0 or byte_size(Jason.encode!(outline)) <= @outline_bytes, do: outline
+    end)
   end
 
   defp run("list_modules", args, _context) do
@@ -384,12 +429,14 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp run("request_media", args, %{actor: actor}) do
     kind = media_kind!(args["kind"])
-    query = to_string(args["query"] || "")
 
-    suggested =
-      if query == "",
-        do: [],
-        else: kind |> to_string() |> Dependencies.options(actor, query) |> Enum.take(12) |> Enum.map(& &1.id)
+    from_entry =
+      case args["from_entry"] do
+        %{"content_type" => type, "id" => id} -> for {^kind, id} <- entry_media(schema!(type), id, actor), do: id
+        _ -> []
+      end
+
+    suggested = Enum.take(Enum.uniq(from_entry ++ library_search(kind, args["query"], actor)), 24)
 
     %{
       asked: true,
@@ -397,6 +444,23 @@ defmodule Brando.Content.Proposals.Tools do
       suggested: suggested,
       note:
         "The editor is asked, with #{length(suggested)} library suggestions. End your turn with a short question and wait for their reply; what they pick arrives as attachments (list_attachments)."
+    }
+  end
+
+  defp run("list_entry_media", args, %{actor: actor}) do
+    media = entry_media(schema!(args["content_type"]), args["id"], actor)
+    media = if kind = args["kind"], do: Enum.filter(media, &(elem(&1, 0) == media_kind!(kind))), else: media
+    dimensions = dimensions([], media)
+    titles = Map.new([:image, :video], fn kind -> {kind, titles(kind, for({^kind, id} <- media, do: id))} end)
+
+    %{
+      media:
+        media
+        |> Enum.take(60)
+        |> Enum.map(fn {kind, id} ->
+          Map.merge(%{kind: kind, id: id, title: titles[kind][id]}, Map.get(dimensions, {kind, id}, %{}))
+        end),
+      total: length(media)
     }
   end
 
@@ -436,13 +500,19 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   defp run("search_assets", %{"kind" => kind} = args, %{actor: actor}) when kind in ~w(image video file) do
-    assets =
-      kind
-      |> Dependencies.options(actor, to_string(args["query"] || ""))
-      |> Enum.take(limit(args))
-      |> Enum.map(&%{kind: kind, id: &1.id, label: &1.label})
+    kind = String.to_existing_atom(kind)
 
-    %{assets: assets}
+    ids =
+      if to_string(args["query"] || "") == "",
+        do: kind |> to_string() |> Dependencies.options(actor, "") |> Enum.map(& &1.id),
+        else: library_search(kind, args["query"], actor)
+
+    ids = Enum.take(ids, limit(args))
+
+    titles = titles(kind, ids)
+    dimensions = if kind in [:image, :video], do: dimensions([], Enum.map(ids, &{kind, &1})), else: %{}
+
+    %{assets: Enum.map(ids, &Map.merge(%{kind: kind, id: &1, label: titles[&1]}, Map.get(dimensions, {kind, &1}, %{})))}
   end
 
   defp run("search_assets", _args, _context), do: Error.fail!("kind is image, video or file.")
@@ -543,6 +613,59 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp target_key(target) when is_binary(target), do: target
   defp target_key(target), do: Proposals.Proposal.key(target)
+
+  # Every image and video an entry uses, in the order its blocks show them.
+  defp entry_media(schema, id, actor) do
+    entry = Catalog.load!(schema, id, actor, :read)
+    blocks = schema.__blocks_fields__() |> Enum.flat_map(&Map.fetch!(entry, :"entry_#{&1.name}")) |> Enum.map(& &1.block)
+
+    blocks
+    |> Enum.flat_map(&tree_media/1)
+    |> Enum.flat_map(&media_rows/1)
+    |> Enum.flat_map(fn row -> for kind <- [:image, :video], id = Map.get(row, :"#{kind}_id"), do: {kind, id} end)
+    |> Enum.concat(Map.values(entry_assets(schema, entry)))
+    |> Enum.uniq()
+  end
+
+  # Library media for `query`, word by word: titles and file names, then the
+  # media in folders named after a word. Media matching more words come first.
+  defp library_search(kind, query, actor) do
+    words = query |> to_string() |> String.split(~r/[\s,]+/, trim: true) |> Enum.filter(&(String.length(&1) >= 3))
+
+    # Without words there is nothing to go by.
+    if words == [] do
+      []
+    else
+      by_name =
+        Enum.flat_map(words, fn word -> kind |> to_string() |> Dependencies.options(actor, word) |> Enum.map(& &1.id) end)
+
+      in_folders =
+        Enum.flat_map(words, fn word ->
+          for folder <- Enum.take(Folders.find(kind, word, actor).folders, 2),
+              id <- Folders.assets(kind, folder.id, actor, subfolders: true, limit: 12).ids,
+              do: id
+        end)
+
+      (by_name ++ in_folders)
+      |> Enum.frequencies()
+      |> Enum.sort_by(fn {id, count} -> {-count, id} end)
+      |> Enum.map(&elem(&1, 0))
+    end
+  end
+
+  defp titles(:file, ids),
+    do: Map.new(Brando.Repo.all(from(f in Brando.Files.File, where: f.id in ^ids)), &{&1.id, &1.title || &1.filename})
+
+  defp titles(kind, ids) do
+    schema = if kind == :video, do: Brando.Videos.Video, else: Brando.Images.Image
+
+    Map.new(Brando.Repo.all(from(m in schema, where: m.id in ^ids, select: {m.id, m.title})), fn {id, title} ->
+      {id, plain(title)}
+    end)
+  end
+
+  defp plain(%{} = text), do: text["en"] || text |> Map.values() |> List.first()
+  defp plain(text), do: text
 
   # Datasources usually list identifiers; a custom one may list its own maps.
   defp selection_option(%Brando.Content.Identifier{} = identifier) do
@@ -680,13 +803,13 @@ defmodule Brando.Content.Proposals.Tools do
 
   # Outline `blocks` and their children, depth first. `described` counts the
   # blocks outlined in full, against `@outline_budget`.
-  defp outline(blocks, dimensions, described) do
+  defp outline(blocks, dimensions, described, budget) do
     Enum.map_reduce(blocks, described, fn block, described ->
-      {children, after_children} = outline(block.children || [], dimensions, described + 1)
+      {children, after_children} = outline(block.children || [], dimensions, described + 1, budget)
 
       summary =
         block
-        |> block_summary(dimensions, described < @outline_budget)
+        |> block_summary(dimensions, described < budget)
         |> put_kind(block)
         |> then(&if(children == [], do: &1, else: Map.put(&1, :children, children)))
 

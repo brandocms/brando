@@ -733,3 +733,14 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
 - **Also.** Steps name what was read; the conversation's estimated cost is
   shown (`show_cost: false` hides it); the run speaks the editor's language;
   the selected entry is a field grid.
+
+- **Tried on by.** Asked for an insight article about the typeface made for
+  Sommerro, the assistant could not read the case: its outline was 24 KB,
+  over the result limit, and the library search matched the whole phrase. Now
+  the outline describes as many blocks in full as fit in 20 KB (and
+  `block_uid` reads one part in full); `request_media` takes `from_entry` and
+  suggests the entry's own media first, then library media matching single
+  words in titles, file names and folder names; `list_entry_media` lists an
+  entry's media with orientation for choosing. Rerun, it read the case, asked
+  with 24 suggestions from it, and took its facts (the art deco starting
+  point, typographer Bobby Tannam) from the case rather than inventing them.

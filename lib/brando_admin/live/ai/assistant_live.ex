@@ -1780,6 +1780,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp step_text("list_attachments", _, _), do: gettext("Matched the attached media")
   defp step_text("list_selection_options", _, _), do: gettext("Looked at the entries a block can show")
+  defp step_text("list_entry_media", _, _), do: gettext("Looked at an entry's media")
 
   defp step_text("search_assets", %{"query" => query}, _) when query not in [nil, ""],
     do: gettext("Searched the media library for “%{query}”", query: query)

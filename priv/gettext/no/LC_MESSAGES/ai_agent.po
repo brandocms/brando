@@ -36,7 +36,7 @@ msgstr "Jeg stoppet etter %{steps} steg. Si fra hvordan jeg skal fortsette."
 msgid "Looking at the available modules"
 msgstr "Ser på tilgjengelige moduler"
 
-#: lib/brando/ai/agent/loop.ex:234
+#: lib/brando/ai/agent/loop.ex:235
 #, elixir-autogen, elixir-format
 msgid "Looking at the site's content"
 msgstr "Ser på innholdet på nettstedet"
@@ -56,7 +56,7 @@ msgstr "Søker etter «%{query}»"
 msgid "Searching the media library"
 msgstr "Søker i mediebiblioteket"
 
-#: lib/brando/ai/agent/loop.ex:274
+#: lib/brando/ai/agent/loop.ex:275
 #, elixir-autogen, elixir-format
 msgid "Something went wrong: %{error}"
 msgstr "Noe gikk galt: %{error}"
@@ -76,7 +76,7 @@ msgstr "Assistenten jobber fortsatt med forrige melding."
 msgid "The assistant requires an authenticated user."
 msgstr "Assistenten krever en innlogget bruker."
 
-#: lib/brando/ai/agent/loop.ex:245
+#: lib/brando/ai/agent/loop.ex:246
 #, elixir-autogen, elixir-format
 msgid "The assistant's token budget is used up. Nothing more was sent to the model."
 msgstr "Assistentens tokenbudsjett er brukt opp. Ingenting mer ble sendt til modellen."
@@ -171,3 +171,8 @@ msgstr "Ber deg om media"
 #, elixir-autogen, elixir-format
 msgid "Looking at the entries a block can show"
 msgstr "Ser på oppføringene en blokk kan vise"
+
+#: lib/brando/ai/agent/loop.ex:234
+#, elixir-autogen, elixir-format
+msgid "Looking at an entry's media"
+msgstr "Ser på mediene til en oppføring"
