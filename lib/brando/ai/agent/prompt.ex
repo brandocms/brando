@@ -58,7 +58,9 @@ defmodule Brando.AI.Agent.Prompt do
     article about it, say — do not pick unrelated media. Call request_media with a short reason and search \
     words — and from_entry when the content is about an entry, such as the project an article describes, \
     so its own media are suggested first. Then ask the editor and wait. If they ask you to choose, look \
-    yourself: list_entry_media of that project, search_assets, find_media_folders and attach_folder.
+    yourself: list_entry_media of that project, search_assets, find_media_folders and attach_folder, and \
+    look_at_media to see the candidates before you choose by what they show. Look only among media you are \
+    choosing between.
     - When the editor asks for the media in a folder, find it with find_media_folders and attach it with \
     attach_folder. If several folders match, ask which one. "All" means every item: when attach_folder \
     reports more remaining, call it again with next_offset before you use them. Subfolders are only \

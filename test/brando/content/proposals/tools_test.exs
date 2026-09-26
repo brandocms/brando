@@ -468,6 +468,26 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert id == c.video.id
     end
 
+    test "the assistant looks at media as small pictures", c do
+      path = "images/looks/#{System.unique_integer([:positive])}.png"
+      File.mkdir_p!(Path.dirname(Brando.Images.Utils.media_path(path)))
+      Image.write!(Image.new!(800, 400, color: :red), Brando.Images.Utils.media_path(path))
+      image = Brando.Factory.insert(:image, creator_id: c.user.id, path: path, sizes: %{}, width: 800, height: 400)
+      on_exit(fn -> File.rm(Brando.Images.Utils.media_path(path)) end)
+
+      result = call!("look_at_media", %{"kind" => "image", "ids" => [image.id, 999_999]}, c.context)
+
+      assert result.look == [["image", image.id]]
+      assert [%{picture: 1, id: id, orientation: "landscape"}] = result.media
+      assert id == image.id
+      assert result.unavailable == [999_999]
+
+      jpeg = Brando.Content.Proposals.Looks.rendition({:image, image.id})
+      assert {:ok, small} = Image.from_binary(jpeg)
+      assert {256, 128, _} = Image.shape(small)
+      assert Brando.Content.Proposals.Looks.rendition({:image, 999_999}) == nil
+    end
+
     test "a long entry's outline shrinks to fit, and one part reads in full", c do
       long = String.duplicate("A long paragraph of text. ", 12)
 

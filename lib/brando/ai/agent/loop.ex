@@ -165,7 +165,8 @@ defmodule Brando.AI.Agent.Loop do
   # Tools that read content. Their results go stale when the editor writes
   # again: the editor may have saved the entry, or be asking about it anew.
   @reads ~w(list_content_types describe_content_type search_entries entry_outline list_modules describe_module
-            list_attachments search_assets find_media_folders list_selection_options list_entry_media)
+            list_attachments search_assets find_media_folders list_selection_options list_entry_media
+            look_at_media)
   @stale Jason.encode!(%{
            stale:
              "Read before the editor's latest message; the content may have changed since. " <>
@@ -204,7 +205,41 @@ defmodule Brando.AI.Agent.Loop do
           message
       end)
 
-    Context.new([Context.system(Prompt.system(conversation)) | Enum.flat_map(messages, &message/1)])
+    # Pictures go with the latest look only: earlier ones are not sent again.
+    latest_look = messages |> Enum.filter(&(&1.role == "tool" and &1.tool_name == "look_at_media")) |> List.last()
+
+    Context.new([
+      Context.system(Prompt.system(conversation))
+      | Enum.flat_map(messages, fn
+          %Message{id: id} = message when not is_nil(latest_look) and id == latest_look.id -> look(message)
+          %Message{tool_name: "look_at_media", content: "{" <> _} = message -> message(earlier_look(message))
+          message -> message(message)
+        end)
+    ])
+  end
+
+  defp earlier_look(message),
+    do: %{message | content: String.replace(message.content, "The pictures follow", "The pictures were shown")}
+
+  # A look's result with its pictures, as small JPEGs after the text.
+  defp look(%Message{} = message) do
+    pictures =
+      case Jason.decode(message.content || "") do
+        {:ok, %{"look" => refs}} ->
+          for [kind, id] <- refs,
+              kind in ["image", "video"],
+              bytes = Brando.Content.Proposals.Looks.rendition({String.to_existing_atom(kind), id}),
+              do: ReqLLM.Message.ContentPart.image(bytes, "image/jpeg")
+
+        _ ->
+          []
+      end
+
+    [
+      Context.tool_result(message.tool_call_id, message.tool_name, [
+        ReqLLM.Message.ContentPart.text(message.content) | pictures
+      ])
+    ]
   end
 
   defp message(%Message{role: "user", content: content}), do: [Context.user(content)]
@@ -232,6 +267,7 @@ defmodule Brando.AI.Agent.Loop do
   defp progress("list_selection_options", _), do: dgettext("ai_agent", "Looking at the entries a block can show")
   defp progress("request_media", _), do: dgettext("ai_agent", "Asking you for media")
   defp progress("list_entry_media", _), do: dgettext("ai_agent", "Looking at an entry's media")
+  defp progress("look_at_media", _), do: dgettext("ai_agent", "Looking at the pictures")
   defp progress(_, _), do: dgettext("ai_agent", "Looking at the site's content")
 
   defp encode(result) do

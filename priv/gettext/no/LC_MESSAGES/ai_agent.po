@@ -11,12 +11,12 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/ai/agent/loop.ex:225
+#: lib/brando/ai/agent/loop.ex:260
 #, elixir-autogen, elixir-format
 msgid "Checking a module's slots"
 msgstr "Sjekker plassene i en modul"
 
-#: lib/brando/ai/agent/loop.ex:230
+#: lib/brando/ai/agent/loop.ex:265
 #, elixir-autogen, elixir-format
 msgid "Checking the proposal"
 msgstr "Sjekker forslaget"
@@ -31,32 +31,32 @@ msgstr "Ferdig."
 msgid "I stopped after %{steps} steps. Tell me how to continue."
 msgstr "Jeg stoppet etter %{steps} steg. Si fra hvordan jeg skal fortsette."
 
-#: lib/brando/ai/agent/loop.ex:226
+#: lib/brando/ai/agent/loop.ex:261
 #, elixir-autogen, elixir-format
 msgid "Looking at the available modules"
 msgstr "Ser på tilgjengelige moduler"
 
-#: lib/brando/ai/agent/loop.ex:235
+#: lib/brando/ai/agent/loop.ex:271
 #, elixir-autogen, elixir-format
 msgid "Looking at the site's content"
 msgstr "Ser på innholdet på nettstedet"
 
-#: lib/brando/ai/agent/loop.ex:224
+#: lib/brando/ai/agent/loop.ex:259
 #, elixir-autogen, elixir-format
 msgid "Reading an entry"
 msgstr "Leser en oppføring"
 
-#: lib/brando/ai/agent/loop.ex:223
+#: lib/brando/ai/agent/loop.ex:258
 #, elixir-autogen, elixir-format
 msgid "Searching for “%{query}”"
 msgstr "Søker etter «%{query}»"
 
-#: lib/brando/ai/agent/loop.ex:227
+#: lib/brando/ai/agent/loop.ex:262
 #, elixir-autogen, elixir-format
 msgid "Searching the media library"
 msgstr "Søker i mediebiblioteket"
 
-#: lib/brando/ai/agent/loop.ex:275
+#: lib/brando/ai/agent/loop.ex:311
 #, elixir-autogen, elixir-format
 msgid "Something went wrong: %{error}"
 msgstr "Noe gikk galt: %{error}"
@@ -76,7 +76,7 @@ msgstr "Assistenten jobber fortsatt med forrige melding."
 msgid "The assistant requires an authenticated user."
 msgstr "Assistenten krever en innlogget bruker."
 
-#: lib/brando/ai/agent/loop.ex:246
+#: lib/brando/ai/agent/loop.ex:282
 #, elixir-autogen, elixir-format
 msgid "The assistant's token budget is used up. Nothing more was sent to the model."
 msgstr "Assistentens tokenbudsjett er brukt opp. Ingenting mer ble sendt til modellen."
@@ -107,12 +107,12 @@ msgstr "Skriv en melding først."
 msgid "You do not have permission to use the assistant."
 msgstr "Du har ikke tilgang til å bruke assistenten."
 
-#: lib/brando/ai/agent/loop.ex:229
+#: lib/brando/ai/agent/loop.ex:264
 #, elixir-autogen, elixir-format
 msgid "Attaching the folder's media"
 msgstr "Legger ved mediene i mappen"
 
-#: lib/brando/ai/agent/loop.ex:228
+#: lib/brando/ai/agent/loop.ex:263
 #, elixir-autogen, elixir-format
 msgid "Looking for the folder"
 msgstr "Ser etter mappen"
@@ -157,22 +157,27 @@ msgstr "Dette nettstedet"
 msgid "You do not have permission to change the assistant's guidance."
 msgstr "Du har ikke tilgang til å endre assistentens veiledning."
 
-#: lib/brando/ai/agent/loop.ex:231
+#: lib/brando/ai/agent/loop.ex:266
 #, elixir-autogen, elixir-format
 msgid "Looking at the attachments"
 msgstr "Ser på vedleggene"
 
-#: lib/brando/ai/agent/loop.ex:233
+#: lib/brando/ai/agent/loop.ex:268
 #, elixir-autogen, elixir-format
 msgid "Asking you for media"
 msgstr "Ber deg om media"
 
-#: lib/brando/ai/agent/loop.ex:232
+#: lib/brando/ai/agent/loop.ex:267
 #, elixir-autogen, elixir-format
 msgid "Looking at the entries a block can show"
 msgstr "Ser på oppføringene en blokk kan vise"
 
-#: lib/brando/ai/agent/loop.ex:234
+#: lib/brando/ai/agent/loop.ex:269
 #, elixir-autogen, elixir-format
 msgid "Looking at an entry's media"
 msgstr "Ser på mediene til en oppføring"
+
+#: lib/brando/ai/agent/loop.ex:270
+#, elixir-autogen, elixir-format
+msgid "Looking at the pictures"
+msgstr "Ser på bildene"

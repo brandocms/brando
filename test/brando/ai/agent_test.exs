@@ -450,6 +450,40 @@ defmodule Brando.AI.AgentTest do
     assert current =~ "new"
   end
 
+  test "pictures go with the latest look only, and count as a model charges for them", c do
+    path = "images/looks/#{System.unique_integer([:positive])}.png"
+    File.mkdir_p!(Path.dirname(Brando.Images.Utils.media_path(path)))
+    Image.write!(Image.new!(600, 600, color: :blue), Brando.Images.Utils.media_path(path))
+    image = Brando.Factory.insert(:image, creator_id: c.user.id, path: path, sizes: %{})
+    on_exit(fn -> File.rm(Brando.Images.Utils.media_path(path)) end)
+
+    message = fn attrs -> Repo.insert!(struct(Message, Map.put(attrs, :conversation_id, c.conversation.id))) end
+    look = ~s({"look":[["image",#{image.id}]],"note":"The pictures follow, numbered in this order."})
+
+    message.(%{role: "user", content: "Choose a cover"})
+
+    for id <- ["call_1", "call_2"] do
+      message.(%{
+        role: "assistant",
+        content: "",
+        tool_calls: [%{"id" => id, "name" => "look_at_media", "arguments" => "{}"}]
+      })
+
+      message.(%{role: "tool", tool_call_id: id, tool_name: "look_at_media", content: look})
+    end
+
+    context = Brando.AI.Agent.Loop.context(c.conversation)
+    assert [earlier, latest] = Enum.filter(context.messages, &(&1.role == :tool))
+    refute Enum.any?(earlier.content, &(&1.type == :image))
+    assert Enum.map_join(earlier.content, & &1.text) =~ "were shown"
+    assert [%{type: :image, media_type: "image/jpeg"}] = Enum.filter(latest.content, &(&1.type == :image))
+
+    # The picture counts as its tokens, not its bytes.
+    estimate = Brando.AI.Agent.Budget.estimate(context)
+    without = Brando.AI.Agent.Budget.estimate(%{context | messages: Enum.drop(context.messages, -1)})
+    assert estimate - without < 200
+  end
+
   test "a run reports progress in the editor's language", c do
     user = c.user |> Ecto.Changeset.change(language: :no) |> Repo.update!()
     Agent.subscribe(c.conversation.id)

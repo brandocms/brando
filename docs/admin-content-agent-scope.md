@@ -766,3 +766,18 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
   proposal's day) that opens it read-only for colleagues, with page previews;
   only its author applies it. The page preview opens in its own tab, and
   "Share a link" makes the editor's public snapshot link of the proposed page.
+
+## Looking at media (26 September 2026)
+
+- `look_at_media` lets the assistant see up to 24 images, or videos by their
+  thumbnails, when it chooses media by what they show. The stored tool result
+  holds only references. `Brando.AI.Agent.Loop` attaches the pictures when it
+  builds the context for the model.
+- `Brando.Content.Proposals.Looks` makes each picture a JPEG at most 256px on
+  its long edge. It uses the smallest local size, or fetches one from the CDN,
+  and caches the result for an hour. At about 87 input tokens a picture, a
+  full look costs about 2,100 tokens, less than one entry outline.
+- Only the latest look carries pictures. Earlier looks keep their text, and a
+  look from before the editor's latest message becomes stale like other
+  reads. `Budget.estimate` counts each picture at its token cost, not its
+  byte size.

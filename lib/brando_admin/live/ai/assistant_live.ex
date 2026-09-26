@@ -1886,7 +1886,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # Tool calls and their results collapse into one list of steps between the
   # user's message and the assistant's answer.
   # Results that make a step's label specific: what was read, which version.
-  @labelled_results ~w(entry_outline prepare_proposal attach_folder request_media)
+  @labelled_results ~w(entry_outline prepare_proposal attach_folder request_media look_at_media)
 
   defp turns(messages) do
     results =
@@ -1985,6 +1985,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp step_text("list_attachments", _, _), do: gettext("Matched the attached media")
   defp step_text("list_selection_options", _, _), do: gettext("Looked at the entries a block can show")
   defp step_text("list_entry_media", _, _), do: gettext("Looked at an entry's media")
+
+  defp step_text("look_at_media", _, %{"media" => media}) when is_list(media),
+    do: ngettext("Looked at %{count} picture", "Looked at %{count} pictures", length(media))
+
+  defp step_text("look_at_media", _, _), do: gettext("Looked at pictures")
 
   defp step_text("search_assets", %{"query" => query}, _) when query not in [nil, ""],
     do: gettext("Searched the media library for “%{query}”", query: query)

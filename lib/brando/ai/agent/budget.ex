@@ -79,6 +79,18 @@ defmodule Brando.AI.Agent.Budget do
 
   @doc "A rough token estimate for a request: about four characters per token."
   @spec estimate(term()) :: non_neg_integer()
+  def estimate(%ReqLLM.Context{messages: messages} = context) do
+    # A picture costs what a model charges for it, not its bytes.
+    {messages, pictures} =
+      Enum.map_reduce(messages, 0, fn message, count ->
+        {images, rest} = Enum.split_with(List.wrap(message.content), &match?(%{type: :image}, &1))
+        {%{message | content: rest}, count + length(images)}
+      end)
+
+    div(byte_size(:erlang.term_to_binary(%{context | messages: messages})), 4) +
+      pictures * Brando.Content.Proposals.Looks.tokens()
+  end
+
   def estimate(payload), do: div(byte_size(:erlang.term_to_binary(payload)), 4)
 
   # Configured prices (USD per million tokens) win; then the cost ReqLLM

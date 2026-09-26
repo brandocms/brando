@@ -130,6 +130,19 @@ defmodule Brando.Content.Proposals.Tools do
       }
     },
     %{
+      name: "look_at_media",
+      description:
+        "See images or videos (a video by its thumbnail), when you choose media by what they show — which photos show the typeface, which cover suits a case. You get small pictures, in the order of ids, after this result. Look only among candidates you are choosing between; up to 24 at a time.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          kind: %{type: "string", enum: ["image", "video"]},
+          ids: %{type: "array", items: %{type: "integer"}, maxItems: 24}
+        },
+        required: ["kind", "ids"]
+      }
+    },
+    %{
       name: "list_entry_media",
       description:
         "List the images and videos an entry uses — in its blocks, galleries and media fields — with title, width, height and orientation. Use it to choose media for related content, such as an article about a project.",
@@ -446,6 +459,33 @@ defmodule Brando.Content.Proposals.Tools do
       suggested: suggested,
       note:
         "The editor is asked, with #{length(suggested)} library suggestions. End your turn with a short question and wait for their reply; what they pick arrives as attachments (list_attachments)."
+    }
+  end
+
+  # The pictures are not in the result: `Brando.AI.Agent.Loop` attaches them
+  # from `look`, so the stored conversation holds references only.
+  defp run("look_at_media", args, %{actor: actor}) do
+    kind = media_kind!(args["kind"])
+    ids = args["ids"] |> List.wrap() |> Enum.map(&integer/1) |> Enum.reject(&is_nil/1) |> Enum.uniq() |> Enum.take(24)
+
+    readable =
+      Enum.filter(ids, fn id ->
+        match?({:ok, _}, Error.protect(fn -> Dependencies.load!(to_string(kind), id, actor) end))
+      end)
+
+    dimensions = dimensions([], Enum.map(readable, &{kind, &1}))
+    titles = titles(kind, readable)
+
+    %{
+      look: Enum.map(readable, &[to_string(kind), &1]),
+      media:
+        readable
+        |> Enum.with_index(1)
+        |> Enum.map(fn {id, n} ->
+          Map.merge(%{picture: n, kind: kind, id: id, title: titles[id]}, Map.get(dimensions, {kind, id}, %{}))
+        end),
+      unavailable: ids -- readable,
+      note: "The pictures follow, numbered in this order."
     }
   end
 
