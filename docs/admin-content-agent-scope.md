@@ -814,3 +814,17 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
   needs the publish permission, which the authorization engine checks again
   at apply. New entries are still created as drafts. The review shows the
   status as the admin names it ("Deactivated" for disabled).
+
+## Prompt caching (26 September 2026)
+
+- A run calls the model once per step with the same tools, system prompt and
+  conversation so far. With Anthropic models `Loop` marks all three for the
+  prompt cache (`anthropic_prompt_cache`, `anthropic_cache_messages: -1`),
+  so each step reads the repeated prefix at a tenth of the input price.
+  Before, a seven-step run on `by` sent 65k input tokens at full price
+  ($0.28). A cached two-step question cost $0.04, with 6.5k tokens read
+  from cache.
+- The monthly token budget counts cache reads and writes as input when the
+  provider reports them apart (`input_includes_cached: false`). Configured
+  and catalogue prices bill cache reads at 10% and writes at 125% of the
+  input price.

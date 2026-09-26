@@ -329,6 +329,25 @@ defmodule Brando.AI.AgentTest do
     assert_in_delta cost, (1 * 2.0 + 1 * 10.0) / 1_000_000, 1.0e-12
   end
 
+  test "cached input counts to the budget, at its own price", c do
+    put_config(prices: [input: 2.0, output: 10.0])
+
+    run =
+      Repo.insert!(%Run{conversation_id: c.conversation.id, scope: Brando.Content.Transfer.scope(), status: "running"})
+
+    usage = %{
+      input_tokens: 6,
+      cached_tokens: 1_000,
+      cache_creation_tokens: 500,
+      output_tokens: 10,
+      input_includes_cached: false
+    }
+
+    run = Brando.AI.Agent.Budget.reconcile(run, usage, "anthropic:claude-opus-5-5")
+    assert {run.input_tokens, run.cached_tokens} == {1_506, 1_000}
+    assert_in_delta run.cost, (6 * 2.0 + 1_000 * 0.2 + 500 * 2.5 + 10 * 10.0) / 1_000_000, 1.0e-12
+  end
+
   test "the step limit ends a run that keeps calling tools", c do
     put_config(max_steps: 2)
     AIStub.script(List.duplicate({:tools, [{"list_content_types", %{}}]}, 5))
@@ -397,6 +416,14 @@ defmodule Brando.AI.AgentTest do
     assert_received {:anthropic, first}
     assert first["system"] |> inspect() =~ "content assistant"
     assert Enum.any?(first["tools"], &(&1["name"] == "entry_outline"))
+
+    # Each step reads the repeated prefix from Anthropic's prompt cache: the
+    # tools, the system prompt and the conversation up to its latest message.
+    assert %{"cache_control" => %{"type" => "ephemeral"}} = List.last(first["tools"])
+    assert [%{"cache_control" => %{"type" => "ephemeral"}} | _] = Enum.reverse(first["system"])
+
+    assert %{"cache_control" => %{"type" => "ephemeral"}} =
+             first["messages"] |> List.last() |> Map.get("content") |> List.last()
 
     assert_received {:anthropic, second}
 

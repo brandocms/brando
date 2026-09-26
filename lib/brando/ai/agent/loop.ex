@@ -72,7 +72,9 @@ defmodule Brando.AI.Agent.Loop do
     Agent.broadcast(conversation.id, {:progress, dgettext("ai_agent", "Thinking")})
 
     opts =
-      Keyword.merge(request.req_opts, tools: tools(), max_tokens: Agent.config()[:max_tokens])
+      request.req_opts
+      |> Keyword.merge(tools: tools(), max_tokens: Agent.config()[:max_tokens])
+      |> Keyword.merge(cache_opts(request.provider))
 
     case Agent.config()[:client].generate_text(request.model, context, opts) do
       {:ok, response} ->
@@ -254,6 +256,14 @@ defmodule Brando.AI.Agent.Loop do
   defp message(%Message{role: "tool"} = m), do: [Context.tool_result(m.tool_call_id, m.tool_name, m.content || "")]
 
   defp message(_), do: []
+
+  # A run calls the model once per step with the same tools, system prompt
+  # and conversation so far, plus the last step. Anthropic's prompt cache
+  # bills that repeated prefix at a tenth of the input price: the tools and
+  # system prompt, and the conversation up to its latest message, are marked
+  # for the next call to read.
+  defp cache_opts(:anthropic), do: [anthropic_prompt_cache: true, anthropic_cache_messages: -1]
+  defp cache_opts(_provider), do: []
 
   defp progress("search_entries", args) do
     case String.trim(to_string(args["query"])) do

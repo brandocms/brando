@@ -42,7 +42,7 @@ defmodule Brando.AI.Agent.Budget do
   @spec reconcile(Run.t(), map() | nil, String.t()) :: Run.t()
   def reconcile(%Run{} = run, usage, model) do
     usage = usage || %{}
-    input = count(usage, :input_tokens)
+    input = input_tokens(usage)
     output = count(usage, :output_tokens)
 
     run = Repo.get!(Run, run.id)
@@ -93,6 +93,16 @@ defmodule Brando.AI.Agent.Budget do
 
   def estimate(payload), do: div(byte_size(:erlang.term_to_binary(payload)), 4)
 
+  # Every token sent counts to the budget, also those read from or written
+  # to a prompt cache, which some providers report beside the input.
+  defp input_tokens(usage) do
+    input = count(usage, :input_tokens)
+
+    if usage[:input_includes_cached] == false,
+      do: input + count(usage, :cached_tokens) + count(usage, :cache_creation_tokens),
+      else: input
+  end
+
   # Configured prices (USD per million tokens) win; then the cost ReqLLM
   # reports; then the model catalogue's prices. A model with no known price
   # costs zero, and its tokens still count to the budget.
@@ -100,9 +110,9 @@ defmodule Brando.AI.Agent.Budget do
     reported = usage[:total_cost]
 
     case {configured_prices(), reported} do
-      {{_, _} = prices, _} -> price(input, output, prices)
+      {{_, _} = prices, _} -> price(usage, input, output, prices)
       {nil, reported} when is_number(reported) -> reported / 1
-      {nil, _} -> price(input, output, catalogue_prices(model))
+      {nil, _} -> price(usage, input, output, catalogue_prices(model))
     end
   end
 
@@ -121,8 +131,16 @@ defmodule Brando.AI.Agent.Budget do
     end
   end
 
-  defp price(input, output, {i, o}) when is_number(i) and is_number(o), do: (input * i + output * o) / 1_000_000
-  defp price(_, _, _), do: 0.0
+  # Cache reads at a tenth of the input price and writes at a quarter more,
+  # as Anthropic bills them.
+  defp price(usage, input, output, {i, o}) when is_number(i) and is_number(o) do
+    read = count(usage, :cached_tokens)
+    write = count(usage, :cache_creation_tokens)
+    fresh = max(input - read - write, 0)
+    (fresh * i + read * i * 0.1 + write * i * 1.25 + output * o) / 1_000_000
+  end
+
+  defp price(_, _, _, _), do: 0.0
 
   defp count(usage, key), do: to_integer(usage[key] || 0)
 
