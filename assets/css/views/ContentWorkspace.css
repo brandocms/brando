@@ -160,3 +160,48 @@
   .name { font-size: 12px; line-height: 18px; }
   .time { font-size: 11px; line-height: 16px; }
 }
+
+/* Language versions of a synchronized translation, with their open work. */
+.listing-translations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  order: 6;
+}
+
+.listing-translation {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  border: 1px solid #dce2dc;
+  border-radius: 30px;
+  color: #272b2a;
+  font-size: 11px;
+  line-height: 18px;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover { border-color: #aab9a5; }
+  &.is-current { border-style: dashed; }
+  &.is-work { border-color: #e7d7b4; background: #fdf9ef; }
+  &.is-updated { background: #f4f7fb; }
+}
+
+.listing-translation-language {
+  padding: 0 6px;
+  border-radius: 30px;
+  background: #eef0eb;
+  font-family: theme(typography.families.mono);
+  font-size: 10px;
+}
+
+.listing-translation-state { color: #626b66; }
+.listing-translation.is-work .listing-translation-state { color: #87662d; }
+
+@media (max-width: 720px) {
+  .listing-translations { grid-column: 2 / -1; grid-row: 4; }
+}

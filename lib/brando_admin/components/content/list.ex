@@ -439,12 +439,25 @@ defmodule BrandoAdmin.Components.Content.List do
     sanitized_list_opts = list_opts |> Listings.drop_switched_off(listing) |> sanitize_list_opts()
 
     {:ok, entries} = apply(context, :"list_#{plural}", [sanitized_list_opts])
-    entries = decorate(entries, listing.decorate)
+
+    entries =
+      entries
+      |> decorate(listing.decorate)
+      |> decorate(&put_translation_status(&1, schema, socket.assigns.current_user))
 
     socket
     |> assign(:list_opts, list_opts)
     |> assign(:entries, entries)
     |> assign(:content_language, content_language)
+  end
+
+  # Synchronized translations show each language version's open work, fetched
+  # for the whole page at once.
+  defp put_translation_status(entries, schema, user) do
+    case Brando.Translations.listing_status(schema, entries, user) do
+      status when map_size(status) == 0 -> entries
+      status -> Enum.map(entries, &Map.put(&1, :translation_status, status[&1.id]))
+    end
   end
 
   # A paginated listing wraps the page in a map; decorate only the entries.

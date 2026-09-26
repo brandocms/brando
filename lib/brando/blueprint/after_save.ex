@@ -15,12 +15,15 @@ defmodule Brando.Blueprint.AfterSave do
   @doc """
   Runs the after-save work for `entry` of `schema`. Returns the traits'
   results, as `Brando.Trait.run_trait_after_save_callbacks/4` does.
+  `minor: true` marks a save of minor text corrections (see
+  `Brando.Translations.source_saved/2`).
   """
-  @spec run(module(), struct(), Ecto.Changeset.t(), map() | atom()) :: list()
-  def run(schema, entry, changeset, user) do
+  @spec run(module(), struct(), Ecto.Changeset.t(), map() | atom(), keyword()) :: list()
+  def run(schema, entry, changeset, user, opts \\ []) do
     results = Brando.Trait.run_trait_after_save_callbacks(schema, entry, changeset, user)
-    # A no-op unless the schema is synchronized and the entry is a group's source.
-    Brando.Translations.source_saved(entry, minor: false)
+    # A no-op unless the schema is synchronized and the entry is in a group.
+    # `minor: true` saves minor text corrections: no new review work.
+    Brando.Translations.source_saved(entry, minor: Keyword.get(opts, :minor, false))
     results
   end
 end

@@ -206,6 +206,177 @@ defmodule Brando.TranslationsTest do
     assert pending(target) == nil
   end
 
+  describe "saving a translation" do
+    # The source changes block 1's text and the shared year: the target gets a
+    # review item for block 1 and a shared update for the year.
+    defp reviewed_change(c) do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      translate(target, ["First paragraph", "Second paragraph"])
+      [first, _] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
+      set_text(first, "Første avsnitt, endret")
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.user)
+      Translations.source_saved(load(c.source.id))
+      version = pending(target)
+      review_path = Enum.find(version.work_items, &(&1.kind == :review)).path
+      %{target: target, version: version, review_path: review_path}
+    end
+
+    defp open_items(target) do
+      case pending(target) do
+        nil -> []
+        version -> for item <- version.work_items, is_nil(item.resolved_at), do: {item.kind, item.path}
+      end
+    end
+
+    test "resolves the work the editor completed and applies the version", c do
+      %{target: target, version: version} = reviewed_change(c)
+
+      # The editor rewrote block 1 and saved the pending year.
+      [first, _] = Enum.map(load(target.id).entry_blocks, & &1.block)
+      set_text(first, "First paragraph, revised")
+      {:ok, _} = SyncTest.update_article(target.id, %{year: 2024}, c.user)
+
+      assert {:ok, %{open: 0, stale: false}} =
+               Translations.target_saved(Article, target.id, %{version_id: version.id, acknowledged: []})
+
+      assert Repo.get!(PendingVersion, version.id).status == :applied
+      assert open_items(target) == []
+      assert texts(load(target.id)) == ["First paragraph, revised", "Second paragraph"]
+    end
+
+    test "unchanged text stays open until the editor acknowledges it", c do
+      %{target: target, version: version, review_path: path} = reviewed_change(c)
+      {:ok, _} = SyncTest.update_article(target.id, %{year: 2024}, c.user)
+
+      assert {:ok, %{open: 1}} = Translations.target_saved(Article, target.id, %{version_id: version.id})
+      assert open_items(target) == [{:review, path}]
+
+      assert {:ok, %{open: 0}} =
+               Translations.target_saved(Article, target.id, %{
+                 version_id: pending(target).id,
+                 acknowledged: [path]
+               })
+    end
+
+    test "saving other fields does not clear the work", c do
+      %{target: target, review_path: path} = reviewed_change(c)
+      {:ok, _} = SyncTest.update_article(target.id, %{subtitle: "Unrelated"}, c.user)
+
+      # No reviewed version: an ordinary save, e.g. outside the editor.
+      assert {:ok, %{open: 2}} = Translations.target_saved(Article, target.id)
+      assert Enum.sort(open_items(target)) == Enum.sort([{:review, path}, {:shared_update, "year"}])
+      assert Translations.decode_payload(pending(target)).subtitle == "Unrelated"
+    end
+
+    test "work raised by a newer source save stays open, and the save is reported as stale", c do
+      %{target: target, version: version, review_path: path} = reviewed_change(c)
+
+      # The source changes block 1 again while the editor works on the version.
+      [first, _] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
+      set_text(first, "Første avsnitt, endret igjen")
+      Translations.source_saved(load(c.source.id))
+
+      [block, _] = Enum.map(load(target.id).entry_blocks, & &1.block)
+      set_text(block, "First paragraph, revised")
+      {:ok, _} = SyncTest.update_article(target.id, %{year: 2024}, c.user)
+
+      assert {:ok, %{stale: true}} =
+               Translations.target_saved(Article, target.id, %{version_id: version.id, acknowledged: [path]})
+
+      # The review of the first change is done; the second is not.
+      assert open_items(target) == [{:review, path}]
+      assert pending(target).source_generation == 2
+    end
+
+    test "a saved translation is recomputed in the background", c do
+      %{target: target} = reviewed_change(c)
+      {:ok, _} = SyncTest.update_article(target.id, %{subtitle: "Saved elsewhere"}, c.user)
+      Translations.source_saved(load(target.id))
+
+      assert Translations.decode_payload(pending(target)).subtitle == "Saved elsewhere"
+      assert length(open_items(target)) == 2
+    end
+
+    test "a save may change text, but not what the source controls", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      target = load(target.id)
+      check = &Translations.check_target_save(Article, target.id, &1)
+
+      assert {:ok, _} = check.(Article.changeset(target, %{title: "Title", subtitle: "Own"}, c.user))
+
+      assert {:error, {:source_controlled, ["year"]}} = check.(Article.changeset(target, %{year: 1999}, c.user))
+
+      # Whatever produced it, a save without a block or a subform row changes
+      # the structure.
+      [first, _second] = target.entry_blocks
+      without_block = Ecto.Changeset.change(%{target | entry_blocks: [first]})
+      assert {:error, {:source_controlled, ["entry_blocks" | _]}} = check.(without_block)
+      assert {:error, {:source_controlled, ["items" | _]}} = check.(Ecto.Changeset.change(%{target | items: []}))
+
+      # The source itself, and entries outside a group, are not restricted.
+      source = load(c.source.id)
+
+      assert {:ok, _} =
+               Translations.check_target_save(Article, source.id, Article.changeset(source, %{year: 1}, c.user))
+    end
+
+    test "the editor state names the source and the pending version", c do
+      %{target: target, version: version} = reviewed_change(c)
+
+      assert %{member: %{role: :target}, source: %{id: source_id, language: "no"}, pending: %{id: id}} =
+               Translations.editor_state(Article, target.id)
+
+      assert {source_id, id} == {c.source.id, version.id}
+      assert %{member: %{role: :source}, pending: nil} = Translations.editor_state(Article, c.source.id)
+    end
+  end
+
+  describe "listing status" do
+    test "a structural update without text work is still pending", c do
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+      [_, second] = load(c.source.id).entry_blocks
+      Repo.delete!(second)
+      Translations.source_saved(load(c.source.id))
+
+      assert [_, %{pending: true, counts: counts}] = Translations.listing_status(Article, [en])[en.id]
+      assert counts == %{}
+    end
+
+    test "counts each language's open work in one batch", c do
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+      translate(en, ["First paragraph", "Second paragraph"])
+      [first, _] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
+      set_text(first, "Første avsnitt, endret")
+      add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
+      Translations.source_saved(load(c.source.id))
+
+      {:ok, loner} =
+        SyncTest.create_article(%{title: "Alene", slug: "alene", language: "no", status: "draft"}, c.user)
+
+      status = Translations.listing_status(Article, [c.source, en, loner])
+
+      assert [
+               %{language: "no", role: :source, pending: false},
+               %{language: "en", role: :target, pending: true, counts: %{translate: 1, review: 1}}
+             ] = status[c.source.id]
+
+      assert status[en.id] == status[c.source.id]
+      refute Map.has_key?(status, loner.id)
+
+      # Resolved work is not counted.
+      en_block = hd(load(en.id).entry_blocks).block
+      set_text(en_block, "First paragraph, revised")
+      version = Translations.get_pending_version(Article, en.id)
+      Translations.target_saved(Article, en.id, %{version_id: version.id})
+      assert [_, %{counts: %{translate: 1} = counts}] = Translations.listing_status(Article, [c.source])[c.source.id]
+      refute Map.has_key?(counts, :review)
+
+      # An independent translation has no work.
+      {:ok, _} = Translations.make_independent(Article, en.id, c.user)
+      assert [_, %{synchronized: false, pending: false}] = Translations.listing_status(Article, [en])[en.id]
+    end
+  end
+
   test "make_independent stops synchronization and keeps content and links", c do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
     add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
@@ -401,6 +572,48 @@ defmodule Brando.TranslationsTest do
       assert_raise BlueprintError, ~r/requires mode: :synchronized/, fn ->
         Translatable.validate(Article, source_controlled_fields: [:year])
       end
+    end
+
+    test "accepts subform fields and module variables, and keeps the flat form" do
+      selectors = [:year, {:module, "hero-banner", [:layout, "theme"]}, items: [:link]]
+      assert Translatable.validate(Article, mode: :synchronized, source_controlled_fields: selectors) == true
+
+      assert %{
+               source_controlled_fields: [:year],
+               source_controlled_subform_fields: %{items: [:link]},
+               source_controlled_module_vars: %{"hero-banner" => ["layout", "theme"]}
+             } = Translatable.config(mode: :synchronized, source_controlled_fields: selectors)
+    end
+
+    test "rejects selectors that do not address an owned subform input or a module" do
+      validate = &Translatable.validate(Article, mode: :synchronized, source_controlled_fields: &1)
+
+      assert_raise BlueprintError, ~r/not an owned subform/, fn -> validate.(alternates: [:entry_id]) end
+      assert_raise BlueprintError, ~r/not an owned subform/, fn -> validate.(nope: [:label]) end
+      assert_raise BlueprintError, ~r/identify rows/, fn -> validate.(items: [:uid]) end
+      assert_raise BlueprintError, ~r/identify rows/, fn -> validate.(items: [:article_id]) end
+      assert_raise BlueprintError, ~r/are not inputs of the :items subform/, fn -> validate.(items: [:nope]) end
+      assert_raise BlueprintError, ~r/more than once/, fn -> validate.([{:items, [:link]}, {:items, [:label]}]) end
+      assert_raise BlueprintError, ~r/more than once/, fn -> validate.([{:module, "a", [:x]}, {:module, "a", [:y]}]) end
+      assert_raise BlueprintError, ~r/must list field names/, fn -> validate.(["year"]) end
+      assert_raise BlueprintError, ~r/must list field names/, fn -> validate.([{:module, "", [:x]}]) end
+      assert_raise BlueprintError, ~r/must list field names/, fn -> validate.(items: []) end
+    end
+
+    test "check_config reports module selectors that match no module or variable", c do
+      config = %{
+        Article.__translatable_config__()
+        | source_controlled_fields: [:year]
+      }
+
+      config =
+        Map.put(config, :source_controlled_module_vars, %{
+          c.module.uid => ["body_style"],
+          "gone" => ["layout"]
+        })
+
+      assert Enum.sort(Translations.check_config(Article, config)) ==
+               Enum.sort([{:unknown_module, "gone"}, {:unknown_var, c.module.uid, "body_style"}])
     end
   end
 end

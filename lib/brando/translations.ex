@@ -29,6 +29,7 @@ defmodule Brando.Translations do
   alias Brando.Translations.Sync
   alias Brando.Translations.WorkItem
   alias Brando.Utils
+  alias Ecto.Changeset
 
   @doc "Whether `schema` declares `trait :translatable, mode: :synchronized`."
   def synchronized?(schema) when is_atom(schema) do
@@ -37,6 +38,119 @@ defmodule Brando.Translations do
   end
 
   def synchronized?(_), do: false
+
+  @doc """
+  The translation state of a listing page, in one batch: for each entry of
+  `entries` in a group, every language version of its group with its open
+  work. Entries outside a group are left out.
+
+      %{entry_id => [%{language: "en", entry_id: 7, role: :target,
+                       synchronized: true, pending: true,
+                       counts: %{translate: 2, review: 1}}, ...]}
+
+  Only a member's current pending version counts; superseded ones are
+  ignored, and a pending version with no open item still reads as pending
+  — a structural or shared update without text work. With an `actor`, only
+  versions the actor may read are listed.
+  """
+  def listing_status(schema, entries, actor \\ nil) do
+    ids = for %{id: id} <- entries, id, do: id
+
+    if ids == [] or not synchronized?(schema) do
+      %{}
+    else
+      type = entry_type(schema)
+      own = Repo.all(from m in Member, where: m.entry_type == ^type and m.entry_id in ^ids)
+      group_ids = own |> Enum.map(& &1.group_id) |> Enum.uniq()
+      members = Repo.all(from m in Member, where: m.group_id in ^group_ids, order_by: [asc: m.id])
+      target_ids = for %Member{role: :target, synchronized: true, id: id} <- members, do: id
+
+      versions =
+        Repo.all(
+          from v in PendingVersion,
+            where: v.member_id in ^target_ids and v.status == :pending,
+            select: {v.member_id, v.id}
+        )
+
+      version_ids = Enum.map(versions, &elem(&1, 1))
+
+      counts =
+        from(w in WorkItem,
+          where: w.pending_version_id in ^version_ids and is_nil(w.resolved_at),
+          group_by: [w.pending_version_id, w.kind],
+          select: {w.pending_version_id, w.kind, count(w.id)}
+        )
+        |> Repo.all()
+        |> Enum.group_by(&elem(&1, 0), fn {_, kind, count} -> {kind, count} end)
+        |> Map.new(fn {version_id, kinds} -> {version_id, Map.new(kinds)} end)
+
+      version_by_member = Map.new(versions)
+
+      group_status =
+        members
+        |> Enum.group_by(& &1.group_id)
+        |> Map.new(fn {group_id, group} ->
+          {group_id,
+           group
+           |> Enum.sort_by(&(&1.role != :source))
+           |> Enum.map(fn member ->
+             version_id = version_by_member[member.id]
+
+             %{
+               language: member.language,
+               entry_id: member.entry_id,
+               role: member.role,
+               synchronized: member.synchronized,
+               pending: version_id != nil,
+               counts: Map.get(counts, version_id, %{})
+             }
+           end)}
+        end)
+
+      visible = readable_ids(schema, Enum.map(members, & &1.entry_id), actor)
+
+      Map.new(own, fn member ->
+        {member.entry_id, Enum.filter(group_status[member.group_id], &MapSet.member?(visible, &1.entry_id))}
+      end)
+    end
+  end
+
+  defp readable_ids(_schema, ids, nil), do: MapSet.new(ids)
+
+  defp readable_ids(schema, ids, actor) do
+    from(e in schema, where: e.id in ^ids, select: e.id)
+    |> Brando.Content.Transfer.Catalog.scoped_query(schema, actor, :read)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc "The schema of a translation group's entries."
+  def group_schema(group_id) do
+    case Repo.get(Group, group_id) do
+      nil -> nil
+      group -> entry_schema(group)
+    end
+  end
+
+  @doc """
+  The languages of the entries `entry_id` is already linked to as alternates.
+  Existing, independent alternates are not joined to a group, so no
+  translation is created for their languages.
+  """
+  def alternate_languages(schema, entry_id) do
+    if schema.has_alternates?() do
+      from(a in Module.concat(schema, Alternate),
+        join: e in ^schema,
+        on: e.id == a.linked_entry_id,
+        where: a.entry_id == ^entry_id,
+        select: e.language
+      )
+      |> Repo.all()
+      |> Enum.map(&to_string/1)
+    else
+      []
+    end
+  end
 
   @doc "Returns the group membership of an entry, or nil."
   def get_member(schema, entry_id) do
@@ -116,7 +230,7 @@ defmodule Brando.Translations do
           role: :target,
           synchronized: true,
           last_synced_generation: group.source_generation,
-          baseline: Sync.baseline_for(source, schema)
+          baseline: Sync.baseline_for(source, schema, nil, module_uids([source], schema))
         })
 
       # The copy still links to the source language's content; its first
@@ -150,7 +264,7 @@ defmodule Brando.Translations do
           supersede_pending(member.id)
 
           member
-          |> Ecto.Changeset.change(synchronized: false, detached_at: now())
+          |> Changeset.change(synchronized: false, detached_at: now())
           |> Repo.update!()
         end)
     end
@@ -166,7 +280,7 @@ defmodule Brando.Translations do
   def transfer_source(schema, new_source_id, _actor) do
     with %Member{role: :target, synchronized: true} = new_source <- get_member(schema, new_source_id),
          {:ok, entry} <- load_entry(schema, new_source_id) do
-      baseline = Sync.baseline_for(entry, schema)
+      baseline = Sync.baseline_for(entry, schema, nil, module_uids([entry], schema))
 
       Repo.transaction(fn ->
         from(m in Member, where: m.group_id == ^new_source.group_id and m.role == :source)
@@ -178,7 +292,7 @@ defmodule Brando.Translations do
         supersede_pending(new_source.id)
 
         new_source
-        |> Ecto.Changeset.change(role: :source, baseline: %{})
+        |> Changeset.change(role: :source, baseline: %{})
         |> Repo.update!()
       end)
     else
@@ -197,8 +311,14 @@ defmodule Brando.Translations do
   """
   def source_saved(%schema{id: id}, opts \\ []) do
     with true <- synchronized?(schema),
-         %Member{role: :source, group_id: group_id} <- get_member(schema, id) do
-      enqueue_sync(group_id, Keyword.get(opts, :minor, false))
+         %Member{} = member <- get_member(schema, id) do
+      case member do
+        %Member{role: :source, group_id: group_id} -> enqueue_sync(group_id, Keyword.get(opts, :minor, false))
+        # A saved translation gets its pending version recomputed against what
+        # was saved, so applying it later keeps the new text.
+        %Member{role: :target, synchronized: true} -> enqueue_resync(member)
+        _ -> :ok
+      end
     else
       _ -> :ok
     end
@@ -210,6 +330,322 @@ defmodule Brando.Translations do
     |> Brando.Worker.TranslationSync.new()
     |> Oban.insert()
   end
+
+  defp enqueue_resync(%Member{group_id: group_id, id: member_id}) do
+    %{group_id: group_id, member_id: member_id}
+    |> Brando.Tenant.Job.attach()
+    |> Brando.Worker.TranslationSync.new()
+    |> Oban.insert()
+  end
+
+  @doc """
+  Recomputes one synchronized target's pending version against its saved
+  content, at the group's current source generation. Unresolved work carries
+  over; nothing new is asked for review.
+  """
+  def resync_target(group_id, member_id) do
+    Repo.transaction(fn ->
+      group = Repo.one!(from g in Group, where: g.id == ^group_id, lock: "FOR UPDATE")
+
+      with %Member{role: :target, synchronized: true} = member <- Repo.get(Member, member_id),
+           {:ok, source} <- load_group_source(group) do
+        sync_member(entry_schema(group), source, member, group.source_generation, false)
+      else
+        _ -> :skipped
+      end
+    end)
+  end
+
+  ## Editing a synchronized target
+
+  @doc """
+  What the editor needs to open a synchronized target: its membership, the
+  source entry's id and language, and the current pending version with its
+  work items (or nil). Returns nil for entries outside a group.
+  """
+  def editor_state(schema, entry_id) do
+    with true <- synchronized?(schema),
+         %Member{} = member <- get_member(schema, entry_id) do
+      source = Enum.find(list_members(member.group_id), &(&1.role == :source))
+      pending = if member.role == :target and member.synchronized, do: current_pending(member.id)
+
+      %{
+        member: member,
+        source: source && %{id: source.entry_id, language: source.language},
+        pending: pending
+      }
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Called by the editor after it saved a synchronized target.
+
+  `review` describes what the editor worked from: `%{version_id: id,
+  acknowledged: [path]}`, the pending version it loaded and the paths whose
+  text it marked as reviewed without changing. Only work of that version is
+  resolved, matched by path and the source text it was raised against, so
+  work raised by a newer source save stays open:
+
+    * `:translate` and `:review` — when the saved text differs from the
+      pending text, or the path was acknowledged
+    * `:shared_update` — when the saved value is the source's
+    * `:awaiting_translation` — never; it resolves when the link can be made
+
+  The pending version is then recomputed against the saved content, carrying
+  unresolved work. Returns `{:ok, %{open: count, stale: boolean}}`; `stale`
+  means the source was saved again after the loaded version was computed.
+  """
+  def target_saved(schema, entry_id, review \\ nil) do
+    with true <- synchronized?(schema),
+         %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do
+      Repo.transaction(fn -> save_target(schema, member, review) end)
+    else
+      _ -> {:ok, %{open: 0, stale: false}}
+    end
+  end
+
+  # Under the group's lock: resolve what the review completed, then recompute
+  # the pending version against the saved translation.
+  defp save_target(schema, member, review) do
+    group = Repo.one!(from g in Group, where: g.id == ^member.group_id, lock: "FOR UPDATE")
+    current = current_pending(member.id)
+    reviewed = reviewed_version(member, review)
+
+    previous =
+      case {current, reviewed} do
+        {nil, _} -> nil
+        {current, nil} -> current
+        {current, reviewed} -> resolve_reviewed(schema, member, current, reviewed, review)
+      end
+
+    case load_group_source(group) do
+      {:ok, source} -> sync_member(schema, source, member, group.source_generation, false, previous)
+      :error -> :ok
+    end
+
+    %{open: open_count(member.id), stale: reviewed != nil and reviewed.source_generation < group.source_generation}
+  end
+
+  @doc """
+  Checks a synchronized translation's save before it is written, and returns
+  the changeset to save.
+
+  Structure, media, links and source-controlled values of a synchronized
+  translation follow its source. Whatever path changed them — a disabled
+  control, a forged event, a replayed parameter — the save is compared with
+  the version the editor worked from: the pending version `version_id`, or
+  the saved translation when none was loaded. Any difference refuses the
+  save with the paths that differ: `{:error, {:source_controlled, paths}}`.
+
+  New blocks and table rows keep the sync identity the pending version gave
+  them, which the form does not carry.
+
+  Entries outside a group, sources and independent translations pass through.
+  """
+  def check_target_save(schema, entry_id, %Changeset{} = changeset, version_id \\ nil) do
+    with true <- synchronized?(schema),
+         %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do
+      reference =
+        case reviewed_version(member, %{version_id: version_id}) do
+          nil ->
+            {:ok, saved} = load_entry(schema, entry_id)
+            saved
+
+          version ->
+            decode_payload(version)
+        end
+
+      changeset = restore_sync_identities(changeset, schema, reference)
+      submitted = Changeset.apply_changes(changeset)
+      module_uids = module_uids([reference, submitted], schema)
+      expected = Sync.owned_rows(reference, schema, nil, module_uids)
+      actual = Sync.owned_rows(submitted, schema, nil, module_uids)
+
+      case (expected -- actual) ++ (actual -- expected) do
+        [] -> {:ok, changeset}
+        differing -> {:error, {:source_controlled, paths(differing)}}
+      end
+    else
+      _ -> {:ok, changeset}
+    end
+  end
+
+  defp paths(rows), do: rows |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+
+  # A block the pending version added is new to the form, which gives it a
+  # fresh `sync_uid`; put back the one the source assigned, found by `uid`.
+  defp restore_sync_identities(changeset, schema, reference) do
+    blocks = reference_blocks(reference, schema)
+
+    Enum.reduce(blocks_fields(schema), changeset, fn field, changeset ->
+      case Changeset.get_change(changeset, field) do
+        joins when is_list(joins) ->
+          Changeset.put_change(changeset, field, Enum.map(joins, &restore_join(&1, blocks)))
+
+        _ ->
+          changeset
+      end
+    end)
+  end
+
+  defp restore_join(%Changeset{} = join, blocks) do
+    case Changeset.get_change(join, :block) do
+      %Changeset{} = block -> Changeset.put_change(join, :block, restore_block(block, blocks))
+      _ -> join
+    end
+  end
+
+  defp restore_join(join, _blocks), do: join
+
+  defp restore_block(%Changeset{} = block, blocks) do
+    reference = blocks[Changeset.get_field(block, :uid)]
+
+    block
+    |> restore_block_identity(reference)
+    |> restore_table_rows(reference)
+    |> restore_children(blocks)
+  end
+
+  defp restore_block_identity(%Changeset{data: %{id: nil}} = block, %{sync_uid: sync_uid}),
+    do: Changeset.force_change(block, :sync_uid, sync_uid)
+
+  defp restore_block_identity(block, _reference), do: block
+
+  # New table rows take the identity of the pending version's row at the same
+  # position: they were restored from it in order.
+  defp restore_table_rows(block, nil), do: block
+
+  defp restore_table_rows(block, reference) do
+    case Changeset.get_change(block, :table_rows) do
+      rows when is_list(rows) ->
+        reference_rows = loaded_list(reference.table_rows)
+
+        rows =
+          rows
+          |> Enum.with_index()
+          |> Enum.map(fn {row, index} -> restore_row_identity(row, Enum.at(reference_rows, index)) end)
+
+        Changeset.put_change(block, :table_rows, rows)
+
+      _ ->
+        block
+    end
+  end
+
+  defp restore_row_identity(%Changeset{data: %{id: nil}} = row, %{sync_uid: sync_uid}) when not is_nil(sync_uid),
+    do: Changeset.force_change(row, :sync_uid, sync_uid)
+
+  defp restore_row_identity(row, _reference), do: row
+
+  defp restore_children(block, blocks) do
+    case Changeset.get_change(block, :children) do
+      children when is_list(children) ->
+        Changeset.put_change(block, :children, Enum.map(children, &restore_child(&1, blocks)))
+
+      _ ->
+        block
+    end
+  end
+
+  defp restore_child(%Changeset{} = child, blocks), do: restore_block(child, blocks)
+  defp restore_child(child, _blocks), do: child
+
+  defp reference_blocks(entry, schema) do
+    blocks_fields(schema)
+    |> Enum.flat_map(&loaded_list(Map.get(entry, &1)))
+    |> Enum.flat_map(&walk_blocks(&1.block))
+    |> Map.new(&{&1.uid, &1})
+  end
+
+  defp walk_blocks(nil), do: []
+  defp walk_blocks(block), do: [block | Enum.flat_map(loaded_list(block.children), &walk_blocks/1)]
+
+  defp blocks_fields(schema) do
+    if function_exported?(schema, :__blocks_fields__, 0),
+      do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
+      else: []
+  end
+
+  defp loaded_list(list) when is_list(list), do: list
+  defp loaded_list(_), do: []
+
+  defp open_count(member_id) do
+    case current_pending(member_id) do
+      nil -> 0
+      version -> Enum.count(version.work_items, &is_nil(&1.resolved_at))
+    end
+  end
+
+  defp reviewed_version(_member, nil), do: nil
+
+  defp reviewed_version(member, review) do
+    with id when not is_nil(id) <- review[:version_id],
+         %PendingVersion{member_id: member_id} = version when member_id == member.id <-
+           Repo.get(PendingVersion, id) |> Repo.preload(:work_items) do
+      version
+    else
+      _ -> nil
+    end
+  end
+
+  # Resolves the current version's work that the reviewed version also held
+  # and the save completed, then marks the current version applied. Returns it,
+  # so the recomputation carries what is still open.
+  defp resolve_reviewed(schema, member, current, reviewed, review) do
+    {:ok, saved} = load_entry(schema, member.entry_id)
+    payload = decode_payload(reviewed)
+    module_uids = module_uids([saved, payload], schema)
+    saved_rows = rows_by_path(saved, schema, module_uids)
+    reviewed_rows = rows_by_path(payload, schema, module_uids)
+    reviewed_work = MapSet.new(reviewed.work_items, &{&1.path, &1.source_digest})
+    acknowledged = MapSet.new(List.wrap(review[:acknowledged]))
+    timestamp = now()
+
+    items =
+      Enum.map(current.work_items, fn item ->
+        if is_nil(item.resolved_at) and MapSet.member?(reviewed_work, {item.path, item.source_digest}) and
+             done?(item, saved_rows, reviewed_rows, acknowledged) do
+          item
+          |> Changeset.change(resolved_at: timestamp, resolved_generation: reviewed.source_generation)
+          |> Repo.update!()
+        else
+          item
+        end
+      end)
+
+    current
+    |> Changeset.change(status: :applied, applied_at: timestamp)
+    |> Repo.update!()
+    |> Map.put(:work_items, items)
+  end
+
+  defp done?(%WorkItem{kind: kind, path: path}, saved, reviewed, acknowledged) when kind in [:translate, :review] do
+    MapSet.member?(acknowledged, path) or
+      (Map.has_key?(saved, path) and not blank?(saved[path]) and saved[path] != reviewed[path])
+  end
+
+  defp done?(%WorkItem{kind: :shared_update, path: path, source_digest: digest}, saved, _reviewed, _acknowledged),
+    do: Map.has_key?(saved, path) and Sync.digest(saved[path]) == digest
+
+  defp done?(_item, _saved, _reviewed, _acknowledged), do: false
+
+  defp rows_by_path(entry, schema, module_uids),
+    do: Map.new(Sync.flatten_entry(entry, schema, nil, module_uids), fn {path, _, value} -> {path, value} end)
+
+  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
+  defp blank?(nil), do: true
+  defp blank?(_), do: false
+
+  defp load_group_source(group) do
+    case Repo.one(from m in Member, where: m.group_id == ^group.id and m.role == :source) do
+      nil -> :error
+      member -> load_entry(entry_schema(group), member.entry_id)
+    end
+  end
+
+  defp entry_schema(group), do: String.to_existing_atom(group.entry_type)
 
   @doc """
   Synchronizes every synchronized target of a group from its source.
@@ -225,7 +661,7 @@ defmodule Brando.Translations do
       schema = String.to_existing_atom(group.entry_type)
       generation = group.source_generation + 1
 
-      group |> Ecto.Changeset.change(source_generation: generation) |> Repo.update!()
+      group |> Changeset.change(source_generation: generation) |> Repo.update!()
 
       case sync_members(schema, list_members(group.id), generation, minor?) do
         {:ok, results} -> results
@@ -249,21 +685,22 @@ defmodule Brando.Translations do
     end
   end
 
-  defp sync_member(schema, source, member, generation, minor?) do
+  defp sync_member(schema, source, member, generation, minor?, previous \\ :current) do
     case load_entry(schema, member.entry_id) do
       {:ok, target} ->
         result =
           Sync.compute_pending(source, target, member.baseline,
             schema: schema,
+            module_uids: module_uids([source, target], schema),
             minor: minor?,
             identifiers: identifier_map(source, schema, member.language)
           )
 
-        previous = current_pending(member.id)
+        previous = if previous == :current, do: current_pending(member.id), else: previous
         record_pending(member, result, previous, generation, schema)
 
         member
-        |> Ecto.Changeset.change(baseline: result.baseline, last_synced_generation: generation)
+        |> Changeset.change(baseline: result.baseline, last_synced_generation: generation)
         |> Repo.update!()
 
         {member.id, :ok}
@@ -449,7 +886,57 @@ defmodule Brando.Translations do
 
   def guard_delete(_, _), do: :ok
 
+  @doc """
+  Maps the `{module_origin, module_id}` of every block in `entries` to its
+  module's `uid`, for module-variable selectors. Empty when the schema
+  controls no module variables.
+  """
+  def module_uids(entries, schema) do
+    if schema.__translatable_config__() |> Map.get(:source_controlled_module_vars, %{}) |> map_size() == 0 do
+      %{}
+    else
+      refs = Sync.module_refs(entries, schema)
+      local_ids = for {:local, id} <- refs, do: id
+
+      local =
+        from(m in Brando.Content.Module, where: m.id in ^local_ids, select: {m.id, m.uid})
+        |> Repo.all()
+        |> Map.new(fn {id, uid} -> {{:local, id}, uid} end)
+
+      shared =
+        for {:shared, id} <- refs, module = Brando.Content.fetch_module(id, :shared), into: %{} do
+          {{:shared, id}, module.uid}
+        end
+
+      Map.merge(local, shared)
+    end
+  end
+
+  @doc """
+  Checks the module-variable selectors of a synchronized schema against the
+  modules in the database. Returns `[]`, or problems such as
+  `{:unknown_module, uid}` and `{:unknown_var, uid, key}` — a module that was
+  renamed, deleted or never imported, or a variable it does not define.
+  Checked here rather than at compile time because modules are content.
+  """
+  def check_config(schema, config \\ nil) do
+    config = config || schema.__translatable_config__()
+    selectors = Map.get(config, :source_controlled_module_vars, %{})
+
+    Enum.flat_map(selectors, fn {uid, keys} -> check_module(uid, keys) end)
+  end
+
+  defp check_module(uid, keys) do
+    case Repo.one(from m in Brando.Content.Module, where: m.uid == ^uid and is_nil(m.deleted_at), preload: :vars) do
+      nil -> [{:unknown_module, uid}]
+      module -> for key <- keys, key not in Enum.map(module.vars || [], & &1.key), do: {:unknown_var, uid, key}
+    end
+  end
+
   defp entry_type(schema), do: to_string(schema)
+
+  @doc "The current pending version of a member, with its work items, or nil."
+  def current_pending_for_member(member_id), do: current_pending(member_id)
 
   defp current_pending(member_id) do
     Repo.one(

@@ -6,7 +6,8 @@ defmodule Brando.Translations.Sync do
   Both entries are first flattened into `{path, class, value}` rows:
 
     * `:text` — language-specific text (titles, block text, captions, alt text)
-    * `:shared` — media selections and `source_controlled_fields`
+    * `:shared` — media selections and source-controlled values: the listed
+      fields, subform fields and module variables
     * `:local` — other values; copied once, then owned by each language
     * `:structure` — membership and order of blocks, refs, vars and rows
 
@@ -51,6 +52,8 @@ defmodule Brando.Translations.Sync do
   @text_inputs [:text, :textarea, :rich_text]
   @media_fks [:image_id, :video_id, :file_id, :gallery_id]
   @media_assocs [:image, :video, :file, :gallery]
+  # What a source-controlled module variable takes from the source.
+  @var_values [:value, :value_boolean, :link_text, :link_type, :link_target_blank]
 
   @block_structure_fields ~w(type module_id module_origin container_id container_origin palette_id
                              palette_origin fragment_id slot_name slot_kind slot_module_set multi
@@ -64,6 +67,10 @@ defmodule Brando.Translations.Sync do
   `baseline` maps paths to the source digests this target was last synchronized
   with. Options: `:schema` (required), `:config` (defaults to the schema's
   `__translatable_config__/0`), `:minor` and `:identifiers`.
+
+  `:module_uids` maps `{module_origin, module_id}` to the module's `uid`, for
+  `{:module, uid, vars}` selectors in `source_controlled_fields`; a block
+  whose module is not in it has no source-controlled variables.
 
   `:identifiers` maps each source identifier id (`identifier_ids/2`) to the
   identifier of the same content in the target's language, or to nil when that
@@ -83,7 +90,7 @@ defmodule Brando.Translations.Sync do
     schema = Keyword.fetch!(opts, :schema)
     config = Keyword.get_lazy(opts, :config, fn -> schema.__translatable_config__() end)
     minor? = Keyword.get(opts, :minor, false)
-    spec = spec(schema, config)
+    spec = spec(schema, config, Keyword.get(opts, :module_uids, %{}))
 
     {payload, notes} = merge(source, target, spec)
     {payload, awaiting} = resolve_identifiers(payload, spec, Keyword.get(opts, :identifiers))
@@ -110,19 +117,57 @@ defmodule Brando.Translations.Sync do
   end
 
   @doc "The baseline digests for `entry` as a source: one per text and shared path."
-  def baseline_for(entry, schema, config \\ nil) do
+  def baseline_for(entry, schema, config \\ nil, module_uids \\ %{}) do
     config = config || schema.__translatable_config__()
-    entry |> flatten(spec(schema, config)) |> baseline()
+    entry |> flatten(spec(schema, config, module_uids)) |> baseline()
   end
 
   @doc "Flattens an entry into `{path, class, value}` rows, in document order."
-  def flatten_entry(entry, schema, config \\ nil) do
-    flatten(entry, spec(schema, config || schema.__translatable_config__()))
+  def flatten_entry(entry, schema, config \\ nil, module_uids \\ %{}) do
+    flatten(entry, spec(schema, config || schema.__translatable_config__(), module_uids))
+  end
+
+  # Not compared when a translation is saved: the editor does not carry them
+  # for new blocks, and neither changes what the block is.
+  @unowned_block_fields [:module_version, :source]
+
+  @doc """
+  The rows of `entry` a synchronized translation may not change: structure
+  (block and row membership, order, nesting, modules) and shared values
+  (media, links, source-controlled fields). Two versions of a translation
+  whose owned rows are equal differ only in text and language-specific values.
+  """
+  def owned_rows(entry, schema, config \\ nil, module_uids \\ %{}) do
+    entry
+    |> flatten_entry(schema, config, module_uids)
+    |> Enum.flat_map(fn
+      {path, :structure, %{} = structure} -> [{path, :structure, Map.drop(structure, @unowned_block_fields)}]
+      {_path, class, _value} = row when class in [:structure, :shared] -> [row]
+      _ -> []
+    end)
+  end
+
+  @doc "The `{module_origin, module_id}` of every block in `entries`, at any depth."
+  def module_refs(entries, schema) do
+    fields =
+      if function_exported?(schema, :__blocks_fields__, 0),
+        do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
+        else: []
+
+    entries
+    |> Enum.flat_map(fn entry -> Enum.flat_map(fields, &(entry |> Map.get(&1) |> loaded())) end)
+    |> Enum.flat_map(&block_module_refs(&1.block))
+    |> Enum.uniq()
+  end
+
+  defp block_module_refs(block) do
+    own = if block.module_id, do: [{block.module_origin || :local, block.module_id}], else: []
+    own ++ Enum.flat_map(loaded(block.children), &block_module_refs/1)
   end
 
   @doc "The ids of every identifier `entry` links to, from blocks and var relations."
   def identifier_ids(entry, schema, config \\ nil) do
-    spec = spec(schema, config || schema.__translatable_config__())
+    spec = spec(schema, config || schema.__translatable_config__(), %{})
 
     block_ids =
       Enum.flat_map(spec.blocks_fields, fn field ->
@@ -153,7 +198,7 @@ defmodule Brando.Translations.Sync do
 
   # --- Spec -------------------------------------------------------------------
 
-  defp spec(schema, config) do
+  defp spec(schema, config, module_uids) do
     attributes = Enum.map(Attributes.__attributes__(schema), & &1.name)
     text_fields = Translation.translatable_text_fields(schema)
     source_controlled = config.source_controlled_fields
@@ -166,28 +211,33 @@ defmodule Brando.Translations.Sync do
     shared_relations =
       for %{type: :belongs_to, name: name} <- relations, name in source_controlled, do: name
 
-    fields =
-      Enum.flat_map(attributes -- @excluded_fields, fn name ->
-        cond do
-          String.starts_with?(to_string(name), "rendered_") -> []
-          name in source_controlled -> [{name, :shared}]
-          name in text_fields -> [{name, :text}]
-          true -> [{name, :local}]
-        end
-      end)
+    fields = Enum.flat_map(attributes -- @excluded_fields, &field_class(&1, source_controlled, text_fields))
 
     blocks_fields =
       if function_exported?(schema, :__blocks_fields__, 0),
         do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
         else: []
 
+    controlled_subforms = Map.get(config, :source_controlled_subform_fields, %{})
+    controlled_vars = Map.get(config, :source_controlled_module_vars, %{})
+
     %{
       schema: schema,
       fields: fields,
       belongs_to: Enum.uniq(assets ++ shared_relations),
       blocks_fields: blocks_fields,
-      subforms: subforms(schema, relations)
+      subforms: Enum.map(subforms(schema, relations), &Map.put(&1, :shared, Map.get(controlled_subforms, &1.name, []))),
+      controlled_vars: &Map.get(controlled_vars, module_uids[{&1.module_origin || :local, &1.module_id}], [])
     }
+  end
+
+  defp field_class(name, source_controlled, text_fields) do
+    cond do
+      String.starts_with?(to_string(name), "rendered_") -> []
+      name in source_controlled -> [{name, :shared}]
+      name in text_fields -> [{name, :text}]
+      true -> [{name, :local}]
+    end
   end
 
   defp subforms(schema, relations) do
@@ -250,7 +300,7 @@ defmodule Brando.Translations.Sync do
 
         [
           {prefix, :structure, Enum.map(blocks, &identities[&1.uid])}
-          | Enum.flat_map(blocks, &flatten_block(&1, prefix, identities))
+          | Enum.flat_map(blocks, &flatten_block(&1, prefix, identities, spec))
         ]
       end)
 
@@ -261,7 +311,7 @@ defmodule Brando.Translations.Sync do
 
   # Paths are `<field>/<identity>` at every depth: nesting is recorded in the
   # parent's structure row, so moving a block does not change its paths.
-  defp flatten_block(block, parent_prefix, identities) do
+  defp flatten_block(block, parent_prefix, identities, spec) do
     prefix = "#{parent_prefix}/#{identities[block.uid]}"
     children = loaded(block.children)
     refs = loaded(block.refs)
@@ -283,12 +333,12 @@ defmodule Brando.Translations.Sync do
 
     [{prefix, :structure, structure}, identifiers] ++
       Enum.flat_map(refs, &flatten_ref(&1, prefix)) ++
-      Enum.flat_map(vars, &flatten_var(&1, "#{prefix}/vars")) ++
+      Enum.flat_map(vars, &flatten_var(&1, "#{prefix}/vars", &1.key in spec.controlled_vars.(block))) ++
       Enum.flat_map(rows, fn row ->
         Enum.flat_map(loaded(row.vars), &flatten_var(&1, "#{prefix}/rows/#{row_ids[row]}/vars"))
       end) ++
       flatten_identifier_metas(block, prefix) ++
-      Enum.flat_map(children, &flatten_block(&1, parent_prefix, identities))
+      Enum.flat_map(children, &flatten_block(&1, parent_prefix, identities, spec))
   end
 
   defp flatten_ref(ref, block_prefix) do
@@ -342,12 +392,13 @@ defmodule Brando.Translations.Sync do
 
   defp media_key_string({type, id}), do: "#{type || "any"}:#{id}"
 
-  defp flatten_var(var, parent_prefix) do
+  defp flatten_var(var, parent_prefix, controlled? \\ false) do
     prefix = "#{parent_prefix}/#{var.key}"
     media = {prefix <> "/media", :shared, Map.take(var, [:identifier_id | @media_fks])}
 
     value =
       cond do
+        controlled? -> {prefix <> "/value", :shared, Map.take(var, @var_values)}
         var.type in Translation.translatable_var_types() -> {prefix <> "/value", :text, var.value}
         var.type == :link -> {prefix <> "/link_text", :text, var.link_text}
         true -> {prefix <> "/value", :local, Map.take(var, [:value, :value_boolean])}
@@ -371,7 +422,7 @@ defmodule Brando.Translations.Sync do
     [{to_string(name), :structure, Enum.map(vars, & &1.key)} | Enum.flat_map(vars, &flatten_var(&1, to_string(name)))]
   end
 
-  defp flatten_subform(entry, %{name: name, key: key, text: text, module: module, related_key: related_key}) do
+  defp flatten_subform(entry, %{name: name, key: key, text: text, module: module, related_key: related_key} = subform) do
     rows = loaded(Map.get(entry, name))
     fields = module.__schema__(:fields) -- [:id, key, related_key, :sequence, :inserted_at, :updated_at]
 
@@ -379,7 +430,13 @@ defmodule Brando.Translations.Sync do
       {to_string(name), :structure, Enum.map(rows, &Map.get(&1, key))}
       | Enum.flat_map(rows, fn row ->
           for field <- fields do
-            class = if field in text, do: :text, else: :local
+            class =
+              cond do
+                field in subform.shared -> :shared
+                field in text -> :text
+                true -> :local
+              end
+
             {"#{name}/#{Map.get(row, key)}/#{field}", class, Map.get(row, field)}
           end
         end)
@@ -404,7 +461,9 @@ defmodule Brando.Translations.Sync do
 
     {payload, block_notes} =
       Enum.reduce(spec.blocks_fields, {payload, []}, fn field, {acc, notes} ->
-        {entry_blocks, field_notes} = merge_entry_blocks(Map.get(source, field), Map.get(target, field), target)
+        {entry_blocks, field_notes} =
+          merge_entry_blocks(Map.get(source, field), Map.get(target, field), target, spec.controlled_vars)
+
         {Map.put(acc, field, entry_blocks), notes ++ field_notes}
       end)
 
@@ -419,7 +478,7 @@ defmodule Brando.Translations.Sync do
     {payload, block_notes ++ subform_notes}
   end
 
-  defp merge_entry_blocks(source_entry_blocks, target_entry_blocks, target) do
+  defp merge_entry_blocks(source_entry_blocks, target_entry_blocks, target, controlled_vars) do
     source_entry_blocks = loaded(source_entry_blocks)
     target_entry_blocks = loaded(target_entry_blocks)
 
@@ -428,7 +487,7 @@ defmodule Brando.Translations.Sync do
     target_ids = identities(target_blocks)
     target_index = index_blocks(target_blocks, target_ids)
     target_joins = Map.new(target_entry_blocks, &{target_ids[&1.block.uid], &1})
-    ctx = %{source_ids: source_ids, target_index: target_index}
+    ctx = %{source_ids: source_ids, target_index: target_index, controlled_vars: controlled_vars}
 
     {entry_blocks, notes} =
       Enum.map_reduce(source_entry_blocks, [], fn source_join, notes ->
@@ -481,7 +540,7 @@ defmodule Brando.Translations.Sync do
             children: children,
             refs: refs,
             block_identifiers: Enum.map(loaded(source_block.block_identifiers), &new_block_identifier/1),
-            vars: merge_vars(loaded(source_block.vars), loaded(target_block.vars)),
+            vars: merge_vars(loaded(source_block.vars), loaded(target_block.vars), ctx.controlled_vars.(source_block)),
             table_rows: merge_rows(loaded(source_block.table_rows), loaded(target_block.table_rows))
           })
 
@@ -536,7 +595,7 @@ defmodule Brando.Translations.Sync do
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
   end
 
-  defp merge_vars(source_vars, target_vars) do
+  defp merge_vars(source_vars, target_vars, controlled \\ []) do
     target_by_key = Map.new(target_vars, &{{&1.key, &1.type}, &1})
 
     Enum.map(source_vars, fn source_var ->
@@ -545,13 +604,13 @@ defmodule Brando.Translations.Sync do
           clone(source_var)
 
         target_var ->
-          Map.merge(
-            target_var,
-            Map.take(source_var, [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs])
-          )
+          Map.merge(target_var, Map.take(source_var, var_shared_fields(source_var.key in controlled)))
       end
     end)
   end
+
+  defp var_shared_fields(false), do: [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs]
+  defp var_shared_fields(true), do: var_shared_fields(false) ++ @var_values
 
   defp merge_rows(source_rows, target_rows) do
     source_ids = row_identities(source_rows)
@@ -579,7 +638,7 @@ defmodule Brando.Translations.Sync do
     {:ok, merge_vars(loaded(Map.get(source, name)), loaded(Map.get(target, name)))}
   end
 
-  defp merge_subform(source, target, %{name: name, key: key, related_key: related_key}) do
+  defp merge_subform(source, target, %{name: name, key: key, related_key: related_key} = subform) do
     target_by_key = Map.new(loaded(Map.get(target, name)), &{Map.get(&1, key), &1})
 
     rows =
@@ -590,6 +649,8 @@ defmodule Brando.Translations.Sync do
             if related_key, do: Map.put(row, related_key, target.id), else: row
 
           target_row ->
+            target_row = Map.merge(target_row, Map.take(source_row, subform.shared))
+
             if Map.has_key?(source_row, :sequence),
               do: %{target_row | sequence: source_row.sequence},
               else: target_row

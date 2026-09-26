@@ -52,6 +52,7 @@ defmodule E2eProjectWeb.Router do
       post "/user-directory/:action", E2EFixtureController, :user_directory
       post "/image-creator/:image_id", E2EFixtureController, :image_creator
       post "/admin-workspace-fixtures", E2EFixtureController, :admin_workspaces
+      post "/synchronized-translation", E2EFixtureController, :synchronized_translation
       post "/dashboard-access/:mode", E2EFixtureController, :dashboard_access
       post "/authorization/:role", E2EFixtureController, :authorization
       post "/authorization-sites/:action", E2EAuthorizationController, :run
@@ -80,6 +81,12 @@ defmodule E2eProjectWeb.Router do
       live "/projects", ProjectListLive
       live "/projects/create", ProjectFormLive, :create
       live "/projects/update/:entry_id", ProjectFormLive, :update
+    end
+
+    scope "/sync_test", E2eProjectAdmin.SyncTest do
+      live "/articles", ArticleListLive
+      live "/articles/create", ArticleFormLive, :create
+      live "/articles/update/:entry_id", ArticleFormLive, :update
     end
 
     scope "/prices", E2eProjectAdmin.Prices do

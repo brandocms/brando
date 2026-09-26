@@ -448,6 +448,114 @@ defmodule E2EFixtureController do
     json(conn, %{ok: true})
   end
 
+  # A Norwegian source article with one block and one linked item, an English
+  # translation of both, and a source change that leaves the translation a
+  # pending version: a new block to translate and a new year.
+  # The source changes again while its translation is open in the editor.
+  def synchronized_translation(conn, %{"source_id" => source_id, "year" => year}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = get_admin_user()
+    alias E2eProject.SyncTest
+
+    {:ok, _} = SyncTest.update_article(String.to_integer(source_id), %{year: String.to_integer(year)}, user)
+
+    {:ok, source} =
+      SyncTest.get_article(%{
+        matches: %{id: String.to_integer(source_id)},
+        preload: Brando.Blueprint.preloads_for(E2eProject.SyncTest.Article)
+      })
+
+    Brando.Translations.source_saved(source)
+    json(conn, %{ok: true})
+  end
+
+  def synchronized_translation(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = get_admin_user()
+    alias E2eProject.SyncTest
+    alias E2eProject.SyncTest.Article
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        %{
+          name: %{"en" => "Sync text", "no" => "Synk-tekst"},
+          namespace: %{"en" => "Sync", "no" => "Synk"},
+          help_text: %{"en" => "", "no" => ""},
+          class: "sync-text",
+          code: "<div>{% ref refs.body %}</div>",
+          refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: ""}}}],
+          vars: []
+        },
+        user
+      )
+
+    {:ok, source} =
+      SyncTest.create_article(
+        %{
+          title: "Kilden",
+          slug: "kilden",
+          language: "no",
+          status: "published",
+          year: 2020,
+          items: [%{label: "Mer", link: "/mer"}]
+        },
+        user
+      )
+
+    add_sync_block = fn article, text, sequence ->
+      block =
+        %Brando.Content.Block{}
+        |> Brando.Content.Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => module.id,
+            "creator_id" => user.id,
+            "source" => to_string(Article.Blocks),
+            "refs" => [
+              %{
+                "uid" => Brando.Utils.generate_uid(),
+                "name" => "body",
+                "data" => %{"type" => "text", "data" => %{"text" => "<p>#{text}</p>"}}
+              }
+            ]
+          },
+          user
+        )
+        |> Brando.Repo.insert!()
+
+      Brando.Repo.insert!(struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}))
+    end
+
+    add_sync_block.(source, "Første avsnitt", 0)
+    {:ok, target} = Brando.Translations.create_target(Article, source.id, :en, user)
+
+    # Translate the copy.
+    {:ok, loaded} = SyncTest.get_article(%{matches: %{id: target.id}, preload: Brando.Blueprint.preloads_for(Article)})
+
+    for join <- loaded.entry_blocks, ref <- Brando.Repo.preload(join.block, :refs).refs do
+      ref
+      |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: "<p>First paragraph</p>"}})
+      |> Brando.Repo.update!()
+    end
+
+    for item <- Brando.Repo.preload(loaded, :items, force: true).items do
+      item |> Ecto.Changeset.change(label: "More") |> Brando.Repo.update!()
+    end
+
+    {:ok, _} = SyncTest.update_article(target.id, %{title: "The source", slug: "the-source"}, user)
+
+    # The source changes.
+    add_sync_block.(source, "Nytt avsnitt", 1)
+    {:ok, _} = SyncTest.update_article(source.id, %{year: 2024}, user)
+    {:ok, source} = SyncTest.get_article(%{matches: %{id: source.id}, preload: Brando.Blueprint.preloads_for(Article)})
+    Brando.Translations.source_saved(source)
+
+    json(conn, %{source_id: source.id, target_id: target.id})
+  end
+
   def admin_workspaces(conn, _params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

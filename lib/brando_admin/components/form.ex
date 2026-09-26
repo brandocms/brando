@@ -52,6 +52,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RevisionsDrawer
+  alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
   alias BrandoAdmin.Components.Form.VideoDrawer
   alias BrandoAdmin.Components.ImagePicker
@@ -94,6 +95,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:dirty_fields, [])
      |> assign(:server_owned_assets, %{})
      |> assign(:draft, nil)
+     |> assign(:translation, nil)
+     |> assign(:minor_save?, false)
      |> assign(:draft_save_checked?, false)
      |> assign(:editing_image?, false)
      |> assign(:editing_file?, false)
@@ -1035,6 +1038,27 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, assign(socket, :blocks_ready?, true)}
   end
 
+  def update(%{action: :apply_translation}, socket) do
+    cond do
+      not Translation.apply?(socket.assigns) ->
+        {:ok, socket}
+
+      not socket.assigns.blocks_ready? or socket.assigns.entry_loading? ->
+        send_update_after(__MODULE__, [id: socket.assigns.id, action: :apply_translation], 100)
+        {:ok, socket}
+
+      true ->
+        case Translation.restore_changeset(socket) do
+          {:ok, changeset, socket} ->
+            {:ok, apply_restored_changeset(socket, changeset)}
+
+          :error ->
+            send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
+            {:ok, socket}
+        end
+    end
+  end
+
   def update(assigns, socket) do
     form_name = assigns[:name] || :default
 
@@ -1111,7 +1135,31 @@ defmodule BrandoAdmin.Components.Form do
     |> maybe_assign_block_map()
     |> maybe_assign_entry_for_blocks()
     |> Drafts.init()
+    |> Translation.assign_state()
+    |> schedule_translation_apply()
     |> assign(:initial_update, false)
+  end
+
+  # A synchronized translation opens with its pending version in the form.
+  # Applied once the block fields exist, as a recovery copy is.
+  defp schedule_translation_apply(socket) do
+    if connected?(socket) and Translation.apply?(socket.assigns),
+      do: send_update_after(__MODULE__, [id: socket.assigns.id, action: :apply_translation], 100)
+
+    socket
+  end
+
+  # After a save the form reloads the entry; its translation state and any
+  # newer pending version are loaded again.
+  defp refresh_translation(socket, stale?) do
+    socket
+    |> assign(:translation, nil)
+    |> Translation.assign_state()
+    |> then(fn
+      %{assigns: %{translation: %{} = state}} = socket -> assign(socket, :translation, %{state | stale?: stale?})
+      socket -> socket
+    end)
+    |> schedule_translation_apply()
   end
 
   defp start_entry_load(socket) do
@@ -2527,6 +2575,13 @@ defmodule BrandoAdmin.Components.Form do
                   <Button.dropdown value={false} event={JS.push("push_submit_new", target: @myself)}>
                     {gettext("Save and create new")}
                   </Button.dropdown>
+                  <Button.dropdown
+                    :if={Translation.source?(@translation)}
+                    value={false}
+                    event={JS.push("push_submit_minor", target: @myself)}
+                  >
+                    {gettext("Save minor text corrections")}
+                  </Button.dropdown>
                 </SplitDropdown.render>
               </div>
             </div>
@@ -2592,6 +2647,7 @@ defmodule BrandoAdmin.Components.Form do
             phx-change="validate"
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
+            <Translation.panel :if={@translation} state={@translation} form_name={@form.name} target={@myself} />
             <div style="display:none">
               <.live_file_input upload={@uploads[:image_editor_upload]} />
             </div>
@@ -2662,6 +2718,8 @@ defmodule BrandoAdmin.Components.Form do
             entry_blocks={entry_blocks}
             current_user={@current_user}
             form_id={@id}
+            source_locked={Translation.locked?(@translation)}
+            source_url={Translation.source_url(@translation)}
           />
 
           <Primitives.submit_button
@@ -2904,35 +2962,12 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply, socket}
 
       {:ok, socket, changeset} ->
-        form = to_form(changeset)
-
-        for field <- socket.assigns.form_blueprint.blocks do
-          send_update(BlockField,
-            id: "#{socket.assigns.id}-blocks-#{field.name}",
-            event: "restore_draft",
-            entry_blocks: Map.get(changeset.data, :"entry_#{field.name}") || [],
-            changesets: get_assoc(changeset, :"entry_#{field.name}")
-          )
-        end
-
-        for {name, _, _} <- socket.assigns.form_blueprint.transformers do
-          send_update(BrandoAdmin.Components.Form.Transformer,
-            id: "#{form.id}-transformer-#{name}",
-            event: "restore_draft",
-            field: form[name]
-          )
-        end
-
         draft = %{socket.assigns.draft | open?: socket.assigns.draft.issues != [], status: :ready}
 
         {:noreply,
          socket
          |> assign(:draft, draft)
-         |> assign(:form, form)
-         |> own_changed_assets(Map.keys(changeset.changes))
-         |> assign_entry_for_blocks()
-         |> force_svelte_remounts(:all)
-         |> Drafts.dirty()}
+         |> apply_restored_changeset(changeset)}
     end
   end
 
@@ -2944,7 +2979,7 @@ defmodule BrandoAdmin.Components.Form do
     # This is also the recovery event for the main form, and it is what
     # rebuilds the entry from the recovered params — see
     # `maybe_finish_live_preview_recovery/1`.
-    socket = assign(socket, :form_recovered?, true)
+    socket = socket |> assign(:form_recovered?, true) |> Translation.put_acknowledged(params)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -3301,7 +3336,9 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:progress_popup, "Saving entry..."})
 
-    case apply(context, :"#{mutation_type}_#{singular}", [rendered_changeset, current_user]) do
+    socket = Translation.put_acknowledged(socket, params)
+
+    case save_entry(socket, context, mutation_type, singular, rendered_changeset) do
       {:ok, entry} ->
         send(self(), {:progress_popup, "Entry saved."})
 
@@ -3309,8 +3346,11 @@ defmodule BrandoAdmin.Components.Form do
           schema,
           entry,
           rendered_changeset,
-          current_user
+          current_user,
+          minor: Map.get(socket.assigns, :minor_save?, false)
         )
+
+        {socket, stale?} = after_translation_save(socket, schema, entry)
 
         maybe_run_form_after_save(form_blueprint, entry, current_user)
 
@@ -3340,6 +3380,7 @@ defmodule BrandoAdmin.Components.Form do
                    |> assign_block_map()
                    |> assign_entry_for_blocks()
                    |> reload_all_blocks()
+                   |> refresh_translation(stale?)
                    |> push_patch(to: update_url)
                  else
                    if schema.has_trait(Brando.Trait.Revisioned) do
@@ -3359,6 +3400,7 @@ defmodule BrandoAdmin.Components.Form do
                    |> assign_block_map()
                    |> assign_entry_for_blocks()
                    |> reload_all_blocks()
+                   |> refresh_translation(stale?)
                  end
 
                :listing ->
@@ -3371,6 +3413,15 @@ defmodule BrandoAdmin.Components.Form do
            assign(maybe_redirected_socket, :save_redirect_target, :listing)
          end)}
 
+      {:error, {:source_controlled, paths}} ->
+        {:noreply,
+         socket
+         |> assign(:processing, false)
+         |> assign(:all_blocks_received?, false)
+         |> clear_blocks_root_changesets()
+         |> reset_transformer_changesets()
+         |> source_controlled_error(paths)}
+
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger
         Logger.error(inspect(changeset, pretty: true))
@@ -3379,6 +3430,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:processing, false)
+         |> assign(:minor_save?, false)
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
@@ -3453,9 +3505,15 @@ defmodule BrandoAdmin.Components.Form do
       schema.__admin_route__(:create, [])
     end
 
-    case apply(context, :"#{mutation_type}_#{singular}", [changeset, current_user]) do
+    socket = Translation.put_acknowledged(socket, params)
+
+    case save_entry(socket, context, mutation_type, singular, changeset) do
       {:ok, entry} ->
-        Brando.Blueprint.AfterSave.run(schema, entry, changeset, current_user)
+        Brando.Blueprint.AfterSave.run(schema, entry, changeset, current_user,
+          minor: Map.get(socket.assigns, :minor_save?, false)
+        )
+
+        {socket, _stale?} = after_translation_save(socket, schema, entry)
         maybe_run_form_after_save(form_blueprint, entry, current_user)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
@@ -3512,6 +3570,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:processing, false)
+         |> assign(:minor_save?, false)
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
@@ -4442,6 +4501,58 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # One save that asks the translations for no new review of text that
+  # changed: typo fixes and the like. Structure, shared values and new text
+  # are still synchronized.
+  def handle_event("push_submit_minor", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:minor_save?, true)
+     |> assign(:save_redirect_target, :self)
+     |> push_event("b:submit", %{})}
+  end
+
+  def handle_event("create_translation", %{"language" => language}, socket) do
+    %{schema: schema, current_user: user, translation: state} = socket.assigns
+    source_id = (state && state.source && state.source.id) || socket.assigns.entry.id
+
+    with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
+         {:ok, target} <- Brando.Translations.create_target(schema, source_id, language, user) do
+      BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+      {:noreply, push_navigate(socket, to: schema.__admin_route__(:update, [target.id]))}
+    else
+      error -> {:noreply, translation_action_failed(socket, error)}
+    end
+  end
+
+  def handle_event("make_translation_independent", _, socket) do
+    %{schema: schema, current_user: user, entry: entry} = socket.assigns
+
+    with :ok <- Brando.Authorization.Boundary.authorize(user, :update, entry),
+         {:ok, _member} <- Brando.Translations.make_independent(schema, entry.id, user) do
+      BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+      send(self(), {:toast, gettext("This translation is now independent.")})
+      # The form keeps its unsaved changes; only the translation state changes.
+      {:noreply, Translation.assign_state(socket)}
+    else
+      error -> {:noreply, translation_action_failed(socket, error)}
+    end
+  end
+
+  def handle_event("make_translation_source", _, socket) do
+    %{schema: schema, current_user: user, entry: entry, translation: state} = socket.assigns
+
+    with :ok <- Brando.Authorization.Boundary.authorize(user, :update, entry),
+         :ok <- authorize_source(schema, user, state),
+         {:ok, _member} <- Brando.Translations.transfer_source(schema, entry.id, user) do
+      BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+      send(self(), {:toast, gettext("This translation is now the source.")})
+      {:noreply, Translation.assign_state(socket)}
+    else
+      error -> {:noreply, translation_action_failed(socket, error)}
+    end
+  end
+
   def handle_event("push_submit_redirect", _, socket) do
     {:noreply, push_event(socket, "b:submit", %{})}
   end
@@ -4710,6 +4821,112 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_run_form_after_save(%{after_save: after_save}, entry, current_user) do
     Callback.call(after_save, [entry, current_user])
+  end
+
+  # Puts a changeset built on the saved entry — a recovery copy, or a
+  # translation's pending version — into the form as unsaved changes: the main
+  # form, every block field and every transformer.
+  defp apply_restored_changeset(socket, changeset) do
+    form = to_form(changeset)
+
+    for field <- socket.assigns.form_blueprint.blocks do
+      send_update(BlockField,
+        id: "#{socket.assigns.id}-blocks-#{field.name}",
+        event: "restore_draft",
+        entry_blocks: Map.get(changeset.data, :"entry_#{field.name}") || [],
+        changesets: get_assoc(changeset, :"entry_#{field.name}")
+      )
+    end
+
+    for {name, _, _} <- socket.assigns.form_blueprint.transformers do
+      send_update(BrandoAdmin.Components.Form.Transformer,
+        id: "#{form.id}-transformer-#{name}",
+        event: "restore_draft",
+        field: form[name]
+      )
+    end
+
+    socket
+    |> assign(:form, form)
+    |> own_changed_assets(Map.keys(changeset.changes))
+    |> assign_entry_for_blocks()
+    |> force_svelte_remounts(:all)
+    |> Drafts.dirty()
+  end
+
+  # A synchronized translation is checked against the version its editor
+  # worked from before it is written (`Brando.Translations.check_target_save/4`).
+  defp save_entry(socket, context, mutation_type, singular, changeset) do
+    entry_id = get_field(changeset, :id)
+    user = socket.assigns.current_user
+
+    check =
+      if entry_id,
+        do:
+          Brando.Translations.check_target_save(
+            socket.assigns.schema,
+            entry_id,
+            changeset,
+            Translation.version_id(socket.assigns)
+          ),
+        else: {:ok, changeset}
+
+    case check do
+      {:ok, changeset} -> apply(context, :"#{mutation_type}_#{singular}", [changeset, user])
+      error -> error
+    end
+  end
+
+  defp after_translation_save(socket, schema, entry) do
+    socket = assign(socket, :minor_save?, false)
+
+    case Brando.Translations.target_saved(schema, entry.id, Translation.review(socket.assigns)) do
+      {:ok, %{stale: stale?}} -> {socket, stale?}
+      _ -> {socket, false}
+    end
+  end
+
+  # The current source becomes a translation, so the user must be allowed to
+  # change it too.
+  defp authorize_source(schema, user, %{source: %{id: id}}) do
+    case Brando.Repo.get(schema, id) do
+      nil -> {:error, :source_not_found}
+      source -> Brando.Authorization.Boundary.authorize(user, :update, source)
+    end
+  end
+
+  defp authorize_source(_schema, _user, _state), do: {:error, :not_enrolled}
+
+  defp translation_action_failed(socket, error) do
+    message =
+      case error do
+        {:error, :language_exists} -> gettext("This language already has a version.")
+        {:error, :unauthorized} -> gettext("You do not have permission to do this.")
+        {:error, %{__exception__: true}} -> gettext("You do not have permission to do this.")
+        _ -> gettext("The translation could not be changed.")
+      end
+
+    require Logger
+    Logger.warning("Translation action failed: #{inspect(error)}")
+    send(self(), {:toast, message})
+    socket
+  end
+
+  defp source_controlled_error(socket, paths) do
+    socket = assign(socket, :minor_save?, false)
+    require Logger
+    Logger.warning("Refused a translation save that changed source-controlled content: #{inspect(paths)}")
+    send(self(), {:progress_popup, "Saving entry failed..."})
+
+    send(
+      self(),
+      {:toast,
+       gettext(
+         "Not saved: this translation's structure, media and shared values follow the source. Change them in the source."
+       )}
+    )
+
+    socket
   end
 
   defp assoc_all_block_fields(block_changesets, changeset) do

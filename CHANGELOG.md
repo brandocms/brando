@@ -406,6 +406,19 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   [Content assistant](guides/content_assistant.md).
 - `Brando.Content.Proposals` stores, validates, previews and applies these
   proposals, and can be used without the assistant.
+- **Synchronized translations in the admin.** A translation opens with its
+  pending version in the form, lists the text to translate or review, and
+  resolves only what the editor completed when saved. Its structure, media and
+  source-controlled values are locked and enforced on save. The source gets
+  **Save minor text corrections**; translations get **Make independent** and
+  **Make source**, and missing languages can be created from the entry.
+  Listings show each language's open work. See
+  [Synchronized translations](guides/i18n.md#synchronized-translations).
+- `source_controlled_fields` accepts subform fields (`credits: [:url]`) and
+  block-module variables (`{:module, "hero-banner", [:layout]}`);
+  `Brando.Translations.check_config/1` checks module selectors against the
+  database.
+- `Brando.Blueprint.AfterSave.run/5` takes `minor: true`.
 - Run `mix brando.gen.migrations` for `brando_183`–`brando_187`, which add
   proposals, their receipts, and assistant conversations. All live in `public`.
 - **Build with AI** in the block editor opens the assistant for that entry

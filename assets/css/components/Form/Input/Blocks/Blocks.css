@@ -655,3 +655,42 @@ section.alert.danger {
     flex: 0 0 auto;
   }
 }
+
+/* A synchronized translation: structure, modules and media follow the source,
+   so the controls that change them are hidden. The server refuses those
+   changes as well (BlockField's structural-op guard and the save check). */
+.blocks-source-note {
+  margin: 0 0 8px;
+  color: #626b66;
+  font-size: 12px;
+  line-height: 18px;
+
+  a {
+    margin-left: 6px;
+    color: #254e3f;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+.blocks-wrapper.is-source-locked {
+  .block-plus-wrapper,
+  .sort-handle,
+  .blocks-actions,
+  .block-toolbar .switch,
+  [phx-click="duplicate_block"],
+  [phx-click="copy_block"],
+  [phx-click="delete_block"],
+  [phx-click="add_table_row"],
+  [phx-click="assign_available_identifiers"],
+  [phx-click*="\"delete_var\""],
+  [phx-click*="\"reset_var\""],
+  [phx-click*="\"reset_ref\""],
+  [phx-click*="\"reset_refs\""],
+  [phx-click*="\"reset_vars\""],
+  [phx-click*="\"fetch_missing_refs\""],
+  [phx-click*="\"fetch_missing_vars\""],
+  [phx-click*="\"select_block\""] {
+    display: none;
+  }
+}

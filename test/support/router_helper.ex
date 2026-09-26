@@ -101,6 +101,51 @@ defmodule RouterHelper do
   end
 end
 
+defmodule BrandoAdmin.SyncTest.ArticleListLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Listing, schema: Brando.SyncTest.Article
+
+  alias BrandoAdmin.Components.Content
+
+  def render(assigns) do
+    ~H"""
+    <Content.header title="Articles" subtitle="Overview" />
+
+    <.live_component
+      module={Content.List}
+      id={"content_listing_#{@schema}_default"}
+      schema={@schema}
+      current_user={@current_user}
+      uri={@uri}
+      params={@params}
+      listing={:default}
+    />
+    """
+  end
+end
+
+defmodule BrandoAdmin.SyncTest.ArticleFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="article_form"
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Article</:header>
+    </.live_component>
+    """
+  end
+end
+
 defmodule BrandoIntegrationWeb.Router do
   @moduledoc false
   use Phoenix.Router
@@ -116,6 +161,9 @@ defmodule BrandoIntegrationWeb.Router do
 
   admin_routes do
     live "/projects", BrandoIntegrationWeb.Projects.ProjectListLive
+    live "/articles", BrandoAdmin.SyncTest.ArticleListLive
+    live "/articles/create", BrandoAdmin.SyncTest.ArticleFormLive, :create
+    live "/articles/update/:entry_id", BrandoAdmin.SyncTest.ArticleFormLive, :update
   end
 
   scope "/coming-soon" do

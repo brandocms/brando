@@ -31,7 +31,7 @@ defmodule Brando.Translations.ComputePendingTest do
       uid: opts[:uid] || uid(),
       sync_uid: sync_uid,
       type: :module,
-      module_id: 1,
+      module_id: opts[:module_id] || 1,
       sequence: opts[:sequence] || 0,
       refs: opts[:refs] || [],
       vars: opts[:vars] || [],
@@ -297,6 +297,77 @@ defmodule Brando.Translations.ComputePendingTest do
     assert Enum.map(result.payload.items, & &1.label) == ["Two", "Tre"]
     # Both are `:text` inputs in the subform.
     assert kinds(result) == [{:translate, "items/i3/label"}, {:translate, "items/i3/link"}]
+  end
+
+  describe "source-controlled subform fields and module variables" do
+    @uids %{{:local, 1} => "hero-banner", {:local, 2} => "quote"}
+
+    defp controlled_config(overrides) do
+      Map.merge(Article.__translatable_config__(), overrides)
+    end
+
+    test "a controlled subform field follows the source; the row's text stays translated" do
+      config = controlled_config(%{source_controlled_subform_fields: %{items: [:link]}})
+      item = fn uid, label, link -> %ArticleItem{uid: uid, label: label, link: link} end
+      source = article(:no, items: [item.("i1", "En", "/en")])
+      target = article(:en, id: 2, items: [item.("i1", "One", "/one")])
+      base = Sync.baseline_for(source, Article, config)
+
+      source = %{source | items: [item.("i1", "En", "/ny")]}
+      result = compute(source, target, base, config: config)
+
+      assert [%{label: "One", link: "/ny"}] = result.payload.items
+      assert kinds(result) == [{:shared_update, "items/i1/link"}]
+
+      # Without the selector the link is the translation's own.
+      plain = compute(source, target, baseline(source))
+      assert [%{link: "/one"}] = plain.payload.items
+    end
+
+    test "a controlled variable follows the source only on the named module" do
+      config = controlled_config(%{source_controlled_module_vars: %{"hero-banner" => ["layout"]}})
+      var = fn key, value -> %Var{key: key, type: :string, value: value, label: key} end
+
+      source =
+        article(:no,
+          blocks: [
+            block("h", module_id: 1, vars: [var.("layout", "wide"), var.("heading", "Overskrift")]),
+            block("q", module_id: 2, vars: [var.("layout", "left")])
+          ]
+        )
+
+      target =
+        article(:en,
+          id: 2,
+          blocks: [
+            block("h", id: 10, module_id: 1, vars: [var.("layout", "narrow"), var.("heading", "Heading")]),
+            block("q", id: 11, module_id: 2, vars: [var.("layout", "right")])
+          ]
+        )
+
+      base = Sync.baseline_for(source, Article, config, @uids)
+      result = compute(source, target, base, config: config, module_uids: @uids)
+      [hero, quote] = Enum.map(result.payload.entry_blocks, & &1.block)
+
+      assert Enum.map(hero.vars, &{&1.key, &1.value}) == [{"layout", "wide"}, {"heading", "Heading"}]
+      # Same key on another module: the translation's own value.
+      assert Enum.map(quote.vars, &{&1.key, &1.value}) == [{"layout", "right"}]
+      assert kinds(result) == [{:shared_update, "entry_blocks/h/vars/layout/value"}]
+
+      # A block whose module is unknown controls nothing.
+      unknown = compute(source, target, base, config: config, module_uids: %{})
+      assert Enum.map(hd(unknown.payload.entry_blocks).block.vars, & &1.value) == ["narrow", "Heading"]
+    end
+
+    test "repeated source saves keep controlled values in step without new work" do
+      config = controlled_config(%{source_controlled_module_vars: %{"hero-banner" => ["layout"]}})
+      var = fn value -> %Var{key: "layout", type: :string, value: value, label: "Layout"} end
+      source = article(:no, blocks: [block("h", module_id: 1, vars: [var.("wide")])])
+      target = article(:en, id: 2, blocks: [block("h", id: 10, module_id: 1, vars: [var.("wide")])])
+      base = Sync.baseline_for(source, Article, config, @uids)
+
+      assert compute(source, target, base, config: config, module_uids: @uids).work_items == []
+    end
   end
 
   test "repeated source saves keep completed translations" do

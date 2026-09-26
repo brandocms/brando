@@ -137,22 +137,22 @@ msgstr "Oppføringen har ikke blokkfeltet %{field}."
 msgid "This entry is not available, or you do not have permission to change it."
 msgstr "Oppføringen er ikke tilgjengelig, eller du har ikke tilgang til å endre den."
 
-#: lib/brando/ai/agent/guidance.ex:142
+#: lib/brando/ai/agent/guidance.ex:148
 #, elixir-autogen, elixir-format
 msgid "Guidance can be at most %{count} characters."
 msgstr "Veiledningen kan være på høyst %{count} tegn."
 
-#: lib/brando/ai/agent/guidance.ex:194
+#: lib/brando/ai/agent/guidance.ex:202
 #, elixir-autogen, elixir-format
 msgid "This guidance is not available."
 msgstr "Denne veiledningen er ikke tilgjengelig."
 
-#: lib/brando/ai/agent/guidance.ex:203
+#: lib/brando/ai/agent/guidance.ex:211
 #, elixir-autogen, elixir-format
 msgid "This site"
 msgstr "Dette nettstedet"
 
-#: lib/brando/ai/agent/guidance.ex:235
+#: lib/brando/ai/agent/guidance.ex:250
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to change the assistant's guidance."
 msgstr "Du har ikke tilgang til å endre assistentens veiledning."

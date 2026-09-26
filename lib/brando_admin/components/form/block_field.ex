@@ -75,6 +75,27 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, assign(socket, outline_items: [], open_slot_uid: nil, slot_title: nil, note_observers: %{})}
   end
 
+  @structural_ops [:insert, :insert_child, :move, :reorder, :reorder_children, :move_to_parent, :remap_slot, :delete]
+
+  # A synchronized translation's structure follows its source: this editor's
+  # structural events are refused before they touch the store, the bin or the
+  # other editors. Content edits (`{:update, …}` ops) pass.
+  @locked_events ~w(create_footnote duplicate_block paste_block paste_child_block delete_block
+                    insert_extracted_child insert_block insert_container insert_fragment remap_region)
+
+  def update(%{event: event}, %{assigns: %{source_locked: true}} = socket) when event in @locked_events,
+    do: {:ok, refuse_structure(socket, event)}
+
+  def update(%{event: "block_op", op: op}, %{assigns: %{source_locked: true}} = socket)
+      when elem(op, 0) in @structural_ops,
+      do: {:ok, refuse_structure(socket, elem(op, 0))}
+
+  def update(
+        %{event: "field_note_action", action: "delete_unused_collection"},
+        %{assigns: %{source_locked: true}} = socket
+      ),
+      do: {:ok, refuse_structure(socket, "delete_unused_collection")}
+
   def update(%{event: "close_slot"}, socket), do: {:ok, assign(socket, :open_slot_uid, nil)}
 
   def update(%{event: "inspect_field_notes", field: field, html: html, reply_to: reply_to}, socket) do
@@ -725,7 +746,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
       socket
       |> put_seed_form(remote_uid, entry_block_form)
-      |> apply_block_op({:insert, remote_uid, sequence, Ops.block_diff_params(entry_block_cs)})
+      |> apply_block_op({:insert, remote_uid, sequence, Ops.block_diff_params(entry_block_cs)}, :internal)
       |> refresh_live_preview()
       |> then(&{:ok, &1})
     end
@@ -830,7 +851,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # Remote user reordered blocks
   def update(%{event: "remote_blocks_reordered", block_list: remote_block_list}, socket) do
     socket
-    |> apply_block_op({:reorder, remote_block_list})
+    |> apply_block_op({:reorder, remote_block_list}, :internal)
     |> refresh_live_preview()
     |> then(&{:ok, &1})
   end
@@ -926,6 +947,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:footnote_fields, assigns.opts[:footnote_fields] || %{})
     |> assign(:note_collection?, !!assigns.opts[:footnote_fields])
     |> assign(:assistant?, assistant?(assigns))
+    |> assign_new(:source_locked, fn -> false end)
+    |> assign_new(:source_url, fn -> nil end)
     |> request_blocks_sync()
   end
 
@@ -1034,7 +1057,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The op chokepoint: every mutation (structural or content, local or
   # remote) lands here. A rejected op means a caller drifted from the store —
   # log it loudly, keep the socket usable.
-  defp apply_block_op(socket, op) do
+  # A synchronized translation's structure follows its source. Structural ops
+  # from this editor are refused; `:internal` ops — another editor's shipped
+  # state, reconnect recovery — replay what was already accepted.
+  defp apply_block_op(socket, op, mode \\ :local)
+
+  defp apply_block_op(%{assigns: %{source_locked: true}} = socket, op, :local)
+       when elem(op, 0) in @structural_ops,
+       do: refuse_structure(socket, elem(op, 0))
+
+  defp apply_block_op(socket, op, _mode) do
     case Ops.apply_op(socket.assigns.block_ops, op) do
       {:ok, ops_state} ->
         send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty")
@@ -1051,6 +1083,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
         socket
     end
+  end
+
+  defp refuse_structure(socket, what) do
+    Logger.warning("BlockField (#{socket.assigns.block_field}) refused #{inspect(what)} in a synchronized translation")
+
+    send(
+      self(),
+      {:toast, gettext("Blocks in this translation follow the source. Add, remove or move them in the source.")}
+    )
+
+    socket
   end
 
   # `root_order` is the render projection of the store — assigned together
@@ -1325,12 +1368,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp apply_recovered_block_ops(socket, recovered_forms, merged_uids) do
     recovered_forms
     |> Enum.reduce(socket, fn {uid, form}, acc ->
-      apply_block_op(acc, {:insert, uid, :end, Ops.block_diff_params(form.source)})
+      apply_block_op(acc, {:insert, uid, :end, Ops.block_diff_params(form.source)}, :internal)
     end)
-    |> apply_block_op({:reorder, merged_uids})
+    |> apply_block_op({:reorder, merged_uids}, :internal)
   end
 
   # reposition a main block
+  @locked_client_events ~w(reposition paste_block_at_end restore_block outline_root_reposition outline_reposition)
+
+  def handle_event(event, _params, %{assigns: %{source_locked: true}} = socket) when event in @locked_client_events,
+    do: {:noreply, refuse_structure(socket, event)}
+
   def handle_event("reposition", %{"new" => new_idx, "old" => old_idx}, socket) when new_idx == old_idx do
     # same index, no move needed
     {:noreply, socket}
@@ -1786,7 +1834,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     <div
       id={"#{@id}-wrapper"}
       phx-hook="Brando.BlockField"
-      class={["blocks-wrapper", @note_collection? && "footnote-storage"]}
+      class={["blocks-wrapper", @note_collection? && "footnote-storage", @source_locked && "is-source-locked"]}
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
@@ -1818,6 +1866,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           </button>
         </div>
       </div>
+      <p :if={@source_locked} class="blocks-source-note">
+        {gettext("Blocks, their order and media follow the source. Edit the text here.")}
+        <.link :if={@source_url} navigate={@source_url}>{gettext("Change structure in the source")}</.link>
+      </p>
       <div class="blocks-content">
         <div :if={!@note_collection? && (@root_order != [] or @clipboard_meta)} class="blocks-actions">
           <div class="block-field-dropdown">

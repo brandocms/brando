@@ -77,6 +77,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           />
         <% end %>
         <.alternates :if={@alternates?} entry={@entry} target={@myself} schema={@schema} />
+        <.translation_status entry={@entry} schema={@schema} />
         <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
         <.entry_menu schema={@schema} content_language={@content_language} entry={@entry} listing={@listing} />
       </div>
@@ -462,6 +463,63 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  attr :entry, :map, required: true
+  attr :schema, :atom, required: true
+
+  @doc """
+  The language versions of a synchronized translation group and their open
+  work (`Brando.Translations.listing_status/2`), each linking to its entry.
+  """
+  def translation_status(assigns) do
+    assigns = assign(assigns, :versions, Map.get(assigns.entry, :translation_status))
+
+    ~H"""
+    <ul :if={@versions} class="listing-translations" aria-label={gettext("Language versions")}>
+      <li :for={version <- @versions}>
+        <.link
+          navigate={@schema.__admin_route__(:update, [version.entry_id])}
+          class={["listing-translation", "is-#{translation_state(version)}", version.entry_id == @entry.id && "is-current"]}
+          title={translation_summary(version)}
+        >
+          <span class="listing-translation-language">{String.upcase(version.language)}</span>
+          <span class="listing-translation-state">{translation_summary(version)}</span>
+        </.link>
+      </li>
+    </ul>
+    """
+  end
+
+  defp translation_state(%{role: :source}), do: "source"
+  defp translation_state(%{synchronized: false}), do: "independent"
+  defp translation_state(%{pending: true, counts: counts}) when map_size(counts) > 0, do: "work"
+  defp translation_state(%{pending: true}), do: "updated"
+  defp translation_state(_version), do: "current"
+
+  defp translation_summary(%{role: :source}), do: gettext("Source")
+  defp translation_summary(%{synchronized: false}), do: gettext("Independent")
+
+  defp translation_summary(%{pending: true, counts: counts}) do
+    text = Map.get(counts, :translate, 0)
+    review = Map.get(counts, :review, 0)
+    waiting = Map.get(counts, :awaiting_translation, 0)
+    shared = Map.get(counts, :shared_update, 0)
+
+    parts =
+      Enum.reject(
+        [
+          text > 0 && ngettext("%{count} to translate", "%{count} to translate", text),
+          review > 0 && ngettext("%{count} to review", "%{count} to review", review),
+          waiting > 0 && ngettext("%{count} link waiting", "%{count} links waiting", waiting),
+          shared > 0 && text + review == 0 && gettext("Updated from the source")
+        ],
+        &(&1 in [false, nil])
+      )
+
+    if parts == [], do: gettext("Updated from the source"), else: Enum.join(parts, " · ")
+  end
+
+  defp translation_summary(_version), do: gettext("Up to date")
+
   def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns), do: ~H""
 
   def alternates(%{entry: %{alternate_entries: alternate_entries}} = assigns) do
@@ -654,6 +712,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         />
       <% end %>
       <.alternates :if={@alternates?} entry={@entry} target={@target} schema={@schema} />
+      <.translation_status entry={@entry} schema={@schema} />
       <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
       <.entry_menu schema={@schema} entry={@entry} content_language={@content_language} listing={@listing} />
     </div>

@@ -1,0 +1,141 @@
+/* Synchronized translations: the panel at the top of an entry form, and the
+   marks on the blocks and fields its open work points at. */
+
+.translation-panel {
+  --translation-ink: #272b2a;
+  --translation-muted: #626b66;
+  --translation-line: #dce2dc;
+  --translation-accent: #254e3f;
+  --translation-work: #b7791f;
+
+  display: grid;
+  gap: 16px;
+  margin: 0 0 24px;
+  padding: 20px 24px;
+  border: 1px solid var(--translation-line);
+  border-radius: 8px;
+  background: #f8f9f5;
+  color: var(--translation-ink);
+  font-size: 13px;
+  line-height: 1.55;
+
+  h2, h3, p, ul { margin: 0; padding: 0; }
+  h2 { font-size: 16px; font-weight: 500; line-height: 1.4; text-transform: none; letter-spacing: -.01em; }
+  h3 { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+  h3 span { color: var(--translation-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+  ul { list-style: none; }
+
+  > header { display: grid; gap: 4px; }
+  > header p { color: var(--translation-muted); max-width: 80ch; }
+  > header a { color: var(--translation-accent); text-decoration: underline; text-underline-offset: 2px; }
+}
+
+.translation-panel.is-target { border-color: #e7d7b4; background: #fdf9ef; }
+
+.translation-notice {
+  padding: 8px 12px;
+  border: 1px solid #ecdcb9;
+  border-radius: 6px;
+  background: #fff8e9;
+  color: #755929;
+}
+
+.translation-done, .translation-summary span { color: var(--translation-muted); }
+.translation-summary { display: flex; flex-wrap: wrap; gap: 4px 12px; font-weight: 500; }
+.translation-summary span { font-weight: 400; }
+
+.translation-work { display: grid; gap: 16px; }
+.translation-group { display: grid; gap: 8px; }
+
+.translation-group li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--translation-line);
+}
+
+.translation-item-label { min-width: 0; overflow-wrap: anywhere; }
+
+.translation-ack {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--translation-muted);
+  font-size: 12px;
+  cursor: pointer;
+
+  input { margin: 0; }
+}
+
+.translation-members { display: grid; gap: 8px; }
+.translation-members ul { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.translation-members li { display: inline-flex; align-items: center; gap: 6px; }
+.translation-members a { color: var(--translation-accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.translation-badge {
+  padding: 1px 8px;
+  border-radius: 30px;
+  background: #eef0eb;
+  color: #5b6557;
+  font-size: 11px;
+  white-space: nowrap;
+
+  &.is-work { background: #fbefda; color: #87662d; }
+}
+
+/* Marks from Brando.TranslationWork. */
+.block[data-translation-work] { box-shadow: 0 0 0 2px #e2b85c; border-radius: 6px; }
+.field-wrapper[data-translation-work] { box-shadow: -3px 0 0 #e2b85c; }
+
+@media (max-width: 720px) {
+  .translation-panel { padding: 16px; }
+  .translation-group li { flex-direction: column; align-items: flex-start; }
+}
+
+.translation-structure { color: var(--translation-ink); }
+
+/* Locked by Brando.TranslationWork in a synchronized translation. */
+.field-wrapper[data-source-locked] { opacity: .6; }
+
+[data-source-structure] {
+  .subform-delete,
+  .subform-handle,
+  .add-entry-button {
+    display: none;
+  }
+}
+
+.translation-actions, .translation-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.translation-create > span { color: var(--translation-muted); }
+
+.translation-action {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: auto;
+  min-height: 30px;
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--translation-line);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--translation-ink);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+  cursor: pointer;
+
+  &:hover { border-color: #aab9a5; background: #f1f5ef; }
+}
