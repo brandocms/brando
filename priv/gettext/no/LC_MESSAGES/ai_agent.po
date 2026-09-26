@@ -36,7 +36,7 @@ msgstr "Jeg stoppet etter %{steps} steg. Si fra hvordan jeg skal fortsette."
 msgid "Looking at the available modules"
 msgstr "Ser på tilgjengelige moduler"
 
-#: lib/brando/ai/agent/loop.ex:232
+#: lib/brando/ai/agent/loop.ex:234
 #, elixir-autogen, elixir-format
 msgid "Looking at the site's content"
 msgstr "Ser på innholdet på nettstedet"
@@ -56,27 +56,27 @@ msgstr "Søker etter «%{query}»"
 msgid "Searching the media library"
 msgstr "Søker i mediebiblioteket"
 
-#: lib/brando/ai/agent/loop.ex:272
+#: lib/brando/ai/agent/loop.ex:274
 #, elixir-autogen, elixir-format
 msgid "Something went wrong: %{error}"
 msgstr "Noe gikk galt: %{error}"
 
-#: lib/brando/ai/agent.ex:452
+#: lib/brando/ai/agent.ex:467
 #, elixir-autogen, elixir-format
 msgid "The assistant has no AI model configured for this site."
 msgstr "Assistenten har ingen KI-modell satt opp for dette nettstedet."
 
-#: lib/brando/ai/agent.ex:468
+#: lib/brando/ai/agent.ex:483
 #, elixir-autogen, elixir-format
 msgid "The assistant is still working on the previous message."
 msgstr "Assistenten jobber fortsatt med forrige melding."
 
-#: lib/brando/ai/agent.ex:550
+#: lib/brando/ai/agent.ex:565
 #, elixir-autogen, elixir-format
 msgid "The assistant requires an authenticated user."
 msgstr "Assistenten krever en innlogget bruker."
 
-#: lib/brando/ai/agent/loop.ex:243
+#: lib/brando/ai/agent/loop.ex:245
 #, elixir-autogen, elixir-format
 msgid "The assistant's token budget is used up. Nothing more was sent to the model."
 msgstr "Assistentens tokenbudsjett er brukt opp. Ingenting mer ble sendt til modellen."
@@ -86,23 +86,23 @@ msgstr "Assistentens tokenbudsjett er brukt opp. Ingenting mer ble sendt til mod
 msgid "Thinking"
 msgstr "Tenker"
 
-#: lib/brando/ai/agent.ex:534
-#: lib/brando/ai/agent.ex:536
+#: lib/brando/ai/agent.ex:549
+#: lib/brando/ai/agent.ex:551
 #, elixir-autogen, elixir-format
 msgid "This conversation is not available."
 msgstr "Denne samtalen er ikke tilgjengelig."
 
-#: lib/brando/ai/agent.ex:344
+#: lib/brando/ai/agent.ex:359
 #, elixir-autogen, elixir-format
 msgid "This upload was not reserved in the conversation."
 msgstr "Denne opplastingen var ikke reservert i samtalen."
 
-#: lib/brando/ai/agent.ex:449
+#: lib/brando/ai/agent.ex:464
 #, elixir-autogen, elixir-format
 msgid "Write a message first."
 msgstr "Skriv en melding først."
 
-#: lib/brando/ai/agent.ex:545
+#: lib/brando/ai/agent.ex:560
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to use the assistant."
 msgstr "Du har ikke tilgang til å bruke assistenten."
@@ -161,3 +161,13 @@ msgstr "Du har ikke tilgang til å endre assistentens veiledning."
 #, elixir-autogen, elixir-format
 msgid "Looking at the attachments"
 msgstr "Ser på vedleggene"
+
+#: lib/brando/ai/agent/loop.ex:233
+#, elixir-autogen, elixir-format
+msgid "Asking you for media"
+msgstr "Ber deg om media"
+
+#: lib/brando/ai/agent/loop.ex:232
+#, elixir-autogen, elixir-format
+msgid "Looking at the entries a block can show"
+msgstr "Ser på oppføringene en blokk kan vise"

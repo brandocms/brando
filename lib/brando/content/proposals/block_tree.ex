@@ -99,19 +99,23 @@ defmodule Brando.Content.Proposals.BlockTree do
   is `copy`; each block below takes `copy_uid(copy, original)`.
   """
   @spec copy(t(), uid(), uid(), uid() | nil, term()) :: t()
-  def copy(tree, uid, copy, parent, placement) do
+  def copy(tree, uid, copy, parent, placement), do: copy_from(tree, tree, uid, copy, parent, placement)
+
+  @doc "Copy `uid` of `source` into `tree`, as `copy/5` does within one tree."
+  @spec copy_from(t(), t(), uid(), uid(), uid() | nil, term()) :: t()
+  def copy_from(source, tree, uid, copy, parent, placement) do
     tree
-    |> put(%{fetch(tree, uid) | uid: copy}, parent, placement)
-    |> copy_children(uid, copy, copy)
+    |> put(%{fetch(source, uid) | uid: copy}, parent, placement)
+    |> copy_children(source, uid, copy, copy)
   end
 
-  defp copy_children(tree, original, parent, root) do
-    Enum.reduce(children(tree, original), tree, fn child, tree ->
+  defp copy_children(tree, source, original, parent, root) do
+    Enum.reduce(children(source, original), tree, fn child, tree ->
       uid = copy_uid(root, child)
 
       tree
-      |> put(%{fetch(tree, child) | uid: uid}, parent, :append)
-      |> copy_children(child, uid, root)
+      |> put(%{fetch(source, child) | uid: uid}, parent, :append)
+      |> copy_children(source, child, uid, root)
     end)
   end
 

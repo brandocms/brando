@@ -23,6 +23,8 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "copy_block", "target" => target, "block_uid" => uid, "placement" => placement, "uid" => uid}
       %{"op" => "set_block_details", "target" => target, "block_uid" => uid, "anchor" => a, "description" => d}
       %{"op" => "set_ref_config", "target" => target, "block_uid" => uid, "ref" => name, "config" => %{}}
+      %{"op" => "set_block_table", "target" => target, "block_uid" => uid, "rows" => [%{}]}
+      %{"op" => "set_block_selection", "target" => target, "block_uid" => uid, "identifiers" => [id]}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
   `asset` is `%{"kind" => "image" | "video" | "file", "id" => 3}`, the alias
@@ -40,6 +42,8 @@ defmodule Brando.Content.Proposals.Codec do
     SetBlockActive,
     SetBlockDetails,
     SetBlockMedia,
+    SetBlockSelection,
+    SetBlockTable,
     SetBlockText,
     SetBlockValues,
     SetFields,
@@ -149,6 +153,36 @@ defmodule Brando.Content.Proposals.Codec do
     }
   end
 
+  defp decode!("set_block_table", map, attachments) do
+    rows =
+      case map["rows"] do
+        rows when is_list(rows) -> Enum.map(rows, &values(map!(&1), attachments))
+        _ -> invalid!(dgettext("content_proposals", "rows is a list of objects."))
+      end
+
+    %SetBlockTable{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid"),
+      rows: rows
+    }
+  end
+
+  defp decode!("set_block_selection", map, _) do
+    identifiers =
+      case map["identifiers"] do
+        ids when is_list(ids) -> Enum.map(ids, &id!/1)
+        _ -> invalid!(dgettext("content_proposals", "identifiers is a list of identifier ids."))
+      end
+
+    %SetBlockSelection{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid"),
+      identifiers: identifiers
+    }
+  end
+
   defp decode!("set_ref_config", map, _) do
     %SetRefConfig{
       target: target!(map["target"]),
@@ -165,7 +199,9 @@ defmodule Brando.Content.Proposals.Codec do
       field: map["field"] || "blocks",
       block_uid: string!(map["block_uid"], "block_uid"),
       placement: placement!(map["placement"] || "append", true),
-      uid: optional_string!(map["uid"], "uid")
+      uid: optional_string!(map["uid"], "uid"),
+      to_target: map["to"] && target!(map["to"]),
+      to_field: optional_string!(map["to_field"], "to_field")
     }
   end
 
@@ -271,6 +307,24 @@ defmodule Brando.Content.Proposals.Codec do
       "active" => op.active
     }
 
+  def encode(%SetBlockTable{} = op),
+    do: %{
+      "op" => "set_block_table",
+      "target" => target(op.target),
+      "field" => op.field,
+      "block_uid" => op.block_uid,
+      "rows" => Enum.map(op.rows, fn row -> Map.new(row, fn {key, value} -> {key, value(value)} end) end)
+    }
+
+  def encode(%SetBlockSelection{} = op),
+    do: %{
+      "op" => "set_block_selection",
+      "target" => target(op.target),
+      "field" => op.field,
+      "block_uid" => op.block_uid,
+      "identifiers" => op.identifiers
+    }
+
   def encode(%SetRefConfig{} = op),
     do: %{
       "op" => "set_ref_config",
@@ -288,7 +342,9 @@ defmodule Brando.Content.Proposals.Codec do
       "field" => op.field,
       "block_uid" => op.block_uid,
       "placement" => placement(op.placement),
-      "uid" => op.uid
+      "uid" => op.uid,
+      "to" => op.to_target && target(op.to_target),
+      "to_field" => op.to_field
     }
 
   def encode(%SetBlockDetails{} = op),
@@ -416,8 +472,10 @@ defmodule Brando.Content.Proposals.Codec do
     Brando.Content.Transfer.Error -> invalid!(dgettext("content_proposals", "A target needs a numeric id."))
   end
 
+  defp decode_value(list, attachments) when is_list(list), do: Enum.map(list, &decode_value(&1, attachments))
   defp decode_value(value, _), do: value
 
+  defp value(list) when is_list(list), do: Enum.map(list, &value/1)
   defp value({:new, ref}), do: %{"new" => ref}
   defp value({:entry, schema, id}), do: %{"content_type" => content_type(schema), "id" => id}
   defp value({kind, _} = asset) when kind in [:image, :video, :file, :gallery], do: asset(asset)
@@ -433,6 +491,17 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp boolean!(value, _key) when is_boolean(value), do: value
   defp boolean!(_, key), do: invalid!(dgettext("content_proposals", "%{key} is true or false.", key: key))
+
+  defp id!(id) when is_integer(id), do: id
+
+  defp id!(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {id, ""} -> id
+      _ -> invalid!(dgettext("content_proposals", "Expected a numeric id."))
+    end
+  end
+
+  defp id!(_), do: invalid!(dgettext("content_proposals", "Expected a numeric id."))
 
   # Text that may be cleared with "".
   defp optional_text!(value, _key) when is_nil(value) or is_binary(value), do: value

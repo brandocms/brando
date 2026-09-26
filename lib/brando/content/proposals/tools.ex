@@ -18,6 +18,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.BlockSlots
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.Codec
+  alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.RefConfig
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Media.Folders
@@ -102,6 +103,35 @@ defmodule Brando.Content.Proposals.Tools do
       parameters: %{type: "object", properties: %{module: %{type: "string"}}, required: ["module"]}
     },
     %{
+      name: "request_media",
+      description:
+        "Ask the editor for images or videos a request needs and that you do not have — for example photos of a typeface for an article about it. The editor sees your reason and library suggestions for query, and can pick some, browse the library, upload, or tell you to choose. Then end your turn with a short question and wait. Their picks arrive as attachments.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          kind: %{type: "string", enum: ["image", "video"]},
+          reason: %{type: "string", description: "One sentence the editor reads: what the media is for."},
+          query: %{type: "string", description: "Words to suggest library media by (title, file name)."},
+          count: %{type: "integer", description: "How many you need, if you know."}
+        },
+        required: ["kind", "reason"]
+      }
+    },
+    %{
+      name: "list_selection_options",
+      description:
+        "List the entries a datasource block that shows chosen entries can pick from (describe_module says datasource: selection or single), as identifier ids for set_block_selection.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          module: %{type: "string"},
+          language: %{type: "string", description: "The entry's language; the options are per language."},
+          query: %{type: "string", description: "Filter by title."}
+        },
+        required: ["module"]
+      }
+    },
+    %{
       name: "list_attachments",
       description: "List the media the user attached to this conversation, by alias (image1, video1, …).",
       parameters: %{type: "object", properties: %{}}
@@ -161,7 +191,9 @@ defmodule Brando.Content.Proposals.Tools do
       {"op":"copy_block","target":…,"block_uid":UID,"placement":"append"|{"before":UID}|{"after":UID}|{"into":UID},"uid":UID?}
       {"op":"set_block_details","target":…,"block_uid":UID,"anchor":TEXT?,"description":TEXT?}
       {"op":"set_ref_config","target":…,"block_uid":UID,"ref":NAME,"config":{}}
-      Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings). set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id).
+      {"op":"set_block_table","target":…,"block_uid":UID,"rows":[{KEY:VALUE}]}
+      {"op":"set_block_selection","target":…,"block_uid":UID,"identifiers":[ID]}
+      Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings); with "to":{"content_type":T,"id":N}|{"new":R} (and "to_field") it copies a saved block to another entry or block field — to move it there, copy it and delete_block the original. set_block_table replaces a table block's rows (describe_module lists the row variables). set_block_selection sets the entries a selection datasource block shows. In any text, link to an entry with <a href="entry:CONTENT_TYPE:ID">; it becomes a link that follows the entry's address. List fields (describe_content_type: "list of …") take the whole list: ids, or entries as {"content_type":T,"id":N}. set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id).
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later. Returns problems to fix; call again with the corrected operations.
       """,
       parameters: %{
@@ -229,7 +261,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       content_type: Codec.content_type(schema),
       label: Brando.Blueprint.get_singular(schema),
-      fields: attributes ++ references ++ assets,
+      fields: attributes ++ references ++ assets ++ EntryFields.describe(schema),
       block_fields: block_fields(schema),
       publication: "New entries are created as drafts. Existing entries keep their status."
     }
@@ -258,7 +290,7 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp run("entry_outline", args, %{actor: actor}) do
     schema = schema!(args["content_type"])
-    entry = Catalog.load!(schema, args["id"], actor, :read)
+    entry = schema |> Catalog.load!(args["id"], actor, :read) |> EntryFields.preload()
 
     roots =
       Map.new(schema.__blocks_fields__(), fn %{name: name} ->
@@ -281,6 +313,14 @@ defmodule Brando.Content.Proposals.Tools do
       status: to_string(Map.get(entry, :status)),
       live: Map.get(entry, :status) == :published,
       fields: scalar_fields(entry),
+      lists:
+        for(
+          {name, _} <- EntryFields.lists(schema),
+          current = EntryFields.current(entry, name),
+          current not in [nil, ""],
+          into: %{},
+          do: {name, current}
+        ),
       media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end),
       blocks: Map.new(blocks)
     }
@@ -340,6 +380,48 @@ defmodule Brando.Content.Proposals.Tools do
       true ->
         description
     end
+  end
+
+  defp run("request_media", args, %{actor: actor}) do
+    kind = media_kind!(args["kind"])
+    query = to_string(args["query"] || "")
+
+    suggested =
+      if query == "",
+        do: [],
+        else: kind |> to_string() |> Dependencies.options(actor, query) |> Enum.take(12) |> Enum.map(& &1.id)
+
+    %{
+      asked: true,
+      kind: kind,
+      suggested: suggested,
+      note:
+        "The editor is asked, with #{length(suggested)} library suggestions. End your turn with a short question and wait for their reply; what they pick arrives as attachments (list_attachments)."
+    }
+  end
+
+  defp run("list_selection_options", args, _context) do
+    {origin, id} = Content.SharedLibrary.reference(args["module"])
+    module = Content.fetch_module(id, origin) || Error.fail!("Unknown module #{inspect(args["module"])}.")
+
+    unless module.datasource && module.datasource_type in [:selection, :single],
+      do: Error.fail!("This module does not show chosen entries.")
+
+    query = String.downcase(to_string(args["query"] || ""))
+
+    options =
+      module
+      |> Proposals.selection_options(args["language"])
+      |> Enum.filter(&String.contains?(String.downcase(option_title(&1)), query))
+
+    %{
+      total: length(options),
+      options:
+        options
+        |> Enum.take(100)
+        |> Enum.map(&selection_option/1),
+      note: if(length(options) > 100, do: "Only the first 100 are listed. Narrow with query.")
+    }
   end
 
   defp run("list_attachments", _args, %{attachments: attachments}) do
@@ -462,6 +544,21 @@ defmodule Brando.Content.Proposals.Tools do
   defp target_key(target) when is_binary(target), do: target
   defp target_key(target), do: Proposals.Proposal.key(target)
 
+  # Datasources usually list identifiers; a custom one may list its own maps.
+  defp selection_option(%Brando.Content.Identifier{} = identifier) do
+    %{
+      identifier_id: identifier.id,
+      title: identifier.title,
+      content_type: inspect(identifier.schema),
+      id: identifier.entry_id,
+      language: identifier.language
+    }
+  end
+
+  defp selection_option(option), do: %{identifier_id: option.id, title: option_title(option)}
+
+  defp option_title(option), do: to_string(Map.get(option, :title) || Map.get(option, :label) || "")
+
   defp block_fields(schema) do
     Enum.map(schema.__blocks_fields__(), fn %{name: name} ->
       %{field: to_string(name), module_set: Proposals.module_set(schema, to_string(name)) || "all"}
@@ -509,7 +606,27 @@ defmodule Brando.Content.Proposals.Tools do
           }
         end)
     }
+    |> put_present(:table, table_description(module))
+    |> put_present(:datasource, datasource_description(module))
   end
+
+  # A table's rows each have the variables of the module's table template.
+  defp table_description(module) do
+    for var <- Proposals.table_vars(module) do
+      %{key: var.key, type: to_string(var.type), label: var.label, settable: settable(var.type)}
+    end
+  end
+
+  defp datasource_description(%{datasource: true, datasource_type: type}) when type in [:selection, :single],
+    do: %{
+      type: to_string(type),
+      note: "Choose its entries with set_block_selection, from list_selection_options."
+    }
+
+  defp datasource_description(%{datasource: true, datasource_type: type}),
+    do: %{type: to_string(type), note: "It lists entries by itself; nothing to choose."}
+
+  defp datasource_description(_module), do: nil
 
   defp text_slot("text"), do: "text: simple HTML"
   defp text_slot("header"), do: "text: plain"
@@ -591,11 +708,23 @@ defmodule Brando.Content.Proposals.Tools do
       media: ref_media(block.refs, dimensions),
       values: var_values(block.vars, dimensions)
     }
+    |> put_present(:table, table_rows(block))
+    |> put_present(:selection, selection(block))
     |> put_present(:anchor, block.anchor)
     |> put_present(:description, block.description)
     |> put_present(:settings, ref_settings(block.refs || []))
     |> put_present(:refs_off, for(%{active: false, name: name} <- block.refs || [], do: name))
   end
+
+  defp table_rows(%{table_rows: rows}) when is_list(rows),
+    do: Enum.map(rows, fn row -> Map.new(row.vars || [], &{&1.key, var_value(&1, %{})}) end)
+
+  defp table_rows(_block), do: nil
+
+  defp selection(%{block_identifiers: [_ | _] = chosen}),
+    do: Enum.map(chosen, &%{identifier_id: &1.identifier_id, title: &1.identifier && &1.identifier.title})
+
+  defp selection(_block), do: nil
 
   defp ref_settings(refs),
     do: for(ref <- refs, current = RefConfig.current(ref), current != %{}, into: %{}, do: {ref.name, current})

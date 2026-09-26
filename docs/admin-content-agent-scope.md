@@ -702,3 +702,34 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
   Now → Proposed with titles, the media each block will show in order cards,
   file thumbnails, and a card cover only for new content: an update's first
   swapped video is not the card's cover.
+
+## The rest of the editor's reach, and review tools (26 September 2026)
+
+- **Tables.** `set_block_table` replaces a block's rows; each row follows the
+  module's table template and takes values like variables do (no galleries).
+- **Datasource selections.** `list_selection_options` lists what a selection
+  (or single) datasource block can show — the datasource's own `list` for the
+  entry's language, as the editor offers it — and `set_block_selection` sets
+  the chosen identifiers, checked against that list.
+- **Entry lists.** Join relations picked in a multi select (a case's
+  categories) take the related ids; `:entries` relations take entries, saved
+  through their identifiers (`Proposals.EntryFields`). Both replace the list,
+  in order. `describe_content_type` lists them; `entry_outline` shows them.
+- **Links to entries in text.** `<a href="entry:TYPE:ID">` becomes the
+  editor's link — the entry's address and `data-identifier-id` — so it follows
+  the entry (`Proposals.EntryLinks`). An unresolvable one is a problem.
+- **Copies to other entries and fields.** `copy_block` with `to`/`to_field`
+  copies a saved block; the source shows "Copy … to …", the destination the
+  new order. Moving across entries is a copy and a delete.
+- **Galleries.** A media slot that stops being a gallery drops its gallery.
+- **Leave out.** The reviewer can leave any change out except a new order: the
+  rest becomes the next version without a model call, and a note in the
+  conversation tells the assistant.
+- **Asking for media.** `request_media` puts a card in the chat with the
+  reason, library suggestions (stored with the request, so they do not shift),
+  Browse, Upload, "Let the assistant choose" and "Use what I attached". Picks
+  are ordinary attachments. The prompt tells the model to ask rather than use
+  unrelated media, and how to find media itself when asked to choose.
+- **Also.** Steps name what was read; the conversation's estimated cost is
+  shown (`show_cost: false` hides it); the run speaks the editor's language;
+  the selected entry is a field grid.

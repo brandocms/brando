@@ -187,6 +187,32 @@ defmodule BrandoAdmin.AssistantLiveTest do
     refute has_element?(view, ".assistant-cost")
   end
 
+  test "the assistant asks for media, and the editor picks from its suggestions", %{conn: conn} = c do
+    AIStub.script([
+      {:tools, [{"request_media", %{"kind" => "image", "reason" => "Photos of the typeface", "query" => "Title one"}}]},
+      {:text, "Which images of the typeface should I use?"},
+      {:tools, [{"list_attachments", %{}}]},
+      {:text, "I will use image1."}
+    ])
+
+    {:ok, view, _} = live(conn, "/admin/assistant")
+    view |> form("#assistant-composer", %{message: "Write an insight article about the typeface"}) |> render_submit()
+    eventually(view, &(&1 =~ "Which images of the typeface should I use?"))
+
+    assert has_element?(view, ".assistant-request.is-open", "The assistant asks for images")
+    assert has_element?(view, ".assistant-request-reason", "Photos of the typeface")
+    suggestion = ~s(.assistant-request-item[phx-value-id="#{c.image.id}"])
+    assert has_element?(view, suggestion)
+
+    view |> element(suggestion) |> render_click()
+    assert has_element?(view, suggestion <> ".is-picked", "image1")
+
+    view |> element(".assistant-request .assistant-apply") |> render_click()
+    eventually(view, &(&1 =~ "I will use image1."))
+    assert has_element?(view, ".assistant-bubble", "I have attached the media. Use it.")
+    refute has_element?(view, ".assistant-request.is-open")
+  end
+
   test "uploads reserve aliases in the order they were chosen", %{conn: conn} = c do
     {:ok, conversation} = Agent.start_conversation(c.current_user)
     {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
@@ -415,6 +441,21 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert has_element?(view, ".assistant-fields ins", "true")
       assert has_element?(view, ".assistant-change-title", "Change the details of “Project”")
       assert has_element?(view, ".assistant-order li:last-child .assistant-order-mark", "Copy")
+    end
+
+    test "a change is left out, and the conversation says so", %{conn: conn} = c do
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      assert has_element?(view, ".assistant-eyebrow", "version 1")
+
+      view |> element(~s(button.assistant-leave-out[phx-value-operations="0"])) |> render_click()
+
+      assert has_element?(view, ".assistant-eyebrow", "version 2")
+      refute render(view) =~ "Change settings of “Project” · 2 of 3"
+      assert has_element?(view, ".assistant-bubble", "Left out of the proposal: “Project” · 2 of 3 in “Projects” · Beta")
+
+      # The rest is still there, and an order has no leave-out button.
+      assert has_element?(view, ".assistant-order")
+      assert has_element?(view, ".assistant-change-title.is-removal")
     end
   end
 end

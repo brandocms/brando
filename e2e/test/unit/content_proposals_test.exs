@@ -156,5 +156,50 @@ defmodule E2eProject.ContentProposalsTest do
     assert project.listing_image_id == image.id
     assert project.rendered_blocks =~ "Sommerro story"
     assert Repo.get!(Page, page.id).rendered_blocks =~ "Identity case"
+
+    # Lists: the case's categories by id, its related entries as entries.
+    categories =
+      for title <- ~w(Identity Hotels) do
+        Repo.insert!(%E2eProject.Projects.Category{title: title, slug: String.downcase(title) <> suffix, creator_id: actor.id})
+      end
+
+    {:ok, _} = Content.create_identifier(Page, page)
+
+    {:ok, [op]} =
+      Brando.Content.Proposals.Codec.decode_all([
+        %{
+          "op" => "set_fields",
+          "target" => %{"content_type" => "E2eProject.Projects.Project", "id" => project.id},
+          "fields" => %{
+            "project_categories" => Enum.map(Enum.reverse(categories), & &1.id),
+            "related_entries" => [%{"content_type" => "Brando.Pages.Page", "id" => page.id}]
+          }
+        }
+      ])
+
+    {:ok, proposal} = Proposals.propose([op], actor)
+    assert proposal.problems == []
+    [%{changes: [%{type: :fields, fields: fields}]}] = Brando.Content.Proposals.Review.entries(proposal)
+    assert Enum.any?(fields, &(&1.value == "Hotels, Identity"))
+
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, actor)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, actor)
+
+    project = Repo.preload(Repo.get!(Project, project.id), [:project_categories, related_entries: :identifier])
+    assert Enum.map(project.project_categories, & &1.category_id) == Enum.map(Enum.reverse(categories), & &1.id)
+    assert [%{identifier: %{entry_id: entry_id}}] = project.related_entries
+    assert entry_id == page.id
+
+    {:ok, [bad]} =
+      Brando.Content.Proposals.Codec.decode_all([
+        %{
+          "op" => "set_fields",
+          "target" => %{"content_type" => "E2eProject.Projects.Project", "id" => project.id},
+          "fields" => %{"project_categories" => [-1]}
+        }
+      ])
+
+    {:ok, proposal} = Proposals.propose([bad], actor)
+    assert [%{code: :unknown_target}] = proposal.problems
   end
 end

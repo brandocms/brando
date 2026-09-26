@@ -129,9 +129,13 @@ defmodule Brando.Content.Proposals.CopyBlock do
   `uid` is the copy's uid, frozen at prepare. The copies of the blocks below
   it take uids derived from it (`BlockTree.copy_uid/2`), so review, preview
   and apply build the same tree.
+
+  With `to_target` (and `to_field`), the copy goes to another entry or block
+  field; placement anchors are then blocks there. Such a copy is of the
+  saved block. A move to another entry is a copy and a `DeleteBlock`.
   """
   @enforce_keys [:target, :block_uid]
-  defstruct [:target, :block_uid, :uid, placement: :append, field: "blocks"]
+  defstruct [:target, :block_uid, :uid, :to_target, :to_field, placement: :append, field: "blocks"]
 end
 
 defmodule Brando.Content.Proposals.SetBlockDetails do
@@ -154,4 +158,25 @@ defmodule Brando.Content.Proposals.SetRefConfig do
   """
   @enforce_keys [:target, :block_uid, :ref, :config]
   defstruct [:target, :block_uid, :ref, :config, field: "blocks"]
+end
+
+defmodule Brando.Content.Proposals.SetBlockTable do
+  @moduledoc """
+  Replace the table rows of the block `block_uid`. Its module's table
+  template defines each row's variables; `rows` is a list of
+  `%{var_key => value}`, values as for `SetBlockValues`. Keys a row leaves out
+  keep the template's defaults.
+  """
+  @enforce_keys [:target, :block_uid, :rows]
+  defstruct [:target, :block_uid, :rows, field: "blocks"]
+end
+
+defmodule Brando.Content.Proposals.SetBlockSelection do
+  @moduledoc """
+  Choose the entries a selection datasource block shows, in order, as
+  identifier ids from the datasource's own options (the `list_selection_options`
+  tool). A single-entry datasource takes one.
+  """
+  @enforce_keys [:target, :block_uid, :identifiers]
+  defstruct [:target, :block_uid, :identifiers, field: "blocks"]
 end

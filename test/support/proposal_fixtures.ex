@@ -67,7 +67,12 @@ defmodule Brando.ProposalFixtures do
           refs: opts[:refs] || [],
           vars: opts[:vars] || [],
           multi: opts[:multi] || false,
-          parent_id: opts[:parent_id]
+          parent_id: opts[:parent_id],
+          table_template_id: opts[:table_template_id],
+          datasource: opts[:datasource] || false,
+          datasource_module: opts[:datasource_module],
+          datasource_type: opts[:datasource_type],
+          datasource_query: opts[:datasource_query]
         ),
         user
       )

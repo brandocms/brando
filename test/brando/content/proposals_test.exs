@@ -13,6 +13,8 @@ defmodule Brando.Content.ProposalsTest do
     Review,
     SetBlockActive,
     SetBlockDetails,
+    SetBlockSelection,
+    SetBlockTable,
     SetRefConfig,
     Preview,
     Receipt,
@@ -1058,6 +1060,176 @@ defmodule Brando.Content.ProposalsTest do
       assert {:ok, proposal} = Proposals.propose(ops, c.user)
       assert proposal.problems == []
       assert [%{operation: 0}, %{operation: 1}, %{operation: 2}] = Proposals.notes(proposal)
+    end
+  end
+
+  describe "tables, selections, links, copies to other entries and leaving out" do
+    setup c, do: Brando.ProposalFixtures.multi_context(c)
+
+    test "a table block's rows are replaced", c do
+      template =
+        Repo.insert!(%Brando.Content.TableTemplate{
+          uid: Brando.Utils.generate_uid(),
+          name: "Opening hours",
+          vars: [
+            %Brando.Content.Var{type: :string, key: "day", label: "Day", sequence: 0},
+            %Brando.Content.Var{type: :boolean, key: "open", label: "Open", sequence: 1}
+          ]
+        })
+
+      module = module!(c.user, "Hours", "<table></table>", table_template_id: template.id)
+      target = {Page, c.work.id}
+      uid = Brando.Utils.generate_uid()
+
+      ops = [
+        %InsertBlock{target: target, module: module.id, uid: uid},
+        %SetBlockTable{target: target, block_uid: uid, rows: [%{day: "Monday", open: true}, %{day: "Sunday"}]}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert [_, %{type: :block_table, rows: ["Monday · true", "Sunday"]}] = hd(Review.entries(proposal)).changes
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      block = load(c.work, c.user).entry_blocks |> List.last() |> Map.get(:block)
+      rows = Enum.map(block.table_rows, fn row -> Map.new(row.vars, &{&1.key, &1.value || &1.value_boolean}) end)
+      assert rows == [%{"day" => "Monday", "open" => true}, %{"day" => "Sunday", "open" => false}]
+
+      bad = [%SetBlockTable{target: target, block_uid: c.intro_uid, rows: [%{day: "x"}]}]
+      assert {:ok, %{problems: [%{code: :unsupported_value}]}} = Proposals.propose(bad, c.user)
+
+      bad = [%SetBlockTable{target: target, block_uid: uid, rows: [%{nope: 1}]}]
+      assert {:ok, %{problems: [%{code: :unknown_var}]}} = Proposals.propose(bad, c.user)
+    end
+
+    test "a selection datasource block's entries are chosen from its options", c do
+      module =
+        module!(c.user, "Featured", "<div></div>",
+          datasource: true,
+          datasource_type: :selection,
+          datasource_module: "Elixir.BrandoIntegration.ModuleWithDatasource",
+          datasource_query: "chosen_pages"
+        )
+
+      {:ok, identity} = Brando.Content.create_identifier(Page, c.identity)
+      {:ok, naming} = Brando.Content.create_identifier(Page, c.naming)
+
+      target = {Page, c.work.id}
+      uid = Brando.Utils.generate_uid()
+
+      ok = [
+        %InsertBlock{target: target, module: module.id, uid: uid},
+        %SetBlockSelection{target: target, block_uid: uid, identifiers: [naming.id, identity.id]}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ok, c.user)
+      assert proposal.problems == []
+      assert {:ok, changesets} = Proposals.materialize(proposal, c.user)
+
+      block =
+        changesets[target]
+        |> Changeset.get_assoc(:entry_blocks)
+        |> List.last()
+        |> Changeset.get_assoc(:block)
+
+      assert Enum.map(Changeset.get_assoc(block, :block_identifiers, :struct), &{&1.identifier_id, &1.sequence}) ==
+               [{naming.id, 0}, {identity.id, 1}]
+
+      bad = [
+        %InsertBlock{target: target, module: module.id, uid: uid},
+        %SetBlockSelection{target: target, block_uid: uid, identifiers: [-1]},
+        %SetBlockSelection{target: target, block_uid: c.intro_uid, identifiers: [identity.id]}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(bad, c.user)
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [{1, :unsupported_value}, {2, :unsupported_value}]
+    end
+
+    test "a link to an entry becomes a link that follows it", c do
+      Brando.Content.create_identifier(Page, c.identity)
+      {:ok, identifier} = Brando.Content.get_identifier(Page, c.identity)
+      text = ~s(<p>See <a href="entry:Brando.Pages.Page:#{c.identity.id}">Identity</a></p>)
+
+      ops = [%SetBlockText{target: {Page, c.work.id}, block_uid: c.intro_uid, ref: :body, text: text}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      [%SetBlockText{text: resolved}] = proposal.operations
+      assert resolved =~ ~s(data-identifier-id="#{identifier.id}")
+      assert resolved =~ ~s(href="#{identifier.url}")
+
+      broken = ~s(<p><a href="entry:Brando.Pages.Page:-1">Gone</a></p>)
+      ops = [%SetBlockText{target: {Page, c.work.id}, block_uid: c.intro_uid, ref: :body, text: broken}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert :unknown_target in Enum.map(proposal.problems, & &1.code)
+    end
+
+    test "a saved block is copied to another entry", c do
+      [alpha | _] = c.child_uids
+      copy = Brando.Utils.generate_uid()
+      [first | _] = uids(c.identity, c.user)
+
+      ops = [
+        %CopyBlock{target: {Page, c.work.id}, block_uid: c.multi_uid, to_target: {Page, c.identity.id}, uid: copy},
+        %CopyBlock{
+          target: {Page, c.work.id},
+          block_uid: c.intro_uid,
+          to_target: {Page, c.identity.id},
+          placement: {:before, first}
+        }
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert %{updates: 2, inserted_blocks: 2} = proposal.effects
+
+      cards = Review.entries(proposal)
+      work = Enum.find(cards, &(&1.target == {Page, c.work.id}))
+      identity = Enum.find(cards, &(&1.target == {Page, c.identity.id}))
+      assert [%{type: :copy_out}, %{type: :copy_out}] = work.changes
+      assert [%{type: :order, items: items}] = identity.changes
+      assert Enum.count(items, & &1.copy?) == 2
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      [_intro_copy | rest] = load(c.identity, c.user).entry_blocks
+      copied = List.last(rest).block
+      assert copied.uid == copy
+      assert copied.source == Page.Blocks
+      assert Enum.map(copied.children, & &1.uid) == Enum.map(c.child_uids, &Proposals.BlockTree.copy_uid(copy, &1))
+      assert uids(c.work, c.user) == [c.intro_uid, c.multi_uid]
+
+      # Only saved blocks go to another entry.
+      new_uid = Brando.Utils.generate_uid()
+
+      ops = [
+        %InsertBlock{target: {Page, c.work.id}, module: c.text_module.id, uid: new_uid},
+        %CopyBlock{target: {Page, c.work.id}, block_uid: new_uid, to_target: {Page, c.identity.id}},
+        %CopyBlock{target: {Page, c.work.id}, block_uid: alpha, to_target: {Page, c.identity.id}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [{1, :unknown_block}, {2, :module_not_allowed}]
+    end
+
+    test "the reviewer leaves a change out, and a new version holds the rest", c do
+      [alpha, beta, _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %SetBlockValues{target: target, block_uid: alpha, values: %{size: "50"}},
+        %SetBlockValues{target: target, block_uid: beta, values: %{size: "50"}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert [%{operations: [0]}, %{operations: [1]}] = hd(Review.entries(proposal)).changes
+
+      assert {:ok, refined} = Proposals.leave_out(proposal.id, proposal.version, [0], c.user)
+      assert refined.version == 2
+      assert [%SetBlockValues{block_uid: ^beta}] = refined.operations
+      assert {:ok, %{status: "superseded"}} = Proposals.get(proposal.id, c.user)
+
+      assert {:error, _} = Proposals.leave_out(proposal.id, proposal.version, [1], c.user)
+      assert {:error, message} = Proposals.leave_out(refined.id, refined.version, [0], c.user)
+      assert message =~ "Discard"
     end
   end
 

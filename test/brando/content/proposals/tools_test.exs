@@ -89,6 +89,16 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert {:error, _} = Tools.call("search_assets", %{"kind" => "gallery"}, c.context)
   end
 
+  test "request_media suggests library media for the editor to pick", c do
+    result =
+      call!("request_media", %{"kind" => "image", "reason" => "Photos", "query" => "Title one"}, c.context)
+
+    assert %{asked: true, kind: :image, suggested: suggested} = result
+    assert c.image.id in suggested
+    assert %{suggested: []} = call!("request_media", %{"kind" => "video", "reason" => "Clips"}, c.context)
+    assert {:error, _} = Tools.call("request_media", %{"kind" => "file", "reason" => "x"}, c.context)
+  end
+
   test "prepare_proposal stores a version for review and refines it", c do
     op = %{
       "op" => "insert_block",
@@ -386,6 +396,40 @@ defmodule Brando.Content.Proposals.ToolsTest do
       outline = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}, c.context)
       [_, %{children: [first | _]}] = outline.blocks.blocks
       assert first.settings == %{"clip" => %{loop: true}}
+    end
+
+    test "tables are described and selection options listed", c do
+      template =
+        Brando.Repo.insert!(%Brando.Content.TableTemplate{
+          uid: Brando.Utils.generate_uid(),
+          name: "Hours",
+          vars: [%Brando.Content.Var{type: :string, key: "day", label: "Day", sequence: 0}]
+        })
+
+      table = Brando.ProposalFixtures.module!(c.user, "Hours", "<table></table>", table_template_id: template.id)
+      contract = call!("describe_module", %{"module" => "local:#{table.id}"}, c.context)
+      assert [%{key: "day", settable: "a string"}] = contract.table
+
+      featured =
+        Brando.ProposalFixtures.module!(c.user, "Featured", "<div></div>",
+          datasource: true,
+          datasource_type: :selection,
+          datasource_module: "Elixir.BrandoIntegration.ModuleWithDatasource",
+          datasource_query: "chosen_pages"
+        )
+
+      assert %{datasource: %{type: "selection"}} =
+               call!("describe_module", %{"module" => "local:#{featured.id}"}, c.context)
+
+      {:ok, identifier} = Brando.Content.create_identifier(Page, c.identity)
+
+      %{options: options} =
+        call!("list_selection_options", %{"module" => "local:#{featured.id}", "query" => "ident"}, c.context)
+
+      assert [%{identifier_id: id, title: "Identity", content_type: "Brando.Pages.Page"}] = options
+      assert id == identifier.id
+
+      assert {:error, _} = Tools.call("list_selection_options", %{"module" => "local:#{table.id}"}, c.context)
     end
 
     test "list_modules offers multi modules at the root", c do

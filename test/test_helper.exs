@@ -281,6 +281,14 @@ defmodule BrandoIntegration.ModuleWithDatasource do
         {:ok, [%{id: 1, label: "label 1", more: true}, %{id: 2, label: "label 2", more: true}]}
       end)
     end
+
+    # Pages, chosen by their identifiers, as a site's featured-entries
+    # datasource lists them.
+    datasource :chosen_pages do
+      type :selection
+      list(fn _schema, language, _vars -> Brando.Content.list_identifiers([Brando.Pages.Page], %{language: language}) end)
+      get(fn identifiers -> {:ok, identifiers} end)
+    end
   end
 end
 

@@ -540,6 +540,33 @@
 
 .assistant-changes { display: grid; gap: 16px; font-size: 13px; }
 .assistant-changes > li { display: grid; gap: 8px; }
+/* Leave out: quiet until the change is hovered or focused. */
+.assistant-changes > li.can-leave-out { position: relative; padding-right: 88px; }
+
+.assistant-leave-out {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--assistant-line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--assistant-muted);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity .15s;
+
+  [data-icon] { width: 12px; height: 12px; }
+}
+
+.assistant-changes > li:hover .assistant-leave-out,
+.assistant-leave-out:focus-visible { opacity: 1; }
+.assistant-leave-out:hover { color: var(--assistant-error); border-color: currentColor; }
+
+@media (hover: none) { .assistant-leave-out { opacity: 1; } }
 .assistant-change-title { font-weight: 500; }
 .assistant-change-title.is-removal { color: var(--assistant-error); }
 .assistant-placement { color: var(--assistant-muted); font-size: 12px; }
@@ -806,14 +833,21 @@
 .assistant-destination-title { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
 .assistant-destination-title a { color: var(--assistant-accent); text-decoration: underline; text-underline-offset: 2px; }
 
+/* A field grid, as on a printed form: cells share 1px rules (the gap shows
+   the grid's own background), each with a small label above its value. */
 .assistant-destination-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 20px;
-  font-size: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--assistant-line);
+  border-radius: 4px;
+  background: var(--assistant-line);
 
-  dt { color: var(--assistant-muted); }
-  dd { margin: 0; }
+  > div { display: grid; gap: 2px; align-content: start; min-width: 0; padding: 7px 10px 8px; background: var(--assistant-surface, #fff); }
+  > .is-entry { grid-column: 1 / -1; }
+  dt { color: var(--assistant-muted); font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
+  dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
 }
 
 .assistant-destination-note { color: var(--assistant-muted); font-size: 12px; }
@@ -909,4 +943,62 @@
   height: 28px;
 
   img { position: static; width: auto; height: 100%; }
+}
+
+/* The assistant's request for media: its reason, library suggestions to pick
+   from, and the other ways to answer. Only the latest open request acts. */
+.assistant-request {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--assistant-line);
+  border-radius: 6px;
+  font-size: 13px;
+
+  &.is-open { border-color: var(--assistant-new-line); background: var(--assistant-new); }
+
+  header { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  header [data-icon] { width: 16px; height: 16px; }
+}
+
+.assistant-request-reason { color: var(--assistant-muted); }
+
+.assistant-request-suggestions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+
+.assistant-request-item {
+  position: relative;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+
+  .assistant-thumb { width: 100%; }
+  &.is-picked { border-color: var(--assistant-accent); }
+  &:focus-visible { outline: 2px solid var(--assistant-accent); outline-offset: 2px; }
+}
+
+.assistant-request-alias {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--assistant-accent);
+  color: #fff;
+  font-size: 10px;
+}
+
+.assistant-request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  .assistant-button { display: inline-flex; align-items: center; gap: 4px; }
+  .assistant-button [data-icon] { width: 14px; height: 14px; }
+  .assistant-apply { margin-left: auto; }
 }

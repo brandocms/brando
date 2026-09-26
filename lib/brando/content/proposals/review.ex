@@ -21,12 +21,15 @@ defmodule Brando.Content.Proposals.Review do
     SetBlockActive,
     SetBlockDetails,
     SetBlockMedia,
+    SetBlockSelection,
+    SetBlockTable,
     SetBlockText,
     SetBlockValues,
     SetFields,
     SetRefConfig
   }
 
+  alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.RefConfig
 
   alias Brando.Content.Transfer.Catalog
@@ -121,10 +124,11 @@ defmodule Brando.Content.Proposals.Review do
             Map.put(
               field_view(entry.__struct__, name, value),
               :before,
-              display(entry.__struct__, name, current(entry, name))
+              saved_value(entry, name)
             )
 
-    if fields == [], do: [], else: [%{type: :fields, fields: fields}]
+    indices = for {%SetFields{target: ^target}, index} <- Enum.with_index(proposal.operations), do: index
+    if fields == [], do: [], else: [%{type: :fields, fields: fields, operations: indices}]
   end
 
   defp block_changes(target, entry, proposal) do
@@ -135,11 +139,20 @@ defmodule Brando.Content.Proposals.Review do
     |> Enum.flat_map(fn
       # Moves are shown as the order they produce, once per list of siblings,
       # where the first move into that list is.
+      # A copy to another entry shows in that entry's order, and as a note here.
+      {%CopyBlock{target: ^target, to_target: to} = op, index} when not is_nil(to) ->
+        [Map.put(copy_out(op, entry, proposal), :operations, [index])]
+
+      {%CopyBlock{to_target: ^target}, index} ->
+        Map.get(orders, index, [])
+
       {%{__struct__: kind, target: ^target}, index} when kind in [MoveBlock, CopyBlock] ->
         Map.get(orders, index, [])
 
-      {op, _index} ->
-        block_change(op, target, entry, proposal)
+      # Each change names the operations it comes from, so the reviewer can
+      # leave it out. A new order is all or nothing: it has no operations.
+      {op, index} ->
+        op |> block_change(target, entry, proposal) |> Enum.map(&Map.put(&1, :operations, [index]))
     end)
   end
 
@@ -266,16 +279,66 @@ defmodule Brando.Content.Proposals.Review do
     ]
   end
 
+  defp block_change(%SetBlockTable{target: target} = op, target, entry, proposal) do
+    saved = saved_block(entry, op.field, op.block_uid)
+
+    [
+      %{
+        type: :block_table,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        before: saved && length(saved.table_rows || []),
+        rows:
+          Enum.map(op.rows, fn row ->
+            row |> Enum.sort() |> Enum.map_join(" · ", fn {_key, value} -> to_string(option(nil, value) || "") end)
+          end)
+      }
+    ]
+  end
+
+  defp block_change(%SetBlockSelection{target: target} = op, target, entry, proposal) do
+    saved = saved_block(entry, op.field, op.block_uid)
+    titles = identifier_titles(op.identifiers)
+
+    [
+      %{
+        type: :block_selection,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        before:
+          saved &&
+            Enum.map(saved.block_identifiers || [], fn bi ->
+              (bi.identifier && bi.identifier.title) || "##{bi.identifier_id}"
+            end),
+        entries: Enum.map(op.identifiers, &Map.get(titles, &1, "##{&1}"))
+      }
+    ]
+  end
+
   defp block_change(_op, _target, _entry, _proposal), do: []
+
+  defp identifier_titles(ids) do
+    case Content.list_identifiers(ids) do
+      {:ok, identifiers} -> Map.new(identifiers, &{&1.id, &1.title})
+      _ -> %{}
+    end
+  end
 
   # The order cards of `target`, keyed by the index of the first move into
   # each list of siblings. The operations are replayed on the saved field, so
   # a card shows the final order, with what is new and what moved.
   defp orders(target, entry, proposal) do
-    ops = proposal.operations |> Enum.with_index() |> Enum.filter(&(Map.get(elem(&1, 0), :target) == target))
+    ops =
+      proposal.operations
+      |> Enum.with_index()
+      |> Enum.flat_map(fn
+        {%CopyBlock{to_target: ^target} = op, index} -> [{op.to_field, {{:copy_in, op, proposal}, index}}]
+        {%CopyBlock{to_target: to}, _} when not is_nil(to) -> []
+        {op, index} -> if Map.get(op, :target) == target, do: [{Map.get(op, :field), {op, index}}], else: []
+      end)
 
     ops
-    |> Enum.group_by(fn {op, _} -> Map.get(op, :field) end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.flat_map(fn
       {nil, _} -> []
       {field, ops} -> field_orders(field, ops, entry, proposal)
@@ -330,6 +393,16 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
+  defp replay({{:copy_in, op, proposal}, index}, {tree, firsts, moved} = acc) do
+    source = proposal.targets |> Map.get(op.target) |> saved_tree(op.field)
+    to = move_parent(op.placement, nil, tree)
+
+    if BlockTree.fetch(source, op.block_uid),
+      do:
+        {BlockTree.copy_from(source, tree, op.block_uid, op.uid, to, op.placement), Map.put_new(firsts, to, index), moved},
+      else: acc
+  end
+
   defp replay({%DeleteBlock{} = op, _index}, {tree, firsts, moved} = acc) do
     if BlockTree.fetch(tree, op.block_uid), do: {BlockTree.delete(tree, op.block_uid), firsts, moved}, else: acc
   end
@@ -340,6 +413,25 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp replay(_op, acc), do: acc
+
+  defp saved_tree(%{} = entry, field), do: entry |> Map.get(:"entry_#{field}", []) |> BlockTree.from_saved()
+  defp saved_tree(_new, _field), do: %BlockTree{}
+
+  defp copy_out(op, entry, proposal) do
+    destination =
+      case Map.get(proposal.targets, op.to_target) do
+        %{} = other -> Catalog.describe(other).title
+        _ -> dgettext("content_proposals", "the new entry")
+      end
+
+    %{
+      type: :copy_out,
+      uid: nil,
+      block: block_label(entry, op.field, op.block_uid, proposal),
+      destination: destination,
+      context: block_media(saved_block(entry, op.field, op.block_uid))
+    }
+  end
 
   defp move_parent(:append, from, _tree), do: from
   defp move_parent({:into, parent}, _from, _tree), do: parent
@@ -354,7 +446,16 @@ defmodule Brando.Content.Proposals.Review do
   defp order_item(uid, entry, field, moved, proposal) do
     # A copy shows its original.
     copy = Enum.find(proposal.operations, &match?(%CopyBlock{uid: ^uid}, &1))
-    saved = saved_block(entry, field, original(copy, uid))
+
+    saved =
+      case copy do
+        %CopyBlock{to_target: to} when not is_nil(to) ->
+          proposal.targets |> Map.get(copy.target) |> saved_block(copy.field, copy.block_uid)
+
+        _ ->
+          saved_block(entry, field, original(copy, uid))
+      end
+
     inserted = Enum.find(proposal.operations, &match?(%InsertBlock{uid: ^uid}, &1))
 
     %{
@@ -709,14 +810,23 @@ defmodule Brando.Content.Proposals.Review do
     _ -> id
   end
 
+  defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || shorten(value)
   defp display(_schema, _name, value) when is_binary(value), do: excerpt(value)
   defp display(_schema, _name, value), do: shorten(value)
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
       %CreateEntry{ref: ref} -> {:new, ref} == target
+      %CopyBlock{to_target: to} = op when not is_nil(to) -> target in [op.target, to]
       op -> Map.get(op, :target) == target
     end) || 0
+  end
+
+  # A saved field as the reviewer reads it; a list by its titles.
+  defp saved_value(entry, name) do
+    if Map.has_key?(EntryFields.lists(entry.__struct__), name),
+      do: entry |> EntryFields.preload([name]) |> EntryFields.current(name),
+      else: display(entry.__struct__, name, current(entry, name))
   end
 
   defp current(entry, name) do

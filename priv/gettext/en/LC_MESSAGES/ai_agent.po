@@ -36,7 +36,7 @@ msgstr ""
 msgid "Looking at the available modules"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:232
+#: lib/brando/ai/agent/loop.ex:234
 #, elixir-autogen, elixir-format
 msgid "Looking at the site's content"
 msgstr ""
@@ -56,27 +56,27 @@ msgstr ""
 msgid "Searching the media library"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:272
+#: lib/brando/ai/agent/loop.ex:274
 #, elixir-autogen, elixir-format
 msgid "Something went wrong: %{error}"
 msgstr ""
 
-#: lib/brando/ai/agent.ex:452
+#: lib/brando/ai/agent.ex:467
 #, elixir-autogen, elixir-format
 msgid "The assistant has no AI model configured for this site."
 msgstr ""
 
-#: lib/brando/ai/agent.ex:468
+#: lib/brando/ai/agent.ex:483
 #, elixir-autogen, elixir-format
 msgid "The assistant is still working on the previous message."
 msgstr ""
 
-#: lib/brando/ai/agent.ex:550
+#: lib/brando/ai/agent.ex:565
 #, elixir-autogen, elixir-format
 msgid "The assistant requires an authenticated user."
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:243
+#: lib/brando/ai/agent/loop.ex:245
 #, elixir-autogen, elixir-format
 msgid "The assistant's token budget is used up. Nothing more was sent to the model."
 msgstr ""
@@ -86,23 +86,23 @@ msgstr ""
 msgid "Thinking"
 msgstr ""
 
-#: lib/brando/ai/agent.ex:534
-#: lib/brando/ai/agent.ex:536
+#: lib/brando/ai/agent.ex:549
+#: lib/brando/ai/agent.ex:551
 #, elixir-autogen, elixir-format
 msgid "This conversation is not available."
 msgstr ""
 
-#: lib/brando/ai/agent.ex:344
+#: lib/brando/ai/agent.ex:359
 #, elixir-autogen, elixir-format
 msgid "This upload was not reserved in the conversation."
 msgstr ""
 
-#: lib/brando/ai/agent.ex:449
+#: lib/brando/ai/agent.ex:464
 #, elixir-autogen, elixir-format
 msgid "Write a message first."
 msgstr ""
 
-#: lib/brando/ai/agent.ex:545
+#: lib/brando/ai/agent.ex:560
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to use the assistant."
 msgstr ""
@@ -160,4 +160,14 @@ msgstr ""
 #: lib/brando/ai/agent/loop.ex:231
 #, elixir-autogen, elixir-format
 msgid "Looking at the attachments"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:233
+#, elixir-autogen, elixir-format
+msgid "Asking you for media"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:232
+#, elixir-autogen, elixir-format
+msgid "Looking at the entries a block can show"
 msgstr ""

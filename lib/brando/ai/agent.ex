@@ -188,6 +188,21 @@ defmodule Brando.AI.Agent do
     (Repo.one(from(r in Run, where: r.conversation_id == ^id, select: sum(r.cost))) || 0) / 1
   end
 
+  @doc """
+  Record something the editor did outside the chat — such as leaving a change
+  out of the proposal — as their message, so the assistant knows it on the
+  next turn. No run starts.
+  """
+  @spec note(Ecto.UUID.t(), String.t(), term()) :: {:ok, Message.t()} | {:error, String.t()}
+  def note(conversation_id, text, actor) do
+    Error.protect(fn ->
+      %{id: id} = conversation!(conversation_id, actor)
+      message = Repo.insert!(%Message{conversation_id: id, role: "user", content: text})
+      broadcast(id, {:message, message})
+      message
+    end)
+  end
+
   @doc "The conversation's latest run, if any."
   @spec latest_run(Ecto.UUID.t(), term()) :: Run.t() | nil
   def latest_run(conversation_id, actor) do

@@ -41,6 +41,8 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.CopyBlock
   alias Brando.Content.Proposals.CreateEntry
   alias Brando.Content.Proposals.DeleteBlock
+  alias Brando.Content.Proposals.EntryFields
+  alias Brando.Content.Proposals.EntryLinks
   alias Brando.Content.Proposals.InsertBlock
   alias Brando.Content.Proposals.MoveBlock
   alias Brando.Content.Proposals.Proposal
@@ -50,6 +52,8 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.SetBlockActive
   alias Brando.Content.Proposals.SetBlockDetails
   alias Brando.Content.Proposals.SetBlockMedia
+  alias Brando.Content.Proposals.SetBlockSelection
+  alias Brando.Content.Proposals.SetBlockTable
   alias Brando.Content.Proposals.SetBlockText
   alias Brando.Content.Proposals.SetBlockValues
   alias Brando.Content.Proposals.SetFields
@@ -82,12 +86,12 @@ defmodule Brando.Content.Proposals do
   defp prepare!(operations, actor) do
     Transfer.ensure_scope!(actor)
     user = user!(actor)
-    operations = Enum.map(operations, &freeze/1)
+    operations = Enum.map(operations, &(&1 |> freeze() |> EntryLinks.resolve(actor)))
     creates = for %CreateEntry{} = op <- operations, into: %{}, do: {{:new, op.ref}, op.schema}
 
     entries =
       operations
-      |> Enum.map(&Map.get(&1, :target))
+      |> Enum.flat_map(&op_targets/1)
       |> Enum.filter(&match?({schema, id} when is_atom(schema) and schema != :new and not is_nil(id), &1))
       |> Enum.uniq()
       |> Map.new(fn target -> {target, load!(target, actor)} end)
@@ -107,12 +111,18 @@ defmodule Brando.Content.Proposals do
       |> Enum.with_index()
       |> Enum.flat_map_reduce(%{}, fn {op, index}, trees ->
         {problems, trees} = check(op, proposal, actor, trees)
+        {copy_problems, trees} = check_copy_destination(op, proposal, trees)
+        problems = problems ++ copy_problems ++ link_problems(op)
         {Enum.map(problems, &Map.put(&1, :operation, index)), trees}
       end)
 
     problems = if problems == [], do: check_changesets(proposal, entries, user), else: problems
     %{proposal | problems: problems, effects: effects(proposal)}
   end
+
+  # The entries an operation touches: its target, and a copy's destination.
+  defp op_targets(%CopyBlock{target: target, to_target: to}) when not is_nil(to), do: [target, to]
+  defp op_targets(op), do: [Map.get(op, :target)]
 
   defp freeze(%CreateEntry{} = op), do: %{op | ref: to_string(op.ref), fields: stringify(op.fields)}
   defp freeze(%SetFields{} = op), do: %{op | target: target(op.target), fields: stringify(op.fields)}
@@ -157,10 +167,25 @@ defmodule Brando.Content.Proposals do
 
   defp freeze(%MoveBlock{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
 
-  defp freeze(%CopyBlock{} = op),
-    do: %{op | target: target(op.target), field: to_string(op.field), uid: op.uid || Utils.generate_uid()}
+  defp freeze(%CopyBlock{} = op) do
+    to_target = op.to_target && target(op.to_target)
+
+    %{
+      op
+      | target: target(op.target),
+        field: to_string(op.field),
+        uid: op.uid || Utils.generate_uid(),
+        to_target: to_target,
+        to_field: to_target && to_string(op.to_field || op.field)
+    }
+  end
 
   defp freeze(%SetBlockDetails{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
+
+  defp freeze(%SetBlockTable{} = op),
+    do: %{op | target: target(op.target), field: to_string(op.field), rows: Enum.map(op.rows, &stringify/1)}
+
+  defp freeze(%SetBlockSelection{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
 
   defp freeze(%SetBlockActive{} = op),
     do: %{op | target: target(op.target), field: to_string(op.field), ref: op.ref && to_string(op.ref)}
@@ -203,6 +228,45 @@ defmodule Brando.Content.Proposals do
 
   defp check(op, proposal, actor, trees), do: {check(op, proposal, actor), trees}
 
+  # The destination half of a copy to another entry or field.
+  defp check_copy_destination(%CopyBlock{to_target: to} = op, proposal, trees) when not is_nil(to) do
+    source = {op.target, op.field}
+    source_tree = Map.get_lazy(trees, source, fn -> saved_tree(op.target, op.field, proposal) end)
+    saved? = saved_block_of(proposal, op.target, op.field, op.block_uid) != nil
+
+    with {:ok, schema} <- target_schema(to, proposal),
+         :ok <- block_field(schema, op.to_field),
+         %{} = node <- BlockTree.fetch(source_tree, op.block_uid) || {:error, unknown_block()},
+         true <- saved? || {:error, copy_unsaved()},
+         key = {to, op.to_field},
+         tree = Map.get_lazy(trees, key, fn -> saved_tree(to, op.to_field, proposal) end),
+         :ok <- new_uid(op.uid, tree),
+         {:ok, parent} <- destination(op.placement, %{node | uid: op.uid, parent: nil}, tree, :copy),
+         :ok <- movable(%{node | parent: :elsewhere}, parent, schema, op.to_field, tree) do
+      {[], Map.put(trees, key, BlockTree.copy_from(source_tree, tree, node.uid, op.uid, parent, op.placement))}
+    else
+      {:error, problem} -> {[problem], trees}
+    end
+  end
+
+  defp check_copy_destination(_op, _proposal, trees), do: {[], trees}
+
+  defp copy_unsaved,
+    do:
+      problem(
+        :unknown_block,
+        dgettext("content_proposals", "Only a saved block can be copied to another entry or field.")
+      )
+
+  defp saved_block_of(proposal, target, field, uid) do
+    with %{} = entry <- Map.get(proposal.targets, target),
+         {block, _, _} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+      block
+    else
+      _ -> nil
+    end
+  end
+
   defp check(%CreateEntry{} = op, proposal, actor) do
     duplicate? = Enum.count(proposal.operations, &match?(%CreateEntry{ref: ref} when ref == op.ref, &1)) > 1
 
@@ -218,7 +282,8 @@ defmodule Brando.Content.Proposals do
 
       true ->
         protected_fields(op.fields, op.schema) ++
-          asset_fields(op.fields, op.schema, actor) ++ draft_dependencies(op.fields, proposal)
+          asset_fields(op.fields, op.schema, actor) ++
+          list_fields(op.fields, op.schema, actor) ++ draft_dependencies(op.fields, proposal)
     end
   end
 
@@ -229,7 +294,8 @@ defmodule Brando.Content.Proposals do
     {schema, _} = op.target
 
     protected_fields(op.fields, schema) ++
-      asset_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
+      asset_fields(op.fields, schema, actor) ++
+      list_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
   end
 
   defp saved_tree(target, field, proposal) do
@@ -275,6 +341,11 @@ defmodule Brando.Content.Proposals do
     end
   end
 
+  # A copy to another entry or field is checked against that field, with the
+  # saved original.
+  defp check_block(%CopyBlock{to_target: to}, _schema, tree, _actor, _proposal) when not is_nil(to),
+    do: {[], tree}
+
   # A copy may sit next to its original, but not inside it.
   defp check_block(%CopyBlock{} = op, schema, tree, _actor, _proposal) do
     with {:ok, node} <- structural_block(tree, op.block_uid),
@@ -285,6 +356,51 @@ defmodule Brando.Content.Proposals do
     else
       {:error, problem} -> {[problem], tree}
     end
+  end
+
+  defp check_block(%SetBlockTable{} = op, _schema, tree, actor, proposal) do
+    problems =
+      with {:ok, module} <- module_block(tree, op.block_uid),
+           [_ | _] = vars <- table_vars(module) do
+        rows_problems(op.rows, vars, actor, proposal)
+      else
+        {:error, problem} -> [problem]
+        [] -> [problem(:unsupported_value, dgettext("content_proposals", "This module has no table."))]
+      end
+
+    {problems, tree}
+  end
+
+  defp check_block(%SetBlockSelection{identifiers: ids} = op, _schema, tree, _actor, proposal) do
+    problems =
+      case module_block(tree, op.block_uid) do
+        {:ok, %{datasource: true, datasource_type: type} = module} when type in [:selection, :single] ->
+          available = module |> selection_options(language(op.target, proposal)) |> MapSet.new(& &1.id)
+
+          cond do
+            type == :single and length(ids) > 1 ->
+              [problem(:unsupported_value, dgettext("content_proposals", "This block shows one entry."))]
+
+            Enum.all?(ids, &MapSet.member?(available, &1)) ->
+              []
+
+            true ->
+              [
+                problem(
+                  :unsupported_value,
+                  dgettext("content_proposals", "Choose entries from the block's options (list_selection_options).")
+                )
+              ]
+          end
+
+        {:ok, _module} ->
+          [problem(:unsupported_value, dgettext("content_proposals", "This block does not show chosen entries."))]
+
+        {:error, problem} ->
+          [problem]
+      end
+
+    {problems, tree}
   end
 
   defp check_block(%SetBlockDetails{} = op, _schema, tree, _actor, _proposal) do
@@ -371,6 +487,26 @@ defmodule Brando.Content.Proposals do
 
   # An image, video or file field takes media of its own kind, from the
   # library. The value is saved as the asset's id.
+  defp list_fields(fields, schema, actor),
+    do: for({code, message} <- EntryFields.problems(schema, fields, actor), do: problem(code, message))
+
+  # A link to an entry that could not be resolved to its page.
+  defp link_problems(op) do
+    texts =
+      [Map.get(op, :text)] ++
+        Map.values(Map.get(op, :texts) || %{}) ++
+        Map.values(Map.get(op, :fields) || %{}) ++ Map.values(Map.get(op, :values) || %{})
+
+    if Enum.any?(texts, &EntryLinks.unresolved?/1),
+      do: [
+        problem(
+          :unknown_target,
+          dgettext("content_proposals", "A link points to an entry that was not found or has no page yet.")
+        )
+      ],
+      else: []
+  end
+
   defp asset_fields(fields, schema, actor) do
     for {name, {kind, id}} <- fields, kind in [:image, :video, :file, :gallery] do
       case asset_field(schema, name) do
@@ -386,6 +522,61 @@ defmodule Brando.Content.Proposals do
       %{name: asset, type: type} -> if "#{asset}_id" == name, do: type
     end)
   end
+
+  defp rows_problems(rows, vars, actor, proposal) do
+    galleries? = Enum.any?(rows, fn row -> Enum.any?(row, &match?({_, {:gallery, _}}, &1)) end)
+
+    if galleries?,
+      do: [problem(:unsupported_value, dgettext("content_proposals", "Table rows cannot hold galleries."))],
+      else:
+        rows
+        |> Enum.flat_map(&(values(&1, vars, actor) ++ draft_dependencies(&1, proposal)))
+        |> Enum.uniq()
+  end
+
+  @doc "The variables each row of `module`'s table has, from its table template."
+  @spec table_vars(map()) :: [Brando.Content.Var.t()]
+  def table_vars(%{table_template_id: id}) when is_integer(id) do
+    case Repo.one(
+           from(t in Brando.Content.TableTemplate,
+             where: t.id == ^id,
+             preload: [vars: ^from(v in Brando.Content.Var, order_by: [asc: v.sequence])]
+           )
+         ) do
+      %{vars: vars} -> vars
+      nil -> []
+    end
+  end
+
+  def table_vars(_module), do: []
+
+  @doc """
+  The identifiers a selection datasource block can show, as its datasource
+  lists them for `language` — the same options the block editor offers.
+  """
+  @spec selection_options(map(), String.t() | atom() | nil) :: [Brando.Content.Identifier.t()]
+  def selection_options(%{datasource_module: ds_module, datasource_query: query} = module, language)
+      when is_binary(ds_module) do
+    vars = Enum.map(module.vars || [], &Changeset.change/1)
+
+    case Brando.Datasource.list_results(Module.concat([ds_module]), query, vars, language && to_string(language)) do
+      {:ok, identifiers} when is_list(identifiers) -> identifiers
+      _ -> []
+    end
+  rescue
+    _ -> []
+  end
+
+  def selection_options(_module, _language), do: []
+
+  defp language({:new, ref}, proposal) do
+    case Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1)) do
+      %{fields: fields} -> fields["language"]
+      nil -> nil
+    end
+  end
+
+  defp language(target, proposal), do: proposal.targets |> Map.get(target) |> then(&(&1 && Map.get(&1, :language)))
 
   defp ref_exists(name, module) do
     if Enum.any?(module.refs || [], &(&1.name == name)),
@@ -702,8 +893,9 @@ defmodule Brando.Content.Proposals do
   defp unknown_text(name),
     do: problem(:unknown_ref, dgettext("content_proposals", "The module has no text slot %{name}.", name: name))
 
+  # A link to an entry that was not resolved is reported as such.
   defp text_problem(type, text, name) when type in ["text", "markdown", "html"] do
-    unless Brando.RichText.safe_html?(text),
+    unless EntryLinks.unresolved?(text) or Brando.RichText.safe_html?(text),
       do: dgettext("content_proposals", "%{name} contains unsafe rich text.", name: name)
   end
 
@@ -833,7 +1025,16 @@ defmodule Brando.Content.Proposals do
       updates: length(existing),
       inserted_blocks: length(inserted),
       updated_blocks:
-        changed.([SetBlockMedia, SetBlockText, SetBlockValues, SetBlockActive, SetBlockDetails, SetRefConfig]),
+        changed.([
+          SetBlockMedia,
+          SetBlockText,
+          SetBlockValues,
+          SetBlockActive,
+          SetBlockDetails,
+          SetRefConfig,
+          SetBlockTable,
+          SetBlockSelection
+        ]),
       moved_blocks: changed.([MoveBlock]),
       deletions: deleted |> Enum.uniq() |> Enum.reject(&(elem(&1, 1) in inserted)) |> length(),
       live: for({target, %{status: :published}} <- existing, do: target)
@@ -966,14 +1167,10 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
-  defp asset_ids(fields),
-    do:
-      Map.new(fields, fn {key, value} -> {key, with({kind, id} when kind in [:image, :video, :file] <- value, do: id)} end)
-
   defp base_changeset({:new, ref} = target, proposal, _entries, user) do
     schema = Map.fetch!(proposal.targets, target)
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
-    schema.changeset(struct(schema), fields |> asset_ids() |> Map.put("status", "draft"), user, nil, [])
+    schema.changeset(struct(schema), schema |> EntryFields.params(fields) |> Map.put("status", "draft"), user, nil, [])
   end
 
   defp base_changeset({schema, _} = target, proposal, entries, user) do
@@ -982,16 +1179,24 @@ defmodule Brando.Content.Proposals do
           reduce: %{},
           do: (acc -> Map.merge(acc, fields))
 
-    schema.changeset(Map.fetch!(entries, target), asset_ids(fields), user, nil, [])
+    entry = entries |> Map.fetch!(target) |> EntryFields.preload(Map.keys(fields))
+    schema.changeset(entry, EntryFields.params(schema, fields), user, nil, [])
   end
 
   defp put_blocks(changeset, target, proposal, entries, user) do
     schema = changeset.data.__struct__
 
+    # A copy from another entry or field arrives here with its saved original.
     ops =
       proposal.operations
-      |> Enum.filter(&(Map.get(&1, :target) == target && Map.has_key?(&1, :field)))
-      |> Enum.group_by(& &1.field)
+      |> Enum.flat_map(fn
+        %CopyBlock{to_target: to} = op when not is_nil(to) ->
+          if to == target, do: [{op.to_field, {:copy_in, op, copy_source(op, entries)}}], else: []
+
+        op ->
+          if Map.get(op, :target) == target and Map.has_key?(op, :field), do: [{op.field, op}], else: []
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     # A new entry gets every block field, empty or not: renderers and
     # templates read them, and an unsaved struct has them unloaded.
@@ -1020,6 +1225,13 @@ defmodule Brando.Content.Proposals do
       end)
 
     if schema.__blocks_fields__() == [], do: changeset, else: Blocks.render_block_fields(changeset)
+  end
+
+  defp copy_source(op, entries) do
+    {block, _parent, _index} =
+      entries |> Map.fetch!(op.target) |> Map.fetch!(:"entry_#{op.field}") |> BlockTree.find_saved(op.block_uid)
+
+    Changeset.change(block)
   end
 
   # `joins` is the field's root join rows as `[{uid, join_changeset}]`; child
@@ -1084,6 +1296,52 @@ defmodule Brando.Content.Proposals do
         if Changeset.get_field(ref, :name) == op.ref, do: RefConfig.put(ref, op.config), else: ref
       end)
     )
+  end
+
+  defp block_op({:copy_in, op, original}, joins, join_schema, user) do
+    to =
+      case op.placement do
+        :append -> :root
+        {:into, parent} -> {:ok, parent}
+        {_side, anchor} -> parent_of(joins, anchor)
+      end
+
+    copy =
+      Blocks.duplicate_block(original,
+        user_id: user.id,
+        uid: op.uid,
+        uid_mapping: copy_uids(original, op.uid),
+        source: join_schema
+      )
+
+    attach({copy, joins}, to, op.placement, join_schema)
+  end
+
+  defp block_op(%SetBlockTable{} = op, joins, _join_schema, _user) do
+    update_block(joins, op.block_uid, fn block ->
+      module =
+        Content.fetch_module(Changeset.get_field(block, :module_id), Changeset.get_field(block, :module_origin) || :local)
+
+      vars = table_vars(module)
+
+      rows =
+        op.rows
+        |> Enum.with_index()
+        |> Enum.map(fn {row, sequence} ->
+          %{sequence: sequence, vars: Enum.map(vars, &table_var(&1, row))}
+        end)
+
+      Changeset.put_assoc(block, :table_rows, rows)
+    end)
+  end
+
+  defp block_op(%SetBlockSelection{} = op, joins, _join_schema, _user) do
+    update_block(joins, op.block_uid, fn block ->
+      selection =
+        op.identifiers |> Enum.with_index() |> Enum.map(fn {id, sequence} -> %{identifier_id: id, sequence: sequence} end)
+
+      Changeset.put_assoc(block, :block_identifiers, selection)
+    end)
   end
 
   defp block_op(%SetBlockDetails{} = op, joins, _join_schema, _user) do
@@ -1330,6 +1588,7 @@ defmodule Brando.Content.Proposals do
         |> Changeset.put_change(:data, template(definition, type))
         |> Changeset.put_change(:image_id, nil)
         |> Changeset.put_change(:video_id, nil)
+        |> Changeset.put_change(:gallery_id, nil)
       end
 
     if kind == :gallery,
@@ -1402,6 +1661,30 @@ defmodule Brando.Content.Proposals do
 
     Changeset.put_assoc(block, :vars, vars)
   end
+
+  # A new table row's variable, from its template with the row's value. Maps,
+  # not structs: `put_assoc` inserts each as its own row.
+  @var_owners [:__meta__, :id, :inserted_at, :updated_at, :module_id, :block_id, :table_template_id, :table_row_id]
+
+  defp table_var(template, row) do
+    var = template |> Map.from_struct() |> Map.drop(@var_owners ++ Brando.Content.Var.__schema__(:associations))
+
+    case Map.fetch(row, template.key) do
+      {:ok, value} -> Map.merge(var, var_value(template.type, value))
+      :error -> var
+    end
+  end
+
+  defp var_value(:boolean, value), do: %{value_boolean: value}
+  defp var_value(kind, {kind, id}) when kind in [:image, :video, :file], do: %{:"#{kind}_id" => id}
+
+  defp var_value(:link, {:entry, schema, id}) do
+    {:ok, identifier} = Content.get_identifier(schema, %{id: id})
+    %{link_type: :identifier, identifier_id: identifier.id}
+  end
+
+  defp var_value(:link, url), do: %{link_type: :url, value: url}
+  defp var_value(_type, value), do: %{value: value}
 
   defp put_value(var, :boolean, value, _user), do: Changeset.put_change(var, :value_boolean, value)
   defp put_value(var, :gallery, {:gallery, items}, user), do: put_gallery(var, items, "default", user)
@@ -1532,6 +1815,32 @@ defmodule Brando.Content.Proposals do
     |> Repo.update!()
   end
 
+  @doc """
+  Leave the operations at `indices` out of `version` of proposal `id`, as the
+  reviewer asks: the rest is prepared and stored as the next version, which
+  supersedes this one. Nothing is left out of a proposal that is no longer
+  under review, and a proposal is not left empty — it is discarded instead.
+  """
+  @spec leave_out(Ecto.UUID.t(), integer(), [non_neg_integer()], term()) :: {:ok, Proposal.t()} | {:error, String.t()}
+  def leave_out(id, version, indices, actor) do
+    with {:ok, record} <- Error.protect(fn -> under_review!(id, version, actor) end),
+         {:ok, operations} <- Codec.decode_all(record.operations) do
+      case for {op, index} <- Enum.with_index(operations), index not in indices, do: op do
+        [] -> {:error, dgettext("content_proposals", "Nothing would be left. Discard the proposal instead.")}
+        rest -> propose(rest, actor, supersedes: id, summary: record.summary)
+      end
+    end
+  end
+
+  defp under_review!(id, version, actor) do
+    record = record!(id, actor)
+
+    if record.version != version or record.status not in ~w(pending approved),
+      do: Error.fail!(dgettext("content_proposals", "This proposal is no longer under review."))
+
+    record
+  end
+
   @doc "Cancel a proposal under review. Content is untouched."
   @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
   def cancel(id, actor) do
@@ -1610,7 +1919,7 @@ defmodule Brando.Content.Proposals do
 
     entries =
       for op <- operations,
-          target = Map.get(op, :target),
+          target <- op_targets(op),
           match?({schema, id} when schema != :new and is_integer(id), target),
           uniq: true,
           into: %{},
@@ -1763,7 +2072,7 @@ defmodule Brando.Content.Proposals do
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
       %CreateEntry{ref: ref} -> {:new, ref} == target
-      op -> Map.get(op, :target) == target
+      op -> target in op_targets(op)
     end)
   end
 

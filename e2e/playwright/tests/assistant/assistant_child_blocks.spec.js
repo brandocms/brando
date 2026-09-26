@@ -79,6 +79,15 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   await expect(review).toContainText('It is kept, but not shown on the page.')
   await page.screenshot({ path: testInfo.outputPath('assistant-order-desktop.png'), fullPage: true })
 
+  // Leaving the switch-off out makes version 2 with only the new order, and
+  // the conversation records it.
+  const removal = review.locator('.assistant-changes > li').filter({ has: page.locator('.assistant-change-title.is-removal') })
+  await removal.hover()
+  await removal.getByRole('button', { name: 'Leave out' }).click()
+  await expect(review.locator('.assistant-eyebrow')).toContainText('version 2')
+  await expect(review.locator('.assistant-change-title.is-removal')).toHaveCount(0)
+  await expect(page.locator('.assistant-bubble').last()).toContainText('Left out of the proposal')
+
   await review.getByRole('button', { name: /^Apply/ }).click()
   await expect(review.getByRole('heading', { name: 'Applied' })).toBeVisible({ timeout: 15000 })
 
@@ -89,6 +98,6 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   await expect(saved).toHaveCount(2, { timeout: 15000 })
   await expect(saved.nth(0).locator('.block-vars').getByLabel('Name')).toHaveValue('Bob Jones')
   await expect(saved.nth(1).locator('.block-vars').getByLabel('Name')).toHaveValue('Alice Smith')
-  await expect(saved.nth(1).locator('.base-block').first()).toHaveClass(/disabled/)
+  await expect(saved.nth(1).locator('.base-block').first()).not.toHaveClass(/disabled/)
   expect(errors).toEqual([])
 })

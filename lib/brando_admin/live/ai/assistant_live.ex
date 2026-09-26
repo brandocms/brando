@@ -211,7 +211,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
                   "Describe the changes you want: which entries, which media and where it goes. Attach media first and refer to it as image1, video1 and so on."
                 )}
               </p>
-              <.message :for={item <- @turns} item={item} />
+              <.message
+                :for={item <- @turns}
+                item={item}
+                media={@media}
+                aliases={aliases(@conversation)}
+                available?={@available? and !running?(@run)}
+              />
               <div :if={@progress} class="assistant-progress" role="status">
                 <span class="assistant-spinner" aria-hidden="true"></span>
                 <span>{@progress}</span>
@@ -311,6 +317,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             media={@media}
             aliases={aliases(@conversation)}
             receipt={@receipt}
+            run={@run}
             error={@error}
             applying={@applying}
             preview={@preview}
@@ -325,6 +332,78 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   attr :item, :map, required: true
+  attr :media, :map, default: %{}
+  attr :aliases, :map, default: %{}
+  attr :available?, :boolean, default: false
+
+  defp message(%{item: %{role: "request"}} = assigns) do
+    ~H"""
+    <section class={["assistant-request", @item.open? && "is-open"]} aria-label={gettext("The assistant asks for media")}>
+      <header>
+        <.icon name={if @item.kind == "video", do: "hero-film", else: "hero-photo"} />
+        <span>
+          {if @item.kind == "video",
+            do: gettext("The assistant asks for videos"),
+            else: gettext("The assistant asks for images")}
+        </span>
+      </header>
+      <p :if={@item.reason} class="assistant-request-reason">{@item.reason}</p>
+      <div :if={@item.open? and @item.suggested != []} class="assistant-request-suggestions">
+        <button
+          :for={id <- @item.suggested}
+          type="button"
+          class={["assistant-request-item", Map.has_key?(@aliases, {to_kind(@item.kind), id}) && "is-picked"]}
+          phx-click={"select_#{@item.kind}"}
+          phx-value-id={id}
+          aria-pressed={to_string(Map.has_key?(@aliases, {to_kind(@item.kind), id}))}
+          title={media_label(%{kind: @item.kind, id: id}, @aliases, @media)}
+          disabled={!@available?}
+        >
+          <.thumb media={@media} kind={@item.kind} id={id} />
+          <span :if={Map.has_key?(@aliases, {to_kind(@item.kind), id})} class="assistant-request-alias">
+            {@aliases[{to_kind(@item.kind), id}]["alias"]}
+          </span>
+        </button>
+      </div>
+      <div :if={@item.open?} class="assistant-request-actions">
+        <button
+          type="button"
+          class="assistant-button"
+          phx-click={JS.push("browse_library", value: %{kind: @item.kind}) |> toggle_drawer("##{@item.kind}-picker")}
+          disabled={!@available?}
+        >
+          <.icon name="hero-rectangle-stack" />{gettext("Browse the library")}
+        </button>
+        <button
+          type="button"
+          class="assistant-button"
+          phx-click={JS.dispatch("click", to: "#assistant-upload .upload-trigger")}
+          disabled={!@available?}
+        >
+          <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+        </button>
+        <button
+          type="button"
+          class="assistant-button"
+          phx-click="send"
+          phx-value-message={gettext("Choose suitable ones from the library yourself.")}
+          disabled={!@available?}
+        >
+          <.icon name="hero-sparkles" />{gettext("Let the assistant choose")}
+        </button>
+        <button
+          type="button"
+          class="assistant-apply"
+          phx-click="send"
+          phx-value-message={gettext("I have attached the media. Use it.")}
+          disabled={!@available?}
+        >
+          {gettext("Use what I attached")}
+        </button>
+      </div>
+    </section>
+    """
+  end
 
   defp message(%{item: %{role: "user"}} = assigns) do
     ~H"""
@@ -375,11 +454,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
     ~H"""
     <section class="assistant-destination" id="assistant-destination" aria-label={gettext("Selected entry")}>
       <span class="assistant-destination-label">{gettext("Working on")}</span>
-      <p class="assistant-destination-title">
-        <.link :if={@url} navigate={@url}>{@target["title"]}</.link>
-        <span :if={!@url}>{@target["title"]}</span>
-      </p>
       <dl class="assistant-destination-meta">
+        <div class="is-entry">
+          <dt>{gettext("Entry")}</dt>
+          <dd class="assistant-destination-title">
+            <.link :if={@url} navigate={@url}>{@target["title"]}</.link>
+            <span :if={!@url}>{@target["title"]}</span>
+          </dd>
+        </div>
         <div>
           <dt>{gettext("Type")}</dt>
           <dd>{@type}</dd>
@@ -472,6 +554,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :media, :map, required: true
   attr :aliases, :map, default: %{}
   attr :receipt, :any, required: true
+  attr :run, :any, default: nil
   attr :error, :any, required: true
   attr :applying, :boolean, required: true
   attr :preview, :any, default: nil
@@ -514,7 +597,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
         entry_changes: (assigns.proposal.effects[:creates] || 0) + (assigns.proposal.effects[:updates] || 0),
         problems?: assigns.proposal.problems != [],
         general_problems: Enum.filter(assigns.proposal.problems, &(is_nil(&1[:operation]) and is_nil(&1[:target]))),
-        entry_problems: for(entry <- assigns.review, problem <- entry.problems, do: {entry, problem})
+        entry_problems: for(entry <- assigns.review, problem <- entry.problems, do: {entry, problem}),
+        # A change can be left out while the proposal is under review, and
+        # while something else would remain.
+        can_leave_out?:
+          is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved) and
+            length(assigns.proposal.operations) > 1 and !running?(assigns.run)
       )
 
     ~H"""
@@ -585,8 +673,19 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <p :if={entry.url} class="assistant-card-url">{entry.url}</p>
 
             <ul class="assistant-changes">
-              <li :for={change <- entry.changes}>
+              <li :for={change <- entry.changes} class={change[:operations] && @can_leave_out? && "can-leave-out"}>
                 <.change change={change} aliases={@aliases} media={@media} applied={!is_nil(@receipt)} />
+                <button
+                  :if={change[:operations] && @can_leave_out?}
+                  type="button"
+                  class="assistant-leave-out"
+                  phx-click="leave_out"
+                  phx-value-operations={Enum.join(change.operations, ",")}
+                  phx-value-subject={change_subject(change)}
+                  title={gettext("Leave this change out of the proposal")}
+                >
+                  <.icon name="hero-x-mark" /><span>{gettext("Leave out")}</span>
+                </button>
               </li>
             </ul>
 
@@ -1007,6 +1106,43 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  defp change(%{change: %{type: :block_table}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title">{gettext("Replace the table in %{block}", block: @change.block)}</span>
+    <p :if={@change.before} class="assistant-placement">
+      {ngettext("It has %{count} row now.", "It has %{count} rows now.", @change.before)}
+    </p>
+    <ol class="assistant-order">
+      <li :for={row <- @change.rows}><span class="assistant-order-name">{row}</span></li>
+    </ol>
+    """
+  end
+
+  defp change(%{change: %{type: :block_selection}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title">{gettext("Choose the entries shown in %{block}", block: @change.block)}</span>
+    <dl class="assistant-fields">
+      <div :if={@change.before not in [nil, []]}>
+        <dt>{gettext("Now")}</dt>
+        <dd><del>{Enum.join(@change.before, ", ")}</del></dd>
+      </div>
+      <div>
+        <dt>{gettext("Proposed")}</dt>
+        <dd><ins>{Enum.join(@change.entries, ", ")}</ins></dd>
+      </div>
+    </dl>
+    """
+  end
+
+  defp change(%{change: %{type: :copy_out}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title">
+      {gettext("Copy %{block} to %{entry}", block: @change.block, entry: @change.destination)}
+    </span>
+    <p class="assistant-placement">{gettext("The original stays here.")}</p>
+    """
+  end
+
   defp change(%{change: %{type: :block_active}} = assigns) do
     ~H"""
     <span class={["assistant-change-title", !@change.active && "is-removal"]}>
@@ -1109,6 +1245,28 @@ defmodule BrandoAdmin.AI.AssistantLive do
        |> put_toast(:info, gettext("Changes applied"))}
     else
       {:error, message} -> {:noreply, socket |> assign(applying: false, error: message) |> assign_proposal()}
+    end
+  end
+
+  def handle_event("leave_out", %{"operations" => indices, "subject" => subject}, socket) do
+    %{proposal: proposal, conversation: conversation, current_user: user} = socket.assigns
+    indices = indices |> String.split(",", trim: true) |> Enum.map(&String.to_integer/1)
+
+    case Proposals.leave_out(proposal.id, proposal.version, indices, user) do
+      {:ok, refined} ->
+        conversation |> Ecto.Changeset.change(proposal_id: refined.id) |> Brando.Repo.update!()
+        Agent.note(conversation.id, gettext("Left out of the proposal: %{change}", change: subject), user)
+
+        {:noreply,
+         socket
+         |> assign(:conversation, reload(conversation, user))
+         |> discard_previews()
+         |> assign(:preview, nil)
+         |> assign_proposal()
+         |> assign_messages()}
+
+      {:error, message} ->
+        {:noreply, put_toast(socket, :error, message)}
     end
   end
 
@@ -1271,6 +1429,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # new blocks. For other changes the media belong to one change among many.
   defp adds_content?(entry), do: Enum.all?(entry.changes, &(&1.type in [:create, :insert_block, :fields]))
 
+  # What a change is about, for the note left in the conversation.
+  defp change_subject(%{type: :fields}), do: gettext("the entry's fields")
+  defp change_subject(%{block: block}) when is_binary(block), do: block
+  defp change_subject(%{module: module}) when is_binary(module), do: gettext("a new %{module} block", module: module)
+  defp change_subject(_change), do: gettext("a change")
+
+  # Media titles may be translated: the admin's language, English, or any.
+  defp plain(%{} = text),
+    do: text[Gettext.get_locale(Brando.Gettext)] || text["en"] || text |> Map.values() |> List.first()
+
+  defp plain(text), do: text
+
   defp thumb_icon(kind) do
     case to_string(kind) do
       "video" -> "hero-film"
@@ -1353,7 +1523,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     %{conversation: conversation, current_user: user} = socket.assigns
     messages = Agent.messages(conversation.id, user)
     cost = if Agent.config()[:show_cost], do: Agent.cost(conversation.id, user)
-    assign(socket, messages: messages, turns: turns(messages), cost: cost)
+    socket |> assign(messages: messages, turns: turns(messages), cost: cost) |> assign_media()
   end
 
   defp assign_proposal(%{assigns: %{conversation: %{proposal_id: id}}} = socket) when is_binary(id) do
@@ -1407,9 +1577,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp assign_media(socket) do
     attachments = (socket.assigns.conversation && socket.assigns.conversation.attachments) || []
 
+    suggested =
+      for %{role: "request", kind: kind, suggested: ids} <- socket.assigns[:turns] || [],
+          id <- ids,
+          do: {to_kind(kind), id}
+
     refs =
       Enum.flat_map(attachments, &if(&1["id"], do: [{to_kind(&1["kind"]), &1["id"]}], else: [])) ++
-        Review.media(socket.assigns.review)
+        Review.media(socket.assigns.review) ++ suggested
 
     assign(socket, :media, load_media(Enum.uniq(refs)))
   end
@@ -1435,9 +1610,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         else: Repo.all(from(f in Brando.Files.File, where: f.id in ^file_ids))
 
     Map.new(
-      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1), label: &1.title}}) ++
-        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1), label: &1.title}}) ++
-        Enum.map(files, &{{:file, &1.id}, %{url: nil, label: &1.title || &1.filename}})
+      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1), label: plain(&1.title)}}) ++
+        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1), label: plain(&1.title)}}) ++
+        Enum.map(files, &{{:file, &1.id}, %{url: nil, label: plain(&1.title) || &1.filename}})
     )
   end
 
@@ -1507,7 +1682,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # Tool calls and their results collapse into one list of steps between the
   # user's message and the assistant's answer.
   # Results that make a step's label specific: what was read, which version.
-  @labelled_results ~w(entry_outline prepare_proposal attach_folder)
+  @labelled_results ~w(entry_outline prepare_proposal attach_folder request_media)
 
   defp turns(messages) do
     results =
@@ -1523,18 +1698,52 @@ defmodule BrandoAdmin.AI.AssistantLive do
         acc
 
       %{role: "assistant", tool_calls: [_ | _] = calls} = message, acc ->
+        {requests, calls} = Enum.split_with(calls, &(&1["name"] == "request_media"))
         steps = Enum.map(calls, &step_label(&1, results[&1["id"]] || %{}))
         acc = if message.content not in [nil, ""], do: [%{role: "assistant", content: message.content} | acc], else: acc
 
-        case acc do
-          [%{role: "steps", steps: previous} | rest] -> [%{role: "steps", steps: previous ++ steps} | rest]
-          _ -> [%{role: "steps", steps: steps} | acc]
-        end
+        acc =
+          case {steps, acc} do
+            {[], acc} -> acc
+            {steps, [%{role: "steps", steps: previous} | rest]} -> [%{role: "steps", steps: previous ++ steps} | rest]
+            {steps, acc} -> [%{role: "steps", steps: steps} | acc]
+          end
+
+        Enum.reduce(requests, acc, &[media_request(&1, results[&1["id"]] || %{}) | &2])
 
       message, acc ->
         [%{role: message.role, content: message.content} | acc]
     end)
     |> Enum.reverse()
+    |> mark_open_request()
+  end
+
+  # The assistant's request for media, with the library suggestions it was
+  # made with.
+  defp media_request(%{"arguments" => arguments}, result) do
+    args =
+      case Jason.decode(arguments || "{}") do
+        {:ok, %{} = args} -> args
+        _ -> %{}
+      end
+
+    %{
+      role: "request",
+      kind: if(args["kind"] == "video", do: "video", else: "image"),
+      reason: args["reason"],
+      count: args["count"],
+      suggested: result["suggested"] || [],
+      open?: false
+    }
+  end
+
+  # Only the latest request, with no message from the editor after it, can be
+  # answered from its card.
+  defp mark_open_request(turns) do
+    case turns |> Enum.with_index() |> Enum.filter(&(elem(&1, 0).role in ["request", "user"])) |> List.last() do
+      {%{role: "request"} = request, index} -> List.replace_at(turns, index, %{request | open?: true})
+      _ -> turns
+    end
   end
 
   defp step_label(%{"name" => name, "arguments" => arguments}, result) do
@@ -1570,6 +1779,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp step_text("list_attachments", _, _), do: gettext("Matched the attached media")
+  defp step_text("list_selection_options", _, _), do: gettext("Looked at the entries a block can show")
 
   defp step_text("search_assets", %{"query" => query}, _) when query not in [nil, ""],
     do: gettext("Searched the media library for “%{query}”", query: query)
