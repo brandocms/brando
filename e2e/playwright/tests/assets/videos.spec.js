@@ -13,7 +13,10 @@ test('video metadata and counts follow the selected folder', async ({ page }, te
   await syncLV(page)
   await expect(page.locator('.list-row')).toHaveCount(expectedCount)
   await expect(page.getByText(`${expectedCount} videos`, { exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Launch film.mp4', exact: true })).toBeVisible()
+  // Titles are renamed in place; the link shows the decoded source address.
+  const launch = page.locator('.list-row').filter({ has: page.locator('input[name="title"][value="Launch film.mp4"]') })
+  await expect(launch).toHaveCount(1)
+  await expect(launch.getByRole('link', { name: /example\.com\/Launch film\.mp4/ })).toBeVisible()
   await expect(page.locator('.list-row').first()).toContainText('1920 × 1080')
   await expect(page.locator('.list-row').first()).toContainText('00:31')
   await expect(page.locator('.list-row').first()).not.toContainText('private-query')
@@ -28,5 +31,5 @@ test('video metadata and counts follow the selected folder', async ({ page }, te
   await expect(page).toHaveURL(new RegExp(`folder_id=${folder_id}`))
   await expect(page.locator('.list-row')).toHaveCount(1)
   await expect(page.getByText('1 video', { exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Campaign film', exact: true })).toBeVisible()
+  await expect(page.locator('.list-row input[name="title"]')).toHaveValue('Campaign film')
 })

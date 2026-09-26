@@ -189,7 +189,8 @@ test('galleries share the resource listing design', async ({ page }, testInfo) =
   await page.goto('/admin/assets/galleries')
   await syncLV(page)
   await expect(page.getByRole('heading', { name: 'Gallerier', exact: true })).toBeVisible()
-  await expect(page.locator('.list-tools-wrapper')).toBeHidden()
+  // The only tool is the usage filter, translated.
+  await expect(page.locator('.list-tools-wrapper')).toContainText('Ikke i bruk')
   await expect(page.locator('.content-list .list-row')).toHaveCount(2)
   await screenshot(page, testInfo, 'galleries-desktop')
   await narrow(page)
