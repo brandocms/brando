@@ -8,7 +8,7 @@ defmodule Brando.Mixfile do
     [
       app: :brando,
       version: @version,
-      elixir: "~> 1.15",
+      elixir: "~> 1.18",
       deps: deps(),
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),

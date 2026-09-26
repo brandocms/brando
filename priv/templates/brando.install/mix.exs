@@ -8,7 +8,7 @@ defmodule <%= application_module %>.MixProject do
     [
       app: :<%= application_name %>,
       version: @version,
-      elixir: "~> 1.14.1 or ~> 1.15",
+      elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       listeners: [Phoenix.CodeReloader],

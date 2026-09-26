@@ -14,6 +14,9 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
 
+- **Brando requires Elixir 1.18 or later.** Its dependencies already did:
+  `req_llm` depends on `llm_db`, which requires 1.18. Upgrade Elixir before
+  updating Brando. New sites are generated with the same requirement.
 - **A `:boolean` listing filter switched off stops applying.** Switching a
   toggle off used to send `"false"` to the context filter, so the same off
   position showed every entry before the toggle was touched and only entries
