@@ -492,7 +492,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp message(%{item: %{role: "steps"}} = assigns) do
     ~H"""
     <ul class="assistant-steps">
-      <li :for={step <- @item.steps}><.icon name="hero-check" />{step}</li>
+      <li :for={step <- @item.steps}>
+        <.icon name="hero-check" />
+        <span><.step_part :for={part <- step} part={part} /></span>
+      </li>
     </ul>
     """
   end
@@ -2021,6 +2024,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
+  # One part of a step's text, without whitespace around it.
+  defp step_part(%{part: {:term, _}} = assigns), do: ~H|<span class="assistant-step-term">{elem(@part, 1)}</span>|
+  defp step_part(%{part: {:type, _}} = assigns), do: ~H|<span class="assistant-step-type">{elem(@part, 1)}</span>|
+  defp step_part(%{part: {:strong, _}} = assigns), do: ~H|<strong>{elem(@part, 1)}</strong>|
+  defp step_part(assigns), do: ~H"{elem(@part, 1)}"
+
   defp step_label(%{"name" => name, "arguments" => arguments}, result) do
     args =
       case Jason.decode(arguments || "{}") do
@@ -2029,7 +2038,31 @@ defmodule BrandoAdmin.AI.AssistantLive do
       end
 
     label = step_text(name, args, result)
-    if result["error"], do: gettext("%{step} (did not work)", step: label), else: label
+    label = if result["error"], do: gettext("%{step} (did not work)", step: label), else: label
+    parts(label)
+  end
+
+  # Values in a step are marked where they are bound, so a translation can
+  # move them, and styled when the finished text is split into its parts.
+  @mark "\u{E000}"
+
+  defp term(value), do: "#{@mark}term:#{value}#{@mark}"
+  defp type(value), do: "#{@mark}type:#{value}#{@mark}"
+  defp strong(value), do: "#{@mark}strong:#{value}#{@mark}"
+
+  defp parts(label) do
+    label
+    |> String.split(@mark)
+    |> Enum.with_index()
+    |> Enum.reject(&(elem(&1, 0) == ""))
+    |> Enum.map(fn
+      {part, index} when rem(index, 2) == 1 ->
+        [kind, text] = String.split(part, ":", parts: 2)
+        {String.to_existing_atom(kind), text}
+
+      {part, _} ->
+        {:text, part}
+    end)
   end
 
   defp step_text("search_entries", args, _) do
@@ -2037,29 +2070,29 @@ defmodule BrandoAdmin.AI.AssistantLive do
     type = args["content_type"] && content_type_plural(args["content_type"])
 
     cond do
-      query == "" and type -> gettext("Listed %{type}", type: type)
+      query == "" and type -> gettext("Listed %{type}", type: type(type))
       query == "" -> gettext("Listed entries")
-      type -> gettext("Searched for “%{query}” in %{type}", query: query, type: type)
-      true -> gettext("Searched for “%{query}”", query: query)
+      type -> gettext("Searched for “%{query}” in %{type}", query: term(query), type: type(type))
+      true -> gettext("Searched for “%{query}”", query: term(query))
     end
   end
 
   defp step_text("entry_outline", _args, %{"title" => title}) when is_binary(title),
-    do: gettext("Read “%{title}”", title: title)
+    do: gettext("Read “%{title}”", title: term(title))
 
   defp step_text("entry_outline", _args, _), do: gettext("Read an entry")
   defp step_text("list_content_types", _, _), do: gettext("Looked at the content types")
 
   defp step_text("describe_content_type", args, _),
-    do: gettext("Checked the fields of %{type}", type: content_type_label(args["content_type"]))
+    do: gettext("Checked the fields of %{type}", type: type(content_type_label(args["content_type"])))
 
   defp step_text("list_modules", args, _),
-    do: gettext("Looked at the modules for %{type}", type: content_type_label(args["content_type"]))
+    do: gettext("Looked at the modules for %{type}", type: type(content_type_label(args["content_type"])))
 
   defp step_text("describe_module", args, _) do
     case module_name(args["module"]) do
       nil -> gettext("Checked a module's slots")
-      name -> gettext("Checked the module “%{module}”", module: name)
+      name -> gettext("Checked the module “%{module}”", module: term(name))
     end
   end
 
@@ -2073,28 +2106,28 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp step_text("look_at_media", _, _), do: gettext("Looked at pictures")
 
   defp step_text("search_assets", %{"query" => query}, _) when query not in [nil, ""],
-    do: gettext("Searched the media library for “%{query}”", query: query)
+    do: gettext("Searched the media library for “%{query}”", query: term(query))
 
   defp step_text("search_assets", _, _), do: gettext("Searched the media library")
 
   defp step_text("find_media_folders", %{"name" => name}, _) when is_binary(name),
-    do: gettext("Looked for the folder “%{name}”", name: name)
+    do: gettext("Looked for the folder “%{name}”", name: term(name))
 
   defp step_text("find_media_folders", _, _), do: gettext("Looked for the folder")
 
   defp step_text("attach_folder", _, %{"folder" => %{"path" => path}, "attached" => attached}) when is_list(attached),
     do:
       ngettext("Attached %{count} item from %{folder}", "Attached %{count} items from %{folder}", length(attached),
-        folder: path
+        folder: term(path)
       )
 
   defp step_text("attach_folder", _, _), do: gettext("Attached the folder's media")
 
   defp step_text("prepare_proposal", _, %{"version" => version, "applicable" => false}),
-    do: gettext("Prepared version %{version}, with problems to fix", version: version)
+    do: gettext("Prepared version %{version}, with problems to fix", version: strong(version))
 
   defp step_text("prepare_proposal", _, %{"version" => version}),
-    do: gettext("Prepared version %{version} of the proposal", version: version)
+    do: gettext("Prepared version %{version} of the proposal", version: strong(version))
 
   defp step_text("prepare_proposal", _, _), do: gettext("Prepared the proposal")
   defp step_text(_, _, _), do: gettext("Looked at the site's content")

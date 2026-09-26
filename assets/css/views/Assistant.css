@@ -228,7 +228,22 @@
   font-size: 13px;
 
   li { display: flex; align-items: center; gap: 8px; }
-  [data-icon] { width: 14px; height: 14px; color: #6d8574; }
+  li > [data-icon] { flex: 0 0 auto; width: 14px; height: 14px; color: #6d8574; }
+  strong { color: var(--assistant-ink); font-weight: 600; }
+}
+
+/* What a step looked for, and where. */
+.assistant-step-term { color: var(--assistant-accent); font-weight: 500; }
+
+.assistant-step-type {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--assistant-surface);
+  color: var(--assistant-ink);
+  font-size: 11px;
+  line-height: 18px;
+  vertical-align: 1px;
 }
 
 .assistant-progress {
