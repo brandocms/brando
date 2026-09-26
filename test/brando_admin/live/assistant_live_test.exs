@@ -47,10 +47,11 @@ defmodule BrandoAdmin.AssistantLiveTest do
     [conversation] = Agent.list_conversations(c.current_user)
     assert_patch(view, "/admin/assistant/#{conversation.id}")
 
-    html = eventually(view, &(&1 =~ "Ready for your review"))
+    # The proposal arrives before the model's final reply.
+    html = eventually(view, &(&1 =~ "Prepared a text block for Identity."))
+    assert html =~ "Ready for your review"
     assert html =~ "Searched for “Ident”"
     assert html =~ "Prepared the proposal"
-    assert html =~ "Prepared a text block for Identity."
     assert html =~ "Add a Text block"
     assert html =~ "Written in the assistant"
     assert html =~ "Live page"

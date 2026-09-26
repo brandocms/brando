@@ -94,27 +94,24 @@ test('uploads media, prepares a proposal from a message and applies it', async (
 })
 
 test('attaches library media and removes it again', async ({ page }) => {
+  const response = await page.request.post('/e2e/admin-workspace-fixtures')
+  expect(response.ok()).toBeTruthy()
   await page.goto('/admin/assistant')
   await syncLV(page)
 
-  await page.getByRole('button', { name: 'From library' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Attach from the media library' })
+  await page.getByTitle('Attach videos from the media library', { exact: true }).click()
+  const dialog = page.locator('#video-picker')
   await expect(dialog).toBeVisible()
-  const first = dialog.locator('.assistant-library-grid button').first()
+  const video = dialog.locator('.video-picker__video').filter({ hasText: 'Studio tour' })
 
-  if ((await first.count()) === 0) {
-    await expect(dialog).toContainText('Nothing matches this search.')
-    return
-  }
-
-  await first.click()
-  await expect(first).toHaveAttribute('aria-pressed', 'true')
+  await video.click()
+  await expect(video).toHaveClass(/selected/)
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 
   const attachment = page.locator('.assistant-attachment').first()
-  await expect(attachment).toContainText('image1')
+  await expect(attachment).toContainText('video1')
   await attachment.hover()
-  await attachment.getByRole('button', { name: 'Remove image1' }).click()
+  await attachment.getByRole('button', { name: 'Remove video1' }).click()
   await expect(page.locator('.assistant-attachment')).toHaveCount(0)
 })
