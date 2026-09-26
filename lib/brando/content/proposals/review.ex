@@ -107,6 +107,7 @@ defmodule Brando.Content.Proposals.Review do
       admin_url: admin_url(schema, id),
       status: to_string(Map.get(entry, :status) || ""),
       live?: target in (proposal.effects[:live] || []),
+      languages: languages(entry, proposal),
       changes: changes,
       media: media_of(changes),
       highlight: uids_of(changes),
@@ -114,6 +115,28 @@ defmodule Brando.Content.Proposals.Review do
       preview_targets: preview_targets(schema),
       problems: problems(proposal, target)
     }
+  end
+
+  # The entry's other language versions, and what the proposal does to them:
+  # synchronized ones follow when it is applied; others change only if the
+  # proposal changes them too.
+  defp languages(entry, proposal) do
+    {role, versions} = Brando.Content.Proposals.Languages.versions(entry)
+    targets = Map.keys(proposal.targets)
+
+    for version <- versions do
+      schema = entry.__struct__
+      changed? = {schema, version.id} in targets
+
+      state =
+        cond do
+          changed? -> :changed
+          role == :source and version.synchronized -> :follows
+          true -> :unchanged
+        end
+
+      %{language: version.language, title: version.title, state: state}
+    end
   end
 
   defp field_changes(target, entry, proposal) do

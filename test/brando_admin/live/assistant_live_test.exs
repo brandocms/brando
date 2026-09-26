@@ -457,5 +457,55 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert has_element?(view, ".assistant-order")
       assert has_element?(view, ".assistant-change-title.is-removal")
     end
+
+    test "applied changes can be undone", %{conn: conn} = c do
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      view |> element("button.assistant-apply") |> render_click()
+      assert has_element?(view, "button.assistant-undo")
+
+      view |> element("button.assistant-undo") |> render_click()
+      assert has_element?(view, "h2", "Undone")
+      refute has_element?(view, "button.assistant-undo")
+      assert length(Catalog.load!(Page, c.work.id, c.current_user).entry_blocks) == 2
+      [_, multi] = Catalog.load!(Page, c.work.id, c.current_user).entry_blocks
+      assert Enum.map(multi.block.children, & &1.uid) == c.child_uids
+    end
+
+    test "a review link opens the proposal read-only for a colleague", %{conn: conn} = c do
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      view |> element("button", "Share for review") |> render_click()
+      [link] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#assistant-review-link", "value")
+      path = URI.parse(link).path
+
+      colleague = Brando.Factory.insert(:random_user, config: %Brando.Users.UserConfig{})
+      {:ok, shared, html} = live(log_in_user(build_conn(), colleague), path)
+      assert html =~ "Proposal for review"
+      assert has_element?(shared, ".assistant-order")
+      refute has_element?(shared, "button.assistant-apply")
+      refute has_element?(shared, ".assistant-leave-out")
+      refute has_element?(shared, "#assistant-composer")
+
+      assert {:error, {:live_redirect, %{to: "/admin/assistant"}}} =
+               live(log_in_user(build_conn(), colleague), "/admin/assistant/shared/nope")
+    end
+
+    test "a new entry can be published as it is applied", %{conn: conn} = c do
+      ops = [
+        %Brando.Content.Proposals.CreateEntry{
+          schema: Page,
+          ref: "news",
+          fields: %{title: "News", uri: "news", language: "en", template: "default.html"}
+        }
+      ]
+
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, c.current_user, conversation_id: c.conversation.id)
+      c.conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      view |> element(~s(.assistant-publish input[phx-value-key="new:news"])) |> render_click()
+      view |> element("button.assistant-apply") |> render_click()
+      assert has_element?(view, ".assistant-receipt .assistant-badge", "Published")
+      assert Brando.Repo.get_by!(Page, uri: "news").status == :published
+    end
   end
 end

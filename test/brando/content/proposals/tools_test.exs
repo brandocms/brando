@@ -89,6 +89,21 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert {:error, _} = Tools.call("search_assets", %{"kind" => "gallery"}, c.context)
   end
 
+  test "entry_outline lists an entry's language versions and whether they follow it", c do
+    {:ok, source} =
+      Brando.SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "published"}, c.user)
+
+    {:ok, english} = Brando.Translations.create_target(Brando.SyncTest.Article, source.id, :en, c.user)
+
+    outline = call!("entry_outline", %{"content_type" => "Brando.SyncTest.Article", "id" => source.id}, c.context)
+    assert %{role: "source", versions: [%{language: "en", id: id, synchronized: true}], note: note} = outline.languages
+    assert id == english.id
+    assert note =~ "structure and media"
+
+    plain = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}, c.context)
+    refute Map.has_key?(plain, :languages)
+  end
+
   test "request_media suggests library media for the editor to pick", c do
     result =
       call!("request_media", %{"kind" => "image", "reason" => "Photos", "query" => "Title one"}, c.context)

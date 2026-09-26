@@ -106,6 +106,7 @@ defmodule Brando.Router do
               ] do
           live "/groups", BrandoAdmin.Users.GroupsLive
           live "/assistant", BrandoAdmin.AI.AssistantLive
+          live "/assistant/shared/:token", BrandoAdmin.AI.AssistantLive, :shared
           live "/assistant/:conversation_id", BrandoAdmin.AI.AssistantLive, :show
           # brando routes
           live "/sites", BrandoAdmin.Sites.SiteLive

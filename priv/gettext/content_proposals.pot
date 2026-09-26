@@ -47,17 +47,17 @@ msgstr ""
 msgid "%{name} takes plain text."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:2163
+#: lib/brando/content/proposals.ex:2378
 #, elixir-autogen, elixir-format
 msgid "A module changed after this proposal was prepared. Review it again."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1885
+#: lib/brando/content/proposals.ex:2029
 #, elixir-autogen, elixir-format
 msgid "A newer version of this proposal exists. Review it instead."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:2179
+#: lib/brando/content/proposals.ex:2395
 #, elixir-autogen, elixir-format
 msgid "A proposal requires an authenticated user."
 msgstr ""
@@ -73,34 +73,34 @@ msgstr ""
 msgid "A target needs a numeric id."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:566
+#: lib/brando/content/proposals/review.ex:589
 #, elixir-autogen, elixir-format
 msgid "After %{block}"
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1888
-#: lib/brando/content/proposals.ex:2025
+#: lib/brando/content/proposals.ex:2032
+#: lib/brando/content/proposals.ex:2170
 #, elixir-autogen, elixir-format
 msgid "Approve this version of the proposal before applying it."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:557
+#: lib/brando/content/proposals/review.ex:580
 #, elixir-autogen, elixir-format
 msgid "At the end"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:565
+#: lib/brando/content/proposals/review.ex:588
 #, elixir-autogen, elixir-format
 msgid "Before %{block}"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:581
-#: lib/brando/content/proposals/review.ex:633
+#: lib/brando/content/proposals/review.ex:604
+#: lib/brando/content/proposals/review.ex:656
 #, elixir-autogen, elixir-format
 msgid "Block"
 msgstr ""
 
-#: lib/brando/content/proposals.ex:2158
+#: lib/brando/content/proposals.ex:2373
 #, elixir-autogen, elixir-format
 msgid "Content changed after this proposal was prepared. Review it again."
 msgstr ""
@@ -111,7 +111,7 @@ msgid "Each operation needs an \"op\"."
 msgstr ""
 
 #: lib/brando/content/proposals.ex:990
-#: lib/brando/content/proposals.ex:2101
+#: lib/brando/content/proposals.ex:2316
 #, elixir-autogen, elixir-format
 msgid "Entry validation: %{errors}"
 msgstr ""
@@ -131,7 +131,7 @@ msgstr ""
 msgid "No entry is created with this reference."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1742
+#: lib/brando/content/proposals.ex:1745
 #, elixir-autogen, elixir-format
 msgid "Only a proposal under review can be refined."
 msgstr ""
@@ -141,8 +141,8 @@ msgstr ""
 msgid "Placement is \"append\", {before: uid} or {after: uid}."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1809
-#: lib/brando/content/proposals.ex:1997
+#: lib/brando/content/proposals.ex:1812
+#: lib/brando/content/proposals.ex:2141
 #, elixir-autogen, elixir-format
 msgid "Resolve every blocking problem before applying."
 msgstr ""
@@ -177,7 +177,7 @@ msgstr ""
 msgid "This content type is not registered on this site."
 msgstr ""
 
-#: lib/brando/content/proposals/preview.ex:58
+#: lib/brando/content/proposals/preview.ex:60
 #, elixir-autogen, elixir-format
 msgid "This entry is not part of the proposal."
 msgstr ""
@@ -203,20 +203,21 @@ msgstr ""
 msgid "This module is not available in this block field."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1910
-#: lib/brando/content/proposals.ex:1913
-#: lib/brando/content/proposals.ex:2141
+#: lib/brando/content/proposals.ex:2054
+#: lib/brando/content/proposals.ex:2057
+#: lib/brando/content/proposals.ex:2356
 #, elixir-autogen, elixir-format
 msgid "This proposal belongs to another user, site or environment."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1894
+#: lib/brando/content/proposals.ex:2038
 #, elixir-autogen, elixir-format
 msgid "This proposal has expired. Prepare it again."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1839
-#: lib/brando/content/proposals.ex:1891
+#: lib/brando/content/proposals.ex:1842
+#: lib/brando/content/proposals.ex:1953
+#: lib/brando/content/proposals.ex:2035
 #, elixir-autogen, elixir-format
 msgid "This proposal is no longer under review."
 msgstr ""
@@ -253,27 +254,27 @@ msgid "You do not have permission to create this entry."
 msgstr ""
 
 #: lib/brando/content/proposals.ex:993
-#: lib/brando/content/proposals.ex:2107
+#: lib/brando/content/proposals.ex:2322
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to save this entry."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:596
+#: lib/brando/content/proposals/review.ex:619
 #, elixir-autogen, elixir-format
 msgid "a block"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:593
+#: lib/brando/content/proposals/review.ex:616
 #, elixir-autogen, elixir-format
 msgid "the new %{module} block"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:872
+#: lib/brando/content/proposals/review.ex:895
 #, elixir-autogen, elixir-format
 msgid "the new entry %{ref}"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:605
+#: lib/brando/content/proposals/review.ex:628
 #, elixir-autogen, elixir-format
 msgid "%{position} of %{count} in “%{parent}”"
 msgstr ""
@@ -288,7 +289,7 @@ msgstr ""
 msgid "Another block already uses this uid."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:546
+#: lib/brando/content/proposals/review.ex:569
 #, elixir-autogen, elixir-format
 msgid "At the end of %{block}"
 msgstr ""
@@ -368,7 +369,7 @@ msgstr ""
 msgid "The module has no ref %{name}."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:699
+#: lib/brando/content/proposals/review.ex:722
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
@@ -405,7 +406,7 @@ msgstr ""
 msgid "An anchor starts with a letter and holds letters, digits, - and _."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:696
+#: lib/brando/content/proposals/review.ex:719
 #, elixir-autogen, elixir-format
 msgid "File #%{id}"
 msgstr ""
@@ -436,7 +437,7 @@ msgstr ""
 msgid "Expected a numeric id."
 msgstr ""
 
-#: lib/brando/content/proposals.ex:1829
+#: lib/brando/content/proposals.ex:1832
 #, elixir-autogen, elixir-format
 msgid "Nothing would be left. Discard the proposal instead."
 msgstr ""
@@ -476,7 +477,48 @@ msgstr ""
 msgid "rows is a list of objects."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:424
+#: lib/brando/content/proposals/review.ex:447
 #, elixir-autogen, elixir-format
 msgid "the new entry"
+msgstr ""
+
+#: lib/brando/content/proposals.ex:1888
+#, elixir-autogen, elixir-format
+msgid "%{entries} changed after the proposal was applied. Undo would overwrite that."
+msgstr ""
+
+#: lib/brando/content/proposals.ex:1900
+#, elixir-autogen, elixir-format
+msgid "An entry has no earlier revision to go back to."
+msgstr ""
+
+#: lib/brando/content/proposals.ex:1867
+#, elixir-autogen, elixir-format
+msgid "Only an applied proposal can be undone."
+msgstr ""
+
+#: lib/brando/content/proposals.ex:2229
+#, elixir-autogen, elixir-format
+msgid "Only entries in this proposal that have a status can be published."
+msgstr ""
+
+#: lib/brando/content/proposals.ex:1864
+#, elixir-autogen, elixir-format
+msgid "This proposal has already been undone."
+msgstr ""
+
+#: lib/brando/content/proposals.ex:1950
+#, elixir-autogen, elixir-format
+msgid "This proposal is no longer available."
+msgstr ""
+
+#: lib/brando/content/proposals.ex:1924
+#: lib/brando/content/proposals.ex:1934
+#, elixir-autogen, elixir-format
+msgid "Undo failed: %{reason}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex:2232
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to publish this entry."
 msgstr ""

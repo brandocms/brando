@@ -99,5 +99,18 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   await expect(saved.nth(0).locator('.block-vars').getByLabel('Name')).toHaveValue('Bob Jones')
   await expect(saved.nth(1).locator('.block-vars').getByLabel('Name')).toHaveValue('Alice Smith')
   await expect(saved.nth(1).locator('.base-block').first()).not.toHaveClass(/disabled/)
+
+  // Undo, after confirming, puts Alice first again.
+  await page.goBack()
+  await syncLV(page)
+  page.once('dialog', dialog => dialog.accept())
+  await review.getByRole('button', { name: 'Undo' }).click()
+  await expect(review.getByRole('heading', { name: 'Undone' })).toBeVisible({ timeout: 15000 })
+
+  await page.goto(`/admin/pages/update/${id}`)
+  await syncLV(page)
+  const restored = page.locator('[data-module-multi="true"]').first().locator('.block-children [data-uid]')
+  await expect(restored.nth(0).locator('.block-vars').getByLabel('Name')).toHaveValue('Alice Smith', { timeout: 15000 })
+  await expect(restored.nth(1).locator('.block-vars').getByLabel('Name')).toHaveValue('Bob Jones')
   expect(errors).toEqual([])
 })

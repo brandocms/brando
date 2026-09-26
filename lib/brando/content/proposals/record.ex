@@ -9,7 +9,7 @@ defmodule Brando.Content.Proposals.Record do
   """
   use Ecto.Schema
 
-  @statuses ~w(pending approved applied superseded cancelled)
+  @statuses ~w(pending approved applied undone superseded cancelled)
 
   @type t :: %__MODULE__{}
 

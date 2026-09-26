@@ -744,3 +744,25 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
   entry's media with orientation for choosing. Rerun, it read the case, asked
   with 24 suggestions from it, and took its facts (the art deco starting
   point, typographer Bobby Tannam) from the case rather than inventing them.
+
+## Undo, publishing, sharing and language versions (26 September 2026)
+
+- **Undo.** Apply records the revision each entry was at (making one when an
+  entry has none), so `Proposals.undo/2` restores those revisions with
+  `Brando.Revisions.set_entry_to_revision/5` and deletes entries the proposal
+  created. It is refused when an entry changed after the apply — that work
+  would be lost — and the proposal becomes `undone`.
+- **Publishing.** New entries are drafts, and a proposal still cannot set a
+  status. The reviewer chooses "Publish when applied" per new entry or draft;
+  `apply/4` takes `publish: [keys]` and needs the publish permission.
+- **Editor's after-save work.** Apply now runs `Blueprint.AfterSave.run/5` for
+  each saved entry, as the admin form does — trait callbacks and the sync of
+  synchronized translations — which plain context updates skip.
+- **Language versions.** `entry_outline` lists an entry's other language
+  versions and whether they follow it by sync; each review card says whether
+  they change here, follow on apply (with text to translate), or stay as they
+  are. The prompt has the assistant ask before changing only one language.
+- **Sharing.** "Share for review" makes a signed link (valid for the
+  proposal's day) that opens it read-only for colleagues, with page previews;
+  only its author applies it. The page preview opens in its own tab, and
+  "Share a link" makes the editor's public snapshot link of the proposed page.

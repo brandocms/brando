@@ -1154,10 +1154,13 @@ defmodule Brando.Content.Proposals do
   Returns `%{target => changeset}`; nothing is saved.
   """
   @spec materialize(Proposal.t(), term()) :: {:ok, %{Proposal.target() => Changeset.t()}} | {:error, String.t()}
-  def materialize(%Proposal{} = proposal, actor) do
+  def materialize(%Proposal{} = proposal, actor, opts \\ []) do
     Error.protect(fn ->
-      authorize_proposal!(proposal, actor)
-      materialize!(proposal, current!(proposal, actor), user!(actor))
+      # A proposal shared for review is read by a colleague, who needs only
+      # to be able to read its entries.
+      if opts[:shared], do: Transfer.ensure_scope!(actor), else: authorize_proposal!(proposal, actor)
+      action = if opts[:shared], do: :read, else: :update
+      materialize!(proposal, current!(proposal, actor, action), user!(actor))
     end)
   end
 
@@ -1841,6 +1844,134 @@ defmodule Brando.Content.Proposals do
     record
   end
 
+  @doc """
+  Undo an applied proposal: each entry it changed goes back to the revision
+  it was at before, and each entry it created is deleted.
+
+  Refused, with nothing changed, when an entry has been edited since the
+  proposal was applied — undo would overwrite that work — or when an entry
+  has no revision to go back to.
+  """
+  @spec undo(Ecto.UUID.t(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
+  def undo(id, actor) do
+    Error.protect(fn ->
+      record = record!(id, actor)
+      user = user!(actor)
+      receipt = receipt(id, actor)
+
+      cond do
+        record.status == "undone" ->
+          Error.fail!(dgettext("content_proposals", "This proposal has already been undone."))
+
+        record.status != "applied" or is_nil(receipt) ->
+          Error.fail!(dgettext("content_proposals", "Only an applied proposal can be undone."))
+
+        true ->
+          :ok
+      end
+
+      saved =
+        for {key, %{"schema" => name, "id" => entry_id, "fingerprint" => fingerprint}} <- receipt.after do
+          {:ok, schema} = Codec.schema(name)
+          {key, schema, entry_id, fingerprint}
+        end
+
+      changed =
+        for {_key, schema, entry_id, fingerprint} <- saved,
+            entry = load!({schema, entry_id}, actor),
+            Transfer.entry_fingerprint(entry) != fingerprint,
+            do: Catalog.describe(entry).title
+
+      if changed != [],
+        do:
+          Error.fail!(
+            dgettext("content_proposals", "%{entries} changed after the proposal was applied. Undo would overwrite that.",
+              entries: Enum.join(changed, ", ")
+            )
+          )
+
+      without_revision =
+        for {key, _schema, _id, _} <- saved,
+            !String.starts_with?(key, "new:"),
+            is_nil(receipt.before[key]["revision"]),
+            do: key
+
+      if without_revision != [],
+        do: Error.fail!(dgettext("content_proposals", "An entry has no earlier revision to go back to."))
+
+      {:ok, receipt} =
+        Repo.transaction(fn ->
+          Enum.each(saved, fn {key, schema, entry_id, _} ->
+            if String.starts_with?(key, "new:"),
+              do: delete_entry!(schema, entry_id, user),
+              else: restore!(schema, entry_id, receipt.before[key]["revision"], user)
+          end)
+
+          record |> Changeset.change(status: "undone") |> Repo.update!()
+
+          receipt
+          |> Changeset.change(mappings: Map.put(receipt.mappings, "undone_at", DateTime.to_iso8601(DateTime.utc_now())))
+          |> Repo.update!()
+        end)
+
+      receipt
+    end)
+  end
+
+  defp restore!(schema, id, revision, user) do
+    case Brando.Revisions.set_entry_to_revision(schema, id, revision, user) do
+      {:ok, _entry} -> :ok
+      {:error, reason} -> Error.fail!(dgettext("content_proposals", "Undo failed: %{reason}", reason: inspect(reason)))
+    end
+  end
+
+  defp delete_entry!(schema, id, user) do
+    context = schema.__modules__().context
+    singular = schema.__naming__().singular
+
+    case Kernel.apply(context, :"delete_#{singular}", [id, user]) do
+      {:ok, _} -> :ok
+      {:error, reason} -> Error.fail!(dgettext("content_proposals", "Undo failed: %{reason}", reason: inspect(reason)))
+    end
+  end
+
+  @doc """
+  Load `version` of proposal `id` for a colleague it was shared with, to
+  review it read-only. The viewer must be able to read its entries; only the
+  proposing user can approve and apply it.
+  """
+  @spec get_shared(Ecto.UUID.t(), integer(), term()) :: {:ok, Proposal.t()} | {:error, String.t()}
+  def get_shared(id, version, viewer) do
+    Error.protect(fn ->
+      Transfer.ensure_scope!(viewer)
+
+      record =
+        Repo.one(from(r in Record, where: r.id == ^id and r.scope == ^Transfer.scope() and r.version == ^version)) ||
+          Error.fail!(dgettext("content_proposals", "This proposal is no longer available."))
+
+      if record.status not in ~w(pending approved applied),
+        do: Error.fail!(dgettext("content_proposals", "This proposal is no longer under review."))
+
+      rebuild!(record, viewer, :read)
+    end)
+  end
+
+  @share_salt "brando-proposal-share"
+
+  @doc "A token that lets colleagues review `version` of proposal `id` for a day."
+  @spec share_token(Proposal.t()) :: String.t()
+  def share_token(%Proposal{id: id, version: version}),
+    do: Phoenix.Token.sign(Brando.endpoint(), @share_salt, %{"id" => id, "version" => version})
+
+  @doc "The proposal id and version a share token names, while it is valid."
+  @spec verify_share_token(String.t()) :: {:ok, {Ecto.UUID.t(), integer()}} | {:error, atom()}
+  def verify_share_token(token) do
+    case Phoenix.Token.verify(Brando.endpoint(), @share_salt, token, max_age: div(@ttl, 1000)) do
+      {:ok, %{"id" => id, "version" => version}} -> {:ok, {id, version}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   @doc "Cancel a proposal under review. Content is untouched."
   @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
   def cancel(id, actor) do
@@ -1860,7 +1991,7 @@ defmodule Brando.Content.Proposals do
   returns its receipt.
   """
   @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
-  def apply(id, version, actor) do
+  def apply(id, version, actor, opts \\ []) do
     result =
       Error.protect(fn ->
         record = record!(id, actor)
@@ -1869,14 +2000,27 @@ defmodule Brando.Content.Proposals do
           {receipt(id, actor), []}
         else
           reviewable!(record, version, "approved")
-          record |> rebuild!(actor) |> apply!(actor)
+          record |> rebuild!(actor) |> apply!(actor, opts)
         end
       end)
 
     with {:ok, {receipt, saved}} <- result do
-      Enum.each(saved, &announce(&1, actor))
+      Enum.each(saved, &after_apply(&1, actor))
       {:ok, receipt}
     end
+  end
+
+  # What follows an editor's save, once the proposal is committed: the
+  # traits' after-save work and the sync of synchronized translations, then
+  # notifications and broadcasts.
+  defp after_apply({target, entry, changeset}, actor) do
+    try do
+      Brando.Blueprint.AfterSave.run(entry.__struct__, entry, changeset, user!(actor))
+    rescue
+      error -> require(Logger) && Logger.error("After-save of an applied proposal failed: " <> Exception.message(error))
+    end
+
+    announce({target, entry}, actor)
   end
 
   defp reviewable!(record, version, status) do
@@ -1913,7 +2057,7 @@ defmodule Brando.Content.Proposals do
       Error.fail!(dgettext("content_proposals", "This proposal belongs to another user, site or environment."))
   end
 
-  defp rebuild!(record, actor) do
+  defp rebuild!(record, actor, action \\ :update) do
     {:ok, operations} = Codec.decode_all(record.operations)
     creates = for %CreateEntry{} = op <- operations, into: %{}, do: {{:new, op.ref}, op.schema}
 
@@ -1923,7 +2067,7 @@ defmodule Brando.Content.Proposals do
           match?({schema, id} when schema != :new and is_integer(id), target),
           uniq: true,
           into: %{},
-          do: {target, load!(target, actor)}
+          do: {target, load!(target, actor, action: action)}
 
     proposal = %Proposal{
       id: record.id,
@@ -1990,7 +2134,7 @@ defmodule Brando.Content.Proposals do
     }
   end
 
-  defp apply!(proposal, actor) do
+  defp apply!(proposal, actor, opts) do
     authorize_proposal!(proposal, actor)
 
     if proposal.problems != [],
@@ -1998,11 +2142,11 @@ defmodule Brando.Content.Proposals do
 
     case receipt(proposal.id, actor) do
       %Receipt{} = receipt -> {receipt, []}
-      nil -> apply_new!(proposal, actor)
+      nil -> apply_new!(proposal, actor, opts)
     end
   end
 
-  defp apply_new!(proposal, actor) do
+  defp apply_new!(proposal, actor, opts) do
     {:ok, result} =
       Repo.transaction(fn ->
         Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
@@ -2011,15 +2155,16 @@ defmodule Brando.Content.Proposals do
 
         case receipt(proposal.id, actor) do
           %Receipt{} = receipt -> {receipt, []}
-          nil -> apply_locked!(proposal, actor, user!(actor))
+          nil -> apply_locked!(proposal, actor, user!(actor), opts)
         end
       end)
 
     result
   end
 
-  defp apply_locked!(proposal, actor, user) do
+  defp apply_locked!(proposal, actor, user, opts) do
     record = record!(proposal.id, actor, lock: true)
+    publish = publish_targets!(proposal, actor, opts[:publish] || [])
 
     unless record.status == "approved" and record.version == proposal.version,
       do: Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
@@ -2032,14 +2177,24 @@ defmodule Brando.Content.Proposals do
 
     Transfer.lock_records!(%{fields: Enum.map(locked, &%{entry: &1}), bindings: %{}})
     entries = current!(proposal, actor)
+    # The revision each entry is at now: undo restores it.
+    revisions = Map.new(entries, fn {target, entry} -> {target, revision_before(target, entry, user)} end)
 
     # Create first: later stages resolve `{:new, ref}` to the saved id.
     # Otherwise entries are saved in the order the operations name them.
     saved =
       proposal
       |> materialize!(entries, user)
+      |> Enum.map(fn {target, cs} ->
+        if Proposal.key(target) in publish,
+          do: {target, Changeset.put_change(cs, :status, :published)},
+          else: {target, cs}
+      end)
       |> Enum.sort_by(fn {target, _} -> {!match?({:new, _}, target), first_mention(proposal, target)} end)
-      |> Enum.map(&save!(&1, user))
+      |> Enum.map(fn {target, cs} = pair ->
+        {^target, entry} = save!(pair, user)
+        {target, entry, cs}
+      end)
 
     receipt =
       Repo.insert!(%Receipt{
@@ -2047,10 +2202,11 @@ defmodule Brando.Content.Proposals do
         version: proposal.version,
         scope: proposal.scope,
         actor_id: user.id,
-        before: Map.new(entries, &snapshot(&1, proposal)),
-        after: Map.new(saved, &saved_fingerprint(&1, actor)),
+        before: Map.new(entries, &snapshot(&1, proposal, revisions)),
+        after: Map.new(saved, fn {target, entry, _cs} -> saved_fingerprint({target, entry}, actor) end),
         mappings: %{
-          "created" => for({{:new, ref}, entry} <- saved, into: %{}, do: {ref, entry.id}),
+          "created" => for({{:new, ref}, entry, _cs} <- saved, into: %{}, do: {ref, entry.id}),
+          "published" => publish,
           "effects" => encode_effects(proposal.effects)
         }
       })
@@ -2059,8 +2215,67 @@ defmodule Brando.Content.Proposals do
     {receipt, saved}
   end
 
-  defp snapshot({target, entry}, proposal),
-    do: {Proposal.key(target), %{"fingerprint" => proposal.fingerprints[target], "entry" => Params.snapshot(entry)}}
+  # Publishing is the reviewer's choice at apply, per entry: new entries are
+  # drafts otherwise, and drafts stay drafts. It takes the publish permission.
+  defp publish_targets!(proposal, actor, keys) do
+    keys = Enum.map(keys, &to_string/1)
+
+    for key <- keys do
+      target = Enum.find(Map.keys(proposal.targets), &(Proposal.key(&1) == key))
+      schema = target && proposal_schema(proposal, target)
+
+      cond do
+        is_nil(schema) or not schema.has_trait(Brando.Trait.Status) ->
+          Error.fail!(dgettext("content_proposals", "Only entries in this proposal that have a status can be published."))
+
+        Boundary.authorize(actor, :publish, schema) != :ok ->
+          Error.fail!(dgettext("content_proposals", "You do not have permission to publish this entry."))
+
+        true ->
+          key
+      end
+    end
+  end
+
+  defp proposal_schema(_proposal, {schema, id}) when is_integer(id), do: schema
+  defp proposal_schema(proposal, target), do: Map.get(proposal.targets, target)
+
+  # An entry never saved with a revision gets one of its state now, so undo
+  # has something to go back to.
+  defp revision_before(target, entry, user) do
+    case active_revision(target) do
+      nil ->
+        with true <- elem(target, 0).has_trait(Brando.Trait.Revisioned),
+             {:ok, revision} <- Brando.Revisions.create_revision(entry, user) do
+          revision.revision
+        else
+          _ -> nil
+        end
+
+      number ->
+        number
+    end
+  end
+
+  defp active_revision({schema, id}) do
+    if schema.has_trait(Brando.Trait.Revisioned) do
+      case Brando.Revisions.get_active_revision(schema, id) do
+        {:ok, {_revision, {number, _entry}}} -> number
+        _ -> nil
+      end
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp snapshot({target, entry}, proposal, revisions) do
+    {Proposal.key(target),
+     %{
+       "fingerprint" => proposal.fingerprints[target],
+       "entry" => Params.snapshot(entry),
+       "revision" => revisions[target]
+     }}
+  end
 
   defp saved_fingerprint({target, entry}, actor) do
     entry = load!({entry.__struct__, entry.id}, actor)
@@ -2149,8 +2364,8 @@ defmodule Brando.Content.Proposals do
   has a new version.
   """
   @spec current!(Proposal.t(), term()) :: %{Proposal.target() => struct()}
-  def current!(proposal, actor) do
-    entries = Map.new(proposal.fingerprints, fn {target, _} -> {target, load!(target, actor)} end)
+  def current!(proposal, actor, action \\ :update) do
+    entries = Map.new(proposal.fingerprints, fn {target, _} -> {target, load!(target, actor, action: action)} end)
 
     unless Enum.all?(entries, fn {target, entry} -> Transfer.entry_fingerprint(entry) == proposal.fingerprints[target] end),
            do:
@@ -2165,7 +2380,8 @@ defmodule Brando.Content.Proposals do
     entries
   end
 
-  defp load!({schema, id}, actor, opts \\ []), do: Catalog.load!(schema, id, actor, :update, opts)
+  defp load!({schema, id}, actor, opts \\ []),
+    do: Catalog.load!(schema, id, actor, Keyword.get(opts, :action, :update), Keyword.delete(opts, :action))
 
   defp fetch_module(reference) do
     {origin, id} = Content.SharedLibrary.reference(reference)

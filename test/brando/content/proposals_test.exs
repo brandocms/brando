@@ -126,7 +126,9 @@ defmodule Brando.Content.ProposalsTest do
     assert created.status == :draft
     assert created.title == "Sommerro"
 
-    assert {revisions(c.identity), revisions(c.naming)} == {elem(revisions, 0) + 1, elem(revisions, 1) + 1}
+    # The pages had no revision: applying keeps one of how they were, for
+    # undo, and the save adds its own.
+    assert {revisions(c.identity), revisions(c.naming)} == {elem(revisions, 0) + 2, elem(revisions, 1) + 2}
     assert block_count() == blocks + 2
     assert receipt.mappings["effects"]["inserted_blocks"] == 2
 
@@ -1230,6 +1232,129 @@ defmodule Brando.Content.ProposalsTest do
       assert {:error, _} = Proposals.leave_out(proposal.id, proposal.version, [1], c.user)
       assert {:error, message} = Proposals.leave_out(refined.id, refined.version, [0], c.user)
       assert message =~ "Discard"
+    end
+  end
+
+  describe "publishing, undo, sharing and language versions" do
+    setup c, do: Brando.ProposalFixtures.multi_context(c)
+
+    test "the reviewer publishes a new entry as the proposal is applied", c do
+      ops = [
+        %CreateEntry{
+          schema: Page,
+          ref: "news",
+          fields: %{title: "News", uri: "news", language: "en", template: "default.html"}
+        }
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      assert {:ok, receipt} = Proposals.apply(proposal.id, proposal.version, c.user, publish: ["new:news"])
+      assert receipt.mappings["published"] == ["new:news"]
+      assert Repo.get!(Page, receipt.mappings["created"]["news"]).status == :published
+
+      # A key the proposal does not name is refused, and nothing is saved.
+      assert {:ok, proposal} =
+               Proposals.propose([%{hd(ops) | ref: "other", fields: %{hd(ops).fields | uri: "other"}}], c.user)
+
+      assert {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      assert {:error, _} = Proposals.apply(proposal.id, proposal.version, c.user, publish: ["Brando.Pages.Page:-1"])
+      refute Repo.get_by(Page, uri: "other")
+    end
+
+    test "undo puts every entry back and deletes new ones", c do
+      [alpha, beta, gamma] = c.child_uids
+      target = {Page, c.work.id}
+      before = {uids(c.work, c.user), child_uids(c), sizes(c)}
+
+      # The fixture page was never saved with a revision; applying makes one
+      # of its state first.
+      assert Brando.Revisions.get_active_revision(Page, c.work.id) == :error
+
+      ops = [
+        %SetBlockValues{target: target, block_uid: beta, values: %{size: "50"}},
+        %MoveBlock{target: target, block_uid: gamma, placement: {:before, alpha}},
+        %DeleteBlock{target: target, block_uid: alpha},
+        %InsertBlock{target: target, module: c.text_module.id, texts: %{body: "<p>New</p>"}},
+        %CreateEntry{
+          schema: Page,
+          ref: "news",
+          fields: %{title: "News", uri: "news", language: "en", template: "default.html"}
+        }
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert {:ok, receipt} = approve_and_apply(proposal, c.user)
+      created = receipt.mappings["created"]["news"]
+      refute {uids(c.work, c.user), child_uids(c), sizes(c)} == before
+
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+      assert {uids(c.work, c.user), child_uids(c), sizes(c)} == before
+      assert Repo.get(Page, created) == nil or Repo.get(Page, created).deleted_at
+      assert {:ok, %{status: "undone"}} = Proposals.get(proposal.id, c.user)
+      assert {:error, message} = Proposals.undo(proposal.id, c.user)
+      assert message =~ "already"
+    end
+
+    test "undo is refused when an entry changed after the proposal was applied", c do
+      {:ok, _} = Brando.Revisions.create_revision(load(c.work, c.user), c.user)
+      ops = [%SetFields{target: {Page, c.work.id}, fields: %{title: "Work, renamed"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      {:ok, _} = Brando.Pages.update_page(c.work.id, %{title: "Edited by hand"}, c.user)
+      assert {:error, message} = Proposals.undo(proposal.id, c.user)
+      assert message =~ "Edited by hand"
+      assert Repo.get!(Page, c.work.id).title == "Edited by hand"
+    end
+
+    test "a colleague reviews a shared proposal and previews its pages", c do
+      ops = [%SetBlockValues{target: {Page, c.work.id}, block_uid: hd(c.child_uids), values: %{size: "50"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+
+      token = Proposals.share_token(proposal)
+      assert {:ok, {id, version}} = Proposals.verify_share_token(token)
+      assert {id, version} == {proposal.id, proposal.version}
+      assert {:error, _} = Proposals.verify_share_token(token <> "x")
+
+      colleague = Factory.insert(:random_user)
+      assert {:ok, shared} = Proposals.get_shared(id, version, colleague)
+      assert shared.operations == proposal.operations
+      # Only the proposing user applies it.
+      assert {:error, _} = Proposals.approve(id, version, colleague)
+
+      assert {:ok, %{key: key, html: html}} =
+               Preview.render(shared, {Page, c.work.id}, colleague, shared: true, preview_target: :blocks)
+
+      assert html =~ "size-50"
+      Preview.discard([key])
+
+      assert {:ok, url, days} = Preview.share(proposal, {Page, c.work.id}, c.user, preview_target: :blocks)
+      assert url =~ "/__p__/"
+      assert days > 0
+    end
+
+    test "language versions are listed, and a synchronized source's translations follow on apply", c do
+      alias Brando.SyncTest.Article
+
+      {:ok, source} =
+        Brando.SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "published"}, c.user)
+
+      {:ok, english} = Brando.Translations.create_target(Article, source.id, :en, c.user)
+
+      assert {:source, [%{language: "en", id: id, synchronized: true}]} =
+               Brando.Content.Proposals.Languages.versions(Repo.get!(Article, source.id))
+
+      assert id == english.id
+
+      ops = [%InsertBlock{target: {Article, source.id}, module: c.text_module.id, texts: %{body: "<p>Nytt avsnitt</p>"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert [%{languages: [%{language: "en", state: :follows}]}] = Review.entries(proposal)
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      pending = Brando.Translations.get_pending_version(Article, english.id)
+      assert pending
+      assert Enum.any?(pending.work_items, &(&1.kind == :translate))
     end
   end
 

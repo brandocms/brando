@@ -339,23 +339,25 @@ defmodule Brando.Content.Proposals.Tools do
     assets = entry_assets(schema, entry)
     dimensions = dimensions(roots |> Map.values() |> List.flatten(), Map.values(assets))
 
-    head = %{
-      content_type: Codec.content_type(schema),
-      id: entry.id,
-      title: Catalog.describe(entry).title,
-      status: to_string(Map.get(entry, :status)),
-      live: Map.get(entry, :status) == :published,
-      fields: scalar_fields(entry),
-      lists:
-        for(
-          {name, _} <- EntryFields.lists(schema),
-          current = EntryFields.current(entry, name),
-          current not in [nil, ""],
-          into: %{},
-          do: {name, current}
-        ),
-      media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end)
-    }
+    head =
+      %{
+        content_type: Codec.content_type(schema),
+        id: entry.id,
+        title: Catalog.describe(entry).title,
+        status: to_string(Map.get(entry, :status)),
+        live: Map.get(entry, :status) == :published,
+        fields: scalar_fields(entry),
+        lists:
+          for(
+            {name, _} <- EntryFields.lists(schema),
+            current = EntryFields.current(entry, name),
+            current not in [nil, ""],
+            into: %{},
+            do: {name, current}
+          ),
+        media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end)
+      }
+      |> put_present(:languages, languages(entry))
 
     Enum.find_value(@outline_budgets, fn budget ->
       {blocks, described} =
@@ -851,6 +853,26 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp ref_settings(refs),
     do: for(ref <- refs, current = RefConfig.current(ref), current != %{}, into: %{}, do: {ref.name, current})
+
+  # Other language versions, and whether they follow this entry by sync.
+  defp languages(entry) do
+    case Brando.Content.Proposals.Languages.versions(entry) do
+      {_role, []} ->
+        nil
+
+      {role, versions} ->
+        %{
+          role: role && to_string(role),
+          versions: versions,
+          note:
+            if(role == :source,
+              do:
+                "Synchronized versions get this entry's structure and media when a proposal is applied, with its new text to translate; change them only for other things.",
+              else: "Change another language version only when the editor asks; it is its own entry."
+            )
+        }
+    end
+  end
 
   defp put_present(map, _key, value) when value in [nil, "", [], %{}], do: map
   defp put_present(map, key, value), do: Map.put(map, key, value)

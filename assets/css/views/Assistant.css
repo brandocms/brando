@@ -1002,3 +1002,64 @@
   .assistant-button [data-icon] { width: 14px; height: 14px; }
   .assistant-apply { margin-left: auto; }
 }
+
+/* Sharing: a review link for colleagues, a public link to a proposed page,
+   and opening the preview in its own tab. */
+.assistant-share { margin-top: 8px; }
+
+.assistant-share-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+
+  label { grid-column: 1 / -1; color: var(--assistant-muted); }
+  input {
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--assistant-line);
+    border-radius: 4px;
+    background: var(--assistant-surface);
+    font-family: var(--brando-font-mono, ui-monospace, monospace);
+    font-size: 11px;
+  }
+  a { color: var(--assistant-accent); }
+}
+
+.assistant-frame-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--assistant-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  [data-icon] { width: 12px; height: 12px; }
+  &:hover { color: var(--assistant-accent); }
+}
+
+/* An entry's other language versions, and what the proposal does to them. */
+.assistant-languages {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--assistant-line);
+  font-size: 12px;
+
+  > span { color: var(--assistant-muted); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+  ul { display: grid; gap: 2px; padding: 0; list-style: none; }
+  li { display: flex; gap: 6px; }
+  li span { color: var(--assistant-muted); }
+  li.is-follows span, li.is-changed span { color: #2f6a4d; }
+}
+
+.assistant-publish { margin-top: 10px; }
+.assistant-undo { display: inline-flex; align-items: center; gap: 4px; justify-self: start; }
+.assistant-undo [data-icon] { width: 14px; height: 14px; }
