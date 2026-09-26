@@ -203,7 +203,10 @@
   line-height: 1.6;
   overflow-wrap: anywhere;
 
-  > * + * { margin-top: 10px; }
+  /* The element in each selector lifts it to (0,1,1), so it outranks the
+     workspace reset that zeroes p, ul and ol margins. */
+  > :is(p, ul, ol, pre, blockquote, h1, h2, h3, h4, table) + * { margin-top: 10px; }
+  > * + :is(ul, ol), > :is(ul, ol) + * { margin-top: 14px; }
   strong { font-weight: 600; }
   em { font-style: italic; }
   ul, ol { padding-left: 20px; }
