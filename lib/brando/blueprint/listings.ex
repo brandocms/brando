@@ -79,8 +79,8 @@ defmodule Brando.Blueprint.Listings do
   end
 
   @doc """
-  The value a filter holds when nobody has touched it, as the context filter
-  receives it; `nil` when it does not apply.
+  What an untouched filter sends to the context filter, so a listing's first
+  page matches what its toggles show; `nil` when the filter does not apply.
 
   A :boolean filter rests at `"true"` with `default: true`, at `"false"` with
   `off: false`, and otherwise does not apply.
