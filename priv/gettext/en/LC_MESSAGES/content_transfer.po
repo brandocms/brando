@@ -281,8 +281,8 @@ msgstr ""
 msgid "Choose a destination entry and block field."
 msgstr ""
 
-#: lib/brando/content/transfer/catalog.ex:234
-#: lib/brando/content/transfer/catalog.ex:238
+#: lib/brando/content/transfer/catalog.ex:245
+#: lib/brando/content/transfer/catalog.ex:249
 #, elixir-autogen, elixir-format
 msgid "Choose a destination record."
 msgstr ""
@@ -1564,12 +1564,12 @@ msgstr ""
 msgid "The relationship %{value1} has an incompatible content type."
 msgstr ""
 
-#: lib/brando/content/transfer/catalog.ex:55
+#: lib/brando/content/transfer/catalog.ex:61
 #, elixir-autogen, elixir-format
 msgid "The selected entry has been deleted."
 msgstr ""
 
-#: lib/brando/content/transfer/catalog.ex:54
+#: lib/brando/content/transfer/catalog.ex:60
 #, elixir-autogen, elixir-format
 msgid "The selected entry is no longer available."
 msgstr ""
@@ -1584,7 +1584,7 @@ msgstr ""
 msgid "This Blueprint needs a generated integer entry ID."
 msgstr ""
 
-#: lib/brando/content/transfer/catalog.ex:46
+#: lib/brando/content/transfer/catalog.ex:52
 #, elixir-autogen, elixir-format
 msgid "This block field does not exist on the destination."
 msgstr ""
@@ -1594,8 +1594,8 @@ msgstr ""
 msgid "This bundle has no external dependencies."
 msgstr ""
 
-#: lib/brando/content/transfer/catalog.ex:32
-#: lib/brando/content/transfer/catalog.ex:193
+#: lib/brando/content/transfer/catalog.ex:38
+#: lib/brando/content/transfer/catalog.ex:204
 #, elixir-autogen, elixir-format
 msgid "This content type is not registered on this site."
 msgstr ""
@@ -2027,7 +2027,7 @@ msgstr ""
 msgid "Update"
 msgstr ""
 
-#: lib/brando/content/transfer/catalog.ex:62
+#: lib/brando/content/transfer/catalog.ex:68
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to access this content."
 msgstr ""

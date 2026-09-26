@@ -14,8 +14,14 @@ defmodule Brando.Content.Transfer.Catalog do
     |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
   end
 
-  @doc "Content types a proposal can change: those with block fields, and other entries."
-  def editable_schemas, do: (schemas() ++ entry_schemas()) |> Enum.uniq() |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
+  @doc """
+  Content types a proposal can change: those with block fields, and other
+  entries editors manage in an admin listing.
+  """
+  def editable_schemas do
+    listed = Enum.filter(entry_schemas(), &(function_exported?(&1, :__listings__, 0) and &1.__listings__() != []))
+    (schemas() ++ listed) |> Enum.uniq() |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
+  end
 
   def entry_schemas do
     Brando.Authorization.Catalog.schemas()
@@ -72,7 +78,12 @@ defmodule Brando.Content.Transfer.Catalog do
         do: [
           if(opts[:entries], do: Brando.Content.Transfer.EntryCodec.schema!(opts[:schema]), else: schema!(opts[:schema]))
         ],
-        else: if(opts[:entries], do: entry_schemas(), else: schemas())
+        else:
+          (cond do
+             opts[:entries] -> entry_schemas()
+             opts[:editable] -> editable_schemas()
+             true -> schemas()
+           end)
 
     pattern = "%" <> escape_like(String.slice(query, 0, 150)) <> "%"
 

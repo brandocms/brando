@@ -70,7 +70,9 @@ defmodule Brando.Content.Proposals.Tools do
     },
     %{
       name: "search_entries",
-      description: "Search entries the user can edit by title. Returns ids to use as proposal targets.",
+      description:
+        "Search entries the user can edit by title or name, in every content type. Returns ids to use as " <>
+          "proposal targets. An empty query with a content_type lists that type's entries.",
       parameters: %{
         type: "object",
         properties: %{
@@ -321,7 +323,7 @@ defmodule Brando.Content.Proposals.Tools do
 
     results =
       actor
-      |> Catalog.search(to_string(args["query"] || ""), action: :update, schemas: schemas)
+      |> Catalog.search(to_string(args["query"] || ""), action: :update, schemas: schemas, editable: true)
       |> Enum.take(limit(args))
       |> Enum.map(fn entry ->
         %{

@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:260
+#: lib/brando/ai/agent/loop.ex:266
 #, elixir-autogen, elixir-format
 msgid "Checking a module's slots"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:265
+#: lib/brando/ai/agent/loop.ex:271
 #, elixir-autogen, elixir-format
 msgid "Checking the proposal"
 msgstr ""
@@ -31,32 +31,32 @@ msgstr ""
 msgid "I stopped after %{steps} steps. Tell me how to continue."
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:261
+#: lib/brando/ai/agent/loop.ex:267
 #, elixir-autogen, elixir-format
 msgid "Looking at the available modules"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:271
+#: lib/brando/ai/agent/loop.ex:277
 #, elixir-autogen, elixir-format
 msgid "Looking at the site's content"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:259
+#: lib/brando/ai/agent/loop.ex:265
 #, elixir-autogen, elixir-format
 msgid "Reading an entry"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:258
+#: lib/brando/ai/agent/loop.ex:261
 #, elixir-autogen, elixir-format
 msgid "Searching for “%{query}”"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:262
+#: lib/brando/ai/agent/loop.ex:268
 #, elixir-autogen, elixir-format
 msgid "Searching the media library"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:311
+#: lib/brando/ai/agent/loop.ex:317
 #, elixir-autogen, elixir-format
 msgid "Something went wrong: %{error}"
 msgstr ""
@@ -76,7 +76,7 @@ msgstr ""
 msgid "The assistant requires an authenticated user."
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:282
+#: lib/brando/ai/agent/loop.ex:288
 #, elixir-autogen, elixir-format
 msgid "The assistant's token budget is used up. Nothing more was sent to the model."
 msgstr ""
@@ -107,12 +107,12 @@ msgstr ""
 msgid "You do not have permission to use the assistant."
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:264
+#: lib/brando/ai/agent/loop.ex:270
 #, elixir-autogen, elixir-format
 msgid "Attaching the folder's media"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:263
+#: lib/brando/ai/agent/loop.ex:269
 #, elixir-autogen, elixir-format
 msgid "Looking for the folder"
 msgstr ""
@@ -157,27 +157,32 @@ msgstr ""
 msgid "You do not have permission to change the assistant's guidance."
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:266
+#: lib/brando/ai/agent/loop.ex:272
 #, elixir-autogen, elixir-format
 msgid "Looking at the attachments"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:268
+#: lib/brando/ai/agent/loop.ex:274
 #, elixir-autogen, elixir-format
 msgid "Asking you for media"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:267
+#: lib/brando/ai/agent/loop.ex:273
 #, elixir-autogen, elixir-format
 msgid "Looking at the entries a block can show"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:269
+#: lib/brando/ai/agent/loop.ex:275
 #, elixir-autogen, elixir-format
 msgid "Looking at an entry's media"
 msgstr ""
 
-#: lib/brando/ai/agent/loop.ex:270
+#: lib/brando/ai/agent/loop.ex:276
 #, elixir-autogen, elixir-format
 msgid "Looking at the pictures"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex:260
+#, elixir-autogen, elixir-format
+msgid "Listing entries"
 msgstr ""

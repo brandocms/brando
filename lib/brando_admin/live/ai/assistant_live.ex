@@ -2032,7 +2032,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
     if result["error"], do: gettext("%{step} (did not work)", step: label), else: label
   end
 
-  defp step_text("search_entries", args, _), do: gettext("Searched for “%{query}”", query: args["query"])
+  defp step_text("search_entries", args, _) do
+    query = String.trim(to_string(args["query"]))
+    type = args["content_type"] && content_type_plural(args["content_type"])
+
+    cond do
+      query == "" and type -> gettext("Listed %{type}", type: type)
+      query == "" -> gettext("Listed entries")
+      type -> gettext("Searched for “%{query}” in %{type}", query: query, type: type)
+      true -> gettext("Searched for “%{query}”", query: query)
+    end
+  end
 
   defp step_text("entry_outline", _args, %{"title" => title}) when is_binary(title),
     do: gettext("Read “%{title}”", title: title)
@@ -2088,6 +2098,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp step_text("prepare_proposal", _, _), do: gettext("Prepared the proposal")
   defp step_text(_, _, _), do: gettext("Looked at the site's content")
+
+  defp content_type_plural(name) do
+    case Brando.Content.Proposals.Codec.schema(name) do
+      {:ok, schema} -> Brando.Blueprint.get_plural(schema)
+      :error -> name
+    end
+  end
 
   defp content_type_label(name) do
     case Brando.Content.Proposals.Codec.schema(name) do

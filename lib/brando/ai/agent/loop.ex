@@ -255,7 +255,13 @@ defmodule Brando.AI.Agent.Loop do
 
   defp message(_), do: []
 
-  defp progress("search_entries", args), do: dgettext("ai_agent", "Searching for “%{query}”", query: args["query"])
+  defp progress("search_entries", args) do
+    case String.trim(to_string(args["query"])) do
+      "" -> dgettext("ai_agent", "Listing entries")
+      query -> dgettext("ai_agent", "Searching for “%{query}”", query: query)
+    end
+  end
+
   defp progress("entry_outline", _), do: dgettext("ai_agent", "Reading an entry")
   defp progress("describe_module", _), do: dgettext("ai_agent", "Checking a module's slots")
   defp progress("list_modules", _), do: dgettext("ai_agent", "Looking at the available modules")

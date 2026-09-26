@@ -274,8 +274,8 @@ msgstr "Velg en innholdspakke"
 msgid "Choose a destination entry and block field."
 msgstr "Velg en måloppføring og et blokkfelt."
 
-#: lib/brando/content/transfer/catalog.ex:234
-#: lib/brando/content/transfer/catalog.ex:238
+#: lib/brando/content/transfer/catalog.ex:245
+#: lib/brando/content/transfer/catalog.ex:249
 #, elixir-autogen, elixir-format
 msgid "Choose a destination record."
 msgstr "Velg en oppføring på målstedet."
@@ -1557,12 +1557,12 @@ msgstr "Den refererte oppføringen er slettet."
 msgid "The relationship %{value1} has an incompatible content type."
 msgstr "Relasjonen %{value1} har en innholdstype som ikke er kompatibel."
 
-#: lib/brando/content/transfer/catalog.ex:55
+#: lib/brando/content/transfer/catalog.ex:61
 #, elixir-autogen, elixir-format
 msgid "The selected entry has been deleted."
 msgstr "Den valgte oppføringen er slettet."
 
-#: lib/brando/content/transfer/catalog.ex:54
+#: lib/brando/content/transfer/catalog.ex:60
 #, elixir-autogen, elixir-format
 msgid "The selected entry is no longer available."
 msgstr "Den valgte oppføringen er ikke lenger tilgjengelig."
@@ -1577,7 +1577,7 @@ msgstr "Opplastingen kunne ikke fullføres. Fjern filen og prøv på nytt."
 msgid "This Blueprint needs a generated integer entry ID."
 msgstr "Denne Blueprint-typen krever en generert oppførings-ID som heltall."
 
-#: lib/brando/content/transfer/catalog.ex:46
+#: lib/brando/content/transfer/catalog.ex:52
 #, elixir-autogen, elixir-format
 msgid "This block field does not exist on the destination."
 msgstr "Blokkfeltet finnes ikke på målstedet."
@@ -1587,8 +1587,8 @@ msgstr "Blokkfeltet finnes ikke på målstedet."
 msgid "This bundle has no external dependencies."
 msgstr "Pakken har ingen eksterne avhengigheter."
 
-#: lib/brando/content/transfer/catalog.ex:32
-#: lib/brando/content/transfer/catalog.ex:193
+#: lib/brando/content/transfer/catalog.ex:38
+#: lib/brando/content/transfer/catalog.ex:204
 #, elixir-autogen, elixir-format
 msgid "This content type is not registered on this site."
 msgstr "Innholdstypen er ikke registrert på dette nettstedet."
@@ -2020,7 +2020,7 @@ msgstr "Den eksporterte definisjonen er slettet fra målstedet."
 msgid "Update"
 msgstr "Oppdater"
 
-#: lib/brando/content/transfer/catalog.ex:62
+#: lib/brando/content/transfer/catalog.ex:68
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to access this content."
 msgstr "Du har ikke tillatelse til å få tilgang til dette innholdet."

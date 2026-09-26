@@ -51,7 +51,16 @@ defmodule Brando.Content.Proposals.ToolsTest do
     # Entries without block fields are listed too.
     assert %{block_fields: []} = Enum.find(types, &(&1.content_type == "Brando.Content.Palette"))
 
-    palette = Brando.Factory.insert(:palette)
+    palette = Brando.Factory.insert(:palette, name: "Evening", key: "evening")
+    {:ok, _} = Brando.Content.create_identifier(Brando.Content.Palette, palette)
+
+    # Search finds them, by name or by listing the type.
+    %{entries: found} =
+      call!("search_entries", %{"query" => palette.name, "content_type" => "Brando.Content.Palette"}, c.context)
+
+    assert Enum.any?(found, &(&1.id == palette.id and &1.content_type == "Brando.Content.Palette"))
+    %{entries: listed} = call!("search_entries", %{"query" => "", "content_type" => "Brando.Content.Palette"}, c.context)
+    assert Enum.any?(listed, &(&1.id == palette.id))
 
     %{content_type: "Brando.Content.Palette"} =
       call!("entry_outline", %{"content_type" => "Brando.Content.Palette", "id" => palette.id}, c.context)
