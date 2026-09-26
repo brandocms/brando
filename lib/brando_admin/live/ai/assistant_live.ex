@@ -435,10 +435,23 @@ defmodule BrandoAdmin.AI.AssistantLive do
           </span>
         </button>
       </div>
-      <div :if={@item.open?} class="assistant-request-actions">
+      <button
+        :if={@item.open?}
+        type="button"
+        class="assistant-apply assistant-request-use"
+        phx-click="send"
+        phx-value-message={gettext("I have attached the media. Use it.")}
+        disabled={!@available? or attached(@aliases, @item.kind) == 0}
+      >
+        {if attached(@aliases, @item.kind) == 0,
+          do: gettext("Pick some above, or choose another way"),
+          else: ngettext("Use the %{count} I attached", "Use the %{count} I attached", attached(@aliases, @item.kind))}
+        <.icon :if={attached(@aliases, @item.kind) > 0} name="hero-arrow-right" />
+      </button>
+      <div :if={@item.open?} class="assistant-request-other">
+        <span>{gettext("Or")}</span>
         <button
           type="button"
-          class="assistant-button"
           phx-click={JS.push("browse_library", value: %{kind: @item.kind}) |> toggle_drawer("##{@item.kind}-picker")}
           disabled={!@available?}
         >
@@ -446,7 +459,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </button>
         <button
           type="button"
-          class="assistant-button"
           phx-click={JS.dispatch("click", to: "#assistant-upload .upload-trigger")}
           disabled={!@available?}
         >
@@ -454,21 +466,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </button>
         <button
           type="button"
-          class="assistant-button"
           phx-click="send"
           phx-value-message={gettext("Choose suitable ones from the library yourself.")}
           disabled={!@available?}
         >
           <.icon name="hero-sparkles" />{gettext("Let the assistant choose")}
-        </button>
-        <button
-          type="button"
-          class="assistant-apply"
-          phx-click="send"
-          phx-value-message={gettext("I have attached the media. Use it.")}
-          disabled={!@available?}
-        >
-          {gettext("Use what I attached")}
         </button>
       </div>
     </section>
@@ -693,7 +695,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span :for={{count, label} <- counts(@proposal.effects)}><strong>{count}</strong> {label}</span>
         </p>
         <div :if={!@shared and !@preview and @under_review?} class="assistant-share">
-          <button :if={!@review_link} type="button" class="assistant-quiet-button" phx-click="share_review">
+          <button :if={!@review_link} type="button" class="assistant-button" phx-click="share_review">
             <.icon name="hero-user-plus" />{gettext("Share for review")}
           </button>
           <div :if={@review_link} class="assistant-share-link">
@@ -2181,6 +2183,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp to_kind(kind) when kind in [:image, "image"], do: :image
   defp to_kind(kind) when kind in [:video, "video"], do: :video
   defp to_kind(_), do: nil
+
+  defp attached(aliases, kind), do: Enum.count(aliases, fn {{k, _}, _} -> k == to_kind(kind) end)
 
   defp topic(conversation_id), do: Brando.Tenant.Topic.scoped("brando:ai_agent:#{conversation_id}")
 
