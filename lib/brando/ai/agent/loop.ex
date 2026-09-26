@@ -27,6 +27,9 @@ defmodule Brando.AI.Agent.Loop do
   def run(run_id, user_id) do
     run = Repo.get!(Run, run_id)
     user = Repo.get!(Brando.Users.User, user_id)
+    # Progress and the assistant's own notices are shown in the editor's
+    # language; this process does not inherit the LiveView's locale.
+    Gettext.put_locale(Brando.Gettext, to_string(user.language || Brando.config(:default_admin_language) || "en"))
 
     case Brando.AI.request(Agent.model_opts()) do
       {:ok, request} -> step(run, user, request, 1)

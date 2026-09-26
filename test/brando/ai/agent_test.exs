@@ -449,4 +449,15 @@ defmodule Brando.AI.AgentTest do
     assert [_, _, current] = results.()
     assert current =~ "new"
   end
+
+  test "a run reports progress in the editor's language", c do
+    user = c.user |> Ecto.Changeset.change(language: :no) |> Repo.update!()
+    Agent.subscribe(c.conversation.id)
+    AIStub.script([{:text, "Hei."}])
+
+    # The caller's locale does not matter: the run process sets its own.
+    Gettext.put_locale(Brando.Gettext, "en")
+    assert {:ok, %Run{status: "completed"}} = Agent.send_message(c.conversation.id, "Hei", user, sync: true)
+    assert_received {:agent, _, {:progress, "Tenker"}}
+  end
 end

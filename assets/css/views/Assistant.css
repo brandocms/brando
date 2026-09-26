@@ -378,6 +378,7 @@
 }
 
 .assistant-footnote { color: var(--assistant-muted); font-size: 12px; text-align: center; }
+.assistant-cost { display: block; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
 /* Review */
 
@@ -432,7 +433,7 @@
 .assistant-proposal-head { display: grid; gap: 8px; padding-bottom: 24px; border-bottom: 1px solid var(--assistant-line); }
 .assistant-proposal.is-previewing .assistant-proposal-head { padding-bottom: 0; border-bottom: 0; }
 .assistant-proposal-head h2 { font-size: 30px; line-height: 1.2; letter-spacing: -.03em; }
-.assistant-summary { color: var(--assistant-muted); font-size: 14px; }
+.assistant-summary { max-width: 64ch; color: var(--assistant-muted); font-size: 14px; }
 .assistant-eyebrow { color: var(--assistant-muted); font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
 
 .assistant-counts {

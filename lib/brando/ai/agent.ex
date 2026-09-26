@@ -31,6 +31,8 @@ defmodule Brando.AI.Agent do
                                               # see Brando.AI.Agent.Guidance
         prices: [input: 5.0, output: 25.0],   # USD per million tokens; otherwise the
                                               # provider's or catalogue's price
+        show_cost: true,                      # show the conversation's estimated cost
+                                              # to the editor
         client: ReqLLM                        # anything with ReqLLM's generate_text/3,
                                               # e.g. a scripted model for end-to-end tests
 
@@ -58,7 +60,8 @@ defmodule Brando.AI.Agent do
         max_steps: 12,
         max_tokens: 4096,
         run_token_budget: 300_000,
-        monthly_token_budget: nil
+        monthly_token_budget: nil,
+        show_cost: true
       ],
       Application.get_env(:brando, __MODULE__, [])
     )
@@ -173,6 +176,16 @@ defmodule Brando.AI.Agent do
   def messages(conversation_id, actor) do
     %{id: id} = conversation!(conversation_id, actor)
     Repo.all(from(m in Message, where: m.conversation_id == ^id, order_by: [asc: m.inserted_at, asc: m.id]))
+  end
+
+  @doc """
+  The estimated cost of a conversation's runs so far, in USD — the sum of
+  each run's cost as `Brando.AI.Agent.Budget` reconciles it.
+  """
+  @spec cost(Ecto.UUID.t(), term()) :: float()
+  def cost(conversation_id, actor) do
+    %{id: id} = conversation!(conversation_id, actor)
+    (Repo.one(from(r in Run, where: r.conversation_id == ^id, select: sum(r.cost))) || 0) / 1
   end
 
   @doc "The conversation's latest run, if any."

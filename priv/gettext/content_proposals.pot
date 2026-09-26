@@ -73,7 +73,7 @@ msgstr ""
 msgid "A target needs a numeric id."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:457
+#: lib/brando/content/proposals/review.ex:465
 #, elixir-autogen, elixir-format
 msgid "After %{block}"
 msgstr ""
@@ -84,18 +84,18 @@ msgstr ""
 msgid "Approve this version of the proposal before applying it."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:448
+#: lib/brando/content/proposals/review.ex:456
 #, elixir-autogen, elixir-format
 msgid "At the end"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:456
+#: lib/brando/content/proposals/review.ex:464
 #, elixir-autogen, elixir-format
 msgid "Before %{block}"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:472
-#: lib/brando/content/proposals/review.ex:524
+#: lib/brando/content/proposals/review.ex:480
+#: lib/brando/content/proposals/review.ex:532
 #, elixir-autogen, elixir-format
 msgid "Block"
 msgstr ""
@@ -257,22 +257,22 @@ msgstr ""
 msgid "You do not have permission to save this entry."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:487
+#: lib/brando/content/proposals/review.ex:495
 #, elixir-autogen, elixir-format
 msgid "a block"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:484
+#: lib/brando/content/proposals/review.ex:492
 #, elixir-autogen, elixir-format
 msgid "the new %{module} block"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:754
+#: lib/brando/content/proposals/review.ex:762
 #, elixir-autogen, elixir-format
 msgid "the new entry %{ref}"
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:496
+#: lib/brando/content/proposals/review.ex:504
 #, elixir-autogen, elixir-format
 msgid "%{position} of %{count} in “%{parent}”"
 msgstr ""
@@ -287,7 +287,7 @@ msgstr ""
 msgid "Another block already uses this uid."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:437
+#: lib/brando/content/proposals/review.ex:445
 #, elixir-autogen, elixir-format
 msgid "At the end of %{block}"
 msgstr ""
@@ -367,7 +367,7 @@ msgstr ""
 msgid "The module has no ref %{name}."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:590
+#: lib/brando/content/proposals/review.ex:598
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
@@ -404,7 +404,7 @@ msgstr ""
 msgid "An anchor starts with a letter and holds letters, digits, - and _."
 msgstr ""
 
-#: lib/brando/content/proposals/review.ex:587
+#: lib/brando/content/proposals/review.ex:595
 #, elixir-autogen, elixir-format
 msgid "File #%{id}"
 msgstr ""

@@ -73,7 +73,7 @@ msgstr "Et mål er {content_type, id} eller {new: ref}."
 msgid "A target needs a numeric id."
 msgstr "Et mål trenger en numerisk id."
 
-#: lib/brando/content/proposals/review.ex:457
+#: lib/brando/content/proposals/review.ex:465
 #, elixir-autogen, elixir-format
 msgid "After %{block}"
 msgstr "Etter %{block}"
@@ -84,18 +84,18 @@ msgstr "Etter %{block}"
 msgid "Approve this version of the proposal before applying it."
 msgstr "Godkjenn denne versjonen av forslaget før du utfører det."
 
-#: lib/brando/content/proposals/review.ex:448
+#: lib/brando/content/proposals/review.ex:456
 #, elixir-autogen, elixir-format
 msgid "At the end"
 msgstr "Til slutt"
 
-#: lib/brando/content/proposals/review.ex:456
+#: lib/brando/content/proposals/review.ex:464
 #, elixir-autogen, elixir-format
 msgid "Before %{block}"
 msgstr "Før %{block}"
 
-#: lib/brando/content/proposals/review.ex:472
-#: lib/brando/content/proposals/review.ex:524
+#: lib/brando/content/proposals/review.ex:480
+#: lib/brando/content/proposals/review.ex:532
 #, elixir-autogen, elixir-format
 msgid "Block"
 msgstr "Blokk"
@@ -257,22 +257,22 @@ msgstr "Du har ikke tilgang til å opprette denne oppføringen."
 msgid "You do not have permission to save this entry."
 msgstr "Du har ikke tilgang til å lagre denne oppføringen."
 
-#: lib/brando/content/proposals/review.ex:487
+#: lib/brando/content/proposals/review.ex:495
 #, elixir-autogen, elixir-format
 msgid "a block"
 msgstr "en blokk"
 
-#: lib/brando/content/proposals/review.ex:484
+#: lib/brando/content/proposals/review.ex:492
 #, elixir-autogen, elixir-format
 msgid "the new %{module} block"
 msgstr "den nye %{module}-blokken"
 
-#: lib/brando/content/proposals/review.ex:754
+#: lib/brando/content/proposals/review.ex:762
 #, elixir-autogen, elixir-format
 msgid "the new entry %{ref}"
 msgstr "den nye oppføringen %{ref}"
 
-#: lib/brando/content/proposals/review.ex:496
+#: lib/brando/content/proposals/review.ex:504
 #, elixir-autogen, elixir-format
 msgid "%{position} of %{count} in “%{parent}”"
 msgstr "%{position} av %{count} i “%{parent}”"
@@ -287,7 +287,7 @@ msgstr "En plass kan ikke flyttes eller slettes."
 msgid "Another block already uses this uid."
 msgstr "En annen blokk bruker allerede denne uid-en."
 
-#: lib/brando/content/proposals/review.ex:437
+#: lib/brando/content/proposals/review.ex:445
 #, elixir-autogen, elixir-format
 msgid "At the end of %{block}"
 msgstr "Sist i %{block}"
@@ -367,7 +367,7 @@ msgstr "Fant ikke oppføringen det skal lenkes til."
 msgid "The module has no ref %{name}."
 msgstr "Modulen har ingen ref som heter %{name}."
 
-#: lib/brando/content/proposals/review.ex:590
+#: lib/brando/content/proposals/review.ex:598
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
@@ -404,7 +404,7 @@ msgstr "Et galleri inneholder bilder og videoer."
 msgid "An anchor starts with a letter and holds letters, digits, - and _."
 msgstr "Et anker starter med en bokstav og inneholder bokstaver, sifre, - og _."
 
-#: lib/brando/content/proposals/review.ex:587
+#: lib/brando/content/proposals/review.ex:595
 #, elixir-autogen, elixir-format
 msgid "File #%{id}"
 msgstr "Fil #%{id}"

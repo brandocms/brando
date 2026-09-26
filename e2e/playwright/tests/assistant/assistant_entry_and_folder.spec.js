@@ -59,8 +59,10 @@ test('Build with AI opens the assistant on the entry, and a folder fills the pro
 
   // Two calls attach the folder, one page each, as image1 and image2.
   const steps = assistant.locator('.assistant-steps')
-  await expect(steps).toContainText('Looked for the folder', { timeout: 15000 })
-  await expect(steps.getByText("Attached the folder's media")).toHaveCount(2)
+  // Steps name what they read and attached.
+  await expect(steps).toContainText('Looked for the folder “ai-lobby”', { timeout: 15000 })
+  await expect(steps.getByText(/^Attached 1 item from (.+\/)?ai-lobby$/)).toHaveCount(2)
+  await expect(steps).toContainText(`Read “${title}”`, { timeout: 15000 })
   const attachments = assistant.locator('.assistant-attachment')
   await expect(attachments).toHaveCount(2)
   await expect(attachments.nth(0)).toContainText('image1')

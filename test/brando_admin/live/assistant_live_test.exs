@@ -148,7 +148,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
     html = eventually(view, &(&1 =~ "Prepared a text block for Identity."))
     assert html =~ "Ready for your review"
     assert html =~ "Searched for “Ident”"
-    assert html =~ "Prepared the proposal"
+    assert html =~ "Prepared version 1 of the proposal"
     assert html =~ "Add a Text block"
     assert html =~ "Written in the assistant"
     assert html =~ "Live page"
@@ -159,6 +159,32 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert html =~ "The changes are saved"
     assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 4
     refute has_element?(view, "button.assistant-apply")
+  end
+
+  test "steps name what they read, and the cost so far is shown unless switched off", %{conn: conn} = c do
+    AIStub.script([
+      {:tools, [{"entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}}]},
+      {:text, "Identity has three text blocks."}
+    ])
+
+    {:ok, view, _} = live(conn, "/admin/assistant")
+    view |> form("#assistant-composer", %{message: "What is on Identity?"}) |> render_submit()
+    html = eventually(view, &(&1 =~ "Identity has three text blocks."))
+    assert html =~ "Read “Identity”"
+
+    [conversation] = Agent.list_conversations(c.current_user)
+    run = Agent.latest_run(conversation.id, c.current_user)
+    run |> Ecto.Changeset.change(cost: 0.4242) |> Brando.Repo.update!()
+
+    {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+    assert has_element?(view, ".assistant-cost", "Estimated cost so far: $0.42")
+
+    previous = Application.get_env(:brando, Agent, [])
+    Application.put_env(:brando, Agent, Keyword.put(previous, :show_cost, false))
+    on_exit(fn -> Application.put_env(:brando, Agent, previous) end)
+
+    {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+    refute has_element?(view, ".assistant-cost")
   end
 
   test "uploads reserve aliases in the order they were chosen", %{conn: conn} = c do

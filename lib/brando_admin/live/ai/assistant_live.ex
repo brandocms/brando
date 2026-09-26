@@ -44,6 +44,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
        configurable?: Agent.Guidance.configurable?(socket.assigns.current_user),
        conversations: [],
        messages: [],
+       turns: [],
+       cost: nil,
        run: nil,
        progress: nil,
        proposal: nil,
@@ -99,7 +101,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     {:noreply,
      socket
-     |> assign(conversation: nil, messages: [], run: nil, proposal: nil, review: [], receipt: nil, error: nil)
+     |> assign(
+       conversation: nil,
+       messages: [],
+       turns: [],
+       cost: nil,
+       run: nil,
+       proposal: nil,
+       review: [],
+       receipt: nil,
+       error: nil
+     )
      |> assign(:target, target)
      |> assign_conversations()
      |> assign_guidance()}
@@ -199,7 +211,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                   "Describe the changes you want: which entries, which media and where it goes. Attach media first and refer to it as image1, video1 and so on."
                 )}
               </p>
-              <.message :for={item <- turns(@messages)} item={item} />
+              <.message :for={item <- @turns} item={item} />
               <div :if={@progress} class="assistant-progress" role="status">
                 <span class="assistant-spinner" aria-hidden="true"></span>
                 <span>{@progress}</span>
@@ -284,7 +296,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
               </button>
             </div>
           </form>
-          <p class="assistant-footnote">{gettext("Changes are only applied after your confirmation.")}</p>
+          <p class="assistant-footnote">
+            {gettext("Changes are only applied after your confirmation.")}
+            <span :if={@cost && @cost > 0} class="assistant-cost" title={gettext("Estimated from the model's token prices")}>
+              {gettext("Estimated cost so far: %{cost}", cost: format_cost(@cost))}
+            </span>
+          </p>
         </section>
 
         <section class="assistant-review" aria-label={gettext("Proposal")}>
@@ -1327,10 +1344,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp assign_conversations(socket),
     do: assign(socket, :conversations, Agent.list_conversations(socket.assigns.current_user))
 
-  defp assign_messages(%{assigns: %{conversation: nil}} = socket), do: assign(socket, :messages, [])
+  defp assign_messages(%{assigns: %{conversation: nil}} = socket),
+    do: assign(socket, messages: [], turns: [], cost: nil)
 
+  # The turns are built once per update: step labels read the stored tool
+  # results. The cost follows each model call, which each new message marks.
   defp assign_messages(socket) do
-    assign(socket, :messages, Agent.messages(socket.assigns.conversation.id, socket.assigns.current_user))
+    %{conversation: conversation, current_user: user} = socket.assigns
+    messages = Agent.messages(conversation.id, user)
+    cost = if Agent.config()[:show_cost], do: Agent.cost(conversation.id, user)
+    assign(socket, messages: messages, turns: turns(messages), cost: cost)
   end
 
   defp assign_proposal(%{assigns: %{conversation: %{proposal_id: id}}} = socket) when is_binary(id) do
@@ -1483,14 +1506,24 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # Tool calls and their results collapse into one list of steps between the
   # user's message and the assistant's answer.
+  # Results that make a step's label specific: what was read, which version.
+  @labelled_results ~w(entry_outline prepare_proposal attach_folder)
+
   defp turns(messages) do
+    results =
+      for %{role: "tool", tool_name: name, tool_call_id: id, content: content} <- messages,
+          name in @labelled_results,
+          {:ok, %{} = result} <- [Jason.decode(content || "")],
+          into: %{},
+          do: {id, result}
+
     messages
     |> Enum.reduce([], fn
       %{role: "tool"}, acc ->
         acc
 
       %{role: "assistant", tool_calls: [_ | _] = calls} = message, acc ->
-        steps = Enum.map(calls, &step_label/1)
+        steps = Enum.map(calls, &step_label(&1, results[&1["id"]] || %{}))
         acc = if message.content not in [nil, ""], do: [%{role: "assistant", content: message.content} | acc], else: acc
 
         case acc do
@@ -1504,28 +1537,94 @@ defmodule BrandoAdmin.AI.AssistantLive do
     |> Enum.reverse()
   end
 
-  defp step_label(%{"name" => name, "arguments" => arguments}) do
+  defp step_label(%{"name" => name, "arguments" => arguments}, result) do
     args =
       case Jason.decode(arguments || "{}") do
         {:ok, %{} = args} -> args
         _ -> %{}
       end
 
-    case name do
-      "search_entries" -> gettext("Searched for “%{query}”", query: args["query"])
-      "entry_outline" -> gettext("Read an entry")
-      "list_content_types" -> gettext("Looked at the content types")
-      "describe_content_type" -> gettext("Checked a content type's fields")
-      "list_modules" -> gettext("Looked at the available modules")
-      "describe_module" -> gettext("Checked a module's slots")
-      "list_attachments" -> gettext("Matched the attached media")
-      "search_assets" -> gettext("Searched the media library")
-      "find_media_folders" -> gettext("Looked for the folder")
-      "attach_folder" -> gettext("Attached the folder's media")
-      "prepare_proposal" -> gettext("Prepared the proposal")
-      _ -> gettext("Looked at the site's content")
+    label = step_text(name, args, result)
+    if result["error"], do: gettext("%{step} (did not work)", step: label), else: label
+  end
+
+  defp step_text("search_entries", args, _), do: gettext("Searched for “%{query}”", query: args["query"])
+
+  defp step_text("entry_outline", _args, %{"title" => title}) when is_binary(title),
+    do: gettext("Read “%{title}”", title: title)
+
+  defp step_text("entry_outline", _args, _), do: gettext("Read an entry")
+  defp step_text("list_content_types", _, _), do: gettext("Looked at the content types")
+
+  defp step_text("describe_content_type", args, _),
+    do: gettext("Checked the fields of %{type}", type: content_type_label(args["content_type"]))
+
+  defp step_text("list_modules", args, _),
+    do: gettext("Looked at the modules for %{type}", type: content_type_label(args["content_type"]))
+
+  defp step_text("describe_module", args, _) do
+    case module_name(args["module"]) do
+      nil -> gettext("Checked a module's slots")
+      name -> gettext("Checked the module “%{module}”", module: name)
     end
   end
+
+  defp step_text("list_attachments", _, _), do: gettext("Matched the attached media")
+
+  defp step_text("search_assets", %{"query" => query}, _) when query not in [nil, ""],
+    do: gettext("Searched the media library for “%{query}”", query: query)
+
+  defp step_text("search_assets", _, _), do: gettext("Searched the media library")
+
+  defp step_text("find_media_folders", %{"name" => name}, _) when is_binary(name),
+    do: gettext("Looked for the folder “%{name}”", name: name)
+
+  defp step_text("find_media_folders", _, _), do: gettext("Looked for the folder")
+
+  defp step_text("attach_folder", _, %{"folder" => %{"path" => path}, "attached" => attached}) when is_list(attached),
+    do:
+      ngettext("Attached %{count} item from %{folder}", "Attached %{count} items from %{folder}", length(attached),
+        folder: path
+      )
+
+  defp step_text("attach_folder", _, _), do: gettext("Attached the folder's media")
+
+  defp step_text("prepare_proposal", _, %{"version" => version, "applicable" => false}),
+    do: gettext("Prepared version %{version}, with problems to fix", version: version)
+
+  defp step_text("prepare_proposal", _, %{"version" => version}),
+    do: gettext("Prepared version %{version} of the proposal", version: version)
+
+  defp step_text("prepare_proposal", _, _), do: gettext("Prepared the proposal")
+  defp step_text(_, _, _), do: gettext("Looked at the site's content")
+
+  defp content_type_label(name) do
+    case Brando.Content.Proposals.Codec.schema(name) do
+      {:ok, schema} -> Brando.Blueprint.get_singular(schema)
+      :error -> name
+    end
+  end
+
+  defp module_name(reference) do
+    {origin, id} = Brando.Content.SharedLibrary.reference(reference)
+
+    case Brando.Content.fetch_module(id, origin) do
+      %{name: %{} = name} ->
+        name[Gettext.get_locale(Brando.Gettext)] || name["en"] || name |> Map.values() |> List.first()
+
+      %{name: name} ->
+        name
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  # USD with cents; tiny amounts are not rounded to nothing.
+  defp format_cost(cost) when cost < 0.01, do: "< $0.01"
+  defp format_cost(cost), do: "$" <> :erlang.float_to_binary(cost, decimals: 2)
 
   defp language_label(code) when is_binary(code) do
     case Enum.find(Brando.config(:languages) || [], &(to_string(&1[:value]) == code)) do

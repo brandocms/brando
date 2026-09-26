@@ -35,7 +35,7 @@ test('uploads media, prepares a proposal from a message and applies it', async (
 
   await expect(page.locator('.assistant-bubble')).toHaveText('Put image1 on the Index page')
   await expect(page.locator('.assistant-steps')).toContainText('Searched for “Index”', { timeout: 15000 })
-  await expect(page.locator('.assistant-steps')).toContainText('Prepared the proposal')
+  await expect(page.locator('.assistant-steps')).toContainText('Prepared version 1 of the proposal')
   await expect(page.locator('.assistant-text').last()).toContainText('I prepared a proposal that adds image1 to Index')
 
   const review = page.locator('.assistant-proposal')
