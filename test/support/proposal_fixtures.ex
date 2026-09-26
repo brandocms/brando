@@ -65,12 +65,110 @@ defmodule Brando.ProposalFixtures do
           help_text: %{"en" => "Help"},
           code: code,
           refs: opts[:refs] || [],
-          vars: opts[:vars] || []
+          vars: opts[:vars] || [],
+          multi: opts[:multi] || false,
+          parent_id: opts[:parent_id]
         ),
         user
       )
 
     module
+  end
+
+  # A "Projects" multi module whose entry module "Project" has a `size`
+  # select (50/100), a `clip` video and an `info` text, and a page "Work"
+  # with a Text block and a Projects block holding three projects: sizes
+  # 100, 100 and 50, the first showing `c.video`.
+  def multi_context(c) do
+    projects =
+      module!(c.user, "Projects", ~s(<section class="projects">{{ content }}</section>), multi: true)
+
+    project =
+      module!(
+        c.user,
+        "Project",
+        ~s(<article class="project size-{{ size }}">{% ref refs.info %}{% ref refs.clip %}</article>),
+        parent_id: projects.id,
+        refs: [ref("info", %{type: "text", data: %{text: "Info"}}), ref("clip", %{type: "video", data: %{}})],
+        vars: [
+          %{
+            type: "select",
+            key: "size",
+            label: "Size",
+            value: "100",
+            options: [%{label: "Half", value: "50"}, %{label: "Full", value: "100"}]
+          }
+        ]
+      )
+
+    page = Factory.insert(:page, creator: c.user, title: "Work", uri: "work")
+    text = insert_block!(c.user, c.text_module, :module, nil, [body_ref("<p>Work intro</p>")], [])
+    multi = insert_block!(c.user, projects, :module, nil, [], [])
+
+    children =
+      [{"Alpha", "100", c.video.id}, {"Beta", "100", nil}, {"Gamma", "50", nil}]
+      |> Enum.with_index()
+      |> Enum.map(fn {{name, size, video_id}, n} ->
+        refs = [
+          %{"uid" => Brando.Utils.generate_uid(), "name" => "info", "data" => text_data("<p>#{name}</p>")},
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "name" => "clip",
+            "data" => %{"type" => "video", "data" => %{}},
+            "video_id" => video_id
+          }
+        ]
+
+        vars = [
+          %{
+            "type" => "select",
+            "key" => "size",
+            "label" => "Size",
+            "value" => size,
+            "options" => [
+              %{"label" => "Half", "value" => "50"},
+              %{"label" => "Full", "value" => "100"}
+            ]
+          }
+        ]
+
+        insert_block!(c.user, project, :module_entry, multi.id, refs, vars, n)
+      end)
+
+    for {block, n} <- Enum.with_index([text, multi]),
+        do: struct(Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: n}) |> Repo.insert!()
+
+    Map.merge(c, %{
+      projects_module: projects,
+      project_module: project,
+      work: page,
+      intro_uid: text.uid,
+      multi_uid: multi.uid,
+      child_uids: Enum.map(children, & &1.uid)
+    })
+  end
+
+  defp body_ref(text), do: %{"uid" => Brando.Utils.generate_uid(), "name" => "body", "data" => text_data(text)}
+  defp text_data(text), do: %{"type" => "text", "data" => %{"text" => text}}
+
+  defp insert_block!(user, module, type, parent_id, refs, vars, sequence \\ 0) do
+    %Block{}
+    |> Block.recursive_block_changeset(
+      %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => to_string(type),
+        "module_id" => module.id,
+        "multi" => module.multi || false,
+        "parent_id" => parent_id,
+        "sequence" => sequence,
+        "creator_id" => user.id,
+        "source" => to_string(Page.Blocks),
+        "refs" => refs,
+        "vars" => vars
+      },
+      user
+    )
+    |> Repo.insert!()
   end
 
   def page!(user, title, module) do

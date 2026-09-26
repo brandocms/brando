@@ -898,8 +898,56 @@ defmodule BrandoAdmin.AI.AssistantLive do
     ~H"""
     <span class="assistant-change-title">{gettext("Change settings of %{block}", block: @change.block)}</span>
     <dl class="assistant-fields">
+      <div :for={media <- @change.context}>
+        <dt>{humanize(media.ref)}</dt>
+        <dd class="assistant-inline-media"><.thumb media={@media} kind={media.kind} id={media.id} /></dd>
+      </div>
       <div :for={value <- @change.values}>
-        <dt>{humanize(value.name)}</dt><dd>{to_string(value.value)}</dd>
+        <dt>{value.label || humanize(value.name)}</dt>
+        <dd>
+          <del :if={value.before not in [nil, ""] and value.before != value.value}>{to_string(value.before)}</del>
+          <ins>{to_string(value.value)}</ins>
+        </dd>
+      </div>
+    </dl>
+    """
+  end
+
+  defp change(%{change: %{type: :order}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title">
+      {if @change.parent,
+        do: gettext("New order in %{block}", block: @change.parent),
+        else: gettext("New order of the blocks")}
+    </span>
+    <ol class="assistant-order">
+      <li :for={item <- @change.items} class={[item.moved? && "is-moved", item.new? && "is-new"]}>
+        <span :if={item.media != []} class="assistant-inline-media">
+          <.thumb media={@media} kind={hd(item.media).kind} id={hd(item.media).id} />
+        </span>
+        <span class="assistant-order-name">
+          <strong>{item.name}</strong> <span :if={item.excerpt}>{item.excerpt}</span>
+        </span>
+        <span :for={value <- item.values} class={["assistant-order-value", value.changed? && "is-changed"]}>
+          {value.label}: {to_string(value.value)}
+        </span>
+        <span :if={item.new?} class="assistant-order-mark">{gettext("New")}</span>
+        <span :if={item.moved? and !item.new?} class="assistant-order-mark">{gettext("Moved")}</span>
+      </li>
+    </ol>
+    """
+  end
+
+  defp change(%{change: %{type: :delete_block}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title is-removal">{gettext("Remove %{block}", block: @change.block)}</span>
+    <p :if={@change.children > 0} class="assistant-placement">
+      {ngettext("Its %{count} nested block is removed too.", "Its %{count} nested blocks are removed too.", @change.children)}
+    </p>
+    <dl :if={@change.context != []} class="assistant-fields">
+      <div :for={media <- @change.context}>
+        <dt>{humanize(media.ref)}</dt>
+        <dd class="assistant-inline-media"><.thumb media={@media} kind={media.kind} id={media.id} /></dd>
       </div>
     </dl>
     """
@@ -1416,11 +1464,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
       {effects[:updates] || 0, ngettext("updated entry", "updated entries", effects[:updates] || 0)},
       {effects[:inserted_blocks] || 0, ngettext("new block", "new blocks", effects[:inserted_blocks] || 0)},
       {effects[:updated_blocks] || 0, ngettext("changed block", "changed blocks", effects[:updated_blocks] || 0)},
+      {effects[:moved_blocks] || 0, ngettext("moved block", "moved blocks", effects[:moved_blocks] || 0)},
       {effects[:deletions] || 0, ngettext("deletion", "deletions", effects[:deletions] || 0)}
     ]
     # Deletions are always shown: "0 deletions" is a fact worth stating.
     |> Enum.with_index()
-    |> Enum.filter(fn {{count, _}, index} -> count > 0 or index == 4 end)
+    |> Enum.filter(fn {{count, _}, index} -> count > 0 or index == 5 end)
     |> Enum.map(&elem(&1, 0))
   end
 
@@ -1439,7 +1488,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
         ngettext("%{count} new block", "%{count} new blocks", effects[:inserted_blocks]),
       (effects[:updated_blocks] || 0) > 0 &&
         ngettext("%{count} changed block", "%{count} changed blocks", effects[:updated_blocks]),
-      gettext("no deletions")
+      (effects[:moved_blocks] || 0) > 0 &&
+        ngettext("%{count} moved block", "%{count} moved blocks", effects[:moved_blocks]),
+      if((effects[:deletions] || 0) > 0,
+        do: ngettext("%{count} deletion", "%{count} deletions", effects[:deletions]),
+        else: gettext("no deletions")
+      )
     ]
     |> Enum.filter(& &1)
     |> Enum.join(" · ")

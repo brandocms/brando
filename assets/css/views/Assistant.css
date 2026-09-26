@@ -540,6 +540,7 @@
 .assistant-changes { display: grid; gap: 16px; font-size: 13px; }
 .assistant-changes > li { display: grid; gap: 8px; }
 .assistant-change-title { font-weight: 500; }
+.assistant-change-title.is-removal { color: var(--assistant-error); }
 .assistant-placement { color: var(--assistant-muted); font-size: 12px; }
 
 /* A compact outline of the block field: neighbour → new block. */
@@ -864,4 +865,44 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
+}
+
+/* The order a proposal leaves a list of blocks in: moved and new rows stand out. */
+.assistant-order {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  font-size: 12px;
+  list-style: none;
+  counter-reset: order;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid var(--assistant-line);
+    border-radius: 4px;
+    counter-increment: order;
+
+    &::before { content: counter(order); min-width: 16px; color: var(--assistant-faint); font-variant-numeric: tabular-nums; }
+    &.is-moved { border-color: var(--assistant-new-line); }
+    &.is-new { border-style: dashed; border-color: var(--assistant-new-line); background: var(--assistant-new); }
+  }
+
+  .assistant-order-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .assistant-order-name span { color: var(--assistant-muted); }
+  .assistant-order-value { flex: 0 0 auto; color: var(--assistant-muted); }
+  .assistant-order-value.is-changed { color: inherit; background: var(--assistant-new); }
+  .assistant-order-mark { flex: 0 0 auto; color: #2f6a4d; font-size: 11px; }
+}
+
+/* Order rows show media at its own aspect ratio: portrait and landscape are the point. */
+.assistant-order .assistant-inline-media .assistant-thumb {
+  width: auto;
+  min-width: 20px;
+  height: 28px;
+
+  img { position: static; width: auto; height: 100%; }
 }

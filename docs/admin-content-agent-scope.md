@@ -619,3 +619,34 @@ Stage 1 took about a day, not the estimated 2–3.
 - **Not done:** overlays for arbitrary cross-entry queries in templates, as
   scoped in the issue. A category preview that lists cases does not include a
   case the same proposal creates.
+
+## Child blocks and arrangement (26 September 2026)
+
+A layout request on the by front page ("one full-width video, then two portrait
+videos side by side, …") failed: the entries of the "Selected projects" multi
+module, and their `size` variable, were invisible to the assistant.
+
+- **Tools see the whole tree.** `entry_outline` nests `children` (multi entries,
+  container and slot blocks), gives each image and video its width, height and
+  orientation, and names a link variable by its entry's title. Past 150 blocks
+  the rest are listed by uid and module only. `describe_module` on a multi module
+  describes its entry modules and their variables.
+- **Operations reach any block.** `set_block_values`, `set_block_text` and
+  `set_block_media` take any uid in the field. New: `move_block` (among
+  siblings), `delete_block`, and `insert_block` with a `parent` — a multi block
+  takes its own entry modules, a container the field's modules, a slot its
+  module set.
+- **Validation replays the field** (`Proposals.BlockTree`): each operation is
+  checked against the field as the earlier ones leave it, so a deleted block
+  cannot be edited afterwards, anchors must be siblings, and a uid given to a new
+  block must be unused.
+- **Review shows the resulting order** once per list of siblings that a move
+  touches: numbered, with thumbnails at their own aspect ratio, select values
+  (such as `Size: 40%`) and Moved/New marks. Block labels name the entry's
+  position in its parent. Removals have their own card. Setting values shows the
+  saved value struck through.
+- **The system prompt** tells the model that layout often lives on the children,
+  to read them and their modules before saying a change is impossible, and to
+  delete only when asked.
+- **Not done:** inserting a multi module at the root (its entries would have to
+  be inserted in the same proposal), and moving a block to another parent.

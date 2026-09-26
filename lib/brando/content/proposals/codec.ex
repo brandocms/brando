@@ -12,17 +12,28 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "create_entry", "content_type" => "…", "ref" => "case", "fields" => %{}}
       %{"op" => "set_fields", "target" => target, "fields" => %{}}
       %{"op" => "insert_block", "target" => target, "field" => "blocks", "module" => "local:12",
-        "placement" => "append" | %{"before" => uid} | %{"after" => uid},
+        "parent" => uid | nil, "placement" => "append" | %{"before" => uid} | %{"after" => uid},
         "values" => %{}, "texts" => %{}, "media" => %{"cover" => asset}}
       %{"op" => "set_block_media", "target" => target, "block_uid" => uid, "ref" => name, "asset" => asset}
       %{"op" => "set_block_values", "target" => target, "block_uid" => uid, "values" => %{}}
       %{"op" => "set_block_text", "target" => target, "block_uid" => uid, "ref" => name, "text" => text}
+      %{"op" => "move_block", "target" => target, "block_uid" => uid, "placement" => placement}
+      %{"op" => "delete_block", "target" => target, "block_uid" => uid}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
   `asset` is `%{"kind" => "image" | "video", "id" => 3}` or the alias of a
   conversation attachment such as `"image1"`.
   """
-  alias Brando.Content.Proposals.{CreateEntry, InsertBlock, SetBlockMedia, SetBlockText, SetBlockValues, SetFields}
+  alias Brando.Content.Proposals.{
+    CreateEntry,
+    DeleteBlock,
+    InsertBlock,
+    MoveBlock,
+    SetBlockMedia,
+    SetBlockText,
+    SetBlockValues,
+    SetFields
+  }
 
   @doc "Decode one operation. `attachments` maps aliases to `{:image | :video, id}`."
   @spec decode(map(), map()) :: {:ok, struct()} | {:error, String.t()}
@@ -63,11 +74,12 @@ defmodule Brando.Content.Proposals.Codec do
       target: target!(map["target"]),
       field: map["field"] || "blocks",
       module: module!(map["module"]),
+      parent: optional_string!(map["parent"], "parent"),
       placement: placement!(map["placement"] || "append"),
       values: values(map!(map["values"])),
       texts: map!(map["texts"]),
       media: Map.new(map!(map["media"]), fn {name, asset} -> {name, asset!(asset, attachments)} end),
-      uid: map["uid"],
+      uid: optional_string!(map["uid"], "uid"),
       ref_uids: map!(map["ref_uids"])
     }
   end
@@ -101,6 +113,23 @@ defmodule Brando.Content.Proposals.Codec do
     }
   end
 
+  defp decode!("move_block", map, _) do
+    %MoveBlock{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid"),
+      placement: placement!(map["placement"])
+    }
+  end
+
+  defp decode!("delete_block", map, _) do
+    %DeleteBlock{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid")
+    }
+  end
+
   defp decode!(op, _, _), do: invalid!(dgettext("content_proposals", "Unknown operation %{op}.", op: inspect(op)))
 
   @doc "Encode one operation to its JSON form."
@@ -116,6 +145,7 @@ defmodule Brando.Content.Proposals.Codec do
       "target" => target(op.target),
       "field" => op.field,
       "module" => module(op.module),
+      "parent" => op.parent,
       "placement" => placement(op.placement),
       "values" => Map.new(op.values, fn {key, value} -> {key, value(value)} end),
       "texts" => op.texts,
@@ -153,6 +183,18 @@ defmodule Brando.Content.Proposals.Codec do
       "ref" => to_string(op.ref),
       "text" => op.text
     }
+
+  def encode(%MoveBlock{} = op),
+    do: %{
+      "op" => "move_block",
+      "target" => target(op.target),
+      "field" => op.field,
+      "block_uid" => op.block_uid,
+      "placement" => placement(op.placement)
+    }
+
+  def encode(%DeleteBlock{} = op),
+    do: %{"op" => "delete_block", "target" => target(op.target), "field" => op.field, "block_uid" => op.block_uid}
 
   @doc "The name agents use for a content type."
   @spec content_type(module()) :: String.t()
@@ -247,6 +289,9 @@ defmodule Brando.Content.Proposals.Codec do
   defp string!(value, _) when is_binary(value) and value != "", do: value
   defp string!(value, _) when is_atom(value) and not is_nil(value), do: to_string(value)
   defp string!(_, key), do: invalid!(dgettext("content_proposals", "%{key} is required.", key: key))
+
+  defp optional_string!(nil, _key), do: nil
+  defp optional_string!(value, key), do: string!(value, key)
 
   defp invalid!(message), do: throw({:invalid, message})
 end

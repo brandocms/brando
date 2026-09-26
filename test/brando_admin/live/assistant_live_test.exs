@@ -293,4 +293,51 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 3
     end
   end
+
+  describe "child block changes" do
+    setup %{current_user: user} = c do
+      c = Brando.ProposalFixtures.multi_context(c)
+      [alpha, beta, gamma] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %Brando.Content.Proposals.SetBlockValues{target: target, block_uid: beta, values: %{size: "50"}},
+        %Brando.Content.Proposals.MoveBlock{target: target, block_uid: gamma, placement: {:after, beta}},
+        %Brando.Content.Proposals.DeleteBlock{target: target, block_uid: alpha}
+      ]
+
+      {:ok, conversation} = Agent.start_conversation(user)
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, user, conversation_id: conversation.id)
+      conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+      Map.put(c, :conversation, conversation)
+    end
+
+    test "the review names each entry, shows values before and after, moves and removals", %{conn: conn} = c do
+      {:ok, view, html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      assert html =~ "Ready for your review"
+      assert has_element?(view, ".assistant-counts", "1 moved block")
+      assert has_element?(view, ".assistant-counts", "1 deletion")
+
+      assert html =~ "Change settings of “Project” · 2 of 3 in “Projects” · Beta"
+      assert has_element?(view, ".assistant-fields dt", "Size")
+      assert has_element?(view, ".assistant-fields del", "Full (100)")
+      assert has_element?(view, ".assistant-fields ins", "Half (50)")
+
+      assert html =~ "New order in “Projects”"
+      assert has_element?(view, ".assistant-order li:nth-child(2).is-moved", "Gamma")
+      assert has_element?(view, ".assistant-order li:nth-child(1)", "Beta")
+      assert has_element?(view, ".assistant-order li:nth-child(1) .assistant-order-value.is-changed", "Size: Half (50)")
+
+      assert has_element?(view, ".assistant-change-title.is-removal", "Remove “Project” · 1 of 3 in “Projects” · Alpha")
+      # The removed entry's video identifies it.
+      assert has_element?(view, ".assistant-thumb.is-video")
+
+      view |> element("button.assistant-apply") |> render_click()
+      eventually(view, &(&1 =~ "Applied"))
+
+      [_, multi] = Catalog.load!(Page, c.work.id, c.current_user).entry_blocks
+      assert Enum.map(multi.block.children, & &1.uid) == tl(c.child_uids)
+    end
+  end
 end

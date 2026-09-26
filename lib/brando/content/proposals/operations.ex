@@ -23,21 +23,27 @@ defmodule Brando.Content.Proposals.InsertBlock do
     * `target` — `{schema, id}` or `{:new, ref}`
     * `field` — the block field name, `"blocks"` by default
     * `module` — a module id or shared-library reference
+    * `parent` — the uid of the block to insert into: a multi module block
+      (which takes its child modules), a container or a slot. `nil` inserts a
+      root block.
     * `placement` — `:append`, `{:before, uid}` or `{:after, uid}`, where `uid`
-      is a root block of the field
+      is a block with the same parent
     * `values` — var values by key
     * `texts` — `%{ref_name => text}` for text refs (safe rich-text HTML) and
       header refs (plain text)
     * `media` — `%{ref_name => {:image, id} | {:video, id}}`
 
   `uid` and `ref_uids` are frozen when the proposal is prepared, so every
-  materialization — review, preview and apply — builds the same block.
+  materialization — review, preview and apply — builds the same block. A
+  `uid` given in the operation lets later operations address the new block,
+  for example to insert children into it.
   """
   @enforce_keys [:target, :module]
   defstruct [
     :target,
     :module,
     :uid,
+    :parent,
     field: "blocks",
     placement: :append,
     values: %{},
@@ -49,7 +55,8 @@ end
 
 defmodule Brando.Content.Proposals.SetBlockMedia do
   @moduledoc """
-  Put a library image or video into ref `ref` of the root block `block_uid`.
+  Put a library image or video into ref `ref` of the block `block_uid`, at
+  any depth of the field.
   `asset` is `{:image, id}` or `{:video, id}`.
   """
   @enforce_keys [:target, :block_uid, :ref, :asset]
@@ -57,16 +64,35 @@ defmodule Brando.Content.Proposals.SetBlockMedia do
 end
 
 defmodule Brando.Content.Proposals.SetBlockValues do
-  @moduledoc "Set var values by key on the root block `block_uid`."
+  @moduledoc "Set var values by key on the block `block_uid`, at any depth of the field."
   @enforce_keys [:target, :block_uid, :values]
   defstruct [:target, :block_uid, :values, field: "blocks"]
 end
 
 defmodule Brando.Content.Proposals.SetBlockText do
   @moduledoc """
-  Replace the text of ref `ref` on the root block `block_uid`: safe rich-text
-  HTML for a text ref, plain text for a header ref.
+  Replace the text of ref `ref` on the block `block_uid`, at any depth of the
+  field: safe rich-text HTML for a text ref, plain text for a header ref.
   """
   @enforce_keys [:target, :block_uid, :ref, :text]
   defstruct [:target, :block_uid, :ref, :text, field: "blocks"]
+end
+
+defmodule Brando.Content.Proposals.MoveBlock do
+  @moduledoc """
+  Move the block `block_uid` among its siblings — the root blocks of the
+  field, or the children of its parent. `placement` is `:append` (last),
+  `{:before, uid}` or `{:after, uid}`, where `uid` is a sibling.
+  """
+  @enforce_keys [:target, :block_uid, :placement]
+  defstruct [:target, :block_uid, :placement, field: "blocks"]
+end
+
+defmodule Brando.Content.Proposals.DeleteBlock do
+  @moduledoc """
+  Remove the block `block_uid` and its children from the field, as deleting
+  it in the block editor does.
+  """
+  @enforce_keys [:target, :block_uid]
+  defstruct [:target, :block_uid, field: "blocks"]
 end

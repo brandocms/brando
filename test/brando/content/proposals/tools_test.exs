@@ -300,4 +300,67 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert conversation.attachments == []
     end
   end
+
+  describe "child blocks" do
+    setup c do
+      c = Brando.ProposalFixtures.multi_context(c)
+      c.video |> Ecto.Changeset.change(width: 720, height: 900) |> Brando.Repo.update!()
+      c
+    end
+
+    test "entry_outline nests children with media dimensions and link titles", c do
+      outline = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}, c.context)
+
+      assert [%{uid: intro} = text, %{uid: multi, multi: true, module_name: "Projects", children: children}] =
+               outline.blocks.blocks
+
+      assert intro == c.intro_uid and multi == c.multi_uid
+      refute Map.has_key?(text, :children)
+      assert Enum.map(children, & &1.uid) == c.child_uids
+      assert Enum.map(children, & &1.type) == ~w(module_entry module_entry module_entry)
+      assert Enum.map(children, & &1.values["size"]) == ~w(100 100 50)
+
+      assert [%{media: %{"clip" => clip}, texts: %{"info" => "Alpha"}} | _] = children
+      assert clip == %{kind: :video, id: c.video.id, width: 720, height: 900, orientation: "portrait"}
+      refute outline[:note]
+    end
+
+    test "describe_module lists a multi module's entry modules and their variables", c do
+      contract = call!("describe_module", %{"module" => "local:#{c.projects_module.id}"}, c.context)
+      refute contract.insertable
+      assert contract.note =~ "parent"
+      assert [%{module: module, name: "Project", variables: [size]}] = contract.entries
+      assert module == "local:#{c.project_module.id}"
+      assert %{key: "size", options: [%{value: "50", label: "Half"}, %{value: "100", label: "Full"}]} = size
+
+      entry = call!("describe_module", %{"module" => module}, c.context)
+      assert entry.entry_of == "local:#{c.projects_module.id}"
+    end
+
+    test "prepare_proposal changes, moves and inserts children", c do
+      [alpha, beta, gamma] = c.child_uids
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}
+
+      ops = [
+        %{"op" => "set_block_values", "target" => target, "block_uid" => beta, "values" => %{"size" => "50"}},
+        %{"op" => "move_block", "target" => target, "block_uid" => alpha, "placement" => %{"after" => gamma}},
+        %{
+          "op" => "insert_block",
+          "target" => target,
+          "module" => "local:#{c.project_module.id}",
+          "parent" => c.multi_uid,
+          "placement" => %{"before" => beta},
+          "values" => %{"size" => "50"}
+        }
+      ]
+
+      result = call!("prepare_proposal", %{"summary" => "Pair the projects", "operations" => ops}, c.context)
+      assert %{applicable: true, effects: %{updated_blocks: 1, moved_blocks: 1, inserted_blocks: 1}} = result
+
+      bad = [%{"op" => "move_block", "target" => target, "block_uid" => alpha, "placement" => %{"after" => c.intro_uid}}]
+      result = call!("prepare_proposal", %{"summary" => "x", "operations" => bad}, c.context)
+      assert %{applicable: false, problems: [%{code: :unknown_placement, message: message}]} = result
+      assert message =~ "same parent"
+    end
+  end
 end

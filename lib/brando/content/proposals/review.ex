@@ -11,8 +11,11 @@ defmodule Brando.Content.Proposals.Review do
   alias Brando.Content
 
   alias Brando.Content.Proposals.{
+    BlockTree,
     CreateEntry,
+    DeleteBlock,
     InsertBlock,
+    MoveBlock,
     Proposal,
     SetBlockMedia,
     SetBlockText,
@@ -32,9 +35,16 @@ defmodule Brando.Content.Proposals.Review do
     |> Enum.map(fn {target, value} -> entry(target, value, proposal) end)
   end
 
-  @doc "Every `{kind, id}` media reference in the review cards, for batch loading."
+  @doc """
+  Every `{kind, id}` media reference in the review cards, for batch loading:
+  the media a proposal places, and the `context` media that identify the
+  blocks it changes, moves or removes.
+  """
   @spec media([map()]) :: [{:image | :video, integer()}]
-  def media(entries), do: entries |> Enum.flat_map(& &1.media) |> Enum.uniq()
+  def media(entries) do
+    context = for entry <- entries, %{context: context} <- entry.changes, %{kind: kind, id: id} <- context, do: {kind, id}
+    entries |> Enum.flat_map(& &1.media) |> Enum.concat(context) |> Enum.uniq()
+  end
 
   defp entry({:new, ref} = target, schema, proposal) do
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
@@ -99,7 +109,26 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp block_changes(target, entry, proposal) do
-    Enum.flat_map(proposal.operations, fn
+    orders = orders(target, entry, proposal)
+
+    proposal.operations
+    |> Enum.with_index()
+    |> Enum.flat_map(fn
+      # Moves are shown as the order they produce, once per list of siblings,
+      # where the first move into that list is.
+      {%MoveBlock{target: ^target}, index} ->
+        case orders do
+          %{^index => card} -> [card]
+          _ -> []
+        end
+
+      {op, _index} ->
+        block_change(op, target, entry, proposal)
+    end)
+  end
+
+  defp block_change(op, target, entry, proposal) do
+    case op do
       %InsertBlock{target: ^target} = op ->
         module = fetch_module(op.module)
 
@@ -109,7 +138,7 @@ defmodule Brando.Content.Proposals.Review do
             uid: op.uid,
             field: op.field,
             module: module && label(module.name),
-            placement: placement(op.placement, entry, op.field, proposal),
+            placement: placement(op.placement, op.parent, entry, op.field, proposal),
             values: Enum.map(op.values, fn {k, v} -> %{name: k, value: shorten(v)} end),
             texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: excerpt(text)} end),
             media: Enum.map(op.media, fn {ref, {kind, id}} -> %{ref: ref, kind: kind, id: id} end)
@@ -142,22 +171,144 @@ defmodule Brando.Content.Proposals.Review do
         ]
 
       %SetBlockValues{target: ^target} = op ->
+        saved = saved_block(entry, op.field, op.block_uid)
+
         [
           %{
             type: :block_values,
             uid: op.block_uid,
             block: block_label(entry, op.field, op.block_uid, proposal),
-            values: Enum.map(op.values, fn {k, v} -> %{name: k, value: shorten(v)} end)
+            values: Enum.map(op.values, &value_view(&1, saved, op.block_uid, proposal)),
+            context: block_media(saved)
+          }
+        ]
+
+      %DeleteBlock{target: ^target} = op ->
+        saved = saved_block(entry, op.field, op.block_uid)
+
+        [
+          %{
+            type: :delete_block,
+            uid: nil,
+            block: block_label(entry, op.field, op.block_uid, proposal),
+            children: descendants(saved),
+            context: block_media(saved)
           }
         ]
 
       _ ->
         []
-    end)
+    end
   end
 
+  # The order cards of `target`, keyed by the index of the first move into
+  # each list of siblings. The operations are replayed on the saved field, so
+  # a card shows the final order, with what is new and what moved.
+  defp orders(target, entry, proposal) do
+    ops = proposal.operations |> Enum.with_index() |> Enum.filter(&(Map.get(elem(&1, 0), :target) == target))
+
+    ops
+    |> Enum.group_by(fn {op, _} -> Map.get(op, :field) end)
+    |> Enum.flat_map(fn
+      {nil, _} -> []
+      {field, ops} -> field_orders(field, ops, entry, proposal)
+    end)
+    |> Map.new()
+  end
+
+  defp field_orders(field, ops, entry, proposal) do
+    tree = if entry, do: entry |> Map.get(:"entry_#{field}", []) |> BlockTree.from_saved(), else: %BlockTree{}
+
+    {tree, firsts, moved} =
+      Enum.reduce(ops, {tree, %{}, MapSet.new()}, fn {op, index}, {tree, firsts, moved} = acc ->
+        case {op, BlockTree.fetch(tree, Map.get(op, :block_uid) || Map.get(op, :parent) || "")} do
+          {%MoveBlock{} = op, %{parent: parent}} ->
+            {BlockTree.move(tree, op.block_uid, op.placement), Map.put_new(firsts, parent, index),
+             MapSet.put(moved, op.block_uid)}
+
+          {%DeleteBlock{} = op, %{}} ->
+            {BlockTree.delete(tree, op.block_uid), firsts, moved}
+
+          {%InsertBlock{} = op, _} ->
+            node = %{uid: op.uid, parent: op.parent, type: :module, module: op.module, multi: false, slot_module_set: nil}
+            {BlockTree.put(tree, node, op.parent, op.placement), firsts, moved}
+
+          _ ->
+            acc
+        end
+      end)
+
+    for {parent, index} <- firsts do
+      items = Enum.map(BlockTree.children(tree, parent), &order_item(&1, entry, field, moved, proposal))
+
+      {index,
+       %{
+         type: :order,
+         uid: nil,
+         uids: MapSet.to_list(moved),
+         parent: parent && block_label(entry, field, parent, proposal),
+         items: items,
+         context: Enum.flat_map(items, & &1.media)
+       }}
+    end
+  end
+
+  defp order_item(uid, entry, field, moved, proposal) do
+    saved = saved_block(entry, field, uid)
+    inserted = Enum.find(proposal.operations, &match?(%InsertBlock{uid: ^uid}, &1))
+    vars = if saved, do: saved.vars, else: inserted_vars(inserted)
+
+    set =
+      for %SetBlockValues{block_uid: ^uid, values: values} <- proposal.operations, reduce: %{} do
+        acc -> Map.merge(acc, values)
+      end
+
+    set = if inserted, do: Map.merge(inserted.values, set), else: set
+
+    %{
+      uid: uid,
+      name: if(saved, do: block_name(saved), else: inserted && module_label(inserted.module)),
+      excerpt: saved && saved |> describe() |> brief(),
+      new?: is_nil(saved),
+      moved?: MapSet.member?(moved, uid),
+      media: block_media(saved),
+      values:
+        for %{type: :select} = var <- vars || [] do
+          value = Map.get(set, var.key, var.value)
+          %{label: var.label || var.key, value: option(var, value), changed?: Map.has_key?(set, var.key)}
+        end
+    }
+  end
+
+  defp inserted_vars(nil), do: []
+
+  defp inserted_vars(%InsertBlock{module: module}) do
+    case fetch_module(module) do
+      %{vars: vars} -> vars
+      _ -> []
+    end
+  end
+
+  defp brief(nil), do: nil
+  defp brief(text) when byte_size(text) > 48, do: String.slice(text, 0, 48) <> "…"
+  defp brief(text), do: text
+
   # Where a new block goes, relative to a neighbour the editor recognises.
-  defp placement(:append, entry, field, _proposal) do
+  defp placement(:append, parent, entry, field, proposal) when is_binary(parent) do
+    anchor =
+      case saved_block(entry, field, parent) do
+        %{children: [_ | _] = children} -> block_anchor(List.last(children))
+        _ -> nil
+      end
+
+    %{
+      position: :end,
+      anchor: anchor,
+      text: dgettext("content_proposals", "At the end of %{block}", block: block_label(entry, field, parent, proposal))
+    }
+  end
+
+  defp placement(:append, nil, entry, field, _proposal) do
     anchor =
       case entry && Map.get(entry, :"entry_#{field}", []) do
         [_ | _] = joins -> block_anchor(List.last(joins).block)
@@ -167,7 +318,7 @@ defmodule Brando.Content.Proposals.Review do
     %{position: :end, anchor: anchor, text: dgettext("content_proposals", "At the end")}
   end
 
-  defp placement({side, uid}, entry, field, proposal) do
+  defp placement({side, uid}, _parent, entry, field, proposal) do
     label = block_label(entry, field, uid, proposal)
 
     text =
@@ -189,14 +340,14 @@ defmodule Brando.Content.Proposals.Review do
       module:
         (block.module_id && module_label({block.module_origin || :local, block.module_id})) ||
           dgettext("content_proposals", "Block"),
-      excerpt: block.refs |> Enum.find_value(&text_of/1) |> excerpt()
+      excerpt: describe(block)
     }
   end
 
   # A saved block is named by its module and the start of its text; a block
   # the proposal inserts, by its module.
   defp block_label(entry, field, uid, proposal) do
-    case saved_block(entry, field, uid) do
+    case find_saved(entry, field, uid) do
       nil ->
         case Enum.find(proposal.operations, &match?(%InsertBlock{uid: ^uid}, &1)) do
           %InsertBlock{module: module} ->
@@ -206,17 +357,102 @@ defmodule Brando.Content.Proposals.Review do
             dgettext("content_proposals", "a block")
         end
 
-      block ->
-        name = block.module_id && module_label({block.module_origin || :local, block.module_id})
-        text = block.refs |> Enum.find_value(&text_of/1) |> excerpt()
-        Enum.join(Enum.reject(["“#{name || dgettext("content_proposals", "Block")}”", text], &(&1 in [nil, ""])), " · ")
+      {block, parent, index} ->
+        name = "“#{block_name(block)}”"
+        text = describe(block)
+
+        position =
+          parent &&
+            dgettext("content_proposals", "%{position} of %{count} in “%{parent}”",
+              position: index + 1,
+              count: length(parent.children),
+              parent: block_name(parent)
+            )
+
+        text = if text == block_name(block), do: nil, else: text
+        Enum.join(Enum.reject([name, position, text], &(&1 in [nil, ""])), " · ")
     end
   end
 
-  defp saved_block(nil, _field, _uid), do: nil
+  # What a block is about: the entry a link variable points to — a project
+  # block names its project — or else the start of its text, or of its first
+  # text variable (a team member block holds only a name and a role).
+  defp describe(block) do
+    Enum.find_value(block.vars || [], fn
+      %{type: :link, identifier: %{title: title}} when is_binary(title) and title != "" -> title
+      _ -> nil
+    end) ||
+      block.refs |> Enum.find_value(&text_of/1) |> excerpt() ||
+      Enum.find_value(block.vars || [], fn
+        %{type: type, value: value} when type in [:string, :text] and is_binary(value) and value != "" -> excerpt(value)
+        _ -> nil
+      end)
+  end
+
+  defp block_name(block) do
+    (block.module_id && module_label({block.module_origin || :local, block.module_id})) ||
+      dgettext("content_proposals", "Block")
+  end
+
+  defp find_saved(nil, _field, _uid), do: nil
+  defp find_saved(entry, field, uid), do: entry |> Map.get(:"entry_#{field}", []) |> BlockTree.find_saved(uid)
 
   defp saved_block(entry, field, uid) do
-    entry |> Map.get(:"entry_#{field}", []) |> Enum.find_value(&(&1.block.uid == uid && &1.block))
+    case find_saved(entry, field, uid) do
+      {block, _parent, _index} -> block
+      nil -> nil
+    end
+  end
+
+  # A setting as the editor knows it: the variable's label, and the option
+  # label of a select next to its value, with the saved value before it.
+  defp value_view({key, value}, saved, uid, proposal) do
+    var = saved && Enum.find(saved.vars, &(&1.key == key))
+    var = var || module_var(uid, key, proposal)
+
+    %{
+      name: key,
+      label: var && var.label,
+      before: saved && var && option(var, if(var.type == :boolean, do: var.value_boolean, else: var.value)),
+      value: option(var, value)
+    }
+  end
+
+  defp module_var(uid, key, proposal) do
+    with %InsertBlock{module: module} <- Enum.find(proposal.operations, &match?(%InsertBlock{uid: ^uid}, &1)),
+         %{vars: vars} <- fetch_module(module) do
+      Enum.find(vars || [], &(&1.key == key))
+    else
+      _ -> nil
+    end
+  end
+
+  defp option(%{type: :select, options: options}, value) when is_binary(value) do
+    case Enum.find(options || [], &(&1.value == value)) do
+      %{label: label} when label in [nil, ""] -> value
+      # "40%" says what "40" means; "Half (50)" needs the value beside it.
+      %{label: label} -> if String.contains?(label, value), do: label, else: "#{label} (#{value})"
+      _ -> value
+    end
+  end
+
+  defp option(_var, value), do: shorten(value)
+
+  defp descendants(nil), do: 0
+  defp descendants(block), do: Enum.reduce(block.children || [], 0, &(&2 + 1 + descendants(&1)))
+
+  # The first image or video of a block, shown so the reviewer recognises it.
+  defp block_media(nil), do: []
+
+  defp block_media(block) do
+    block.refs
+    |> Enum.find_value(fn ref ->
+      Enum.find_value([:image, :video], fn kind ->
+        id = Map.get(ref, :"#{kind}_id")
+        id && %{ref: ref.name, kind: kind, id: id}
+      end)
+    end)
+    |> List.wrap()
   end
 
   defp saved_text(entry, field, uid, ref) do
@@ -239,7 +475,8 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   # The blocks a page preview outlines: inserted blocks and changed ones.
-  defp uids_of(changes), do: changes |> Enum.map(&Map.get(&1, :uid)) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+  defp uids_of(changes),
+    do: changes |> Enum.flat_map(&[Map.get(&1, :uid) | Map.get(&1, :uids, [])]) |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
   defp media_of(changes) do
     fields = for %{fields: fields} <- changes, %{media: %{kind: kind, id: id}} <- fields, do: {kind, id}
@@ -346,7 +583,10 @@ defmodule Brando.Content.Proposals.Review do
     _ -> nil
   end
 
-  defp label(%{} = map), do: map["en"] || map |> Map.values() |> List.first()
+  # Module names in the admin's language, falling back to English.
+  defp label(%{} = map),
+    do: map[Gettext.get_locale(Brando.Gettext)] || map["en"] || map |> Map.values() |> List.first()
+
   defp label(value), do: value
 
   defp excerpt(nil), do: nil

@@ -1055,7 +1055,7 @@ msgstr "Enkeltstående"
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex:43
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:149
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:333
-#: lib/brando_admin/components/form/translation.ex:625
+#: lib/brando_admin/components/form/translation.ex:649
 #: lib/brando_admin/live/config/environment_live.ex:444
 #, elixir-autogen, elixir-format
 msgid "Source"
@@ -1860,7 +1860,9 @@ msgstr "Auto"
 
 #: lib/brando_admin/components/form/block/render.ex:2387
 #: lib/brando_admin/components/form/block_field.ex:2261
-#: lib/brando_admin/components/form/translation.ex:338
+#: lib/brando_admin/components/form/translation.ex:352
+#: lib/brando_admin/components/form/translation.ex:356
+#: lib/brando_admin/components/form/translation.ex:362
 #: lib/brando_admin/components/form/var_layout.ex:238
 #, elixir-autogen, elixir-format
 msgid "Block"
@@ -2369,6 +2371,7 @@ msgstr "Generert nettstedskart."
 msgid "Identifiers synced."
 msgstr "Identifikatorer synkronisert."
 
+#: lib/brando_admin/live/ai/assistant_live.ex:934
 #: lib/brando_admin/live_view/form/hooks.ex:1486
 #, elixir-autogen, elixir-format
 msgid "New"
@@ -2387,7 +2390,7 @@ msgstr "Videoens coverbilde"
 
 #: lib/brando_admin/components/form/block_field.ex:1844
 #: lib/brando_admin/components/form/module_props.ex:19
-#: lib/brando_admin/live/ai/assistant_live.ex:1474
+#: lib/brando_admin/live/ai/assistant_live.ex:1528
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr "Blokker"
@@ -3453,7 +3456,7 @@ msgstr "Oppføringer"
 msgid "Error deleting user: %{reason}"
 msgstr "Feil ved sletting av bruker: %{reason}"
 
-#: lib/brando_admin/components/form/translation.ex:353
+#: lib/brando_admin/components/form/translation.ex:377
 #: lib/brando_admin/live/users/user_list_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Table"
@@ -9539,8 +9542,8 @@ msgid "Reference #%{id}"
 msgstr "Referanse #%{id}"
 
 #: lib/brando_admin/components/form/draft_preview.ex:230
-#: lib/brando_admin/components/form/translation.ex:354
-#: lib/brando_admin/components/form/translation.ex:355
+#: lib/brando_admin/components/form/translation.ex:378
+#: lib/brando_admin/components/form/translation.ex:379
 #, elixir-autogen
 msgid "Related entries"
 msgstr "Relaterte innlegg"
@@ -10251,7 +10254,7 @@ msgstr "%{missing} av %{total} bilder mangler alt-tekst, og %{poor} har bare et 
 #: lib/brando/seo/checks.ex:348
 #: lib/brando/seo/checks.ex:359
 #: lib/brando_admin/components/content/list/row.ex:477
-#: lib/brando_admin/components/form/translation.ex:620
+#: lib/brando_admin/components/form/translation.ex:644
 #, elixir-autogen, elixir-format
 msgid "Language versions"
 msgstr "Språkversjoner"
@@ -11239,49 +11242,49 @@ msgid_plural "%{count} attached"
 msgstr[0] "%{count} vedlagt"
 msgstr[1] "%{count} vedlagt"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1137
+#: lib/brando_admin/live/ai/assistant_live.ex:1185
 #, elixir-autogen, elixir-format
 msgid "%{count} block added"
 msgid_plural "%{count} blocks added"
 msgstr[0] "%{count} blokk lagt til"
 msgstr[1] "%{count} blokker lagt til"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1138
+#: lib/brando_admin/live/ai/assistant_live.ex:1186
 #, elixir-autogen, elixir-format
 msgid "%{count} change"
 msgid_plural "%{count} changes"
 msgstr[0] "%{count} endring"
 msgstr[1] "%{count} endringer"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1441
+#: lib/brando_admin/live/ai/assistant_live.ex:1490
 #, elixir-autogen, elixir-format
 msgid "%{count} changed block"
 msgid_plural "%{count} changed blocks"
 msgstr[0] "%{count} endret blokk"
 msgstr[1] "%{count} endrede blokker"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1439
+#: lib/brando_admin/live/ai/assistant_live.ex:1488
 #, elixir-autogen, elixir-format
 msgid "%{count} new block"
 msgid_plural "%{count} new blocks"
 msgstr[0] "%{count} ny blokk"
 msgstr[1] "%{count} nye blokker"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1429
+#: lib/brando_admin/live/ai/assistant_live.ex:1478
 #, elixir-autogen, elixir-format
 msgid "%{count} new entry"
 msgid_plural "%{count} new entries"
 msgstr[0] "%{count} ny oppføring"
 msgstr[1] "%{count} nye oppføringer"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1430
+#: lib/brando_admin/live/ai/assistant_live.ex:1479
 #, elixir-autogen, elixir-format
 msgid "%{count} updated entry"
 msgid_plural "%{count} updated entries"
 msgstr[0] "%{count} oppdatert oppføring"
 msgstr[1] "%{count} oppdaterte oppføringer"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1125
+#: lib/brando_admin/live/ai/assistant_live.ex:1173
 #, elixir-autogen, elixir-format
 msgid "%{title} (no address yet)"
 msgstr "%{title} (ingen adresse ennå)"
@@ -11306,13 +11309,13 @@ msgstr "Juster"
 msgid "All changes"
 msgstr "Alle endringer"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1402
+#: lib/brando_admin/live/ai/assistant_live.ex:1450
 #, elixir-autogen, elixir-format
 msgid "Applied"
 msgstr "Utført"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1479
-#: lib/brando_admin/live/ai/assistant_live.ex:1482
+#: lib/brando_admin/live/ai/assistant_live.ex:1533
+#: lib/brando_admin/live/ai/assistant_live.ex:1536
 #, elixir-autogen, elixir-format
 msgid "Apply %{count} entry change"
 msgid_plural "Apply %{count} entry changes"
@@ -11361,7 +11364,7 @@ msgstr "Endre felter"
 msgid "Change settings of %{block}"
 msgstr "Endre innstillinger for %{block}"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:961
+#: lib/brando_admin/live/ai/assistant_live.ex:1009
 #, elixir-autogen, elixir-format
 msgid "Changes applied"
 msgstr "Endringene er utført"
@@ -11376,12 +11379,12 @@ msgstr "Endringene utføres først når du bekrefter dem."
 msgid "Changes by entry"
 msgstr "Endringer per oppføring"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1368
+#: lib/brando_admin/live/ai/assistant_live.ex:1416
 #, elixir-autogen, elixir-format
 msgid "Checked a content type's fields"
 msgstr "Sjekket feltene i en innholdstype"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1370
+#: lib/brando_admin/live/ai/assistant_live.ex:1418
 #, elixir-autogen, elixir-format
 msgid "Checked a module's slots"
 msgstr "Sjekket plassene i en modul"
@@ -11411,7 +11414,7 @@ msgstr "Opprett oppføringen som utkast"
 msgid "Created as draft"
 msgstr "Opprettet som utkast"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1517
+#: lib/brando_admin/live/ai/assistant_live.ex:1571
 #, elixir-autogen, elixir-format
 msgid "Current site"
 msgstr "Nåværende nettsted"
@@ -11436,7 +11439,7 @@ msgstr "Beskriv innholdsendringene …"
 msgid "Desktop"
 msgstr "Desktop"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1406
+#: lib/brando_admin/live/ai/assistant_live.ex:1454
 #, elixir-autogen, elixir-format
 msgid "Discarded"
 msgstr "Forkastet"
@@ -11461,22 +11464,22 @@ msgstr "For eksempel"
 msgid "Live page"
 msgstr "Publisert side"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1369
+#: lib/brando_admin/live/ai/assistant_live.ex:1417
 #, elixir-autogen, elixir-format
 msgid "Looked at the available modules"
 msgstr "Så på tilgjengelige moduler"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1367
+#: lib/brando_admin/live/ai/assistant_live.ex:1415
 #, elixir-autogen, elixir-format
 msgid "Looked at the content types"
 msgstr "Så på innholdstypene"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1376
+#: lib/brando_admin/live/ai/assistant_live.ex:1424
 #, elixir-autogen, elixir-format
 msgid "Looked at the site's content"
 msgstr "Så på innholdet på nettstedet"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1371
+#: lib/brando_admin/live/ai/assistant_live.ex:1419
 #, elixir-autogen, elixir-format
 msgid "Matched the attached media"
 msgstr "Fant de vedlagte mediene"
@@ -11491,7 +11494,7 @@ msgstr "Melding"
 msgid "Mobile"
 msgstr "Mobil"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1408
+#: lib/brando_admin/live/ai/assistant_live.ex:1456
 #, elixir-autogen, elixir-format
 msgid "Needs changes"
 msgstr "Trenger endringer"
@@ -11507,7 +11510,7 @@ msgstr "Ny samtale"
 msgid "New draft"
 msgstr "Nytt utkast"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1131
+#: lib/brando_admin/live/ai/assistant_live.ex:1179
 #, elixir-autogen, elixir-format
 msgid "New entry"
 msgstr "Ny oppføring"
@@ -11547,7 +11550,7 @@ msgstr "Forhåndsvisning er ikke satt opp for denne innholdstypen. Se gjennom en
 msgid "Page preview of %{title}"
 msgstr "Forhåndsvisning av %{title}"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1375
+#: lib/brando_admin/live/ai/assistant_live.ex:1423
 #, elixir-autogen, elixir-format
 msgid "Prepared the proposal"
 msgstr "Gjorde klar forslaget"
@@ -11578,12 +11581,12 @@ msgstr "Foreslått"
 msgid "Put image1 on the Index page, after the introduction"
 msgstr "Sett image1 på forsiden, etter ingressen"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1366
+#: lib/brando_admin/live/ai/assistant_live.ex:1414
 #, elixir-autogen, elixir-format
 msgid "Read an entry"
 msgstr "Leste en oppføring"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1409
+#: lib/brando_admin/live/ai/assistant_live.ex:1457
 #, elixir-autogen, elixir-format
 msgid "Ready for your review"
 msgstr "Klar til gjennomgang"
@@ -11603,7 +11606,7 @@ msgstr "Fjern %{alias}"
 msgid "Replace media in %{block}"
 msgstr "Bytt media i %{block}"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1407
+#: lib/brando_admin/live/ai/assistant_live.ex:1455
 #, elixir-autogen, elixir-format
 msgid "Replaced by a newer version"
 msgstr "Erstattet av en nyere versjon"
@@ -11623,12 +11626,12 @@ msgstr "Skriv om ingressen på Om oss-siden så den blir kortere"
 msgid "Saved version"
 msgstr "Lagret versjon"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1365
+#: lib/brando_admin/live/ai/assistant_live.ex:1413
 #, elixir-autogen, elixir-format
 msgid "Searched for “%{query}”"
 msgstr "Søkte etter «%{query}»"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1372
+#: lib/brando_admin/live/ai/assistant_live.ex:1420
 #, elixir-autogen, elixir-format
 msgid "Searched the media library"
 msgstr "Søkte i mediebiblioteket"
@@ -11663,7 +11666,7 @@ msgstr "Siden kunne ikke rendres: %{message}"
 msgid "The proposed content in the site's own templates. Nothing is saved."
 msgstr "Det foreslåtte innholdet i nettstedets egne maler. Ingenting lagres."
 
-#: lib/brando_admin/live/ai/assistant_live.ex:928
+#: lib/brando_admin/live/ai/assistant_live.ex:976
 #, elixir-autogen, elixir-format
 msgid "Thinking"
 msgstr "Tenker"
@@ -11703,21 +11706,21 @@ msgstr "Visning"
 msgid "You"
 msgstr "Du"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1483
+#: lib/brando_admin/live/ai/assistant_live.ex:1537
 #, elixir-autogen, elixir-format
 msgid "affects %{count} live page"
 msgid_plural "affects %{count} live pages"
 msgstr[0] "berører %{count} publisert side"
 msgstr[1] "berører %{count} publiserte sider"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1418
+#: lib/brando_admin/live/ai/assistant_live.ex:1466
 #, elixir-autogen, elixir-format
 msgid "changed block"
 msgid_plural "changed blocks"
 msgstr[0] "endret blokk"
 msgstr[1] "endrede blokker"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1419
+#: lib/brando_admin/live/ai/assistant_live.ex:1468
 #, elixir-autogen, elixir-format
 msgid "deletion"
 msgid_plural "deletions"
@@ -11729,21 +11732,21 @@ msgstr[1] "slettinger"
 msgid "module"
 msgstr "modul"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1417
+#: lib/brando_admin/live/ai/assistant_live.ex:1465
 #, elixir-autogen, elixir-format
 msgid "new block"
 msgid_plural "new blocks"
 msgstr[0] "ny blokk"
 msgstr[1] "nye blokker"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1415
+#: lib/brando_admin/live/ai/assistant_live.ex:1463
 #, elixir-autogen, elixir-format
 msgid "new entry"
 msgid_plural "new entries"
 msgstr[0] "ny oppføring"
 msgstr[1] "nye oppføringer"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1442
+#: lib/brando_admin/live/ai/assistant_live.ex:1495
 #, elixir-autogen, elixir-format
 msgid "no deletions"
 msgstr "ingen slettinger"
@@ -11753,7 +11756,7 @@ msgstr "ingen slettinger"
 msgid "not applied"
 msgstr "ikke utført"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1416
+#: lib/brando_admin/live/ai/assistant_live.ex:1464
 #, elixir-autogen, elixir-format
 msgid "updated entry"
 msgid_plural "updated entries"
@@ -11828,7 +11831,7 @@ msgstr "nei"
 msgid "off"
 msgstr "av"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1374
+#: lib/brando_admin/live/ai/assistant_live.ex:1422
 #, elixir-autogen, elixir-format
 msgid "Attached the folder's media"
 msgstr "La ved mediene i mappen"
@@ -11849,7 +11852,7 @@ msgstr "Bygg med KI"
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando_admin/live/ai/assistant_live.ex:1373
+#: lib/brando_admin/live/ai/assistant_live.ex:1421
 #, elixir-autogen, elixir-format
 msgid "Looked for the folder"
 msgstr "Så etter mappen"
@@ -12026,7 +12029,7 @@ msgstr "Retningslinjene innholdsassistenten følger når den bygger innhold for 
 msgid "The copy is loaded into the editor. Nothing changes here until you save it."
 msgstr "Kopien hentes inn i redigeringen. Ingenting endres her før du lagrer den."
 
-#: lib/brando_admin/components/form/translation.ex:500
+#: lib/brando_admin/components/form/translation.ex:524
 #, elixir-autogen, elixir-format
 msgid "%{count} item needs attention"
 msgid_plural "%{count} items need attention"
@@ -12040,7 +12043,7 @@ msgid_plural "%{count} links waiting"
 msgstr[0] "%{count} lenke venter"
 msgstr[1] "%{count} lenker venter"
 
-#: lib/brando_admin/components/form/translation.ex:628
+#: lib/brando_admin/components/form/translation.ex:652
 #, elixir-autogen, elixir-format
 msgid "%{count} open item"
 msgid_plural "%{count} open items"
@@ -12054,7 +12057,7 @@ msgid_plural "%{count} to translate"
 msgstr[0] "%{count} å oversette"
 msgstr[1] "%{count} å oversette"
 
-#: lib/brando_admin/components/form/translation.ex:429
+#: lib/brando_admin/components/form/translation.ex:453
 #, elixir-autogen, elixir-format
 msgid "A translation is created as an unpublished copy of this entry, which becomes its source: structure, media and shared values follow this entry."
 msgstr "En oversettelse opprettes som en upublisert kopi av denne oppføringen, som blir kilden: struktur, medier og felles verdier følger denne oppføringen."
@@ -12064,7 +12067,7 @@ msgstr "En oversettelse opprettes som en upublisert kopi av denne oppføringen, 
 msgid "Blocks in this translation follow the source. Add, remove or move them in the source."
 msgstr "Blokkene i denne oversettelsen følger kilden. Legg til, fjern eller flytt dem i kilden."
 
-#: lib/brando_admin/components/form/translation.ex:491
+#: lib/brando_admin/components/form/translation.ex:515
 #, elixir-autogen, elixir-format
 msgid "Blocks or rows were added, removed or moved in the source. The form has the new structure."
 msgstr "Blokker eller rader ble lagt til, fjernet eller flyttet i kilden. Skjemaet har den nye strukturen."
@@ -12079,43 +12082,43 @@ msgstr "Blokkene, rekkefølgen og mediene følger kilden. Rediger teksten her."
 msgid "Change structure in the source"
 msgstr "Endre strukturen i kilden"
 
-#: lib/brando_admin/components/form/translation.ex:513
+#: lib/brando_admin/components/form/translation.ex:537
 #, elixir-autogen, elixir-format
 msgid "Changed in the source — review the translation"
 msgstr "Endret i kilden – gå gjennom oversettelsen"
 
-#: lib/brando_admin/components/form/translation.ex:572
+#: lib/brando_admin/components/form/translation.ex:596
 #, elixir-autogen, elixir-format
 msgid "Create a translation"
 msgstr "Opprett en oversettelse"
 
 #: lib/brando_admin/components/content/list/row.ex:499
-#: lib/brando_admin/components/form/translation.ex:626
+#: lib/brando_admin/components/form/translation.ex:650
 #, elixir-autogen, elixir-format
 msgid "Independent"
 msgstr "Selvstendig"
 
-#: lib/brando_admin/components/form/translation.ex:443
+#: lib/brando_admin/components/form/translation.ex:467
 #, elixir-autogen, elixir-format
 msgid "Independent translation"
 msgstr "Selvstendig oversettelse"
 
-#: lib/brando_admin/components/form/translation.ex:546
+#: lib/brando_admin/components/form/translation.ex:570
 #, elixir-autogen, elixir-format
 msgid "Make independent"
 msgstr "Gjør selvstendig"
 
-#: lib/brando_admin/components/form/translation.ex:559
+#: lib/brando_admin/components/form/translation.ex:583
 #, elixir-autogen, elixir-format
 msgid "Make source"
 msgstr "Gjør til kilde"
 
-#: lib/brando_admin/components/form/translation.ex:554
+#: lib/brando_admin/components/form/translation.ex:578
 #, elixir-autogen, elixir-format
 msgid "Make this translation the source? The other languages will follow its structure and shared values from its next save. Nothing is published."
 msgstr "Gjøre denne oversettelsen til kilde? De andre språkene følger strukturen og de felles verdiene fra neste gang den lagres. Ingenting publiseres."
 
-#: lib/brando_admin/components/form/translation.ex:506
+#: lib/brando_admin/components/form/translation.ex:530
 #, elixir-autogen, elixir-format
 msgid "Needs translation"
 msgstr "Må oversettes"
@@ -12125,17 +12128,17 @@ msgstr "Må oversettes"
 msgid "Not saved: this translation's structure, media and shared values follow the source. Change them in the source."
 msgstr "Ikke lagret: strukturen, mediene og de felles verdiene i denne oversettelsen følger kilden. Endre dem i kilden."
 
-#: lib/brando_admin/components/form/translation.ex:495
+#: lib/brando_admin/components/form/translation.ex:519
 #, elixir-autogen, elixir-format
 msgid "Nothing needs translating or reviewing."
 msgstr "Ingenting må oversettes eller gås gjennom."
 
-#: lib/brando_admin/components/form/translation.ex:475
+#: lib/brando_admin/components/form/translation.ex:499
 #, elixir-autogen, elixir-format
 msgid "Open the source"
 msgstr "Åpne kilden"
 
-#: lib/brando_admin/components/form/translation.ex:606
+#: lib/brando_admin/components/form/translation.ex:630
 #, elixir-autogen, elixir-format
 msgid "Reviewed"
 msgstr "Gått gjennom"
@@ -12145,27 +12148,27 @@ msgstr "Gått gjennom"
 msgid "Save minor text corrections"
 msgstr "Lagre små tekstrettelser"
 
-#: lib/brando_admin/components/form/translation.ex:407
+#: lib/brando_admin/components/form/translation.ex:431
 #, elixir-autogen, elixir-format
 msgid "Source of its translations"
 msgstr "Kilde for oversettelsene sine"
 
-#: lib/brando_admin/components/form/translation.ex:541
+#: lib/brando_admin/components/form/translation.ex:565
 #, elixir-autogen, elixir-format
 msgid "Stop following the source? This translation keeps its content, its unsaved changes and its link to the other languages, and its structure becomes editable here. It is not published."
 msgstr "Slutte å følge kilden? Oversettelsen beholder innholdet, endringene som ikke er lagret og koblingen til de andre språkene, og strukturen kan redigeres her. Den publiseres ikke."
 
-#: lib/brando_admin/components/form/translation.ex:472
+#: lib/brando_admin/components/form/translation.ex:496
 #, elixir-autogen, elixir-format
 msgid "Structure, media and shared values follow the source. Edit the text here; change structure in the source."
 msgstr "Struktur, medier og felles verdier følger kilden. Rediger teksten her; endre strukturen i kilden."
 
-#: lib/brando_admin/components/form/translation.ex:409
+#: lib/brando_admin/components/form/translation.ex:433
 #, elixir-autogen, elixir-format
 msgid "Structure, media and shared values you save here are applied to the translations below. Their translated text is kept, and changed text is marked for review."
 msgstr "Struktur, medier og felles verdier du lagrer her, brukes i oversettelsene nedenfor. Den oversatte teksten beholdes, og endret tekst markeres for gjennomgang."
 
-#: lib/brando_admin/components/form/translation.ex:501
+#: lib/brando_admin/components/form/translation.ex:525
 #, elixir-autogen, elixir-format
 msgid "The changes from the source are in the form and are saved with it."
 msgstr "Endringene fra kilden ligger i skjemaet og lagres sammen med det."
@@ -12175,7 +12178,7 @@ msgstr "Endringene fra kilden ligger i skjemaet og lagres sammen med det."
 msgid "The changes from the source could not be loaded into the form."
 msgstr "Endringene fra kilden kunne ikke lastes inn i skjemaet."
 
-#: lib/brando_admin/components/form/translation.ex:487
+#: lib/brando_admin/components/form/translation.ex:511
 #, elixir-autogen, elixir-format
 msgid "The source changed again while you were editing. Its newer changes are loaded below and are not saved yet."
 msgstr "Kilden ble endret igjen mens du redigerte. De nyere endringene er lastet inn nedenfor og er ikke lagret ennå."
@@ -12200,17 +12203,17 @@ msgstr "Oversettelsen er nå selvstendig."
 msgid "This translation is now the source."
 msgstr "Oversettelsen er nå kilden."
 
-#: lib/brando_admin/components/form/translation.ex:444
+#: lib/brando_admin/components/form/translation.ex:468
 #, elixir-autogen, elixir-format
 msgid "This translation no longer follows a source. Its structure and shared values are edited here."
 msgstr "Denne oversettelsen følger ikke lenger en kilde. Strukturen og de felles verdiene redigeres her."
 
-#: lib/brando_admin/components/form/translation.ex:469
+#: lib/brando_admin/components/form/translation.ex:493
 #, elixir-autogen, elixir-format
 msgid "Translation of the %{language} source"
 msgstr "Oversettelse av kilden på %{language}"
 
-#: lib/brando_admin/components/form/translation.ex:427
+#: lib/brando_admin/components/form/translation.ex:451
 #, elixir-autogen, elixir-format
 msgid "Translations"
 msgstr "Oversettelser"
@@ -12222,12 +12225,12 @@ msgstr "Oppdatert"
 
 #: lib/brando_admin/components/content/list/row.ex:513
 #: lib/brando_admin/components/content/list/row.ex:518
-#: lib/brando_admin/components/form/translation.ex:520
+#: lib/brando_admin/components/form/translation.ex:544
 #, elixir-autogen, elixir-format
 msgid "Updated from the source"
 msgstr "Oppdatert fra kilden"
 
-#: lib/brando_admin/components/form/translation.ex:526
+#: lib/brando_admin/components/form/translation.ex:550
 #, elixir-autogen, elixir-format
 msgid "Waiting for a linked translation"
 msgstr "Venter på en koblet oversettelse"
@@ -12238,13 +12241,61 @@ msgstr "Venter på en koblet oversettelse"
 msgid "You do not have permission to do this."
 msgstr "Du har ikke tilgang til å gjøre dette."
 
-#: lib/brando_admin/components/form/translation.ex:349
+#: lib/brando_admin/components/form/translation.ex:373
 #, elixir-autogen, elixir-format
 msgid "gallery"
 msgstr "galleri"
 
-#: lib/brando_admin/components/form/translation.ex:348
-#: lib/brando_admin/components/form/translation.ex:351
+#: lib/brando_admin/components/form/translation.ex:372
+#: lib/brando_admin/components/form/translation.ex:375
 #, elixir-autogen, elixir-format
 msgid "media"
 msgstr "medier"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1494
+#, elixir-autogen, elixir-format
+msgid "%{count} deletion"
+msgid_plural "%{count} deletions"
+msgstr[0] "%{count} sletting"
+msgstr[1] "%{count} slettinger"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1492
+#, elixir-autogen, elixir-format
+msgid "%{count} moved block"
+msgid_plural "%{count} moved blocks"
+msgstr[0] "%{count} flyttet blokk"
+msgstr[1] "%{count} flyttede blokker"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:945
+#, elixir-autogen, elixir-format
+msgid "Its %{count} nested block is removed too."
+msgid_plural "Its %{count} nested blocks are removed too."
+msgstr[0] "Den ene underliggende blokken fjernes også."
+msgstr[1] "De %{count} underliggende blokkene fjernes også."
+
+#: lib/brando_admin/live/ai/assistant_live.ex:943
+#, elixir-autogen, elixir-format
+msgid "Remove %{block}"
+msgstr "Fjern %{block}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:1467
+#, elixir-autogen, elixir-format
+msgid "moved block"
+msgid_plural "moved blocks"
+msgstr[0] "flyttet blokk"
+msgstr[1] "flyttede blokker"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:935
+#, elixir-autogen, elixir-format
+msgid "Moved"
+msgstr "Flyttet"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:920
+#, elixir-autogen, elixir-format
+msgid "New order in %{block}"
+msgstr "Ny rekkefølge i %{block}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex:921
+#, elixir-autogen, elixir-format
+msgid "New order of the blocks"
+msgstr "Ny rekkefølge for blokkene"

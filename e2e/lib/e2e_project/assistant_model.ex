@@ -13,6 +13,9 @@ defmodule E2eProject.AssistantModel do
   as when the conversation is opened from the block editor. "… all the images
   in the NAME folder …" finds the folder, attaches it one image per call to
   exercise paging, and adds a Single Asset block for every attached image.
+
+  "Put the last team member first" reads the selected entry's outline and
+  moves the last child of its first multi block before the first one.
   """
   alias ReqLLM.{Context, Message, Response, ToolCall}
   alias ReqLLM.Message.ContentPart
@@ -41,9 +44,14 @@ defmodule E2eProject.AssistantModel do
 
   defp find_entry(text, system) do
     case {Regex.run(~r/(?:on|to) the (.+?) page/i, text), selected(system)} do
-      {[_, title], _} -> {:call, "search_entries", %{"query" => title, "content_type" => "Brando.Pages.Page"}}
-      {nil, %{} = entry} -> {:call, "entry_outline", entry}
-      {nil, nil} -> {:text, "Which page should the media go on?"}
+      {[_, title], _} ->
+        {:call, "search_entries", %{"query" => title, "content_type" => "Brando.Pages.Page"}}
+
+      {nil, %{} = entry} ->
+        {:call, "entry_outline", entry}
+
+      {nil, nil} ->
+        {:text, "Which page should the media go on?"}
     end
   end
 
@@ -66,7 +74,8 @@ defmodule E2eProject.AssistantModel do
 
   defp continue(results, request, system) do
     cond do
-      folder = results["find_media_folders"] && !results["search_entries"] && !results["entry_outline"] ->
+      folder =
+          results["find_media_folders"] && !results["search_entries"] && !results["entry_outline"] ->
         attach_folder(folder, results, request, system)
 
       true ->
@@ -86,7 +95,8 @@ defmodule E2eProject.AssistantModel do
         {:call, "attach_folder", %{"kind" => "image", "folder_id" => folder["id"], "limit" => 1}}
 
       {[folder], %{"next_offset" => offset}} when is_integer(offset) ->
-        {:call, "attach_folder", %{"kind" => "image", "folder_id" => folder["id"], "limit" => 1, "offset" => offset}}
+        {:call, "attach_folder",
+         %{"kind" => "image", "folder_id" => folder["id"], "limit" => 1, "offset" => offset}}
 
       {[_folder], %{"total" => 0}} ->
         {:text, "The folder is empty."}
@@ -98,6 +108,9 @@ defmodule E2eProject.AssistantModel do
 
   defp continue(results, request) do
     cond do
+      request =~ ~r/team member first/i ->
+        reorder(results)
+
       results["prepare_proposal"] ->
         case results["prepare_proposal"] do
           %{"applicable" => true} ->
@@ -109,13 +122,16 @@ defmodule E2eProject.AssistantModel do
             {:text, "I could not prepare the proposal: #{error}"}
 
           %{"problems" => problems} ->
-            {:text, "The proposal has problems: " <> Enum.map_join(problems, "; ", & &1["message"])}
+            {:text,
+             "The proposal has problems: " <> Enum.map_join(problems, "; ", & &1["message"])}
         end
 
       results["list_attachments"] ->
         module = Enum.find(results["list_modules"]["modules"], &(&1["name"] == "Single Asset"))
         summary = if request =~ ~r/instead/i, do: "Add the media, adjusted", else: "Add the media"
-        aliases = if folder_name(request), do: all_attachments(results), else: [attachment(results)]
+
+        aliases =
+          if folder_name(request), do: all_attachments(results), else: [attachment(results)]
 
         {:call, "prepare_proposal",
          %{
@@ -124,7 +140,10 @@ defmodule E2eProject.AssistantModel do
              Enum.map(aliases, fn alias ->
                %{
                  "op" => "insert_block",
-                 "target" => %{"content_type" => page(results)["content_type"], "id" => page(results)["id"]},
+                 "target" => %{
+                   "content_type" => page(results)["content_type"],
+                   "id" => page(results)["id"]
+                 },
                  "module" => module["module"],
                  "media" => %{"media" => alias}
                }
@@ -145,11 +164,41 @@ defmodule E2eProject.AssistantModel do
     end
   end
 
+  defp reorder(%{"prepare_proposal" => %{"applicable" => true}}),
+    do: {:text, "I prepared a proposal that moves the last team member first."}
+
+  defp reorder(%{"prepare_proposal" => result}),
+    do: {:text, "The proposal has problems: #{inspect(result)}"}
+
+  defp reorder(%{"entry_outline" => entry}) do
+    with %{"children" => [%{"uid" => first} | _] = children} <-
+           Enum.find(entry["blocks"]["blocks"], &(&1["multi"] && &1["children"])),
+         %{"uid" => last} when last != first <- List.last(children) do
+      target = %{"content_type" => entry["content_type"], "id" => entry["id"]}
+
+      {:call, "prepare_proposal",
+       %{
+         "summary" => "Put the last team member first",
+         "operations" => [
+           %{
+             "op" => "move_block",
+             "target" => target,
+             "block_uid" => last,
+             "placement" => %{"before" => first}
+           }
+         ]
+       }}
+    else
+      _ -> {:text, "I found no team with more than one member."}
+    end
+  end
+
   # "… and create a case called Sommerro with image2" adds a draft case whose
   # listing image and first block use that attachment.
   defp case_operations(request, module, results) do
     with [_, title, alias] <- Regex.run(~r/case called (\w+) with (\w+)/i, request),
-         %{"id" => id} <- Enum.find(results["list_attachments"]["attachments"], &(&1["alias"] == alias)) do
+         %{"id" => id} <-
+           Enum.find(results["list_attachments"]["attachments"], &(&1["alias"] == alias)) do
       [
         %{
           "op" => "create_entry",
@@ -186,9 +235,14 @@ defmodule E2eProject.AssistantModel do
   defp page(results), do: List.first(results["search_entries"]["entries"] || [])
 
   defp placed(results, request),
-    do: if(folder_name(request), do: Enum.join(all_attachments(results), ", "), else: attachment(results))
+    do:
+      if(folder_name(request),
+        do: Enum.join(all_attachments(results), ", "),
+        else: attachment(results)
+      )
 
-  defp all_attachments(results), do: Enum.map(results["list_attachments"]["attachments"], & &1["alias"])
+  defp all_attachments(results),
+    do: Enum.map(results["list_attachments"]["attachments"], & &1["alias"])
 
   defp attachment(results) do
     case results["list_attachments"]["attachments"] do
@@ -202,7 +256,10 @@ defmodule E2eProject.AssistantModel do
     turn = messages |> Enum.reverse() |> Enum.take_while(&(&1.role != :user)) |> Enum.reverse()
 
     names =
-      for %Message{role: :assistant, tool_calls: calls} <- turn, calls, call <- calls, into: %{} do
+      for %Message{role: :assistant, tool_calls: calls} <- turn,
+          calls,
+          call <- calls,
+          into: %{} do
         {call.id, ToolCall.name(call)}
       end
 
@@ -221,12 +278,24 @@ defmodule E2eProject.AssistantModel do
   defp text(%Message{content: content}) when is_binary(content), do: content
 
   defp response(model, context, {:call, name, args}) do
-    call = ToolCall.new("call_" <> Integer.to_string(System.unique_integer([:positive])), name, Jason.encode!(args))
-    build(model, context, %Message{role: :assistant, content: [], tool_calls: [call]}, :tool_calls)
+    call =
+      ToolCall.new(
+        "call_" <> Integer.to_string(System.unique_integer([:positive])),
+        name,
+        Jason.encode!(args)
+      )
+
+    build(
+      model,
+      context,
+      %Message{role: :assistant, content: [], tool_calls: [call]},
+      :tool_calls
+    )
   end
 
   defp response(model, context, {:text, text}),
-    do: build(model, context, %Message{role: :assistant, content: [ContentPart.text(text)]}, :stop)
+    do:
+      build(model, context, %Message{role: :assistant, content: [ContentPart.text(text)]}, :stop)
 
   defp build(model, context, message, finish_reason) do
     %Response{

@@ -4,8 +4,12 @@ defmodule Brando.Content.ProposalsTest do
   alias Brando.Content.Proposals
 
   alias Brando.Content.Proposals.{
+    Codec,
     CreateEntry,
+    DeleteBlock,
     InsertBlock,
+    MoveBlock,
+    Review,
     Preview,
     Receipt,
     SetBlockMedia,
@@ -493,6 +497,196 @@ defmodule Brando.Content.ProposalsTest do
       ops = [%CreateEntry{schema: Brando.Pages.Fragment, ref: "f", fields: %{key: "f", parent_key: "p", language: "en"}}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user)
       assert {:error, :no_preview_target} = Preview.render(proposal, {:new, "f"}, c.user)
+    end
+  end
+
+  describe "child blocks" do
+    setup c, do: Brando.ProposalFixtures.multi_context(c)
+
+    defp multi(c), do: load(c.work, c.user).entry_blocks |> Enum.find(&(&1.block.uid == c.multi_uid)) |> Map.get(:block)
+    defp child_uids(c), do: Enum.map(multi(c).children, & &1.uid)
+    defp sizes(c), do: Enum.map(multi(c).children, &Enum.find_value(&1.vars, fn v -> v.key == "size" && v.value end))
+
+    test "values, text and media of a multi module's entries", c do
+      [alpha, beta, gamma] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %SetBlockValues{target: target, block_uid: beta, values: %{size: "50"}},
+        %SetBlockText{target: target, block_uid: gamma, ref: :info, text: "<p>Gamma, rewritten</p>"},
+        %SetBlockMedia{target: target, block_uid: gamma, ref: :clip, asset: {:video, c.video.id}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert %{updated_blocks: 2, moved_blocks: 0, deletions: 0} = proposal.effects
+
+      [card] = Review.entries(proposal)
+
+      assert [values, text, media] = card.changes
+      assert values.block =~ "“Project” · 2 of 3 in “Projects”"
+      assert [%{label: "Size", before: "Full (100)", value: "Half (50)"}] = values.values
+      assert text.before == "Gamma"
+      assert media.uid == gamma
+      assert {:video, c.video.id} in Review.media([card])
+      refute alpha in card.highlight
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert sizes(c) == ["100", "50", "50"]
+      assert child_uids(c) == c.child_uids
+
+      [_, _, g] = multi(c).children
+      assert Enum.find(g.refs, &(&1.name == "info")).data.data.text == "<p>Gamma, rewritten</p>"
+      assert Enum.find(g.refs, &(&1.name == "clip")).video_id == c.video.id
+      assert Repo.get!(Page, c.work.id).rendered_blocks =~ "Gamma, rewritten"
+    end
+
+    test "move, delete and insert entries; operations see the ones before them", c do
+      [alpha, beta, gamma] = c.child_uids
+      target = {Page, c.work.id}
+      delta = Brando.Utils.generate_uid()
+      blocks = block_count()
+
+      ops = [
+        %MoveBlock{target: target, block_uid: gamma, placement: {:before, alpha}},
+        %DeleteBlock{target: target, block_uid: beta},
+        %InsertBlock{
+          target: target,
+          module: c.project_module.id,
+          parent: c.multi_uid,
+          placement: {:after, gamma},
+          uid: delta,
+          values: %{size: "50"},
+          texts: %{info: "<p>Delta</p>"}
+        },
+        %MoveBlock{target: target, block_uid: c.multi_uid, placement: {:before, c.intro_uid}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert %{inserted_blocks: 1, moved_blocks: 2, deletions: 1} = proposal.effects
+
+      [card] = Review.entries(proposal)
+
+      # Moves are shown as the order they leave each list in, where the first
+      # move into that list is: the entries, then the root blocks.
+      assert [order, delete, insert, root_order] = card.changes
+      assert %{type: :order, parent: parent, items: items} = order
+      assert parent =~ "Projects"
+      assert Enum.map(items, & &1.uid) == [gamma, delta, alpha]
+      assert Enum.map(items, &{&1.moved?, &1.new?}) == [{true, false}, {false, true}, {false, false}]
+      assert [%{label: "Size", value: "Half (50)", changed?: true}] = Enum.at(items, 1).values
+      assert [%{value: "Half (50)", changed?: false}] = hd(items).values
+      assert gamma in card.highlight
+      assert delete.type == :delete_block and delete.block =~ "Beta"
+      assert insert.type == :insert_block and insert.placement.text =~ "After"
+      assert %{type: :order, parent: nil, items: [%{uid: multi}, %{uid: intro}]} = root_order
+      assert {multi, intro} == {c.multi_uid, c.intro_uid}
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      assert uids(c.work, c.user) == [c.multi_uid, c.intro_uid]
+      assert child_uids(c) == [gamma, delta, alpha]
+      assert Enum.map(multi(c).children, & &1.sequence) == [0, 1, 2]
+      assert Enum.map(multi(c).children, & &1.type) == [:module_entry, :module_entry, :module_entry]
+      assert sizes(c) == ["50", "50", "100"]
+      # The deleted entry is gone with its row; the new one is counted once.
+      assert block_count() == blocks
+      assert Repo.get!(Page, c.work.id).rendered_blocks =~ "Delta"
+    end
+
+    test "delete a root block and its children", c do
+      target = {Page, c.work.id}
+      ops = [%DeleteBlock{target: target, block_uid: c.multi_uid}]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert %{deletions: 1} = proposal.effects
+      assert [%{type: :delete_block, children: 3}] = hd(Review.entries(proposal)).changes
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert uids(c.work, c.user) == [c.intro_uid]
+      refute Repo.get!(Page, c.work.id).rendered_blocks =~ "Alpha"
+    end
+
+    test "structure problems", c do
+      [alpha, beta, _gamma] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        # Not an entry module of Projects.
+        %InsertBlock{target: target, module: c.text_module.id, parent: c.multi_uid},
+        # A Text block holds no children.
+        %InsertBlock{target: target, module: c.project_module.id, parent: c.intro_uid},
+        # Anchors are siblings.
+        %InsertBlock{target: target, module: c.project_module.id, parent: c.multi_uid, placement: {:after, c.intro_uid}},
+        %MoveBlock{target: target, block_uid: alpha, placement: {:after, c.intro_uid}},
+        %MoveBlock{target: target, block_uid: alpha, placement: {:after, alpha}},
+        # A deleted block cannot be edited afterwards.
+        %DeleteBlock{target: target, block_uid: beta},
+        %SetBlockValues{target: target, block_uid: beta, values: %{size: "50"}},
+        %DeleteBlock{target: target, block_uid: "nope"},
+        # A uid in use cannot be given to a new block.
+        %InsertBlock{target: target, module: c.project_module.id, parent: c.multi_uid, uid: alpha},
+        %SetBlockValues{target: target, block_uid: alpha, values: %{size: "75"}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [
+               {0, :module_not_allowed},
+               {1, :not_a_parent},
+               {2, :unknown_placement},
+               {3, :unknown_placement},
+               {4, :unknown_placement},
+               {6, :unknown_block},
+               {7, :unknown_block},
+               {8, :duplicate_uid},
+               {9, :unsupported_value}
+             ]
+    end
+
+    test "new child operations survive storage", c do
+      [alpha, beta, _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %MoveBlock{target: target, block_uid: alpha, placement: :append},
+        %DeleteBlock{target: target, block_uid: beta},
+        %InsertBlock{target: target, module: c.project_module.id, parent: c.multi_uid}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert {:ok, stored} = Proposals.get(proposal.id, c.user)
+      assert stored.operations == proposal.operations
+      assert stored.effects == proposal.effects
+    end
+  end
+
+  describe "codec" do
+    test "decodes move, delete and a child insert, and encodes them back" do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => 1}
+
+      maps = [
+        %{"op" => "move_block", "target" => target, "block_uid" => "a", "placement" => %{"after" => "b"}},
+        %{"op" => "move_block", "target" => target, "block_uid" => "a", "placement" => "append"},
+        %{"op" => "delete_block", "target" => target, "block_uid" => "a"},
+        %{"op" => "insert_block", "target" => target, "module" => "local:3", "parent" => "p", "uid" => "n"}
+      ]
+
+      assert {:ok, [move, append, delete, insert]} = Codec.decode_all(maps)
+      assert %MoveBlock{target: {Page, 1}, block_uid: "a", placement: {:after, "b"}, field: "blocks"} = move
+      assert append.placement == :append
+      assert %DeleteBlock{block_uid: "a"} = delete
+      assert %InsertBlock{parent: "p", uid: "n", placement: :append} = insert
+
+      for op <- [move, append, delete, insert], do: assert({:ok, ^op} = Codec.decode(Codec.encode(op)))
+
+      assert {:error, "Operation 0: " <> _} =
+               Codec.decode_all([%{"op" => "move_block", "target" => target, "block_uid" => "a"}])
+
+      assert {:error, _} = Codec.decode(%{"op" => "delete_block", "target" => target})
+      assert {:error, _} = Codec.decode(%{"op" => "insert_block", "target" => target, "module" => 3, "parent" => 5})
     end
   end
 end
