@@ -53,6 +53,32 @@ defmodule Brando.RichText do
   def safe_html?(nil), do: true
   def safe_html?(_), do: false
 
+  @unsafe_svg_tags ~w(script foreignobject iframe object embed style link meta base animate set handler)
+
+  @doc """
+  Whether `code` is one inline `<svg>` without scripts, event handlers,
+  embedded documents or script URLs. Animation elements are refused too:
+  they can rewrite an attribute such as `href` after the check.
+  """
+  def safe_svg?(code) when is_binary(code) do
+    with {:ok, nodes} <- Floki.parse_fragment(code),
+         [{"svg", _, _} = svg] <-
+           Enum.reject(nodes, &(match?({:comment, _}, &1) or (is_binary(&1) and String.trim(&1) == ""))) do
+      safe_svg_node?(svg)
+    else
+      _ -> false
+    end
+  end
+
+  def safe_svg?(_), do: false
+
+  defp safe_svg_node?({tag, attrs, children}) do
+    String.downcase(tag) not in @unsafe_svg_tags && Enum.all?(attrs, &safe_attribute?/1) &&
+      Enum.all?(children, &safe_svg_node?/1)
+  end
+
+  defp safe_svg_node?(_), do: true
+
   defp safe_node?({tag, attrs, children}) do
     tag not in @unsafe_tags && Enum.all?(attrs, &safe_attribute?/1) && Enum.all?(children, &safe_node?/1)
   end

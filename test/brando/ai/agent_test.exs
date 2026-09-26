@@ -417,4 +417,36 @@ defmodule Brando.AI.AgentTest do
     assert_receive {:agent, _, {:run, %Run{id: ^id, status: "completed"}}}, 5_000
     assert List.last(Agent.messages(c.conversation.id, c.user)).content == "Hello there"
   end
+
+  test "reads from before the editor's latest message are marked stale", c do
+    message = fn attrs -> Repo.insert!(struct(Message, Map.put(attrs, :conversation_id, c.conversation.id))) end
+    call = %{"id" => "call_1", "name" => "entry_outline", "arguments" => "{}"}
+    proposal = %{"id" => "call_2", "name" => "prepare_proposal", "arguments" => "{}"}
+
+    message.(%{role: "user", content: "Rearrange the page"})
+    message.(%{role: "assistant", content: "", tool_calls: [call]})
+    message.(%{role: "tool", tool_call_id: "call_1", tool_name: "entry_outline", content: ~s({"blocks":"old"})})
+    message.(%{role: "assistant", content: "", tool_calls: [proposal]})
+    message.(%{role: "tool", tool_call_id: "call_2", tool_name: "prepare_proposal", content: ~s({"version":1})})
+    message.(%{role: "user", content: "Switch off Deli's cover"})
+
+    results = fn ->
+      c.conversation
+      |> Brando.AI.Agent.Loop.context()
+      |> Map.fetch!(:messages)
+      |> Enum.filter(&(&1.role == :tool))
+      |> Enum.map(fn m -> m.content |> Enum.map_join(& &1.text) end)
+    end
+
+    assert [outline, proposal_result] = results.()
+    assert outline =~ "stale"
+    refute outline =~ "old"
+    assert proposal_result =~ "version"
+
+    # A read after the latest message is current.
+    message.(%{role: "assistant", content: "", tool_calls: [%{call | "id" => "call_3"}]})
+    message.(%{role: "tool", tool_call_id: "call_3", tool_name: "entry_outline", content: ~s({"blocks":"new"})})
+    assert [_, _, current] = results.()
+    assert current =~ "new"
+  end
 end

@@ -20,23 +20,30 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "move_block", "target" => target, "block_uid" => uid, "placement" => placement | %{"into" => uid}}
       %{"op" => "set_block_active", "target" => target, "block_uid" => uid, "ref" => name | nil, "active" => false}
       %{"op" => "delete_block", "target" => target, "block_uid" => uid}
+      %{"op" => "copy_block", "target" => target, "block_uid" => uid, "placement" => placement, "uid" => uid}
+      %{"op" => "set_block_details", "target" => target, "block_uid" => uid, "anchor" => a, "description" => d}
+      %{"op" => "set_ref_config", "target" => target, "block_uid" => uid, "ref" => name, "config" => %{}}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
-  `asset` is `%{"kind" => "image" | "video", "id" => 3}` or the alias of a
-  conversation attachment such as `"image1"`. In `values`, an image or video
-  var takes `%{"kind" => …, "id" => …}` or `%{"asset" => "image1"}`, and a link
-  var an entry as `%{"content_type" => …, "id" => …}`.
+  `asset` is `%{"kind" => "image" | "video" | "file", "id" => 3}`, the alias
+  of a conversation attachment such as `"image1"`, or `%{"gallery" => [asset]}`
+  for a gallery. In `values`, a media var takes `%{"kind" => …, "id" => …}`,
+  `%{"asset" => "image1"}` or `%{"gallery" => […]}`, and a link var an entry
+  as `%{"content_type" => …, "id" => …}`.
   """
   alias Brando.Content.Proposals.{
+    CopyBlock,
     CreateEntry,
     DeleteBlock,
     InsertBlock,
     MoveBlock,
     SetBlockActive,
+    SetBlockDetails,
     SetBlockMedia,
     SetBlockText,
     SetBlockValues,
-    SetFields
+    SetFields,
+    SetRefConfig
   }
 
   @doc "Decode one operation. `attachments` maps aliases to `{:image | :video, id}`."
@@ -68,10 +75,15 @@ defmodule Brando.Content.Proposals.Codec do
     end)
   end
 
-  defp decode!("create_entry", map, _),
-    do: %CreateEntry{schema: schema!(map["content_type"]), ref: string!(map["ref"], "ref"), fields: map!(map["fields"])}
+  defp decode!("create_entry", map, attachments),
+    do: %CreateEntry{
+      schema: schema!(map["content_type"]),
+      ref: string!(map["ref"], "ref"),
+      fields: values(map!(map["fields"]), attachments)
+    }
 
-  defp decode!("set_fields", map, _), do: %SetFields{target: target!(map["target"]), fields: map!(map["fields"])}
+  defp decode!("set_fields", map, attachments),
+    do: %SetFields{target: target!(map["target"]), fields: values(map!(map["fields"]), attachments)}
 
   defp decode!("insert_block", map, attachments) do
     %InsertBlock{
@@ -83,6 +95,7 @@ defmodule Brando.Content.Proposals.Codec do
       values: values(map!(map["values"]), attachments),
       texts: map!(map["texts"]),
       media: Map.new(map!(map["media"]), fn {name, asset} -> {name, asset!(asset, attachments)} end),
+      configs: Map.new(map!(map["configs"]), fn {name, config} -> {name, map!(config)} end),
       uid: optional_string!(map["uid"], "uid"),
       ref_uids: map!(map["ref_uids"])
     }
@@ -136,6 +149,36 @@ defmodule Brando.Content.Proposals.Codec do
     }
   end
 
+  defp decode!("set_ref_config", map, _) do
+    %SetRefConfig{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid"),
+      ref: string!(map["ref"], "ref"),
+      config: map!(map["config"])
+    }
+  end
+
+  defp decode!("copy_block", map, _) do
+    %CopyBlock{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid"),
+      placement: placement!(map["placement"] || "append", true),
+      uid: optional_string!(map["uid"], "uid")
+    }
+  end
+
+  defp decode!("set_block_details", map, _) do
+    %SetBlockDetails{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid"),
+      anchor: optional_text!(map["anchor"], "anchor"),
+      description: optional_text!(map["description"], "description")
+    }
+  end
+
   defp decode!("delete_block", map, _) do
     %DeleteBlock{
       target: target!(map["target"]),
@@ -149,9 +192,19 @@ defmodule Brando.Content.Proposals.Codec do
   @doc "Encode one operation to its JSON form."
   @spec encode(struct()) :: map()
   def encode(%CreateEntry{} = op),
-    do: %{"op" => "create_entry", "content_type" => content_type(op.schema), "ref" => op.ref, "fields" => op.fields}
+    do: %{
+      "op" => "create_entry",
+      "content_type" => content_type(op.schema),
+      "ref" => op.ref,
+      "fields" => Map.new(op.fields, fn {key, value} -> {key, value(value)} end)
+    }
 
-  def encode(%SetFields{} = op), do: %{"op" => "set_fields", "target" => target(op.target), "fields" => op.fields}
+  def encode(%SetFields{} = op),
+    do: %{
+      "op" => "set_fields",
+      "target" => target(op.target),
+      "fields" => Map.new(op.fields, fn {key, value} -> {key, value(value)} end)
+    }
 
   def encode(%InsertBlock{} = op) do
     %{
@@ -164,6 +217,7 @@ defmodule Brando.Content.Proposals.Codec do
       "values" => Map.new(op.values, fn {key, value} -> {key, value(value)} end),
       "texts" => op.texts,
       "media" => Map.new(op.media, fn {name, asset} -> {name, asset(asset)} end),
+      "configs" => op.configs,
       "uid" => op.uid,
       "ref_uids" => op.ref_uids
     }
@@ -215,6 +269,36 @@ defmodule Brando.Content.Proposals.Codec do
       "block_uid" => op.block_uid,
       "ref" => op.ref,
       "active" => op.active
+    }
+
+  def encode(%SetRefConfig{} = op),
+    do: %{
+      "op" => "set_ref_config",
+      "target" => target(op.target),
+      "field" => op.field,
+      "block_uid" => op.block_uid,
+      "ref" => op.ref,
+      "config" => op.config
+    }
+
+  def encode(%CopyBlock{} = op),
+    do: %{
+      "op" => "copy_block",
+      "target" => target(op.target),
+      "field" => op.field,
+      "block_uid" => op.block_uid,
+      "placement" => placement(op.placement),
+      "uid" => op.uid
+    }
+
+  def encode(%SetBlockDetails{} = op),
+    do: %{
+      "op" => "set_block_details",
+      "target" => target(op.target),
+      "field" => op.field,
+      "block_uid" => op.block_uid,
+      "anchor" => op.anchor,
+      "description" => op.description
     }
 
   def encode(%DeleteBlock{} = op),
@@ -287,10 +371,21 @@ defmodule Brando.Content.Proposals.Codec do
   defp placement!(_, false),
     do: invalid!(dgettext("content_proposals", "Placement is \"append\", {before: uid} or {after: uid}."))
 
+  defp asset({:gallery, items}), do: %{"gallery" => Enum.map(items, &asset/1)}
   defp asset({kind, id}), do: %{"kind" => to_string(kind), "id" => id}
 
-  defp asset!(%{"kind" => kind, "id" => id}, _) when kind in ~w(image video) and is_integer(id),
+  defp asset!(%{"kind" => kind, "id" => id}, _) when kind in ~w(image video file) and is_integer(id),
     do: {String.to_existing_atom(kind), id}
+
+  defp asset!(%{"gallery" => items}, attachments) when is_list(items) do
+    {:gallery,
+     Enum.map(items, fn item ->
+       case asset!(item, attachments) do
+         {kind, _} = asset when kind in [:image, :video] -> asset
+         _ -> invalid!(dgettext("content_proposals", "A gallery holds images and videos."))
+       end
+     end)}
+  end
 
   defp asset!(alias, attachments) when is_binary(alias) do
     case Map.fetch(attachments, alias) do
@@ -300,7 +395,10 @@ defmodule Brando.Content.Proposals.Codec do
   end
 
   defp asset!(_, _),
-    do: invalid!(dgettext("content_proposals", "Media is {kind: image|video, id} or an attachment alias."))
+    do:
+      invalid!(
+        dgettext("content_proposals", "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}.")
+      )
 
   # A reference to an entry the proposal creates. It is kept so validation
   # can report the draft dependency.
@@ -310,6 +408,7 @@ defmodule Brando.Content.Proposals.Codec do
   defp decode_value(%{"new" => ref}, _) when is_binary(ref), do: {:new, ref}
   defp decode_value(%{"asset" => alias}, attachments), do: asset!(alias, attachments)
   defp decode_value(%{"kind" => _, "id" => _} = asset, attachments), do: asset!(asset, attachments)
+  defp decode_value(%{"gallery" => _} = asset, attachments), do: asset!(asset, attachments)
 
   defp decode_value(%{"content_type" => name, "id" => id}, _) do
     {:entry, schema!(name), Brando.Content.Transfer.Catalog.id!(id)}
@@ -321,7 +420,7 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp value({:new, ref}), do: %{"new" => ref}
   defp value({:entry, schema, id}), do: %{"content_type" => content_type(schema), "id" => id}
-  defp value({kind, id}) when kind in [:image, :video], do: asset({kind, id})
+  defp value({kind, _} = asset) when kind in [:image, :video, :file, :gallery], do: asset(asset)
   defp value(value), do: value
 
   defp map!(nil), do: %{}
@@ -334,6 +433,10 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp boolean!(value, _key) when is_boolean(value), do: value
   defp boolean!(_, key), do: invalid!(dgettext("content_proposals", "%{key} is true or false.", key: key))
+
+  # Text that may be cleared with "".
+  defp optional_text!(value, _key) when is_nil(value) or is_binary(value), do: value
+  defp optional_text!(_, key), do: invalid!(dgettext("content_proposals", "%{key} is text.", key: key))
 
   defp optional_string!(nil, _key), do: nil
   defp optional_string!(value, key), do: string!(value, key)

@@ -5,12 +5,15 @@ defmodule Brando.Content.ProposalsTest do
 
   alias Brando.Content.Proposals.{
     Codec,
+    CopyBlock,
     CreateEntry,
     DeleteBlock,
     InsertBlock,
     MoveBlock,
     Review,
     SetBlockActive,
+    SetBlockDetails,
+    SetRefConfig,
     Preview,
     Receipt,
     SetBlockMedia,
@@ -857,6 +860,207 @@ defmodule Brando.Content.ProposalsTest do
     end
   end
 
+  describe "copies, details, settings and every kind of ref" do
+    setup c, do: Brando.ProposalFixtures.multi_context(c)
+
+    test "a block is copied with everything below it", c do
+      [alpha, _beta, gamma] = c.child_uids
+      target = {Page, c.work.id}
+      copy = Brando.Utils.generate_uid()
+      blocks = block_count()
+
+      ops = [
+        %CopyBlock{target: target, block_uid: alpha, placement: {:after, gamma}, uid: copy},
+        %CopyBlock{target: target, block_uid: c.multi_uid}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert %{inserted_blocks: 2} = proposal.effects
+
+      [card] = Review.entries(proposal)
+      assert [%{type: :order, items: items}, %{type: :order, parent: nil}] = card.changes
+      assert %{uid: ^copy, copy?: true, excerpt: "Alpha"} = List.last(items)
+
+      # Review, preview and apply build the same tree.
+      [%CopyBlock{uid: root_copy} | _] = Enum.reverse(proposal.operations)
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert child_uids(c) == c.child_uids ++ [copy]
+      # Alpha's copy, and the copy of Projects with its four entries — the
+      # second copy sees the first.
+      assert block_count() == blocks + 1 + 5
+
+      [_, _, copied] = load(c.work, c.user).entry_blocks
+      assert copied.block.uid == root_copy
+
+      assert Enum.map(copied.block.children, & &1.uid) ==
+               Enum.map(c.child_uids ++ [copy], &Proposals.BlockTree.copy_uid(root_copy, &1))
+
+      assert Enum.find(List.last(multi(c).children).refs, &(&1.name == "info")).data.data.text == "<p>Alpha</p>"
+    end
+
+    test "a block's anchor and description, and its refs' settings", c do
+      [alpha, beta, _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %SetBlockDetails{target: target, block_uid: alpha, anchor: "alpha-case", description: "The first case"},
+        %SetRefConfig{target: target, block_uid: alpha, ref: "clip", config: %{autoplay: true, loop: true}},
+        %SetRefConfig{target: target, block_uid: beta, ref: "info", config: %{type: "lead"}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+
+      [card] = Review.entries(proposal)
+      assert [%{type: :block_details, settings: details}, %{type: :ref_config, settings: clip}, _] = card.changes
+      assert Enum.any?(details, &match?(%{name: "anchor", value: "alpha-case"}, &1))
+      assert Enum.any?(clip, &match?(%{name: "autoplay", before: nil, value: true}, &1))
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      [a, b, _] = multi(c).children
+      assert {a.anchor, a.description} == {"alpha-case", "The first case"}
+      assert %{autoplay: true, loop: true} = Enum.find(a.refs, &(&1.name == "clip")).data.data
+      assert Enum.find(b.refs, &(&1.name == "info")).data.data.type == :lead
+
+      bad = [
+        %SetBlockDetails{target: target, block_uid: alpha, anchor: "1 no"},
+        %SetRefConfig{target: target, block_uid: alpha, ref: "clip", config: %{sizes: %{}}},
+        %SetRefConfig{target: target, block_uid: beta, ref: "info", config: %{type: "shout"}},
+        %SetRefConfig{target: target, block_uid: beta, ref: "nope", config: %{}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(bad, c.user)
+
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [
+               {0, :unsupported_value},
+               {1, :unsupported_value},
+               {2, :unsupported_value},
+               {3, :unknown_ref}
+             ]
+    end
+
+    test "galleries, files, svg, markdown and maps", c do
+      file =
+        Repo.insert!(%Brando.Files.File{
+          title: "Brochure",
+          filename: "brochure.pdf",
+          filesize: 1,
+          config_target: "default",
+          creator_id: c.user.id
+        })
+
+      module =
+        module!(c.user, "Everything", "<div>{% ref refs.gallery %}{% ref refs.doc %}{% ref refs.icon %}</div>",
+          refs: [
+            Brando.ProposalFixtures.ref("gallery", %{type: "gallery", data: %{}}),
+            Brando.ProposalFixtures.ref("doc", %{type: "file", data: %{}}),
+            Brando.ProposalFixtures.ref("icon", %{type: "svg", data: %{}}),
+            Brando.ProposalFixtures.ref("notes", %{type: "markdown", data: %{}}),
+            Brando.ProposalFixtures.ref("where", %{type: "map", data: %{}})
+          ]
+        )
+
+      target = {Page, c.work.id}
+      uid = Brando.Utils.generate_uid()
+      svg = ~s(<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>)
+
+      insert = %InsertBlock{
+        target: target,
+        module: module.id,
+        uid: uid,
+        media: %{gallery: {:gallery, [{:image, c.image.id}, {:video, c.video.id}]}, doc: {:file, file.id}},
+        texts: %{icon: svg, notes: "Some *notes*", where: "https://www.google.com/maps/embed?pb=1"},
+        configs: %{gallery: %{display: "list"}, doc: %{label: "Download"}}
+      }
+
+      assert {:ok, proposal} = Proposals.propose([insert], c.user)
+      assert proposal.problems == []
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      block = load(c.work, c.user).entry_blocks |> List.last() |> Map.get(:block)
+      ref = &Enum.find(block.refs, fn ref -> ref.name == &1 end)
+      gallery = ref.("gallery").gallery
+      assert Enum.map(gallery.gallery_objects, &{&1.image_id, &1.video_id}) == [{c.image.id, nil}, {nil, c.video.id}]
+      assert ref.("gallery").data.data.display == :list
+      assert {ref.("doc").file_id, ref.("doc").data.data.label} == {file.id, "Download"}
+      assert ref.("icon").data.data.code == svg
+      assert ref.("notes").data.data.text == "Some *notes*"
+      assert ref.("where").data.data.embed_url =~ "google.com/maps"
+
+      # A new gallery replaces the objects of the saved one.
+      op = %SetBlockMedia{target: target, block_uid: uid, ref: :gallery, asset: {:gallery, [{:video, c.video.id}]}}
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      block = load(c.work, c.user).entry_blocks |> List.last() |> Map.get(:block)
+      regallery = Enum.find(block.refs, &(&1.name == "gallery")).gallery
+      assert regallery.id == gallery.id
+      assert Enum.map(regallery.gallery_objects, & &1.video_id) == [c.video.id]
+
+      bad = %InsertBlock{
+        target: target,
+        module: module.id,
+        media: %{doc: {:image, c.image.id}, gallery: {:gallery, [{:image, -1}]}},
+        texts: %{icon: ~s{<svg onload="x()"></svg>}, where: "http://example.com"}
+      }
+
+      assert {:ok, proposal} = Proposals.propose([bad], c.user)
+
+      assert proposal.problems |> Enum.map(& &1.code) |> Enum.sort() ==
+               Enum.sort([:wrong_media_type, :missing_asset, :unsafe_text, :unsafe_text])
+    end
+
+    test "entry fields take media", c do
+      ops = [%SetFields{target: {Page, c.work.id}, fields: %{meta_image_id: {:image, c.image.id}, meta_title: "Work"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert [%{type: :fields, fields: fields}] = hd(Review.entries(proposal)).changes
+      assert Enum.any?(fields, &match?(%{media: %{kind: :image}}, &1))
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert %{meta_image_id: id, meta_title: "Work"} = Repo.get!(Page, c.work.id)
+      assert id == c.image.id
+
+      ops = [%SetFields{target: {Page, c.work.id}, fields: %{meta_image_id: {:video, c.video.id}}}]
+      assert {:ok, %{problems: [%{code: :wrong_media_type}]}} = Proposals.propose(ops, c.user)
+    end
+
+    test "a media swap shows what it replaces, and the order shows what will be", c do
+      [alpha, _, gamma] = c.child_uids
+      target = {Page, c.work.id}
+      other = Factory.insert(:video)
+
+      ops = [
+        %SetBlockMedia{target: target, block_uid: alpha, ref: :clip, asset: {:video, other.id}},
+        %MoveBlock{target: target, block_uid: alpha, placement: {:after, gamma}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      [card] = Review.entries(proposal)
+      [swap, order] = card.changes
+      assert swap.replaces == [%{ref: "clip", kind: :video, id: c.video.id}]
+      assert swap.media == [%{ref: "clip", kind: :video, id: other.id}]
+      assert %{uid: ^alpha, media: [%{id: id}]} = List.last(order.items)
+      assert id == other.id
+      assert {:video, c.video.id} in Review.media([card])
+    end
+
+    test "operations that change nothing are noted, not blocked", c do
+      [alpha, beta, _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %SetBlockActive{target: target, block_uid: alpha, active: true},
+        %SetBlockValues{target: target, block_uid: beta, values: %{size: "100"}},
+        %SetBlockText{target: target, block_uid: c.intro_uid, ref: :body, text: "<p>Work intro</p>"},
+        %SetBlockValues{target: target, block_uid: alpha, values: %{size: "50"}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert [%{operation: 0}, %{operation: 1}, %{operation: 2}] = Proposals.notes(proposal)
+    end
+  end
+
   describe "codec" do
     test "decodes move, delete and a child insert, and encodes them back" do
       target = %{"content_type" => "Brando.Pages.Page", "id" => 1}
@@ -900,6 +1104,43 @@ defmodule Brando.Content.ProposalsTest do
                Codec.decode(%{"op" => "insert_block", "target" => target, "module" => 3, "placement" => %{"into" => "p"}})
 
       assert {:error, _} = Codec.decode(%{"op" => "set_block_active", "target" => target, "block_uid" => "a"})
+
+      more = [
+        %{"op" => "copy_block", "target" => target, "block_uid" => "a", "placement" => %{"into" => "p"}, "uid" => "c"},
+        %{"op" => "set_block_details", "target" => target, "block_uid" => "a", "anchor" => "x", "description" => ""},
+        %{"op" => "set_ref_config", "target" => target, "block_uid" => "a", "ref" => "h", "config" => %{"level" => 2}},
+        %{
+          "op" => "set_block_media",
+          "target" => target,
+          "block_uid" => "a",
+          "ref" => "g",
+          "asset" => %{"gallery" => ["image1", %{"kind" => "video", "id" => 2}]}
+        },
+        %{
+          "op" => "set_fields",
+          "target" => target,
+          "fields" => %{"meta_image_id" => "x", "cover_id" => %{"asset" => "image1"}}
+        }
+      ]
+
+      assert {:ok, [copy, details, config, gallery, fields] = decoded} =
+               Codec.decode_all(more, %{"image1" => {:image, 9}})
+
+      assert %CopyBlock{uid: "c", placement: {:into, "p"}} = copy
+      assert %SetBlockDetails{anchor: "x", description: ""} = details
+      assert %SetRefConfig{ref: "h", config: %{"level" => 2}} = config
+      assert gallery.asset == {:gallery, [{:image, 9}, {:video, 2}]}
+      assert fields.fields == %{"meta_image_id" => "x", "cover_id" => {:image, 9}}
+      for op <- decoded, do: assert({:ok, ^op} = Codec.decode(Codec.encode(op)))
+
+      assert {:error, _} =
+               Codec.decode(%{
+                 "op" => "set_block_media",
+                 "target" => target,
+                 "block_uid" => "a",
+                 "ref" => "g",
+                 "asset" => %{"gallery" => [%{"kind" => "file", "id" => 1}]}
+               })
 
       assert {:error, "Operation 0: " <> _} =
                Codec.decode_all([%{"op" => "move_block", "target" => target, "block_uid" => "a"}])

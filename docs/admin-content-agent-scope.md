@@ -666,3 +666,39 @@ module, and their `size` variable, were invisible to the assistant.
     loaded children drop it, so `on_replace` does not delete it, and the save
     updates `parent_id` (a root block loses its join row; one moving to the
     root gets a new one). The review shows the order of both lists.
+
+## Everything an editor can change (26 September 2026)
+
+The aim: whatever an editor can change in a block or entry, a proposal can too.
+
+- **Refs of every kind.** Galleries (a full, ordered list of images and videos;
+  the ref's gallery keeps its row and its objects are replaced, or a new
+  `ref:gallery` gallery is made), files, markdown, safe HTML, one safe `<svg>`
+  (`RichText.safe_svg?/1`: no scripts, handlers, foreign objects or animation
+  elements) and https map embeds. Media slots can hold galleries too.
+- **Ref settings.** `set_ref_config` (and `configs` on `insert_block`) sets any
+  field of the ref type's data except its content — a heading's level, a
+  picture's alt, title, credits and link, a video's autoplay and loop, a
+  gallery's display, a file's label — cast by the type's own schema
+  (`Proposals.RefConfig`). `describe_module` lists them per slot;
+  `entry_outline` shows the ones that differ from the defaults.
+- **Variables.** File and gallery variables are settable too.
+- **Blocks.** `copy_block` copies a block with everything below it. Copied
+  descendants take uids derived from the copy's (`BlockTree.copy_uid/2`), so
+  review, preview and apply build the same tree. `set_block_details` sets the
+  anchor and description.
+- **Entry fields.** Image, video and file fields (such as `meta_image_id`) take
+  media like blocks do; SEO fields are ordinary fields.
+- **Unchanged operations.** `prepare_proposal` lists operations that would
+  change nothing (a ref already off, a value already set) under `unchanged`.
+  They do not block the proposal. Only the first change to each part of a
+  block is compared with the saved block.
+- **Stale reads.** The agent's context replaces results of reading tools from
+  before the editor's latest message with a note to read again. The model can
+  no longer answer from an outline the editor has since changed (on by it did:
+  it said no refs were off after they had become visible), and old outlines
+  stop costing tokens.
+- **Review.** Settings and details cards, "Copy" in order cards, media swaps as
+  Now → Proposed with titles, the media each block will show in order cards,
+  file thumbnails, and a card cover only for new content: an update's first
+  swapped video is not the card's cover.

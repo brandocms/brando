@@ -159,9 +159,23 @@ defmodule Brando.AI.Agent.Loop do
     end)
   end
 
+  # Tools that read content. Their results go stale when the editor writes
+  # again: the editor may have saved the entry, or be asking about it anew.
+  @reads ~w(list_content_types describe_content_type search_entries entry_outline list_modules describe_module
+            list_attachments search_assets find_media_folders)
+  @stale Jason.encode!(%{
+           stale:
+             "Read before the editor's latest message; the content may have changed since. " <>
+               "Call the tool again for current data before you rely on it."
+         })
+
   @doc """
   Rebuild the model context from the stored messages. Runs are stateless, so
   a restart or a later message continues the same conversation.
+
+  Results of reading tools from before the editor's latest message are
+  replaced by a note to read again, so the model does not answer from an
+  outline the editor has since changed — and does not pay for it twice.
   """
   @spec context(Conversation.t()) :: Context.t()
   def context(conversation) do
@@ -172,6 +186,20 @@ defmodule Brando.AI.Agent.Loop do
           order_by: [asc: m.inserted_at, asc: m.id]
         )
       )
+
+    latest = messages |> Enum.map(& &1.role) |> Enum.with_index() |> Enum.filter(&(elem(&1, 0) == "user")) |> List.last()
+    latest = if latest, do: elem(latest, 1), else: -1
+
+    messages =
+      messages
+      |> Enum.with_index()
+      |> Enum.map(fn
+        {%Message{role: "tool", tool_name: name} = message, index} when index < latest and name in @reads ->
+          %{message | content: @stale}
+
+        {message, _index} ->
+          message
+      end)
 
     Context.new([Context.system(Prompt.system(conversation)) | Enum.flat_map(messages, &message/1)])
   end
@@ -197,6 +225,7 @@ defmodule Brando.AI.Agent.Loop do
   defp progress("find_media_folders", _), do: dgettext("ai_agent", "Looking for the folder")
   defp progress("attach_folder", _), do: dgettext("ai_agent", "Attaching the folder's media")
   defp progress("prepare_proposal", _), do: dgettext("ai_agent", "Checking the proposal")
+  defp progress("list_attachments", _), do: dgettext("ai_agent", "Looking at the attachments")
   defp progress(_, _), do: dgettext("ai_agent", "Looking at the site's content")
 
   defp encode(result) do

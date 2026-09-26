@@ -444,7 +444,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     ~H"""
     <span class={["assistant-thumb", "is-#{@kind}"]}>
       <img :if={@asset && @asset.url} src={@asset.url} alt={@label || ""} loading="lazy" />
-      <.icon :if={!(@asset && @asset.url)} name={if to_string(@kind) == "video", do: "hero-film", else: "hero-photo"} />
+      <.icon :if={!(@asset && @asset.url)} name={thumb_icon(@kind)} />
       <span :if={to_string(@kind) == "video"} class="assistant-play" aria-hidden="true"><.icon name="hero-play" /></span>
     </span>
     """
@@ -550,9 +550,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
           class={["assistant-card", entry.problems != [] && "has-problems"]}
           id={"card-#{entry.key}"}
         >
-          <div :if={entry.media != []} class="assistant-card-cover">
+          <div :if={entry.media != [] and adds_content?(entry)} class="assistant-card-cover">
             <.thumb media={@media} kind={elem(hd(entry.media), 0)} id={elem(hd(entry.media), 1)} />
-            <span class="assistant-cover-label">{media_label(media_map(hd(entry.media)), @aliases)}</span>
+            <span class="assistant-cover-label">{media_label(media_map(hd(entry.media)), @aliases, @media)}</span>
           </div>
           <div class="assistant-card-body">
             <header>
@@ -810,7 +810,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <dt>{field.name}</dt>
         <dd>
           <span :if={field.media} class="assistant-inline-media">
-            <.thumb media={@media} kind={field.media.kind} id={field.media.id} />{media_label(field.media, @aliases)}
+            <.thumb media={@media} kind={field.media.kind} id={field.media.id} />{media_label(field.media, @aliases, @media)}
           </span>
           <span :if={!field.media}>{to_string(field.value)}</span>
         </dd>
@@ -829,7 +829,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <del :if={field.before not in [nil, ""]}>{to_string(field.before)}</del>
           <ins :if={!field.media}>{to_string(field.value)}</ins>
           <span :if={field.media} class="assistant-inline-media">
-            <.thumb media={@media} kind={field.media.kind} id={field.media.id} />{media_label(field.media, @aliases)}
+            <.thumb media={@media} kind={field.media.kind} id={field.media.id} />{media_label(field.media, @aliases, @media)}
           </span>
         </dd>
       </div>
@@ -851,11 +851,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <span :if={@change.placement.position != :before} class="is-new">+ {@change.module}</span>
     </div>
     <p class="assistant-placement">{@change.placement.text}</p>
-    <dl :if={@change.texts != [] or @change.values != [] or @change.media != []} class="assistant-fields">
+    <dl
+      :if={@change.texts != [] or @change.values != [] or @change.media != [] or @change.settings != []}
+      class="assistant-fields"
+    >
       <div :for={media <- @change.media}>
         <dt>{humanize(media.ref)}</dt>
         <dd class="assistant-inline-media">
-          <.thumb media={@media} kind={media.kind} id={media.id} />{media_label(media, @aliases)}
+          <.thumb media={@media} kind={media.kind} id={media.id} />{media_label(media, @aliases, @media)}
         </dd>
       </div>
       <div :for={text <- @change.texts}>
@@ -867,8 +870,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span :if={value.media} class="assistant-inline-media">
             <.thumb media={@media} kind={value.media.kind} id={value.media.id} />
           </span>
-          <span :if={!value.media}>{to_string(value.value)}</span>
+          <span :if={value.value not in [nil, ""]}>{to_string(value.value)}</span>
         </dd>
+      </div>
+      <div :for={setting <- @change.settings}>
+        <dt>{humanize(setting.ref)} · {humanize(setting.name)}</dt>
+        <dd>{to_string(setting.value)}</dd>
       </div>
     </dl>
     """
@@ -878,10 +885,20 @@ defmodule BrandoAdmin.AI.AssistantLive do
     ~H"""
     <span class="assistant-change-title">{gettext("Replace media in %{block}", block: @change.block)}</span>
     <dl class="assistant-fields">
-      <div :for={media <- @change.media}>
-        <dt>{humanize(media.ref)}</dt>
-        <dd class="assistant-inline-media">
-          <.thumb media={@media} kind={media.kind} id={media.id} />{media_label(media, @aliases)}
+      <div :if={@change[:replaces] not in [nil, []]} class="is-before">
+        <dt>{gettext("Now")}</dt>
+        <dd>
+          <del :for={media <- @change.replaces} class="assistant-inline-media">
+            <.thumb media={@media} kind={media.kind} id={media.id} />{media_label(media, @aliases, @media)}
+          </del>
+        </dd>
+      </div>
+      <div>
+        <dt>{if @change[:replaces] not in [nil, []], do: gettext("Proposed"), else: humanize(@change.ref)}</dt>
+        <dd>
+          <span :for={media <- @change.media} class="assistant-inline-media">
+            <.thumb media={@media} kind={media.kind} id={media.id} />{media_label(media, @aliases, @media)}
+          </span>
         </dd>
       </div>
     </dl>
@@ -915,7 +932,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span :if={value.media} class="assistant-inline-media">
             <.thumb media={@media} kind={value.media.kind} id={value.media.id} />
           </span>
-          <ins :if={!value.media}>{to_string(value.value)}</ins>
+          <ins :if={value.value not in [nil, ""]}>{to_string(value.value)}</ins>
         </dd>
       </div>
     </dl>
@@ -940,10 +957,36 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <span :for={value <- item.values} class={["assistant-order-value", value.changed? && "is-changed"]}>
           {value.label}: {to_string(value.value)}
         </span>
-        <span :if={item.new?} class="assistant-order-mark">{gettext("New")}</span>
+        <span :if={item.copy?} class="assistant-order-mark">{gettext("Copy")}</span>
+        <span :if={item.new? and !item.copy?} class="assistant-order-mark">{gettext("New")}</span>
         <span :if={item.moved? and !item.new?} class="assistant-order-mark">{gettext("Moved")}</span>
       </li>
     </ol>
+    """
+  end
+
+  defp change(%{change: %{type: type}} = assigns) when type in [:ref_config, :block_details] do
+    ~H"""
+    <span class="assistant-change-title">
+      {if @change.type == :ref_config,
+        do: gettext("Change %{ref} settings in %{block}", ref: humanize(@change.ref), block: @change.block),
+        else: gettext("Change the details of %{block}", block: @change.block)}
+    </span>
+    <dl class="assistant-fields">
+      <div :for={media <- @change[:context] || []}>
+        <dt>{humanize(media.ref)}</dt>
+        <dd class="assistant-inline-media"><.thumb media={@media} kind={media.kind} id={media.id} /></dd>
+      </div>
+      <div :for={setting <- @change.settings}>
+        <dt>{humanize(setting.name)}</dt>
+        <dd>
+          <del :if={setting.before not in [nil, ""] and to_string(setting.before) != to_string(setting.value)}>
+            {to_string(setting.before)}
+          </del>
+          <ins>{if setting.value == "", do: gettext("(cleared)"), else: to_string(setting.value)}</ins>
+        </dd>
+      </div>
+    </dl>
     """
   end
 
@@ -1207,6 +1250,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
     :ok
   end
 
+  # A card leads with media only when it places new content: a new entry or
+  # new blocks. For other changes the media belong to one change among many.
+  defp adds_content?(entry), do: Enum.all?(entry.changes, &(&1.type in [:create, :insert_block, :fields]))
+
+  defp thumb_icon(kind) do
+    case to_string(kind) do
+      "video" -> "hero-film"
+      "file" -> "hero-document"
+      _ -> "hero-photo"
+    end
+  end
+
   defp frame_url(nil), do: nil
   defp frame_url(%{url: "/" <> _ = path}), do: String.replace(Brando.endpoint().url(), ~r{^https?://}, "") <> path
   defp frame_url(%{url: url}) when is_binary(url), do: String.replace(url, ~r{^https?://}, "")
@@ -1339,6 +1394,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp load_media(refs) do
     image_ids = for {:image, id} <- refs, do: id
     video_ids = for {:video, id} <- refs, do: id
+    file_ids = for {:file, id} <- refs, do: id
 
     images =
       if image_ids == [],
@@ -1350,9 +1406,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
         do: [],
         else: Repo.all(from(v in Brando.Videos.Video, where: v.id in ^video_ids, preload: [:thumbnail]))
 
+    files =
+      if file_ids == [],
+        do: [],
+        else: Repo.all(from(f in Brando.Files.File, where: f.id in ^file_ids))
+
     Map.new(
-      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1)}}) ++
-        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1)}})
+      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1), label: &1.title}}) ++
+        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1), label: &1.title}}) ++
+        Enum.map(files, &{{:file, &1.id}, %{url: nil, label: &1.title || &1.filename}})
     )
   end
 
@@ -1579,9 +1641,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # Media the user attached is named by its alias and file; other library
   # media by kind and id.
-  defp media_label(%{kind: kind, id: id}, aliases) do
-    case aliases[{to_kind(kind), id}] do
-      %{"alias" => alias, "label" => label} -> Enum.join(Enum.reject([alias, label], &(&1 in [nil, ""])), " · ")
+  # An attachment by its alias, other media by its title.
+  defp media_label(%{kind: kind, id: id}, aliases, loaded) do
+    case {aliases[{to_kind(kind), id}], loaded[{to_kind(kind), id}]} do
+      {%{"alias" => alias, "label" => label}, _} -> Enum.join(Enum.reject([alias, label], &(&1 in [nil, ""])), " · ")
+      {_, %{label: label}} when label not in [nil, ""] -> label
       _ -> "#{kind} ##{id}"
     end
   end

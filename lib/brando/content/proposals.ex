@@ -38,6 +38,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.BlockSlots
   alias Brando.Content.Proposals.BlockTree
   alias Brando.Content.Proposals.Codec
+  alias Brando.Content.Proposals.CopyBlock
   alias Brando.Content.Proposals.CreateEntry
   alias Brando.Content.Proposals.DeleteBlock
   alias Brando.Content.Proposals.InsertBlock
@@ -45,11 +46,14 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.Proposal
   alias Brando.Content.Proposals.Receipt
   alias Brando.Content.Proposals.Record
+  alias Brando.Content.Proposals.RefConfig
   alias Brando.Content.Proposals.SetBlockActive
+  alias Brando.Content.Proposals.SetBlockDetails
   alias Brando.Content.Proposals.SetBlockMedia
   alias Brando.Content.Proposals.SetBlockText
   alias Brando.Content.Proposals.SetBlockValues
   alias Brando.Content.Proposals.SetFields
+  alias Brando.Content.Proposals.SetRefConfig
   alias Brando.Content.Transfer
   alias Brando.Content.Transfer.Catalog
   alias Brando.Content.Transfer.Dependencies
@@ -61,7 +65,7 @@ defmodule Brando.Content.Proposals do
 
   @protected_fields ~w(id status publish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
   @text_vars [:string, :text, :html]
-  @media_kinds %{image: "picture", video: "video"}
+  @media_kinds %{image: "picture", video: "video", gallery: "gallery"}
 
   ## Prepare
 
@@ -113,6 +117,15 @@ defmodule Brando.Content.Proposals do
   defp freeze(%CreateEntry{} = op), do: %{op | ref: to_string(op.ref), fields: stringify(op.fields)}
   defp freeze(%SetFields{} = op), do: %{op | target: target(op.target), fields: stringify(op.fields)}
 
+  defp freeze(%SetRefConfig{} = op),
+    do: %{
+      op
+      | target: target(op.target),
+        field: to_string(op.field),
+        ref: to_string(op.ref),
+        config: stringify(op.config)
+    }
+
   defp freeze(%InsertBlock{} = op) do
     refs =
       case fetch_module(op.module) do
@@ -130,6 +143,7 @@ defmodule Brando.Content.Proposals do
         values: stringify(op.values),
         texts: stringify(op.texts),
         media: stringify(op.media),
+        configs: Map.new(op.configs || %{}, fn {name, config} -> {to_string(name), stringify(config)} end),
         ref_uids: Map.new(refs, &{&1.name, op.ref_uids[&1.name] || Utils.generate_uid()})
     }
   end
@@ -142,6 +156,11 @@ defmodule Brando.Content.Proposals do
     do: %{op | target: target(op.target), field: to_string(op.field), values: stringify(op.values)}
 
   defp freeze(%MoveBlock{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
+
+  defp freeze(%CopyBlock{} = op),
+    do: %{op | target: target(op.target), field: to_string(op.field), uid: op.uid || Utils.generate_uid()}
+
+  defp freeze(%SetBlockDetails{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
 
   defp freeze(%SetBlockActive{} = op),
     do: %{op | target: target(op.target), field: to_string(op.field), ref: op.ref && to_string(op.ref)}
@@ -198,16 +217,19 @@ defmodule Brando.Content.Proposals do
         [problem(:forbidden, dgettext("content_proposals", "You do not have permission to create this entry."))]
 
       true ->
-        protected_fields(op.fields, op.schema) ++ draft_dependencies(op.fields, proposal)
+        protected_fields(op.fields, op.schema) ++
+          asset_fields(op.fields, op.schema, actor) ++ draft_dependencies(op.fields, proposal)
     end
   end
 
   defp check(%SetFields{target: {:new, _}}, _, _),
     do: [problem(:unknown_target, dgettext("content_proposals", "Set the fields of a new entry when creating it."))]
 
-  defp check(%SetFields{} = op, proposal, _actor) do
+  defp check(%SetFields{} = op, proposal, actor) do
     {schema, _} = op.target
-    protected_fields(op.fields, schema) ++ draft_dependencies(op.fields, proposal)
+
+    protected_fields(op.fields, schema) ++
+      asset_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
   end
 
   defp saved_tree(target, field, proposal) do
@@ -234,6 +256,7 @@ defmodule Brando.Content.Proposals do
         values(op.values, module.vars, actor) ++
           Enum.flat_map(op.texts, fn {name, text} -> text(name, text, module) end) ++
           Enum.flat_map(op.media, fn {name, asset} -> media(name, asset, module, actor) end) ++
+          Enum.flat_map(op.configs, fn {name, config} -> config(name, config, module) end) ++
           draft_dependencies(op.values, proposal)
 
       {problems, BlockTree.put(tree, node, op.parent, op.placement)}
@@ -244,12 +267,34 @@ defmodule Brando.Content.Proposals do
 
   defp check_block(%MoveBlock{} = op, schema, tree, _actor, _proposal) do
     with {:ok, node} <- structural_block(tree, op.block_uid),
-         {:ok, parent} <- destination(op.placement, node, tree),
+         {:ok, parent} <- destination(op.placement, node, tree, :move),
          :ok <- movable(node, parent, schema, op.field, tree) do
       {[], BlockTree.move(tree, op.block_uid, parent, op.placement)}
     else
       {:error, problem} -> {[problem], tree}
     end
+  end
+
+  # A copy may sit next to its original, but not inside it.
+  defp check_block(%CopyBlock{} = op, schema, tree, _actor, _proposal) do
+    with {:ok, node} <- structural_block(tree, op.block_uid),
+         :ok <- new_uid(op.uid, tree),
+         {:ok, parent} <- destination(op.placement, node, tree, :copy),
+         :ok <- movable(node, parent, schema, op.field, tree) do
+      {[], BlockTree.copy(tree, op.block_uid, op.uid, parent, op.placement)}
+    else
+      {:error, problem} -> {[problem], tree}
+    end
+  end
+
+  defp check_block(%SetBlockDetails{} = op, _schema, tree, _actor, _proposal) do
+    problems =
+      case structural_block(tree, op.block_uid) do
+        {:ok, _node} -> anchor(op.anchor) ++ description(op.description)
+        {:error, problem} -> [problem]
+      end
+
+    {problems, tree}
   end
 
   defp check_block(%SetBlockActive{ref: nil} = op, _schema, tree, _actor, _proposal) do
@@ -275,6 +320,7 @@ defmodule Brando.Content.Proposals do
             %SetBlockValues{values: values} -> values(values, module.vars, actor) ++ draft_dependencies(values, proposal)
             %SetBlockText{ref: name, text: text} -> text(to_string(name), text, module)
             %SetBlockActive{ref: name} -> ref_exists(name, module)
+            %SetRefConfig{ref: name, config: config} -> config(name, config, module)
           end
 
         {:error, problem} ->
@@ -316,6 +362,31 @@ defmodule Brando.Content.Proposals do
     end
   end
 
+  defp config(name, config, module) do
+    case Enum.find(module.refs || [], &(&1.name == name)) do
+      nil -> ref_exists(name, module)
+      definition -> Enum.map(RefConfig.problems(name, definition, config), &problem(:unsupported_value, &1))
+    end
+  end
+
+  # An image, video or file field takes media of its own kind, from the
+  # library. The value is saved as the asset's id.
+  defp asset_fields(fields, schema, actor) do
+    for {name, {kind, id}} <- fields, kind in [:image, :video, :file, :gallery] do
+      case asset_field(schema, name) do
+        ^kind when kind != :gallery -> assets({kind, id}, [], name, actor)
+        _ -> [wrong_media(name)]
+      end
+    end
+    |> List.flatten()
+  end
+
+  defp asset_field(schema, name) do
+    Enum.find_value(Brando.Blueprint.Assets.__assets__(schema), fn
+      %{name: asset, type: type} -> if "#{asset}_id" == name, do: type
+    end)
+  end
+
   defp ref_exists(name, module) do
     if Enum.any?(module.refs || [], &(&1.name == name)),
       do: [],
@@ -325,23 +396,45 @@ defmodule Brando.Content.Proposals do
   # Where a move puts the block: among its siblings, next to another block —
   # under that block's parent — or at the end of a block's children. A block
   # cannot go inside itself.
-  defp destination(:append, node, _tree), do: {:ok, node.parent}
+  defp destination(:append, node, _tree, _kind), do: {:ok, node.parent}
 
-  defp destination({side, anchor}, node, tree) when side in [:before, :after, :into] do
+  defp destination({side, anchor}, node, tree, kind) when side in [:before, :after, :into] do
     case BlockTree.fetch(tree, anchor) do
       nil ->
         {:error, unknown_placement()}
 
       anchor_node ->
         parent = if side == :into, do: anchor, else: anchor_node.parent
+        next_to_self? = kind == :move and BlockTree.within?(tree, node.uid, anchor)
 
-        if BlockTree.within?(tree, node.uid, anchor) or (parent && BlockTree.within?(tree, node.uid, parent)),
+        if next_to_self? or (parent && BlockTree.within?(tree, node.uid, parent)),
           do: {:error, problem(:unknown_placement, dgettext("content_proposals", "A block cannot move inside itself."))},
           else: {:ok, parent}
     end
   end
 
-  defp destination(_placement, _node, _tree), do: {:error, unknown_placement()}
+  defp destination(_placement, _node, _tree, _kind), do: {:error, unknown_placement()}
+
+  # An anchor is the fragment a link jumps to: a letter, then letters,
+  # digits, dashes and underscores.
+  defp anchor(nil), do: []
+  defp anchor(""), do: []
+
+  defp anchor(anchor) do
+    if anchor =~ ~r/^[A-Za-z][A-Za-z0-9_-]{0,63}$/,
+      do: [],
+      else: [
+        problem(
+          :unsupported_value,
+          dgettext("content_proposals", "An anchor starts with a letter and holds letters, digits, - and _.")
+        )
+      ]
+  end
+
+  defp description(description) when is_binary(description) and byte_size(description) > 255,
+    do: [problem(:unsupported_value, dgettext("content_proposals", "A block description is at most 255 characters."))]
+
+  defp description(_), do: []
 
   defp unknown_placement,
     do: problem(:unknown_placement, dgettext("content_proposals", "The block to place it next to is not in the field."))
@@ -551,11 +644,14 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  defp value_problems(%{type: kind}, key, {kind, id}, actor) when kind in [:image, :video],
-    do: media(key, {kind, id}, %{refs: [%{name: key, data: %{type: @media_kinds[kind]}}]}, actor)
+  defp value_problems(%{type: kind} = var, key, {kind, _} = asset, actor) when kind in [:image, :video, :file, :gallery],
+    do: assets(asset, gallery_types(var), key, actor)
 
-  defp value_problems(%{type: type}, key, {kind, _id}, _actor) when type in [:image, :video] and kind in [:image, :video],
-    do: [problem(:wrong_media_type, dgettext("content_proposals", "%{name} does not accept this media type.", name: key))]
+  defp value_problems(%{type: type}, key, {kind, _id}, _actor)
+       when type in [:image, :video, :file, :gallery] and kind in [:image, :video, :file, :gallery],
+       do: [
+         problem(:wrong_media_type, dgettext("content_proposals", "%{name} does not accept this media type.", name: key))
+       ]
 
   defp value_problems(var, key, value, _actor),
     do: if(settable?(var, value), do: [], else: [unsupported(var, key, value)])
@@ -586,59 +682,99 @@ defmodule Brando.Content.Proposals do
   defp unsupported(_var, key, _value),
     do: problem(:unsupported_value, dgettext("content_proposals", "%{key} cannot be set to this value.", key: key))
 
-  # Text refs hold rich text that must pass the same safety check as the
-  # editor; header refs hold plain text.
+  # Text, markdown and HTML refs must pass the same safety check as the
+  # editor's rich text; header refs hold plain text, svg refs one safe
+  # `<svg>`, and map refs an https embed address.
   defp text(name, text, module) do
     case Enum.find(module.refs || [], &(&1.name == name)) do
-      %{data: %{type: "text"}} when is_binary(text) ->
-        if Brando.RichText.safe_html?(text),
-          do: [],
-          else: [problem(:unsafe_text, dgettext("content_proposals", "%{name} contains unsafe rich text.", name: name))]
-
-      %{data: %{type: "header"}} when is_binary(text) ->
-        if String.contains?(text, ["<", ">"]),
-          do: [problem(:unsafe_text, dgettext("content_proposals", "%{name} takes plain text.", name: name))],
-          else: []
+      %{data: %{type: type}} when is_binary(text) ->
+        case text_problem(type, text, name) do
+          :unknown -> [unknown_text(name)]
+          nil -> []
+          message -> [problem(:unsafe_text, message)]
+        end
 
       _ ->
-        [problem(:unknown_ref, dgettext("content_proposals", "The module has no text slot %{name}.", name: name))]
+        [unknown_text(name)]
     end
   end
 
-  defp media(name, {kind, id}, module, actor) when kind in [:image, :video] do
+  defp unknown_text(name),
+    do: problem(:unknown_ref, dgettext("content_proposals", "The module has no text slot %{name}.", name: name))
+
+  defp text_problem(type, text, name) when type in ["text", "markdown", "html"] do
+    unless Brando.RichText.safe_html?(text),
+      do: dgettext("content_proposals", "%{name} contains unsafe rich text.", name: name)
+  end
+
+  defp text_problem("header", text, name) do
+    if String.contains?(text, ["<", ">"]), do: dgettext("content_proposals", "%{name} takes plain text.", name: name)
+  end
+
+  defp text_problem("svg", text, name) do
+    unless Brando.RichText.safe_svg?(text),
+      do: dgettext("content_proposals", "%{name} takes one safe <svg> element.", name: name)
+  end
+
+  defp text_problem("map", text, name) do
+    unless String.starts_with?(text, "https://"),
+      do: dgettext("content_proposals", "%{name} takes an https embed address.", name: name)
+  end
+
+  defp text_problem(_type, _text, _name), do: :unknown
+
+  defp media(name, {kind, _} = asset, module, actor) when kind in [:image, :video, :file, :gallery] do
     case Enum.find(module.refs || [], &(&1.name == name)) do
       nil ->
         [problem(:unknown_ref, dgettext("content_proposals", "The module has no media slot %{name}.", name: name))]
 
       ref ->
-        cond do
-          kind not in accepts(ref) ->
-            [
-              problem(
-                :wrong_media_type,
-                dgettext("content_proposals", "%{name} does not accept this media type.", name: name)
-              )
-            ]
-
-          match?({:error, _}, Error.protect(fn -> Dependencies.load!(to_string(kind), id, actor) end)) ->
-            [problem(:missing_asset, dgettext("content_proposals", "This media is no longer in the library."))]
-
-          true ->
-            []
-        end
+        if kind in accepts(ref),
+          do: assets(asset, gallery_types(ref), name, actor),
+          else: [wrong_media(name)]
     end
   end
 
   defp media(_name, _asset, _module, _actor),
-    do: [problem(:wrong_media_type, dgettext("content_proposals", "Only images and videos can be placed."))]
+    do: [
+      problem(:wrong_media_type, dgettext("content_proposals", "Only images, videos, files and galleries can be placed."))
+    ]
+
+  defp wrong_media(name),
+    do: problem(:wrong_media_type, dgettext("content_proposals", "%{name} does not accept this media type.", name: name))
+
+  # Every item of a gallery must be of a kind the gallery allows, and still in
+  # the library.
+  defp assets({:gallery, items}, types, name, actor) do
+    if Enum.all?(items, fn {kind, _} -> kind in types end),
+      do: Enum.flat_map(items, &assets(&1, types, name, actor)) |> Enum.uniq(),
+      else: [wrong_media(name)]
+  end
+
+  defp assets({kind, id}, _types, _name, actor) do
+    if match?({:error, _}, Error.protect(fn -> Dependencies.load!(to_string(kind), id, actor) end)),
+      do: [problem(:missing_asset, dgettext("content_proposals", "This media is no longer in the library."))],
+      else: []
+  end
+
+  defp gallery_types(%{data: %{type: "gallery", data: data}}), do: Map.get(data, :allowed_types) || [:image, :video]
+
+  defp gallery_types(%{data: %{type: "media", data: %{template_gallery: %{allowed_types: [_ | _] = types}}}}),
+    do: types
+
+  defp gallery_types(%{gallery_allowed_types: [_ | _] = types}), do: types
+  defp gallery_types(_), do: [:image, :video]
 
   @doc """
   The media kinds a module ref accepts: a picture ref takes an image, a video
-  ref a video, and a media slot whichever of the two it makes available.
+  ref a video, a file ref a file, a gallery ref a gallery, and a media slot
+  whichever of picture, video and gallery it makes available.
   """
-  @spec accepts(Brando.Content.Ref.t()) :: [:image | :video]
+  @spec accepts(Brando.Content.Ref.t()) :: [:image | :video | :file | :gallery]
   def accepts(%{data: %{type: "picture"}}), do: [:image]
   def accepts(%{data: %{type: "video"}}), do: [:video]
+  def accepts(%{data: %{type: "file"}}), do: [:file]
+  def accepts(%{data: %{type: "gallery"}}), do: [:gallery]
 
   def accepts(%{data: %{type: "media", data: data}}) do
     available = Map.get(data, :available_blocks) || ["picture", "video"]
@@ -680,7 +816,7 @@ defmodule Brando.Content.Proposals do
 
   defp effects(proposal) do
     existing = for {{schema, _} = target, entry} <- proposal.targets, schema != :new, do: {target, entry}
-    inserted = for %InsertBlock{uid: uid} <- proposal.operations, do: uid
+    inserted = for %{__struct__: kind, uid: uid} <- proposal.operations, kind in [InsertBlock, CopyBlock], do: uid
     deleted = for %DeleteBlock{} = op <- proposal.operations, do: {op.target, op.block_uid}
 
     changed = fn kinds ->
@@ -696,12 +832,117 @@ defmodule Brando.Content.Proposals do
       creates: Enum.count(proposal.operations, &match?(%CreateEntry{}, &1)),
       updates: length(existing),
       inserted_blocks: length(inserted),
-      updated_blocks: changed.([SetBlockMedia, SetBlockText, SetBlockValues, SetBlockActive]),
+      updated_blocks:
+        changed.([SetBlockMedia, SetBlockText, SetBlockValues, SetBlockActive, SetBlockDetails, SetRefConfig]),
       moved_blocks: changed.([MoveBlock]),
       deletions: deleted |> Enum.uniq() |> Enum.reject(&(elem(&1, 1) in inserted)) |> length(),
       live: for({target, %{status: :published}} <- existing, do: target)
     }
   end
+
+  ## Notes
+
+  @doc """
+  Operations that change nothing: a block or ref switched to the state it is
+  in, a value, text or media set to what is saved, details that are already
+  so. Only the first change to each part of a block is compared with the
+  saved block; later ones build on the proposal.
+
+  Notes do not block a proposal. They tell the agent what to drop, and the
+  reviewer why nothing seems to change.
+  """
+  @spec notes(Proposal.t()) :: [%{operation: non_neg_integer(), message: String.t()}]
+  def notes(%Proposal{} = proposal) do
+    proposal.operations
+    |> Enum.with_index()
+    |> Enum.reduce({[], MapSet.new()}, fn {op, index}, {notes, seen} ->
+      key = Map.has_key?(op, :block_uid) && {Map.get(op, :target), op.block_uid, aspect(op)}
+
+      notes =
+        with true <- key && key not in seen,
+             %{} = block <- saved_block(proposal, op),
+             message when is_binary(message) <- unchanged(op, block) do
+          [%{operation: index, message: message} | notes]
+        else
+          _ -> notes
+        end
+
+      {notes, if(key, do: MapSet.put(seen, key), else: seen)}
+    end)
+    |> elem(0)
+    |> Enum.reverse()
+  end
+
+  # What an operation changes on a block. Only the first change to each is
+  # compared with the saved block.
+  defp aspect(%SetBlockActive{ref: ref}), do: {:active, ref}
+  defp aspect(%SetBlockValues{values: values}), do: {:values, values |> Map.keys() |> Enum.sort()}
+  defp aspect(%{ref: ref} = op), do: {op.__struct__, to_string(ref)}
+  defp aspect(op), do: op.__struct__
+
+  defp saved_block(proposal, %{target: target, field: field, block_uid: uid}) do
+    with %{} = entry <- Map.get(proposal.targets, target),
+         {block, _parent, _index} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+      block
+    else
+      _ -> nil
+    end
+  end
+
+  defp unchanged(%SetBlockActive{ref: nil, active: active}, %{active: active}),
+    do: "The block is already #{if active, do: "on", else: "off"}."
+
+  defp unchanged(%SetBlockActive{ref: name, active: active}, block) do
+    if Enum.any?(block.refs, &(&1.name == name and &1.active == active)),
+      do: "Ref #{name} is already #{if active, do: "on", else: "off"}."
+  end
+
+  defp unchanged(%SetBlockValues{values: values}, block) do
+    same =
+      for {key, value} <- values,
+          %{} = var <- [Enum.find(block.vars, &(&1.key == key))],
+          saved_value(var) == value,
+          do: key
+
+    if same != [] and length(same) == map_size(values),
+      do: "#{Enum.join(same, ", ")} already has this value.",
+      else: if(same != [], do: "#{Enum.join(same, ", ")} already has this value; the rest change.")
+  end
+
+  defp unchanged(%SetBlockText{ref: name, text: text}, block) do
+    if Enum.any?(block.refs, &(&1.name == to_string(name) and ref_text(&1) == text)),
+      do: "Ref #{name} already has this text."
+  end
+
+  defp unchanged(%SetBlockMedia{ref: name, asset: {kind, id}}, block) when kind in [:image, :video, :file] do
+    if Enum.any?(block.refs, &(&1.name == to_string(name) and Map.get(&1, :"#{kind}_id") == id)),
+      do: "Ref #{name} already shows this #{kind}."
+  end
+
+  defp unchanged(%SetBlockDetails{} = op, block) do
+    if Enum.all?([anchor: op.anchor, description: op.description], fn {key, value} ->
+         is_nil(value) or (Map.get(block, key) || "") == value
+       end),
+       do: "The block already has these details."
+  end
+
+  defp unchanged(%SetRefConfig{ref: name, config: config}, block) do
+    with %{} = ref <- Enum.find(block.refs, &(&1.name == name)),
+         true <-
+           Enum.all?(RefConfig.diff(ref, config), fn {_, before, value} -> to_string(before) == to_string(value) end) do
+      "Ref #{name} already has these settings."
+    else
+      _ -> nil
+    end
+  end
+
+  defp unchanged(_op, _block), do: nil
+
+  defp saved_value(%{type: :boolean} = var), do: var.value_boolean
+  defp saved_value(%{type: kind} = var) when kind in [:image, :video, :file], do: {kind, Map.get(var, :"#{kind}_id")}
+  defp saved_value(var), do: var.value
+
+  defp ref_text(%{data: %{data: data}}), do: Map.get(data, :text) || Map.get(data, :code) || Map.get(data, :embed_url)
 
   ## Materialize
 
@@ -725,10 +966,14 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
+  defp asset_ids(fields),
+    do:
+      Map.new(fields, fn {key, value} -> {key, with({kind, id} when kind in [:image, :video, :file] <- value, do: id)} end)
+
   defp base_changeset({:new, ref} = target, proposal, _entries, user) do
     schema = Map.fetch!(proposal.targets, target)
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
-    schema.changeset(struct(schema), Map.put(fields, "status", "draft"), user, nil, [])
+    schema.changeset(struct(schema), fields |> asset_ids() |> Map.put("status", "draft"), user, nil, [])
   end
 
   defp base_changeset({schema, _} = target, proposal, entries, user) do
@@ -737,7 +982,7 @@ defmodule Brando.Content.Proposals do
           reduce: %{},
           do: (acc -> Map.merge(acc, fields))
 
-    schema.changeset(Map.fetch!(entries, target), fields, user, nil, [])
+    schema.changeset(Map.fetch!(entries, target), asset_ids(fields), user, nil, [])
   end
 
   defp put_blocks(changeset, target, proposal, entries, user) do
@@ -817,6 +1062,35 @@ defmodule Brando.Content.Proposals do
       else: joins |> detach(uid, from) |> attach(to, placement, join_schema)
   end
 
+  defp block_op(%CopyBlock{block_uid: uid, placement: placement} = op, joins, join_schema, user) do
+    to =
+      case placement do
+        :append -> parent_of(joins, uid)
+        {:into, parent} -> {:ok, parent}
+        {_side, anchor} -> parent_of(joins, anchor)
+      end
+
+    original = find_block(joins, uid)
+    copy = Blocks.duplicate_block(original, user_id: user.id, uid: op.uid, uid_mapping: copy_uids(original, op.uid))
+    # "append" puts the copy last among the original's siblings.
+    attach({copy, joins}, to, placement, join_schema)
+  end
+
+  defp block_op(%SetRefConfig{} = op, joins, _join_schema, _user) do
+    update_block(
+      joins,
+      op.block_uid,
+      &update_refs(&1, fn ref ->
+        if Changeset.get_field(ref, :name) == op.ref, do: RefConfig.put(ref, op.config), else: ref
+      end)
+    )
+  end
+
+  defp block_op(%SetBlockDetails{} = op, joins, _join_schema, _user) do
+    changes = for {key, value} <- [anchor: op.anchor, description: op.description], not is_nil(value), do: {key, value}
+    update_block(joins, op.block_uid, &Changeset.change(&1, changes))
+  end
+
   defp block_op(%SetBlockActive{ref: nil} = op, joins, _join_schema, _user),
     do: update_block(joins, op.block_uid, &Changeset.put_change(&1, :active, op.active))
 
@@ -836,14 +1110,14 @@ defmodule Brando.Content.Proposals do
       else: update_siblings(joins, uid, fn children -> Enum.reject(children, &(Changeset.get_field(&1, :uid) == uid)) end)
   end
 
-  defp block_op(%SetBlockMedia{} = op, joins, _join_schema, _user) do
+  defp block_op(%SetBlockMedia{} = op, joins, _join_schema, user) do
     name = to_string(op.ref)
 
     update_block(joins, op.block_uid, fn block ->
       module =
         Content.fetch_module(Changeset.get_field(block, :module_id), Changeset.get_field(block, :module_origin) || :local)
 
-      update_refs(block, &if(Changeset.get_field(&1, :name) == name, do: put_media(&1, op.asset, module), else: &1))
+      update_refs(block, &if(Changeset.get_field(&1, :name) == name, do: put_media(&1, op.asset, module, user), else: &1))
     end)
   end
 
@@ -857,8 +1131,8 @@ defmodule Brando.Content.Proposals do
     )
   end
 
-  defp block_op(%SetBlockValues{} = op, joins, _join_schema, _user),
-    do: update_block(joins, op.block_uid, &put_values(&1, op.values))
+  defp block_op(%SetBlockValues{} = op, joins, _join_schema, user),
+    do: update_block(joins, op.block_uid, &put_values(&1, op.values, user))
 
   defp new_block(%InsertBlock{} = op, join_schema, user, type) do
     module = fetch_module(op.module)
@@ -871,9 +1145,10 @@ defmodule Brando.Content.Proposals do
       name = Changeset.get_field(ref, :name)
       ref = Changeset.put_change(ref, :uid, Map.fetch!(op.ref_uids, name))
       ref = if text = op.texts[name], do: put_text(ref, text), else: ref
-      if asset = op.media[name], do: put_media(ref, asset, module), else: ref
+      ref = if asset = op.media[name], do: put_media(ref, asset, module, user), else: ref
+      RefConfig.put(ref, op.configs[name] || %{})
     end)
-    |> put_values(op.values)
+    |> put_values(op.values, user)
   end
 
   defp reorder(joins, uid, placement) do
@@ -951,6 +1226,17 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
+  # The uids a copy gives to the blocks below the original (`duplicate_block/2`
+  # maps every uid in the tree, slots included).
+  defp copy_uids(block, copy) do
+    block
+    |> tree_uids()
+    |> Map.new(&{&1, BlockTree.copy_uid(copy, &1)})
+    |> Map.put(Changeset.get_field(block, :uid), copy)
+  end
+
+  defp tree_uids(block), do: [Changeset.get_field(block, :uid) | Enum.flat_map(children(block), &tree_uids/1)]
+
   defp find_block(joins, uid) do
     Enum.find_value(joins, fn {_, join} -> find_in_block(Changeset.get_assoc(join, :block), uid) end)
   end
@@ -1025,9 +1311,12 @@ defmodule Brando.Content.Proposals do
 
   defp update_refs(block, fun), do: Changeset.put_assoc(block, :refs, Enum.map(Changeset.get_assoc(block, :refs), fun))
 
+  defp put_media(ref, {:file, id}, _module, _user), do: Changeset.put_change(ref, :file_id, id)
+
   # A media slot is retyped from its module definition's template, as the
-  # editor's media block does when an editor picks a picture or a video.
-  defp put_media(ref, {kind, id}, module) do
+  # editor's media block does when an editor picks a picture, a video or a
+  # gallery.
+  defp put_media(ref, {kind, value}, module, user) do
     type = Map.fetch!(@media_kinds, kind)
     name = Changeset.get_field(ref, :name)
 
@@ -1043,12 +1332,41 @@ defmodule Brando.Content.Proposals do
         |> Changeset.put_change(:video_id, nil)
       end
 
-    Changeset.put_change(ref, :"#{kind}_id", id)
+    if kind == :gallery,
+      do: put_gallery(ref, value, "ref:gallery", user),
+      else: Changeset.put_change(ref, :"#{kind}_id", value)
   end
 
+  # A gallery's objects are replaced in order; a ref or var without a gallery
+  # gets a new one, as the editor does when the first item is picked.
+  defp put_gallery(changeset, items, config_target, user) do
+    objects =
+      items
+      |> Enum.with_index()
+      |> Enum.map(fn {{kind, id}, sequence} -> %{:"#{kind}_id" => id, sequence: sequence, creator_id: user.id} end)
+
+    case Changeset.get_field(changeset, :gallery) do
+      %Brando.Galleries.Gallery{} = gallery ->
+        gallery = gallery |> Changeset.change() |> Changeset.put_assoc(:gallery_objects, objects)
+        Changeset.put_assoc(changeset, :gallery, gallery)
+
+      _ ->
+        Changeset.put_assoc(changeset, :gallery, %{config_target: config_target, gallery_objects: objects})
+    end
+  end
+
+  # The field a ref's content lives in, by ref type.
   defp put_text(ref, text) do
-    %{data: inner} = block = Changeset.get_field(ref, :data)
-    Changeset.put_change(ref, :data, %{block | data: %{inner | text: text}})
+    %{type: type, data: inner} = block = Changeset.get_field(ref, :data)
+
+    key =
+      case type do
+        "svg" -> :code
+        "map" -> :embed_url
+        _ -> :text
+      end
+
+    Changeset.put_change(ref, :data, %{block | data: Map.put(inner, key, text)})
   end
 
   defp template(%{data: %{type: "media", data: data}}, "picture"),
@@ -1063,15 +1381,21 @@ defmodule Brando.Content.Proposals do
       data: data.template_video || %Brando.Villain.Blocks.VideoBlock.Data{}
     }
 
-  defp put_values(block, values) when values == %{}, do: block
+  defp template(%{data: %{type: "media", data: data}}, "gallery"),
+    do: %Brando.Villain.Blocks.GalleryBlock{
+      type: "gallery",
+      data: data.template_gallery || %Brando.Villain.Blocks.GalleryBlock.Data{}
+    }
 
-  defp put_values(block, values) do
+  defp put_values(block, values, _user) when values == %{}, do: block
+
+  defp put_values(block, values, user) do
     vars =
       block
       |> Changeset.get_assoc(:vars)
       |> Enum.map(fn var ->
         case Map.fetch(values, Changeset.get_field(var, :key)) do
-          {:ok, value} -> put_value(var, Changeset.get_field(var, :type), value)
+          {:ok, value} -> put_value(var, Changeset.get_field(var, :type), value, user)
           :error -> var
         end
       end)
@@ -1079,16 +1403,19 @@ defmodule Brando.Content.Proposals do
     Changeset.put_assoc(block, :vars, vars)
   end
 
-  defp put_value(var, :boolean, value), do: Changeset.put_change(var, :value_boolean, value)
-  defp put_value(var, kind, {kind, id}) when kind in [:image, :video], do: Changeset.put_change(var, :"#{kind}_id", id)
+  defp put_value(var, :boolean, value, _user), do: Changeset.put_change(var, :value_boolean, value)
+  defp put_value(var, :gallery, {:gallery, items}, user), do: put_gallery(var, items, "default", user)
 
-  defp put_value(var, :link, {:entry, schema, id}) do
+  defp put_value(var, kind, {kind, id}, _user) when kind in [:image, :video, :file],
+    do: Changeset.put_change(var, :"#{kind}_id", id)
+
+  defp put_value(var, :link, {:entry, schema, id}, _user) do
     {:ok, identifier} = Content.get_identifier(schema, %{id: id})
     Changeset.change(var, link_type: :identifier, identifier_id: identifier.id)
   end
 
-  defp put_value(var, :link, url) when is_binary(url), do: Changeset.change(var, link_type: :url, value: url)
-  defp put_value(var, _type, value), do: Changeset.put_change(var, :value, value)
+  defp put_value(var, :link, url, _user) when is_binary(url), do: Changeset.change(var, link_type: :url, value: url)
+  defp put_value(var, _type, value, _user), do: Changeset.put_change(var, :value, value)
 
   ## Store, approve and apply
 

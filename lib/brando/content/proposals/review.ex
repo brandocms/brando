@@ -12,17 +12,22 @@ defmodule Brando.Content.Proposals.Review do
 
   alias Brando.Content.Proposals.{
     BlockTree,
+    CopyBlock,
     CreateEntry,
     DeleteBlock,
     InsertBlock,
     MoveBlock,
     Proposal,
     SetBlockActive,
+    SetBlockDetails,
     SetBlockMedia,
     SetBlockText,
     SetBlockValues,
-    SetFields
+    SetFields,
+    SetRefConfig
   }
+
+  alias Brando.Content.Proposals.RefConfig
 
   alias Brando.Content.Transfer.Catalog
 
@@ -43,7 +48,11 @@ defmodule Brando.Content.Proposals.Review do
   """
   @spec media([map()]) :: [{:image | :video, integer()}]
   def media(entries) do
-    context = for entry <- entries, %{context: context} <- entry.changes, %{kind: kind, id: id} <- context, do: {kind, id}
+    context =
+      for entry <- entries,
+          change <- entry.changes,
+          %{kind: kind, id: id} <- (change[:context] || []) ++ (change[:replaces] || []),
+          do: {kind, id}
 
     values =
       for entry <- entries,
@@ -126,7 +135,7 @@ defmodule Brando.Content.Proposals.Review do
     |> Enum.flat_map(fn
       # Moves are shown as the order they produce, once per list of siblings,
       # where the first move into that list is.
-      {%MoveBlock{target: ^target}, index} ->
+      {%{__struct__: kind, target: ^target}, index} when kind in [MoveBlock, CopyBlock] ->
         Map.get(orders, index, [])
 
       {op, _index} ->
@@ -134,91 +143,130 @@ defmodule Brando.Content.Proposals.Review do
     end)
   end
 
-  defp block_change(op, target, entry, proposal) do
-    case op do
-      %InsertBlock{target: ^target} = op ->
-        module = fetch_module(op.module)
+  defp block_change(%InsertBlock{target: target} = op, target, entry, proposal) do
+    module = fetch_module(op.module)
 
-        [
-          %{
-            type: :insert_block,
-            uid: op.uid,
-            field: op.field,
-            module: module && label(module.name),
-            placement: placement(op.placement, op.parent, entry, op.field, proposal),
-            values: Enum.map(op.values, &value_view(&1, nil, op.uid, proposal)),
-            texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: excerpt(text)} end),
-            media: Enum.map(op.media, fn {ref, {kind, id}} -> %{ref: ref, kind: kind, id: id} end)
-          }
-        ]
-
-      %SetBlockMedia{target: ^target} = op ->
-        {kind, id} = op.asset
-
-        [
-          %{
-            type: :block_media,
-            uid: op.block_uid,
-            block: block_label(entry, op.field, op.block_uid, proposal),
-            ref: to_string(op.ref),
-            media: [%{ref: to_string(op.ref), kind: kind, id: id}]
-          }
-        ]
-
-      %SetBlockText{target: ^target} = op ->
-        [
-          %{
-            type: :block_text,
-            uid: op.block_uid,
-            block: block_label(entry, op.field, op.block_uid, proposal),
-            ref: to_string(op.ref),
-            before: excerpt(saved_text(entry, op.field, op.block_uid, op.ref)),
-            text: excerpt(op.text)
-          }
-        ]
-
-      %SetBlockActive{target: ^target} = op ->
-        [
-          %{
-            type: :block_active,
-            uid: op.block_uid,
-            block: block_label(entry, op.field, op.block_uid, proposal),
-            ref: op.ref,
-            active: op.active,
-            context: block_media(saved_block(entry, op.field, op.block_uid))
-          }
-        ]
-
-      %SetBlockValues{target: ^target} = op ->
-        saved = saved_block(entry, op.field, op.block_uid)
-
-        [
-          %{
-            type: :block_values,
-            uid: op.block_uid,
-            block: block_label(entry, op.field, op.block_uid, proposal),
-            values: Enum.map(op.values, &value_view(&1, saved, op.block_uid, proposal)),
-            context: block_media(saved)
-          }
-        ]
-
-      %DeleteBlock{target: ^target} = op ->
-        saved = saved_block(entry, op.field, op.block_uid)
-
-        [
-          %{
-            type: :delete_block,
-            uid: nil,
-            block: block_label(entry, op.field, op.block_uid, proposal),
-            children: descendants(saved),
-            context: block_media(saved)
-          }
-        ]
-
-      _ ->
-        []
-    end
+    [
+      %{
+        type: :insert_block,
+        uid: op.uid,
+        field: op.field,
+        module: module && label(module.name),
+        placement: placement(op.placement, op.parent, entry, op.field, proposal),
+        values: Enum.map(op.values, &value_view(&1, nil, op.uid, proposal)),
+        texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: excerpt(text)} end),
+        media: Enum.flat_map(op.media, fn {ref, asset} -> media_items(ref, asset) end),
+        settings:
+          Enum.flat_map(op.configs, fn {ref, config} ->
+            Enum.map(config, fn {key, value} -> %{ref: ref, name: key, before: nil, value: shorten(value)} end)
+          end)
+      }
+    ]
   end
+
+  defp block_change(%SetBlockMedia{target: target} = op, target, entry, proposal) do
+    [
+      %{
+        type: :block_media,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        ref: to_string(op.ref),
+        media: media_items(to_string(op.ref), op.asset),
+        replaces: entry |> saved_block(op.field, op.block_uid) |> ref_media(to_string(op.ref))
+      }
+    ]
+  end
+
+  defp block_change(%SetRefConfig{target: target} = op, target, entry, proposal) do
+    saved = saved_block(entry, op.field, op.block_uid)
+    ref = saved && Enum.find(saved.refs, &(&1.name == op.ref))
+
+    [
+      %{
+        type: :ref_config,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        ref: op.ref,
+        settings:
+          for {key, before, value} <- RefConfig.diff(ref, op.config) do
+            %{name: key, before: shorten(before), value: shorten(value)}
+          end,
+        context: block_media(saved)
+      }
+    ]
+  end
+
+  defp block_change(%SetBlockDetails{target: target} = op, target, entry, proposal) do
+    saved = saved_block(entry, op.field, op.block_uid)
+
+    [
+      %{
+        type: :block_details,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        settings:
+          for {key, value} <- [anchor: op.anchor, description: op.description], not is_nil(value) do
+            %{name: to_string(key), before: saved && Map.get(saved, key), value: value}
+          end
+      }
+    ]
+  end
+
+  defp block_change(%SetBlockText{target: target} = op, target, entry, proposal) do
+    [
+      %{
+        type: :block_text,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        ref: to_string(op.ref),
+        before: excerpt(saved_text(entry, op.field, op.block_uid, op.ref)),
+        text: excerpt(op.text)
+      }
+    ]
+  end
+
+  defp block_change(%SetBlockActive{target: target} = op, target, entry, proposal) do
+    [
+      %{
+        type: :block_active,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        ref: op.ref,
+        active: op.active,
+        context: block_media(saved_block(entry, op.field, op.block_uid))
+      }
+    ]
+  end
+
+  defp block_change(%SetBlockValues{target: target} = op, target, entry, proposal) do
+    saved = saved_block(entry, op.field, op.block_uid)
+
+    [
+      %{
+        type: :block_values,
+        uid: op.block_uid,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        values: Enum.map(op.values, &value_view(&1, saved, op.block_uid, proposal)),
+        context: block_media(saved)
+      }
+    ]
+  end
+
+  defp block_change(%DeleteBlock{target: target} = op, target, entry, proposal) do
+    saved = saved_block(entry, op.field, op.block_uid)
+
+    [
+      %{
+        type: :delete_block,
+        uid: nil,
+        block: block_label(entry, op.field, op.block_uid, proposal),
+        children: descendants(saved),
+        context: block_media(saved)
+      }
+    ]
+  end
+
+  defp block_change(_op, _target, _entry, _proposal), do: []
 
   # The order cards of `target`, keyed by the index of the first move into
   # each list of siblings. The operations are replayed on the saved field, so
@@ -270,6 +318,18 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
+  # A copy is new in the list it joins.
+  defp replay({%CopyBlock{} = op, index}, {tree, firsts, moved} = acc) do
+    case BlockTree.fetch(tree, op.block_uid) do
+      %{parent: from} ->
+        to = if op.placement == :append, do: from, else: move_parent(op.placement, from, tree)
+        {BlockTree.copy(tree, op.block_uid, op.uid, to, op.placement), Map.put_new(firsts, to, index), moved}
+
+      nil ->
+        acc
+    end
+  end
+
   defp replay({%DeleteBlock{} = op, _index}, {tree, firsts, moved} = acc) do
     if BlockTree.fetch(tree, op.block_uid), do: {BlockTree.delete(tree, op.block_uid), firsts, moved}, else: acc
   end
@@ -292,25 +352,44 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp order_item(uid, entry, field, moved, proposal) do
-    saved = saved_block(entry, field, uid)
+    # A copy shows its original.
+    copy = Enum.find(proposal.operations, &match?(%CopyBlock{uid: ^uid}, &1))
+    saved = saved_block(entry, field, original(copy, uid))
     inserted = Enum.find(proposal.operations, &match?(%InsertBlock{uid: ^uid}, &1))
-    vars = if saved, do: saved.vars, else: inserted_vars(inserted)
-
-    set = proposed_values(uid, inserted, proposal)
 
     %{
       uid: uid,
-      name: if(saved, do: block_name(saved), else: inserted && module_label(inserted.module)),
+      name: item_name(saved, inserted),
       excerpt: saved && saved |> describe() |> brief(),
-      new?: is_nil(saved),
+      new?: is_nil(saved) or not is_nil(copy),
+      copy?: not is_nil(copy),
       moved?: MapSet.member?(moved, uid),
-      media: block_media(saved),
+      media: proposed_media(uid, proposal) || block_media(saved),
       values:
-        for %{type: :select} = var <- vars || [] do
-          value = Map.get(set, var.key, var.value)
-          %{label: var.label || var.key, value: option(var, value), changed?: Map.has_key?(set, var.key)}
-        end
+        select_values(if(saved, do: saved.vars, else: inserted_vars(inserted)), proposed_values(uid, inserted, proposal))
     }
+  end
+
+  # The media a block will show: the last media the proposal gives it.
+  defp proposed_media(uid, proposal) do
+    case proposal.operations |> Enum.filter(&match?(%SetBlockMedia{block_uid: ^uid}, &1)) |> List.last() do
+      nil -> nil
+      op -> op.ref |> to_string() |> media_items(op.asset) |> Enum.take(1)
+    end
+  end
+
+  defp original(nil, uid), do: uid
+  defp original(%CopyBlock{block_uid: original}, _uid), do: original
+
+  defp item_name(nil, nil), do: nil
+  defp item_name(nil, inserted), do: module_label(inserted.module)
+  defp item_name(saved, _inserted), do: block_name(saved)
+
+  defp select_values(vars, set) do
+    for %{type: :select} = var <- vars || [] do
+      value = Map.get(set, var.key, var.value)
+      %{label: var.label || var.key, value: option(var, value), changed?: Map.has_key?(set, var.key)}
+    end
   end
 
   # The values the proposal gives a block: an insert's, then later settings.
@@ -328,6 +407,25 @@ defmodule Brando.Content.Proposals.Review do
       _ -> []
     end
   end
+
+  # What a saved ref shows now.
+  defp ref_media(nil, _name), do: []
+
+  defp ref_media(block, name) do
+    case Enum.find(block.refs, &(&1.name == name)) do
+      nil -> []
+      ref -> ref |> ref_items() |> Enum.map(fn {kind, id} -> %{ref: name, kind: kind, id: id} end)
+    end
+  end
+
+  defp ref_items(%{gallery: %{gallery_objects: [_ | _] = objects}}),
+    do: Enum.map(objects, &if(&1.video_id, do: {:video, &1.video_id}, else: {:image, &1.image_id}))
+
+  defp ref_items(ref), do: for(kind <- [:image, :video, :file], id = Map.get(ref, :"#{kind}_id"), do: {kind, id})
+
+  # Media as the review shows it: a gallery item by item.
+  defp media_items(ref, {:gallery, items}), do: Enum.map(items, fn {kind, id} -> %{ref: ref, kind: kind, id: id} end)
+  defp media_items(ref, {kind, id}), do: [%{ref: ref, kind: kind, id: id}]
 
   defp brief(nil), do: nil
   defp brief(text) when byte_size(text) > 48, do: String.slice(text, 0, 48) <> "…"
@@ -465,6 +563,7 @@ defmodule Brando.Content.Proposals.Review do
   defp saved_value(var), do: option(var, var.value)
 
   defp media_value({kind, id}) when kind in [:image, :video], do: %{kind: kind, id: id}
+  defp media_value({:gallery, [{kind, id} | _]}), do: %{kind: kind, id: id}
   defp media_value(_), do: nil
 
   defp module_var(uid, key, proposal) do
@@ -493,6 +592,11 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp option(_var, {kind, _id}) when kind in [:image, :video], do: nil
+  defp option(_var, {:file, id}), do: dgettext("content_proposals", "File #%{id}", id: id)
+
+  defp option(_var, {:gallery, items}),
+    do: dngettext("content_proposals", "%{count} item", "%{count} items", length(items))
+
   defp option(_var, value), do: shorten(value)
 
   defp descendants(nil), do: 0
@@ -579,6 +683,7 @@ defmodule Brando.Content.Proposals.Review do
     _ -> nil
   end
 
+  defp media_ref(kind, {kind, id}), do: media_ref(kind, id)
   defp media_ref(kind, id) when is_integer(id), do: %{kind: kind, id: id}
   defp media_ref(_, _), do: nil
 

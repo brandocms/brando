@@ -18,6 +18,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.BlockSlots
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.Codec
+  alias Brando.Content.Proposals.RefConfig
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Media.Folders
 
@@ -77,7 +78,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "entry_outline",
       description:
-        "Read one entry: its fields, its own media (such as a listing image) and an outline of its blocks — root blocks and their children, nested (uid, module, active, short text, media, refs_off, variable values). Media carries width, height and orientation. refs_off lists refs that are switched off. Children are the entries of a multi module, or the blocks of a container or slot. Use block uids for placement and block edits; every block at any depth can be edited, switched on or off, moved or deleted.",
+        "Read one entry: its fields, its own media (such as a listing image) and an outline of its blocks — root blocks and their children, nested (uid, module, active, short text, media, refs_off, settings that differ from the defaults, variable values, anchor, description). Media carries width, height and orientation. refs_off lists refs that are switched off. Children are the entries of a multi module, or the blocks of a container or slot. Use block uids for placement and block edits; every block at any depth can be edited, switched on or off, moved or deleted.",
       parameters: %{
         type: "object",
         properties: %{content_type: %{type: "string"}, id: %{type: "integer"}},
@@ -97,7 +98,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "describe_module",
       description:
-        "Describe a module's contract: its text slots (text: safe HTML, header: plain text), media slots with the media they accept, and variables with their types and options. For a multi module it also describes its entry modules, which its blocks hold as children.",
+        "Describe a module's contract: its slots — what each takes (text, media) and the settings it has, such as a heading's level or a picture's alt text — and its variables with their types and options. For a multi module it also describes its entry modules, which its blocks hold as children.",
       parameters: %{type: "object", properties: %{module: %{type: "string"}}, required: ["module"]}
     },
     %{
@@ -107,11 +108,11 @@ defmodule Brando.Content.Proposals.Tools do
     },
     %{
       name: "search_assets",
-      description: "Search the media library for images or videos by title or filename.",
+      description: "Search the media library for images, videos or files by title or filename.",
       parameters: %{
         type: "object",
         properties: %{
-          kind: %{type: "string", enum: ["image", "video"]},
+          kind: %{type: "string", enum: ["image", "video", "file"]},
           query: %{type: "string"},
           limit: %{type: "integer", maximum: @max_results}
         },
@@ -157,6 +158,10 @@ defmodule Brando.Content.Proposals.Tools do
       {"op":"move_block","target":…,"block_uid":UID,"placement":"append"|{"before":UID}|{"after":UID}|{"into":UID}}
       {"op":"set_block_active","target":…,"block_uid":UID,"ref":NAME?,"active":true|false}
       {"op":"delete_block","target":…,"block_uid":UID}
+      {"op":"copy_block","target":…,"block_uid":UID,"placement":"append"|{"before":UID}|{"after":UID}|{"into":UID},"uid":UID?}
+      {"op":"set_block_details","target":…,"block_uid":UID,"anchor":TEXT?,"description":TEXT?}
+      {"op":"set_ref_config","target":…,"block_uid":UID,"ref":NAME,"config":{}}
+      Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings). set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id).
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later. Returns problems to fix; call again with the corrected operations.
       """,
       parameters: %{
@@ -348,7 +353,7 @@ defmodule Brando.Content.Proposals.Tools do
     }
   end
 
-  defp run("search_assets", %{"kind" => kind} = args, %{actor: actor}) when kind in ~w(image video) do
+  defp run("search_assets", %{"kind" => kind} = args, %{actor: actor}) when kind in ~w(image video file) do
     assets =
       kind
       |> Dependencies.options(actor, to_string(args["query"] || ""))
@@ -358,7 +363,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{assets: assets}
   end
 
-  defp run("search_assets", _args, _context), do: Error.fail!("kind is image or video.")
+  defp run("search_assets", _args, _context), do: Error.fail!("kind is image, video or file.")
 
   defp run("find_media_folders", args, %{actor: actor}),
     do: Folders.find(media_kind!(args["kind"]), args["name"], actor)
@@ -440,6 +445,18 @@ defmodule Brando.Content.Proposals.Tools do
       effects: Map.update!(proposal.effects, :live, fn live -> Enum.map(live, &target_key/1) end),
       note: "The user reviews and approves this in the admin. Nothing is saved yet."
     }
+    |> then(fn review ->
+      case Proposals.notes(proposal) do
+        [] ->
+          review
+
+        notes ->
+          Map.put(review, :unchanged, %{
+            operations: notes,
+            advice: "These change nothing. Drop them, or tell the editor why."
+          })
+      end
+    end)
   end
 
   defp target_key(target) when is_binary(target), do: target
@@ -471,9 +488,10 @@ defmodule Brando.Content.Proposals.Tools do
             name: ref.name,
             kind: ref.data.type,
             description: ref.description,
+            settings: RefConfig.describe(ref),
             settable:
               cond do
-                ref.data.type in ["text", "header"] -> "text"
+                text = text_slot(ref.data.type) -> text
                 Proposals.accepts(ref) != [] -> Enum.map_join(Proposals.accepts(ref), " or ", &to_string/1)
                 true -> "no"
               end
@@ -493,6 +511,14 @@ defmodule Brando.Content.Proposals.Tools do
     }
   end
 
+  defp text_slot("text"), do: "text: simple HTML"
+  defp text_slot("header"), do: "text: plain"
+  defp text_slot("markdown"), do: "text: markdown"
+  defp text_slot("html"), do: "text: safe HTML"
+  defp text_slot("svg"), do: "text: one <svg> element, no scripts"
+  defp text_slot("map"), do: "text: an https map embed address"
+  defp text_slot(_), do: nil
+
   defp settable(type) when type in [:string, :text, :html], do: "a string"
   defp settable(:boolean), do: "true or false"
   defp settable(:select), do: "one of the options"
@@ -502,6 +528,8 @@ defmodule Brando.Content.Proposals.Tools do
   defp settable(:image), do: ~s({"kind":"image","id":N} or {"asset":"image1"})
   defp settable(:video), do: ~s({"kind":"video","id":N} or {"asset":"video1"})
   defp settable(:link), do: ~s(a URL, or an entry {"content_type":T,"id":N})
+  defp settable(:file), do: ~s({"kind":"file","id":N})
+  defp settable(:gallery), do: ~s({"gallery":[media, …]}, images and videos in order)
   defp settable(_), do: "no"
 
   defp option(%{label: label, value: value}) when label in [nil, "", value], do: value
@@ -556,35 +584,61 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   defp details(block, dimensions) do
-    details = %{
+    %{
       module: block.module_id && "#{block.module_origin || :local}:#{block.module_id}",
       active: block.active,
       texts: ref_texts(block.refs),
       media: ref_media(block.refs, dimensions),
       values: var_values(block.vars, dimensions)
     }
-
-    case for %{active: false, name: name} <- block.refs || [], do: name do
-      [] -> details
-      off -> Map.put(details, :refs_off, off)
-    end
+    |> put_present(:anchor, block.anchor)
+    |> put_present(:description, block.description)
+    |> put_present(:settings, ref_settings(block.refs || []))
+    |> put_present(:refs_off, for(%{active: false, name: name} <- block.refs || [], do: name))
   end
+
+  defp ref_settings(refs),
+    do: for(ref <- refs, current = RefConfig.current(ref), current != %{}, into: %{}, do: {ref.name, current})
+
+  defp put_present(map, _key, value) when value in [nil, "", [], %{}], do: map
+  defp put_present(map, key, value), do: Map.put(map, key, value)
 
   defp put_kind(summary, %{type: :slot, slot_name: name}), do: Map.put(summary, :slot, name)
   defp put_kind(summary, %{multi: true}), do: Map.put(summary, :multi, true)
   defp put_kind(summary, _block), do: summary
 
   defp ref_texts(refs) do
-    for %{data: %{type: type, data: data}} = ref <- refs, type in ["text", "header"], into: %{} do
-      {ref.name, shorten(HtmlSanitizeEx.strip_tags(data.text || ""))}
+    for %{data: %{type: type, data: data}} = ref <- refs, text = ref_text(type, data), into: %{}, do: {ref.name, text}
+  end
+
+  defp ref_text(type, data) when type in ["text", "header", "markdown", "html"],
+    do: shorten(HtmlSanitizeEx.strip_tags(data.text || ""))
+
+  defp ref_text("svg", %{code: code}) when is_binary(code), do: "<svg> (#{byte_size(code)} bytes)"
+  defp ref_text("map", %{embed_url: url}), do: url
+  defp ref_text(_, _), do: nil
+
+  defp ref_media(refs, dimensions) do
+    for ref <- refs, summary = ref_media_summary(ref, dimensions), into: %{}, do: {ref.name, summary}
+  end
+
+  defp ref_media_summary(ref, dimensions) do
+    cond do
+      id = Map.get(ref, :image_id) -> media_summary(:image, id, dimensions)
+      id = Map.get(ref, :video_id) -> media_summary(:video, id, dimensions)
+      id = Map.get(ref, :file_id) -> %{kind: :file, id: id}
+      items = gallery_items(Map.get(ref, :gallery)) -> gallery_summary(items, dimensions)
+      true -> nil
     end
   end
 
-  defp ref_media(refs, dimensions) do
-    for ref <- refs, kind <- [:image, :video], id = Map.get(ref, :"#{kind}_id"), into: %{} do
-      {ref.name, media_summary(kind, id, dimensions)}
-    end
-  end
+  defp gallery_items(%{gallery_objects: [_ | _] = objects}),
+    do: Enum.map(objects, &if(&1.video_id, do: {:video, &1.video_id}, else: {:image, &1.image_id}))
+
+  defp gallery_items(_), do: nil
+
+  defp gallery_summary(items, dimensions),
+    do: %{kind: :gallery, items: Enum.map(items, fn {kind, id} -> media_summary(kind, id, dimensions) end)}
 
   # Width, height and orientation of the media in `blocks`, in one query per kind.
   # The entry's own image and video fields, such as a listing image.
@@ -602,6 +656,7 @@ defmodule Brando.Content.Proposals.Tools do
     ids =
       blocks
       |> Enum.flat_map(&tree_media/1)
+      |> Enum.flat_map(&media_rows/1)
       |> Enum.flat_map(fn row -> for kind <- [:image, :video], id = Map.get(row, :"#{kind}_id"), do: {kind, id} end)
       |> Enum.concat(extra)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
@@ -613,6 +668,14 @@ defmodule Brando.Content.Proposals.Tools do
           Brando.Repo.all(from(m in schema, where: m.id in ^ids, select: {m.id, m.width, m.height})),
         into: %{},
         do: {{kind, id}, %{width: width, height: height, orientation: orientation(width, height)}}
+  end
+
+  # A gallery's objects hold media too.
+  defp media_rows(row) do
+    case Map.get(row, :gallery) do
+      %{gallery_objects: objects} when is_list(objects) -> [row | objects]
+      _ -> [row]
+    end
   end
 
   # Refs and vars both hold media.
@@ -630,7 +693,7 @@ defmodule Brando.Content.Proposals.Tools do
   defp orientation(_, _), do: nil
 
   defp var_values(vars, dimensions) do
-    for var <- vars, var.type not in [:gallery, :file], into: %{} do
+    for var <- vars, into: %{} do
       {var.key, var_value(var, dimensions)}
     end
   end
@@ -645,6 +708,15 @@ defmodule Brando.Content.Proposals.Tools do
     case Map.get(var, :"#{kind}_id") do
       nil -> nil
       id -> media_summary(kind, id, dimensions)
+    end
+  end
+
+  defp var_value(%{type: :file, file_id: id}, _), do: id && %{kind: :file, id: id}
+
+  defp var_value(%{type: :gallery} = var, dimensions) do
+    case gallery_items(Map.get(var, :gallery)) do
+      nil -> nil
+      items -> gallery_summary(items, dimensions)
     end
   end
 

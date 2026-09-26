@@ -94,6 +94,44 @@ defmodule Brando.Content.Proposals.BlockTree do
     }
   end
 
+  @doc """
+  Copy `uid` and the blocks below it under `parent` at `placement`. The copy
+  is `copy`; each block below takes `copy_uid(copy, original)`.
+  """
+  @spec copy(t(), uid(), uid(), uid() | nil, term()) :: t()
+  def copy(tree, uid, copy, parent, placement) do
+    tree
+    |> put(%{fetch(tree, uid) | uid: copy}, parent, placement)
+    |> copy_children(uid, copy, copy)
+  end
+
+  defp copy_children(tree, original, parent, root) do
+    Enum.reduce(children(tree, original), tree, fn child, tree ->
+      uid = copy_uid(root, child)
+
+      tree
+      |> put(%{fetch(tree, child) | uid: uid}, parent, :append)
+      |> copy_children(child, uid, root)
+    end)
+  end
+
+  @doc """
+  The uid a copy `copy` gives to `original`, a block below the copied one.
+  Derived rather than random, so every materialization of a proposal builds
+  the same tree.
+  """
+  @spec copy_uid(uid(), uid()) :: uid()
+  def copy_uid(copy, original) do
+    :sha256
+    |> :crypto.hash(copy <> ":" <> original)
+    |> Base.encode32(case: :lower, padding: false)
+    |> binary_part(0, 22)
+  end
+
+  @doc "Every uid below `uid`."
+  @spec descendants(t(), uid()) :: [uid()]
+  def descendants(tree, uid), do: Enum.flat_map(children(tree, uid), &[&1 | descendants(tree, &1)])
+
   @doc "Whether `uid` is `ancestor` or below it."
   @spec within?(t(), uid(), uid()) :: boolean()
   def within?(_tree, ancestor, ancestor), do: true
@@ -118,8 +156,6 @@ defmodule Brando.Content.Proposals.BlockTree do
         order: tree.order |> Map.drop([uid | removed]) |> Map.update(parent, [], &List.delete(&1, uid))
     }
   end
-
-  defp descendants(tree, uid), do: Enum.flat_map(children(tree, uid), &[&1 | descendants(tree, &1)])
 
   @doc "Insert `uid` into `list` at `placement`; an anchor missing from `list` appends."
   @spec insert_at([term()], term(), term(), (term() -> term())) :: [term()]

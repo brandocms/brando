@@ -364,5 +364,31 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert has_element?(view, ".assistant-placement", "It is kept, but not shown on the page.")
       assert has_element?(view, ".assistant-thumb.is-video")
     end
+
+    test "settings, details and copies are reviewed", %{conn: conn} = c do
+      [alpha | _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %Brando.Content.Proposals.SetRefConfig{target: target, block_uid: alpha, ref: "clip", config: %{autoplay: true}},
+        %Brando.Content.Proposals.SetBlockDetails{target: target, block_uid: alpha, anchor: "alpha"},
+        %Brando.Content.Proposals.CopyBlock{target: target, block_uid: alpha}
+      ]
+
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, c.current_user, conversation_id: c.conversation.id)
+      c.conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      assert has_element?(
+               view,
+               ".assistant-change-title",
+               "Change Clip settings in “Project” · 1 of 3 in “Projects” · Alpha"
+             )
+
+      assert has_element?(view, ".assistant-fields ins", "true")
+      assert has_element?(view, ".assistant-change-title", "Change the details of “Project”")
+      assert has_element?(view, ".assistant-order li:last-child .assistant-order-mark", "Copy")
+    end
   end
 end

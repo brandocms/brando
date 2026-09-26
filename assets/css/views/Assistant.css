@@ -569,6 +569,9 @@
   dt { color: var(--assistant-muted); overflow-wrap: anywhere; }
   dd { overflow-wrap: anywhere; }
   del { color: var(--assistant-error); margin-right: 4px; }
+  /* Media a change replaces: dimmed and struck through, beside what replaces it. */
+  del.assistant-inline-media { color: var(--assistant-muted); opacity: .6; }
+  del.assistant-inline-media .assistant-thumb { filter: grayscale(1); }
   ins { text-decoration: none; background: var(--assistant-new); }
 }
 

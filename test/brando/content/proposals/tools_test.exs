@@ -85,7 +85,8 @@ defmodule Brando.Content.Proposals.ToolsTest do
 
     %{assets: assets} = call!("search_assets", %{"kind" => "image", "query" => "Title one"}, c.context)
     assert Enum.any?(assets, &(&1.id == c.image.id))
-    assert {:error, _} = Tools.call("search_assets", %{"kind" => "file"}, c.context)
+    assert {:ok, %{assets: []}} = Tools.call("search_assets", %{"kind" => "file"}, c.context)
+    assert {:error, _} = Tools.call("search_assets", %{"kind" => "gallery"}, c.context)
   end
 
   test "prepare_proposal stores a version for review and refines it", c do
@@ -350,6 +351,41 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert first.values["project"] == %{entry: "Identity", content_type: "Brando.Pages.Page", id: c.identity.id}
       assert %{"meta_image" => %{kind: :image, id: id, width: _, height: _}} = outline.media
       assert id == c.image.id
+    end
+
+    test "settings are described, outlined and changes that do nothing are reported", c do
+      [alpha | _] = c.child_uids
+      contract = call!("describe_module", %{"module" => "local:#{c.project_module.id}"}, c.context)
+      clip = Enum.find(contract.slots, &(&1.name == "clip"))
+      assert Enum.any?(clip.settings, &(&1.key == :autoplay))
+      info = Enum.find(contract.slots, &(&1.name == "info"))
+      assert [%{key: :type, type: "one of", values: values}] = info.settings
+      assert :lead in values
+
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}
+
+      ops = [
+        %{
+          "op" => "set_ref_config",
+          "target" => target,
+          "block_uid" => alpha,
+          "ref" => "clip",
+          "config" => %{"loop" => true}
+        },
+        %{"op" => "set_block_active", "target" => target, "block_uid" => alpha, "active" => true}
+      ]
+
+      result = call!("prepare_proposal", %{"summary" => "Loop", "operations" => ops}, c.context)
+      assert %{applicable: true, unchanged: %{operations: [%{operation: 1, message: message}]}} = result
+      assert message =~ "already on"
+
+      {:ok, proposal} = Proposals.get(result.proposal_id, c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+      outline = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}, c.context)
+      [_, %{children: [first | _]}] = outline.blocks.blocks
+      assert first.settings == %{"clip" => %{loop: true}}
     end
 
     test "list_modules offers multi modules at the root", c do
