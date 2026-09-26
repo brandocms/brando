@@ -45,6 +45,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.Proposal
   alias Brando.Content.Proposals.Receipt
   alias Brando.Content.Proposals.Record
+  alias Brando.Content.Proposals.SetBlockActive
   alias Brando.Content.Proposals.SetBlockMedia
   alias Brando.Content.Proposals.SetBlockText
   alias Brando.Content.Proposals.SetBlockValues
@@ -141,6 +142,10 @@ defmodule Brando.Content.Proposals do
     do: %{op | target: target(op.target), field: to_string(op.field), values: stringify(op.values)}
 
   defp freeze(%MoveBlock{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
+
+  defp freeze(%SetBlockActive{} = op),
+    do: %{op | target: target(op.target), field: to_string(op.field), ref: op.ref && to_string(op.ref)}
+
   defp freeze(%DeleteBlock{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
 
   defp module_reference(reference) do
@@ -226,7 +231,7 @@ defmodule Brando.Content.Proposals do
       }
 
       problems =
-        values(op.values, module.vars) ++
+        values(op.values, module.vars, actor) ++
           Enum.flat_map(op.texts, fn {name, text} -> text(name, text, module) end) ++
           Enum.flat_map(op.media, fn {name, asset} -> media(name, asset, module, actor) end) ++
           draft_dependencies(op.values, proposal)
@@ -237,11 +242,19 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  defp check_block(%MoveBlock{} = op, _schema, tree, _actor, _proposal) do
+  defp check_block(%MoveBlock{} = op, schema, tree, _actor, _proposal) do
     with {:ok, node} <- structural_block(tree, op.block_uid),
-         :ok <- sibling_placement(op.placement, node.parent, op.block_uid, tree) do
-      {[], BlockTree.move(tree, op.block_uid, op.placement)}
+         {:ok, parent} <- destination(op.placement, node, tree),
+         :ok <- movable(node, parent, schema, op.field, tree) do
+      {[], BlockTree.move(tree, op.block_uid, parent, op.placement)}
     else
+      {:error, problem} -> {[problem], tree}
+    end
+  end
+
+  defp check_block(%SetBlockActive{ref: nil} = op, _schema, tree, _actor, _proposal) do
+    case structural_block(tree, op.block_uid) do
+      {:ok, _node} -> {[], tree}
       {:error, problem} -> {[problem], tree}
     end
   end
@@ -259,8 +272,9 @@ defmodule Brando.Content.Proposals do
         {:ok, module} ->
           case op do
             %SetBlockMedia{ref: name, asset: asset} -> media(to_string(name), asset, module, actor)
-            %SetBlockValues{values: values} -> values(values, module.vars) ++ draft_dependencies(values, proposal)
+            %SetBlockValues{values: values} -> values(values, module.vars, actor) ++ draft_dependencies(values, proposal)
             %SetBlockText{ref: name, text: text} -> text(to_string(name), text, module)
+            %SetBlockActive{ref: name} -> ref_exists(name, module)
           end
 
         {:error, problem} ->
@@ -302,6 +316,52 @@ defmodule Brando.Content.Proposals do
     end
   end
 
+  defp ref_exists(name, module) do
+    if Enum.any?(module.refs || [], &(&1.name == name)),
+      do: [],
+      else: [problem(:unknown_ref, dgettext("content_proposals", "The module has no ref %{name}.", name: name))]
+  end
+
+  # Where a move puts the block: among its siblings, next to another block —
+  # under that block's parent — or at the end of a block's children. A block
+  # cannot go inside itself.
+  defp destination(:append, node, _tree), do: {:ok, node.parent}
+
+  defp destination({side, anchor}, node, tree) when side in [:before, :after, :into] do
+    case BlockTree.fetch(tree, anchor) do
+      nil ->
+        {:error, unknown_placement()}
+
+      anchor_node ->
+        parent = if side == :into, do: anchor, else: anchor_node.parent
+
+        if BlockTree.within?(tree, node.uid, anchor) or (parent && BlockTree.within?(tree, node.uid, parent)),
+          do: {:error, problem(:unknown_placement, dgettext("content_proposals", "A block cannot move inside itself."))},
+          else: {:ok, parent}
+    end
+  end
+
+  defp destination(_placement, _node, _tree), do: {:error, unknown_placement()}
+
+  defp unknown_placement,
+    do: problem(:unknown_placement, dgettext("content_proposals", "The block to place it next to is not in the field."))
+
+  # A block moving to another parent must be one the new parent takes.
+  defp movable(%{parent: parent}, parent, _schema, _field, _tree), do: :ok
+
+  defp movable(%{module: {_, _} = reference, type: type}, parent, schema, field, tree)
+       when type in [:module, :module_entry] do
+    with {:ok, _module, _type} <- placeable(reference, parent, schema, field, tree), do: :ok
+  end
+
+  defp movable(_node, _parent, _schema, _field, _tree),
+    do:
+      {:error,
+       problem(
+         :unknown_placement,
+         dgettext("content_proposals", "Only blocks built from a module can move to another parent.")
+       )}
+
   defp new_uid(uid, tree) do
     taken? =
       BlockTree.fetch(tree, uid) != nil or
@@ -315,12 +375,14 @@ defmodule Brando.Content.Proposals do
   # Which module a block may be built from depends on where it goes: the
   # field's allowed modules at the root or in a container, a multi module's
   # own entries, or a slot's module set.
-  defp insertable(%InsertBlock{parent: nil} = op, schema, _tree) do
-    with {:ok, module} <- allowed_module(op.module, schema, op.field), do: {:ok, module, :module}
+  defp insertable(%InsertBlock{} = op, schema, tree), do: placeable(op.module, op.parent, schema, op.field, tree)
+
+  defp placeable(reference, nil, schema, field, _tree) do
+    with {:ok, module} <- allowed_module(reference, schema, field), do: {:ok, module, :module}
   end
 
-  defp insertable(%InsertBlock{parent: parent} = op, schema, tree) do
-    case {BlockTree.fetch(tree, parent), fetch_module(op.module)} do
+  defp placeable(reference, parent, schema, field, tree) do
+    case {BlockTree.fetch(tree, parent), fetch_module(reference)} do
       {nil, _} ->
         {:error, unknown_block()}
 
@@ -328,10 +390,10 @@ defmodule Brando.Content.Proposals do
         {:error, problem(:unknown_module, dgettext("content_proposals", "This module does not exist."))}
 
       {%{type: :container}, _module} ->
-        with {:ok, module} <- allowed_module(op.module, schema, op.field), do: {:ok, module, :module}
+        with {:ok, module} <- allowed_module(reference, schema, field), do: {:ok, module, :module}
 
       {parent, module} ->
-        child_module(parent, module, op.module)
+        child_module(parent, module, reference)
     end
   end
 
@@ -421,7 +483,7 @@ defmodule Brando.Content.Proposals do
       is_nil(module) ->
         {:error, problem(:unknown_module, dgettext("content_proposals", "This module does not exist."))}
 
-      module.parent_id || module.multi || module_id(module) not in allowed_module_ids(schema, field, module) ->
+      module.parent_id || module_id(module) not in allowed_module_ids(schema, field, module) ->
         {:error,
          problem(:module_not_allowed, dgettext("content_proposals", "This module is not available in this block field."))}
 
@@ -459,18 +521,59 @@ defmodule Brando.Content.Proposals do
 
   defp module_id(module), do: {Map.get(module, :library_origin) || :local, module.id}
 
-  defp values(values, vars) do
-    Enum.flat_map(values, fn {key, value} -> value_problems(Enum.find(vars || [], &(&1.key == key)), key, value) end)
+  defp values(values, vars, actor) do
+    Enum.flat_map(values, fn {key, value} ->
+      value_problems(Enum.find(vars || [], &(&1.key == key)), key, value, actor)
+    end)
   end
 
-  defp value_problems(nil, key, _value),
+  defp value_problems(nil, key, _value, _actor),
     do: [problem(:unknown_var, dgettext("content_proposals", "The module has no variable %{key}.", key: key))]
 
-  defp value_problems(var, key, value), do: if(settable?(var, value), do: [], else: [unsupported(var, key, value)])
+  # A new entry is reported by `draft_dependencies/2`.
+  defp value_problems(%{type: :link}, _key, {:new, _}, _actor), do: []
+
+  defp value_problems(%{type: :link} = var, key, {:entry, schema, id}, actor) do
+    allowed = var.link_identifier_schemas || []
+
+    cond do
+      allowed != [] and to_string(schema) not in allowed and inspect(schema) not in allowed ->
+        [problem(:unsupported_value, dgettext("content_proposals", "%{key} cannot link to this content type.", key: key))]
+
+      match?({:error, _}, Error.protect(fn -> Catalog.load!(schema, id, actor, :read) end)) ->
+        [problem(:unknown_target, dgettext("content_proposals", "The entry to link to was not found."))]
+
+      match?({:error, _}, Content.get_identifier(schema, %{id: id})) ->
+        [problem(:unsupported_value, dgettext("content_proposals", "The entry to link to has no identifier yet."))]
+
+      true ->
+        []
+    end
+  end
+
+  defp value_problems(%{type: kind}, key, {kind, id}, actor) when kind in [:image, :video],
+    do: media(key, {kind, id}, %{refs: [%{name: key, data: %{type: @media_kinds[kind]}}]}, actor)
+
+  defp value_problems(%{type: type}, key, {kind, _id}, _actor) when type in [:image, :video] and kind in [:image, :video],
+    do: [problem(:wrong_media_type, dgettext("content_proposals", "%{name} does not accept this media type.", name: key))]
+
+  defp value_problems(var, key, value, _actor),
+    do: if(settable?(var, value), do: [], else: [unsupported(var, key, value)])
 
   defp settable?(%{type: :boolean}, value), do: is_boolean(value)
   defp settable?(%{type: type}, value) when type in @text_vars, do: is_binary(value)
   defp settable?(%{type: :select, options: options}, value), do: Enum.any?(options || [], &(&1.value == value))
+
+  defp settable?(%{type: :color}, value) when is_binary(value),
+    do: value =~ ~r/^#([[:xdigit:]]{3,4}|[[:xdigit:]]{6}|[[:xdigit:]]{8})$/
+
+  defp settable?(%{type: :date}, value) when is_binary(value), do: match?({:ok, _}, Date.from_iso8601(value))
+
+  defp settable?(%{type: :datetime}, value) when is_binary(value),
+    do: match?({:ok, _, _}, DateTime.from_iso8601(value)) or match?({:ok, _}, NaiveDateTime.from_iso8601(value))
+
+  # A link var takes an address, or an entry (above).
+  defp settable?(%{type: :link}, value) when is_binary(value), do: value != ""
   defp settable?(_, _), do: false
 
   defp unsupported(%{type: :select}, key, value) when is_binary(value),
@@ -593,7 +696,7 @@ defmodule Brando.Content.Proposals do
       creates: Enum.count(proposal.operations, &match?(%CreateEntry{}, &1)),
       updates: length(existing),
       inserted_blocks: length(inserted),
-      updated_blocks: changed.([SetBlockMedia, SetBlockText, SetBlockValues]),
+      updated_blocks: changed.([SetBlockMedia, SetBlockText, SetBlockValues, SetBlockActive]),
       moved_blocks: changed.([MoveBlock]),
       deletions: deleted |> Enum.uniq() |> Enum.reject(&(elem(&1, 1) in inserted)) |> length(),
       live: for({target, %{status: :published}} <- existing, do: target)
@@ -699,17 +802,32 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
-  defp block_op(%MoveBlock{block_uid: uid, placement: placement}, joins, _join_schema, _user) do
-    case List.keytake(joins, uid, 0) do
-      {root, rest} ->
-        BlockTree.insert_at(rest, root, placement, &elem(&1, 0))
+  defp block_op(%MoveBlock{block_uid: uid, placement: placement}, joins, join_schema, _user) do
+    from = parent_of(joins, uid)
 
-      nil ->
-        update_siblings(joins, uid, fn children ->
-          {child, rest} = Enum.split_with(children, &(Changeset.get_field(&1, :uid) == uid))
-          BlockTree.insert_at(rest, hd(child), placement, &Changeset.get_field(&1, :uid))
-        end)
-    end
+    to =
+      case placement do
+        :append -> from
+        {:into, parent} -> {:ok, parent}
+        {_side, anchor} -> parent_of(joins, anchor)
+      end
+
+    if to == from,
+      do: reorder(joins, uid, placement),
+      else: joins |> detach(uid, from) |> attach(to, placement, join_schema)
+  end
+
+  defp block_op(%SetBlockActive{ref: nil} = op, joins, _join_schema, _user),
+    do: update_block(joins, op.block_uid, &Changeset.put_change(&1, :active, op.active))
+
+  defp block_op(%SetBlockActive{} = op, joins, _join_schema, _user) do
+    update_block(
+      joins,
+      op.block_uid,
+      &update_refs(&1, fn ref ->
+        if Changeset.get_field(ref, :name) == op.ref, do: Changeset.put_change(ref, :active, op.active), else: ref
+      end)
+    )
   end
 
   defp block_op(%DeleteBlock{block_uid: uid}, joins, _join_schema, _user) do
@@ -756,6 +874,91 @@ defmodule Brando.Content.Proposals do
       if asset = op.media[name], do: put_media(ref, asset, module), else: ref
     end)
     |> put_values(op.values)
+  end
+
+  defp reorder(joins, uid, placement) do
+    case List.keytake(joins, uid, 0) do
+      {root, rest} ->
+        BlockTree.insert_at(rest, root, placement, &elem(&1, 0))
+
+      nil ->
+        update_siblings(joins, uid, fn children ->
+          {child, rest} = Enum.split_with(children, &(Changeset.get_field(&1, :uid) == uid))
+          BlockTree.insert_at(rest, hd(child), placement, &Changeset.get_field(&1, :uid))
+        end)
+    end
+  end
+
+  # `:root` or `{:ok, parent_uid}` of the block `uid`.
+  defp parent_of(joins, uid) do
+    if List.keymember?(joins, uid, 0),
+      do: :root,
+      else: Enum.find_value(joins, fn {_, join} -> parent_in(Changeset.get_assoc(join, :block), uid) end)
+  end
+
+  defp parent_in(block, uid) do
+    children = children(block)
+
+    if Enum.any?(children, &(Changeset.get_field(&1, :uid) == uid)),
+      do: {:ok, Changeset.get_field(block, :uid)},
+      else: Enum.find_value(children, &parent_in(&1, uid))
+  end
+
+  # A block moving to another parent keeps its row: it leaves the old list
+  # and is saved as an update under the new parent, which sets `parent_id`.
+  # The old parent must not count it as removed — `on_replace` would delete
+  # the row — so it is taken out of the old parent's loaded children too. A
+  # root block's join row goes; the block is updated through its new parent.
+  defp detach(joins, uid, :root) do
+    {{^uid, join}, rest} = List.keytake(joins, uid, 0)
+    {Changeset.get_assoc(join, :block), rest}
+  end
+
+  defp detach(joins, uid, {:ok, parent}) do
+    block = find_block(joins, uid)
+
+    joins =
+      update_block(joins, parent, fn parent ->
+        parent =
+          case parent.data.children do
+            loaded when is_list(loaded) ->
+              %{parent | data: %{parent.data | children: Enum.reject(loaded, &(&1.uid == uid))}}
+
+            _ ->
+              parent
+          end
+
+        put_children(parent, fn children -> Enum.reject(children, &(Changeset.get_field(&1, :uid) == uid)) end)
+      end)
+
+    {block, joins}
+  end
+
+  defp attach({block, joins}, :root, placement, join_schema) do
+    join =
+      join_schema
+      |> struct()
+      |> Changeset.change()
+      |> Changeset.put_assoc(:block, Changeset.put_change(block, :parent_id, nil))
+      |> Map.put(:action, :insert)
+
+    BlockTree.insert_at(joins, {Changeset.get_field(block, :uid), join}, placement, &elem(&1, 0))
+  end
+
+  defp attach({block, joins}, {:ok, parent}, placement, _join_schema) do
+    update_block(joins, parent, fn parent ->
+      put_children(parent, &BlockTree.insert_at(&1, block, placement, fn child -> Changeset.get_field(child, :uid) end))
+    end)
+  end
+
+  defp find_block(joins, uid) do
+    Enum.find_value(joins, fn {_, join} -> find_in_block(Changeset.get_assoc(join, :block), uid) end)
+  end
+
+  defp find_in_block(block, uid) do
+    if Changeset.get_field(block, :uid) == uid,
+      do: block,
+      else: block |> children() |> Enum.find_value(&find_in_block(&1, uid))
   end
 
   # Apply `fun` to the block `uid`, wherever it is in the field.
@@ -867,15 +1070,25 @@ defmodule Brando.Content.Proposals do
       block
       |> Changeset.get_assoc(:vars)
       |> Enum.map(fn var ->
-        case {Map.fetch(values, Changeset.get_field(var, :key)), Changeset.get_field(var, :type)} do
-          {{:ok, value}, :boolean} -> Changeset.put_change(var, :value_boolean, value)
-          {{:ok, value}, _} -> Changeset.put_change(var, :value, value)
-          {:error, _} -> var
+        case Map.fetch(values, Changeset.get_field(var, :key)) do
+          {:ok, value} -> put_value(var, Changeset.get_field(var, :type), value)
+          :error -> var
         end
       end)
 
     Changeset.put_assoc(block, :vars, vars)
   end
+
+  defp put_value(var, :boolean, value), do: Changeset.put_change(var, :value_boolean, value)
+  defp put_value(var, kind, {kind, id}) when kind in [:image, :video], do: Changeset.put_change(var, :"#{kind}_id", id)
+
+  defp put_value(var, :link, {:entry, schema, id}) do
+    {:ok, identifier} = Content.get_identifier(schema, %{id: id})
+    Changeset.change(var, link_type: :identifier, identifier_id: identifier.id)
+  end
+
+  defp put_value(var, :link, url) when is_binary(url), do: Changeset.change(var, link_type: :url, value: url)
+  defp put_value(var, _type, value), do: Changeset.put_change(var, :value, value)
 
   ## Store, approve and apply
 

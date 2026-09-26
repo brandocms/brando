@@ -76,7 +76,7 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert contract.insertable
     slots = Map.new(contract.slots, &{&1.name, &1.settable})
     assert slots == %{"cover" => "image", "clip" => "video", "slot" => "image or video"}
-    assert [%{key: "heading", settable: true}, %{key: "wide", settable: true}] = contract.variables
+    assert [%{key: "heading", settable: "a string"}, %{key: "wide", settable: "true or false"}] = contract.variables
   end
 
   test "attachments and the media library", c do
@@ -325,6 +325,39 @@ defmodule Brando.Content.Proposals.ToolsTest do
       refute outline[:note]
     end
 
+    test "entry_outline shows switched-off refs, link titles and the entry's own media", c do
+      [alpha | _] = c.child_uids
+      block = Brando.Repo.get_by!(Brando.Content.Block, uid: alpha) |> Brando.Repo.preload(:refs)
+      Enum.each(block.refs, &(&1 |> Ecto.Changeset.change(active: &1.name != "clip") |> Brando.Repo.update!()))
+
+      Brando.Content.create_identifier(Page, c.identity)
+      {:ok, identifier} = Brando.Content.get_identifier(Page, c.identity)
+
+      Brando.Repo.insert!(%Brando.Content.Var{
+        block_id: block.id,
+        type: :link,
+        key: "project",
+        label: "Project",
+        link_type: :identifier,
+        identifier_id: identifier.id
+      })
+
+      c.work |> Ecto.Changeset.change(meta_image_id: c.image.id) |> Brando.Repo.update!()
+
+      outline = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.work.id}, c.context)
+      [_, %{children: [first | _]}] = outline.blocks.blocks
+      assert first.refs_off == ["clip"]
+      assert first.values["project"] == %{entry: "Identity", content_type: "Brando.Pages.Page", id: c.identity.id}
+      assert %{"meta_image" => %{kind: :image, id: id, width: _, height: _}} = outline.media
+      assert id == c.image.id
+    end
+
+    test "list_modules offers multi modules at the root", c do
+      %{modules: modules} = call!("list_modules", %{"content_type" => "Brando.Pages.Page"}, c.context)
+      assert %{multi: true, name: "Projects"} = Enum.find(modules, &(&1.module == "local:#{c.projects_module.id}"))
+      refute Enum.any?(modules, &(&1.module == "local:#{c.project_module.id}"))
+    end
+
     test "describe_module lists a multi module's entry modules and their variables", c do
       contract = call!("describe_module", %{"module" => "local:#{c.projects_module.id}"}, c.context)
       refute contract.insertable
@@ -359,8 +392,8 @@ defmodule Brando.Content.Proposals.ToolsTest do
 
       bad = [%{"op" => "move_block", "target" => target, "block_uid" => alpha, "placement" => %{"after" => c.intro_uid}}]
       result = call!("prepare_proposal", %{"summary" => "x", "operations" => bad}, c.context)
-      assert %{applicable: false, problems: [%{code: :unknown_placement, message: message}]} = result
-      assert message =~ "same parent"
+      # Next to a root block means to the root, which takes no project entries.
+      assert %{applicable: false, problems: [%{code: :module_not_allowed}]} = result
     end
   end
 end

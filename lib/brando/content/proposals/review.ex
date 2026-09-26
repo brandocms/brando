@@ -17,6 +17,7 @@ defmodule Brando.Content.Proposals.Review do
     InsertBlock,
     MoveBlock,
     Proposal,
+    SetBlockActive,
     SetBlockMedia,
     SetBlockText,
     SetBlockValues,
@@ -43,6 +44,15 @@ defmodule Brando.Content.Proposals.Review do
   @spec media([map()]) :: [{:image | :video, integer()}]
   def media(entries) do
     context = for entry <- entries, %{context: context} <- entry.changes, %{kind: kind, id: id} <- context, do: {kind, id}
+
+    values =
+      for entry <- entries,
+          %{values: values} <- entry.changes,
+          is_list(values),
+          %{media: %{kind: kind, id: id}} <- values,
+          do: {kind, id}
+
+    context = context ++ values
     entries |> Enum.flat_map(& &1.media) |> Enum.concat(context) |> Enum.uniq()
   end
 
@@ -117,10 +127,7 @@ defmodule Brando.Content.Proposals.Review do
       # Moves are shown as the order they produce, once per list of siblings,
       # where the first move into that list is.
       {%MoveBlock{target: ^target}, index} ->
-        case orders do
-          %{^index => card} -> [card]
-          _ -> []
-        end
+        Map.get(orders, index, [])
 
       {op, _index} ->
         block_change(op, target, entry, proposal)
@@ -139,7 +146,7 @@ defmodule Brando.Content.Proposals.Review do
             field: op.field,
             module: module && label(module.name),
             placement: placement(op.placement, op.parent, entry, op.field, proposal),
-            values: Enum.map(op.values, fn {k, v} -> %{name: k, value: shorten(v)} end),
+            values: Enum.map(op.values, &value_view(&1, nil, op.uid, proposal)),
             texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: excerpt(text)} end),
             media: Enum.map(op.media, fn {ref, {kind, id}} -> %{ref: ref, kind: kind, id: id} end)
           }
@@ -167,6 +174,18 @@ defmodule Brando.Content.Proposals.Review do
             ref: to_string(op.ref),
             before: excerpt(saved_text(entry, op.field, op.block_uid, op.ref)),
             text: excerpt(op.text)
+          }
+        ]
+
+      %SetBlockActive{target: ^target} = op ->
+        [
+          %{
+            type: :block_active,
+            uid: op.block_uid,
+            block: block_label(entry, op.field, op.block_uid, proposal),
+            ref: op.ref,
+            active: op.active,
+            context: block_media(saved_block(entry, op.field, op.block_uid))
           }
         ]
 
@@ -213,32 +232,15 @@ defmodule Brando.Content.Proposals.Review do
       {nil, _} -> []
       {field, ops} -> field_orders(field, ops, entry, proposal)
     end)
-    |> Map.new()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
   defp field_orders(field, ops, entry, proposal) do
     tree = if entry, do: entry |> Map.get(:"entry_#{field}", []) |> BlockTree.from_saved(), else: %BlockTree{}
 
-    {tree, firsts, moved} =
-      Enum.reduce(ops, {tree, %{}, MapSet.new()}, fn {op, index}, {tree, firsts, moved} = acc ->
-        case {op, BlockTree.fetch(tree, Map.get(op, :block_uid) || Map.get(op, :parent) || "")} do
-          {%MoveBlock{} = op, %{parent: parent}} ->
-            {BlockTree.move(tree, op.block_uid, op.placement), Map.put_new(firsts, parent, index),
-             MapSet.put(moved, op.block_uid)}
+    {tree, firsts, moved} = Enum.reduce(ops, {tree, %{}, MapSet.new()}, &replay/2)
 
-          {%DeleteBlock{} = op, %{}} ->
-            {BlockTree.delete(tree, op.block_uid), firsts, moved}
-
-          {%InsertBlock{} = op, _} ->
-            node = %{uid: op.uid, parent: op.parent, type: :module, module: op.module, multi: false, slot_module_set: nil}
-            {BlockTree.put(tree, node, op.parent, op.placement), firsts, moved}
-
-          _ ->
-            acc
-        end
-      end)
-
-    for {parent, index} <- firsts do
+    for {parent, index} <- Enum.sort_by(firsts, &elem(&1, 1)) do
       items = Enum.map(BlockTree.children(tree, parent), &order_item(&1, entry, field, moved, proposal))
 
       {index,
@@ -253,17 +255,48 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
+  # Replay one operation on the review's tree. `firsts` maps each list of
+  # siblings a move touches to the first move's index; a block that changes
+  # parent changes both lists.
+  defp replay({%MoveBlock{} = op, index}, {tree, firsts, moved} = acc) do
+    case BlockTree.fetch(tree, op.block_uid) do
+      %{parent: from} ->
+        to = move_parent(op.placement, from, tree)
+        firsts = firsts |> Map.put_new(from, index) |> Map.put_new(to, index)
+        {BlockTree.move(tree, op.block_uid, to, op.placement), firsts, MapSet.put(moved, op.block_uid)}
+
+      nil ->
+        acc
+    end
+  end
+
+  defp replay({%DeleteBlock{} = op, _index}, {tree, firsts, moved} = acc) do
+    if BlockTree.fetch(tree, op.block_uid), do: {BlockTree.delete(tree, op.block_uid), firsts, moved}, else: acc
+  end
+
+  defp replay({%InsertBlock{} = op, _index}, {tree, firsts, moved}) do
+    node = %{uid: op.uid, parent: op.parent, type: :module, module: op.module, multi: false, slot_module_set: nil}
+    {BlockTree.put(tree, node, op.parent, op.placement), firsts, moved}
+  end
+
+  defp replay(_op, acc), do: acc
+
+  defp move_parent(:append, from, _tree), do: from
+  defp move_parent({:into, parent}, _from, _tree), do: parent
+
+  defp move_parent({_side, anchor}, from, tree) do
+    case BlockTree.fetch(tree, anchor) do
+      %{parent: parent} -> parent
+      nil -> from
+    end
+  end
+
   defp order_item(uid, entry, field, moved, proposal) do
     saved = saved_block(entry, field, uid)
     inserted = Enum.find(proposal.operations, &match?(%InsertBlock{uid: ^uid}, &1))
     vars = if saved, do: saved.vars, else: inserted_vars(inserted)
 
-    set =
-      for %SetBlockValues{block_uid: ^uid, values: values} <- proposal.operations, reduce: %{} do
-        acc -> Map.merge(acc, values)
-      end
-
-    set = if inserted, do: Map.merge(inserted.values, set), else: set
+    set = proposed_values(uid, inserted, proposal)
 
     %{
       uid: uid,
@@ -278,6 +311,13 @@ defmodule Brando.Content.Proposals.Review do
           %{label: var.label || var.key, value: option(var, value), changed?: Map.has_key?(set, var.key)}
         end
     }
+  end
+
+  # The values the proposal gives a block: an insert's, then later settings.
+  defp proposed_values(uid, inserted, proposal) do
+    for %SetBlockValues{block_uid: ^uid, values: values} <- proposal.operations,
+        reduce: (inserted && inserted.values) || %{},
+        do: (acc -> Map.merge(acc, values))
   end
 
   defp inserted_vars(nil), do: []
@@ -413,10 +453,19 @@ defmodule Brando.Content.Proposals.Review do
     %{
       name: key,
       label: var && var.label,
-      before: saved && var && option(var, if(var.type == :boolean, do: var.value_boolean, else: var.value)),
-      value: option(var, value)
+      before: saved && var && saved_value(var),
+      value: option(var, value),
+      media: media_value(value)
     }
   end
+
+  defp saved_value(%{type: :boolean} = var), do: var.value_boolean
+  defp saved_value(%{type: :link, identifier: %{title: title}}) when is_binary(title), do: title
+  defp saved_value(%{type: type}) when type in [:image, :video], do: nil
+  defp saved_value(var), do: option(var, var.value)
+
+  defp media_value({kind, id}) when kind in [:image, :video], do: %{kind: kind, id: id}
+  defp media_value(_), do: nil
 
   defp module_var(uid, key, proposal) do
     with %InsertBlock{module: module} <- Enum.find(proposal.operations, &match?(%InsertBlock{uid: ^uid}, &1)),
@@ -436,6 +485,14 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
+  defp option(_var, {:entry, schema, id}) do
+    case Content.get_identifier(schema, %{id: id}) do
+      {:ok, %{title: title}} when is_binary(title) -> title
+      _ -> "##{id}"
+    end
+  end
+
+  defp option(_var, {kind, _id}) when kind in [:image, :video], do: nil
   defp option(_var, value), do: shorten(value)
 
   defp descendants(nil), do: 0

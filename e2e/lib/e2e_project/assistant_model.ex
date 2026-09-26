@@ -15,7 +15,8 @@ defmodule E2eProject.AssistantModel do
   exercise paging, and adds a Single Asset block for every attached image.
 
   "Put the last team member first" reads the selected entry's outline and
-  moves the last child of its first multi block before the first one.
+  moves the last child of its first multi block before the first one; "… and
+  switch off the first one" also switches the former first child off.
   """
   alias ReqLLM.{Context, Message, Response, ToolCall}
   alias ReqLLM.Message.ContentPart
@@ -109,7 +110,7 @@ defmodule E2eProject.AssistantModel do
   defp continue(results, request) do
     cond do
       request =~ ~r/team member first/i ->
-        reorder(results)
+        reorder(Map.put(results, :request, request))
 
       results["prepare_proposal"] ->
         case results["prepare_proposal"] do
@@ -170,7 +171,9 @@ defmodule E2eProject.AssistantModel do
   defp reorder(%{"prepare_proposal" => result}),
     do: {:text, "The proposal has problems: #{inspect(result)}"}
 
-  defp reorder(%{"entry_outline" => entry}) do
+  defp reorder(%{"entry_outline" => entry} = results), do: reorder(entry, results[:request])
+
+  defp reorder(entry, request) do
     with %{"children" => [%{"uid" => first} | _] = children} <-
            Enum.find(entry["blocks"]["blocks"], &(&1["multi"] && &1["children"])),
          %{"uid" => last} when last != first <- List.last(children) do
@@ -179,14 +182,26 @@ defmodule E2eProject.AssistantModel do
       {:call, "prepare_proposal",
        %{
          "summary" => "Put the last team member first",
-         "operations" => [
-           %{
-             "op" => "move_block",
-             "target" => target,
-             "block_uid" => last,
-             "placement" => %{"before" => first}
-           }
-         ]
+         "operations" =>
+           [
+             %{
+               "op" => "move_block",
+               "target" => target,
+               "block_uid" => last,
+               "placement" => %{"before" => first}
+             }
+           ] ++
+             if(request =~ ~r/switch off the first/i,
+               do: [
+                 %{
+                   "op" => "set_block_active",
+                   "target" => target,
+                   "block_uid" => first,
+                   "active" => false
+                 }
+               ],
+               else: []
+             )
        }}
     else
       _ -> {:text, "I found no team with more than one member."}

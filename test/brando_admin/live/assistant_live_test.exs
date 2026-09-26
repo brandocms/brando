@@ -339,5 +339,30 @@ defmodule BrandoAdmin.AssistantLiveTest do
       [_, multi] = Catalog.load!(Page, c.work.id, c.current_user).entry_blocks
       assert Enum.map(multi.block.children, & &1.uid) == tl(c.child_uids)
     end
+
+    test "switching a ref off is reviewed with the block it belongs to", %{conn: conn} = c do
+      [alpha | _] = c.child_uids
+
+      op = %Brando.Content.Proposals.SetBlockActive{
+        target: {Page, c.work.id},
+        block_uid: alpha,
+        ref: "clip",
+        active: false
+      }
+
+      {:ok, proposal} = Brando.Content.Proposals.propose([op], c.current_user, conversation_id: c.conversation.id)
+      c.conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      assert has_element?(
+               view,
+               ".assistant-change-title.is-removal",
+               "Turn off Clip in “Project” · 1 of 3 in “Projects” · Alpha"
+             )
+
+      assert has_element?(view, ".assistant-placement", "It is kept, but not shown on the page.")
+      assert has_element?(view, ".assistant-thumb.is-video")
+    end
   end
 end

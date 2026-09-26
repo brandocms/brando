@@ -64,7 +64,14 @@ defmodule Brando.Content.Proposals.SetBlockMedia do
 end
 
 defmodule Brando.Content.Proposals.SetBlockValues do
-  @moduledoc "Set var values by key on the block `block_uid`, at any depth of the field."
+  @moduledoc """
+  Set var values by key on the block `block_uid`, at any depth of the field.
+
+  Text vars take strings, booleans a boolean and selects one of their options.
+  Colours take `#rgb`/`#rrggbb(aa)`, dates and datetimes ISO 8601 strings,
+  image and video vars `{:image | :video, id}`, and link vars a URL or
+  `{:entry, schema, id}`.
+  """
   @enforce_keys [:target, :block_uid, :values]
   defstruct [:target, :block_uid, :values, field: "blocks"]
 end
@@ -80,9 +87,12 @@ end
 
 defmodule Brando.Content.Proposals.MoveBlock do
   @moduledoc """
-  Move the block `block_uid` among its siblings — the root blocks of the
-  field, or the children of its parent. `placement` is `:append` (last),
-  `{:before, uid}` or `{:after, uid}`, where `uid` is a sibling.
+  Move the block `block_uid`, keeping its row and its children.
+
+  `placement` is `:append` (last among its current siblings), `{:before, uid}`
+  or `{:after, uid}` next to any block of the field — the block moves to that
+  block's parent — or `{:into, uid}`, the end of that block's children. The
+  new parent must accept the block's module, as for `InsertBlock`.
   """
   @enforce_keys [:target, :block_uid, :placement]
   defstruct [:target, :block_uid, :placement, field: "blocks"]
@@ -95,4 +105,14 @@ defmodule Brando.Content.Proposals.DeleteBlock do
   """
   @enforce_keys [:target, :block_uid]
   defstruct [:target, :block_uid, field: "blocks"]
+end
+
+defmodule Brando.Content.Proposals.SetBlockActive do
+  @moduledoc """
+  Turn the block `block_uid` on or off, or — with `ref` — one of its refs.
+  An inactive block or ref is kept but not rendered, as when an editor
+  switches it off.
+  """
+  @enforce_keys [:target, :block_uid, :active]
+  defstruct [:target, :block_uid, :active, :ref, field: "blocks"]
 end

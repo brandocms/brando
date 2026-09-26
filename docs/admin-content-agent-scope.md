@@ -648,5 +648,21 @@ module, and their `size` variable, were invisible to the assistant.
 - **The system prompt** tells the model that layout often lives on the children,
   to read them and their modules before saying a change is impossible, and to
   delete only when asked.
-- **Not done:** inserting a multi module at the root (its entries would have to
-  be inserted in the same proposal), and moving a block to another parent.
+- **Follow-up, same day.** Asked whether Deli could show its listing image by
+  switching off its cover ref, the assistant said it could neither see nor
+  change a ref's state. Added:
+  - `set_block_active` switches a block, or one ref, off or on. The outline
+    lists switched-off refs as `refs_off` (on by, Deli's `cover` was already off).
+  - The outline includes the entry's own media (a listing image) with
+    dimensions.
+  - Every variable type is settable except files and galleries: colours,
+    dates, datetimes, image and video vars, and link vars as a URL or an entry
+    (resolved to its identifier). The outline shows them; `describe_module`
+    says what each takes.
+  - Multi modules can be inserted at the root, with their entries in the same
+    proposal. `list_modules` includes them.
+  - `move_block` can change parent: next to any block, or `{"into": uid}`. The
+    new parent must take the module. The block keeps its row. The old parent's
+    loaded children drop it, so `on_replace` does not delete it, and the save
+    updates `parent_id` (a root block loses its join row; one moving to the
+    root gets a new one). The review shows the order of both lists.

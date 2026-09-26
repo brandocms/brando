@@ -4,7 +4,7 @@ import { syncLV } from '../../utils'
 // Runs against E2eProject.AssistantModel: "Put the last team member first"
 // reads the selected entry's outline, where a multi block lists its entries
 // as children, and moves the last child before the first. The review shows
-// the order the proposal leaves the entries in.
+// the order the proposal leaves the entries in, and the entry it switches off.
 
 test('reorders the entries of a multi block and reviews the new order', async ({ page }, testInfo) => {
   test.setTimeout(120000)
@@ -51,7 +51,7 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   await page.goto(`/admin/assistant?content_type=Brando.Pages.Page&id=${id}&field=blocks`)
   await syncLV(page)
   const input = page.getByLabel('Message')
-  await input.fill('Put the last team member first')
+  await input.fill('Put the last team member first and switch off the first one')
   await input.press('Enter')
   await expect(page.locator('.assistant-text').last()).toContainText('moves the last team member first', {
     timeout: 15000
@@ -60,6 +60,7 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   const review = page.locator('.assistant-proposal')
   await expect(review.getByRole('heading', { name: 'Ready for your review' })).toBeVisible()
   await expect(review.locator('.assistant-counts')).toContainText('1 moved block')
+  await expect(review.locator('.assistant-counts')).toContainText('1 changed block')
 
   // One card shows the order the entries end up in, with the moved one marked.
   const order = review.locator('.assistant-order')
@@ -70,6 +71,12 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   await expect(order.locator('li').nth(0)).toContainText('Moved')
   await expect(order.locator('li').nth(1)).toContainText('Alice Smith')
   await expect(order.locator('li').nth(1)).not.toHaveClass(/is-moved/)
+
+  // Switching a block off keeps it: the card says so.
+  const off = review.locator('.assistant-change-title.is-removal')
+  await expect(off).toContainText('Turn off “Team Member”')
+  await expect(off).toContainText('Alice Smith')
+  await expect(review).toContainText('It is kept, but not shown on the page.')
   await page.screenshot({ path: testInfo.outputPath('assistant-order-desktop.png'), fullPage: true })
 
   await review.getByRole('button', { name: /^Apply/ }).click()
@@ -82,5 +89,6 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   await expect(saved).toHaveCount(2, { timeout: 15000 })
   await expect(saved.nth(0).locator('.block-vars').getByLabel('Name')).toHaveValue('Bob Jones')
   await expect(saved.nth(1).locator('.block-vars').getByLabel('Name')).toHaveValue('Alice Smith')
+  await expect(saved.nth(1).locator('.base-block').first()).toHaveClass(/disabled/)
   expect(errors).toEqual([])
 })

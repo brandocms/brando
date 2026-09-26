@@ -62,8 +62,8 @@ defmodule Brando.Content.Proposals.BlockTree do
   def sibling?(tree, parent, anchor), do: anchor in children(tree, parent)
 
   @doc """
-  Place `node` under `parent`: `:append`, `{:before, uid}` or `{:after, uid}`
-  where `uid` is a sibling.
+  Place `node` under `parent`: `:append` or `{:into, _}` (last),
+  `{:before, uid}` or `{:after, uid}` where `uid` is a sibling.
   """
   @spec put(t(), block(), uid() | nil, term()) :: t()
   def put(tree, node, parent, placement) do
@@ -77,12 +77,33 @@ defmodule Brando.Content.Proposals.BlockTree do
     }
   end
 
-  @doc "Move `uid` among its siblings."
-  @spec move(t(), uid(), term()) :: t()
-  def move(tree, uid, placement) do
-    %{parent: parent} = fetch(tree, uid)
-    siblings = List.delete(children(tree, parent), uid)
-    %{tree | order: Map.put(tree.order, parent, insert_at(siblings, uid, placement))}
+  @doc """
+  Move `uid` under `parent` (`nil` for the root) at `placement`. `{:into, _}`
+  places it last.
+  """
+  @spec move(t(), uid(), uid() | nil, term()) :: t()
+  def move(tree, uid, parent, placement) do
+    %{parent: from} = node = fetch(tree, uid)
+    order = Map.update(tree.order, from, [], &List.delete(&1, uid))
+    siblings = Map.get(order, parent, [])
+
+    %{
+      tree
+      | nodes: Map.put(tree.nodes, uid, %{node | parent: parent}),
+        order: Map.put(order, parent, insert_at(siblings, uid, placement))
+    }
+  end
+
+  @doc "Whether `uid` is `ancestor` or below it."
+  @spec within?(t(), uid(), uid()) :: boolean()
+  def within?(_tree, ancestor, ancestor), do: true
+
+  def within?(tree, ancestor, uid) do
+    case fetch(tree, uid) do
+      %{parent: nil} -> false
+      %{parent: parent} -> within?(tree, ancestor, parent)
+      nil -> false
+    end
   end
 
   @doc "Remove `uid` and everything below it."
@@ -104,6 +125,7 @@ defmodule Brando.Content.Proposals.BlockTree do
   @spec insert_at([term()], term(), term(), (term() -> term())) :: [term()]
   def insert_at(list, item, placement, key \\ & &1)
   def insert_at(list, item, :append, _key), do: list ++ [item]
+  def insert_at(list, item, {:into, _}, _key), do: list ++ [item]
 
   def insert_at(list, item, {side, anchor}, key) do
     case Enum.find_index(list, &(key.(&1) == anchor)) do

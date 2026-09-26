@@ -10,6 +10,7 @@ defmodule Brando.Content.ProposalsTest do
     InsertBlock,
     MoveBlock,
     Review,
+    SetBlockActive,
     Preview,
     Receipt,
     SetBlockMedia,
@@ -618,7 +619,9 @@ defmodule Brando.Content.ProposalsTest do
         %InsertBlock{target: target, module: c.text_module.id, parent: c.multi_uid},
         # A Text block holds no children.
         %InsertBlock{target: target, module: c.project_module.id, parent: c.intro_uid},
-        # Anchors are siblings.
+        # An insert's anchor is a sibling; a move next to a root block goes to
+        # the root, which does not take project entries; nothing moves next to
+        # itself.
         %InsertBlock{target: target, module: c.project_module.id, parent: c.multi_uid, placement: {:after, c.intro_uid}},
         %MoveBlock{target: target, block_uid: alpha, placement: {:after, c.intro_uid}},
         %MoveBlock{target: target, block_uid: alpha, placement: {:after, alpha}},
@@ -637,7 +640,7 @@ defmodule Brando.Content.ProposalsTest do
                {0, :module_not_allowed},
                {1, :not_a_parent},
                {2, :unknown_placement},
-               {3, :unknown_placement},
+               {3, :module_not_allowed},
                {4, :unknown_placement},
                {6, :unknown_block},
                {7, :unknown_block},
@@ -663,6 +666,197 @@ defmodule Brando.Content.ProposalsTest do
     end
   end
 
+  describe "arranging across parents" do
+    setup c do
+      c = Brando.ProposalFixtures.multi_context(c)
+      container = Brando.ProposalFixtures.root_block!(c, :container, nil, 2)
+      other = Brando.ProposalFixtures.root_block!(c, :module, c.projects_module, 3)
+      Map.merge(c, %{container_uid: container.uid, other_uid: other.uid})
+    end
+
+    defp block_row(uid), do: Repo.get_by!(Block, uid: uid)
+
+    test "a block moves to another parent and back, keeping its row", c do
+      [alpha, beta, gamma] = c.child_uids
+      target = {Page, c.work.id}
+      ids = Map.new([c.intro_uid, gamma], &{&1, block_row(&1).id})
+      blocks = block_count()
+
+      ops = [
+        %MoveBlock{target: target, block_uid: c.intro_uid, placement: {:into, c.container_uid}},
+        %MoveBlock{target: target, block_uid: gamma, placement: {:into, c.other_uid}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert %{moved_blocks: 2} = proposal.effects
+
+      # Both lists a block leaves and joins are shown.
+      [card] = Review.entries(proposal)
+      parents = for %{type: :order, parent: parent} <- card.changes, do: parent
+      assert length(parents) == 4
+      assert nil in parents
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert block_count() == blocks
+      assert uids(c.work, c.user) == [c.multi_uid, c.container_uid, c.other_uid]
+      assert block_row(c.intro_uid).id == ids[c.intro_uid]
+      assert block_row(c.intro_uid).parent_id == block_row(c.container_uid).id
+      assert block_row(gamma).id == ids[gamma]
+      assert block_row(gamma).parent_id == block_row(c.other_uid).id
+      assert child_uids(c) == [alpha, beta]
+
+      # Back to the root, next to a root block: the row gets a join again.
+      ops = [%MoveBlock{target: target, block_uid: c.intro_uid, placement: {:before, c.multi_uid}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      assert uids(c.work, c.user) == [c.intro_uid, c.multi_uid, c.container_uid, c.other_uid]
+      assert block_row(c.intro_uid).id == ids[c.intro_uid]
+      assert is_nil(block_row(c.intro_uid).parent_id)
+      assert block_count() == blocks
+    end
+
+    test "the new parent must take the module, and nothing moves into itself", c do
+      [alpha | _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        # A project entry is not a module of the container.
+        %MoveBlock{target: target, block_uid: alpha, placement: {:into, c.container_uid}},
+        %MoveBlock{target: target, block_uid: c.multi_uid, placement: {:into, alpha}},
+        %MoveBlock{target: target, block_uid: c.intro_uid, placement: {:into, c.intro_uid}},
+        # Text blocks hold no children.
+        %MoveBlock{target: target, block_uid: c.other_uid, placement: {:into, c.intro_uid}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [
+               {0, :module_not_allowed},
+               {1, :unknown_placement},
+               {2, :unknown_placement},
+               {3, :not_a_parent}
+             ]
+    end
+
+    test "a multi module is inserted at the root with its entries", c do
+      target = {Page, c.work.id}
+      uid = Brando.Utils.generate_uid()
+
+      ops = [
+        %InsertBlock{target: target, module: c.projects_module.id, uid: uid, placement: {:after, c.intro_uid}},
+        %InsertBlock{target: target, module: c.project_module.id, parent: uid, texts: %{info: "<p>One</p>"}},
+        %InsertBlock{
+          target: target,
+          module: c.project_module.id,
+          parent: uid,
+          values: %{size: "50"},
+          texts: %{info: "<p>Two</p>"}
+        }
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      [_, inserted | _] = load(c.work, c.user).entry_blocks
+      assert inserted.block.uid == uid
+      assert inserted.block.multi
+      assert Enum.map(inserted.block.children, & &1.type) == [:module_entry, :module_entry]
+      assert Repo.get!(Page, c.work.id).rendered_blocks =~ "Two"
+    end
+  end
+
+  describe "switching blocks and refs, and every kind of variable" do
+    setup c, do: Brando.ProposalFixtures.multi_context(c)
+
+    test "a block and a ref are switched off and on", c do
+      [alpha, beta, _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %SetBlockActive{target: target, block_uid: beta, active: false},
+        %SetBlockActive{target: target, block_uid: alpha, ref: "clip", active: false}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert %{updated_blocks: 2} = proposal.effects
+
+      [card] = Review.entries(proposal)
+      assert [%{type: :block_active, active: false, ref: nil}, %{type: :block_active, ref: "clip"}] = card.changes
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      [a, b, _] = multi(c).children
+      refute b.active
+      refute Enum.find(a.refs, &(&1.name == "clip")).active
+      refute Repo.get!(Page, c.work.id).rendered_blocks =~ "Beta"
+
+      ops = [
+        %SetBlockActive{target: target, block_uid: beta, active: true},
+        %SetBlockActive{target: target, block_uid: alpha, ref: "nope", active: true},
+        %SetBlockActive{target: target, block_uid: "nope", active: true}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [{1, :unknown_ref}, {2, :unknown_block}]
+    end
+
+    test "colour, date, datetime, image and link variables", c do
+      Brando.Content.create_identifier(Page, c.identity)
+
+      module =
+        module!(c.user, "Styled", "<p>{{ tint }}</p>",
+          vars: [
+            %{type: "color", key: "tint", label: "Tint"},
+            %{type: "date", key: "day", label: "Day"},
+            %{type: "datetime", key: "at", label: "At"},
+            %{type: "image", key: "picture", label: "Picture"},
+            %{type: "link", key: "to", label: "To"},
+            %{type: "link", key: "url", label: "Url"}
+          ]
+        )
+
+      target = {Page, c.work.id}
+      uid = Brando.Utils.generate_uid()
+
+      values = %{
+        tint: "#1a2b3c",
+        day: "2026-09-26",
+        at: "2026-09-26T12:00:00Z",
+        picture: {:image, c.image.id},
+        to: {:entry, Page, c.identity.id},
+        url: "https://example.com"
+      }
+
+      assert {:ok, proposal} =
+               Proposals.propose([%InsertBlock{target: target, module: module.id, uid: uid, values: values}], c.user)
+
+      assert proposal.problems == []
+
+      [%{values: views}] = hd(Review.entries(proposal)).changes
+      assert %{value: "Identity"} = Enum.find(views, &(&1.name == "to"))
+      assert %{media: %{kind: :image}} = Enum.find(views, &(&1.name == "picture"))
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      block = load(c.work, c.user).entry_blocks |> List.last() |> Map.get(:block)
+      var = &Enum.find(block.vars, fn var -> var.key == &1 end)
+      assert var.("tint").value == "#1a2b3c"
+      assert var.("day").value == "2026-09-26"
+      assert var.("picture").image_id == c.image.id
+      assert var.("to").identifier.entry_id == c.identity.id
+      assert var.("url").value == "https://example.com"
+
+      bad = %{tint: "blue", day: "tomorrow", picture: {:video, c.video.id}, to: {:entry, Page, -1}}
+      assert {:ok, proposal} = Proposals.propose([%InsertBlock{target: target, module: module.id, values: bad}], c.user)
+
+      assert proposal.problems |> Enum.map(& &1.code) |> Enum.sort() ==
+               Enum.sort([:unsupported_value, :unsupported_value, :wrong_media_type, :unknown_target])
+    end
+  end
+
   describe "codec" do
     test "decodes move, delete and a child insert, and encodes them back" do
       target = %{"content_type" => "Brando.Pages.Page", "id" => 1}
@@ -671,16 +865,41 @@ defmodule Brando.Content.ProposalsTest do
         %{"op" => "move_block", "target" => target, "block_uid" => "a", "placement" => %{"after" => "b"}},
         %{"op" => "move_block", "target" => target, "block_uid" => "a", "placement" => "append"},
         %{"op" => "delete_block", "target" => target, "block_uid" => "a"},
-        %{"op" => "insert_block", "target" => target, "module" => "local:3", "parent" => "p", "uid" => "n"}
+        %{"op" => "insert_block", "target" => target, "module" => "local:3", "parent" => "p", "uid" => "n"},
+        %{"op" => "move_block", "target" => target, "block_uid" => "a", "placement" => %{"into" => "p"}},
+        %{"op" => "set_block_active", "target" => target, "block_uid" => "a", "ref" => "cover", "active" => false},
+        %{
+          "op" => "set_block_values",
+          "target" => target,
+          "block_uid" => "a",
+          "values" => %{
+            "to" => %{"content_type" => "Brando.Pages.Page", "id" => 2},
+            "picture" => %{"asset" => "image1"},
+            "clip" => %{"kind" => "video", "id" => 4}
+          }
+        }
       ]
 
-      assert {:ok, [move, append, delete, insert]} = Codec.decode_all(maps)
+      assert {:ok, [move, append, delete, insert, into, active, values]} =
+               Codec.decode_all(maps, %{"image1" => {:image, 9}})
+
       assert %MoveBlock{target: {Page, 1}, block_uid: "a", placement: {:after, "b"}, field: "blocks"} = move
       assert append.placement == :append
       assert %DeleteBlock{block_uid: "a"} = delete
       assert %InsertBlock{parent: "p", uid: "n", placement: :append} = insert
 
-      for op <- [move, append, delete, insert], do: assert({:ok, ^op} = Codec.decode(Codec.encode(op)))
+      assert into.placement == {:into, "p"}
+      assert %SetBlockActive{ref: "cover", active: false} = active
+      assert values.values == %{"to" => {:entry, Page, 2}, "picture" => {:image, 9}, "clip" => {:video, 4}}
+
+      for op <- [move, append, delete, insert, into, active, values],
+          do: assert({:ok, ^op} = Codec.decode(Codec.encode(op)))
+
+      # Only a move goes into a block; an insert names its parent.
+      assert {:error, _} =
+               Codec.decode(%{"op" => "insert_block", "target" => target, "module" => 3, "placement" => %{"into" => "p"}})
+
+      assert {:error, _} = Codec.decode(%{"op" => "set_block_active", "target" => target, "block_uid" => "a"})
 
       assert {:error, "Operation 0: " <> _} =
                Codec.decode_all([%{"op" => "move_block", "target" => target, "block_uid" => "a"}])

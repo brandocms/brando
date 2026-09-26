@@ -77,7 +77,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "entry_outline",
       description:
-        "Read one entry: its fields and an outline of its blocks — root blocks and their children, nested (uid, module, short text, media with width, height and orientation, variable values). Children are the entries of a multi module, or the blocks of a container or slot. Use block uids for placement and block edits; every block at any depth can be edited, moved or deleted.",
+        "Read one entry: its fields, its own media (such as a listing image) and an outline of its blocks — root blocks and their children, nested (uid, module, active, short text, media, refs_off, variable values). Media carries width, height and orientation. refs_off lists refs that are switched off. Children are the entries of a multi module, or the blocks of a container or slot. Use block uids for placement and block edits; every block at any depth can be edited, switched on or off, moved or deleted.",
       parameters: %{
         type: "object",
         properties: %{content_type: %{type: "string"}, id: %{type: "integer"}},
@@ -86,7 +86,8 @@ defmodule Brando.Content.Proposals.Tools do
     },
     %{
       name: "list_modules",
-      description: "List the modules that may be inserted into a content type's block field.",
+      description:
+        "List the modules that may be inserted at the root of a content type's block field. Multi modules (multi: true) hold entries: insert the multi block with a uid of your own, then its entries with parent set to that uid (describe_module lists them).",
       parameters: %{
         type: "object",
         properties: %{content_type: %{type: "string"}, field: %{type: "string", default: "blocks"}},
@@ -153,9 +154,10 @@ defmodule Brando.Content.Proposals.Tools do
       {"op":"set_block_text","target":…,"block_uid":UID,"ref":NAME,"text":TEXT}
       {"op":"set_block_media","target":…,"block_uid":UID,"ref":NAME,"asset":"image1"|{"kind":"image","id":N}}
       {"op":"set_block_values","target":…,"block_uid":UID,"values":{}}
-      {"op":"move_block","target":…,"block_uid":UID,"placement":"append"|{"before":UID}|{"after":UID}}
+      {"op":"move_block","target":…,"block_uid":UID,"placement":"append"|{"before":UID}|{"after":UID}|{"into":UID}}
+      {"op":"set_block_active","target":…,"block_uid":UID,"ref":NAME?,"active":true|false}
       {"op":"delete_block","target":…,"block_uid":UID}
-      block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block; with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. Placement and move_block anchors are siblings: blocks with the same parent. move_block reorders among siblings ("append" moves last). Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later. Returns problems to fix; call again with the corrected operations.
+      block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later. Returns problems to fix; call again with the corrected operations.
       """,
       parameters: %{
         type: "object",
@@ -258,7 +260,8 @@ defmodule Brando.Content.Proposals.Tools do
         {name, Enum.map(Map.fetch!(entry, :"entry_#{name}"), & &1.block)}
       end)
 
-    dimensions = dimensions(roots |> Map.values() |> List.flatten())
+    assets = entry_assets(schema, entry)
+    dimensions = dimensions(roots |> Map.values() |> List.flatten(), Map.values(assets))
 
     {blocks, described} =
       Enum.map_reduce(roots, 0, fn {name, blocks}, described ->
@@ -273,6 +276,7 @@ defmodule Brando.Content.Proposals.Tools do
       status: to_string(Map.get(entry, :status)),
       live: Map.get(entry, :status) == :published,
       fields: scalar_fields(entry),
+      media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end),
       blocks: Map.new(blocks)
     }
 
@@ -293,10 +297,11 @@ defmodule Brando.Content.Proposals.Tools do
     unless Enum.any?(schema.__blocks_fields__(), &(to_string(&1.name) == field)),
       do: Error.fail!("#{args["content_type"]} has no block field #{field}.")
 
+    set = Proposals.module_set(schema, field)
+
     modules =
-      schema
-      |> Proposals.module_set(field)
-      |> BlockSlots.modules()
+      (BlockSlots.modules(set) ++ multi_modules(set))
+      |> Enum.sort_by(& &1.sequence)
       |> Enum.map(fn module ->
         %{
           module: "local:#{module.id}",
@@ -305,6 +310,7 @@ defmodule Brando.Content.Proposals.Tools do
           help: shorten(label(module.help_text)),
           slots: Enum.map(module.refs || [], &"#{&1.name} (#{&1.data.type})")
         }
+        |> then(&if(module.multi, do: Map.put(&1, :multi, true), else: &1))
       end)
 
     %{modules: modules}
@@ -481,14 +487,41 @@ defmodule Brando.Content.Proposals.Tools do
             label: var.label,
             instructions: var.instructions,
             options: if(var.type == :select, do: Enum.map(var.options || [], &option/1)),
-            settable: var.type in [:string, :text, :html, :boolean, :select]
+            settable: settable(var.type)
           }
         end)
     }
   end
 
+  defp settable(type) when type in [:string, :text, :html], do: "a string"
+  defp settable(:boolean), do: "true or false"
+  defp settable(:select), do: "one of the options"
+  defp settable(:color), do: "a colour such as #1a2b3c"
+  defp settable(:date), do: "an ISO date, 2026-09-26"
+  defp settable(:datetime), do: "an ISO datetime, 2026-09-26T12:00:00Z"
+  defp settable(:image), do: ~s({"kind":"image","id":N} or {"asset":"image1"})
+  defp settable(:video), do: ~s({"kind":"video","id":N} or {"asset":"video1"})
+  defp settable(:link), do: ~s(a URL, or an entry {"content_type":T,"id":N})
+  defp settable(_), do: "no"
+
   defp option(%{label: label, value: value}) when label in [nil, "", value], do: value
   defp option(%{label: label, value: value}), do: %{value: value, label: label}
+
+  # Multi modules the field allows at its root. Their blocks start empty; the
+  # entries are inserted as children.
+  defp multi_modules(set) when set in [nil, "", "all"] do
+    case Content.list_modules(%{preload: [:refs], order: "asc sequence"}) do
+      {:ok, modules} -> Enum.filter(modules, &(&1.multi && is_nil(&1.parent_id)))
+      _ -> []
+    end
+  end
+
+  defp multi_modules(set) do
+    case Content.get_module_set(%{matches: %{title: set}, preload: [module_set_modules: [module: :refs]]}) do
+      {:ok, set} -> set.module_set_modules |> Enum.map(& &1.module) |> Enum.filter(&(&1.multi && is_nil(&1.parent_id)))
+      _ -> []
+    end
+  end
 
   # The modules a multi module takes as entries.
   defp entry_modules(module, :local) do
@@ -519,17 +552,22 @@ defmodule Brando.Content.Proposals.Tools do
   defp block_summary(block, dimensions, full?) do
     module = block.module_id && Content.fetch_module(block.module_id, block.module_origin || :local)
     summary = %{uid: block.uid, type: to_string(block.type), module_name: module && label(module.name)}
+    if full?, do: Map.merge(summary, details(block, dimensions)), else: summary
+  end
 
-    if full?,
-      do:
-        Map.merge(summary, %{
-          module: block.module_id && "#{block.module_origin || :local}:#{block.module_id}",
-          active: block.active,
-          texts: ref_texts(block.refs),
-          media: ref_media(block.refs, dimensions),
-          values: var_values(block.vars)
-        }),
-      else: summary
+  defp details(block, dimensions) do
+    details = %{
+      module: block.module_id && "#{block.module_origin || :local}:#{block.module_id}",
+      active: block.active,
+      texts: ref_texts(block.refs),
+      media: ref_media(block.refs, dimensions),
+      values: var_values(block.vars, dimensions)
+    }
+
+    case for %{active: false, name: name} <- block.refs || [], do: name do
+      [] -> details
+      off -> Map.put(details, :refs_off, off)
+    end
   end
 
   defp put_kind(summary, %{type: :slot, slot_name: name}), do: Map.put(summary, :slot, name)
@@ -544,16 +582,28 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp ref_media(refs, dimensions) do
     for ref <- refs, kind <- [:image, :video], id = Map.get(ref, :"#{kind}_id"), into: %{} do
-      {ref.name, Map.merge(%{kind: kind, id: id}, Map.get(dimensions, {kind, id}, %{}))}
+      {ref.name, media_summary(kind, id, dimensions)}
     end
   end
 
   # Width, height and orientation of the media in `blocks`, in one query per kind.
-  defp dimensions(blocks) do
+  # The entry's own image and video fields, such as a listing image.
+  defp entry_assets(schema, entry) do
+    for %{name: name, type: kind} <- Brando.Blueprint.Assets.__assets__(schema),
+        kind in [:image, :video],
+        id = Map.get(entry, :"#{name}_id"),
+        into: %{},
+        do: {to_string(name), {kind, id}}
+  end
+
+  defp media_summary(kind, id, dimensions), do: Map.merge(%{kind: kind, id: id}, Map.get(dimensions, {kind, id}, %{}))
+
+  defp dimensions(blocks, extra) do
     ids =
       blocks
-      |> Enum.flat_map(&tree_refs/1)
-      |> Enum.flat_map(fn ref -> for kind <- [:image, :video], id = Map.get(ref, :"#{kind}_id"), do: {kind, id} end)
+      |> Enum.flat_map(&tree_media/1)
+      |> Enum.flat_map(fn row -> for kind <- [:image, :video], id = Map.get(row, :"#{kind}_id"), do: {kind, id} end)
+      |> Enum.concat(extra)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     for {kind, schema} <- [image: Brando.Images.Image, video: Brando.Videos.Video],
@@ -565,7 +615,9 @@ defmodule Brando.Content.Proposals.Tools do
         do: {{kind, id}, %{width: width, height: height, orientation: orientation(width, height)}}
   end
 
-  defp tree_refs(block), do: (block.refs || []) ++ Enum.flat_map(block.children || [], &tree_refs/1)
+  # Refs and vars both hold media.
+  defp tree_media(block),
+    do: (block.refs || []) ++ (block.vars || []) ++ Enum.flat_map(block.children || [], &tree_media/1)
 
   defp orientation(width, height) when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
     cond do
@@ -577,17 +629,26 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp orientation(_, _), do: nil
 
-  defp var_values(vars) do
-    for var <- vars, var.type in [:string, :text, :boolean, :select, :link], into: %{} do
-      {var.key, var_value(var)}
+  defp var_values(vars, dimensions) do
+    for var <- vars, var.type not in [:gallery, :file], into: %{} do
+      {var.key, var_value(var, dimensions)}
     end
   end
 
-  defp var_value(%{type: :boolean} = var), do: var.value_boolean
+  defp var_value(%{type: :boolean} = var, _), do: var.value_boolean
 
   # A link names the entry it points to; the editor knows a project by its title.
-  defp var_value(%{type: :link, identifier: %{title: title}}) when is_binary(title), do: shorten(title)
-  defp var_value(var), do: shorten(var.value)
+  defp var_value(%{type: :link, identifier: %{title: title}} = var, _) when is_binary(title),
+    do: %{entry: shorten(title), content_type: Codec.content_type(var.identifier.schema), id: var.identifier.entry_id}
+
+  defp var_value(%{type: kind} = var, dimensions) when kind in [:image, :video] do
+    case Map.get(var, :"#{kind}_id") do
+      nil -> nil
+      id -> media_summary(kind, id, dimensions)
+    end
+  end
+
+  defp var_value(var, _), do: shorten(var.value)
 
   defp schema!(name) do
     case Codec.schema(name) do

@@ -148,6 +148,13 @@ defmodule Brando.ProposalFixtures do
     })
   end
 
+  @doc "Append an empty root block — a container, or a module block — to the Work page."
+  def root_block!(c, type, module, sequence) do
+    block = insert_block!(c.user, module || %{id: nil, multi: false}, type, nil, [], [])
+    struct(Page.Blocks, %{entry_id: c.work.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
+    block
+  end
+
   defp body_ref(text), do: %{"uid" => Brando.Utils.generate_uid(), "name" => "body", "data" => text_data(text)}
   defp text_data(text), do: %{"type" => "text", "data" => %{"text" => text}}
 

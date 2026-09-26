@@ -862,7 +862,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <dt>{humanize(text.ref)}</dt><dd>{text.text}</dd>
       </div>
       <div :for={value <- @change.values}>
-        <dt>{humanize(value.name)}</dt><dd>{to_string(value.value)}</dd>
+        <dt>{value.label || humanize(value.name)}</dt>
+        <dd>
+          <span :if={value.media} class="assistant-inline-media">
+            <.thumb media={@media} kind={value.media.kind} id={value.media.id} />
+          </span>
+          <span :if={!value.media}>{to_string(value.value)}</span>
+        </dd>
       </div>
     </dl>
     """
@@ -906,7 +912,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <dt>{value.label || humanize(value.name)}</dt>
         <dd>
           <del :if={value.before not in [nil, ""] and value.before != value.value}>{to_string(value.before)}</del>
-          <ins>{to_string(value.value)}</ins>
+          <span :if={value.media} class="assistant-inline-media">
+            <.thumb media={@media} kind={value.media.kind} id={value.media.id} />
+          </span>
+          <ins :if={!value.media}>{to_string(value.value)}</ins>
         </dd>
       </div>
     </dl>
@@ -935,6 +944,37 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <span :if={item.moved? and !item.new?} class="assistant-order-mark">{gettext("Moved")}</span>
       </li>
     </ol>
+    """
+  end
+
+  defp change(%{change: %{type: :block_active}} = assigns) do
+    ~H"""
+    <span class={["assistant-change-title", !@change.active && "is-removal"]}>
+      {cond do
+        @change.ref && @change.active ->
+          gettext("Turn on %{ref} in %{block}", ref: humanize(@change.ref), block: @change.block)
+
+        @change.ref ->
+          gettext("Turn off %{ref} in %{block}", ref: humanize(@change.ref), block: @change.block)
+
+        @change.active ->
+          gettext("Turn on %{block}", block: @change.block)
+
+        true ->
+          gettext("Turn off %{block}", block: @change.block)
+      end}
+    </span>
+    <p class="assistant-placement">
+      {if @change.active,
+        do: gettext("It is shown on the page again."),
+        else: gettext("It is kept, but not shown on the page.")}
+    </p>
+    <dl :if={@change.context != []} class="assistant-fields">
+      <div :for={media <- @change.context}>
+        <dt>{humanize(media.ref)}</dt>
+        <dd class="assistant-inline-media"><.thumb media={@media} kind={media.kind} id={media.id} /></dd>
+      </div>
+    </dl>
     """
   end
 

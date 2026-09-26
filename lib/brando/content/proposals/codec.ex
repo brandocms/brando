@@ -17,18 +17,22 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "set_block_media", "target" => target, "block_uid" => uid, "ref" => name, "asset" => asset}
       %{"op" => "set_block_values", "target" => target, "block_uid" => uid, "values" => %{}}
       %{"op" => "set_block_text", "target" => target, "block_uid" => uid, "ref" => name, "text" => text}
-      %{"op" => "move_block", "target" => target, "block_uid" => uid, "placement" => placement}
+      %{"op" => "move_block", "target" => target, "block_uid" => uid, "placement" => placement | %{"into" => uid}}
+      %{"op" => "set_block_active", "target" => target, "block_uid" => uid, "ref" => name | nil, "active" => false}
       %{"op" => "delete_block", "target" => target, "block_uid" => uid}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
   `asset` is `%{"kind" => "image" | "video", "id" => 3}` or the alias of a
-  conversation attachment such as `"image1"`.
+  conversation attachment such as `"image1"`. In `values`, an image or video
+  var takes `%{"kind" => …, "id" => …}` or `%{"asset" => "image1"}`, and a link
+  var an entry as `%{"content_type" => …, "id" => …}`.
   """
   alias Brando.Content.Proposals.{
     CreateEntry,
     DeleteBlock,
     InsertBlock,
     MoveBlock,
+    SetBlockActive,
     SetBlockMedia,
     SetBlockText,
     SetBlockValues,
@@ -76,7 +80,7 @@ defmodule Brando.Content.Proposals.Codec do
       module: module!(map["module"]),
       parent: optional_string!(map["parent"], "parent"),
       placement: placement!(map["placement"] || "append"),
-      values: values(map!(map["values"])),
+      values: values(map!(map["values"]), attachments),
       texts: map!(map["texts"]),
       media: Map.new(map!(map["media"]), fn {name, asset} -> {name, asset!(asset, attachments)} end),
       uid: optional_string!(map["uid"], "uid"),
@@ -94,12 +98,22 @@ defmodule Brando.Content.Proposals.Codec do
     }
   end
 
-  defp decode!("set_block_values", map, _) do
+  defp decode!("set_block_values", map, attachments) do
     %SetBlockValues{
       target: target!(map["target"]),
       field: map["field"] || "blocks",
       block_uid: string!(map["block_uid"], "block_uid"),
-      values: values(map!(map["values"]))
+      values: values(map!(map["values"]), attachments)
+    }
+  end
+
+  defp decode!("set_block_active", map, _) do
+    %SetBlockActive{
+      target: target!(map["target"]),
+      field: map["field"] || "blocks",
+      block_uid: string!(map["block_uid"], "block_uid"),
+      ref: optional_string!(map["ref"], "ref"),
+      active: boolean!(map["active"], "active")
     }
   end
 
@@ -118,7 +132,7 @@ defmodule Brando.Content.Proposals.Codec do
       target: target!(map["target"]),
       field: map["field"] || "blocks",
       block_uid: string!(map["block_uid"], "block_uid"),
-      placement: placement!(map["placement"])
+      placement: placement!(map["placement"], true)
     }
   end
 
@@ -193,6 +207,16 @@ defmodule Brando.Content.Proposals.Codec do
       "placement" => placement(op.placement)
     }
 
+  def encode(%SetBlockActive{} = op),
+    do: %{
+      "op" => "set_block_active",
+      "target" => target(op.target),
+      "field" => op.field,
+      "block_uid" => op.block_uid,
+      "ref" => op.ref,
+      "active" => op.active
+    }
+
   def encode(%DeleteBlock{} = op),
     do: %{"op" => "delete_block", "target" => target(op.target), "field" => op.field, "block_uid" => op.block_uid}
 
@@ -251,11 +275,16 @@ defmodule Brando.Content.Proposals.Codec do
   defp placement(:append), do: "append"
   defp placement({side, uid}), do: %{to_string(side) => uid}
 
-  defp placement!("append"), do: :append
-  defp placement!(%{"before" => uid}) when is_binary(uid), do: {:before, uid}
-  defp placement!(%{"after" => uid}) when is_binary(uid), do: {:after, uid}
+  defp placement!(placement, into? \\ false)
+  defp placement!("append", _), do: :append
+  defp placement!(%{"before" => uid}, _) when is_binary(uid), do: {:before, uid}
+  defp placement!(%{"after" => uid}, _) when is_binary(uid), do: {:after, uid}
+  defp placement!(%{"into" => uid}, true) when is_binary(uid), do: {:into, uid}
 
-  defp placement!(_),
+  defp placement!(_, true),
+    do: invalid!(dgettext("content_proposals", "Placement is \"append\", {before: uid}, {after: uid} or {into: uid}."))
+
+  defp placement!(_, false),
     do: invalid!(dgettext("content_proposals", "Placement is \"append\", {before: uid} or {after: uid}."))
 
   defp asset({kind, id}), do: %{"kind" => to_string(kind), "id" => id}
@@ -275,11 +304,24 @@ defmodule Brando.Content.Proposals.Codec do
 
   # A reference to an entry the proposal creates. It is kept so validation
   # can report the draft dependency.
-  defp values(values), do: Map.new(values, fn {key, value} -> {key, decode_value(value)} end)
-  defp decode_value(%{"new" => ref}) when is_binary(ref), do: {:new, ref}
-  defp decode_value(value), do: value
+  defp values(values, attachments),
+    do: Map.new(values, fn {key, value} -> {key, decode_value(value, attachments)} end)
+
+  defp decode_value(%{"new" => ref}, _) when is_binary(ref), do: {:new, ref}
+  defp decode_value(%{"asset" => alias}, attachments), do: asset!(alias, attachments)
+  defp decode_value(%{"kind" => _, "id" => _} = asset, attachments), do: asset!(asset, attachments)
+
+  defp decode_value(%{"content_type" => name, "id" => id}, _) do
+    {:entry, schema!(name), Brando.Content.Transfer.Catalog.id!(id)}
+  rescue
+    Brando.Content.Transfer.Error -> invalid!(dgettext("content_proposals", "A target needs a numeric id."))
+  end
+
+  defp decode_value(value, _), do: value
 
   defp value({:new, ref}), do: %{"new" => ref}
+  defp value({:entry, schema, id}), do: %{"content_type" => content_type(schema), "id" => id}
+  defp value({kind, id}) when kind in [:image, :video], do: asset({kind, id})
   defp value(value), do: value
 
   defp map!(nil), do: %{}
@@ -289,6 +331,9 @@ defmodule Brando.Content.Proposals.Codec do
   defp string!(value, _) when is_binary(value) and value != "", do: value
   defp string!(value, _) when is_atom(value) and not is_nil(value), do: to_string(value)
   defp string!(_, key), do: invalid!(dgettext("content_proposals", "%{key} is required.", key: key))
+
+  defp boolean!(value, _key) when is_boolean(value), do: value
+  defp boolean!(_, key), do: invalid!(dgettext("content_proposals", "%{key} is true or false.", key: key))
 
   defp optional_string!(nil, _key), do: nil
   defp optional_string!(value, key), do: string!(value, key)
