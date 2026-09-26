@@ -2063,6 +2063,37 @@ defmodule BrandoAdmin.AI.AssistantLive do
       {part, _} ->
         {:text, part}
     end)
+    |> hug_quotes()
+  end
+
+  # Quotes stay in the same run as the term they enclose: split across
+  # elements, a font's kerning between « and the first letter is lost.
+  @opening ~w(« “ " ‘ ‹)
+  @closing ~w(» ” " ’ ›)
+
+  defp hug_quotes([{:text, before}, {:term, term}, {:text, rest} | tail]) do
+    {before, open} = split_last(before, @opening)
+    {close, rest} = split_first(rest, @closing)
+    parts = [{:text, before}, {:term, open <> term <> close}, {:text, rest}]
+    Enum.reject(parts, &(elem(&1, 1) == "")) ++ hug_quotes(tail)
+  end
+
+  defp hug_quotes([{:term, _} = term, {:text, rest} | tail]) do
+    {close, rest} = split_first(rest, @closing)
+    [{:term, elem(term, 1) <> close} | Enum.reject([{:text, rest}], &(elem(&1, 1) == ""))] ++ hug_quotes(tail)
+  end
+
+  defp hug_quotes([part | tail]), do: [part | hug_quotes(tail)]
+  defp hug_quotes([]), do: []
+
+  defp split_last(text, marks) do
+    last = String.last(text)
+    if last in marks, do: {String.slice(text, 0..-2//1), last}, else: {text, ""}
+  end
+
+  defp split_first(text, marks) do
+    first = String.first(text)
+    if first in marks, do: {first, String.slice(text, 1..-1//1)}, else: {"", text}
   end
 
   defp step_text("search_entries", args, _) do

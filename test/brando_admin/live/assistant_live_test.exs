@@ -147,9 +147,11 @@ defmodule BrandoAdmin.AssistantLiveTest do
     # The proposal arrives before the model's final reply.
     html = eventually(view, &(&1 =~ "Prepared a text block for Identity."))
     assert html =~ "Ready for your review"
-    # A step's search words, content type and version are marked out, with
-    # no space inside the quotes.
-    assert html =~ ~s(Searched for “<span class="assistant-step-term">Ident</span>” in <span class="assistant-step-type">Pages</span>)
+    # A step's search words, content type and version are marked out; the
+    # quotes stay with the words, so the font's kerning holds.
+    assert html =~
+             ~s(Searched for <span class="assistant-step-term">“Ident”</span> in <span class="assistant-step-type">Pages</span>)
+
     assert html =~ "Prepared version <strong>1</strong> of the proposal"
     assert html =~ "Add a Text block"
     assert html =~ "Written in the assistant"
@@ -172,7 +174,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
     {:ok, view, _} = live(conn, "/admin/assistant")
     view |> form("#assistant-composer", %{message: "What is on Identity?"}) |> render_submit()
     html = eventually(view, &(&1 =~ "Identity has three text blocks."))
-    assert html =~ ~s(Read “<span class="assistant-step-term">Identity</span>”)
+    assert html =~ ~s(Read <span class="assistant-step-term">“Identity”</span>)
 
     [conversation] = Agent.list_conversations(c.current_user)
     run = Agent.latest_run(conversation.id, c.current_user)
