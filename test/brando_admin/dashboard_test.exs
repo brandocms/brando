@@ -56,6 +56,19 @@ defmodule BrandoAdmin.DashboardTest do
     assert BrandoAdmin.Dashboard.load(c.user).recent == []
   end
 
+  test "the site's own menu entries come first, without repeating the general ones", c do
+    grant(c, ~w(brando.admin.access brando.pages.read brando.images.read))
+    shortcuts = BrandoAdmin.Dashboard.load(c.user).shortcuts
+    paths = Enum.map(shortcuts, &URI.parse(&1.path).path)
+
+    # The integration app's menu has a single entry: Pages.
+    assert hd(paths) == "/admin/pages"
+    assert paths == Enum.uniq(paths)
+    assert "/admin/assets/images" in paths
+    # No global sets, no menus: no shortcuts to empty screens.
+    refute "/admin/globals" in paths
+  end
+
   defp grant(c, keys) do
     {:ok, group} = Groups.create(c.scope, %{name: "Dashboard access"}, keys)
     {:ok, :ok} = Groups.add_member(c.scope, group.id, c.user.id)

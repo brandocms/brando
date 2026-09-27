@@ -396,6 +396,25 @@ defmodule BrandoAdmin.Menu do
       do: %{name: gettext("Globals"), url: "/admin/globals"}
   end
 
+  @doc """
+  The site's own menu entries (the app's `Menus` module), as links the user
+  may open: `[%{name: "Projects", url: "/admin/works/projects"}, …]`, sub
+  items flattened. The dashboard offers these as shortcuts.
+  """
+  def site_menu_items(current_user) do
+    items = Brando.admin_module(Menus).__menus__()
+    items = if Brando.Authorization.enabled?(), do: filter_authorized(items, current_user), else: items
+    flatten_links(items)
+  end
+
+  defp flatten_links(items) do
+    Enum.flat_map(items, fn
+      %{items: [_ | _] = children} -> flatten_links(children)
+      %{url: url, name: name} when is_binary(url) -> [%{name: name, url: url}]
+      _ -> []
+    end)
+  end
+
   defp publishing_menu_item(%{delivery_mode: :static}) do
     %{name: gettext("Publishing"), url: "/admin/config/publishing"}
   end

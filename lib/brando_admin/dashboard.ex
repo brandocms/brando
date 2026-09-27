@@ -88,39 +88,56 @@ defmodule BrandoAdmin.Dashboard do
     |> Enum.take(4)
   end
 
+  # The site's own sections first (a site's Works, not Brando's Pages), then
+  # the general ones. Navigation and Globals only once there's something in
+  # them: a shortcut to an empty screen is a dead end.
   defp shortcuts(user) do
-    [
-      %{
-        label: gettext("Pages"),
-        path: "/admin/pages",
-        icon: "hero-document-text",
-        action: :read,
-        schema: Brando.Pages.Page
-      },
-      %{
-        label: gettext("Images"),
-        path: "/admin/assets/images",
-        icon: "hero-photo",
-        action: :read,
-        schema: Brando.Images.Image
-      },
-      %{
-        label: gettext("Navigation"),
-        path: "/admin/config/navigation/menus",
-        icon: "hero-bars-3",
-        action: :read,
-        schema: Brando.Navigation.Menu
-      },
-      %{
-        label: gettext("Globals"),
-        path: "/admin/globals",
-        icon: "hero-adjustments-horizontal",
-        action: :update,
-        schema: Brando.Sites.GlobalSet
-      }
-    ]
-    |> Enum.filter(&allowed?(user, &1.action, struct(&1.schema)))
+    site =
+      user
+      |> BrandoAdmin.Menu.site_menu_items()
+      |> Enum.map(&%{label: &1.name, path: &1.url, icon: "hero-squares-2x2"})
+
+    general =
+      [
+        %{
+          label: gettext("Pages"),
+          path: "/admin/pages",
+          icon: "hero-document-text",
+          action: :read,
+          schema: Brando.Pages.Page
+        },
+        %{
+          label: gettext("Images"),
+          path: "/admin/assets/images",
+          icon: "hero-photo",
+          action: :read,
+          schema: Brando.Images.Image
+        },
+        any?(Brando.Navigation.Menu) &&
+          %{
+            label: gettext("Navigation"),
+            path: "/admin/config/navigation/menus",
+            icon: "hero-bars-3",
+            action: :read,
+            schema: Brando.Navigation.Menu
+          },
+        any?(Brando.Sites.GlobalSet) &&
+          %{
+            label: gettext("Globals"),
+            path: "/admin/globals",
+            icon: "hero-adjustments-horizontal",
+            action: :update,
+            schema: Brando.Sites.GlobalSet
+          }
+      ]
+      |> Enum.filter(& &1)
+      |> Enum.filter(&allowed?(user, &1.action, struct(&1.schema)))
+      |> Enum.map(&Map.take(&1, [:label, :path, :icon]))
+
+    Enum.uniq_by(site ++ general, &URI.parse(&1.path).path)
   end
+
+  defp any?(schema), do: Repo.aggregate(schema, :count) > 0
 
   defp allowed?(user, action, entry) do
     if Brando.Authorization.enabled?() do
