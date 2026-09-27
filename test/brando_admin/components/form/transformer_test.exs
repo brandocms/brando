@@ -137,6 +137,14 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     assert [_] = Floki.find(document, ".layout-list .subform-fields input[value='Editable caption']")
     assert [] = Floki.find(document, ".subform-edit")
     assert [] = Floki.find(document, ".modal")
+
+    # "Upload" sits inside the uploader hook, which opens the file dialog and
+    # registers the file as a replacement for this entry.
+    assert [upload] =
+             Floki.find(document, "[phx-hook='Brando.TransformerUploader'] [data-pick-replace='transformer-item-1']")
+
+    assert Floki.attribute(upload, "data-pick-kind") == ["images"]
+    assert Floki.text(upload) =~ "Upload"
   end
 
   test "builds a clean related record when no default is configured" do
