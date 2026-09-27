@@ -47,7 +47,7 @@ defmodule Brando.Setup.Seeds do
       Enum.reduce(languages, %{created: [], skipped: []}, fn language, report ->
         report
         |> track(:"identity (#{language})", fn -> identity(language) end)
-        |> track(:"seo (#{language})", fn -> seo(language) end)
+        |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
         |> track(:"menu (#{language})", fn -> menu(language, user) end)
         |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
       end)
@@ -87,11 +87,27 @@ defmodule Brando.Setup.Seeds do
     end
   end
 
-  defp seo(language) do
+  # The site's address and a short description, when setup was given them.
+  defp seo(language, seo_opts) do
     case Sites.get_seo(%{matches: %{language: language}}) do
-      {:ok, _seo} -> :exists
-      {:error, _} -> Sites.create_default_seo(language)
+      {:ok, _seo} ->
+        :exists
+
+      {:error, _} ->
+        language
+        |> Sites.create_default_seo()
+        |> fill_seo(seo_opts)
     end
+  end
+
+  defp fill_seo(%Sites.SEO{} = seo, seo_opts) do
+    changes =
+      %{base_url: seo_opts[:base_url], fallback_meta_description: seo_opts[:description]}
+      |> Map.reject(fn {_key, value} -> value in [nil, ""] end)
+
+    if changes == %{},
+      do: seo,
+      else: seo |> Ecto.Changeset.change(changes) |> Brando.Repo.update!()
   end
 
   # Checked against the repo rather than `Navigation.get_menu/2`, which reads

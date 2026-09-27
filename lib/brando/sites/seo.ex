@@ -58,6 +58,13 @@ defmodule Brando.Sites.SEO do
       redirect_on_save &__MODULE__.redirect/3
 
       tab t("Content") do
+        alert :warning,
+              t(
+                "There is no base URL yet (under Indexing). Without it, canonical links, sharing " <>
+                  "previews and the sitemap can't give the site's full addresses."
+              ),
+              show_if: &__MODULE__.base_url_missing?/1
+
         fieldset do
           label t("Default metadata")
 
@@ -81,7 +88,12 @@ defmodule Brando.Sites.SEO do
 
         fieldset do
           label t("Indexing")
-          input :base_url, :text, label: t("Base URL"), placeholder: t("https://yoursite.com")
+
+          input :base_url, :text,
+            label: t("Base URL"),
+            placeholder: t("https://yoursite.com"),
+            instructions: t("The site's address. Used for canonical links, sharing previews and the sitemap")
+
           input :robots, :textarea, monospace: true, label: t("Robots"), placeholder: t("Robots")
         end
 
@@ -92,7 +104,12 @@ defmodule Brando.Sites.SEO do
             label t("Redirects")
             style :inline
             cardinality :many
-            instructions t("Use `$` at the end of test to prevent matching beyond string.")
+
+            instructions t(
+                           "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> " <>
+                             "to match that path only, not longer ones that start with it."
+                         )
+
             default %{from: "/example/:slug", to: "/new/:slug", code: 301}
 
             input :code, :number, label: t("Code", Brando.Sites.Redirect)
@@ -110,6 +127,9 @@ defmodule Brando.Sites.SEO do
       translate :plural, t("SEO")
     end
   end
+
+  @doc false
+  def base_url_missing?(form), do: form[:base_url].value in [nil, ""]
 
   def search_preview(assigns) do
     image = Ecto.Changeset.get_field(assigns.form.source, :fallback_meta_image)
