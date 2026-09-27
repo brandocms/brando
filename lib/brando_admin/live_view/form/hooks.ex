@@ -27,7 +27,11 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
       {:cont, assign(socket, :current_focused_block_uid, nil)}
     else
-      {:cont, assign(socket, :socket_connected, false)}
+      # The dead render gets a title too, so the tab isn't "Admin" first.
+      {:cont,
+       socket
+       |> assign(:socket_connected, false)
+       |> assign(:page_title, Brando.Blueprint.get_singular(schema))}
     end
   end
 
@@ -51,7 +55,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
       {:cont, socket}
     else
-      {:cont, assign(socket, :socket_connected, false)}
+      {:cont,
+       socket
+       |> assign(:socket_connected, false)
+       |> assign(
+         :page_title,
+         gettext("New %{singular}", singular: String.downcase(Brando.Blueprint.get_singular(schema)))
+       )}
     end
   end
 
@@ -214,7 +224,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:cont,
      socket
      |> assign_action(:update)
-     |> assign_entry_id(entry_id)}
+     |> assign_entry_id(entry_id)
+     |> assign_title()}
   end
 
   defp maybe_arm_entry_scope(_params, _uri, socket), do: {:cont, socket}
@@ -1481,15 +1492,34 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     end)
   end
 
+  # The browser tab: "mmmMarbles — Project" for an entry, "New project" on
+  # create. Several open forms are told apart by what they edit, not by id.
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
-    translated_singular = Brando.Blueprint.get_singular(schema)
-    entry_id = socket.assigns.entry_id || gettext("New")
+    assign(socket, :page_title, form_title(schema, socket.assigns[:entry_id]))
+  end
 
-    assign(
-      socket,
-      :page_title,
-      "#{translated_singular} [\##{entry_id}]"
-    )
+  @doc false
+  def form_title(schema, entry_id) do
+    singular = Brando.Blueprint.get_singular(schema)
+
+    case entry_id && entry_title(schema, entry_id) do
+      nil when is_nil(entry_id) -> gettext("New %{singular}", singular: String.downcase(singular))
+      nil -> singular
+      title -> "#{title} — #{singular}"
+    end
+  end
+
+  defp entry_title(schema, entry_id) do
+    with true <- function_exported?(schema, :__has_identifier__, 0) and schema.__has_identifier__(),
+         %{} = entry <- Brando.Repo.get(schema, entry_id),
+         entry = Brando.Repo.preload(entry, schema.__identifier_preloads__()),
+         %{title: title} when is_binary(title) and title != "" <- schema.__identifier__(entry) do
+      title
+    else
+      _ -> nil
+    end
+  rescue
+    _ -> nil
   end
 
   defp assign_entry_id(socket, entry_id) do
