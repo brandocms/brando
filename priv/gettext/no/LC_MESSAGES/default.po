@@ -12721,3 +12721,24 @@ msgstr "Den kan hentes tilbake derfra."
 
 msgid "New %{singular}"
 msgstr "Ny %{singular}"
+
+msgid "Job title"
+msgstr "Tittel"
+
+msgid "e.g. Artist"
+msgstr "f.eks. Kunstner"
+
+msgid "Occupation"
+msgstr "Yrke"
+
+msgid "e.g. Visual artist"
+msgstr "f.eks. Billedkunstner"
+
+msgid "More specific type (URL)"
+msgstr "Mer presis type (URL)"
+
+msgid "Optional. A type schema.org doesn't have, as a URL — e.g. Wikidata's “visual artist”: https://www.wikidata.org/wiki/Q3391743"
+msgstr "Valgfritt. En type schema.org ikke har, som URL — f.eks. Wikidatas «billedkunstner»: https://www.wikidata.org/wiki/Q3391743"
+
+msgid "One topic per line — what they are known for"
+msgstr "Ett tema per linje — hva de er kjent for"

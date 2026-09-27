@@ -5,8 +5,9 @@ defmodule Brando.Sites.Identity.TypeConfig do
   Holds the schema.org fields behind the identity's JSON-LD.
 
   Some apply only to certain types (`opening_hours_specification` for
-  LocalBusiness and friends); others — `legal_name`, `vat_id`, `area_served`,
-  `knows_about` — are Organization properties every type can carry.
+  LocalBusiness and friends, `job_title` for a Person); others — `legal_name`,
+  `vat_id`, `area_served`, `knows_about` — are Organization properties every
+  organisation type can carry.
   """
 
   use Brando.Blueprint,
@@ -57,5 +58,11 @@ defmodule Brando.Sites.Identity.TypeConfig do
 
     # SportsOrganization
     attribute :sport, :string
+
+    # Person: what they do ("Artist"), their occupation ("Visual artist") and
+    # a more specific type by URL (Wikidata's "visual artist")
+    attribute :job_title, :string
+    attribute :occupation, :string
+    attribute :additional_type, :string
   end
 end

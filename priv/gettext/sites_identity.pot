@@ -283,3 +283,9 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Services"
 msgstr ""
+
+msgid "Person"
+msgstr ""
+
+msgid "A site about one person: an artist, a writer, a freelancer"
+msgstr ""

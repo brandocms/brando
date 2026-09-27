@@ -30,6 +30,17 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
     merge_type_config(base, identity)
   end
 
+  # A person carries none of the Organization properties below (legal name,
+  # VAT, area served) — only what they know about and what they do.
+  defp merge_type_config(base, %{type: "person", type_config: %{} = config}) do
+    Map.merge(base, %{
+      jobTitle: config.job_title,
+      hasOccupation: occupation(config.occupation),
+      additionalType: blank_to_nil(config.additional_type),
+      knowsAbout: list_or_nil(config.knows_about)
+    })
+  end
+
   defp merge_type_config(base, %{type: type, type_config: %{} = config}) do
     type_fields =
       case type do
@@ -145,6 +156,12 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   end
 
   defp merge_type_config(base, _), do: base
+
+  defp occupation(name) when is_binary(name) and name != "", do: %{"@type": "Occupation", name: name}
+  defp occupation(_), do: nil
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
 
   defp format_date(nil), do: nil
   defp format_date(%Date{} = date), do: Calendar.strftime(date, "%Y-%m-%d")

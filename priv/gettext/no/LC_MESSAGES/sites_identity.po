@@ -284,3 +284,9 @@ msgstr "Strukturerte data"
 #, elixir-autogen, elixir-format
 msgid "Services"
 msgstr "Tjenester"
+
+msgid "Person"
+msgstr "Person"
+
+msgid "A site about one person: an artist, a writer, a freelancer"
+msgstr "Et nettsted om én person: en kunstner, en forfatter, en frilanser"

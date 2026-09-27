@@ -37,6 +37,24 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     ]
   end
 
+  # A person has none of the Organization properties (legal name, VAT, area
+  # served) — what they do instead.
+  defp person_fields do
+    [
+      {:job_title, :text, gettext("Job title"), [instructions: gettext("e.g. Artist")]},
+      {:occupation, :text, gettext("Occupation"), [instructions: gettext("e.g. Visual artist")]},
+      {:additional_type, :text, gettext("More specific type (URL)"),
+       [
+         instructions:
+           gettext(
+             "Optional. A type schema.org doesn't have, as a URL — e.g. Wikidata's “visual artist”: https://www.wikidata.org/wiki/Q3391743"
+           )
+       ]},
+      {:knows_about, :string_list, gettext("Knows about"),
+       [instructions: gettext("One topic per line — what they are known for")]}
+    ]
+  end
+
   def mount(socket) do
     {:ok, socket}
   end
@@ -47,7 +65,11 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
       |> Ecto.Changeset.get_field(:type)
       |> to_string()
 
-    fields = shared_fields() ++ type_fields(identity_type)
+    fields =
+      if identity_type == "person",
+        do: person_fields(),
+        else: shared_fields() ++ type_fields(identity_type)
+
     has_opening_hours = identity_type in @opening_hours_types
 
     {:ok,
