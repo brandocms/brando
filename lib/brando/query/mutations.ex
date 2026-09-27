@@ -1,6 +1,8 @@
 defmodule Brando.Query.Mutations do
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Content
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Datasource
@@ -503,12 +505,40 @@ defmodule Brando.Query.Mutations do
         Map.put(updated_entry, f, new_value)
 
       f, updated_entry ->
-        default_value = Map.get(updated_entry, f)
-        Map.update(updated_entry, f, default_value, fn v -> "#{v}_dupl" end)
+        Map.update(updated_entry, f, nil, &copy_value(updated_entry, f, &1))
     end)
   end
 
   defp maybe_change_fields(entry, _), do: entry
+
+  # A copy's title gets " (copy)"; its slug (or a page's URI) gets "-copy",
+  # numbered when that's taken, so the copy's public URL reads as one.
+  defp copy_value(_entry, _field, nil), do: nil
+
+  defp copy_value(%module{}, field, value) when is_binary(value) do
+    if slug_field?(module, field),
+      do: free_slug(module, field, "#{value}-copy", 1),
+      else: "#{value} #{gettext("(copy)")}"
+  end
+
+  defp copy_value(_entry, _field, value), do: value
+
+  defp slug_field?(_module, field) when field in [:slug, :uri], do: true
+
+  defp slug_field?(module, field) do
+    function_exported?(module, :__attributes__, 0) and
+      Enum.any?(module.__attributes__(), &(&1.name == field and &1.type == :slug))
+  end
+
+  defp free_slug(module, field, base, n) do
+    candidate = if n == 1, do: base, else: "#{base}-#{n}"
+
+    taken = Brando.Repo.aggregate(from(q in module, where: field(q, ^field) == ^candidate), :count) > 0
+
+    if taken,
+      do: free_slug(module, field, base, n + 1),
+      else: candidate
+  end
 
   defp maybe_delete_fields(entry, %{delete_fields: delete_fields}) do
     unless is_list(delete_fields) do

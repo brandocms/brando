@@ -12711,3 +12711,6 @@ msgstr "Dette kan ikke angres."
 
 msgid "and"
 msgstr "og"
+
+msgid "(copy)"
+msgstr "(kopi)"

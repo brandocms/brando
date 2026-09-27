@@ -580,8 +580,8 @@ defmodule Brando.PagesTest do
     refute duplicated_child.id == original_child.id
     assert duplicated_child.parent_id == duplicated_page.id
     assert original_child.parent_id == original_page.id
-    # Child title is appended with _dupl to distinguish it
-    assert duplicated_child.title == "#{original_child.title}_dupl"
+    # Child title is marked as a copy to distinguish it
+    assert duplicated_child.title == "#{original_child.title} (copy)"
 
     # Assert child page blocks are duplicated
     assert length(duplicated_child.entry_blocks) == 1
