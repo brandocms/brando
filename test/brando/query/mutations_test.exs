@@ -303,9 +303,20 @@ defmodule Brando.Query.MutationsTest do
 
       {:ok, duplicate} = TestContext.duplicate_page(original.id, user)
 
-      # change_fields: [:title, :uri] should append _dupl
-      assert duplicate.title == "My Title_dupl"
-      assert duplicate.uri == "my-uri_dupl"
+      # change_fields: [:title, :uri] mark the copy: " (copy)" on the title,
+      # "-copy" on the URI
+      assert duplicate.title == "My Title (copy)"
+      assert duplicate.uri == "my-uri-copy"
+    end
+
+    test "numbers a copied URI that's already taken" do
+      user = Factory.insert(:random_user)
+      original = Factory.insert(:page, title: "My Title", uri: "taken-uri")
+
+      {:ok, first} = TestContext.duplicate_page(original.id, user)
+      {:ok, second} = TestContext.duplicate_page(original.id, user)
+
+      assert {first.uri, second.uri} == {"taken-uri-copy", "taken-uri-copy-2"}
     end
 
     test "sets status to draft" do

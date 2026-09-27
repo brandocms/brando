@@ -4,6 +4,7 @@ defmodule Brando.Pages do
   """
   use BrandoAdmin, :context
   use Brando.Query
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Query
 
@@ -281,8 +282,8 @@ defmodule Brando.Pages do
       alternates: [],
       alternate_entries: []
     })
-    |> Map.update(:uri, child.uri, fn uri -> "#{uri}_dupl" end)
-    |> Map.update(:title, child.title, fn title -> "#{title}_dupl" end)
+    |> Map.update(:uri, child.uri, fn uri -> "#{uri}-copy" end)
+    |> Map.update(:title, child.title, fn title -> "#{title} #{gettext("(copy)")}" end)
     |> Map.put(:status, :draft)
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
   end

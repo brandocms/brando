@@ -12706,3 +12706,6 @@ msgstr ""
 
 msgid "and"
 msgstr ""
+
+msgid "(copy)"
+msgstr ""
