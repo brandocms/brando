@@ -1111,6 +1111,29 @@ input :meta_description, :textarea,
   ]
 ```
 
+### Showing a field depending on another
+
+`show_if:` shows an input only while another field has one of the given
+values; `hidden:` is the opposite. Both take `{field, value}` or
+`{field, [values]}`, and `hidden:` also takes `true` or a function of the
+form. They work the same in top-level fieldsets, subform rows and transformer
+entries, where the field is one of the row's own. The field is checked at
+compile time.
+
+```elixir
+inputs_for :links do
+  cardinality :many
+  style :listing
+
+  input :kind, :radios, options: [%{label: t("Web link"), value: :url}, %{label: t("PDF"), value: :pdf}]
+  input :url, :text, show_if: {:kind, :url}
+  input :file, :file, show_if: {:kind, [:pdf, :audio]}
+end
+```
+
+A hidden input is left out of the form, so its current value is kept as it
+is.
+
 ### Subforms and custom components
 
 `inputs_for` renders a `:has_many`, `:embeds_many`, `:has_one`, or `:embeds_one`

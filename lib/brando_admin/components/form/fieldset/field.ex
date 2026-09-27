@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
   alias BrandoAdmin.Components.Form.Transformer
-  alias Phoenix.HTML.FormField
+  alias BrandoAdmin.Components.Form.Visibility
 
   # prop input, :map
   # prop form, :form
@@ -93,53 +93,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
     """
   end
 
-  defp hidden?(%BlueprintInput{opts: opts}, form) do
-    case Keyword.get(opts || [], :hidden) do
-      nil -> false
-      false -> false
-      true -> true
-      {field, expected} -> hidden_for_field?(form, field, expected)
-      hidden_fn when is_function(hidden_fn, 1) -> hidden_for_form?(hidden_fn, form)
-      _ -> false
-    end
-  end
-
+  defp hidden?(%BlueprintInput{opts: opts}, form), do: Visibility.hidden?(opts, form)
   defp hidden?(_, _), do: false
-
-  defp hidden_for_form?(hidden_fn, form) do
-    case hidden_fn.(form) do
-      true -> true
-      _ -> false
-    end
-  rescue
-    _ -> false
-  end
-
-  defp hidden_for_field?(form, field, expected) do
-    with {:ok, normalized_field} <- normalize_field(field),
-         %FormField{value: value} <- form[normalized_field] do
-      equivalent?(value, expected)
-    else
-      _ -> false
-    end
-  rescue
-    _ -> false
-  end
-
-  defp normalize_field(field) when is_atom(field), do: {:ok, field}
-
-  defp normalize_field(field) when is_binary(field) do
-    {:ok, String.to_existing_atom(field)}
-  rescue
-    _ -> :error
-  end
-
-  defp normalize_field(_), do: :error
-
-  defp equivalent?(left, right) when left === right, do: true
-  defp equivalent?(left, right) when is_atom(left) and is_binary(right), do: Atom.to_string(left) == right
-  defp equivalent?(left, right) when is_binary(left) and is_atom(right), do: left == Atom.to_string(right)
-  defp equivalent?(_, _), do: false
 
   # A subform's label and instructions from the form DSL, translated in the
   # schema's domain. Plain inputs resolve theirs in `Primitives.input/1`.

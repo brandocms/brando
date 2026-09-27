@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
   # use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Form.Visibility
 
   # prop input, :map
   # prop sub_form, :form
@@ -23,6 +24,7 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
 
     ~H"""
     <Primitives.input
+      :if={not Visibility.hidden?(@input.opts, @sub_form)}
       id={"#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
       field={@sub_form[@input.name]}
       label={@label}

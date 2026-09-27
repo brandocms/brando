@@ -875,6 +875,28 @@ defmodule Brando.Blueprint.VerifierTest do
     )
   end
 
+  test "reports show_if referencing an unknown schema field" do
+    assert_form_error(
+      quote do
+        attributes do
+          attribute :title, :string
+          attribute :url, :string
+        end
+
+        forms do
+          form do
+            tab "Content" do
+              fieldset do
+                input :url, :text, show_if: {:kind, [:url]}
+              end
+            end
+          end
+        end
+      end,
+      ~r/:show_if referencing unknown schema field :kind/
+    )
+  end
+
   test "reports static form queries with invalid matches" do
     assert_form_error(
       quote do

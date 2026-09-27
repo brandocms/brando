@@ -17,6 +17,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Form.Visibility
   alias BrandoAdmin.Components.Form.Subform
 
   import Ecto.Changeset, only: [change: 2]
@@ -654,7 +655,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     >
       <div
         :for={input <- @subform.sub_fields}
-        :if={input.name not in @skip_fields and input.type not in [:image, :video]}
+        :if={
+          input.name not in @skip_fields and input.type not in [:image, :video] and
+            not Visibility.hidden?(input.opts, @item_form)
+        }
         class="field-wrapper"
       >
         <Primitives.input
