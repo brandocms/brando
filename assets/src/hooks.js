@@ -43,6 +43,7 @@ import SubFormSortableHook from './hooks/SubFormSortable'
 import SubmitHook from './hooks/Submit'
 import SVGDropHook from './hooks/SVGDrop'
 import TipTapHook from './hooks/TipTap'
+import TransformerFieldsHook from './hooks/TransformerFields'
 import TransformerSortableHook from './hooks/TransformerSortable'
 import TransformerUploaderHook from './hooks/TransformerUploader'
 import UploadManagerHook from './hooks/UploadManager'
@@ -99,6 +100,7 @@ export default (app) => {
     'Brando.Submit': SubmitHook(app),
     'Brando.SVGDrop': SVGDropHook(app),
     'Brando.TipTap': TipTapHook(app),
+    'Brando.TransformerFields': TransformerFieldsHook(app),
     'Brando.TransformerSortable': TransformerSortableHook(app),
     'Brando.TransformerUploader': TransformerUploaderHook(app),
     'Brando.UploadManager': UploadManagerHook(app),

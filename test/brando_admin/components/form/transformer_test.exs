@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
 
     attributes do
       attribute :title, :string
+      attribute :size, :enum, values: [:small, :large]
       # The save path orders entries by sequence.
       attribute :sequence, :integer
     end
@@ -55,8 +56,13 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     |> Phoenix.Component.assign(:relation_module, MediaItem)
     |> Phoenix.Component.assign(:image_field, :cover)
     |> Phoenix.Component.assign(:video_field, nil)
+    |> Phoenix.Component.assign(:subform, %Subform{
+      sub_fields: [input(:cover, :image), input(:title, :text), input(:size, :radios)]
+    })
     |> Phoenix.LiveView.stream(:transformer_items, [])
   end
+
+  defp input(name, type), do: %Brando.Blueprint.Forms.Input{name: name, type: type}
 
   test "editing a transformer field notifies recovery with its current content" do
     item = Transformer.new_item("item-1", %{title: "Before", cover_id: nil})
@@ -73,6 +79,35 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     assert_receive {:phoenix, :send_update,
                     {{BrandoAdmin.Components.Form, "collection_form"},
                      %{draft_dirty: true, updated_relation: [%{title: "Unsaved caption"}]}}}
+  end
+
+  describe "editing an entry's fields" do
+    test "casts the value, so an enum is saved as an atom" do
+      source = %MediaItem{id: 1, title: "The Reins", size: :small}
+      socket = recovery_socket(Transformer.new_item("item-1", source, is_new: false))
+
+      {:noreply, socket} =
+        Transformer.handle_event("update_field", %{"dom_id" => "item-1", "field" => "size", "value" => "large"}, socket)
+
+      assert hd(socket.assigns.items).changes.size == :large
+
+      {:ok, _} = Transformer.update(%{event: "fetch_transformer_data", tag: "save"}, socket)
+
+      assert_receive {:phoenix, :send_update,
+                      {{BrandoAdmin.Components.Form, "collection_form"},
+                       %{event: "provide_transformer_data", transformer_data: [%Ecto.Changeset{changes: %{size: :large}}]}}}
+    end
+
+    test "only changes the subform's own fields" do
+      socket = recovery_socket(Transformer.new_item("item-1", %{title: "The Reins", cover_id: 7}))
+
+      for field <- ["cover", "cover_id", "id", "no_such_field"] do
+        {:noreply, socket} =
+          Transformer.handle_event("update_field", %{"dom_id" => "item-1", "field" => field, "value" => "1"}, socket)
+
+        assert hd(socket.assigns.items).changes == %{}
+      end
+    end
   end
 
   test "upload progress does not dirty recovery, but completed delivery does" do
