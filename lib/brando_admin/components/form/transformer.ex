@@ -709,11 +709,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
             |> toggle_drawer("##{@kind}-picker")
           }
         >
-          {if @asset, do: gettext("Replace"), else: gettext("Select")}
+          {if @kind == "image", do: gettext("Select image"), else: gettext("Browse library")}
         </button>
         <%!-- A new file from disk, the same way as dropping one on the card:
               TransformerUploader opens the file dialog and registers it as a
-              replacement for this entry. --%>
+              replacement for this entry. Labelled as in image fields and
+              picture blocks. --%>
         <button
           :if={@kind == "image"}
           type="button"
@@ -721,7 +722,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
           data-pick-replace={@item.dom_id}
           data-pick-kind="images"
         >
-          {if @asset, do: gettext("Upload new"), else: gettext("Upload")}
+          {if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
         </button>
         <button
           :if={@asset}
