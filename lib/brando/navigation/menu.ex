@@ -77,7 +77,11 @@ defmodule Brando.Navigation.Menu do
               %{value: :disabled, label: t("Deactivated")}
             ]
 
-          input :language, :select, options: :languages, narrow: true, label: t("Language")
+          input :language, :select,
+            options: :languages,
+            narrow: true,
+            label: t("Language"),
+            hidden: &Brando.I18n.single_language?/1
         end
 
         fieldset do

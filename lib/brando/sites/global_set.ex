@@ -44,7 +44,13 @@ defmodule Brando.Sites.GlobalSet do
       tab t("Content") do
         fieldset do
           size :half
-          input :language, :select, options: :languages, narrow: true, label: t("Language")
+
+          input :language, :select,
+            options: :languages,
+            narrow: true,
+            label: t("Language"),
+            hidden: &Brando.I18n.single_language?/1
+
           input :label, :text, label: t("Label")
           input :key, :text, monospace: true, label: t("Key")
         end

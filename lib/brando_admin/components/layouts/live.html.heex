@@ -19,7 +19,9 @@
   )}
   <div id="admin" phx-hook="Brando.Admin">
     <%= if @socket_connected do %>
+      <%!-- Nothing to switch between on a single-language site. --%>
       <.live_component
+        :if={length(Brando.config(:languages) || []) > 1}
         module={BrandoAdmin.Components.ContentLanguageSwitch}
         id="content-language-switch"
         current_user={@current_user}

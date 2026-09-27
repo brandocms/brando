@@ -77,6 +77,13 @@ defmodule Brando.I18n do
   def get_language(conn), do: Map.get(conn.assigns, :language, Brando.config(:default_admin_language))
 
   @doc """
+  Whether the site has only one content language. Language pickers are
+  hidden then (`input :language, :select, hidden: &Brando.I18n.single_language?/1`),
+  since there is nothing to pick.
+  """
+  def single_language?(_form \\ nil), do: length(Brando.config(:languages) || []) <= 1
+
+  @doc """
   Extract language from path or fall back to default language
   """
   @spec parse_path(list) :: {language :: binary, modified_path :: list} | nil
