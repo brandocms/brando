@@ -133,23 +133,42 @@ defmodule Brando.Videos.MetadataTest do
     assert video.thumbnail.path =~ "images/videos/thumbnails/"
   end
 
-  test "a video added by URL is looked up in the background" do
-    Application.put_env(:brando, Metadata, Keyword.put(Application.get_env(:brando, Metadata), :fetch_on_create, true))
+  describe "a video added by URL" do
+    setup do
+      Application.put_env(:brando, Metadata, Keyword.put(Application.get_env(:brando, Metadata), :fetch_on_create, true))
 
-    on_exit(fn ->
-      Application.put_env(:brando, Metadata, Keyword.put(Application.get_env(:brando, Metadata), :fetch_on_create, false))
-    end)
+      on_exit(fn ->
+        Application.put_env(
+          :brando,
+          Metadata,
+          Keyword.put(Application.get_env(:brando, Metadata), :fetch_on_create, false)
+        )
+      end)
 
-    user = Factory.insert(:random_user)
-    stub(fn "/api/oembed.json", _ -> {:json, %{"title" => "Utklipp"}} end)
+      stub(fn "/api/oembed.json", _ -> {:json, %{"title" => "Utklipp"}} end)
+      %{user: Factory.insert(:random_user)}
+    end
 
-    {:ok, video} =
-      Videos.create_video(
-        %{type: :vimeo, remote_id: "7", source_url: "https://vimeo.com/7", config_target: "default"},
-        user
-      )
+    test "is looked up in the background", %{user: user} do
+      {:ok, video} =
+        Videos.create_video(
+          %{type: :vimeo, remote_id: "7", source_url: "https://vimeo.com/7", config_target: "default"},
+          user
+        )
 
-    # Oban runs inline in tests.
-    assert Brando.Repo.get(Videos.Video, video.id).title == "Utklipp"
+      # Oban runs inline in tests.
+      assert Brando.Repo.get(Videos.Video, video.id).title == "Utklipp"
+    end
+
+    # The block editor and the URL handler pass the user's id.
+    test "is looked up when created with a user id", %{user: user} do
+      {:ok, video} =
+        Videos.create_video(
+          %{type: :vimeo, remote_id: "7", source_url: "https://vimeo.com/7", config_target: "default"},
+          user.id
+        )
+
+      assert Brando.Repo.get(Videos.Video, video.id).title == "Utklipp"
+    end
   end
 end

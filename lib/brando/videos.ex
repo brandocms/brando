@@ -95,7 +95,7 @@ defmodule Brando.Videos do
   @doc """
   Create new video
   """
-  @spec create_video(params, user) :: {:ok, Video.t()} | {:error, changeset}
+  @spec create_video(params, user | integer()) :: {:ok, Video.t()} | {:error, changeset}
   def create_video(params, user) do
     %Video{}
     |> Video.changeset(params, user)
@@ -120,8 +120,15 @@ defmodule Brando.Videos do
   Queues a lookup of each video's thumbnail, title, duration and size at its
   source (see `fetch_metadata/2`). Returns how many were queued.
   """
-  @spec enqueue_metadata([integer()], user) :: {:ok, non_neg_integer()}
-  def enqueue_metadata(video_ids, %{id: user_id}) do
+  @spec enqueue_metadata([integer()], user | integer()) :: {:ok, non_neg_integer()}
+  def enqueue_metadata(video_ids, user) do
+    # Callers of `create_video/2` pass a user or its id, as the Creator trait allows.
+    user_id =
+      case user do
+        %{id: id} -> id
+        id when is_integer(id) -> id
+      end
+
     jobs =
       Enum.map(video_ids, fn id ->
         %{"video_id" => id, "user_id" => user_id}
