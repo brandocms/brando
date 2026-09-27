@@ -86,6 +86,21 @@ Or use Igniter's package installer with the same development source:
 mix igniter.install brando@path:/absolute/path/to/brando
 ```
 
+While Brando is a path dependency, a running site doesn't pick up changes in
+the checkout: the site builds its own copy of the dependency, `mix compile` in
+the Brando repository doesn't touch it, and Phoenix's code reloader only
+recompiles the site's own code (`reloadable_apps` doesn't help — it reloads,
+but never recompiles a dependency). After changing Brando:
+
+```sh
+mix deps.compile brando   # in the site
+# then restart the server
+```
+
+Admin JavaScript has to be published into the site as well: `npx yalc
+publish` in Brando's `assets`, then `npx yalc update @brandocms/brandojs` and
+`pnpm install` in the site's `assets/backend`, and restart its Vite.
+
 The package installer calls the same `brando.install` task. Preserve your selected
 Git/path source while testing unreleased work; a bare `igniter.install brando`
 selects the package source according to Igniter's own dependency rules. Brando's

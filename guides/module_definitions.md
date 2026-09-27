@@ -225,6 +225,12 @@ Unknown settings and unsupported ref types fail validation rather than being
 silently dropped. Export includes default and nil values so a later schema
 default cannot quietly change an existing definition.
 
+A ref appears in the block editor where the template renders it
+(`<.ref block={@block} ref={:note} />`, `{% ref refs.note %}`); a ref the
+template never places isn't editable. This holds for a `:comment` ref too:
+it renders nothing on the site, but still has to be placed to be written in
+the editor.
+
 ### Vars: values, controls and layout
 
 The DSL supports the schema's var types: `:boolean`, `:string`, `:text`, `:html`,
