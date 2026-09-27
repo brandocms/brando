@@ -38,6 +38,22 @@ defmodule Brando.Cache do
     @cache_module.del(:cache, cache_key(key))
   end
 
+  @doc """
+  Empties every cache and reloads the site-wide ones: the query cache (pages,
+  fragments, modules, …) and the identity, SEO, globals, palettes and
+  navigation caches. For changes made outside this server — a seed, a mix
+  task, another node — that it can't have heard about.
+  """
+  def reload_all do
+    Cachex.clear(:query)
+    Brando.Cache.Identity.set()
+    Brando.Cache.SEO.set()
+    Brando.Cache.Globals.set()
+    Brando.Cache.Palettes.set()
+    Brando.Cache.Navigation.set()
+    :ok
+  end
+
   defp get_from_cache(key) do
     @cache_module.get(:cache, cache_key(key))
   end
