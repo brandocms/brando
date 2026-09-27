@@ -67,18 +67,22 @@ async function alertPrompt(html, value, callback) {
   callback({ data })
 }
 
-function alertConfirm(title, html, callback) {
+// Button labels come from the server, translated: per call, or the defaults
+// the admin layout puts on <body> (data-confirm-ok / data-confirm-cancel).
+function alertConfirm(title, html, callback, { confirmText, cancelText } = {}) {
   if (!callback) {
     callback = () => {}
   }
+
+  const defaults = document.body.dataset
 
   Swal.fire({
     title,
     html,
     icon: 'question',
     showCancelButton: true,
-    cancelButtonText: 'Cancel/Avbryt',
-    confirmButtonText: 'OK'
+    cancelButtonText: cancelText || defaults.confirmCancel || 'Cancel',
+    confirmButtonText: confirmText || defaults.confirmOk || 'OK'
   }).then(result => {
     if (result.isConfirmed) {
       callback(true)

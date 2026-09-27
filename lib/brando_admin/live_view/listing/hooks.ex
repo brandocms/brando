@@ -81,6 +81,20 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
         {:halt, socket}
 
+      # The delete dialog's text, asked for by the ConfirmClick hook before it
+      # opens: the entry by name and what's deleted with it.
+      "describe_delete", %{"id" => entry_id}, socket ->
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
+
+        reply =
+          case apply(context, :"get_#{singular}", [%{matches: %{id: entry_id}}]) do
+            {:ok, entry} -> BrandoAdmin.LiveView.Listing.DeleteDescription.describe(schema, entry)
+            _ -> %{}
+          end
+
+        {:halt, reply, socket}
+
       "delete_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
         if {:before_delete, 3} in schema.__info__(:functions) do
           schema.before_delete(entry_id, socket, self())

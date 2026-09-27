@@ -12690,3 +12690,24 @@ msgstr "Bilder opptil %{image_size} · Videoer opptil %{video_size} per fil"
 #, elixir-autogen, elixir-format
 msgid "Up to %{size} per file"
 msgstr "Opptil %{size} per fil"
+
+msgid "Delete %{singular}?"
+msgstr "Slette %{singular}?"
+
+msgid "This %{singular}"
+msgstr "Denne %{singular}"
+
+msgid "together with %{children}"
+msgstr "sammen med %{children}"
+
+msgid "will be deleted"
+msgstr "slettes"
+
+msgid "It can be restored under the list's Deleted filter."
+msgstr "Den kan hentes tilbake under Slettet i listen."
+
+msgid "This can't be undone."
+msgstr "Dette kan ikke angres."
+
+msgid "and"
+msgstr "og"
