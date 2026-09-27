@@ -18,7 +18,8 @@ defmodule Brando.JSONLD.Schema.WebPage do
             inLanguage: nil,
             isPartOf: nil,
             breadcrumb: nil,
-            primaryImageOfPage: nil
+            primaryImageOfPage: nil,
+            mainEntity: nil
 
   @doc """
   Builds a WebPage entity from conn data.
@@ -34,9 +35,16 @@ defmodule Brando.JSONLD.Schema.WebPage do
       name: conn.assigns[:page_title],
       inLanguage: conn.assigns[:language],
       isPartOf: %{"@id": Path.join(Brando.Utils.hostname(), "#website")},
-      breadcrumb: build_breadcrumb_ref(conn)
+      breadcrumb: build_breadcrumb_ref(conn),
+      mainEntity: main_entity(type)
     }
   end
+
+  # A profile or about page is about the site's person or organisation.
+  defp main_entity(type) when type in ["ProfilePage", "AboutPage"],
+    do: %{"@id": Path.join(Brando.Utils.hostname(), "#identity")}
+
+  defp main_entity(_type), do: nil
 
   defp build_breadcrumb_ref(%{assigns: %{json_ld_breadcrumbs: _}}) do
     %{"@id": "#{Brando.Utils.hostname()}/#breadcrumb"}
