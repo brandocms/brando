@@ -34,7 +34,12 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp ensure_declaration(zipper, {macro, args, code, function}, context) do
-      case CodeFunction.move_to_function_call_in_current_scope(zipper, macro, [2, 3], &arguments_match?(&1, args)) do
+      case CodeFunction.move_to_function_call_in_current_scope(
+             zipper,
+             macro,
+             [2, 3],
+             &declared?(&1, macro, args, function)
+           ) do
         {:ok, _} ->
           {:ok, zipper}
 
@@ -55,9 +60,16 @@ if Code.ensure_loaded?(Igniter) do
         end) != :error
     end
 
+    # A mutation is already declared when one generates the same function —
+    # whether its schema is written as `Schema` or `{Schema, opts}`.
+    defp declared?(call, :mutation, [operation | _], function) when not is_nil(function),
+      do: CodeFunction.argument_equals?(call, 0, operation) && generated_function(call, operation) == function
+
+    defp declared?(call, _macro, args, _function), do: arguments_match?(call, args)
+
     defp generated_function(call, operation) do
       with {:ok, argument} <- CodeFunction.move_to_nth_argument(call, 1),
-           {:ok, module} when is_atom(module) <- Common.expand_literal(argument),
+           {:ok, module} when is_atom(module) <- expand_schema(argument),
            true <- Code.ensure_loaded?(module) && function_exported?(module, :__naming__, 0) do
         naming = module.__naming__()
 
@@ -68,6 +80,14 @@ if Code.ensure_loaded?(Igniter) do
         end
       else
         _ -> :unknown
+      end
+    end
+
+    # `Schema`, or the schema in `{Schema, opts}` (duplicate's form).
+    defp expand_schema(argument) do
+      case Common.expand_literal(argument) do
+        {:ok, {module, _opts}} when is_atom(module) -> {:ok, module}
+        other -> other
       end
     end
 
@@ -91,6 +111,17 @@ if Code.ensure_loaded?(Igniter) do
         Enum.map([:create, :update, :delete], fn op ->
           {:mutation, [op, m.schema], "mutation :#{op}, #{schema}", String.to_atom("#{op}_#{m.naming.singular}")}
         end)
+
+      # A copy is marked on its title and slug: "Title (copy)", "slug-copy".
+      copy_fields = Enum.uniq([field] ++ if(:slug in m.schema.__schema__(:fields), do: [:slug], else: []))
+
+      mutations =
+        mutations ++
+          [
+            {:mutation, [:duplicate, m.schema],
+             "mutation :duplicate, {#{schema}, change_fields: #{inspect(copy_fields)}}",
+             String.to_atom("duplicate_#{m.naming.singular}")}
+          ]
 
       mutations ++
         [

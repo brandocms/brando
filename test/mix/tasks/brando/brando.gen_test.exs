@@ -93,6 +93,16 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     assert function_exported?(GeneratorStudio.Catalog, :list_products, 1)
     assert function_exported?(GeneratorStudio.Catalog, :get_category, 1)
     assert function_exported?(GeneratorStudio.Catalog, :create_category, 2)
+    assert function_exported?(GeneratorStudio.Catalog, :duplicate_product, 2)
+    assert function_exported?(GeneratorStudio.Catalog, :duplicate_category, 2)
+    assert source =~ ~r/mutation[ (]:duplicate, \{GeneratorStudio.Catalog.Product, change_fields: \[:title, :slug\]\}/
+    assert source =~ ~r/mutation[ (]:duplicate, \{GeneratorStudio.Catalog.Category, change_fields: \[:name\]\}/
+
+    # Running it again finds the declarations, `{Schema, opts}` form included.
+    rerun = result |> generate() |> generate("GeneratorStudio.Catalog.Category")
+    assert rerun.issues == []
+    rerun_source = IgniterCase.source(rerun, "lib/generator_studio/catalog.ex")
+    assert length(Regex.scan(~r/mutation[ (]:duplicate/, rerun_source)) == 2
 
     on_exit(fn ->
       :code.purge(GeneratorStudio.Catalog)
