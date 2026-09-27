@@ -36,6 +36,7 @@ defmodule <%= web_module %>.CMS.PageController do
       conn
       |> put_section("index")
       |> put_meta(Pages.Page, page)
+      |> put_json_ld_type(page.json_ld_type)
       |> put_hreflang(page)
       |> put_title(page.title, skip_prefix: true, skip_postfix: true)
       |> assign(:partials, partials)
@@ -69,6 +70,7 @@ defmodule <%= web_module %>.CMS.PageController do
         conn
         |> put_section(page.uri)
         |> put_meta(Pages.Page, page)
+        |> put_json_ld_type(page.json_ld_type)
         |> put_hreflang(page)
         |> put_title(page.title)
         |> assign(:partials, partials)
