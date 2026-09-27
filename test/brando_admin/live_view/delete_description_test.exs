@@ -35,4 +35,13 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescriptionTest do
     assert message =~ "<strong>&lt;b&gt;Bold&lt;/b&gt;</strong> will be deleted."
     refute message =~ "together"
   end
+
+  test "a soft-deleted entry is moved to Deleted, where it can be restored" do
+    page = Brando.Factory.insert(:page, title: "About")
+    %{message: message} = DeleteDescription.describe(Brando.Pages.Page, page)
+
+    assert message =~ "<strong>About</strong> is moved to the list's Deleted filter"
+    assert message =~ "It can be restored from there."
+    refute message =~ "can't be undone"
+  end
 end

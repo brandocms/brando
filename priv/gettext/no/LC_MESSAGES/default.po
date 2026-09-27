@@ -12695,9 +12695,6 @@ msgstr "sammen med %{children}"
 msgid "will be deleted"
 msgstr "slettes"
 
-msgid "It can be restored under the list's Deleted filter."
-msgstr "Den kan hentes tilbake under Slettet i listen."
-
 msgid "This can't be undone."
 msgstr "Dette kan ikke angres."
 
@@ -12712,3 +12709,12 @@ msgstr "Rediger %{singular}"
 
 msgid "entry"
 msgstr "oppføring"
+
+msgid "with its %{children}"
+msgstr "med sine %{children}"
+
+msgid "is moved to the list's Deleted filter"
+msgstr "flyttes til Slettet i listen"
+
+msgid "It can be restored from there."
+msgstr "Den kan hentes tilbake derfra."
