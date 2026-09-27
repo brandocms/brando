@@ -12,6 +12,16 @@ defmodule Brando.Blueprint.Listings.Filter do
             key: nil,
             type: :text,
             options: [],
+            static_options: [],
             default: nil,
             off: :all
+
+  @doc false
+  # Nested `option` entities are collected in `static_options` — collected
+  # into `options` they overwrote an `options:` callback with `[]`. Moved
+  # over here when present, so readers only look at `options`.
+  def merge_static_options(%__MODULE__{static_options: [_ | _] = static} = filter),
+    do: {:ok, %{filter | options: static}}
+
+  def merge_static_options(filter), do: {:ok, filter}
 end
