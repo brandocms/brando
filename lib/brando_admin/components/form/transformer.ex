@@ -643,22 +643,32 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         myself={@myself}
       />
     </div>
+    <%!-- These inputs sit inside the main form, so their changes would go to
+          its `validate` and be lost. The hook sends them here instead, as
+          `update_field`. --%>
     <div
-      :for={input <- @subform.sub_fields}
-      :if={input.name not in @skip_fields and input.type not in [:image, :video]}
-      class="field-wrapper"
+      id={"#{@item.dom_id}-fields"}
+      phx-hook="Brando.TransformerFields"
+      data-dom-id={@item.dom_id}
+      data-target={@myself}
     >
-      <Primitives.input
-        id={"#{@item.dom_id}-input-#{input.name}"}
-        field={@item_form[input.name]}
-        label={nil}
-        instructions={nil}
-        placeholder={nil}
-        opts={input.opts}
-        type={input.type}
-        current_user={@current_user}
-        target={@myself}
-      />
+      <div
+        :for={input <- @subform.sub_fields}
+        :if={input.name not in @skip_fields and input.type not in [:image, :video]}
+        class="field-wrapper"
+      >
+        <Primitives.input
+          id={"#{@item.dom_id}-input-#{input.name}"}
+          field={@item_form[input.name]}
+          label={nil}
+          instructions={nil}
+          placeholder={nil}
+          opts={input.opts}
+          type={input.type}
+          current_user={@current_user}
+          target={@myself}
+        />
+      </div>
     </div>
     """
   end
@@ -953,39 +963,30 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   def handle_event("validate", _params, socket), do: {:noreply, socket}
 
+  # Sent by the `Brando.TransformerFields` hook around an entry's inputs. The
+  # value is cast here, because saving applies the changes with `change/2`,
+  # which doesn't: a size would otherwise reach the database as "large"
+  # rather than `:large`. Only the subform's own fields are accepted.
   def handle_event(
         "update_field",
         %{"dom_id" => dom_id, "field" => field, "value" => value},
         socket
       ) do
-    field_atom =
-      try do
-        String.to_existing_atom(field)
-      rescue
-        ArgumentError -> nil
-      end
+    items = socket.assigns.items
 
-    if is_nil(field_atom) do
-      {:noreply, socket}
+    with %{name: name} <- editable_field(socket.assigns, field),
+         idx when is_integer(idx) <- Enum.find_index(items, &(&1.dom_id == dom_id)) do
+      item = Enum.at(items, idx)
+      cast = socket.assigns.relation_module |> struct() |> Ecto.Changeset.cast(%{name => value}, [name])
+      updated_item = %{item | changes: Map.put(item.changes, name, Ecto.Changeset.get_field(cast, name))}
+
+      {:noreply,
+       socket
+       |> assign(:items, List.replace_at(items, idx, updated_item))
+       |> stream_insert(:transformer_items, stream_entry(updated_item))
+       |> notify_relation_change()}
     else
-      items = socket.assigns.items
-
-      case Enum.find_index(items, &(&1.dom_id == dom_id)) do
-        nil ->
-          {:noreply, socket}
-
-        idx ->
-          item = Enum.at(items, idx)
-          updated_changes = Map.put(item.changes, field_atom, value)
-          updated_item = %{item | changes: updated_changes}
-          updated_items = List.replace_at(items, idx, updated_item)
-
-          {:noreply,
-           socket
-           |> assign(:items, updated_items)
-           |> stream_insert(:transformer_items, stream_entry(updated_item))
-           |> notify_relation_change()}
-      end
+      _ -> {:noreply, socket}
     end
   end
 
@@ -1428,6 +1429,16 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp maybe_abort_pending_upload(socket, _item), do: socket
+
+  # The field an `update_field` may change: one of the subform's inputs, and
+  # not an asset (those have their own picker).
+  defp editable_field(assigns, field) do
+    skip = [assigns.image_field, assigns.video_field]
+
+    Enum.find(assigns.subform.sub_fields, fn input ->
+      to_string(input.name) == field and input.name not in skip and input.type not in [:image, :video]
+    end)
+  end
 
   # The transformer deliberately keeps its items out of the parent changeset
   # until save — but live preview renders from the form's entry, so without this
