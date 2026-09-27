@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Components.ChildListingButton do
       assigns
       |> assign(:button_id, button_id)
       |> assign(:count, count_children(assigns.entry, fields))
+      |> assign(:text, assigns.text || describe_children(assigns.entry, fields))
       |> assign(:toggle, toggle(button_id, assigns.target, fields))
 
     ~H"""
@@ -53,6 +54,43 @@ defmodule BrandoAdmin.Components.ChildListingButton do
     JS.toggle_class("active", to: selector)
     |> JS.toggle_attribute({"aria-expanded", "true", "false"}, to: selector)
     |> JS.push("toggle_children", target: target, value: %{fields: event_fields})
+  end
+
+  # "2 fragments", "1 page, 2 fragments": what the toggle opens, so a bare
+  # number isn't the only clue that the row expands.
+  defp describe_children(%{__struct__: schema} = entry, fields) do
+    relations =
+      if function_exported?(schema, :__naming__, 0),
+        do: Brando.Blueprint.Relations.__relations__(schema),
+        else: []
+
+    fields
+    |> Enum.map(fn field -> {field, Enum.count(Map.get(entry, field) || [])} end)
+    |> Enum.reject(fn {_field, count} -> count == 0 end)
+    |> Enum.map_join(", ", fn {field, count} -> "#{count} #{child_label(relations, field, count)}" end)
+    |> case do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp describe_children(_entry, _fields), do: nil
+
+  defp child_label(relations, field, count) do
+    module =
+      Enum.find_value(relations, fn
+        %{name: ^field, opts: %{module: module}} when is_atom(module) -> module
+        _ -> nil
+      end)
+
+    label =
+      cond do
+        module && count == 1 -> Brando.Blueprint.get_singular(module)
+        module -> Brando.Blueprint.get_plural(module)
+        true -> to_string(field)
+      end
+
+    label |> String.downcase() |> String.replace("_", " ")
   end
 
   defp count_children(entry, fields) do
