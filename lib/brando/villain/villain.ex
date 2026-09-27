@@ -276,16 +276,22 @@ defmodule Brando.Villain do
   end
 
   def parse_and_render(html, context) do
-    liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
-
     html_string =
       html
       |> ensure_string()
       |> strip_identifier_data_attributes()
 
-    case liquex_parse(html_string, liquex_parser) do
-      {:ok, parsed_doc} -> render_parsed_doc(html_string, parsed_doc, context)
-      error -> log_liquex_parse_error(html, error)
+    # Refs can emit Liquid for this final pass. Ordinary rendered HTML needs
+    # only the identifier cleanup, without allocating another parsed document.
+    if String.contains?(html_string, ["{{", "{%"]) do
+      liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
+
+      case liquex_parse(html_string, liquex_parser) do
+        {:ok, parsed_doc} -> render_parsed_doc(html_string, parsed_doc, context)
+        error -> log_liquex_parse_error(html, error)
+      end
+    else
+      html_string
     end
   end
 

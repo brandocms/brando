@@ -14,6 +14,48 @@ defmodule Brando.Villain.RefRenderingTest do
   end
 
   describe "ref parsing and rendering" do
+    test "evaluates Liquid emitted by refs in both page and single-block rendering", %{user: user} do
+      {:ok, module} =
+        Content.create_module(
+          Factory.params_for(:module, %{
+            code: "<section>{% ref refs.text %}</section>",
+            refs: [%{name: "text", uid: Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}}]
+          }),
+          user
+        )
+
+      block = %Brando.Content.Block{
+        type: :module,
+        module_id: module.id,
+        uid: Utils.generate_uid(),
+        vars: [],
+        refs: [
+          %Brando.Content.Ref{
+            name: "text",
+            uid: Utils.generate_uid(),
+            data: %Brando.Villain.Blocks.TextBlock{
+              data: %Brando.Villain.Blocks.TextBlock.Data{
+                type: :paragraph,
+                text:
+                  "<a data-identifier-id=\"42\" href=\"/case\">{{ entry.title }}</a>" <>
+                    "{% if entry.title %}<strong>Visible</strong>{% endif %}"
+              }
+            }
+          }
+        ]
+      }
+
+      entry = %Brando.Pages.Page{title: "Rendered title"}
+
+      for rendered <- [Brando.Villain.parse([%{block: block}], entry), Brando.Villain.render_block(block, entry)] do
+        assert rendered =~ "<a href=\"/case\">Rendered title</a>"
+        assert rendered =~ "<strong>Visible</strong>"
+        refute rendered =~ "data-identifier-id"
+        refute rendered =~ "{{"
+        refute rendered =~ "{%"
+      end
+    end
+
     # The marker exists to say *which* ref was switched off. `active` moved from
     # the ref's data into a database column, which stranded the clause that
     # printed the name and left every deactivated ref rendering an anonymous
