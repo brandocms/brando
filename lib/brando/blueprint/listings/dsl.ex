@@ -79,7 +79,8 @@ defmodule Brando.Blueprint.Listings.Dsl do
   @filter %Spark.Dsl.Entity{
     name: :filter,
     target: Listings.Filter,
-    entities: [options: [@option]],
+    entities: [static_options: [@option]],
+    transform: {Listings.Filter, :merge_static_options, []},
     schema: [
       label: [
         type: :string,
@@ -247,6 +248,7 @@ defmodule Brando.Blueprint.Listings.Dsl do
 
   @root %Spark.Dsl.Section{
     name: :listings,
+    imports: [Brando.Blueprint.Listings.FilterMacro],
     entities: [@listing],
     top_level?: false
   }
