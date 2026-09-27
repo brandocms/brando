@@ -378,15 +378,22 @@ defmodule BrandoAdmin.Menu do
               name: gettext("Pages & Sections"),
               url: "/admin/pages"
             },
-            %{
-              name: gettext("Globals"),
-              url: "/admin/globals"
-            }
-          ] ++ content_menus
+            globals_menu_item()
+          ]
+          |> Enum.reject(&is_nil/1)
+          |> Kernel.++(content_menus)
       }
     ]
 
     if Brando.Authorization.enabled?(), do: filter_authorized(menus, current_user), else: menus
+  end
+
+  # Globals is empty until a developer adds a global set; a menu item leading
+  # to "no globals configured" is a dead end for editors. With tenants the
+  # item stays: platform pages have no site whose global sets to count.
+  defp globals_menu_item do
+    if Tenant.mode() != :none or Brando.Repo.aggregate(Brando.Sites.GlobalSet, :count) > 0,
+      do: %{name: gettext("Globals"), url: "/admin/globals"}
   end
 
   defp publishing_menu_item(%{delivery_mode: :static}) do
