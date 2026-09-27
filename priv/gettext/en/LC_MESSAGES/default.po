@@ -12709,3 +12709,9 @@ msgstr ""
 
 msgid "(copy)"
 msgstr ""
+
+msgid "Edit %{singular}"
+msgstr ""
+
+msgid "entry"
+msgstr ""

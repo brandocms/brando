@@ -12714,3 +12714,9 @@ msgstr "og"
 
 msgid "(copy)"
 msgstr "(kopi)"
+
+msgid "Edit %{singular}"
+msgstr "Rediger %{singular}"
+
+msgid "entry"
+msgstr "oppføring"
