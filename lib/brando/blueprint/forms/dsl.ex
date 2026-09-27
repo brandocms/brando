@@ -69,6 +69,11 @@ defmodule Brando.Blueprint.Forms.Dsl do
         type: {:or, [:string, {:mfa_or_fun, 1}]},
         required: true,
         doc: "Alert content as a string or one-argument function component"
+      ],
+      show_if: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Shows the alert only while this function, given the form, returns true"
       ]
     ]
   }
