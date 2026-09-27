@@ -63,7 +63,7 @@ defmodule Brando.Blueprint.ChangesetRunner do
       changeset_params.user,
       changeset_params.opts
     )
-    |> maybe_validate_required(changeset_params.required_castable_fields)
+    |> maybe_validate_required(changeset_params.required_castable_fields, changeset_params.module)
     |> Unique.run_unique_attribute_constraints(changeset_params.module, changeset_params.attributes)
     |> Unique.run_unique_relation_constraints(changeset_params.module, changeset_params.relations)
     |> Constraints.run_validations(changeset_params.module, changeset_params.attributes)
@@ -95,14 +95,22 @@ defmodule Brando.Blueprint.ChangesetRunner do
   end
 
   @doc """
-  Validates required fields unless the changeset is a draft.
+  Validates required fields. A draft only needs the required fields its
+  identifier shows (usually the title), so it can be saved half done but
+  never as a nameless entry nobody can find in the list.
   """
-  @spec maybe_validate_required(Changeset.t(), [atom()]) :: Changeset.t()
-  def maybe_validate_required(changeset, all_required_attrs) do
+  @spec maybe_validate_required(Changeset.t(), [atom()], module() | nil) :: Changeset.t()
+  def maybe_validate_required(changeset, all_required_attrs, module \\ nil) do
     case Changeset.get_field(changeset, :status) do
-      :draft -> changeset
+      :draft -> Changeset.validate_required(changeset, draft_required(all_required_attrs, module))
       _ -> Changeset.validate_required(changeset, all_required_attrs)
     end
+  end
+
+  defp draft_required(required, module) do
+    if module && function_exported?(module, :__identifier_fields__, 0),
+      do: Enum.filter(required, &(to_string(&1) in module.__identifier_fields__())),
+      else: []
   end
 
   defp mark_for_deletion(changeset) do

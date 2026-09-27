@@ -251,6 +251,12 @@ defmodule Brando.Blueprint do
       def __has_identifier__, do: false
       defoverridable __has_identifier__: 0
 
+      @doc false
+      # The names of the entry fields the identifier shows (`{{ entry.title }}`,
+      # `{@entry.title}`): what makes an entry recognisable in lists.
+      def __identifier_fields__, do: []
+      defoverridable __identifier_fields__: 0
+
       def __persist_identifier__, do: true
       defoverridable __persist_identifier__: 0
     end
