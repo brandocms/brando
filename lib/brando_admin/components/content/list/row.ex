@@ -768,7 +768,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   defp render_status_label(nil), do: gettext("Not set")
-  defp render_status_label(:disabled), do: gettext("Disabled")
+  defp render_status_label(:disabled), do: gettext("Deactivated")
   defp render_status_label(:draft), do: gettext("Draft")
   defp render_status_label(:pending), do: gettext("Pending")
   defp render_status_label(:published), do: gettext("Published")

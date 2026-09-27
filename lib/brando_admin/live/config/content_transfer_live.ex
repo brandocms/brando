@@ -1862,7 +1862,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   defp status_label("published"), do: dgettext("content_transfer", "Published")
   defp status_label("draft"), do: dgettext("content_transfer", "Draft")
   defp status_label("pending"), do: dgettext("content_transfer", "Pending")
-  defp status_label("disabled"), do: dgettext("content_transfer", "Disabled")
+  defp status_label("disabled"), do: dgettext("content_transfer", "Deactivated")
   defp status_label(status), do: Labels.field(status)
 
   defp selected_count(selected), do: Enum.sum(Enum.map(selected, fn {_, selection} -> length(selection.fields) end))
