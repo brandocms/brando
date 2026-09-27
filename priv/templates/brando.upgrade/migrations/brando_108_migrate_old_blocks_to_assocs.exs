@@ -6,7 +6,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
   def up do
     # First, ensure we have a wrapper module for legacy free-standing blocks
-    wrapper_module_id = ensure_legacy_wrapper_module()
+    {wrapper_module_id, created?} = ensure_legacy_wrapper_module()
 
     for {table, data_field, new_block_rel} <- list_villain_columns() do
       query =
@@ -70,9 +70,18 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
       Brando.repo().update_all(query, [])
     end
+
+    # A site with nothing to migrate would otherwise offer editors a "Legacy
+    # Content Wrapper" block forever.
+    if created?, do: remove_unused_wrapper(wrapper_module_id)
   end
 
   def down do
+  end
+
+  defp remove_unused_wrapper(id) do
+    used? = Brando.repo().exists?(from(b in "content_blocks", where: b.module_id == ^id))
+    unless used?, do: Brando.repo().delete_all(from(m in "content_modules", where: m.id == ^id))
   end
 
   def parse_block_data(table_name, entry, blocks, new_block_rel, wrapper_module_id)
@@ -392,7 +401,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
       )
 
     if existing do
-      existing
+      {existing, false}
     else
       module_refs = [
         %{
@@ -428,7 +437,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           returning: [:id]
         )
 
-      id
+      {id, true}
     end
   end
 
