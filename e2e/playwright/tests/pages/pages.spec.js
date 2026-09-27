@@ -77,7 +77,7 @@ test('creates a simple page', async ({ page }) => {
   const exampleBlock = page.locator('.entry-block').nth(2)
   await exampleBlock.locator('textarea').filter({ hasText: 'Heading' }).fill('Another heading')
 
-  const editor = exampleBlock.locator('.tiptap-wrapper [contenteditable="true"]')
+  const editor = exampleBlock.locator('.tiptap-wrapper .tiptap')
   await editor.click()
   await page.keyboard.down('ControlOrMeta')
   await page.keyboard.press('A')

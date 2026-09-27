@@ -3,11 +3,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  import Brando.Utils.Datetime, only: [format_datetime: 1]
-
   alias Brando.Blueprint.Identifier
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Content.List.Row
+  alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
@@ -151,62 +149,62 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <div>
       <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-        <div class="asset-field entries-input">
-          <%= if !@has_entries do %>
-            <div class="empty-list">
-              {gettext("No selected entries")}
-              <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
+        <div class="entries-input identifier-field">
+          <div class="identifier-field-copy">
+            <%= if !@has_entries do %>
+              <div class="identifier-empty">
+                <span class="identifier-empty-icon" aria-hidden="true"><.icon name="hero-link" /></span>
+                <span>{gettext("No selected entries")}</span>
+                <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
+              </div>
+            <% else %>
+              <div
+                id={"sortable-#{@field.id}-identifiers"}
+                class="selected-entries identifier-list"
+                phx-hook="Brando.SortableAssocs"
+                data-target={@myself}
+                data-sortable-id={"sortable-#{@field.id}-identifiers"}
+                data-sortable-handle=".identifier"
+                data-sortable-selector=".identifier"
+                data-sortable-dispatch-event="true"
+                data-sortable-dispatch-event-target-id={@field.id}
+                data-sortable-filter=".remove button"
+              >
+                <input type="hidden" name={@field.name} id={@field.id} />
+                <.inputs_for :let={identifier_form} field={@field}>
+                  <.assoc_identifier assoc_identifier={identifier_form} available_identifiers={@selected_identifiers}>
+                    <:delete>
+                      <input
+                        type="hidden"
+                        name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
+                        value={identifier_form.index}
+                      />
+                      <button
+                        type="button"
+                        name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
+                        value={identifier_form.index}
+                        aria-label={gettext("Remove")}
+                        phx-click={JS.dispatch("change")}
+                      >
+                        <.icon name="hero-x-mark" />
+                      </button>
+                    </:delete>
+                  </.assoc_identifier>
+                </.inputs_for>
+                <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
+              </div>
+            <% end %>
+          </div>
+          <div class="identifier-actions">
+            <div class="media-field-split">
+              <button type="button" class="media-button" phx-click={show_modal("##{@field.id}-select-entries")}>
+                {gettext("Select entries")}
+              </button>
+              <button type="button" class="media-button" phx-click="clear_all" phx-target={@myself} disabled={!@has_entries}>
+                {gettext("Clear all")}
+              </button>
             </div>
-          <% else %>
-            <div
-              id={"sortable-#{@field.id}-identifiers"}
-              class="selected-entries"
-              phx-hook="Brando.SortableAssocs"
-              data-target={@myself}
-              data-sortable-id={"sortable-#{@field.id}-identifiers"}
-              data-sortable-handle=".identifier"
-              data-sortable-selector=".identifier"
-              data-sortable-dispatch-event="true"
-              data-sortable-dispatch-event-target-id={@field.id}
-              data-sortable-filter=".remove button"
-            >
-              <input type="hidden" name={@field.name} id={@field.id} />
-              <.inputs_for :let={identifier_form} field={@field}>
-                <.assoc_identifier assoc_identifier={identifier_form} available_identifiers={@selected_identifiers}>
-                  <%!-- <input
-                  type="hidden"
-                  name={identifier_form[:id].name}
-                  value={identifier_form[:id].value}
-                />
-                <input
-                  type="hidden"
-                  name={identifier_form[:_persistent_id].name}
-                  value={identifier_form.index}
-                /> --%>
-                  <:delete>
-                    <input
-                      type="hidden"
-                      name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
-                      value={identifier_form.index}
-                    />
-                    <button
-                      type="button"
-                      name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
-                      value={identifier_form.index}
-                      phx-click={JS.dispatch("change")}
-                    >
-                      <.icon name="hero-x-circle" />
-                    </button>
-                  </:delete>
-                </.assoc_identifier>
-              </.inputs_for>
-              <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
-            </div>
-          <% end %>
-
-          <button type="button" class="tiny" phx-click={show_modal("##{@field.id}-select-entries")}>
-            {gettext("Select entries")}
-          </button>
+          </div>
         </div>
 
         <Content.modal title={gettext("Select entries")} id={"#{@field.id}-select-entries"} narrow>
@@ -267,13 +265,27 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           </div>
         </div>
       </div>
-      <div id={"#{@id}-options"} class="entry-picker-options">
-        <h2 class="titlecase">{gettext("Available entries")}</h2>
+      <h2 class="titlecase">{gettext("Available entries")}</h2>
+      <div id={"#{@id}-options"} class="entry-picker-options identifier-list">
         <div class="no-results" role="status">{gettext("No matching entries")}</div>
         {render_slot(@inner_block)}
       </div>
     </div>
     """
+  end
+
+  def handle_event("clear_all", _, socket) do
+    field = socket.assigns.field
+    changeset = Changeset.put_assoc(field.form.source, field.field, [])
+    module = changeset.data.__struct__
+
+    send_update(BrandoAdmin.Components.Form,
+      id: "#{module.__naming__().singular}_form",
+      action: :update_changeset,
+      changeset: changeset
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
@@ -421,13 +433,13 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <Input.hidden field={@block_identifier[:block_id]} />
       <Input.hidden field={@block_identifier[:identifier_id]} />
 
-      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+      <.identifier_content draggable has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
           {render_slot(@delete)}
         </:delete>
         {render_slot(@inner_block)}
       </.identifier_content>
-      <div class="meta" data-sortable-filter>
+      <div :if={@meta != []} class="meta" data-sortable-filter>
         {render_slot(@meta, @identifier)}
       </div>
     </article>
@@ -449,26 +461,29 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       assigns
       |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign(:selected, selected && selected.action != :replace)
+      |> assign(:selected, selected != nil && selected.action != :replace)
 
     ~H"""
-    <article
+    <button
+      type="button"
+      aria-pressed={to_string(@selected)}
       data-id={@identifier.id}
       data-label={@identifier.title}
       class={[
         "identifier",
+        "selectable",
         @selected && "selected"
       ]}
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
-      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+      <.identifier_content selectable selected={@selected} has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
           {render_slot(@delete)}
         </:delete>
         {render_slot(@inner_block)}
       </.identifier_content>
-    </article>
+    </button>
     """
   end
 
@@ -498,7 +513,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       data-id={@identifier.id}
       data-label={@identifier.title}
       class={[
-        "draggable",
         "identifier",
         @select && "selectable",
         @identifier in @selected_identifiers && "selected"
@@ -506,7 +520,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
-      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+      <.identifier_content
+        selectable={!!@select}
+        selected={@identifier in @selected_identifiers}
+        has_cover?={@has_cover?}
+        identifier={@identifier}
+      >
         <:delete>
           {render_slot(@delete)}
         </:delete>
@@ -557,7 +576,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <Input.hidden field={@assoc_identifier[:parent_id]} />
       <Input.hidden field={@assoc_identifier[:identifier_id]} />
 
-      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+      <.identifier_content draggable has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
           {render_slot(@delete)}
         </:delete>
@@ -582,26 +601,29 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       assigns
       |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign(:selected, selected && selected.action != :replace)
+      |> assign(:selected, selected != nil && selected.action != :replace)
 
     ~H"""
-    <article
+    <button
+      type="button"
+      aria-pressed={to_string(@selected)}
       data-id={@identifier.id}
       data-label={@identifier.title}
       class={[
         "identifier",
+        "selectable",
         @selected && "selected"
       ]}
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
-      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+      <.identifier_content selectable selected={@selected} has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
           {render_slot(@delete)}
         </:delete>
         {render_slot(@inner_block)}
       </.identifier_content>
-    </article>
+    </button>
     """
   end
 
@@ -624,7 +646,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     <article
       data-id={@identifier.entry_id}
       class={[
-        "draggable",
         "identifier",
         @select && "selectable"
       ]}
@@ -642,39 +663,18 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   attr :identifier, :map, required: true
   attr :has_cover?, :boolean, default: false
+  attr :draggable, :boolean, default: false
+  attr :selectable, :boolean, default: false
+  attr :selected, :boolean, default: false
   slot :delete
   slot :inner_block
 
   def identifier_content(assigns) do
-    identifier = assigns.identifier
-    schema = identifier.schema
-    translated_type = Brando.Blueprint.get_singular(schema)
-    assigns = assign(assigns, :type, String.upcase(translated_type))
-
     ~H"""
-    <section class="cover-wrapper">
-      <div class="cover">
-        <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
-      </div>
-    </section>
-    <section class="content">
+    <IdentifierRow.content identifier={@identifier} draggable={@draggable} selectable={@selectable} selected={@selected}>
+      <:delete :if={@delete != []}>{render_slot(@delete)}</:delete>
       {render_slot(@inner_block)}
-      <div class="info">
-        <div class="name">
-          <%= if @identifier.language do %>
-            [{@identifier.language}]
-          <% end %>
-          {@identifier.title}
-        </div>
-        <div class="meta-info">
-          <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(@identifier.entry_id)}
-          <span>|</span> {format_datetime(@identifier.updated_at)}
-        </div>
-      </div>
-    </section>
-    <div class="remove">
-      {render_slot(@delete)}
-    </div>
+    </IdentifierRow.content>
     """
   end
 

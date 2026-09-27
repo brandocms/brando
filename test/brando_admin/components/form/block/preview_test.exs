@@ -13,6 +13,48 @@ defmodule BrandoAdmin.Components.Form.Block.PreviewTest do
 
   defp wrap(block, _), do: Changeset.change(block)
 
+  test "enabling preview retains the form and enables descendants without rendering again" do
+    form = Phoenix.Component.to_form(wrap(%ContentBlock{uid: "root", rendered_html: "existing"}, :root))
+
+    socket =
+      Phoenix.Component.assign(%Phoenix.LiveView.Socket{}, %{
+        id: "block-root",
+        uid: "root",
+        belongs_to: :root,
+        has_children?: true,
+        changesets: [{"child", nil}],
+        form: form
+      })
+
+    assert {:ok, enabled} = Block.update(%{event: "enable_live_preview", cache_key: "preview"}, socket)
+    assert enabled.assigns.form == form
+    assert enabled.assigns.live_preview_active?
+
+    assert_receive {:phoenix, :send_update,
+                    {{Block, "block-root-child-child"}, %{event: "enable_live_preview", cache_key: "preview"}}}
+  end
+
+  test "entry delivery updates editor splits without stamping a discarded block render" do
+    socket =
+      Phoenix.Component.assign(%Phoenix.LiveView.Socket{}, %{
+        entry: %{title: "Before"},
+        liquid_splits: [],
+        form: :unchanged,
+        live_preview_active?: true,
+        belongs_to: :root
+      })
+
+    assert {:ok, updated} =
+             Block.update(%{event: "update_entry_field", path: [Access.key(:title)], change: "After"}, socket)
+
+    assert updated.assigns.entry.title == "After"
+    assert updated.assigns.form == :unchanged
+
+    assert {:ok, replaced} = Block.update(%{event: "replace_entry", entry: %{title: "Replaced"}}, updated)
+    assert replaced.assigns.entry.title == "Replaced"
+    assert replaced.assigns.form == :unchanged
+  end
+
   for belongs_to <- [:root, :container, :slot] do
     test "reactivation includes owned children (#{belongs_to})" do
       belongs_to = unquote(belongs_to)
@@ -57,6 +99,7 @@ defmodule BrandoAdmin.Components.Form.Block.PreviewTest do
         |> Phoenix.Component.assign(Map.merge(attrs, %{live_preview_active?: true, form_id: "page"}))
 
       Block.maybe_update_live_preview_block(socket)
+      refute Block.render_live_preview_block?(socket)
 
       assert_receive {:phoenix, :send_update,
                       {{BrandoAdmin.Components.Form, "page"}, %{id: "page", event: "update_live_preview"}}}

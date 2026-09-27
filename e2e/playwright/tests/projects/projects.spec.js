@@ -1,7 +1,7 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, dragAndDrop, fillSlugSource, confirmUploadFolder } from '../../utils'
 
-test('creates project', async ({ page }) => {
+test('creates project', async ({ page }, testInfo) => {
   test.setTimeout(120000)
 
   await page.goto('/admin')
@@ -92,6 +92,13 @@ test('creates project', async ({ page }) => {
   await expect(listingImage.locator('img')).toBeVisible({ timeout: 30000 })
   const secondImageId = await listingImage.getAttribute('data-asset-id')
 
+  const gallery = page.locator('.gallery-input')
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await gallery.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+    await gallery.screenshot({ path: testInfo.outputPath(`project-gallery-empty-${width}.png`) })
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 })
   const galleryFileChooser = page.waitForEvent('filechooser')
   await page.locator('.gallery-input').getByRole('button', { name: 'Upload media' }).click()
   await (await galleryFileChooser).setFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
@@ -110,6 +117,12 @@ test('creates project', async ({ page }) => {
 
   await expect(firstGalleryObjectImg).toBeVisible()
   await expect(secondGalleryObjectImg).toBeVisible()
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await gallery.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+    await gallery.screenshot({ path: testInfo.outputPath(`project-gallery-filled-${width}.png`) })
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 })
 
   // Wait for images to be fully persisted to the database
   await syncLV(page)

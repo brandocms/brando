@@ -168,8 +168,9 @@ end
      module never reads it (`may_read_entry?/2`), so a replaced entry struct does not
      re-render the whole tree.
    - `assign_new` for uid/type/multi/has_vars? etc — set once, never overwritten
-   - `maybe_assign_children` → `maybe_assign_module` → `maybe_parse_module` →
-     `maybe_render_module`
+   - `maybe_assign_children` → `maybe_assign_module` → `maybe_parse_module`
+   - Parent updates do not render preview HTML; validation selects the required
+     preview transport before rendering.
    - Sets `block_initialized: true`
 
 **Key guard**: `assign_new` plus the `Map.drop` above are what stop a parent re-render from
@@ -367,16 +368,22 @@ Cascades through entire block tree:
 Form → BlockField (event: "enable_live_preview", cache_key: ...) →
   for each block_uid: send_update(Block, event: "enable_live_preview", cache_key: ...)
     → Block: assigns live_preview_active?: true, cascades to children
-    → maybe_render_module() — renders Liquex template
+    → no local HTML render; the initial full-page render already supplies it
 ```
 
 ### Rendering
 - **`render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)`** — renders a child block's Liquex template, puts `rendered_html` and `rendered_at` into changeset
 - **`render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)`** — same but navigates through the entry_block wrapper to the nested block
 - `force_render?` — set true when container flips from `active: false` to `active: true`
+- The final `render_html?` argument comes from `render_live_preview_block?/1`.
+  Slots and single modules with children request a full refresh, so their local
+  validation skips HTML rendering. Media ref changes skip it before a reload.
+  Entry-field updates refresh editor splits; Form renders the full preview.
 
 ### Update Trigger
-After validate_block: `maybe_update_live_preview_block()` sends rendered HTML to the form, which pushes it to the client.
+After validate_block: `maybe_update_live_preview_block()` sends incremental HTML
+or requests a full refresh. Form coalesces full refreshes before collecting
+BlockField state; save/share collection remains separate.
 
 ### Reorder and preview
 There is **no position-response tracker.** Earlier versions waited for every

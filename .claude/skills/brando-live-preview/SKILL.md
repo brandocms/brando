@@ -31,6 +31,21 @@ an event name at both ends before changing its payload.
   shared-snapshot rules are documented in `guides/authorization.md`; preserve
   its update/recovery authorization checks.
 
+## Coalesced updates
+
+`Form.Preview` owns the pending preview timer, generation token and block-field
+responses. It collects once per burst with a 25 ms minimum window, keeps the
+earliest deadline, and chooses reload over body rerender over main update.
+An edit during collection invalidates that generation and collects again;
+late replies are ignored. Keep this accumulator separate from save/share.
+Closing preview or switching targets cancels pending updates.
+
+`Villain.RenderScope` memoizes source/context reads only during one synchronous
+render, including nested refs and multiple block fields. Its keys include
+tenant context, and cleanup runs even after failure. Preserve custom parser
+source lists and the shared-library origin lookup. Module projections use the
+existing module-list eviction namespace.
+
 ## Recovery is a two-event handshake
 
 The main form's `validate` recovery and the hidden preview form's recovery can
@@ -40,8 +55,9 @@ an iframe successfully does not establish that recovered unsaved inputs have
 reached the server. Keep the recovery form outside the conditional preview pane
 and avoid replacing the ignored iframe wrapper during ordinary patches.
 
-Use `test/brando_admin/live/form_recovery_test.exs` as a mounted-recovery
-harness; when changing this handshake, cover both arrival orders explicitly.
+Use `test/brando_admin/live/preview_updates_test.exs` for both preview recovery
+arrival orders and `test/brando_admin/live/form_recovery_test.exs` for the wider
+mounted-recovery harness.
 Use `test/brando/live_preview/live_preview_test.exs` for rendering;
 `test/brando/plugs/live_preview_test.exs` and
 `test/brando_admin/preview_controller_test.exs` for access and snapshots.

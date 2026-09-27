@@ -2,7 +2,7 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, dragAndDrop } from '../../utils'
 
 test.describe('Block Identifier Selection', () => {
-  test('add, reorder, remove, re-add identifiers and verify persistence', async ({ page }) => {
+  test('add, reorder, remove, re-add identifiers and verify persistence', async ({ page }, testInfo) => {
     // Navigate to Pages
     await page.goto('/admin')
     await page.getByRole('link', { name: 'Pages & Sections' }).click()
@@ -57,6 +57,15 @@ test.describe('Block Identifier Selection', () => {
     await expect(selectedEntries.nth(1)).toContainText('Beta')
     await expect(selectedEntries.nth(2)).toContainText('Gamma')
 
+    const identifierField = page.locator('.module-datasource-selected')
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 })
+      await identifierField.scrollIntoViewIfNeeded()
+      expect(await identifierField.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      await identifierField.screenshot({ path: testInfo.outputPath(`block-identifiers-${width}.png`) })
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 })
+
     // === TEST 2: Save and reload to verify persistence ===
     await page.getByTestId('submit').click()
     // Wait for redirect to pages list before syncing new page
@@ -97,7 +106,8 @@ test.describe('Block Identifier Selection', () => {
       const sourceX = sourceBox.x + sourceBox.width / 2
       const sourceY = sourceBox.y + sourceBox.height / 2
       const targetX = targetBox.x + targetBox.width / 2
-      const targetY = targetBox.y + targetBox.height / 2
+      // Drop in the upper quarter to place Gamma before Alpha.
+      const targetY = targetBox.y + targetBox.height / 4
 
       // 3. Perform the Drag
       // Move to source

@@ -443,12 +443,32 @@ scoped layout owner for gaps. Check visible alignment after scrolling, too:
 a sticky search field must not cover mobile content navigation.
 
 Keep deliberate adaptations explicit. Real content-type names may need a
-slightly wider navigation column. Show unusual states such as drafts without
-repeating published status in every result. Use the existing icon family,
+slightly wider navigation column. Use the shared identifier status treatment in
+results, including draft and published labels. Use the existing icon family,
 actual counts and creator photos, and truthful completion actions for the
 form's state model.
 
 ## Shared dropdowns and entry panels
+
+The approved identifier appearance is **D: joined cover rows**, selected on
+27 September 2026. Apply it globally to relation fields, block/datasource
+selections, entry/link pickers and alternates. See the
+[approved desktop reference](admin-ui/identifier-variants/variant-d-desktop.png)
+and [mobile reference](admin-ui/identifier-variants/variant-d-mobile.png).
+The [interactive comparison](admin-ui/identifier-variants/standalone.html)
+retains the other variants for context.
+
+Use one outline around adjacent rows, thin dividers, small rectangular covers
+and a document icon when no cover exists. Titles lead; type, language and a
+localized status label sit below. Show a grip only for sortable rows, a checkbox
+for picker choices, and a small remove button where removal is supported.
+Relation-field actions share a footer inside the outline. Link-picker results
+also retain their destination URL.
+
+`Content.Identifier.content` owns the shared row contents and `Identifier.css`
+owns their appearance. Keep selection, sorting, hidden association inputs and
+metadata slots with their existing callers. Do not add per-field overrides that
+make Related entries look different from the other identifier contexts.
 
 Action, sort, bulk-selection and block menus share `%admin_dropdown_panel` in
 `FloatingDropdown.css`: white surface, muted border, light shadow, compact rows

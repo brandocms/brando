@@ -540,31 +540,34 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <.icon name="hero-language" class="m" />
       </button>
       <Content.modal title={gettext("Alternates")} narrow id={"entry-#{@entry.id}-alternates"}>
-        <Entries.dumb_identifier
-          :for={identifier <- @identifiers}
-          :key={identifier.id}
-          identifier={identifier}
-          select={
-            JS.push("update_entry",
-              value: %{entry_id: identifier.entry_id, schema: identifier.schema},
-              target: @target
-            )
-          }
-        >
-          <:delete>
-            <button
-              type="button"
-              phx-click={
-                JS.push("remove_entry",
-                  value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id},
-                  target: @target
-                )
-              }
-            >
-              <.icon name="hero-x-mark" />
-            </button>
-          </:delete>
-        </Entries.dumb_identifier>
+        <div class="identifier-list">
+          <Entries.dumb_identifier
+            :for={identifier <- @identifiers}
+            :key={identifier.id}
+            identifier={identifier}
+            select={
+              JS.push("update_entry",
+                value: %{entry_id: identifier.entry_id, schema: identifier.schema},
+                target: @target
+              )
+            }
+          >
+            <:delete>
+              <button
+                type="button"
+                aria-label={gettext("Remove")}
+                phx-click={
+                  JS.push("remove_entry",
+                    value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id},
+                    target: @target
+                  )
+                }
+              >
+                <.icon name="hero-x-mark" />
+              </button>
+            </:delete>
+          </Entries.dumb_identifier>
+        </div>
       </Content.modal>
     </div>
     """

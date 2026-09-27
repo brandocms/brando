@@ -15,7 +15,10 @@ export default app => {
       this.focusTimer = setTimeout(() => {
         if (!this.isOpen() || document.activeElement !== this.el) return
         const editor = this.el.querySelector('[contenteditable="true"]')
-        ;(editor || this.el.querySelector('.block-slot-done'))?.focus()
+        const preview = this.el.querySelector('.tiptap-activate:not(:disabled)')
+        if (editor) editor.focus()
+        else if (preview) preview.closest('[data-name="TipTap"]').dispatchEvent(new Event('brando:tiptap:activate'))
+        else this.el.querySelector('.block-slot-done')?.focus()
       }, 50)
     },
     mounted() {

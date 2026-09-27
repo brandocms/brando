@@ -320,13 +320,7 @@
   }
 }
 
-/* Shell comes from AssetField.css (`.asset-field`). When the gallery is empty
-   the upload wrapper additionally carries `.asset-field--single`, so the empty
-   state renders as thumbnail + info column exactly like the image field. */
 .gallery-input {
-  /* The drop target should span the field, not shrink to its contents — this
-     overrides the `width: fit-content` that `.asset-field--single` would
-     otherwise impose on the empty state. */
   width: 100%;
 
   .alert {
@@ -334,10 +328,6 @@
   }
 
   .gallery-upload-wrapper {
-    &.asset-field--single {
-      width: 100%;
-    }
-
     &.dragging {
       background-color: #cde7ec;
       border-radius: 8px;
@@ -352,6 +342,34 @@
 
     > div {
       display: flex;
+    }
+  }
+}
+
+/* Entry galleries use the same single surface and thumbnail scale as the
+   neighboring image/video fields. The upload hook still owns this wrapper. */
+.gallery-input .media-gallery--field {
+  background: #fff;
+  padding: 12px;
+  .actions { align-items: stretch; max-width: 100%; }
+  .actions .media-button { white-space: normal; }
+  .media-button { padding-inline: 8px; }
+  .gallery-objects { margin-top: 12px; }
+  &.media-gallery--empty {
+    display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 16px;
+    padding: 6px;
+    > .media-field-preview { grid-column: 1; grid-row: 1 / span 2; width: 112px; height: 112px; background: #f7f8f6; }
+    > .gallery-info { display: flex; flex-direction: column; gap: 2px; grid-column: 2; min-width: 0; padding: 8px 10px 0 0; }
+    .media-field-name { font-weight: 400; }
+    > .actions { grid-column: 2; align-self: end; margin: 12px 10px 8px 0; }
+    > .media-field-progress { grid-column: 1 / -1; }
+  }
+  @media (max-width: 600px) {
+    &.media-gallery--empty {
+      grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px;
+      > .media-field-preview { width: 72px; height: 72px; grid-row: 1; }
+      > .gallery-info { align-self: center; padding-top: 0; }
+      > .actions { grid-column: 1 / -1; margin: 12px 6px 6px; }
     }
   }
 }

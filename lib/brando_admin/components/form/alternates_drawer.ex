@@ -37,26 +37,29 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
           </p>
         </:info>
         <h3 class="mb-1">{gettext("Currently linked entries")}</h3>
-        <Entries.identifier
-          :for={identifier <- @identifiers}
-          :key={identifier.id}
-          identifier_id={identifier.id}
-          available_identifiers={@identifiers}
-        >
-          <:delete>
-            <button
-              type="button"
-              phx-click={
-                JS.push("remove_entry",
-                  target: @myself,
-                  value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
-                )
-              }
-            >
-              <.icon name="hero-x-mark" />
-            </button>
-          </:delete>
-        </Entries.identifier>
+        <div :if={@identifiers != []} class="identifier-list">
+          <Entries.identifier
+            :for={identifier <- @identifiers}
+            :key={identifier.id}
+            identifier_id={identifier.id}
+            available_identifiers={@identifiers}
+          >
+            <:delete>
+              <button
+                type="button"
+                aria-label={gettext("Remove")}
+                phx-click={
+                  JS.push("remove_entry",
+                    target: @myself,
+                    value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
+                  )
+                }
+              >
+                <.icon name="hero-x-mark" />
+              </button>
+            </:delete>
+          </Entries.identifier>
+        </div>
 
         <button class="secondary mt-1" type="button" phx-click={JS.push("get_entries_identifiers", target: @myself)}>
           {gettext("Select entries to link")}
@@ -75,19 +78,21 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
 
         <div :if={@entries_identifiers != []} class="entries-identifiers mt-3">
           <h3 class="mb-1">{gettext("Available entries")}</h3>
-          <Entries.identifier
-            :for={identifier <- @entries_identifiers}
-            :key={identifier.id}
-            identifier_id={identifier.id}
-            selected_identifiers={@identifiers}
-            available_identifiers={@entries_identifiers}
-            select={
-              JS.push("select_entry",
-                target: @myself,
-                value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
-              )
-            }
-          />
+          <div class="identifier-list">
+            <Entries.identifier
+              :for={identifier <- @entries_identifiers}
+              :key={identifier.id}
+              identifier_id={identifier.id}
+              selected_identifiers={@identifiers}
+              available_identifiers={@entries_identifiers}
+              select={
+                JS.push("select_entry",
+                  target: @myself,
+                  value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
+                )
+              }
+            />
+          </div>
         </div>
       </Content.drawer>
     </div>

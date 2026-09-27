@@ -813,7 +813,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         has_vars?,
         has_table_rows?,
         force_render?,
-        socket.assigns.live_preview_active?
+        Block.render_live_preview_block?(socket)
       )
 
     updated_form =
@@ -916,7 +916,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         has_vars?,
         has_table_rows?,
         force_render?,
-        socket.assigns.live_preview_active?
+        Block.render_live_preview_block?(socket)
       )
       |> Block.maybe_put_empty_children(has_children?)
 

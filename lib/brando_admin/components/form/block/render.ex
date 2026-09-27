@@ -2921,10 +2921,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           </Entries.entry_picker>
         </Content.modal>
 
-        <div class="module-datasource-selected">
+        <div class="module-datasource-selected identifier-field">
           <div
             id={"sortable-#{@uid}-identifiers"}
-            class="selected-entries"
+            class="selected-entries identifier-list"
             phx-hook="Brando.SortableAssocs"
             data-target={@target}
             data-sortable-id={"sortable-#{@uid}-identifiers"}
@@ -2945,14 +2945,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                     name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
                     value={block_identifier.index}
                     phx-click={JS.dispatch("change")}
+                    aria-label={gettext("Remove")}
                     data-sortable-filter
                   >
-                    <.icon name="hero-x-circle" />
+                    <.icon name="hero-x-mark" />
                   </button>
                 </:delete>
-                <:meta :let={identifier}>
+                <:meta :let={identifier} :if={@datasource_meta not in [nil, []]}>
                   <.identifier_meta
-                    :if={@datasource_meta != []}
                     datasource_meta={@datasource_meta}
                     identifier={identifier}
                     block_data={@block_data}
@@ -2963,15 +2963,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <input type="hidden" name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"} />
           </div>
 
-          <button
-            class="tiny select-button"
-            type="button"
-            phx-click="assign_available_identifiers"
-            phx-target={@target}
-            data-ui-modal-show={"select-entries-#{@uid}"}
-          >
-            {gettext("Select entries")}
-          </button>
+          <div class="identifier-actions">
+            <button
+              class="media-button select-button"
+              type="button"
+              phx-click="assign_available_identifiers"
+              phx-target={@target}
+              data-ui-modal-show={"select-entries-#{@uid}"}
+            >
+              {gettext("Select entries")}
+            </button>
+          </div>
         </div>
       <% end %>
     </div>

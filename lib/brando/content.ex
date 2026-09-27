@@ -240,7 +240,7 @@ defmodule Brando.Content do
   }
 
   @doc """
-  Fetch a single module by ID from the cached module list.
+  Fetch a single module by ID, respecting the current shared-library origin.
   """
   def fetch_module(id, origin \\ :local)
 
@@ -248,8 +248,7 @@ defmodule Brando.Content do
     if Brando.Tenant.enabled?() do
       Brando.Content.SharedLibrary.get_for_current_tenant(:module, id, origin)
     else
-      {:ok, modules} = list_modules(module_cache_opts())
-      Enum.find(modules, &(&1.id == id))
+      Brando.Villain.RenderSourceQuery.get_module(id, module_cache_opts())
     end
   end
 

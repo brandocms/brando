@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
 
   alias Brando.RichText
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
   alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Form.Input
 
@@ -347,7 +348,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         )}</span>
         <span>{gettext("Title")} / {gettext("URL")}</span>
       </div>
-      <div id={"#{@id}-identifier-options"} class="identifier-options">
+      <div id={"#{@id}-identifier-options"} class="identifier-options identifier-list">
         <div class="no-results">{gettext("No matching identifiers")}</div>
         <.identifier
           :for={identifier <- @identifiers}
@@ -369,17 +370,6 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   slot :delete
 
   def identifier(assigns) do
-    identifier = assigns.identifier
-    schema = identifier.schema
-
-    translated_type = Brando.Blueprint.get_singular(schema)
-
-    assigns =
-      assigns
-      |> assign(:identifier, identifier)
-      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign(:type, String.upcase(translated_type))
-
     ~H"""
     <button
       type="button"
@@ -394,37 +384,14 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
-      <%= if @workspace do %>
-        <span class="identifier-result-icon"><.icon name="hero-document-text" /></span>
-        <span class="identifier-result-copy"><strong>{@identifier.title}</strong><small>{@identifier.url}</small></span>
-        <span class="identifier-result-meta"><span :if={@identifier.language} class="modal-badge">{String.upcase(
-          to_string(@identifier.language)
-        )}</span><.status_value status={@identifier.status} /></span>
-        <span class="identifier-result-check"><.icon :if={@identifier.id == @selected_identifier_id} name="hero-check" /></span>
-      <% else %>
-        <section class="cover-wrapper">
-          <div class="cover">
-            <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
-          </div>
-        </section>
-        <section class="content">
-          <div class="info">
-            <div class="name">
-              <%= if @identifier.language do %>
-                [{@identifier.language}]
-              <% end %>
-              {@identifier.title}
-            </div>
-            <div class="meta-info">
-              <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(@identifier.entry_id)}
-              <span>|</span> {Brando.Utils.Datetime.format_datetime(@identifier.updated_at)} [iid:{@identifier.id}]
-            </div>
-          </div>
-        </section>
-        <div class="remove">
-          {render_slot(@delete)}
-        </div>
-      <% end %>
+      <IdentifierRow.content
+        identifier={@identifier}
+        selectable={!!@select}
+        selected={@identifier.id == @selected_identifier_id}
+        show_url={@workspace}
+      >
+        <:delete :if={@delete != []}>{render_slot(@delete)}</:delete>
+      </IdentifierRow.content>
     </button>
     """
   end

@@ -8,12 +8,15 @@ const errors = []
 window.addEventListener('error', event => errors.push(event.message))
 window.harness = {
   app, errors,
+  async activate() { this.current.hook.activate(); await tick() },
   async create(options = {}) {
     const id = `editor-${++sequence}`
     const form = document.createElement('form')
     form.innerHTML = `<div class="field-wrapper"><label class="control-label">Introduction</label><div class="tiptap-wrapper"><div id="${id}" data-tiptap-type="rich_text"><div class="tiptap-target"></div><input type="hidden" class="tiptap-text" id="${id}-text" name="page[body]"></div></div></div><button type="button">After editor</button>`
     document.getElementById('fixture').append(form)
     const el = form.querySelector(`#${id}`)
+    el.dataset.tiptapType = options.type || 'block'
+    if (options.inBlockField) form.classList.add('blocks-wrapper')
     if (options.formTarget) form.setAttribute('phx-target', options.formTarget)
     if (options.editorTarget) el.setAttribute('phx-target', options.editorTarget)
     if (options.nestedComponent) form.querySelector('.field-wrapper').dataset.phxComponent = options.nestedComponent

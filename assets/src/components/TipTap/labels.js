@@ -1,4 +1,5 @@
 export const defaultLabels = {
+  editText: 'Edit text',
   toolbar: 'Text formatting', paragraph: 'Paragraph', heading: 'Heading %{level}', styles: 'Paragraph and style', resetStyle: 'Reset paragraph style',
   bold: 'Bold', italic: 'Italic', list: 'Bulleted list', orderedList: 'Numbered list', listTypes: 'List types', link: 'Link', button: 'Button',
   sub: 'Subscript', sup: 'Superscript', color: 'Text color', resetColor: 'Reset color', align: 'Alignment', left: 'Align left', center: 'Align center', right: 'Align right',

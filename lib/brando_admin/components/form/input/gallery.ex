@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   import Ecto.Changeset
 
   alias Brando.Utils
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -119,6 +120,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     schema = assigns.field.form.data.__struct__
     path = Brando.Utils.get_path_from_field_name(assigns.field.form.name)
     config_target = Brando.Assets.ConfigTarget.serialize({"gallery", schema, assigns.field.field})
+    {image_config, _resolved_target} = Brando.Uploads.resolve_image_config(config_target)
     {video_config, _resolved_target} = Brando.Uploads.resolve_video_config(config_target)
 
     {:ok,
@@ -129,6 +131,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> assign(:schema, schema)
      |> assign(:path, path)
      |> assign(:config_target, config_target)
+     |> assign(:image_upload_limit, MediaField.upload_limit(image_config))
+     |> assign(:video_upload_limit, MediaField.upload_limit(video_config))
      |> assign_new(:config_modal, fn -> nil end)
      |> assign(:video_upload_enabled?, Brando.Uploads.video_upload_available?(video_config))
      |> assign_value()}
@@ -161,10 +165,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     ~H"""
     <div>
       <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-        <div class="asset-field gallery-input">
+        <div class="gallery-input">
           <div
             id={"#{@field.id}-gallery-upload-trigger"}
-            class="gallery-upload-wrapper media-gallery"
+            class={[
+              "gallery-upload-wrapper media-gallery media-gallery--field",
+              @gallery_objects == [] && "media-gallery--empty"
+            ]}
             phx-hook="Brando.UploadTrigger"
             data-kind="entry_field_gallery"
             data-upload-label={@label}
@@ -182,32 +189,31 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             <input type="file" class="file-input" multiple />
 
             <%= if @gallery_objects == [] do %>
-              <div class="img-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                  <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
-                </svg>
+              <div class="media-field-preview" aria-hidden="true">
+                <.icon name="hero-rectangle-stack" />
               </div>
               <div class="gallery-info">
-                <span>{gettext("Drop media here to build your gallery")}</span>
-                <.gallery_actions
-                  field={@field}
-                  id={@id}
-                  path={@path}
-                  config_target={@config_target}
-                  video_upload_enabled?={@video_upload_enabled?}
-                  myself={@myself}
-                />
+                <span class="media-field-name">{gettext("Drop media here to build your gallery")}</span>
+                <span class="media-field-meta">
+                  <%= if @video_upload_enabled? && @image_upload_limit != @video_upload_limit do %>
+                    {gettext("Images up to %{image_size} · Videos up to %{video_size} each",
+                      image_size: @image_upload_limit,
+                      video_size: @video_upload_limit
+                    )}
+                  <% else %>
+                    {gettext("Up to %{size} per file", size: @image_upload_limit)}
+                  <% end %>
+                </span>
               </div>
-            <% else %>
-              <.gallery_actions
-                field={@field}
-                id={@id}
-                path={@path}
-                config_target={@config_target}
-                video_upload_enabled?={@video_upload_enabled?}
-                myself={@myself}
-              />
             <% end %>
+            <.gallery_actions
+              field={@field}
+              id={@id}
+              path={@path}
+              config_target={@config_target}
+              video_upload_enabled?={@video_upload_enabled?}
+              myself={@myself}
+            />
 
             <%= if @gallery_objects != [] do %>
               <div
@@ -318,28 +324,25 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   defp gallery_actions(assigns) do
     ~H"""
-    <div class="actions">
-      <div class="segmented-buttons">
-        <button type="button" class="media-button primary upload-trigger">
-          {gettext("Upload media")}
-        </button>
-      </div>
-      <div class="segmented-buttons">
-        <button
-          phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-          type="button"
-          class="tiny"
-        >
-          {gettext("Select images")}
-        </button>
-        <button
-          phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-          type="button"
-          class="tiny"
-        >
-          {gettext("Select videos")}
-        </button>
-      </div>
+    <div class="actions segmented-buttons">
+      <button type="button" class="media-button upload-trigger">
+        <.icon name="hero-arrow-up-tray" />
+        {gettext("Upload media")}
+      </button>
+      <button
+        phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+        type="button"
+        class="media-button"
+      >
+        {gettext("Select images")}
+      </button>
+      <button
+        phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+        type="button"
+        class="media-button"
+      >
+        {gettext("Select videos")}
+      </button>
     </div>
     """
   end

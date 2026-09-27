@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:config_target, target)
       |> assign(:upload_enabled?, upload_enabled)
       |> assign(:accept, accept(config))
-      |> assign(:limit, size_label(config.size_limit))
+      |> assign(:limit, upload_limit(config))
       |> assign(:folder, Map.get(config, :upload_path))
       |> assign(:name, asset_name(asset, assigns.type))
       |> assign(:details, asset_details(asset, assigns.type))
@@ -223,6 +223,17 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp asset_name(asset, :image), do: Path.basename(asset.path || "")
   defp asset_name(asset, :file), do: asset.filename
   defp asset_name(asset, :video), do: asset.title || gettext("Untitled video")
+
+  @doc false
+  def upload_limit(config) do
+    bytes =
+      case Map.get(config, :size_limit) do
+        limit when is_integer(limit) and limit > 0 -> limit
+        _ -> Uploads.max_file_size()
+      end
+
+    size_label(bytes)
+  end
 
   defp size_label(bytes) when bytes >= 1_000_000 do
     size = bytes |> Kernel./(1_000_000) |> Float.round(1) |> Float.to_string() |> String.trim_trailing(".0")

@@ -83,6 +83,10 @@ defmodule Brando.LivePreview do
             assigns: []
 
   def render(schema_module, entry, cache_key, render_opts \\ []) do
+    Brando.Villain.RenderScope.run(fn -> do_render(schema_module, entry, cache_key, render_opts) end)
+  end
+
+  defp do_render(schema_module, entry, cache_key, render_opts) do
     opts = get_target_config(schema_module, Keyword.get(render_opts, :target, target_name(cache_key)))
     language = Map.get(entry, :language, Brando.config(:default_language))
 

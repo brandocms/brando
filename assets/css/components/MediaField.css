@@ -63,7 +63,7 @@
    segmented control. Members are either the buttons or a wrapper holding one.
    Selectors carry `.media-field` so they out-specify `.media-field
    .media-button`, which sets the margin and border they have to override. */
-.media-field .media-field-split {
+.media-field .media-field-split, .identifier-actions .media-field-split {
   display: inline-flex; align-items: stretch;
   > * + * { margin-left: -1px; }
   > .media-button, > * > .media-button { border-radius: 0; }

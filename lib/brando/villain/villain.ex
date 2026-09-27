@@ -11,6 +11,7 @@ defmodule Brando.Villain do
   alias Brando.Pages.FragmentQuery
   alias Brando.RuntimeConfig
   alias Brando.Villain.ContextCache
+  alias Brando.Villain.RenderScope
   alias Brando.Villain.RenderSourceQuery
   alias Liquex.Context
 
@@ -57,6 +58,10 @@ defmodule Brando.Villain do
   def parse(nil, _, _), do: ""
 
   def parse(entry_blocks_list, entry, opts) do
+    RenderScope.run(fn -> do_parse(entry_blocks_list, entry, opts) end)
+  end
+
+  defp do_parse(entry_blocks_list, entry, opts) do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = RuntimeConfig.get(Brando.Villain)[:parser]
@@ -115,6 +120,14 @@ defmodule Brando.Villain do
   def render_block(%{marked_as_deleted: true}, _entry, _opts), do: ""
 
   def render_block(%{__struct__: block_module} = block, entry, opts) when block_module == @block_module do
+    RenderScope.run(fn -> do_render_block(block, entry, opts) end)
+  end
+
+  def render_block(%{block: block} = _entry_block, entry, opts) do
+    render_block(block, entry, opts)
+  end
+
+  defp do_render_block(block, entry, opts) do
     opts_map = Enum.into(opts, %{})
     parser = RuntimeConfig.get(Brando.Villain)[:parser]
 
@@ -135,10 +148,6 @@ defmodule Brando.Villain do
     parser
     |> parse_node(block, opts_map)
     |> parse_and_render(context)
-  end
-
-  def render_block(%{block: block} = _entry_block, entry, opts) do
-    render_block(block, entry, opts)
   end
 
   # Cachex gets deep-copy each cached list (modules with full var/ref preloads,

@@ -41,22 +41,6 @@
   }
 }
 
-/* The entries relation field has no thumbnail, so it just takes the well and
-   stacks its contents. */
-.entries-input {
-  padding: 10px 12px 12px;
-
-  .empty-list {
-    @font mono;
-    font-size: 12px;
-    padding: 0 0 8px;
-  }
-
-  .selected-entries {
-    margin-bottom: 8px;
-  }
-}
-
 .asset-field--single {
   display: flex;
   width: fit-content;

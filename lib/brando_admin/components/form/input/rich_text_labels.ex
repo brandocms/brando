@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.RichTextLabels do
 
   def labels do
     %{
+      editText: gettext("Edit text"),
       toolbar: gettext("Text formatting"),
       paragraph: gettext("Paragraph"),
       heading: gettext("Heading %{level}", level: "%{level}"),

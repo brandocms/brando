@@ -4,10 +4,139 @@ async function setup(page, options = {}) {
   await page.goto('/tiptap.html')
   await page.waitForFunction(() => !!window.harness)
   await page.evaluate(options => harness.create(options), options)
+  if (options.activate !== false) await page.getByRole('button', { name: 'Edit text: Introduction', exact: true }).click()
   await expect(page.locator('.ProseMirror')).toBeVisible()
 }
 const html = page => page.evaluate(() => harness.current.editor.getHTML())
 const command = (page, name, ...args) => page.evaluate(({ name, args }) => harness.current.editor.commands[name](...args), { name, args })
+
+test('ordinary rich text mounts immediately while a block-owned HTML variable stays dormant', async ({ page }) => {
+  await setup(page, { type: 'rich_text', activate: false })
+  await expect(page.locator('.tiptap[contenteditable=true]')).toBeVisible()
+  await expect(page.locator('.tiptap-activate')).toHaveCount(0)
+  await page.locator('.tiptap').click()
+  await page.keyboard.type('Ready to edit. ')
+  await expect(page.locator('.tiptap-text')).toHaveValue(/Ready to edit/)
+  await setup(page, { type: 'rich_text', inBlockField: true, activate: false })
+  await expect(page.locator('.tiptap-preview')).toBeVisible()
+  await expect(page.locator('.tiptap-editor-shell')).toHaveCount(0)
+})
+
+test('dormant preview keeps the exact form value until keyboard activation', async ({ page }) => {
+  const content = '<p class="legacy">Our <strong>rooms</strong> &amp; gardens.</p>'
+  await setup(page, { content, activate: false })
+  await expect(page.locator('.tiptap-editor-shell')).toHaveCount(0)
+  await expect(page.locator('.tiptap-preview')).toContainText('Our rooms & gardens.')
+  expect(await page.evaluate(() => new FormData(harness.current.form).get('page[body]'))).toBe(content)
+  const button = page.getByRole('button', { name: 'Edit text: Introduction', exact: true })
+  await button.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.tiptap[contenteditable=true]')).toBeFocused()
+  await expect(page.locator('.tiptap-preview')).toHaveCount(0)
+  await page.keyboard.type('Welcome. ')
+  await expect(page.locator('.tiptap-text')).toHaveValue(/Welcome/)
+  await page.getByRole('button', { name: 'After editor', exact: true }).click()
+  await expect(page.locator('.tiptap-editor-shell')).toHaveCount(1)
+  expect(await page.evaluate(() => harness.current.editor.can().undo())).toBe(true)
+})
+
+test('dormant replacements, patches and configuration changes reach the eventual editor', async ({ page }) => {
+  await setup(page, { activate: false })
+  await page.evaluate(() => {
+    const { hook } = harness.current
+    hook.replaceContent({ html: '<p>Remote revision</p>', revision: 5, epoch: 'first' })
+    hook.replaceContent({ html: '<p>Stale</p>', revision: 4, epoch: 'first' })
+    hook.el.dataset.tiptapExtensions = 'p|bold'
+    hook.updated()
+  })
+  await expect(page.locator('.tiptap-preview-content')).toHaveText('Remote revision')
+  await expect(page.locator('.tiptap-text')).toHaveValue('<p>Remote revision</p>')
+  expect(await page.evaluate(() => !!harness.current.editor)).toBe(false)
+  await page.evaluate(() => {
+    harness.current.input.value = '<p>Recovered value</p>'
+    harness.current.hook.updated()
+    harness.current.hook.remount()
+  })
+  await expect(page.locator('.tiptap-preview-content')).toHaveText('Recovered value')
+  await page.locator('.tiptap-preview-content').click()
+  await expect(page.locator('.tiptap[contenteditable=true]')).toHaveText('Recovered value')
+  await expect(page.locator('.tiptap[contenteditable=true]')).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Bold', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Italic', exact: true })).toHaveCount(0)
+})
+
+test('dormant previews respect locks, can clear without mounting and clean up', async ({ page }) => {
+  await setup(page, { activate: false })
+  await page.evaluate(() => harness.current.form.classList.add('field-locked'))
+  await expect(page.locator('.tiptap-activate')).toBeDisabled()
+  await page.evaluate(() => harness.current.hook.activate())
+  expect(await page.evaluate(() => !!harness.current.editor)).toBe(false)
+  await page.evaluate(() => harness.current.form.classList.remove('field-locked'))
+  await expect(page.locator('.tiptap-activate')).toBeEnabled()
+  await page.evaluate(() => harness.current.hook.el.dispatchEvent(new Event('brando:tiptap:clear')))
+  await expect(page.locator('.tiptap-text')).toHaveValue('')
+  await expect(page.locator('.tiptap-preview')).toContainText('Write something…')
+  expect(await page.evaluate(() => !!harness.current.editor)).toBe(false)
+  await page.evaluate(() => harness.current.hook.destroyed())
+  expect(await page.evaluate(() => harness.app.components.length)).toBe(0)
+  expect(await page.evaluate(() => harness.errors)).toEqual([])
+})
+
+test('dormant footnotes open without activation and renumber after a remote removal', async ({ page }) => {
+  await page.goto('/tiptap.html')
+  await page.waitForFunction(() => !!window.harness)
+  await page.evaluate(async () => {
+    document.getElementById('fixture').classList.add('blocks-wrapper')
+    await harness.create({ content: '<p>First<sup data-footnote-uid="first">•</sup></p>' })
+    await harness.create({ content: '<p>Second<sup data-footnote-uid="second">•</sup></p>', formTarget: '42' })
+  })
+  await expect(page.getByRole('button', { name: 'Edit footnote 2', exact: true })).toBeVisible()
+  await page.evaluate(() => harness.app.components[0].replaceContent({ html: '<p>First</p>', revision: 1 }))
+  await expect(page.getByRole('button', { name: 'Edit footnote 2', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Edit footnote 1', exact: true }).click()
+  await expect(page.locator('.tiptap-editor-shell')).toHaveCount(0)
+  expect(await page.evaluate(() => harness.current.sent.find(event => event.name === 'open_footnote'))).toMatchObject({
+    target: '42', payload: { uid: 'second', number: '1' },
+  })
+  await expect(page.locator('.tiptap-text').last()).toHaveValue('<p>Second<sup data-footnote-uid="second">•</sup></p>')
+})
+
+test('155 rich text fields start dormant and only the selected field creates an editor', async ({ page }) => {
+  await page.goto('/tiptap.html')
+  await page.waitForFunction(() => !!window.harness)
+  const preview = await page.evaluate(async () => {
+    const start = performance.now()
+    for (let i = 0; i < 155; i++) await harness.create({ content: `<p>Field ${i}: <strong>formatted content</strong> with a <a href="/rooms">link</a>.</p>` })
+    document.body.getBoundingClientRect()
+    return { ms: performance.now() - start, nodes: document.querySelectorAll('#fixture *').length }
+  })
+  await expect(page.locator('.tiptap-preview')).toHaveCount(155)
+  await expect(page.locator('.tiptap-editor-shell')).toHaveCount(0)
+  const activation = await page.evaluate(async () => {
+    const start = performance.now()
+    await harness.activate()
+    document.body.getBoundingClientRect()
+    return performance.now() - start
+  })
+  await expect(page.locator('.tiptap-editor-shell')).toHaveCount(1)
+  await expect(page.locator('.tiptap-preview')).toHaveCount(154)
+  await expect(page.locator('.tiptap[contenteditable=true]')).toBeFocused()
+  await page.keyboard.type('Updated ')
+  await expect(page.locator('.tiptap-text').last()).toHaveValue(/Updated/)
+  await expect(page.locator('.tiptap-text').first()).toHaveValue('<p>Field 0: <strong>formatted content</strong> with a <a href="/rooms">link</a>.</p>')
+  expect(await page.evaluate(() => harness.errors)).toEqual([])
+  console.log('Tiptap 155 dormant fields:', JSON.stringify({ preview, activationMs: activation }))
+})
+
+test('preview HTML is inert and never replaces the original input', async ({ page }) => {
+  const content = '<p onclick="window.previewExecuted=true" style="position:fixed;color:red">Safe <strong>text</strong></p><img src=x onerror="window.previewExecuted=true"><script>window.previewExecuted=true</script>'
+  await setup(page, { activate: false, content })
+  await expect(page.locator('.tiptap-preview-content')).toHaveText('Safe text')
+  await expect(page.locator('.tiptap-preview-content script, .tiptap-preview-content img, .tiptap-preview-content [onclick]')).toHaveCount(0)
+  expect(await page.evaluate(() => window.previewExecuted)).toBeUndefined()
+  expect(await page.locator('.tiptap-preview-content p').evaluate(el => el.style.position)).toBe('')
+  await expect(page.locator('.tiptap-text')).toHaveValue(content)
+})
 
 for (const [name, options, target] of [
   ['block form', { formTarget: '42' }, '42'],
@@ -309,6 +438,7 @@ test('long-document editing keeps the HTML mirror current and records transactio
     const content = Array.from({ length: 600 }, (_, i) => `<p>Paragraph ${i}. A considered place by the sea with room to slow down, read, and enjoy the changing light.</p>`).join('')
     const started = performance.now()
     await harness.create({ content, footnotes: false })
+    await harness.activate()
     const mounted = performance.now() - started
     harness.current.editor.commands.focus('end')
     const samples = []
@@ -355,7 +485,7 @@ test('many editors keep edits local and measure editing with neighboring instanc
   await page.goto('/tiptap.html')
   await page.waitForFunction(() => !!window.harness)
   const timing = await page.evaluate(async () => {
-    for (let index = 0; index < 20; index++) await harness.create({ footnotes: false, ai: false })
+    for (let index = 0; index < 20; index++) { await harness.create({ footnotes: false, ai: false }); await harness.activate() }
     const neighbors = harness.app.components.slice(0, -1)
     const before = neighbors.map(hook => hook._editor.getHTML())
     const samples = []

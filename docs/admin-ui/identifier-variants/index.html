@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brando · Identifier variants</title>
+  <link rel="stylesheet" href="../../../assets/css/heroicons.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <header class="study-heading">
+      <div><div class="eyebrow">Brando admin · Design study</div><h1>Identifiers, as items</h1>
+        <p>One shared appearance for related entries, block references and entry pickers.</p></div>
+      <span class="study-label">Interactive preview</span>
+    </header>
+    <nav class="study-controls" aria-label="Compare identifier styles">
+      <button data-view="all" aria-pressed="true">Compare all</button>
+      <button data-view="a" aria-pressed="false">A · Compact cards</button>
+      <button data-view="b" aria-pressed="false">B · Joined list</button>
+      <button data-view="c" aria-pressed="false">C · Cover rows</button>
+      <button data-view="d" aria-pressed="false">D · Joined cover rows</button>
+      <button class="reset" id="reset">Reset preview</button>
+    </nav>
+    <div class="comparison" id="comparison"></div>
+    <footer>Sample content. Remove items or change the selection to compare states; changes stay in this preview.</footer>
+    <p class="sr-only" role="status" id="status"></p>
+  </main>
+  <script src="preview.js"></script>
+</body>
+</html>

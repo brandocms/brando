@@ -43,6 +43,16 @@ For form declarations, use `guides/blueprints.md` instead.
 
 ## Recovery and verification
 
+Rich-text inputs keep their hidden `.tiptap-text` input mounted from the start.
+Ordinary form rich text mounts its editor immediately. Block-owned rich text
+(text refs, block HTML vars/table cells, and block-slot content) initially renders
+a sanitized display copy and creates the editor on click or keyboard activation. Never write that display copy back
+to the input: untouched HTML must survive save and recovery exactly. Incoming
+replacements update dormant previews and their inputs as well as active
+editors. Once activated, an editor stays mounted to retain undo history.
+Open a dormant editor programmatically with `brando:tiptap:activate` on its hook
+element, rather than assuming a `contenteditable=true` node already exists.
+
 The main form and preview recovery form reconnect independently. Follow
 `maybe_finish_live_preview_recovery/1` in Form and the
 [live-preview skill](../brando-live-preview/SKILL.md) when both are involved.

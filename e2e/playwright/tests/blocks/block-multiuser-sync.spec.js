@@ -224,47 +224,66 @@ test.describe('Multi-user block sync', () => {
   const editTipTap = async (page, text) => {
     const editor = page.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()
     await editor.click()
+    await expect(editor).toHaveAttribute('contenteditable', 'true')
+    await expect(editor).toBeFocused()
     await page.keyboard.press('ControlOrMeta+a')
     await page.keyboard.type(text)
     await awaitBlockDebounce(page) // tiptap → hidden input mirror → debounce flush → op
   }
 
-  test("A's tiptap edit is VISIBLE for a connected B after plain blur", async ({
-    page,
-    secondUserPage,
-  }) => {
-    const entryUrl = await createEntryWithTextBlock(page, 'Multiuser TipTap Live', 'multiuser-tiptap-live')
+  for (const activateReceiver of [false, true]) {
+    test(`A's tiptap edit reaches B's ${activateReceiver ? 'editor' : 'dormant preview'} and survives B's save`, async ({
+      page,
+      secondUserPage,
+    }) => {
+      const entryUrl = await createEntryWithTextBlock(page, 'Multiuser TipTap Live', 'multiuser-tiptap-live')
 
-    await page.goto(entryUrl)
-    await syncLV(page)
-    await secondUserPage.goto(entryUrl)
-    await syncLV(secondUserPage)
-    await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()).toContainText(
-      'Article content goes here'
-    )
+      await page.goto(entryUrl)
+      await syncLV(page)
+      await secondUserPage.goto(entryUrl)
+      await syncLV(secondUserPage)
+      await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()).toContainText(
+        'Article content goes here'
+      )
 
-    await editTipTap(page, 'Rewritten live by A')
-    // stage 1: A's editor mirrored into A's hidden input (op committed)
-    await expect(page.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(/Rewritten live by A/, {
-      timeout: 3000,
+      if (activateReceiver) {
+        await secondUserPage.locator('[data-tiptap-type="block"] .tiptap-activate').first().click()
+        await expect(secondUserPage.locator('[data-tiptap-type="block"] [contenteditable=true]').first()).toBeFocused()
+        // Release the block without locking a field that A needs next.
+        await secondUserPage.getByLabel('URI', { exact: true }).click()
+        await awaitBlockShip(secondUserPage)
+      }
+
+      await editTipTap(page, 'Rewritten live by A')
+      // stage 1: A's editor mirrored into A's hidden input (op committed)
+      await expect(page.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(/Rewritten live by A/, {
+        timeout: 3000,
+      })
+
+      // blur to something outside the blocks
+      await page.getByLabel('Title', { exact: true }).click()
+      await awaitBlockShip(page) // settle → ship → B applies + remounts
+
+      // stage 2: the ship reached B's store and patched B's hidden input
+      await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(
+        /Rewritten live by A/,
+        { timeout: 5000 }
+      )
+
+      // The visible content changes whether or not B has activated an editor.
+      await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()).toContainText(
+        'Rewritten live by A',
+        { timeout: 5000 }
+      )
+      await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-editor-shell')).toHaveCount(activateReceiver ? 1 : 0)
+      await secondUserPage.getByTestId('submit').click()
+      await expect(secondUserPage).toHaveURL(/\/admin\/pages$/)
+      await secondUserPage.goto(entryUrl)
+      await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(/Rewritten live by A/)
+      await secondUserPage.locator('[data-tiptap-type="block"] .tiptap-activate').first().click()
+      await expect(secondUserPage.locator('[data-tiptap-type="block"] [contenteditable=true]').first()).toHaveText('Rewritten live by A')
     })
-
-    // blur to something outside the blocks
-    await page.getByLabel('Title', { exact: true }).click()
-    await awaitBlockShip(page) // settle → ship → B applies + remounts
-
-    // stage 2: the ship reached B's store and patched B's hidden input
-    await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(
-      /Rewritten live by A/,
-      { timeout: 5000 }
-    )
-
-    // stage 3: B's editor re-booted with the new content (visible)
-    await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()).toContainText(
-      'Rewritten live by A',
-      { timeout: 5000 }
-    )
-  })
+  }
 
   test('late joiner receives tiptap content AND entry field changes', async ({
     page,

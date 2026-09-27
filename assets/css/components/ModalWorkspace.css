@@ -147,19 +147,6 @@
 .identifier-picker-results .select-filter input.text { padding-left: 38px; }
 .identifier-picker-results .select-filter .field-wrapper { margin-bottom: 0; }
 .identifier-results-heading { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 8px; font-size: 12px; color: var(--modal-muted); }
-.identifier-picker .identifier-options { display: flex; flex-direction: column; gap: 0; margin: 0; }
-.identifier-picker .identifier-options .identifier { display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%; min-height: 68px; padding: 12px; margin: 0; text-align: left; border: 1px solid transparent; border-bottom-color: #e4e9df; border-radius: 0; background: white; color: var(--modal-ink); }
-.identifier-picker .identifier-options .identifier.selected { border: 1px solid #ccdfba; border-radius: 6px; background: #f0f5e9; }
-.identifier-picker .identifier-options .identifier:hover { background: #f5f8f0; }
-.identifier-result-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; border: 1px solid #dce5d4; border-radius: 6px; background: #f5f7ef; color: #748a66; }
-.identifier-result-icon > span { width: 16px; height: 16px; }
-.identifier-result-copy { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.identifier-result-copy strong { font: 500 14px/19px "Main", sans-serif; }
-.identifier-result-copy small { font: 11px/18px "Main", sans-serif; color: var(--modal-muted); overflow-wrap: anywhere; }
-.identifier-result-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.identifier-result-meta .modal-status { font-size: 11px; }
-.identifier-result-check { width: 16px; flex: 0 0 16px; color: var(--modal-accent); }
-.identifier-result-check > span { width: 16px; height: 16px; }
 .identifier-picker-details { width: 306px; flex: 0 0 306px; padding: 24px; border-left: 1px solid var(--modal-line); background: #f4f7f9; overflow: auto; scrollbar-width: thin; }
 .identifier-picker-details h3 { font: 500 15px/24px "Main", sans-serif; margin: 0 0 16px; }
 .identifier-picker-details .identifier-destination-heading { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -210,7 +197,6 @@
 @media (max-width: 1000px) {
   .identifier-picker-nav { width: 136px; flex-basis: 136px; }
   .identifier-picker-details { width: 260px; flex-basis: 260px; padding: 20px; }
-  .identifier-result-meta .modal-status { display: none; }
 }
 @media (max-width: 720px) {
   .modal { padding: 12px; }
@@ -239,10 +225,6 @@
   .modal .identifier-picker-nav .button-group-vertical { display: flex; flex-direction: row; overflow: auto; }
   .modal .identifier-picker-nav button.secondary { width: auto; flex-shrink: 0; white-space: nowrap; padding: 8px 10px; font-size: 12px; }
   .identifier-picker-results { overflow: visible; padding: 16px; }
-  .identifier-picker .identifier-options .identifier { padding: 12px 6px; gap: 9px; }
-  .identifier-result-copy strong { font-size: 14px; }
-  .identifier-result-copy small { font-size: 11px; }
-  .identifier-result-meta .modal-badge { font-size: 10px; padding: 1px 4px; }
   .identifier-picker-details { width: 100%; padding: 20px 18px; overflow: visible; border-left: 0; border-top: 1px solid var(--modal-line); }
   .modal--transfer .transfer-content-modal { display: flex; flex-direction: column; gap: 20px; }
   .transfer-content-modal .transfer-content-summary { width: 100%; padding: 16px; }
@@ -318,18 +300,11 @@ button.link-preview { text-align: left; }
 .identifier-picker-nav h3 { font-size: 11px; }
 .identifier-results-heading { font-size: 11px; margin: 16px 0 10px; }
 .identifier-results-count { display: flex; gap: 4px; }
-.identifier-picker .identifier-options .identifier { min-height: 67px; padding: 13px 12px; }
-.identifier-picker .identifier-options .identifier.selected { background: #f0f5eb; border-color: #ccdcbc; }
-.identifier-picker .identifier-options .identifier.selected .identifier-result-icon { background: #e4eddc; border-color: #d5e0ca; color: #56754a; }
-.identifier-result-meta { flex-direction: row; align-items: center; gap: 12px; }
-.identifier-result-meta .modal-badge { font-size: 10px; }
-.identifier-result-meta .modal-status[data-status="published"] { display: none; }
 @media (max-width: 720px) {
   .identifier-picker-nav { width: 100%; }
   .identifier-picker-nav button > [class^="hero-"] { display: none; }
   .identifier-scope-count { font-size: 10px; }
   .modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { padding: 8px 9px; font-size: 11px; }
-  .identifier-picker .identifier-options .identifier { padding: 11px 7px; gap: 9px; min-height: 65px; }
 }
 
 .modal .modal-footer-selection { display: flex; align-items: center; gap: 8px; margin-right: auto; min-width: 0; color: #466640; font: 12px/18px "Main", sans-serif; }
@@ -353,19 +328,7 @@ button.link-preview { text-align: left; }
 /* Related-entry pickers share the quiet selection surface used by other pickers. */
 .modal .entry-picker-filter { background: #fff; padding-bottom: 12px; margin-bottom: 8px; }
 .entry-picker-filter .filter-clear > span { width: 14px; height: 14px; }
-.modal .entry-picker-options .identifier {
-  min-height: 58px; padding: 8px 10px; margin: 0 0 6px;
-  border: 1px solid #dce2dc; border-radius: 6px; background: #fff; color: #272b2a;
-  cursor: pointer;
-  &:hover { background: #f5f7f3; border-color: #bdcdbf; }
-  &.selected { background: #edf3e9; border-color: #b8cdb3; color: #254e3f; }
-  .cover-wrapper { flex: 0 0 40px; width: 40px; min-width: 40px; padding: 0; }
-  .cover, .cover img { width: 40px; height: 40px; }
-  .content { min-width: 0; }
-  .name { font: 14px/20px "Main", sans-serif; overflow-wrap: anywhere; }
-  .meta-info { font-size: 11px; color: #626b66; }
-  .remove:empty { display: none; }
-}
+
 @media (max-width: 600px) {
   .select-modal-wrapper { grid-template-columns: minmax(0, 1fr); }
   .select-modal-wrapper .select-modal { border-right: 0; border-bottom: 1px solid #dce2dc; padding: 0 0 16px; }

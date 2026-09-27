@@ -12673,3 +12673,20 @@ msgstr "Listet oppføringer"
 #, elixir-autogen, elixir-format
 msgid "Searched for “%{query}” in %{type}"
 msgstr "Søkte etter «%{query}» i %{type}"
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Edit text"
+msgstr "Rediger tekst"
+
+#, elixir-autogen, elixir-format
+msgid "Clear all"
+msgstr "Fjern alle"
+
+#, elixir-autogen, elixir-format
+msgid "Images up to %{image_size} · Videos up to %{video_size} each"
+msgstr "Bilder opptil %{image_size} · Videoer opptil %{video_size} per fil"
+
+#, elixir-autogen, elixir-format
+msgid "Up to %{size} per file"
+msgstr "Opptil %{size} per fil"

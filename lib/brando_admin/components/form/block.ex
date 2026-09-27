@@ -459,7 +459,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:live_preview_active?, true)
     |> assign(:live_preview_cache_key, cache_key)
-    |> maybe_render_module()
     |> then(&{:ok, &1})
   end
 
@@ -677,7 +676,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           end
       end)
 
-    render_html? = socket.assigns.live_preview_active?
+    render_html? = render_live_preview_block?(socket)
 
     updated_changeset =
       if belongs_to == :root do
@@ -842,7 +841,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           end
       end)
 
-    render_html? = socket.assigns.live_preview_active?
+    render_html? = render_live_preview_block?(socket) && !media_ref?
 
     updated_changeset =
       if belongs_to == :root do
@@ -869,7 +868,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  # update liquid splits for the block editor, and render the module for live preview
+  # Entry changes refresh the editor's splits. Form renders the full preview
+  # from the op store; a block render here would never be delivered.
   def update(%{event: "replace_entry", entry: entry}, socket) do
     liquid_splits = socket.assigns.liquid_splits
     updated_liquid_splits = update_liquid_splits_entry_variables(liquid_splits, entry)
@@ -877,7 +877,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:entry, entry)
     |> assign(:liquid_splits, updated_liquid_splits)
-    |> render_module()
     |> then(&{:ok, &1})
   end
 
@@ -889,7 +888,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:entry, entry)
     |> assign(:liquid_splits, updated_liquid_splits)
-    |> render_module()
     |> then(&{:ok, &1})
   end
 
@@ -1020,7 +1018,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_assign_fragment()
     |> maybe_assign_datasource_meta()
     |> maybe_parse_module()
-    |> maybe_render_module()
     |> maybe_get_live_preview_status()
     |> assign_hidden_block_fields()
     |> assign(:block_initialized, true)
@@ -1280,7 +1277,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
   end
 
-  # rendering only feeds live preview — skip the full module render when closed
   def render_module(%{assigns: %{live_preview_active?: false}} = socket), do: socket
 
   def render_module(%{assigns: %{belongs_to: belongs_to}} = socket) do
@@ -1292,7 +1288,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     new_form =
       if belongs_to == :root do
         updated_changeset =
-          render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+          render_and_update_entry_block_changeset(
+            changeset,
+            entry,
+            has_vars?,
+            has_table_rows?,
+            false,
+            render_live_preview_block?(socket)
+          )
 
         to_form(updated_changeset,
           as: "entry_block",
@@ -1300,50 +1303,20 @@ defmodule BrandoAdmin.Components.Form.Block do
         )
       else
         updated_changeset =
-          render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+          render_and_update_block_changeset(
+            changeset,
+            entry,
+            has_vars?,
+            has_table_rows?,
+            false,
+            render_live_preview_block?(socket)
+          )
 
         to_form(updated_changeset,
           as: "child_block",
           id: "child_block_form-#{socket.assigns.uid}"
         )
       end
-
-    assign(socket, :form, new_form)
-  end
-
-  def maybe_render_module(%{assigns: %{belongs_to: :root, live_preview_active?: true}} = socket) do
-    update_form_with_rendered_module(socket, :root)
-  end
-
-  def maybe_render_module(%{assigns: %{initial_render: false, live_preview_active?: true}} = socket) do
-    update_form_with_rendered_module(socket, :child)
-  end
-
-  def maybe_render_module(socket) do
-    socket
-  end
-
-  defp update_form_with_rendered_module(socket, belongs_to_type) do
-    changeset = socket.assigns.form.source
-    entry = socket.assigns.entry
-    uid = socket.assigns.uid
-    has_vars? = socket.assigns.has_vars?
-    has_table_rows? = socket.assigns.has_table_rows?
-
-    updated_changeset =
-      if belongs_to_type == :root do
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
-      else
-        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
-      end
-
-    form_type = if belongs_to_type == :root, do: "entry_block", else: "child_block"
-
-    new_form =
-      to_form(updated_changeset,
-        as: form_type,
-        id: "#{form_type}_form-#{uid}"
-      )
 
     assign(socket, :form, new_form)
   end
@@ -2249,6 +2222,14 @@ defmodule BrandoAdmin.Components.Form.Block do
       &Map.has_key?(params, &1)
     )
   end
+
+  @doc false
+  def render_live_preview_block?(%{assigns: %{live_preview_active?: true} = assigns}) do
+    assigns[:belongs_to] != :slot && assigns[:type] != :slot &&
+      !(assigns[:type] == :module && assigns[:multi] == false && assigns[:has_children?] == true)
+  end
+
+  def render_live_preview_block?(_socket), do: false
 
   def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true, belongs_to: :slot}} = socket),
     do: refresh_live_preview(socket)

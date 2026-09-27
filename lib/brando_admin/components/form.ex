@@ -50,6 +50,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias BrandoAdmin.Components.Form.Input.Select
   alias BrandoAdmin.Components.Form.MetaDrawer
+  alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.Translation
@@ -118,6 +119,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_ready?, false)
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)
+     |> assign(:preview_update, nil)
      |> assign(:blocks_wanting_entry, %{})
      |> assign(:blocks_ready_for_sharing, false)
      |> assign(:fields_demanding_full_live_preview_rerender, [])
@@ -512,6 +514,15 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
+        %{event: "update_live_preview_block"},
+        %{assigns: %{preview_update: %{} = pending}} = socket
+      ) do
+    # An incremental edit may have landed after a field supplied its snapshot.
+    # Recollect that generation; a still-scheduled batch will read it normally.
+    {:ok, Preview.queue(socket, pending.mode, 0)}
+  end
+
+  def update(
         %{
           event: "update_live_preview_block",
           rendered_html: rendered_html,
@@ -558,6 +569,10 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{event: "update_live_preview"}, %{assigns: %{live_preview_active?: false}} = socket) do
     {:ok, socket}
+  end
+
+  def update(%{event: "flush_live_preview", token: token}, socket) do
+    {:ok, Preview.flush(socket, token, &render_preview_update/3)}
   end
 
   # `fields` is the list of entry fields the block's module reads, or `:all`
@@ -859,6 +874,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # got all root changesets for the block field
+  def update(
+        %{event: "provide_root_blocks", tag: {:preview_update, token}, block_field: field, root_changesets: roots},
+        socket
+      ) do
+    {:ok, Preview.receive_blocks(socket, token, field, roots, &render_preview_update/3)}
+  end
+
   def update(
         %{
           event: "provide_root_blocks",
@@ -1636,7 +1658,6 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_force_live_preview_update(socket, false, true) do
     fetch_root_blocks(socket, :live_preview_update, 0)
-    socket
   end
 
   defp maybe_force_live_preview_update(socket, _, _) do
@@ -1661,7 +1682,6 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_full_rerender_live_preview(%{assigns: %{has_blocks?: true}} = socket, true) do
     fetch_root_blocks(socket, :live_preview_full_rerender, 1200)
-    socket
   end
 
   defp maybe_full_rerender_live_preview(socket, false) do
@@ -2223,63 +2243,6 @@ defmodule BrandoAdmin.Components.Form do
       else
         push_errors(socket, changeset, socket.assigns.form_blueprint, schema)
       end
-    end
-  end
-
-  def event_tag_received(socket, :live_preview_full_rerender) do
-    block_changesets = socket.assigns.block_changesets
-    changeset = socket.assigns.form.source
-    cache_key = socket.assigns.live_preview_cache_key
-    updated_entry_assocs = socket.assigns.updated_entry_assocs
-
-    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
-      socket
-    else
-      schema = socket.assigns.schema
-      changeset = assoc_all_block_fields(block_changesets, changeset)
-      Brando.LivePreview.rerender(schema, changeset, cache_key, updated_entry_assocs)
-      clear_blocks_root_changesets(socket)
-    end
-  end
-
-  # A media association changed — refresh the cached HTML for the SAME cache key and
-  # tell the iframe to reload itself, letting the host frontend re-initialize and
-  # mount the new video/gallery player. A morphdom rerender can't run the frontend's
-  # JS boot for newly introduced media, so it would leave a gray box.
-  #
-  # We deliberately keep the same cache key: minting a new one (via `initialize`)
-  # would desync the key held by every block component and break all subsequent
-  # morphdom updates until live preview is toggled off and on again.
-  def event_tag_received(socket, :live_preview_reload) do
-    block_changesets = socket.assigns.block_changesets
-    changeset = socket.assigns.form.source
-    cache_key = socket.assigns.live_preview_cache_key
-    updated_entry_assocs = socket.assigns.updated_entry_assocs
-
-    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
-      socket
-    else
-      schema = socket.assigns.schema
-      changeset = assoc_all_block_fields(block_changesets, changeset)
-      Brando.LivePreview.reload(schema, changeset, cache_key, updated_entry_assocs)
-      clear_blocks_root_changesets(socket)
-    end
-  end
-
-  # when inserting or deleting blocks we want a full rerender of the live preview.
-  def event_tag_received(socket, :live_preview_update) do
-    block_changesets = socket.assigns.block_changesets
-    changeset = socket.assigns.form.source
-    cache_key = socket.assigns.live_preview_cache_key
-    updated_entry_assocs = socket.assigns.updated_entry_assocs
-
-    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
-      socket
-    else
-      schema = socket.assigns.schema
-      changeset = assoc_all_block_fields(block_changesets, changeset)
-      Brando.LivePreview.update(schema, changeset, cache_key, updated_entry_assocs)
-      clear_blocks_root_changesets(socket)
     end
   end
 
@@ -4375,7 +4338,7 @@ defmodule BrandoAdmin.Components.Form do
         socket = assign(socket, :live_preview_menu_open?, false)
 
         if socket.assigns.live_preview_active? do
-          socket = assign(socket, :pending_live_preview_target, target.name)
+          socket = socket |> Preview.cancel() |> assign(:pending_live_preview_target, target.name)
           {:noreply, fetch_root_blocks(socket, :live_preview_target, 0)}
         else
           socket = assign(socket, :live_preview_schema_target, target.name)
@@ -4444,6 +4407,7 @@ defmodule BrandoAdmin.Components.Form do
     Brando.LivePreview.cleanup_cache(socket.assigns.live_preview_cache_key)
 
     socket
+    |> Preview.cancel()
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_menu_open?, false)
     |> assign(:pending_live_preview_target, nil)
@@ -4700,11 +4664,15 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do
     fetch_root_blocks(socket, event, delay)
-    socket
   end
 
   defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: false}} = socket, _, _) do
     socket
+  end
+
+  defp fetch_root_blocks(socket, tag, delay)
+       when tag in [:live_preview_update, :live_preview_full_rerender, :live_preview_reload] do
+    Preview.queue(socket, tag, delay)
   end
 
   defp fetch_root_blocks(socket, tag, delay) do
@@ -4734,6 +4702,28 @@ defmodule BrandoAdmin.Components.Form do
   defp clear_blocks_root_changesets(socket) do
     blocks = socket.assigns.form_blueprint.blocks
     assign(socket, :block_changesets, Map.new(blocks, &{&1.name, nil}))
+  end
+
+  defp render_preview_update(socket, mode, block_changesets) do
+    changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
+
+    # Reload newly introduced media so frontend players initialize. Preserve the
+    # key held by the iframe and every block's channel subscription.
+    function =
+      case mode do
+        :live_preview_update -> :update
+        :live_preview_full_rerender -> :rerender
+        :live_preview_reload -> :reload
+      end
+
+    apply(Brando.LivePreview, function, [
+      socket.assigns.schema,
+      changeset,
+      socket.assigns.live_preview_cache_key,
+      socket.assigns.updated_entry_assocs
+    ])
+
+    socket
   end
 
   defp reload_all_blocks(socket) do

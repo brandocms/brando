@@ -47,11 +47,11 @@ for (const syntax of ['liquid', 'heex']) {
         await expect(editor).toHaveText(text)
       }
       const addText = async text => {
-        const count = await drawer.locator('.tiptap[contenteditable=true]').count()
+        const count = await drawer.locator('.tiptap').count()
         await drawer.getByRole('button', { name: 'Add block', exact: true }).last().click()
         await page.getByRole('button', { name: 'Note text', exact: true }).click()
-        await expect(drawer.locator('.tiptap[contenteditable=true]')).toHaveCount(count + 1)
-        await setText(drawer.locator('.tiptap[contenteditable=true]').last(), text)
+        await expect(drawer.locator('.tiptap')).toHaveCount(count + 1)
+        await setText(drawer.locator('.tiptap').last(), text)
         await syncLV(page)
       }
       await page.getByRole('button', { name: 'sidebar Edit blocks · Footnotes', exact: true }).click()
@@ -67,7 +67,7 @@ for (const syntax of ['liquid', 'heex']) {
       const frame = getPreviewFrame(page)
       await expect(frame.locator('.region-preview aside p')).toHaveText(['First sidebar block', 'Second sidebar block'])
       await page.getByRole('button', { name: 'sidebar Edit blocks · Footnotes', exact: true }).click()
-      await setText(drawer.locator('.tiptap[contenteditable=true]').first(), 'Unsaved sidebar edit')
+      await setText(drawer.locator('.tiptap').first(), 'Unsaved sidebar edit')
       await drawer.getByRole('button', { name: 'Done', exact: true }).click()
       await expect(frame.locator('.region-preview aside p')).toHaveText(['Unsaved sidebar edit', 'Second sidebar block'])
 

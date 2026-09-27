@@ -7,6 +7,8 @@ import { captureRange, mapRange } from '../../components/TipTap/selection'
 import { linkClass } from '../../components/TipTap/extensions/Link'
 import { normalizeUrl } from '../../components/TipTap/urlPolicy'
 import { resolveCapabilities } from '../../components/TipTap/config'
+import { defaultLabels } from '../../components/TipTap/labels'
+import RichTextPreview from './preview'
 
 const readJSON = (value, fallback = {}) => { try { return value ? JSON.parse(value) : fallback } catch { return fallback } }
 
@@ -15,9 +17,58 @@ export default app => ({
     this._handlers = []
     this._revision = -1
     this._destroyed = false
-    this.mount()
+    this._input = this.el.querySelector('.tiptap-text')
+    this._field = this.el.dataset.tiptapType === 'rich_text' ? this._input.name : this.el.closest('.blocks-wrapper')?.dataset.blockField
+    // Only block-owned fields defer editing. Ordinary Blueprint inputs keep
+    // their toolbar and editor available as soon as the form opens.
+    if (this.el.dataset.tiptapType === 'block' || this.el.closest('.blocks-wrapper, .block-slot-drawer')) {
+      this._preview = new RichTextPreview(this.el.querySelector('.tiptap-target'), event => this.activate(event), (uid, number) => this.openFootnote(uid, number))
+      this.renderPreview()
+      this.updateFootnoteNumbers()
+    } else {
+      this.mount()
+    }
     this.setupHandlers()
+    this.updateEditable()
     app.components.push(this)
+  },
+
+  renderPreview() {
+    if (!this._preview) return
+    this._preview.update(this._input.value || '', { ...defaultLabels, ...readJSON(this.el.dataset.tiptapLabels) }, this.accessibility())
+  },
+
+  updateFootnoteNumbers() {
+    // Removing the last marker also changes numbering in neighboring fields.
+    const footnotes = !!this.el.querySelector('.tiptap-footnote')
+    if (footnotes || this._hadFootnotes) renumberFootnotes(this.el)
+    this._hadFootnotes = footnotes
+  },
+
+  locked() {
+    return !!this.el.closest('.block-locked, [data-presence-locked="true"], .field-locked') || this.el.dataset.tiptapReadonly === 'true'
+  },
+
+  activate(event, action) {
+    if (this._destroyed || this.locked()) return
+    if (this._editor) {
+      this._editor.commands.focus()
+      action?.()
+      return
+    }
+    if (this._activating) return
+    this._activating = true
+    this._activateAction = action
+    this._activatePoint = event && { left: event.clientX, offset: event.clientY - this._preview.content.getBoundingClientRect().top }
+    this._preview.destroy()
+    this._preview = null
+    this.mount()
+  },
+
+  openFootnote(uid, number) {
+    if (this.locked()) return
+    if (!uid) this._footnoteRange = captureRange(this._editor, { from: this._editor.state.selection.to, to: this._editor.state.selection.to })
+    this.pushEditorEvent(uid ? 'open_footnote' : 'create_footnote', { uid, number, ref_name: this.el.dataset.footnoteRef, field: this.el.dataset.footnoteField, tiptap_id: this.el.id })
   },
 
   mount() {
@@ -58,10 +109,7 @@ export default app => ({
         },
         onToggleLink: onToggle('link'), onToggleButton: onToggle('button'),
         footnotes: this.el.dataset.footnotes === 'true', footnoteLabels: readFootnoteLabels(this.el),
-        onOpenFootnote: (uid, number) => {
-          if (!uid) this._footnoteRange = captureRange(this._editor, { from: this._editor.state.selection.to, to: this._editor.state.selection.to })
-          this.pushEditorEvent(uid ? 'open_footnote' : 'create_footnote', { uid, number, ref_name: this.el.dataset.footnoteRef, field: this.el.dataset.footnoteField, tiptap_id: this.el.id })
-        },
+        onOpenFootnote: (uid, number) => this.openFootnote(uid, number),
         aiEnabled: this.el.dataset.tiptapAi === 'true',
         onGenerateAi: payload => this.pushEditorEvent('tiptap_ai_generate', { ...payload, tiptap_id: this.el.id, ref_name: this.el.dataset.footnoteRef, field_name: this._input.name, field_key: this.el.dataset.tiptapField }),
         onCancelAi: request_id => this.pushEditorEvent('tiptap_ai_cancel', { request_id, tiptap_id: this.el.id }),
@@ -73,7 +121,21 @@ export default app => ({
             this._footnoteRange = mapRange(this._footnoteRange, transaction)
           })
           this.updateEditable()
-          queueMicrotask(() => { if (!this._destroyed) renumberFootnotes(this.el) })
+          queueMicrotask(() => {
+            if (this._destroyed) return
+            this.updateFootnoteNumbers()
+            if (this._activating) {
+              this._activating = false
+              if (!this.locked()) {
+                const point = this._activatePoint
+                const position = point && editor.view.posAtCoords({ left: point.left, top: editor.view.dom.getBoundingClientRect().top + point.offset })
+                editor.commands.focus(position?.pos ?? 'start')
+                this._activateAction?.()
+              }
+              this._activateAction = null
+              this._activatePoint = null
+            }
+          })
         },
         tiptapInput: this._input,
       },
@@ -103,7 +165,8 @@ export default app => ({
   },
 
   updateEditable() {
-    const locked = !!this.el.closest('.block-locked, [data-presence-locked="true"], .field-locked') || this.el.dataset.tiptapReadonly === 'true'
+    const locked = this.locked()
+    this._preview?.setLocked(locked)
     if (this._editor && !this._editor.isDestroyed && this._editor.isEditable === locked) {
       this._editor.setEditable(!locked, false)
       this._editor.view.dispatch(this._editor.state.tr.setMeta('brando:editable', !locked))
@@ -111,7 +174,8 @@ export default app => ({
   },
 
   updated() {
-    if (this.configuration() !== this._configuration) {
+    this.renderPreview()
+    if (this._editor && this.configuration() !== this._configuration) {
       // A schema/configuration change is deliberate (e.g. module preview).
       // Preserve the document, but do not replay history under different rules.
       const content = this._editor.getHTML(), selection = this._editor.state.selection
@@ -144,9 +208,7 @@ export default app => ({
     // Scoped to `.blocks-wrapper`, so this walks every block on the page. Run
     // it for an editor that carries footnotes, and for one that just lost its
     // last — the numbering of the others depends on both.
-    const footnotes = !!this.el.querySelector('.tiptap-footnote')
-    if (footnotes || this._hadFootnotes) renumberFootnotes(this.el)
-    this._hadFootnotes = footnotes
+    this.updateFootnoteNumbers()
   },
 
   configuration() { return ['tiptapExtensions', 'tiptapStyles', 'tiptapTypography', 'footnotes', 'tiptapAi'].map(key => this.el.dataset[key] || '').join('\u001f') },
@@ -154,7 +216,7 @@ export default app => ({
   setupHandlers() {
     this._handlers.push(this.handleEvent(`b:tiptap:set_link:${this.el.id}`, payload => {
       if (payload.request_id && payload.request_id !== this._linkRequest) return
-      if (payload.cancel || payload.closed) { this._instance.linkClosed?.(); this._linkRange = null; return }
+      if (payload.cancel || payload.closed) { this._instance?.linkClosed?.(); this._linkRange = null; return }
       const editor = this._editor, range = this._linkRange
       const request_id = this._linkRequest
       const result = applied => {
@@ -182,6 +244,10 @@ export default app => ({
       this._linkRange = null
     }))
     this._handlers.push(this.handleEvent(`b:tiptap:insert_footnote:${this.el.id}`, ({ uid, restore }) => {
+      if (!this._editor && restore) { this.activate(null, () => this._insertFootnote({ uid, restore })); return }
+      this._insertFootnote({ uid, restore })
+    }))
+    this._insertFootnote = ({ uid, restore }) => {
       if (!this._editor?.isEditable) return
       const range = this._footnoteRange || (restore ? captureRange(this._editor, { from: this._editor.state.selection.to, to: this._editor.state.selection.to }) : null)
       if (!range?.valid) { this._instance.showError?.(); return }
@@ -190,15 +256,21 @@ export default app => ({
       if (restore) chain.focus()
       chain.insertContentAt(range.to, { type: 'footnote', attrs: { uid } }, { updateSelection: false }).run()
       renumberFootnotes(this.el)
-      this.commitInput(() => document.getElementById(`block-slot-drawer-${uid}`)?.querySelector('[contenteditable="true"]')?.focus())
-    }))
-    this._handlers.push(this.handleEvent(`b:tiptap:ai:${this.el.id}`, payload => this._instance.receiveAi?.(payload)))
+      this.commitInput(() => document.getElementById(`block-slot-drawer-${uid}`)?.querySelector('[data-name="TipTap"]')?.dispatchEvent(new Event('brando:tiptap:activate')))
+    }
+    this._handlers.push(this.handleEvent(`b:tiptap:ai:${this.el.id}`, payload => this._instance?.receiveAi?.(payload)))
     this._handlers.push(this.handleEvent('b:tiptap:update', payload => { if (payload.id === this.el.id) this.replaceContent(payload) }))
-    this._clearListener = () => { if (this._editor?.isEditable) this._editor.commands.clearContent(true) }
-    this._aiListener = () => this._instance.openAi?.()
+    this._clearListener = () => {
+      if (this.locked()) return
+      if (this._editor) this._editor.commands.clearContent(true)
+      else { this._input.value = ''; this._input.dispatchEvent(new Event('input', { bubbles: true })); this.renderPreview(); this.updateFootnoteNumbers() }
+    }
+    this._aiListener = () => this.activate(null, () => this._instance?.openAi?.())
+    this._activateListener = () => this.activate()
     this._compositionEnd = () => { if (this._pendingReplacement) { const payload = this._pendingReplacement; this._pendingReplacement = null; this.replaceContent(payload) } }
     this.el.addEventListener('brando:tiptap:clear', this._clearListener)
     this.el.addEventListener('brando:tiptap:ai', this._aiListener)
+    this.el.addEventListener('brando:tiptap:activate', this._activateListener)
     this.el.addEventListener('compositionend', this._compositionEnd)
     this._lockObserver = new MutationObserver(() => this.updateEditable())
     this.observeEditable()
@@ -218,7 +290,15 @@ export default app => ({
 
   replaceContent({ html, revision, epoch } = {}) {
     if (epoch != null && epoch !== this._epoch) { this._epoch = epoch; this._revision = -1 }
-    if (!this._editor || this._destroyed || revision != null && revision <= this._revision) return
+    if (this._destroyed || revision != null && revision <= this._revision) return
+    if (!this._editor) {
+      if (revision != null) this._revision = revision
+      this._input.value = html ?? this._input.value ?? ''
+      this.renderPreview()
+      this.updateFootnoteNumbers()
+      this.updateEditable()
+      return
+    }
     if (this._editor.view.composing) {
       if (revision == null || this._pendingReplacement?.revision == null || epoch !== this._pendingReplacement.epoch || revision > this._pendingReplacement.revision) this._pendingReplacement = { html, revision, epoch }
       return
@@ -251,10 +331,12 @@ export default app => ({
     this._lockObserver?.disconnect()
     this.el.removeEventListener('brando:tiptap:clear', this._clearListener)
     this.el.removeEventListener('brando:tiptap:ai', this._aiListener)
+    this.el.removeEventListener('brando:tiptap:activate', this._activateListener)
     this.el.removeEventListener('compositionend', this._compositionEnd)
     this._handlers.forEach(ref => this.removeHandleEvent?.(ref))
     const index = app.components.indexOf(this)
     if (index >= 0) app.components.splice(index, 1)
-    unmount(this._instance)
+    this._preview?.destroy()
+    if (this._instance) unmount(this._instance)
   },
 })

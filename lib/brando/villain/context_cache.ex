@@ -8,6 +8,7 @@ defmodule Brando.Villain.ContextCache do
   """
 
   alias Brando.Cache
+  alias Brando.Villain.RenderScope
 
   @identity_cache Module.concat(["Brando", "Cache", "Identity"])
   @globals_cache Module.concat(["Brando", "Cache", "Globals"])
@@ -17,8 +18,10 @@ defmodule Brando.Villain.ContextCache do
   """
   @spec identity(binary()) :: map()
   def identity(language) do
-    identity_map = Cache.get(:identity) || @identity_cache.set()
-    Map.get(identity_map, language, %{})
+    RenderScope.fetch({__MODULE__, :identity, language}, fn ->
+      identity_map = Cache.get(:identity) || @identity_cache.set()
+      Map.get(identity_map, language, %{})
+    end)
   end
 
   @doc """
@@ -26,13 +29,15 @@ defmodule Brando.Villain.ContextCache do
   """
   @spec globals(binary()) :: map()
   def globals(language) do
-    globals_map = Cache.get(:globals) || @globals_cache.set()
-    Map.get(globals_map || %{}, language, %{})
+    RenderScope.fetch({__MODULE__, :globals, language}, fn ->
+      globals_map = Cache.get(:globals) || @globals_cache.set()
+      Map.get(globals_map || %{}, language, %{})
+    end)
   end
 
   @doc """
   Gets the cached navigation tree.
   """
   @spec navigation() :: map() | nil
-  def navigation, do: Cache.get(:navigation)
+  def navigation, do: RenderScope.fetch({__MODULE__, :navigation}, fn -> Cache.get(:navigation) end)
 end

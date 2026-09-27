@@ -12668,3 +12668,20 @@ msgstr ""
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Searched for “%{query}” in %{type}"
 msgstr ""
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Edit text"
+msgstr "Edit text"
+
+#, elixir-autogen, elixir-format
+msgid "Clear all"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Images up to %{image_size} · Videos up to %{video_size} each"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Up to %{size} per file"
+msgstr ""
