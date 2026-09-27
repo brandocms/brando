@@ -82,6 +82,13 @@ defmodule Brando.Pages.Fragment do
           input :status, :status, label: t("Status")
         end
 
+        alert :warning,
+              t(
+                "Templates look this fragment up by its parent key and key. Pages that use it " <>
+                  "won't find it under the new ones until their templates are changed too."
+              ),
+              show_if: &__MODULE__.key_changed?/1
+
         fieldset do
           size :half
           input :title, :text, label: t("Title")
@@ -126,6 +133,13 @@ defmodule Brando.Pages.Fragment do
   def redirect(socket, _entry, _) do
     Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageListLive)
   end
+
+  @doc false
+  # A saved fragment whose parent key or key is being edited.
+  def key_changed?(%{source: %Ecto.Changeset{data: %{id: id}, changes: changes}}) when not is_nil(id),
+    do: Map.has_key?(changes, :parent_key) or Map.has_key?(changes, :key)
+
+  def key_changed?(_form), do: false
 
   def get_pages(_, _) do
     {:ok, pages} = Pages.list_pages()
