@@ -24,6 +24,8 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
 
     attributes do
       attribute :title, :string
+      # The save path orders entries by sequence.
+      attribute :sequence, :integer
     end
 
     assets do
@@ -46,7 +48,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
   end
 
   defp recovery_socket(item) do
-    %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}}}
+    %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
     |> Phoenix.Component.assign(:items, [item])
     |> Phoenix.Component.assign(:form_id, "collection_form")
     |> Phoenix.Component.assign(:relation_key, :items)
@@ -209,6 +211,22 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
       file = %{"ref" => "tf-abc124", "filename" => "clip.mp4", "size" => 2048, "kind" => "video"}
 
       assert Transformer.build_placeholder(file, %Subform{}, Item, %{}).pending.kind == :video
+    end
+  end
+
+  describe "an entry's asset" do
+    test "is saved when a saved entry's asset is removed" do
+      source = %MediaItem{id: 1, title: "The Reins", cover_id: 7}
+      socket = recovery_socket(Transformer.new_item("item-1", source, is_new: false))
+
+      {:noreply, socket} = Transformer.handle_event("clear_asset", %{"dom_id" => "item-1", "kind" => "image"}, socket)
+      {:ok, _} = Transformer.update(%{event: "fetch_transformer_data", tag: "save"}, socket)
+
+      assert_receive {:phoenix, :send_update,
+                      {{BrandoAdmin.Components.Form, "collection_form"},
+                       %{event: "provide_transformer_data", transformer_data: [%Ecto.Changeset{} = changeset]}}}
+
+      assert Map.fetch(changeset.changes, :cover_id) == {:ok, nil}
     end
   end
 

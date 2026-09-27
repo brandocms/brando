@@ -1183,22 +1183,26 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     end
   end
 
-  # Existing rows keep an Ecto struct as their source, so the association has to
-  # be written alongside the id or the listing keeps showing the old asset.
   defp put_item_asset(socket, index, field, asset) do
     socket
     |> do_put_item_asset(index, field, asset)
     |> notify_relation_change()
   end
 
+  # The listing shows `assets`, and the id goes into `changes`. An existing
+  # row's source is the persisted struct the save diffs against
+  # (`change(source, changes)`) — writing the new id into it as well made the
+  # change invisible and the save a no-op, so the asset was never replaced. New
+  # entries are plain maps merged at save, so they take it directly.
   defp do_put_item_asset(socket, index, field, asset) do
     update_item(socket, index, fn item ->
       id = asset && asset.id
+      key = :"#{field}_id"
 
       %{
         item
-        | source: Map.put(item.source, :"#{field}_id", id),
-          changes: Map.put(item.changes, :"#{field}_id", id),
+        | source: if(item.is_new, do: Map.put(item.source, key, id), else: item.source),
+          changes: Map.put(item.changes, key, id),
           assets: Map.put(item.assets, field, asset)
       }
     end)
