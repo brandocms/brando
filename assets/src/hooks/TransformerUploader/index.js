@@ -42,6 +42,18 @@
 export default (app) => ({
   mounted() {
     this.el.addEventListener('click', (event) => {
+      // "Upload new" on an entry: one file from disk replaces that entry's
+      // asset, exactly like dropping it on the card.
+      const replacer = event.target.closest('[data-pick-replace]')
+      if (replacer && this.el.contains(replacer)) {
+        event.preventDefault()
+        event.stopPropagation()
+        this.openPicker(replacer.dataset.pickKind, (files) =>
+          this.replace(files[0], replacer.dataset.pickReplace)
+        )
+        return
+      }
+
       const picker = event.target.closest('[data-pick]')
       if (!picker || !this.el.contains(picker)) return
 
@@ -101,8 +113,9 @@ export default (app) => ({
 
   // A hidden input per media type, created on demand. `accept` narrows the OS
   // dialog, but everything still goes through the same validation as a drop —
-  // the dialog's filter is a convenience, not a guarantee.
-  openPicker(kind) {
+  // the dialog's filter is a convenience, not a guarantee. With `onPick` the
+  // dialog takes one file and hands it over instead of adding entries.
+  openPicker(kind, onPick = null) {
     const accept = {
       images: this.imageAccept(),
       videos: this.videoAccept(),
@@ -113,13 +126,13 @@ export default (app) => ({
 
     const input = document.createElement('input')
     input.type = 'file'
-    input.multiple = true
+    input.multiple = !onPick
     input.accept = accept.join(',')
     input.style.display = 'none'
 
     input.addEventListener('change', (event) => {
       const files = Array.from(event.target.files || [])
-      if (files.length) this.intake(files)
+      if (files.length) onPick ? onPick(files) : this.intake(files)
       input.remove()
     })
 

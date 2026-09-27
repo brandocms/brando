@@ -681,6 +681,18 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         >
           {if @asset, do: gettext("Replace"), else: gettext("Select")}
         </button>
+        <%!-- A new file from disk, the same way as dropping one on the card:
+              TransformerUploader opens the file dialog and registers it as a
+              replacement for this entry. --%>
+        <button
+          :if={@kind == "image"}
+          type="button"
+          class="tiny"
+          data-pick-replace={@item.dom_id}
+          data-pick-kind="images"
+        >
+          {if @asset, do: gettext("Upload new"), else: gettext("Upload")}
+        </button>
         <button
           :if={@asset}
           type="button"
