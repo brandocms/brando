@@ -1938,6 +1938,15 @@ defmodule BrandoAdmin.Components.Form do
     |> assign_new(:tabs, fn -> Enum.map(tabs, & &1.name) end)
   end
 
+  # An alert's `show_if`, given the form; alerts without one always show.
+  defp alert_shown?(%{show_if: show_if}, form) when is_function(show_if, 1) do
+    show_if.(form) == true
+  rescue
+    _ -> false
+  end
+
+  defp alert_shown?(_alert, _form), do: true
+
   def prepare_empty_entry(schema, current_user) do
     schema
     |> struct()
@@ -2813,12 +2822,33 @@ defmodule BrandoAdmin.Components.Form do
     assigns =
       assigns
       |> assign(:indexed_fields, Enum.with_index(assigns.tab.fields))
+      |> assign(:alerts, Map.get(assigns.tab, :alerts) || [])
       |> assign(:relations, Brando.Blueprint.Relations.__relations__(assigns.schema))
 
     ~H"""
+    <.alert :for={alert <- @alerts} :if={alert_shown?(alert, @form)} type={alert.type}>
+      <:icon>
+        <.icon name="hero-exclamation-triangle" />
+      </:icon>
+      <%= if is_binary(alert.content) do %>
+        {g(@form.source.data.__struct__, alert.content)}
+      <% else %>
+        {component(
+          BlueprintForms.alert_component(alert.content),
+          [
+            form: @form,
+            schema: @schema,
+            current_user: @current_user,
+            form_cid: @form_cid,
+            form_id: @form_id
+          ],
+          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+        )}
+      <% end %>
+    </.alert>
     <%= for {fieldset, idx} <- @indexed_fields do %>
       <%= if fieldset.__struct__ == Brando.Blueprint.Forms.Alert do %>
-        <.alert type={fieldset.type}>
+        <.alert :if={alert_shown?(fieldset, @form)} type={fieldset.type}>
           <:icon>
             <.icon name="hero-exclamation-triangle" />
           </:icon>

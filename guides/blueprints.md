@@ -549,6 +549,15 @@ alert :info, &__MODULE__.editor_notice/1
 alert :warning, {MyAppWeb.FormAlerts, :quota_notice, [limit: 10]}
 ```
 
+A tab's alerts render above its fieldsets. `show_if:` takes a function of the
+form and shows the alert only while it returns `true` — a warning that
+appears once an editor starts changing something risky:
+
+```elixir
+alert :warning, t("Templates look this fragment up by its key."),
+  show_if: &__MODULE__.key_changed?/1
+```
+
 Form error summaries use a configured string `label` when present. Inputs with
 `label: :hidden`, blank/nil labels, and other non-text labels fall back to a
 humanized field name. Errors attached to generated foreign keys such as
