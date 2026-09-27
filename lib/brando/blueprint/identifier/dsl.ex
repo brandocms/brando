@@ -95,6 +95,7 @@ defmodule Brando.Blueprint.Identifier.DSL do
       @identifier_tpl unquote(tpl)
       @identifier_type :liquid
       def __has_identifier__, do: true
+      def __identifier_fields__, do: unquote(identifier_fields(tpl))
 
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry, opts \\ []) do
@@ -121,6 +122,7 @@ defmodule Brando.Blueprint.Identifier.DSL do
       end
 
       def __has_identifier__, do: true
+      def __identifier_fields__, do: unquote(identifier_fields(tpl_string))
 
       def __identifier__(entry, opts \\ []) do
         var!(assigns) = %{entry: entry}
@@ -157,4 +159,16 @@ defmodule Brando.Blueprint.Identifier.DSL do
     raise BlueprintError,
       message: "identifier expects a Liquid string, HEEx template, false, or nil, got: #{Macro.to_string(value)}"
   end
+
+  @doc false
+  # `entry.title` in Liquid, `@entry.title` in HEEx. Names, not atoms: the
+  # template may mention anything, and only real fields are compared.
+  def identifier_fields(tpl) when is_binary(tpl) do
+    ~r/@?entry\.([a-z_][a-z0-9_]*)/
+    |> Regex.scan(tpl, capture: :all_but_first)
+    |> Enum.map(fn [field] -> field end)
+    |> Enum.uniq()
+  end
+
+  def identifier_fields(_), do: []
 end
