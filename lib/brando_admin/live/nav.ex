@@ -247,7 +247,7 @@ defmodule BrandoAdmin.Nav do
                       <.link :if={item.url} navigate={item.url} class={Brando.HTML.active(@current_url, item.url)}>
                         {item.name}
                       </.link>
-                      <span :if={item[:items]} data-nav-expand>
+                      <span :if={item[:items]} data-nav-expand data-nav-key={item.name}>
                         {item.name} <.icon name="hero-plus-circle" />
                       </span>
                     </dt>
