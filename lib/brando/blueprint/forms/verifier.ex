@@ -84,9 +84,11 @@ defmodule Brando.Blueprint.Forms.Verifier do
   end
 
   defp verify_hidden_field(context, form, %{opts: opts} = input) do
-    case Keyword.get(opts || [], :hidden) do
-      {field, _expected} -> verify_referenced_field(context, form, input, :hidden, field)
-      _ -> :ok
+    for option <- [:hidden, :show_if],
+        {field, _expected} <- [Keyword.get(opts || [], option)],
+        reduce: :ok do
+      :ok -> verify_referenced_field(context, form, input, option, field)
+      error -> error
     end
   end
 
@@ -174,7 +176,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
 
     validate_entities(subform.sub_fields, fn input ->
       if MapSet.member?(related_fields, input.name) do
-        :ok
+        verify_sub_field_visibility(context, form, subform, input, related_fields, related_module)
       else
         error(
           context,
@@ -184,6 +186,28 @@ defmodule Brando.Blueprint.Forms.Verifier do
         )
       end
     end)
+  end
+
+  # `hidden: {field, _}` / `show_if: {field, _}` in a subform refer to the
+  # row's own fields.
+  defp verify_sub_field_visibility(context, form, subform, %{opts: opts} = input, related_fields, related_module) do
+    for option <- [:hidden, :show_if],
+        {field, _expected} <- [Keyword.get(opts || [], option)],
+        reduce: :ok do
+      :ok ->
+        if is_atom(field) and MapSet.member?(related_fields, field),
+          do: :ok,
+          else:
+            error(
+              context,
+              input,
+              [form.name, subform.name, input.name],
+              "has #{inspect(option)} referencing unknown field #{inspect(field)} on #{inspect(related_module)}"
+            )
+
+      error ->
+        error
+    end
   end
 
   defp verify_listing(context, form, %{style: :listing} = subform) do
