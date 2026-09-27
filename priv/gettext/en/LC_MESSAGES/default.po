@@ -12690,9 +12690,6 @@ msgstr ""
 msgid "will be deleted"
 msgstr ""
 
-msgid "It can be restored under the list's Deleted filter."
-msgstr ""
-
 msgid "This can't be undone."
 msgstr ""
 
@@ -12706,4 +12703,13 @@ msgid "Edit %{singular}"
 msgstr ""
 
 msgid "entry"
+msgstr ""
+
+msgid "with its %{children}"
+msgstr ""
+
+msgid "is moved to the list's Deleted filter"
+msgstr ""
+
+msgid "It can be restored from there."
 msgstr ""

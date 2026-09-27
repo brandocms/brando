@@ -36,24 +36,23 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
         do: "<strong>#{escape(name)}</strong>",
         else: gettext("This %{singular}", singular: singular)
 
-    with_it =
-      case owned do
-        [] -> nil
-        counts -> gettext("together with %{children}", children: to_sentence(counts))
-      end
+    if schema.has_trait(SoftDelete) do
+      # Soft deleted, the owned rows stay with the entry and come back with it.
+      with_it = owned != [] && gettext("with its %{children}", children: to_sentence(owned))
 
-    restore =
-      if schema.has_trait(SoftDelete),
-        do: gettext("It can be restored under the list's Deleted filter."),
-        else: gettext("This can't be undone.")
+      [subject, gettext("is moved to the list's Deleted filter"), with_it]
+      |> sentence()
+      |> Kernel.<>(" " <> gettext("It can be restored from there."))
+    else
+      with_it = owned != [] && gettext("together with %{children}", children: to_sentence(owned))
 
-    deleted =
       [subject, gettext("will be deleted"), with_it]
-      |> Enum.reject(&is_nil/1)
-      |> Enum.join(" ")
-
-    "#{deleted}. #{restore}"
+      |> sentence()
+      |> Kernel.<>(" " <> gettext("This can't be undone."))
+    end
   end
+
+  defp sentence(parts), do: (parts |> Enum.reject(&(&1 in [nil, false])) |> Enum.join(" ")) <> "."
 
   defp entry_name(schema, entry) do
     if function_exported?(schema, :__has_identifier__, 0) and schema.__has_identifier__() do
