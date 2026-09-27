@@ -1420,7 +1420,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp active_status?(%{status: current_status}, status) when current_status == status, do: true
   defp active_status?(_, _), do: false
 
-  defp render_status_label(:disabled), do: gettext("Disabled")
+  defp render_status_label(:disabled), do: gettext("Deactivated")
   defp render_status_label(:draft), do: gettext("Draft")
   defp render_status_label(:pending), do: gettext("Pending")
   defp render_status_label(:published), do: gettext("Published")

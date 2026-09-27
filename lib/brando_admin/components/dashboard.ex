@@ -96,6 +96,6 @@ defmodule BrandoAdmin.Components.Dashboard do
   defp status_label(:published), do: gettext("Published")
   defp status_label(:draft), do: gettext("Draft")
   defp status_label(:pending), do: gettext("Pending")
-  defp status_label(:disabled), do: gettext("Disabled")
+  defp status_label(:disabled), do: gettext("Deactivated")
   defp status_label(_), do: gettext("Unpublished")
 end
