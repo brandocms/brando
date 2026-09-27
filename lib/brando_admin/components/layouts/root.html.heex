@@ -28,7 +28,12 @@
     </style>
     <.include_assets admin />
   </head>
-  <body id="app" data-env={Brando.env()}>
+  <body
+    id="app"
+    data-env={Brando.env()}
+    data-confirm-ok={gettext("OK")}
+    data-confirm-cancel={gettext("Cancel")}
+  >
     <div class="fader" id="fader">
       <script>
         var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none'},5000);

@@ -12685,3 +12685,24 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Up to %{size} per file"
 msgstr ""
+
+msgid "Delete %{singular}?"
+msgstr ""
+
+msgid "This %{singular}"
+msgstr ""
+
+msgid "together with %{children}"
+msgstr ""
+
+msgid "will be deleted"
+msgstr ""
+
+msgid "It can be restored under the list's Deleted filter."
+msgstr ""
+
+msgid "This can't be undone."
+msgstr ""
+
+msgid "and"
+msgstr ""
