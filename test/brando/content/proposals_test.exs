@@ -934,6 +934,8 @@ defmodule Brando.Content.ProposalsTest do
       assert Enum.map(copied.block.children, & &1.uid) ==
                Enum.map(c.child_uids ++ [copy], &Proposals.BlockTree.copy_uid(root_copy, &1))
 
+      assert Enum.map(copied.block.children, & &1.sequence) == [0, 1, 2, 3]
+
       assert Enum.find(List.last(multi(c).children).refs, &(&1.name == "info")).data.data.text == "<p>Alpha</p>"
     end
 

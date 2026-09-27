@@ -1345,11 +1345,12 @@ defmodule Brando.Content.Blocks do
 
   def duplicate_children(changeset, children, current_user_id, source \\ nil, mapping \\ nil) do
     duplicated_children =
-      Enum.map(children, fn child ->
+      Enum.with_index(children, fn child, sequence ->
         child
         |> Changeset.change()
         |> duplicate_block(
           user_id: current_user_id,
+          sequence: sequence,
           source: source,
           uid_mapping: mapping || Brando.Content.BlockSlots.uid_mapping(child)
         )
