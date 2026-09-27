@@ -177,7 +177,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
   # later, inside render, as a KeyError with no obvious link to the upload that
   # produced it.
   describe "item shape" do
-    @item_keys [:assets, :changes, :dom_id, :is_new, :pending, :source]
+    @item_keys [:assets, :changes, :dom_id, :is_new, :pending, :replacing, :source]
 
     test "a new item carries every key" do
       item = Transformer.new_item("transformer-item-new-1", %{})
@@ -211,6 +211,121 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
       file = %{"ref" => "tf-abc124", "filename" => "clip.mp4", "size" => 2048, "kind" => "video"}
 
       assert Transformer.build_placeholder(file, %Subform{}, Item, %{}).pending.kind == :video
+    end
+  end
+
+  describe "dropping a file on an entry" do
+    defp replacement_socket do
+      item =
+        Transformer.new_item("item-1", %{title: "The Reins", cover_id: 7}, assets: %{cover: %Brando.Images.Image{id: 7}})
+
+      recovery_socket(item)
+    end
+
+    defp register(socket, ref \\ "tf-replace1") do
+      {:noreply, socket} =
+        Transformer.handle_event(
+          "register_replacement",
+          %{"dom_id" => "item-1", "file" => %{"ref" => ref, "filename" => "new.jpg", "size" => 10, "kind" => "image"}},
+          socket
+        )
+
+      socket
+    end
+
+    test "keeps the entry, and its current asset, while the file uploads" do
+      socket = register(replacement_socket())
+      [item] = socket.assigns.items
+
+      assert item.replacing.ref == "tf-replace1"
+      assert item.replacing.filename == "new.jpg"
+      assert item.source.cover_id == 7
+
+      target = %Phoenix.LiveComponent.CID{cid: 7}
+      {:ok, _} = Transformer.update(%{event: "capture_draft", capture_id: "c", reply_to: target}, socket)
+
+      assert_receive {:phoenix, :send_update, {^target, %{data: [%{"cover_id" => 7, "title" => "The Reins"}]}}}
+    end
+
+    test "puts the delivered asset on the entry and keeps its other fields" do
+      socket = register(replacement_socket())
+      image = %Brando.Images.Image{id: 42}
+
+      {:ok, socket} = Transformer.update(%{event: "upload_complete", ref: "tf-replace1", asset: image}, socket)
+      [item] = socket.assigns.items
+
+      assert item.replacing == nil
+      assert item.source.cover_id == 42
+      assert item.changes.cover_id == 42
+      assert item.assets.cover == image
+
+      assert_receive {:phoenix, :send_update,
+                      {{BrandoAdmin.Components.Form, "collection_form"},
+                       %{updated_relation: [%{cover_id: 42, title: "The Reins"}]}}}
+    end
+
+    test "a saved entry is saved with the new asset" do
+      source = %MediaItem{id: 1, title: "The Reins", cover_id: 7}
+      item = Transformer.new_item("item-1", source, is_new: false)
+
+      socket =
+        recovery_socket(item)
+        |> Phoenix.Component.assign(:subform, %Subform{})
+        |> register()
+
+      {:ok, socket} =
+        Transformer.update(%{event: "upload_complete", ref: "tf-replace1", asset: %Brando.Images.Image{id: 42}}, socket)
+
+      {:ok, _} = Transformer.update(%{event: "fetch_transformer_data", tag: "save"}, socket)
+
+      assert_receive {:phoenix, :send_update,
+                      {{BrandoAdmin.Components.Form, "collection_form"},
+                       %{event: "provide_transformer_data", transformer_data: [%Ecto.Changeset{} = changeset]}}}
+
+      assert changeset.changes.cover_id == 42
+    end
+
+    test "can be cancelled, leaving the entry as it was" do
+      {:noreply, socket} =
+        Transformer.handle_event("cancel_replacement", %{"dom_id" => "item-1"}, register(replacement_socket()))
+
+      [item] = socket.assigns.items
+      assert item.replacing == nil
+      assert item.source.cover_id == 7
+    end
+
+    test "a failed replacement leaves the entry as it was" do
+      {:noreply, socket} =
+        Transformer.handle_event(
+          "upload_error",
+          %{"error" => "Too large", "request_ref" => "tf-replace1"},
+          register(replacement_socket())
+        )
+
+      [item] = socket.assigns.items
+      assert item.replacing == nil
+      assert item.source.cover_id == 7
+    end
+
+    test "ignores an unsafe ref and a placeholder target" do
+      assert hd(register(replacement_socket(), "<script>").assigns.items).replacing == nil
+
+      placeholder =
+        Transformer.build_placeholder(
+          %{"ref" => "tf-waiting", "filename" => "a.jpg", "kind" => "image"},
+          %Subform{},
+          MediaItem,
+          %{}
+        )
+
+      {:noreply, socket} =
+        Transformer.handle_event(
+          "register_replacement",
+          %{"dom_id" => placeholder.dom_id, "file" => %{"ref" => "tf-other", "filename" => "b.jpg"}},
+          recovery_socket(placeholder)
+        )
+
+      assert hd(socket.assigns.items).replacing == nil
     end
   end
 

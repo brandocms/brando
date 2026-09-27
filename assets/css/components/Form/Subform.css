@@ -532,6 +532,77 @@
     cursor: grabbing;
   }
 
+  /* One file dragged over an entry replaces that entry's asset. The label
+     comes from the entry (data-replace-label) so it is translated. */
+  .transformer-entry.drop-replace {
+    position: relative;
+    outline: 2px solid var(--brando-color-dark);
+    outline-offset: -2px;
+
+    &::after {
+      content: attr(data-replace-label);
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      background-color: color-mix(in srgb, var(--brando-color-peach, #fdf3ef) 88%, transparent);
+      font-size: 14px;
+      text-align: center;
+      pointer-events: none;
+    }
+  }
+
+  /* The new file is on its way; the entry still shows (and saves) its old
+     asset underneath. */
+  .transformer-entry.replacing {
+    position: relative;
+  }
+
+  .replace-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    row-gap: 8px;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.92);
+
+    .replace-filename {
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .pending-progress {
+      display: flex;
+      align-items: center;
+      column-gap: 10px;
+
+      .progress-bar {
+        position: relative;
+        flex-grow: 1;
+        height: 3px;
+        border-radius: 2px;
+        background-color: #f0f0f2;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        min-width: 12%;
+        background-color: var(--brando-color-dark);
+        transition: width 0.2s ease;
+      }
+    }
+
+    .replace-cancel {
+      align-self: flex-start;
+    }
+  }
+
   .transformer-entry.pending {
     opacity: 0.85;
 

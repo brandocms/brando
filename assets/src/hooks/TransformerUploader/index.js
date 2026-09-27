@@ -18,6 +18,11 @@
  *   4. hand each file to its transport, tagged with the ref its placeholder was
  *      registered under
  *
+ * One file dropped on an existing entry (anything carrying
+ * data-replace-dom-id) replaces that entry's asset instead: it is registered as
+ * a replacement for the entry and travels the same way, so the entry keeps its
+ * other fields and its place.
+ *
  * Expected markup:
  *
  *   <div phx-hook="Brando.TransformerUploader"
@@ -55,6 +60,7 @@ export default (app) => ({
       event.preventDefault()
       event.stopPropagation()
       this.el.classList.add('dragging')
+      this.markReplaceTarget(this.replaceTarget(event))
     })
 
     this.el.addEventListener('dragleave', (event) => {
@@ -62,6 +68,7 @@ export default (app) => ({
       // Ignore leaves into our own children, or the highlight flickers.
       if (event.relatedTarget && this.el.contains(event.relatedTarget)) return
       this.el.classList.remove('dragging')
+      this.markReplaceTarget(null)
     })
 
     this.el.addEventListener('drop', (event) => {
@@ -69,8 +76,19 @@ export default (app) => ({
       event.stopPropagation()
       this.el.classList.remove('dragging')
 
+      const target = this.replaceTarget(event)
+      this.markReplaceTarget(null)
+
       const files = Array.from(event.dataTransfer?.files || [])
-      if (files.length) this.intake(files)
+      if (!files.length) return
+
+      // A single file on an entry replaces its asset; a pile of files, or files
+      // dropped anywhere else, become new entries.
+      if (target && files.length === 1) {
+        this.replace(files[0], target.dataset.replaceDomId)
+      } else {
+        this.intake(files)
+      }
     })
 
     // The card was removed while its transfer was queued or running. Provider
@@ -158,6 +176,54 @@ export default (app) => ({
     return `tf-${id}`.replace(/[^A-Za-z0-9_-]/g, '')
   },
 
+  // The entry under the pointer, if it can take a replacement. Only a drag
+  // carrying exactly one file can replace — dragging several highlights
+  // nothing, since they would be added as new entries.
+  replaceTarget(event) {
+    const items = event.dataTransfer?.items
+    if (items && items.length !== 1) return null
+
+    const entry = event.target.closest?.('[data-replace-dom-id]')
+    return entry && this.el.contains(entry) ? entry : null
+  },
+
+  markReplaceTarget(entry) {
+    if (this.replaceEntry === entry) return
+    this.replaceEntry?.classList.remove('drop-replace')
+    this.replaceEntry = entry
+    entry?.classList.add('drop-replace')
+  },
+
+  // Validated exactly like intake, then registered against the entry rather
+  // than as a new placeholder.
+  replace(file, domId) {
+    const entry = this.validate(file)
+
+    if (entry.rejected) {
+      this.pushTo('reject_files', { files: [entry.rejected] })
+      return
+    }
+
+    this.pushTo('register_replacement', {
+      dom_id: domId,
+      file: { ref: entry.ref, kind: entry.kind, filename: file.name, size: file.size },
+    })
+
+    this.dispatch([entry])
+  },
+
+  validate(file) {
+    const kind = this.classify(file)
+    if (!kind) return { rejected: { filename: file.name, reason: 'Unsupported file type' } }
+
+    const limit = this.maxSize(kind === 'video' ? 'videoMaxSize' : 'imageMaxSize')
+    if (limit && file.size > limit) {
+      return { rejected: { filename: file.name, reason: `Too large (max ${this.humanSize(limit)})` } }
+    }
+
+    return { file, kind, ref: this.ref() }
+  },
+
   intake(files) {
     const accepted = []
     const rejected = []
@@ -166,20 +232,12 @@ export default (app) => ({
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
       .forEach((file) => {
-        const kind = this.classify(file)
-
-        if (!kind) {
-          rejected.push({ filename: file.name, reason: 'Unsupported file type' })
-          return
+        const entry = this.validate(file)
+        if (entry.rejected) {
+          rejected.push(entry.rejected)
+        } else {
+          accepted.push(entry)
         }
-
-        const limit = this.maxSize(kind === 'video' ? 'videoMaxSize' : 'imageMaxSize')
-        if (limit && file.size > limit) {
-          rejected.push({ filename: file.name, reason: `Too large (max ${this.humanSize(limit)})` })
-          return
-        }
-
-        accepted.push({ file, kind, ref: this.ref() })
       })
 
     if (rejected.length) this.pushTo('reject_files', { files: rejected })

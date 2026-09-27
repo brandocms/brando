@@ -151,9 +151,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp deliver(socket, ref, asset_field, asset, append_fun) do
-    case find_pending_index(socket.assigns.items, &(&1.ref == ref)) do
+    case find_upload(socket.assigns.items, ref) do
       nil -> {:ok, append_fun.(socket, asset)}
-      index -> {:ok, resolve_pending_item(socket, index, asset_field, asset)}
+      {index, :pending} -> {:ok, resolve_pending_item(socket, index, asset_field, asset)}
+      {index, :replacing} -> {:ok, resolve_replacement(socket, index, asset_field, asset)}
     end
   end
 
@@ -354,9 +355,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                   "group",
                   entry.item.pending && "pending",
                   entry.item.pending && entry.item.pending.status == :error && "failed",
+                  entry.item.replacing && "replacing",
                   (@subform.listing || entry.item.pending) && dom_id not in @open_entries && "listing"
                 ]}
                 data-id={dom_id}
+                data-replace-dom-id={is_nil(entry.item.pending) && dom_id}
+                data-replace-label={gettext("Drop to replace")}
               >
                 <div class="subform-tools">
                   <Subform.subentry_edit
@@ -379,6 +383,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                   video_field={@video_field}
                   relation_module={@relation_module}
                   subform={@subform}
+                  myself={@myself}
                 />
                 <div
                   :if={
@@ -526,6 +531,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       |> assign(:video, video)
       |> assign(:entry, entry)
       |> assign(:pending, item.pending)
+      |> assign(:replacing, Map.get(item, :replacing))
 
     ~H"""
     <div :if={@pending} class="subform-listing pending-listing">
@@ -568,6 +574,24 @@ defmodule BrandoAdmin.Components.Form.Transformer do
             <div class="img-placeholder"><.icon name="hero-photo" /></div>
           </div>
       <% end %>
+      <%!-- A file dropped on the card is on its way in. The card keeps its
+            current asset (and saves with it) until the new one lands. --%>
+      <div :if={@replacing} class="replace-overlay">
+        <div class="replace-filename">{@replacing.filename}</div>
+        <div class="pending-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" style={"width: #{@replacing.progress}%"} />
+          </div>
+          <small>{replacing_status_label(@replacing)}</small>
+        </div>
+        <button
+          type="button"
+          class="tiny replace-cancel"
+          phx-click={JS.push("cancel_replacement", value: %{dom_id: @item.dom_id}, target: @myself)}
+        >
+          {gettext("Cancel")}
+        </button>
+      </div>
       <div class="subform-listing-row">
         <%= if @subform.listing do %>
           {Phoenix.LiveView.TagEngine.component(
@@ -756,6 +780,43 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   def handle_event("dismiss_upload_errors", _, socket) do
     {:noreply, assign(socket, :upload_errors, [])}
+  end
+
+  # A single file dropped on an existing card replaces that card's asset. The
+  # card keeps its current asset — and is saved with it — until the upload
+  # lands, so a save mid-upload loses nothing. Placeholders can't be replaced;
+  # they have nothing to replace yet.
+  def handle_event("register_replacement", %{"dom_id" => dom_id, "file" => file}, socket) do
+    with %{} = state <- upload_state(file),
+         index when is_integer(index) <-
+           Enum.find_index(socket.assigns.items, &(&1.dom_id == dom_id && is_nil(&1.pending))) do
+      item = Enum.at(socket.assigns.items, index)
+
+      {:noreply,
+       socket
+       |> maybe_abort_pending_upload(item)
+       |> update_item(index, &%{&1 | replacing: state})}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  # The upload is left to finish (or be cancelled from the upload manager);
+  # when it lands, nothing is waiting for it, so the card keeps its asset and
+  # the delivered file is appended as a new entry instead of being lost.
+  def handle_event("cancel_replacement", %{"dom_id" => dom_id}, socket) do
+    case Enum.find_index(socket.assigns.items, &(&1.dom_id == dom_id)) do
+      nil ->
+        {:noreply, socket}
+
+      index ->
+        item = Enum.at(socket.assigns.items, index)
+
+        {:noreply,
+         socket
+         |> maybe_abort_pending_upload(item)
+         |> update_item(index, &%{&1 | replacing: nil})}
+    end
   end
 
   # --- Asset selection ---
@@ -951,7 +1012,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         # The Video row exists now, but the transfer is what takes time — the
         # placeholder keeps its progress bar until the browser reports success.
         socket =
-          case find_pending_index(socket.assigns.items, &(&1.ref == request_ref)) do
+          case find_upload(socket.assigns.items, request_ref) do
+            {index, :replacing} ->
+              socket
+              |> do_put_item_asset(index, video_field, video)
+              |> clear_other_asset(index, video_field)
+              |> update_item(index, &%{&1 | replacing: %{&1.replacing | status: :uploading}})
+
             nil ->
               default_map =
                 subform
@@ -964,7 +1031,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
               |> update(:items, &(&1 ++ [item]))
               |> stream_insert(:transformer_items, stream_entry(item))
 
-            index ->
+            {index, :pending} ->
               update_item(socket, index, fn item ->
                 %{
                   item
@@ -1051,6 +1118,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # - `source`   the struct (existing row) or map (unsaved) the entry wraps
   # - `changes`  inline field edits, merged over source at save
   # - `pending`  upload placeholder state, or nil once the asset lands
+  # - `replacing` upload state for a file dropped on an existing entry to
+  #              replace its asset; the entry keeps its asset until it lands
   # - `assets`   render-only resolved assets; never merged into save data
   @doc false
   def new_item(dom_id, source, opts \\ []) do
@@ -1060,6 +1129,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       changes: %{},
       is_new: Keyword.get(opts, :is_new, true),
       pending: Keyword.get(opts, :pending),
+      replacing: Keyword.get(opts, :replacing),
       assets: Keyword.get(opts, :assets, %{})
     }
   end
@@ -1103,24 +1173,35 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # queued card, is skipped at save time, and becomes a real item the moment its
   # asset id lands — the position it was given on drop never changes.
   @doc false
-  def build_placeholder(%{"ref" => ref, "filename" => filename} = file, subform, relation_module, entry_data)
-      when is_binary(ref) and is_binary(filename) do
-    if valid_ref?(ref) do
-      new_item("transformer-item-pending-#{ref}", build_default(subform, relation_module, entry_data, nil),
-        pending: %{
-          ref: ref,
-          filename: filename,
-          size: parse_size(Map.get(file, "size")),
-          kind: if(Map.get(file, "kind") == "video", do: :video, else: :image),
-          status: :waiting,
-          progress: 0,
-          error: nil
-        }
-      )
+  def build_placeholder(file, subform, relation_module, entry_data) do
+    case upload_state(file) do
+      nil ->
+        nil
+
+      state ->
+        new_item("transformer-item-pending-#{state.ref}", build_default(subform, relation_module, entry_data, nil),
+          pending: state
+        )
     end
   end
 
-  def build_placeholder(_file, _subform, _relation_module, _entry_data), do: nil
+  # The upload state a placeholder or a replacement carries while its file
+  # travels. nil for anything that couldn't safely be tracked.
+  defp upload_state(%{"ref" => ref, "filename" => filename} = file) when is_binary(ref) and is_binary(filename) do
+    if valid_ref?(ref) do
+      %{
+        ref: ref,
+        filename: filename,
+        size: parse_size(Map.get(file, "size")),
+        kind: if(Map.get(file, "kind") == "video", do: :video, else: :image),
+        status: :waiting,
+        progress: 0,
+        error: nil
+      }
+    end
+  end
+
+  defp upload_state(_file), do: nil
 
   # Same charset as Brando.Uploads.AssetIntent — this reaches the DOM as an id.
   defp valid_ref?(ref), do: Regex.match?(~r/^[A-Za-z0-9_-]{1,64}$/, ref)
@@ -1208,8 +1289,44 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     end)
   end
 
-  defp find_pending_index(items, fun) do
-    Enum.find_index(items, fn item -> item.pending && fun.(item.pending) end)
+  # Where an upload's ref is waited on: a placeholder of its own, or an existing
+  # entry the file was dropped on to replace its asset.
+  defp find_upload(_items, nil), do: nil
+
+  defp find_upload(items, ref) do
+    Enum.find_value(Enum.with_index(items), fn {item, index} ->
+      cond do
+        match?(%{ref: ^ref}, item.pending) -> {index, :pending}
+        match?(%{ref: ^ref}, Map.get(item, :replacing)) -> {index, :replacing}
+        true -> nil
+      end
+    end)
+  end
+
+  defp resolve_replacement(socket, index, asset_field, asset) do
+    socket
+    |> do_put_item_asset(index, asset_field, asset)
+    |> clear_other_asset(index, asset_field)
+    |> update_item(index, &%{&1 | replacing: nil})
+    |> notify_relation_change()
+  end
+
+  # An entry holds an image or a video. Dropping one kind on an entry of the
+  # other swaps it, rather than leaving both set.
+  defp clear_other_asset(socket, index, asset_field) do
+    other =
+      case asset_field do
+        field when field == socket.assigns.image_field -> socket.assigns.video_field
+        _ -> socket.assigns.image_field
+      end
+
+    item = Enum.at(socket.assigns.items, index)
+
+    if other && item |> resolve_item_data() |> Map.get(:"#{other}_id") do
+      do_put_item_asset(socket, index, other, nil)
+    else
+      socket
+    end
   end
 
   defp update_item(socket, index, fun) do
@@ -1239,28 +1356,38 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp clear_pending_upload(socket, ref) do
-    case find_pending_index(socket.assigns.items, &(&1.ref == ref)) do
+    case find_upload(socket.assigns.items, ref) do
       nil -> socket
-      index -> update_item(socket, index, &%{&1 | pending: nil})
+      {index, key} -> update_item(socket, index, &Map.put(&1, key, nil))
     end
   end
 
   defp progress_pending_upload(socket, ref, percentage) do
-    case find_pending_index(socket.assigns.items, &(&1.ref == ref)) do
+    case find_upload(socket.assigns.items, ref) do
       nil ->
         socket
 
-      index ->
+      {index, key} ->
         update_item(socket, index, fn item ->
-          %{item | pending: %{item.pending | status: :uploading, progress: clamp(percentage)}}
+          Map.update!(item, key, &%{&1 | status: :uploading, progress: clamp(percentage)})
         end)
     end
   end
 
+  # A failed replacement leaves the entry as it was, so the failure is a toast
+  # rather than a failed card.
   defp fail_pending_upload(socket, ref, message) do
-    case find_pending_index(socket.assigns.items, &(&1.ref == ref)) do
-      nil -> alert_upload_failure(socket, message)
-      index -> mark_failed(socket, index, message)
+    case find_upload(socket.assigns.items, ref) do
+      nil ->
+        alert_upload_failure(socket, message)
+
+      {index, :pending} ->
+        mark_failed(socket, index, message)
+
+      {index, :replacing} ->
+        socket
+        |> update_item(index, &%{&1 | replacing: nil})
+        |> alert_upload_failure(message)
     end
   end
 
@@ -1281,6 +1408,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp maybe_abort_pending_upload(socket, %{pending: %{ref: ref}}) do
+    push_event(socket, "transformer:abort_upload", %{ref: ref})
+  end
+
+  defp maybe_abort_pending_upload(socket, %{replacing: %{ref: ref}}) do
     push_event(socket, "transformer:abort_upload", %{ref: ref})
   end
 
@@ -1345,6 +1476,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   defp pending_status_label(%{status: :waiting}), do: gettext("Waiting…")
   defp pending_status_label(%{status: :uploading, progress: progress}), do: "#{progress}%"
   defp pending_status_label(_pending), do: gettext("Uploading…")
+
+  defp replacing_status_label(%{status: :uploading, progress: progress}) when progress > 0, do: "#{progress}%"
+  defp replacing_status_label(_replacing), do: gettext("Replacing…")
 
   # Delegated rather than duplicated: `Brando.Uploads` owns the text, because
   # the picker and the video drawer report the same failures on the same
