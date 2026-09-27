@@ -267,7 +267,9 @@ defmodule BrandoAdmin.Images.ImageListLive do
                                                                                                                     gettext(
                                                                                                                       "Upload to %{folder}",
                                                                                                                       folder:
-                                                                                                                        @effective_upload_folder
+                                                                                                                        upload_folder_label(
+                                                                                                                          @effective_upload_folder
+                                                                                                                        )
                                                                                                                     ),
                                                                                                                   else:
                                                                                                                     gettext(
@@ -371,6 +373,12 @@ defmodule BrandoAdmin.Images.ImageListLive do
       :effective_upload_folder_id,
       FolderBrowser.folder_id_for(effective_upload_folder, socket.assigns.upload_root)
     )
+  end
+
+  # "site › default" for images/site/default: the folders as the library
+  # shows them, not the storage path.
+  defp upload_folder_label(folder) do
+    folder |> folder_label_for_display() |> String.replace("/", " › ")
   end
 
   defp folder_label_for_display(folder) do

@@ -3,6 +3,8 @@ defmodule Brando.Blueprint.AssetOptions do
 
   @asset_types [:file, :gallery, :image, :video]
   @option_scopes %{
+    # The entry field the site uses as the image's alt text (e.g. :title).
+    alt_from: [:image],
     cfg: @asset_types,
     constraints: @asset_types,
     force_update_on_change: [:gallery],
@@ -20,7 +22,8 @@ defmodule Brando.Blueprint.AssetOptions do
   @spec validate(map()) :: :ok | {:error, String.t()}
   def validate(%{type: type, opts: opts}) do
     with :ok <- validate_known_options(type, opts),
-         :ok <- boolean_option(opts, :required) do
+         :ok <- boolean_option(opts, :required),
+         :ok <- atom_option(opts, :alt_from) do
       validate_gallery_options(type, opts)
     end
   end
@@ -50,6 +53,13 @@ defmodule Brando.Blueprint.AssetOptions do
     case Map.get(opts, option) do
       value when value in [nil, false, true] -> :ok
       value -> {:error, "`:#{option}` must be a boolean, got: #{inspect(value)}"}
+    end
+  end
+
+  defp atom_option(opts, option) do
+    case Map.get(opts, option) do
+      value when is_atom(value) -> :ok
+      value -> {:error, "`:#{option}` must be a field name (atom), got: #{inspect(value)}"}
     end
   end
 

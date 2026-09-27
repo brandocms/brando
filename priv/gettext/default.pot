@@ -12736,3 +12736,6 @@ msgstr ""
 
 msgid "One topic per line — what they are known for"
 msgstr ""
+
+msgid "Alt text from its entry"
+msgstr ""

@@ -101,6 +101,7 @@ defmodule Brando.Images.Image do
       |> assign(:image_formats, formats)
       |> assign(:size_count, map_size(assigns.entry.sizes || %{}))
       |> assign(:title, Brando.Images.text(assigns.entry, :title, nil))
+      |> assign(:alt_from_entry?, Brando.Images.AltText.alt_from_entry?(assigns.entry))
       |> assign(:alt_missing, Brando.Images.AltText.missing_languages(assigns.entry))
       |> assign(:language_count, length(Brando.Images.AltText.languages()))
 
@@ -118,8 +119,10 @@ defmodule Brando.Images.Image do
           <span :if={@size_count > 0} class="library-size-count">
             {ngettext("%{count} size", "%{count} sizes", @size_count)}
           </span>
-          <span class={["library-alt", @alt_missing != [] && "missing"]}>
+          <span class={["library-alt", @alt_missing != [] && not @alt_from_entry? && "missing"]}>
             <%= cond do %>
+              <% @alt_from_entry? and @alt_missing != [] -> %>
+                {gettext("Alt text from its entry")}
               <% @alt_missing == [] -> %>
                 {gettext("Alt text added")}
               <% length(@alt_missing) == @language_count -> %>

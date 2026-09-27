@@ -115,6 +115,7 @@ defmodule Brando.Blueprint.OptionCompatibilityTest do
   }
 
   @asset_option_scopes %{
+    alt_from: [:image],
     cfg: [:file, :gallery, :image, :video],
     constraints: [:file, :gallery, :image, :video],
     force_update_on_change: [:gallery],
@@ -307,5 +308,13 @@ defmodule Brando.Blueprint.OptionCompatibilityTest do
              })
 
     assert message =~ "unsupported options [:required_message]"
+
+    assert :ok = AssetOptions.validate(%{type: :image, opts: %{cfg: :default, alt_from: :title}})
+
+    assert {:error, message} = AssetOptions.validate(%{type: :image, opts: %{cfg: :default, alt_from: "title"}})
+    assert message =~ "`:alt_from` must be a field name"
+
+    assert {:error, message} = AssetOptions.validate(%{type: :video, opts: %{cfg: :default, alt_from: :title}})
+    assert message =~ "unsupported options [:alt_from]"
   end
 end

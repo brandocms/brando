@@ -90,15 +90,36 @@ defmodule Brando.Images.AltText do
   @spec missing_count() :: non_neg_integer()
   def missing_count, do: Brando.Repo.aggregate(missing_query(), :count)
 
+  @doc """
+  Config targets (`"image:MyApp.Works.Artwork:image"`) of image assets whose
+  alt text the site takes from their entry — declared with `alt_from:` on the
+  asset, e.g. `asset :image, :image, alt_from: :title, cfg: …`. Their images
+  don't need alt text of their own, so they aren't counted as missing it.
+  """
+  @spec entry_alt_targets() :: [String.t()]
+  def entry_alt_targets do
+    for blueprint <- Brando.Blueprint.list_blueprints(),
+        %{type: :image, name: name, opts: %{alt_from: field}} when not is_nil(field) <-
+          Brando.Blueprint.Assets.__assets__(blueprint),
+        do: "image:#{inspect(blueprint)}:#{name}"
+  end
+
+  @doc "Whether `image`'s alt text comes from its entry (see `entry_alt_targets/0`)."
+  @spec alt_from_entry?(map(), [String.t()]) :: boolean()
+  def alt_from_entry?(image, targets \\ entry_alt_targets()), do: Map.get(image, :config_target) in targets
+
   defp missing_query do
     missing_any =
       Enum.reduce(languages(), dynamic(false), fn language, acc ->
         dynamic([i], ^acc or fragment("coalesce(btrim(? ->> ?), '') = ''", i.alt, ^language))
       end)
 
+    targets = entry_alt_targets()
+
     from i in Image,
       where: ^missing_any,
-      where: is_nil(i.deleted_at) and i.status == :processed and not ilike(i.path, "%.svg")
+      where: is_nil(i.deleted_at) and i.status == :processed and not ilike(i.path, "%.svg"),
+      where: is_nil(i.config_target) or i.config_target not in ^targets
   end
 
   @doc """
