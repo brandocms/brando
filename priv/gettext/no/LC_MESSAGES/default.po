@@ -12718,3 +12718,6 @@ msgstr "flyttes til Slettet i listen"
 
 msgid "It can be restored from there."
 msgstr "Den kan hentes tilbake derfra."
+
+msgid "New %{singular}"
+msgstr "Ny %{singular}"

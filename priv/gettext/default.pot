@@ -12712,3 +12712,6 @@ msgstr ""
 
 msgid "It can be restored from there."
 msgstr ""
+
+msgid "New %{singular}"
+msgstr ""

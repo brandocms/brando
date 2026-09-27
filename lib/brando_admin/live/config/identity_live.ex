@@ -10,7 +10,9 @@ defmodule BrandoAdmin.Sites.IdentityLive do
     {:ok,
      socket
      |> assign_current_user(token)
-     |> assign_entry_id()}
+     |> assign_entry_id()
+     # One identity per language: the tab says what it is, not "[#New]".
+     |> assign(:page_title, gettext("Identity"))}
   end
 
   def render(assigns) do

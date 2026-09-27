@@ -24,7 +24,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
      |> assign_current_user(token)
      |> assign_entry_id()
      |> assign_404s()
-     |> assign_audit_defaults()}
+     |> assign_audit_defaults()
+     |> assign(:page_title, gettext("SEO"))}
   end
 
   def handle_params(params, _uri, socket) do
