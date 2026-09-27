@@ -52,6 +52,23 @@ defmodule Brando.Blueprint.ListingComponentsTest do
     assert html =~ ~s(aria-expanded="false")
   end
 
+  test "says what the toggle opens, from the child relations' names" do
+    page = %Brando.Pages.Page{
+      id: 7,
+      children: [%Brando.Pages.Page{}],
+      fragments: [%Brando.Pages.Fragment{}, %Brando.Pages.Fragment{}]
+    }
+
+    html =
+      render_component(&ChildListingButton.children_button/1, %{
+        entry: page,
+        fields: [:fragments, :children],
+        target: "#list-row-7"
+      })
+
+    assert html =~ ~s(class="children-button-text">2 fragments, 1 page</span>)
+  end
+
   test "listing rows toggle only child fields that exist on the entry" do
     socket =
       %Phoenix.LiveView.Socket{}
