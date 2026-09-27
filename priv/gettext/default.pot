@@ -942,18 +942,24 @@ msgid "List"
 msgstr ""
 
 #: lib/brando_admin/components/form/meta_drawer.ex:50
+#: lib/brando/seo/checks.ex:131
+#: lib/brando/seo/checks.ex:138
+#: lib/brando/seo/checks.ex:145
 #, elixir-autogen, elixir-format
-msgid "META description"
+msgid "Meta description"
 msgstr ""
 
 #: lib/brando_admin/components/form/meta_drawer.ex:60
 #, elixir-autogen, elixir-format
-msgid "META image"
+msgid "Meta image"
 msgstr ""
 
 #: lib/brando_admin/components/form/meta_drawer.ex:42
+#: lib/brando/seo/checks.ex:98
+#: lib/brando/seo/checks.ex:105
+#: lib/brando/seo/checks.ex:110
 #, elixir-autogen, elixir-format
-msgid "META title"
+msgid "Meta title"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex:2586
@@ -1793,7 +1799,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/meta_drawer.ex:36
 #, elixir-autogen, elixir-format
-msgid "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own META image which will override your entry's cover image, if it has one."
+msgid "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own meta image which will override your entry's cover image, if it has one."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1148
@@ -9988,13 +9994,6 @@ msgstr ""
 msgid "Not checked"
 msgstr ""
 
-#: lib/brando/seo/checks.ex:98
-#: lib/brando/seo/checks.ex:105
-#: lib/brando/seo/checks.ex:110
-#, elixir-autogen, elixir-format
-msgid "Meta title"
-msgstr ""
-
 #: lib/brando/seo/checks.ex:111
 #, elixir-autogen, elixir-format
 msgid "Set a meta title; the site fallback is used otherwise."
@@ -10004,13 +10003,6 @@ msgstr ""
 #: lib/brando/seo/checks.ex:120
 #, elixir-autogen, elixir-format
 msgid "Meta title length"
-msgstr ""
-
-#: lib/brando/seo/checks.ex:131
-#: lib/brando/seo/checks.ex:138
-#: lib/brando/seo/checks.ex:145
-#, elixir-autogen, elixir-format
-msgid "Meta description"
 msgstr ""
 
 #: lib/brando/seo/checks.ex:146

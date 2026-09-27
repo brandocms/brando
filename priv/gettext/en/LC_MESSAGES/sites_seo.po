@@ -24,19 +24,19 @@ msgstr ""
 #: lib/brando/sites/seo.ex:69
 #: lib/brando/sites/seo.ex:70
 #, elixir-autogen, elixir-format
-msgid "Fallback META description"
+msgid "Fallback meta description"
 msgstr ""
 
 #: lib/brando/sites/seo.ex:73
 #: lib/brando/sites/seo.ex:74
 #, elixir-autogen, elixir-format
-msgid "Fallback META image"
+msgid "Fallback meta image"
 msgstr ""
 
 #: lib/brando/sites/seo.ex:65
 #: lib/brando/sites/seo.ex:66
 #, elixir-autogen, elixir-format
-msgid "Fallback META title"
+msgid "Fallback meta title"
 msgstr ""
 
 #: lib/brando/sites/seo.ex:92

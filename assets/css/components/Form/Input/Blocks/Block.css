@@ -710,10 +710,12 @@ button.btn-palette {
       }
     }
 
+    /* Var labels in normal case: long labels ("File (instead of the link,
+       e.g. a CV)") are unreadable in mono capitals. */
     label.control-label {
-      @font mono;
-      font-size: 10px;
-      text-transform: uppercase;
+      @font main;
+      font-size: 12px;
+      font-weight: 500;
     }
 
     input[type="text"] {

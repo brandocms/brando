@@ -34,12 +34,12 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
       <:info>
         <p>
           {gettext(
-            "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own META image which will override your entry's cover image, if it has one."
+            "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own meta image which will override your entry's cover image, if it has one."
           )}
         </p>
       </:info>
       <div class="brando-input">
-        <Input.text field={@form[:meta_title]} opts={@meta_title_opts} target={@form_cid} label={gettext("META title")} />
+        <Input.text field={@form[:meta_title]} opts={@meta_title_opts} target={@form_cid} label={gettext("Meta title")} />
       </div>
 
       <div class="brando-input">
@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           field={@form[:meta_description]}
           opts={@meta_description_opts}
           target={@form_cid}
-          label={gettext("META description")}
+          label={gettext("Meta description")}
         />
       </div>
 
@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           id={"#{@form.id}-meta-image"}
           field={@form[:meta_image]}
           current_user={@current_user}
-          label={gettext("META image")}
+          label={gettext("Meta image")}
         />
       </div>
     </Content.drawer>

@@ -62,16 +62,16 @@ defmodule Brando.Sites.SEO do
           label t("Default metadata")
 
           input :fallback_meta_title, :text,
-            label: t("Fallback META title"),
-            placeholder: t("Fallback META title")
+            label: t("Fallback meta title"),
+            placeholder: t("Fallback meta title")
 
           input :fallback_meta_description, :textarea,
-            label: t("Fallback META description"),
-            placeholder: t("Fallback META description")
+            label: t("Fallback meta description"),
+            placeholder: t("Fallback meta description")
 
           input :fallback_meta_image, :image,
-            label: t("Fallback META image"),
-            placeholder: t("Fallback META image")
+            label: t("Fallback meta image"),
+            placeholder: t("Fallback meta image")
         end
 
         fieldset do
