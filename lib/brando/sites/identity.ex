@@ -141,6 +141,11 @@ defmodule Brando.Sites.Identity do
 
           input :type, :select,
             options: [
+              %{
+                value: :person,
+                label: t("Person"),
+                instructions: t("A site about one person: an artist, a writer, a freelancer")
+              },
               %{value: :architect, label: t("Architect"), instructions: t("Architecture offices, studios")},
               %{value: :art_gallery, label: t("Art Gallery"), instructions: t("Art galleries, exhibition spaces")},
               %{value: :corporation, label: t("Corporation"), instructions: t("Large company, publicly traded")},

@@ -8,7 +8,7 @@ single `@graph` document, following the approach recommended by Google.
 
 Every page automatically gets a connected graph with:
 
-- **Identity** (Organization, Corporation, ProfessionalService, LocalBusiness, or Restaurant)
+- **Identity** (Person, Organization, Corporation, ProfessionalService, LocalBusiness, Restaurant, …)
 - **WebSite** — linked to identity via `@id`
 - **WebPage** — linked to website via `isPartOf`, type selectable per page
 - **BreadcrumbList** — if breadcrumbs are set, linked from WebPage
@@ -233,6 +233,7 @@ schema.org properties based on the selected identity type:
 
 | Type | Additional fields |
 |------|-------------------|
+| Person | `jobTitle`, `hasOccupation`, `additionalType`, `knowsAbout` — and none of the Organization properties |
 | Organization | `foundingDate`, `numberOfEmployees` |
 | Corporation | `foundingDate`, `numberOfEmployees`, `tickerSymbol` |
 | ProfessionalService | `foundingDate`, `areaServed`, `knowsAbout` |
@@ -241,6 +242,11 @@ schema.org properties based on the selected identity type:
 
 These are stored in the `type_config` embedded schema on Identity and
 automatically included in the JSON-LD output.
+
+A **Person** identity is for a site about one person. `additionalType` takes
+a URL for a type schema.org doesn't have — an artist can point at Wikidata's
+"visual artist" (`https://www.wikidata.org/wiki/Q3391743`) — and the
+identity's links become `sameAs`.
 
 ### Custom schema modules
 

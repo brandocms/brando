@@ -141,4 +141,36 @@ defmodule Brando.JSONLD.Schema.IdentityTypeFieldsTest do
       end
     end
   end
+
+  describe "person" do
+    test "is a Person with what they do, and none of the Organization properties" do
+      config = [
+        job_title: "Artist",
+        occupation: "Visual artist",
+        additional_type: "https://www.wikidata.org/wiki/Q3391743",
+        knows_about: ["Photography"],
+        legal_name: "Ignored AS",
+        vat_id: "123"
+      ]
+
+      built = Schema.IdentityPerson.build({identity("person", config), seo()})
+      json = built |> Jason.encode!() |> Jason.decode!()
+
+      assert json["@type"] == "Person"
+      assert json["jobTitle"] == "Artist"
+      assert json["hasOccupation"] == %{"@type" => "Occupation", "name" => "Visual artist"}
+      assert json["additionalType"] == "https://www.wikidata.org/wiki/Q3391743"
+      assert json["knowsAbout"] == ["Photography"]
+      refute Map.has_key?(json, "legalName")
+      refute Map.has_key?(json, "vatID")
+      refute Map.has_key?(json, "logo")
+    end
+
+    test "leaves out an empty occupation and type" do
+      built = Schema.IdentityPerson.build({identity("person", job_title: "Artist"), seo()})
+
+      assert built.hasOccupation == nil
+      assert built.additionalType == nil
+    end
+  end
 end

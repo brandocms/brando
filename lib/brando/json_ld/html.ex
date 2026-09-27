@@ -43,6 +43,7 @@ defmodule Brando.JSONLD.HTML do
     identity_schema_module(type).build({cached_identity, cached_seo})
   end
 
+  defp identity_schema_module("person"), do: JSONLD.Schema.IdentityPerson
   defp identity_schema_module("organization"), do: JSONLD.Schema.Organization
   defp identity_schema_module("corporation"), do: JSONLD.Schema.Corporation
   defp identity_schema_module("professional_service"), do: JSONLD.Schema.ProfessionalService

@@ -12715,3 +12715,24 @@ msgstr ""
 
 msgid "New %{singular}"
 msgstr ""
+
+msgid "Job title"
+msgstr ""
+
+msgid "e.g. Artist"
+msgstr ""
+
+msgid "Occupation"
+msgstr ""
+
+msgid "e.g. Visual artist"
+msgstr ""
+
+msgid "More specific type (URL)"
+msgstr ""
+
+msgid "Optional. A type schema.org doesn't have, as a URL — e.g. Wikidata's “visual artist”: https://www.wikidata.org/wiki/Q3391743"
+msgstr ""
+
+msgid "One topic per line — what they are known for"
+msgstr ""
