@@ -13,6 +13,7 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
   @doc "Builds the setup expanded by the public listing LiveView API."
   def build(opts) do
     schema = Keyword.fetch!(opts, :schema)
+    page_title = Keyword.get(opts, :page_title)
 
     quote do
       use BrandoAdmin, :live_view
@@ -23,7 +24,9 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
       on_mount({__MODULE__, :hooks})
 
       def on_mount(:hooks, params, assigns, socket) do
-        BrandoAdmin.LiveView.Listing.Hooks.hooks(params, assigns, socket, unquote(schema))
+        params
+        |> BrandoAdmin.LiveView.Listing.Hooks.hooks(assigns, socket, unquote(schema))
+        |> BrandoAdmin.LiveView.Listing.put_page_title(unquote(page_title))
       end
     end
   end
