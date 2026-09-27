@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.MenuTest do
   use ExUnit.Case
+  # The menu asks the database whether there are global sets.
+  use Brando.ConnCase
 
   defmodule MenuItemBlueprint do
     @moduledoc false
@@ -62,6 +64,14 @@ defmodule BrandoAdmin.MenuTest do
 
     assert menu_urls(static_menu) =~ "/admin/config/publishing"
     refute menu_urls(dynamic_menu) =~ "/admin/config/publishing"
+  end
+
+  test "Globals is only in the menu when there are global sets" do
+    refute menu_urls(BrandoAdmin.Menu.get_menu(nil)) =~ "/admin/globals"
+
+    Brando.Repo.insert!(%Brando.Sites.GlobalSet{label: "Gallery", key: "gallery", language: :en})
+
+    assert menu_urls(BrandoAdmin.Menu.get_menu(nil)) =~ "/admin/globals"
   end
 
   test "frontend assets is translated in the Norwegian menu" do
