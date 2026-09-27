@@ -1,5 +1,7 @@
 import { Dom, gsap } from '@brandocms/jupiter'
 
+const OPEN_KEY = 'brando:nav:open'
+
 export default app => ({
   mounted() {
     console.log('==> Navigation mounted.')
@@ -45,6 +47,38 @@ export default app => ({
     }
   },
 
+  // Which sidebar sections are open survives page loads: the keys (item
+  // names) of the open ones are kept in localStorage.
+  savedOpen() {
+    try {
+      return JSON.parse(localStorage.getItem(OPEN_KEY) || '[]')
+    } catch (_e) {
+      return []
+    }
+  },
+
+  saveOpen(key, open) {
+    const keys = this.savedOpen().filter(k => k !== key)
+    if (open) keys.push(key)
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify(keys))
+    } catch (_e) {
+      // storage full or disabled: the sidebar just doesn't remember
+    }
+  },
+
+  // Opens a section at once, without the animation: on load, for sections
+  // that were open, or that hold the current page.
+  openDropdown(trigger) {
+    const dl = trigger.parentNode.parentNode
+    const dd = dl.querySelector('dd')
+    trigger.dataset.height = dl.offsetHeight
+    gsap.set(dd, { opacity: 1, display: 'block' })
+    gsap.set(dd.querySelectorAll('li'), { autoAlpha: 1, x: 0 })
+    gsap.set(dl, { height: 'auto' })
+    trigger.classList.add('open')
+  },
+
   toggleDropdown(trigger) {
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
@@ -54,6 +88,7 @@ export default app => ({
       gsap.to(Array.from(lis).reverse(), { duration: 0.35, autoAlpha: 0, x: -15, stagger: 0.03 })
       gsap.to(dl, { duration: 0.35, delay: 0.2, height: trigger.dataset.height })
       trigger.classList.remove('open')
+      this.saveOpen(trigger.dataset.navKey, false)
     } else {
       trigger.dataset.height = dl.offsetHeight
       gsap.set(dl, { height: trigger.dataset.height })
@@ -62,6 +97,7 @@ export default app => ({
       gsap.to(dl, { duration: 0.35, height: 'auto' })
       gsap.to(lis, { duration: 0.2, delay: 0.2, autoAlpha: 1, x: 0, stagger: 0.02 })
       trigger.classList.add('open')
+      this.saveOpen(trigger.dataset.navKey, true)
     }
   },
 
@@ -77,8 +113,17 @@ export default app => ({
     }
 
     const dropdowns = document.querySelectorAll('nav [data-nav-expand]')
+    const saved = this.savedOpen()
+    const path = window.location.pathname
 
     dropdowns.forEach(dd => {
+      const links = dd.parentNode.parentNode.querySelectorAll('dd a[href]')
+      const holdsCurrent = Array.from(links).some(a => {
+        const href = new URL(a.href, window.location.origin).pathname
+        return path === href || path.startsWith(href + '/')
+      })
+
+      if (saved.includes(dd.dataset.navKey) || holdsCurrent) this.openDropdown(dd)
       dd.addEventListener('click', () => this.toggleDropdown(dd))
     })
   },
