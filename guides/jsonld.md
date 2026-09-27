@@ -93,6 +93,7 @@ end
 | `JSONLD.Schema.Person` | Person | Author/creator |
 | `JSONLD.Schema.Place` | Place | Physical location |
 | `JSONLD.Schema.ImageObject` | ImageObject | Image metadata |
+| `JSONLD.Schema.VisualArtwork` | VisualArtwork | An artwork, in a project's `hasPart` |
 
 Identity schemas (`Organization`, `Corporation`, `ProfessionalService`,
 `LocalBusiness`, `Restaurant`) are handled automatically based on the
