@@ -221,7 +221,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
 
     ~H"""
     <%= if is_function(@component_target) do %>
-      <div class="brando-input" data-component={@type} data-compact={@compact} data-size={@size}>
+      <div class="brando-input" data-component={component_name(@type)} data-compact={@compact} data-size={@size}>
         {component(
           @component_target,
           assigns,
@@ -271,6 +271,15 @@ defmodule BrandoAdmin.Components.Form.Primitives do
     <% end %>
     """
   end
+
+  # A function component input type (`&Components.my_input/1`) has no name to
+  # print, so it's shown as `Module.fun/1`.
+  defp component_name(fun) when is_function(fun) do
+    info = Function.info(fun)
+    "#{inspect(info[:module])}.#{info[:name]}/#{info[:arity]}"
+  end
+
+  defp component_name(type), do: type
 
   attr :field, Phoenix.HTML.FormField
   slot :inner_block
