@@ -12742,3 +12742,6 @@ msgstr "Valgfritt. En type schema.org ikke har, som URL — f.eks. Wikidatas «b
 
 msgid "One topic per line — what they are known for"
 msgstr "Ett tema per linje — hva de er kjent for"
+
+msgid "Alt text from its entry"
+msgstr "Alt-tekst fra oppføringen"
