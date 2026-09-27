@@ -238,6 +238,10 @@ defmodule Brando.Content.Definition.Model do
       |> Map.update!("name", &Value.object/1)
       |> Map.update!("namespace", &Value.object/1)
       |> Map.update!("help_text", &Value.object/1)
+      # Left out, `multi` means false — the column's default. Kept as nil, a
+      # stored module (false) never digests like its file, and every import
+      # after the first is refused as "target changed since export".
+      |> Map.update("multi", false, &(&1 || false))
 
     normalized =
       Module.changeset(struct(Module), attrs, :system)
