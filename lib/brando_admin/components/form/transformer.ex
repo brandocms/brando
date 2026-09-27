@@ -442,7 +442,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
           <Content.modal
             :if={@layout == :grid}
             id={"#{@id}-entry-modal"}
-            title={gettext("Edit entry")}
+            title={entry_modal_title(@relation_module, @editing_item)}
             medium
             show={@editing_dom_id != nil}
             close={JS.push("close_entry", target: @myself)}
@@ -671,6 +671,22 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       </div>
     </div>
     """
+  end
+
+  # "Edit artwork: The Reins" — the relation's singular, and the entry's title
+  # once it has one.
+  defp entry_modal_title(module, item) do
+    singular =
+      if module && function_exported?(module, :__translations__, 0),
+        do: module |> Brando.Blueprint.get_singular() |> String.downcase(),
+        else: gettext("entry")
+
+    heading = gettext("Edit %{singular}", singular: singular)
+
+    case item && item |> resolve_item_data() |> Map.get(:title) do
+      title when is_binary(title) and title != "" -> "#{heading}: #{title}"
+      _ -> heading
+    end
   end
 
   defp asset_picker(assigns) do
