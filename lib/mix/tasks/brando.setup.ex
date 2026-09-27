@@ -8,6 +8,7 @@ defmodule Mix.Tasks.Brando.Setup do
 
       mix brando.setup
       mix brando.setup --email me@domain.tld --name "Me" --password secret
+      mix brando.setup --base-url https://example.com --description "What the site is"
       mix brando.setup --no-assets --no-seeds
 
   Composes the steps a freshly installed application needs before its first
@@ -18,7 +19,9 @@ defmodule Mix.Tasks.Brando.Setup do
     3. a superuser account, prompted for unless `--email`/`--name`/`--password`
        are supplied, and skipped when an active superuser already exists
     4. `brando.gen.seeds` — identity, SEO, modules, an `index` page, a main
-       menu and a footer fragment per configured language
+       menu and a footer fragment per configured language. The site's base URL
+       and a short description are prompted for (or `--base-url`,
+       `--description`) and go into SEO; leave them empty to fill in later
 
   Each step is skipped when its result already exists, so rerunning after a
   failure resumes rather than duplicates. Nothing is removed or rewritten.
@@ -38,7 +41,9 @@ defmodule Mix.Tasks.Brando.Setup do
     email: :string,
     name: :string,
     password: :string,
-    source: :string
+    source: :string,
+    base_url: :string,
+    description: :string
   ]
 
   @impl Mix.Task
@@ -115,7 +120,18 @@ defmodule Mix.Tasks.Brando.Setup do
   defp seeds(opts) do
     if Keyword.get(opts, :seeds, true) do
       step("Seeding default content")
-      Mix.Task.run("brando.gen.seeds")
+
+      base_url =
+        Keyword.get_lazy(opts, :base_url, fn -> prompt("Site address (base URL), e.g. https://example.com:", "") end)
+
+      description = Keyword.get_lazy(opts, :description, fn -> prompt("Short description of the site:", "") end)
+
+      seo_args =
+        [{"--base-url", base_url}, {"--description", description}]
+        |> Enum.reject(fn {_flag, value} -> value in [nil, ""] end)
+        |> Enum.flat_map(fn {flag, value} -> [flag, value] end)
+
+      Mix.Task.run("brando.gen.seeds", seo_args)
     else
       skip("Seeds")
     end

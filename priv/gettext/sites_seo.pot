@@ -56,10 +56,6 @@ msgstr ""
 msgid "SEO"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:95
-#, elixir-autogen, elixir-format
-msgid "Use `$` at the end of test to prevent matching beyond string."
-msgstr ""
 
 #: lib/brando/sites/seo.ex:84
 #, elixir-autogen, elixir-format
@@ -79,4 +75,13 @@ msgstr ""
 #: lib/brando/sites/seo.ex:78
 #, elixir-autogen, elixir-format
 msgid "Search preview"
+msgstr ""
+
+msgid "There is no base URL yet (under Indexing). Without it, canonical links, sharing previews and the sitemap can't give the site's full addresses."
+msgstr ""
+
+msgid "The site's address. Used for canonical links, sharing previews and the sitemap"
+msgstr ""
+
+msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."
 msgstr ""

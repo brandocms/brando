@@ -11,6 +11,19 @@ defmodule Brando.Setup.SeedsTest do
   defp count(schema), do: Brando.Repo.aggregate(schema, :count)
 
   describe "run/2" do
+    test "a new SEO record gets the base URL and description setup was given" do
+      import Ecto.Query
+      user = Factory.insert(:random_user)
+      Brando.Repo.delete_all(from(s in Brando.Sites.SEO, where: s.language == :en))
+
+      {:ok, report} =
+        Seeds.run(user, languages: [:en], seo: [base_url: "https://example.com", description: "A studio"])
+
+      assert :"seo (en)" in report.created
+      seo = Brando.Repo.get_by!(Brando.Sites.SEO, language: :en)
+      assert {seo.base_url, seo.fallback_meta_description} == {"https://example.com", "A studio"}
+    end
+
     test "seeds a renderable homepage, modules, menu and identity per language" do
       user = Factory.insert(:random_user)
 

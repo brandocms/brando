@@ -57,10 +57,6 @@ msgstr "Roboter"
 msgid "SEO"
 msgstr "SEO"
 
-#: lib/brando/sites/seo.ex:95
-#, elixir-autogen, elixir-format
-msgid "Use `$` at the end of test to prevent matching beyond string."
-msgstr "Bruk `$` på slutten av testkoden for å forhindre match etter."
 
 #: lib/brando/sites/seo.ex:84
 #, elixir-autogen, elixir-format
@@ -81,3 +77,12 @@ msgstr "Indeksering"
 #, elixir-autogen, elixir-format
 msgid "Search preview"
 msgstr "Søkeforhåndsvisning"
+
+msgid "There is no base URL yet (under Indexing). Without it, canonical links, sharing previews and the sitemap can't give the site's full addresses."
+msgstr "Det er ingen basis-URL ennå (under Indeksering). Uten den kan ikke kanoniske lenker, delingsforhåndsvisninger og nettstedskartet gi nettstedets fulle adresser."
+
+msgid "The site's address. Used for canonical links, sharing previews and the sitemap"
+msgstr "Nettstedets adresse. Brukes til kanoniske lenker, delingsforhåndsvisninger og nettstedskartet"
+
+msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."
+msgstr "Fra kan bruke parametere, som <code>/work/:slug</code>. Avslutt med <code>$</code> for å treffe bare den stien, ikke lengre stier som begynner med den."

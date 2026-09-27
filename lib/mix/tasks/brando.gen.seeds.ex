@@ -8,6 +8,7 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
 
       mix brando.gen.seeds
       mix brando.gen.seeds --user 1
+      mix brando.gen.seeds --base-url https://example.com --description "What the site is"
 
   Creates identity and SEO defaults per configured language, a small set of
   content modules, a published `index` page built from them, a main navigation
@@ -17,11 +18,15 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
   The seeded content is a starting point for editing in the admin, not a
   migration or an upgrade path.
 
+  `--base-url` and `--description` fill in a new SEO record's base URL and
+  fallback meta description; without a base URL, canonical links, sharing
+  previews and the sitemap can't give full addresses.
+
   Requires an account to own the content. Without `--user ID` the oldest
   superuser is used. Create one with `mix brando.gen.admin`.
   """
 
-  @switches [user: :integer]
+  @switches [user: :integer, base_url: :string, description: :string]
 
   @impl Mix.Task
   @spec run([binary]) :: :ok
@@ -40,7 +45,7 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     ---------------------------
     """)
 
-    {:ok, report} = Brando.Setup.Seeds.run(user)
+    {:ok, report} = Brando.Setup.Seeds.run(user, seo: Keyword.take(opts, [:base_url, :description]))
 
     for label <- Enum.reverse(report.created), do: Mix.shell().info([:green, "    + #{label}"])
     for label <- Enum.reverse(report.skipped), do: Mix.shell().info([:yellow, "    = #{label} (exists)"])
