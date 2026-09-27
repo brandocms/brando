@@ -132,7 +132,9 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           >
             {gettext("Configure")}
           </button>
-          <button :if={@asset && !@configure && @upload_enabled?} type="button" class="media-button upload-trigger">
+          <%!-- Offered with Configure too: a filled field is replaced the same
+                way everywhere, by upload, library or drop. --%>
+          <button :if={@asset && @upload_enabled?} type="button" class="media-button upload-trigger">
             {gettext("Upload replacement")}
           </button>
           <button :if={@asset && @browse} type="button" class="media-button" phx-click={@browse}>
