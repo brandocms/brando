@@ -127,7 +127,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
   end
 
   def handle_event("empty_caches", _, socket) do
-    Cachex.clear(:query)
+    :ok = Brando.Cache.reload_all()
     send(self(), {:toast, gettext("Caches cleared!")})
 
     {:noreply, assign_caches(socket)}
