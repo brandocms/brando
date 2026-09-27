@@ -889,8 +889,8 @@ defmodule Brando.Content.Proposals.Tools do
     |> put_present(:selection, selection(block))
     |> put_present(:anchor, block.anchor)
     |> put_present(:description, block.description)
-    |> put_present(:settings, ref_settings(block.refs || []))
-    |> put_present(:refs_off, for(%{active: false, name: name} <- block.refs || [], do: name))
+    |> put_present(:settings, ref_settings(block.refs))
+    |> put_present(:refs_off, for(%{active: false, name: name} <- block.refs, do: name))
   end
 
   defp table_rows(%{table_rows: rows}) when is_list(rows),
