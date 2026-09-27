@@ -944,19 +944,25 @@ msgid "List"
 msgstr "Liste"
 
 #: lib/brando_admin/components/form/meta_drawer.ex:50
+#: lib/brando/seo/checks.ex:131
+#: lib/brando/seo/checks.ex:138
+#: lib/brando/seo/checks.ex:145
 #, elixir-autogen, elixir-format
-msgid "META description"
-msgstr "META beskrivelse"
+msgid "Meta description"
+msgstr "Metabeskrivelse"
 
 #: lib/brando_admin/components/form/meta_drawer.ex:60
 #, elixir-autogen, elixir-format
-msgid "META image"
-msgstr "META bilde"
+msgid "Meta image"
+msgstr "Metabilde"
 
 #: lib/brando_admin/components/form/meta_drawer.ex:42
+#: lib/brando/seo/checks.ex:98
+#: lib/brando/seo/checks.ex:105
+#: lib/brando/seo/checks.ex:110
 #, elixir-autogen, elixir-format
-msgid "META title"
-msgstr "META tittel"
+msgid "Meta title"
+msgstr "Metatittel"
 
 #: lib/brando_admin/components/form/block/render.ex:2586
 #: lib/brando_admin/components/form/block_field.ex:2257
@@ -1795,7 +1801,7 @@ msgstr "Du må lukke bildeskuffen før du kan lagre skjemaet. Det kan være endr
 
 #: lib/brando_admin/components/form/meta_drawer.ex:36
 #, elixir-autogen, elixir-format
-msgid "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own META image which will override your entry's cover image, if it has one."
+msgid "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own meta image which will override your entry's cover image, if it has one."
 msgstr "Metainformasjon for søkemotorer. Prøv å holde tittelfeltet under 70 tegn mens du forsøker å inkorporere nøkkelord relatert til innholdet ditt. Beskrivelsesfeltet bør være rundt 155 tegn for å forhindre at teksten kuttes i søkeresultatene. Du kan også velge ditt eget metabilde som vil overstyre innleggets coverbilde, om det har et."
 
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1148
@@ -9994,13 +10000,6 @@ msgstr "Advarsel"
 msgid "Not checked"
 msgstr "Ikke sjekket"
 
-#: lib/brando/seo/checks.ex:98
-#: lib/brando/seo/checks.ex:105
-#: lib/brando/seo/checks.ex:110
-#, elixir-autogen, elixir-format
-msgid "Meta title"
-msgstr "Metatittel"
-
 #: lib/brando/seo/checks.ex:111
 #, elixir-autogen, elixir-format
 msgid "Set a meta title; the site fallback is used otherwise."
@@ -10011,13 +10010,6 @@ msgstr "Angi en metatittel; ellers brukes nettstedets standardtittel."
 #, elixir-autogen, elixir-format
 msgid "Meta title length"
 msgstr "Lengde på metatittel"
-
-#: lib/brando/seo/checks.ex:131
-#: lib/brando/seo/checks.ex:138
-#: lib/brando/seo/checks.ex:145
-#, elixir-autogen, elixir-format
-msgid "Meta description"
-msgstr "Metabeskrivelse"
 
 #: lib/brando/seo/checks.ex:146
 #, elixir-autogen, elixir-format
