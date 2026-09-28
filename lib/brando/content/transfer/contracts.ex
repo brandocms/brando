@@ -14,7 +14,8 @@ defmodule Brando.Content.Transfer.Contracts do
       if module.table_template_id,
         do: Repo.get!(Brando.Content.TableTemplate, module.table_template_id) |> Repo.preload(:vars) |> table()
 
-    Map.take(data, @settings)
+    data
+    |> settings()
     |> Map.merge(%{
       "refs" => Map.new(data["refs"], &{&1["name"], &1["data"]["type"]}),
       "vars" => types(data["vars"]),
@@ -22,11 +23,17 @@ defmodule Brando.Content.Transfer.Contracts do
     })
   end
 
+  # An unset `multi` means false, the column's default: a module stored
+  # without it (NULL) and the same definition installed elsewhere (false) are
+  # one contract. Mirrors Brando.Content.Definition.Model.normalize_module!/1.
+  defp settings(data), do: data |> Map.take(@settings) |> unset_multi()
+  defp unset_multi(data), do: Map.update(data, "multi", false, &(&1 || false))
+
   def table(table), do: table |> Params.snapshot() |> Map.fetch!("vars") |> types()
   defp types(vars), do: Map.new(vars, &{&1["key"], &1["type"]})
 
   def normalized(module) do
-    module |> Params.snapshot() |> Map.take(@settings ++ ~w(code class refs vars)) |> normalize()
+    module |> Params.snapshot() |> Map.take(@settings ++ ~w(code class refs vars)) |> unset_multi() |> normalize()
   end
 
   defp normalize(value) when is_map(value) do
@@ -49,6 +56,8 @@ defmodule Brando.Content.Transfer.Contracts do
   def differences(_, _), do: []
 
   def check!(block, old, module, latest \\ nil) do
+    # Bundles exported before the unset-multi rule carry `nil`
+    old = unset_multi(old)
     latest = latest || capture(module)
     changed = Enum.filter(@settings, &(old[&1] != latest[&1]))
 
