@@ -452,21 +452,24 @@
     row-gap: 8px;
     margin-top: 12px;
 
-    /* One shape for every action, whichever markup it came from. */
+    /* One shape for every action, whichever markup it came from: the light
+       button of media fields and button groups. */
     .add-entry-button,
     .upload-button {
+      display: inline-flex;
+      align-items: center;
       margin-top: 0;
-      height: 36px;
-      padding: 0 14px;
-      column-gap: 8px;
-      font-size: 13px;
-      line-height: 1;
-      border-radius: 8px;
-      border: 1px solid var(--brando-color-dark);
-      background: none;
+      min-height: 32px;
+      padding: 5px 12px;
+      column-gap: 7px;
+      font: 13px/20px "Main", sans-serif;
+      color: #272b2a;
+      border-radius: 5px;
+      border: 1px solid #dce2dc;
+      background-color: #fff;
       white-space: nowrap;
       cursor: pointer;
-      transition: background-color 0.2s ease, color 0.2s ease;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
 
       svg {
         width: 15px;
@@ -475,20 +478,21 @@
       }
 
       &:hover {
-        background-color: var(--brando-color-dark);
-        color: var(--brando-color-peach);
+        background-color: #f1f5ef;
+        border-color: #bacabd;
       }
     }
 
     /* The combined upload is the primary action — it is what most drops and
        most clicks actually want. */
     .upload-button[data-pick="files"] {
-      background-color: var(--brando-color-dark);
-      color: var(--brando-color-peach);
+      background-color: #254e3f;
+      border-color: #254e3f;
+      color: #fff;
 
       &:hover {
-        background-color: transparent;
-        color: var(--brando-color-dark);
+        background-color: #1a3d30;
+        border-color: #1a3d30;
       }
     }
 
@@ -675,26 +679,8 @@
 
     .transformer-asset-actions {
       display: flex;
-      column-gap: 6px;
-
-      /* These sit in a flex row that would otherwise stretch them; size them to
-         their label so "Remove" doesn't span the dialog. */
-      button {
-        flex: 0 0 auto;
-      }
-
-      /* Destructive, but a sibling of Replace — tinted rather than a full
-         secondary button, which carries its own much larger metrics. */
-      .asset-remove {
-        color: var(--media-badge-missing, #a33a3a);
-        border-color: color-mix(in srgb, var(--media-badge-missing, #a33a3a) 40%, transparent);
-
-        &:hover {
-          background-color: var(--media-badge-missing, #a33a3a);
-          border-color: var(--media-badge-missing, #a33a3a);
-          color: #fff;
-        }
-      }
+      align-items: center;
+      column-gap: 8px;
     }
   }
 
