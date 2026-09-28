@@ -154,6 +154,21 @@ defmodule Brando.TranslationsTest do
     assert {:error, :not_source} = Translations.create_target(Article, target.id, :no, c.user)
   end
 
+  test "a language held by an independent alternate is not translated again", c do
+    {:ok, english} =
+      SyncTest.create_article(%{title: "Title", slug: "title", language: "en", status: "published"}, c.user)
+
+    :ok = Article.Alternate.add(c.source.id, english.id)
+
+    assert {:error, :language_exists} = Translations.create_target(Article, c.source.id, :en, c.user)
+    # Refused before the source is enrolled: no group is left behind
+    assert Translations.get_member(Article, c.source.id) == nil
+
+    assert {:ok, _} = SyncTest.delete_article(english.id, c.user)
+    assert {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    assert target.language == :en
+  end
+
   test "saving the source records pending work without touching the translation", c do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
     translate(target, ["First paragraph", "Second paragraph"])

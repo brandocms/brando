@@ -135,7 +135,8 @@ defmodule Brando.Translations do
   @doc """
   The languages of the entries `entry_id` is already linked to as alternates.
   Existing, independent alternates are not joined to a group, so no
-  translation is created for their languages.
+  translation is created for their languages. A deleted entry keeps its
+  alternate link but no longer holds its language.
   """
   def alternate_languages(schema, entry_id) do
     if schema.has_alternates?() do
@@ -145,6 +146,7 @@ defmodule Brando.Translations do
         where: a.entry_id == ^entry_id,
         select: e.language
       )
+      |> exclude_deleted(schema)
       |> Repo.all()
       |> Enum.map(&to_string/1)
     else
@@ -199,11 +201,15 @@ defmodule Brando.Translations do
   The source is duplicated as an unpublished draft that keeps every block's
   sync identity, linked as an alternate and added to the group. An entry not
   yet in a group becomes its source.
+
+  Returns `{:error, :language_exists}` when the group already has that
+  language, or when the source is linked to an independent version in it.
   """
   def create_target(schema, source_id, language, actor) do
     language = to_string(language)
 
     with :ok <- ensure_language_known(schema, language),
+         :ok <- ensure_no_linked_version(schema, source_id, language),
          {:ok, source_member} <- source_member(schema, source_id, actor),
          :ok <- ensure_language_free(source_member, language) do
       Repo.transaction(fn ->
@@ -968,6 +974,23 @@ defmodule Brando.Translations do
     if exists?(from m in Member, where: m.group_id == ^group_id and m.language == ^language),
       do: {:error, :language_exists},
       else: :ok
+  end
+
+  # An independent alternate isn't a group member, but it holds its language:
+  # a second version beside it would give the source two in one language.
+  # Checked before the source is enrolled, so a refusal leaves no group behind.
+  # A target is left to `source_member/3`, which refuses it as `:not_source`.
+  defp ensure_no_linked_version(schema, entry_id, language) do
+    case get_member(schema, entry_id) do
+      %Member{role: :target} -> :ok
+      _ -> if language in alternate_languages(schema, entry_id), do: {:error, :language_exists}, else: :ok
+    end
+  end
+
+  defp exclude_deleted(query, schema) do
+    if :deleted_at in schema.__schema__(:fields),
+      do: where(query, [_alternate, entry], is_nil(entry.deleted_at)),
+      else: query
   end
 
   defp ensure_language_known(schema, language) do
