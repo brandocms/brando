@@ -676,7 +676,7 @@ button.btn-palette {
     margin: 0;
     min-width: 0;
     /* Past this a row's cells drift too far apart to read as one line */
-    max-width: 760px;
+    max-width: 1080px;
     border: 1px solid var(--vars-line);
     border-radius: 8px;
     background-color: var(--brando-color-shaded);
@@ -976,6 +976,17 @@ button.btn-palette {
           font-weight: 400;
         }
 
+        /* Title and URL each end in an ellipsis rather than mid-word */
+        dl {
+          min-width: 0;
+        }
+
+        dt,
+        dd {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
       }
     }
 
