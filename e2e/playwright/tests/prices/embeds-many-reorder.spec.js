@@ -7,7 +7,7 @@ test.describe('Embeds many reordering and deletion', () => {
   }) => {
     // Navigate to Price Categories
     await page.goto('/admin')
-    await page.getByRole('link', { name: 'Price categories' }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Price categories' }).click()
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
 

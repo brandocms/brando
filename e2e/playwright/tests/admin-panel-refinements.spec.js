@@ -117,7 +117,7 @@ test('entry drawers retain input and use their own scrolling surface', async ({ 
     const drawer = page.locator(`[id$="-${suffix}"]`)
     await expect(drawer).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await page.waitForTimeout(350)
-    if (trigger === 'Meta') await drawer.getByLabel('META title', { exact: true }).fill('Panel metadata')
+    if (trigger === 'Meta') await drawer.getByLabel('Meta title', { exact: true }).fill('Panel metadata')
     if (trigger === 'Revisions') {
       await drawer.getByRole('button', { name: 'Store current editor state', exact: true }).click()
       await expect(drawer.locator('.revisions-line').first()).toBeVisible()
@@ -134,7 +134,7 @@ test('entry drawers retain input and use their own scrolling surface', async ({ 
     await page.setViewportSize({ width: 1440, height: 900 })
   }
   await page.getByRole('button', { name: 'Meta', exact: true }).click()
-  await expect(page.getByLabel('META title', { exact: true })).toHaveValue('Panel metadata')
+  await expect(page.getByLabel('Meta title', { exact: true })).toHaveValue('Panel metadata')
 })
 
 test('listing actions align with the header rule and selection covers presence', async ({ page }, testInfo) => {

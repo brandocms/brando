@@ -11,7 +11,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
 
   // Step 1: Navigate to projects and create a client first
   await page.goto('/admin')
-  await page.getByRole('link', { name: 'Clients' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
   await page.getByText('Published').click()
@@ -22,7 +22,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await syncLV(page)
 
   // Step 2: Create a new project
-  await page.getByRole('link', { name: 'Projects' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
   await expect(page).toHaveURL(/\/projects\/projects/)
   await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()

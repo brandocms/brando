@@ -3,7 +3,7 @@ import { syncLV } from '../../utils'
 
 test('creates and edits clients', async ({ page }) => {
   await page.goto('/admin')
-  await page.getByRole('link', { name: 'Clients' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
   await page.getByText('Published').click()

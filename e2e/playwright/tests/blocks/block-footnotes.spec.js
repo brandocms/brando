@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV, confirmUploadFolder, mediaMenu } from '../../utils'
 
 const fixture = async (page, schema, attributes) => {
   const response = await page.request.post('/__e2e/db/factory', {
@@ -175,7 +175,7 @@ test('a note uses the existing image, video and file controls and keeps media on
   await expect(drawer.locator('.video-block .media-field:visible')).toContainText('Footnote film')
   await add('Note download')
   const fileVar = drawer.locator('.media-field[data-kind="block_var"][id$="-file-media"]')
-  await fileVar.getByRole('button', { name: 'Browse library', exact: true }).click()
+  await mediaMenu(fileVar, 'Browse library')
   await page.locator('.file-picker__file', { hasText: 'footnote-source.pdf' }).click()
   await expect(fileVar).toContainText('footnote-source.pdf')
   await drawer.getByRole('button', { name: 'Done', exact: true }).click()
