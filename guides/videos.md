@@ -309,7 +309,7 @@ config :brando, Brando.Videos.Uploaders.Cloudflare,
 
 ### Video Blocks
 
-Video blocks in the Villain editor use the global `default_video_upload_strategy` setting. When set to a non-local strategy (like `:mux`), the video picker will show a file upload option for direct uploads.
+Video blocks in the Villain editor use the global `default_video_upload_strategy` setting. The video picker shows an "Upload file" button when that strategy can take an upload: `:local` and a configured `:s3` upload through the upload manager, and a provider strategy uploads directly to the provider once it has credentials and a webhook secret (Bunny also needs `library_id` and `cdn_hostname`). Without them the button is hidden, since an upload would never finish processing.
 
 The upload flow:
 1. User selects a video file in the video picker
@@ -387,9 +387,9 @@ can be added to a gallery in three ways:
 1. **Select existing videos** — the "Select videos" button opens the video picker.
 2. **Add from URL** — the video picker accepts YouTube, Vimeo and direct video URLs.
 3. **Upload video files**:
-   - With `:local` or a configured `:s3` strategy, the gallery input shows an
-     "Upload videos" button that uploads through the unified upload manager and
-     appends the video to the gallery.
+   - With `:local` or a configured `:s3` strategy, the gallery's "Upload media"
+     button takes video files as well as images, uploads them through the
+     unified upload manager and appends them to the gallery.
    - With a provider strategy (`:mux`/`:bunny`/`:cloudflare`), upload through the video picker's
      "Upload file" button instead — the uploaded video is selected into the
      gallery automatically.

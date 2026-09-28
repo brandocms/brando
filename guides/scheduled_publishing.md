@@ -98,7 +98,7 @@ To cancel before execution, use **Cancel schedule** in the revision row:
 ```
 
 This API uses the current authorization scope. In application code, establish it
-through the `Boundary.run` wrapper, as in the authorization guide;
+with `Brando.Authorization.Boundary.with_scope/2`, as in the authorization guide;
 the authenticated admin already has it. Cancellation keeps the snapshot and
 clears its scheduled flag, making normal retention rules apply again. Activating
 that revision manually also cancels its pending job.

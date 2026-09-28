@@ -77,10 +77,10 @@ msgstr ""
 msgid "Search preview"
 msgstr ""
 
-msgid "There is no base URL yet (under Indexing). Without it, canonical links, sharing previews and the sitemap can't give the site's full addresses."
+msgid "There is no base URL yet (under Indexing). Without it, structured data can't give the site's address, and analytics can't tell which site this is."
 msgstr ""
 
-msgid "The site's address. Used for canonical links, sharing previews and the sitemap"
+msgid "The site's address, used in structured data and to find the site in analytics. Canonical links and the sitemap use the server's own URL"
 msgstr ""
 
 msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."

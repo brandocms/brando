@@ -320,7 +320,7 @@ Stage 1: deps          → mix deps.get
 Stage 2: compile_deps  → mix deps.compile
 Stage 3: compile_app   → mix compile
 Stage 4: assets_backend  → yarn build (admin Svelte app)
-Stage 5: assets_frontend → yarn build (site CSS/JS via Vite + EuropaCSS)
+Stage 5: assets_frontend → pnpm build (site CSS/JS via Vite + EuropaCSS)
 Stage 6: digest        → mix brando.digest (fingerprint static assets)
 Stage 7: release       → mix release (create OTP release tarball)
 ```
@@ -586,13 +586,14 @@ florist prod env:reload    # upload + restart service
 # 1. Configure
 florist init
 # Edit florist.config.exs with your server details
+florist local config:generate
 
-# 2. Create .envrc.runtime
+# 2. Create .envrc.<flavor> (e.g. .envrc.prod) — uploaded as .envrc.runtime
 # Add to .gitignore
 
-# 3. Bootstrap server
-florist prod bootstrap
+# 3. Bootstrap server (Traefik first: bootstrap checks it is installed)
 florist prod traefik:setup    # if using Traefik
+florist prod bootstrap
 
 # 4. First deploy
 florist prod release:deploy

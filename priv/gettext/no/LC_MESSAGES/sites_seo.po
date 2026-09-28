@@ -78,11 +78,11 @@ msgstr "Indeksering"
 msgid "Search preview"
 msgstr "Søkeforhåndsvisning"
 
-msgid "There is no base URL yet (under Indexing). Without it, canonical links, sharing previews and the sitemap can't give the site's full addresses."
-msgstr "Det er ingen basis-URL ennå (under Indeksering). Uten den kan ikke kanoniske lenker, delingsforhåndsvisninger og nettstedskartet gi nettstedets fulle adresser."
+msgid "There is no base URL yet (under Indexing). Without it, structured data can't give the site's address, and analytics can't tell which site this is."
+msgstr "Det er ingen basis-URL ennå (under Indeksering). Uten den kan ikke strukturerte data oppgi nettstedets adresse, og analyseverktøyene vet ikke hvilket nettsted det gjelder."
 
-msgid "The site's address. Used for canonical links, sharing previews and the sitemap"
-msgstr "Nettstedets adresse. Brukes til kanoniske lenker, delingsforhåndsvisninger og nettstedskartet"
+msgid "The site's address, used in structured data and to find the site in analytics. Canonical links and the sitemap use the server's own URL"
+msgstr "Nettstedets adresse, brukt i strukturerte data og for å finne nettstedet i analyseverktøy. Kanoniske lenker og nettstedskartet bruker serverens egen URL"
 
 msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."
 msgstr "Fra kan bruke parametere, som <code>/work/:slug</code>. Avslutt med <code>$</code> for å treffe bare den stien, ikke lengre stier som begynner med den."

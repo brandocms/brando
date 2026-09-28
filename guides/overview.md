@@ -1,7 +1,7 @@
-# Brando 0.54 guides
+# Brando 0.55 guides
 
 Brando combines Phoenix and Ecto with a Blueprint system for content schemas,
-admin forms, and structured content. These guides cover the developing **0.54**
+admin forms, and structured content. These guides cover the developing **0.55**
 API on the `next` branch. Use documentation from your application's Brando
 version when maintaining an older installation.
 
@@ -43,6 +43,9 @@ The [block editor](block_editor.md) guide introduces modules, refs, and vars.
 [Villain parser](villain_parser.md) covers custom output, [text styles](villain_text_styles.md)
 covers rich text, and [Datasources](datasources.md) connects modules to queried or
 selected entries, including ordering and invalidation.
+[Module definitions](module_definitions.md) exports modules as editable files and
+imports your edits back, and [Markdown sources](markdown_sources.md) places a
+GitHub Markdown document in a module.
 
 ## Edit, preview, and publish
 
@@ -53,6 +56,11 @@ entry publication dates from revision releases, including cancellation and job
 execution. [Content lifecycle](content_lifecycle.md) covers status, soft deletion,
 restoration, purge, and sequence ordering.
 
+[Content assistant](content_assistant.md) lets an editor describe changes in a
+conversation and review them as a proposal before anything is saved.
+[Content import and export](content_transfer.md) moves saved entries between
+installations, sites, and environments.
+
 ## Deliver media and public output
 
 [Images, files, and galleries](media.md) gives complete field and rendering recipes.
@@ -62,7 +70,8 @@ paths, object keys, and public delivery URLs.
 [Identity, SEO, and redirects](identity_and_seo.md) configures translated defaults,
 links, robots output, and manual redirect rules. [Metadata](meta.md) adds page-level
 search and sharing tags, [JSON-LD](jsonld.md) adds structured data, and
-[Sitemaps](sitemaps.md) generates XML from public content.
+[Sitemaps](sitemaps.md) generates XML from public content. [Content SEO](content_seo.md)
+scores published entries and says what to fix.
 
 ## Operate the application
 

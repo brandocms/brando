@@ -9,7 +9,7 @@ and content transfer, see [User accounts and sessions](users.md).
 
 ## Enable for an existing application
 
-1. Run `mix brando.upgrade`, review migration 170, and run `mix ecto.migrate`.
+1. Run `mix brando.gen.migrations`, review migration 170, and run `mix brando.migrate`.
    Rebuild the application's backend assets to include the scope-aware channels.
    Security tables live in `public`; they are never copied with site content.
 2. As a Superuser, open **Configuration → Utilities** and run the migration

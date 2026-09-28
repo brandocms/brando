@@ -200,8 +200,8 @@ entry = Brando.Repo.preload(entry, Brando.Blueprint.preloads_for(entry.__struct_
 ```
 
 The callback receives `vars["request"]`, whose `params` are **route path params**
-and whose `url` is the request path. The old `"response"` example is incorrect;
-query-string params are not automatically included. A callback can read:
+and whose `url` is the request path. Query-string params are not automatically
+included. A callback can read:
 
 ```elixir
 slug = get_in(vars, ["request", :params, "category_slug"])

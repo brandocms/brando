@@ -21,14 +21,14 @@ Styles are configured per-ref in the Module form under the text block's "Styles"
 
 - `element` is restricted to `p`, `h1`-`h6`, and `span`.
 - `class` must match CSS-friendly identifiers (`[A-Za-z_][A-Za-z0-9_-]*`).
-- Duplicate `{element, class}` pairs are deduplicated when passed to the TipTap component.
+- Duplicate `{element, class}` pairs are rejected with "contains duplicate element and class definitions".
 
 ### Module Ref Defaults
 
 When creating new text refs in Module Form, Brando initializes `styles` with:
 
 ```elixir
-[%Style{element: "p", class: "lede", label: "Lede", icon: "hero-circle"}]
+[%Style{element: "p", class: "lede", label: "Lede", icon: "hero-circle-stack"}]
 ```
 
 This gives editors a sensible default variant without making `"paragraph"` a classed style.

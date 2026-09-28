@@ -60,8 +60,8 @@ defmodule Brando.Sites.SEO do
       tab t("Content") do
         alert :warning,
               t(
-                "There is no base URL yet (under Indexing). Without it, canonical links, sharing " <>
-                  "previews and the sitemap can't give the site's full addresses."
+                "There is no base URL yet (under Indexing). Without it, structured data can't give " <>
+                  "the site's address, and analytics can't tell which site this is."
               ),
               show_if: &__MODULE__.base_url_missing?/1
 
@@ -92,7 +92,11 @@ defmodule Brando.Sites.SEO do
           input :base_url, :text,
             label: t("Base URL"),
             placeholder: t("https://yoursite.com"),
-            instructions: t("The site's address. Used for canonical links, sharing previews and the sitemap")
+            instructions:
+              t(
+                "The site's address, used in structured data and to find the site in analytics. " <>
+                  "Canonical links and the sitemap use the server's own URL"
+              )
 
           input :robots, :textarea, monospace: true, label: t("Robots"), placeholder: t("Robots")
         end

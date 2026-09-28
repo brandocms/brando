@@ -182,8 +182,10 @@ mix brando.setup
 asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default
 content seeds. Each step is skipped when its result already exists, so a rerun
 after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
-`--no-db`, `--no-account` and `--no-seeds`, and supply `--email`, `--name` and
-`--password` for an unattended account. The sections below describe the same
+`--no-db`, `--no-account` and `--no-seeds`. Setup prompts for anything it needs;
+for an unattended run, supply `--email`, `--name` and `--password` for the
+account and `--base-url` and `--description` for the seeded site identity.
+`--source PATH` hands a Brando JavaScript source to asset setup. The sections below describe the same
 steps as individual tasks, which is what to reach for when you want to control
 them separately.
 

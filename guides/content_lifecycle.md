@@ -19,8 +19,9 @@ Brando's status type stores these values:
 | `:pending` | `2` | Awaiting scheduled publication |
 | `:disabled` | `3` | Retained but intentionally not published |
 
-A Blueprint draft skips its ordinary required-field validation. Other statuses
-validate required fields. Drafts are not exempt from every constraint: type
+A Blueprint draft only needs the required fields its identifier shows, usually
+the title, so it can be saved half done but never as a nameless entry. Other
+statuses validate every required field. Drafts are not exempt from every constraint: type
 casting, uniqueness, association rules, and database constraints can still fail.
 Use named status atoms or accepted form values, not arbitrary integers from an
 untrusted request.

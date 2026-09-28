@@ -95,22 +95,25 @@ end
 | `JSONLD.Schema.ImageObject` | ImageObject | Image metadata |
 | `JSONLD.Schema.VisualArtwork` | VisualArtwork | An artwork, in a project's `hasPart` |
 
-Identity schemas (`Organization`, `Corporation`, `ProfessionalService`,
-`LocalBusiness`, `Restaurant`) are handled automatically based on the
-identity type configured in the admin.
+The identity schema is handled automatically from the identity type chosen in
+the admin: Person, Organization, Corporation, ProfessionalService,
+LocalBusiness, Restaurant, Architect, ArtGallery, EducationalOrganization,
+EmploymentAgency, GovernmentOrganization, MedicalOrganization, NGO or
+SportsOrganization.
 
 ### Controller usage
 
 #### Adding a content entity
 
 ```elixir
-{:ok, case} = Cases.get_case(%{matches: %{slug: slug}})
+# `case` is a reserved word in Elixir, so it can't name the variable
+{:ok, project} = Cases.get_case(%{matches: %{slug: slug}})
 
 conn
-|> assign(:case, case)
-|> put_title(case.title)
-|> put_meta(Cases.Case, case)
-|> put_json_ld(Cases.Case, case)
+|> assign(:case, project)
+|> put_title(project.title)
+|> put_meta(Cases.Case, project)
+|> put_json_ld(Cases.Case, project)
 |> put_section("case")
 |> render(:detail)
 ```
@@ -227,6 +230,10 @@ conn
 |> put_json_ld_type("CollectionPage")
 ```
 
+Every `put_json_ld/4` call also sets the page type, to the entry's
+`json_ld_type` or `"WebPage"` when it has none. Call `put_json_ld_type/2`
+after `put_json_ld/4`, or the entity call resets it.
+
 ### Identity type-specific fields
 
 The Identity form includes type-specific fields that populate additional
@@ -235,11 +242,16 @@ schema.org properties based on the selected identity type:
 | Type | Additional fields |
 |------|-------------------|
 | Person | `jobTitle`, `hasOccupation`, `additionalType`, `knowsAbout` — and none of the Organization properties |
-| Organization | `foundingDate`, `numberOfEmployees` |
+| Organization, EducationalOrganization, GovernmentOrganization, NGO | `foundingDate`, `numberOfEmployees` |
 | Corporation | `foundingDate`, `numberOfEmployees`, `tickerSymbol` |
-| ProfessionalService | `foundingDate`, `areaServed`, `knowsAbout` |
-| LocalBusiness | `openingHours`, `priceRange`, `areaServed`, `geo` |
-| Restaurant | `openingHours`, `priceRange`, `servesCuisine`, `hasMenu`, `geo` |
+| MedicalOrganization | `foundingDate`, `numberOfEmployees`, `medicalSpecialty` |
+| SportsOrganization | `foundingDate`, `numberOfEmployees`, `sport` |
+| ProfessionalService, Architect | `foundingDate`, `openingHoursSpecification`, `priceRange`, `geo` |
+| LocalBusiness, ArtGallery, EmploymentAgency | `openingHoursSpecification`, `priceRange`, `geo` |
+| Restaurant | `openingHoursSpecification`, `priceRange`, `servesCuisine`, `hasMenu`, `geo` |
+
+Every type except Person also gets `legalName`, `vatID`, `areaServed` and
+`knowsAbout`.
 
 These are stored in the `type_config` embedded schema on Identity and
 automatically included in the JSON-LD output.

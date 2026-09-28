@@ -9,8 +9,8 @@ public endpoint URL, and published pages with working URL definitions.
 
 ## Declare public URLs
 
-Run `mix brando.gen.sitemap` to generate the module, then adapt it to the current
-query and URL APIs:
+Run `mix brando.gen.sitemap` to generate the module (it needs Igniter), then list
+your own content types in it:
 
 ```elixir
 defmodule MyAppWeb.Sitemap do

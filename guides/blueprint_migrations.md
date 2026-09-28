@@ -1,29 +1,5 @@
 # Blueprint migrations
 
-The command uses Igniter. It prints the exact migration source and snapshot
-version before acceptance, then commits both through Brando's checked storage
-writer. `--dry-run` leaves files, directories and snapshot versions unchanged;
-`--yes` accepts the prepared changes. Igniter 0.8 also auto-accepts when stdin is
-redirected, so always use `--dry-run` for unattended previews.
-
-Accept and compile Blueprint edits before planning storage. Prepare one Blueprint
-storage plan per invocation, committing it before planning another so migration
-ordering and history checks remain valid. If the schema, an existing snapshot,
-or the migration directory changes after review, the commit rejects the stale
-plan. Generate and review a new plan; do not reuse the old deferred command.
-
-The binary snapshot and its migration are deliberately excluded from Igniter's
-text writer. A deferred task recomputes and verifies the reviewed fingerprint,
-then uses the migration-directory and snapshot locks and paired persistence.
-The normal storage diff engine, rename hints, legacy snapshot upgrades, and
-explicit `--rebaseline` behavior are retained. No database migration is run by
-the source generator.
-
-For programmatic callers, `Brando.Blueprint.Migrations.plan/2` creates the plan
-without writes and `commit_plan/1` verifies and persists it. Existing
-`create_migration/2` and `rebaseline_snapshot/2` callers retain immediate operation
-through the same implementation.
-
 Blueprint migrations turn storage-relevant DSL changes into reviewed Ecto migrations. The generator stores a
 versioned, normalized schema snapshot beside the migration history and compares the next Blueprint definition to that
 snapshot. It does not compare arbitrary runtime structs or infer state from the database.
@@ -77,6 +53,9 @@ mix ecto.migrate
 mix test
 ```
 
+In an application with named environments, apply migrations with `mix brando.migrate` and then
+`mix brando.migrate --tenants`; tenant discovery needs the public migrations first.
+
 In the Brando repository, the full E2E reset also rolls every migration after
 the monolithic test baseline back and runs it forward again before seeding:
 
@@ -92,6 +71,32 @@ migration against that application's own schema and data.
 
 Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 does not connect to or mutate a database.
+
+## How the command writes files
+
+`mix brando.gen.blueprint_migration` uses Igniter. It prints the exact migration source and snapshot
+version before acceptance, then commits both through Brando's checked storage
+writer. `--dry-run` leaves files, directories and snapshot versions unchanged;
+`--yes` accepts the prepared changes. Igniter 0.8 also auto-accepts when stdin is
+redirected, so always use `--dry-run` for unattended previews.
+
+Accept and compile Blueprint edits before planning storage. Prepare one Blueprint
+storage plan per invocation, committing it before planning another so migration
+ordering and history checks remain valid. If the schema, an existing snapshot,
+or the migration directory changes after review, the commit rejects the stale
+plan. Generate and review a new plan; do not reuse the old deferred command.
+
+The binary snapshot and its migration are deliberately excluded from Igniter's
+text writer. A deferred task recomputes and verifies the reviewed fingerprint,
+then uses the migration-directory and snapshot locks and paired persistence.
+The normal storage diff engine, rename hints, legacy snapshot upgrades, and
+explicit `--rebaseline` behavior are retained. No database migration is run by
+the source generator.
+
+For programmatic callers, `Brando.Blueprint.Migrations.plan/2` creates the plan
+without writes and `commit_plan/1` verifies and persists it. Existing
+`create_migration/2` and `rebaseline_snapshot/2` callers retain immediate operation
+through the same implementation.
 
 ## What the snapshot tracks
 
@@ -433,6 +438,6 @@ Blueprints.
 ## Why this is not automatic in the Igniter upgrade
 
 Igniter can rewrite source syntax, but it cannot prove that a particular production database matches a Blueprint or
-that a missing historical snapshot is safe to reconstruct. The 0.54 Igniter task therefore does not generate or
-re-baseline Blueprint migrations. Run the commands in this guide deliberately after the source upgrade, with the
+that a missing historical snapshot is safe to reconstruct. The Igniter upgrade (`mix brando.migrate55` and the
+`mix brando.upgrade FROM TO` hook) therefore does not generate or re-baseline Blueprint migrations. Run the commands in this guide deliberately after the source upgrade, with the
 database history and generated diff available for review.

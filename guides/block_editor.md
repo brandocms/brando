@@ -123,7 +123,7 @@ swaps reload the preview.
 ## How the editor manages state (debugging notes)
 
 The admin editor follows a **single-owner** architecture (see also the
-"Block Editor" section in CLAUDE.md if you're working on Brando itself):
+"Block Editor" section in AGENTS.md if you're working on Brando itself):
 
 - Each block is a live_component that owns its editing state exclusively.
   Parent re-renders never overwrite a mounted block's form.

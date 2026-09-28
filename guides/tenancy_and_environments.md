@@ -35,7 +35,8 @@ public
 ├── users_tokens
 ├── user_sites
 ├── site_asset_sets
-└── environment_operation_logs
+├── environment_operation_logs
+└── … (see "Which tables are shared")
 
 tenant_acme_production
 ├── pages
@@ -275,15 +276,22 @@ also that `execute/1` does not receive the migration prefix the way
 
 `Brando.Tenant.SharedTables` is the single source of truth. Registry,
 authentication, session, and migration-history tables stay in `public`
-permanently, along with every `oban_*` table, since Oban is configured against
-`public`:
+permanently, as do authorization, the content assistant's conversations and
+proposals, content transfer receipts, and Markdown webhook deliveries, along
+with every `oban_*` table, since Oban is configured against `public`:
 
 ```text
-environments  environment_operation_logs  schema_migrations
-site_asset_sets  ssg_builds  sites  sites_previews
-uploads_pending_intents  user_sites  user_tokens  users  users_tokens
+sites  sites_previews  environments  environment_operation_logs
+site_asset_sets  ssg_builds  uploads_pending_intents  schema_migrations
+users  users_tokens  user_tokens  user_sites
+authorization_groups  authorization_group_permissions  authorization_user_groups
+authorization_legacy_mappings  authorization_audit_events
+ai_conversations  ai_messages  ai_runs  content_proposals  content_proposal_receipts
+content_transfer_receipts  markdown_webhook_deliveries
 oban_*
 ```
+
+`Brando.Tenant.SharedTables.list/0` returns the current list.
 
 Everything else in `public` is treated as tenant content, so an application with
 its own cross-site tables must say so, or they will be cloned into every
@@ -487,7 +495,7 @@ both public and tenant migrations so the public access tables, source/version
 columns, and origin-qualified block fields are present:
 
 ```bash
-mix brando.upgrade
+mix brando.gen.migrations
 mix brando.migrate
 mix brando.migrate --tenants
 ```

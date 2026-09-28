@@ -90,7 +90,7 @@ defmodule Brando.Supervisor do
               {"0 2 * * *", Brando.Worker.SitemapGenerator},
               # Clean up soft deleted entries every night at 03:00 UTC
               {"0 3 * * *", Brando.Worker.SoftDeletePurger},
-              # Purge inactive/unprotected revisions older than 14 days
+              # Purge inactive/unprotected revisions older than 30 days
               {"0 4 * * *", Brando.Worker.RevisionPurger},
               {"15 4 * * *", Brando.Worker.DraftPurger},
               # Mark video rows stuck in :uploading as errored (abandoned external uploads)

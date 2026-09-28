@@ -71,8 +71,9 @@ when Igniter becomes available. The dependency remains optional at runtime.
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;
 - refreshes `scripts/sync_gettext.sh` and archives the consumer-owned
-  `mix brando.upgrade` task that 0.54 installed, so the library-owned
-  `mix brando.gen.migrations` can take over the task name;
+  `mix brando.upgrade` task that 0.54 installed, so Brando's own
+  `mix brando.upgrade FROM TO` hook can take over the task name (copying
+  migration files is now `mix brando.gen.migrations`);
 - creates `florist.config.exs` when both legacy `deployment.cfg` and
   `fabfile.py` exist and no Florist configuration is already present.
 
@@ -258,6 +259,15 @@ mix brando.identifiers.sync
 
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.
+
+Image alt text, title and credits are now translated maps. Templates that print
+them without the `i18n` filter (`{{ entry.cover.alt | i18n }}`) show the raw map.
+Module, container and menu templates live in the database, so the source
+migration cannot see them; list the ones to fix with:
+
+```shell
+mix brando.check.image_texts
+```
 
 ## 5. Reconcile Gettext catalogs
 

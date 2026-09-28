@@ -11,8 +11,9 @@ records in `public`; site content and group scope are separate.
 ## Create an editor account
 
 Open **Users → Create new**, enter the name, email, interface language, and a
-password, then save. If first-login password change is enabled in the user's
-configuration, the next sign-in redirects to that password form. The current
+password, then save. The next sign-in redirects to a password form, so the
+editor sets their own; turn off `reset_password_on_first_login` in the user's
+configuration to skip it. The current
 `reset_user_password/2` function is not an implemented email-reset workflow;
 do not advertise a reset email without an application implementation.
 
@@ -134,7 +135,8 @@ underlying operation is:
 
 Use a real, different, active recipient selected by your application; the raw
 context call should not be treated as a recipient-validation UI. Brando discovers
-foreign-key references to `users`, moves content ownership to the recipient,
+foreign-key references to `users` and moves every one to the recipient — content
+ownership and edit history (`updated_by_id`) alike,
 deletes the departing account's session-token rows, and soft-deletes the account.
 It deliberately does **not** transfer authorization memberships or `user_sites`
 access: the recipient keeps their own permissions.

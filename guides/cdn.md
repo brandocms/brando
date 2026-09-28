@@ -138,6 +138,6 @@ Replacing a file at the same key may require CDN invalidation. Updating
 `mix brando.files.update_content_disposition` task supports a dry run before
 rewriting existing object headers. Run `mix help` for its exact target/options.
 
-Frontend build artifacts use `Brando.Static` and the deployment workflow, not
+Frontend build artifacts use the `Brando.Static` configuration and the deployment workflow, not
 image/file field settings. See [Deployment](deployment.md) and the asset-set
 section of [Sites and environments](tenancy_and_environments.md) for that lifecycle.

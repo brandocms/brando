@@ -55,7 +55,7 @@ at the bottom.
 | `text/2` | |
 | `html/2` | |
 | `svg/2` | |
-| `markdown/2` | |
+| `markdown/2` | deprecated |
 | `picture/2` | see *What the media callbacks receive* |
 | `video/2` | " |
 | `gallery/2` | " |

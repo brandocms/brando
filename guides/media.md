@@ -39,7 +39,7 @@ and inspect the square thumbnail. `crop: true` uses the configured geometry and
 focal point for the crop; an uncropped size preserves the source proportions.
 Save the product and reopen it before checking the public page.
 
-Brando 0.54 uses `Brando.Images.Processor.Vix` through the Image library and
+Brando uses `Brando.Images.Processor.Vix` through the Image library and
 libvips. Configure it in the consumer if overriding an older processor:
 
 ```elixir
@@ -93,7 +93,7 @@ attributes. The example above works without that deferred-loading behavior.
 The image's alt text is the default; `alt: "..."` overrides it for this placement,
 and `alt: ""` marks a decorative image. An image's alt text, title and credits
 are kept per content language: the component renders the request's language
-(set by `Brando.Plugs.I18n`), falling back to the default language. Pass
+(set by `Brando.Plug.I18n`), falling back to the default language. Pass
 `language: "no"` to choose it. To read the text yourself, use
 `Brando.Images.text(image, :alt, language)` — the fields hold maps of
 language → text, not strings. Use a meaningful caption only when it adds

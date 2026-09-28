@@ -500,7 +500,8 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   language, never written anywhere.
 - The Content SEO tab and its checks are translated into Norwegian.
 - `:i18n_string` inputs (`:i18n_text`, `:i18n_textarea`) show one tab per
-  language, mark the empty ones, and take `languages: :content` for content
+  language, mark a language only while another one has text, and take
+  `languages: :content` for content
   languages (admin languages remain the default). A plain string cast to the
   type lands under the default content language instead of `"en"`.
 - AI entry translation leaves a placement alone when the image it inherits

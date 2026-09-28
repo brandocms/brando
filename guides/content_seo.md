@@ -26,8 +26,8 @@ language — the audit compares entries against the site fallbacks there.
 | Content length | At least 300 words of body text; none at all fails | normal |
 | Heading structure | At most one H1 in the body, no skipped levels | low |
 | Image descriptions | Every image has alt text that is not a filename or "image" | normal |
-| Language versions | Not much shorter than, missing images or headings from, or months behind a published translation | normal |
-| Search click-through | With Search Console: a first-page result clicked by under 1% of searchers | normal |
+| Language versions | Not much shorter than, with fewer images or more than one heading more or fewer than, or months behind a published translation | normal |
+| Search click-through | With Search Console: a first-page result with at least 100 impressions, clicked by under 1% of searchers | normal |
 
 Failures earn nothing, warnings half their weight; weights are 1, 2 and 4.
 Checks that cannot run — no sitemap yet, no block fields — are left out of the
