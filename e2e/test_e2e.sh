@@ -5,6 +5,7 @@ source .envrc
 # Default test command
 TEST_COMMAND="test"
 RESET_DB=false
+CHECK_MIGRATIONS=false
 EXTRA_ARGS=()
 
 # Process arguments
@@ -13,6 +14,9 @@ for arg in "$@"; do
     TEST_COMMAND="test:ui"
   elif [ "$arg" = "--reset" ]; then
     RESET_DB=true
+  elif [ "$arg" = "--check-migrations" ]; then
+    RESET_DB=true
+    CHECK_MIGRATIONS=true
   else
     EXTRA_ARGS+=("$arg")
   fi
@@ -45,22 +49,20 @@ echo "E2E instance: $BRANDO_E2E_INSTANCE"
 echo "E2E database: $BRANDO_E2E_DATABASE"
 echo "E2E server: $BRANDO_E2E_BASE_URL"
 
-# Check if database exists, create it if not, then ensure it's up to date
-MIX_ENV=e2e mix do ecto.create, ecto.migrate
-
-# Reset explicitly, otherwise seed only when the isolated database is fresh.
+# Compile, prepare the database and seed in one VM. Mix tracks compile_env
+# changes itself; forcing compilation on every reset defeats incremental builds.
+SETUP_ARGS=()
 if [ "$RESET_DB" = true ]; then
-  echo "Resetting database with seed data..."
-  # Force recompile to ensure sandbox plug is included (compile_env is evaluated at compile time)
-  MIX_ENV=e2e mix compile --force --warnings-as-errors
-  MIX_ENV=e2e mix do ecto.drop, ecto.create, ecto.migrate
-  echo "Validating post-baseline migration rollback and forward execution..."
-  # `--to` is inclusive, so target the first migration after the monolithic baseline.
-  MIX_ENV=e2e mix ecto.rollback --to 20250528084352
-  MIX_ENV=e2e mix ecto.migrate
-  BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs
+  SETUP_ARGS+=(--reset)
+fi
+if [ "$CHECK_MIGRATIONS" = true ]; then
+  SETUP_ARGS+=(--check-migrations)
+fi
+
+if [ "${#SETUP_ARGS[@]}" -eq 0 ]; then
+  BRANDO_SEEDING=true MIX_ENV=e2e mix do compile --warnings-as-errors + run --no-start priv/repo/prepare_e2e.exs
 else
-  BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/ensure_e2e_seeds.exs
+  BRANDO_SEEDING=true MIX_ENV=e2e mix do compile --warnings-as-errors + run --no-start priv/repo/prepare_e2e.exs "${SETUP_ARGS[@]}"
 fi
 
 unset NO_COLOR

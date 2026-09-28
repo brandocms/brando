@@ -12,6 +12,36 @@ values when needed by exporting `BRANDO_E2E_INSTANCE`,
 `BRANDO_E2E_DATABASE`, or `BRANDO_E2E_PORT` before invoking the runner.
 GitHub Actions uses the same path with a stable `ci` instance.
 
+## Playwright runs
+
+From `e2e/`, source `.envrc` before running commands:
+
+```sh
+source .envrc
+./test_e2e.sh --reset tests/blocks/block-var-uploads.spec.js
+```
+
+`--reset` drops, migrates and seeds the isolated test database. Compilation is
+incremental. Without `--reset`, the runner migrates and seeds only a fresh
+database. Setup runs in one Mix VM.
+
+Use `--check-migrations` to reset and also validate rollback and reapplication
+of every migration after the baseline. CI runs this once, on `legacy-1`:
+
+```sh
+./test_e2e.sh --check-migrations tests/blocks/block-var-uploads.spec.js
+```
+
+Keep one Playwright worker per server: SQL sandboxes do not isolate PubSub,
+caches or other application state. The existing two CI shards use separate
+servers and PostgreSQL services.
+
+Each attempt writes its duration and result to `playwright/test-results/timings.jsonl`
+(or the selected `--output` directory), including on runs interrupted before
+the final HTML/JSON reports. Ordinary actions have a 15-second deadline;
+operations that need longer should set an explicit timeout. CI's Playwright
+deadline leaves time to finish reports before GitHub's job deadline.
+
 To start your server:
 
   * Install dependencies with `mix deps.get`
