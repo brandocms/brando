@@ -10,6 +10,20 @@ defmodule Brando.Setup.SeedsTest do
 
   defp count(schema), do: Brando.Repo.aggregate(schema, :count)
 
+  # Seeds.run/2 refills the identity, SEO and navigation caches from this
+  # test's sandboxed rows. The rows roll back; the global caches don't, and
+  # later tests (the JSON-LD schema test) would read this test's SEO.
+  setup do
+    cached = Map.new(~w(identity seo navigation)a, &{&1, Brando.Cache.get(&1)})
+
+    on_exit(fn ->
+      Enum.each(cached, fn
+        {key, nil} -> Brando.Cache.del(key)
+        {key, value} -> Brando.Cache.put(key, value, :infinite)
+      end)
+    end)
+  end
+
   describe "run/2" do
     test "a new SEO record gets the base URL and description setup was given" do
       import Ecto.Query
