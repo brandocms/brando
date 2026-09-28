@@ -113,6 +113,97 @@ HEEx).
 Modules are managed in the admin under Configuration → Modules; entries
 reference them by id, so template edits apply everywhere on next render.
 
+## Named block regions
+
+A **Blocks** ref (`:blocks` in [module definitions](module_definitions.md))
+gives an ordinary module a named insertion point for its own collection of
+module blocks, such as a sidebar. Name the ref (for example `sidebar`), set its
+**Module set** (`"all"` by default) and use its description as the label
+editors see. Place it with the normal ref syntax:
+
+```liquid
+<article>
+  {% ref refs.text %}
+  <aside>{% ref refs.sidebar %}</aside>
+</article>
+```
+
+```heex
+<article>
+  <.ref block={@block} ref={:text} />
+  <aside><.ref block={@block} ref={:sidebar} /></aside>
+</article>
+```
+
+In the editor the region opens a drawer (**Content / Block region**) with its
+own block list, sorting and module picker, limited to the configured set. The
+content is saved with the entry. It lives in an internal `:slot` block under
+the owning block, matched by the ref's name, so replacing or resetting the ref
+row does not replace its content. The region renders its active children
+without a wrapper; override `blocks/2` in your parser to change that (see the
+[Villain parser](villain_parser.md) guide).
+
+Renaming or removing a region ref keeps its content but stops rendering it. The
+owning block lists such collections under **Unused content**, where they can be
+opened, remapped to an empty current region on the same block, or deleted.
+
+## Footnotes
+
+Footnotes are off by default. Each note is a small collection of ordinary
+modules from a configured module set, attached to a specific text ref or
+Blueprint rich-text field. When enabled, the text editor gets a footnote button
+that inserts a reference and opens the note's drawer. Tiptap stores only a
+stable note UID; numbers are derived at render time.
+
+**Text refs.** In the module's text ref configuration, switch **Footnotes** on
+and set **Footnote module set** (default `"Footnotes"`); in module definitions
+these are the `footnotes` and `footnote_module_set` fields. Put a text module
+first in that set: it becomes the initial block of a new note. Switching
+footnotes off hides the button but keeps existing references and notes.
+
+**Blueprint rich-text fields.** Declare a dedicated blocks relation and opt the
+top-level input in:
+
+```elixir
+relations do
+  relation :body_notes, :has_many, module: :blocks
+end
+
+forms do
+  form do
+    tab "Content" do
+      fieldset do
+        input :body, :rich_text,
+          footnotes: [blocks: :body_notes, module_set: "Footnotes"]
+      end
+    end
+  end
+end
+```
+
+The form mounts the notes editor itself; do not also declare
+`blocks :body_notes`. `enabled: false` in the footnote options stops new notes
+while keeping existing ones. Footnotes in subform inputs raise at compile time.
+Render the field with its notes (preload the `entry_body_notes` block trees
+first):
+
+```heex
+<Brando.HTML.render_rich_text entry={@entry} field={:body} />
+```
+
+`Brando.Villain.Footnotes.render_field/3` returns `%{html:, notes:}` for a
+custom layout; `Footnotes.to_html/2` and `Footnotes.outlet/2` build the endnote
+list.
+
+**Numbering.** `Brando.Villain.parse/3` numbers references after rendering the
+whole block field, so the sequence follows rendered order across blocks, and
+appends a `section.footnotes` endnote list with backlinks. Pass
+`footnote_scope: "article-#{entry.id}"` when several block fields share a page,
+or `footnotes: false` to skip this step. Unreferenced notes are not rendered;
+the editor lists them under **Unused content**, with **Restore reference**.
+Footnote rendering uses Floki at runtime, so don't restrict Floki to
+`only: :test` in the consuming app.
+
 ## Live preview
 
 With a `preview_target` configured for the schema (see the Live Preview

@@ -98,8 +98,53 @@ older snapshots in a non-live environment after a schema migration before
 relying on them for a release.
 
 Invalid editor changes do not create a revision: field errors remain in the
-form. If loading history fails, the drawer offers **Try again**. Avoid refreshing
-the whole page until any unsaved working copy has been stored or discarded.
+form. If loading history fails, the drawer offers **Try again**. Reloading the
+editor discards unsaved editor state; the latest acknowledged edits can usually
+be brought back through [draft recovery](#draft-recovery), but that is a
+convenience copy, not a stored revision. Store a revision when you need a
+reliable, named snapshot.
+
+## Draft recovery
+
+Blueprint forms also autosave **recovery copies** (`Brando.Drafts`) of unsaved
+editor state, for new and existing entries. A recovery copy is not a revision:
+it lives in its own `entry_drafts` table, never changes the entry, never
+publishes, and does not appear in the revision history. Only a normal Save
+persists recovered content (and, on a revisioned schema, captures a revision
+as usual).
+
+Capture runs about three seconds after the last change, or after fifteen
+seconds of continuous editing; idle editors send nothing. A copy holds the
+entry form's fields (including values that failed validation), the block trees
+of each block field, transformer rows, and the module definitions the blocks
+used. Password fields, file bytes, pending uploads and rendered HTML are
+excluded, as are unsaved edits in separate asset drawers. Copies are stored
+server-side per user, schema, entry, form and tenant environment; edits made
+while disconnected are only durable once acknowledged after reconnect. The form
+shows the storage status and warns before leaving with unacknowledged edits.
+
+When the editor opens and a copy differs from the saved entry, it shows **Pick
+up where you left off**. **Review recovery copy** opens a panel listing copies
+with capture times and a diff against the saved entry, with text copy and JSON
+download. Restoring loads the copy into the editor as unsaved changes; blocks
+whose module definitions have changed incompatibly are held back for review,
+and **Restore compatible content** loads the rest. **Continue without
+restoring** dismisses the prompt; the copies stay reachable through **Recovery
+copies** until they expire. A successful Save resolves the matching copies.
+
+The `DraftPurger` Oban job runs daily at 04:15 UTC and deletes expired copies.
+Unresolved copies expire after `:draft_retention_days` (default 30); saved,
+discarded or resolved copies after `:resolved_draft_retention_days`
+(default 7):
+
+```elixir
+config :brando,
+  draft_retention_days: 30,
+  resolved_draft_retention_days: 7
+```
+
+The values are read when a copy is written or closed, so changing them affects
+new expiry dates only.
 
 ## Retention
 

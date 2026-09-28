@@ -56,6 +56,7 @@ at the bottom.
 | `html/2` | |
 | `svg/2` | |
 | `markdown/2` | deprecated |
+| `markdown_source/2` | a [Markdown source](markdown_sources.md) placement; `data` holds `source_id`, `policy` and `version_id`. The default returns the stored HTML of the resolved version (the source's latest for `:follow`, otherwise the selected version), or `""` |
 | `picture/2` | see *What the media callbacks receive* |
 | `video/2` | " |
 | `gallery/2` | " |
@@ -65,6 +66,7 @@ at the bottom.
 | `media/2` | a media block where the editor picked no type; renders `""` |
 | `fragment/2` | embeds another entry's rendered blocks |
 | `input/2` | deprecated |
+| `blocks/2` | a named block region. `data` is the ref's `%BlocksBlock.Data{}` plus `:rendered_html` (the region's active child blocks, already rendered through your parser, with no wrapper) and `:slot_uid`. The default returns `rendered_html`, or `""` when the region is empty |
 
 **Structural**, called by `Brando.Villain.parse/3` and by each other:
 
@@ -97,7 +99,8 @@ onto it, so the callback gets one struct carrying everything:
 | `gallery/2` | `%GalleryBlock.Data{}` with the resolved `%Brando.Galleries.Gallery{}` on its virtual `gallery` field. Read `data.gallery.gallery_objects` — each holds an `image` **or** a `video`, already carrying any per-object caption and playback overrides. |
 | `file/2` | a plain map of the block's fields plus `:file`, `:filename`, `:filesize` and `:mime_type`. |
 
-Every other callback receives its block's own `Data` struct.
+Every other callback receives its block's own `Data` struct (for `blocks/2`,
+with the extra keys described above).
 
 ### opts
 
