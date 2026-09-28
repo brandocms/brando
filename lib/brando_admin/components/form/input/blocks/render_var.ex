@@ -932,7 +932,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       <Primitives.field_base field={@var[:video_id]} label={@label} instructions={@instructions} skip_presence>
         <MediaField.field
           id={"#{@var.id}-video-media"}
-            presentation={if @edit, do: :field, else: :line}
+          presentation={if @edit, do: :field, else: :line}
           type={:video}
           asset={@video}
           kind={@upload_kind}
