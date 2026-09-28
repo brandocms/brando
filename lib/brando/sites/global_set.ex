@@ -49,7 +49,7 @@ defmodule Brando.Sites.GlobalSet do
             options: :languages,
             narrow: true,
             label: t("Language"),
-            hidden: &Brando.I18n.single_language?/1
+            hidden: &Brando.I18n.SingleLanguage.single_language?/1
 
           input :label, :text, label: t("Label")
           input :key, :text, monospace: true, label: t("Key")

@@ -271,7 +271,7 @@ defmodule Brando.Pages.Page do
 
           input :language, :select,
             options: :languages,
-            hidden: &Brando.I18n.single_language?/1,
+            hidden: &Brando.I18n.SingleLanguage.single_language?/1,
             narrow: true,
             label: t("Language")
 
