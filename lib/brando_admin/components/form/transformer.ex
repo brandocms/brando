@@ -698,36 +698,40 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     <div class="transformer-asset">
       <div class="transformer-asset-label">{@label}</div>
       <div class="transformer-asset-actions">
-        <button
-          type="button"
-          class="tiny"
-          phx-click={
-            JS.push("pick_asset",
-              value: %{dom_id: @item.dom_id, kind: @kind},
-              target: @myself
-            )
-            |> toggle_drawer("##{@kind}-picker")
-          }
-        >
-          {if @kind == "image", do: gettext("Select image"), else: gettext("Browse library")}
-        </button>
-        <%!-- A new file from disk, the same way as dropping one on the card:
+        <%!-- One segmented group, as in media fields; Remove stays apart since
+              it's the one action that discards work. --%>
+        <div class="media-field-split">
+          <button
+            type="button"
+            class="media-button"
+            phx-click={
+              JS.push("pick_asset",
+                value: %{dom_id: @item.dom_id, kind: @kind},
+                target: @myself
+              )
+              |> toggle_drawer("##{@kind}-picker")
+            }
+          >
+            {if @kind == "image", do: gettext("Select image"), else: gettext("Browse library")}
+          </button>
+          <%!-- A new file from disk, the same way as dropping one on the card:
               TransformerUploader opens the file dialog and registers it as a
               replacement for this entry. Labelled as in image fields and
               picture blocks. --%>
-        <button
-          :if={@kind == "image"}
-          type="button"
-          class="tiny"
-          data-pick-replace={@item.dom_id}
-          data-pick-kind="images"
-        >
-          {if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
-        </button>
+          <button
+            :if={@kind == "image"}
+            type="button"
+            class="media-button"
+            data-pick-replace={@item.dom_id}
+            data-pick-kind="images"
+          >
+            {if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
+          </button>
+        </div>
         <button
           :if={@asset}
           type="button"
-          class="tiny asset-remove"
+          class="media-button quiet destructive"
           phx-click={JS.push("clear_asset", value: %{dom_id: @item.dom_id, kind: @kind}, target: @myself)}
         >
           {gettext("Remove")}
