@@ -589,6 +589,27 @@ defmodule Brando.TranslationsTest do
       end
     end
 
+    test "language_controlled_fields takes assets, only in synchronized mode and not both ways" do
+      assert Translatable.validate(Article, mode: :synchronized, language_controlled_fields: [:cover]) == true
+      assert %{language_controlled_fields: [:cover]} = Translatable.config(language_controlled_fields: [:cover])
+
+      assert_raise BlueprintError, ~r/are not image, file, video or gallery assets/, fn ->
+        Translatable.validate(Article, mode: :synchronized, language_controlled_fields: [:year])
+      end
+
+      assert_raise BlueprintError, ~r/language_controlled_fields requires mode: :synchronized/, fn ->
+        Translatable.validate(Article, language_controlled_fields: [:cover])
+      end
+
+      assert_raise BlueprintError, ~r/cannot be both/, fn ->
+        Translatable.validate(Article,
+          mode: :synchronized,
+          source_controlled_fields: [:cover],
+          language_controlled_fields: [:cover]
+        )
+      end
+    end
+
     test "accepts subform fields and module variables, and keeps the flat form" do
       selectors = [:year, {:module, "hero-banner", [:layout, "theme"]}, items: [:link]]
       assert Translatable.validate(Article, mode: :synchronized, source_controlled_fields: selectors) == true

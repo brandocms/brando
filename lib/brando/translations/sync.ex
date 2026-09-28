@@ -203,8 +203,12 @@ defmodule Brando.Translations.Sync do
     text_fields = Translation.translatable_text_fields(schema)
     source_controlled = config.source_controlled_fields
 
+    # Assets follow the source unless the schema gives them to each language
     assets =
-      for %{type: type, name: name} <- Assets.__assets__(schema), type in [:image, :file, :video, :gallery], do: name
+      for %{type: type, name: name} <- Assets.__assets__(schema),
+          type in [:image, :file, :video, :gallery],
+          name not in Map.get(config, :language_controlled_fields, []),
+          do: name
 
     relations = Relations.__relations__(schema)
 

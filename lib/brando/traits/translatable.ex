@@ -27,6 +27,15 @@ defmodule Brando.Trait.Translatable do
         credits: [:url]
       ]
 
+  `language_controlled_fields` does the opposite for assets, which follow the
+  source by default: the listed assets are copied when a translation is
+  created, then each language keeps its own (a listing image per language):
+
+      language_controlled_fields: [:listing_image]
+
+  Only `:image`, `:file`, `:video` and `:gallery` assets can be listed, and not
+  in `source_controlled_fields` as well.
+
   Assets are already source-controlled, so listing them only documents the
   intent. A subform must be an owned collection (`has_many` with `cast: true`,
   or `embeds_many`) whose rows are matched by `uid` (`trait :ensure_uid`), and
@@ -70,6 +79,7 @@ defmodule Brando.Trait.Translatable do
     %{
       mode: Keyword.get(opts, :mode, :independent),
       source_controlled_fields: for(name <- List.wrap(selectors), is_atom(name), do: name),
+      language_controlled_fields: List.wrap(Keyword.get(opts, :language_controlled_fields, [])),
       source_controlled_subform_fields:
         for({name, fields} <- List.wrap(selectors), is_atom(name), is_list(fields), into: %{}, do: {name, fields}),
       source_controlled_module_vars:
@@ -89,7 +99,47 @@ defmodule Brando.Trait.Translatable do
 
     validate_mode!(module, mode, opts)
     validate_fields!(module, mode, Keyword.get(opts, :source_controlled_fields, []))
+    validate_language_controlled!(module, mode, opts)
     true
+  end
+
+  defp validate_language_controlled!(module, mode, opts) do
+    fields = Keyword.get(opts, :language_controlled_fields, [])
+
+    unless is_list(fields) and Enum.all?(fields, &is_atom/1) do
+      raise BlueprintError,
+        message:
+          "#{inspect(module)}: trait :translatable language_controlled_fields must list asset names, got #{inspect(fields)}"
+    end
+
+    if fields != [] and mode != :synchronized do
+      raise BlueprintError,
+        message: "#{inspect(module)}: trait :translatable language_controlled_fields requires mode: :synchronized"
+    end
+
+    assets =
+      for %{type: type, name: name} <- Assets.__assets__(module), type in [:image, :file, :video, :gallery], do: name
+
+    case fields -- assets do
+      [] ->
+        :ok
+
+      unknown ->
+        raise BlueprintError,
+          message:
+            "#{inspect(module)}: trait :translatable language_controlled_fields #{inspect(unknown)} are not " <>
+              "image, file, video or gallery assets; other fields are already each language's own"
+    end
+
+    case fields -- (fields -- Keyword.get(opts, :source_controlled_fields, [])) do
+      [] ->
+        :ok
+
+      both ->
+        raise BlueprintError,
+          message:
+            "#{inspect(module)}: trait :translatable #{inspect(both)} cannot be both source- and language-controlled"
+    end
   end
 
   defp validate_mode!(module, mode, opts) do

@@ -212,6 +212,16 @@ defmodule Brando.Translations.ComputePendingTest do
     assert {:shared_update, "cover"} in kinds(result)
   end
 
+  test "a language-controlled asset stays the translation's own" do
+    {source, target, base} = pair()
+    config = Brando.Trait.Translatable.config(mode: :synchronized, language_controlled_fields: [:cover])
+
+    result = compute(%{source | cover_id: 7}, %{target | cover_id: 9}, base, config: config)
+
+    assert result.payload.cover_id == 9
+    refute {:shared_update, "cover"} in kinds(result)
+  end
+
   test "other values are language-specific" do
     {source, target, base} = pair()
     result = compute(%{source | featured: true}, %{target | year: 2020}, base)

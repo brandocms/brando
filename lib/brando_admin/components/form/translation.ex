@@ -168,6 +168,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
     assets =
       for %{type: type, name: name} <- Brando.Blueprint.Assets.__assets__(schema),
           type in [:image, :video, :file, :gallery],
+          name not in Map.get(config, :language_controlled_fields, []),
           do: name
 
     fields =
