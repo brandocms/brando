@@ -95,6 +95,18 @@ defmodule Brando.Authorization.RealtimeTest do
              BrandoAdmin.AdminSocket.connect(%{"token" => Brando.Users.build_token(c.outsider.id)}, %Phoenix.Socket{})
   end
 
+  test "a late preview subscriber receives changes made since the iframe loaded", c do
+    assert preview_conn(c.editor, c.key).resp_body =~ "Private draft"
+
+    html = "<html><body><main>Recovered unsaved blocks</main></body></html>"
+    Brando.LivePreview.store_cache(c.key, html)
+    Brando.endpoint().broadcast("live_preview:#{c.key}", "rerender", %{html: html})
+
+    socket = socket(BrandoAdmin.AdminSocket, "preview", %{user_id: c.editor.id})
+    assert {:ok, _, _} = subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:#{c.key}")
+    assert_push "rerender", %{html: ^html}
+  end
+
   test "preview channels stop on revocation and recheck each outgoing update", c do
     socket = socket(BrandoAdmin.AdminSocket, "preview", %{user_id: c.editor.id})
     {:ok, _, joined} = subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:#{c.key}")
