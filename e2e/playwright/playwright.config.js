@@ -41,16 +41,25 @@ module.exports = defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   timeout: 60000,
+  // Finish reporters before GitHub's 30-minute job deadline kills the process.
+  globalTimeout: process.env.CI ? 25 * 60 * 1000 : 0,
   // SQL sandboxes isolate rows, but application-wide PubSub and caches can still
   // leak transient state between workers. Keep every E2E run deterministic.
   workers: 1,
   retries: process.env.CI ? 2 : 1,
   // Retain per-test timings on successful CI runs as well as failures.
-  reporter: process.env.CI
-    ? [['github'], ['html'], ['json', { outputFile: 'test-results/results.json' }], ['dot']]
-    : [['list']],
+  reporter: [
+    ...(process.env.CI
+      ? [['github'], ['html'], ['json', { outputFile: 'test-results/results.json' }], ['dot']]
+      : [['list']]),
+    ['./test-support/timingReporter.js'],
+  ],
   use: {
     trace: 'retain-on-failure',
+    // A missing control should fail at the action, not consume a two-minute
+    // media test deadline on every retry. Longer operations opt in explicitly.
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
     screenshot: 'only-on-failure',
     baseURL: `${baseURL}/`,
     ignoreHTTPSErrors: true,
