@@ -1287,7 +1287,13 @@ button.btn-palette {
 
     /* Long text and inline rich text share the values' size; the expanded
        rich text editor keeps its own. */
-    .variable.html .tiptap-editor-shell:not(.expanded) {
+    /* The static preview shown until the editor is activated, and the
+       inline editor itself */
+    .variable.html .tiptap-preview {
+      padding-block: 10px;
+    }
+
+    .variable.html :is(.tiptap-preview, .tiptap-editor-shell:not(.expanded)) {
       .tiptap-document {
         padding-block: 10px;
       }
