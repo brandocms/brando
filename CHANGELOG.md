@@ -406,6 +406,27 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   [Content assistant](guides/content_assistant.md).
 - `Brando.Content.Proposals` stores, validates, previews and applies these
   proposals, and can be used without the assistant.
+- **Synchronized pages, and translations that follow their links.**
+  - `config :brando, Brando.Pages.Page, translatable: [mode: :synchronized, ...]`
+    synchronizes pages; independent stays the default. It is read at runtime,
+    and `translatable_sites` sets it per site in a tenant installation.
+    Brando validates it at boot.
+  - A relation to the schema itself, like a page's parent, follows the source
+    mapped to the parent's version in the translation's language.
+  - `language_controlled_fields` gives chosen assets (a listing image, a
+    brochure) to each language instead of the source.
+  - A link to content without a version in the translation's language keeps
+    pointing at the source-language content instead of being emptied, and
+    moves once that version exists. Identifiers made before a schema was
+    translatable are mapped by their entry's language.
+  - Link pickers offer content in the entry's language.
+  - Creating a translation keeps the source's text instead of the duplicate's
+    "(copy)" marks, leaves out child pages and fragments, and requires a
+    duplicate mutation in the context (`{:error, :not_duplicable}` otherwise,
+    and the admin no longer offers it). A failed copy leaves no group behind.
+  - A pending version computed before its translation last changed (a
+    published revision, a scheduled release) is recomputed before the editor
+    applies it. Stale shared updates are no longer carried to the next version.
 - **Synchronized translations in the admin.** A translation opens with its
   pending version in the form, lists the text to translate or review, and
   resolves only what the editor completed when saved. Its structure, media and
