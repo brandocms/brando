@@ -641,9 +641,9 @@ button.btn-palette {
     }
   }
 
-  /* Block variables are drawn as lines on the block itself, not as cards:
-     the refs below are the cards. Each cell puts its label beside its control
-     so a row is one line, and every control keeps showing its value —
+  /* Block variables are one quiet sheet with hairlines between rows and
+     cells, not a card per variable. Each cell puts its label beside its
+     control so a row is one line, and every control keeps showing its value —
      switches and choices are what editors most easily forget.
 
      Rows and widths are authored in the module editor and derived
@@ -654,7 +654,7 @@ button.btn-palette {
     --vars-muted: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
     --vars-faint: color-mix(in srgb, var(--brando-color-dark) 40%, transparent);
     border-top: 1px solid #eee;
-    padding: 0 10px;
+    padding: 10px;
 
     /* Only shown as the side panel's heading, see the container query below */
     > .vars-info {
@@ -665,6 +665,11 @@ button.btn-palette {
   .block-vars {
     display: flex;
     flex-direction: column;
+    margin: 0;
+    min-width: 0;
+    border: 1px solid var(--vars-line);
+    border-radius: 8px;
+    background-color: var(--brando-color-shaded);
 
     .block-vars-row {
       display: flex;
@@ -677,20 +682,16 @@ button.btn-palette {
 
     .variable {
       min-width: 0;
-      min-height: 44px;
+      min-height: 40px;
       display: flex;
       align-items: center;
-      padding: 6px 12px;
+      padding: 5px 12px;
       color: var(--brando-color-foreground);
 
       > div {
         flex: 1 1 auto;
         min-width: 0;
       }
-    }
-
-    .variable:first-child {
-      padding-left: 0;
     }
 
     .variable + .variable {
@@ -742,7 +743,11 @@ button.btn-palette {
         display: flex;
         align-items: center;
 
+        /* A row, so the presence avatars sit beside the label, not under it */
         label.control-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
           @font main;
           font-size: 12px;
           font-weight: 400;
@@ -767,6 +772,13 @@ button.btn-palette {
         &:not(:has(.help-text:not([hidden]))) {
           display: none;
         }
+      }
+
+      /* The form sets every input and select to --admin-field-height (44px).
+         Set it on the var's own controls only, not on the modals inside. */
+      > .field-base > .input-with-action,
+      > .field-base > .multiselect {
+        --admin-field-height: 30px;
       }
 
       input.text {
@@ -827,6 +839,7 @@ button.btn-palette {
       .boolean-instructions {
         order: 3;
         display: flex;
+        margin-left: -4px;
         color: var(--vars-faint);
       }
 
@@ -870,21 +883,40 @@ button.btn-palette {
       }
     }
 
+    /* Swatch and hex; the clear button only shows on hover and takes no
+       room, so a colour fits half the side panel beside its label. */
     .variable.color .picker {
+      .picker-target {
+        position: relative;
+      }
+
       .circle {
         width: 18px;
         height: 18px;
         flex-shrink: 0;
+        border: 1px solid color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
       }
 
       .color-hex {
         @font mono;
         font-size: 12px;
         margin-left: 8px;
+        text-transform: uppercase;
       }
 
       button.clear-color {
+        position: absolute;
+        left: 100%;
         margin-left: 6px;
+        opacity: 0;
+      }
+    }
+
+    .variable.color:is(:hover, :focus-within) .picker button.clear-color {
+      opacity: 0.5;
+
+      &:hover {
+        opacity: 1;
       }
     }
 
@@ -930,20 +962,221 @@ button.btn-palette {
           font-weight: 400;
         }
 
-        dl:not(:has(dd)) dt {
-          color: var(--vars-faint);
+      }
+    }
+
+    .variable.link .link-preview--empty {
+      .icon {
+        border: 0;
+        width: 16px;
+        color: var(--vars-faint);
+      }
+
+      .info dt {
+        color: var(--vars-faint);
+      }
+
+      &:hover {
+        .icon,
+        .info dt {
+          color: var(--brando-color-blue);
         }
       }
     }
 
+    /* A set URL shows the URL; the "URL=" prefix is noise here */
+    .variable.link .link-preview .info dl:has(dd) dt {
+      display: none;
+    }
+
+    /* Files, images and videos are one line too: a thumbnail, the name (or
+       "Drop a … here") and the media field's own buttons, made small. The
+       whole field is still a drop target. */
+    .variable:is(.file, .image, .video) .media-field {
+      max-width: none;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 4px;
+
+      .media-field-content {
+        flex: 0 1 auto;
+        gap: 8px;
+      }
+
+      .media-field-preview {
+        flex: 0 0 24px;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+
+        > [class^="hero-"] {
+          width: 14px;
+          height: 14px;
+        }
+      }
+
+      .media-field-copy {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 8px;
+      }
+
+      .media-field-name {
+        font: 400 14px/20px "Main", sans-serif;
+      }
+
+      .media-field-meta {
+        font-size: 12px;
+        color: var(--vars-faint);
+      }
+
+      .media-field-actions {
+        margin-top: 0;
+      }
+
+      .media-button {
+        min-height: 26px;
+        padding: 2px 9px;
+        white-space: nowrap;
+      }
+
+      .media-field-destination,
+      .media-field-progress {
+        flex: 0 0 100%;
+        margin-top: 0;
+      }
+    }
+
+    .variable:is(.image, .video) .media-field .media-field-preview {
+      flex: 0 0 40px;
+      width: 40px;
+      height: 40px;
+    }
+
+    .variable:is(.file, .image, .video) .media-field--empty .media-field-name {
+      color: var(--vars-muted);
+    }
+
+    /* A gallery: its count and buttons on one line. Its name repeats the
+       label, so it goes. Anything else it shows (thumbnails) gets a line. */
+    .variable.gallery .media-gallery {
+      max-width: none;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 6px;
+
+      > :not(.media-field-copy, .media-field-actions, .media-field-drop, input) {
+        flex: 0 0 100%;
+      }
+
+      .media-field-name {
+        display: none;
+      }
+
+      .media-field-meta {
+        font-size: 12px;
+        color: var(--vars-muted);
+      }
+
+      .media-field-actions {
+        margin-top: 0;
+      }
+
+      .media-button {
+        min-height: 26px;
+        padding: 2px 9px;
+      }
+    }
+
+    /* Date and time: the value as text, the timezone after it, and Clear
+       only on hover — like the colour's clear button. */
+    .variable.datetime .datetime-wrapper > div {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 8px;
+
+      input.flatpickr {
+        order: 1;
+        flex: 1 0 15em;
+        min-width: 0;
+        height: 30px;
+        margin-left: -6px;
+        padding: 0 6px;
+        font: 14px/20px "Main", sans-serif;
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-overflow: ellipsis;
+
+        &:hover {
+          border-color: var(--vars-line);
+        }
+
+        &:focus {
+          background-color: var(--brando-color-input);
+          border-color: var(--brando-color-blue);
+          outline: none;
+        }
+      }
+
+      /* Just the zone: "— Your timezone is:" doesn't fit on the line */
+      .timezone {
+        order: 2;
+        position: static;
+        margin: 0;
+        font-size: 0;
+        color: var(--vars-faint);
+        white-space: nowrap;
+
+        span {
+          font-size: 11px;
+        }
+      }
+
+      .clear-datetime {
+        order: 3;
+        position: absolute;
+        top: 3px;
+        right: 0;
+        padding: 2px 6px;
+        border: 0;
+        font: 12px/20px "Main", sans-serif;
+        text-transform: none;
+        color: var(--vars-muted);
+        background: transparent;
+        background: var(--brando-color-shaded);
+        opacity: 0;
+
+        &:hover {
+          color: var(--brando-color-blue);
+        }
+      }
+    }
+
+    .variable.datetime:is(:hover, :focus-within) .clear-datetime {
+      opacity: 1;
+    }
+
     /* Rich text, long text and media don't fit on a line: their label goes
        above, as a small heading, and the control gets the cell. */
-    .variable:is(.text, .html, .image, .file, .video, .gallery) {
+    .variable:is(.text, .html) {
       padding-top: 10px;
       padding-bottom: 12px;
     }
 
-    .variable:is(.text, .html, .image, .file, .video, .gallery) > div > .brando-input > .field-wrapper {
+    .variable:is(.text, .html) > div > .brando-input > .field-wrapper {
       display: block;
 
       > .label-wrapper {
@@ -960,22 +1193,6 @@ button.btn-palette {
       height: auto;
     }
 
-    .datetime-wrapper {
-      .clear-datetime {
-        font-size: 12px;
-        top: 11px;
-        line-height: 1;
-        font-family: "Mono";
-        text-transform: uppercase;
-        padding: 0.5em;
-        background-color: white;
-
-        &:hover {
-          background-color: 1px solid var(--brando-color-dark);
-          color: 1px solid var(--brando-color-input);
-        }
-      }
-    }
   }
 
   /* A very wide block moves its variables into a panel on the right, next to
@@ -2278,10 +2495,8 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
         flex-wrap: wrap;
       }
 
-      .variable,
-      .variable:first-child {
+      .variable {
         flex: 0 0 100%;
-        padding-left: 0;
         border-left: 0;
       }
 
@@ -2289,10 +2504,19 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
         flex: 0 0 50%;
       }
 
-      /* Swatch, hex and clear button need more than half the panel beside a
-         label; let them drop under the label instead of spilling out. */
-      .variable.color > div > .brando-input > .field-wrapper > .field-base {
-        flex: 1 0 auto;
+      /* Links and media need the panel's width: label above, like text */
+      .variable:is(.link, .file, .image, .video, .gallery) {
+        padding-top: 10px;
+        padding-bottom: 12px;
+      }
+
+      .variable:is(.link, .file, .image, .video, .gallery) > div > .brando-input > .field-wrapper {
+        display: block;
+
+        > .label-wrapper {
+          max-width: none;
+          margin-bottom: 8px;
+        }
       }
 
       .variable + .variable {

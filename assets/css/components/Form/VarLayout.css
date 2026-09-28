@@ -573,11 +573,11 @@
     padding: 9px 12px;
   }
 
-  /* The preview's fieldset stands in for the block editor's plain div. */
+  /* The preview's fieldset stands in for the block editor's plain div; the
+     sheet's border and background come from Block.css. */
   fieldset.block-vars {
     margin: 0;
     padding: 0;
-    border: 0;
   }
 }
 

@@ -12745,3 +12745,6 @@ msgstr "Ett tema per linje — hva de er kjent for"
 
 msgid "Alt text from its entry"
 msgstr "Alt-tekst fra oppføringen"
+
+msgid "Add link"
+msgstr "Legg til lenke"
