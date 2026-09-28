@@ -5,7 +5,7 @@ test('creates project', async ({ page }, testInfo) => {
   test.setTimeout(120000)
 
   await page.goto('/admin')
-  await page.getByRole('link', { name: 'Clients' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
   await page.getByText('Published').click()
@@ -13,7 +13,7 @@ test('creates project', async ({ page }, testInfo) => {
   await page.getByRole('textbox', { name: 'Name' }).fill('Microsoft')
   await page.getByTestId('submit').click()
   await syncLV(page)
-  await page.getByRole('link', { name: 'Categories', exact: true }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Categories', exact: true }).click()
   await expect(page).toHaveURL(/\/categories/)
   await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
@@ -27,7 +27,7 @@ test('creates project', async ({ page }, testInfo) => {
   await page.getByRole('textbox', { name: 'Title' }).fill('Strategy')
   await page.getByTestId('submit').click()
   await syncLV(page)
-  await page.getByRole('link', { name: 'Projects' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
   await expect(page).toHaveURL(/\/projects\/projects/)
   await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
@@ -39,7 +39,7 @@ test('creates project', async ({ page }, testInfo) => {
   await syncLV(page)
   // Wait for slug field to be populated
   await expect(page.locator('input[name="project[slug]"]')).toHaveValue(/microsoft/, { timeout: 10000 })
-  await page.getByText('Published', { exact: true }).click()
+  await page.locator('#project_status-field-base').getByText('Published', { exact: true }).click()
   await page.locator('#project_full_case-field-base div').click()
 
   // Use pressSequentially instead of fill() for TipTap contenteditable elements

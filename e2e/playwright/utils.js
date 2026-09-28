@@ -341,6 +341,17 @@ const expectCanvasOverlayAligned = async page => {
     .toBeLessThanOrEqual(1.5) // rounding only
 }
 
+// A media variable in a block keeps its actions behind one menu ("Add" when
+// empty, "Change" when set): the menu's trigger, and opening it to click one.
+function mediaMenuButton(field) {
+  return field.locator('.media-action-menu > button')
+}
+
+async function mediaMenu(field, action) {
+  await mediaMenuButton(field).click()
+  await field.locator('.media-field-menu').getByRole('button', { name: action, exact: true }).click()
+}
+
 module.exports = {
   randomString,
   syncLV,
@@ -359,5 +370,7 @@ module.exports = {
   setPreviewDevice,
   fillSlugSource,
   confirmUploadFolder,
-  expectCanvasOverlayAligned
+  expectCanvasOverlayAligned,
+  mediaMenu,
+  mediaMenuButton
 }

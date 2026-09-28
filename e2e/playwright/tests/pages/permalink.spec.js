@@ -109,7 +109,7 @@ test('renaming back removes the destination redirect even when the new redirect 
 
 test('plain forms prompt on slug changes and preserve continue-editing saves', async ({ page }) => {
   await page.goto('/admin')
-  await page.getByRole('link', { name: 'Categories', exact: true }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Categories', exact: true }).click()
   await page.getByRole('link', { name: 'Create new', exact: true }).click()
   await page.getByLabel('Title', { exact: true }).fill('Design')
   await page.getByTestId('submit').click()

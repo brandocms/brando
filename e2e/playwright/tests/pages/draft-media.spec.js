@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV, confirmUploadFolder, mediaMenu, mediaMenuButton } from '../../utils'
 
 const mediaState = async (page, schema, id = 'new') => {
   const response = await page.request.post('/e2e/drafts/media-state', { data: { schema, entry_id: String(id) } })
@@ -404,7 +404,7 @@ test.describe('Media in entry recovery copies', () => {
     for (const [type, file] of [['image', 'image2.jpg'], ['file', 'test.pdf']]) {
       const field = blockMediaVar(page, type)
       const chooser = page.waitForEvent('filechooser')
-      await field.getByRole('button', { name: 'Upload', exact: true }).click()
+      await mediaMenu(field, 'Upload')
       await (await chooser).setFiles(`./fixtures/${file}`)
       if (type === 'image') await confirmUploadFolder(page)
       await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
@@ -436,14 +436,14 @@ test.describe('Media in entry recovery copies', () => {
     const id = await savePage(page, title)
     expect((await mediaState(page, 'page', id)).counts).toEqual(counts)
     for (const type of ['image', 'file']) {
-      await blockMediaVar(page, type).getByRole('button', { name: 'Configure', exact: true }).click()
+      await mediaMenu(blockMediaVar(page, type), 'Configure')
       const modal = page.locator(`[id$="${type}-config"]:visible`)
       await modal.getByRole('button', { name: 'Remove', exact: true }).click()
       await modal.getByRole('button', { name: 'Done', exact: true }).click()
     }
     await waitForCopy(page, 'page', id, copy => media(copy).slice(0, 2).every(Boolean) && media(copy).slice(2).every(value => !value))
     await restore(page)
-    for (const type of ['image', 'file']) await expect(blockMediaVar(page, type).getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
+    for (const type of ['image', 'file']) await expect(mediaMenuButton(blockMediaVar(page, type))).toHaveText('Add')
     await savePage(page, title)
     const state = await mediaState(page, 'page', id)
     const vars = state.entry.entry_blocks.flatMap(row => row.block.vars)

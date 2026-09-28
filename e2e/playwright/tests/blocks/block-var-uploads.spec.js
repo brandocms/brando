@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV, confirmUploadFolder, mediaMenu, mediaMenuButton } from '../../utils'
 
 async function createVarPage(page, title) {
   await page.goto('/admin/pages/create')
@@ -22,12 +22,12 @@ for (const type of ['image', 'file']) {
     const title = `Var ${type} Upload Test`
     await createVarPage(page, title)
     const field = mediaField(page, type)
-    await expect(field.getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
+    await expect(mediaMenuButton(field)).toHaveText('Add')
     await field.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
     if (type === 'image') await confirmUploadFolder(page)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
     if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 20000 })
-    await field.getByRole('button', { name: 'Configure', exact: true }).click()
+    await mediaMenu(field, 'Configure')
     const modal = page.locator(`[id$="${type}-config"]:visible`)
     await expect(modal.locator('.media-field')).toHaveAttribute('data-asset-id', /\d+/)
     await modal.getByRole('button', { name: 'Done', exact: true }).click()
@@ -46,13 +46,15 @@ for (const type of ['image', 'file']) {
     await field.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
     if (type === 'image') await confirmUploadFolder(page)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
-    await field.getByRole('button', { name: 'Configure', exact: true }).click()
+    await mediaMenu(field, 'Configure')
     const modal = page.locator(`[id$="${type}-config"]:visible`)
     await modal.getByRole('button', { name: 'Remove', exact: true }).click()
     await modal.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(modal).not.toBeVisible()
     await expect(field).not.toHaveAttribute('data-asset-id', /\d+/)
-    await expect(field.getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
-    await expect(field.getByRole('button', { name: type === 'image' ? 'Select image' : 'Browse library', exact: true })).toBeVisible()
+    await expect(mediaMenuButton(field)).toHaveText('Add')
+    await mediaMenuButton(field).click()
+    await expect(field.locator('.media-field-menu').getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
+    await expect(field.locator('.media-field-menu').getByRole('button', { name: type === 'image' ? 'Select image' : 'Browse library', exact: true })).toBeVisible()
   })
 }

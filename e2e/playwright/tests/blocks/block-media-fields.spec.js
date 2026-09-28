@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV, confirmUploadFolder, mediaMenu } from '../../utils'
 import fs from 'node:fs'
 
 async function createPage(page, title, module) {
@@ -317,7 +317,7 @@ test('file refs keep their settings through replacement and gallery vars accept 
   await drop(page, field, [['test.pdf', 'application/pdf']])
   await expect(field).not.toHaveAttribute('data-asset-id', initial)
   const gallery = page.locator('.media-gallery[data-kind="block_var_gallery"]:visible')
-  await gallery.getByRole('button', { name: 'Configure', exact: true }).click()
+  await mediaMenu(gallery, 'Configure')
   const galleryModal = page.getByRole('dialog', { name: 'Gallery', exact: true })
   await expect(galleryModal.getByRole('heading', { name: 'Build your gallery', exact: true })).toBeVisible()
   await page.waitForTimeout(350)

@@ -5,7 +5,7 @@ test.describe('Multi-select reordering', () => {
   test.beforeEach(async ({ page }) => {
     // Create a client first
     await page.goto('/admin')
-    await page.getByRole('link', { name: 'Clients' }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
     await page.getByText('Published').click()
@@ -18,7 +18,7 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
 
     // Create three categories
-    await page.getByRole('link', { name: 'Categories', exact: true }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Categories', exact: true }).click()
     await expect(page).toHaveURL(/\/categories/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
@@ -54,7 +54,7 @@ test.describe('Multi-select reordering', () => {
 
   test('reorders selected items in multi-select and persists order', async ({ page }) => {
     // Navigate to Projects and create new
-    await page.getByRole('link', { name: 'Projects' }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
     await expect(page).toHaveURL(/\/projects\/projects/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
@@ -182,7 +182,7 @@ test.describe('Multi-select reordering', () => {
     // Regression: after "Reset value", selecting a single option brought back
     // every previously selected option (reset only cleared local assigns,
     // while select_option rebuilds its list from the form changeset)
-    await page.getByRole('link', { name: 'Projects' }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
     await expect(page).toHaveURL(/\/projects\/projects/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()

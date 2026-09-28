@@ -10,7 +10,7 @@ test.describe('Listing Filters', () => {
     await page.goto('/admin')
 
     // Create a client first
-    await page.getByRole('link', { name: 'Clients' }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
     await page.getByRole('link', { name: 'Create new' }).click()
     await expect(page).toHaveURL(/\/clients\/create/)
     await syncLV(page)
@@ -22,7 +22,7 @@ test.describe('Listing Filters', () => {
     await syncLV(page)
 
     // Create one project with full_case: true
-    await page.getByRole('link', { name: 'Projects' }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
     await expect(page).toHaveURL(/\/projects\/projects/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()

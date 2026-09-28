@@ -3,7 +3,7 @@ import { syncLV } from '../../utils'
 
 test('listing summaries preserve edits through collapse, validation and save', async ({ page }, testInfo) => {
   await page.goto('/admin')
-  await page.getByRole('link', { name: 'Price categories' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Price categories' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
   await page.locator('#price_category_title').fill('Summary prices')
