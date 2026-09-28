@@ -514,6 +514,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     <h3>{gettext("Default value")}</h3>
 
                     <.render_value_inputs
+                      language={assigns[:language]}
                       edit
                       id={@id}
                       type={@type}
@@ -657,6 +658,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <% end %>
 
             <.render_value_inputs
+              language={assigns[:language]}
               type={@type}
               palette_colors={@palette_colors}
               var={@var}
@@ -721,6 +723,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr(:component_id, :any, default: nil)
   attr(:var_key, :any, default: nil)
   attr(:upload_kind, :string, default: "entry_var")
+  # The entry's language: the link picker offers entries in it
+  attr(:language, :string, default: nil)
 
   def render_value_inputs(%{type: nil} = assigns) do
     ~H"""
@@ -1056,6 +1060,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             field={@var}
             identifier={@identifier}
             target={@target}
+            language={assigns[:language]}
             on_change={@on_change || fn params -> send_update(@target, params) end}
           />
         </div>
@@ -1217,6 +1222,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           var_key={@var_key}
           var_type={@var_type}
           wanted_schemas={@wanted_schemas}
+          language={assigns[:language]}
           layout={:workspace}
           require_url
           on_change={@on_change}

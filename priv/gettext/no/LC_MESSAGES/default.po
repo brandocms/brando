@@ -12791,3 +12791,8 @@ msgstr "Modulen er endret i admin etter at filen ble importert, så neste lagrin
 #, elixir-autogen, elixir-format
 msgid "Both this module and its file changed since the last import, so the file is not imported. Export the modules again and reapply your file edits."
 msgstr "Både modulen og filen er endret siden forrige import, så filen blir ikke importert. Eksporter modulene på nytt og gjør endringene i filen igjen."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Translations can't be created: this content type can't be copied."
+msgstr "Oversettelser kan ikke opprettes: denne innholdstypen kan ikke kopieres."

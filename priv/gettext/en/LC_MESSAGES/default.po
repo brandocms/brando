@@ -12786,3 +12786,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Both this module and its file changed since the last import, so the file is not imported. Export the modules again and reapply your file edits."
 msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Translations can't be created: this content type can't be copied."
+msgstr ""

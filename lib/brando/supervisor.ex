@@ -24,6 +24,9 @@ defmodule Brando.Supervisor do
     # blocks boot — see the moduledoc for why, and for the opt-in strict mode.
     Brando.Videos.ProviderConfigCheck.run()
 
+    # Runtime translation configs (Page's) aren't checked by the compiler.
+    Brando.Trait.Translatable.check_runtime_config!()
+
     children = [
       Brando.MarkdownSources.RateLimiter,
       {Task.Supervisor, name: Brando.AI.Agent.Supervisor},

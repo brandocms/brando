@@ -21,5 +21,5 @@ defmodule Brando.SyncTest do
   mutation :update, Article
   mutation :delete, Article
 
-  mutation :duplicate, {Article, []}
+  mutation :duplicate, {Article, change_fields: [:title, :slug]}
 end

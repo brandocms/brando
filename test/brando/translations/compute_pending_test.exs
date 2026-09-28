@@ -236,7 +236,7 @@ defmodule Brando.Translations.ComputePendingTest do
       result = compute(%{source | parent_id: 10}, %{target | parent_id: 5}, base, entries: %{10 => nil})
 
       assert result.payload.parent_id == 5
-      assert {:awaiting_translation, "parent"} in kinds(result)
+      assert {:awaiting_translation, "parent/10"} in kinds(result)
     end
 
     test "has nothing to do when the target is already under the mapped parent" do
@@ -465,11 +465,25 @@ defmodule Brando.Translations.ComputePendingTest do
     result = compute(source, target, baseline(source), identifiers: %{1 => 11, 2 => nil, 3 => 33})
     [join] = result.payload.entry_blocks
 
-    assert Enum.map(join.block.block_identifiers, & &1.identifier_id) == [11]
+    # 2 has no English version yet: it stays linked, to the Norwegian one
+    assert Enum.map(join.block.block_identifiers, & &1.identifier_id) == [11, 2]
     assert hd(join.block.vars).identifier_id == 33
 
     assert {:awaiting_translation, "entry_blocks/a/identifiers/2"} in kinds(result)
     assert {:shared_update, "entry_blocks/a/identifiers"} in kinds(result)
     refute Enum.any?(result.work_items, &(&1.path == "entry_blocks/a/vars/cta/media"))
+  end
+
+  test "a link without a version in the target's language keeps the source's, and is not emptied" do
+    var = %Var{key: "project", type: :link, link_type: :identifier, identifier_id: 3, label: "project"}
+    source = article(:no, blocks: [block("a", vars: [var])])
+    target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [var])])
+
+    result = compute(source, target, baseline(source), identifiers: %{3 => nil})
+    [join] = result.payload.entry_blocks
+
+    assert hd(join.block.vars).identifier_id == 3
+    assert {:awaiting_translation, "entry_blocks/a/vars/project/identifier/3"} in kinds(result)
+    refute Enum.any?(result.work_items, &(&1.kind == :shared_update))
   end
 end

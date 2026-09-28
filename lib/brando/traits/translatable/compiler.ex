@@ -9,9 +9,19 @@ defmodule Brando.Trait.Translatable.Compiler do
       @translatable_alternates Keyword.get(unquote(config), :alternates, true)
 
       @translatable_config Brando.Trait.Translatable.config(unquote(config))
+      @translatable_runtime Keyword.get(unquote(config), :runtime_config, false)
 
       def has_alternates?, do: @translatable_alternates
-      def __translatable_config__, do: @translatable_config
+      def __translatable_runtime__?, do: @translatable_runtime
+
+      if @translatable_runtime do
+        # Read from the application's config at runtime, per site: see
+        # `Brando.Trait.Translatable.runtime_config/2`.
+        def __translatable_config__,
+          do: Brando.Trait.Translatable.runtime_config(__MODULE__, @translatable_config)
+      else
+        def __translatable_config__, do: @translatable_config
+      end
 
       attributes do
         attribute :language, :language, required: true

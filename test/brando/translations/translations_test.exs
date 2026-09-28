@@ -140,6 +140,8 @@ defmodule Brando.TranslationsTest do
     assert target.language == :en
     assert target.status == :draft
     assert target.slug == "tittel-en"
+    # The context's duplicate marks copies; a translation starts from the source's text
+    assert target.title == "Tittel"
 
     assert Enum.map(target.entry_blocks, & &1.block.sync_uid) == Enum.map(source.entry_blocks, & &1.block.sync_uid)
     assert Enum.map(target.entry_blocks, & &1.block.uid) != Enum.map(source.entry_blocks, & &1.block.uid)
@@ -167,6 +169,20 @@ defmodule Brando.TranslationsTest do
     assert {:ok, _} = SyncTest.delete_article(english.id, c.user)
     assert {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
     assert target.language == :en
+  end
+
+  test "a shared update that no longer applies is not carried to the next version", c do
+    {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+    {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.user)
+    Translations.source_saved(load(c.source.id))
+    assert Enum.any?(pending(target).work_items, &(&1.kind == :shared_update and &1.path == "year"))
+
+    # The source goes back to the translation's value before it was saved
+    {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2020}, c.user)
+    Translations.source_saved(load(c.source.id))
+    # Nothing is left to do, so there is no pending version at all
+    assert pending(target) == nil
   end
 
   test "saving the source records pending work without touching the translation", c do
@@ -301,6 +317,22 @@ defmodule Brando.TranslationsTest do
       # The review of the first change is done; the second is not.
       assert open_items(target) == [{:review, path}]
       assert pending(target).source_generation == 2
+    end
+
+    test "the editor never applies a pending version computed against older content", c do
+      %{target: target} = reviewed_change(c)
+      before = pending(target)
+
+      # Unchanged: the editor gets the same version, not a recompute
+      assert Translations.editor_state(Article, target.id).pending.id == before.id
+
+      # Changed outside the form before the background recompute has run, as a
+      # published revision or scheduled release does
+      Repo.update_all(from(a in Article, where: a.id == ^target.id), set: [subtitle: "Published revision"])
+
+      %{pending: fresh} = Translations.editor_state(Article, target.id)
+      assert fresh.id != before.id
+      assert Translations.decode_payload(fresh).subtitle == "Published revision"
     end
 
     test "a saved translation is recomputed in the background", c do
@@ -536,7 +568,7 @@ defmodule Brando.TranslationsTest do
       {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
 
       version = pending(en)
-      assert Enum.any?(version.work_items, &(&1.kind == :awaiting_translation and &1.path == "parent"))
+      assert Enum.any?(version.work_items, &(&1.kind == :awaiting_translation and &1.path == "parent/#{c.parent.id}"))
       # The copy kept the source's parent; the pending version doesn't point it elsewhere yet
       assert Translations.decode_payload(version).parent_id == c.parent.id
 
@@ -545,6 +577,17 @@ defmodule Brando.TranslationsTest do
       version = pending(en)
       refute Enum.any?(version.work_items, &(&1.kind == :awaiting_translation))
       assert Translations.decode_payload(version).parent_id == parent_en.id
+    end
+
+    test "only the awaited entry's translation re-syncs a waiting parent", c do
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+      waiting = pending(en)
+
+      {:ok, unrelated} =
+        SyncTest.create_article(%{title: "Annen", slug: "annen", language: "no", status: "published"}, c.user)
+
+      {:ok, _} = Translations.create_target(Article, unrelated.id, :en, c.user)
+      assert pending(en).id == waiting.id
     end
 
     test "maps at once when the parent is already translated", c do
@@ -576,7 +619,8 @@ defmodule Brando.TranslationsTest do
       version = pending(en)
       assert [%{path: path}] = Enum.filter(version.work_items, &(&1.kind == :awaiting_translation))
       assert path =~ ~r"^entry_blocks/.+/identifiers/#{c.identifier_id}$"
-      assert linked_ids(Translations.decode_payload(version)) == []
+      # Still linked, to the Norwegian article, until it is translated
+      assert linked_ids(Translations.decode_payload(version)) == [c.identifier_id]
 
       # Translating the linked article fills the link in.
       {:ok, other_en} = Translations.create_target(Article, c.other.id, :en, c.user)
@@ -585,6 +629,17 @@ defmodule Brando.TranslationsTest do
       version = pending(en)
       refute Enum.any?(version.work_items, &(&1.kind == :awaiting_translation))
       assert linked_ids(Translations.decode_payload(version)) == [other_en_identifier.id]
+    end
+
+    test "a link maps even when its identifier predates the schema's translations", c do
+      # Identifiers made before a schema became translatable have no language
+      Repo.update_all(from(i in Brando.Content.Identifier, where: i.id == ^c.identifier_id), set: [language: nil])
+
+      {:ok, other_en} = Translations.create_target(Article, c.other.id, :en, c.user)
+      mapped = Translations.identifier_map(load(c.source.id), Article, "en")[c.identifier_id]
+      {:ok, other_en_identifier} = Brando.Content.get_identifier(Article, other_en)
+
+      assert mapped == other_en_identifier.id
     end
 
     test "a link to content already translated is mapped at once", c do
@@ -622,20 +677,48 @@ defmodule Brando.TranslationsTest do
       end
     end
 
-    test "trait options can come from an expression, as Page takes them from config" do
-      assert %{mode: :synchronized, source_controlled_fields: [:year]} =
-               Brando.SyncTest.ConfiguredArticle.__translatable_config__()
-    end
-
-    test "Page is independent unless configured, and validates a synchronized setup" do
+    test "Page is independent unless configured, and reads its config at runtime, per site" do
       alias Brando.Pages.Page
       alias Brando.Translations.Sync
 
       assert Page.__translatable_config__().mode == :independent
 
-      config = [mode: :synchronized, source_controlled_fields: [:template, :is_homepage, :has_url, :css_classes]]
-      assert Translatable.validate(Page, config) == true
-      assert Sync.tree_relations(Page, Translatable.config(config)) == [:parent]
+      synchronized = [mode: :synchronized, source_controlled_fields: [:template, :is_homepage]]
+      put_test_env(Page, translatable: synchronized, translatable_sites: %{"acme" => [mode: :independent]})
+
+      assert %{mode: :synchronized, source_controlled_fields: [:template, :is_homepage]} =
+               Page.__translatable_config__()
+
+      assert Sync.tree_relations(Page) == [:parent]
+      assert Brando.Translations.synchronized?(Page)
+
+      put_test_env(:tenancy_mode, :multi)
+
+      Brando.Tenant.with_prefix("tenant_acme_production", fn ->
+        assert Page.__translatable_config__().mode == :independent
+      end)
+
+      Brando.Tenant.with_prefix("tenant_other_production", fn ->
+        assert Page.__translatable_config__().mode == :synchronized
+      end)
+    end
+
+    test "runtime configs are checked at boot" do
+      put_test_env(Brando.Pages.Page, translatable: [mode: :synchronized, source_controlled_fields: [:template]])
+      assert Translatable.check_runtime_config!() == :ok
+
+      put_test_env(Brando.Pages.Page, translatable: [mode: :synchronized, source_controlled_fields: [:nope]])
+      assert_raise BlueprintError, ~r/are not attributes/, fn -> Translatable.check_runtime_config!() end
+
+      put_test_env(Brando.Pages.Page, translatable_sites: %{"acme" => [mode: :shared]})
+      assert_raise BlueprintError, ~r/mode must be one of/, fn -> Translatable.check_runtime_config!() end
+
+      put_test_env(Brando.Pages.Page, [])
+      put_test_env(Article, translatable: [mode: :synchronized])
+
+      assert_raise BlueprintError, ~r/does not declare trait :translatable, runtime_config: true/, fn ->
+        Translatable.check_runtime_config!()
+      end
     end
 
     test "language_controlled_fields takes assets, only in synchronized mode and not both ways" do

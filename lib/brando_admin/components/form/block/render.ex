@@ -897,6 +897,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 block_form={block_form}
                 target={@target}
                 form_id={@form_id}
+                language={entry_language(assigns[:entry])}
               />
               <.module_content
                 config_open={@config_open}
@@ -948,6 +949,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               block_form={@form}
               target={@target}
               form_id={@form_id}
+              language={entry_language(assigns[:entry])}
             />
             <.module_content
               config_open={@config_open}
@@ -1021,6 +1023,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           target={@target}
           form_id={@form_id}
           current_user_id={@block_form[:creator_id].value}
+          language={entry_language(assigns[:entry])}
         />
         <.datasource
           :if={@is_datasource?}
@@ -1085,6 +1088,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           target={@target}
           form_id={@form_id}
           current_user_id={@block_form[:creator_id].value}
+          language={entry_language(assigns[:entry])}
         />
         <.datasource
           :if={@is_datasource?}
@@ -1192,6 +1196,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :target, :any, required: true
   attr :form_id, :any, default: nil
   attr :open, :boolean, default: false
+  attr :language, :string, default: nil
 
   @doc """
   The block's configure surface.
@@ -1238,6 +1243,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         target={@target}
         form_id={@form_id}
         current_user_id={@block_form[:creator_id].value}
+        language={@language}
       />
     </div>
     <Content.modal
@@ -1267,6 +1273,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             target={@target}
             form_id={@form_id}
             current_user_id={@block_form[:creator_id].value}
+            language={@language}
           />
           <div class="modal-technical-note">
             UID: <span class="text-mono">{@uid}</span>
@@ -2336,6 +2343,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :target, :any
   attr :form_id, :any, default: nil
   attr :current_user_id, :any, default: nil
+  attr :language, :string, default: nil, doc: "the entry's language; link pickers offer entries in it"
 
   @doc """
   Renders the vars belonging to one editing surface.
@@ -2399,6 +2407,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             on_change={fn params -> send_update(@target, params) end}
             form_id={@form_id}
             current_user_id={@current_user_id}
+            language={@language}
             publish
           />
         </div>
@@ -3131,4 +3140,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
     Brando.Villain.TemplateAdapter.Heex.put_vars(base, processed_vars)
   end
+
+  # The language of the entry being edited, for link pickers. nil for entries
+  # without one, which then offer every language.
+  defp entry_language(%{language: language}) when not is_nil(language), do: to_string(language)
+
+  defp entry_language(_entry), do: nil
 end

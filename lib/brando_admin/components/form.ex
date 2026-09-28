@@ -4921,6 +4921,7 @@ defmodule BrandoAdmin.Components.Form do
     message =
       case error do
         {:error, :language_exists} -> gettext("This language already has a version.")
+        {:error, :not_duplicable} -> gettext("Translations can't be created: this content type can't be copied.")
         {:error, :unauthorized} -> gettext("You do not have permission to do this.")
         {:error, %{__exception__: true}} -> gettext("You do not have permission to do this.")
         _ -> gettext("The translation could not be changed.")

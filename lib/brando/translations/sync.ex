@@ -75,7 +75,7 @@ defmodule Brando.Translations.Sync do
   `:identifiers` maps each source identifier id (`identifier_ids/2`) to the
   identifier of the same content in the target's language, or to nil when that
   translation does not exist yet. Links to content follow the source, mapped
-  through this; an unmapped link is left out of the payload and raises an
+  through this; an unmapped link keeps the source-language entry and raises an
   `:awaiting_translation` item until the translation exists. Without the
   option, links are copied as they are.
 
@@ -115,6 +115,15 @@ defmodule Brando.Translations.Sync do
       base_fingerprint: base_fingerprint,
       changed?: fingerprint != base_fingerprint or work_items != []
     }
+  end
+
+  @doc """
+  The fingerprint `compute_pending/4` records as a target's `base_fingerprint`:
+  a pending version whose base no longer matches was computed against content
+  the target has since replaced.
+  """
+  def base_fingerprint(entry, schema, module_uids \\ %{}) do
+    fingerprint(flatten(entry, spec(schema, schema.__translatable_config__(), module_uids)))
   end
 
   @doc "The baseline digests for `entry` as a source: one per text and shared path."
@@ -705,8 +714,8 @@ defmodule Brando.Translations.Sync do
 
   # `:entries` maps each source id to its version in the target's language, or
   # nil when there is none yet. Then the target keeps its own value and an
-  # `:awaiting_translation` item records the field; a re-sync after that
-  # version is created fills it in.
+  # `:awaiting_translation` item records the field and the awaited id
+  # (`parent/12`); a re-sync after that version is created fills it in.
   defp resolve_tree(payload, _target, _spec, nil, awaiting), do: {payload, awaiting}
 
   defp resolve_tree(payload, target, spec, map, awaiting) do
@@ -719,7 +728,8 @@ defmodule Brando.Translations.Sync do
 
         source_id ->
           case Map.get(map, source_id) do
-            nil -> {Map.put(acc, field, Map.get(target, field)), [awaiting_item(to_string(name)) | awaiting]}
+            # The path names the awaited entry, so only its translation re-syncs this
+            nil -> {Map.put(acc, field, Map.get(target, field)), [awaiting_item("#{name}/#{source_id}") | awaiting]}
             id -> {Map.put(acc, field, id), awaiting}
           end
       end
@@ -729,9 +739,10 @@ defmodule Brando.Translations.Sync do
   # --- Identifiers ------------------------------------------------------------
 
   # Every link in the payload was taken from the source, so each is replaced by
-  # its target-language counterpart. One with no counterpart yet is left out,
-  # and an `:awaiting_translation` item records where it belongs; the next sync
-  # after that translation is created puts it in.
+  # its target-language counterpart. One with no counterpart yet keeps pointing
+  # at the source-language entry, so the translation's link still works, and an
+  # `:awaiting_translation` item records it; the next sync after that
+  # translation is created points it there.
   defp resolve_identifiers(payload, _spec, nil), do: {payload, []}
 
   defp resolve_identifiers(payload, spec, map) do
@@ -761,7 +772,8 @@ defmodule Brando.Translations.Sync do
     {block_identifiers, awaiting} =
       Enum.flat_map_reduce(loaded(block.block_identifiers), awaiting, fn row, awaiting ->
         case map[row.identifier_id] do
-          nil -> {[], [awaiting_item("#{prefix}/identifiers/#{row.identifier_id}") | awaiting]}
+          # Keeps the source-language entry until its translation exists
+          nil -> {[row], [awaiting_item("#{prefix}/identifiers/#{row.identifier_id}") | awaiting]}
           target_id -> {[%{unload(row, :identifier) | identifier_id: target_id}], awaiting}
         end
       end)
@@ -790,9 +802,10 @@ defmodule Brando.Translations.Sync do
 
       %{identifier_id: source_id} = var, awaiting ->
         case map[source_id] do
+          # Keeps pointing at the source-language entry until its translation
+          # exists: a working link, not an empty one
           nil ->
-            {%{unload(var, :identifier) | identifier_id: nil},
-             [awaiting_item("#{prefix}/#{var.key}/identifier/#{source_id}") | awaiting]}
+            {var, [awaiting_item("#{prefix}/#{var.key}/identifier/#{source_id}") | awaiting]}
 
           target_id ->
             {%{unload(var, :identifier) | identifier_id: target_id}, awaiting}

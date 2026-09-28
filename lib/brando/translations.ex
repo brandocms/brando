@@ -208,18 +208,36 @@ defmodule Brando.Translations do
   def create_target(schema, source_id, language, actor) do
     language = to_string(language)
 
-    with :ok <- ensure_language_known(schema, language),
-         :ok <- ensure_no_linked_version(schema, source_id, language),
-         {:ok, source_member} <- source_member(schema, source_id, actor),
-         :ok <- ensure_language_free(source_member, language) do
+    with :ok <- ensure_duplicable(schema),
+         :ok <- ensure_language_known(schema, language),
+         :ok <- ensure_no_linked_version(schema, source_id, language) do
+      # One transaction, enrolment included: a failed copy leaves no group
+      # with a source and no translation behind.
       Repo.transaction(fn ->
-        case insert_target(schema, source_member, source_id, language, actor) do
-          {:ok, target} -> target
+        with {:ok, source_member} <- source_member(schema, source_id, actor),
+             :ok <- ensure_language_free(source_member, language),
+             {:ok, target} <- insert_target(schema, source_member, source_id, language, actor) do
+          target
+        else
           {:error, reason} -> Repo.rollback(reason)
         end
       end)
     end
   end
+
+  @doc """
+  Whether translations of `schema` can be created: its context must be able to
+  duplicate an entry (`mutation :duplicate` in the context), since a
+  translation starts as a copy of its source.
+  """
+  def duplicable?(schema) do
+    context = schema.__modules__().context
+
+    Code.ensure_loaded?(context) and
+      function_exported?(context, :"duplicate_#{schema.__naming__().singular}", 3)
+  end
+
+  defp ensure_duplicable(schema), do: if(duplicable?(schema), do: :ok, else: {:error, :not_duplicable})
 
   defp insert_target(schema, source_member, source_id, language, actor) do
     with {:ok, target} <- duplicate_to_language(schema, source_id, language, actor),
@@ -373,7 +391,7 @@ defmodule Brando.Translations do
     with true <- synchronized?(schema),
          %Member{} = member <- get_member(schema, entry_id) do
       source = Enum.find(list_members(member.group_id), &(&1.role == :source))
-      pending = if member.role == :target and member.synchronized, do: current_pending(member.id)
+      pending = if member.role == :target and member.synchronized, do: fresh_pending(schema, member)
 
       %{
         member: member,
@@ -741,10 +759,28 @@ defmodule Brando.Translations do
     end
   end
 
-  defp counterpart_id(%Identifier{language: identifier_language} = identifier, language) do
-    if identifier_language in [nil, ""] or to_string(identifier_language) == language,
-      do: identifier.id,
-      else: alternate_identifier_id(identifier, language)
+  defp counterpart_id(%Identifier{} = identifier, language) do
+    case identifier_language(identifier) do
+      nil -> identifier.id
+      ^language -> identifier.id
+      _other -> alternate_identifier_id(identifier, language)
+    end
+  end
+
+  # An identifier made before its schema became translatable has no language,
+  # though its entry now has one: ask the entry, or every link to it would be
+  # taken as language-neutral and never mapped.
+  defp identifier_language(%Identifier{language: language}) when language not in [nil, ""], do: to_string(language)
+
+  defp identifier_language(%Identifier{schema: module, entry_id: entry_id}) do
+    with true <- Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 1),
+         true <- :language in module.__schema__(:fields),
+         language when not is_nil(language) <-
+           Repo.one(from e in module, where: e.id == ^entry_id, select: e.language) do
+      to_string(language)
+    else
+      _ -> nil
+    end
   end
 
   defp alternate_identifier_id(%Identifier{schema: module, entry_id: entry_id}, language) do
@@ -809,7 +845,7 @@ defmodule Brando.Translations do
 
     patterns = Enum.flat_map(identifier_ids, &["%/identifiers/#{&1}", "%/identifier/#{&1}"])
 
-    resync_waiting_tree(module)
+    resync_waiting_tree(module, [entry_id, linked_entry_id])
 
     if patterns != [] do
       matches = Enum.reduce(patterns, dynamic(false), &dynamic([w], ^&2 or like(w.path, ^&1)))
@@ -830,10 +866,9 @@ defmodule Brando.Translations do
   end
 
   # A new version of an entry may be the one a translation's parent waited for.
-  # Items record only the field, so every waiting group of the schema re-syncs;
-  # those still without a version simply wait again.
-  defp resync_waiting_tree(module) do
-    paths = Enum.map(Sync.tree_relations(module), &to_string/1)
+  # The awaiting item names that entry (`parent/12`), so only its waiters re-sync.
+  defp resync_waiting_tree(module, entry_ids) do
+    paths = for name <- Sync.tree_relations(module), id <- entry_ids, do: "#{name}/#{id}"
 
     if paths != [] and synchronized?(module) do
       from(w in WorkItem,
@@ -864,8 +899,15 @@ defmodule Brando.Translations do
         nil ->
           []
 
+        # Text work is carried: review is found against the baseline, which
+        # this sync advances, and a translate item's path holds the source's
+        # text once the version is saved, so neither would be found again.
+        # Shared updates and waiting links are recomputed from the current
+        # values each time; a carried one could claim a change that no longer
+        # exists.
         %PendingVersion{work_items: items} ->
           for item <- items,
+              item.kind in [:review, :translate],
               is_nil(item.resolved_at),
               MapSet.member?(result.paths, item.path),
               not MapSet.member?(new_paths, item.path),
@@ -978,6 +1020,32 @@ defmodule Brando.Translations do
   @doc "The current pending version of a member, with its work items, or nil."
   def current_pending_for_member(member_id), do: current_pending(member_id)
 
+  # The pending version the editor applies must have been computed against
+  # the target as it is now. A save outside the form (a published revision, a
+  # scheduled release, an API update) queues a recompute, but the editor may
+  # open before it runs, and the old payload would overwrite that save.
+  defp fresh_pending(schema, member) do
+    case current_pending(member.id) do
+      %PendingVersion{base_fingerprint: base} = pending ->
+        if stale_base?(schema, member, base) do
+          resync_target(member.group_id, member.id)
+          current_pending(member.id)
+        else
+          pending
+        end
+
+      nil ->
+        nil
+    end
+  end
+
+  defp stale_base?(schema, member, base) do
+    case load_entry(schema, member.entry_id) do
+      {:ok, target} -> Sync.base_fingerprint(target, schema, module_uids([target], schema)) != base
+      _ -> false
+    end
+  end
+
   defp current_pending(member_id) do
     Repo.one(
       from v in PendingVersion,
@@ -1046,8 +1114,27 @@ defmodule Brando.Translations do
         {name, fn _entry, value -> Utils.slugify("#{value}-#{language}") end}
       end)
 
+    # Related entries a schema's own duplicate copies along (a page's child
+    # pages and fragments) are separate entries, each translated on its own:
+    # copied here they'd join the translation in the source's language.
+    separate =
+      for %{type: :has_many, name: name, opts: opts} <- Brando.Blueprint.Relations.__relations__(schema),
+          opts[:module] not in [:blocks, :alternates],
+          opts[:cast] != true,
+          do: {name, []}
+
+    # A context's duplicate marks a copy ("Title (copy)"); a translation starts
+    # from the source's own text instead. Slugs are handled above.
+    slug_names = Enum.map(slug_fields, &elem(&1, 0))
+
+    kept_text =
+      for %{name: name, type: type} <- Brando.Blueprint.Attributes.__attributes__(schema),
+          type in [:string, :text],
+          name not in slug_names,
+          do: {name, fn _entry, value -> value end}
+
     override_opts = [
-      change_fields: [{:language, String.to_existing_atom(language)} | slug_fields],
+      change_fields: [{:language, String.to_existing_atom(language)} | slug_fields] ++ kept_text ++ separate,
       merge_change_fields: true,
       keep_sync_uid: true
     ]

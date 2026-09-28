@@ -61,7 +61,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
       source: nil,
       members: [],
       missing_languages: languages_except(schema, taken),
-      can_create?: Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok,
+      can_create?:
+        Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok,
       pending: nil,
       payload: nil,
       items: [],
@@ -86,7 +87,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
       source: source && Map.put(source, :url, admin_url(schema, source.id)),
       members: members(schema, member.group_id),
       missing_languages: missing_languages(schema, member.group_id, source),
-      can_create?: Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok,
+      can_create?:
+        Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok,
       pending: pending,
       payload: payload,
       items: items(schema, pending, payload),
@@ -278,8 +280,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
     labels = field_labels(schema)
     blocks = block_index(schema, payload)
 
-    pending.work_items
-    |> Enum.filter(&is_nil(&1.resolved_at))
+    open = Enum.filter(pending.work_items, &is_nil(&1.resolved_at))
+    titles = linked_titles(open, blocks)
+
+    open
     |> Enum.sort_by(&{kind_order(&1.kind), &1.path})
     |> Enum.map(fn item ->
       target = target(item.path, blocks)
@@ -287,10 +291,49 @@ defmodule BrandoAdmin.Components.Form.Translation do
       %{
         path: item.path,
         kind: item.kind,
-        label: label(item.path, target, labels),
+        label: with_linked(label(item.path, target, labels), item, target, blocks, titles),
         target: target
       }
     end)
+  end
+
+  # A link's item names the entry it points at: the one it now follows for an
+  # update, the one still waiting for a translation otherwise.
+  defp with_linked(label, item, target, blocks, titles) do
+    case linked_id(item, target, blocks) do
+      nil -> label
+      id -> "#{String.replace_suffix(label, " › " <> gettext("media"), "")} → #{titles[id] || "##{id}"}"
+    end
+  end
+
+  defp linked_id(%{kind: :awaiting_translation, path: path}, _target, _blocks) do
+    case Regex.run(~r{/identifiers?/(\d+)$}, path) do
+      [_, id] -> String.to_integer(id)
+      _ -> nil
+    end
+  end
+
+  defp linked_id(%{kind: :shared_update}, {:block, uid, _module, ["vars", key, "media"]}, blocks) do
+    Enum.find_value(blocks, fn {_identity, block} ->
+      block.uid == uid && Enum.find_value(block.vars, &(&1.key == key && &1.identifier_id))
+    end)
+  end
+
+  defp linked_id(_item, _target, _blocks), do: nil
+
+  defp linked_titles(items, blocks) do
+    ids =
+      items
+      |> Enum.map(&linked_id(&1, target(&1.path, blocks), blocks))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    if ids == [] do
+      %{}
+    else
+      import Ecto.Query
+      Brando.Repo.all(from i in Brando.Content.Identifier, where: i.id in ^ids, select: {i.id, i.title}) |> Map.new()
+    end
   end
 
   defp kind_order(:translate), do: 0
@@ -310,6 +353,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
       [field] ->
         {:field, field}
+
+      # A tree relation waiting for an entry's translation: `parent/12`
+      [field, id] ->
+        if id =~ ~r/^\d+$/, do: {:field, field}, else: {:field, path}
 
       [subform, uid, field] ->
         {:row, subform, uid, field}
@@ -333,7 +380,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
       end
     end)
     |> Enum.flat_map(&walk/1)
-    |> Map.new(fn block -> {block.sync_uid || block.uid, %{uid: block.uid, module_name: module_name(block)}} end)
+    |> Map.new(fn block ->
+      vars = if is_list(block.vars), do: block.vars, else: []
+      {block.sync_uid || block.uid, %{uid: block.uid, module_name: module_name(block), vars: vars}}
+    end)
   end
 
   defp walk(nil), do: []
@@ -367,7 +417,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp label(_path, {:row, subform, _uid, field}, labels),
     do: "#{labels[subform] || humanize(subform)} › #{labels[field] || humanize(field)}"
 
-  defp label(_path, {:field, field}, labels), do: labels[field] || humanize(field)
+  defp label(_path, {:field, field}, labels), do: labels[field] || labels[field <> "_id"] || humanize(field)
 
   defp block_part(["refs", name, "text"]), do: [humanize(name)]
   defp block_part(["refs", name, "media"]), do: [humanize(name), gettext("media")]
