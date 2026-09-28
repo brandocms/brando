@@ -15,6 +15,7 @@ defmodule Brando.LivePreviewChannel do
 
     with :ok <- Preview.authorize(preview_id, socket.assigns.user_id) do
       Realtime.subscribe()
+      send(self(), :sync_preview)
       {:ok, socket.assigns.user_id, assign(socket, :preview_id, preview_id)}
     else
       _ -> {:error, %{reason: "forbidden"}}
@@ -27,6 +28,16 @@ defmodule Brando.LivePreviewChannel do
       {:noreply, socket}
     else
       {:stop, :normal, socket}
+    end
+  end
+
+  # Recovery can render between the iframe's HTTP request and its channel join.
+  # Replay the cache after subscribing so those updates are not lost, including
+  # when an existing iframe rejoins after a transport failure.
+  def handle_info(:sync_preview, socket) do
+    case Brando.LivePreview.get_cache(socket.assigns.preview_id) do
+      {:ok, html} when is_binary(html) -> handle_out("rerender", %{html: html}, socket)
+      _ -> {:noreply, socket}
     end
   end
 

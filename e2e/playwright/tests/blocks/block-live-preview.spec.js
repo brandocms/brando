@@ -52,6 +52,11 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
 
     test('live preview restores after LiveSocket reconnect', async ({ page }) => {
+      // Exercise the gap between the iframe HTTP load and its channel join.
+      // Fast browsers can hide updates lost while recovery is still running.
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+
       // Navigate to Pages
       await page.goto('/admin')
       await page.getByRole('link', { name: 'Pages & Sections' }).click()

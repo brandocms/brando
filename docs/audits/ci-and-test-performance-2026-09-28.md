@@ -7,6 +7,10 @@ for [PR #2875](https://github.com/brandocms/brando/pull/2875). Changes are on
 28.4.1, 24 schedulers, PostgreSQL and Chromium. These are individual runs,
 not statistical estimates of CI performance.
 
+The branch subsequently incorporated [PR #2877](https://github.com/brandocms/brando/pull/2877).
+Its sidebar, label and media-menu spec fixes replace the overlapping changes
+from the initial investigation. The performance infrastructure remains separate.
+
 ## What prevented CI from finishing
 
 Both legacy E2E jobs reached GitHub's 30-minute limit. Authorization finished
@@ -127,9 +131,9 @@ three site-authorization tests passed in `groups/multi` and again in
 The previously flaky preview reconnect case passed in isolation, which is not
 proof that its CI race is fixed.
 
-The content-transfer case at `tests/configuration/content-transfer.spec.js:444`
-still fails locally at line 459: after installing the missing definition,
-`#transfer-apply` stays disabled. This pre-existing failure is recorded rather
+Before incorporating #2877, the content-transfer case at
+`tests/configuration/content-transfer.spec.js:444` failed locally at line 459: after installing the missing definition,
+`#transfer-apply` stayed disabled. This pre-existing failure was recorded rather
 than skipped or given extra time. The full E2E suite was not rerun while
 troubleshooting individual failures.
 
@@ -139,6 +143,43 @@ passed. A separate tiny Mix project confirmed that a warning from an unchanged
 compiled file still makes `mix compile --all-warnings --warnings-as-errors`
 exit with status 1. The new ExUnit formatter was also exercised against a real
 test and produced its timing JSON.
+
+## Follow-up: reconnect failure in #2877
+
+The [authorization job in #2877](https://github.com/brandocms/brando/actions/runs/36412907714/job/108897094576)
+finished with 40 passing tests and one failure: live preview after LiveSocket
+reconnect. All three attempts failed. Each trace showed a valid initial preview,
+then an HTTP 200 response containing an empty `<main>` when the iframe was
+recreated. The block remained visible in the editor.
+
+Five ordinary local runs passed. With Chromium CPU throttled by a factor of four
+and the server limited to two BEAM schedulers, the same test failed **five out of
+five** times. Recorded WebSocket frames showed the preview channel joining after
+recovery; it received the join reply but none of the earlier render updates.
+Increasing the assertion timeout would leave that missing update unresolved.
+
+The preview channel now sends the current cached HTML after joining, through the
+same authorization check used for other outgoing renders. This covers both a
+new iframe and a channel rejoin. The channel regression test loads the old HTTP
+snapshot, updates the cache and broadcasts before subscribing, then requires
+the latest HTML without another editor action. It fails without the fix.
+
+With the fix, the throttled reconnect test passed **five out of five**, with no
+retries (35.6 seconds for the run). The existing browser case retains CPU
+throttling to exercise this ordering. All 20 targeted channel authorization,
+preview recovery and preview-plug checks passed. E2E worker counts are unchanged.
+
+The missing-definition content-import test now passes with #2877's contract fix.
+All eight reconciled media and content-import cases passed without retries
+(56.2 seconds), as did four targeted preview checks covering open/close, image
+updates, and preservation of video and iframe nodes (21.0 seconds).
+The full unit suite passed with seed `465505`, which exposed #2877's cache leak:
+**3,034 checks** (138 doctests and 2,896 tests), 91.2 seconds of ExUnit time.
+The consumer backend asset build, repository formatting, Actionlint, shell and
+JavaScript syntax, portable-path and whitespace checks passed.
+
+#2877 was merged after its unit matrix and quality checks passed. Hosted CI for
+the combined performance and reconnect changes still needs verification.
 
 ## `mix test`: the cost is predominantly serial work
 
