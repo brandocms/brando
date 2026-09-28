@@ -52,7 +52,11 @@ defmodule Brando.Pages.Page do
   trait :soft_delete, obfuscated_fields: [:uri]
   trait :status
   trait :timestamped
-  trait :translatable
+  # Independent by default. A site opts into synchronized pages with
+  # `config :brando, Brando.Pages.Page, translatable: [mode: :synchronized, ...]`
+  # (see the i18n guide); changing it needs a recompile of Brando, or the app
+  # refuses to boot on the compile_env mismatch.
+  trait :translatable, Application.compile_env(:brando, [Brando.Pages.Page, :translatable], [])
   trait :blocks
 
   # --

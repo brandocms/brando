@@ -3,7 +3,7 @@ defmodule Brando.Blueprint.Trait do
 
   defmacro trait(name, opts \\ []) do
     trait = expand_trait(name, __CALLER__)
-    {requested_compiler, trait_opts} = Keyword.pop(opts, :compile_with)
+    {requested_compiler, trait_opts} = Keyword.pop(literal_opts(opts, __CALLER__), :compile_with)
     compiler = expand_compiler(requested_compiler, trait, __CALLER__)
 
     [
@@ -12,6 +12,18 @@ defmodule Brando.Blueprint.Trait do
         Module.put_attribute(__MODULE__, :traits, {unquote(trait), unquote(trait_opts)})
       end
     ]
+  end
+
+  # Options are read when the Blueprint compiles. A library-owned Blueprint can
+  # take them from the application's config instead of a literal, as Page does
+  # with `Application.compile_env/3`; that expression is evaluated here.
+  defp literal_opts(opts, caller) do
+    if Macro.quoted_literal?(opts) do
+      opts
+    else
+      {value, _binding} = Code.eval_quoted(opts, [], caller)
+      value
+    end
   end
 
   defp expand_trait(:blocks, _caller), do: built_in_trait("Blocks")

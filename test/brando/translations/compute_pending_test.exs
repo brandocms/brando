@@ -222,6 +222,41 @@ defmodule Brando.Translations.ComputePendingTest do
     refute {:shared_update, "cover"} in kinds(result)
   end
 
+  describe "a parent in the same schema" do
+    test "follows the source, mapped to its version in the target's language" do
+      {source, target, base} = pair()
+      result = compute(%{source | parent_id: 10}, target, base, entries: %{10 => 20})
+
+      assert result.payload.parent_id == 20
+      assert {:shared_update, "parent"} in kinds(result)
+    end
+
+    test "waits, keeping the target's own, while there is no version yet" do
+      {source, target, base} = pair()
+      result = compute(%{source | parent_id: 10}, %{target | parent_id: 5}, base, entries: %{10 => nil})
+
+      assert result.payload.parent_id == 5
+      assert {:awaiting_translation, "parent"} in kinds(result)
+    end
+
+    test "has nothing to do when the target is already under the mapped parent" do
+      {source, target, base} = pair()
+      result = compute(%{source | parent_id: 10}, %{target | parent_id: 20}, base, entries: %{10 => 20})
+
+      assert result.payload.parent_id == 20
+      refute Enum.any?(kinds(result), &match?({_, "parent"}, &1))
+    end
+
+    test "stays the translation's own when language-controlled" do
+      {source, target, base} = pair()
+      config = Brando.Trait.Translatable.config(mode: :synchronized, language_controlled_fields: [:parent])
+      result = compute(%{source | parent_id: 10}, %{target | parent_id: 5}, base, config: config, entries: %{10 => 20})
+
+      assert result.payload.parent_id == 5
+      assert result.work_items == []
+    end
+  end
+
   test "other values are language-specific" do
     {source, target, base} = pair()
     result = compute(%{source | featured: true}, %{target | year: 2020}, base)

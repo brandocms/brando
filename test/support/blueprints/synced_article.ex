@@ -39,6 +39,7 @@ defmodule Brando.SyncTest.Article do
   end
 
   relations do
+    relation :parent, :belongs_to, module: __MODULE__
     relation :blocks, :has_many, module: :blocks
 
     relation :items, :has_many,

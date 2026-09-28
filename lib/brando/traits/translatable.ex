@@ -120,7 +120,12 @@ defmodule Brando.Trait.Translatable do
     assets =
       for %{type: type, name: name} <- Assets.__assets__(module), type in [:image, :file, :video, :gallery], do: name
 
-    case fields -- assets do
+    tree =
+      for %{type: :belongs_to, name: name, opts: opts} <- Spark.Dsl.Extension.get_entities(module, [:relations]),
+          opts[:module] == module,
+          do: name
+
+    case fields -- (assets ++ tree) do
       [] ->
         :ok
 
@@ -128,7 +133,8 @@ defmodule Brando.Trait.Translatable do
         raise BlueprintError,
           message:
             "#{inspect(module)}: trait :translatable language_controlled_fields #{inspect(unknown)} are not " <>
-              "image, file, video or gallery assets; other fields are already each language's own"
+              "image, file, video or gallery assets, or relations to the schema itself; other fields are " <>
+              "already each language's own"
     end
 
     case fields -- (fields -- Keyword.get(opts, :source_controlled_fields, [])) do

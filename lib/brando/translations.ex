@@ -699,7 +699,8 @@ defmodule Brando.Translations do
             schema: schema,
             module_uids: module_uids([source, target], schema),
             minor: minor?,
-            identifiers: identifier_map(source, schema, member.language)
+            identifiers: identifier_map(source, schema, member.language),
+            entries: entry_map(source, schema, member.language)
           )
 
         previous = if previous == :current, do: current_pending(member.id), else: previous
@@ -727,6 +728,17 @@ defmodule Brando.Translations do
     from(i in Identifier, where: i.id in ^ids)
     |> Repo.all()
     |> Map.new(&{&1.id, counterpart_id(&1, language)})
+  end
+
+  @doc """
+  Maps the ids `source`'s tree relations (`Brando.Translations.Sync.tree_relations/2`,
+  such as a page's parent) point at onto the same entries' versions in
+  `language`, or nil when there is no such version yet.
+  """
+  def entry_map(source, schema, language) do
+    for name <- Sync.tree_relations(schema), id = Map.get(source, :"#{name}_id"), not is_nil(id), into: %{} do
+      {id, alternate_entry_id(schema, id, language)}
+    end
   end
 
   defp counterpart_id(%Identifier{language: identifier_language} = identifier, language) do
@@ -797,6 +809,8 @@ defmodule Brando.Translations do
 
     patterns = Enum.flat_map(identifier_ids, &["%/identifiers/#{&1}", "%/identifier/#{&1}"])
 
+    resync_waiting_tree(module)
+
     if patterns != [] do
       matches = Enum.reduce(patterns, dynamic(false), &dynamic([w], ^&2 or like(w.path, ^&1)))
 
@@ -813,6 +827,26 @@ defmodule Brando.Translations do
     end
 
     :ok
+  end
+
+  # A new version of an entry may be the one a translation's parent waited for.
+  # Items record only the field, so every waiting group of the schema re-syncs;
+  # those still without a version simply wait again.
+  defp resync_waiting_tree(module) do
+    paths = Enum.map(Sync.tree_relations(module), &to_string/1)
+
+    if paths != [] and synchronized?(module) do
+      from(w in WorkItem,
+        join: v in assoc(w, :pending_version),
+        join: m in assoc(v, :member),
+        where: w.kind == :awaiting_translation and v.status == :pending and is_nil(w.resolved_at),
+        where: w.path in ^paths and m.entry_type == ^entry_type(module),
+        distinct: true,
+        select: m.group_id
+      )
+      |> Repo.all()
+      |> Enum.each(&enqueue_sync(&1, false))
+    end
   end
 
   @doc """

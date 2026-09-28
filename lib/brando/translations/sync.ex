@@ -94,6 +94,7 @@ defmodule Brando.Translations.Sync do
 
     {payload, notes} = merge(source, target, spec)
     {payload, awaiting} = resolve_identifiers(payload, spec, Keyword.get(opts, :identifiers))
+    {payload, awaiting} = resolve_tree(payload, target, spec, Keyword.get(opts, :entries), awaiting)
 
     source_rows = flatten(source, spec)
     target_rows = flatten(target, spec)
@@ -212,8 +213,10 @@ defmodule Brando.Translations.Sync do
 
     relations = Relations.__relations__(schema)
 
+    tree = tree_relations(schema, config)
+
     shared_relations =
-      for %{type: :belongs_to, name: name} <- relations, name in source_controlled, do: name
+      for %{type: :belongs_to, name: name} <- relations, name in source_controlled, name not in tree, do: name
 
     fields = Enum.flat_map(attributes -- @excluded_fields, &field_class(&1, source_controlled, text_fields))
 
@@ -229,6 +232,7 @@ defmodule Brando.Translations.Sync do
       schema: schema,
       fields: fields,
       belongs_to: Enum.uniq(assets ++ shared_relations),
+      tree: tree,
       blocks_fields: blocks_fields,
       subforms: Enum.map(subforms(schema, relations), &Map.put(&1, :shared, Map.get(controlled_subforms, &1.name, []))),
       controlled_vars: &Map.get(controlled_vars, module_uids[{&1.module_origin || :local, &1.module_id}], [])
@@ -293,7 +297,7 @@ defmodule Brando.Translations.Sync do
       Enum.map(spec.fields, fn {name, class} -> {to_string(name), class, Map.get(entry, name)} end)
 
     asset_rows =
-      Enum.map(spec.belongs_to, fn name -> {to_string(name), :shared, Map.get(entry, :"#{name}_id")} end)
+      Enum.map(spec.belongs_to ++ spec.tree, fn name -> {to_string(name), :shared, Map.get(entry, :"#{name}_id")} end)
 
     block_rows =
       Enum.flat_map(spec.blocks_fields, fn field ->
@@ -469,6 +473,15 @@ defmodule Brando.Translations.Sync do
           merge_entry_blocks(Map.get(source, field), Map.get(target, field), target, spec.controlled_vars)
 
         {Map.put(acc, field, entry_blocks), notes ++ field_notes}
+      end)
+
+    # A tree relation takes the source's value here; `resolve_tree/4` maps it
+    # onto the version in the target's language.
+    payload =
+      Enum.reduce(spec.tree, payload, fn name, acc ->
+        acc
+        |> Map.put(:"#{name}_id", Map.get(source, :"#{name}_id"))
+        |> Map.put(name, Map.get(struct(spec.schema), name))
       end)
 
     {payload, subform_notes} =
@@ -667,6 +680,50 @@ defmodule Brando.Translations.Sync do
   defp new_block_identifier(block_identifier) do
     %{unload(block_identifier, :identifier) | id: nil, block_id: nil}
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+  end
+
+  # --- Tree relations ---------------------------------------------------------
+
+  @doc """
+  The `belongs_to` relations of `schema` that point at `schema` itself, like a
+  page's parent. They follow the source, mapped onto the same entry's version
+  in the target's language. Only schemas with alternates have such versions;
+  one listed in `language_controlled_fields` stays each language's own.
+  """
+  def tree_relations(schema, config \\ nil) do
+    config = config || schema.__translatable_config__()
+
+    if function_exported?(schema, :has_alternates?, 0) and schema.has_alternates?() do
+      for %{type: :belongs_to, name: name, opts: opts} <- Relations.__relations__(schema),
+          opts[:module] == schema,
+          name not in Map.get(config, :language_controlled_fields, []),
+          do: name
+    else
+      []
+    end
+  end
+
+  # `:entries` maps each source id to its version in the target's language, or
+  # nil when there is none yet. Then the target keeps its own value and an
+  # `:awaiting_translation` item records the field; a re-sync after that
+  # version is created fills it in.
+  defp resolve_tree(payload, _target, _spec, nil, awaiting), do: {payload, awaiting}
+
+  defp resolve_tree(payload, target, spec, map, awaiting) do
+    Enum.reduce(spec.tree, {payload, awaiting}, fn name, {acc, awaiting} ->
+      field = :"#{name}_id"
+
+      case Map.get(acc, field) do
+        nil ->
+          {acc, awaiting}
+
+        source_id ->
+          case Map.get(map, source_id) do
+            nil -> {Map.put(acc, field, Map.get(target, field)), [awaiting_item(to_string(name)) | awaiting]}
+            id -> {Map.put(acc, field, id), awaiting}
+          end
+      end
+    end)
   end
 
   # --- Identifiers ------------------------------------------------------------

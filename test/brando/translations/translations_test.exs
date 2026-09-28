@@ -523,6 +523,39 @@ defmodule Brando.TranslationsTest do
     end
   end
 
+  describe "a parent in the same schema" do
+    setup c do
+      {:ok, parent} =
+        SyncTest.create_article(%{title: "Forelder", slug: "forelder", language: "no", status: "published"}, c.user)
+
+      source = c.source |> Ecto.Changeset.change(parent_id: parent.id) |> Repo.update!()
+      %{parent: parent, source: source}
+    end
+
+    test "waits for the parent's translation, then follows it", c do
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      version = pending(en)
+      assert Enum.any?(version.work_items, &(&1.kind == :awaiting_translation and &1.path == "parent"))
+      # The copy kept the source's parent; the pending version doesn't point it elsewhere yet
+      assert Translations.decode_payload(version).parent_id == c.parent.id
+
+      {:ok, parent_en} = Translations.create_target(Article, c.parent.id, :en, c.user)
+
+      version = pending(en)
+      refute Enum.any?(version.work_items, &(&1.kind == :awaiting_translation))
+      assert Translations.decode_payload(version).parent_id == parent_en.id
+    end
+
+    test "maps at once when the parent is already translated", c do
+      {:ok, parent_en} = Translations.create_target(Article, c.parent.id, :en, c.user)
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      assert Translations.decode_payload(pending(en)).parent_id == parent_en.id
+      assert Translations.entry_map(c.source, Article, "en") == %{c.parent.id => parent_en.id}
+    end
+  end
+
   describe "links to other content" do
     setup c do
       {:ok, other} =
@@ -587,6 +620,22 @@ defmodule Brando.TranslationsTest do
       assert_raise BlueprintError, ~r/requires mode: :synchronized/, fn ->
         Translatable.validate(Article, source_controlled_fields: [:year])
       end
+    end
+
+    test "trait options can come from an expression, as Page takes them from config" do
+      assert %{mode: :synchronized, source_controlled_fields: [:year]} =
+               Brando.SyncTest.ConfiguredArticle.__translatable_config__()
+    end
+
+    test "Page is independent unless configured, and validates a synchronized setup" do
+      alias Brando.Pages.Page
+      alias Brando.Translations.Sync
+
+      assert Page.__translatable_config__().mode == :independent
+
+      config = [mode: :synchronized, source_controlled_fields: [:template, :is_homepage, :has_url, :css_classes]]
+      assert Translatable.validate(Page, config) == true
+      assert Sync.tree_relations(Page, Translatable.config(config)) == [:parent]
     end
 
     test "language_controlled_fields takes assets, only in synchronized mode and not both ways" do
