@@ -176,12 +176,11 @@
   cursor: text;
   .tiptap-preview-actions { display: flex; justify-content: flex-end; }
   .tiptap-activate {
-    display: inline-flex; align-items: center; gap: 7px;
+    display: inline-flex; align-items: center;
     min-height: 32px; margin: 0; padding: 6px 11px;
     border: 1px solid #d5dfe6; border-radius: 6px;
     background: #f5f8fa; color: #345568;
     font: 500 12px/18px "Main", sans-serif; white-space: nowrap; cursor: pointer;
-    .hero-pencil { width: 15px; height: 15px; }
     &:hover { background: #eaf2f7; border-color: #aebfcb; }
     &:focus-visible { outline: 2px solid #345568; outline-offset: 3px; }
     &:disabled { opacity: .5; cursor: default; }

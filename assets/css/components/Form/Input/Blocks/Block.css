@@ -506,9 +506,15 @@ button.btn-palette {
       padding: 10px;
     }
 
-    .tiptap {
+    /* The editor's own padding. The static preview carries its text with the
+       preview's padding instead, see below. */
+    .tiptap:not(.tiptap-preview-content) {
       padding-left: 10px;
       padding-right: 10px;
+    }
+
+    .tiptap-preview {
+      padding-inline: 10px;
     }
   }
 
@@ -656,7 +662,6 @@ button.btn-palette {
     border-top: 1px solid #eee;
     padding: 10px;
 
-    /* Only shown as the side panel's heading, see the container query below */
     > .vars-info {
       display: none;
     }
@@ -666,15 +671,12 @@ button.btn-palette {
     /* One size for every value on a line: text, choices, names, dates */
     --vars-value-size: 13px;
 
-    /* Main renders about 1.2px above the middle of its line box (tall
-       ascender, short descender). Text in variables is nudged down by this
-       so it lines up optically with switches, icons and button edges. */
-    --vars-optical: 1px;
-
     display: flex;
     flex-direction: column;
     margin: 0;
     min-width: 0;
+    /* Past this a row's cells drift too far apart to read as one line */
+    max-width: 760px;
     border: 1px solid var(--vars-line);
     border-radius: 8px;
     background-color: var(--brando-color-shaded);
@@ -755,8 +757,6 @@ button.btn-palette {
 
         /* A row, so the presence avatars sit beside the label, not under it */
         label.control-label {
-          position: relative;
-          top: var(--vars-optical);
           display: flex;
           align-items: center;
           gap: 6px;
@@ -865,11 +865,13 @@ button.btn-palette {
       color: var(--vars-muted);
     }
 
-    /* A select shows its value and a chevron; the whole value opens it */
+    /* A select shows its value and a chevron; the whole value opens it.
+       Block-level flex: inline-flex would sit on a line box and push the
+       value 1.5px below the label's line. */
     .variable.select .multiselect {
-      width: auto;
+      width: fit-content;
       height: 30px;
-      display: inline-flex;
+      display: flex;
       justify-content: flex-start;
       gap: 6px;
       padding: 0 22px 0 0;
@@ -880,8 +882,6 @@ button.btn-palette {
       cursor: pointer;
 
       .select-label {
-        position: relative;
-        top: var(--vars-optical);
         @font main;
         font-size: var(--vars-value-size);
         text-transform: none;
@@ -898,7 +898,7 @@ button.btn-palette {
     }
 
     /* Swatch and hex; the clear button only shows on hover and takes no
-       room, so a colour fits half the side panel beside its label. */
+       room, so a colour stays narrow beside its label. */
     .variable.color .picker {
       .picker-target {
         position: relative;
@@ -980,8 +980,6 @@ button.btn-palette {
     }
 
     .variable.link .link-preview .info {
-      position: relative;
-      top: var(--vars-optical);
       line-height: 20px;
     }
 
@@ -1008,8 +1006,6 @@ button.btn-palette {
       }
 
       .info {
-        position: relative;
-        top: var(--vars-optical);
         font-size: 12px;
         line-height: 20px;
 
@@ -1502,10 +1498,6 @@ button.btn-palette {
     border-top: 1px solid #eee;
     padding: 15px 10px;
     width: 100%;
-
-    .select-button {
-      margin-bottom: 15px;
-    }
 
     .datasource-info {
       @space margin-bottom 15px;
@@ -2582,78 +2574,5 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
-  }
-}
-
-/* The side panel for very wide blocks (see `.block-vars` in `.block` above).
-   Spelled `@Container` because EuropaCSS still claims the lowercase at-rule
-   for its deprecated container-spacing shorthand and rejects any block with
-   children. At-rule names are case-insensitive in CSS, so browsers read this
-   as a normal container query. */
-@Container block-content (min-width: 1200px) {
-  .block [b-editor-tpl]:has(> .block-vars-wrapper > .block-vars) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 400px;
-    align-items: start;
-
-    > * {
-      grid-column: 1;
-    }
-
-    > .block-vars-wrapper {
-      grid-column: 2;
-      grid-row: 1 / span 20;
-      position: sticky;
-      top: 80px;
-      border-top: 0;
-      border-left: 1px solid #eee;
-      padding: 12px 14px;
-
-      > .vars-info {
-        display: flex;
-        margin-bottom: 4px;
-      }
-
-      .block-vars-row {
-        flex-wrap: wrap;
-      }
-
-      .variable {
-        flex: 0 0 100%;
-        border-left: 0;
-      }
-
-      .variable:is(.boolean, .select, .color) {
-        flex: 0 0 50%;
-      }
-
-      /* Links and media need the panel's width: label above, like text */
-      .variable:is(.link, .file, .image, .video, .gallery) {
-        padding-top: 10px;
-        padding-bottom: 12px;
-      }
-
-      .variable:is(.link, .file, .image, .video, .gallery) > div > .brando-input > .field-wrapper {
-        display: block;
-
-        > .label-wrapper {
-          max-width: none;
-          margin-bottom: 8px;
-        }
-      }
-
-      .variable + .variable {
-        border-top: 1px solid var(--vars-line);
-      }
-
-      .variable:is(.boolean, .select, .color) + .variable:is(.boolean, .select, .color):nth-child(even) {
-        border-top: 0;
-      }
-
-      .variable:is(.boolean, .select, .color) + .variable:is(.boolean, .select, .color):nth-child(even) {
-        padding-left: 12px;
-        border-left: 1px solid var(--vars-line);
-      }
-    }
   }
 }

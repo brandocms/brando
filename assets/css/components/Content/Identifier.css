@@ -47,10 +47,13 @@
     &:hover { background: #eef3ed; color: #272b2a; }
     &:focus-visible { outline: 2px solid #345568; outline-offset: 1px; }
   }
-  .meta { flex: 0 0 100%; min-width: 0; padding-top: 8px; cursor: auto; }
-  .meta:empty { display: none; }
+  > .meta { flex: 0 0 100%; min-width: 0; padding-top: 8px; cursor: auto; }
+  > .meta:empty { display: none; }
   .meta-fields { display: flex; flex-direction: column; gap: 8px; }
   .identifier-meta .field-wrapper { margin-bottom: 0; }
+  /* A meta field's own help line only takes room when it has instructions */
+  .identifier-meta .field-wrapper > .meta:not(:has(.help-text:not([hidden]))) { display: none; }
+  .identifier-meta textarea { display: block; }
   .identifier-meta .field-base { display: flex; }
   .identifier-meta .input-with-action { flex: 1; min-width: 0; }
   .identifier-meta .label-wrapper label { font-size: 12px; }

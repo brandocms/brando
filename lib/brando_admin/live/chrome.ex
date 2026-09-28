@@ -138,7 +138,9 @@ defmodule BrandoAdmin.Chrome do
     |> assign(:active_presences, active)
     |> assign(:inactive_presences, inactive)
     |> stream(:active_presences, active, reset: true)
-    |> stream(:inactive_presences, inactive, reset: true)
+    # The avatar strip overlaps its avatars and lays them out with row-reverse,
+    # so the most recent must come last in the DOM to sit leftmost and on top.
+    |> stream(:inactive_presences, Enum.reverse(inactive), reset: true)
   end
 
   def assign_presences(socket), do: refresh_authorization(socket)

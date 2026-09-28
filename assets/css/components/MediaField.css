@@ -89,11 +89,13 @@
   max-width: 620px;
   &:not(.media-field--empty) {
     .media-field-content { align-items: flex-start; }
-    /* Non-image media retain the compact preview beside their metadata. */
+    /* Non-image media retain the compact preview beside their metadata. The
+       preview takes the poster's own shape within 180×132, so a wide poster
+       is shorter rather than letterboxed. */
     .media-field-preview {
-      flex: 0 0 auto; width: auto; max-width: 180px; height: 132px; background: transparent;
-      .image-content { display: block; width: auto; max-width: 180px; height: 132px; }
-      img, picture, video { display: block; width: auto; max-width: 180px; height: 132px; object-fit: contain; }
+      flex: 0 0 auto; width: auto; max-width: 180px; height: auto; background: transparent;
+      .image-content { display: block; width: auto; max-width: 180px; height: auto; }
+      img, picture, video { display: block; width: auto; max-width: 180px; height: auto; max-height: 132px; }
     }
     .media-field-preview:not(:has(img, picture, video)) { width: 76px; background: #f1f5ef; }
   }

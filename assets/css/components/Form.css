@@ -500,9 +500,8 @@
 /**
  * Entry form tab bar. Shares its chip vocabulary with the module editor's
  * `.module-editor-tabs` (see Form/BlockEditor.css) — both read the
- * `--brando-tabbar-*` / `--brando-chip-*` tokens from app.css. Action-specific
- * pastel chips sit on a white surface; classes keep colors stable when
- * optional actions are absent.
+ * `--brando-tabbar-*` / `--brando-chip-*` tokens from app.css. The builtin
+ * actions share one neutral tint as a single segmented group.
  */
 .form-tabs {
   --form-tool-tint-strength: 100%;
@@ -605,51 +604,12 @@
   }
 
   .form-tab-builtins {
+    --form-tool-bg: color-mix(in srgb, var(--brando-color-dark) 4%, var(--brando-color-white));
+    --form-tool-hover: color-mix(in srgb, var(--brando-color-dark) 8%, var(--brando-color-white));
+    --form-tool-ink: color-mix(in srgb, var(--brando-color-dark) 65%, var(--brando-color-white));
     display: flex;
     align-items: center;
     gap: 5px;
-
-    .form-tool-meta {
-      --form-tool-bg: #fcf3f0;
-      --form-tool-hover: #f8eae5;
-      --form-tool-ink: #946857;
-    }
-
-    .form-tool-revisions {
-      --form-tool-bg: #f5f2fc;
-      --form-tool-hover: #ede7f8;
-      --form-tool-ink: #7b689a;
-    }
-
-    .form-tool-schedule {
-      --form-tool-bg: #fcf7e9;
-      --form-tool-hover: #f6eed6;
-      --form-tool-ink: #8b773f;
-    }
-
-    .form-tool-language {
-      --form-tool-bg: #f0f6fd;
-      --form-tool-hover: #e5effa;
-      --form-tool-ink: #6080a4;
-    }
-
-    .form-tool-preview {
-      --form-tool-bg: #eef7f3;
-      --form-tool-hover: #dfefe7;
-      --form-tool-ink: #55826e;
-    }
-
-    .form-tool-share {
-      --form-tool-bg: #eff7f8;
-      --form-tool-hover: #e1f0f2;
-      --form-tool-ink: #53838b;
-    }
-
-    .form-tool-save {
-      --form-tool-bg: #edf2ff;
-      --form-tool-hover: #e2eaff;
-      --form-tool-ink: #3c609a;
-    }
 
     > * {
       background-color: color-mix(in srgb, var(--form-tool-bg) var(--form-tool-tint-strength), var(--brando-color-white));
@@ -733,6 +693,43 @@
 
         svg path:last-child {
           fill: currentColor;
+        }
+      }
+    }
+
+    /* One segmented group: members sit flush, only the outer corners are
+       rounded, and a hairline marks each seam. Phones keep separate chips,
+       spread across the bar. */
+    @responsive >=ipad_portrait {
+      gap: 0;
+
+      > * {
+        border-radius: 0;
+      }
+
+      > * + * {
+        box-shadow: inset 1px 0 0 color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
+      }
+
+      > :first-child {
+        border-radius: var(--brando-chip-radius) 0 0 var(--brando-chip-radius);
+      }
+
+      > :last-child {
+        border-radius: 0 var(--brando-chip-radius) var(--brando-chip-radius) 0;
+      }
+
+      /* The preview chooser carries its chip on the button inside it */
+      .preview-chooser > button {
+        border-radius: inherit;
+      }
+
+      /* The split button's main half sits inside the group, never at its edge */
+      .split-dropdown {
+        margin-left: 0;
+
+        > button {
+          border-radius: 0;
         }
       }
     }

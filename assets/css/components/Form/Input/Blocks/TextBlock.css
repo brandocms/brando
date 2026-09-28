@@ -1,5 +1,5 @@
 .text-block {
-  .tiptap {
+  .tiptap:not(.tiptap-preview-content) {
     padding-top: 10px;
   }
 

@@ -14,13 +14,19 @@
   .module-files-context span { display: block; color: #626b66; margin-top: 4px; }
   .module-files-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
   .module-files-card > .module-files-actions { margin-top: auto; padding-top: 4px; }
-  .module-files-button { display: inline-flex; align-items: center; justify-content: center; padding: 7px 12px; min-height: 34px; border: 1px solid #c5cfc7; border-radius: 5px; background: #fff; color: #254e3f; font-size: 13px; line-height: 18px; font-weight: 500; text-decoration: none; cursor: pointer; }
+  /* height and min-width undo the admin's big global button.primary */
+  .module-files-button { display: inline-flex; align-items: center; justify-content: center; padding: 7px 12px; height: auto; min-width: 0; min-height: 34px; border: 1px solid #c5cfc7; border-radius: 5px; background: #fff; color: #254e3f; font-size: 13px; line-height: 18px; font-weight: 500; text-decoration: none; cursor: pointer; }
   .module-files-button.primary { background: #254e3f; border-color: #254e3f; color: #fff; }
   .module-files-button:disabled { opacity: 0.5; cursor: not-allowed; }
   .module-files-button:focus-visible, summary:focus-visible { outline: 2px solid #254e3f; outline-offset: 3px; }
   .module-files-dropzone { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; border: 1px dashed #b6c0b9; border-radius: 5px; background: #fff; }
   .module-files-dropzone label { font-size: 13px; margin: 0; }
-  .module-files-dropzone input { max-width: 100%; font-size: 12px; }
+  /* A bare file input: no text-field frame, and the picker button reads like
+     the admin's light .media-button */
+  .module-files-dropzone input[type="file"] { max-width: 100%; height: auto; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font: 12px/20px "Main", sans-serif; color: #626b66; }
+  .module-files-dropzone input[type="file"]::file-selector-button { min-height: 32px; margin: 0 10px 0 0; padding: 5px 11px; border: 1px solid #dce2dc; border-radius: 5px; background: #fff; color: #272b2a; font: 12px/20px "Main", sans-serif; cursor: pointer; }
+  .module-files-dropzone input[type="file"]:not(:disabled)::file-selector-button:hover { background: #f1f5ef; border-color: #bacabd; }
+  .module-files-dropzone input[type="file"]:disabled::file-selector-button { opacity: .45; cursor: default; }
   .module-files-dropzone span { font-size: 12px; color: #626b66; }
   .module-files-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; overflow-wrap: anywhere; }
   .module-files-upload progress { width: 100%; height: 5px; }

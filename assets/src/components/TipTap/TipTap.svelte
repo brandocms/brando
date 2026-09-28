@@ -31,7 +31,7 @@
   let anchorError = $state('')
   let aiMode = $state('rewrite')
   let instruction = $state('')
-  let pending = null, anchorRange = null, menuTrigger = null, stopPositioning, inertSiblings = [], resumeOverlay = false, menuCleanups = []
+  let pending = null, anchorRange = null, menuTrigger = null, pressedMenu = '', stopPositioning, inertSiblings = [], resumeOverlay = false, menuCleanups = []
   const id = $derived(`${tiptapInput?.id || 'tiptap'}-controls`)
   const active = $derived.by(() => {
     revision
@@ -46,8 +46,11 @@
     ['underline', 'underline', 'toggleUnderline'], ['strike', 'strike', 'toggleStrike'], ['code', 'code', 'toggleCode'], ['codeBlock', 'codeBlock', 'toggleCodeBlock'],
   ].filter(([key]) => has(key)))
   function closeMenus() { [typeMenu, listMenu, moreMenu, anchorMenu, aiMenu].forEach(menu => { if (menu?.matches(':popover-open')) menu.hidePopover() }); stopPositioning?.(); stopPositioning = null; currentMenu = '' }
+  // Pressing a trigger light-dismisses its open popover before the click
+  // arrives, so the click would reopen it. Remember what was open at the press.
   function showMenu(menu, trigger, name) {
-    const wasOpen = menu.matches(':popover-open')
+    const wasOpen = menu.matches(':popover-open') || pressedMenu === name
+    pressedMenu = ''
     closeMenus()
     if (wasOpen) return
     menuTrigger = trigger; currentMenu = name; menu.showPopover()
@@ -209,7 +212,7 @@
     </div>
   {/if}
   {#if editor}
-    <div bind:this={toolbar} class="tiptap-menu" role="toolbar" tabindex="-1" aria-label={labels.toolbar} onkeydown={toolbarKeys} onfocusin={toolbarFocus}>
+    <div bind:this={toolbar} class="tiptap-menu" role="toolbar" tabindex="-1" aria-label={labels.toolbar} onkeydown={toolbarKeys} onfocusin={toolbarFocus} onpointerdowncapture={() => { pressedMenu = currentMenu }} onclick={() => { pressedMenu = '' }}>
       <button type="button" class="menu-item tiptap-type-control" class:tiptap-type-pilcrow={typeLabel === '¶'} aria-label={labels.styles} title={labels.styles} aria-expanded={currentMenu === 'type'} aria-controls={`${id}-types`} disabled={!active.editable} onclick={event => showMenu(typeMenu, event.currentTarget, 'type')}><span>{typeLabel}</span><span class="hero-chevron-down-mini" aria-hidden="true"></span></button>
       {#if has('bold')}<button type="button" class="menu-item" aria-label={labels.bold} title={`${labels.bold} · ⌘/Ctrl B`} aria-pressed={active.bold} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleBold')}><span class="tiptap-bold" aria-hidden="true"></span></button>{/if}
       {#if has('italic')}<button type="button" class="menu-item" aria-label={labels.italic} title={`${labels.italic} · ⌘/Ctrl I`} aria-pressed={active.italic} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleItalic')}><span class="tiptap-italic" aria-hidden="true"></span></button>{/if}

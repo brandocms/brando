@@ -141,15 +141,15 @@
         display: none;
       }
 
-      font-size: 10px;
-      line-height: normal;
+      font-size: 12px;
+      line-height: 17px;
       margin-top: 2px;
       text-align: left;
       max-width: 55ch;
       text-wrap: balance;
       display: flex;
       gap: 1em;
-      opacity: 0.65;
+      opacity: 0.72;
     }
 
     .extra {

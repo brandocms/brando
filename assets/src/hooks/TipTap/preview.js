@@ -14,11 +14,8 @@ export default class RichTextPreview {
     this.button = document.createElement('button')
     this.button.type = 'button'
     this.button.className = 'tiptap-activate'
-    const icon = document.createElement('span')
-    icon.className = 'hero-pencil'
-    icon.setAttribute('aria-hidden', 'true')
     this.label = document.createElement('span')
-    this.button.append(icon, this.label)
+    this.button.append(this.label)
     actions.append(this.button)
     this.content = document.createElement('div')
     this.content.className = 'tiptap ProseMirror tiptap-preview-content'

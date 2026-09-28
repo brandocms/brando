@@ -209,7 +209,8 @@
     border: none !important;
   }
 
-  input {
+  /* Text-like inputs get the field frame; a file input is a button and a name */
+  input:not([type="file"]) {
     background-color: transparent !important;
     color: theme(colors.dark) !important;
     border: 1px solid var(--brando-input-border) !important;
