@@ -83,6 +83,40 @@ As with identifiers, Brando extracts association paths into
 `__absolute_url_preloads__/0`. Use `absolute_url false` for entries without a
 public URL. Invalid templates fail during compilation.
 
+When only some entries have a page on the site — a case that only links to the
+client, a page that is just an organisational section — declare which ones with
+`only:`. A map lists fields and the values they must equal:
+
+```elixir
+absolute_url ~H"/projects/{@entry.slug}", only: %{type: :full_case}
+```
+
+Brando's own `Page` uses `only: %{has_url: true}`, so pages with the
+**Has URL** toggle (`has_url`) off — sections, the 404 and 410 pages — have
+none. The declaration answers the question twice:
+
+* `__has_url__/1` — whether one entry has a URL on this site.
+* `__url_filter__/0` — the same map, to pass as a list query's `filter:` so
+  such entries are never loaded, e.g. in a sitemap:
+  `filter: Project.__url_filter__()`. The context must support filtering on
+  those keys.
+
+For the entries `only:` excludes, `__absolute_url__/1` returns `nil`. Sitemaps
+skip them (with a warning suggesting the query filter), the SEO audit leaves
+them out, hreflang alternates omit them, and no permalink redirect is proposed.
+An external link stored on the entry is content, not the entry's URL.
+
+`only:` also takes a one-arity function for rules that are not plain equality.
+It answers `__has_url__/1` only; `__url_filter__/0` is then `nil`, because a
+function cannot become a query:
+
+```elixir
+absolute_url ~H"/projects/{@entry.slug}", only: &(&1.external_url in [nil, ""])
+```
+
+Without `only:`, every entry has a URL and `__url_filter__/0` is `nil`.
+`absolute_url false` takes no options.
+
 ## Schema
 
 ### Root configuration
@@ -255,6 +289,35 @@ type and dumped default instead of treating the Elixir module name as a
 PostgreSQL type. Custom parameterized types retain their own type-specific
 options.
 
+`:i18n_string` holds one short text per language in a single field, stored as
+`jsonb` (a map of language code to text) through `Brando.Type.I18nString`. It
+suits text that belongs to one record in every language rather than to a
+translated entry — an image's title, alt text, and credits:
+
+```elixir
+attributes do
+  attribute :alt, :i18n_string
+end
+
+forms do
+  form do
+    tab t("Content") do
+      fieldset do
+        input :alt, :i18n_text, label: t("Alt. text"), languages: :content
+      end
+    end
+  end
+end
+```
+
+Edit it with `:i18n_text` or `:i18n_textarea`, which show one tab per language.
+They offer the admin interface languages (`admin_languages`) by default;
+`languages: :content` offers the site's content languages instead. A plain
+string is cast under the default language, and all-blank values are stored as
+`nil`. Read one language with `Brando.Type.I18nString.get(value, language)`,
+which falls back to the default language. For translated entries, see
+[Languages and translations](i18n.md).
+
 ### Relations
 
 Blueprint uses the same persisted foreign-key name for Ecto schema generation,
@@ -410,9 +473,24 @@ callbacks. Deferred zero-argument config functions are validated when their
 result is materialized.
 
 At the asset declaration level, the supported options are `cfg`, `required`,
-and `constraints`. Galleries additionally accept Ecto's `required_message`,
-`invalid_message`, and `force_update_on_change` cast options. Unknown options
-are rejected during compilation so a typo cannot silently weaken validation.
+and `constraints`. Images additionally accept `alt_from`, and galleries Ecto's
+`required_message`, `invalid_message`, and `force_update_on_change` cast
+options. Unknown options are rejected during compilation so a typo cannot
+silently weaken validation.
+
+`alt_from:` names the entry field the site renders as the image's alt text, for
+images described by their entry — an artwork whose title is its alt text:
+
+```elixir
+asset :image, :image, alt_from: :title, cfg: :default
+```
+
+It must be a field name (an atom). Images uploaded to that asset are then not
+counted as missing alt text — neither in the image library, which labels them
+**Alt text from its entry**, nor on the **Alt text** page that describes images
+with AI. It is a declaration only: Brando does not copy the
+field into the image, so templates still render the entry field themselves.
+
 When a form clears a required gallery, its `required_message` is used and the
 changeset error retains `validation: :required`; optional galleries continue to
 clear normally. Correct newly reported declaration typos after upgrading. No
@@ -511,62 +589,6 @@ matching typed config before use. Returning `:db`/`:config_target`, returning a
 config struct for another media type, or targeting a field declared as another
 asset type is rejected. Upload-manager intake catches these resolution errors,
 uses the typed default config, and stores the resolved target as `"default"`.
-
-### Form loading and callbacks
-
-An existing entry is loaded with `%{matches: %{id: id}}` by default. Use a
-static query map to add fixed options; Brando always injects the entry ID into
-the map's `:matches`:
-
-```elixir
-forms do
-  form do
-    query %{preload: [:illustrators]}
-  end
-end
-```
-
-Use a callback when the query itself is dynamic. Callback queries replace the
-default and must return the complete query map, including an ID match when one
-is required:
-
-```elixir
-query &__MODULE__.form_query/1
-
-def form_query(id), do: %{matches: %{id: id}, preload: [:illustrators]}
-```
-
-Form `query`, `after_save`, and `redirect_on_save` callbacks accept either the
-documented function arity or `{module, function, extra_args}`. Runtime arguments
-come first and configured arguments are appended.
-
-Alerts accept translated strings and one-argument function components. Alert
-components receive `form`, `schema`, `current_user`, `form_cid`, and `form_id`
-assigns:
-
-```elixir
-alert :info, &__MODULE__.editor_notice/1
-alert :warning, {MyAppWeb.FormAlerts, :quota_notice, [limit: 10]}
-```
-
-A tab's alerts render above its fieldsets. `show_if:` takes a function of the
-form and shows the alert only while it returns `true` — a warning that
-appears once an editor starts changing something risky:
-
-```elixir
-alert :warning, t("Templates look this fragment up by its key."),
-  show_if: &__MODULE__.key_changed?/1
-```
-
-Form error summaries use a configured string `label` when present. Inputs with
-`label: :hidden`, blank/nil labels, and other non-text labels fall back to a
-humanized field name. Errors attached to generated foreign keys such as
-`:cover_video_id` resolve through the visible `:cover_video` input, so storage
-field names do not leak into the editor message.
-
-These runtime contract corrections do not change storage. No Ecto migration or
-Igniter upgrade script is required; compile after upgrading and correct any
-static query whose `:matches` value is not a map.
 
 ## Traits
 
@@ -675,8 +697,9 @@ absolute_url ~H"/articles/{@entry.slug}"
 After a successful admin save, Brando compares the previous and saved URLs and
 shows the proposed permanent (301) redirect. The editor can create it or continue
 without it; either choice completes the selected save action. New entries,
-unchanged URLs, and entries with `has_url: false` do not prompt. Built-in pages
-include this trait.
+unchanged URLs, and entries without a URL — a page with `has_url: false`, or
+any entry an [`absolute_url ..., only:`](#absolute-url) declaration excludes —
+do not prompt. Built-in pages include this trait.
 
 When the URL changes, any exact permalink redirect on the new URL is removed from
 the saved entry's language before the prompt appears. This also happens when the
@@ -826,6 +849,27 @@ listing do
 end
 ```
 
+A row component sees only its own entry, so data the query cannot preload —
+where an asset is used, counts from another table — would otherwise be looked
+up once per row. `decorate` takes a one-arity function that receives the loaded
+page of entries (a list; for paginated listings, only the page's entries) and
+returns them, typically with an extra key put on each. It runs once per page
+load, so the lookup can be batched:
+
+```elixir
+listing do
+  decorate &__MODULE__.put_usage/1
+  component &__MODULE__.listing_row/1
+end
+
+@doc false
+def put_usage(entries), do: Brando.Content.Usage.put(entries, :image)
+```
+
+Rows then read `@entry.usage`. Prefer a local capture, as above: the listing
+keeps the function at compile time, and a remote capture would make the
+Blueprint compile against the module it calls.
+
 ### Filters and sorts
 
 Filters require unique string keys and support `:text`, `:boolean`, and
@@ -917,9 +961,7 @@ No code migration, Igniter upgrade, or database migration is required.
 ### Form options
 
 Forms are named; the default form uses `:default`, and additional forms use
-`form :name`. `default_params` initializes new entries. `query`, `after_save`,
-and `redirect_on_save` accept their documented function arity or an MFA tuple
-whose configured arguments are appended after runtime arguments.
+`form :name`. `default_params` initializes new entries.
 
 ```elixir
 form do
@@ -929,14 +971,40 @@ form do
 end
 ```
 
+An existing entry is loaded with `%{matches: %{id: id}}` by default. A static
+`query` map adds fixed options such as preloads; Brando always injects the
+entry ID into the map's `:matches`, which must itself be a map. Use a callback
+when the query itself is dynamic. A callback replaces the default and must
+return the complete query map, including an ID match when one is required:
+
+```elixir
+query &__MODULE__.form_query/1
+
+def form_query(id), do: %{matches: %{id: id}, preload: [:illustrators]}
+```
+
+`query`, `after_save`, and `redirect_on_save` accept their documented function
+arity or `{module, function, extra_args}`. Runtime arguments come first and
+configured arguments are appended.
+
+Form error summaries use a configured string `label` when present. Inputs with
+`label: :hidden`, blank/nil labels, and other non-text labels fall back to a
+humanized field name. Errors attached to generated foreign keys such as
+`:cover_video_id` resolve through the visible `:cover_video` input, so storage
+field names do not leak into the editor message.
+
 ### Tabs, alerts, and fieldsets
 
-A form contains tabs; each tab contains alerts and fieldsets. Fieldsets control
-layout with `size`, `align`, `shaded`, and `style`. An optional `label` renders a
-translated section legend. An optional `component &MyModule.preview/1` renders
-read-only content using the current `form` assigns, such as an SEO preview; it
-does not own or collect form state. Alerts use `:info`,
-`:warning`, or `:error` and accept a string or one-argument function component.
+A form contains tabs; each tab contains alerts and fieldsets, and its alerts
+render above its fieldsets.
+
+Fieldsets control layout with `size`, `align`, `shaded`, and `style`. An
+optional `label` renders a translated section legend. An optional
+`component &MyModule.preview/1` renders read-only content using the current
+`form` assigns, such as an SEO preview; it does not own or collect form state.
+`superuser true` shows the fieldset only to users with the `:superuser` role —
+for technical settings editors have no use for, such as a gallery's config
+target. Other users do not get the fieldset rendered at all.
 
 ```elixir
 tab t("Content") do
@@ -948,7 +1016,30 @@ tab t("Content") do
     shaded false
     input :title, :text, label: t("Title")
   end
+
+  fieldset do
+    superuser true
+    input :config_target, :text, label: t("Config target")
+  end
 end
+```
+
+Alerts use `:info`, `:warning`, or `:error` and accept a translated string, a
+one-argument function component, or an MFA tuple. Alert components receive
+`form`, `schema`, `current_user`, `form_cid`, and `form_id` assigns:
+
+```elixir
+alert :info, &__MODULE__.editor_notice/1
+alert :warning, {MyAppWeb.FormAlerts, :quota_notice, [limit: 10]}
+```
+
+`show_if:` takes a function of the form and shows the alert only while it
+returns `true` — a warning that appears once an editor starts changing
+something risky:
+
+```elixir
+alert :warning, t("Templates look this fragment up by its key."),
+  show_if: &__MODULE__.key_changed?/1
 ```
 
 ### Inputs
@@ -961,9 +1052,12 @@ field and selects the admin renderer by type. Common renderers include `:text`,
 cannot be reconciled with their Blueprint field or relation rather than allowing
 a broken form to reach runtime.
 
-Use `blocks :blocks, ...` for a block editor field. Inputs may be hidden with a
-boolean, `{field, expected_value}`, or one-argument form predicate. Constant
-option lists should be assigned by the LiveView rather than rebuilt in HEEx.
+Use `blocks :blocks, ...` for a block editor field. Inputs may be hidden with
+`hidden:` — a boolean, `{field, value}`, `{field, [values]}`, or a one-argument
+function of the form — or shown conditionally with `show_if:`; see
+[Showing a field depending on another](#showing-a-field-depending-on-another).
+Constant option lists should be assigned by the LiveView rather than rebuilt in
+HEEx.
 
 Select and multi-select option lists refresh when their specification changes.
 Callable providers load on mount, when the picker opens, or on an explicit
