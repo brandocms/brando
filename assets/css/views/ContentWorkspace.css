@@ -46,12 +46,18 @@
   .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex: 0 0 180px; order: 7; }
   .item-meta .name, .item-meta .time { color: var(--workspace-muted); font-size: 12px; }
   .content-list .list-row .circle-dropdown { order: 8; }
-  .content-list .list-row .main-content > div:has(> .children-button) { flex: 0 0 58px; }
+  /* Wide enough for "2 fragments" / "1 page, 2 fragments", not a fixed slot:
+     a fixed 58px wrapped the text and pushed the count out of the button. */
+  .content-list .list-row .main-content > div:has(> .children-button) { flex: 0 0 auto; min-width: 58px; }
   .children-button button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 52px; max-width: none; height: 32px; aspect-ratio: auto; padding: 0 9px; border: 1px solid #dae4db; border-radius: 6px; background: #f1f6ef; color: #42634d; font-family: inherit; font-size: 13px; line-height: 20px; }
   .children-button button:hover, .children-button button[aria-expanded="true"] { background: #e6efe4; color: #254e3f; border-color: #c3d5c5; }
   .children-button button .children-button-count, .children-button button .children-button-close { display: none; }
   .children-button-disclosure { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; line-height: 20px; }
   .children-number { font-variant-numeric: tabular-nums; }
+  .children-button-text { white-space: nowrap; }
+  /* The text already says how many; keep only the chevron beside it. */
+  .children-button button.text .children-number { display: none; }
+  .children-button button.text { gap: 6px; padding: 0 10px 0 8px; }
   .children-button-disclosure [data-icon] { display: block; flex: 0 0 14px; width: 14px; height: 14px; transition: transform .15s; }
   .children-button button[aria-expanded="true"] [data-icon] { transform: rotate(90deg); }
   .content-list .child-rows { margin: 0 16px 0 38px; padding: 0; border-left: 1px solid var(--workspace-line); }
