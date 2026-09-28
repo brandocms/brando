@@ -12748,3 +12748,6 @@ msgstr "Alt-tekst fra oppføringen"
 
 msgid "Add link"
 msgstr "Legg til lenke"
+
+msgid "Change"
+msgstr "Endre"

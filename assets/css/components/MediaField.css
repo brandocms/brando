@@ -71,6 +71,11 @@
   > :last-child, > :last-child > .media-button { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
   > .media-button:hover, > .media-button:focus-visible, > .media-field-replace:hover, > .media-field-replace:focus-within { position: relative; z-index: 1; }
 }
+/* Menu items that discard work, and the upload destination under the actions */
+.media-field-replace .media-field-menu button.destructive { color: #983e30; }
+.media-field-replace .media-field-menu button.destructive:hover { background: #fcf3f0; }
+.media-field-replace .media-field-menu .media-field-menu-note { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; padding: 8px 10px 4px; border-top: 1px solid #edf0ed; color: #626b66; font: 11px/16px "Main", sans-serif; overflow-wrap: anywhere; }
+.media-field-replace .media-field-menu .media-field-menu-note [class^="hero-"] { width: 13px; height: 13px; flex-shrink: 0; }
 .media-field-replace {
   position: relative;
   .media-field-menu { position: fixed; inset: auto; margin: 0; min-width: min(190px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; padding: 5px; background: #fff; border: 1px solid #dce2dc; border-radius: 7px; box-shadow: 0 8px 24px #13251c18; }

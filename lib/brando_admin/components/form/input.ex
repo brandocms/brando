@@ -170,7 +170,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       assign(assigns,
         value: assigns.field.value || get_default(assigns.opts),
         class: assigns.opts[:class],
-        locale: Gettext.get_locale()
+        locale: Gettext.get_locale(),
+        alt_format: assigns.opts[:alt_format]
       )
 
     ~H"""
@@ -180,6 +181,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         class="datetime-wrapper"
         phx-hook="Brando.DateTimePicker"
         data-locale={@locale}
+        data-alt-format={@alt_format}
         data-value={@value || ""}
       >
         <div id={"#{@field.id}-datetimepicker-flatpickr"} phx-update="ignore">
@@ -187,7 +189,9 @@ defmodule BrandoAdmin.Components.Form.Input do
             {gettext("Clear")}
           </button>
           <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
-          <div class="timezone">&mdash; {gettext("Your timezone is")}: <span>Unknown</span></div>
+          <div class="timezone">
+            <span class="timezone-prefix">&mdash; {gettext("Your timezone is")}:</span> <span data-timezone>Unknown</span>
+          </div>
         </div>
       </div>
     </Primitives.field_base>

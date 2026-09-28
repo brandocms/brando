@@ -12743,3 +12743,6 @@ msgstr ""
 
 msgid "Add link"
 msgstr ""
+
+msgid "Change"
+msgstr ""

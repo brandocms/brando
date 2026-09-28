@@ -23,7 +23,9 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   attr :configure, :any, default: nil
   attr :remove, :any, default: nil
   attr :editable, :boolean, default: true
-  attr :presentation, :atom, values: [:field, :block], default: :field
+  # `:line` is one line with all actions behind a single menu, for block
+  # variables, where every variable is one row.
+  attr :presentation, :atom, values: [:field, :block, :line], default: :field
   attr :label, :string, default: nil
   slot :inner_block
   slot :actions
@@ -37,7 +39,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
     assigns =
       assigns
       |> assign(:asset, asset)
-      |> assign(:compact?, assigns.presentation == :field)
+      |> assign(:compact?, assigns.presentation in [:field, :line])
       |> assign(:config_target, target)
       |> assign(:upload_enabled?, upload_enabled)
       |> assign(:accept, accept(config))
@@ -109,7 +111,29 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           </span>
         </div>
       </div>
-      <div :if={@editable} class="media-field-actions">
+      <.action_menu
+        :if={@editable && @presentation == :line}
+        id={"#{@id}-actions"}
+        label={if @asset, do: gettext("Change"), else: gettext("Add")}
+      >
+        <button :if={@upload_enabled?} type="button" class="upload-trigger">
+          <.icon name="hero-arrow-up-tray" />{if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
+        </button>
+        <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{@browse_label}</button>
+        <button :if={@configure && (@asset || !@upload_enabled?)} type="button" phx-click={@configure}>
+          <.icon name="hero-adjustments-horizontal" />{gettext("Configure")}
+        </button>
+        {render_slot(@actions)}
+        <button :if={@asset && @remove} type="button" class="destructive" phx-click={@remove}>
+          <.icon name="hero-trash" />{gettext("Remove")}
+        </button>
+        <p :if={@upload_enabled?} class="media-field-menu-note">
+          <.icon name="hero-folder" />
+          <span :if={@type == :image && @config_target == "default"}>{gettext("Choose a folder when uploading")}</span>
+          <span :if={@type != :image || @config_target != "default"}>{@folder}</span>
+        </p>
+      </.action_menu>
+      <div :if={@editable && @presentation != :line} class="media-field-actions">
         <%!-- The two ways of filling an empty field read as one segmented control,
               the same as the asset's own actions do once it has been filled. --%>
         <div :if={!@asset && (@upload_enabled? || @browse)} class="media-field-split">
@@ -181,7 +205,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           {gettext("Remove")}
         </button>
       </div>
-      <div :if={@upload_enabled?} class="media-field-destination">
+      <div :if={@upload_enabled? && @presentation != :line} class="media-field-destination">
         <.icon name="hero-folder" />
         <span :if={@type == :image && @config_target == "default"} data-media-destination>{gettext(
           "Choose a folder when uploading"
@@ -197,6 +221,29 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
             {if @type == :image && @config_target == "default", do: gettext("Choose a folder before uploading"), else: @folder}
           </span>
         </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  A button that opens a small menu of actions, painted in the top layer so a
+  scrolling drawer or a clipped block can't cut it off. Menu items are plain
+  buttons; add `class="destructive"` to one that discards work.
+  """
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :placement, :string, default: "bottom-start"
+  slot :inner_block, required: true
+
+  def action_menu(assigns) do
+    ~H"""
+    <div id={@id} class="media-field-replace media-action-menu" phx-hook="Brando.FloatingDropdown" data-placement={@placement}>
+      <button type="button" class="media-button" popovertarget={"#{@id}-menu"} aria-expanded="false">
+        {@label}<.icon name="hero-chevron-down-mini" />
+      </button>
+      <div id={"#{@id}-menu"} class="media-field-menu" popover="auto">
+        {render_slot(@inner_block)}
       </div>
     </div>
     """
