@@ -229,7 +229,10 @@ are separate from the Igniter source plan.
 succeeds: identity and SEO per configured language when missing, seven modules,
 a published `index` page built from six of them, a `main` navigation menu and a
 `partials/footer` fragment. It owns an account with `--user ID`, defaulting to
-the oldest active superuser. Existing content of each kind is left untouched,
+the oldest active superuser. `--base-url URL` and `--description TEXT` fill in
+a newly created SEO record's base URL and fallback meta description; without a
+base URL, canonical links, sharing previews and the sitemap cannot build full
+addresses. Existing content of each kind is left untouched,
 so the task is safe to rerun; it is a starting point for editing in the admin,
 not a migration path. Without it, `/` has no published page and responds 404.
 Your application's own `priv/repo/seeds.exs` is preserved and never run for you.
@@ -325,9 +328,11 @@ compilation. Customized or unrecognized tasks block removal: rename their module
 and task explicitly, preserving your application-specific steps. Compile in a
 new invocation before using `mix igniter.upgrade brando`.
 
-Igniter calls the library-owned `brando.upgrade FROM TO` hook. The current recipe
-accepts forward changes in the 0.54 development line, from `0.54.0-dev` onward,
-and never beyond the loaded dependency version. Equal versions are a no-op;
+Igniter calls the library-owned `brando.upgrade FROM TO` hook. It accepts forward
+upgrades from `0.54.0-dev` onward to a 0.54 or 0.55 target, never beyond the
+loaded dependency version. Each crossed minor version composes its recipe
+before missing framework migrations are planned: a 0.54 → 0.55 upgrade runs
+`brando.migrate55` first. Equal versions are a no-op;
 use `brando.gen.migrations` to reconcile files during development. Applications
 with older DSL syntax must first follow [Migrating from 0.53 or 0.54](migrating_from_053.md).
 Future release transitions require explicit upgrade recipes and qualification.
@@ -402,6 +407,9 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.seeds` | Operational default content: identity, seven modules, index page, menu, footer fragment |
 | `brando.setup.tenancy` | Igniter tenancy source preparation |
 | `brando.migrate_to_tenant` | Operational data conversion |
+| `brando.migrate` | Runs public or tenant migrations |
+| `brando.modules` | Export, plan and import module-definition DSL files |
+| `brando.gen.site` | Plans optional CMS page rendering with explicit homepage ownership |
 | `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |
 | `brando.gen.release` | Reviewed release helpers and missing Mix configuration |
 | `brando.install.fabfile` | Retired; use release generation and Florist |
@@ -409,6 +417,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.migrations` | Reviewed missing framework migration files |
 | `brando.upgrade.prepare` | Reviewed retirement of the recognized consumer-owned upgrade task |
 | `brando.upgrade FROM TO` | Version-aware hook called by Igniter |
+| `brando.migrate54` / `brando.migrate55` | Migrates application source from Brando 0.53 to 0.54 / 0.54 to 0.55 |
 | `brando.gen.tenant_migration` | Tenant migration source; see the tenancy guide |
 
 For setup failures, fix the first compiler, migration or asset error before

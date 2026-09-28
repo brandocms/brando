@@ -85,6 +85,47 @@ This setting affects:
 - Video blocks in the Villain editor
 - Any video picker without a specific config target
 
+### Provider Requirements
+
+A provider strategy only offers the "Upload file" button when
+`Brando.Videos.upload_available?/1` is true for it:
+
+| Strategy      | Required keys |
+|---------------|---------------|
+| `:mux`        | `access_token_id`, `access_token_secret`, `webhook_secret` |
+| `:bunny`      | `api_key`, `library_id`, `cdn_hostname`, `webhook_secret` |
+| `:cloudflare` | `account_id`, `api_token`, `webhook_secret` |
+
+The webhook secret is required because an upload without it starts and never
+completes. Bunny signs its webhooks with the library Read-Only API key, so it
+accepts `read_only_api_key` as an alias for `webhook_secret` — both the upload
+check and `BrandoWeb.Plugs.BunnyWebhook` fall back to it.
+
+#### Boot-time configuration check
+
+`Brando.Supervisor` runs `Brando.Videos.ProviderConfigCheck` at startup, so a
+misconfigured deploy shows up in the boot log instead of on the first editor's
+file pick. It reports only:
+
+- **Partial credentials** — some of a provider's credential keys are set and
+  others are missing or empty.
+- **Credentials without a webhook secret** — uploads would never complete and
+  the upload control would not render (`webhook_secret`, or
+  `read_only_api_key` for Bunny).
+- **An unusable default strategy** — `default_video_upload_strategy` names a
+  provider that has no usable credentials.
+
+A provider with no configuration at all is not reported; that is simply a
+provider the site does not use.
+
+Problems are logged as errors and boot continues, since refusing to start would
+turn a misconfiguration into an outage and break dev, test and CI environments
+that legitimately have no credentials. To fail the boot instead:
+
+```elixir
+config :brando, :strict_video_provider_config, true
+```
+
 ### Mux Configuration
 
 For Mux uploads, you need to configure your credentials:
@@ -427,4 +468,13 @@ Full list of `Brando.Type.VideoConfig` options:
 | `allow_external_urls` | boolean | `true` | Enable URL-based videos |
 | `random_filename` | boolean | `false` | Randomize uploaded filenames |
 | `slugify_filename` | boolean | `true` | Slugify uploaded filenames |
+| `overwrite` | boolean | `false` | Write over an existing file with the same name instead of making the name unique (`:local`/`:s3`) |
+| `force_filename` | string or nil | `nil` | Store under this filename; only applied together with `overwrite: true` |
+| `completed_callback` | function, MFA or nil | `nil` | Called with the video and user when a local upload is stored or a provider video first becomes ready (see below) |
+| `accept` | term | `:any` | Present for parity with `FileConfig`, but not read; the file input's `accept` comes from `allowed_mimetypes` |
 | `meta` | map | `%{}` | Provider-specific settings |
+
+`completed_callback` takes an arity-2 function or `{module, function,
+extra_args}`; the video and user are passed before the extra arguments.
+Provider webhooks and processing may retry or deliver twice, so callbacks with
+external side effects should be idempotent.

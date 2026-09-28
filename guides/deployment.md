@@ -79,6 +79,46 @@ configs into `etc/`, which `bootstrap` uploads and symlinks. `traefik:setup`
 both reads `etc/traefik/traefik.yml` and installs the Traefik binary, which
 `bootstrap` checks for before it will configure the web server.
 
+### Release helpers
+
+Florist builds a standard Mix release. If the application has no release setup
+yet, run:
+
+```bash
+mix brando.gen.release
+```
+
+It creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`,
+`migrate_tenants/0`) and adds a `releases` entry for the app to `mix.exs` when
+none exists. Existing release settings, runtime configuration, secrets and
+deployment files are left alone. The task requires Igniter.
+
+### Migrating from Fabric
+
+Projects still deployed with the legacy Fabric setup (`deployment.cfg` +
+`fabfile.py`) get a starting `florist.config.exs` from `mix brando.migrate55`
+(part of the 0.54 → 0.55 upgrade). The conversion runs only when both legacy
+files exist and there is no `florist.config.exs` yet. It reads literal settings
+without evaluating Python and carries over the project/module, production and
+staging targets, SSH endpoint, remote paths, database names/users, Docker
+host/file, domains and pgbackup intent. It keeps the legacy
+`deployment type: :single` / nginx topology, and never touches or removes the
+Fabric files.
+
+Check by hand before the first Florist command:
+
+- Passwords are not copied — export `FLORIST_DB_PASSWORD_PROD` (and
+  `FLORIST_DB_PASSWORD_STAGING` when a staging target was generated).
+- Anything the task warned about; unconvertible Python expressions fall back
+  to documented defaults.
+- Ports (`8055` production, `8060` staging) against each `.envrc.<flavor>`
+  `PORT` and the old nginx upstream.
+- The persistent media directory, the legacy `etc/` units and rclone setup
+  (not migrated).
+
+The full checklist is in "Review a generated Florist configuration" in the
+[0.53 migration guide](migrating_from_053.md).
+
 ## Configuration
 
 Create `florist.config.exs` in your project root. Run `florist init` to generate

@@ -83,6 +83,20 @@ content from a previous output directory. A missing file returns `404` through
 the sitemap controller. With no application sitemap module, generation can be a
 no-op; a command finishing is not sufficient verification that XML exists.
 
+Entries whose `loc` is `nil` or `""` are dropped rather than written, and the
+generator logs one warning per sitemap (named by its generated function):
+
+```
+Sitemap __sitemap_for_pages__: skipped 3 entries without a URL. Filter them in its query.
+```
+
+It means the stream returned entries that have no URL on this site — usually
+entries excluded by the `only:` of the schema's `absolute_url`, or plain maps
+that the resolver cannot build a URL from. The rest of the sitemap is still
+generated. Fix it in the query: add `filter: Schema.__url_filter__()` (keeping
+the filter's fields in `select`) and return Blueprint structs, so those entries
+are never loaded.
+
 ## Keep it current
 
 The default Oban cron runs the sitemap generator at **02:00 UTC**.
