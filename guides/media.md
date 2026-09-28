@@ -96,11 +96,32 @@ are kept per content language: the component renders the request's language
 (set by `Brando.Plug.I18n`), falling back to the default language. Pass
 `language: "no"` to choose it. To read the text yourself, use
 `Brando.Images.text(image, :alt, language)` — the fields hold maps of
-language → text, not strings. Use a meaningful caption only when it adds
-information. `caption: true` uses the image title; a string supplies an explicit
-caption. Captions are rendered as HTML, so only pass trusted editorial content.
+language → text, not strings (`:i18n_string`; see
+[Languages](i18n.md#translated-strings-in-one-field)). It returns that language's text, else the default language's,
+else `nil`. `Brando.Images.resolve_texts(image, language)` replaces all three
+maps with text in one step and leaves a placement's override strings alone;
+call it once where the language is known, and nothing downstream sees a map.
+For Liquid, `Brando.Villain.map_images(images, language)` maps images with
+their texts resolved (the default language when `nil`).
+
+Use a meaningful caption only when it adds information. `caption: true` uses
+the image title; a string supplies an explicit caption. Captions are rendered
+as HTML, so only pass trusted editorial content.
 A nil image renders nothing. An **unloaded** association renders a diagnostic:
 fix the preload rather than hiding it with a CSS rule.
+
+A template in the database that prints an image text directly shows the raw
+map. Add the `i18n` filter, which prints the page's language with the default
+as fallback and leaves plain strings alone:
+
+```liquid
+{{ entry.cover.alt | i18n }}
+```
+
+`{% picture %}` needs nothing. `mix brando.check.image_texts` lists module,
+container and menu templates that print `alt`, `title` or `credits` without
+the filter, in every active site and environment. It changes nothing and
+matches by name, so check each finding.
 
 For a plain URL, use
 `Brando.Utils.img_url(image, "large", prefix: Brando.Utils.media_url())`.
@@ -218,8 +239,10 @@ surprisingly empty gallery is a reason to check preloads.
 Gallery ownership matters when duplicating content. Use
 `Brando.Galleries.duplicate_gallery(gallery.id, current_user.id)` for an independent
 gallery: its join rows and configuration are copied while image/video assets are
-reused. Reusing the original `gallery_id` shares the gallery itself. Verify that
-reordering a duplicate does not reorder its source.
+reused. Reusing the original `gallery_id` shares the gallery itself. A context's
+generated `duplicate_*` mutation already does this for the entry's gallery
+assets and for galleries on block refs and vars. Verify that reordering a
+duplicate does not reorder its source.
 
 ## Upload lifecycle and delivery checks
 

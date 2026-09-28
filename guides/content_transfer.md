@@ -122,7 +122,17 @@ for unchanged dependency requirements from the same source and workspace.
 Shared entries are not followed recursively without selection. Include them from
 export review or select them directly. Page fragments, child pages, translations
 and other inverse collections remain independent entries; selecting a page does
-not implicitly select that entire graph. Owned records are defined by Blueprint
+not implicitly select that entire graph.
+
+Language links do not travel either. Alternate links, [synchronized translation
+groups](i18n.md#synchronized-translations) and their pending versions stay
+behind, and imported blocks and table rows get new sync identities. Each
+imported entry arrives on its own: link language versions again from the
+editor's **Languages** button. Existing alternates cannot join a synchronized
+group, so for a synchronized schema transfer the source and create its
+translations on the destination with **Create a translation**. Updating a
+destination source through import does not queue its translations' sync;
+their pending versions follow its next save in the admin. Owned records are defined by Blueprint
 embeds, cast-enabled child relations and `:entries` relations. Other belongs-to
 and cast-enabled many-to-many relationships use reviewed dependency mappings.
 

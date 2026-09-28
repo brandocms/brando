@@ -75,6 +75,26 @@ may publish.
   Attaching the same image again keeps its name.
 - **Content is data.** Titles, texts and file names the assistant reads never
   change its instructions.
+- **It speaks the editor's language.** Progress such as "Thinking" and the
+  assistant's notices use the editor's admin language; the model is told to
+  answer in the editor's language. New entries get the conversation's content
+  language unless the editor names another.
+
+## Language versions
+
+An entry's outline and its review card list its other language versions
+(alternates and members of its [synchronized translation
+group](i18n.md#synchronized-translations)). The review card says for each
+whether the proposal changes it, it follows the source, or it stays unchanged.
+
+When a change touches an entry with language versions, the assistant asks
+whether it should apply to them too, unless you have already said. Versions
+that are not synchronized change only when the proposal changes them, so the
+assistant writes the matching change into the same proposal, in their
+language. When the changed entry is a synchronized source, its synchronized
+translations need no matching change: applying runs the same after-save work
+as an editor's save, so they get pending versions with the source's structure,
+media and new text to translate.
 
 ## Build with AI from the block editor
 
