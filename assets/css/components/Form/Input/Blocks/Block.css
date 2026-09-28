@@ -663,6 +663,11 @@ button.btn-palette {
   }
 
   .block-vars {
+    /* Main renders about 1.2px above the middle of its line box (tall
+       ascender, short descender). Text in variables is nudged down by this
+       so it lines up optically with switches, icons and button edges. */
+    --vars-optical: 1px;
+
     display: flex;
     flex-direction: column;
     margin: 0;
@@ -747,6 +752,8 @@ button.btn-palette {
 
         /* A row, so the presence avatars sit beside the label, not under it */
         label.control-label {
+          position: relative;
+          top: var(--vars-optical);
           display: flex;
           align-items: center;
           gap: 6px;
@@ -789,7 +796,7 @@ button.btn-palette {
         height: 30px;
         width: calc(100% + 6px);
         margin-left: -6px;
-        padding: 0 6px;
+        padding: 1px 6px 0;
         background-color: transparent;
         border: 1px solid transparent;
         border-radius: 4px;
@@ -870,6 +877,8 @@ button.btn-palette {
       cursor: pointer;
 
       .select-label {
+        position: relative;
+        top: 0.5px;
         @font main;
         font-size: 14px;
         text-transform: none;
@@ -968,6 +977,8 @@ button.btn-palette {
     }
 
     .variable.link .link-preview .info {
+      position: relative;
+      top: var(--vars-optical);
       line-height: 20px;
     }
 
@@ -994,6 +1005,8 @@ button.btn-palette {
       }
 
       .info {
+        position: relative;
+        top: var(--vars-optical);
         font-size: 12px;
         line-height: 20px;
 
@@ -1052,6 +1065,11 @@ button.btn-palette {
         gap: 8px;
       }
 
+      .media-field-copy {
+        position: relative;
+        top: 0.5px;
+      }
+
       .media-field-name {
         font: 400 14px/20px "Main", sans-serif;
         min-width: 0;
@@ -1094,9 +1112,14 @@ button.btn-palette {
     /* The one menu button of a media variable (Add ▾ / Change ▾) */
     .variable .media-action-menu > .media-button {
       min-height: 26px;
-      padding: 2px 6px 2px 10px;
+      padding: 3px 6px 1px 10px;
       gap: 2px;
       white-space: nowrap;
+
+      > [class^="hero-"] {
+        position: relative;
+        top: -1px;
+      }
     }
 
     /* A gallery: its count and buttons on one line. Its name repeats the
@@ -1143,7 +1166,7 @@ button.btn-palette {
         min-width: 0;
         height: 30px;
         margin-left: -6px;
-        padding: 0 6px;
+        padding: 1px 6px 0;
         font: 14px/20px "Main", sans-serif;
         background-color: transparent;
         border: 1px solid transparent;
