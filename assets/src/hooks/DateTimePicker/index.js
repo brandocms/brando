@@ -38,7 +38,8 @@ export default app => ({
       minuteIncrement: 15,
       time_24hr: true,
       altInput: true,
-      altFormat: 'l j F, Y @ H:i',
+      // A caller can ask for a shorter display, e.g. a one-line block variable
+      altFormat: this.el.dataset.altFormat || 'l j F, Y @ H:i',
       dateFormat: 'Z',
       allowInput: true
     }
@@ -48,7 +49,7 @@ export default app => ({
     }
 
     this.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    this.$timezoneEl = Dom.find(this.el, '.timezone span')
+    this.$timezoneEl = Dom.find(this.el, '.timezone [data-timezone]')
     this.$btnClear = Dom.find(this.el, 'button.clear-datetime')
     this.$targetEl = Dom.find(this.el, '.flatpickr')
     this.flatpickrInstance = Flatpickr(this.$targetEl, opts)

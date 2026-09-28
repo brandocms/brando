@@ -777,7 +777,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :datetime} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Input.datetime field={@var[:value]} label={@label} instructions={@instructions} />
+      <Input.datetime
+        field={@var[:value]}
+        label={@label}
+        instructions={@instructions}
+        opts={if @edit, do: [], else: [alt_format: "j M Y, H:i"]}
+      />
     </div>
     """
   end
@@ -842,6 +847,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         <div class="input-image">
           <MediaField.field
             id={"#{@var.id}-image-media"}
+            presentation={if @edit, do: :field, else: :line}
             type={:image}
             asset={@image}
             kind={@upload_kind}
@@ -884,6 +890,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         <div class="input-file">
           <MediaField.field
             id={"#{@var.id}-file-media"}
+            presentation={if @edit, do: :field, else: :line}
             type={:file}
             asset={@file}
             kind={@upload_kind}
@@ -925,6 +932,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       <Primitives.field_base field={@var[:video_id]} label={@label} instructions={@instructions} skip_presence>
         <MediaField.field
           id={"#{@var.id}-video-media"}
+            presentation={if @edit, do: :field, else: :line}
           type={:video}
           asset={@video}
           kind={@upload_kind}
@@ -989,14 +997,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               "Drop media here to add"
             )}</span>
           </div>
-          <div class="media-field-actions">
-            <button type="button" class="media-button primary upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext(
-              "Upload media"
-            )}</button>
-            <button type="button" class="media-button" phx-click={show_modal("#var-#{@var.id}-gallery-config")}><.icon name="hero-adjustments-horizontal" />{gettext(
-              "Configure"
-            )}</button>
-          </div>
+          <MediaField.action_menu
+            id={"#{@var.id}-gallery-actions"}
+            label={if @gallery_objects == [], do: gettext("Add"), else: gettext("Change")}
+          >
+            <button type="button" class="upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext("Upload media")}</button>
+            <button type="button" phx-click={show_modal("#var-#{@var.id}-gallery-config")}>
+              <.icon name="hero-adjustments-horizontal" />{gettext("Configure")}
+            </button>
+          </MediaField.action_menu>
           <div
             id={"#{@var.id}-gallery-progress"}
             class="media-field-progress"
