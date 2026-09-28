@@ -10518,8 +10518,8 @@ msgstr "Beskriv tjenesten eller koble den til en side"
 
 #: lib/brando_admin/components/module_files.ex:131
 #, elixir-autogen, elixir-format
-msgid "Destination reference mappings"
-msgstr "Referansekoblinger på målet"
+msgid "Importing into another site?"
+msgstr "Importerer du til et annet nettsted?"
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:66
 #: lib/brando_admin/live/ai/assistant_live.ex:883
@@ -10584,8 +10584,8 @@ msgstr "Følg oppdateringer automatisk"
 
 #: lib/brando_admin/components/module_files.ex:134
 #, elixir-autogen, elixir-format
-msgid "For another installation or environment, map each external token to its destination record ID. Leave empty for the original workspace."
-msgstr "For en annen installasjon eller et annet miljø: koble hver ekstern token til ID-en for posten på målet. La stå tomt for det opprinnelige arbeidsområdet."
+msgid "Only needed when you import into a different site or environment than you exported from. Images and content that modules point to, such as a default image or a linked page, are not in the ZIP — only their names are. Map each name to the ID of the matching record here. If one is missing, the preview says which."
+msgstr "Trengs bare når du importerer til et annet nettsted eller miljø enn du eksporterte fra. Bilder og innhold som modulene peker på, for eksempel et standardbilde eller en lenket side, ligger ikke i ZIP-filen – bare navnene deres. Koble hvert navn til ID-en for tilsvarende post her. Mangler et navn, sier forhåndsvisningen hvilket."
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:62
 #, elixir-autogen, elixir-format
@@ -10768,8 +10768,8 @@ msgstr[1] "Referansene %{refs} ligger inne i betingelser, løkker eller skjulte 
 
 #: lib/brando_admin/components/module_files.ex:138
 #, elixir-autogen, elixir-format
-msgid "Reference mappings (JSON)"
-msgstr "Referansekoblinger (JSON)"
+msgid "Name → ID (JSON)"
+msgstr "Navn → ID (JSON)"
 
 #: lib/brando_admin/components/module_files.ex:400
 #, elixir-autogen, elixir-format
@@ -12751,3 +12751,43 @@ msgstr "Legg til lenke"
 
 msgid "Change"
 msgstr "Endre"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "This module is also a file"
+msgstr "Denne modulen finnes også som fil"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "File not imported"
+msgstr "Filen er ikke importert"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed here since the file"
+msgstr "Endret her etter filen"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed here and in the file"
+msgstr "Endret både her og i filen"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Saving the file imports it. Changes made here put the file out of date, so edit the file instead."
+msgstr "Lagrer du filen, importeres den. Endringer her gjør filen utdatert, så rediger heller filen."
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The file has changes that are not imported. The server log says why — usually a change that needs a migration."
+msgstr "Filen har endringer som ikke er importert. Serverloggen sier hvorfor – som regel en endring som krever en migrering."
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "This module changed in the admin after the file was imported, so the file's next save is refused. Export the modules again to bring the changes into the file before editing it."
+msgstr "Modulen er endret i admin etter at filen ble importert, så neste lagring av filen avvises. Eksporter modulene på nytt for å få endringene inn i filen før du redigerer den."
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Both this module and its file changed since the last import, so the file is not imported. Export the modules again and reapply your file edits."
+msgstr "Både modulen og filen er endret siden forrige import, så filen blir ikke importert. Eksporter modulene på nytt og gjør endringene i filen igjen."

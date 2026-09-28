@@ -27,7 +27,8 @@ defmodule Brando.Content.Definition.Writer do
 
   def files(bundle) do
     definitions = bundle["modules"] ++ bundle["table_templates"]
-    files = Enum.flat_map(definitions, &definition_files/1)
+    names = names(definitions)
+    files = Enum.flat_map(definitions, &definition_files(&1, names[identity(&1)]))
     Value.unique!(Enum.map(files, &elem(&1, 0)), "output filenames")
 
     lock =
@@ -46,7 +47,12 @@ defmodule Brando.Content.Definition.Writer do
     File.mkdir_p!(staging)
 
     try do
-      Enum.each(files, fn {name, body} -> File.write!(Path.join(staging, name), body) end)
+      Enum.each(files, fn {name, body} ->
+        path = Path.join(staging, name)
+        File.mkdir_p!(Path.dirname(path))
+        File.write!(path, body)
+      end)
+
       File.rename!(staging, directory)
     after
       File.rm_rf(staging)
@@ -55,11 +61,114 @@ defmodule Brando.Content.Definition.Writer do
     Map.keys(files) |> Enum.sort()
   end
 
-  defp definition_files(definition) do
-    key = String.slice(Value.digest(definition["uid"]), 0, 16)
-    name = if definition["kind"] == "module", do: "module_" <> key, else: "table_" <> key
+  # Files are named for people: `<namespace>/<name>` in the admin language, and
+  # table templates under `tables/`. A child module lives in a folder beside its
+  # parent, `<parent>/<child>`, like `foo.ex` and `foo/` in Elixir. Identity is
+  # the `uid` inside each file, so these names only have to be unique within one
+  # export. Definitions that would share a path, or a module name, get a short
+  # UID digest appended.
+  defp names(definitions) do
+    parents =
+      for %{"kind" => "module"} = parent <- definitions, child <- parent["children"] || [], into: %{} do
+        {child, parent["uid"]}
+      end
+
+    paths = paths(definitions, parents, %{})
+
+    modules =
+      definitions
+      |> Enum.map(&{identity(&1), module_name(paths[identity(&1)])})
+      |> disambiguate(definitions, & &1, fn module, key -> module <> "D" <> key end)
+
+    Map.new(definitions, &{identity(&1), %{path: paths[identity(&1)], module: modules[identity(&1)]}})
+  end
+
+  # Top-down, so a child follows its parent's final path, digest included
+  defp paths([], _parents, assigned), do: assigned
+
+  defp paths(pending, parents, assigned) do
+    {ready, waiting} = Enum.split_with(pending, &(is_nil(parent(&1, parents)) or assigned[parent(&1, parents)]))
+    if ready == [], do: Error.raise!("children", "child modules form a cycle")
+
+    named = Enum.map(ready, &{identity(&1), readable_path(&1, assigned[parent(&1, parents)])})
+    taken = Enum.frequencies_by(Map.values(assigned) ++ Enum.map(named, &elem(&1, 1)), &String.downcase/1)
+    keys = Map.new(ready, &{identity(&1), key(&1)})
+
+    assigned =
+      Enum.reduce(named, assigned, fn {identity, path}, assigned ->
+        path = if taken[String.downcase(path)] > 1, do: path <> "-" <> keys[identity], else: path
+        Map.put(assigned, identity, path)
+      end)
+
+    paths(waiting, parents, assigned)
+  end
+
+  defp parent(%{"kind" => "module", "uid" => uid}, parents) do
+    if parent = parents[uid], do: {"module", parent}
+  end
+
+  defp parent(_definition, _parents), do: nil
+
+  defp disambiguate(named, definitions, compare, suffix) do
+    counts = Enum.frequencies_by(named, fn {_, name} -> compare.(name) end)
+    keys = Map.new(definitions, &{identity(&1), key(&1)})
+
+    Map.new(named, fn {identity, name} ->
+      if counts[compare.(name)] > 1, do: {identity, suffix.(name, keys[identity])}, else: {identity, name}
+    end)
+  end
+
+  defp identity(definition), do: {definition["kind"], definition["uid"]}
+  defp key(definition), do: String.slice(Value.digest(definition["uid"]), 0, 8)
+
+  defp readable_path(%{"kind" => "table_template"} = definition, _parent_path),
+    do: Path.join("tables", slug(definition["name"]) || "table-" <> key(definition))
+
+  defp readable_path(definition, parent_path) do
+    name = slug(definition["name"]) || "module-" <> key(definition)
+
+    case {parent_path, slug(definition["namespace"])} do
+      {nil, nil} -> name
+      {nil, namespace} -> Path.join(namespace, name)
+      {parent_path, _} -> Path.join(parent_path, name)
+    end
+  end
+
+  # Names are locale maps (or plain strings on older records)
+  defp slug(value) when is_map(value) do
+    language = to_string(Brando.config(:default_admin_language) || "en")
+    present = value |> Enum.reject(fn {_, text} -> text in [nil, ""] end) |> Enum.sort()
+
+    case Map.new(present) do
+      %{^language => text} -> slug(text)
+      %{"en" => text} -> slug(text)
+      _ -> present |> List.first({nil, nil}) |> elem(1) |> slug()
+    end
+  end
+
+  defp slug(value) when is_binary(value) do
+    case Brando.Utils.slugify(value) do
+      slug when slug in [nil, ""] -> nil
+      slug -> slug
+    end
+  end
+
+  defp slug(_), do: nil
+
+  defp module_name(path) do
+    segments =
+      path
+      |> Path.split()
+      |> Enum.map(fn segment ->
+        segment = segment |> String.replace("-", "_") |> Macro.camelize()
+        if segment =~ ~r/^[A-Z]/, do: segment, else: "D" <> segment
+      end)
+
+    Enum.join(["BrandoDefinitions" | segments], ".")
+  end
+
+  defp definition_files(definition, %{path: name, module: module_name}) do
     template_name = name <> if(definition["type"] == "heex", do: ".heex", else: ".liquid")
-    module_name = "BrandoDefinitions.D" <> key
 
     fields =
       if definition["kind"] == "module",
@@ -81,7 +190,7 @@ defmodule Brando.Content.Definition.Writer do
 
     template =
       if definition["kind"] == "module",
-        do: ["\n  template_file :", definition["type"], ", ", literal(template_name), "\n"],
+        do: ["\n  template_file :", definition["type"], ", ", literal(Path.basename(template_name)), "\n"],
         else: ""
 
     source = IO.iodata_to_binary([header, kind, attributes, table, refs, vars, children, template, "end\n"])

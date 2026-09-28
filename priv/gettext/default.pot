@@ -10512,7 +10512,7 @@ msgstr ""
 
 #: lib/brando_admin/components/module_files.ex:131
 #, elixir-autogen, elixir-format
-msgid "Destination reference mappings"
+msgid "Importing into another site?"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:66
@@ -10578,7 +10578,7 @@ msgstr ""
 
 #: lib/brando_admin/components/module_files.ex:134
 #, elixir-autogen, elixir-format
-msgid "For another installation or environment, map each external token to its destination record ID. Leave empty for the original workspace."
+msgid "Only needed when you import into a different site or environment than you exported from. Images and content that modules point to, such as a default image or a linked page, are not in the ZIP — only their names are. Map each name to the ID of the matching record here. If one is missing, the preview says which."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:62
@@ -10762,7 +10762,7 @@ msgstr[1] ""
 
 #: lib/brando_admin/components/module_files.ex:138
 #, elixir-autogen, elixir-format
-msgid "Reference mappings (JSON)"
+msgid "Name → ID (JSON)"
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex:400
@@ -12744,4 +12744,44 @@ msgid "Add link"
 msgstr ""
 
 msgid "Change"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "This module is also a file"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "File not imported"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed here since the file"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed here and in the file"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Saving the file imports it. Changes made here put the file out of date, so edit the file instead."
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The file has changes that are not imported. The server log says why — usually a change that needs a migration."
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "This module changed in the admin after the file was imported, so the file's next save is refused. Export the modules again to bring the changes into the file before editing it."
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Both this module and its file changed since the last import, so the file is not imported. Export the modules again and reapply your file edits."
 msgstr ""

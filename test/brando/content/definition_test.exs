@@ -68,9 +68,91 @@ defmodule Brando.Content.DefinitionTest do
     assert {:ok, imported} = Definitions.read(exported)
     assert imported == bundle
     assert Writer.files(imported) == Writer.files(bundle)
-    source = exported |> Path.join("*.exs") |> Path.wildcard() |> hd()
+    source = exported |> Path.join("**/*.exs") |> Path.wildcard() |> hd()
     [{module, _}] = Code.compile_file(source)
     assert {:ok, ^bundle} = Definitions.from_modules([module], root: exported)
+  end
+
+  test "export names files by namespace and name, and only digests names that collide", %{path: path} do
+    only_english = String.replace(@source, ~s(name en: "Hero", no: "Topp"), ~s(name en: "Hero"))
+    File.write!(Path.join(path, "hero.exs"), only_english)
+
+    File.write!(
+      Path.join(path, "twin.exs"),
+      only_english |> String.replace("Example.Hero", "Example.Twin") |> String.replace(~s("hero-test"), ~s("hero-twin"))
+    )
+
+    File.write!(
+      Path.join(path, "plain.exs"),
+      only_english
+      |> String.replace("Example.Hero", "Example.Plain")
+      |> String.replace(~s("hero-test"), ~s("plain-test"))
+      |> String.replace(~s(name en: "Hero"), ~s(name en: "Plain Text"))
+      |> String.replace(~s(namespace en: "Sections"\n), "")
+    )
+
+    assert {:ok, bundle} = Definitions.read(path)
+    names = bundle |> Writer.files() |> Map.keys()
+
+    assert "plain-text.exs" in names
+    assert "plain-text.heex" in names
+    assert "modules.lock.json" in names
+    twins = Enum.filter(names, &String.starts_with?(&1, "sections/hero-"))
+    assert length(twins) == 4
+    assert Enum.all?(twins, &(&1 =~ ~r/^sections\/hero-[0-9a-f]{8}\.(exs|heex)$/))
+
+    exported = Path.join(path, "export")
+    Writer.write!(bundle, exported)
+    plain = File.read!(Path.join(exported, "plain-text.exs"))
+    assert plain =~ "defmodule BrandoDefinitions.PlainText do"
+    assert plain =~ ~s(template_file :heex, "plain-text.heex")
+    assert {:ok, ^bundle} = Definitions.read(exported)
+  end
+
+  test "child modules are written in a folder beside their parent, whatever their namespace", %{path: path} do
+    only_english = String.replace(@source, ~s(name en: "Hero", no: "Topp"), ~s(name en: "Hero"))
+
+    child = fn module, uid, name, children ->
+      only_english
+      |> String.replace("Example.Hero", module)
+      |> String.replace(~s("hero-test"), ~s("#{uid}"))
+      |> String.replace(~s(name en: "Hero"), ~s(name en: "#{name}"))
+      |> String.replace(~s(namespace en: "Sections"), ~s(namespace en: "Elsewhere"))
+      |> String.replace("  refs do", children <> "\n  refs do")
+    end
+
+    File.write!(
+      Path.join(path, "hero.exs"),
+      String.replace(
+        only_english,
+        "  refs do",
+        "  multi true\n  children do\n    child \"card-test\"\n  end\n\n  refs do"
+      )
+    )
+
+    File.write!(
+      Path.join(path, "card.exs"),
+      child.("Example.Card", "card-test", "Card", "  multi true\n  children do\n    child \"badge-test\"\n  end\n")
+    )
+
+    File.write!(Path.join(path, "badge.exs"), child.("Example.Badge", "badge-test", "Badge", ""))
+
+    assert {:ok, bundle} = Definitions.read(path)
+    names = bundle |> Writer.files() |> Map.keys()
+
+    assert "sections/hero.exs" in names
+    assert "sections/hero/card.exs" in names
+    assert "sections/hero/card.heex" in names
+    assert "sections/hero/card/badge.exs" in names
+    refute Enum.any?(names, &String.starts_with?(&1, "elsewhere/"))
+
+    exported = Path.join(path, "export")
+    Writer.write!(bundle, exported)
+
+    assert File.read!(Path.join(exported, "sections/hero/card.exs")) =~
+             "defmodule BrandoDefinitions.Sections.Hero.Card do"
+
+    assert {:ok, ^bundle} = Definitions.read(exported)
   end
 
   test "text-ref presets, styles and footnotes round-trip through the definition files", %{path: path} do

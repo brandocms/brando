@@ -48,6 +48,9 @@ defmodule Brando.Supervisor do
       {Oban, oban_config()}
     ]
 
+    # Dev only, and only when configured: see its moduledoc
+    children = children ++ Brando.Content.Definition.Watcher.children()
+
     Supervisor.init(children, strategy: :one_for_one)
   end
 

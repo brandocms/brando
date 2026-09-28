@@ -41,8 +41,8 @@ definitions, authorization checks and importer as the CLI.
    local ZIP in place. The result also reports refresh failures and offers
    **Retry refresh** without reimporting definitions.
 
-For another installation or tenant environment, expand **Destination reference
-mappings** and enter a JSON object mapping external tokens to destination record
+For another installation or tenant environment, expand **Importing into another
+site?** and enter a JSON object mapping external tokens to destination record
 IDs (see [Media and content references](#media-and-content-references)). Missing
 mappings are reported before a plan can be applied. The modal identifies the
 current workspace; it does not switch the active site or environment.
@@ -91,10 +91,19 @@ tenant context on success or failure.
 
 Export requires a **new directory**. It writes:
 
-- One `.exs` file per module or table template, with deterministic names based on UID.
+- One `.exs` file per module or table template, named `<namespace>/<name>.exs`
+  in the admin language (`default_admin_language`), and `tables/<name>.exs` for
+  table templates. A child module goes in a folder beside its parent,
+  `<namespace>/<parent>/<child>.exs`, whatever its own namespace. Definitions
+  that would share a name get a short UID digest appended. The Elixir module
+  name follows the path, e.g. `BrandoDefinitions.Sections.Hero`.
 - One adjacent `.heex` or `.liquid` file per module, preserving its source bytes.
 - `modules.lock.json`, containing the format version, source scope, definition
   digests and external reference bindings. No database credentials are included.
+
+Names are only for people. Identity is the `uid` inside each file, so you can
+rename files and move them between folders; keep each `template_file` path,
+which is relative to its `.exs` file, pointing at the template.
 
 Use repeatable `--uid UID` on export to select module trees. Selecting a child
 includes its root, siblings, descendants and required table templates. This
@@ -104,6 +113,32 @@ Commit the DSL, templates and lockfile together. After a successful import the
 CLI updates the lockfile to the applied baseline, leaving authored source alone.
 That baseline lets you make another edit and import again. A dry run changes
 neither database definitions nor files.
+
+### Importing on save in development
+
+`Brando.Content.Definition.Watcher` runs the import whenever a definition or
+template in the directory changes:
+
+```elixir
+# config/dev.exs
+config :brando, Brando.Content.Definition.Watcher,
+  path: "priv/modules",
+  user_id: 1
+```
+
+Tenant applications also set `site:` and `environment:`. The directory must
+exist (export it first), and `FileSystem` must be loaded, which Phoenix apps get
+in dev through `phoenix_live_reload`. Each save plans the whole directory: a
+clean plan is applied and the lockfile advances; conflicts and required
+migrations are logged and nothing is written; an unchanged save does nothing.
+It applies without a preview, so never configure it in production.
+
+While it runs, the admin shows which modules have a file: a marker with the
+path in the module listing, and a notice in the module editor. Both warn when
+the module changed in the admin after the file was imported (the file's next
+save would be refused), when both sides changed, or when the file has changes
+that are not imported. Set `PLUG_EDITOR` (as for Phoenix's error pages, e.g.
+`vscode://file/__FILE__:__LINE__`) to link the path to your editor.
 
 ## Authoring a definition
 

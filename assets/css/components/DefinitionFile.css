@@ -1,0 +1,36 @@
+/* A module that is also a definition file (dev watcher): a quiet marker in the
+   module listing and a notice in the module editor. Out-of-step states warn. */
+.definition-file-marker {
+  display: flex; align-items: center; gap: 5px; margin-top: 4px; min-width: 0;
+  color: #7a837d; font: 11px/16px "Main", sans-serif;
+  [data-icon], [class^="hero-"] { width: 13px; height: 13px; flex: 0 0 13px; }
+  .definition-file-path { font-family: Mono, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &:not([data-state="in_sync"]) { color: #8a5a00; font-weight: 500; }
+}
+
+.definition-file-notice {
+  /* icon | headline | file chip, then the explanation under the headline */
+  display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center;
+  column-gap: 10px; row-gap: 2px; margin-bottom: 20px; padding: 12px 14px;
+  border: 1px solid #dce2dc; border-radius: 8px; background: #f7f9f6; color: #3f4843;
+  font: 13px/20px "Main", sans-serif;
+  > [data-icon], > [class^="hero-"] { width: 16px; height: 16px; color: #69806c; }
+  p { margin: 0; }
+  .definition-file-headline { font-weight: 500; color: #272b2a; }
+  .definition-file-path {
+    justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    padding: 1px 7px; border: 1px solid #dce2dc; border-radius: 4px; background: #fff;
+    font: 11px/18px Mono, monospace; color: #626b66; text-decoration: none;
+  }
+  a.definition-file-path:hover { border-color: #bacabd; color: #272b2a; }
+  .definition-file-explanation { grid-column: 2 / -1; max-width: 72ch; font-size: 12px; line-height: 18px; color: #626b66; }
+  &:not([data-state="in_sync"]) {
+    border-color: #ecd9a8; background: #fdf8ea;
+    > [data-icon], > [class^="hero-"] { color: #a86f00; }
+    .definition-file-path { border-color: #ecd9a8; }
+  }
+  @media (max-width: 600px) {
+    grid-template-columns: 16px minmax(0, 1fr);
+    .definition-file-path { grid-column: 2; justify-self: start; }
+  }
+}

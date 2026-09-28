@@ -128,15 +128,15 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 )}</button>
               </div>
               <details class="module-files-mappings" open={@mappings != ""}>
-                <summary>{gettext("Destination reference mappings")}</summary>
+                <summary>{gettext("Importing into another site?")}</summary>
                 <div>
                   <p>
                     {gettext(
-                      "For another installation or environment, map each external token to its destination record ID. Leave empty for the original workspace."
+                      "Only needed when you import into a different site or environment than you exported from. Images and content that modules point to, such as a default image or a linked page, are not in the ZIP — only their names are. Map each name to the ID of the matching record here. If one is missing, the preview says which."
                     )}
                   </p>
-                  <label for="module-files-mappings">{gettext("Reference mappings (JSON)")}</label>
-                  <textarea id="module-files-mappings" name="references" rows="4" placeholder={~s({"cover": 42})}>{@mappings}</textarea>
+                  <label for="module-files-mappings">{gettext("Name → ID (JSON)")}</label>
+                  <textarea id="module-files-mappings" name="references" rows="4" placeholder={~s({"cover-photo": 42})}>{@mappings}</textarea>
                 </div>
               </details>
               <div class="module-files-actions">

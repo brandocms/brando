@@ -97,6 +97,7 @@
 @import "./components/EditorWorkspace.css";
 @import "./components/MarkdownSources.css";
 @import "./components/ModuleFiles.css";
+@import "./components/DefinitionFile.css";
 @import "./views/config/Cache.css";
 @import "./views/config/Authorization.css";
 @import "./views/config/Environments.css";
