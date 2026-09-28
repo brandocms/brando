@@ -270,9 +270,18 @@
 .modal .modal-content .block-vars-wrapper .vars-info .icon { width: 24px; height: 24px; background: transparent; }
 .modal .modal-content .block-vars-wrapper .vars-info .vars-label { font: 13px/20px "Main", sans-serif; text-transform: none; color: var(--modal-muted); }
 .modal .modal-content .block-vars-wrapper .vars-info br { display: none; }
-.modal .modal-content .block-vars .variable { box-shadow: none; padding: 0; border: 0; background: transparent; }
-.modal .modal-content .block-vars .variable .control-label { text-transform: none; }
-.modal .modal-content .block-vars input.text { font-family: "Main", sans-serif; }
+/* Block variables keep their one-line sheet (Block.css) in the Configure
+   modal: undo the modal's full-size field styling for the var's own field
+   only — a var's link or image modal nested inside keeps the modal look. */
+.modal .modal-content .block-vars .variable :is(.brando-input > .field-wrapper, .brando-input > div > .field-wrapper) { margin: 0; }
+.modal .modal-content .block-vars .variable :is(.brando-input > .field-wrapper, .brando-input > div > .field-wrapper) > .label-wrapper { margin: 0; }
+.modal .modal-content .block-vars .variable :is(.brando-input > .field-wrapper, .brando-input > div > .field-wrapper) > .label-wrapper .control-label,
+.modal .modal-content .block-vars .variable :is(.brando-input > .field-wrapper, .brando-input > div > .field-wrapper) > .label-wrapper .control-label > span { font: 12px/1.3 "Main", sans-serif; color: var(--vars-muted); text-transform: none; }
+.modal .modal-content .block-vars .variable.boolean .brando-input > .field-wrapper > .label-wrapper .control-label > span { color: var(--brando-color-foreground); }
+.modal .modal-content .block-vars .variable .brando-input > .field-wrapper > .field-base > .input-with-action > input.text { height: 30px; min-height: 30px; background: transparent !important; border-color: transparent !important; }
+.modal .modal-content .block-vars .variable .brando-input > .field-wrapper > .field-base > .input-with-action > input.text:hover { border-color: var(--vars-line) !important; }
+.modal .modal-content .block-vars .variable .brando-input > .field-wrapper > .field-base > .input-with-action > input.text:focus { background: var(--brando-color-input) !important; border-color: var(--brando-color-blue) !important; }
+.modal .modal-content .block-vars .variable .brando-input > div > .field-wrapper > .field-base > .multiselect { height: 30px; min-height: 30px; }
 button.link-preview { text-align: left; }
 
 /* Own control spacing inside nested menu forms; their label rules are specific. */

@@ -12740,3 +12740,6 @@ msgstr ""
 
 msgid "Alt text from its entry"
 msgstr ""
+
+msgid "Add link"
+msgstr ""

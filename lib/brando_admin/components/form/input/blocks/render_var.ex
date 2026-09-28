@@ -1069,11 +1069,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign(:link_text, link_text)
       |> assign(:value, split_url_with_wbr(value))
       |> assign(:external?, external?)
+      |> assign(:empty?, link_type == :url && value in [nil, ""])
 
     ~H"""
-    <button type="button" class="link-preview" phx-click={@click}>
+    <button type="button" class={["link-preview", @empty? && "link-preview--empty"]} phx-click={@click}>
       <div class="icon">
-        <.icon :if={@link_type == :url && !@external?} name="hero-link" />
+        <.icon :if={@empty?} name="hero-plus" />
+        <.icon :if={@link_type == :url && !@external? && !@empty?} name="hero-link" />
         <.icon :if={@link_type == :url && @external?} name="hero-globe-alt" />
         <.icon :if={@link_type == :identifier} name="hero-link" />
       </div>
@@ -1089,7 +1091,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             </dl>
           <% else %>
             <dl>
-              <dt>{gettext("No link set")}</dt>
+              <dt>{gettext("Add link")}</dt>
             </dl>
           <% end %>
         <% else %>
