@@ -641,55 +641,78 @@ button.btn-palette {
     }
   }
 
+  /* Block variables are drawn as lines on the block itself, not as cards:
+     the refs below are the cards. Each cell puts its label beside its control
+     so a row is one line, and every control keeps showing its value —
+     switches and choices are what editors most easily forget.
+
+     Rows and widths are authored in the module editor and derived
+     server-side from `sequence` + `new_row` (`Brando.Content.Var.Layout`).
+     The module editor's layout preview uses this same markup. */
   .block-vars-wrapper {
+    --vars-line: color-mix(in srgb, var(--brando-color-dark) 9%, transparent);
+    --vars-muted: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    --vars-faint: color-mix(in srgb, var(--brando-color-dark) 40%, transparent);
     border-top: 1px solid #eee;
-    padding: 15px 10px;
+    padding: 0 10px;
+
+    /* Only shown as the side panel's heading, see the container query below */
+    > .vars-info {
+      display: none;
+    }
   }
 
-  /* Rows are authored in the module editor and derived server-side from
-     `sequence` + `new_row`. The old `grid-auto-flow: dense` packed vars
-     itself, which could float a narrow var backwards past a wider one — the
-     rendered order stopped matching the authored order. */
   .block-vars {
     display: flex;
     flex-direction: column;
-    gap: 10px;
 
-    /* Stretch, so the boxes on a row end at the same baseline even when one
-       holds a select and its neighbours only hold a toggle. */
     .block-vars-row {
       display: flex;
-      gap: 10px;
       align-items: stretch;
+    }
+
+    .block-vars-row + .block-vars-row {
+      border-top: 1px solid var(--vars-line);
     }
 
     .variable {
       min-width: 0;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
       color: var(--brando-color-foreground);
-      box-shadow: 0px 0px 1px #ccc;
-      border-radius: 8px;
-      padding-left: 15px;
-      padding-top: 13px;
-      padding-bottom: 12px;
-      padding-right: 15px;
+
+      > div {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+    }
+
+    .variable:first-child {
+      padding-left: 0;
+    }
+
+    .variable + .variable {
+      border-left: 1px solid var(--vars-line);
     }
 
     /* Fixed widths hold their exact measure so a lone half-width var reads as
-       half a row. Only `fill` grows. Gap is 10px. */
+       half a row. Only `fill` grows. */
     .variable[data-size="full"] {
       flex: 0 0 100%;
     }
 
     .variable[data-size="half"] {
-      flex: 0 0 calc(50% - 5px);
+      flex: 0 0 50%;
     }
 
     .variable[data-size="third"] {
-      flex: 0 0 calc(33.333% - 6.667px);
+      flex: 0 0 33.333%;
     }
 
     .variable[data-size="fourth"] {
-      flex: 0 0 calc(25% - 7.5px);
+      flex: 0 0 25%;
     }
 
     .variable[data-size="auto"] {
@@ -700,70 +723,241 @@ button.btn-palette {
       flex: 1 1 0;
     }
 
-    .variable .field-wrapper {
-      .label-wrapper {
-        margin-bottom: 10px;
-      }
+    /* The var's own field only — a var's link or image modal is a descendant
+       of `.variable`, and must keep its own form styling. Select wraps its
+       field in one more div. */
+    .variable > div > .brando-input > .field-wrapper,
+    .variable > div > .brando-input > div > .field-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 2px;
+      margin: 0;
 
-      .multiselect {
-        background-color: #ffffff;
-      }
-    }
+      > .label-wrapper {
+        flex: 0 1 auto;
+        max-width: 45%;
+        margin: 0;
+        display: flex;
+        align-items: center;
 
-    /* Var labels in normal case: long labels ("File (instead of the link,
-       e.g. a CV)") are unreadable in mono capitals. */
-    label.control-label {
-      @font main;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    input[type="text"] {
-      @font mono;
-      font-size: 14px;
-      padding: 1em 0.7em;
-      background-color: #fafafa;
-      height: auto;
-
-      &::placeholder {
-        @font mono;
-        font-size: 14px;
-      }
-    }
-
-    textarea.text {
-      @font mono;
-      font-size: 14px;
-      padding: 1em 0.7em;
-      background-color: white;
-      height: auto;
-    }
-
-    /* A var's editing modal (link picker, image picker, …) is a descendant of
-       `.variable`, not a portal, so every rule above cascades into it. The var
-       widget sizing outranked `.modal-content input.text` on specificity and
-       rendered the modal's fields 50px tall with 14px of vertical padding.
-       Hand the modal's own chrome back — values mirror Modal.css. */
-    .modal-content {
-      input[type="text"],
-      textarea.text {
-        font-family: inherit;
-        padding: 0 12px;
-        height: 40px;
-
-        &::placeholder {
-          font-family: inherit;
+        label.control-label {
+          @font main;
+          font-size: 12px;
+          font-weight: 400;
+          line-height: 1.3;
+          color: var(--vars-muted);
+          text-transform: none;
+          letter-spacing: 0;
         }
       }
 
-      textarea.text {
-        padding: 12px;
-        height: auto;
+      > .field-base {
+        flex: 1 1 0;
+        min-width: 0;
       }
 
-      label.control-label {
-        font-size: 12px;
+      /* Instructions go under the line, across the cell */
+      > .meta {
+        flex: 0 0 100%;
+        font-size: 11px;
+        color: var(--vars-faint);
+
+        &:not(:has(.help-text:not([hidden]))) {
+          display: none;
+        }
       }
+
+      input.text {
+        @font main;
+        font-size: 14px;
+        height: 30px;
+        width: calc(100% + 6px);
+        margin-left: -6px;
+        padding: 0 6px;
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        box-shadow: none;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+
+        &::placeholder {
+          @font main;
+          font-size: 14px;
+          color: var(--vars-faint);
+        }
+
+        &:hover {
+          border-color: var(--vars-line);
+        }
+
+        &:focus {
+          background-color: var(--brando-color-input);
+          border-color: var(--brando-color-blue);
+          outline: none;
+        }
+      }
+    }
+
+    /* Switches read like a checklist: switch, then its label */
+    .variable.boolean > div > .brando-input > .field-wrapper {
+      flex-wrap: nowrap;
+      column-gap: 10px;
+
+      > .field-base,
+      > .field-base > .boolean-control {
+        display: contents;
+      }
+
+      .switch {
+        order: 1;
+      }
+
+      > .label-wrapper {
+        order: 2;
+        max-width: none;
+
+        label.control-label {
+          color: var(--brando-color-foreground);
+          cursor: pointer;
+        }
+      }
+
+      .boolean-instructions {
+        order: 3;
+        display: flex;
+        color: var(--vars-faint);
+      }
+
+      > .meta {
+        order: 4;
+      }
+    }
+
+    .variable.boolean:has(input[type="checkbox"]:not(:checked))
+      > div > .brando-input > .field-wrapper > .label-wrapper label.control-label {
+      color: var(--vars-muted);
+    }
+
+    /* A select shows its value and a chevron; the whole value opens it */
+    .variable.select .multiselect {
+      width: auto;
+      height: 30px;
+      display: inline-flex;
+      justify-content: flex-start;
+      gap: 6px;
+      padding: 0 22px 0 0;
+      border: 0;
+      box-shadow: none;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23626d67' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+        no-repeat right 2px center / 14px;
+      cursor: pointer;
+
+      .select-label {
+        @font main;
+        font-size: 14px;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .button-edit {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
+    }
+
+    .variable.color .picker {
+      .circle {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      .color-hex {
+        @font mono;
+        font-size: 12px;
+        margin-left: 8px;
+      }
+
+      button.clear-color {
+        margin-left: 6px;
+      }
+    }
+
+    /* An unset link reads as an action, not as a dashed box */
+    .variable.link .link-preview {
+      gap: 8px;
+      padding: 3px 8px 3px 3px;
+      margin-left: -3px;
+      background-color: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      max-width: 100%;
+
+      &:hover {
+        border-color: var(--vars-line);
+      }
+
+      .icon {
+        width: 22px;
+        height: 22px;
+        background-color: transparent;
+        border: 1px solid var(--vars-line);
+
+        span {
+          width: 12px;
+          height: 12px;
+        }
+      }
+
+      .info {
+        @font main;
+        font-size: 13px;
+        text-transform: none;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        dl,
+        dt {
+          margin: 0;
+          font-weight: 400;
+        }
+
+        dl:not(:has(dd)) dt {
+          color: var(--vars-faint);
+        }
+      }
+    }
+
+    /* Rich text, long text and media don't fit on a line: their label goes
+       above, as a small heading, and the control gets the cell. */
+    .variable:is(.text, .html, .image, .file, .video, .gallery) {
+      padding-top: 10px;
+      padding-bottom: 12px;
+    }
+
+    .variable:is(.text, .html, .image, .file, .video, .gallery) > div > .brando-input > .field-wrapper {
+      display: block;
+
+      > .label-wrapper {
+        max-width: none;
+        margin-bottom: 8px;
+      }
+    }
+
+    .variable.text textarea.text {
+      @font main;
+      font-size: 14px;
+      padding: 8px 10px;
+      background-color: var(--brando-color-input);
+      height: auto;
     }
 
     .datetime-wrapper {
@@ -782,6 +976,15 @@ button.btn-palette {
         }
       }
     }
+  }
+
+  /* A very wide block moves its variables into a panel on the right, next to
+     the content, instead of stretching them across the screen. Inside the
+     panel the module editor's order and row breaks still hold; switches,
+     choices and colours go two to a line and everything else takes the
+     panel's width. */
+  .block-content {
+    container: block-content / inline-size;
   }
 
   .helpful-actions {
@@ -2039,5 +2242,71 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
+  }
+}
+
+/* The side panel for very wide blocks (see `.block-vars` in `.block` above).
+   Spelled `@Container` because EuropaCSS still claims the lowercase at-rule
+   for its deprecated container-spacing shorthand and rejects any block with
+   children. At-rule names are case-insensitive in CSS, so browsers read this
+   as a normal container query. */
+@Container block-content (min-width: 1200px) {
+  .block [b-editor-tpl]:has(> .block-vars-wrapper > .block-vars) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    align-items: start;
+
+    > * {
+      grid-column: 1;
+    }
+
+    > .block-vars-wrapper {
+      grid-column: 2;
+      grid-row: 1 / span 20;
+      position: sticky;
+      top: 80px;
+      border-top: 0;
+      border-left: 1px solid #eee;
+      padding: 12px 14px;
+
+      > .vars-info {
+        display: flex;
+        margin-bottom: 4px;
+      }
+
+      .block-vars-row {
+        flex-wrap: wrap;
+      }
+
+      .variable,
+      .variable:first-child {
+        flex: 0 0 100%;
+        padding-left: 0;
+        border-left: 0;
+      }
+
+      .variable:is(.boolean, .select, .color) {
+        flex: 0 0 50%;
+      }
+
+      /* Swatch, hex and clear button need more than half the panel beside a
+         label; let them drop under the label instead of spilling out. */
+      .variable.color > div > .brando-input > .field-wrapper > .field-base {
+        flex: 1 0 auto;
+      }
+
+      .variable + .variable {
+        border-top: 1px solid var(--vars-line);
+      }
+
+      .variable:is(.boolean, .select, .color) + .variable:is(.boolean, .select, .color):nth-child(even) {
+        border-top: 0;
+      }
+
+      .variable:is(.boolean, .select, .color) + .variable:is(.boolean, .select, .color):nth-child(even) {
+        padding-left: 12px;
+        border-left: 1px solid var(--vars-line);
+      }
+    }
   }
 }
