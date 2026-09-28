@@ -1166,7 +1166,9 @@ button.btn-palette {
         min-width: 0;
         height: 30px;
         margin-left: -6px;
-        padding: 1px 6px 0;
+        /* Input text snaps to whole pixels: 1px left it 0.5px high, 2px
+           leaves it 0.45px low, which reads better */
+        padding: 2px 6px 0;
         font: 14px/20px "Main", sans-serif;
         background-color: transparent;
         border: 1px solid transparent;
