@@ -486,4 +486,54 @@ defmodule Brando.Translations.ComputePendingTest do
     assert {:awaiting_translation, "entry_blocks/a/vars/project/identifier/3"} in kinds(result)
     refute Enum.any?(result.work_items, &(&1.kind == :shared_update))
   end
+
+  describe "URL links" do
+    defp url_link(url), do: %Var{key: "cta", type: :link, link_type: :url, value: url, label: "cta"}
+
+    test "a changed URL is reviewed; the translation keeps its own" do
+      source = article(:no, blocks: [block("a", vars: [url_link("/no/om-oss")])])
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [url_link("/en/about")])])
+      base = baseline(source)
+
+      result =
+        compute(
+          put_in(source.entry_blocks, [
+            %{hd(source.entry_blocks) | block: %{hd(source.entry_blocks).block | vars: [url_link("/no/kontakt")]}}
+          ]),
+          target,
+          base
+        )
+
+      [join] = result.payload.entry_blocks
+
+      assert hd(join.block.vars).value == "/en/about"
+      assert {:review, "entry_blocks/a/vars/cta/url"} in kinds(result)
+    end
+
+    test "a new URL link starts from the source's URL, to translate" do
+      source = article(:no, blocks: [block("a", vars: [url_link("/no/om-oss")])])
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [])])
+
+      result = compute(source, target, baseline(source))
+      [join] = result.payload.entry_blocks
+
+      assert hd(join.block.vars).value == "/no/om-oss"
+      assert {:translate, "entry_blocks/a/vars/cta/url"} in kinds(result)
+    end
+
+    test "a link that changes kind in the source follows it, from the source's value" do
+      source = article(:no, blocks: [block("a", vars: [url_link("/no/om-oss")])])
+
+      entry = %Var{key: "cta", type: :link, link_type: :identifier, identifier_id: 3, label: "cta"}
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [entry])])
+
+      result = compute(source, target, baseline(source))
+      [var] = hd(result.payload.entry_blocks).block.vars
+
+      assert var.link_type == :url
+      assert var.value == "/no/om-oss"
+      assert var.identifier_id == nil
+      assert {:shared_update, "entry_blocks/a/vars/cta/media"} in kinds(result)
+    end
+  end
 end

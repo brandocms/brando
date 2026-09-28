@@ -424,6 +424,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp block_part(["refs", name, "gallery" | _]), do: [humanize(name), gettext("gallery")]
   defp block_part(["refs", name, field]), do: [humanize(name), humanize(field)]
   defp block_part(["vars", key, "media"]), do: [humanize(key), gettext("media")]
+  defp block_part(["vars", key, "url"]), do: [humanize(key), "URL"]
   defp block_part(["vars", key | _]), do: [humanize(key)]
   defp block_part(["rows", _row, "vars", key | _]), do: [gettext("Table"), humanize(key)]
   defp block_part(["identifiers" | _]), do: [gettext("Related entries")]

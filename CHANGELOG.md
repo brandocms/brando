@@ -419,7 +419,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
     pointing at the source-language content instead of being emptied, and
     moves once that version exists. Identifiers made before a schema was
     translatable are mapped by their entry's language.
-  - Link pickers offer content in the entry's language.
+  - Link pickers offer content in the entry's language. A link's typed URL
+    is kept per language like text (translate when new, review when the
+    source changes it); whether a link points at an entry or a URL follows
+    the source.
+  - A content transfer that updates a synchronized source queues its
+    translations' sync, as a save does.
   - Creating a translation keeps the source's text instead of the duplicate's
     "(copy)" marks, leaves out child pages and fragments, and requires a
     duplicate mutation in the context (`{:error, :not_duplicable}` otherwise,

@@ -754,6 +754,10 @@ defmodule Brando.Content.Transfer do
                        entry,
                        if(is_map(identifier), do: identifier.id)
                      ),
+                   # Transfer writes past the Blueprint's after-save: a
+                   # synchronized source queues its translations' sync here,
+                   # and a synchronized translation its own recompute
+                   _ <- Brando.Translations.source_saved(entry),
                    do: :ok
             end
           rescue

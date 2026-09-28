@@ -185,6 +185,31 @@ defmodule Brando.TranslationsTest do
     assert pending(target) == nil
   end
 
+  test "a content transfer that updates a source queues its translations' sync", c do
+    {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    Translations.target_saved(Article, target.id)
+
+    # A transfer writes past the Blueprint's after-save
+    Repo.update_all(from(a in Article, where: a.id == ^c.source.id), set: [year: 2031])
+
+    receipt =
+      Repo.insert!(%Brando.Content.Transfer.Receipt{
+        id: Ecto.UUID.generate(),
+        package_id: "test",
+        fingerprint: "test",
+        scope: "public",
+        actor_id: c.user.id,
+        before: %{},
+        after: %{"field" => %{"schema" => to_string(Article), "id" => c.source.id}},
+        mappings: %{}
+      })
+
+    Brando.Content.Transfer.refresh_receipt(receipt, c.user)
+
+    assert Enum.any?(pending(target).work_items, &(&1.kind == :shared_update and &1.path == "year"))
+    assert Translations.decode_payload(pending(target)).year == 2031
+  end
+
   test "saving the source records pending work without touching the translation", c do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
     translate(target, ["First paragraph", "Second paragraph"])

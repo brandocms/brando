@@ -411,18 +411,35 @@ defmodule Brando.Translations.Sync do
 
   defp flatten_var(var, parent_prefix, controlled? \\ false) do
     prefix = "#{parent_prefix}/#{var.key}"
-    media = {prefix <> "/media", :shared, Map.take(var, [:identifier_id | @media_fks])}
+    # A link's kind (an entry or a URL) follows the source like its target does
+    media = {prefix <> "/media", :shared, Map.take(var, [:identifier_id | @media_fks] ++ link_kind(var))}
 
-    value =
+    values =
       cond do
-        controlled? -> {prefix <> "/value", :shared, Map.take(var, @var_values)}
-        var.type in Translation.translatable_var_types() -> {prefix <> "/value", :text, var.value}
-        var.type == :link -> {prefix <> "/link_text", :text, var.link_text}
-        true -> {prefix <> "/value", :local, Map.take(var, [:value, :value_boolean])}
+        controlled? ->
+          [{prefix <> "/value", :shared, Map.take(var, @var_values)}]
+
+        var.type in Translation.translatable_var_types() ->
+          [{prefix <> "/value", :text, var.value}]
+
+        # A typed URL is often language-specific (a /no/ path, a localized
+        # site), so it is text: kept per language, reviewed when the source's
+        # changes, and started from the source's when the link is new
+        var.type == :link and var.link_type == :url ->
+          [{prefix <> "/link_text", :text, var.link_text}, {prefix <> "/url", :text, var.value}]
+
+        var.type == :link ->
+          [{prefix <> "/link_text", :text, var.link_text}]
+
+        true ->
+          [{prefix <> "/value", :local, Map.take(var, [:value, :value_boolean])}]
       end
 
-    [media, value]
+    [media | values]
   end
+
+  defp link_kind(%{type: :link}), do: [:link_type]
+  defp link_kind(_var), do: []
 
   defp flatten_identifier_metas(%{identifier_metas: metas}, prefix) when is_map(metas) do
     for {identifier, fields} <- Enum.sort(metas), is_map(fields), {field, value} <- Enum.sort(fields) do
@@ -630,13 +647,28 @@ defmodule Brando.Translations.Sync do
           clone(source_var)
 
         target_var ->
-          Map.merge(target_var, Map.take(source_var, var_shared_fields(source_var.key in controlled)))
+          Map.merge(
+            target_var,
+            Map.take(source_var, var_shared_fields(source_var) ++ controlled_fields(source_var, controlled))
+          )
+          |> restart_changed_link(source_var, target_var)
       end
     end)
   end
 
-  defp var_shared_fields(false), do: [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs]
-  defp var_shared_fields(true), do: var_shared_fields(false) ++ @var_values
+  # A link that changed kind in the source (an entry to a URL, or back) starts
+  # over from the source's value; the translation's old one belonged to the
+  # other kind.
+  defp restart_changed_link(merged, %{type: :link, link_type: kind} = source_var, %{link_type: old})
+       when kind != old,
+       do: Map.merge(merged, Map.take(source_var, [:value, :link_text]))
+
+  defp restart_changed_link(merged, _source_var, _target_var), do: merged
+
+  defp controlled_fields(var, controlled), do: if(var.key in controlled, do: @var_values, else: [])
+
+  defp var_shared_fields(var),
+    do: [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs ++ link_kind(var)]
 
   defp merge_rows(source_rows, target_rows) do
     source_ids = row_identities(source_rows)

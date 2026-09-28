@@ -131,8 +131,9 @@ imported entry arrives on its own: link language versions again from the
 editor's **Languages** button. Existing alternates cannot join a synchronized
 group, so for a synchronized schema transfer the source and create its
 translations on the destination with **Create a translation**. Updating a
-destination source through import does not queue its translations' sync;
-their pending versions follow its next save in the admin. Owned records are defined by Blueprint
+destination entry through import updates its translations as a save would: a
+synchronized source queues its translations' sync, and a synchronized
+translation gets its pending version recomputed. Owned records are defined by Blueprint
 embeds, cast-enabled child relations and `:entries` relations. Other belongs-to
 and cast-enabled many-to-many relationships use reviewed dependency mappings.
 
