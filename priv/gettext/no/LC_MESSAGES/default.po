@@ -13101,3 +13101,11 @@ msgstr "Alt"
 #, elixir-autogen, elixir-format
 msgid "missing in %{languages}"
 msgstr "mangler på %{languages}"
+
+#, elixir-autogen, elixir-format
+msgid "A section holds other blocks, with its own background and spacing."
+msgstr "En seksjon rommer andre blokker, med egen bakgrunn og avstand."
+
+#, elixir-autogen, elixir-format
+msgid "A fragment is shared content, edited in one place and shown the same wherever it is inserted."
+msgstr "Et fragment er delt innhold: det redigeres ett sted og vises likt overalt der det er satt inn."

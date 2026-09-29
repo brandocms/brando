@@ -536,7 +536,24 @@ section.alert.danger {
     outline: 2px solid var(--brando-color-blue);
     outline-offset: 2px;
   }
+
+  /* Marked from the search field with ↑↓; Enter inserts it */
+  &.is-keyboard {
+    border-color: var(--brando-color-foreground);
+    box-shadow: 0 0 0 2px var(--brando-color-blue);
+  }
 }
+
+/* Pinned near the top: the results shrink and grow as you type, and a
+   centred dialog jumped with them */
+.modal:has(.module-picker) {
+  align-items: flex-start;
+
+  > .modal-dialog { margin-top: 6vh; }
+}
+
+/* A group with no matches for the search */
+.module-picker-namespace.is-empty { opacity: 0.45; }
 
 .module-card-body {
   display: flex;

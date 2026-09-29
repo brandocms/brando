@@ -20,15 +20,19 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   def render(assigns) do
     groups = visible_groups(assigns)
 
-    # Counts come from the unfiltered set so the sidebar stays a stable map of
-    # what exists, rather than flickering as you type.
+    # Counts follow the search: each group says how many of its modules match,
+    # so you can see where else a name turns up while one group is selected.
+    query = String.trim(assigns[:query] || "")
+
     namespace_counts =
       for {translated_namespace, _map, modules} <- assigns.modules_by_namespace,
           translated_namespace not in [nil, ""],
-          do: {translated_namespace, length(modules)}
+          do: {translated_namespace, Enum.count(modules, &matches?(&1, query))}
 
     total_count =
-      Enum.reduce(assigns.modules_by_namespace, 0, fn {_, _, modules}, acc -> acc + length(modules) end)
+      Enum.reduce(assigns.modules_by_namespace, 0, fn {_, _, modules}, acc ->
+        acc + Enum.count(modules, &matches?(&1, query))
+      end)
 
     assigns =
       assigns
@@ -51,6 +55,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               :if={!@hide_sections}
               type="button"
               phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
+              data-popover={gettext("A section holds other blocks, with its own background and spacing.")}
             >
               <.icon name="hero-window" />
               {gettext("Container")}
@@ -59,6 +64,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               :if={!@hide_fragments}
               type="button"
               phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
+              data-popover={
+                gettext("A fragment is shared content, edited in one place and shown the same wherever it is inserted.")
+              }
             >
               <.icon name="hero-puzzle-piece" />
               {gettext("Fragment")}
@@ -76,6 +84,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               phx-target={@myself}
               phx-debounce="120"
               phx-mounted={JS.focus()}
+              phx-hook="Brando.ModulePickerKeys"
+              id={"#{@id}-search"}
               autocomplete="off"
               spellcheck="false"
               placeholder={gettext("Search modules")}
@@ -101,7 +111,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
             >
               <button
                 type="button"
-                class={["module-picker-namespace", (@query == "" and is_nil(@active_namespace)) && "active"]}
+                class={["module-picker-namespace", is_nil(@active_namespace) && "active"]}
                 phx-click="toggle_namespace"
                 phx-target={@myself}
                 phx-value-id=""
@@ -113,7 +123,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                 :for={{namespace, count} <- @namespace_counts}
                 :key={namespace}
                 type="button"
-                class={["module-picker-namespace", (@query == "" and @active_namespace == namespace) && "active"]}
+                class={["module-picker-namespace", @active_namespace == namespace && "active", count == 0 && "is-empty"]}
                 phx-click="toggle_namespace"
                 phx-target={@myself}
                 phx-value-id={namespace}
@@ -340,9 +350,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   @doc false
-  # What the grid shows: `{namespace, modules}` pairs, already filtered by the
-  # search box and the selected group. Searching deliberately ignores the group
-  # selection — typing a name you remember should find it wherever it lives.
+  # What the grid shows: `{namespace, modules}` pairs, filtered by the search
+  # box within the selected group ("Everything" searches all). The group rail
+  # counts the matches in every group, so another group's hits stay in view.
   def visible_groups(assigns) do
     query = String.trim(assigns[:query] || "")
 
@@ -351,7 +361,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       {presentable_namespace(translated_namespace), modules}
     end)
     |> then(fn groups ->
-      if query == "" and assigns[:active_namespace],
+      if assigns[:active_namespace],
         do: Enum.filter(groups, fn {ns, _} -> ns == assigns.active_namespace end),
         else: groups
     end)

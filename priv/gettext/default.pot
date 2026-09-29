@@ -13095,3 +13095,11 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "missing in %{languages}"
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "A section holds other blocks, with its own background and spacing."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "A fragment is shared content, edited in one place and shown the same wherever it is inserted."
+msgstr ""
