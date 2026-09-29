@@ -22,7 +22,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
         %{event: "open_block_upload_browser"} = assigns,
         socket
       ) do
-    config_target = assigns[:config_target] || socket.assigns.config_target || "default"
+    # Each opening names its own target. Falling back to the previous one left
+    # a block's upload scoped to whatever field opened the picker last.
+    config_target = assigns[:config_target] || "default"
     recent_folders = assigns[:recent_folders] || socket.assigns.recent_folders
 
     {:ok,
