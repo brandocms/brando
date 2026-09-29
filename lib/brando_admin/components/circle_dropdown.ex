@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.CircleDropdown do
   @moduledoc false
   use BrandoAdmin, :component
+  use Gettext, backend: Brando.Gettext
 
   def update(assigns, socket) do
     {:ok,
@@ -16,6 +17,10 @@ defmodule BrandoAdmin.Components.CircleDropdown do
         class="circle-dropdown-button"
         data-testid="circle-dropdown-button"
         type="button"
+        aria-label={assigns[:label] || gettext("Actions")}
+        title={assigns[:label] || gettext("Actions")}
+        aria-haspopup="menu"
+        aria-controls={@id}
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >

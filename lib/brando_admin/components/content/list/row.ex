@@ -79,7 +79,13 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <.alternates :if={@alternates?} entry={@entry} target={@myself} schema={@schema} />
         <.translation_status entry={@entry} schema={@schema} />
         <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
-        <.entry_menu schema={@schema} content_language={@content_language} entry={@entry} listing={@listing} />
+        <.entry_menu
+          schema={@schema}
+          content_language={@content_language}
+          entry={@entry}
+          listing={@listing}
+          current_user={assigns[:current_user]}
+        />
       </div>
 
       <%= if @show_children do %>
@@ -225,6 +231,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :content_language, :string
   attr :entry, :map
   attr :listing, :map
+  attr :current_user, :any, default: nil
 
   def entry_menu(assigns) do
     language = Map.get(assigns.entry, :language)
@@ -280,7 +287,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           language={@language}
           event="edit_entry"
         >
-          {gettext("Edit")} {@translated_singular}
+          {gettext("Edit")}
         </.action_button>
         <.action_button
           :if={BrandoAdmin.Authorization.allowed?(:delete, @entry)}
@@ -293,7 +300,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           confirm_label={gettext("Delete")}
           describe="describe_delete"
         >
-          {gettext("Delete")} {@translated_singular}
+          {gettext("Delete")}
         </.action_button>
         <.action_button
           :if={
@@ -305,7 +312,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           language={@language}
           event="duplicate_entry"
         >
-          {gettext("Duplicate")} {@translated_singular}
+          {gettext("Duplicate")}
         </.action_button>
         <.action_button
           :for={lang <- @duplicate_langs}
@@ -342,7 +349,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {gettext("Create translation")} [{String.upcase(lang)}]
         </.action_button>
         <.action_button
-          :if={@has_blocks? && BrandoAdmin.Authorization.allowed?(:publish, @entry)}
+          :if={@has_blocks? && superuser?(@current_user) && BrandoAdmin.Authorization.allowed?(:publish, @entry)}
           id={"action_#{@listing.name}_rerender_entry_#{@entry.id}"}
           entry_id={@entry.id}
           language={@language}
@@ -372,7 +379,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         language={@language}
         event="undelete_entry"
       >
-        {gettext("Undelete")} {@translated_singular}
+        {gettext("Undelete")}
       </.action_button>
     </CircleDropdown.render>
     """
@@ -757,7 +764,13 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <.alternates :if={@alternates?} entry={@entry} target={@target} schema={@schema} />
       <.translation_status entry={@entry} schema={@schema} />
       <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
-      <.entry_menu schema={@schema} entry={@entry} content_language={@content_language} listing={@listing} />
+      <.entry_menu
+        schema={@schema}
+        entry={@entry}
+        content_language={@content_language}
+        listing={@listing}
+        current_user={assigns[:current_user]}
+      />
     </div>
     """
   end
@@ -835,4 +848,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     |> Enum.map(& &1[:value])
     |> Enum.reject(&(&1 == content_language))
   end
+
+  defp superuser?(%{role: :superuser}), do: true
+  defp superuser?(_user), do: false
 end

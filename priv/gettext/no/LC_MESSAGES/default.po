@@ -1645,7 +1645,7 @@ msgstr "Legg til alternativ"
 #: lib/brando_admin/live/users/groups_live.ex:1038
 #, elixir-autogen, elixir-format
 msgid "Duplicate"
-msgstr "Duplisér"
+msgstr "Dupliser"
 
 #: lib/brando_admin/components/content/list/row.ex:267
 #: lib/brando_admin/components/form/subform.ex:194
@@ -4449,12 +4449,12 @@ msgstr[1] "Slettet %{count} arkiver."
 #: lib/brando_admin/components/form/module_props.ex:284
 #, elixir-autogen, elixir-format
 msgid "Duplicate reference %{name}"
-msgstr "Duplisér referansen %{name}"
+msgstr "Dupliser referansen %{name}"
 
 #: lib/brando_admin/components/form/var_layout.ex:400
 #, elixir-autogen, elixir-format
 msgid "Duplicate variable %{key}"
-msgstr "Duplisér variabelen %{key}"
+msgstr "Dupliser variabelen %{key}"
 
 #: lib/brando_admin/live/config/site_live.ex:70
 #, elixir-autogen, elixir-format
