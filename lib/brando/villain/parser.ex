@@ -261,7 +261,9 @@ defmodule Brando.Villain.Parser do
   def adapter_for(:heex), do: TemplateAdapter.Heex
   def adapter_for(nil), do: TemplateAdapter.Liquex
 
-  def header(%{text: nil}, _), do: ""
+  # An empty header (a module whose header ref is left blank) renders nothing,
+  # not an empty <h2></h2>.
+  def header(%{text: text}, _) when text in [nil, ""], do: ""
 
   def header(%{text: text, level: level, anchor: anchor}, opts) do
     h = parser_module(opts).header(%{text: text, level: level}, opts)
@@ -447,6 +449,8 @@ defmodule Brando.Villain.Parser do
 
     if opts[:annotate_blocks], do: html |> annotate_children(slot.uid) |> IO.iodata_to_binary(), else: html
   end
+
+  def text(%{text: text}, _) when text in [nil, ""], do: ""
 
   def text(%{text: text} = params, _) do
     case Map.get(params, :type) do

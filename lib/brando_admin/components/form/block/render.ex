@@ -2084,6 +2084,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               type={:textarea}
               field={block_data[:text]}
               class={"h#{block_data[:level].value}"}
+              placeholder={block_data[:placeholder].value}
               phx-debounce={300}
               data-autosize={true}
               rows={1}
@@ -2117,6 +2118,16 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       </button>
     </.inputs_for>
     """
+  end
+
+  # The ref's own placeholder, when its module sets one, replaces the editor's
+  # generic "Write something…".
+  defp text_labels(placeholder) do
+    labels = BrandoAdmin.Components.Form.Input.RichTextLabels.labels()
+
+    labels
+    |> then(&if(placeholder in [nil, ""], do: &1, else: Map.put(&1, :placeholder, placeholder)))
+    |> Jason.encode!()
   end
 
   def text(assigns) do
@@ -2153,6 +2164,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign(:extensions, extensions)
       |> assign(:styles, styles)
       |> assign(:footnotes, assigns[:footnotes_enabled] == true)
+      |> assign(:labels, text_labels(Changeset.get_field(block_data_cs, :placeholder)))
 
     ~H"""
     <.inputs_for :let={text_block_data} field={@block[:data]}>
@@ -2176,6 +2188,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <:config>
             <Input.hidden field={text_block_data[:footnotes]} />
             <Input.hidden field={text_block_data[:footnote_module_set]} />
+            <Input.hidden field={text_block_data[:placeholder]} />
             <Input.radios
               field={text_block_data[:type]}
               label="Type"
@@ -2202,7 +2215,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 data-block-uid={@uid}
                 data-tiptap-extensions={@extensions}
                 data-tiptap-styles={@styles}
-                data-tiptap-labels={Jason.encode!(BrandoAdmin.Components.Form.Input.RichTextLabels.labels())}
+                data-tiptap-labels={@labels}
                 data-tiptap-label={@ref_description || @ref_name || gettext("Text")}
                 data-footnotes={@footnotes && "true"}
                 data-footnote-ref={@ref_name}

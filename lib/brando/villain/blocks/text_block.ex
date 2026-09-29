@@ -60,12 +60,14 @@ defmodule Brando.Villain.Blocks.TextBlock do
       field :extensions, {:array, :string}
       field :footnotes, :boolean, default: false
       field :footnote_module_set, :string, default: "Footnotes"
+      # Shown greyed in the empty editor; never part of the text.
+      field :placeholder, :string
       embeds_many :styles, Style, on_replace: :delete
     end
 
     def changeset(struct, params \\ %{}) do
       struct
-      |> cast(params, ~w(text type extensions footnotes footnote_module_set)a)
+      |> cast(params, ~w(text type extensions footnotes footnote_module_set placeholder)a)
       |> update_change(:extensions, fn
         nil -> nil
         values -> values |> Enum.reject(&(&1 == "")) |> Enum.map(&if(is_nil(&1), do: "all", else: &1))

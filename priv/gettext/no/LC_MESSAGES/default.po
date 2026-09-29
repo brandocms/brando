@@ -13121,3 +13121,8 @@ msgstr "Bruk eksisterende"
 #, elixir-autogen, elixir-format
 msgid "Upload anyway"
 msgstr "Last opp likevel"
+
+#: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#, elixir-autogen, elixir-format
+msgid "Shown greyed in the empty field. Never saved as text."
+msgstr "Vises grått i det tomme feltet. Lagres aldri som tekst."

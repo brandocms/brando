@@ -92,6 +92,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:level]} label={gettext("Level")} />
       <Input.text field={block_data[:text]} label={gettext("Text")} />
+      <Input.text
+        field={block_data[:placeholder]}
+        label={gettext("Placeholder")}
+        instructions={gettext("Shown greyed in the empty field. Never saved as text.")}
+      />
       <Input.text field={block_data[:id]} label={gettext("ID")} />
       <Input.text field={block_data[:link]} label={gettext("Link")} />
     </Primitives.inputs_for_block>
@@ -208,6 +213,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
           ai: nil
         ]}
         instructions={gettext("Try the selected tools here. This text is used as the default for new blocks.")}
+      />
+      <Input.text
+        field={block_data[:placeholder]}
+        label={gettext("Placeholder")}
+        instructions={gettext("Shown greyed in the empty field. Never saved as text.")}
       />
       <Input.hidden field={block_data[:type]} />
       <Input.toggle field={block_data[:footnotes]} label={gettext("Footnotes")} />

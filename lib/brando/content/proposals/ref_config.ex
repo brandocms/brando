@@ -15,6 +15,11 @@ defmodule Brando.Content.Proposals.RefConfig do
               video_config_target gallery allowed_types footnotes footnote_module_set extensions formats srcset
               media_queries remote_id source thumbnail_url url poster_url file_id image_id video_id)a
 
+  # A text or header ref's placeholder is the module's hint for an empty field,
+  # set in its definition; it isn't a setting of the block. (On pictures and
+  # galleries `placeholder` is a display setting, so it stays there.)
+  @definition_only %{"text" => [:placeholder], "header" => [:placeholder]}
+
   # A media slot can hold any of these, each with its own settings.
   @media_types ~w(picture video gallery)
 
@@ -36,8 +41,12 @@ defmodule Brando.Content.Proposals.RefConfig do
   @spec keys(String.t()) :: [atom()]
   def keys(type) do
     case data_module(type) do
-      nil -> []
-      data -> data.__schema__(:fields) -- (data.__schema__(:embeds) ++ data.__schema__(:primary_key) ++ @content)
+      nil ->
+        []
+
+      data ->
+        data.__schema__(:fields) --
+          (data.__schema__(:embeds) ++ data.__schema__(:primary_key) ++ @content ++ Map.get(@definition_only, type, []))
     end
   end
 
