@@ -5,6 +5,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
   alias BrandoAdmin.Components.Content
 
+  # The "Recently used" rail entry. Not a namespace a module can have.
+  @recent_key "__recent"
+  @recent_limit 5
+
   def mount(socket) do
     {:ok,
      assign(socket,
@@ -13,7 +17,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
        show: false,
        query: "",
        collection: false,
-       modules_by_namespace: []
+       modules_by_namespace: [],
+       recent_ids: [],
+       recent_key: @recent_key
      )}
   end
 
@@ -39,40 +45,20 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       |> assign(:groups, groups)
       |> assign(:namespace_counts, namespace_counts)
       |> assign(:total_count, total_count)
+      |> assign(:recent_count, length(recent_modules(assigns)))
+      |> assign(:extras?, !assigns.collection and (!assigns[:hide_fragments] or !assigns[:hide_sections]))
 
+    # A palette: the search field is the header, the groups a rail on the
+    # left, and each module a row with its sketch, name and description. The
+    # first row is marked, so Enter inserts it straight from the search field.
     ~H"""
     <div>
       <Content.modal
         title={gettext("Add content block")}
         id={@id}
-        wide
+        layout="palette"
         close={JS.push("close_modal", target: @myself) |> hide_modal("##{@id}")}
       >
-        <:header :if={@show and !@collection and (!@hide_fragments or !@hide_sections)}>
-          <div class="module-picker-extras">
-            <span class="module-picker-extras-label">{gettext("Or insert")}</span>
-            <button
-              :if={!@hide_sections}
-              type="button"
-              phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
-              data-popover={gettext("A section holds other blocks, with its own background and spacing.")}
-            >
-              <.icon name="hero-window" />
-              {gettext("Container")}
-            </button>
-            <button
-              :if={!@hide_fragments}
-              type="button"
-              phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
-              data-popover={
-                gettext("A fragment is shared content, edited in one place and shown the same wherever it is inserted.")
-              }
-            >
-              <.icon name="hero-puzzle-piece" />
-              {gettext("Fragment")}
-            </button>
-          </div>
-        </:header>
         <div :if={@show} class="module-picker">
           <div class="module-picker-search">
             <.icon name="hero-magnifying-glass" />
@@ -88,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               id={"#{@id}-search"}
               autocomplete="off"
               spellcheck="false"
-              placeholder={gettext("Search modules")}
+              placeholder={gettext("Add a block – search modules…")}
               aria-label={gettext("Search modules")}
             />
             <button
@@ -101,14 +87,22 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
             >
               <.icon name="hero-x-mark" />
             </button>
+            <kbd class="module-picker-esc">esc</kbd>
           </div>
 
           <div class="module-picker-body">
-            <nav
-              :if={@namespace_counts != []}
-              class={["module-picker-namespaces", @query != "" && "is-searching"]}
-              aria-label={gettext("Module groups")}
-            >
+            <nav class={["module-picker-namespaces", @query != "" && "is-searching"]} aria-label={gettext("Module groups")}>
+              <button
+                :if={@recent_count > 0 and @query == ""}
+                type="button"
+                class={["module-picker-namespace", @active_namespace == @recent_key && "active"]}
+                phx-click="toggle_namespace"
+                phx-target={@myself}
+                phx-value-id={@recent_key}
+              >
+                <span class="label">{gettext("Recently used")}</span>
+                <span class="count">{@recent_count}</span>
+              </button>
               <button
                 type="button"
                 class={["module-picker-namespace", is_nil(@active_namespace) && "active"]}
@@ -131,36 +125,54 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                 <span class="label">{namespace}</span>
                 <span class="count">{count}</span>
               </button>
+
+              <div :if={@extras?} class="module-picker-extras">
+                <button
+                  :if={!@hide_sections}
+                  type="button"
+                  phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
+                  data-popover={gettext("A section holds other blocks, with its own background and spacing.")}
+                >
+                  <.icon name="hero-window" />
+                  {gettext("Container")}
+                </button>
+                <button
+                  :if={!@hide_fragments}
+                  type="button"
+                  phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
+                  data-popover={
+                    gettext("A fragment is shared content, edited in one place and shown the same wherever it is inserted.")
+                  }
+                >
+                  <.icon name="hero-puzzle-piece" />
+                  {gettext("Fragment")}
+                </button>
+              </div>
             </nav>
 
-            <div class="module-picker-results">
+            <div class="module-picker-results" data-query={@query}>
               <section :for={{namespace, modules} <- @groups} :key={namespace || "-"} class="module-picker-group">
                 <h3 :if={namespace not in [nil, ""]} class="module-picker-group-title">{namespace}</h3>
-                <div class="module-picker-grid">
-                  <button
-                    :for={module <- modules}
-                    :key={{module.library_origin, module.id}}
-                    type="button"
-                    class={["module-card", module.svg && "has-preview"]}
-                    data-color={module.color}
-                    aria-label={translate(module.name)}
-                    phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
-                    phx-value-module-id={Brando.Content.SharedLibrary.encode_reference(module.library_origin, module.id)}
-                  >
-                    <%!-- Only modules that actually ship an SVG get a preview
-                          box. Rendering an empty 16:9 placeholder for the rest
-                          made every card mostly dead space, which is the common
-                          case — most modules have no svg. --%>
-                    <figure :if={module.svg} class="module-card-preview">
-                      <img src={"data:image/svg+xml;base64,#{module.svg}"} alt="" />
-                    </figure>
-                    <span class="module-card-body">
-                      <span class="module-card-name">{translate(module.name)}</span>
+                <button
+                  :for={module <- modules}
+                  :key={{namespace, module.library_origin, module.id}}
+                  type="button"
+                  class="module-row"
+                  data-color={module.color}
+                  data-module-ref={Brando.Content.SharedLibrary.encode_reference(module.library_origin, module.id)}
+                  aria-label={translate(module.name)}
+                  phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
+                  phx-value-module-id={Brando.Content.SharedLibrary.encode_reference(module.library_origin, module.id)}
+                >
+                  <span class="module-row-sketch" aria-hidden="true">
+                    <img :if={module.svg} src={"data:image/svg+xml;base64,#{module.svg}"} alt="" />
+                    <.icon :if={!module.svg} name={module_icon(module)} />
+                  </span>
+                  <span class="module-row-text">
+                    <span class="module-row-name">
+                      {translate(module.name)}
                       <%!-- Origin only earns a badge when it distinguishes this
-                            module from the others on screen. With no shared
-                            library in play every module is site-local, so the
-                            old unconditional badge stamped an identical "site"
-                            on every card and said nothing. --%>
+                            module from the others on screen. --%>
                       <span :if={module.library_origin == :shared} class="badge">
                         <%= if module.source_module_id do %>
                           {gettext("customized")}
@@ -171,12 +183,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                       <span :if={module.update_available} class="badge warning">
                         {gettext("update available")}
                       </span>
-                      <span :if={translate(module.help_text) != ""} class="module-card-help">
-                        {translate(module.help_text)}
-                      </span>
                     </span>
-                  </button>
-                </div>
+                    <span :if={translate(module.help_text) != ""} class="module-row-help">
+                      {translate(module.help_text)}
+                    </span>
+                  </span>
+                  <span class="module-row-enter" aria-hidden="true">↵ {gettext("Insert")}</span>
+                </button>
               </section>
 
               <p :if={@groups == []} class="module-picker-empty">
@@ -184,6 +197,12 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               </p>
             </div>
           </div>
+
+          <footer class="module-picker-keys" aria-hidden="true">
+            <span><kbd>↑</kbd> <kbd>↓</kbd> {gettext("choose")}</span>
+            <span><kbd>↵</kbd> {gettext("insert")}</span>
+            <span><kbd>esc</kbd> {gettext("close")}</span>
+          </footer>
         </div>
       </Content.modal>
     </div>
@@ -231,7 +250,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     {:ok, set} =
       Brando.Content.get_module_set(%{
         matches: %{title: set_title, filter_modules: filter},
-        preload: [module_set_modules: :module],
+        preload: [module_set_modules: [module: :refs]],
         cache: {:ttl, :infinite}
       })
 
@@ -306,6 +325,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     |> then(&{:noreply, &1})
   end
 
+  # The search field's hook reads the recently used modules from the browser
+  # (this user's, on this site) when the picker opens.
+  def handle_event("set_recent", %{"ids" => ids}, socket) when is_list(ids) do
+    {:noreply, assign(socket, :recent_ids, Enum.filter(ids, &is_binary/1))}
+  end
+
+  # Enter inserts on keydown and closes the picker; its keyup still arrives
+  # as a search, and must not leave that text in the next picker.
+  def handle_event("search", _params, %{assigns: %{show: false}} = socket), do: {:noreply, socket}
+
   def handle_event("search", %{"value" => query}, socket) do
     {:noreply, assign(socket, :query, query)}
   end
@@ -350,24 +379,90 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   @doc false
-  # What the grid shows: `{namespace, modules}` pairs, filtered by the search
+  # What the list shows: `{namespace, modules}` pairs, filtered by the search
   # box within the selected group ("Everything" searches all). The group rail
   # counts the matches in every group, so another group's hits stay in view.
+  # Without a search, "Everything" starts with the recently used modules, which
+  # are then left out of their own groups; "Recently used" shows only those.
   def visible_groups(assigns) do
     query = String.trim(assigns[:query] || "")
+    recent = recent_modules(assigns)
 
-    assigns.modules_by_namespace
-    |> Enum.map(fn {translated_namespace, _namespace_map, modules} ->
-      {presentable_namespace(translated_namespace), modules}
-    end)
-    |> then(fn groups ->
-      if assigns[:active_namespace],
-        do: Enum.filter(groups, fn {ns, _} -> ns == assigns.active_namespace end),
-        else: groups
-    end)
+    groups =
+      Enum.map(assigns.modules_by_namespace, fn {translated_namespace, _namespace_map, modules} ->
+        {presentable_namespace(translated_namespace), modules}
+      end)
+
+    groups =
+      cond do
+        assigns[:active_namespace] == @recent_key ->
+          [{gettext("Recently used"), recent}]
+
+        assigns[:active_namespace] ->
+          Enum.filter(groups, fn {ns, _} -> ns == assigns.active_namespace end)
+
+        query == "" and recent != [] ->
+          recent_refs = MapSet.new(recent, &module_ref/1)
+
+          rest =
+            Enum.map(groups, fn {ns, modules} ->
+              {ns, Enum.reject(modules, &MapSet.member?(recent_refs, module_ref(&1)))}
+            end)
+
+          [{gettext("Recently used"), recent} | rest]
+
+        true ->
+          groups
+      end
+
+    groups
     |> Enum.map(fn {ns, modules} -> {ns, Enum.filter(modules, &matches?(&1, query))} end)
     |> Enum.reject(fn {_ns, modules} -> modules == [] end)
   end
+
+  # The recently used modules that are in this picker's set, most recent first.
+  defp recent_modules(assigns) do
+    case Map.get(assigns, :recent_ids, []) do
+      [] -> []
+      ids -> recent_modules(assigns, ids)
+    end
+  end
+
+  defp recent_modules(assigns, ids) do
+    by_ref =
+      for {_, _, modules} <- assigns.modules_by_namespace, module <- modules, into: %{} do
+        {module_ref(module), module}
+      end
+
+    ids
+    |> Enum.flat_map(&List.wrap(by_ref[&1]))
+    |> Enum.take(@recent_limit)
+  end
+
+  defp module_ref(module), do: Brando.Content.SharedLibrary.encode_reference(module.library_origin, module.id)
+
+  @doc false
+  # A module without its own sketch gets an icon for what it holds, read from
+  # its refs: namespaces are free text, so they can't pick one.
+  def module_icon(%{datasource: true}), do: "hero-queue-list"
+  def module_icon(%{multi: true}), do: "hero-rectangle-stack"
+
+  def module_icon(%{refs: refs}) when is_list(refs) do
+    types = Enum.map(refs, &ref_type/1)
+
+    cond do
+      "gallery" in types -> "hero-squares-2x2"
+      Enum.any?(types, &(&1 in ~w(picture video media))) -> "hero-photo"
+      "blocks" in types -> "hero-rectangle-group"
+      Enum.any?(types, &(&1 in ~w(text header))) -> "hero-bars-3-bottom-left"
+      true -> "hero-cube"
+    end
+  end
+
+  def module_icon(_module), do: "hero-cube"
+
+  defp ref_type(%{data: %{type: type}}) when not is_nil(type), do: to_string(type)
+  defp ref_type(_ref), do: nil
 
   defp presentable_namespace(namespace) when namespace in [nil, ""], do: nil
   defp presentable_namespace(namespace), do: namespace
@@ -427,6 +522,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
         {:ok, modules} =
           Brando.Content.list_modules(%{
             filter: filter,
+            preload: [:refs],
             cache: {:ttl, :infinite}
           })
 

@@ -291,385 +291,342 @@ section.alert.danger {
 
 /* ---------------------------------------------------------------- module picker
 
-   Replaces the peach accordion. Three things drove the redesign:
+   A palette: the search field is the header, the groups a rail on the left
+   (recently used, everything, each namespace, then sections and fragments),
+   and each module a row with its sketch, its name and its description under
+   it. The marked row (the first, until you move) is what Enter inserts. */
 
-   * you could not see what existed without opening groups one at a time
-   * there was no way to search, so finding a module meant remembering its group
-   * a full-width row per module wasted the modal's horizontal space
+.modal--palette > .modal-dialog {
+  width: 780px;
+}
 
-   So: a persistent group rail, a search field that spans every group, and a
-   card grid that gives each module's preview room to be recognisable.
-   Colours are all theme tokens, so this follows dark mode like everything else. */
+.modal--palette > .modal-dialog > .modal-content {
+  > .modal-header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    padding: 0;
+    border: 0;
+  }
+
+  > .modal-body {
+    padding: 0;
+    overflow: hidden;
+  }
+}
 
 .module-picker {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: min(72vh, 720px);
+  height: min(640px, calc(100dvh - 96px));
 }
 
 .module-picker-search {
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
   flex: 0 0 auto;
+  height: 54px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--modal-line, #dce2dc);
+  color: #8a958f;
 
-  /* `<.icon>` renders `<span data-icon>`, not an <svg> — match both so the
-     magnifier actually sits inside the input rather than inline beside it. */
-  > [data-icon],
-  > svg {
-    position: absolute;
-    left: 14px;
-    width: 17px;
-    height: 17px;
-    opacity: 0.45;
-    pointer-events: none;
+  > [data-icon] {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
   }
 
-  input {
-    width: 100%;
-    padding: 13px 42px;
-    border: 1px solid var(--brando-color-gray-light);
-    border-radius: 10px;
-    background-color: var(--brando-color-input);
-    color: var(--brando-color-foreground);
+  /* The field is the palette's header: none of the admin's input chrome,
+     including its focus ring (the header row carries the focus). */
+  .modal-content & input[type="text"],
+  .modal-content & input[type="text"]:focus,
+  .modal-content & input[type="text"]:focus-visible {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0;
+    background: transparent;
     font-size: 15px;
-    transition: border-color 200ms ease, box-shadow 200ms ease;
+    color: var(--modal-ink, #272b2a);
+    outline: none;
 
     &::placeholder {
-      color: var(--brando-color-gray);
-    }
-
-    &:focus {
-      outline: none;
-      border-color: var(--brando-color-blue);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--brando-color-blue) 18%, transparent);
+      color: #8a958f;
     }
   }
 }
 
 .module-picker-clear {
-  position: absolute;
-  right: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
   border-radius: 50%;
-  background: transparent;
-  color: var(--brando-color-gray);
+  background: #f1f4f1;
+  color: #5d6a63;
   cursor: pointer;
-  transition: background-color 200ms ease, color 200ms ease;
 
-  [data-icon],
-  svg {
-    position: static;
-    width: 15px;
-    height: 15px;
-    opacity: 1;
+  [data-icon] {
+    width: 14px;
+    height: 14px;
   }
+}
 
-  &:hover {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-foreground);
-  }
+.module-picker kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  border: 1px solid #dfe5df;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: 500 10.5px/16px "Main", sans-serif;
+  text-align: center;
+  color: #5d6a63;
+  background: #fff;
 }
 
 .module-picker-body {
   display: grid;
-  grid-template-columns: minmax(150px, 200px) 1fr;
-  gap: 24px;
-  min-height: 0;
-  margin-top: 20px;
+  grid-template-columns: 180px minmax(0, 1fr);
   flex: 1 1 auto;
+  min-height: 0;
 }
 
-/* The group rail. Always visible, so the shape of the module library is
-   readable at a glance instead of discovered by clicking. */
 .module-picker-namespaces {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: 10px 8px;
+  border-right: 1px solid var(--modal-line, #dce2dc);
   overflow-y: auto;
-  min-height: 0;
-  padding-right: 4px;
 }
 
 .module-picker-namespace {
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 8px;
+  justify-content: space-between;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
   background: transparent;
-  color: var(--brando-color-foreground);
-  cursor: pointer;
+  font-size: 13px;
+  color: #3b4a3f;
   text-align: left;
-  transition: background-color 180ms ease;
+  cursor: pointer;
 
   .label {
-    @font mono;
-    font-size: 12px;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    flex: 1 1 auto;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .count {
-    @font mono;
     font-size: 11px;
-    flex: 0 0 auto;
-    padding: 1px 7px;
-    border-radius: 20px;
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-foreground);
-    opacity: 0.75;
+    color: #9aa59f;
   }
 
   &:hover {
-    background-color: var(--brando-color-peach);
+    background: #f4f7f4;
   }
 
   &.active {
-    background-color: var(--brando-color-foreground);
-    color: var(--brando-color-background);
-
-    .count {
-      background-color: color-mix(in srgb, var(--brando-color-background) 22%, transparent);
-      color: var(--brando-color-background);
-      opacity: 1;
-    }
+    background: #eef4ef;
+    color: #10254a;
+    font-weight: 600;
   }
 
-  &:focus-visible {
-    outline: 2px solid var(--brando-color-blue);
-    outline-offset: 2px;
+  &.is-empty {
+    opacity: 0.45;
   }
 }
 
-/* While a search is running it spans every group, so the rail's selection is
-   not what is being shown. Fade it rather than leave a lit row lying about
-   filtering that is not happening. */
-.module-picker-namespaces.is-searching {
-  opacity: 0.45;
-}
-
-.module-picker-results {
-  overflow-y: auto;
-  min-height: 0;
-  padding-right: 4px;
-}
-
-.module-picker-group + .module-picker-group {
-  margin-top: 26px;
-}
-
-.module-picker-group-title {
-  @font mono;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  margin: 0 0 12px;
-  padding: 4px 0 8px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--brando-color-gray);
-  background-color: var(--brando-color-content-background);
-}
-
-.module-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
-  gap: 12px;
-}
-
-/* One card per module. The module's colour is the same one its block wears in
-   the editor, so the card previews what you are about to get. */
-.module-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  border: 1px solid var(--brando-color-gray-light);
-  border-radius: 12px;
-  background-color: var(--brando-color-content-background);
-  cursor: pointer;
-  text-align: left;
-  overflow: hidden;
-  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
-
-  /* colour rail, matching the block editor's per-module colours */
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 3px;
-    background-color: #dbeafe;
-  }
-
-  &[data-color="pink"]::before {
-    background-color: #fbcfe8;
-  }
-
-  &[data-color="emerald"]::before {
-    background-color: #a7f3d0;
-  }
-
-  &[data-color="peach"]::before {
-    background-color: #fed7aa;
-  }
-
-  &:hover {
-    border-color: var(--brando-color-foreground);
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--brando-color-foreground) 10%, transparent);
-    transform: translateY(-2px);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brando-color-blue);
-    outline-offset: 2px;
-  }
-
-  /* Marked from the search field with ↑↓; Enter inserts it */
-  &.is-keyboard {
-    border-color: var(--brando-color-foreground);
-    box-shadow: 0 0 0 2px var(--brando-color-blue);
-  }
-}
-
-/* Pinned near the top: the results shrink and grow as you type, and a
-   centred dialog jumped with them */
-.modal:has(.module-picker) {
-  align-items: flex-start;
-
-  > .modal-dialog { margin-top: 6vh; }
-}
-
-/* A group with no matches for the search */
-.module-picker-namespace.is-empty { opacity: 0.45; }
-
-.module-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 13px 15px 14px 17px;
-}
-
-.module-card-preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 16 / 9;
-  margin: 0;
-  padding: 10px;
-  background-color: var(--brando-color-shaded);
-  border-bottom: 1px solid var(--brando-color-gray-light);
-
-  img {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-  }
-}
-
-.module-card-name {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--brando-color-foreground);
-}
-
-.module-card-help {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--brando-color-gray);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.module-picker-empty {
-  padding: 40px 0;
-  text-align: center;
-  font-size: 14px;
-  color: var(--brando-color-gray);
-}
-
-/* Containers and fragments are not modules — they are a different kind of
-   insert. Separating them stops them competing with the library above. */
-/* Lives in the modal header (right-aligned, next to the close button) rather
-   than the footer, where a full-width bordered bar over-emphasised it. */
 .module-picker-extras {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-right: 12px;
-
-  .module-picker-extras-label {
-    @font mono;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--brando-color-gray);
-    margin-right: 2px;
-  }
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #edf0ed;
 
   button {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 11px;
-    border: 1px solid var(--brando-color-gray-light);
-    border-radius: 20px;
-    background-color: transparent;
-    color: var(--brando-color-foreground);
-    font-size: 12px;
+    gap: 8px;
+    height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 13px;
+    color: #3b4a3f;
     cursor: pointer;
-    transition: background-color 200ms ease, border-color 200ms ease;
 
-    [data-icon],
-    svg {
-      width: 13px;
-      height: 13px;
-      opacity: 0.6;
+    [data-icon] {
+      width: 15px;
+      height: 15px;
+      color: #7a867f;
     }
 
     &:hover {
-      background-color: var(--brando-color-peach);
-      border-color: var(--brando-color-peach);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--brando-color-blue);
-      outline-offset: 2px;
+      background: #f4f7f4;
     }
   }
+}
+
+.module-picker-results {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}
+
+.module-picker-group-title {
+  margin: 0;
+  padding: 14px 12px 4px;
+  font: 400 10.5px/1.4 "Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a867f;
+}
+
+.module-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  /* Hover is lighter than the mark, so it doesn't pass for what Enter picks. */
+  &:hover {
+    background: #f5f8f5;
+  }
+
+  &.is-keyboard {
+    background: #eaf2eb;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-color-blue);
+    outline-offset: -2px;
+  }
+}
+
+.module-row-sketch {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  height: 28px;
+  color: #7f9086;
+
+  img {
+    max-width: 42px;
+    max-height: 28px;
+  }
+
+  [data-icon] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.module-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.module-row-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #10254a;
+
+  .badge {
+    font-size: 10px;
+  }
+}
+
+.module-row-help {
+  font-size: 12.5px;
+  color: #7a867f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-row-enter {
+  margin-left: auto;
+  font-size: 11px;
+  color: #698661;
+  white-space: nowrap;
+  visibility: hidden;
+
+  .module-row.is-keyboard & {
+    visibility: visible;
+  }
+}
+
+.module-picker-empty {
+  padding: 32px 12px;
+  color: #7a867f;
+  text-align: center;
+}
+
+.module-picker-keys {
+  display: flex;
+  gap: 16px;
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-top: 1px solid #edf0ed;
+  background: #fafbfa;
+  font-size: 12px;
+  color: #7a867f;
 }
 
 @media (max-width: 720px) {
   .module-picker-body {
     grid-template-columns: 1fr;
-    gap: 16px;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .module-picker-namespaces {
     flex-direction: row;
     overflow-x: auto;
-    padding-bottom: 4px;
+    border-right: 0;
+    border-bottom: 1px solid var(--modal-line, #dce2dc);
   }
 
   .module-picker-namespace {
-    width: auto;
     flex: 0 0 auto;
+  }
+
+  .module-picker-extras {
+    flex-direction: row;
+    margin: 0 0 0 8px;
+    padding: 0 0 0 8px;
+    border-top: 0;
+    border-left: 1px solid #edf0ed;
+  }
+
+  .module-picker-keys {
+    display: none;
   }
 }
 

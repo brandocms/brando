@@ -13121,3 +13121,33 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Shown greyed in the empty field. Never saved as text."
 msgstr "Shown greyed in the empty field. Never saved as text."
+
+#: lib/brando_admin/components/form/block_field/module_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add a block – search modules…"
+msgstr "Add a block – search modules…"
+
+#: lib/brando_admin/components/form/block_field/module_picker.ex
+#, elixir-autogen, elixir-format
+msgid "choose"
+msgstr "choose"
+
+#: lib/brando_admin/components/form/block_field/module_picker.ex
+#, elixir-autogen, elixir-format
+msgid "insert"
+msgstr "insert"
+
+#: lib/brando_admin/components/form/block_field/module_picker.ex
+#, elixir-autogen, elixir-format
+msgid "close"
+msgstr "close"
+
+#: lib/brando_admin/components/form/block_field/module_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Insert"
+msgstr "Insert"
+
+#: lib/brando_admin/components/form/block_field/module_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Recently used"
+msgstr "Recently used"
