@@ -162,6 +162,9 @@
   .image-detail-section-heading h3 { font: 500 17px/24px "Main", sans-serif; color: #272b2a; }
   .image-detail-section-heading p { font: 13px/20px "Main", sans-serif; color: #626b66; }
   .image-detail-metadata :is(.brando-input,.field-wrapper) { margin: 0; padding: 0; }
+  /* Under the alt text it fills */
+  .image-alt-suggest { align-self: flex-start; margin-top: -12px; gap: 6px; font-size: 12px; }
+  .image-alt-suggest [class^="hero-"] { width: 14px; height: 14px; }
   .image-detail-metadata .label-wrapper { margin-bottom: 8px; }
   .image-detail-metadata .control-label { font: 13px/20px "Main", sans-serif; }
   .image-detail-metadata input.text { height: 40px; padding: 8px 10px; border: 1px solid #dce2dc; border-radius: 5px; font: 14px/20px "Main", sans-serif; background: #fff; color: #272b2a; }

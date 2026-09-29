@@ -216,6 +216,19 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
               <p>{gettext("Changes apply wherever this image is used.")}</p>
             </div>
             <Input.i18n_text field={image_form[:alt]} label={gettext("Alternative text")} opts={[languages: :content]} />
+            <%!-- Fills the fields above, in the languages that lack alt text
+                  (all when none do); nothing is saved until the drawer is. --%>
+            <button
+              :if={alt_text_ai?()}
+              type="button"
+              class="workspace-button image-alt-suggest"
+              phx-click="suggest_alt_text"
+              phx-target={@myself}
+              disabled={@alt_text_suggesting}
+            >
+              <.icon name="hero-sparkles" />
+              {if @alt_text_suggesting, do: gettext("Suggesting…"), else: gettext("Suggest alt text")}
+            </button>
             <Input.i18n_text field={image_form[:title]} label={gettext("Caption")} opts={[languages: :content]} />
             <Input.i18n_text field={image_form[:credits]} label={gettext("Credits")} opts={[languages: :content]} />
           </section>
@@ -228,6 +241,8 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
     </Content.drawer>
     """
   end
+
+  defp alt_text_ai?, do: Brando.AI.configured?(Brando.Images.AltText.ai_opts())
 
   def editor(assigns) do
     ~H"""

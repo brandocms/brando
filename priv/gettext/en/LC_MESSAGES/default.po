@@ -13076,3 +13076,15 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Streaming video"
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Suggest alt text"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Suggesting…"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "The alt text could not be suggested. Try again, or write it yourself."
+msgstr ""

@@ -1299,6 +1299,27 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
   end
 
+  # "Suggest alt text" in the image drawer: the suggestions go into the
+  # drawer's form, as if typed, and are saved with it — reviewed first.
+  def handle_async({:suggest_alt_text, image_id}, result, socket) do
+    socket = assign(socket, :alt_text_suggesting, false)
+
+    case {result, socket.assigns[:edit_image]} do
+      {{:ok, {:ok, %{values: values}}}, %{image: %{id: ^image_id}}} ->
+        changeset = socket.assigns.image_changeset
+        alt = Map.merge(Ecto.Changeset.get_field(changeset, :alt) || %{}, values)
+        {:noreply, assign(socket, :image_changeset, Ecto.Changeset.put_change(changeset, :alt, alt))}
+
+      # The drawer moved on to another image; its suggestion is not wanted
+      {{:ok, {:ok, _}}, _} ->
+        {:noreply, socket}
+
+      _ ->
+        send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
+        {:noreply, socket}
+    end
+  end
+
   def handle_async(:entry_load, {:exit, reason}, _socket) do
     # surface load failures exactly like the old synchronous load did
     case reason do
@@ -2601,6 +2622,7 @@ defmodule BrandoAdmin.Components.Form do
             schema={@schema}
             edit_image={@edit_image}
             processing={@processing}
+            alt_text_suggesting={assigns[:alt_text_suggesting] || false}
           />
 
           <ImageDrawer.editor
@@ -4052,6 +4074,13 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("validate_image", _, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("suggest_alt_text", _, %{assigns: %{edit_image: %{image: %{id: id}}}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:alt_text_suggesting, true)
+     |> start_async({:suggest_alt_text, id}, fn -> Brando.Images.AltText.describe(id) end)}
   end
 
   # When opened from a block, edit_image has no path/field/relation_field.
