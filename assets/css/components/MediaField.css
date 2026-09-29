@@ -105,7 +105,8 @@
     }
     .media-field-preview:not(:has(img, picture, video)) { width: 76px; background: #f1f5ef; }
   }
-  &.media-field--empty { min-height: 168px; }
+  /* Empty, it holds an icon, a line and the buttons: no more room than that */
+  &.media-field--empty { max-width: 460px; }
 }
 .media-field--block[data-asset-type="image"]:not(.media-field--empty) {
   --image-preview-width: 180px;
@@ -135,6 +136,12 @@
   &.media-field--empty { background: #fff; border-style: solid; }
   &.media-field--empty .media-field-preview { background: #f7f8f6; }
   .media-button.primary { background: #fff; color: #272b2a; border-color: #dce2dc; }
+  /* An image keeps its shape: the width is fixed and the height follows it,
+     never a square crop (a 4:5 listing image is 112 × 140). */
+  &:not(.media-field--empty) .media-field-preview {
+    height: auto; align-self: start; background: transparent;
+    .image-content, img, picture { width: 100%; height: auto; object-fit: contain; }
+  }
 }
 .media-field > .media-field-destination { display: none; }
 .media-field-drop > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -146,6 +153,7 @@
   .media-field .media-field-content { gap: 12px; }
   .media-field--field { padding: 6px; grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px; }
   .media-field--field .media-field-preview { width: 72px; height: 104px; }
+  .media-field--field:not(.media-field--empty) .media-field-preview { height: auto; }
   .media-field--field .media-field-actions { margin-top: 8px; }
 }
 @media (max-width: 375px) {
