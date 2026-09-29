@@ -56,4 +56,23 @@ defmodule BrandoAdmin.Components.Form.Input.OptionsTest do
     assert Options.expand(list) == list
     assert Options.expand(:not_a_token) == :not_a_token
   end
+
+  defp field(schema), do: %{form: %{source: %Ecto.Changeset{data: struct(schema)}}}
+
+  test "a Blueprint's option labels are translated in its gettext domain, as radios are" do
+    gettext = Brando.Navigation.Menu.__modules__().gettext
+    Gettext.put_locale(gettext, "no")
+
+    options = [%{value: "published", label: "Published"}, %{value: "draft", label: "Draft"}]
+
+    assert [%{label: "Publisert"}, %{label: "Utkast"}] =
+             Options.translate_labels(options, field(Brando.Navigation.Menu))
+  end
+
+  test "a label without a translation, or a form without a schema, is left as it is" do
+    options = [%{value: "x", label: "Not a msgid"}]
+
+    assert Options.translate_labels(options, field(Brando.Navigation.Menu)) == options
+    assert Options.translate_labels(options, %{form: %{source: %{}}}) == options
+  end
 end

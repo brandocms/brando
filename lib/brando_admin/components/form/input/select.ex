@@ -357,7 +357,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         options_fun.(field.form, opts)
 
       options when is_list(options) ->
-        options
+        Options.translate_labels(options, field)
     end
     |> Enum.map(&ensure_string_values/1)
     |> Enum.reject(&is_nil/1)

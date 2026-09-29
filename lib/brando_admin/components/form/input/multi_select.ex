@@ -609,7 +609,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         options_fun.(field.form, opts)
 
       options ->
-        options
+        Options.translate_labels(options, field)
     end
     |> Enum.map(&ensure_string_values/1)
     |> Enum.map(&precompute_option/1)
