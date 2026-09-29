@@ -220,8 +220,18 @@
     color: #849486;
     cursor: pointer;
 
-    img { width: 100%; height: 100%; object-fit: cover; }
+    /* The whole frame, as in the image library: a portrait video is not
+       cropped to a landscape box, so the list can be scanned by shape */
+    img { width: 100%; height: 100%; object-fit: contain; }
   }
+
+  .content-list .list-row .library-video-thumbnail { background: #1d2320; }
+
+  /* The rows match the image library's: a quiet source line, tight lines */
+  .content-list .list-row .library-video-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; flex: 1; min-width: 0; }
+  .library-video-info .library-image-title { font-size: 12px; line-height: 18px; color: var(--workspace-muted); }
+  .library-video-info .library-image-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--workspace-muted); font-size: 11px; }
+  .library-video-info .library-format { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--workspace-line); border-radius: 3px; background: #fafbf8; color: #566153; font-size: 10px; line-height: 17px; }
 
   .library-video-play-icon {
     position: absolute;
@@ -247,17 +257,18 @@
     input {
       width: 100%;
       margin-left: -6px;
-      padding: 2px 6px;
+      padding: 0 6px;
       border: 1px solid transparent;
       border-radius: 4px;
       background: transparent;
       color: var(--workspace-ink);
       font: inherit;
       font-size: 15px;
+      font-weight: 500;
       line-height: 22px;
     }
 
-    input::placeholder { color: var(--workspace-muted); font-style: italic; }
+    input::placeholder { color: var(--workspace-muted); opacity: .7; }
     input:hover { border-color: var(--workspace-line); }
     input:focus { border-color: var(--workspace-accent); background: #fff; outline: none; }
   }
