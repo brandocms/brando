@@ -12836,3 +12836,8 @@ msgstr "If it was deleted by mistake, restore it. Otherwise you can delete this 
 #, elixir-autogen, elixir-format
 msgid "Delete this block"
 msgstr "Delete this block"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This entry"
+msgstr "This entry"

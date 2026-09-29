@@ -12835,3 +12835,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Delete this block"
 msgstr ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This entry"
+msgstr ""

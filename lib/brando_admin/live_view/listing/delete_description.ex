@@ -24,17 +24,16 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
     %{
       title: gettext("Delete %{singular}?", singular: singular),
-      message: message(schema, singular, name, owned),
+      message: message(schema, name, owned),
       confirm: gettext("Delete"),
       cancel: gettext("Cancel")
     }
   end
 
-  defp message(schema, singular, name, owned) do
-    subject =
-      if name,
-        do: "<strong>#{escape(name)}</strong>",
-        else: gettext("This %{singular}", singular: singular)
+  # Without a name the subject is "This entry": splicing the schema's noun
+  # into "This %{singular}" cannot agree with its gender ("Denne bilde").
+  defp message(schema, name, owned) do
+    subject = if name, do: "<strong>#{escape(name)}</strong>", else: gettext("This entry")
 
     if schema.has_trait(SoftDelete) do
       # Soft deleted, the owned rows stay with the entry and come back with it.

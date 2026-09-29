@@ -12841,3 +12841,8 @@ msgstr "Hvis den ble slettet ved en feil, kan du gjenopprette den. Hvis ikke kan
 #, elixir-autogen, elixir-format
 msgid "Delete this block"
 msgstr "Slett denne blokken"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This entry"
+msgstr "Denne oppføringen"

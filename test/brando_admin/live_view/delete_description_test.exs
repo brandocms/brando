@@ -36,6 +36,13 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescriptionTest do
     refute message =~ "together"
   end
 
+  test "an entry without a name is \"this entry\", not the schema's noun spliced in" do
+    entry = article("", [])
+    %{message: message} = DeleteDescription.describe(Article, entry)
+
+    assert message =~ "This entry will be deleted."
+  end
+
   test "a soft-deleted entry is moved to Deleted, where it can be restored" do
     page = Brando.Factory.insert(:page, title: "About")
     %{message: message} = DeleteDescription.describe(Brando.Pages.Page, page)
