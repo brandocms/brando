@@ -45,6 +45,13 @@ defmodule Brando.Videos.Video do
   identifier false
   persist_identifier false
 
+  translations do
+    context :naming do
+      translate :singular, t("video")
+      translate :plural, t("videos")
+    end
+  end
+
   attributes do
     attribute :type, :enum, values: [:upload, :external_file, :vimeo, :youtube, :mux, :bunny, :cloudflare]
     attribute :title, :text

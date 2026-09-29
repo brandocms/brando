@@ -23,6 +23,13 @@ defmodule Brando.Galleries.Gallery do
   identifier false
   persist_identifier false
 
+  translations do
+    context :naming do
+      translate :singular, t("gallery")
+      translate :plural, t("galleries")
+    end
+  end
+
   attributes do
     attribute :config_target, :text
 

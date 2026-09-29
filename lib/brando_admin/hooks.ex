@@ -31,6 +31,7 @@ defmodule BrandoAdmin.Hooks do
       socket
       |> assign(:params, params)
       |> assign(:uri, uri)
+      |> default_page_title(uri, user)
 
     if connected?(socket) do
       if socket.assigns[:previous_uri] do
@@ -57,6 +58,52 @@ defmodule BrandoAdmin.Hooks do
 
     {:cont, socket}
   end
+
+  # A screen without a title of its own takes the name of its menu item, so
+  # the browser tab doesn't just say "Admin". Screens that set `:page_title`
+  # (listings, forms) keep theirs.
+  defp default_page_title(%{assigns: %{page_title: title}} = socket, _uri, _user) when not is_nil(title),
+    do: socket
+
+  defp default_page_title(socket, %URI{path: path}, user) when is_binary(path) do
+    case menu_title(BrandoAdmin.Menu.get_menu(user, socket.assigns[:current_site]), path) do
+      nil -> socket
+      title -> assign(socket, :page_title, title)
+    end
+  end
+
+  defp default_page_title(socket, _uri, _user), do: socket
+
+  @doc false
+  # The name of the menu item whose URL is `path`, or, failing that, the
+  # item whose URL is the longest leading part of it ("/admin" only matches
+  # itself).
+  def menu_title(sections, path) do
+    items = sections |> Enum.flat_map(&Map.get(&1, :items, [])) |> flatten_items()
+
+    exact = Enum.find(items, &(url_path(&1.url) == path))
+
+    best =
+      exact ||
+        items
+        |> Enum.filter(fn %{url: url} ->
+          url_path = url_path(url)
+          url_path not in [nil, "/admin"] and String.starts_with?(path, url_path <> "/")
+        end)
+        |> Enum.max_by(&String.length(url_path(&1.url)), fn -> nil end)
+
+    best && to_string(best.name)
+  end
+
+  defp flatten_items(items) do
+    Enum.flat_map(items, fn item ->
+      children = item |> Map.get(:items) |> List.wrap()
+      if Map.get(item, :url), do: [item | flatten_items(children)], else: flatten_items(children)
+    end)
+  end
+
+  defp url_path(nil), do: nil
+  defp url_path(url), do: url |> URI.parse() |> Map.get(:path)
 
   def handle_info({_, {:uri_presence, %{user_joined: presence}}}, socket) do
     {:halt, assign_uri_presence(socket, presence)}

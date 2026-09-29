@@ -36,3 +36,13 @@ msgstr "Teknisk"
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr "Ikke i bruk"
+
+#: lib/brando/galleries/gallery.ex
+#, elixir-autogen, elixir-format
+msgid "gallery"
+msgstr "galleri"
+
+#: lib/brando/galleries/gallery.ex
+#, elixir-autogen, elixir-format
+msgid "galleries"
+msgstr "gallerier"

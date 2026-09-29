@@ -106,3 +106,13 @@ msgstr "Ikke i bruk"
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "video"
+msgstr "video"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "videos"
+msgstr "videoer"

@@ -31,3 +31,13 @@ msgstr "Navn"
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr "Kategori"
+
+#: lib/brando/content/template.ex
+#, elixir-autogen, elixir-format
+msgid "template"
+msgstr "innholdsmal"
+
+#: lib/brando/content/template.ex
+#, elixir-autogen, elixir-format
+msgid "templates"
+msgstr "innholdsmaler"

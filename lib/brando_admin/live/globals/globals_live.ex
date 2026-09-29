@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Globals.GlobalsLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Sites.GlobalSet
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Sites.GlobalSet, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Workspace
@@ -9,6 +9,11 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :active_tab, nil)}
   end
+
+  # The values screen is "Globals" in the menu and its heading, not the
+  # schema's plural ("Global sets"), which names the setup screen.
+  @doc false
+  def page_title, do: gettext("Globals")
 
   def handle_event("focus", _, socket), do: {:noreply, socket}
   def handle_event("blur", _, socket), do: {:noreply, socket}

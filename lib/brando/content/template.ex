@@ -25,6 +25,13 @@ defmodule Brando.Content.Template do
   trait :timestamped
   trait :blocks
 
+  translations do
+    context :naming do
+      translate :singular, t("template")
+      translate :plural, t("templates")
+    end
+  end
+
   attributes do
     attribute :name, :string, required: true
     attribute :namespace, :string, required: true

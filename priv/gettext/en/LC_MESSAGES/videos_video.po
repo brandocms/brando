@@ -105,3 +105,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "video"
+msgstr "video"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "videos"
+msgstr "videos"

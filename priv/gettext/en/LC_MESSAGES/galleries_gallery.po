@@ -36,3 +36,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr ""
+
+#: lib/brando/galleries/gallery.ex
+#, elixir-autogen, elixir-format
+msgid "gallery"
+msgstr "gallery"
+
+#: lib/brando/galleries/gallery.ex
+#, elixir-autogen, elixir-format
+msgid "galleries"
+msgstr "galleries"
