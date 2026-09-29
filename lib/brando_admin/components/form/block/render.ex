@@ -1097,7 +1097,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             form_id={@form_id}
           />
         </div>
-        <div class="block-liquex-preview">
+        <div :if={@liquid_splits != []} class="block-liquex-preview">
           <%= for split <- @liquid_splits do %>
             <%= case split do %>
               <% {:liquid_error, _reason} -> %>

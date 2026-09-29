@@ -1708,7 +1708,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       splits =
         case LiquidPreview.strip_logic(module_code) do
           {:ok, module_code} ->
-            module_code = emphasize_datasources(module_code, assigns)
+            module_code = strip_datasources(module_code)
 
             ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
             |> Regex.split(module_code, include_captures: true)
@@ -1749,7 +1749,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         end
 
       socket
-      |> assign(:liquid_splits, splits)
+      |> assign(:liquid_splits, drop_empty_preview(splits))
     end
   end
 
@@ -1781,6 +1781,15 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp maybe_parse_module(socket) do
     assign(socket, liquid_splits: [])
+  end
+
+  # Only markup left, e.g. a module that is its datasource and nothing else:
+  # no preview, rather than an empty strip under the block's header.
+  defp drop_empty_preview(splits) do
+    if Enum.all?(splits, &is_binary/1) and
+         splits |> Enum.join() |> String.replace(~r/<[^>]*>/, "") |> String.trim() == "",
+       do: [],
+       else: splits
   end
 
   # if the assoc is not preloaded, meaning it is an %Ecto.Association.NotLoaded{} struct,
@@ -2754,17 +2763,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     )
   end
 
-  defp emphasize_datasources(code, assigns) do
-    Regex.replace(
-      ~r/(({% datasource %}(?:.*?){% enddatasource %}))/s,
-      code,
-      """
-      <div class="brando-datasource-placeholder">
-        #{gettext("%{title} appear here", title: BrandoAdmin.Components.Form.Block.Render.datasource_title(assigns.module_datasource_type, assigns.module_datasource_module_label))}
-      </div>
-      """
-    )
-  end
+  # The block's header already says what the datasource shows; its entries
+  # are left out of the module's preview.
+  defp strip_datasources(code),
+    do: Regex.replace(~r/{% datasource %}.*?{% enddatasource %}/s, code, "")
 
   defp liquid_render_entry_picture_src("entry." <> var_path_string, assigns) do
     entry = assigns.entry

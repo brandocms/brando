@@ -69,6 +69,10 @@
     &[hidden] { display: none; }
   }
   .identifier-meta input, .identifier-meta textarea { height: auto; padding: 6px 8px; border: 1px solid #dce2dc; border-radius: 4px; font-size: 13px; }
+  /* Beats `.block textarea:focus`, which drops the border inside blocks */
+  .identifier-meta input:focus, .identifier-meta textarea:focus {
+    border: 1px solid #a6bba8; box-shadow: 0 0 0 2px #254e3f14; outline: none;
+  }
 }
 .identifier-list {
   display: flex; flex-direction: column; gap: 0; width: 100%; min-width: 0;

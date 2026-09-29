@@ -51,15 +51,3 @@
     }
   }
 }
-
-/* Where a datasource's entries go in a module's preview */
-.brando-datasource-placeholder {
-  margin: 16px 0;
-  padding: 24px 16px;
-  border: 1px dashed #b9c3bd;
-  border-radius: 6px;
-  background: #f7f8f6;
-  color: #626b66;
-  font-size: 13px;
-  text-align: center;
-}
