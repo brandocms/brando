@@ -2,8 +2,7 @@
  * Brando.AssistantComposer — the assistant's message field.
  *
  * Enter sends the message, Shift+Enter adds a line; an IME composition is
- * never interrupted. After sending, the server pushes `b:assistant:clear`;
- * a suggestion pushes `b:assistant:fill` with its text.
+ * never interrupted. After sending, the server pushes `b:assistant:clear`.
  */
 export default () => ({
   mounted() {
@@ -11,12 +10,6 @@ export default () => ({
       if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return
       e.preventDefault()
       if (this.el.value.trim() !== '') this.el.form.requestSubmit()
-    })
-
-    this.handleEvent('b:assistant:fill', ({ text }) => {
-      this.el.value = text
-      this.el.focus()
-      this.el.setSelectionRange(text.length, text.length)
     })
 
     // Opening a page preview brings the review column's top into view.

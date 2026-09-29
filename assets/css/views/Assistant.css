@@ -422,27 +422,6 @@
   [data-icon] { width: 24px; height: 24px; }
 }
 
-.assistant-suggestions {
-  display: grid;
-  gap: 8px;
-  width: 100%;
-  margin-top: 12px;
-
-  > span { color: var(--assistant-muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-
-  button {
-    padding: 10px 14px;
-    border: 1px solid var(--assistant-line);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--assistant-ink);
-    font-size: 13px;
-    text-align: left;
-  }
-
-  button:hover { border-color: #b7c6bc; background: var(--assistant-surface); }
-}
-
 .assistant-proposal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding-bottom: 8px; }
 .assistant-proposal > * { min-width: 0; }
 .assistant-proposal-head { display: grid; gap: 8px; padding-bottom: 24px; border-bottom: 1px solid var(--assistant-line); }

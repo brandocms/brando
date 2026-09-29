@@ -652,23 +652,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
           "Describe the changes in the conversation. The assistant prepares them here for review, entry by entry, and nothing is saved until you apply them."
         )}
       </p>
-      <div class="assistant-suggestions">
-        <span>{gettext("For example")}</span>
-        <button
-          :for={
-            text <- [
-              gettext("Put image1 on the Index page, after the introduction"),
-              gettext("Create a case called Sommerro with image1 as its cover"),
-              gettext("Rewrite the introduction on the About page to be shorter")
-            ]
-          }
-          type="button"
-          phx-click="suggest"
-          phx-value-text={text}
-        >
-          {text}
-        </button>
-      </div>
     </div>
     """
   end
@@ -1386,9 +1369,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
   ## Events
 
   def handle_event("draft", %{"message" => text}, socket), do: {:noreply, assign(socket, :draft, text)}
-
-  def handle_event("suggest", %{"text" => text}, socket),
-    do: {:noreply, socket |> assign(:draft, text) |> push_event("b:assistant:fill", %{text: text})}
 
   def handle_event("send", %{"message" => text}, socket) do
     user = socket.assigns.current_user
