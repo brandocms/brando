@@ -52,6 +52,73 @@
     &.false [data-icon] {
       background-color: #863f3f;
     }
+
+    .grid-icon {
+      display: none;
+    }
+  }
+
+  /* One bordered line per item: a plain coloured ✓/✗ in its own column,
+     then the label on a neutral background. */
+  &.grid {
+    display: grid;
+    grid-template-columns: 30px auto;
+    row-gap: 0;
+    width: fit-content;
+    margin-top: 0.4em;
+    border: 1px solid #dfe5df;
+    border-radius: 8px;
+    overflow: hidden;
+
+    .checklist-item {
+      display: contents;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+
+      .chip-icon {
+        display: none;
+      }
+
+      .grid-icon,
+      .content {
+        display: flex;
+        align-items: center;
+        min-height: 24px;
+        border-top: 1px solid #dfe5df;
+        color: #3b4a3f;
+      }
+
+      &:first-child .grid-icon,
+      &:first-child .content {
+        border-top: 0;
+      }
+
+      .grid-icon {
+        justify-content: center;
+        border-right: 1px solid #dfe5df;
+      }
+
+      .content {
+        padding: 4px 12px 4px 10px;
+      }
+
+      .grid-icon [data-icon] {
+        width: 15px;
+        height: 15px;
+        padding: 0;
+        border-radius: 0;
+        background-color: currentColor;
+      }
+
+      &.true .grid-icon {
+        color: #2e9d4f;
+      }
+
+      &.false .grid-icon {
+        color: #c43c3c;
+      }
+    }
   }
 }
 
