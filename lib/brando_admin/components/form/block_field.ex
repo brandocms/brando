@@ -2162,8 +2162,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp assign_module_set(socket) do
     assign_new(socket, :module_set, fn ->
-      opts = socket.assigns.opts
-      opts[:module_set] || "all"
+      %{opts: opts, entry: entry, block_field: field} = socket.assigns
+
+      opts[:module_set] || Brando.Content.Proposals.configured_module_set(entry.__struct__, field) || "all"
     end)
   end
 

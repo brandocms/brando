@@ -821,17 +821,30 @@ defmodule Brando.Content.Proposals do
   end
 
   @doc """
-  The module set a block field's form declares (`blocks :blocks, module_set: …`).
-  It limits the root modules the editor's picker offers; `nil` allows all.
+  The module set of a block field: the one its form declares (`blocks :blocks,
+  module_set: …`), else the one the site configures for it, for schemas it
+  doesn't own (`config :brando, Brando.Pages.Page, module_sets: [blocks:
+  "Page"]`). It limits the root modules the editor's picker offers; `nil`
+  allows all.
   """
   @spec module_set(module(), String.t()) :: String.t() | nil
   def module_set(schema, field) do
     with %{blocks: inputs} <- schema.__form__(),
-         %{opts: opts} <- Enum.find(inputs, &(to_string(&1.name) == field)) do
-      opts[:module_set]
+         %{opts: opts} <- Enum.find(inputs, &(to_string(&1.name) == field)),
+         set when is_binary(set) <- opts[:module_set] || configured_module_set(schema, field) do
+      set
     else
       _ -> nil
     end
+  end
+
+  @doc "The module set the site configures for `schema`'s block field `field`, or `nil`."
+  @spec configured_module_set(module(), String.t() | atom()) :: String.t() | nil
+  def configured_module_set(schema, field) do
+    :brando
+    |> Application.get_env(schema, [])
+    |> Keyword.get(:module_sets, [])
+    |> Enum.find_value(fn {name, set} -> if to_string(name) == to_string(field), do: set end)
   end
 
   defp module_id(module), do: {Map.get(module, :library_origin) || :local, module.id}
