@@ -106,7 +106,11 @@ defmodule Brando.Type.ImageConfig do
       ],
       upload_path: Path.join(["images", "site", "default"]),
       default_size: :largest,
-      random_filename: true,
+      # The uploaded file's own name, slugified ("Sommerro Lobby.JPG" is
+      # "sommerro-lobby.jpg"), so the library can be read and searched; a
+      # clash gets a numbered suffix.
+      random_filename: false,
+      slugify_filename: true,
       size_limit: 10_240_000,
       sizes: %{
         "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
