@@ -135,7 +135,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   # The image fields a picker row needs.
-  @list_fields [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal]
+  @list_fields [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal, :title]
 
   # Rows rendered at a time. The rest load as the list scrolls (or from the
   # "show more" button), so a big folder doesn't put 1000+ rows in the form.
@@ -183,6 +183,14 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   def handle_event("picker_closed", _, socket) do
     {:noreply, close_list(socket)}
+  end
+
+  def handle_event("search_images", %{"search" => search}, socket) do
+    {:noreply,
+     socket
+     |> assign(:search, String.trim(search))
+     |> assign_folder_state(socket.assigns.current_folder)
+     |> push_selection_state()}
   end
 
   def handle_event("load_more_images", _, socket) do
@@ -378,6 +386,23 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 </p>
               </div>
               <div class="image-picker-main-actions">
+                <form
+                  id={"image-picker-search-#{@id}"}
+                  phx-change="search_images"
+                  phx-target={@myself}
+                  phx-submit="search_images"
+                >
+                  <input
+                    type="search"
+                    name="search"
+                    value={@search}
+                    class="image-picker-search"
+                    placeholder={gettext("Search by name or title")}
+                    aria-label={gettext("Search by name or title")}
+                    phx-debounce="250"
+                    autocomplete="off"
+                  />
+                </form>
                 <span>
                   {ngettext("%{count} image", "%{count} images", @image_count, count: @image_count)}
                 </span>
@@ -655,6 +680,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:image_count, fn -> 0 end)
     |> assign_new(:visible_item_ids, fn -> [] end)
     |> assign_new(:rendered_count, fn -> 0 end)
+    |> assign_new(:search, fn -> "" end)
   end
 
   defp assign_folder_state(socket, requested_folder) do
@@ -684,7 +710,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
         ""
       end
 
-    visible_images = FolderBrowser.entries_in_folder(images, current_folder, upload_root)
+    visible_images =
+      images
+      |> FolderBrowser.entries_in_folder(current_folder, upload_root)
+      |> filter_by_search(socket.assigns[:search])
 
     child_folders = FolderBrowser.child_folders(folders, current_folder)
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
@@ -709,6 +738,20 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders_for_root, recent_folders_for_root)
     |> assign(:upload_target, upload_target(socket, upload_root, current_folder))
+  end
+
+  # Matches the file name and the title in any language, ignoring case.
+  defp filter_by_search(images, search) when search in [nil, ""], do: images
+
+  defp filter_by_search(images, search) do
+    needle = String.downcase(search)
+
+    Enum.filter(images, fn image ->
+      titles = if is_map(image.title), do: Map.values(image.title), else: [image.title]
+
+      [Path.basename(image.path || "") | titles]
+      |> Enum.any?(&(is_binary(&1) and String.contains?(String.downcase(&1), needle)))
+    end)
   end
 
   # The next page of the folder's images, appended to the list. Only the ids
@@ -737,6 +780,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   defp close_list(socket) do
     socket
     |> assign(:opened?, false)
+    |> assign(:search, "")
     |> assign(:organize_selected, [])
     |> assign(:last_organize_selected_id, nil)
     |> assign(:visible_item_ids, [])

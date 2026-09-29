@@ -12940,3 +12940,8 @@ msgstr "Sorter listen etter rekkefølge for å dra i radene"
 #, elixir-autogen, elixir-format
 msgid "Creating in %{language}"
 msgstr "Oppretter på %{language}"
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search by name or title"
+msgstr "Søk etter navn eller tittel"

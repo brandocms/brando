@@ -76,6 +76,7 @@
   .image-picker__actions { grid-column: 4; grid-row: 1 / span 2; }
 }
 .drawer.admin-workspace.media-workspace-drawer {
+  .image-picker-search { width: 220px; min-height: 30px; padding: 4px 10px; border: 1px solid #d7dfd9; border-radius: 5px; background: #fff; font: 13px/18px "Main", sans-serif; }
   /* Loads the next page of a big folder, if scrolling to the end hasn't. */
   .image-picker-more { display: block; width: 100%; margin: 12px 0 0; padding: 10px; border: 1px solid #dce2dc; border-radius: 6px; background: #fff; color: #3d5c48; font: 13px/18px "Main", sans-serif; cursor: pointer; }
   .image-picker-more:hover { background: #edf3e9; }

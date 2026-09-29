@@ -12935,3 +12935,8 @@ msgstr "Sort the list by its order to drag rows"
 #, elixir-autogen, elixir-format
 msgid "Creating in %{language}"
 msgstr "Creating in %{language}"
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search by name or title"
+msgstr "Search by name or title"
