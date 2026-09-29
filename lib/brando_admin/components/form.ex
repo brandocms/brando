@@ -52,6 +52,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Form.Visibility
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
@@ -94,6 +95,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_ready?, true)
      |> assign(:entry_load_status, nil)
      |> assign(:dirty_fields, [])
+     |> assign(:hidden_block_fields, [])
      |> assign(:server_owned_assets, %{})
      |> assign(:draft, nil)
      |> assign(:draft_enabled?, false)
@@ -243,7 +245,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> own_changed_assets(Enum.map(changes, & &1.field))
      |> Drafts.dirty()
      |> force_svelte_remounts(Enum.map(changes, & &1.field))}
@@ -638,7 +640,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:form, to_form(changeset, []))
+     |> put_form(to_form(changeset, []))
      |> update_entry_with_relation(path ++ [field], nil)
      |> update_entry_assocs(path ++ [field], nil)
      |> own_asset(path, relation_key, :id)
@@ -865,7 +867,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(new_changeset, []))
+     |> put_form(to_form(new_changeset, []))
      |> clear_owned_assets()
      |> assign(:block_map, [])
      |> force_svelte_remounts(:all)}
@@ -880,7 +882,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:form, to_form(new_changeset, []))
+     |> put_form(to_form(new_changeset, []))
      |> force_svelte_remounts()}
   end
 
@@ -954,7 +956,7 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     {:ok,
      socket
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> Drafts.dirty()
      |> push_event("b:validate", %{})
      |> force_svelte_remounts()}
@@ -963,7 +965,7 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     updated_form = to_form(updated_changeset, [])
 
-    {:ok, socket |> assign(:form, updated_form) |> Drafts.dirty()}
+    {:ok, socket |> put_form(updated_form) |> Drafts.dirty()}
   end
 
   # Gallery picker writes. The gallery components hand back a replacement
@@ -1001,7 +1003,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> assign(:processing, false)}
   end
 
@@ -1031,7 +1033,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(updated_changeset))
+     |> put_form(to_form(updated_changeset))
      |> clear_owned_assets()
      |> force_svelte_remounts(:all)}
   end
@@ -1061,7 +1063,7 @@ defmodule BrandoAdmin.Components.Form do
     updated_changeset = put_change(changeset, :globals, updated_globals)
     updated_form = to_form(updated_changeset, [])
 
-    {:ok, assign(socket, :form, updated_form)}
+    {:ok, put_form(socket, updated_form)}
   end
 
   # Async entry-load progress, reported from the loading task via
@@ -1334,7 +1336,7 @@ defmodule BrandoAdmin.Components.Form do
         changeset = socket.assigns.form.source
         alt = Map.merge(Ecto.Changeset.get_field(changeset, :alt) || %{}, values)
         changeset = put_change(changeset, :alt, alt)
-        {:noreply, socket |> assign(:form, to_form(changeset, [])) |> Drafts.dirty()}
+        {:noreply, socket |> put_form(to_form(changeset, [])) |> Drafts.dirty()}
 
       {{:ok, {:ok, _}}, _} ->
         {:noreply, socket}
@@ -1459,7 +1461,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:entry, updated_entry)
-    |> assign(:form, to_form(updated_changeset, []))
+    |> put_form(to_form(updated_changeset, []))
     |> own_asset(path, relation_key, :id)
     |> Drafts.dirty()
     # Ship while the FK is still a change — the drawer-save path re-bakes the
@@ -1514,7 +1516,7 @@ defmodule BrandoAdmin.Components.Form do
     updated_changeset = put_gallery_into(socket.assigns.form.source, path, key, new_gallery)
 
     socket
-    |> assign(:form, to_form(updated_changeset, []))
+    |> put_form(to_form(updated_changeset, []))
     |> own_asset(path, key, :gallery)
     |> Drafts.dirty()
   end
@@ -1771,6 +1773,27 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:block_map, build_block_map(socket))
     |> assign(:block_changesets, Map.new(blocks, &{&1.name, nil}))
+  end
+
+  # Every change to the form goes through here, so the block fields a
+  # `hidden:`/`show_if:` option hides (e.g. `hidden: {:type, :external_link}`)
+  # follow the form. They are kept as their own assign rather than read from
+  # `@form` in the template: `assign/3` only marks it changed when the list
+  # does, so a keystroke doesn't re-render every block field. Hidden block
+  # fields stay mounted, since saving waits for each one's changesets.
+  defp put_form(socket, form) do
+    hidden_block_fields =
+      case socket.assigns do
+        %{form_blueprint: %{blocks: blocks}} ->
+          for %{name: name, opts: opts} <- blocks, Visibility.hidden?(opts, form), do: name
+
+        _ ->
+          []
+      end
+
+    socket
+    |> assign(:form, form)
+    |> assign(:hidden_block_fields, hidden_block_fields)
   end
 
   defp build_block_map(%{assigns: %{has_blocks?: false}}), do: []
@@ -2775,6 +2798,7 @@ defmodule BrandoAdmin.Components.Form do
             block_field={block_field}
             form_name={@form.name}
             opts={field_opts}
+            hidden={block_field in @hidden_block_fields}
             id={"#{@id}-blocks-#{block_field}"}
             entry={@entry_for_blocks}
             entry_blocks={entry_blocks}
@@ -3097,7 +3121,7 @@ defmodule BrandoAdmin.Components.Form do
     # entry field (`view.ts:2450`, `channel.ex:848-853`). Assigning inside the
     # `[^singular | rest]` branch meant every recovered value was recomputed and
     # then dropped, so a reconnect silently restored nothing.
-    socket = socket |> assign(:form, to_form(changeset, [])) |> Drafts.dirty()
+    socket = socket |> put_form(to_form(changeset, [])) |> Drafts.dirty()
 
     case Map.get(params, "_target") do
       [^singular | rest] ->
@@ -3515,7 +3539,7 @@ defmodule BrandoAdmin.Components.Form do
          socket
          |> assign(:processing, false)
          |> assign(:minor_save?, false)
-         |> assign(:form, to_form(changeset, []))
+         |> put_form(to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
   end
@@ -3655,7 +3679,7 @@ defmodule BrandoAdmin.Components.Form do
          socket
          |> assign(:processing, false)
          |> assign(:minor_save?, false)
-         |> assign(:form, to_form(changeset, []))
+         |> put_form(to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
   end
@@ -3848,7 +3872,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
-     |> assign(:form, to_form(changeset, []))
+     |> put_form(to_form(changeset, []))
      |> own_asset(edit_video.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
@@ -3924,7 +3948,7 @@ defmodule BrandoAdmin.Components.Form do
      # "close the file drawer before saving" with no drawer to close.
      |> assign(:editing_file?, false)
      |> assign(:edit_file, updated_edit_file)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> own_asset(edit_file.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
@@ -3958,7 +3982,7 @@ defmodule BrandoAdmin.Components.Form do
      # guard flag must come down or the entry can never be saved again.
      |> assign(:editing_image?, false)
      |> assign(:edit_image, updated_edit_image)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> own_asset(edit_image.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
@@ -4090,7 +4114,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> assign(:file_changeset, validated_changeset)
      |> assign(:editing_file?, false)
      |> assign(:edit_file, edit_file)
@@ -4276,7 +4300,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, false)
@@ -4411,7 +4435,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> put_form(to_form(updated_changeset, []))
      |> assign(:video_changeset, validated_changeset)
      |> assign(:edit_video, edit_video)
      |> assign(:editing_video?, false)
@@ -5002,7 +5026,7 @@ defmodule BrandoAdmin.Components.Form do
     end
 
     socket
-    |> assign(:form, form)
+    |> put_form(form)
     |> own_changed_assets(Map.keys(changeset.changes))
     |> assign_entry_for_blocks()
     |> force_svelte_remounts(:all)
@@ -5131,7 +5155,7 @@ defmodule BrandoAdmin.Components.Form do
 
       {:error, invalid_changeset} ->
         socket
-        |> assign(:form, to_form(invalid_changeset, []))
+        |> put_form(to_form(invalid_changeset, []))
         |> push_errors(
           invalid_changeset,
           socket.assigns.form_blueprint,
@@ -5498,13 +5522,15 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    assign_new(socket, :form, fn ->
+    socket
+    |> assign_new(:form, fn ->
       # this is the initial assignment of changeset with an empty entry,
       # so we add default_params here
       default_entry
       |> schema.changeset(default_params, current_user)
       |> to_form()
     end)
+    |> then(&put_form(&1, &1.assigns.form))
   end
 
   # No `Map.put(:action, :validate)` on any of these three: they all build from
@@ -5522,16 +5548,18 @@ defmodule BrandoAdmin.Components.Form do
   # reason to keep it.
   # Pinned by `test/brando_admin/components/form/empty_params_errors_test.exs`.
   def assign_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
-    assign_new(socket, :form, fn ->
+    socket
+    |> assign_new(:form, fn ->
       entry
       |> schema.changeset(%{}, current_user)
       |> to_form()
     end)
+    |> then(&put_form(&1, &1.assigns.form))
   end
 
   def assign_refreshed_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
     socket
-    |> assign(:form, to_form(schema.changeset(entry, %{}, current_user), []))
+    |> put_form(to_form(schema.changeset(entry, %{}, current_user), []))
     |> clear_owned_assets()
   end
 
@@ -5785,7 +5813,7 @@ defmodule BrandoAdmin.Components.Form do
         Enum.map(list, &Map.from_struct/1)
       end)
 
-    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, path, key, map) when is_list(path) and is_map(map) do
@@ -5794,7 +5822,7 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset =
       EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> Map.from_struct(map) end)
 
-    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, path, key, value) when is_list(path) do
@@ -5805,28 +5833,28 @@ defmodule BrandoAdmin.Components.Form do
 
     new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
 
-    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, key, list) when is_list(list) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Enum.map(list, &Map.from_struct/1))
 
-    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, key, value) when is_map(value) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Map.from_struct(value))
 
-    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, key, value) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, value)
 
-    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   defp sequence(gallery_images) do

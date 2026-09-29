@@ -859,6 +859,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(assigns, socket) do
     socket
     |> assign(assigns)
+    |> assign_new(:hidden, fn -> false end)
     |> initialize_blocks(assigns)
     |> maybe_arm_blocks_topic()
     |> assign_module_set()
@@ -1834,6 +1835,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     <div
       id={"#{@id}-wrapper"}
       phx-hook="Brando.BlockField"
+      hidden={@hidden}
       class={["blocks-wrapper", @note_collection? && "footnote-storage", @source_locked && "is-source-locked"]}
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}

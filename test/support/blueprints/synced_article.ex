@@ -57,7 +57,9 @@ defmodule Brando.SyncTest.Article do
 
   forms do
     form do
-      blocks :blocks
+      # Hidden only for this title, so the form tests can check `hidden:`
+      # on a blocks field without affecting the others.
+      blocks :blocks, hidden: {:title, "Hide the blocks"}
 
       tab "Content" do
         fieldset do
