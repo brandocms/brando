@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   alias Brando.Drafts.Params
   alias Brando.Drafts.Restore
   alias BrandoAdmin.Components.Form.DraftPreview
+  alias BrandoAdmin.Components.Form.DraftRecoveryComponent
 
   def init(%{assigns: %{draft: %{initialized?: true}}} = socket), do: socket
 
@@ -58,20 +59,48 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         saved_at: nil
       }
 
-      assign(socket, :draft, state)
+      put_draft(socket, state)
     else
-      assign(socket, :draft, nil)
+      put_draft(socket, nil)
     end
   rescue
     error ->
       require Logger
       Logger.error("Recovery copies unavailable: #{inspect(error.__struct__)}")
-      assign(socket, :draft, nil)
+      put_draft(socket, nil)
+  end
+
+  @doc """
+  Sets the form's recovery state, and hands it to the status component.
+
+  The form's own template doesn't read `@draft`: the state changes on every
+  autosave, and a change in the form's diff makes LiveView patch the whole
+  form (tens of thousands of elements on a case with blocks). The status
+  renders in `DraftRecoveryComponent`, which only gets the state on its first
+  render (`:draft_seed`) and from here after that.
+  """
+  def put_draft(socket, draft) do
+    socket =
+      socket
+      |> assign(:draft, draft)
+      |> assign(:draft_enabled?, not is_nil(draft))
+
+    socket =
+      if is_nil(socket.assigns[:draft_seed]) and not is_nil(draft),
+        do: assign(socket, :draft_seed, draft),
+        else: socket
+
+    send_update(DraftRecoveryComponent,
+      id: DraftRecoveryComponent.id(socket.assigns.id),
+      state: draft
+    )
+
+    socket
   end
 
   def dirty(%{assigns: %{draft: %{initialized?: true} = draft}} = socket) do
     socket
-    |> assign(:draft, %{draft | generation: draft.generation + 1, status: :saving})
+    |> put_draft(%{draft | generation: draft.generation + 1, status: :saving})
     |> push_event("b:draft-dirty", %{id: socket.assigns.id})
   end
 
@@ -114,7 +143,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       expected: expected
     }
 
-    socket = assign(socket, :draft, %{draft | capture: capture, status: :saving})
+    socket = put_draft(socket, %{draft | capture: capture, status: :saving})
 
     for field <- blueprint.blocks do
       send_update(BrandoAdmin.Components.Form.BlockField,
@@ -143,7 +172,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
   def part(%{assigns: %{draft: %{capture: %{id: id} = capture} = draft}} = socket, id, kind, field, data) do
     capture = %{capture | parts: Map.put(capture.parts, {kind, to_string(field)}, data)}
-    socket |> assign(:draft, %{draft | capture: capture}) |> finish()
+    socket |> put_draft(%{draft | capture: capture}) |> finish()
   end
 
   def part(socket, _, _, _, _), do: socket
@@ -198,7 +227,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
               else: state
 
           socket
-          |> assign(:draft, state)
+          |> put_draft(state)
           |> push_event("b:draft-saved", %{
             id: socket.assigns.id,
             generation: capture.client_generation,
@@ -240,18 +269,18 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   defp parts(parts, kind), do: Map.new(for {{^kind, field}, value} <- parts, do: {field, value})
 
   defp fail_capture(%{assigns: %{draft: draft}} = socket) when is_map(draft) do
-    assign(socket, :draft, %{draft | capture: nil, status: :error})
+    put_draft(socket, %{draft | capture: nil, status: :error})
   end
 
   defp fail_capture(socket), do: socket
 
   def before_save(%{assigns: %{draft: %{save_generation: nil} = draft}} = socket),
-    do: assign(socket, :draft, %{draft | save_generation: draft.generation})
+    do: put_draft(socket, %{draft | save_generation: draft.generation})
 
   def before_save(socket), do: socket
 
   def save_result(%{assigns: %{draft: draft, processing: false}} = socket) when is_map(draft),
-    do: assign(socket, :draft, %{draft | save_generation: nil})
+    do: put_draft(socket, %{draft | save_generation: nil})
 
   def save_result(socket), do: socket
 
@@ -266,7 +295,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       do: :ok,
       else:
         {:error,
-         assign(socket, :draft, %{
+         put_draft(socket, %{
            draft
            | open?: true,
              issues: issues,
@@ -321,7 +350,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     checksum = Content.checksum(payload)
 
     socket
-    |> assign(:draft, %{
+    |> put_draft(%{
       draft
       | id: Ecto.UUID.generate(),
         identity: identity,
@@ -374,7 +403,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
             end)
         }
 
-        assign(socket, :draft, %{
+        put_draft(socket, %{
           socket.assigns.draft
           | selected: selected,
             open?: true,
@@ -394,7 +423,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     draft = socket.assigns.draft
     Enum.each(draft.candidates, &Drafts.dismiss(draft.identity, &1.id))
 
-    assign(socket, :draft, %{
+    put_draft(socket, %{
       draft
       | candidates: candidates(socket, draft.identity, draft.baseline),
         open?: false,
@@ -406,7 +435,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     draft = socket.assigns.draft
     Drafts.discard(draft.identity, id)
 
-    assign(socket, :draft, %{
+    put_draft(socket, %{
       draft
       | candidates: candidates(socket, draft.identity, draft.baseline),
         selected: nil,
@@ -444,7 +473,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
           {:ok,
            socket
            |> assign(:entry, entry)
-           |> assign(:draft, %{
+           |> put_draft(%{
              state
              | id: Ecto.UUID.generate(),
                modules: original.payload["modules"] || %{},
@@ -461,18 +490,18 @@ defmodule BrandoAdmin.Components.Form.Drafts do
               else:
                 "Some blocks use modules that have changed. You can recover compatible content and keep the original copy."
 
-          {:error, assign(socket, :draft, %{state | error: message, issues: issues, compatible?: true})}
+          {:error, put_draft(socket, %{state | error: message, issues: issues, compatible?: true})}
 
         {:error, message} ->
-          {:error, assign(socket, :draft, %{state | error: message})}
+          {:error, put_draft(socket, %{state | error: message})}
       end
     else
-      _ -> {:error, assign(socket, :draft, %{draft | error: "This recovery copy is no longer available.", open?: true})}
+      _ -> {:error, put_draft(socket, %{draft | error: "This recovery copy is no longer available.", open?: true})}
     end
   rescue
     _ ->
       {:error,
-       assign(socket, :draft, %{
+       put_draft(socket, %{
          socket.assigns.draft
          | error: "This recovery copy could not be applied. You can continue with the saved entry.",
            open?: true

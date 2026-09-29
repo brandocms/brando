@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.AlternatesDrawer
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.Drafts
-  alias BrandoAdmin.Components.Form.DraftRecovery
+  alias BrandoAdmin.Components.Form.DraftRecoveryComponent
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
   alias BrandoAdmin.Components.Form.ImageDrawer
@@ -96,6 +96,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:dirty_fields, [])
      |> assign(:server_owned_assets, %{})
      |> assign(:draft, nil)
+     |> assign(:draft_enabled?, false)
+     |> assign(:draft_seed, nil)
      |> assign(:translation, nil)
      |> assign(:minor_save?, false)
      |> assign(:draft_save_checked?, false)
@@ -2351,7 +2353,7 @@ defmodule BrandoAdmin.Components.Form do
         phx-hook="Brando.Form"
         data-deliver-topic={@deliver_topic}
         data-entry-id={@entry_id}
-        data-draft-enabled={@draft && "true"}
+        data-draft-enabled={@draft_enabled? && "true"}
         data-draft-form-id={@id}
         data-draft-leave-message={gettext("Your latest edits have not reached recovery storage. Leave this editor anyway?")}
       >
@@ -2366,7 +2368,14 @@ defmodule BrandoAdmin.Components.Form do
             {render_slot(@instructions)}
           </div>
 
-          <DraftRecovery.render id={"#{@id}-draft-recovery"} state={@draft} target={@myself} entry_id={@entry_id} />
+          <.live_component
+            module={DraftRecoveryComponent}
+            id={DraftRecoveryComponent.id(@id)}
+            dom_id={"#{@id}-draft-recovery"}
+            seed={@draft_seed}
+            target={@myself}
+            entry_id={@entry_id}
+          />
 
           <div class="form-tabs">
             <div class="form-tab-customs">
@@ -2959,7 +2968,7 @@ defmodule BrandoAdmin.Components.Form do
 
         {:noreply,
          socket
-         |> assign(:draft, draft)
+         |> Drafts.put_draft(draft)
          |> apply_restored_changeset(changeset)}
     end
   end
