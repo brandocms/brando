@@ -392,6 +392,14 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   count: length(@organize_selected)
                 )}
               </span>
+              <%!-- Filled by the ImagePickerGrid hook from the selected rows, which
+                    may be scrolled far out of view. --%>
+              <div
+                id={"image-picker-organize-thumbs-#{@id}"}
+                class="image-picker-organize-thumbs"
+                phx-update="ignore"
+              >
+              </div>
               <span class="image-picker-organize-hint">{gettext("Drag to a folder")}</span>
               <button
                 type="button"
@@ -408,6 +416,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
               phx-update="stream"
               phx-hook="Brando.ImagePickerGrid"
               data-target-component={@myself}
+              data-thumbs-id={"image-picker-organize-thumbs-#{@id}"}
             >
               <.image_row
                 :for={{dom_id, image} <- @streams.visible_images}
@@ -500,8 +509,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
       phx-keydown={if @picker_mode == :select, do: JS.exec("phx-click")}
       phx-click={
         if @picker_mode == :select do
+          # Marked at once, before the round trip through the field; the
+          # selection state the picker pushes back then confirms it.
           if @multi,
-            do: JS.push("select_image", target: @event_target),
+            do: "selected" |> JS.toggle_class() |> JS.push("select_image", target: @event_target),
             else: JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")
         end
       }

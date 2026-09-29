@@ -557,6 +557,15 @@
     opacity: 0.72;
   }
 
+  .image-picker-organize-thumbs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    img { width: 28px; height: 28px; border-radius: 3px; object-fit: cover; background: #f3f6ef; }
+    span { font-size: 12px; }
+  }
+
   .image-picker-organize-hint {
     color: color-mix(in srgb, var(--brando-color-dark) 58%, white);
     margin-left: 0.25rem;

@@ -89,7 +89,35 @@ export default app => ({
       })
 
       this.el.classList.toggle('image-picker-grid--organizing', organizeSet.size > 0)
+      this.renderOrganizeThumbs(organizeSet)
     })
+  },
+
+  // Thumbnails of the shift+clicked images in the organize bar, so the
+  // selection shows even when its rows are scrolled out of view.
+  renderOrganizeThumbs(organizeSet) {
+    const container = document.getElementById(this.el.dataset.thumbsId)
+    if (!container) return
+
+    const max = 8
+    const rows = Array.from(this.el.querySelectorAll('.image-picker__image[data-id]'))
+      .filter(el => organizeSet.has(el.dataset.id))
+
+    container.replaceChildren(
+      ...rows.slice(0, max).map(row => {
+        const source = row.querySelector('img')
+        const thumb = document.createElement('img')
+        thumb.src = source ? source.currentSrc || source.src : ''
+        thumb.alt = ''
+        return thumb
+      })
+    )
+
+    if (organizeSet.size > max) {
+      const more = document.createElement('span')
+      more.textContent = `+${organizeSet.size - max}`
+      container.append(more)
+    }
   },
 
   destroyed() {
