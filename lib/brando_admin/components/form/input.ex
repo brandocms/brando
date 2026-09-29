@@ -842,6 +842,12 @@ defmodule BrandoAdmin.Components.Form.Input do
         "status-dropdown-#{assigns.field.id}"
       )
 
+    # The dot alone doesn't say which status it is
+    current_label =
+      Enum.find_value(assigns.statuses, fn status -> status.value == to_string(assigns.field.value) && status.label end)
+
+    assigns = assign(assigns, :current_label, current_label)
+
     hide = hide_dropdown("##{assigns.id}") |> JS.set_attribute({"aria-expanded", "false"}, to: "##{assigns.id}-trigger")
     assigns = assign(assigns, :hide, hide)
 
@@ -865,7 +871,8 @@ defmodule BrandoAdmin.Components.Form.Input do
           id={"#{@id}-trigger"}
           class="status-trigger"
           type="button"
-          aria-label={@label || gettext("Status")}
+          aria-label={"#{@label || gettext("Status")}: #{@current_label}"}
+          title={@current_label}
           aria-controls={@id}
           aria-expanded="false"
           phx-keydown={@hide |> JS.focus(to: "##{@id}-trigger")}
@@ -945,6 +952,57 @@ defmodule BrandoAdmin.Components.Form.Input do
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <.input type={:string_list} field={@field} />
     </Primitives.field_base>
+    """
+  end
+
+  attr :field, FormField
+  attr :label, :string
+  attr :instructions, :string
+  attr :class, :string
+  attr :compact, :boolean
+  attr :placeholder, :string
+  attr :disabled, :boolean
+  attr :readonly, :boolean, default: nil
+  attr :debounce, :integer
+  attr :monospace, :boolean
+  attr :change, :any, default: nil
+  attr :target, :any, default: nil
+  attr :opts, :list
+
+  @doc """
+  A text field for a setting most editors leave alone, such as a menu item's
+  key: it reads "Key: projects" and opens into a field when clicked. The
+  input is always in the form, so its value is always posted.
+  """
+  def disclosed_text(assigns) do
+    assigns = prepare_input_component(assigns)
+    wrapper = "#{assigns.field.id}-disclosure"
+    assigns = assign(assigns, :wrapper, wrapper)
+
+    ~H"""
+    <div id={@wrapper} class={["disclosed-text", @field.errors != [] && "is-open"]}>
+      <button
+        type="button"
+        class="disclosed-text-summary"
+        phx-click={
+          JS.add_class("is-open", to: "##{@wrapper}")
+          |> JS.focus(to: "##{@field.id}")
+        }
+      >
+        {@label}: <code>{@field.value}</code> <.icon name="hero-pencil-square" />
+      </button>
+      <div class="disclosed-text-field">
+        <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+          <.input
+            type={:text}
+            field={@field}
+            placeholder={@placeholder}
+            class={["text", @monospace && "monospace"]}
+            phx-debounce={@debounce}
+          />
+        </Primitives.field_base>
+      </div>
+    </div>
     """
   end
 

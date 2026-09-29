@@ -14,6 +14,7 @@ defmodule Brando.Navigation.Item do
   trait :sequenced
   trait :status
   trait :timestamped
+  trait Brando.Navigation.Item.DeriveKey
 
   identifier false
   persist_identifier false

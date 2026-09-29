@@ -23,6 +23,8 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
     {:ok,
      socket
      |> assign(assigns)
+     # Translates the label in the field's schema's domain, like other inputs
+     |> BrandoAdmin.Utils.prepare_input_component()
      |> ensure_default_link()}
   end
 
@@ -36,6 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
           var={var}
           render={:all}
           form_id={@form_id}
+          label_override={@label}
         />
       </.inputs_for>
     </div>

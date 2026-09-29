@@ -93,9 +93,9 @@ defmodule Brando.Navigation.Menu do
             size :full
 
             input :status, :status, compact: true
-            input :key, :text, monospace: true, compact: true, label: t("Key", Item)
-
             input :link, :link, compact: true, label: t("Link", Item)
+            # Taken from the link until set (`Item.DeriveKey`); tucked away
+            input :key, :disclosed_text, monospace: true, compact: true, label: t("Key", Item)
           end
         end
       end
@@ -109,7 +109,7 @@ defmodule Brando.Navigation.Menu do
   def default_item(_menu, _) do
     %Item{
       status: :published,
-      key: "key",
+      key: nil,
       link: %Var{
         type: :link,
         key: "link",

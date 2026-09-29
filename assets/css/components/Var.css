@@ -161,6 +161,21 @@
   border: 1px dashed #333;
 }
 
+/* What an entry link points at, e.g. "Side", after its title */
+.link-preview .link-kind {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #eef0eb;
+  color: #5b6557;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  text-transform: none;
+  vertical-align: 1px;
+}
+
 .link-preview {
   display: flex;
   align-items: center;

@@ -290,7 +290,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     # which carries the same distinction for vars with no UI at all.
     |> assign(:unsaved_var?, var[:id].value in [nil, ""])
     |> assign(:placement, placement)
-    |> assign(:label, get_field(changeset, :label))
+    # A field that owns the var (a menu item's link) names it with its own,
+    # translated label rather than the var's stored one ("Link")
+    |> assign(:label, Map.get(assigns, :label_override) || get_field(changeset, :label))
     |> assign(:key, var[:key].value)
     |> assign(:type, type)
     |> assign(:value, value)
@@ -1189,22 +1191,24 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     assigns = assign(assigns, :translated_type, translated_type)
 
     ~H"""
-    <div class="link-text" phx-no-format>
-      <%= if @link_text do %>
-        <%= if @identifier do %>
-          <.status_circle status={@identifier.status} />
-          <%= if @identifier.language do %>
-            [<%= String.upcase(to_string(@identifier.language)) %>]
-          <% end %>
-          <%= @link_text %>
-        <% end %>
-      <% else %>
-        <%= if @identifier do %>
-          <.status_circle status={@identifier.status} />
-          [<%= @translated_type %><%= if @identifier.language do %>/<%= String.upcase(to_string(@identifier.language)) %><% end %>]
-          <%= @identifier.title %>
-        <% end %>
-      <% end %>
+    <%!-- "Innsikt · Side", not "[Side/NO] Innsikt": the entry's own title or
+          the link's text, then what it is; its language in the chip's title. --%>
+    <div class="link-text">
+      <span
+        :if={@identifier}
+        class="link-status"
+        title={BrandoAdmin.Components.Content.List.Row.status_label(@identifier.status)}
+      >
+        <.status_circle status={@identifier.status} />
+      </span>
+      {@link_text || (@identifier && @identifier.title)}
+      <span
+        :if={@identifier && @translated_type}
+        class="link-kind"
+        title={@identifier.language && String.upcase(to_string(@identifier.language))}
+      >
+        {@translated_type}
+      </span>
     </div>
     <dl>
       <dt>{gettext("URL")}=</dt>

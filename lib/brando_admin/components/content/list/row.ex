@@ -518,6 +518,14 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  @doc "A status's name, e.g. for the title of its circle."
+  def status_label(:published), do: gettext("Published")
+  def status_label(:draft), do: gettext("Draft")
+  def status_label(:pending), do: gettext("Pending")
+  def status_label(:disabled), do: gettext("Deactivated")
+  def status_label(status) when is_binary(status), do: status |> String.to_existing_atom() |> status_label()
+  def status_label(_), do: gettext("Unpublished")
+
   attr :entry, :map, required: true
   attr :schema, :atom, required: true
 

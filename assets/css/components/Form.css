@@ -1045,3 +1045,29 @@ html.not-mac .shortcut-other { display: inline; }
 
 /* Text for screen readers only, e.g. the name of an icon-only control. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* A setting most editors leave alone: "Key: projects", opening into its field */
+.disclosed-text-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: #626b66;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+
+  code { font-size: 12px; }
+  [class^="hero-"] { width: 13px; height: 13px; }
+  &:hover { color: #254e3f; }
+}
+
+.disclosed-text-field { display: none; }
+.disclosed-text.is-open .disclosed-text-summary { display: none; }
+.disclosed-text.is-open .disclosed-text-field { display: block; }
+

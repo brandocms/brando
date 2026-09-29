@@ -105,6 +105,11 @@
   .brando-form .subform-entry.inline { align-items: flex-end; padding: 14px; margin-bottom: 8px; }
   .brando-form .subform-entry.inline .subform-tools { padding: 0 12px 0 0; align-self: stretch; justify-content: flex-end; }
   .brando-form .subform-entry.inline .subform-fields { display: grid; grid-template-columns: 40px minmax(120px, 180px) minmax(0, 1fr); gap: 16px; align-items: end; }
+  /* A row with a tucked-away setting (a menu item's key): status, the wide
+     field, then the setting's quiet summary. */
+  .brando-form .subform-entry.inline .subform-fields:has(> .brando-input .disclosed-text) { grid-template-columns: 40px minmax(0, 1fr) minmax(140px, auto); }
+  .brando-form .subform-fields .disclosed-text { padding-bottom: 10px; }
+  .brando-form .subform-fields .disclosed-text.is-open { padding-bottom: 0; }
   .brando-form .subform-fields .brando-input { width: 100%; }
   .brando-form .subform-fields .radios-wrapper.status.compact { box-sizing: border-box; width: 40px; height: 40px; min-height: 40px; background: #fff; }
   .brando-form .subform-fields .label-wrapper { display: flex; align-items: center; line-height: 20px; }
@@ -117,6 +122,8 @@
   .subform-fields .link-preview dl { min-width: 0; font-family: inherit; font-size: 12px; color: var(--workspace-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .subform-fields .link-preview dl:has(dd) dt { display: none; }
   .subform-fields .link-preview dd { margin: 0; padding: 0; }
+  /* "Label → /path", for URL and entry links alike */
+  .subform-fields .link-preview dd::before { content: "→ "; }
   @media (max-width: 700px) {
     .brando-form .form-tab > .row > fieldset.inline:first-child .brando-input:first-child { flex-basis: 100%; }
     .brando-form .subform-entry.inline { position: relative; display: block; padding: 14px; }
