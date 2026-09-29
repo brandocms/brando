@@ -12973,11 +12973,11 @@ msgstr[0] ""
 msgstr[1] ""
 
 #, elixir-autogen, elixir-format
-msgid "Now links to the %{language} version"
+msgid "Repointed automatically"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-msgid "The source links to content that also exists in %{language}, so this translation now links to that version instead. Nothing changed in the source; saving is all it takes."
+msgid "The source links to pages in %{source} that also exist in %{language}. Here, they link to the %{language} versions instead. You don't need to do anything but save."
 msgstr ""
 
 #, elixir-autogen, elixir-format

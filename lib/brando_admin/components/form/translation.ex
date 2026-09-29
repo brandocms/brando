@@ -622,7 +622,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
         />
         <.work_group
           :if={@groups[:relinked]}
-          title={gettext("Now links to the %{language} version", language: language_word(@state.language))}
+          title={gettext("Repointed automatically")}
           description={relinked_description(@state)}
           items={@groups[:relinked]}
           state={@state}
@@ -747,8 +747,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   defp relinked_description(state) do
     gettext(
-      "The source links to content that also exists in %{language}, so this translation now links to that version instead. Nothing changed in the source; saving is all it takes.",
-      language: language_word(state.language)
+      "The source links to pages in %{source} that also exist in %{language}. Here, they link to the %{language} versions instead. You don't need to do anything but save.",
+      language: language_word(state.language),
+      source: language_word(state.source && state.source.language)
     )
   end
 
