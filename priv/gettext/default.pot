@@ -12800,3 +12800,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Next page"
 msgstr ""
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Create translation"
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the translation"
+msgstr ""

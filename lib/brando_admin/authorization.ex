@@ -218,7 +218,8 @@ defmodule BrandoAdmin.Authorization do
               "duplicate_entry",
               "duplicate_selected_to_language",
               "duplicate_entry_to_language",
-              "translate_entry_to_language"
+              "translate_entry_to_language",
+              "create_entry_translation"
             ],
        do: :duplicate
 

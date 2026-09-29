@@ -238,9 +238,17 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
     has_blocks? = assigns.schema.has_trait(Brando.Trait.Blocks)
 
+    # A synchronized schema's language versions belong to a translation group:
+    # a plain copy in another language would stand outside it, so its rows
+    # offer "Create translation" instead, the same as the form.
+    synchronized? = Brando.Translations.synchronized?(assigns.schema)
+
     duplicate_langs? =
       assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn? &&
-        Enum.count(Brando.config(:languages)) > 1
+        Enum.count(Brando.config(:languages)) > 1 && not synchronized?
+
+    {translation_source_id, translation_langs} =
+      if synchronized? and has_duplicate_fn?, do: translation_targets(assigns.entry), else: {nil, []}
 
     ai_configured? = Brando.AI.configured?()
 
@@ -253,6 +261,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:has_duplicate_fn?, has_duplicate_fn?)
       |> assign(:has_blocks?, has_blocks?)
       |> assign(:duplicate_langs?, duplicate_langs?)
+      |> assign(:translation_source_id, translation_source_id)
+      |> assign(:translation_langs, translation_langs)
       |> assign(:ai_configured?, ai_configured?)
       |> assign(:translated_singular, translated_singular)
       |> assign(
@@ -319,6 +329,17 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           extra_attrs={[class: "ai-translate-action"]}
         >
           {gettext("Translate to")} [{String.upcase(lang)}] <.icon name="hero-sparkles" />
+        </.action_button>
+        <.action_button
+          :for={lang <- @translation_langs}
+          :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
+          :key={"create_translation_#{lang}"}
+          id={"action_#{@listing.name}_create_translation_#{@entry.id}_lang_#{lang}"}
+          entry_id={@translation_source_id}
+          language={lang}
+          event="create_entry_translation"
+        >
+          {gettext("Create translation")} [{String.upcase(lang)}]
         </.action_button>
         <.action_button
           :if={@has_blocks? && BrandoAdmin.Authorization.allowed?(:publish, @entry)}
@@ -792,6 +813,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   defp render_status_label(:pending), do: gettext("Pending")
   defp render_status_label(:published), do: gettext("Published")
   defp render_status_label(:deleted), do: gettext("Deleted")
+
+  # The group's source and the languages it has no version in yet. An entry
+  # outside a group becomes the source of the first translation.
+  defp translation_targets(entry) do
+    versions = Map.get(entry, :translation_status) || []
+    source = Enum.find(versions, &(&1.role == :source))
+    taken = [to_string(entry.language) | Enum.map(versions, &to_string(&1.language))]
+
+    languages =
+      for value <- Ecto.Enum.values(entry.__struct__, :language), to_string(value) not in taken, do: to_string(value)
+
+    {(source && source.entry_id) || entry.id, languages}
+  end
 
   defp get_duplication_langs(_, false), do: []
 

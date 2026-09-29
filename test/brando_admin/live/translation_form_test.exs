@@ -370,6 +370,27 @@ defmodule BrandoAdmin.TranslationFormTest do
       refute has_element?(view, ".listing-alternates")
     end
 
+    test "a row's menu creates a translation in the group, not a copy beside it", %{conn: conn, current_user: user} = c do
+      {:ok, alone} = SyncTest.create_article(%{title: "Alone", slug: "alone", language: "en", status: "draft"}, user)
+      {:ok, view, _html} = live(conn, "/admin/articles")
+      await_selector(view, ".listing-translations")
+
+      refute has_element?(view, "[phx-click='duplicate_entry_to_language']")
+      refute has_element?(view, "[phx-click='translate_entry_to_language']")
+      # The translated entry has every language already.
+      refute has_element?(view, "[id$='_create_translation_#{c.target.id}_lang_no']")
+
+      view |> element("[id$='_create_translation_#{alone.id}_lang_no']") |> render_click()
+
+      assert %{role: :source, group_id: group_id} = Translations.get_member(Article, alone.id)
+
+      assert [%{language: "no", role: :target, entry_id: target_id}] =
+               group_id |> Translations.list_members() |> Enum.filter(&(&1.language == "no"))
+
+      # It opens the new translation, as the form's button does.
+      assert_redirect(view, "/admin/articles/update/#{target_id}")
+    end
+
     test "is refreshed when the source is synchronized", %{conn: conn} = c do
       {:ok, view, _html} = live(conn, "/admin/articles")
       await_selector(view, "a.listing-translation.is-current")

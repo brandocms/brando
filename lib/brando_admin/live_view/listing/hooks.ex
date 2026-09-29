@@ -232,6 +232,23 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
             {:halt, socket}
         end
 
+      "create_entry_translation",
+      %{"id" => source_id, "language" => language},
+      %{assigns: %{current_user: user, schema: schema}} = socket ->
+        with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
+             {:ok, target} <- Brando.Translations.create_target(schema, source_id, language, user) do
+          update_list_entries(schema)
+          update_url = schema.__admin_route__(:update, [target.id])
+          send(self(), {:set_content_language_and_navigate, language, update_url})
+        else
+          error ->
+            require Logger
+            Logger.error("(!) Error creating a translation: #{inspect(error)}")
+            send(self(), {:toast, gettext("Could not create the translation")})
+        end
+
+        {:halt, socket}
+
       "translate_entry_to_language",
       %{"id" => entry_id, "language" => language},
       %{assigns: %{current_user: user, schema: schema}} = socket ->

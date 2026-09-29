@@ -12806,3 +12806,13 @@ msgstr "Forrige side"
 #, elixir-autogen, elixir-format
 msgid "Next page"
 msgstr "Neste side"
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Create translation"
+msgstr "Opprett oversettelse"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the translation"
+msgstr "Kunne ikke opprette oversettelsen"
