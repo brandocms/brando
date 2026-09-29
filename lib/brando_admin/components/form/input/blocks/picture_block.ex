@@ -117,12 +117,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   defp image_display_assigns(nil) do
-    %{extracted_path: nil, extracted_filename: nil, file_name: nil, upload_formats: ""}
+    %{extracted_path: nil, file_name: nil, upload_formats: ""}
   end
 
   defp image_display_assigns(image) do
     extracted_path = Map.get(image, :path)
-    extracted_filename = extracted_path && Path.basename(extracted_path)
+    file_name = extracted_path && Path.basename(extracted_path)
 
     upload_formats =
       case Map.get(image, :formats) do
@@ -132,8 +132,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     %{
       extracted_path: extracted_path,
-      extracted_filename: extracted_filename,
-      file_name: extracted_filename,
+      file_name: file_name,
       upload_formats: upload_formats
     }
   end
@@ -163,7 +162,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <%= if @ref_description not in ["", nil] do %>
                 {@ref_description}
               <% else %>
-                {@extracted_filename}
+                {image_label(@block_data, @image)}
               <% end %>
             </:description>
             <MediaField.field
@@ -337,4 +336,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:ok, images} = Brando.Images.list_images()
     {:noreply, assign(socket, :images, images)}
   end
+
+  # What the header calls the image: its alt text, not the stored file name,
+  # which is random ("2c9en62v2mds.png") and says nothing about the picture.
+  defp image_label(block_data, image) do
+    [Map.get(block_data, :alt), image_alt(image)]
+    |> Enum.find(&(is_binary(&1) and String.trim(&1) != ""))
+    |> Kernel.||(gettext("Image"))
+  end
+
+  defp image_alt(%{alt: alt}) when is_map(alt) do
+    Map.get(alt, to_string(Brando.config(:default_language))) ||
+      alt |> Map.values() |> Enum.find(&(is_binary(&1) and &1 != ""))
+  end
+
+  defp image_alt(%{alt: alt}) when is_binary(alt), do: alt
+  defp image_alt(_image), do: nil
 end
