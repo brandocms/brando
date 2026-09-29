@@ -14,7 +14,6 @@ defmodule BrandoAdmin.Chrome do
 
   import BrandoAdmin.Utils, only: [show_modal: 1]
 
-  alias Brando.Utils.Datetime
   alias BrandoAdmin.Components.Content
 
   alias Brando.Authorization.{Realtime, Scope}
@@ -71,14 +70,11 @@ defmodule BrandoAdmin.Chrome do
         assigns.presence.last_active
         |> String.to_integer()
         |> DateTime.from_unix!()
-        |> DateTime.shift_zone!(Brando.timezone())
-        |> Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+        |> BrandoAdmin.Dates.short()
       else
         if assigns.presence.last_seen do
           assigns.presence.last_seen
-          |> DateTime.from_naive!("Etc/UTC")
-          |> DateTime.shift_zone!(Brando.timezone())
-          |> Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+          |> BrandoAdmin.Dates.short()
         end
       end
 

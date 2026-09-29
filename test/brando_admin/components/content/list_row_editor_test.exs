@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.Content.ListRowEditorTest do
 
     assert html =~ "Evan"
     assert html =~ ~s(aria-label="Created by")
-    assert html =~ "03/12/24"
+    assert html =~ "03.12.24"
     refute html =~ "22/09/26"
   end
 
@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Content.ListRowEditorTest do
     assert html =~ "Nina"
     refute html =~ "Evan"
     assert html =~ ~s(aria-label="Edited by")
-    assert html =~ "20/09/26"
+    assert html =~ "20.09.26"
     refute html =~ "22/09/26"
   end
 

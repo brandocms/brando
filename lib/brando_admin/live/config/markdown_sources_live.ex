@@ -218,7 +218,7 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
                 <div>
                   <dt>{gettext("Last checked")}</dt><dd>
                     {if source.last_checked_at,
-                      do: Calendar.strftime(source.last_checked_at, "%Y-%m-%d %H:%M UTC"),
+                      do: BrandoAdmin.Dates.long(source.last_checked_at),
                       else: gettext("Never")}
                   </dd>
                 </div>
@@ -235,7 +235,7 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
             </div>
             <ol :if={@selected == source.id} class="markdown-source-history">
               <li :for={event <- @events}>
-                {Calendar.strftime(event.inserted_at, "%Y-%m-%d %H:%M UTC")} · {event_label(event.action)}{if event.message,
+                {BrandoAdmin.Dates.short(event.inserted_at)} · {event_label(event.action)}{if event.message,
                   do: " · " <> event.message}
               </li>
             </ol>

@@ -372,8 +372,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp format_size(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1_024, 1)} KB"
   defp format_size(bytes), do: "#{Float.round(bytes / 1_048_576, 1)} MB"
 
-  defp format_last_edit(%NaiveDateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
-  defp format_last_edit(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
+  defp format_last_edit(%NaiveDateTime{} = datetime), do: BrandoAdmin.Dates.short(datetime)
+  defp format_last_edit(%DateTime{} = datetime), do: BrandoAdmin.Dates.short(datetime)
   defp format_last_edit(value), do: value
 
   defp notify(socket, message) do

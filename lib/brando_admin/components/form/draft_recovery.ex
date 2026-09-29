@@ -113,9 +113,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
                       <span :if={copy.attempted_at} class="draft-copy-reviewed">{gettext("Previously reviewed")}</span>
                     </th>
                     <td>
-                      <time datetime={DateTime.to_iso8601(copy.updated_at)}>
-                        {Calendar.strftime(copy.updated_at, "%d %b %Y · %H:%M:%S")}
-                      </time>
+                      <BrandoAdmin.Dates.time at={copy.updated_at} format={:long} />
                     </td>
                     <td class="draft-copy-contents">{content_summary(copy.payload)}</td>
                   </tr>
@@ -400,7 +398,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
     do: gettext("No unsaved changes in this editor")
 
   defp status(%{saved_at: %DateTime{} = at}),
-    do: gettext("Recovery copy saved at %{time}", time: Calendar.strftime(at, "%H:%M:%S UTC"))
+    do: gettext("Recovery copy saved at %{time}", time: BrandoAdmin.Dates.short(at))
 
   defp status(_), do: gettext("Recovery copies are saved automatically")
 

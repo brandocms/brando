@@ -223,7 +223,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                   aria-current={@conversation && @conversation.id == conversation.id && "page"}
                 >
                   <span>{conversation.title || gettext("Untitled")}</span>
-                  <time>{Calendar.strftime(conversation.updated_at, "%d.%m %H:%M")}</time>
+                  <BrandoAdmin.Dates.time at={conversation.updated_at} />
                 </.link>
               </li>
             </ul>
@@ -268,7 +268,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <section class="assistant-chat" aria-label={gettext("Conversation")}>
           <div class="assistant-chat-title">
             <h2>{(@conversation && @conversation.title) || gettext("New conversation")}</h2>
-            <span :if={@conversation}>{Calendar.strftime(@conversation.inserted_at, "%d.%m.%Y %H:%M")}</span>
+            <span :if={@conversation}><BrandoAdmin.Dates.time at={@conversation.inserted_at} format={:long} /></span>
           </div>
 
           <.destination target={(@conversation && @conversation.target) || @target} />

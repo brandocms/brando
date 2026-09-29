@@ -503,10 +503,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                       gettext("Deleted account")}<span :if={event.subject_user_id}> · {event.subject_name ||
                       gettext("Deleted member")}</span></small>
                   </div>
-                  <time datetime={DateTime.to_iso8601(event.inserted_at)}>{Calendar.strftime(
-                    event.inserted_at,
-                    "%d %b %Y · %H:%M UTC"
-                  )}</time>
+                  <BrandoAdmin.Dates.time at={event.inserted_at} format={:long} />
                 </article>
               </div>
             <% end %>

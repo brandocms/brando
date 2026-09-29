@@ -486,5 +486,5 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp human_status(status), do: status |> Atom.to_string() |> String.capitalize()
 
   defp format_datetime(nil), do: "—"
-  defp format_datetime(datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M UTC")
+  defp format_datetime(datetime), do: BrandoAdmin.Dates.short(datetime)
 end

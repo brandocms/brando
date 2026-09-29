@@ -240,8 +240,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
   defp scope_name(nil), do: gettext("This installation")
   defp scope_name(site), do: site.name
 
-  defp format_datetime(%DateTime{} = datetime),
-    do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M UTC")
+  defp format_datetime(%DateTime{} = datetime), do: BrandoAdmin.Dates.short(datetime)
 
   defp format_size(bytes) when bytes < 1_024, do: "#{bytes} B"
   defp format_size(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1_024, 1)} KB"

@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownSourceBlock do
               >
                 <option value="">{gettext("Choose a commit to preview")}</option>
                 <option :for={version <- @versions} value={version.id} selected={@preview && @preview.id == version.id}>
-                  {String.slice(version.commit, 0, 12)} · {Calendar.strftime(version.inserted_at, "%Y-%m-%d %H:%M UTC")}
+                  {String.slice(version.commit, 0, 12)} · {BrandoAdmin.Dates.short(version.inserted_at)}
                 </option>
               </select>
               <section :if={@preview} aria-label={gettext("Markdown preview")} class="markdown-source-preview">

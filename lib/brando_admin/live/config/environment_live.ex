@@ -705,17 +705,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     |> Calendar.strftime("%Y-%m-%dT%H:%M")
   end
 
-  defp format_log_time(datetime) do
-    datetime
-    |> DateTime.shift_zone!(Brando.timezone())
-    |> Calendar.strftime("%d/%m/%y • %H:%M")
-  end
+  defp format_log_time(datetime), do: BrandoAdmin.Dates.short(datetime)
 
-  defp format_scheduled_at(scheduled_at) do
-    scheduled_at
-    |> DateTime.shift_zone!(Brando.timezone())
-    |> Calendar.strftime("%Y-%m-%d %H:%M %Z")
-  end
+  defp format_scheduled_at(scheduled_at), do: BrandoAdmin.Dates.long(scheduled_at)
 
   defp job_description(job, environments) do
     cond do

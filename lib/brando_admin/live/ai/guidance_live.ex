@@ -226,8 +226,7 @@ defmodule BrandoAdmin.AI.GuidanceLive do
     socket
   end
 
-  defp timestamp(datetime),
-    do: datetime |> DateTime.shift_zone!(Brando.timezone()) |> Calendar.strftime("%d.%m.%Y %H:%M")
+  defp timestamp(datetime), do: BrandoAdmin.Dates.long(datetime)
 
   defp author(%{author: %{name: name}}) when is_binary(name), do: name
   defp author(_), do: gettext("Unknown user")

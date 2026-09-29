@@ -56,10 +56,7 @@ defmodule BrandoAdmin.Components.Dashboard do
             <div class="dashboard-entry-list">
               <article :for={entry <- @overview.scheduled} class="dashboard-entry">
                 <div><.link navigate={entry.path}>{entry.title}</.link><small>{entry.type}</small></div>
-                <time datetime={DateTime.to_iso8601(entry.scheduled_at)}>{Brando.Utils.Datetime.format_datetime(
-                  entry.scheduled_at,
-                  "%d %b · %H:%M %Z"
-                )}</time>
+                <BrandoAdmin.Dates.time at={entry.scheduled_at} format={:long} />
               </article>
             </div>
           </section>
@@ -84,10 +81,7 @@ defmodule BrandoAdmin.Components.Dashboard do
         <span :if={!@compact && @entry.status} class={["workspace-badge", @entry.status == :published && "positive"]}>{status_label(
           @entry.status
         )}</span>
-        <time :if={@entry.updated_at} datetime={DateTime.to_iso8601(@entry.updated_at)}>{Brando.Utils.Datetime.format_datetime(
-          @entry.updated_at,
-          "%d %b · %H:%M"
-        )}</time>
+        <BrandoAdmin.Dates.time :if={@entry.updated_at} at={@entry.updated_at} />
       </div>
     </article>
     """

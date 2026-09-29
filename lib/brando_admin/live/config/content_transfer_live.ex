@@ -226,9 +226,10 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 <div>
                   <dt>{dgettext("content_transfer", "Last updated")}</dt>
                   <dd>
-                    <time :if={entry.updated_at} datetime={Calendar.strftime(entry.updated_at, "%Y-%m-%dT%H:%M:%SZ")}>
-                      {Brando.Utils.Datetime.format_datetime(entry.updated_at, "%d.%m.%Y · %H:%M")}
-                    </time><span :if={!entry.updated_at}>{dgettext("content_transfer", "Not recorded")}</span>
+                    <BrandoAdmin.Dates.time :if={entry.updated_at} at={entry.updated_at} /><span :if={!entry.updated_at}>{dgettext(
+                      "content_transfer",
+                      "Not recorded"
+                    )}</span>
                   </dd>
                 </div>
               </dl>
@@ -1197,7 +1198,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                     map_size(receipt.after)
                   )}
             </h3><p>
-              {Calendar.strftime(receipt.inserted_at, "%Y-%m-%d, %H:%M UTC")}
+              <BrandoAdmin.Dates.time at={receipt.inserted_at} format={:long} />
             </p><span :if={receipt.restored_at} class="transfer-badge">{dgettext("content_transfer", "Recovered")}</span><code>{receipt.package_id}</code>
           </div><div class="transfer-actions">
             <button

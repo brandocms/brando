@@ -168,8 +168,11 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                       </div>
                     </td>
                     <td class="date" data-label={gettext("Created")}>
-                      <time datetime={revision_datetime(revision.inserted_at)}>
-                        {Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%Y")}
+                      <time
+                        datetime={revision_datetime(revision.inserted_at)}
+                        title={BrandoAdmin.Dates.full(revision.inserted_at)}
+                      >
+                        {Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d.%m.%y")}
                         <span class="revision-time">{Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%H:%M")}</span>
                       </time>
                     </td>

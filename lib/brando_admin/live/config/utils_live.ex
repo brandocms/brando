@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               </p>
               <small :if={@sitemap_last_updated}>
                 {gettext("Last generated: %{last_updated}",
-                  last_updated: Calendar.strftime(@sitemap_last_updated, "%d %b %Y, %H:%M %Z")
+                  last_updated: BrandoAdmin.Dates.long(@sitemap_last_updated)
                 )}
               </small>
               <small :if={!@sitemap_last_updated} class="utils-empty-status">{gettext("Not generated")}</small>

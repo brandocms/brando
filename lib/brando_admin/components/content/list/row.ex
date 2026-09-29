@@ -698,7 +698,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
             <div class="time" id={"entry_creator_time_icon_#{@entry_id}"} title={@label}>
               <%= if @at do %>
-                {format_datetime(@at, "%d/%m/%y")}
+                {format_datetime(@at, "%d.%m.%y")}
                 <span>•</span> {format_datetime(@at, "%H:%M")}
               <% end %>
             </div>

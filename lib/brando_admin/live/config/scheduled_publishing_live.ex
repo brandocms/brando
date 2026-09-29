@@ -4,7 +4,6 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  import Brando.Utils.Datetime
   import Phoenix.Component
 
   alias Brando.Publisher
@@ -81,10 +80,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
                   ]}>{job_state_label(job.state)}</span>
                 </td>
                 <td class="publishing-date">
-                  <time datetime={DateTime.to_iso8601(job.scheduled_at)}>{format_datetime(job.scheduled_at, "%d %b %Y")}<small>{format_datetime(
-                    job.scheduled_at,
-                    "%H:%M %Z"
-                  )}</small></time>
+                  <BrandoAdmin.Dates.time at={job.scheduled_at} format={:long} />
                 </td>
                 <td class="row-actions">
                   <button

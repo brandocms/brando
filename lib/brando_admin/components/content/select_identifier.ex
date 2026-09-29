@@ -198,7 +198,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
                 </div>
                 <div>
                   <dt>{gettext("Last updated")}</dt><dd>
-                    <span>{Brando.Utils.Datetime.format_datetime(@selected_identifier.updated_at, "%-d %B %Y · %H:%M")}</span>
+                    <BrandoAdmin.Dates.time at={@selected_identifier.updated_at} format={:long} />
                   </dd>
                 </div>
               </dl>

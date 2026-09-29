@@ -274,7 +274,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
               {@file_name} ({Brando.Utils.human_size(@file.filesize)})
             </div>
             <div :if={!@compact} class="updated">
-              {gettext("Last updated")}: {Brando.Utils.Datetime.format_datetime(@file.updated_at, "%d/%m/%y, %H:%M")}
+              {gettext("Last updated")}: <BrandoAdmin.Dates.time at={@file.updated_at} />
             </div>
           </div>
           <button class="tiny" type="button" phx-click={@click}>
