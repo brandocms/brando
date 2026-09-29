@@ -41,4 +41,24 @@ defmodule BrandoAdmin.Components.Form.SuggestAltTextTest do
     assert Ecto.Changeset.get_change(socket.assigns.image_changeset, :alt) == nil
     refute socket.assigns.alt_text_suggesting
   end
+
+  describe "on the image's own form" do
+    defp form_socket(image) do
+      %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          entry: image,
+          form: Phoenix.Component.to_form(Ecto.Changeset.change(image), [])
+        }
+      }
+    end
+
+    test "the suggestion fills the form's alt text, unsaved" do
+      result = {:ok, {:ok, %{values: %{"en" => "Two people talking"}, model: "m"}}}
+      {:noreply, socket} = Form.handle_async({:suggest_entry_alt_text, 7}, result, form_socket(@image))
+
+      assert Ecto.Changeset.get_change(socket.assigns.form.source, :alt) ==
+               %{"no" => "Eksisterende", "en" => "Two people talking"}
+    end
+  end
 end

@@ -1299,6 +1299,25 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
   end
 
+  def handle_async({:suggest_entry_alt_text, image_id}, result, socket) do
+    socket = assign(socket, :alt_text_suggesting, false)
+
+    case {result, socket.assigns[:entry]} do
+      {{:ok, {:ok, %{values: values}}}, %{id: ^image_id}} ->
+        changeset = socket.assigns.form.source
+        alt = Map.merge(Ecto.Changeset.get_field(changeset, :alt) || %{}, values)
+        changeset = put_change(changeset, :alt, alt)
+        {:noreply, socket |> assign(:form, to_form(changeset, [])) |> Drafts.dirty()}
+
+      {{:ok, {:ok, _}}, _} ->
+        {:noreply, socket}
+
+      _ ->
+        send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
+        {:noreply, socket}
+    end
+  end
+
   # "Suggest alt text" in the image drawer: the suggestions go into the
   # drawer's form, as if typed, and are saved with it — reviewed first.
   def handle_async({:suggest_alt_text, image_id}, result, socket) do
@@ -2370,7 +2389,7 @@ defmodule BrandoAdmin.Components.Form do
       <.entry_loader :if={!@blocks_ready?} id={"#{@id}-loader"} status={@entry_load_status} />
       <div
         id={"#{@id}-el"}
-        class="brando-form"
+        class={["brando-form", assigns[:alt_text_suggesting] && "is-suggesting-alt"]}
         phx-hook="Brando.Form"
         data-deliver-topic={@deliver_topic}
         data-entry-id={@entry_id}
@@ -2622,7 +2641,6 @@ defmodule BrandoAdmin.Components.Form do
             schema={@schema}
             edit_image={@edit_image}
             processing={@processing}
-            alt_text_suggesting={assigns[:alt_text_suggesting] || false}
           />
 
           <ImageDrawer.editor
@@ -4074,6 +4092,15 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("validate_image", _, socket) do
     {:noreply, socket}
+  end
+
+  # The image form's own "Suggest alt text" (`suggest_alt: true` on its alt
+  # field): the suggestion goes into the form, unsaved, like the drawer's.
+  def handle_event("suggest_entry_alt_text", _, %{assigns: %{entry: %Images.Image{id: id}}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:alt_text_suggesting, true)
+     |> start_async({:suggest_entry_alt_text, id}, fn -> Images.AltText.describe(id) end)}
   end
 
   def handle_event("suggest_alt_text", _, %{assigns: %{edit_image: %{image: %{id: id}}}} = socket) do

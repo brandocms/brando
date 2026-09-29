@@ -146,7 +146,7 @@ defmodule Brando.Images.Image do
           size :half
           input :title, :i18n_text, label: t("Title"), languages: :content
           input :credits, :i18n_text, label: t("Credits"), languages: :content
-          input :alt, :i18n_text, label: t("Alt. text"), languages: :content
+          input :alt, :i18n_text, label: t("Alt. text"), languages: :content, suggest_alt: true
         end
 
         # The image with its focal point, set by clicking it.

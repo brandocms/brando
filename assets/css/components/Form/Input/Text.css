@@ -3,6 +3,38 @@
    a segmented pill a few pixels above the input: one outline around them
    all, the open language a white pill inside it. */
 .i18n-field {
+  /* The language tabs, and an action for the field (e.g. "Suggest alt text") */
+  .i18n-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+
+    .i18n-tabs { margin-bottom: 0; }
+  }
+
+  /* In the AI actions' purple */
+  .i18n-suggest {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 2px 4px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #6d4de3;
+    font-size: 12px;
+    line-height: 18px;
+    cursor: pointer;
+
+    [class^="hero-"] { width: 14px; height: 14px; }
+    &:hover { background: color-mix(in srgb, #6d4de3 8%, transparent); }
+  }
+
   .i18n-tabs {
     display: inline-flex;
     gap: 2px;
@@ -206,3 +238,14 @@ input.text.has-ai-action,
 textarea.text.has-ai-action {
   padding-right: 46px;
 }
+
+/* While a suggestion is on its way */
+.is-suggesting-alt .i18n-suggest {
+  pointer-events: none;
+  animation: i18n-suggest-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes i18n-suggest-pulse {
+  50% { opacity: 0.4; }
+}
+

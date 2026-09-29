@@ -1310,6 +1310,10 @@ defmodule BrandoAdmin.Components.Form.Input do
   # One tab per language over a single input area. Which tab is open lives
   # in the browser (JS class commands, which survive patches); every
   # language's input is always in the form, so all of them submit.
+  defp suggest_event(true), do: "suggest_entry_alt_text"
+  defp suggest_event(event) when is_binary(event), do: event
+  defp suggest_event(_), do: nil
+
   defp i18n_field(assigns) do
     opts = assigns.opts || []
     languages = i18n_languages(Keyword.get(opts, :languages, :admin))
@@ -1321,6 +1325,18 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:value, value)
       |> assign(:rows, opts[:rows] || 3)
       |> assign(:i18n_id, "#{assigns.field.id}-i18n")
+      # `suggest_alt: true` on an image form's alt field, or the event name
+      # (and `suggest_target`) where another component owns the image
+      |> assign(:suggest_event, suggest_event(opts[:suggest_alt]))
+      |> assign(:suggest_target, opts[:suggest_target] || assigns[:target])
+      |> then(fn assigns ->
+        assign(
+          assigns,
+          :suggest_alt?,
+          !is_nil(assigns.suggest_event) && !is_nil(assigns.suggest_target) &&
+            Brando.AI.configured?(Brando.Images.AltText.ai_opts())
+        )
+      end)
       |> assign(:first, languages |> List.first() |> then(&(&1 && elem(&1, 0))))
       |> assign(:label_text, label_text(assigns[:label]))
       # A language is only missing once another has text; an empty field is
@@ -1330,20 +1346,32 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["i18n-field", "i18n-#{@kind}"]} id={@i18n_id}>
-        <div class="i18n-tabs" role="tablist" aria-label={@label}>
+        <div class="i18n-head">
+          <div class="i18n-tabs" role="tablist" aria-label={@label}>
+            <button
+              :for={{language, name} <- @languages}
+              type="button"
+              role="tab"
+              id={"#{@i18n_id}-tab-#{language}"}
+              class={["i18n-tab", language == @first && "is-active"]}
+              aria-selected={to_string(language == @first)}
+              aria-controls={"#{@i18n_id}-panel-#{language}"}
+              title={name}
+              data-missing={to_string(@written? and blank_i18n?(@value[language]))}
+              phx-click={select_i18n_tab(@i18n_id, language)}
+            >
+              {language}
+            </button>
+          </div>
+          <%!-- An image's alt text, described by AI and filled in unsaved --%>
           <button
-            :for={{language, name} <- @languages}
+            :if={@suggest_alt?}
             type="button"
-            role="tab"
-            id={"#{@i18n_id}-tab-#{language}"}
-            class={["i18n-tab", language == @first && "is-active"]}
-            aria-selected={to_string(language == @first)}
-            aria-controls={"#{@i18n_id}-panel-#{language}"}
-            title={name}
-            data-missing={to_string(@written? and blank_i18n?(@value[language]))}
-            phx-click={select_i18n_tab(@i18n_id, language)}
+            class="i18n-suggest"
+            phx-click={@suggest_event}
+            phx-target={@suggest_target}
           >
-            {language}
+            <.icon name="hero-sparkles" /> {gettext("Suggest alt text")}
           </button>
         </div>
         <div
