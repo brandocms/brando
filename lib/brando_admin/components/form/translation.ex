@@ -287,12 +287,16 @@ defmodule BrandoAdmin.Components.Form.Translation do
     |> Enum.sort_by(&{kind_order(&1.kind), &1.path})
     |> Enum.map(fn item ->
       target = target(item.path, blocks)
-      linked = linked_title(item, target, blocks, titles, to_string(language))
+      entries = linked_entries(item, target, blocks, titles, to_string(language))
+      linked = if entries == [], do: nil, else: Enum.map_join(entries, ", ", & &1.title)
+      base = label(item.path, target, labels)
 
       %{
         path: item.path,
         kind: item.kind,
-        label: with_linked(label(item.path, target, labels), linked),
+        label: with_linked(base, linked),
+        base_label: if(linked, do: String.replace_suffix(base, " › " <> gettext("media"), ""), else: base),
+        entries: entries,
         linked: linked,
         target: target
       }
@@ -302,15 +306,16 @@ defmodule BrandoAdmin.Components.Form.Translation do
   # A link's item names the entry it points at: the one it now follows for an
   # update, the one still waiting for a translation otherwise. A selection
   # moved onto this language names the entries it now links to in it.
-  defp linked_title(item, target, blocks, titles, language) do
+  defp linked_entries(item, target, blocks, titles, language) do
     item
     |> linked_ids(target, blocks)
-    |> Enum.filter(fn id -> item.kind != :relinked or match?({_, ^language}, titles[id]) end)
-    |> Enum.map(fn id -> (titles[id] && elem(titles[id], 0)) || "##{id}" end)
-    |> case do
-      [] -> nil
-      names -> Enum.join(names, ", ")
-    end
+    |> Enum.filter(fn id -> item.kind != :relinked or match?(%{language: ^language}, titles[id]) end)
+    |> Enum.map(fn id ->
+      case titles[id] do
+        %{title: title, url: url} -> %{title: title, url: url}
+        nil -> %{title: "##{id}", url: nil}
+      end
+    end)
   end
 
   defp with_linked(label, nil), do: label
@@ -346,9 +351,11 @@ defmodule BrandoAdmin.Components.Form.Translation do
     else
       import Ecto.Query
 
-      from(i in Brando.Content.Identifier, where: i.id in ^ids, select: {i.id, {i.title, i.language}})
+      from(i in Brando.Content.Identifier, where: i.id in ^ids)
       |> Brando.Repo.all()
-      |> Map.new(fn {id, {title, language}} -> {id, {title, language && to_string(language)}} end)
+      |> Map.new(fn i ->
+        {i.id, %{title: i.title, language: i.language && to_string(i.language), url: admin_url(i.schema, i.entry_id)}}
+      end)
     end
   end
 
@@ -704,7 +711,21 @@ defmodule BrandoAdmin.Components.Form.Translation do
       <p :if={@description} class="translation-group-description">{@description}</p>
       <ul>
         <li :for={item <- @items}>
-          <span class="translation-item-label">{item.label}</span>
+          <span :if={item.entries == []} class="translation-item-label">{item.label}</span>
+          <span :if={item.entries != []} class="translation-item-label">
+            {item.base_label} →
+            <%= for {entry, index} <- Enum.with_index(item.entries) do %>
+              <%= if index > 0 do %>
+                ,
+              <% end %>
+              <.link
+                :if={entry.url}
+                href={entry.url}
+                target="_blank"
+                title={gettext("Edit in a new tab")}
+              >{entry.title}</.link><span :if={!entry.url}>{entry.title}</span>
+            <% end %>
+          </span>
           <label :if={@acknowledge} class="translation-ack">
             <input
               type="checkbox"

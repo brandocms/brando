@@ -58,6 +58,7 @@
 }
 
 .translation-item-label { min-width: 0; overflow-wrap: anywhere; }
+.translation-item-label a { color: var(--translation-accent); text-decoration: underline; text-underline-offset: 2px; }
 
 .translation-ack {
   display: inline-flex;

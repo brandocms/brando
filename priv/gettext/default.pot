@@ -13013,3 +13013,7 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{title} appear here"
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Edit in a new tab"
+msgstr ""

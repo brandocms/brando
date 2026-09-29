@@ -13019,3 +13019,7 @@ msgstr "Alle %{plural}"
 #, elixir-autogen, elixir-format
 msgid "%{title} appear here"
 msgstr "%{title} vises her"
+
+#, elixir-autogen, elixir-format
+msgid "Edit in a new tab"
+msgstr "Rediger i ny fane"
