@@ -56,4 +56,41 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
   test "no upload outside a form, where nothing would deliver it back to the picker" do
     assert open_select(%{}).assigns.upload_target == nil
   end
+
+  describe "a big folder" do
+    setup do
+      user = Brando.Factory.insert(:random_user)
+
+      for n <- 1..120 do
+        Brando.Factory.insert(:image,
+          creator_id: user.id,
+          status: :processed,
+          path: "images/site/default/picker-#{n}.jpg"
+        )
+      end
+
+      :ok
+    end
+
+    test "renders a page of rows at a time" do
+      socket = open_select(%{})
+      assert socket.assigns.image_count == 120
+      assert socket.assigns.rendered_count == 100
+
+      {:noreply, socket} = ImagePicker.handle_event("load_more_images", %{}, socket)
+      assert socket.assigns.rendered_count == 120
+
+      # Nothing left: another request changes nothing.
+      {:noreply, socket} = ImagePicker.handle_event("load_more_images", %{}, socket)
+      assert socket.assigns.rendered_count == 120
+    end
+
+    test "keeps no rows once closed" do
+      {:noreply, socket} = ImagePicker.handle_event("picker_closed", %{}, open_select(%{}))
+
+      refute socket.assigns.opened?
+      assert socket.assigns.rendered_count == 0
+      assert socket.assigns.visible_item_ids == []
+    end
+  end
 end

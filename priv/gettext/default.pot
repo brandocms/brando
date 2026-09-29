@@ -12840,3 +12840,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This entry"
 msgstr ""
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Show more (%{count} left)"
+msgstr ""

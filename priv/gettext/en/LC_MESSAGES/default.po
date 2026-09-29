@@ -12841,3 +12841,8 @@ msgstr "Delete this block"
 #, elixir-autogen, elixir-format
 msgid "This entry"
 msgstr "This entry"
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Show more (%{count} left)"
+msgstr "Show more (%{count} left)"

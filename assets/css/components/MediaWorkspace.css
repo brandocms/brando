@@ -76,6 +76,9 @@
   .image-picker__actions { grid-column: 4; grid-row: 1 / span 2; }
 }
 .drawer.admin-workspace.media-workspace-drawer {
+  /* Loads the next page of a big folder, if scrolling to the end hasn't. */
+  .image-picker-more { display: block; width: 100%; margin: 12px 0 0; padding: 10px; border: 1px solid #dce2dc; border-radius: 6px; background: #fff; color: #3d5c48; font: 13px/18px "Main", sans-serif; cursor: pointer; }
+  .image-picker-more:hover { background: #edf3e9; }
   /* Thumbnails of the images selected for organizing, in the organize bar.
      Scoped to the drawer to outrank its image rules, which stretch an img. */
   .image-picker-organize-thumbs { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; }

@@ -134,6 +134,13 @@ defmodule BrandoAdmin.Components.ImagePicker do
     assign(socket, :config_target, resolve_config_target(socket.assigns.config_target))
   end
 
+  # The image fields a picker row needs.
+  @list_fields [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal]
+
+  # Rows rendered at a time. The rest load as the list scrolls (or from the
+  # "show more" button), so a big folder doesn't put 1000+ rows in the form.
+  @page_size 100
+
   # `config_target: :all` browses the whole library from the images root, for
   # pickers that are not choosing for a field (the AI assistant's attachments).
   defp list_images(config_target) do
@@ -141,7 +148,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
     {:ok, images} =
       Brando.Images.list_images(%{
-        select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal],
+        select: @list_fields,
         filter: Map.put(filter, :status, :processed),
         order: "desc id"
       })
@@ -166,10 +173,20 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   def handle_event("cancel_pending_upload", _, socket) do
     {:noreply,
-     push_event(socket, "b:block_upload_folder_cancelled", %{
+     socket
+     |> close_list()
+     |> push_event("b:block_upload_folder_cancelled", %{
        upload_name: socket.assigns[:pending_upload_name],
        request_id: socket.assigns[:pending_request_id]
      })}
+  end
+
+  def handle_event("picker_closed", _, socket) do
+    {:noreply, close_list(socket)}
+  end
+
+  def handle_event("load_more_images", _, socket) do
+    {:noreply, socket |> stream_next_page() |> push_selection_state()}
   end
 
   def handle_event("confirm_block_upload_folder", _, socket) do
@@ -180,6 +197,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:noreply,
      socket
      |> remember_folder(absolute_folder)
+     |> close_list()
      |> push_event("b:block_upload_folder_confirmed", %{
        upload_name: to_string(upload_name),
        request_id: socket.assigns[:pending_request_id],
@@ -434,6 +452,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
               id={"image-picker-grid-#{@id}"}
               phx-update="stream"
               phx-hook="Brando.ImagePickerGrid"
+              phx-viewport-bottom={JS.push("load_more_images", target: @myself)}
               data-target-component={@myself}
               data-thumbs-id={"image-picker-organize-thumbs-#{@id}"}
             >
@@ -447,6 +466,15 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 myself={@myself}
               />
             </div>
+            <button
+              :if={@rendered_count < @image_count}
+              type="button"
+              class="image-picker-more"
+              phx-click="load_more_images"
+              phx-target={@myself}
+            >
+              {gettext("Show more (%{count} left)", count: @image_count - @rendered_count)}
+            </button>
           </div>
         </.live_component>
         <:footer :if={@picker_mode == :block_upload}>
@@ -532,7 +560,11 @@ defmodule BrandoAdmin.Components.ImagePicker do
           # selection state the picker pushes back then confirms it.
           if @multi,
             do: "selected" |> JS.toggle_class() |> JS.push("select_image", target: @event_target),
-            else: JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")
+            else:
+              "select_image"
+              |> JS.push(target: @event_target)
+              |> JS.push("picker_closed", target: @myself)
+              |> toggle_drawer("#image-picker")
         end
       }
       phx-value-id={@image.id}
@@ -622,6 +654,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:last_organize_selected_id, fn -> nil end)
     |> assign_new(:image_count, fn -> 0 end)
     |> assign_new(:visible_item_ids, fn -> [] end)
+    |> assign_new(:rendered_count, fn -> 0 end)
   end
 
   defp assign_folder_state(socket, requested_folder) do
@@ -670,11 +703,45 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign(:current_folder, current_folder)
     |> assign(:image_count, length(visible_images))
     |> assign(:visible_item_ids, Enum.map(visible_images, & &1.id))
-    |> stream(:visible_images, visible_images, reset: true)
+    |> assign(:rendered_count, min(@page_size, length(visible_images)))
+    |> stream(:visible_images, Enum.take(visible_images, @page_size), reset: true)
     |> assign(:child_folders, child_folders)
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders_for_root, recent_folders_for_root)
     |> assign(:upload_target, upload_target(socket, upload_root, current_folder))
+  end
+
+  # The next page of the folder's images, appended to the list. Only the ids
+  # are kept between pages, so the rows are loaded again by id, in order.
+  defp stream_next_page(%{assigns: %{visible_item_ids: ids, rendered_count: rendered}} = socket)
+       when rendered < length(ids) do
+    page_ids = ids |> Enum.drop(rendered) |> Enum.take(@page_size)
+    by_id = page_ids |> load_images() |> Map.new(&{&1.id, &1})
+    images = for id <- page_ids, image = by_id[id], do: image
+
+    socket
+    |> assign(:rendered_count, rendered + length(page_ids))
+    |> stream(:visible_images, images)
+  end
+
+  defp stream_next_page(socket), do: socket
+
+  defp load_images(ids) do
+    import Ecto.Query, only: [from: 2]
+    Brando.Repo.all(from(i in Brando.Images.Image, where: i.id in ^ids, select: struct(i, ^@list_fields)))
+  end
+
+  # A closed picker keeps nothing on the page: its rows sat in the form's DOM
+  # (1000+ in a big folder) and every later patch of the form walked them.
+  # Opening it again loads the folder afresh anyway.
+  defp close_list(socket) do
+    socket
+    |> assign(:opened?, false)
+    |> assign(:organize_selected, [])
+    |> assign(:last_organize_selected_id, nil)
+    |> assign(:visible_item_ids, [])
+    |> assign(:rendered_count, 0)
+    |> stream(:visible_images, [], reset: true)
   end
 
   # The UploadTrigger data for uploading into the folder on screen, with the
