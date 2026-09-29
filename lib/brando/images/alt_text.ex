@@ -138,15 +138,15 @@ defmodule Brando.Images.AltText do
 
   @doc """
   Describes image `id` in every content language it lacks alt text in (all
-  of them when it lacks none), without saving: `{:ok, %{values: %{language
+  of them when it lacks none), or in `languages:`, without saving: `{:ok, %{values: %{language
   => text}, model: model}}`.
   """
-  @spec describe(integer() | String.t()) :: {:ok, %{values: map(), model: String.t()}} | {:error, term()}
-  def describe(id) do
+  @spec describe(integer() | String.t(), keyword()) :: {:ok, %{values: map(), model: String.t()}} | {:error, term()}
+  def describe(id, opts \\ []) do
     ai_opts = ai_opts()
 
     with {:ok, image} <- fetch(id),
-         languages = requested_languages(image),
+         languages = opts[:languages] || requested_languages(image),
          {:ok, binary, media_type} <- read(image),
          {:ok, %{text: text, model: model}} <-
            AI.generate_text(messages(image, languages, binary, media_type, ai_opts), ai_opts),

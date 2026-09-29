@@ -51,7 +51,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     socket
     |> assign(:images, [])
     |> assign(:form_id, nil)
+    |> assign(:alt_suggesting, false)
     |> then(&{:ok, &1})
+  end
+
+  def update(%{event: "alt_text_suggested", result: result}, socket) do
+    socket = assign(socket, :alt_suggesting, false)
+
+    case result do
+      {:ok, text} ->
+        socket
+        |> Block.commit_ref_data(
+          ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields, %{alt: text}),
+          image_id: socket.assigns.image && socket.assigns.image.id
+        )
+        |> then(&{:ok, &1})
+
+      :error ->
+        send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
+        {:ok, socket}
+    end
   end
 
   def update(%{event: "image_uploaded", expected_asset_id: expected} = assigns, socket) do
@@ -115,6 +134,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     |> assign(:image, image)
     |> assign(image_display_assigns(image))
   end
+
+  defp alt_text_ai?, do: Brando.AI.configured?(Brando.Images.AltText.ai_opts())
 
   defp image_display_assigns(nil) do
     %{extracted_path: nil, file_name: nil, upload_formats: ""}
@@ -205,12 +226,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     reset
                     opts={[]}
                   />
-                  <Input.override_text
-                    field={block_data[:alt]}
-                    label={gettext("Alternative text")}
-                    default_value={Brando.Images.text(@image, :alt, nil)}
-                    target={@myself}
-                  />
+                  <div class="ref-alt-field">
+                    <Input.override_text
+                      field={block_data[:alt]}
+                      label={gettext("Alternative text")}
+                      default_value={Brando.Images.text(@image, :alt, nil)}
+                      target={@myself}
+                    />
+                    <%!-- This use's alt text, in the entry's language (asked of the
+                        form), beside the field's label --%>
+                    <button
+                      :if={@image && @form_id && alt_text_ai?()}
+                      type="button"
+                      class={["ai-suggest", "ref-alt-suggest", @alt_suggesting && "is-busy"]}
+                      phx-click="suggest_alt_text"
+                      phx-target={@myself}
+                      disabled={@alt_suggesting}
+                    >
+                      <.icon name="hero-sparkles" /> {gettext("Suggest alt text")}
+                    </button>
+                  </div>
                   <Input.override_text
                     field={block_data[:credits]}
                     label={gettext("Credits")}
@@ -300,6 +335,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     )
 
     {:noreply, socket}
+  end
+
+  def handle_event("suggest_alt_text", _, %{assigns: %{image: %{id: image_id}, form_id: form_id}} = socket) do
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      event: "suggest_ref_alt_text",
+      image_id: image_id,
+      reply_to: {__MODULE__, socket.assigns.id}
+    )
+
+    {:noreply, assign(socket, :alt_suggesting, true)}
   end
 
   def handle_event("reset_image", _, socket) do

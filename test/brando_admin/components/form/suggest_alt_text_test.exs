@@ -61,4 +61,25 @@ defmodule BrandoAdmin.Components.Form.SuggestAltTextTest do
                %{"no" => "Eksisterende", "en" => "Two people talking"}
     end
   end
+
+  describe "for a picture block, in the entry's language" do
+    test "the text for that language goes back to the block" do
+      result = {:ok, {"en", {:ok, %{values: %{"en" => "A chair"}, model: "m"}}}}
+
+      {:noreply, _} =
+        Form.handle_async({:suggest_ref_alt_text, {SomeBlock, "ref-1"}}, result, %Phoenix.LiveView.Socket{})
+
+      assert_received {:phoenix, :send_update,
+                       {{SomeBlock, "ref-1"}, %{event: "alt_text_suggested", result: {:ok, "A chair"}}}}
+    end
+
+    test "no text in that language is a failure the block reports" do
+      result = {:ok, {"en", {:ok, %{values: %{"no" => "En stol"}, model: "m"}}}}
+
+      {:noreply, _} =
+        Form.handle_async({:suggest_ref_alt_text, {SomeBlock, "ref-1"}}, result, %Phoenix.LiveView.Socket{})
+
+      assert_received {:phoenix, :send_update, {{SomeBlock, "ref-1"}, %{result: :error}}}
+    end
+  end
 end

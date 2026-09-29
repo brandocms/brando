@@ -139,6 +139,22 @@ defmodule BrandoAdmin.Components.Form do
   # Ship field changes — triggered by child components (e.g. multi-select on close)
   def update(%{event: "draft_dirty"}, socket), do: {:ok, Drafts.dirty(socket)}
 
+  # A picture block's "Suggest alt text": the block doesn't know the entry's
+  # language, the form does. The text goes back to the block, which keeps it
+  # as this use's alt text (saved with the entry).
+  def update(%{event: "suggest_ref_alt_text", image_id: image_id, reply_to: reply_to}, socket) do
+    language =
+      case socket.assigns[:entry] do
+        %{language: language} when not is_nil(language) -> to_string(language)
+        _ -> to_string(Brando.config(:default_language))
+      end
+
+    {:ok,
+     start_async(socket, {:suggest_ref_alt_text, reply_to}, fn ->
+       {language, Images.AltText.describe(image_id, languages: [language])}
+     end)}
+  end
+
   def update(%{event: event, field: field} = message, socket)
       when event in ["inspect_field_notes", "field_note_action"] do
     case Brando.Blueprint.Forms.Footnotes.field(socket.assigns.schema, field) do
@@ -1297,6 +1313,17 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
     {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
+  end
+
+  def handle_async({:suggest_ref_alt_text, {module, id}}, result, socket) do
+    reply =
+      case result do
+        {:ok, {language, {:ok, %{values: values}}}} when is_map_key(values, language) -> {:ok, values[language]}
+        _ -> :error
+      end
+
+    send_update(module, id: id, event: "alt_text_suggested", result: reply)
+    {:noreply, socket}
   end
 
   def handle_async({:suggest_entry_alt_text, image_id}, result, socket) do

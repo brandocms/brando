@@ -1367,7 +1367,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <button
             :if={@suggest_alt?}
             type="button"
-            class="i18n-suggest"
+            class="ai-suggest i18n-suggest"
             phx-click={@suggest_event}
             phx-target={@suggest_target}
           >
