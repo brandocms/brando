@@ -34,25 +34,26 @@
   .field-wrapper input.text { padding-inline: 12px; }
   .field-wrapper textarea { padding: 10px 12px; line-height: 1.6; }
   .field-wrapper .instructions { color: var(--workspace-muted); font-size: 12px; }
-  .brando-form .subform { border: 1px solid #e1dfeb; border-radius: 8px; background: #f6f4fb; box-shadow: none; padding: 16px; }
+  /* Subforms take the workspace's green-grey, like its tabs and tools. */
+  .brando-form .subform { border: 1px solid #dce5df; border-radius: 8px; background: #f7faf6; box-shadow: none; padding: 16px; }
   .subform > .label-wrapper { margin-bottom: 16px; }
-  .subform > .label-wrapper label { font-size: 15px; color: #554d6b; }
-  .brando-form .subform-entry { border-color: #e6e2ee; background: #fff; border-radius: 6px; }
+  .subform > .label-wrapper label { font-size: 15px; color: #46554c; }
+  .brando-form .subform-entry { border-color: #e2e9e3; background: #fff; border-radius: 6px; }
   .brando-form .subform-entry .subform-fields { gap: 16px; align-items: flex-end; }
   .brando-form .subform-entry .subform-fields > .brando-input { margin: 0; min-width: 0; }
   .brando-form .subform-entry .subform-fields .field-wrapper { margin: 0; }
   .brando-form .subform-entry.inline:first-of-type .label-wrapper { margin-bottom: 8px; }
   .brando-form .subform-entry.inline:not(:first-of-type) .label-wrapper { margin-bottom: 0; }
-  .brando-form .subform-tools button { min-height: 26px; padding: 5px; background: #f0edf8; color: #6a5a89; }
-  .brando-form .subform-tools button:hover { background: #e5ddf3; }
+  .brando-form .subform-tools button { min-height: 26px; padding: 5px; background: #edf3e9; color: #3d5c48; }
+  .brando-form .subform-tools button:hover { background: #e2ecdd; }
   .brando-form .subform-tools button [data-icon] { background-color: currentColor; }
   /* A button in a media group takes the group's size and corners. */
   .brando-form button.primary:not(.media-button), .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
   .brando-form button.primary:not(.media-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
   .brando-form .submit-button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 116px; margin-top: 24px; }
-  .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid #d9d4e7; border-radius: 6px; background: #fff; color: #5b4b77; font-family: inherit; font-size: 13px; line-height: 18px; }
+  .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid #d7dfd9; border-radius: 6px; background: #fff; color: #3d5c48; font-family: inherit; font-size: 13px; line-height: 18px; }
   .add-entry-button [data-icon] { display: block; width: 14px; height: 14px; margin: 0; }
-  .add-entry-button:hover { background: #efeaf8; border-color: #c8bedb; }
+  .add-entry-button:hover { background: #edf3e9; border-color: #c3d5c5; }
   .global-save-actions { padding-top: 20px; }
   .global-tabs > [role="region"] { max-width: 880px; }
   .seo-search-preview { max-width: 620px; padding: 16px; border: 1px solid var(--workspace-line); border-radius: 6px; display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
@@ -110,7 +111,7 @@
   .brando-form .subform-fields .label-wrapper label { display: block; white-space: nowrap; font-size: 13px; line-height: 20px; }
   .brando-form .subform-entry.inline .subform-fields .label-wrapper { height: auto; overflow: visible; margin-bottom: 8px; }
   .brando-form .subform-fields .link-preview { box-sizing: border-box; width: 100%; max-width: none; height: 40px; min-height: 40px; padding: 6px 10px; border: 1px solid #d7dfd9; border-radius: 6px; background: #fff; cursor: pointer; }
-  .subform-fields .link-preview .icon { width: 24px; height: 24px; border: 0; background: #eeebf6; color: #76638e; }
+  .subform-fields .link-preview .icon { width: 24px; height: 24px; border: 0; background: #edf3e9; color: #3d5c48; }
   .subform-fields .link-preview .info { @font main; text-transform: none; display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
   .subform-fields .link-preview .link-text { flex: 0 1 auto; font-family: inherit; font-size: 14px; line-height: 20px; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .subform-fields .link-preview dl { min-width: 0; font-family: inherit; font-size: 12px; color: var(--workspace-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
