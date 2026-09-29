@@ -3611,6 +3611,22 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # An image's own form: the entry is the image, so the editor works on it
+  # directly rather than on an image field of the entry.
+  def handle_event("open_own_image_editor", _, %{assigns: %{entry: %Images.Image{} = image}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id, own: true})
+     |> assign(:editing_image?, true)
+     |> assign(:image_changeset, change(image))
+     # `from_block`: a new copy goes through the form's own editor upload
+     # (`handle_image_editor_upload_progress/3`), as from a block. The other
+     # route fills the image drawer's field upload, and this form has no field.
+     |> push_event("b:image_editor:init", Map.put(image_editor_payload(image), :from_block, true))}
+  end
+
+  def handle_event("open_own_image_editor", _, socket), do: {:noreply, socket}
+
   def handle_event("open_image_editor", %{"image_id" => _image_id}, socket) do
     image = socket.assigns.edit_image.image
 
@@ -3670,7 +3686,9 @@ defmodule BrandoAdmin.Components.Form do
 
     # For non-crop case, queue processing after subscribing.
     unless params["crop_applied"] do
-      Images.Processing.queue_processing(updated_image, current_user)
+      # Silent: the editor and drawer show the image processing themselves; the
+      # old top-of-page progress bar would be a second, older indicator.
+      Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
     end
 
     # For crop_applied, processing was already queued by the controller.
@@ -3698,24 +3716,34 @@ defmodule BrandoAdmin.Components.Form do
 
       {:noreply, socket}
     else
-      # Non-block path: update entry with the image so the Image input
-      # detects the change when the form re-validates (same pattern as new_copy).
-      schema = socket.assigns.schema
-      field_atom = String.to_existing_atom("#{edit_image.field}")
-      entry = socket.assigns.entry || struct(schema)
-      field_path = edit_image.path ++ [field_atom]
-      access_path = Brando.Utils.build_access_path(field_path)
-      updated_entry = put_in(entry, access_path, updated_image)
+      if Map.get(edit_image, :own) do
+        # The image's own form: the entry is the image; show it as saved.
+        {:noreply,
+         socket
+         |> assign(:entry, updated_image)
+         |> assign(:edit_image, Map.merge(edit_image, %{image: updated_image}))
+         |> assign(:image_changeset, change(updated_image))
+         |> assign_refreshed_form()}
+      else
+        # Non-block path: update entry with the image so the Image input
+        # detects the change when the form re-validates (same pattern as new_copy).
+        schema = socket.assigns.schema
+        field_atom = String.to_existing_atom("#{edit_image.field}")
+        entry = socket.assigns.entry || struct(schema)
+        field_path = edit_image.path ++ [field_atom]
+        access_path = Brando.Utils.build_access_path(field_path)
+        updated_entry = put_in(entry, access_path, updated_image)
 
-      image_changeset = change(updated_image)
-      updated_edit_image = Map.merge(edit_image, %{image: updated_image})
+        image_changeset = change(updated_image)
+        updated_edit_image = Map.merge(edit_image, %{image: updated_image})
 
-      {:noreply,
-       socket
-       |> assign(:entry, updated_entry)
-       |> assign(:edit_image, updated_edit_image)
-       |> assign(:image_changeset, image_changeset)
-       |> push_event("b:validate", %{})}
+        {:noreply,
+         socket
+         |> assign(:entry, updated_entry)
+         |> assign(:edit_image, updated_edit_image)
+         |> assign(:image_changeset, image_changeset)
+         |> push_event("b:validate", %{})}
+      end
     end
   end
 
@@ -4059,7 +4087,7 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     if new_image.status !== :processed do
-      Images.Processing.queue_processing(new_image, current_user)
+      Images.Processing.queue_processing(new_image, current_user, [], silent: true)
     end
 
     if block_target do
@@ -4153,7 +4181,7 @@ defmodule BrandoAdmin.Components.Form do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
     if requeue_processing?(validated_changeset, updated_image) do
-      Images.Processing.queue_processing(updated_image, current_user, field_full_path)
+      Images.Processing.queue_processing(updated_image, current_user, field_full_path, silent: true)
     end
 
     target_field_name =
@@ -5230,7 +5258,7 @@ defmodule BrandoAdmin.Components.Form do
                 send(self(), {:register_pending_block_image, updated_image.id, block_target})
               end
 
-              Images.Processing.queue_processing(updated_image, current_user)
+              Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
 
               if block_target = Map.get(edit_image, :block_target) do
                 {module, id} = block_target
@@ -5245,18 +5273,7 @@ defmodule BrandoAdmin.Components.Form do
                 send(self(), {:toast, gettext("New image created.")})
                 {:noreply, socket}
               else
-                # Non-block path
-                relation_key = String.to_existing_atom("#{edit_image.field}_id")
-                image_changeset = change(updated_image)
-
-                updated_edit_image =
-                  Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
-
-                {:noreply,
-                 socket
-                 |> update_changeset(edit_image.path, relation_key, updated_image.id)
-                 |> assign(:edit_image, updated_edit_image)
-                 |> assign(:image_changeset, image_changeset)}
+                own_or_field_copy(socket, edit_image, updated_image)
               end
 
             {:error, reason} ->
@@ -5271,6 +5288,28 @@ defmodule BrandoAdmin.Components.Form do
     else
       {:noreply, socket}
     end
+  end
+
+  # A copy made from an image's own form opens its own form; a copy made for
+  # an entry's image field takes the field's place.
+  defp own_or_field_copy(socket, %{own: true}, new_image) do
+    send(self(), {:toast, gettext("New image created.")})
+    {:noreply, push_navigate(socket, to: Images.Image.__admin_route__(:update, [new_image.id]))}
+  end
+
+  defp own_or_field_copy(socket, edit_image, updated_image) do
+    # Non-block path
+    relation_key = String.to_existing_atom("#{edit_image.field}_id")
+    image_changeset = change(updated_image)
+
+    updated_edit_image =
+      Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
+
+    {:noreply,
+     socket
+     |> update_changeset(edit_image.path, relation_key, updated_image.id)
+     |> assign(:edit_image, updated_edit_image)
+     |> assign(:image_changeset, image_changeset)}
   end
 
   defp resolve_block_image_config(config_target) do

@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           label={@label}
           instructions={@instructions}
           placeholder={@placeholder}
-          opts={@input.opts || []}
+          opts={user_opts(@input.opts || [], @current_user)}
           type={@input.type}
           current_user={@current_user}
           form_id={@form_id}
@@ -91,6 +91,15 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       <% end %>
     <% end %>
     """
+  end
+
+  # `readonly: :unless_superuser` and `disabled: :unless_superuser` lock a
+  # field for everyone but superusers, who can still correct it.
+  defp user_opts(opts, user) do
+    Enum.map(opts, fn
+      {key, :unless_superuser} when key in [:readonly, :disabled] -> {key, !match?(%{role: :superuser}, user)}
+      opt -> opt
+    end)
   end
 
   defp hidden?(%BlueprintInput{opts: opts}, form), do: Visibility.hidden?(opts, form)

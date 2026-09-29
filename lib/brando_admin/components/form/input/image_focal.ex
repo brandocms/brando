@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.ImageFocal do
 
   alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.Primitives
+  alias Phoenix.LiveView.JS
 
   def update(assigns, socket) do
     image = Ecto.Changeset.apply_changes(assigns.field.form.source)
@@ -38,6 +39,14 @@ defmodule BrandoAdmin.Components.Form.Input.ImageFocal do
             alt=""
           />
         </figure>
+        <button
+          :if={@image.path && @form_cid}
+          type="button"
+          class="media-button image-focal-edit"
+          phx-click={JS.push("open_own_image_editor", target: @form_cid) |> open_image_editor_drawer()}
+        >
+          <.icon name="hero-scissors" />{gettext("Edit/Crop")}
+        </button>
       </Primitives.field_base>
     </fieldset>
     """

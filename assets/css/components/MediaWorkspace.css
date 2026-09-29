@@ -299,3 +299,5 @@
 .image-focal-figure { width: fit-content; max-width: 100%; border-radius: 5px; overflow: hidden; }
 .image-focal-figure > img { display: block; width: auto; height: auto; max-width: 100%; max-height: 560px; }
 .image-focal-figure .focus-point-pin { width: 20px; height: 20px; padding: 0; border: 2px solid white; border-radius: 50%; background: #254e3fcc; box-shadow: 0 0 0 1px #254e3f, 0 2px 6px #0006; }
+
+.image-focal-field .image-focal-edit { margin-top: 12px; }

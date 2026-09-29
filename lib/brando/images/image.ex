@@ -165,15 +165,15 @@ defmodule Brando.Images.Image do
         end
       end
 
-      # What the upload and processing recorded; read-only here, since
-      # changing them doesn't change the files.
+      # What the upload and processing recorded; read-only but for superusers,
+      # since changing them doesn't change the files.
       tab t("Technical") do
         fieldset do
           size :half
-          input :path, :text, label: t("Path"), monospace: true, readonly: true
-          input :config_target, :text, label: t("Configuration target"), monospace: true, readonly: true
-          input :width, :number, label: t("Width"), monospace: true, readonly: true
-          input :height, :number, label: t("Height"), monospace: true, readonly: true
+          input :path, :text, label: t("Path"), monospace: true, readonly: :unless_superuser
+          input :config_target, :text, label: t("Configuration target"), monospace: true, readonly: :unless_superuser
+          input :width, :number, label: t("Width"), monospace: true, readonly: :unless_superuser
+          input :height, :number, label: t("Height"), monospace: true, readonly: :unless_superuser
         end
 
         fieldset do
@@ -182,7 +182,8 @@ defmodule Brando.Images.Image do
 
           input :cdn, :toggle,
             label: t("CDN"),
-            instructions: t("Asset has been transferred to CDN")
+            instructions: t("Asset has been transferred to CDN"),
+            disabled: :unless_superuser
         end
       end
     end

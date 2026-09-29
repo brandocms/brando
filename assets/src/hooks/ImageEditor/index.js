@@ -359,6 +359,7 @@ export default app => ({
       console.error('Image editor: could not load', payload.image_src)
     }
     img.src = payload.image_src
+    this.imageSrc = payload.image_src
   },
 
   /**
@@ -1434,6 +1435,7 @@ export default app => ({
       if (!blob) return
 
       const formData = new FormData()
+      // The replace endpoint writes over the image's own path; the name is unused.
       formData.append('image', new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' }))
       formData.append('image_id', String(imageId))
       formData.append('focal_x', String(focalX))
@@ -1501,7 +1503,7 @@ export default app => ({
           config_target: configTarget || 'default'
         })
 
-        const file = new File([blob], 'edited-image.jpg', { type: 'image/jpeg' })
+        const file = new File([blob], this.copyFilename(), { type: 'image/jpeg' })
 
         // Forward to LiveView upload
         const liveInput = document.querySelector('input[name="image_editor_upload"]')
@@ -1518,7 +1520,7 @@ export default app => ({
 
         const uploadInput = document.querySelector('#image-drawer-form input[type="file"]')
         if (uploadInput) {
-          const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' })
+          const file = new File([blob], this.copyFilename(), { type: 'image/jpeg' })
           const dataTransfer = new DataTransfer()
           dataTransfer.items.add(file)
           uploadInput.files = dataTransfer.files
@@ -1532,5 +1534,12 @@ export default app => ({
         }
       }, 'image/jpeg', 0.95)
     }
+  },
+
+  // A copy is named after the image it was made from ("lobby-copy.jpg"),
+  // now that uploads keep their names.
+  copyFilename() {
+    const base = (this.imageSrc || '').split('/').pop().split('?')[0].replace(/\.[^.]+$/, '')
+    return `${base || 'image'}-copy.jpg`
   }
 })
