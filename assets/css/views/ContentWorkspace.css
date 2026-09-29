@@ -34,7 +34,10 @@
   .sequence-handle [data-icon] { width: 16px; height: 16px; }
   .listing-kind { flex: 0 0 90px; order: 5; }
   .content-list .list-row .status svg circle:is(:not([class]), [class=""]) { fill: #9ca59c; }
-  .listing-alternates:has(button:disabled) { display: none; }
+  /* Hidden, not removed: rows without alternates keep the slot, so the status
+     column stays in line with the rows that have them. */
+  .listing-alternates { flex: 0 0 32px; }
+  .listing-alternates:has(button:disabled) { visibility: hidden; }
   .listing-home { display: inline-flex; vertical-align: -2px; margin-right: 6px; color: #547361; }
   .listing-home [data-icon] { display: block; width: 16px; height: 16px; }
   .content-list .list-row :is(.listing-title, div:has(> .entry-link)) { flex: 1 1 240px; min-width: 0; }
@@ -167,47 +170,33 @@
   .time { font-size: 11px; line-height: 16px; }
 }
 
-/* Language versions of a synchronized translation, with their open work. */
-.listing-translations {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
+/* Language versions of a synchronized translation, with their open work, one
+   version per line and set like the URL under the title. They sit just before
+   the status, in the same column as the listing's own buttons (a page's
+   fragments): everything after the title has a fixed width and the title
+   takes what is left, so the status stays in line whatever sits before it. */
+.admin-workspace.content-workspace > :where(.content-list-wrapper) .content-list :is(.list-row .main-content, .child-row) > .listing-translations {
+  flex: 0 0 150px;
+  order: 5;
   margin: 0;
-  padding: 0;
-  list-style: none;
-  order: 6;
+  color: var(--workspace-muted);
+  font-size: 12px;
+  line-height: 18px;
+
+  ul { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 }
 
-.listing-translation {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px 2px 2px;
-  border: 1px solid #dce2dc;
-  border-radius: 30px;
-  color: #272b2a;
-  font-size: 11px;
-  line-height: 18px;
+.listing-translations .listing-translation {
+  color: inherit;
   text-decoration: none;
   white-space: nowrap;
 
-  &:hover { border-color: #aab9a5; }
-  &.is-current { border-style: dashed; }
-  &.is-work { border-color: #e7d7b4; background: #fdf9ef; }
-  &.is-updated { background: #f4f7fb; }
+  &:hover .listing-translation-state { text-decoration: underline; }
 }
 
-.listing-translation-language {
-  padding: 0 6px;
-  border-radius: 30px;
-  background: #eef0eb;
-  font-family: theme(typography.families.mono);
-  font-size: 10px;
-}
+.listing-translation-language { display: inline-block; width: 22px; color: #272b2a; font-weight: 500; letter-spacing: .02em; }
+.listing-translations .is-work .listing-translation-state { color: #87662d; }
 
-.listing-translation-state { color: #626b66; }
-.listing-translation.is-work .listing-translation-state { color: #87662d; }
-
-@media (max-width: 720px) {
-  .listing-translations { grid-column: 2 / -1; grid-row: 4; }
+@media (max-width: 600px) {
+  .content-list :is(.main-content, .child-row) > .listing-translations { grid-column: 2 / -1; grid-row: 4; }
 }

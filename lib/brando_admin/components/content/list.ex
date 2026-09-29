@@ -346,9 +346,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign_new(:listings, fn -> listings end)
       |> assign_new(:soft_delete?, fn -> schema.has_trait(SoftDelete) end)
       |> assign_new(:status?, fn -> schema.has_trait(Status) end)
-      |> assign_new(:alternates?, fn ->
-        schema.has_trait(Translatable) and schema.has_alternates?()
-      end)
+      |> assign_new(:alternates?, fn -> alternates_button?(schema) end)
       |> assign_new(:creator?, fn -> schema.has_trait(Creator) end)
       |> assign_new(:listing, fn ->
         listing_name = Map.get(assigns, :listing, :default)
@@ -586,8 +584,14 @@ defmodule BrandoAdmin.Components.Content.List do
     end
   end
 
+  # A synchronized schema lists its language versions with the translation
+  # chips, so its rows leave out the alternates button that shows the same.
+  defp alternates_button?(schema) do
+    schema.has_trait(Translatable) and schema.has_alternates?() and not Brando.Translations.synchronized?(schema)
+  end
+
   defp maybe_preload_alternates(list_opts, schema) do
-    if schema.has_trait(Translatable) and schema.has_alternates?() do
+    if alternates_button?(schema) do
       preloads =
         case schema.__absolute_url_preloads__() do
           [] ->

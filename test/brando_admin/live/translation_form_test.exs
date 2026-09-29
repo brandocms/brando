@@ -365,6 +365,9 @@ defmodule BrandoAdmin.TranslationFormTest do
              )
 
       assert html =~ "EN"
+
+      # The chips list the language versions; the alternates button would repeat them.
+      refute has_element?(view, ".listing-alternates")
     end
 
     test "is refreshed when the source is synchronized", %{conn: conn} = c do

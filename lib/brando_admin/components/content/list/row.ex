@@ -483,31 +483,39 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     assigns = assign(assigns, :versions, Map.get(assigns.entry, :translation_status))
 
     ~H"""
-    <ul :if={@versions} class="listing-translations" aria-label={gettext("Language versions")}>
-      <li :for={version <- @versions}>
-        <.link
-          navigate={@schema.__admin_route__(:update, [version.entry_id])}
-          class={["listing-translation", "is-#{translation_state(version)}", version.entry_id == @entry.id && "is-current"]}
-          title={translation_summary(version)}
-        >
-          <span class="listing-translation-language">{String.upcase(version.language)}</span>
-          <span class="listing-translation-state">{translation_summary(version)}</span>
-        </.link>
-      </li>
-    </ul>
+    <div :if={@versions} class="listing-translations">
+      <ul aria-label={gettext("Language versions")}>
+        <li :for={version <- @versions}>
+          <.link
+            navigate={@schema.__admin_route__(:update, [version.entry_id])}
+            class={["listing-translation", "is-#{translation_state(version)}", version.entry_id == @entry.id && "is-current"]}
+            title={translation_summary(version, :full)}
+          >
+            <span class="listing-translation-language">{String.upcase(version.language)}</span>
+            <span class="listing-translation-state">{translation_summary(version, :short)}</span>
+          </.link>
+        </li>
+      </ul>
+    </div>
     """
   end
 
   defp translation_state(%{role: :source}), do: "source"
   defp translation_state(%{synchronized: false}), do: "independent"
-  defp translation_state(%{pending: true, counts: counts}) when map_size(counts) > 0, do: "work"
-  defp translation_state(%{pending: true}), do: "updated"
+  # Only text to translate or review is work; links waiting for their own
+  # translation already point at the source's target, so they only inform.
+  defp translation_state(%{pending: true, counts: counts}) do
+    if Map.get(counts, :translate, 0) + Map.get(counts, :review, 0) > 0, do: "work", else: "updated"
+  end
+
   defp translation_state(_version), do: "current"
 
-  defp translation_summary(%{role: :source}), do: gettext("Source")
-  defp translation_summary(%{synchronized: false}), do: gettext("Independent")
+  defp translation_summary(%{role: :source}, _), do: gettext("Source")
+  defp translation_summary(%{synchronized: false}, _), do: gettext("Independent")
 
-  defp translation_summary(%{pending: true, counts: counts}) do
+  # The row shows the open work; the tooltip adds that the version has also
+  # taken shared updates from the source.
+  defp translation_summary(%{pending: true, counts: counts}, length) do
     text = Map.get(counts, :translate, 0)
     review = Map.get(counts, :review, 0)
     waiting = Map.get(counts, :awaiting_translation, 0)
@@ -519,7 +527,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           text > 0 && ngettext("%{count} to translate", "%{count} to translate", text),
           review > 0 && ngettext("%{count} to review", "%{count} to review", review),
           waiting > 0 && ngettext("%{count} link waiting", "%{count} links waiting", waiting),
-          shared > 0 && text + review == 0 && gettext("Updated from the source")
+          length == :full && shared > 0 && text + review == 0 && gettext("Updated from the source")
         ],
         &(&1 in [false, nil])
       )
@@ -527,7 +535,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     if parts == [], do: gettext("Updated from the source"), else: Enum.join(parts, " · ")
   end
 
-  defp translation_summary(_version), do: gettext("Up to date")
+  defp translation_summary(_version, _), do: gettext("Up to date")
 
   def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns), do: ~H""
 
@@ -542,6 +550,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <button
         type="button"
         aria-label={gettext("Alternates")}
+        title={gettext("Alternates")}
         class="btn-icon-subtle"
         disabled={!@alternate_entries?}
         phx-click={show_modal("#entry-#{@entry.id}-alternates")}
@@ -673,7 +682,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       assigns
       |> assign(:entry_schema, entry_schema)
       |> assign_new(:alternates?, fn ->
-        entry_schema.has_trait(Trait.Translatable) and entry_schema.has_alternates?()
+        entry_schema.has_trait(Trait.Translatable) and entry_schema.has_alternates?() and
+          not Brando.Translations.synchronized?(entry_schema)
       end)
       |> assign_new(:creator?, fn -> entry_schema.has_trait(Trait.Creator) end)
       |> assign_new(:status?, fn -> entry_schema.has_trait(Trait.Status) end)
