@@ -1026,3 +1026,13 @@ html.not-mac .shortcut-other { display: inline; }
 
 /* "Creating in Norsk" under a create form's heading. */
 .form-creating-language { margin: -8px 0 16px; color: #626b66; font-size: 13px; line-height: 18px; }
+
+/* Every form's heading at the size of the workspace headings, whether the
+   form is an entry's (pages, cases) or a setting's (identity, menus, SEO);
+   entry forms had a 50px display size of their own. */
+.brando-form .form-content .form-header h1 { font-size: 32px; line-height: 1.2; letter-spacing: -.035em; }
+
+/* One tab needs no tab bar. Its lone label goes; with nothing but Save beside
+   it the whole bar goes, since the form's own Save and ⌘S remain. */
+.form-content > .form-tabs > .form-tab-customs:has(> button:only-child) > button { display: none; }
+.form-content > .form-tabs:has(> .form-tab-customs > button:only-child):has(> .form-tab-builtins > .form-tool-save:only-child) { display: none; }
