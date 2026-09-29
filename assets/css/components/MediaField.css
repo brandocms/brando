@@ -112,7 +112,9 @@
   --image-preview-width: 180px;
   .media-field-preview {
     flex: 0 0 var(--image-preview-width); width: var(--image-preview-width); max-width: none; height: auto;
-    .image-content, img, picture { width: 100%; max-width: 100%; height: auto; }
+    /* The image's own shape at this width: a portrait image is taller, not
+       cropped to the 132px cap that suits posters */
+    .image-content, img, picture { width: 100%; max-width: 100%; height: auto; max-height: none; object-fit: contain; }
   }
   @media (max-width: 600px) { --image-preview-width: 96px; }
 }
@@ -149,7 +151,7 @@
 .media-field > .media-field-drop { padding: 16px; }
 @media (max-width: 600px) {
   .media-field { padding: 14px; }
-  .media-field--block:not(.media-field--empty) .media-field-preview { flex-basis: 96px; width: 96px; height: 86px; }
+  .media-field--block:not(.media-field--empty):not([data-asset-type="image"]) .media-field-preview { flex-basis: 96px; width: 96px; height: 86px; }
   .media-field .media-field-content { gap: 12px; }
   .media-field--field { padding: 6px; grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px; }
   .media-field--field .media-field-preview { width: 72px; height: 104px; }
