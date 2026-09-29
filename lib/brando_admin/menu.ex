@@ -289,10 +289,6 @@ defmodule BrandoAdmin.Menu do
                     url: "/admin/config/seo"
                   },
                   %{
-                    name: gettext("Globals"),
-                    url: "/admin/config/global_sets"
-                  },
-                  %{
                     name: gettext("Scheduled publishing"),
                     url: "/admin/config/scheduled_publishing"
                   },
@@ -301,44 +297,48 @@ defmodule BrandoAdmin.Menu do
                   ),
                   environments_menu_item(),
                   publishing_menu_item(current_site),
-                  %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources"},
-                  frontend_assets_menu_item(current_user),
-                  %{name: gettext("Import/Export"), url: "/admin/config/import-export"},
-                  %{
-                    name: gettext("Cache"),
-                    url: "/admin/config/cache"
-                  },
-                  %{
-                    name: gettext("Utilities"),
-                    url: "/admin/config/utils"
-                  },
-                  assistant_guidance_menu_item(current_user),
-                  %{
-                    name: gettext("Block modules"),
-                    url: "/admin/config/content/modules"
-                  },
-                  shared_library_menu_item(current_user),
-                  %{
-                    name: gettext("Block module sets"),
-                    url: "/admin/config/content/module_sets"
-                  },
-                  %{
-                    name: gettext("Containers"),
-                    url: "/admin/config/content/containers"
-                  },
-                  %{
-                    name: gettext("Table Templates"),
-                    url: "/admin/config/content/table_templates"
-                  },
-                  %{
-                    name: gettext("Templates"),
-                    url: "/admin/config/content/templates"
-                  },
-                  %{
-                    name: gettext("Palettes"),
-                    url: "/admin/config/content/palettes"
-                  }
+                  developer_items(current_user, [
+                    %{name: gettext("Global fields (setup)"), url: "/admin/config/global_sets"},
+                    %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources"},
+                    frontend_assets_menu_item(current_user),
+                    %{name: gettext("Import/Export"), url: "/admin/config/import-export"},
+                    %{
+                      name: gettext("Cache"),
+                      url: "/admin/config/cache"
+                    },
+                    %{
+                      name: gettext("Utilities"),
+                      url: "/admin/config/utils"
+                    },
+                    assistant_guidance_menu_item(current_user),
+                    %{
+                      name: gettext("Block modules"),
+                      url: "/admin/config/content/modules"
+                    },
+                    shared_library_menu_item(current_user),
+                    %{
+                      name: gettext("Block module sets"),
+                      url: "/admin/config/content/module_sets"
+                    },
+                    %{
+                      name: gettext("Containers"),
+                      url: "/admin/config/content/containers"
+                    },
+                    %{
+                      name: gettext("Table Templates"),
+                      url: "/admin/config/content/table_templates"
+                    },
+                    %{
+                      name: gettext("Templates"),
+                      url: "/admin/config/content/templates"
+                    },
+                    %{
+                      name: gettext("Palettes"),
+                      url: "/admin/config/content/palettes"
+                    }
+                  ])
                 ]
+                |> List.flatten()
                 |> Enum.reject(&(&1 in [false, nil]))
             },
             %{
@@ -413,6 +413,13 @@ defmodule BrandoAdmin.Menu do
       %{url: url, name: name} when is_binary(url) -> [%{name: name, url: url}]
       _ -> []
     end)
+  end
+
+  # Tools for setting a site up rather than editing it. Without the
+  # authorization engine only superusers see them; with it, the engine's
+  # permissions decide (`filter_authorized/2`).
+  defp developer_items(user, items) do
+    if Brando.Authorization.enabled?() or match?(%{role: :superuser}, user), do: items, else: []
   end
 
   defp publishing_menu_item(%{delivery_mode: :static}) do

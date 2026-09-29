@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Sites.GlobalSetListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Sites.GlobalSet
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Sites.GlobalSet, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.{Content, Workspace}
@@ -8,7 +8,10 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace content-workspace workspace-list global-sets-workspace">
-      <Workspace.header title={gettext("Global sets")} subtitle={gettext("Shared values available across your site.")}>
+      <Workspace.header
+        title={gettext("Global fields (setup)")}
+        subtitle={gettext("Which global fields exist and where. Their values are edited under Globals.")}
+      >
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate="/admin/config/global_sets/create"
@@ -30,4 +33,8 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
     </div>
     """
   end
+
+  # The setup screen, apart from the values screen that "Globals" names.
+  @doc false
+  def page_title, do: gettext("Global fields (setup)")
 end

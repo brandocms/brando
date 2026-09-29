@@ -85,6 +85,20 @@ defmodule BrandoAdmin.MenuTest do
     assert "Frontend-ressurser" in menu_names
   end
 
+  test "an editor gets the editing tools under Configuration, not the setup tools" do
+    editor = menu_urls(BrandoAdmin.Menu.get_menu(%{role: :editor}))
+    superuser = menu_urls(BrandoAdmin.Menu.get_menu(%{role: :superuser}))
+
+    for url <- ["/admin/config/navigation/menus", "/admin/config/identity", "/admin/config/seo"] do
+      assert editor =~ url
+    end
+
+    for url <- ["/admin/config/global_sets", "/admin/config/cache", "/admin/config/content/modules"] do
+      refute editor =~ url
+      assert superuser =~ url
+    end
+  end
+
   defp menu_urls(menus) do
     menus
     |> Enum.flat_map(fn menu -> List.wrap(menu[:url]) ++ List.wrap(menu[:items] && menu_urls(menu.items)) end)

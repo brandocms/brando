@@ -12856,3 +12856,13 @@ msgstr "Vis flere (%{count} igjen)"
 #, elixir-autogen, elixir-format
 msgid "Save and close"
 msgstr "Lagre og lukk"
+
+#: lib/brando_admin/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Global fields (setup)"
+msgstr "Globale felt (oppsett)"
+
+#: lib/brando_admin/live/config/global_set_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Which global fields exist and where. Their values are edited under Globals."
+msgstr "Hvilke globale felt som finnes, og hvor. Verdiene redigeres under Globaler."
