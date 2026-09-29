@@ -390,21 +390,34 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   attr :active_sort, :any, default: nil
 
+  # Rows can only be dragged while they are shown in their stored order: under
+  # any other sort a drag would reorder something the list doesn't show. The
+  # empty column then says how to get there, and has no handle to grab.
   def handle(assigns) do
-    show_sort =
-      is_nil(assigns.active_sort) ||
-        (is_map(assigns.active_sort) && Map.get(assigns.active_sort, :key) == :default)
-
-    assigns = assign(assigns, :show_sort, show_sort)
+    assigns = assign(assigns, :by_sequence?, ordered_by_sequence?(assigns[:active_sort]))
 
     ~H"""
     <div class="col-1 seq">
-      <div class="center sequence-handle">
-        <.icon :if={@show_sort} name="brando-move" />
+      <div :if={@by_sequence?} class="center sequence-handle">
+        <.icon name="brando-move" />
+      </div>
+      <div
+        :if={!@by_sequence?}
+        class="center sequence-handle-off"
+        title={gettext("Sort the list by its order to drag rows")}
+      >
       </div>
     </div>
     """
   end
+
+  defp ordered_by_sequence?(nil), do: true
+
+  defp ordered_by_sequence?(%{order: order}) do
+    match?([{_direction, :sequence} | _], Brando.Query.order_string_to_list(order))
+  end
+
+  defp ordered_by_sequence?(_sort), do: false
 
   # Status components
   attr :entry, :map, required: true
