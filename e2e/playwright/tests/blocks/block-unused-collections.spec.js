@@ -34,7 +34,7 @@ const createPage = async (page, title) => {
 }
 
 const savePage = async (page, title) => {
-  await page.getByRole('button', { name: 'Save (⌘S)', exact: true }).click()
+  await page.getByRole('button', { name: /^Save and close (⇧⌘S|Ctrl\+Shift\+S)$/ }).click()
   await expect(page).toHaveURL(/\/admin\/pages$/)
   await page.getByRole('link', { name: `${title}`, exact: true }).click()
   await syncLV(page)
@@ -157,7 +157,7 @@ test('Blueprint notes expose the same recovery controls beside their text field'
   const drawer = page.locator('.block-slot-drawer.visible')
   await setText(page, drawer.locator('.tiptap'), 'An introduction source')
   await drawer.getByRole('button', { name: 'Done', exact: true }).click()
-  await page.getByRole('button', { name: 'Save (⌘S)', exact: true }).click()
+  await page.getByRole('button', { name: /^Save and close (⇧⌘S|Ctrl\+Shift\+S)$/ }).click()
   await expect(page).toHaveURL(/\/admin\/projects\/projects$/)
   await page.goto(url)
   const uid = await page.locator('.tiptap-footnote').getAttribute('data-footnote-uid')
@@ -176,7 +176,7 @@ test('Blueprint notes expose the same recovery controls beside their text field'
   await page.getByTestId('block-bin').getByRole('button', { name: 'Undo', exact: true }).click()
   await expect(unused).toContainText('An introduction source')
   await unused.getByRole('button', { name: 'Restore reference', exact: true }).click()
-  await page.getByRole('button', { name: 'Save (⌘S)', exact: true }).click()
+  await page.getByRole('button', { name: /^Save and close (⇧⌘S|Ctrl\+Shift\+S)$/ }).click()
   await expect(page).toHaveURL(/\/admin\/projects\/projects$/)
   await page.goto(url)
   await expect(unused).toHaveCount(0)

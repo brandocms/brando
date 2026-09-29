@@ -100,7 +100,7 @@ test('module-variable default link targets the LiveView through nested component
   await link(page, field, '/locations')
   await expect(field.locator('.ProseMirror')).toHaveText('Our locations')
   await variable.getByRole('button', { name: 'Done', exact: true }).click()
-  await page.getByRole('button', { name: 'Save (⇧⌘S)', exact: true }).click()
+  await page.getByRole('button', { name: /^Save (⇧⌘S|Ctrl\+Shift\+S)$/ }).click()
   await expect(page).toHaveURL(/\/admin\/config\/content\/modules$/)
   await page.goto(`/admin/config/content/modules/update/${module.id}`)
   await syncLV(page)
