@@ -91,7 +91,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
         Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok,
       pending: pending,
       payload: payload,
-      items: items(schema, pending, payload),
+      items: items(schema, pending, payload, member.language),
       structure_changed?: payload != nil and structure(payload, schema) != structure(entry, schema),
       # The version whose changes are in the form. Kept across refreshes of
       # the same entry, so a reconnecting form does not apply it twice.
@@ -274,9 +274,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   ## Work items
 
-  defp items(_schema, nil, _payload), do: []
+  defp items(_schema, nil, _payload, _language), do: []
 
-  defp items(schema, pending, payload) do
+  defp items(schema, pending, payload, language) do
     labels = field_labels(schema)
     blocks = block_index(schema, payload)
 
@@ -287,7 +287,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
     |> Enum.sort_by(&{kind_order(&1.kind), &1.path})
     |> Enum.map(fn item ->
       target = target(item.path, blocks)
-      linked = linked_title(item, target, blocks, titles)
+      linked = linked_title(item, target, blocks, titles, to_string(language))
 
       %{
         path: item.path,
@@ -300,45 +300,55 @@ defmodule BrandoAdmin.Components.Form.Translation do
   end
 
   # A link's item names the entry it points at: the one it now follows for an
-  # update, the one still waiting for a translation otherwise.
-  defp linked_title(item, target, blocks, titles) do
-    case linked_id(item, target, blocks) do
-      nil -> nil
-      id -> titles[id] || "##{id}"
+  # update, the one still waiting for a translation otherwise. A selection
+  # moved onto this language names the entries it now links to in it.
+  defp linked_title(item, target, blocks, titles, language) do
+    item
+    |> linked_ids(target, blocks)
+    |> Enum.filter(fn id -> item.kind != :relinked or match?({_, ^language}, titles[id]) end)
+    |> Enum.map(fn id -> (titles[id] && elem(titles[id], 0)) || "##{id}" end)
+    |> case do
+      [] -> nil
+      names -> Enum.join(names, ", ")
     end
   end
 
   defp with_linked(label, nil), do: label
   defp with_linked(label, linked), do: "#{String.replace_suffix(label, " › " <> gettext("media"), "")} → #{linked}"
 
-  defp linked_id(%{kind: :awaiting_translation, path: path}, _target, _blocks) do
+  defp linked_ids(%{kind: :awaiting_translation, path: path}, _target, _blocks) do
     case Regex.run(~r{/identifiers?/(\d+)$}, path) do
-      [_, id] -> String.to_integer(id)
-      _ -> nil
+      [_, id] -> [String.to_integer(id)]
+      _ -> []
     end
   end
 
-  defp linked_id(%{kind: kind}, {:block, uid, _module, ["vars", key, "media"]}, blocks)
+  defp linked_ids(%{kind: kind}, {:block, uid, _module, ["vars", key, "media"]}, blocks)
        when kind in [:shared_update, :relinked] do
-    Enum.find_value(blocks, fn {_identity, block} ->
+    blocks
+    |> Enum.find_value(fn {_identity, block} ->
       block.uid == uid && Enum.find_value(block.vars, &(&1.key == key && &1.identifier_id))
     end)
+    |> List.wrap()
   end
 
-  defp linked_id(_item, _target, _blocks), do: nil
+  defp linked_ids(%{kind: :relinked}, {:block, uid, _module, ["identifiers"]}, blocks) do
+    Enum.find_value(blocks, [], fn {_identity, block} -> block.uid == uid && block.identifier_ids end)
+  end
+
+  defp linked_ids(_item, _target, _blocks), do: []
 
   defp linked_titles(items, blocks) do
-    ids =
-      items
-      |> Enum.map(&linked_id(&1, target(&1.path, blocks), blocks))
-      |> Enum.reject(&is_nil/1)
-      |> Enum.uniq()
+    ids = items |> Enum.flat_map(&linked_ids(&1, target(&1.path, blocks), blocks)) |> Enum.uniq()
 
     if ids == [] do
       %{}
     else
       import Ecto.Query
-      Brando.Repo.all(from i in Brando.Content.Identifier, where: i.id in ^ids, select: {i.id, i.title}) |> Map.new()
+
+      from(i in Brando.Content.Identifier, where: i.id in ^ids, select: {i.id, {i.title, i.language}})
+      |> Brando.Repo.all()
+      |> Map.new(fn {id, {title, language}} -> {id, {title, language && to_string(language)}} end)
     end
   end
 
@@ -389,7 +399,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
     |> Enum.flat_map(&walk/1)
     |> Map.new(fn block ->
       vars = if is_list(block.vars), do: block.vars, else: []
-      {block.sync_uid || block.uid, %{uid: block.uid, module_name: module_name(block), vars: vars}}
+      links = if is_list(block.block_identifiers), do: Enum.map(block.block_identifiers, & &1.identifier_id), else: []
+
+      {block.sync_uid || block.uid, %{uid: block.uid, module_name: module_name(block), vars: vars, identifier_ids: links}}
     end)
   end
 
@@ -610,7 +622,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
         />
         <.work_group
           :if={@groups[:relinked]}
-          title={gettext("Links moved to this language")}
+          title={gettext("Now links to the %{language} version", language: language_word(@state.language))}
           description={relinked_description(@state)}
           items={@groups[:relinked]}
           state={@state}
@@ -735,9 +747,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   defp relinked_description(state) do
     gettext(
-      "Links that pointed at %{source} content now point at its version in %{language}. Nothing changed in the source; saving is all they need.",
-      language: language_word(state.language),
-      source: language_word(state.source && state.source.language)
+      "The source links to content that also exists in %{language}, so this translation now links to that version instead. Nothing changed in the source; saving is all it takes.",
+      language: language_word(state.language)
     )
   end
 

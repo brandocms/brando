@@ -12979,12 +12979,12 @@ msgstr[0] "Venter på en versjon av %{entries} på %{language}. Frem til da lenk
 msgstr[1] "Venter på versjoner av %{entries} på %{language}. Frem til da lenker blokken til dem på %{source}. Når de er oversatt, flyttes lenkene over av seg selv."
 
 #, elixir-autogen, elixir-format
-msgid "Links moved to this language"
-msgstr "Lenker flyttet til dette språket"
+msgid "Now links to the %{language} version"
+msgstr "Lenker nå til versjonen på %{language}"
 
 #, elixir-autogen, elixir-format
-msgid "Links that pointed at %{source} content now point at its version in %{language}. Nothing changed in the source; saving is all they need."
-msgstr "Lenker som pekte på innhold på %{source}, peker nå på versjonen på %{language}. Ingenting er endret i kilden; alt som trengs er å lagre."
+msgid "The source links to content that also exists in %{language}, so this translation now links to that version instead. Nothing changed in the source; saving is all it takes."
+msgstr "Kilden lenker til innhold som også finnes på %{language}, så denne oversettelsen lenker nå til den versjonen i stedet. Ingenting er endret i kilden; det holder å lagre."
 
 #, elixir-autogen, elixir-format
 msgid "Links updated"
