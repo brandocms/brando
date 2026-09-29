@@ -8,6 +8,16 @@
   .form-content > .form-tabs { min-height: 44px; padding: 4px; margin: 0 0 24px; border: 1px solid #dce5df; border-radius: 7px; background: #f4f8f2; box-shadow: none; }
   .form-tab-customs button { min-height: 32px; padding: 6px 12px; font-size: 13px; border-radius: 5px; color: var(--workspace-muted); }
   .form-tab-customs button.active { background: #e5efdf; color: var(--workspace-accent); }
+  /* With one section and only Save, use a quiet caption and one action accent. */
+  .form-content > .form-tabs:has(> .form-tab-customs > button:only-child):has(> .form-tab-builtins > .form-tool-save:only-child) {
+    background: #fff;
+    .form-tab-customs button, .form-tab-customs button:hover { background: transparent; color: var(--workspace-ink); }
+    .form-tab-builtins .form-tool-save {
+      --form-tool-bg: #edf3e9;
+      --form-tool-hover: #e2ecdd;
+      --form-tool-ink: #3d5c48;
+    }
+  }
   .brando-form .form-tab > .row { row-gap: 24px; }
   .brando-form fieldset { min-width: 0; padding: 0; margin: 0; }
   .brando-form .form-tab > .row > fieldset.labelled { padding-top: 24px; border-top: 1px solid var(--workspace-line); }
