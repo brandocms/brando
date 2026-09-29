@@ -241,6 +241,38 @@ defmodule BrandoAdmin.UploadManager do
     {:noreply, drop_item(socket, ref)}
   end
 
+  # The upload is the same file as an image the library already has: put the
+  # existing one where the upload went, and delete the new copy.
+  def handle_event("use_existing", %{"ref" => ref}, socket) do
+    user = socket.assigns.current_user
+
+    case Map.get(socket.assigns.items, ref) do
+      %{duplicate: %{id: existing_id}, asset_id: new_id} = item when is_integer(new_id) ->
+        {:ok, existing} = Brando.Images.get_image(existing_id)
+
+        # The upload is the field's selection now; the swap replaces it
+        target = Map.put(item.target, "expected_asset_id", to_string(new_id))
+        deliver(%{item | target: target}, existing)
+        Brando.Images.delete_images([new_id])
+        Logger.info("==> UploadManager: user ##{user.id} used image ##{existing_id} instead of upload ##{new_id}")
+
+        Process.send_after(self(), {:auto_dismiss_item, ref}, @auto_dismiss_ms)
+        {:noreply, update_item(socket, ref, %{duplicate: nil, status: :done, asset_id: existing_id})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("keep_new", %{"ref" => ref}, socket) do
+    socket = update_item(socket, ref, %{duplicate: nil})
+
+    if match?(%{status: :done}, socket.assigns.items[ref]),
+      do: Process.send_after(self(), {:auto_dismiss_item, ref}, @auto_dismiss_ms)
+
+    {:noreply, socket}
+  end
+
   def handle_event("dismiss_item", %{"ref" => ref}, socket) do
     {:noreply, drop_item(socket, ref)}
   end
@@ -533,11 +565,12 @@ defmodule BrandoAdmin.UploadManager do
 
             Brando.Images.Processing.queue_processing(asset, user, image_field_path(item.target), silent: true)
 
-            update_item(socket, item.ref, %{
-              status: :processing,
-              progress: 100,
-              asset_id: asset.id
-            })
+            duplicate = duplicate_of(asset)
+
+            socket
+            |> update_item(item.ref, %{status: :processing, progress: 100, asset_id: asset.id, duplicate: duplicate})
+            # The choice must be seen, not wait in a closed drawer
+            |> then(&if(duplicate, do: assign(&1, :open?, true), else: &1))
           else
             # Parity with save_file: server-transport files on CDN-enabled
             # sites must still be pushed to the CDN (images push from the
@@ -751,6 +784,8 @@ defmodule BrandoAdmin.UploadManager do
 
   def handle_info({:auto_dismiss_item, ref}, socket) do
     case Map.get(socket.assigns.items, ref) do
+      # A choice about a duplicate stays until it is made
+      %{duplicate: %{}} -> {:noreply, socket}
       %{status: :done} -> {:noreply, drop_item(socket, ref)}
       _ -> {:noreply, socket}
     end
@@ -824,6 +859,16 @@ defmodule BrandoAdmin.UploadManager do
               {item.progress}%
             </progress>
             <div :if={item.status == :error} class="error-label" title={item.error}>{item.error}</div>
+            <div :if={item[:duplicate]} class="duplicate-choice">
+              <p>
+                {gettext("The library already has this image:")}
+                <span class="duplicate-name">{item.duplicate.name}</span>
+              </p>
+              <div class="duplicate-actions">
+                <button type="button" phx-click="use_existing" phx-value-ref={ref}>{gettext("Use existing")}</button>
+                <button type="button" phx-click="keep_new" phx-value-ref={ref}>{gettext("Upload anyway")}</button>
+              </div>
+            </div>
           </li>
         </ul>
       </div>
@@ -832,6 +877,16 @@ defmodule BrandoAdmin.UploadManager do
   end
 
   ## Helpers
+
+  # An earlier image of the same file, named for the choice
+  defp duplicate_of(%Brando.Images.Image{} = image) do
+    case Brando.Images.find_duplicate(image) do
+      nil -> nil
+      existing -> %{id: existing.id, name: Path.basename(existing.path)}
+    end
+  end
+
+  defp duplicate_of(_asset), do: nil
 
   defp parse_asset_type("image"), do: :image
   defp parse_asset_type("file"), do: :file

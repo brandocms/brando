@@ -116,6 +116,22 @@ defmodule Brando.Images do
   end
 
   @doc """
+  An earlier image of the same file as `image` (the same `content_hash`), not
+  deleted, or nil. Only uploads have a hash, so copies made with "Duplicate"
+  are never offered in place of an upload.
+  """
+  def find_duplicate(%Image{content_hash: hash, id: id}) when is_binary(hash) do
+    from(i in Image,
+      where: i.content_hash == ^hash and i.id != ^id and is_nil(i.deleted_at),
+      order_by: [asc: i.id],
+      limit: 1
+    )
+    |> Brando.Repo.one()
+  end
+
+  def find_duplicate(_image), do: nil
+
+  @doc """
   Delete `ids` from database
   Also deletes all dependent image sizes.
   """
@@ -216,6 +232,9 @@ defmodule Brando.Images do
         |> Map.put(:path, new_file)
         |> Map.put(:sizes, %{})
         |> Map.put(:status, :unprocessed)
+        # A deliberate copy (another crop, say) is never offered in place of
+        # an upload of the same file
+        |> Map.put(:content_hash, nil)
 
       create_image(new_image_params, user)
     end

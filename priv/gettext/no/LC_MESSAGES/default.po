@@ -13109,3 +13109,15 @@ msgstr "En seksjon rommer andre blokker, med egen bakgrunn og avstand."
 #, elixir-autogen, elixir-format
 msgid "A fragment is shared content, edited in one place and shown the same wherever it is inserted."
 msgstr "Et fragment er delt innhold: det redigeres ett sted og vises likt overalt der det er satt inn."
+
+#, elixir-autogen, elixir-format
+msgid "The library already has this image:"
+msgstr "Biblioteket har allerede dette bildet:"
+
+#, elixir-autogen, elixir-format
+msgid "Use existing"
+msgstr "Bruk eksisterende"
+
+#, elixir-autogen, elixir-format
+msgid "Upload anyway"
+msgstr "Last opp likevel"

@@ -13103,3 +13103,15 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "A fragment is shared content, edited in one place and shown the same wherever it is inserted."
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "The library already has this image:"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Use existing"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Upload anyway"
+msgstr ""

@@ -42,6 +42,8 @@ defmodule Brando.Images.Image do
     attribute :config_target, :text
     attribute :folder_id, :integer
     attribute :fetchpriority, :enum, values: [:high, :low, :auto], default: :auto
+    # SHA-256 of the uploaded original, to find the same file uploaded again
+    attribute :content_hash, :text
 
     # Block-level presentation settings, declared on
     # `Brando.Villain.Blocks.PictureBlock.Data` and merged onto the image at

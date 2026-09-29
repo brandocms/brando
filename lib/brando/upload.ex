@@ -129,6 +129,7 @@ defmodule Brando.Upload do
 
     image_params = %{
       config_target: upload.meta.config_target,
+      content_hash: content_hash(upload.meta.media_path),
       path: upload.meta.media_path,
       width: svg_size.width,
       height: svg_size.height,
@@ -183,6 +184,7 @@ defmodule Brando.Upload do
 
         image_params = %{
           config_target: meta.config_target,
+          content_hash: content_hash(media_path),
           path: media_path,
           width: width,
           height: height,
@@ -198,6 +200,18 @@ defmodule Brando.Upload do
       {:error, _} ->
         {:error, {:handle_upload_type, "Failed to read image dimensions."}}
     end
+  end
+
+  # SHA-256 of the stored original, read in chunks; nil when it can't be read
+  defp content_hash(media_path) do
+    media_path
+    |> Images.Utils.media_path()
+    |> File.stream!(1_048_576)
+    |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
+    |> :crypto.hash_final()
+    |> Base.encode16(case: :lower)
+  rescue
+    _ -> nil
   end
 
   @doc """
