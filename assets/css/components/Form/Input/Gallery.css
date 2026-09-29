@@ -400,9 +400,9 @@
 
   .gallery-toolbar .actions { margin: 0; }
 
-  /* Uploading leads the group, filled, with the group's size and corners. */
-  .segmented-buttons .media-button.primary { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
-  .segmented-buttons .media-button.primary:hover { background: #163c2e; border-color: #163c2e; }
+  /* Uploading leads the group in a light accent, like every media field's. */
+  .segmented-buttons .media-button.primary { background: #edf3e9; border-color: #cfdcce; color: #254e3f; }
+  .segmented-buttons .media-button.primary:hover { background: #e2ecdd; border-color: #c3d5c5; }
 
   .gallery-count {
     order: 2;

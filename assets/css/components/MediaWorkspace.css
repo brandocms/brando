@@ -55,6 +55,9 @@
   .image-picker__image { display: grid; grid-template-columns: 20px 64px minmax(0,1fr); align-items: center; gap: 14px; margin: 0; padding: 14px 12px; border: 0; border-bottom: 1px solid #e6ebe3; border-radius: 0; background: #fff; color: #272b2a; box-shadow: none; min-height: 82px; }
   .image-picker__image:first-child { border-top: 1px solid #e6ebe3; }
   .image-picker__image[data-selectable="true"]:hover { background: #f7f9f4; }
+  /* Marked at once, like its check mark: the base rows fade their border,
+     background and shadow over 150ms, which left the bar trailing the check. */
+  .image-picker__image { transition: none; }
   .image-picker__image.selected { background: #eef4e9; box-shadow: inset 3px 0 #688563; }
   /* Shift+clicked to move: blue, apart from the green of the field's pick. */
   .image-picker__image.organize-selected { background: #edf2f8; box-shadow: inset 3px 0 #4f74a0; }

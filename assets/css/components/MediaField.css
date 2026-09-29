@@ -51,8 +51,9 @@
   text-transform: none; letter-spacing: 0; box-shadow: none; cursor: pointer; list-style: none;
   > [class^="hero-"] { width: 15px; height: 15px; flex: 0 0 15px; }
   &:hover { background: #f1f5ef; border-color: #bacabd; }
-  &.primary { background: #254e3f; border-color: #254e3f; color: #fff; }
-  &.primary:hover { background: #1a3d30; }
+  /* A light accent: uploading leads the row without shouting over it. */
+  &.primary { background: #edf3e9; border-color: #cfdcce; color: #254e3f; }
+  &.primary:hover { background: #e2ecdd; border-color: #bacabd; }
   &.quiet { border-color: transparent; color: #626b66; background: transparent; }
   &.quiet.destructive { color: #983e30; }
   &.quiet.destructive:hover { background: #fcf3f0; border-color: #ead9d2; }
