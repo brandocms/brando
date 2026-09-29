@@ -6,7 +6,7 @@ test.use({ viewport: { width: 1440, height: 1000 } })
 const screens = [
   ['dashboard', '/admin', 'Dashboard'],
   ['pages', '/admin/pages', 'Pages & Sections'],
-  ['modules', '/admin/config/content/modules', 'Content Modules'],
+  ['modules', '/admin/config/content/modules', 'Block modules'],
   ['navigation', '/admin/config/navigation/menus', 'Navigation'],
   ['menu-editor', '/admin/config/navigation/menus/update/1', 'Edit menu'],
   ['files', '/admin/assets/files', 'Files'],

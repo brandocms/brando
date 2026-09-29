@@ -12866,3 +12866,38 @@ msgstr "Globale felt (oppsett)"
 #, elixir-autogen, elixir-format
 msgid "Which global fields exist and where. Their values are edited under Globals."
 msgstr "Hvilke globale felt som finnes, og hvor. Verdiene redigeres under Globaler."
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Import / export"
+msgstr "Importer/eksporter"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Modules as files"
+msgstr "Moduler som filer"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Export and import module definitions (DSL)"
+msgstr "Eksporter og importer moduldefinisjoner (DSL)"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Paste encoded modules"
+msgstr "Lim inn kodede moduler"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Import copies of modules from another site"
+msgstr "Importer kopier av moduler fra et annet nettsted"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Content transfer"
+msgstr "Innholdsoverføring"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "This imports independent module copies with new identities. Use Content transfer in Configuration to move saved content while preserving module lineage."
+msgstr "Dette importerer selvstendige kopier av modulene, med nye identiteter. Bruk Innholdsoverføring under Konfigurasjon for å flytte lagret innhold og beholde modulenes opphav."

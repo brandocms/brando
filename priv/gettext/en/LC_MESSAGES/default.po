@@ -12861,3 +12861,38 @@ msgstr "Global fields (setup)"
 #, elixir-autogen, elixir-format
 msgid "Which global fields exist and where. Their values are edited under Globals."
 msgstr "Which global fields exist and where. Their values are edited under Globals."
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Import / export"
+msgstr "Import / export"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Modules as files"
+msgstr "Modules as files"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Export and import module definitions (DSL)"
+msgstr "Export and import module definitions (DSL)"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Paste encoded modules"
+msgstr "Paste encoded modules"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Import copies of modules from another site"
+msgstr "Import copies of modules from another site"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "Content transfer"
+msgstr "Content transfer"
+
+#: lib/brando_admin
+#, elixir-autogen, elixir-format
+msgid "This imports independent module copies with new identities. Use Content transfer in Configuration to move saved content while preserving module lineage."
+msgstr "This imports independent module copies with new identities. Use Content transfer in Configuration to move saved content while preserving module lineage."

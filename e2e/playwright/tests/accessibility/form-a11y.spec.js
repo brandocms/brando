@@ -66,9 +66,11 @@ test.describe('Modal focus management', () => {
     await page.goto('/admin/config/content/modules')
     await syncLV(page)
 
-    const opener = page.getByRole('button', { name: 'Import modules' })
-    await opener.focus()
+    // Opened from the header's import/export menu; focus comes back to the
+    // menu's button, since the menu item is gone once the menu closes.
+    const opener = page.locator('#module-transfer-menu > summary')
     await opener.click()
+    await page.getByRole('button', { name: /^Paste encoded modules/ }).click()
 
     const modal = page.locator('#module-import-modal')
     await expect(modal).toBeVisible()

@@ -41,7 +41,8 @@ async function fixtureZip() {
 
 async function openFiles(page) {
   await page.goto('/admin/config/content/modules')
-  await page.getByRole('button', { name: 'Import / export DSL', exact: true }).click()
+  await page.locator('#module-transfer-menu > summary').click()
+  await page.getByRole('button', { name: /^Modules as files/ }).click()
   await expect(page.locator('#module-files-modal')).toBeVisible()
   await syncLV(page)
   return page.locator('#module-files-modal')

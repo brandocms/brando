@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Content.ModuleListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
@@ -17,13 +17,33 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace modules-workspace">
-      <Workspace.header title={gettext("Content Modules")}>
-        <button class="workspace-button" phx-click={JS.push("open_module_files") |> show_modal("#module-files-modal")}>
-          {gettext("Import / export DSL")}
-        </button>
-        <button class="workspace-button" phx-click={show_modal("#module-import-modal")}>
-          {gettext("Import modules")}
-        </button>
+      <Workspace.header title={gettext("Block modules")}>
+        <%!-- One way in to both: modules as files (DSL), and pasted module copies. --%>
+        <details id="module-transfer-menu" class="workspace-menu">
+          <summary class="workspace-button">
+            {gettext("Import / export")} <.icon name="hero-chevron-down" />
+          </summary>
+          <div class="workspace-menu-items">
+            <button
+              type="button"
+              phx-click={
+                JS.push("open_module_files")
+                |> close_transfer_menu()
+                |> show_modal("#module-files-modal")
+              }
+            >
+              {gettext("Modules as files")}
+              <small>{gettext("Export and import module definitions (DSL)")}</small>
+            </button>
+            <button
+              type="button"
+              phx-click={close_transfer_menu() |> show_modal("#module-import-modal")}
+            >
+              {gettext("Paste encoded modules")}
+              <small>{gettext("Import copies of modules from another site")}</small>
+            </button>
+          </div>
+        </details>
         <button
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           class="workspace-button primary"
@@ -65,7 +85,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     >
       <p>
         {gettext(
-          "This imports independent module copies with new identities. Use Import/Export in Configuration to move saved content while preserving module lineage."
+          "This imports independent module copies with new identities. Use Content transfer in Configuration to move saved content while preserving module lineage."
         )}
       </p>
       <div :if={@imported_modules} class="imported-modules">
@@ -225,5 +245,17 @@ defmodule BrandoAdmin.Content.ModuleListLive do
         Brando.Content.import_module_with_children(mod, current_user)
       end
     end)
+  end
+
+  # "Block modules" as in the menu, not the schema's plural ("Modules").
+  @doc false
+  def page_title, do: gettext("Block modules")
+
+  # Closes the menu and puts focus on its button first, so a dialog opened
+  # from the menu gives focus back to something still on screen.
+  defp close_transfer_menu(js \\ %JS{}) do
+    js
+    |> JS.remove_attribute("open", to: "#module-transfer-menu")
+    |> JS.focus(to: "#module-transfer-menu > summary")
   end
 end

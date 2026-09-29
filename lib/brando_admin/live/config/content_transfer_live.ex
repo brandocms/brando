@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     <div class="admin-workspace transfer-workspace" id="content-transfer" aria-busy={to_string(@busy != nil)}>
       <span class="transfer-eyebrow">{dgettext("content_transfer", "Configuration")}</span>
       <Workspace.header
-        title={dgettext("content_transfer", "Import/Export")}
+        title={gettext("Content transfer")}
         subtitle={dgettext("content_transfer", "Move entries and their content between sites and environments.")}
       >
         <div class="transfer-scope">

@@ -301,7 +301,7 @@ defmodule BrandoAdmin.Menu do
                     %{name: gettext("Global fields (setup)"), url: "/admin/config/global_sets"},
                     %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources"},
                     frontend_assets_menu_item(current_user),
-                    %{name: gettext("Import/Export"), url: "/admin/config/import-export"},
+                    %{name: gettext("Content transfer"), url: "/admin/config/import-export"},
                     %{
                       name: gettext("Cache"),
                       url: "/admin/config/cache"

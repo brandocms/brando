@@ -1,13 +1,13 @@
 defmodule BrandoAdmin.Content.ModuleSetListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.ModuleSet
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.ModuleSet, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Module Sets")} subtitle={gettext("Overview")}>
+    <Content.header title={gettext("Block module sets")} subtitle={gettext("Overview")}>
       <.link :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} navigate={@admin_create_url} class="primary">
         {gettext("Create new")}
       </.link>
@@ -24,4 +24,7 @@ defmodule BrandoAdmin.Content.ModuleSetListLive do
     />
     """
   end
+
+  @doc false
+  def page_title, do: gettext("Block module sets")
 end
