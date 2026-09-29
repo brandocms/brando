@@ -13039,3 +13039,13 @@ msgstr "Lim inn blokk her"
 #, elixir-autogen, elixir-format
 msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
 msgstr "«%{block}» er kopiert. Lim den inn med utklippstavle-knappen ved + mellom blokkene, her eller på en annen side."
+
+#, elixir-autogen, elixir-format
+msgid "It is used in one place: %{places}."
+msgid_plural "It is used in %{count} places: %{places}."
+msgstr[0] "Brukt ett sted: %{places}."
+msgstr[1] "Brukt på %{count} steder: %{places}."
+
+#, elixir-autogen, elixir-format
+msgid "%{count} more"
+msgstr "%{count} til"

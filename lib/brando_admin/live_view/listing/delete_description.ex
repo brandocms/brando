@@ -6,10 +6,15 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   "What goes with it" is the rows the entry owns — its `has_many` relations
   with `cast: true`, the ones its form edits as part of it (a project's
   artworks and links). Deleting the entry deletes them.
+
+  Media with usage tracking (`Brando.Content.Usage`: images, videos,
+  galleries, files) also says where it is used, linked, so the editor sees
+  what the delete takes from. Deleting is still allowed.
   """
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Blueprint
+  alias Brando.Content.Usage
   alias Brando.Blueprint.Relations
   alias Brando.Trait.SoftDelete
 
@@ -24,7 +29,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
     %{
       title: gettext("Delete %{singular}?", singular: singular),
-      message: message(schema, name, owned),
+      message: message(schema, name, owned) <> usage(schema, entry),
       confirm: gettext("Delete"),
       cancel: gettext("Cancel")
     }
@@ -50,6 +55,44 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
       |> Kernel.<>(" " <> gettext("This can't be undone."))
     end
   end
+
+  @usage_kinds %{
+    Module.concat(["Brando", "Images", "Image"]) => :image,
+    Module.concat(["Brando", "Videos", "Video"]) => :video,
+    Module.concat(["Brando", "Galleries", "Gallery"]) => :gallery,
+    Module.concat(["Brando", "Files", "File"]) => :file
+  }
+
+  # A long list is cut: the dialog names the first few and counts the rest.
+  @usage_shown 5
+
+  defp usage(schema, %{id: id}) do
+    with kind when not is_nil(kind) <- Map.get(@usage_kinds, schema),
+         [_ | _] = usages <- Map.get(Usage.list(kind, [id]), id, []) do
+      shown = Enum.take(usages, @usage_shown)
+      rest = length(usages) - length(shown)
+
+      links =
+        Enum.map(shown, fn
+          %{url: url, label: label} when is_binary(url) ->
+            ~s(<a href="#{escape(url)}" target="_blank">#{escape(label)}</a>)
+
+          %{label: label} ->
+            escape(label)
+        end)
+
+      links = if rest > 0, do: links ++ [gettext("%{count} more", count: rest)], else: links
+
+      " " <>
+        ngettext("It is used in one place: %{places}.", "It is used in %{count} places: %{places}.", length(usages),
+          places: to_sentence(links)
+        )
+    else
+      _ -> ""
+    end
+  end
+
+  defp usage(_schema, _entry), do: ""
 
   defp sentence(parts), do: (parts |> Enum.reject(&(&1 in [nil, false])) |> Enum.join(" ")) <> "."
 

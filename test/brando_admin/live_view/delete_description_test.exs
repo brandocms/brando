@@ -51,4 +51,22 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescriptionTest do
     assert message =~ "It can be restored from there."
     refute message =~ "can't be undone"
   end
+
+  describe "media in use" do
+    test "names where it is used, linked, and counts past the first few" do
+      image = Brando.Factory.insert(:image)
+      unused = Brando.Factory.insert(:image)
+
+      for n <- 1..7, do: Brando.Factory.insert(:video, title: "Video #{n}", thumbnail_id: image.id)
+
+      %{message: message} = DeleteDescription.describe(Brando.Images.Image, image)
+
+      assert message =~ "It is used in 7 places:"
+      assert message =~ ~r{<a href="[^"]+" target="_blank">Video 1</a>}
+      assert message =~ "2 more"
+      refute message =~ "Video 7"
+
+      refute DeleteDescription.describe(Brando.Images.Image, unused).message =~ "It is used"
+    end
+  end
 end
