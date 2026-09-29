@@ -168,7 +168,7 @@ defmodule Brando.Videos.Video do
         class="library-video-play"
         phx-click="play_video"
         phx-value-id={@entry.id}
-        aria-label={gettext("Play %{title}", title: @title || gettext("Untitled"))}
+        aria-label={gettext("Play %{title}", title: @title || untitled_name(@entry))}
       >
         <img
           :if={@entry.thumbnail}
@@ -196,7 +196,7 @@ defmodule Brando.Videos.Video do
             type="text"
             name="title"
             value={@title}
-            placeholder={gettext("Untitled")}
+            placeholder={untitled_name(@entry)}
             aria-label={gettext("Title")}
             autocomplete="off"
             phx-debounce="blur"
@@ -233,16 +233,28 @@ defmodule Brando.Videos.Video do
     end
   end
 
+  # An untitled video is named after where it is used, like a gallery
+  defp untitled_name(%{usage: [%{label: place} | _]}), do: gettext("Video in %{place}", place: place)
+  defp untitled_name(_video), do: gettext("Untitled")
+
+  # A stream's address ends in a generic playlist; the host and "playlist.m3u8"
+  # say nothing to an editor.
   defp video_source(%{source_url: url}) when is_binary(url) and url != "" do
     uri = URI.parse(url)
 
+    if uri.path && String.ends_with?(uri.path, ".m3u8"),
+      do: gettext("Streaming video"),
+      else: file_source(uri)
+  end
+
+  defp video_source(video), do: video.remote_id
+
+  defp file_source(uri) do
     [uri.host, uri.path && Path.basename(uri.path)]
     |> Enum.reject(&(&1 in [nil, "", "/"]))
     |> Enum.join("/")
     |> URI.decode()
   end
-
-  defp video_source(video), do: video.remote_id
 
   defp video_type_label(:upload), do: gettext("Uploaded file")
   defp video_type_label(:external_file), do: gettext("External file")

@@ -13069,3 +13069,15 @@ msgstr "Valgt"
 #, elixir-autogen, elixir-format
 msgid "Linked to an entry"
 msgstr "Lenker til en oppføring"
+
+#, elixir-autogen, elixir-format
+msgid "Gallery in %{place}"
+msgstr "Galleri i %{place}"
+
+#, elixir-autogen, elixir-format
+msgid "Video in %{place}"
+msgstr "Video i %{place}"
+
+#, elixir-autogen, elixir-format
+msgid "Streaming video"
+msgstr "Strømmevideo"

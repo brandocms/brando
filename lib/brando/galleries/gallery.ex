@@ -116,7 +116,7 @@ defmodule Brando.Galleries.Gallery do
       <Image.image :for={image <- @images} image={image} size={:smallest} />
     </div>
     <.update_link entry={@entry} columns={7}>
-      {gettext("Gallery")} #{@entry.id}
+      {gallery_name(@entry)}
       <:outside>
         <BrandoAdmin.Components.Usage.inline usages={@entry.usage} />
       </:outside>
@@ -126,6 +126,11 @@ defmodule Brando.Galleries.Gallery do
     </.field>
     """
   end
+
+  # Galleries have no title: one is named after where it is used, which is
+  # how an editor thinks of it. "Gallery #12" is left for one used nowhere.
+  defp gallery_name(%{usage: [%{label: place} | _]}), do: gettext("Gallery in %{place}", place: place)
+  defp gallery_name(entry), do: "#{gettext("Gallery")} ##{entry.id}"
 
   @doc """
   Returns preloaded gallery query

@@ -13063,3 +13063,15 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Linked to an entry"
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Gallery in %{place}"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Video in %{place}"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Streaming video"
+msgstr ""
