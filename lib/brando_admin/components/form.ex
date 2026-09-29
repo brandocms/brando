@@ -2556,7 +2556,11 @@ defmodule BrandoAdmin.Components.Form do
                   <Button.dropdown value={false} event={JS.push("push_submit", target: @myself)}>
                     {gettext("Save and continue editing")}<Primitives.shortcut key="S" />
                   </Button.dropdown>
-                  <Button.dropdown value={false} event={JS.push("push_submit_new", target: @myself)}>
+                  <Button.dropdown
+                    :if={can_create_new?(@schema)}
+                    value={false}
+                    event={JS.push("push_submit_new", target: @myself)}
+                  >
                     {gettext("Save and create new")}
                   </Button.dropdown>
                   <Button.dropdown
@@ -6278,5 +6282,15 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     best
+  end
+
+  # "Save and create new" needs somewhere to go: singletons such as the
+  # identity have no create route.
+  defp can_create_new?(schema) do
+    BrandoAdmin.Authorization.allowed?(:create, schema) and is_binary(schema.__admin_route__(:create, []))
+  rescue
+    UndefinedFunctionError -> false
+    FunctionClauseError -> false
+    ArgumentError -> false
   end
 end
