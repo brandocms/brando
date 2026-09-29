@@ -12928,8 +12928,8 @@ msgstr "Never logged in"
 
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
-msgid "Sort the list by its order to drag rows"
-msgstr "Sort the list by its order to drag rows"
+msgid "Rows can be dragged in this order"
+msgstr "Rows can be dragged in this order"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format

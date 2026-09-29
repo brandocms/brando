@@ -1082,6 +1082,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign_new(:statuses, fn -> get_statuses(assigns.schema) end)
       |> assign_new(:filters, fn -> txt_filters end)
       |> assign_new(:sorts, fn -> assigns.listing.sorts end)
+      |> assign_new(:sortable?, fn -> false end)
 
     ~H"""
     <div class={["list-tools-wrapper", @display_filters != %{} && "has-active-filters"]}>
@@ -1124,7 +1125,14 @@ defmodule BrandoAdmin.Components.Content.List do
         reset_filters={@reset_filters}
       />
       <div class="list-filters-and-sorts">
-        <.sorts :if={@sorts != []} active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
+        <.sorts
+          :if={@sorts != []}
+          active_sort={@active_sort}
+          sorts={@sorts}
+          sortable?={@sortable?}
+          schema={@schema}
+          on_update={@update_sort}
+        />
       </div>
     </div>
     <.active_filters
@@ -1141,7 +1149,10 @@ defmodule BrandoAdmin.Components.Content.List do
   attr :sorts, :list, required: true
   attr :schema, :atom, required: true
   attr :on_update, :any, required: true
+  attr :sortable?, :boolean, default: false
 
+  # A sortable list's rows can only be dragged under a sort that shows their
+  # stored order, so that sort says so where the editor picks it.
   def sorts(assigns) do
     ~H"""
     <div class="sorts">
@@ -1151,6 +1162,9 @@ defmodule BrandoAdmin.Components.Content.List do
           <li :for={sort <- @sorts} :key={sort.key}>
             <button type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
               {g(@schema, sort.label)}
+              <span :if={@sortable? && Row.ordered_by_sequence?(sort)} class="sort-note">
+                {gettext("Rows can be dragged in this order")}
+              </span>
             </button>
           </li>
         </:options>

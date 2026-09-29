@@ -125,6 +125,7 @@
   .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: 12px; text-transform: none; color: var(--workspace-muted); }
   .reset-filters-btn:hover { background: var(--workspace-wash); color: var(--workspace-accent); }
   .sorts .dropdown-chevron { display: block; width: 14px; height: 14px; }
+  .sorts .sort-note { display: block; margin-top: 2px; font-size: 11px; color: var(--workspace-muted); }
   @media (max-width: 600px) { .content-list .list-tools { flex-basis: 100%; } .content-list .list-tools .filters { width: 100%; } }
 }
 

@@ -392,34 +392,30 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   # Rows can only be dragged while they are shown in their stored order: under
   # any other sort a drag would reorder something the list doesn't show. The
-  # empty column then says how to get there, and has no handle to grab.
+  # column is then left out, so the row starts at its content; the sort menu
+  # says which order allows dragging.
   def handle(assigns) do
     assigns = assign(assigns, :by_sequence?, ordered_by_sequence?(assigns[:active_sort]))
 
     ~H"""
-    <div class="col-1 seq">
-      <div :if={@by_sequence?} class="center sequence-handle">
+    <div :if={@by_sequence?} class="col-1 seq">
+      <div class="center sequence-handle">
         <.icon name="brando-move" />
-      </div>
-      <div
-        :if={!@by_sequence?}
-        class="center sequence-handle-off"
-        title={gettext("Sort the list by its order to drag rows")}
-      >
       </div>
     </div>
     """
   end
 
-  defp ordered_by_sequence?(nil), do: true
+  @doc false
+  def ordered_by_sequence?(nil), do: true
 
   # Anywhere in the order: a listing may group first ("featured first, then
   # sequence") and still be shown in its stored order within each group.
-  defp ordered_by_sequence?(%{order: order}) do
+  def ordered_by_sequence?(%{order: order}) do
     Enum.any?(Brando.Query.order_string_to_list(order), &match?({_direction, :sequence}, &1))
   end
 
-  defp ordered_by_sequence?(_sort), do: false
+  def ordered_by_sequence?(_sort), do: false
 
   # Status components
   attr :entry, :map, required: true
