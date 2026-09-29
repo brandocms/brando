@@ -379,7 +379,7 @@
     }
 
     input[type="checkbox"]:checked + .slider {
-      background-color: #698661;
+      background-color: #66bb6a;
     }
   }
 
