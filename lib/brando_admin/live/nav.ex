@@ -25,15 +25,23 @@ defmodule BrandoAdmin.Nav do
       )
       |> then(&{:ok, &1})
     else
+      # The first render already has the user (`:mount_current_user`), so it
+      # renders the menu too. It used to render an empty column that filled in
+      # a second or two later, once the socket connected, on every page load.
       socket
       |> assign(:socket_connected, false)
-      |> assign(:current_user, nil)
       |> assign(:current_url, url)
+      |> put_locale()
       |> assign_tenant_options()
-      |> assign(:menu_sections, [])
+      |> assign(:menu_sections, dead_render_menu(socket))
       |> then(&{:ok, &1})
     end
   end
+
+  defp dead_render_menu(%{assigns: %{current_user: user}} = socket) when not is_nil(user),
+    do: BrandoAdmin.Menu.get_menu(user, socket.assigns[:current_site])
+
+  defp dead_render_menu(_socket), do: []
 
   def put_locale(socket) do
     current_user = socket.assigns.current_user
@@ -237,7 +245,7 @@ defmodule BrandoAdmin.Nav do
               </section>
             </div>
 
-            <nav :if={@socket_connected} phx-hook="Brando.Navigation" id="nav">
+            <nav :if={@menu_sections != []} phx-hook="Brando.Navigation" id="nav">
               <div id="nav-circle" class="nav-circle"></div>
               <div class="nav-sections" id="nav-sections">
                 <section :for={section <- @menu_sections} class="navigation-section">
