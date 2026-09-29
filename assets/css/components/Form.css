@@ -1036,3 +1036,14 @@ html.not-mac .shortcut-other { display: inline; }
    it the whole bar goes, since the form's own Save and ⌘S remain. */
 .form-content > .form-tabs > .form-tab-customs:has(> button:only-child) > button { display: none; }
 .form-content > .form-tabs:has(> .form-tab-customs > button:only-child):has(> .form-tab-builtins > .form-tool-save:only-child) { display: none; }
+
+/* The recovery status reads as a caption of the heading: close under it, with
+   a small gap before the toolbar. */
+.brando-form .form-content .form-header:has(~ .draft-recovery-host) { margin-bottom: 8px; }
+.brando-form .form-content .draft-recovery-host > .draft-recovery { margin-bottom: 12px; }
+
+/* The toolbar's save: icon and label spaced and inked like its neighbours. */
+.form-tabs .form-tab-builtins .form-tool-save > button.form-tool-save-button {
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px;
+  color: var(--brando-color-dark); font-size: 13px; font-weight: 500; white-space: nowrap;
+}

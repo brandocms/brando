@@ -110,7 +110,7 @@
   .draft-recovery-status {
     justify-content: space-between;
     gap: 16px;
-    min-height: 44px;
+    min-height: 28px;
     color: var(--draft-muted);
     font-size: 12px;
 
