@@ -109,74 +109,43 @@
         }
       }
 
-      .delete-x {
-        cursor: pointer;
-        z-index: 1;
+      /* Edit and delete as one group in the corner. */
+      .gallery-object-actions {
         position: absolute;
         top: 8px;
         right: 8px;
-        background-color: white;
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        border: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: white;
-        box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
-
-        &:hover {
-          background-color: var(--brando-color-dark);
-          border: 1px solid var(--brando-color-dark);
-
-          span {
-            background-color: white;
-          }
-        }
-
-        span {
-          background-color: var(--brando-color-dark);
-          width: 1rem;
-          height: 1rem;
-        }
-
-        .text {
-          display: none;
-        }
-      }
-
-      .edit-image-btn {
-        cursor: pointer;
         z-index: 1;
-        position: absolute;
-        top: 8px;
-        right: 38px;
-        background-color: white;
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        border: none;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
+        overflow: hidden;
+        border-radius: 13px;
+        background-color: white;
         box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
 
-        &:hover {
-          background-color: var(--brando-color-dark);
-          border: 1px solid var(--brando-color-dark);
+        button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 25px;
+          padding: 0;
+          border: none;
+          background-color: white;
+          cursor: pointer;
 
           span {
-            background-color: white;
+            width: 14px;
+            height: 14px;
+            background-color: var(--brando-color-dark);
+          }
+
+          &:hover {
+            background-color: var(--brando-color-dark);
+
+            span { background-color: white; }
           }
         }
 
-        span {
-          background-color: var(--brando-color-dark);
-          width: 14px;
-          height: 14px;
-        }
+        button + button { border-left: 1px solid #e6ebe3; }
       }
     }
   }

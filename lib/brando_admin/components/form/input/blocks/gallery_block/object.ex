@@ -87,33 +87,36 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         <% end %>
       <% end %>
 
-      <button
-        class="delete-x"
-        type="button"
-        name={"#{@gallery_form.name}[drop_gallery_object_ids][]"}
-        value={@gallery_object_form.index}
-        phx-click={JS.dispatch("change")}
-        data-sortable-filter
-      >
-        <.icon name="hero-x-mark" />
-        <div class="text">{gettext("Delete")}</div>
-      </button>
-
-      <button
-        :if={@gallery_object_form[:image_id].value}
-        class="edit-image-btn"
-        type="button"
-        phx-click={
-          JS.push("open_image_editor",
-            target: @myself,
-            value: %{image_id: @gallery_object_form[:image_id].value}
-          )
-          |> open_image_editor_drawer()
-        }
-        data-sortable-filter
-      >
-        <.icon name="hero-pencil-square" />
-      </button>
+      <%!-- One group in the corner: edit, then delete. --%>
+      <div class="gallery-object-actions" data-sortable-filter>
+        <button
+          :if={@gallery_object_form[:image_id].value}
+          class="edit-image-btn"
+          type="button"
+          aria-label={gettext("Edit image")}
+          phx-click={
+            JS.push("open_image_editor",
+              target: @myself,
+              value: %{image_id: @gallery_object_form[:image_id].value}
+            )
+            |> open_image_editor_drawer()
+          }
+          data-sortable-filter
+        >
+          <.icon name="hero-pencil-square" />
+        </button>
+        <button
+          class="delete-x"
+          type="button"
+          aria-label={gettext("Delete")}
+          name={"#{@gallery_form.name}[drop_gallery_object_ids][]"}
+          value={@gallery_object_form.index}
+          phx-click={JS.dispatch("change")}
+          data-sortable-filter
+        >
+          <.icon name="hero-x-mark" />
+        </button>
+      </div>
 
       <figcaption phx-click={show_modal("##{@object_modal_id}")} data-sortable-filter>
         <div>
