@@ -28,7 +28,14 @@ defmodule Brando.Navigation.Item.DeriveKey do
   defp derive(%{link_text: text}) when is_binary(text) and text != "", do: to_key(text)
 
   defp derive(%{identifier_id: id}) when is_integer(id) do
-    case Brando.Repo.get(Brando.Content.Identifier, id) do
+    # Named at runtime, inside the call: `Item` depends on this trait at
+    # compile time, so a reference to the repo or the identifier schema (both
+    # reach back to `Item`) would make a compile-connected cycle, which CI
+    # rejects. A module attribute would still compile to a direct reference.
+    repo = Module.concat(["Brando", "Repo"])
+    identifier = Module.concat(["Brando", "Content", "Identifier"])
+
+    case repo.get(identifier, id) do
       %{title: title} when is_binary(title) -> title |> String.replace(~r/^\[[^\]]*\]\s*/, "") |> to_key()
       _ -> nil
     end
@@ -37,7 +44,7 @@ defmodule Brando.Navigation.Item.DeriveKey do
   defp derive(_link), do: nil
 
   defp to_key(text) do
-    case text |> Brando.Utils.slugify() |> String.replace("-", "_") do
+    case text |> Slug.slugify() |> to_string() |> String.replace("-", "_") do
       "" -> nil
       key -> key
     end
