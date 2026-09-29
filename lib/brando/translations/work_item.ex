@@ -5,6 +5,8 @@ defmodule Brando.Translations.WorkItem do
     * `:translate` — new content, seeded with the source text
     * `:review` — the source text changed; the translation was kept
     * `:shared_update` — a source-controlled value or media changed
+    * `:relinked` — the source is unchanged, but a link it holds now points
+      at the version of the same content in this language
     * `:awaiting_translation` — the source links to content that has no
       version in this language yet; the path ends in the source identifier id.
       It resolves itself when that version is created.
@@ -20,7 +22,7 @@ defmodule Brando.Translations.WorkItem do
   schema "translation_work_items" do
     belongs_to :pending_version, PendingVersion
     field :path, :string
-    field :kind, Ecto.Enum, values: [:translate, :review, :shared_update, :awaiting_translation]
+    field :kind, Ecto.Enum, values: [:translate, :review, :shared_update, :relinked, :awaiting_translation]
     field :source_digest, :string
     field :minor, :boolean, default: false
     field :resolved_at, :utc_datetime

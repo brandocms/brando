@@ -12955,3 +12955,32 @@ msgstr "Use this folder"
 #, elixir-autogen, elixir-format
 msgid "Saved in"
 msgstr "Saved in"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed these. The new values are already in the form, so saving is all they need."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source links to entries that have no %{language} version yet. Until they do, this translation links to the %{source} ones. Once they are translated, the links move over by themselves."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for a %{language} version of %{entries}. Until then, this block links to the %{source} one. Once it is translated, the link moves over by itself."
+msgid_plural "Waiting for %{language} versions of %{entries}. Until then, this block links to the %{source} ones. Once they are translated, the links move over by themselves."
+msgstr[0] ""
+msgstr[1] ""
+
+#, elixir-autogen, elixir-format
+msgid "Links moved to this language"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Links that pointed at %{source} content now point at its version in %{language}. Nothing changed in the source; saving is all they need."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Links updated"
+msgstr ""

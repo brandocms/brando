@@ -12960,3 +12960,32 @@ msgstr "Bruk denne mappen"
 #, elixir-autogen, elixir-format
 msgid "Saved in"
 msgstr "Lagres i"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed these. The new values are already in the form, so saving is all they need."
+msgstr "Kilden har endret disse. De nye verdiene ligger allerede i skjemaet, så alt som trengs er å lagre."
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source links to entries that have no %{language} version yet. Until they do, this translation links to the %{source} ones. Once they are translated, the links move over by themselves."
+msgstr "Kilden lenker til innhold som ikke finnes på %{language} ennå. Frem til det gjør det, lenker denne oversettelsen til versjonene på %{source}. Når innholdet er oversatt, flyttes lenkene over av seg selv."
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for a %{language} version of %{entries}. Until then, this block links to the %{source} one. Once it is translated, the link moves over by itself."
+msgid_plural "Waiting for %{language} versions of %{entries}. Until then, this block links to the %{source} ones. Once they are translated, the links move over by themselves."
+msgstr[0] "Venter på en versjon av %{entries} på %{language}. Frem til da lenker blokken til den på %{source}. Når den er oversatt, flyttes lenken over av seg selv."
+msgstr[1] "Venter på versjoner av %{entries} på %{language}. Frem til da lenker blokken til dem på %{source}. Når de er oversatt, flyttes lenkene over av seg selv."
+
+#, elixir-autogen, elixir-format
+msgid "Links moved to this language"
+msgstr "Lenker flyttet til dette språket"
+
+#, elixir-autogen, elixir-format
+msgid "Links that pointed at %{source} content now point at its version in %{language}. Nothing changed in the source; saving is all they need."
+msgstr "Lenker som pekte på innhold på %{source}, peker nå på versjonen på %{language}. Ingenting er endret i kilden; alt som trengs er å lagre."
+
+#, elixir-autogen, elixir-format
+msgid "Links updated"
+msgstr "Lenker oppdatert"

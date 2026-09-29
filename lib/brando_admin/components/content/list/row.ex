@@ -566,6 +566,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     review = Map.get(counts, :review, 0)
     waiting = Map.get(counts, :awaiting_translation, 0)
     shared = Map.get(counts, :shared_update, 0)
+    relinked = Map.get(counts, :relinked, 0)
 
     parts =
       Enum.reject(
@@ -578,7 +579,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         &(&1 in [false, nil])
       )
 
-    if parts == [], do: gettext("Updated from the source"), else: Enum.join(parts, " · ")
+    cond do
+      parts != [] -> Enum.join(parts, " · ")
+      shared == 0 and relinked > 0 -> gettext("Links updated")
+      true -> gettext("Updated from the source")
+    end
   end
 
   defp translation_summary(_version, _), do: gettext("Up to date")

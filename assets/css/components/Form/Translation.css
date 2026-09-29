@@ -46,6 +46,7 @@
 
 .translation-work { display: grid; gap: 16px; }
 .translation-group { display: grid; gap: 8px; }
+.translation-group-description { color: var(--translation-muted); max-width: 80ch; }
 
 .translation-group li {
   display: flex;
@@ -89,6 +90,19 @@
 /* Marks from Brando.TranslationWork. */
 .block[data-translation-work] { box-shadow: 0 0 0 2px #e2b85c; border-radius: 6px; }
 .field-wrapper[data-translation-work] { box-shadow: -3px 0 0 #e2b85c; }
+
+/* A block's note, e.g. the linked entries it waits for. */
+.block[data-translation-note]::before {
+  content: attr(data-translation-note);
+  display: block;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ecdcb9;
+  border-radius: 6px 6px 0 0;
+  background: #fff8e9;
+  color: #755929;
+  font-size: 13px;
+  line-height: 1.5;
+}
 
 @media (max-width: 720px) {
   .translation-panel { padding: 16px; }

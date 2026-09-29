@@ -287,11 +287,13 @@ defmodule BrandoAdmin.Components.Form.Translation do
     |> Enum.sort_by(&{kind_order(&1.kind), &1.path})
     |> Enum.map(fn item ->
       target = target(item.path, blocks)
+      linked = linked_title(item, target, blocks, titles)
 
       %{
         path: item.path,
         kind: item.kind,
-        label: with_linked(label(item.path, target, labels), item, target, blocks, titles),
+        label: with_linked(label(item.path, target, labels), linked),
+        linked: linked,
         target: target
       }
     end)
@@ -299,12 +301,15 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   # A link's item names the entry it points at: the one it now follows for an
   # update, the one still waiting for a translation otherwise.
-  defp with_linked(label, item, target, blocks, titles) do
+  defp linked_title(item, target, blocks, titles) do
     case linked_id(item, target, blocks) do
-      nil -> label
-      id -> "#{String.replace_suffix(label, " › " <> gettext("media"), "")} → #{titles[id] || "##{id}"}"
+      nil -> nil
+      id -> titles[id] || "##{id}"
     end
   end
+
+  defp with_linked(label, nil), do: label
+  defp with_linked(label, linked), do: "#{String.replace_suffix(label, " › " <> gettext("media"), "")} → #{linked}"
 
   defp linked_id(%{kind: :awaiting_translation, path: path}, _target, _blocks) do
     case Regex.run(~r{/identifiers?/(\d+)$}, path) do
@@ -313,7 +318,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
     end
   end
 
-  defp linked_id(%{kind: :shared_update}, {:block, uid, _module, ["vars", key, "media"]}, blocks) do
+  defp linked_id(%{kind: kind}, {:block, uid, _module, ["vars", key, "media"]}, blocks)
+       when kind in [:shared_update, :relinked] do
     Enum.find_value(blocks, fn {_identity, block} ->
       block.uid == uid && Enum.find_value(block.vars, &(&1.key == key && &1.identifier_id))
     end)
@@ -339,7 +345,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp kind_order(:translate), do: 0
   defp kind_order(:review), do: 1
   defp kind_order(:shared_update), do: 2
-  defp kind_order(:awaiting_translation), do: 3
+  defp kind_order(:relinked), do: 3
+  defp kind_order(:awaiting_translation), do: 4
 
   # Where a work item's path points in the form: a field, a block (by uid) or a
   # subform row.
@@ -537,6 +544,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       id="translation-panel"
       phx-hook="Brando.TranslationWork"
       data-blocks={Jason.encode!(block_uids(@state.items))}
+      data-notes={Jason.encode!(block_notes(@state))}
       data-fields={Jason.encode!(field_names(@state.items, @form_name))}
       data-locks={Jason.encode!(locks(@state, @form_name))}
     >
@@ -594,12 +602,23 @@ defmodule BrandoAdmin.Components.Form.Translation do
         <.work_group
           :if={@groups[:shared_update]}
           title={gettext("Updated from the source")}
+          description={
+            gettext("The source changed these. The new values are already in the form, so saving is all they need.")
+          }
           items={@groups[:shared_update]}
+          state={@state}
+        />
+        <.work_group
+          :if={@groups[:relinked]}
+          title={gettext("Links moved to this language")}
+          description={relinked_description(@state)}
+          items={@groups[:relinked]}
           state={@state}
         />
         <.work_group
           :if={@groups[:awaiting_translation]}
           title={gettext("Waiting for a linked translation")}
+          description={awaiting_description(@state)}
           items={@groups[:awaiting_translation]}
           state={@state}
         />
@@ -661,6 +680,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   end
 
   attr :title, :string, required: true
+  attr :description, :string, default: nil
   attr :items, :list, required: true
   attr :state, :map, required: true
   attr :acknowledge, :boolean, default: false
@@ -669,6 +689,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
     ~H"""
     <div class="translation-group">
       <h3>{@title} <span>{length(@items)}</span></h3>
+      <p :if={@description} class="translation-group-description">{@description}</p>
       <ul>
         <li :for={item <- @items}>
           <span class="translation-item-label">{item.label}</span>
@@ -711,6 +732,50 @@ defmodule BrandoAdmin.Components.Form.Translation do
   end
 
   defp block_uids(items), do: for(%{target: {:block, uid, _, _}} <- items, uniq: true, do: uid)
+
+  defp relinked_description(state) do
+    gettext(
+      "Links that pointed at %{source} content now point at its version in %{language}. Nothing changed in the source; saving is all they need.",
+      language: language_word(state.language),
+      source: language_word(state.source && state.source.language)
+    )
+  end
+
+  defp awaiting_description(state) do
+    gettext(
+      "The source links to entries that have no %{language} version yet. Until they do, this translation links to the %{source} ones. Once they are translated, the links move over by themselves.",
+      language: language_word(state.language),
+      source: language_word(state.source && state.source.language)
+    )
+  end
+
+  # What a marked block shows about its waiting links, by block uid: the block
+  # itself gives no hint why its selection looks as it does.
+  defp block_notes(state) do
+    state.items
+    |> Enum.filter(&match?(%{kind: :awaiting_translation, target: {:block, _, _, _}}, &1))
+    |> Enum.group_by(fn %{target: {:block, uid, _, _}} -> uid end, & &1.linked)
+    |> Map.new(fn {uid, titles} ->
+      titles = titles |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+      {uid,
+       ngettext(
+         "Waiting for a %{language} version of %{entries}. Until then, this block links to the %{source} one. Once it is translated, the link moves over by itself.",
+         "Waiting for %{language} versions of %{entries}. Until then, this block links to the %{source} ones. Once they are translated, the links move over by themselves.",
+         length(titles),
+         language: language_word(state.language),
+         source: language_word(state.source && state.source.language),
+         entries: Enum.join(titles, ", ")
+       )}
+    end)
+  end
+
+  # A language's name inside a sentence: Norwegian writes it in lower case,
+  # English does not.
+  defp language_word(code) do
+    label = language_label(code)
+    if Gettext.get_locale(Brando.Gettext) == "en", do: label, else: String.downcase(label)
+  end
 
   defp field_names(items, form_name) do
     for %{target: target} <- items, uniq: true do

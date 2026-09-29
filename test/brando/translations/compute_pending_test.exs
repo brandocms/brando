@@ -470,8 +470,28 @@ defmodule Brando.Translations.ComputePendingTest do
     assert hd(join.block.vars).identifier_id == 33
 
     assert {:awaiting_translation, "entry_blocks/a/identifiers/2"} in kinds(result)
-    assert {:shared_update, "entry_blocks/a/identifiers"} in kinds(result)
+    # The source is as last synchronized: only the mapping moved the link
+    assert {:relinked, "entry_blocks/a/identifiers"} in kinds(result)
+    refute Enum.any?(result.work_items, &(&1.kind == :shared_update))
     refute Enum.any?(result.work_items, &(&1.path == "entry_blocks/a/vars/cta/media"))
+  end
+
+  test "a link the source changed is a shared update, though it is mapped as well" do
+    link = fn id -> %Brando.Content.BlockIdentifier{identifier_id: id, sequence: 0} end
+
+    with_links = fn entry, ids ->
+      [join] = entry.entry_blocks
+      %{entry | entry_blocks: [%{join | block: %{join.block | block_identifiers: Enum.map(ids, link)}}]}
+    end
+
+    before = with_links.(article(:no, blocks: [block("a")]), [1])
+    source = with_links.(before, [1, 2])
+    target = with_links.(article(:en, id: 2, blocks: [block("a", id: 10)]), [11])
+
+    result = compute(source, target, baseline(before), identifiers: %{1 => 11, 2 => 22})
+
+    assert {:shared_update, "entry_blocks/a/identifiers"} in kinds(result)
+    refute Enum.any?(result.work_items, &(&1.kind == :relinked))
   end
 
   test "a link without a version in the target's language keeps the source's, and is not emptied" do

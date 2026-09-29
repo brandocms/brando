@@ -674,7 +674,12 @@ section.alert.danger {
 }
 
 .blocks-wrapper.is-source-locked {
-  .block-plus-wrapper,
+  /* Hidden but still taking its room: the blocks keep the spacing they
+     have in the source instead of running together. */
+  .block-plus-wrapper {
+    visibility: hidden;
+  }
+
   .sort-handle,
   .blocks-actions,
   .block-toolbar .switch,
@@ -683,6 +688,7 @@ section.alert.danger {
   [phx-click="delete_block"],
   [phx-click="add_table_row"],
   [phx-click="assign_available_identifiers"],
+  .module-datasource-selected button[name$="[drop_block_identifier_ids][]"],
   [phx-click*="\"delete_var\""],
   [phx-click*="\"reset_var\""],
   [phx-click*="\"reset_ref\""],

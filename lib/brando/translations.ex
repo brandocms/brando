@@ -414,7 +414,7 @@ defmodule Brando.Translations do
 
     * `:translate` and `:review` — when the saved text differs from the
       pending text, or the path was acknowledged
-    * `:shared_update` — when the saved value is the source's
+    * `:shared_update` and `:relinked` — when the saved value is the pending one
     * `:awaiting_translation` — never; it resolves when the link can be made
 
   The pending version is then recomputed against the saved content, carrying
@@ -650,8 +650,9 @@ defmodule Brando.Translations do
       (Map.has_key?(saved, path) and not blank?(saved[path]) and saved[path] != reviewed[path])
   end
 
-  defp done?(%WorkItem{kind: :shared_update, path: path, source_digest: digest}, saved, _reviewed, _acknowledged),
-    do: Map.has_key?(saved, path) and Sync.digest(saved[path]) == digest
+  defp done?(%WorkItem{kind: kind, path: path, source_digest: digest}, saved, _reviewed, _acknowledged)
+       when kind in [:shared_update, :relinked],
+       do: Map.has_key?(saved, path) and Sync.digest(saved[path]) == digest
 
   defp done?(_item, _saved, _reviewed, _acknowledged), do: false
 

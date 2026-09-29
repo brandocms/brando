@@ -592,6 +592,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:form, form)
+    |> assign_selected_identifiers()
     |> assign_hidden_block_fields()
     |> assign(:form_is_new, false)
     |> assign(:form_has_changes, false)
@@ -1017,6 +1018,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_assign_container()
     |> maybe_assign_fragment()
     |> maybe_assign_datasource_meta()
+    |> assign_selected_identifiers()
     |> maybe_parse_module()
     |> maybe_get_live_preview_status()
     |> assign_hidden_block_fields()
@@ -1416,6 +1418,47 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign_new(socket, :datasource_meta, fn -> nil end)
   end
 
+  # A selection row renders the identifier it has loaded, or finds it among
+  # `available_identifiers`, which only the picker fills. Rows put in the form
+  # as bare ids (a synchronized translation's pending version, a restored
+  # recovery copy) had neither and rendered nothing, not even their hidden
+  # inputs. Their identifiers are loaded here, only the ones not yet known.
+  def assign_selected_identifiers(%{assigns: %{is_datasource?: true, module_datasource_type: :selection}} = socket) do
+    known = MapSet.new(socket.assigns.available_identifiers, & &1.id)
+
+    missing =
+      for row <- selected_block_identifiers(socket),
+          id = Changeset.get_field(row, :identifier_id),
+          not is_nil(id),
+          not loaded_identifier?(row.data, id),
+          not MapSet.member?(known, id),
+          uniq: true,
+          do: id
+
+    if missing == [] do
+      socket
+    else
+      import Ecto.Query
+      found = Brando.Repo.all(from i in Brando.Content.Identifier, where: i.id in ^missing)
+      assign(socket, :available_identifiers, socket.assigns.available_identifiers ++ found)
+    end
+  end
+
+  def assign_selected_identifiers(socket), do: socket
+
+  # The rows as the form renders them: changesets, whose `identifier_id` may
+  # differ from the identifier their data has loaded.
+  defp selected_block_identifiers(%{assigns: %{form: form, belongs_to: belongs_to}}) do
+    form.source
+    |> get_block_changeset(belongs_to)
+    |> Changeset.get_assoc(:block_identifiers)
+  rescue
+    _ -> []
+  end
+
+  defp loaded_identifier?(%{identifier: %Brando.Content.Identifier{id: id}}, id), do: true
+  defp loaded_identifier?(_data, _id), do: false
+
   def maybe_assign_module(%{assigns: %{module_id: nil}} = socket) do
     socket
     |> assign_new(:module_name, fn -> nil end)
@@ -1734,7 +1777,9 @@ defmodule BrandoAdmin.Components.Form.Block do
         Map.get(entry, :language)
       )
 
-    assign(socket, :available_identifiers, available_identifiers)
+    socket
+    |> assign(:available_identifiers, available_identifiers)
+    |> assign_selected_identifiers()
   end
 
   # The var changesets, built when asked for rather than held for the

@@ -671,8 +671,9 @@ defmodule Brando.TranslationsTest do
       {:ok, other_en} = Translations.create_target(Article, c.other.id, :en, c.user)
       {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
 
+      # Nothing changed in the source: the copy's link moved, it was not updated
       version = pending(en)
-      assert Enum.map(version.work_items, & &1.kind) == [:shared_update]
+      assert Enum.map(version.work_items, & &1.kind) == [:relinked]
       assert linked_ids(Translations.decode_payload(version)) == [identifier_id!(other_en)]
     end
   end

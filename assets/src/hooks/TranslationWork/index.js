@@ -8,6 +8,9 @@
  * `structure` subform is marked so its add, remove and reorder controls are
  * hidden. The server refuses those changes on save regardless.
  *
+ * A block can also carry a note (`data-notes`, text by block uid), shown in
+ * the block as `data-translation-note`, e.g. which linked entries it waits for.
+ *
  * Marks are sticky attributes set through `this.js()`, so LiveView patches of
  * the blocks keep them; CSS draws them from `data-translation-work`. Blocks
  * mount after the panel when a pending version is loaded, so marking is
@@ -16,6 +19,7 @@
 export default () => ({
   mounted() {
     this.marked = []
+    this.noted = []
     this.mark()
     this.timers = [300, 1000, 2500].map(delay => setTimeout(() => this.mark(), delay))
   },
@@ -27,6 +31,25 @@ export default () => ({
   destroyed() {
     this.timers.forEach(clearTimeout)
     this.marked.forEach(el => el.isConnected && this.js().removeAttribute(el, 'data-translation-work'))
+    this.noted.forEach(el => el.isConnected && this.js().removeAttribute(el, 'data-translation-note'))
+  },
+
+  note() {
+    const notes = JSON.parse(this.el.dataset.notes || '{}')
+
+    const noted = Object.entries(notes)
+      .map(([uid, text]) => [document.querySelector(`[data-block-uid="${CSS.escape(uid)}"] > .block`), text])
+      .filter(([el]) => el)
+
+    this.noted
+      .filter(el => el.isConnected && !noted.some(([target]) => target === el))
+      .forEach(el => this.js().removeAttribute(el, 'data-translation-note'))
+
+    noted
+      .filter(([el, text]) => el.getAttribute('data-translation-note') !== text)
+      .forEach(([el, text]) => this.js().setAttribute(el, 'data-translation-note', text))
+
+    this.noted = noted.map(([el]) => el)
   },
 
   lock() {
@@ -50,6 +73,7 @@ export default () => ({
 
   mark() {
     this.lock()
+    this.note()
 
     const blocks = JSON.parse(this.el.dataset.blocks || '[]')
     const fields = JSON.parse(this.el.dataset.fields || '[]')

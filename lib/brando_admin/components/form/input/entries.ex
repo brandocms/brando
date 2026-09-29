@@ -396,20 +396,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   def block_identifier(%{block_identifier: block_identifier} = assigns) do
     changeset = block_identifier.source
+    identifier_id = Changeset.get_field(changeset, :identifier_id)
 
-    identifier_changeset =
-      if match?(%Ecto.Association.NotLoaded{}, changeset.data.identifier) do
-        nil
-      else
-        Changeset.get_assoc(changeset, :identifier)
-      end
-
+    # The loaded identifier only while the row still points at it: a
+    # synchronized translation or a restored copy changes the id alone.
     identifier =
-      if identifier_changeset == nil do
-        identifier_id = Changeset.get_field(changeset, :identifier_id)
-        Enum.find(assigns.available_identifiers, &(&1.id == identifier_id))
-      else
-        identifier_changeset.data
+      case changeset.data.identifier do
+        %Brando.Content.Identifier{id: ^identifier_id} = identifier -> identifier
+        _ -> Enum.find(assigns.available_identifiers, &(&1.id == identifier_id))
       end
 
     assigns =
@@ -443,6 +437,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         {render_slot(@meta, @identifier)}
       </div>
     </article>
+    <%!-- Not found: the row keeps its values, so a save can't blank its id. --%>
+    <div :if={!@identifier} hidden>
+      <Input.hidden field={@block_identifier[:id]} />
+      <Input.hidden field={@block_identifier[:block_id]} />
+      <Input.hidden field={@block_identifier[:identifier_id]} />
+    </div>
     """
   end
 

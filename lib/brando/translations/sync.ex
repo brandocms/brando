@@ -19,7 +19,9 @@ defmodule Brando.Translations.Sync do
     * a text path the target lacks → `:translate` (skipped when empty)
     * a text path whose source digest moved from the baseline → `:review`,
       unless the save was a minor correction
-    * a shared path the target holds a different value for → `:shared_update`
+    * a shared path the target holds a different value for → `:shared_update`,
+      or `:relinked` when the source value is the one last synchronized and
+      only its links were mapped onto this language's versions
 
   ## Matching
 
@@ -935,11 +937,23 @@ defmodule Brando.Translations.Sync do
     case ctx.target[path] do
       {:shared, ^value} -> []
       nil -> []
-      _ -> [item(path, :shared_update, digest(value))]
+      _ -> [item(path, shared_kind(path, value, ctx), digest(value))]
     end
   end
 
   defp work_item(_row, _ctx), do: []
+
+  # Nothing changed in the source since the last sync, and the value differs
+  # from it: a link now points at this language's version of the same content.
+  # Not a source change, e.g. on a new translation, whose copy still links to
+  # the source language's content.
+  defp shared_kind(path, value, ctx) do
+    source_value = Map.get(ctx.source, path)
+
+    if value != source_value and Map.get(ctx.baseline, path) == digest(source_value),
+      do: :relinked,
+      else: :shared_update
+  end
 
   defp item(path, kind, source_digest), do: %{path: path, kind: kind, source_digest: source_digest, minor: false}
 
