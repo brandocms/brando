@@ -615,14 +615,14 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Click the module-level active toggle (first() to skip nested ref block toggles)
       const block = page.locator('.entry-block:has(:text("STYLED HEADER"))')
-      await block.locator('.switch.small.inverse .slider').first().click()
+      await block.locator('.switch.small.on-off .slider').first().click()
       await waitForPreviewUpdate(page)
 
       // Assert: header NOT visible in iframe (deactivated blocks render empty)
       await expect(frame.locator('header[b-tpl="styled-header"]')).not.toBeVisible()
 
       // Click toggle again to reactivate
-      await block.locator('.switch.small.inverse .slider').first().click()
+      await block.locator('.switch.small.on-off .slider').first().click()
       await waitForPreviewUpdate(page)
 
       // Assert: header IS visible again in iframe

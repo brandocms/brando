@@ -2571,7 +2571,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div class="block-toolbar">
       <div class="block-description">
-        <Primitives.label field={@active_field} class="switch small inverse">
+        <Primitives.label field={@active_field} class="switch small on-off">
           <span class="visually-hidden">{gettext("Active")}</span>
           <Input.input type={:checkbox} field={@active_field} />
           <div class="slider round"></div>

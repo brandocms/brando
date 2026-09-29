@@ -372,20 +372,14 @@
     }
   }
 
-  &.inverse {
+  /* A block's active switch: green when on, red when off. */
+  &.on-off {
     .slider {
       background-color: #bc3d3d;
-      &:before {
-        transform: translateX(10px);
-      }
     }
 
     input[type="checkbox"]:checked + .slider {
-      background-color: #adadad;
-    }
-
-    input[type="checkbox"]:checked + .slider:before {
-      transform: translateX(0);
+      background-color: #698661;
     }
   }
 

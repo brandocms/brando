@@ -77,7 +77,7 @@ for (const syntax of ['liquid', 'heex']) {
         name: 'sidebar Edit blocks · Footnotes', exact: true,
       }).evaluate(button => button.closest('.block').dataset.blockUid)
       const owner = page.locator(`.block[data-block-uid="${ownerUid}"]`)
-      const toggle = owner.locator('.switch.small.inverse .slider').first()
+      const toggle = owner.locator('.switch.small.on-off .slider').first()
       await toggle.click()
       await expect(frame.locator('.region-preview')).toHaveCount(0)
       await toggle.click()
