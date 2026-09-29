@@ -2283,6 +2283,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         type="button"
         phx-click={@paste_event}
         phx-target={@paste_target}
+        aria-label={gettext("Paste block here")}
+        data-popover={gettext("Paste block here")}
       >
         <.icon name="hero-clipboard-document-check" />
       </button>
@@ -2570,6 +2572,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div class="block-toolbar">
       <div class="block-description">
         <Primitives.label field={@active_field} class="switch small inverse">
+          <span class="visually-hidden">{gettext("Active")}</span>
           <Input.input type={:checkbox} field={@active_field} />
           <div class="slider round"></div>
         </Primitives.label>
@@ -2650,6 +2653,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           phx-click="toggle_help"
           phx-target={@target}
           data-popover={gettext("Show instructions")}
+          role="button"
+          aria-label={gettext("Show instructions")}
         >
           <.icon name="hero-question-mark-circle" />
         </div>
@@ -2661,6 +2666,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           phx-value-uid={@uid}
           phx-target={@target}
           data-popover={gettext("Configure block")}
+          aria-label={gettext("Configure block")}
         >
           <.icon name="hero-cog-8-tooth" />
         </button>
@@ -2669,6 +2675,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           class="block-action toggler"
           popover={gettext("Collapse (hide) block in block editor")}
         >
+          <span class="visually-hidden">{gettext("Collapse (hide) block in block editor")}</span>
           <.icon :if={@collapsed} name="hero-eye-slash" />
           <.icon :if={!@collapsed} name="hero-eye" />
           <Input.input type={:checkbox} field={@collapsed_field} />
@@ -2678,6 +2685,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           :if={!@is_ref?}
           class="dirty block-action toggler"
           data-popover={gettext("Block has changes")}
+          role="button"
+          aria-label={gettext("Block has changes")}
           phx-click="show_dirty"
           phx-target={@target}
         >
@@ -2711,6 +2720,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         class="block-action"
         data-ui-dropdown-toggle={@dropdown_id}
         data-popover={gettext("More actions")}
+        aria-label={gettext("More actions")}
       >
         <.icon name="hero-ellipsis-horizontal-circle" />
       </button>
@@ -2729,12 +2739,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <%!-- `handle_block_event/3` reads the uid off the component's own assigns, so
                the old `value: %{block_uid: @uid}` never reached anything. --%>
           <button type="button" phx-click="duplicate_block" phx-target={@target}>
-            <.icon name="hero-document-duplicate" /> {gettext("Duplicate")}
+            <.icon name="hero-document-duplicate" /> {gettext("Duplicate here")}
           </button>
         </li>
         <li>
           <button type="button" phx-click="copy_block" phx-target={@target}>
-            <.icon name="hero-clipboard-document" /> {gettext("Copy")}
+            <.icon name="hero-clipboard-document" /> {gettext("Copy to clipboard")}
           </button>
         </li>
         <li>

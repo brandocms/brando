@@ -1042,3 +1042,6 @@ html.not-mac .shortcut-other { display: inline; }
   display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px;
   color: var(--brando-color-dark); font-size: 13px; font-weight: 500; white-space: nowrap;
 }
+
+/* Text for screen readers only, e.g. the name of an icon-only control. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

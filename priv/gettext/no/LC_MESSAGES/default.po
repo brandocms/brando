@@ -13023,3 +13023,19 @@ msgstr "%{title} vises her"
 #, elixir-autogen, elixir-format
 msgid "Edit in a new tab"
 msgstr "Rediger i ny fane"
+
+#, elixir-autogen, elixir-format
+msgid "Duplicate here"
+msgstr "Dupliser her"
+
+#, elixir-autogen, elixir-format
+msgid "Copy to clipboard"
+msgstr "Kopier til utklippstavle"
+
+#, elixir-autogen, elixir-format
+msgid "Paste block here"
+msgstr "Lim inn blokk her"
+
+#, elixir-autogen, elixir-format
+msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
+msgstr "«%{block}» er kopiert. Lim den inn med utklippstavle-knappen ved + mellom blokkene, her eller på en annen side."

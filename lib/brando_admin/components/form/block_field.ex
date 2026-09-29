@@ -2237,6 +2237,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     Brando.Cache.put(clipboard_key(user_id), clipboard, @clipboard_ttl)
 
+    send(
+      self(),
+      {:toast,
+       gettext(
+         "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page.",
+         block: clipboard.label
+       )}
+    )
+
     socket
     |> assign_clipboard_meta(clipboard)
     |> then(&{:ok, &1})
