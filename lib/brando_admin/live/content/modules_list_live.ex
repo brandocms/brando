@@ -11,7 +11,15 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     {:ok,
      socket
      |> assign(:base64_modules, nil)
-     |> assign(:imported_modules, nil)}
+     |> assign(:imported_modules, nil)
+     |> assign(:sketches, %{
+       available?: Brando.Content.ModuleSketch.available?(),
+       missing: [],
+       running?: false,
+       current: nil,
+       done: [],
+       failed: []
+     })}
   end
 
   def render(assigns) do
@@ -45,6 +53,14 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           </div>
         </details>
         <button
+          :if={@sketches.available? and BrandoAdmin.Authorization.allowed?(:update, @schema)}
+          type="button"
+          class="workspace-button"
+          phx-click={JS.push("open_sketches") |> show_modal("#module-sketches-modal")}
+        >
+          <.icon name="hero-sparkles" /> {gettext("Sketches with AI")}
+        </button>
+        <button
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           class="workspace-button primary"
           phx-click={JS.push("create_module")}
@@ -76,6 +92,10 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
     <Content.modal title={gettext("Exported modules")} id="module-export-modal">
       <textarea rows="15" style="width: 100%; font-size: 11px; font-family: Mono"><%= @base64_modules %></textarea>
+    </Content.modal>
+
+    <Content.modal title={gettext("Sketches with AI")} id="module-sketches-modal" medium>
+      <.sketches sketches={@sketches} />
     </Content.modal>
 
     <Content.modal
@@ -119,6 +139,41 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       </form>
     </Content.modal>
     """
+  end
+
+  # Draw a sketch for every module without one. They are drawn one at a time
+  # and each is saved as it arrives, so the list fills in as it goes and an
+  # interruption keeps what was drawn.
+  def handle_event("open_sketches", _, %{assigns: %{sketches: %{running?: true}}} = socket), do: {:noreply, socket}
+
+  def handle_event("open_sketches", _, socket) do
+    {:ok, modules} = Brando.Content.list_modules(%{preload: [:refs, :vars]})
+    missing = Enum.filter(modules, &(&1.svg in [nil, ""]))
+
+    {:noreply, update(socket, :sketches, &%{&1 | missing: missing, done: [], failed: [], current: nil})}
+  end
+
+  def handle_event("start_sketches", _, %{assigns: %{sketches: %{running?: true}}} = socket), do: {:noreply, socket}
+
+  def handle_event("start_sketches", _, socket) do
+    lv = self()
+    modules = socket.assigns.sketches.missing
+
+    socket
+    |> update(:sketches, &%{&1 | running?: true, done: [], failed: []})
+    |> start_async(:sketches, fn ->
+      Enum.each(modules, fn module ->
+        send(lv, {:sketch_started, module.id})
+
+        result =
+          with {:ok, svg} <- Brando.Content.ModuleSketch.generate(module),
+               {:ok, _} <- Brando.Content.ModuleSketch.save(module, svg),
+               do: :ok
+
+        send(lv, {:sketch_done, module.id, result})
+      end)
+    end)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("focus", _, socket), do: {:noreply, socket}
@@ -257,5 +312,78 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     js
     |> JS.remove_attribute("open", to: "#module-transfer-menu")
     |> JS.focus(to: "#module-transfer-menu > summary")
+  end
+
+  def handle_async(:sketches, _result, socket),
+    do: {:noreply, update(socket, :sketches, &%{&1 | running?: false, current: nil})}
+
+  def handle_info({:sketch_started, id}, socket), do: {:noreply, update(socket, :sketches, &%{&1 | current: id})}
+
+  def handle_info({:sketch_done, id, :ok}, socket) do
+    BrandoAdmin.LiveView.Listing.update_list_entries(socket.assigns.schema)
+    {:noreply, update(socket, :sketches, &%{&1 | done: &1.done ++ [id]})}
+  end
+
+  def handle_info({:sketch_done, id, {:error, reason}}, socket) do
+    message = if is_atom(reason), do: Brando.AI.error_message(reason), else: gettext("Could not save the sketch")
+    {:noreply, update(socket, :sketches, &%{&1 | failed: &1.failed ++ [{id, message}]})}
+  end
+
+  def handle_info(_message, socket), do: {:noreply, socket}
+
+  attr :sketches, :map, required: true
+
+  defp sketches(assigns) do
+    assigns =
+      assign(assigns,
+        total: length(assigns.sketches.missing),
+        finished: length(assigns.sketches.done) + length(assigns.sketches.failed),
+        failed: Map.new(assigns.sketches.failed)
+      )
+
+    ~H"""
+    <div class="module-sketches">
+      <p :if={@total == 0}>{gettext("Every module has a sketch.")}</p>
+      <%= if @total > 0 do %>
+        <p>
+          {ngettext(
+            "One module has no sketch. The AI draws it from its template, references and variables, and it is saved at once. You can redraw or edit it in the module afterwards.",
+            "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards.",
+            @total
+          )}
+        </p>
+        <ol class="module-sketches-list">
+          <li
+            :for={module <- @sketches.missing}
+            :key={module.id}
+            class={[
+              module.id == @sketches.current && "is-current",
+              module.id in @sketches.done && "is-done",
+              Map.has_key?(@failed, module.id) && "is-failed"
+            ]}
+          >
+            <span class="state">
+              <.icon :if={module.id in @sketches.done} name="hero-check" />
+              <.icon :if={Map.has_key?(@failed, module.id)} name="hero-x-mark" />
+              <.icon :if={module.id == @sketches.current} name="hero-arrow-path" />
+            </span>
+            <span class="name"><.i18n map={module.name} /></span>
+            <span :if={@failed[module.id]} class="error">{@failed[module.id]}</span>
+          </li>
+        </ol>
+        <p :if={@sketches.running?} class="module-sketches-progress">
+          {gettext("Drawing %{done} of %{total}…", done: @finished + 1, total: @total)}
+        </p>
+        <p :if={!@sketches.running? and @finished == @total} class="module-sketches-progress">
+          {gettext("Done: %{ok} drawn, %{failed} failed.", ok: length(@sketches.done), failed: length(@sketches.failed))}
+        </p>
+      <% end %>
+    </div>
+    <div :if={@total > 0 and @finished < @total} class="module-sketches-actions">
+      <button type="button" class="primary" phx-click="start_sketches" disabled={@sketches.running?}>
+        {ngettext("Draw one sketch", "Draw %{count} sketches", @total)}
+      </button>
+    </div>
+    """
   end
 end

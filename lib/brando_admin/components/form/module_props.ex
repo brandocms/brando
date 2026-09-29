@@ -193,6 +193,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         </div>
 
         <Content.modal title={gettext("Edit module icon")} id={"#{@form.id}-#{@key}-icon"}>
+          <.sketch svg={@form[:svg].value} sketch={assigns[:sketch]} />
           <Input.code id={"#{@form.id}-svg"} field={@form[:svg]} label={gettext("SVG")} />
           <:footer>
             <button type="button" class="primary" phx-click={hide_modal("##{@form.id}-#{@key}-icon")}>
@@ -507,6 +508,55 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     </div>
     """
   end
+
+  attr :svg, :string, default: nil
+  attr :sketch, :map, default: nil
+
+  # The icon as the picker shows it, and a button to have the AI draw one from
+  # the module's template, refs and vars.
+  defp sketch(assigns) do
+    assigns = assign(assigns, :src, sketch_src(assigns.svg))
+
+    ~H"""
+    <div class="module-sketch">
+      <div class="module-sketch-preview">
+        <img :if={@src} src={@src} alt="" />
+        <span :if={!@src}>{gettext("No sketch")}</span>
+      </div>
+      <div :if={@sketch && @sketch.available?} class="module-sketch-actions">
+        <button
+          type="button"
+          class="secondary"
+          phx-click="generate_sketch"
+          disabled={@sketch.status == :loading}
+        >
+          <.icon name="hero-sparkles" />
+          <%= cond do %>
+            <% @sketch.status == :loading -> %>
+              {gettext("Drawing…")}
+            <% @src -> %>
+              {gettext("Draw a new sketch with AI")}
+            <% true -> %>
+              {gettext("Draw a sketch with AI")}
+          <% end %>
+        </button>
+        <p class="module-sketch-hint">
+          {gettext("Drawn from the template, references and variables. Save the module to keep it.")}
+        </p>
+        <p :if={match?({:error, _}, @sketch.status)} class="module-sketch-error">
+          {elem(@sketch.status, 1)}
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  # The field holds base64 once saved, markup while being edited.
+  defp sketch_src(svg) when svg in [nil, ""], do: nil
+
+  defp sketch_src("<svg" <> _ = svg), do: "data:image/svg+xml;base64," <> Base.encode64(svg)
+
+  defp sketch_src(svg) when is_binary(svg), do: "data:image/svg+xml;base64," <> svg
 
   def assign_available_datasources(socket) do
     {:ok, available_sources} = Datasource.list_datasources()

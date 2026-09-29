@@ -13150,3 +13150,55 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Recently used"
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Sketches with AI"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Every module has a sketch."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Drawing %{done} of %{total}…"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Done: %{ok} drawn, %{failed} failed."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Could not save the sketch"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "No sketch"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Drawing…"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Draw a new sketch with AI"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Draw a sketch with AI"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Drawn from the template, references and variables. Save the module to keep it."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "One module has no sketch. The AI draws it from its template, references and variables, and it is saved at once. You can redraw or edit it in the module afterwards."
+msgid_plural "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards."
+msgstr[0] ""
+msgstr[1] ""
+
+#, elixir-autogen, elixir-format
+msgid "Draw one sketch"
+msgid_plural "Draw %{count} sketches"
+msgstr[0] ""
+msgstr[1] ""

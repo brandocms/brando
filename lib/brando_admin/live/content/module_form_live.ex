@@ -44,6 +44,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
          |> assign(:save_redirect_target, :listing)
          |> assign(:open_item_modal, nil)
          |> assign(:pending_destructive_save, nil)
+         |> assign(:sketch, %{status: nil, available?: Brando.Content.ModuleSketch.available?()})
          |> assign(:active_tab, :template)
          |> assign_entry(entry_id)
          |> assign_definition_file()
@@ -115,6 +116,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
             duplicate_ref={JS.push("duplicate_ref")}
             create_var={JS.push("create_var")}
             duplicate_var={JS.push("duplicate_var")}
+            sketch={@sketch}
           />
         </div>
 
@@ -432,6 +434,19 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     end
   end
 
+  # Draws the module's sketch from the form as it stands, saved or not. The
+  # result goes into the SVG field; saving the module stores it.
+  def handle_event("generate_sketch", _, %{assigns: %{sketch: %{status: :loading}}} = socket), do: {:noreply, socket}
+
+  def handle_event("generate_sketch", _, socket) do
+    module = Ecto.Changeset.apply_changes(socket.assigns.form.source)
+
+    socket
+    |> assign(:sketch, %{socket.assigns.sketch | status: :loading})
+    |> start_async(:sketch, fn -> Brando.Content.ModuleSketch.generate(module) end)
+    |> then(&{:noreply, &1})
+  end
+
   def handle_event("validate", %{"module" => module_params}, socket) do
     %{current_user: current_user, entry: entry} = socket.assigns
 
@@ -586,6 +601,21 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   # Applies a layout change composed in the variable layout canvas. The canvas
   # is a live component but the module changeset lives here, so it hands back a
   # whole changeset rather than trying to reach into ours.
+  def handle_async(:sketch, {:ok, {:ok, svg}}, socket) do
+    changeset = Ecto.Changeset.put_change(socket.assigns.form.source, :svg, svg)
+
+    socket
+    |> assign(:form, to_form(changeset, []))
+    |> assign(:sketch, %{socket.assigns.sketch | status: nil})
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_async(:sketch, {:ok, {:error, reason}}, socket),
+    do: {:noreply, assign(socket, :sketch, %{socket.assigns.sketch | status: {:error, Brando.AI.error_message(reason)}})}
+
+  def handle_async(:sketch, {:exit, _reason}, socket),
+    do: {:noreply, assign(socket, :sketch, %{socket.assigns.sketch | status: {:error, Brando.AI.error_message(:failed)}})}
+
   def handle_info({:var_layout_changeset, changeset}, socket) do
     {:noreply, assign(socket, :form, to_form(changeset, []))}
   end

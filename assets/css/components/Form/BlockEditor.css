@@ -747,3 +747,126 @@
   font-family: Mono, monospace;
   font-size: 11px;
 }
+
+/* ---------------------------------------------------------------- module sketches
+
+   The module icon dialog shows the sketch as the picker will, with a button to
+   have the AI draw one; the module list can draw every missing one. */
+
+.module-sketch {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.module-sketch-preview {
+  display: grid;
+  place-items: center;
+  flex: 0 0 150px;
+  height: 100px;
+  border: 1px solid #e6ebe6;
+  border-radius: 10px;
+  background: #f6f8f6;
+  font-size: 12px;
+  color: #8a958f;
+
+  img {
+    width: 120px;
+    height: 80px;
+  }
+}
+
+.module-sketch-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  button [data-icon] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.module-sketch-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #7a867f;
+}
+
+.module-sketch-error {
+  margin: 0;
+  font-size: 12px;
+  color: #a83a36;
+}
+
+.module-sketches p {
+  margin: 0 0 12px;
+}
+
+.module-sketches-list {
+  max-height: 340px;
+  margin: 0 0 12px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid #edf0ed;
+  border-radius: 8px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    font-size: 13px;
+
+    & + li {
+      border-top: 1px solid #f1f4f1;
+    }
+
+    .state {
+      display: grid;
+      place-items: center;
+      flex: 0 0 16px;
+      height: 16px;
+
+      [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+    }
+
+    .error {
+      margin-left: auto;
+      font-size: 12px;
+      color: #a83a36;
+    }
+
+    &.is-current {
+      background: #f5f8f5;
+
+      .state [data-icon] {
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    &.is-done .state {
+      color: #2e9d4f;
+    }
+
+    &.is-failed .state {
+      color: #c43c3c;
+    }
+  }
+}
+
+.module-sketches-progress {
+  font-size: 12px;
+  color: #5d6a63;
+}
+
+.module-sketches-actions {
+  display: flex;
+  justify-content: flex-end;
+}

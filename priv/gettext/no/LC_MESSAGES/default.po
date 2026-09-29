@@ -13156,3 +13156,55 @@ msgstr "Sett inn"
 #, elixir-autogen, elixir-format
 msgid "Recently used"
 msgstr "Nylig brukt"
+
+#, elixir-autogen, elixir-format
+msgid "Sketches with AI"
+msgstr "Skisser med KI"
+
+#, elixir-autogen, elixir-format
+msgid "Every module has a sketch."
+msgstr "Alle moduler har en skisse."
+
+#, elixir-autogen, elixir-format
+msgid "Drawing %{done} of %{total}…"
+msgstr "Tegner %{done} av %{total} …"
+
+#, elixir-autogen, elixir-format
+msgid "Done: %{ok} drawn, %{failed} failed."
+msgstr "Ferdig: %{ok} tegnet, %{failed} feilet."
+
+#, elixir-autogen, elixir-format
+msgid "Could not save the sketch"
+msgstr "Kunne ikke lagre skissen"
+
+#, elixir-autogen, elixir-format
+msgid "No sketch"
+msgstr "Ingen skisse"
+
+#, elixir-autogen, elixir-format
+msgid "Drawing…"
+msgstr "Tegner …"
+
+#, elixir-autogen, elixir-format
+msgid "Draw a new sketch with AI"
+msgstr "Tegn en ny skisse med KI"
+
+#, elixir-autogen, elixir-format
+msgid "Draw a sketch with AI"
+msgstr "Tegn en skisse med KI"
+
+#, elixir-autogen, elixir-format
+msgid "Drawn from the template, references and variables. Save the module to keep it."
+msgstr "Tegnes ut fra malen, referansene og variablene. Lagre modulen for å beholde den."
+
+#, elixir-autogen, elixir-format
+msgid "One module has no sketch. The AI draws it from its template, references and variables, and it is saved at once. You can redraw or edit it in the module afterwards."
+msgid_plural "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards."
+msgstr[0] "Én modul mangler skisse. KI-en tegner den ut fra malen, referansene og variablene, og den lagres med én gang. Du kan tegne den på nytt eller redigere den i modulen etterpå."
+msgstr[1] "%{count} moduler mangler skisse. KI-en tegner hver av dem ut fra malen, referansene og variablene, én om gangen, og hver lagres med én gang. Du kan tegne dem på nytt eller redigere dem i modulen etterpå."
+
+#, elixir-autogen, elixir-format
+msgid "Draw one sketch"
+msgid_plural "Draw %{count} sketches"
+msgstr[0] "Tegn én skisse"
+msgstr[1] "Tegn %{count} skisser"
