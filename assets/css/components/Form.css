@@ -779,6 +779,11 @@
   --form-tool-icon-strength: 40%;
 }
 
+/* One of the two spellings, by platform (`html.not-mac` is set by the Admin hook). */
+.shortcut-other { display: none; }
+html.not-mac .shortcut-mac { display: none; }
+html.not-mac .shortcut-other { display: inline; }
+
 .shortcut {
   display: inline-flex;
   align-items: center;

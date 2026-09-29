@@ -166,26 +166,20 @@ export default (app) => ({
   disconnected() { this.draftRecovery?.disconnected() },
   reconnected() { this.draftRecovery?.reconnected() },
 
+  // ⇧⌘S saves and closes, ⌘S saves and stays. Ctrl stands in for ⌘ off a
+  // Mac, and the key is compared in lower case so Caps Lock doesn't matter.
   submitListener(ev) {
-    if (ev.metaKey && ev.shiftKey && ev.key.toLowerCase() === 's') {
-      ev.preventDefault()
+    if (!(ev.metaKey || ev.ctrlKey) || ev.altKey || (ev.key || '').toLowerCase() !== 's') return
+    ev.preventDefault()
 
-      this.$form.dispatchEvent(
-        new Event('submit', { bubbles: true, cancelable: true })
-      )
-      return
-    }
+    const submit = () =>
+      this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
 
-    if (ev.metaKey && ev.key === 's') {
-      ev.preventDefault()
-      this.pushEventTo(this.el, 'save_redirect_target', {
-        save_redirect_target: 'self',
-      })
-      setTimeout(() => {
-        this.$form.dispatchEvent(
-          new Event('submit', { bubbles: true, cancelable: true })
-        )
-      }, 150)
+    if (ev.shiftKey) {
+      submit()
+    } else {
+      // Submit once the server has taken the target, not after a guessed delay.
+      this.pushEventTo(this.el, 'save_redirect_target', { save_redirect_target: 'self' }, submit)
     }
   },
 })

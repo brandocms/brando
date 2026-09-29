@@ -122,7 +122,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
           <Primitives.submit_button
             processing={false}
             form_id="module_form"
-            label={gettext("Save (⇧⌘S)")}
+            label={gettext("Save")}
+            shortcut={%{key: "S", shift: true}}
             class="primary submit-button"
           />
         </div>

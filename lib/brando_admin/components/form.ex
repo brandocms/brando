@@ -2535,23 +2535,26 @@ defmodule BrandoAdmin.Components.Form do
                 <.icon name="hero-arrow-top-right-on-square" class="s" />
               </button>
               <div class="split-dropdown form-tool-save">
+                <%!-- Saves and closes, like the bottom button and ⇧⌘S; the menu
+                      beside it has "save and continue editing". --%>
                 <button
                   phx-click={JS.push("push_submit_redirect", target: @myself)}
                   type="button"
-                  aria-label={gettext("Save")}
-                  title={gettext("Save")}
+                  class="form-tool-save-button"
+                  title={gettext("Save and close")}
                 >
-                  <.icon name="hero-arrow-down-tray" class="s" />
+                  <.icon name="hero-check" class="s" />
+                  <span>{gettext("Save and close")}</span>
                 </button>
                 <SplitDropdown.render id="save-dropdown" label={gettext("Save options")}>
                   <Button.dropdown
                     value={false}
                     event={JS.push("push_submit_redirect", target: @myself)}
                   >
-                    {gettext("Save")}<span class="shortcut">⇧⌘S</span>
+                    {gettext("Save and close")}<Primitives.shortcut key="S" shift />
                   </Button.dropdown>
                   <Button.dropdown value={false} event={JS.push("push_submit", target: @myself)}>
-                    {gettext("Save and continue editing")}<span class="shortcut">⌘S</span>
+                    {gettext("Save and continue editing")}<Primitives.shortcut key="S" />
                   </Button.dropdown>
                   <Button.dropdown value={false} event={JS.push("push_submit_new", target: @myself)}>
                     {gettext("Save and create new")}
@@ -2706,7 +2709,8 @@ defmodule BrandoAdmin.Components.Form do
           <Primitives.submit_button
             processing={@processing}
             form_id={@id}
-            label={gettext("Save (⌘S)")}
+            label={gettext("Save and close")}
+            shortcut={%{key: "S", shift: true}}
             class="primary submit-button"
           />
 

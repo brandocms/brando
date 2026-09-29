@@ -6,6 +6,10 @@ export default app => ({
   mounted() {
     console.log('==> Brando/Admin mounted.')
 
+    // Shortcut labels read "Ctrl+S" instead of "⌘S" off a Mac.
+    const mac = /mac|iphone|ipad/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent)
+    document.documentElement.classList.toggle('not-mac', !mac)
+
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))
     }, 1)

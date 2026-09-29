@@ -12846,3 +12846,8 @@ msgstr "This entry"
 #, elixir-autogen, elixir-format
 msgid "Show more (%{count} left)"
 msgstr "Show more (%{count} left)"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Save and close"
+msgstr "Save and close"

@@ -537,6 +537,29 @@ defmodule BrandoAdmin.Components.Form.Primitives do
     """
   end
 
+  attr :key, :string, required: true
+  attr :shift, :boolean, default: false
+
+  @doc """
+  A keyboard shortcut as the platform writes it: "⇧⌘S" on a Mac, "Ctrl+Shift+S"
+  elsewhere. Both are rendered; the admin marks `<html>` with `not-mac` and the
+  stylesheet shows one.
+  """
+  def shortcut(assigns) do
+    ~H"""
+    <span class="shortcut">
+      <span class="shortcut-mac">{if @shift, do: "⇧"}⌘{@key}</span>
+      <span class="shortcut-other">Ctrl+{if @shift, do: "Shift+"}{@key}</span>
+    </span>
+    """
+  end
+
+  attr :processing, :boolean, default: false
+  attr :form_id, :string, required: true
+  attr :label, :any, required: true
+  attr :class, :any, default: nil
+  attr :shortcut, :map, default: nil, doc: "`%{key: \"S\", shift: true}`, shown after the label"
+
   def submit_button(assigns) do
     ~H"""
     <button
@@ -564,6 +587,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
         </div>
       <% else %>
         {@label}
+        <.shortcut :if={@shortcut} key={@shortcut.key} shift={Map.get(@shortcut, :shift, false)} />
       <% end %>
     </button>
     """

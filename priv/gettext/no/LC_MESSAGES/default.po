@@ -12851,3 +12851,8 @@ msgstr "Denne oppføringen"
 #, elixir-autogen, elixir-format
 msgid "Show more (%{count} left)"
 msgstr "Vis flere (%{count} igjen)"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Save and close"
+msgstr "Lagre og lukk"
