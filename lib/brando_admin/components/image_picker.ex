@@ -363,13 +363,30 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 <span>
                   {ngettext("%{count} image", "%{count} images", @image_count, count: @image_count)}
                 </span>
+                <div
+                  :if={@upload_target}
+                  id={"image-picker-upload-#{@id}"}
+                  phx-hook="Brando.UploadTrigger"
+                  data-click-mode="trigger"
+                  {@upload_target}
+                >
+                  <button type="button" class="folder-action upload-trigger">
+                    <.icon name="hero-arrow-up-tray" />{gettext("Upload here")}
+                  </button>
+                  <input type="file" class="file-input" multiple accept="image/*" aria-label={gettext("Upload images")} />
+                </div>
               </div>
             </div>
           </:main_header>
 
+          <%!-- The list is also a drop zone for new images, uploaded to the
+                folder on screen with the field's own image config. --%>
           <div
             id={"image-picker-drawer-#{@id}"}
             class="image-picker list"
+            phx-hook={@upload_target && "Brando.UploadTrigger"}
+            data-click-mode="trigger"
+            {@upload_target || []}
           >
             <%= if @image_count == 0 do %>
               <div class="image-picker-empty">
@@ -382,6 +399,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
             <div
               :if={@organize_selected != []}
               class="image-picker-organize-bar"
+              draggable="true"
+              title={gettext("Drag to a folder")}
             >
               <.icon name="hero-arrows-pointing-out" />
               <span>
@@ -587,6 +606,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:pending_upload_name, fn -> nil end)
     |> assign_new(:pending_file_count, fn -> 0 end)
     |> assign_new(:form_id, fn -> nil end)
+    |> assign_new(:upload_target, fn -> nil end)
+    |> assign_new(:upload_in_form?, fn -> false end)
     |> assign_new(:folders, fn -> [""] end)
     |> assign_new(:custom_folders, fn -> [] end)
     |> assign_new(:child_folders, fn -> [] end)
@@ -653,7 +674,31 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign(:child_folders, child_folders)
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders_for_root, recent_folders_for_root)
+    |> assign(:upload_target, upload_target(socket, upload_root, current_folder))
   end
+
+  # The UploadTrigger data for uploading into the folder on screen, with the
+  # field's own image config, or nil where the picker can't take an upload:
+  # choosing a block upload's folder, browsing the whole library (`:all`), or
+  # outside a form (`upload_in_form?`, set where the form renders the picker),
+  # whose root carries the topic the upload is delivered on.
+  defp upload_target(
+         %{assigns: %{picker_mode: :select, upload_in_form?: true, config_target: config_target}} = socket,
+         root,
+         folder
+       )
+       when is_binary(config_target) do
+    [
+      {"data-kind", "image_picker"},
+      {"data-component-id", socket.assigns.id},
+      {"data-asset-type", "image"},
+      {"data-config-target", config_target},
+      {"data-folder", FolderBrowser.absolute_folder(folder, root)},
+      {"data-folder-id", FolderBrowser.folder_id_for(folder, root)}
+    ]
+  end
+
+  defp upload_target(_socket, _root, _folder), do: nil
 
   defp picker_upload_root(:all), do: FolderBrowser.scope_for(nil)
   defp picker_upload_root(config_target), do: FolderBrowser.upload_root(config_target)

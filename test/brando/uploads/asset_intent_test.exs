@@ -95,6 +95,30 @@ defmodule Brando.Uploads.AssetIntentTest do
     end
   end
 
+  test "accepts an image picker upload, of images only, into a folder" do
+    assert {:ok, target} =
+             AssetIntent.normalize(%{
+               kind: "image_picker",
+               component_id: "image-picker",
+               asset_type: "image",
+               config_target: "default",
+               folder: "images/site/default",
+               folder_id: "4",
+               deliver_topic: @topic
+             })
+
+    assert target["kind"] == "image_picker"
+    assert target["folder"] == "images/site/default"
+
+    assert {:error, "Asset type is not valid" <> _} =
+             AssetIntent.normalize(%{
+               kind: "image_picker",
+               component_id: "image-picker",
+               asset_type: "video",
+               deliver_topic: @topic
+             })
+  end
+
   test "file replacement requires an existing-id shape and the file asset type" do
     target = %{kind: "file_replace", asset_type: "file", file_id: "42", deliver_topic: @topic}
     assert {:ok, normalized} = AssetIntent.normalize(target)

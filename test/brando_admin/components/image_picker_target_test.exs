@@ -28,4 +28,32 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
 
     assert socket.assigns.config_target == "default"
   end
+
+  # `upload_in_form?` comes from where the form renders the picker, before any
+  # opening; `params` are what a field sends to open it.
+  defp open_select(params, in_form? \\ false) do
+    socket = picker()
+    socket = %{socket | assigns: Map.merge(socket.assigns, %{id: "image-picker", upload_in_form?: in_form?})}
+
+    {:ok, socket} =
+      ImagePicker.update(
+        Map.merge(%{config_target: "default", event_target: nil, multi: true, selected_images: []}, params),
+        socket
+      )
+
+    socket
+  end
+
+  test "picking inside a form offers an upload into the folder on screen, with the field's config" do
+    target = Map.new(open_select(%{}, true).assigns.upload_target)
+
+    assert target["data-kind"] == "image_picker"
+    assert target["data-component-id"] == "image-picker"
+    assert target["data-config-target"] == "default"
+    assert is_binary(target["data-folder"])
+  end
+
+  test "no upload outside a form, where nothing would deliver it back to the picker" do
+    assert open_select(%{}).assigns.upload_target == nil
+  end
 end

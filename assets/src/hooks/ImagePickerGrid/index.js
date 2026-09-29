@@ -28,10 +28,15 @@ export default app => ({
       }
     }
 
-    // Drag start for organize-selected images
+    // Drag start for organize-selected images: from a selected row, or from
+    // the organize bar, which stands for the whole selection.
     this._dragStartHandler = (ev) => {
+      if (!ev.dataTransfer) return
       const row = ev.target.closest('.image-picker__image[data-id]')
-      if (!row || !this.el.contains(row) || !ev.dataTransfer) return
+      const fromRow = row && this.el.contains(row)
+      const bar = this.organizeBar()
+      const fromBar = bar !== null && ev.target.closest('.image-picker-organize-bar') === bar
+      if (!fromRow && !fromBar) return
 
       const selectedIds = Array.from(
         this.el.querySelectorAll('.image-picker__image.organize-selected[data-id]')
@@ -73,8 +78,9 @@ export default app => ({
 
     // Use window-level capture to beat LiveView's document-level capture listener
     window.addEventListener('click', this._clickHandler, true)
-    this.el.addEventListener('dragstart', this._dragStartHandler, true)
-    this.el.addEventListener('dragend', this._dragEndHandler, false)
+    // On the document: the organize bar sits outside this element.
+    document.addEventListener('dragstart', this._dragStartHandler, true)
+    document.addEventListener('dragend', this._dragEndHandler, false)
 
     // Server pushes unified selection state
     this.handleEvent('image_picker_selection_changed', ({ selected_ids, organize_ids }) => {
@@ -91,6 +97,10 @@ export default app => ({
       this.el.classList.toggle('image-picker-grid--organizing', organizeSet.size > 0)
       this.renderOrganizeThumbs(organizeSet)
     })
+  },
+
+  organizeBar() {
+    return document.getElementById(this.el.dataset.thumbsId)?.closest('.image-picker-organize-bar') || null
   },
 
   // Thumbnails of the shift+clicked images in the organize bar, so the
@@ -122,8 +132,8 @@ export default app => ({
 
   destroyed() {
     window.removeEventListener('click', this._clickHandler, true)
-    this.el.removeEventListener('dragstart', this._dragStartHandler, true)
-    this.el.removeEventListener('dragend', this._dragEndHandler, false)
+    document.removeEventListener('dragstart', this._dragStartHandler, true)
+    document.removeEventListener('dragend', this._dragEndHandler, false)
     document.body.classList.remove('selection-dragging')
     window.__brandoSelectedIdsDrag = null
   }

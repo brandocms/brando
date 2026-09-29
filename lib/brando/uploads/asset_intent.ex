@@ -28,6 +28,7 @@ defmodule Brando.Uploads.AssetIntent do
     transformer_image
     transformer_video
     video_picker
+    image_picker
     asset_library
     file_replace
     ai_conversation
@@ -130,7 +131,7 @@ defmodule Brando.Uploads.AssetIntent do
         "block_ref_video" ->
           asset_type == "video"
 
-        "transformer_image" ->
+        kind when kind in ["transformer_image", "image_picker"] ->
           asset_type == "image"
 
         kind when kind in ["transformer_video", "video_picker"] ->

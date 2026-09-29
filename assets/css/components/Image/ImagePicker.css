@@ -536,6 +536,8 @@
 }
 
 .image-picker-organize-bar {
+  /* The bar stands for the selection: drag it onto a folder. */
+  cursor: move;
   display: flex;
   align-items: center;
   gap: 0.45rem;

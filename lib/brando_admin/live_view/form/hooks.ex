@@ -670,6 +670,17 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     )
   end
 
+  # An upload from the image picker is already in the library; the open
+  # picker only has to list it. It lists processed images, and processing
+  # usually finishes after delivery, so follow the image: its `:updated`
+  # broadcast refreshes the picker (`handle_hooks_image_info/2`). Subscribed
+  # before this refresh, so an image processed in between is still listed.
+  defp deliver_asset(%{"kind" => "image_picker", "component_id" => component_id}, %Brando.Images.Image{} = image, _socket)
+       when is_binary(component_id) do
+    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    send_update(BrandoAdmin.Components.ImagePicker, id: component_id, refresh_images: true)
+  end
+
   defp deliver_asset(
          %{"kind" => "video_picker", "component_id" => component_id},
          %Brando.Videos.Video{} = video,
