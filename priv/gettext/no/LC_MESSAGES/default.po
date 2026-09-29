@@ -12945,3 +12945,18 @@ msgstr "Oppretter på %{language}"
 #, elixir-autogen, elixir-format
 msgid "Search by name or title"
 msgstr "Søk etter navn eller tittel"
+
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Uploads to this field go to this folder"
+msgstr "Opplastinger i dette feltet havner i denne mappen"
+
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Use this folder"
+msgstr "Bruk denne mappen"
+
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Saved in"
+msgstr "Lagres i"

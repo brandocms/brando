@@ -521,11 +521,15 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   )}
                 </div>
               <% else %>
-                {ngettext(
-                  "Upload %{count} file to this folder",
-                  "Upload %{count} files to this folder",
-                  @pending_file_count
-                )}
+                <%= if @pending_file_count == 0 do %>
+                  {gettext("Uploads to this field go to this folder")}
+                <% else %>
+                  {ngettext(
+                    "Upload %{count} file to this folder",
+                    "Upload %{count} files to this folder",
+                    @pending_file_count
+                  )}
+                <% end %>
               <% end %>
             </div>
             <div class="media-destination-actions">
@@ -534,7 +538,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 type="button"
                 phx-click={JS.push("confirm_block_upload_folder", target: @myself) |> toggle_drawer("#image-picker")}
               >
-                {gettext("Upload here")}
+                {if @pending_file_count == 0, do: gettext("Use this folder"), else: gettext("Upload here")}
               </button>
               <button
                 type="button"

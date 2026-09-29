@@ -129,8 +129,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         </button>
         <p :if={@upload_enabled?} class="media-field-menu-note">
           <.icon name="hero-folder" />
-          <span :if={@type == :image && @config_target == "default"}>{gettext("Choose a folder when uploading")}</span>
-          <span :if={@type != :image || @config_target != "default"}>{@folder}</span>
+          <span data-media-destination>{@folder}</span>
         </p>
       </.action_menu>
       <div :if={@editable && @presentation != :line} class="media-field-actions">
@@ -207,10 +206,11 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       </div>
       <div :if={@upload_enabled? && @presentation != :line} class="media-field-destination">
         <.icon name="hero-folder" />
-        <span :if={@type == :image && @config_target == "default"} data-media-destination>{gettext(
-          "Choose a folder when uploading"
-        )}</span>
-        <span :if={@type != :image || @config_target != "default"} data-media-destination>{@folder}</span>
+        <span>{gettext("Saved in")}</span>
+        <span data-media-destination>{@folder}</span>
+        <button :if={@type == :image && @config_target == "default"} type="button" class="media-destination-change">
+          {gettext("Change")}
+        </button>
       </div>
       <div id={"#{@id}-progress"} class="media-field-progress" phx-update="ignore" role="status" aria-live="polite"></div>
       <div class="media-field-drop" aria-hidden="true">
@@ -218,7 +218,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <div>
           <span>{@drop_label}</span>
           <span :if={@upload_enabled?} class="media-field-drop-destination" data-media-destination>
-            {if @type == :image && @config_target == "default", do: gettext("Choose a folder before uploading"), else: @folder}
+            {@folder}
           </span>
         </div>
       </div>

@@ -49,6 +49,12 @@ export default (app) => ({
     this.el.addEventListener('change', this._onInputChange)
 
     this.el.addEventListener('click', (e) => {
+      if (e.target.closest('.media-destination-change')) {
+        e.preventDefault()
+        e.stopPropagation()
+        this.changeDestination()
+        return
+      }
       if (e.target.closest('button')) e.target.closest('details')?.removeAttribute('open')
       if (e.target.closest('.upload-trigger')) {
         e.stopPropagation()
@@ -107,7 +113,6 @@ export default (app) => ({
       })
       this.handleEvent('b:block_upload_folder_confirmed', ({ upload_name, request_id, folder, folder_id }) => {
         if (upload_name !== this.el.id || request_id !== this._pendingRequest) return
-        if (!this._pendingFiles.length) return
 
         this._confirmedFolder = { folder, folder_id }
         confirmedFolders.set(this.folderContextKey(), this._confirmedFolder)
@@ -115,7 +120,7 @@ export default (app) => ({
         this.storeRecentFolder(folder)
         this.configureInput()
         const files = this._pendingFiles.splice(0)
-        this.enqueue(files, { folder, folder_id })
+        if (files.length) this.enqueue(files, { folder, folder_id })
       })
     }
   },
@@ -139,9 +144,9 @@ export default (app) => ({
   },
 
   configureInput() {
-    const confirmed = confirmedFolders.get(this.folderContextKey())
-    if (confirmed && (this.el.dataset.configTarget || 'default') === 'default') {
-      this.el.querySelectorAll('[data-media-destination]').forEach(label => { label.textContent = confirmed.folder })
+    const destination = confirmedFolders.get(this.folderContextKey())?.folder || this.lastRecentFolder()
+    if (destination && this.el.dataset.folderBrowser === 'true' && (this.el.dataset.configTarget || 'default') === 'default') {
+      this.el.querySelectorAll('[data-media-destination]').forEach(label => { label.textContent = destination })
     }
     const input = this.el.querySelector(':scope > input[type="file"]')
     if (!input) return
@@ -174,20 +179,29 @@ export default (app) => ({
     this.showProgress(null)
 
     // A concrete form/ref/var target already owns its destination through its
-    // upload config. Ask for a folder only when the target is truly default.
+    // upload config. A default-target image goes straight to the folder chosen
+    // for this field, or the last one used, or the config's own; "Change"
+    // beside the destination picks another. Uploading no longer stops to ask.
     if (this.el.dataset.folderBrowser === 'true' && configTarget === 'default' && files.some(file => file.type.startsWith('image/'))) {
-      this._confirmedFolder = confirmedFolders.get(this.folderContextKey()) || this._confirmedFolder
-      if (this._confirmedFolder) {
-        this.enqueue(files, this._confirmedFolder)
-        return
-      }
-
-      this._pendingFiles = files
-      this._pendingRequest = crypto.randomUUID()
-      this.openFolderBrowser(files)
+      this.enqueue(files, this.destinationFolder() || {})
     } else {
       this.enqueue(files)
     }
+  },
+
+  destinationFolder() {
+    this._confirmedFolder = confirmedFolders.get(this.folderContextKey()) || this._confirmedFolder
+    if (this._confirmedFolder) return this._confirmedFolder
+    const last = this.lastRecentFolder()
+    return last ? { folder: last, folder_id: null } : null
+  },
+
+  // "Change": choose the folder for this field's next uploads, with no files
+  // waiting.
+  changeDestination() {
+    this._pendingFiles = []
+    this._pendingRequest = crypto.randomUUID()
+    this.openFolderBrowser([])
   },
 
   folderContextKey() {
