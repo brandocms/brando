@@ -12895,3 +12895,32 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This imports independent module copies with new identities. Use Content transfer in Configuration to move saved content while preserving module lineage."
 msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgctxt "role"
+msgid "Superuser"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgctxt "role"
+msgid "Administrator"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgctxt "role"
+msgid "Editor"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgctxt "role"
+msgid "User"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Never logged in"
+msgstr ""

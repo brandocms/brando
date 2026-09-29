@@ -15,7 +15,7 @@ test('creates, updates and deletes a user with content transfer', async ({ page 
     const adminRow = page.locator('.list-row').filter({ hasText: 'admin@brandocms.com' })
     await expect(adminRow.locator('.user-avatar img')).toBeVisible()
     await expect.poll(() => adminRow.locator('.user-avatar img').evaluate(img => img.naturalWidth)).toBeGreaterThan(0)
-    await expect(adminRow.locator('.user-role')).toContainText('superuser')
+    await expect(adminRow.locator('.user-role')).toContainText(/superuser/i)
     await expect(adminRow.locator('.user-last-seen time')).toHaveAttribute('datetime', '2026-09-07T12:34:00Z')
     await expect(adminRow.locator('.user-last-login time')).toHaveAttribute('datetime', '2026-09-06T08:15:00Z')
     await expect(page.locator('.user-directory-columns')).toContainText(groups ? 'Legacy role' : 'Role')

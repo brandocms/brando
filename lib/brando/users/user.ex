@@ -135,7 +135,7 @@ defmodule Brando.Users.User do
     </div>
     <.field columns={2} class="user-role">
       <span class="user-detail-label">{if Brando.Authorization.enabled?(), do: t("Legacy role"), else: t("Role")}</span>
-      <span class="workspace-badge">{@entry.role}</span>
+      <span class="workspace-badge">{role_label(@entry.role)}</span>
     </.field>
     <div class="user-activity user-last-seen">
       <span class="user-detail-label">{t("Last seen")}</span>
@@ -146,10 +146,23 @@ defmodule Brando.Users.User do
       <.activity_time value={@entry.last_login} />
     </div>
     <.field columns={2} class="user-state">
-      <span class={["workspace-badge", @entry.active && "positive"]}>{if @entry.active, do: t("Active"), else: t("Inactive")}</span>
+      <span class={["workspace-badge", @entry.active && @entry.last_login && "positive"]}>
+        {cond do
+          !@entry.active -> t("Inactive")
+          is_nil(@entry.last_login) -> gettext("Never logged in")
+          true -> t("Active")
+        end}
+      </span>
     </.field>
     """
   end
+
+  @doc "The role's name in the admin's language."
+  def role_label(:superuser), do: pgettext("role", "Superuser")
+  def role_label(:admin), do: pgettext("role", "Administrator")
+  def role_label(:editor), do: pgettext("role", "Editor")
+  def role_label(:user), do: pgettext("role", "User")
+  def role_label(role), do: to_string(role)
 
   defp activity_time(assigns) do
     ~H"""
