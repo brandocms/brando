@@ -209,30 +209,50 @@ defmodule BrandoAdmin.Images.FolderBrowser do
   def folders_from_filesystem(_upload_root), do: [""]
 
   def create_folder(folder, upload_root \\ nil) do
-    scope = scope_for(upload_root)
-    relative = relative_folder(folder, scope) |> normalize_folder()
+    case storage_location(folder, upload_root) do
+      nil ->
+        {:error, :invalid_folder}
 
-    if is_nil(relative) do
-      {:error, :invalid_folder}
-    else
-      case ensure_folder(scope, relative) do
-        {:ok, _folder} -> {:ok, absolute_folder(relative, scope)}
-        {:error, reason} -> {:error, reason}
-      end
+      {scope, relative} ->
+        case ensure_folder(scope, relative) do
+          {:ok, _folder} -> {:ok, absolute_folder(relative, scope)}
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
   def folder_id_for(folder, upload_root \\ nil) do
-    scope = scope_for(upload_root)
-    relative = relative_folder(folder, scope) |> normalize_folder()
+    case storage_location(folder, upload_root) do
+      nil ->
+        nil
 
-    if is_nil(relative) do
-      nil
-    else
-      case ensure_folder(scope, relative) do
-        {:ok, folder} -> folder.id
-        _ -> nil
-      end
+      {scope, relative} ->
+        case ensure_folder(scope, relative) do
+          {:ok, folder} -> folder.id
+          _ -> nil
+        end
+    end
+  end
+
+  # Folders are stored under the top-level scope ("images", "videos") with
+  # the rest as their path, whoever creates them. `folder` is relative to
+  # `upload_root` or already absolute. Pickers are rooted at a field's upload
+  # path ("images/site/default"), and storing their folders under that as the
+  # scope made a second tree the library couldn't see.
+  defp storage_location(folder, upload_root) do
+    absolute = absolute_folder(folder, upload_root)
+    scope = storage_scope(absolute || upload_root)
+
+    case absolute |> relative_folder(scope) |> normalize_folder() do
+      nil -> nil
+      relative -> {scope, relative}
+    end
+  end
+
+  defp storage_scope(folder) do
+    case normalize_folder(folder) do
+      nil -> @default_scope
+      normalized -> normalized |> String.split("/") |> hd()
     end
   end
 
@@ -242,11 +262,15 @@ defmodule BrandoAdmin.Images.FolderBrowser do
   def folder_path_for_id("", _upload_root), do: ""
 
   def folder_path_for_id(folder_id, upload_root) do
-    scope = scope_for(upload_root)
+    root = scope_for(upload_root)
 
+    # Absolute, so a folder stored under the top-level scope and one stored
+    # the older way, under a picker's upload root, both resolve.
     with id when is_integer(id) <- parse_folder_id(folder_id),
-         %Folder{scope: ^scope, path: path} <- Repo.get(Folder, id) do
-      relative_folder(path, scope)
+         %Folder{scope: scope, path: path} <- Repo.get(Folder, id),
+         absolute when is_binary(absolute) <- absolute_folder(path, scope),
+         true <- folder_under_root?(absolute, root) do
+      relative_folder(absolute, root)
     else
       _ -> ""
     end
