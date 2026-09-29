@@ -91,3 +91,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr ""
+
+#: lib/brando/images/image.ex
+#, elixir-autogen, elixir-format
+msgid "Focal point"
+msgstr "Focal point"
+
+#: lib/brando/images/image.ex
+#, elixir-autogen, elixir-format
+msgid "Technical"
+msgstr "Technical"

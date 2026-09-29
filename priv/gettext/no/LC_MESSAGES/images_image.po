@@ -92,3 +92,13 @@ msgstr "Innhold"
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr "Ikke i bruk"
+
+#: lib/brando/images/image.ex
+#, elixir-autogen, elixir-format
+msgid "Focal point"
+msgstr "Fokuspunkt"
+
+#: lib/brando/images/image.ex
+#, elixir-autogen, elixir-format
+msgid "Technical"
+msgstr "Teknisk"

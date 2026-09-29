@@ -147,30 +147,42 @@ defmodule Brando.Images.Image do
           input :title, :i18n_text, label: t("Title"), languages: :content
           input :credits, :i18n_text, label: t("Credits"), languages: :content
           input :alt, :i18n_text, label: t("Alt. text"), languages: :content
-          input :path, :text, label: t("Path"), monospace: true
         end
 
+        # The image with its focal point, set by clicking it.
         fieldset do
           size :half
 
-          input :cdn, :toggle,
-            label: t("CDN"),
-            instructions: t("Asset has been transferred to CDN")
-
-          input :width, :number, label: t("Width"), monospace: true
-          input :height, :number, label: t("Height"), monospace: true
-          input :dominant_color, :color, label: t("Dominant color"), monospace: true
-          input :config_target, :text, label: t("Configuration target"), monospace: true
-
           inputs_for :focal do
-            label t("Focal")
+            label t("Focal point")
             cardinality :one
-            style :inline
             default %{x: 50, y: 50}
+            component :image_focal
 
             input :x, :text, label: t("x", Focal)
             input :y, :text, label: t("y", Focal)
           end
+        end
+      end
+
+      # What the upload and processing recorded; read-only here, since
+      # changing them doesn't change the files.
+      tab t("Technical") do
+        fieldset do
+          size :half
+          input :path, :text, label: t("Path"), monospace: true, readonly: true
+          input :config_target, :text, label: t("Configuration target"), monospace: true, readonly: true
+          input :width, :number, label: t("Width"), monospace: true, readonly: true
+          input :height, :number, label: t("Height"), monospace: true, readonly: true
+        end
+
+        fieldset do
+          size :half
+          input :dominant_color, :color, label: t("Dominant color"), monospace: true
+
+          input :cdn, :toggle,
+            label: t("CDN"),
+            instructions: t("Asset has been transferred to CDN")
         end
       end
     end

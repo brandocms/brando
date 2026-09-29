@@ -229,6 +229,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
+        readonly={@readonly}
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
       />
