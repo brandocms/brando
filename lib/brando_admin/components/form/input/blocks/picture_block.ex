@@ -183,7 +183,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <%= if @ref_description not in ["", nil] do %>
                 {@ref_description}
               <% else %>
-                {image_label(@block_data, @image)}
+                {gettext("Image")}
               <% end %>
             </:description>
             <MediaField.field
@@ -196,6 +196,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               browse={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
               remove={JS.push("reset_image", target: @myself)}
               presentation={:block}
+              alt_override={@block_data.alt}
               label={@ref_description}
               configure={JS.push("open_block_config", target: @target, value: %{uid: @uid})}
             >
@@ -382,20 +383,4 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:ok, images} = Brando.Images.list_images()
     {:noreply, assign(socket, :images, images)}
   end
-
-  # What the header calls the image: its alt text, not the stored file name,
-  # which is random ("2c9en62v2mds.png") and says nothing about the picture.
-  defp image_label(block_data, image) do
-    [Map.get(block_data, :alt), image_alt(image)]
-    |> Enum.find(&(is_binary(&1) and String.trim(&1) != ""))
-    |> Kernel.||(gettext("Image"))
-  end
-
-  defp image_alt(%{alt: alt}) when is_map(alt) do
-    Map.get(alt, to_string(Brando.config(:default_language))) ||
-      alt |> Map.values() |> Enum.find(&(is_binary(&1) and &1 != ""))
-  end
-
-  defp image_alt(%{alt: alt}) when is_binary(alt), do: alt
-  defp image_alt(_image), do: nil
 end

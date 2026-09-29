@@ -27,6 +27,8 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   # variables, where every variable is one row.
   attr :presentation, :atom, values: [:field, :block, :line], default: :field
   attr :label, :string, default: nil
+  # A use's own alt text (a picture block's), shown instead of the library's
+  attr :alt_override, :string, default: nil
   slot :inner_block
   slot :actions
 
@@ -47,7 +49,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:folder, Map.get(config, :upload_path))
       |> assign(:name, asset_name(asset, assigns.type))
       |> assign(:details, asset_details(asset, assigns.type))
-      |> assign(:alt, if(assigns.presentation != :line, do: alt_status(asset, assigns.type)))
+      |> assign(:alt, if(assigns.presentation != :line, do: alt_status(asset, assigns.type, assigns.alt_override)))
       |> assign(:processing_image?, assigns.type == :image && asset != nil && asset.status != :processed)
       |> assign(:preview_ratio, image_ratio(asset, assigns.type))
       |> assign(
@@ -337,7 +339,11 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   # What the image says to someone who can't see it: its alt text in the
   # default language (or the first it has), and the content languages that
   # lack one. Nothing for an image whose alt text comes from its entry.
-  defp alt_status(%Brando.Images.Image{status: :processed} = image, :image) do
+  defp alt_status(%Brando.Images.Image{status: :processed}, :image, override)
+       when is_binary(override) and override != "",
+       do: {override, []}
+
+  defp alt_status(%Brando.Images.Image{status: :processed} = image, :image, _override) do
     alias Brando.Images.AltText
 
     if AltText.alt_from_entry?(image) do
@@ -352,7 +358,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
     end
   end
 
-  defp alt_status(_asset, _type), do: nil
+  defp alt_status(_asset, _type, _override), do: nil
 
   defp present_alt(%{} = alt, language) do
     case Map.get(alt, language) do
