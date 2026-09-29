@@ -47,6 +47,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:folder, Map.get(config, :upload_path))
       |> assign(:name, asset_name(asset, assigns.type))
       |> assign(:details, asset_details(asset, assigns.type))
+      |> assign(:alt, if(assigns.presentation != :line, do: alt_status(asset, assigns.type)))
       |> assign(:processing_image?, assigns.type == :image && asset != nil && asset.status != :processed)
       |> assign(:preview_ratio, image_ratio(asset, assigns.type))
       |> assign(
@@ -102,6 +103,18 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <div class="media-field-copy">
           <span class="media-field-name">{@name || @drop_label}</span>
           <span :if={@details} class="media-field-meta">{@details}</span>
+          <%= case @alt do %>
+            <% :missing -> %>
+              <span class="media-field-alt is-missing">{gettext("No alt text")}</span>
+            <% {text, missing} -> %>
+              <span class="media-field-alt" title={text}>
+                <span class="media-field-alt-label">{gettext("Alt")}</span> {text}
+                <em :if={missing != []}>
+                  {gettext("missing in %{languages}", languages: missing |> Enum.map(&String.upcase/1) |> Enum.join(", "))}
+                </em>
+              </span>
+            <% _ -> %>
+          <% end %>
           <span :if={@processing_image?} class="media-field-processing" role="status" aria-live="polite">
             <span class="media-field-spinner" aria-hidden="true"></span>
             {gettext("Processing image…")}
@@ -320,4 +333,33 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp media_icon(:image), do: "hero-photo"
   defp media_icon(:file), do: "hero-document"
   defp media_icon(:video), do: "hero-film"
+
+  # What the image says to someone who can't see it: its alt text in the
+  # default language (or the first it has), and the content languages that
+  # lack one. Nothing for an image whose alt text comes from its entry.
+  defp alt_status(%Brando.Images.Image{status: :processed} = image, :image) do
+    alias Brando.Images.AltText
+
+    if AltText.alt_from_entry?(image) do
+      nil
+    else
+      languages = AltText.languages()
+
+      case Enum.find_value(languages, &present_alt(image.alt, &1)) do
+        nil -> :missing
+        text -> {text, AltText.missing_languages(image)}
+      end
+    end
+  end
+
+  defp alt_status(_asset, _type), do: nil
+
+  defp present_alt(%{} = alt, language) do
+    case Map.get(alt, language) do
+      text when is_binary(text) -> if String.trim(text) != "", do: text
+      _ -> nil
+    end
+  end
+
+  defp present_alt(_alt, _language), do: nil
 end

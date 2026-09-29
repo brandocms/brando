@@ -21,6 +21,11 @@
   .media-field-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .media-field-name { color: var(--media-ink); font: 500 14px/20px "Main", sans-serif; overflow-wrap: anywhere; }
   .media-field-meta, .media-field-hint { color: var(--media-muted); font: 12px/18px "Main", sans-serif; }
+  /* The image's alt text, or that it has none */
+  .media-field-alt { display: block; max-width: 100%; overflow: hidden; color: var(--media-muted); font: 12px/18px "Main", sans-serif; white-space: nowrap; text-overflow: ellipsis; }
+  .media-field-alt-label { margin-right: 2px; padding: 0 5px; border: 1px solid #dce2dc; border-radius: 3px; font-size: 10px; line-height: 15px; letter-spacing: .02em; }
+  .media-field-alt em, .media-field-alt.is-missing { color: #87662d; font-style: normal; }
+  .media-field-alt em::before { content: "· "; color: var(--media-muted); }
   .media-field-processing { display: inline-flex; align-items: center; gap: 6px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; }
   .media-field-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
   .media-field-destination { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }

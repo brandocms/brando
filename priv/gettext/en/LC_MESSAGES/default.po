@@ -13088,3 +13088,11 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "The alt text could not be suggested. Try again, or write it yourself."
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Alt"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "missing in %{languages}"
+msgstr ""
