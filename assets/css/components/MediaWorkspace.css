@@ -73,6 +73,11 @@
   .image-picker__actions { grid-column: 4; grid-row: 1 / span 2; }
 }
 .drawer.admin-workspace.media-workspace-drawer {
+  /* Thumbnails of the images selected for organizing, in the organize bar.
+     Scoped to the drawer to outrank its image rules, which stretch an img. */
+  .image-picker-organize-thumbs { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; }
+  .image-picker-organize-thumbs img { flex: 0 0 28px; width: 28px; height: 28px; min-width: 0; max-width: none; border-radius: 3px; object-fit: cover; background: #f3f6ef; }
+  .image-picker-organize-thumbs span { font-size: 12px; }
   .image-picker__selected-indicator, .video-picker__selected-indicator, .file-picker__selected-indicator { background: #688563; color: #fff; box-shadow: none; width: 18px; height: 18px; }
   .image-picker.grid .image-picker__image { border-color: #dce2dc; background: #fff; box-shadow: none; border-radius: 6px; }
   .image-picker.grid .image-picker__image.selected { border-color: #688563; background: #eef4e9; }
