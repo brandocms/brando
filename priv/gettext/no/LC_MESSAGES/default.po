@@ -12816,3 +12816,28 @@ msgstr "Opprett oversettelse"
 #, elixir-autogen, elixir-format
 msgid "Could not create the translation"
 msgstr "Kunne ikke opprette oversettelsen"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "This block uses module #%{id}, which no longer exists."
+msgstr "Denne blokken bruker modul #%{id}, som ikke finnes lenger."
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "This block uses container #%{id}, which no longer exists."
+msgstr "Denne blokken bruker seksjon #%{id}, som ikke finnes lenger."
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "This block uses fragment #%{id}, which no longer exists."
+msgstr "Denne blokken bruker fragment #%{id}, som ikke finnes lenger."
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "If it was deleted by mistake, restore it. Otherwise you can delete this block."
+msgstr "Hvis den ble slettet ved en feil, kan du gjenopprette den. Hvis ikke kan du slette denne blokken."
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this block"
+msgstr "Slett denne blokken"

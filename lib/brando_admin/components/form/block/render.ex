@@ -23,15 +23,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   def render(%{module_not_found: true} = assigns) do
     ~H"""
-    <div class="alert danger text-mono">
-      <div>
-        Missing module — #{inspect(@module_id)}.<br /><br />
-        If this is a mistake, you can hopefully undelete the module.<br /><br /> If you're sure the module is gone, you can
-        <button type="button" phx-click="delete_block" phx-target={@myself}>
-          delete this block.
-        </button>
-      </div>
-    </div>
+    <.missing_target target={@myself}>
+      {gettext("This block uses module #%{id}, which no longer exists.", id: @module_id)}
+    </.missing_target>
     """
   end
 
@@ -43,31 +37,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   # and offer the same escape hatch as `module_not_found`.
   def render(%{container_not_found: true} = assigns) do
     ~H"""
-    <div class="alert danger text-mono">
-      <div>
-        Missing container — #{inspect(@container_id)}.<br /><br />
-        If this is a mistake, you can hopefully undelete the container.<br /><br />
-        If you're sure the container is gone, you can
-        <button type="button" phx-click="delete_block" phx-target={@myself}>
-          delete this block.
-        </button>
-      </div>
-    </div>
+    <.missing_target target={@myself}>
+      {gettext("This block uses container #%{id}, which no longer exists.", id: @container_id)}
+    </.missing_target>
     """
   end
 
   def render(%{fragment_not_found: true} = assigns) do
     ~H"""
-    <div class="alert danger text-mono">
-      <div>
-        Missing fragment — #{inspect(@fragment_id)}.<br /><br />
-        If this is a mistake, you can hopefully undelete the fragment.<br /><br />
-        If you're sure the fragment is gone, you can
-        <button type="button" phx-click="delete_block" phx-target={@myself}>
-          delete this block.
-        </button>
-      </div>
-    </div>
+    <.missing_target target={@myself}>
+      {gettext("This block uses fragment #%{id}, which no longer exists.", id: @fragment_id)}
+    </.missing_target>
     """
   end
 
@@ -3146,4 +3126,21 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   defp entry_language(%{language: language}) when not is_nil(language), do: to_string(language)
 
   defp entry_language(_entry), do: nil
+
+  attr :target, :any, required: true
+  slot :inner_block, required: true
+
+  defp missing_target(assigns) do
+    ~H"""
+    <div class="alert danger">
+      <div>
+        <p>{render_slot(@inner_block)}</p>
+        <p>{gettext("If it was deleted by mistake, restore it. Otherwise you can delete this block.")}</p>
+        <button type="button" phx-click="delete_block" phx-target={@target}>
+          {gettext("Delete this block")}
+        </button>
+      </div>
+    </div>
+    """
+  end
 end
