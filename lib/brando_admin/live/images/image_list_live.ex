@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       |> assign(:clipboard_ids, [])
       |> assign(:root_folder_ids, [])
       |> assign(:missing_alt_count, Brando.Images.AltText.missing_count())
+      |> assign(:arrived?, false)
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -45,7 +46,26 @@ defmodule BrandoAdmin.Images.ImageListLive do
   @impl true
   def handle_params(params, _uri, socket) do
     folder_filter = params["filter:folder_id"] || params["filter:path"]
-    {:noreply, assign_folder_state(socket, folder_filter)}
+    socket = assign_folder_state(socket, folder_filter)
+
+    # Arriving without a folder at an empty root (uploads land in the default
+    # config's folder, e.g. images/site/default) shows nothing. Open that
+    # folder instead, on arrival only: "Root" must still show the root.
+    if is_nil(folder_filter) and !socket.assigns.arrived? and connected?(socket) and
+         socket.assigns.visible_image_count == 0 do
+      {:noreply, socket |> assign(:arrived?, true) |> open_default_upload_folder()}
+    else
+      {:noreply, assign(socket, :arrived?, connected?(socket))}
+    end
+  end
+
+  defp open_default_upload_folder(socket) do
+    with {:ok, %{upload_path: path}} <- Brando.Images.get_config_for(%{config_target: "default"}),
+         folder_id when is_integer(folder_id) <- FolderBrowser.folder_id_for(path, socket.assigns.upload_root) do
+      AssetListHelpers.patch_folder_filter(socket, folder_id)
+    else
+      _ -> socket
+    end
   end
 
   @impl true
