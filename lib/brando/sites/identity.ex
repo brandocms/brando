@@ -120,7 +120,7 @@ defmodule Brando.Sites.Identity do
           style :inline
           input :zipcode, :text, label: t("Zip code")
           input :city, :text, label: t("City")
-          input :country, :text, label: t("Country")
+          input :country, :select, options: &Brando.Sites.Countries.options/2, label: t("Country")
         end
 
         fieldset do
