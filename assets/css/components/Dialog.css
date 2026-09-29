@@ -12,7 +12,8 @@
 }
 
 .swal2-container { display: grid; position: fixed; z-index: 1060; inset: 0px; box-sizing: border-box; grid-template-areas: "top-start top top-end" "center-start center center-end" "bottom-start bottom-center bottom-end"; grid-template-rows: minmax(min-content, auto) minmax(min-content, auto) minmax(min-content, auto); height: 100%; padding: 0.625em; overflow-x: hidden; transition: background-color 350ms; }
-.swal2-container.swal2-backdrop-show, .swal2-container.swal2-noanimation { background: rgb(25 71 255 / 80%); }
+/* A neutral dim, not a saturated colour: the dialog is what needs attention. */
+.swal2-container.swal2-backdrop-show, .swal2-container.swal2-noanimation { background: rgb(22 28 25 / 45%); }
 .swal2-container.swal2-backdrop-hide { background: transparent !important; }
 .swal2-container.swal2-top-start, .swal2-container.swal2-center-start, .swal2-container.swal2-bottom-start { grid-template-columns: minmax(0px, 1fr) auto auto; }
 .swal2-container.swal2-top, .swal2-container.swal2-center, .swal2-container.swal2-bottom { grid-template-columns: auto minmax(0px, 1fr) auto; }
@@ -42,6 +43,9 @@
 .swal2-styled:not([disabled]) { cursor: pointer; }
 .swal2-styled.swal2-confirm { border: 0px; border-radius: 0px; background: var(--brando-color-blue); color: rgb(255, 255, 255); font-size: 1em; }
 .swal2-styled.swal2-confirm:focus { box-shadow: rgba(112, 102, 224, 0.5) 0px 0px 0px 3px; }
+.swal2-styled.swal2-confirm.swal2-destructive { background: #b3261e; }
+.swal2-styled.swal2-confirm.swal2-destructive:hover { background: #8f1e18; }
+.swal2-styled.swal2-confirm.swal2-destructive:focus { box-shadow: rgba(179, 38, 30, 0.35) 0px 0px 0px 3px; }
 .swal2-styled.swal2-deny { border: 0px; border-radius: 0.25em; background: rgb(220, 55, 65); color: rgb(255, 255, 255); font-size: 1em; }
 .swal2-styled.swal2-deny:focus { box-shadow: rgba(220, 55, 65, 0.5) 0px 0px 0px 3px; }
 .swal2-styled.swal2-cancel { border: 0px; border-radius: 0px; background: rgb(110, 120, 129); color: rgb(255, 255, 255); font-size: 1em; }

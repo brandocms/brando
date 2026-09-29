@@ -23,6 +23,10 @@ export default app => ({
         event = `[["push",{"event":"${event}"}]]`
       }
 
+      // A menu the action sat in closes, rather than staying open over the dialog.
+      this.el.closest('.dropdown-content')?.classList.add('hidden')
+      const destructive = this.el.hasAttribute('phx-confirm-click-destructive')
+
       const confirm = ({ title, message, confirm, cancel }) =>
         alertConfirm(
           title,
@@ -32,7 +36,7 @@ export default app => ({
               app.liveSocket.execJS(this.el, event)
             }
           },
-          { confirmText: confirm, cancelText: cancel }
+          { confirmText: confirm, cancelText: cancel, destructive }
         )
 
       const fromElement = {

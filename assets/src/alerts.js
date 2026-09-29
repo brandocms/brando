@@ -69,7 +69,9 @@ async function alertPrompt(html, value, callback) {
 
 // Button labels come from the server, translated: per call, or the defaults
 // the admin layout puts on <body> (data-confirm-ok / data-confirm-cancel).
-function alertConfirm(title, html, callback, { confirmText, cancelText } = {}) {
+// `destructive`: a red confirm button, and focus on Cancel, so Enter doesn't
+// delete by accident.
+function alertConfirm(title, html, callback, { confirmText, cancelText, destructive } = {}) {
   if (!callback) {
     callback = () => {}
   }
@@ -79,8 +81,10 @@ function alertConfirm(title, html, callback, { confirmText, cancelText } = {}) {
   Swal.fire({
     title,
     html,
-    icon: 'question',
+    icon: destructive ? 'warning' : 'question',
     showCancelButton: true,
+    focusCancel: !!destructive,
+    customClass: destructive ? { confirmButton: 'swal2-destructive' } : {},
     cancelButtonText: cancelText || defaults.confirmCancel || 'Cancel',
     confirmButtonText: confirmText || defaults.confirmOk || 'OK'
   }).then(result => {

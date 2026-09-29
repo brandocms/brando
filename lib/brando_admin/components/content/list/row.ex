@@ -198,6 +198,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :confirm, :string, default: nil
   attr :confirm_title, :string, default: nil
   attr :confirm_label, :string, default: nil
+  attr :destructive, :boolean, default: false
   attr :describe, :string, default: nil, doc: "LiveView event that replies with the dialog's text"
   attr :extra_attrs, :list, default: []
   slot :inner_block, required: true
@@ -211,6 +212,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         phx-confirm-click-message={@confirm}
         phx-confirm-click-title={@confirm_title}
         phx-confirm-click-confirm={@confirm_label}
+        phx-confirm-click-destructive={@destructive}
         phx-confirm-click-describe={@describe}
         phx-confirm-click={@event}
         phx-value-language={@language}
@@ -299,6 +301,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           confirm_title={gettext("Delete %{singular}?", singular: String.downcase(@translated_singular))}
           confirm_label={gettext("Delete")}
           describe="describe_delete"
+          destructive
         >
           {gettext("Delete")}
         </.action_button>
