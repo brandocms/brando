@@ -14,15 +14,21 @@ export default app => ({
         fors.push(this.el.dataset.slugFor)
       }
 
+      const generate = () => {
+        const vals = fors.map(f => Dom.find(`[name="${f}"]`).value).join('-')
+        return type === 'standard' ? slugify(vals, { lower: true, strict: true }) : camelCase(vals)
+      }
+
+      // Follow the source only for a slug that starts out empty (a new entry)
+      // and until someone types in it. An existing entry's slug is its URL,
+      // and fixing a typo in the title mustn't move it.
+      this.following = this.el.value === ''
+      this.el.addEventListener('input', () => { this.following = this.el.value === '' })
+
       fors.forEach(f => {
         const el = Dom.find(`[name="${f}"]`)
         el.addEventListener('input', () => {
-          const vals = fors.map(f => Dom.find(`[name="${f}"]`).value).join('-')
-          if (type === 'standard') {
-            this.el.value = slugify(vals, { lower: true, strict: true })
-          } else {
-            this.el.value = camelCase(vals)
-          }
+          if (this.following) this.el.value = generate()
         })
       })
     }

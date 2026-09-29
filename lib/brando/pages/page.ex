@@ -255,7 +255,7 @@ defmodule Brando.Pages.Page do
 
   forms do
     form do
-      default_params %{status: :draft, template: "default.html", uri: "uri"}
+      default_params %{status: :draft, template: "default.html"}
       blocks :blocks, label: t("Blocks")
 
       tab t("Content") do
@@ -266,7 +266,7 @@ defmodule Brando.Pages.Page do
         fieldset do
           size :half
           input :title, :text, label: t("Title")
-          input :uri, :slug, show_url: true, monospace: true, label: t("URI")
+          input :uri, :slug, source: :title, show_url: true, monospace: true, label: t("URI")
         end
 
         fieldset do
