@@ -1018,6 +1018,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_assign_container()
     |> maybe_assign_fragment()
     |> maybe_assign_datasource_meta()
+    |> maybe_assign_datasource_preview()
     |> assign_selected_identifiers()
     |> maybe_parse_module()
     |> maybe_get_live_preview_status()
@@ -1406,16 +1407,71 @@ defmodule BrandoAdmin.Components.Form.Block do
     module_datasource_query = socket.assigns.module_datasource_query
 
     assign_new(socket, :datasource_meta, fn ->
-      Brando.Datasource.get_meta(
-        module_datasource_module,
-        module_datasource_type,
-        module_datasource_query
-      )
+      module_datasource_module
+      |> Brando.Datasource.get_meta(module_datasource_type, module_datasource_query)
+      |> translate_meta_labels(module_datasource_module)
     end)
   end
 
   def maybe_assign_datasource_meta(socket) do
     assign_new(socket, :datasource_meta, fn -> nil end)
+  end
+
+  # Meta labels are msgids in the datasource schema's gettext domain, like
+  # its field labels.
+  defp translate_meta_labels(meta, module) when is_list(meta) do
+    schema = Module.concat([module])
+    gettext = schema.__modules__().gettext
+    naming = schema.__naming__()
+    domain = String.downcase("#{naming.domain}_#{naming.schema}")
+
+    Enum.map(meta, fn
+      %{label: label} = field when is_binary(label) -> %{field | label: Gettext.dgettext(gettext, domain, label)}
+      field -> field
+    end)
+  rescue
+    _ -> meta
+  end
+
+  defp translate_meta_labels(meta, _module), do: meta
+
+  # A list datasource fills itself, so the editor can't see from the block
+  # what ends up on the page. The block names it: the count and the first
+  # titles, read once when the block mounts. A list can be long; only
+  # `@preview_titles` are named.
+  @preview_titles 12
+
+  def maybe_assign_datasource_preview(%{assigns: %{is_datasource?: true, module_datasource_type: :list}} = socket) do
+    assign_new(socket, :datasource_preview, fn -> datasource_preview(socket) end)
+  end
+
+  def maybe_assign_datasource_preview(socket), do: assign_new(socket, :datasource_preview, fn -> nil end)
+
+  defp datasource_preview(socket) do
+    module = Module.concat([socket.assigns.module_datasource_module])
+    language = socket.assigns[:entry] && Map.get(socket.assigns.entry, :language)
+
+    case Brando.Datasource.list_results(module, socket.assigns.module_datasource_query, block_vars(socket), language) do
+      # A list can come grouped, e.g. split into columns for the template
+      {:ok, entries} when is_list(entries) ->
+        entries = entries |> List.flatten() |> Enum.filter(&is_map/1)
+        %{count: length(entries), titles: entries |> Enum.take(@preview_titles) |> Enum.map(&preview_title(module, &1))}
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp preview_title(module, entry) do
+    if function_exported?(module, :__identifier__, 2) do
+      module.__identifier__(entry).title
+    else
+      Map.get(entry, :title) || Map.get(entry, :name) || "##{Map.get(entry, :id)}"
+    end
+  rescue
+    _ -> Map.get(entry, :title) || "##{Map.get(entry, :id)}"
   end
 
   # A selection row renders the identifier it has loaded, or finds it among
@@ -1492,9 +1548,10 @@ defmodule BrandoAdmin.Components.Form.Block do
 
             gettext_module = module.__modules__().gettext
             gettext_domain = String.downcase("#{domain}_#{schema}")
-            msgid = Brando.Utils.humanize(module.__naming__().singular, :downcase)
+            # Plural: the block's header says what it shows, e.g. "Selected cases"
+            msgid = Brando.Utils.humanize(module.__naming__().plural, :downcase)
 
-            String.capitalize(Gettext.dgettext(gettext_module, gettext_domain, msgid))
+            Gettext.dgettext(gettext_module, gettext_domain, msgid)
           else
             ""
           end
@@ -2703,9 +2760,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       code,
       """
       <div class="brando-datasource-placeholder">
-         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z"/></svg>
-         <div class="text-mono">#{assigns.module_datasource_module_label} | #{assigns.module_datasource_type} | #{assigns.module_datasource_query}</div>
-         #{gettext("Content from datasource will be inserted here")}
+        #{gettext("%{title} appear here", title: BrandoAdmin.Components.Form.Block.Render.datasource_title(assigns.module_datasource_type, assigns.module_datasource_module_label))}
       </div>
       """
     )

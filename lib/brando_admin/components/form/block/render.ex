@@ -168,6 +168,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_datasource_query={@module_datasource_query}
         datasource_meta={@datasource_meta}
         available_identifiers={@available_identifiers}
+        datasource_preview={@datasource_preview}
         paste_multi_module_id={@paste_multi_module_id}
         hidden_block_fields={@hidden_block_fields}
         paste_context={
@@ -795,6 +796,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :module_datasource_query, :string, default: ""
   attr :datasource_meta, :any, default: nil
   attr :available_identifiers, :any, default: []
+  attr :datasource_preview, :map, default: nil
   attr :paste_multi_module_id, :any, default: nil
   attr :paste_context, :any, default: :root
   attr :form_id, :any, default: nil
@@ -898,6 +900,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 module_datasource_type={@module_datasource_type}
                 module_datasource_query={@module_datasource_query}
                 available_identifiers={@available_identifiers}
+                datasource_preview={@datasource_preview}
                 block_identifiers={block_form[:block_identifiers]}
                 entry={@entry}
               />
@@ -950,6 +953,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               module_datasource_type={@module_datasource_type}
               module_datasource_query={@module_datasource_query}
               available_identifiers={@available_identifiers}
+              datasource_preview={@datasource_preview}
               block_identifiers={@form[:block_identifiers]}
               entry={@entry}
             />
@@ -1014,6 +1018,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           module_datasource_type={@module_datasource_type}
           module_datasource_query={@module_datasource_query}
           available_identifiers={@available_identifiers}
+          datasource_preview={@datasource_preview}
           block_identifiers={@block_identifiers}
           target={@target}
         />
@@ -1079,6 +1084,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           module_datasource_type={@module_datasource_type}
           module_datasource_query={@module_datasource_query}
           available_identifiers={@available_identifiers}
+          datasource_preview={@datasource_preview}
           block_identifiers={@block_identifiers}
           target={@target}
         />
@@ -2866,35 +2872,38 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :uid, :string, required: true
   attr :target, :any, required: true
   attr :available_identifiers, :any, default: []
+  attr :datasource_preview, :map, default: nil
   attr :block_identifiers, :any, default: []
 
   def datasource(assigns) do
-    translated_module_datasource_type =
-      Gettext.dgettext(
-        Brando.Gettext,
-        "datasource",
-        to_string(assigns.module_datasource_type)
-      )
-
-    assigns =
-      assign(
-        assigns,
-        :translated_module_datasource_type,
-        translated_module_datasource_type
-      )
-
     ~H"""
     <div class="block-datasource">
-      <div class="datasource-info" phx-click="show_datasource_instructions" phx-target={@target}>
+      <div
+        class="datasource-info"
+        title={"#{@module_datasource_type} · #{@module_datasource_query}"}
+      >
         <div class="icon">
           <.icon name="hero-circle-stack" />
         </div>
         <div class="info">
-          <span class="datasource-label">
-            {gettext("Datasource")} [{@translated_module_datasource_type}]<br />
-            {@module_datasource_module_label} &rarr; {@module_datasource_query}
+          <strong class="datasource-title">{datasource_title(@module_datasource_type, @module_datasource_module_label)}</strong>
+          <span :if={@module_datasource_type == :selection} class="datasource-help">
+            {gettext("Choose which to show, and in what order.")}
+          </span>
+          <span :if={@module_datasource_type == :list && @datasource_preview} class="datasource-help">
+            {ngettext("%{count} is shown automatically", "%{count} are shown automatically", @datasource_preview.count)}
           </span>
         </div>
+      </div>
+
+      <div :if={@module_datasource_type == :list && @datasource_preview} class="datasource-preview">
+        <p :if={@datasource_preview.count == 0}>{gettext("None to show right now.")}</p>
+        <ol :if={@datasource_preview.count > 0}>
+          <li :for={title <- @datasource_preview.titles} title={title}>{title}</li>
+        </ol>
+        <p :if={@datasource_preview.count > length(@datasource_preview.titles)} class="datasource-more">
+          {gettext("And %{count} more", count: @datasource_preview.count - length(@datasource_preview.titles))}
+        </p>
       </div>
 
       <%= if @module_datasource_type == :selection do %>
@@ -2969,6 +2978,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  @doc "What a datasource block shows, e.g. \"Selected cases\"."
+  def datasource_title(:selection, plural), do: gettext("Selected %{plural}", plural: plural)
+  def datasource_title(:list, plural), do: gettext("All %{plural}", plural: plural)
+  def datasource_title(_type, plural), do: String.capitalize(plural || "")
+
   attr :datasource_meta, :any, required: true
   attr :identifier, :any, required: true
   attr :block_data, :any, required: true
@@ -3007,15 +3021,31 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         as: "#{block_data.name}[identifier_metas][#{key}]"
       )
 
+    # An empty override is left out of sight behind a button that adds it:
+    # most entries use none, and each field took a row of its own. The input
+    # stays in the form either way, so its value is always posted.
+    dom_prefix =
+      String.replace("meta-#{block_data[:uid].value}-#{key}", ~r/[^A-Za-z0-9_-]/, "-")
+
+    empty = for field <- datasource_meta, blank_meta?(this_meta[to_string(field.key)]), do: field.key
+
     assigns =
       assigns
       |> assign(:key, key)
       |> assign(:meta_form, meta_form)
+      |> assign(:dom_prefix, dom_prefix)
+      |> assign(:empty, empty)
 
     ~H"""
     <div :if={@datasource_meta != []} class="identifier-meta">
       <div class="meta-fields">
-        <div :for={field <- @datasource_meta} :key={field.key} class="meta-field">
+        <div
+          :for={field <- @datasource_meta}
+          :key={field.key}
+          id={"#{@dom_prefix}-#{field.key}"}
+          class="meta-field"
+          hidden={field.key in @empty}
+        >
           <%= case field.type do %>
             <% :text -> %>
               <Input.text field={@meta_form[field.key]} opts={field.opts} label={field.label} />
@@ -3032,9 +3062,26 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <% end %>
         </div>
       </div>
+      <div :if={@empty != []} class="meta-add">
+        <button
+          :for={field <- @datasource_meta}
+          :if={field.key in @empty}
+          id={"#{@dom_prefix}-#{field.key}-add"}
+          type="button"
+          phx-click={
+            JS.remove_attribute("hidden", to: "##{@dom_prefix}-#{field.key}")
+            |> JS.set_attribute({"hidden", ""}, to: "##{@dom_prefix}-#{field.key}-add")
+            |> JS.focus_first(to: "##{@dom_prefix}-#{field.key}")
+          }
+        >
+          <.icon name="hero-plus" /> {field.label}
+        </button>
+      </div>
     </div>
     """
   end
+
+  defp blank_meta?(value), do: value in [nil, "", false, "false"]
 
   ## Private helpers
 

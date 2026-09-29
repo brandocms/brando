@@ -57,6 +57,17 @@
   .identifier-meta .field-base { display: flex; }
   .identifier-meta .input-with-action { flex: 1; min-width: 0; }
   .identifier-meta .label-wrapper label { font-size: 12px; }
+  .meta-field[hidden] { display: none; }
+  .meta-fields:not(:has(.meta-field:not([hidden]))) { display: none; }
+  .meta-add { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .meta-add:not(:has(button:not([hidden]))) { display: none; }
+  .meta-add button {
+    display: inline-flex; align-items: center; gap: 4px; width: auto; height: auto; margin: 0; padding: 2px 0;
+    border: 0; background: none; color: #626b66; font-size: 12px; line-height: 18px; cursor: pointer;
+    [class^="hero-"] { width: 12px; height: 12px; }
+    &:hover { color: #254e3f; text-decoration: underline; text-underline-offset: 2px; }
+    &[hidden] { display: none; }
+  }
   .identifier-meta input, .identifier-meta textarea { height: auto; padding: 6px 8px; border: 1px solid #dce2dc; border-radius: 4px; font-size: 13px; }
 }
 .identifier-list {

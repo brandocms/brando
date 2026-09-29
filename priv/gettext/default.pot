@@ -12983,3 +12983,33 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Links updated"
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Choose which to show, and in what order."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "%{count} is shown automatically"
+msgid_plural "%{count} are shown automatically"
+msgstr[0] ""
+msgstr[1] ""
+
+#, elixir-autogen, elixir-format
+msgid "None to show right now."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "And %{count} more"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Selected %{plural}"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "All %{plural}"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "%{title} appear here"
+msgstr ""

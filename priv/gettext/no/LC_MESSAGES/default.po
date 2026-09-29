@@ -12989,3 +12989,33 @@ msgstr "Kilden lenker til sider på %{source} som også finnes på %{language}. 
 #, elixir-autogen, elixir-format
 msgid "Links updated"
 msgstr "Lenker oppdatert"
+
+#, elixir-autogen, elixir-format
+msgid "Choose which to show, and in what order."
+msgstr "Velg hvilke som vises, og i hvilken rekkefølge."
+
+#, elixir-autogen, elixir-format
+msgid "%{count} is shown automatically"
+msgid_plural "%{count} are shown automatically"
+msgstr[0] "%{count} vises automatisk"
+msgstr[1] "%{count} vises automatisk"
+
+#, elixir-autogen, elixir-format
+msgid "None to show right now."
+msgstr "Ingen å vise akkurat nå."
+
+#, elixir-autogen, elixir-format
+msgid "And %{count} more"
+msgstr "Og %{count} til"
+
+#, elixir-autogen, elixir-format
+msgid "Selected %{plural}"
+msgstr "Utvalgte %{plural}"
+
+#, elixir-autogen, elixir-format
+msgid "All %{plural}"
+msgstr "Alle %{plural}"
+
+#, elixir-autogen, elixir-format
+msgid "%{title} appear here"
+msgstr "%{title} vises her"

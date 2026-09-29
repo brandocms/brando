@@ -109,34 +109,6 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     {:halt, socket}
   end
 
-  def handle_block_event("show_datasource_instructions", _, socket) do
-    message =
-      gettext("""
-      <p>
-        This block has a datasource, meaning it can load and display data from the database. There are two types:
-      </p>
-
-      <ul>
-        <li><strong>List Type</strong>: Automatically lists entries based on a preset filter.</li>
-        <li><strong>Selection Type</strong>: Allows you to manually select specific entries to display.</li>
-      </ul>
-
-      <p>
-        Use these options to dynamically show content or highlight particular items.
-      </p>
-      """)
-
-    alert_params = %{
-      title: gettext("Block datasource"),
-      message: message,
-      type: "info"
-    }
-
-    socket
-    |> push_event("b:alert", alert_params)
-    |> then(&{:halt, &1})
-  end
-
   def handle_block_event("show_vars_instructions", _, socket) do
     message =
       gettext("""
