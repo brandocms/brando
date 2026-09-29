@@ -413,8 +413,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   defp ordered_by_sequence?(nil), do: true
 
+  # Anywhere in the order: a listing may group first ("featured first, then
+  # sequence") and still be shown in its stored order within each group.
   defp ordered_by_sequence?(%{order: order}) do
-    match?([{_direction, :sequence} | _], Brando.Query.order_string_to_list(order))
+    Enum.any?(Brando.Query.order_string_to_list(order), &match?({_direction, :sequence}, &1))
   end
 
   defp ordered_by_sequence?(_sort), do: false
