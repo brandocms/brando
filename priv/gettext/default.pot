@@ -13043,3 +13043,23 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "%{count} more"
 msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Empty"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Chosen"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+msgid "Linked to an entry"
+msgstr ""

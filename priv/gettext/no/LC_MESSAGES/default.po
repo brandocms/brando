@@ -13049,3 +13049,23 @@ msgstr[1] "Brukt på %{count} steder: %{places}."
 #, elixir-autogen, elixir-format
 msgid "%{count} more"
 msgstr "%{count} til"
+
+#, elixir-autogen, elixir-format
+msgid "Empty"
+msgstr "Tom"
+
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Ja"
+
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "Nei"
+
+#, elixir-autogen, elixir-format
+msgid "Chosen"
+msgstr "Valgt"
+
+#, elixir-autogen, elixir-format
+msgid "Linked to an entry"
+msgstr "Lenker til en oppføring"

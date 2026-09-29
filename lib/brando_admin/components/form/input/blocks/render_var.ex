@@ -396,6 +396,53 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp control_value(:link, value) when is_boolean(value), do: nil
   defp control_value(:link, value), do: value
 
+  attr :var, :any, required: true
+
+  # The variable's current value in its collapsed header, so a list of them
+  # can be read without opening each.
+  defp value_summary(assigns) do
+    var = assigns.var
+    type = to_string(var[:type].value)
+
+    assigns =
+      assign(assigns, type: type, summary: summary(type, var), color: type == "color" && present(var[:value].value))
+
+    ~H"""
+    <span class={["variable-value", !@summary && "is-empty"]}>
+      <span :if={@color} class="variable-swatch" style={"background: #{@color}"}></span>
+      <span class="variable-value-text">{@summary || gettext("Empty")}</span>
+    </span>
+    """
+  end
+
+  defp summary("boolean", var),
+    do: if(var[:value_boolean].value in [true, "true"], do: gettext("Yes"), else: gettext("No"))
+
+  defp summary(type, var) when type in ~w(image video gallery file) do
+    if present(var[:"#{type}_id"].value), do: gettext("Chosen")
+  end
+
+  defp summary("link", var) do
+    if to_string(var[:link_type].value) == "identifier",
+      do: present(var[:identifier_id].value) && gettext("Linked to an entry"),
+      else: text_summary(var[:value].value)
+  end
+
+  defp summary(_type, var), do: text_summary(var[:value].value)
+
+  defp text_summary(value) do
+    case present(value) do
+      nil -> nil
+      text -> text |> String.replace(~r/<[^>]*>/, " ") |> String.replace(~r/\s+/, " ") |> String.trim() |> truncate()
+    end
+  end
+
+  defp truncate(text) when byte_size(text) > 80, do: String.slice(text, 0, 80) <> "…"
+  defp truncate(text), do: text
+
+  defp present(value) when value in [nil, ""], do: nil
+  defp present(value), do: to_string(value)
+
   def render(assigns) do
     ~H"""
     <div id={@id} class={["variable", @var[:type].value]} data-size={@var[:width].value} data-id={@var[:id].value}>
@@ -420,6 +467,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 <code>&lcub;&lcub; {@var[:key].value} &rcub;&rcub;</code>
                 <span>{@var[:label].value || gettext("No label")}</span>
               </span>
+              <.value_summary var={@var} />
               <span class={["variable-chevron", @visible && "is-open"]} aria-hidden="true">
                 <.icon name="hero-chevron-down" />
               </span>

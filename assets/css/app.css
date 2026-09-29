@@ -721,10 +721,37 @@ h3 {
     }
   }
 
+  /* The current value, after key and label */
+  .variable-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 45%;
+    margin-left: auto;
+    font-size: 12.5px;
+
+    &.is-empty { opacity: 0.45; }
+  }
+
+  .variable-value-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .variable-swatch {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.15);
+  }
+
   .variable-chevron {
     display: grid;
     place-items: center;
-    margin-left: auto;
+    margin-left: 12px;
     transition: transform 140ms ease;
 
     [data-icon] {
