@@ -22,7 +22,11 @@ export default (app) => ({
       draggable: this.sortableSelector || '.draggable',
       ghostClass: 'is-sorting',
       handle: this.handle,
-      filter: this.sortableFilter,
+      // Nothing is sorted in a synchronized translation: its order follows
+      // the source, and the server refuses a new one.
+      filter: (evt) =>
+        !!this.el.closest('.is-source-locked') ||
+        !!evt.target.closest(this.sortableFilter),
       preventOnFilter: false,
       swapThreshold: 0.5,
       forceFallback: true,

@@ -674,6 +674,8 @@ section.alert.danger {
 }
 
 .blocks-wrapper.is-source-locked {
+  .module-datasource-selected .identifier.draggable { cursor: default; }
+
   /* Hidden but still taking its room: the blocks keep the spacing they
      have in the source instead of running together. */
   .block-plus-wrapper {
@@ -689,6 +691,7 @@ section.alert.danger {
   [phx-click="add_table_row"],
   [phx-click="assign_available_identifiers"],
   .module-datasource-selected button[name$="[drop_block_identifier_ids][]"],
+  .module-datasource-selected .identifier-grip,
   [phx-click*="\"delete_var\""],
   [phx-click*="\"reset_var\""],
   [phx-click*="\"reset_ref\""],
