@@ -12796,3 +12796,13 @@ msgstr "Både modulen og filen er endret siden forrige import, så filen blir ik
 #, elixir-autogen, elixir-format
 msgid "Translations can't be created: this content type can't be copied."
 msgstr "Oversettelser kan ikke opprettes: denne innholdstypen kan ikke kopieres."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Previous page"
+msgstr "Forrige side"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Next page"
+msgstr "Neste side"

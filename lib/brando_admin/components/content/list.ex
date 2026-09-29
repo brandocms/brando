@@ -743,7 +743,7 @@ defmodule BrandoAdmin.Components.Content.List do
     showing_start = get_showing_start(page_size, current_page)
     showing_end = get_showing_end(page_size, current_page, total_entries)
     has_entries = total_entries > 0
-    page_numbers = 1..total_pages
+    page_numbers = page_window(current_page, total_pages)
 
     assigns =
       assigns
@@ -756,6 +756,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:showing_start, showing_start)
       |> assign(:showing_end, showing_end)
       |> assign(:page_numbers, page_numbers)
+      |> assign(:total_pages, total_pages)
 
     ~H"""
     <div class="pagination">
@@ -769,17 +770,58 @@ defmodule BrandoAdmin.Components.Content.List do
         <.page_size_button page_size={50} current_page_size={@page_size} change_limit={@change_limit} /> /
         <.page_size_button page_size={0} current_page_size={@page_size} change_limit={@change_limit} label={gettext("All")} />
       </div>
-      <div class="pagination-buttons">
-        <.pagination_button
-          :for={page_number <- @page_numbers}
-          :key={page_number}
-          page_number={page_number}
-          current_page={@current_page}
-          change_page={@change_page}
-        />
-      </div>
+      <nav :if={@total_pages > 1} class="pagination-buttons" aria-label={gettext("Pages")}>
+        <button
+          type="button"
+          class="pagination-step"
+          aria-label={gettext("Previous page")}
+          disabled={@current_page <= 1}
+          phx-click={@change_page}
+          phx-value-page={@current_page - 2}
+        >
+          <.icon name="hero-chevron-left" />
+        </button>
+        <%= for {page_number, index} <- Enum.with_index(@page_numbers) do %>
+          <span :if={page_number == :gap} :key={"gap-#{index}"} class="pagination-gap" aria-hidden="true">…</span>
+          <.pagination_button
+            :if={page_number != :gap}
+            :key={page_number}
+            page_number={page_number}
+            current_page={@current_page}
+            change_page={@change_page}
+          />
+        <% end %>
+        <button
+          type="button"
+          class="pagination-step"
+          aria-label={gettext("Next page")}
+          disabled={@current_page >= @total_pages}
+          phx-click={@change_page}
+          phx-value-page={@current_page}
+        >
+          <.icon name="hero-chevron-right" />
+        </button>
+      </nav>
     </div>
     """
+  end
+
+  @doc false
+  # The pages to offer: the first and the last, and the current one with two
+  # on each side. A skipped run shows as `:gap`, unless it is a single page,
+  # which is shown instead.
+  def page_window(_current, total) when total <= 7, do: Enum.to_list(1..max(total, 1)//1)
+
+  def page_window(current, total) do
+    [1, total | Enum.to_list(max(current - 2, 1)..min(current + 2, total))]
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.chunk_every(2, 1)
+    |> Enum.flat_map(fn
+      [a, b] when b - a == 2 -> [a, a + 1]
+      [a, b] when b - a > 2 -> [a, :gap]
+      [a | _] -> [a]
+    end)
   end
 
   # Helper functions for pagination

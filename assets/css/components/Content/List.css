@@ -106,8 +106,24 @@
     .pagination-buttons {
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
       gap: 5px;
       max-width: 550px;
+    }
+
+    .pagination-gap {
+      width: 20px;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .pagination-step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      [data-icon] { width: 14px; height: 14px; }
+      &:disabled { opacity: .35; cursor: default; }
     }
 
     button {
