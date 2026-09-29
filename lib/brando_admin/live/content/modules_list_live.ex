@@ -17,7 +17,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
        missing: [],
        running?: false,
        current: nil,
-       done: [],
+       drawn: %{},
        failed: []
      })}
   end
@@ -150,7 +150,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     {:ok, modules} = Brando.Content.list_modules(%{preload: [:refs, :vars]})
     missing = Enum.filter(modules, &(&1.svg in [nil, ""]))
 
-    {:noreply, update(socket, :sketches, &%{&1 | missing: missing, done: [], failed: [], current: nil})}
+    {:noreply, update(socket, :sketches, &%{&1 | missing: missing, drawn: %{}, failed: [], current: nil})}
   end
 
   def handle_event("start_sketches", _, %{assigns: %{sketches: %{running?: true}}} = socket), do: {:noreply, socket}
@@ -160,7 +160,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     modules = socket.assigns.sketches.missing
 
     socket
-    |> update(:sketches, &%{&1 | running?: true, done: [], failed: []})
+    |> update(:sketches, &%{&1 | running?: true, drawn: %{}, failed: []})
     |> start_async(:sketches, fn ->
       Enum.each(modules, fn module ->
         send(lv, {:sketch_started, module.id})
@@ -168,7 +168,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
         result =
           with {:ok, svg} <- Brando.Content.ModuleSketch.generate(module),
                {:ok, _} <- Brando.Content.ModuleSketch.save(module, svg),
-               do: :ok
+               do: {:ok, svg}
 
         send(lv, {:sketch_done, module.id, result})
       end)
@@ -319,9 +319,9 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def handle_info({:sketch_started, id}, socket), do: {:noreply, update(socket, :sketches, &%{&1 | current: id})}
 
-  def handle_info({:sketch_done, id, :ok}, socket) do
+  def handle_info({:sketch_done, id, {:ok, svg}}, socket) do
     BrandoAdmin.LiveView.Listing.update_list_entries(socket.assigns.schema)
-    {:noreply, update(socket, :sketches, &%{&1 | done: &1.done ++ [id]})}
+    {:noreply, update(socket, :sketches, &%{&1 | drawn: Map.put(&1.drawn, id, svg)})}
   end
 
   def handle_info({:sketch_done, id, {:error, reason}}, socket) do
@@ -333,56 +333,74 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   attr :sketches, :map, required: true
 
-  defp sketches(assigns) do
+  @doc false
+  def sketches(assigns) do
     assigns =
       assign(assigns,
         total: length(assigns.sketches.missing),
-        finished: length(assigns.sketches.done) + length(assigns.sketches.failed),
+        finished: map_size(assigns.sketches.drawn) + length(assigns.sketches.failed),
         failed: Map.new(assigns.sketches.failed)
       )
 
     ~H"""
     <div class="module-sketches">
-      <p :if={@total == 0}>{gettext("Every module has a sketch.")}</p>
-      <%= if @total > 0 do %>
-        <p>
-          {ngettext(
-            "One module has no sketch. The AI draws it from its template, references and variables, and it is saved at once. You can redraw or edit it in the module afterwards.",
-            "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards.",
-            @total
-          )}
-        </p>
-        <ol class="module-sketches-list">
-          <li
-            :for={module <- @sketches.missing}
-            :key={module.id}
-            class={[
-              module.id == @sketches.current && "is-current",
-              module.id in @sketches.done && "is-done",
-              Map.has_key?(@failed, module.id) && "is-failed"
-            ]}
-          >
-            <span class="state">
-              <.icon :if={module.id in @sketches.done} name="hero-check" />
-              <.icon :if={Map.has_key?(@failed, module.id)} name="hero-x-mark" />
-              <.icon :if={module.id == @sketches.current} name="hero-arrow-path" />
-            </span>
-            <span class="name"><.i18n map={module.name} /></span>
-            <span :if={@failed[module.id]} class="error">{@failed[module.id]}</span>
-          </li>
-        </ol>
-        <p :if={@sketches.running?} class="module-sketches-progress">
-          {gettext("Drawing %{done} of %{total}…", done: @finished + 1, total: @total)}
-        </p>
-        <p :if={!@sketches.running? and @finished == @total} class="module-sketches-progress">
-          {gettext("Done: %{ok} drawn, %{failed} failed.", ok: length(@sketches.done), failed: length(@sketches.failed))}
-        </p>
-      <% end %>
-    </div>
-    <div :if={@total > 0 and @finished < @total} class="module-sketches-actions">
-      <button type="button" class="primary" phx-click="start_sketches" disabled={@sketches.running?}>
-        {ngettext("Draw one sketch", "Draw %{count} sketches", @total)}
-      </button>
+      <p :if={@total == 0} class="module-sketches-intro">{gettext("Every module has a sketch.")}</p>
+      <p :if={@total > 0} class="module-sketches-intro">
+        {ngettext(
+          "One module has no sketch. The AI draws it from its template, references and variables, and it is saved at once. You can redraw or edit it in the module afterwards.",
+          "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards.",
+          @total
+        )}
+      </p>
+
+      <div :if={@sketches.running? or @finished > 0} class="module-sketches-progress">
+        <div class="bar"><span style={"width: #{round(@finished / max(@total, 1) * 100)}%"}></span></div>
+        <span :if={@sketches.running?}>
+          {gettext("Drawing %{done} of %{total}…", done: min(@finished + 1, @total), total: @total)}
+        </span>
+        <span :if={!@sketches.running?}>
+          {gettext("Done: %{ok} drawn, %{failed} failed.", ok: map_size(@sketches.drawn), failed: length(@sketches.failed))}
+        </span>
+      </div>
+
+      <ol :if={@total > 0} class="module-sketches-list">
+        <li
+          :for={module <- @sketches.missing}
+          :key={module.id}
+          class={[
+            module.id == @sketches.current && "is-current",
+            Map.has_key?(@sketches.drawn, module.id) && "is-done",
+            Map.has_key?(@failed, module.id) && "is-failed"
+          ]}
+        >
+          <span class="state">
+            <%= cond do %>
+              <% Map.has_key?(@sketches.drawn, module.id) -> %>
+                <.icon name="hero-check" />
+              <% Map.has_key?(@failed, module.id) -> %>
+                <.icon name="hero-x-mark" />
+              <% module.id == @sketches.current -> %>
+                <.icon name="hero-arrow-path" />
+              <% true -> %>
+                <span class="pending"></span>
+            <% end %>
+          </span>
+          <span class="name"><.i18n map={module.name} /></span>
+          <span :if={@failed[module.id]} class="error">{@failed[module.id]}</span>
+          <img
+            :if={@sketches.drawn[module.id]}
+            class="thumb"
+            src={"data:image/svg+xml;base64," <> Base.encode64(@sketches.drawn[module.id])}
+            alt=""
+          />
+        </li>
+      </ol>
+
+      <div :if={@total > 0 and @finished < @total} class="module-sketches-actions">
+        <button type="button" class="primary" phx-click="start_sketches" disabled={@sketches.running?}>
+          {ngettext("Draw one sketch", "Draw %{count} sketches", @total)}
+        </button>
+      </div>
     </div>
     """
   end

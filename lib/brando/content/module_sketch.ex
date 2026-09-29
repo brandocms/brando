@@ -63,6 +63,9 @@ defmodule Brando.Content.ModuleSketch do
   - Body text is a few thin rounded bars (height 2, rx 1) of varying length.
     A heading is one thicker bar (height 3.5 to 5). An image is a filled rect
     with rx 1.5. Keep a margin of about 3 units; use the whole canvas.
+  - A button or link is one small filled rounded rect in #6f8177 (height 4
+    to 5, rx 2): never draw its label, and never put a lighter shape on top
+    of a darker one.
   - Two columns side by side if the template lays things out in columns;
     a row of equal rects for a slider or gallery, the last one cut off at the
     edge; a quote mark (a small path) before a quote.

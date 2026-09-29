@@ -801,24 +801,32 @@
   color: #a83a36;
 }
 
-.module-sketches p {
-  margin: 0 0 12px;
+.module-sketches {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.module-sketches-intro {
+  margin: 0;
+  color: var(--modal-muted, #626b66);
 }
 
 .module-sketches-list {
   max-height: 340px;
-  margin: 0 0 12px;
+  margin: 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
-  border: 1px solid #edf0ed;
+  border: 1px solid #e6ebe6;
   border-radius: 8px;
 
   li {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px;
+    gap: 12px;
+    min-height: 40px;
+    padding: 6px 14px;
     font-size: 13px;
 
     & + li {
@@ -830,10 +838,18 @@
       place-items: center;
       flex: 0 0 16px;
       height: 16px;
+      color: #9aa59f;
 
       [data-icon] {
         width: 14px;
         height: 14px;
+      }
+
+      .pending {
+        width: 7px;
+        height: 7px;
+        border: 1.5px solid #c6d0c9;
+        border-radius: 50%;
       }
     }
 
@@ -841,6 +857,12 @@
       margin-left: auto;
       font-size: 12px;
       color: #a83a36;
+    }
+
+    .thumb {
+      width: 42px;
+      height: 28px;
+      margin-left: auto;
     }
 
     &.is-current {
@@ -862,8 +884,25 @@
 }
 
 .module-sketches-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   font-size: 12px;
   color: #5d6a63;
+
+  .bar {
+    height: 4px;
+    border-radius: 2px;
+    background: #edf0ed;
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      background: #66bb6a;
+      transition: width 300ms ease;
+    }
+  }
 }
 
 .module-sketches-actions {
