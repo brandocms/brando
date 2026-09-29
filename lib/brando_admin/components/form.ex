@@ -2364,6 +2364,13 @@ defmodule BrandoAdmin.Components.Form do
             </h1>
           </div>
 
+          <.creating_language
+            entry_id={@entry_id}
+            schema={@schema}
+            form_blueprint={@form_blueprint}
+            current_user={@current_user}
+          />
+
           <div :if={@instructions} class="form-instructions">
             {render_slot(@instructions)}
           </div>
@@ -6293,4 +6300,43 @@ defmodule BrandoAdmin.Components.Form do
     FunctionClauseError -> false
     ArgumentError -> false
   end
+
+  # A new entry of a translatable schema takes the content language chosen in
+  # the sidebar. Where the form has no language field of its own, say which.
+  attr :entry_id, :any, required: true
+  attr :schema, :atom, required: true
+  attr :form_blueprint, :any, required: true
+  attr :current_user, :map, required: true
+
+  defp creating_language(assigns) do
+    assigns = assign(assigns, :language, creating_language_label(assigns))
+
+    ~H"""
+    <p :if={@language} class="form-creating-language">
+      {gettext("Creating in %{language}", language: @language)}
+    </p>
+    """
+  end
+
+  defp creating_language_label(%{entry_id: nil, schema: schema, form_blueprint: blueprint, current_user: user}) do
+    languages = Brando.config(:languages) || []
+
+    if schema.has_trait(Brando.Trait.Translatable) and length(languages) > 1 and
+         not language_input?(blueprint) do
+      code = user.config.content_language
+
+      Enum.find_value(languages, code, fn language ->
+        if to_string(language[:value]) == to_string(code), do: language[:text]
+      end)
+    end
+  end
+
+  defp creating_language_label(_assigns), do: nil
+
+  defp language_input?(%{tabs: tabs}), do: Enum.any?(tabs, &has_language_input?/1)
+  defp language_input?(_blueprint), do: false
+
+  defp has_language_input?(%{fields: fields}), do: Enum.any?(fields, &has_language_input?/1)
+  defp has_language_input?(%{name: :language}), do: true
+  defp has_language_input?(_field), do: false
 end

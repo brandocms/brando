@@ -1023,3 +1023,6 @@ html.not-mac .shortcut-other { display: inline; }
     max-width: 90px;
   }
 }
+
+/* "Creating in Norsk" under a create form's heading. */
+.form-creating-language { margin: -8px 0 16px; color: #626b66; font-size: 13px; line-height: 18px; }

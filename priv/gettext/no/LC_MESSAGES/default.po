@@ -12935,3 +12935,8 @@ msgstr "Aldri innlogget"
 #, elixir-autogen, elixir-format
 msgid "Sort the list by its order to drag rows"
 msgstr "Sorter listen etter rekkefølge for å dra i radene"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Creating in %{language}"
+msgstr "Oppretter på %{language}"
