@@ -132,6 +132,9 @@ defmodule Brando.Content.Definition.Importer do
         baseline_kind = if kind == "module", do: "modules", else: "table_templates"
         baseline = get_in(bundle, ["baseline", baseline_kind, uid])
         baseline = if is_nil(record) and bundle["source"] != References.scope(), do: nil, else: baseline
+        # The baseline is recorded in its own digest version; one that matches
+        # the target stands for the target's exact digest from here on.
+        baseline = if old && baseline && baseline == Snapshot.baseline_digest(bundle, old), do: old_digest, else: baseline
         block_ids = if record && kind == "module", do: Blocks.list_block_ids_using_module(record.id), else: []
 
         {action, reason} =

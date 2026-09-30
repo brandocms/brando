@@ -41,6 +41,23 @@ defmodule Brando.Content.Definition.Value do
 
   def digest(value), do: :crypto.hash(:sha256, :erlang.term_to_binary(canonical(value))) |> Base.encode16(case: :lower)
 
+  @doc """
+  The digest a baseline records (baseline version 2): as `digest/1`, with
+  empty values (`nil`, `false`, `""`, `[]`, `%{}`) left out of every map. A
+  field Brando adds to a block type, or to any definition, starts out empty,
+  so it doesn't change the digest of a definition nobody has touched.
+  """
+  def baseline_digest(value), do: value |> drop_empty() |> digest()
+
+  defp drop_empty(value) when is_map(value) do
+    value
+    |> Map.new(fn {key, val} -> {key, drop_empty(val)} end)
+    |> Map.reject(fn {_key, val} -> val in [nil, false, "", [], %{}] end)
+  end
+
+  defp drop_empty(value) when is_list(value), do: Enum.map(value, &drop_empty/1)
+  defp drop_empty(value), do: value
+
   # Maps are encoded as sorted pairs so hashes are independent of VM map layout.
   defp canonical(value) when is_map(value), do: value |> Enum.sort() |> Enum.map(fn {k, v} -> {k, canonical(v)} end)
   defp canonical(value) when is_list(value), do: Enum.map(value, &canonical/1)

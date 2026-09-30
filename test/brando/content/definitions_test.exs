@@ -3,7 +3,7 @@ defmodule Brando.Content.DefinitionsTest do
   use Brando.ConnCase
 
   alias Brando.Content.{Block, Definitions, Module, Ref, TableTemplate, Var}
-  alias Brando.Content.Definition.{Model, Snapshot}
+  alias Brando.Content.Definition.{Model, Snapshot, Value}
   alias Brando.{Factory, Repo, Tenant}
   alias Ecto.Changeset
 
@@ -74,6 +74,40 @@ defmodule Brando.Content.DefinitionsTest do
     result = apply_bundle!(changed, c.user)
     assert {:ok, plan} = Definitions.plan(result.bundle, c.user)
     assert [%{action: :noop}] = plan.items
+  end
+
+  # brandocms/brando#2886: a Brando upgrade that adds a field to a block type
+  # exports every untouched module with a new empty key.
+  test "a field a block type gained since export doesn't make the definition a conflict", c do
+    result = apply_bundle!(c.bundle, c.user)
+    assert result.bundle["baseline"]["version"] == 2
+
+    [current] = snapshot()["modules"]
+    data = get_in(current, ["refs", Access.at(0), "data", "data"])
+    added = Enum.find_value(data, fn {key, value} -> if is_nil(value), do: key end)
+    assert added, "the header block needs an empty field to stand in for a new one"
+    before_upgrade = update_in(current, ["refs", Access.at(0), "data", "data"], &Map.delete(&1, added))
+
+    edited = edit(result.bundle, &Map.put(&1, "class", "edited"))
+    v2 = put_in(edited, ["baseline", "modules", "hero-test"], Value.baseline_digest(before_upgrade))
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(v2, c.user)
+
+    # Lockfiles from before baseline version 2 hold exact digests: still compared exactly.
+    v1 = Map.put(edited, "baseline", %{"modules" => %{"hero-test" => Value.digest(before_upgrade)}})
+    assert {:ok, %{items: [%{action: :conflict}]}} = Definitions.plan(v1, c.user)
+  end
+
+  test "baseline digests leave empty values out, and still see real changes" do
+    definition = %{"class" => "hero", "refs" => [%{"data" => %{"text" => "Hi", "level" => 1}}]}
+    grown = put_in(definition, ["refs", Access.at(0), "data", "placeholder"], nil)
+    grown = Map.merge(grown, %{"flag" => false, "note" => "", "tags" => [], "config" => %{"unset" => nil}})
+
+    assert Value.baseline_digest(grown) == Value.baseline_digest(definition)
+    refute Value.digest(grown) == Value.digest(definition)
+    refute Value.baseline_digest(Map.put(definition, "flag", true)) == Value.baseline_digest(definition)
+
+    refute Value.baseline_digest(put_in(definition, ["refs", Access.at(0), "data", "level"], 2)) ==
+             Value.baseline_digest(definition)
   end
 
   test "updates settings and defaults once while preserving identities and editor content", c do

@@ -25,6 +25,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   toggles can now be switched off. Active-filter chips and the reset button show
   only while a filter differs from where it starts.
 
+- **Module definition baselines ignore empty values.** A Brando upgrade that
+  added a field to a block type made every module using that block a
+  `conflict` on its next definition import ("target changed since export"),
+  since the baseline digest covered the new empty key. Baselines are now
+  version 2 and leave empty values out. Existing lockfiles keep exact
+  comparison until the next import or export rewrites them; if one reports
+  conflicts after this upgrade, export a fresh baseline first.
 - **Var labels are translated.** `Brando.Content.Var`'s `label` is now a map
   of admin language → text (`:i18n_string`), like a module's name, so editors
   see labels in their own admin language. The `brando_190` migration moves

@@ -73,8 +73,23 @@ defmodule Brando.Content.Definition.Snapshot do
     {bundle, %{modules: Map.new(modules, &{&1.uid, &1}), tables: Map.new(tables, &{&1.uid, &1})}}
   end
 
+  # Version 2 digests leave empty values out, so a field added to a block type
+  # doesn't turn every untouched definition into a conflict. Lockfiles without
+  # a version hold exact digests of every key; they are compared exactly until
+  # the next import or export rewrites them.
+  @baseline_version 2
+
   def baselines(bundle) do
-    Map.new(~w(modules table_templates), fn kind -> {kind, Map.new(bundle[kind], &{&1["uid"], Value.digest(&1)})} end)
+    ~w(modules table_templates)
+    |> Map.new(fn kind -> {kind, Map.new(bundle[kind], &{&1["uid"], Value.baseline_digest(&1)})} end)
+    |> Map.put("version", @baseline_version)
+  end
+
+  @doc "`definition`'s digest as `bundle`'s baseline records them."
+  def baseline_digest(bundle, definition) do
+    if get_in(bundle, ["baseline", "version"]) == @baseline_version,
+      do: Value.baseline_digest(definition),
+      else: Value.digest(definition)
   end
 
   def ensure_scope! do

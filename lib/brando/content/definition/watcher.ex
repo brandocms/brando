@@ -29,7 +29,7 @@ defmodule Brando.Content.Definition.Watcher do
 
   require Logger
 
-  alias Brando.Content.Definition.{Plan, Reader, References, Snapshot, Value}
+  alias Brando.Content.Definition.{Plan, Reader, References, Snapshot}
   alias Brando.Content.Definitions
   alias Brando.Tenant
   alias Brando.Tenant.Registry
@@ -157,13 +157,13 @@ defmodule Brando.Content.Definition.Watcher do
       bindings = if same_site?, do: bundle["references"] || %{}, else: %{}
       baseline = if same_site?, do: get_in(bundle, ["baseline", "modules"]) || %{}, else: %{}
       {snapshot, _records} = Snapshot.take!(bindings: bindings, all_tables: true)
-      stored = Map.new(snapshot["modules"], &{&1["uid"], Value.digest(&1)})
+      stored = Map.new(snapshot["modules"], &{&1["uid"], Snapshot.baseline_digest(bundle, &1)})
 
       states =
         Map.new(bundle["modules"], fn definition ->
           uid = definition["uid"]
           file = files[uid]
-          state = state(stored[uid], Value.digest(definition), baseline[uid])
+          state = state(stored[uid], Snapshot.baseline_digest(bundle, definition), baseline[uid])
           {uid, %{name: Path.relative_to(file, path), path: Path.relative_to_cwd(file), absolute: file, state: state}}
         end)
 

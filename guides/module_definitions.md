@@ -426,6 +426,13 @@ For a conflict, export the target into a new directory, review the admin changes
 against your edits, and apply your intended changes onto that fresh export.
 Do not discard or fabricate baseline digests to hide concurrent edits.
 
+The baseline records a digest of each definition as it was exported. Empty
+values (`nil`, `false`, `""`, `[]`, `%{}`) are left out of it, so a Brando
+upgrade that adds a field to a block type or a var doesn't make untouched
+definitions look changed. Lockfiles written before this (no `"version": 2` in
+`baseline`) are still compared exactly; the next import or export rewrites
+them.
+
 Apply locks the definition tables and recalculates the plan before writing.
 Changes after planning invalidate the plan. A database error rolls back all
 definition writes in that import. Authorization and reference availability are
