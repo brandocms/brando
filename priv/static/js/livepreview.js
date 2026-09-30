@@ -171,6 +171,21 @@ function stampBlockKeys(root) {
 }
 
 /**
+ * An element the host frontend has taken over: a canvas it draws on, a widget
+ * it mounted into. Its script sets attributes and children the server's HTML
+ * knows nothing about, and morphing would strip them. The template opts in
+ * with `data-lp-preserve="<what it shows>"`; while that value is unchanged,
+ * the element and its subtree are left as the frontend made them.
+ * @param {Element} fromEl - The element in the page
+ * @param {Element} toEl - The element in the new HTML
+ * @returns {boolean}
+ */
+function isPreserved(fromEl, toEl) {
+  return fromEl.hasAttribute('data-lp-preserve') &&
+    fromEl.getAttribute('data-lp-preserve') === toEl.getAttribute('data-lp-preserve')
+}
+
+/**
  * Creates a reusable morphdom configuration
  * @param {boolean} childrenOnly - Whether to only update children
  * @returns {Object} - Morphdom configuration object
@@ -205,6 +220,9 @@ function getMorphdomConfig(childrenOnly = true) {
       if (fromEl.tagName === 'IFRAME') {
         return true
       }
+      if (isPreserved(fromEl, toEl)) {
+        return true
+      }
       return false
     },
 
@@ -225,6 +243,10 @@ function getMorphdomConfig(childrenOnly = true) {
       if (fromEl.hasAttribute('data-smart-video') &&
           (fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) &&
           fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
+        return false
+      }
+
+      if (isPreserved(fromEl, toEl)) {
         return false
       }
 

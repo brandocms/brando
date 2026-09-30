@@ -426,9 +426,16 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `available_blocks` and the editor can pick a file there, next to picture,
   video, gallery and svg. The slot's `template_file` sets the file ref's
   defaults (class, download, `config_target`). A file in a media slot renders
-  as any file ref does; a site that wants something else for some files (a
-  Lottie player, an embedded PDF) overrides `file/2` in its Villain parser.
-  The assistant can put a file in such a slot too.
+  as any file ref does; a module that wants something else for some files (a
+  Lottie player, an embedded PDF) declares the slot with `headless_ref` and
+  branches on `refs.NAME.data.type` in its template. The assistant can put a
+  file in such a slot too.
+
+- **`data-lp-preserve` keeps a frontend widget through live preview updates.**
+  The preview patches the page as the editor types, which stripped what a
+  site's script had set on an element it took over (a canvas's size, a loaded
+  marker). An element marked `data-lp-preserve="VALUE"` is left alone while
+  the value is unchanged.
 
 - **Start from a template.** An empty block field offers the content
   templates of its namespace as cards; choosing one fills the field with

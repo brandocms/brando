@@ -112,6 +112,23 @@ markup where possible. Collection callbacks receive preloaded, unsaved data
 before block HTML is rendered; cards should use their normal metadata rather
 than assuming freshly rendered block HTML is already present in the callback.
 
+## Elements the site's script takes over
+
+The preview patches the page in place as the editor types. An element your
+frontend script has taken over (a canvas it draws on, a widget it mounted
+into) carries attributes and children the server's HTML knows nothing about,
+and a patch would strip them. Mark such an element with `data-lp-preserve`,
+set to what it shows:
+
+```liquid
+<canvas data-animation="{{ src }}" data-lp-preserve="{{ src }}"></canvas>
+```
+
+While the value is unchanged, the element and everything in it are left as
+the script made them. When it changes, the element is patched like any other,
+and the script has to follow the new value. Video players are preserved the
+same way without the attribute.
+
 ## Recovery and sharing
 
 The selected view belongs to the preview session. A reconnect restores that
