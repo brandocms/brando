@@ -25,6 +25,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   toggles can now be switched off. Active-filter chips and the reset button show
   only while a filter differs from where it starts.
 
+- **`accept` is gone from video and file configs.** `Brando.Type.VideoConfig`
+  and `Brando.Type.FileConfig` carried `accept: :any`, which nothing read (the
+  file input's `accept` comes from `allowed_mimetypes`). A Blueprint asset
+  `cfg` that still sets `accept:` now fails to compile with "unknown config
+  fields"; remove the key.
+
 - **Module definition baselines ignore empty values.** A Brando upgrade that
   added a field to a block type made every module using that block a
   `conflict` on its next definition import ("target changed since export"),

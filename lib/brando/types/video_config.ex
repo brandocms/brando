@@ -98,7 +98,6 @@ defmodule Brando.Type.VideoConfig do
 
   @type upload_strategy :: :bunny | :cloudflare | :local | :mux | :s3
   @type t :: %__MODULE__{
-          accept: term(),
           allow_external_urls: boolean(),
           allow_uploads: boolean(),
           allowed_mimetypes: [String.t()],
@@ -115,8 +114,7 @@ defmodule Brando.Type.VideoConfig do
         }
 
   @derive Jason.Encoder
-  defstruct accept: :any,
-            cdn: nil,
+  defstruct cdn: nil,
             allow_uploads: true,
             allow_external_urls: true,
             allowed_mimetypes: ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-msvideo"],

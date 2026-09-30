@@ -60,7 +60,6 @@ defmodule Brando.Type.FileConfig do
   import Brando.Utils, only: [stringy_struct: 2]
 
   @type t :: %__MODULE__{
-          accept: term(),
           allowed_mimetypes: [String.t()],
           cdn: %Brando.CDN.Config{} | nil,
           completed_callback: Brando.Assets.CompletedCallback.t(struct()),
@@ -74,8 +73,7 @@ defmodule Brando.Type.FileConfig do
         }
 
   @derive Jason.Encoder
-  defstruct accept: :any,
-            cdn: nil,
+  defstruct cdn: nil,
             allowed_mimetypes: ["application/pdf", "text/plain"],
             upload_path: Path.join("files", "default"),
             random_filename: false,

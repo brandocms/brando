@@ -471,7 +471,6 @@ Full list of `Brando.Type.VideoConfig` options:
 | `overwrite` | boolean | `false` | Write over an existing file with the same name instead of making the name unique (`:local`/`:s3`) |
 | `force_filename` | string or nil | `nil` | Store under this filename; only applied together with `overwrite: true` |
 | `completed_callback` | function, MFA or nil | `nil` | Called with the video and user when a local upload is stored or a provider video first becomes ready (see below) |
-| `accept` | term | `:any` | Present for parity with `FileConfig`, but not read; the file input's `accept` comes from `allowed_mimetypes` |
 | `meta` | map | `%{}` | Provider-specific settings |
 
 `completed_callback` takes an arity-2 function or `{module, function,

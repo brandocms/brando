@@ -255,7 +255,6 @@ defmodule Brando.Blueprint.BlueprintTest do
                  name: :pdf,
                  opts: %{
                    cfg: %Brando.Type.FileConfig{
-                     accept: :any,
                      allowed_mimetypes: ["application/pdf"],
                      force_filename: nil,
                      overwrite: false,
