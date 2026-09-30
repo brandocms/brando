@@ -267,21 +267,20 @@ end
 `available_blocks` takes `"picture"`, `"video"`, `"gallery"`, `"svg"` and
 `"file"`, each with its own `template_*`. A file in a media slot is an
 ordinary file ref: `{% ref refs.visual %}` renders the download link. To show
-some files another way (play a Lottie animation, embed a PDF), override
-`file/2` in the site's Villain parser and fall back to `super` for the rest:
+some files another way (play a Lottie animation, embed a PDF), declare the
+slot with `headless_ref` and decide in the template:
 
-```elixir
-def file(%{file: %Brando.Files.File{filename: filename} = file} = data, opts) do
-  if Path.extname(filename) == ".json",
-    do: ~s(<canvas data-animation="#{Brando.Utils.media_url(file)}"></canvas>),
-    else: super(data, opts)
-end
-
-def file(data, opts), do: super(data, opts)
+```liquid
+{% headless_ref refs.visual %}
+{% if refs.visual.data.type == "file" %}
+  <canvas data-animation="{{ refs.visual.file | media_url }}"></canvas>
+{% else %}
+  {% ref refs.visual %}
+{% endif %}
 ```
 
-Keep the `{% ref %}` tag itself outside `{% if %}`: a ref inside a Liquid
-region gets no slot in the block editor.
+The declaration is what gives the ref its slot in the block editor: a
+`{% ref %}` inside `{% if %}` alone gets none.
 
 Unknown settings and unsupported ref types fail validation rather than being
 silently dropped. Export includes default and nil values so a later schema

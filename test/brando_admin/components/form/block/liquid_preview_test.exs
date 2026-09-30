@@ -204,6 +204,17 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreviewTest do
       assert LiquidPreview.stripped_refs(code) == []
     end
 
+    test "does not report a ref rendered inside a region when headless_ref declares its slot" do
+      # One slot, shown one of two ways: the declaration gives the editor its
+      # input, the region decides how the site renders it.
+      code = """
+      {% headless_ref refs.media %}
+      {% if refs.media.data.type == "file" %}<canvas></canvas>{% else %}{% ref refs.media %}{% endif %}
+      """
+
+      assert LiquidPreview.stripped_refs(code) == []
+    end
+
     test "recognizes trim markers and loose whitespace in the ref tag" do
       assert LiquidPreview.stripped_refs("{% if a %}{%-  ref   refs.spaced -%}{% endif %}") == ["spaced"]
     end
