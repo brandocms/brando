@@ -6,6 +6,8 @@ defmodule Brando.Content.BlockArchive do
   """
   use Ecto.Schema
 
+  @type t :: %__MODULE__{}
+
   schema "content_block_archive" do
     field :root_block_id, :integer
     field :uid, :string
