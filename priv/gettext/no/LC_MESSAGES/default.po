@@ -13310,3 +13310,189 @@ msgstr "Innhold på %{language}"
 #, elixir-autogen, elixir-format
 msgid "Content language"
 msgstr "Innholdsspråk"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Loose blocks"
+msgstr "Løse blokker"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks no entry links to any more. A block removed from an entry is kept so that an older version of the entry can be restored with it; once no version holds it, nothing can bring it back, and it only keeps its images looking used."
+msgstr "Blokker som ingen oppføring lenker til lenger. En blokk som fjernes fra en oppføring beholdes, slik at en eldre versjon av oppføringen kan gjenopprettes med den. Når ingen versjon lenger har den, kan ingenting hente den tilbake, og den gjør bare at bildene dens ser ut som de er i bruk."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "can be removed"
+msgstr "kan fjernes"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "still held"
+msgstr "holdes fortsatt"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "blocks in all"
+msgstr "blokker totalt"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "What was checked"
+msgstr "Dette er sjekket"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Links"
+msgstr "Lenker"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "No row in any table that points at blocks names a block of the tree:"
+msgstr "Ingen rad i noen tabell som peker på blokker nevner en blokk i treet:"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Versions"
+msgstr "Versjoner"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "No loose blocks."
+msgstr "Ingen løse blokker."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Select all that can be removed"
+msgstr "Velg alle som kan fjernes"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Select none"
+msgstr "Velg ingen"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove selected"
+msgstr "Fjern valgte"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Select block %{id}"
+msgstr "Velg blokk %{id}"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Can be removed"
+msgstr "Kan fjernes"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "In a recovery copy"
+msgstr "I en gjenopprettingskopi"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot be verified"
+msgstr "Kan ikke bekreftes"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Held by a version"
+msgstr "Holdes av en versjon"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "version %{number}"
+msgstr "versjon %{number}"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Removed block trees, kept as they were. Restoring one puts it back as a loose block."
+msgstr "Fjernede blokktrær, bevart som de var. Gjenoppretting legger treet tilbake som en løs blokk."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "removed %{date}"
+msgstr "fjernet %{date}"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was removed: %{reason}"
+msgstr "Ingenting ble fjernet: %{reason}"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "The blocks are back, as loose as they were."
+msgstr "Blokkene er tilbake, like løse som de var."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not restore: %{reason}"
+msgstr "Kunne ikke gjenopprette: %{reason}"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Find blocks no entry uses any more, and remove the ones nothing can bring back."
+msgstr "Finn blokker ingen oppføring bruker lenger, og fjern dem som ingenting kan hente tilbake."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review loose blocks"
+msgstr "Gå gjennom løse blokker"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "loose block tree"
+msgid_plural "loose block trees"
+msgstr[0] "løst blokktre"
+msgstr[1] "løse blokktrær"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} stored version was read; none of them may hold a block of the tree."
+msgid_plural "%{count} stored versions were read; none of them may hold a block of the tree."
+msgstr[0] "%{count} lagret versjon er lest; ingen av dem kan ha en blokk fra treet."
+msgstr[1] "%{count} lagrede versjoner er lest; ingen av dem kan ha en blokk fra treet."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} version could not be read, so nothing can be removed."
+msgid_plural "%{count} versions could not be read, so nothing can be removed."
+msgstr[0] "%{count} versjon kunne ikke leses, så ingenting kan fjernes."
+msgstr[1] "%{count} versjoner kunne ikke leses, så ingenting kan fjernes."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} recovery copy was searched for the tree's blocks."
+msgid_plural "%{count} recovery copies were searched for the tree's blocks."
+msgstr[0] "%{count} gjenopprettingskopi er gjennomsøkt etter treets blokker."
+msgstr[1] "%{count} gjenopprettingskopier er gjennomsøkt etter treets blokker."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{count} loose block tree? It goes to the archive and can be restored from there."
+msgid_plural "Remove %{count} loose block trees? They go to the archive and can be restored from there."
+msgstr[0] "Fjerne %{count} løst blokktre? Det legges i arkivet og kan gjenopprettes derfra."
+msgstr[1] "Fjerne %{count} løse blokktrær? De legges i arkivet og kan gjenopprettes derfra."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} tree"
+msgid_plural "%{count} trees"
+msgstr[0] "%{count} tre"
+msgstr[1] "%{count} trær"
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{count} loose block tree (%{blocks} blocks). It is in the archive below."
+msgid_plural "Removed %{count} loose block trees (%{blocks} blocks). They are in the archive below."
+msgstr[0] "Fjernet %{count} løst blokktre (%{blocks} blokker). Det ligger i arkivet nedenfor."
+msgstr[1] "Fjernet %{count} løse blokktrær (%{blocks} blokker). De ligger i arkivet nedenfor."
+
+#: lib/brando_admin/live/config/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} was left: it is in use again."
+msgid_plural "%{count} were left: they are in use again."
+msgstr[0] "%{count} ble stående: den er i bruk igjen."
+msgstr[1] "%{count} ble stående: de er i bruk igjen."

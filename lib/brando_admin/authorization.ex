@@ -21,6 +21,7 @@ defmodule BrandoAdmin.Authorization do
     "Elixir.BrandoAdmin.Images.AltTextLive" => {:update, Brando.Images.Image},
     "Elixir.BrandoAdmin.Sites.CacheLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Sites.UtilsLive" => {:read, :utilities},
+    "Elixir.BrandoAdmin.Sites.BlockAuditLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Sites.ScheduledPublishingLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Globals.GlobalsLive" => {:update, Brando.Sites.GlobalSet},
     "Elixir.BrandoAdmin.Users.GroupsLive" => {:read, :groups},

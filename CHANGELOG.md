@@ -422,6 +422,17 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Utilities → Loose blocks.** Removing a block from an entry keeps the
+  block, so an older revision can be restored with it; nothing removed them
+  once no revision held them, and a site collected unreachable blocks whose
+  media then looked in use. The audit lists every block tree no table links
+  to (the linking tables are read from the database's foreign keys), and
+  marks a tree removable only when no stored revision holds any of its
+  blocks and no recovery copy mentions them. Removing copies the tree's rows
+  to `content_block_archive` first, and the screen restores from it. Run
+  `mix brando.gen.migrations` for `brando_192`. `Brando.Content.BlockAudit`
+  does the same from code.
+
 - **Sort by use in the image library.** A folder that has filled up with
   block images can be sorted into folders for the entries that use them
   (`cases/sommerro`, `pages/about`): a preview with the folders to make,

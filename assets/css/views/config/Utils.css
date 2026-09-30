@@ -188,3 +188,71 @@
   strong { font-weight: 500; }
   a { margin-left: auto; color: #254e3f; text-decoration: none; white-space: nowrap; }
 }
+
+/* Utilities → Loose blocks: what was found, what was checked, and the list. */
+.utils-workspace.block-audit {
+  a.utils-eyebrow { text-decoration: none; }
+  a.utils-eyebrow:hover { color: var(--utils-ink); }
+  .utils-page-heading p { max-width: 680px; line-height: 1.65; }
+
+  .block-audit-stats { margin-bottom: 24px; }
+
+  .block-audit-checked {
+    margin-bottom: 28px; padding: 18px 22px; border: 1px solid var(--utils-line); border-radius: 8px; background: #f7f9f5;
+    h2 { font-size: 13px; margin-bottom: 10px; }
+    ul { list-style: none; display: grid; gap: 8px; }
+    li { color: var(--utils-muted); font-size: 12px; line-height: 1.7; }
+    li strong { display: inline-block; min-width: 172px; color: var(--utils-ink); font-weight: 500; }
+    code { display: inline-block; margin: 0 4px 0 0; padding: 1px 6px; border: 1px solid var(--utils-line); border-radius: 4px; background: #fff; }
+  }
+  .block-audit-warning { display: block; margin-top: 4px; color: #8c4232; }
+  .block-audit-empty { padding: 28px; border: 1px dashed var(--utils-line); border-radius: 8px; color: var(--utils-muted); text-align: center; }
+
+  .block-audit-toolbar {
+    position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 10px 0;
+    background: #fff; border-bottom: 1px solid var(--utils-line);
+    > span { margin-right: auto; color: var(--utils-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  }
+  .utils-button.block-audit-remove { color: #b3261e; border-color: #e6c4c0; }
+  .utils-button.block-audit-remove:hover:not(:disabled) { background: #fdf1ef; border-color: #d99a93; }
+  .utils-button.block-audit-remove > span[data-icon] { width: 14px; height: 14px; color: inherit; }
+
+  .block-audit-group { margin-bottom: 26px; }
+  .block-audit-group h3 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; font-size: 15px; }
+  .block-audit-group h3 span { color: var(--utils-muted); font-size: 12px; font-weight: 400; letter-spacing: 0; }
+  .block-audit-group ul, .block-audit-archive ul { list-style: none; border: 1px solid var(--utils-line); border-radius: 8px; overflow: hidden; }
+
+  .block-audit-tree {
+    display: grid; grid-template-columns: auto 132px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 10px 16px;
+    & + & { border-top: 1px solid #eef1ee; }
+    &:not(.is-removable) { background: #fbfaf6; }
+  }
+  .block-audit-check { display: flex; }
+  .block-audit-check input { width: 16px; height: 16px; margin: 0; }
+  .block-audit-thumbs {
+    display: flex; align-items: center; gap: 4px; min-height: 28px;
+    picture { display: block; width: 40px; }
+    /* Fixed width, natural height: never a cropped square. */
+    img { display: block; width: 40px; height: auto; border-radius: 3px; background: #f1f4f1; }
+  }
+  .block-audit-what {
+    display: flex; flex-direction: column; min-width: 0; line-height: 1.4;
+    strong { font-weight: 500; font-size: 13px; }
+    .block-audit-description { color: var(--utils-ink); font-size: 12px; }
+    .block-audit-excerpt { overflow: hidden; color: var(--utils-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    small { color: #8a938d; font-size: 11px; font-variant-numeric: tabular-nums; }
+  }
+  .block-audit-status { display: flex; justify-content: flex-end; font-size: 12px; }
+  .block-audit-held { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; color: var(--utils-muted); }
+  .block-audit-held a { color: var(--utils-green); }
+  .block-audit-chip {
+    display: inline-flex; align-items: center; padding: 3px 9px; border: 1px solid #ecdfbd; border-radius: 30px;
+    background: #fff8e9; color: #755929; font-size: 11px; white-space: nowrap;
+  }
+  .block-audit-chip.is-ok { border-color: #d7e6d6; background: #f1f7f1; color: #355d40; }
+
+  .block-audit-archive { margin-top: 36px; }
+  .block-audit-archive .utils-section-heading p { color: var(--utils-muted); font-size: 12px; margin-top: 4px; }
+  .block-audit-archive li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 10px 16px; }
+  .block-audit-archive li + li { border-top: 1px solid #eef1ee; }
+}

@@ -105,6 +105,19 @@ defmodule BrandoAdmin.Sites.UtilsLive do
           </article>
           <article>
             <div>
+              <h3>{gettext("Loose blocks")}</h3><p>
+                {gettext("Find blocks no entry uses any more, and remove the ones nothing can bring back.")}
+              </p>
+            </div>
+            <.link
+              navigate={Brando.routes().admin_live_path(@socket, BrandoAdmin.Sites.BlockAuditLive)}
+              class="utils-button"
+            >
+              {gettext("Review loose blocks")}
+            </.link>
+          </article>
+          <article>
+            <div>
               <h3>{gettext("Sitemap")}</h3><p>
                 {gettext("Regenerate the sitemap from published content.")}
               </p>

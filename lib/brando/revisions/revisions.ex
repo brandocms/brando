@@ -466,6 +466,75 @@ defmodule Brando.Revisions do
     end
   end
 
+  @doc """
+  The blocks stored revisions hold: every block id found anywhere in a
+  revision's entry, with the revisions it was found in.
+
+  Restoring a revision re-links the blocks it holds, and fails if one is
+  gone (see `set_entry_to_revision/5`), so a block in this map is still
+  needed however unlinked it looks.
+
+  A revision is read for its block ids even when a restore would refuse it
+  (a snapshot naming something the code no longer has): this is a question
+  of what might be needed, so it errs toward holding. The stored snapshots
+  are the site's own data.
+
+  Returns `{%{block_id => [%{entry_type:, entry_id:, revision:}]}, undecodable}`;
+  `undecodable` counts revisions that could not be read at all, whose blocks
+  are therefore unknown.
+  """
+  @spec held_block_ids() :: {%{optional(integer()) => [map()]}, non_neg_integer()}
+  def held_block_ids do
+    from(r in Revision, select: map(r, [:entry_type, :entry_id, :revision, :encoded_entry]))
+    |> Repo.all()
+    |> Enum.reduce({%{}, 0}, fn revision, {held, undecodable} ->
+      case decode_for_audit(revision.encoded_entry) do
+        {:ok, entry} ->
+          holder = Map.take(revision, [:entry_type, :entry_id, :revision])
+
+          held =
+            entry
+            |> collect_block_ids(MapSet.new())
+            |> Enum.reduce(held, fn id, acc -> Map.update(acc, id, [holder], &[holder | &1]) end)
+
+          {held, undecodable}
+
+        {:error, _} ->
+          {held, undecodable + 1}
+      end
+    end)
+  end
+
+  defp decode_for_audit(encoded_entry) do
+    {:ok, :erlang.binary_to_term(encoded_entry)}
+  rescue
+    _ -> {:error, :invalid_snapshot}
+  end
+
+  # Every block id in a decoded entry, however deep: a block struct's own id,
+  # and any `block_id` a join row or an owned record carries.
+  defp collect_block_ids(%Ecto.Association.NotLoaded{}, acc), do: acc
+
+  defp collect_block_ids(%{__struct__: Brando.Content.Block, id: id} = block, acc) do
+    acc = if is_integer(id), do: MapSet.put(acc, id), else: acc
+    block |> Map.from_struct() |> Map.values() |> collect_block_ids(acc)
+  end
+
+  defp collect_block_ids(%{__struct__: _} = struct, acc) do
+    acc =
+      case struct do
+        %{block_id: id} when is_integer(id) -> MapSet.put(acc, id)
+        _ -> acc
+      end
+
+    struct |> Map.from_struct() |> Map.values() |> collect_block_ids(acc)
+  end
+
+  defp collect_block_ids(map, acc) when is_map(map), do: map |> Map.values() |> collect_block_ids(acc)
+  defp collect_block_ids(list, acc) when is_list(list), do: Enum.reduce(list, acc, &collect_block_ids/2)
+  defp collect_block_ids(tuple, acc) when is_tuple(tuple), do: tuple |> Tuple.to_list() |> collect_block_ids(acc)
+  defp collect_block_ids(_other, acc), do: acc
+
   defp safe_decode(encoded_entry) do
     {:ok, :erlang.binary_to_term(encoded_entry, [:safe])}
   rescue
