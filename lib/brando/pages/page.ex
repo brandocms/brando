@@ -266,7 +266,12 @@ defmodule Brando.Pages.Page do
         fieldset do
           size :half
           input :title, :text, label: t("Title")
-          input :uri, :slug, source: :title, show_url: true, monospace: true, label: t("URI")
+          input :uri, :slug,
+            source: :title,
+            prefix: &__MODULE__.uri_prefix/1,
+            show_url: true,
+            monospace: true,
+            label: t("URI")
         end
 
         fieldset do
@@ -374,6 +379,20 @@ defmodule Brando.Pages.Page do
       |> filter_language(Ecto.Changeset.get_field(form.source, :language))
 
     filtered_parents
+  end
+
+  @doc """
+  What a new page's URI starts with: its parent's URI and a slash, since a
+  page resolves by its whole path (a child of `about` is `about/team`). Empty
+  without a parent, or under the homepage.
+  """
+  def uri_prefix(%Ecto.Changeset{} = changeset) do
+    with parent_id when not is_nil(parent_id) <- Ecto.Changeset.get_field(changeset, :parent_id),
+         {:ok, %{uri: uri}} when uri not in [nil, "", "index"] <- Pages.get_page(parent_id) do
+      uri <> "/"
+    else
+      _ -> ""
+    end
   end
 
   defp filter_self(parents, id) when not is_nil(id), do: Enum.filter(parents, &(&1.id != id))

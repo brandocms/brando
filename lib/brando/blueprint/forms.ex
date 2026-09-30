@@ -448,6 +448,10 @@ defmodule Brando.Blueprint.Forms do
       - `camel_case: true` - Returns slug as `camelCase` instead of `this-type-of-slug`.
       - `show_url: true` - Runs the applied changeset through the schema's `__absolute_url__`
         function and displays the resulting url.
+      - `prefix: "text"` or `prefix: &fun/1` - Put in front of the generated slug. A function
+        gets the form's changeset, so the prefix can follow the form; pages use it to start a
+        child page's URI with its parent's (`&Brando.Pages.Page.uri_prefix/1`). Like the rest
+        of the slug, it is only generated while the field is untouched on a new entry.
 
   ### `status`: Status field
 

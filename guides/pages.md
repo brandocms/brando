@@ -108,9 +108,12 @@ The root path resolves to URI `"index"`, with one record per language. Set
 and use URI `"index"` for root routing. A homepage flag alone is not a substitute
 for the URI used by the controller.
 
-`parent_id` records hierarchy. Store the complete URI yourself: a child of
-`about` needs `uri: "about/team"` to resolve at `/about/team`. Changing the parent
-does not concatenate or rewrite the child's URI. The parent selector limits its
+`parent_id` records hierarchy. The URI stores the complete path: a child of
+`about` needs `uri: "about/team"` to resolve at `/about/team`. In the admin, a new
+page's URI follows its title and starts with the chosen parent's URI (the
+homepage adds nothing); a URI typed by hand is kept as typed, so a child page can
+still live elsewhere. Changing the parent of an existing page does not rewrite
+its URI, and programmatic writes must store the full path themselves. The parent selector limits its
 choices to the page's language; keep that boundary in programmatic writes too.
 Use `has_url: false` for organizational content that should not be public. Such
 a page has no URL: `Page.__absolute_url__/1` returns `nil` for it, and the

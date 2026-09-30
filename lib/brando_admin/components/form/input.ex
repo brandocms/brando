@@ -499,6 +499,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_new(:data_slug_type, fn ->
         (Keyword.get(assigns.opts, :camel_case) && "camel") || "standard"
       end)
+      |> assign(:data_slug_prefix, slug_prefix(assigns.opts[:prefix], assigns.field))
       |> maybe_assign_url(assigns.opts[:show_url])
 
     ~H"""
@@ -511,6 +512,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         phx-debounce={300}
         data-slug-for={@data_slug_for}
         data-slug-type={@data_slug_type}
+        data-slug-prefix={@data_slug_prefix}
         phx-target={@target}
         data-watch-focus
         autocorrect="off"
@@ -556,7 +558,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :rest, :global,
     include:
-      ~w(class placeholder phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-autosize autocorrect spellcheck readonly)
+      ~w(class placeholder phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-slug-prefix data-autosize autocorrect spellcheck readonly)
 
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
@@ -778,6 +780,13 @@ defmodule BrandoAdmin.Components.Form.Input do
   defp maybe_assign_url(assigns, _) do
     assigns
   end
+
+  # `prefix:` goes in front of a generated slug, e.g. a parent page's URI.
+  defp slug_prefix(prefix, %{form: %{source: %Ecto.Changeset{} = changeset}}) when is_function(prefix, 1),
+    do: prefix.(changeset)
+
+  defp slug_prefix(prefix, _field) when is_binary(prefix), do: prefix
+  defp slug_prefix(_prefix, _field), do: nil
 
   defp prepare_slug_for(%{form: form}, slug_for) when is_list(slug_for) do
     slug_for
