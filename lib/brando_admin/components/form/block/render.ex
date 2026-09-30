@@ -2486,7 +2486,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <%= if @unsaved? do %>
       <.carried_var_field :for={field <- @carried_fields} field={@var[field]} />
       <.inputs_for :let={option} field={@var[:options]}>
-        <input type="hidden" name={option[:label].name} value={option[:label].value} />
+        <.carried_var_field field={option[:label]} />
         <input type="hidden" name={option[:value].name} value={option[:value].value} />
       </.inputs_for>
     <% end %>
@@ -2500,6 +2500,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   defp carried_var_field(%{field: %{value: value}} = assigns) when is_list(value) do
     ~H"""
     <input :for={v <- @field.value} type="hidden" name={"#{@field.name}[]"} value={v} />
+    """
+  end
+
+  # A language map (the label): one input per language, so it casts back whole.
+  defp carried_var_field(%{field: %{value: value}} = assigns) when is_map(value) and not is_struct(value) do
+    ~H"""
+    <input :for={{language, text} <- @field.value} type="hidden" name={"#{@field.name}[#{language}]"} value={text} />
     """
   end
 
