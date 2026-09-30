@@ -242,17 +242,27 @@ is applied.
 ## What a proposal can do
 
 - Create entries, as drafts.
-- Change fields of existing entries, except status, publication times and
-  block fields.
-- Insert blocks from the modules a block field allows: at the end, or before
-  or after another block.
-- Set text in text and header slots, images and videos in media slots, and
-  string, text, boolean and select variables. This works on new blocks and on
-  existing top-level blocks.
+- Change fields of existing entries, including their status where the editor
+  may set it. Publication times and block fields are not set this way.
+- Insert blocks from the modules a block field allows: as a root block, or
+  into a multi module, a container or a slot; at the end, or before or after
+  another block.
+- Move, copy and delete blocks, children included, and turn a block or one of
+  its slots on or off.
+- On new and existing blocks, at any depth:
+  - set text in text, header, markdown, html, svg and map slots;
+  - put images, videos and files in media slots, and set a gallery's whole,
+    ordered content;
+  - set variables: text, boolean, select, colour, date, image, video, and
+    links to a URL or an entry;
+  - change a slot's settings: a heading's level, a picture's alt text, title,
+    credits or link, a video's autoplay or loop, a gallery's display;
+  - replace a table's rows, and choose the entries a selection datasource
+    shows;
+  - set a block's anchor and its description.
 
-It does not delete entries or blocks, reorder blocks, edit nested blocks or
-galleries, or insert multi modules. Links from blocks to entries created in the
-same proposal are reported as problems, because the new entry is a draft.
+It does not delete entries. A link to an entry created in the same proposal is
+reported as a problem, because the new entry is a draft.
 
 ## For developers
 

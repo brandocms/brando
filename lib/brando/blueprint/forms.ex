@@ -340,11 +340,16 @@ defmodule Brando.Blueprint.Forms do
 
   #### Options
 
-      - `palette_namespace`: Show palettes from this namespace in containers
-      - `template_namespace`: Show templates from this namespace as starting
-        points when presented with a blank editor
-      - `module_set`: Show modules from this set as starting
-        points when presented with a blank editor
+      - `module_set`: Offer only the modules of this set in the module picker.
+        A site can also set it in config, per schema and field:
+        `config :brando, MyApp.Pages.Page, module_sets: [blocks: "Page"]`
+      - `hidden`: Hide the block editor, as for other inputs
+      - `label`: The field's label
+
+  `template_namespace` and `palette_namespace` are still accepted, so older
+  Blueprints compile, but they do nothing: the block editor no longer offers
+  content templates as starting points, and a container's palettes are
+  narrowed by the container's own `palette_namespace`.
 
   ### `color`: Color picker
 
