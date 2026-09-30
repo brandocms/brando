@@ -1,5 +1,18 @@
 defmodule Brando.Worker.MediaOrphanCleanup do
-  @moduledoc "Runs conservative cross-environment local media cleanup."
+  @moduledoc """
+  Runs conservative local media cleanup (`Brando.Media.OrphanCleanup`).
+
+  With tenancy, every site is cleaned, across its environments. An install
+  without tenancy is cleaned only when it asks for it:
+
+      config :brando, media_orphan_cleanup: true
+
+  Such a site can predate the cleanup and keep files of its own under the
+  media root that no image or file row knows of; those would go. Look at what
+  a run would remove first:
+
+      Brando.Media.OrphanCleanup.run(nil, dry_run: true)
+  """
 
   use Oban.Worker, queue: :upload_reaping, max_attempts: 3
 
@@ -29,12 +42,15 @@ defmodule Brando.Worker.MediaOrphanCleanup do
 
       if errors == [], do: :ok, else: {:error, errors}
     else
-      :ok
+      if Brando.config(:media_orphan_cleanup) == true, do: run_site(nil, args), else: :ok
     end
   end
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(30)
+
+  defp label(nil), do: "this site"
+  defp label(site), do: site.key
 
   defp run_site(site, args) do
     opts =
@@ -46,14 +62,14 @@ defmodule Brando.Worker.MediaOrphanCleanup do
     case OrphanCleanup.run(site, opts) do
       {:ok, report} ->
         Logger.info(
-          "==> [CRON] Media orphan cleanup for #{site.key}: " <>
+          "==> [CRON] Media orphan cleanup for #{label(site)}: " <>
             "#{length(report.deleted)} orphan(s) #{if report.dry_run, do: "found", else: "deleted"}"
         )
 
         :ok
 
       {:error, reason} ->
-        {:error, {site.key, reason}}
+        {:error, {label(site), reason}}
     end
   end
 end

@@ -437,6 +437,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   marker). An element marked `data-lp-preserve="VALUE"` is left alone while
   the value is unchanged.
 
+- **A site without tenancy can clean up its media files.** Deleting an image
+  soft-deletes the row and the purge removes it after 30 days, but the files
+  stayed on disk for good: the nightly `Brando.Worker.MediaOrphanCleanup`
+  only ran with tenancy. `config :brando, media_orphan_cleanup: true` switches
+  it on for a site without; `Brando.Media.OrphanCleanup.run(nil, dry_run: true)`
+  reports what it would remove. The cleanup now leaves dotfiles alone.
+
 - **Start from a template.** An empty block field offers the content
   templates of its namespace as cards; choosing one fills the field with
   copies of the template's blocks. The namespace is the field's

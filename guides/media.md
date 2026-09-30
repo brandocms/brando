@@ -272,6 +272,32 @@ config :brando, Brando.Images,
   sweep_priority: [MyApp.Projects.Project, MyApp.Articles.Article, Brando.Pages.Page]
 ```
 
+## What happens to a deleted image's files
+
+Deleting an image or a file is a soft delete: the row is marked and the files
+stay, so it can be restored. Thirty days later the nightly purge removes the
+row. The files are removed by a separate nightly job,
+`Brando.Worker.MediaOrphanCleanup`, which deletes what no image or file row
+references any more, soft-deleted rows included. It leaves SVGs, dotfiles,
+symlinks and anything changed in the last 24 hours alone, and only looks under
+`images`, `videos` and `files`.
+
+With [tenancy](tenancy_and_environments.md) the job always runs. A site
+without tenancy switches it on:
+
+```elixir
+config :brando, media_orphan_cleanup: true
+```
+
+It is off by default because such a site can keep files of its own under the
+media root that no row knows of, and those would go. See what a run would
+remove first:
+
+```elixir
+{:ok, report} = Brando.Media.OrphanCleanup.run(nil, dry_run: true)
+length(report.deleted)
+```
+
 ## Upload lifecycle and delivery checks
 
 The sticky UploadManager owns intake, transfer, validation, progress, and delivery

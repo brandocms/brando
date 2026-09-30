@@ -8,9 +8,15 @@ defmodule Brando.Media.OrphanCleanup do
   considers deleting anything. If any environment can't be inspected, the run
   fails without deleting files.
 
+  An install without tenancy has one schema and one media root: `run(nil)`
+  reads the image and file rows of the repo's own schema.
+
+  A soft-deleted row still references its files, so an image in the trash can
+  be restored with them. The files go once the row itself is purged.
+
   Only regular files below the managed `images`, `videos`, and `files`
-  directories are candidates. Symlinks, SVG files, and files newer than the
-  grace period are never removed. Pass `dry_run: true` to inspect the result.
+  directories are candidates. Symlinks, SVG files, dotfiles, and files newer
+  than the grace period are never removed. Pass `dry_run: true` to inspect the result.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -35,7 +41,8 @@ defmodule Brando.Media.OrphanCleanup do
         }
 
   @doc """
-  Removes files not referenced by any environment schema for `site`.
+  Removes files not referenced by any environment schema for `site`, or, with
+  `nil` for an install without tenancy, by the repo's own schema.
 
   Options:
 
@@ -44,10 +51,10 @@ defmodule Brando.Media.OrphanCleanup do
     * `:media_root` — override the site media root, primarily for operations
       tooling and tests
   """
-  @spec run(Site.t(), keyword()) :: {:ok, report()} | {:error, term()}
+  @spec run(Site.t() | nil, keyword()) :: {:ok, report()} | {:error, term()}
   def run(site, opts \\ [])
 
-  def run(%Site{} = site, opts) do
+  def run(site, opts) when is_struct(site, Site) or is_nil(site) do
     dry_run? = Keyword.get(opts, :dry_run, false)
     grace_seconds = Keyword.get(opts, :older_than_seconds, @default_grace_seconds)
     root = Keyword.get_lazy(opts, :media_root, fn -> media_root(site) end) |> Path.expand()
@@ -69,11 +76,27 @@ defmodule Brando.Media.OrphanCleanup do
   end
 
   @doc "Returns the local media root reserved for a site."
-  @spec media_root(Site.t()) :: String.t()
+  @spec media_root(Site.t() | nil) :: String.t()
+  def media_root(nil), do: Brando.config(:media_path)
+
   def media_root(%Site{} = site) do
     case Tenant.mode() do
       :multi -> Storage.media_root(site)
       _single_or_none -> Brando.config(:media_path)
+    end
+  end
+
+  # Without tenancy there are no environment schemas to union. With it, the
+  # repo's own schema says nothing about what the environments hold, so a run
+  # without a site is refused instead of trusted.
+  defp referenced_paths(nil) do
+    if Tenant.enabled?() do
+      {:error, :site_required}
+    else
+      case schema_paths(nil, nil) do
+        {:ok, paths} -> {:ok, paths}
+        {:error, reason} -> {:error, {:schema_scan_failed, reason}}
+      end
     end
   end
 
@@ -97,18 +120,21 @@ defmodule Brando.Media.OrphanCleanup do
     end
   end
 
-  defp environment_paths(site, %Environment{} = environment) do
-    prefix = Tenant.prefix(site, environment)
+  defp environment_paths(site, %Environment{} = environment),
+    do: schema_paths(Tenant.prefix(site, environment), site)
+
+  defp schema_paths(prefix, site) do
+    repo_opts = if prefix, do: [prefix: prefix], else: []
 
     try do
       image_paths =
         from(image in Image, select: {image.path, image.sizes, image.formats})
-        |> Brando.Repo.all(prefix: prefix)
+        |> Brando.Repo.all(repo_opts)
         |> Enum.flat_map(&image_paths/1)
 
       file_paths =
         from(file in MediaFile, select: {file.filename, file.config_target})
-        |> Brando.Repo.all(prefix: prefix)
+        |> Brando.Repo.all(repo_opts)
         |> Enum.map(&file_path/1)
 
       paths =
@@ -142,12 +168,12 @@ defmodule Brando.Media.OrphanCleanup do
 
   defp normalize_reference(path, site) when is_binary(path) do
     path = path |> String.trim_leading("/") |> Path.expand("/") |> Path.relative_to("/")
-    site_prefix = site.key <> "/"
 
-    if Tenant.mode() == :multi and String.starts_with?(path, site_prefix) do
-      String.replace_prefix(path, site_prefix, "")
+    with %Site{key: key} <- site,
+         true <- Tenant.mode() == :multi and String.starts_with?(path, key <> "/") do
+      String.replace_prefix(path, key <> "/", "")
     else
-      path
+      _ -> path
     end
   end
 
@@ -193,6 +219,8 @@ defmodule Brando.Media.OrphanCleanup do
 
   defp orphan_paths(candidates, root, references, grace_seconds) do
     candidates
+    # Dotfiles (`.gitkeep`, `.DS_Store`) are never media Brando wrote.
+    |> Enum.reject(&String.starts_with?(Path.basename(&1), "."))
     |> Enum.reject(&String.ends_with?(String.downcase(&1), ".svg"))
     |> Enum.filter(&old_enough?(&1, grace_seconds))
     |> Enum.reject(fn path -> MapSet.member?(references, Path.relative_to(path, root)) end)

@@ -611,8 +611,9 @@ schema before deleting a byte:
 ```
 
 Only regular files below `images`, `videos`, and `files` are candidates.
-Symlinks and SVGs are skipped. Most importantly, if even one environment schema
-cannot be inspected, the entire run fails before deleting anything. The default
+Symlinks, SVGs and dotfiles are skipped. Most importantly, if even one
+environment schema cannot be inspected, the entire run fails before deleting
+anything. The default
 Oban cron invokes `Brando.Worker.MediaOrphanCleanup` at 05:00 UTC; applications
 that replace Brando's Oban configuration must re-declare that job if desired.
 
