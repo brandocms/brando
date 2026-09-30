@@ -1444,8 +1444,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   defp select_i18n_tab(id, language) do
-    JS.remove_class("is-active", to: "##{id} > .i18n-tabs > .i18n-tab, ##{id} > .i18n-panel")
-    |> JS.set_attribute({"aria-selected", "false"}, to: "##{id} > .i18n-tabs > .i18n-tab")
+    JS.remove_class("is-active", to: "##{id} .i18n-tab, ##{id} .i18n-panel")
+    |> JS.set_attribute({"aria-selected", "false"}, to: "##{id} .i18n-tab")
     |> JS.add_class("is-active", to: "##{id}-tab-#{language}, ##{id}-panel-#{language}")
     |> JS.set_attribute({"aria-selected", "true"}, to: "##{id}-tab-#{language}")
   end
