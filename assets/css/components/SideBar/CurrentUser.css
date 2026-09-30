@@ -1,123 +1,114 @@
+/* The signed-in user: a plain row under the logo that opens to "Log out".
+   No outline; it takes the menu's hover tint, and keeps it while open. */
 .current-user {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--brando-color-dark);
-  height: 60px;
-  border-radius: 30px;
+  box-sizing: border-box;
+  height: 52px;
+  margin-inline: -10px;
+  padding: 8px 10px;
+  border-radius: 8px;
   cursor: pointer;
-  padding-top: 5px;
-  padding-bottom: 5px;
   overflow-y: hidden;
   background-color: transparent;
-  transition: background-color 250ms ease;
+  transition: background-color 200ms ease;
 
-  &:hover {
-    @color bg peachLighter;
+  &:hover,
+  &.open {
+    background-color: var(--brando-nav-hover);
+
+    .nav-chevron {
+      opacity: 0.8;
+    }
   }
 
   .button {
     display: flex;
     align-items: center;
+    gap: 12px;
     width: 100%;
     flex-shrink: 0;
     flex-grow: 0;
   }
 
-  .avatar-wrapper {
-    align-items: center;
-    display: flex;
-    margin-right: 15px;
+  .avatar {
+    flex: none;
+    width: 36px;
+    height: 36px;
 
-    .avatar {
-      margin-left: 7px;
-      width: 48px;
-      height: 48px;
+    .image-content,
+    img {
+      display: block;
+      width: 36px;
+      height: 36px;
+    }
 
-      img {
-        user-select: none;
-        border-radius: 48px;
-      }
+    img {
+      user-select: none;
+      border-radius: 50%;
+      object-fit: cover;
+    }
 
-      .img-placeholder svg {
-        margin: 11px 0 0 18px;
-      }
+    .img-placeholder svg {
+      display: block;
+      width: 36px;
+      height: 36px;
     }
   }
 
-  .content {
-    width: 100%;
+  .info {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  .name {
+    font-size: 15px;
+    font-weight: normal;
+    color: var(--brando-nav-ink);
+    user-select: none;
+  }
+
+  .role {
+    @font mono;
+    font-size: 11px;
+    letter-spacing: 0.01em;
+    color: var(--brando-nav-muted);
+    user-select: none;
+    text-transform: uppercase;
+  }
+
+  .dropdown-icon {
     display: flex;
-    line-height: 1;
-    justify-content: space-between;
-    padding-left: 15px;
-    border-left: 1px solid;
-    padding-top: 2px;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    color: var(--brando-nav-ink);
 
-    .name {
-      font-weight: normal;
-      font-size: 18px;
-      margin-bottom: 6px;
-      user-select: none;
-    }
-
-    .role {
-      @font mono;
-      font-size: 12px;
-      opacity: 0.7;
-      user-select: none;
-      text-transform: uppercase;
-    }
-
-    .dropdown-icon {
-      display: flex;
-      align-items: center;
-      margin-right: 20px;
-
-      svg {
-        path {
-          fill: var(--brando-color-dark);
-        }
-      }
+    .nav-chevron {
+      margin-bottom: 3px;
+      opacity: 0.45;
+      transform: rotate(45deg);
     }
   }
 
   .dropdown-content {
     padding-top: 8px;
 
-    ul {
-      li {
-        line-height: 1;
+    ul li a {
+      display: block;
+      /* In line with the name above: avatar + gap. */
+      padding: 6px 10px 6px 58px;
+      margin-inline: -10px;
+      font-size: 14px;
+      line-height: 20px;
+      color: var(--brando-nav-ink);
+      transition: background-color 200ms ease;
 
-        &:before {
-          content: '';
-          background-image: url("data:image/svg+xml,%3Csvg width='15' height='11' viewBox='0 0 15 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.545998 6.3L11.76 6.3L8.106 9.918L9.15 10.962L14.28 5.832L14.28 5.364L9.15 0.234001L8.106 1.278L11.742 4.878L0.545998 4.878L0.545998 6.3Z' fill='white'/%3E%3C/svg%3E%0A");
-          width: 15px;
-          height: 11px;
-          position: absolute;
-          left: 23px;
-          opacity: 0;
-          transition: all 0.5s ease;
-          top: 50%;
-          transform: translateY(-50%);
-        }
-
-        &:hover {
-          background-color: var(--brando-color-dark);
-          color: var(--brando-color-peach);
-          &:before {
-            opacity: 1;
-          }
-        }
-
-        &:last-of-type {
-          margin-bottom: 8px;
-        }
-
-        a {
-          @fontsize input;
-          display: block;
-          padding: 14px 0 14px calc(8px + 64px + 15px);
-        }
+      &:hover {
+        background-color: var(--brando-nav-hover);
       }
     }
   }

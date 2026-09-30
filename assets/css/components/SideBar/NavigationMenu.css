@@ -26,13 +26,18 @@
 }
 
 #navigation {
-  @space padding-bottom 50px;
+  /* Room for the content language row fixed to the foot of the sidebar. */
+  @space padding-bottom 56px;
   @space width var(--navigation-width);
-
   @space padding-x sm;
-  position: fixed;
-  background-color: var(--brando-color-nav-background);
 
+  position: fixed;
+  /* A barely-there green wash: strongest high up in the middle, and never
+     darker toward the content than the paper it sits on. */
+  background:
+    radial-gradient(130% 42% at 62% -10%, rgba(120, 170, 135, 0.13) 0%, rgba(150, 196, 160, 0.06) 55%, rgba(150, 196, 160, 0) 100%),
+    linear-gradient(100deg, rgba(150, 196, 160, 0) 25%, rgba(150, 196, 160, 0.06) 100%),
+    var(--brando-color-nav-background);
   flex-shrink: 0;
   flex-grow: 0;
   overflow-y: auto;
@@ -45,18 +50,20 @@
 
   nav {
     position: relative;
-
-    .nav-circle {
-      content: "";
-      position: absolute;
-      width: 15px;
-      height: 15px;
-      background-color: #bbb;
-      opacity: 0;
-      margin-top: 7px;
-      margin-left: -20px;
-      transition: opacity 300ms ease;
-      border-radius: 50%;
-    }
   }
+
+  /* The small chevron on anything that opens: menu groups, the user row. */
+  .nav-chevron {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    opacity: 0.38;
+    transition: transform 250ms ease, opacity 200ms ease;
+  }
+}
+
+.dark-mode #navigation {
+  background: var(--brando-color-nav-background);
 }

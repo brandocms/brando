@@ -213,28 +213,20 @@ defmodule BrandoAdmin.Nav do
             </details>
             <div :if={@current_user} id="current-user" class="current-user" tabindex="0" data-testid="current-user">
               <section class="button">
-                <section class="avatar-wrapper">
-                  <div class="avatar">
-                    <Content.image image={@current_user.avatar} size={:thumb} />
+                <div class="avatar">
+                  <Content.image image={@current_user.avatar} size={:thumb} />
+                </div>
+                <div class="info">
+                  <div class="name">
+                    {@current_user.name}
                   </div>
-                </section>
-                <section class="content">
-                  <div class="info">
-                    <div class="name">
-                      {@current_user.name}
-                    </div>
-                    <div class="role">
-                      {if Brando.Authorization.enabled?(),
-                        do: gettext("Account"),
-                        else: Brando.Users.User.role_label(@current_user.role)}
-                    </div>
+                  <div class="role">
+                    {if Brando.Authorization.enabled?(),
+                      do: gettext("Account"),
+                      else: Brando.Users.User.role_label(@current_user.role)}
                   </div>
-                  <div class="dropdown-icon">
-                    <svg width="13" height="10" viewBox="0 0 13 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M6.5 10L0.00480841 0.624999L12.9952 0.624998L6.5 10Z" fill="black" />
-                    </svg>
-                  </div>
-                </section>
+                </div>
+                <span class="dropdown-icon" aria-hidden="true"><span class="nav-chevron"></span></span>
               </section>
               <section class="dropdown-content">
                 <ul>
@@ -248,7 +240,6 @@ defmodule BrandoAdmin.Nav do
             </div>
 
             <nav :if={@menu_sections != []} phx-hook="Brando.Navigation" id="nav">
-              <div id="nav-circle" class="nav-circle"></div>
               <div class="nav-sections" id="nav-sections">
                 <section :for={section <- @menu_sections} class="navigation-section">
                   <header>
@@ -261,7 +252,7 @@ defmodule BrandoAdmin.Nav do
                         {item.name}
                       </.link>
                       <span :if={item[:items]} data-nav-expand data-nav-key={item.name}>
-                        {item.name} <.icon name="hero-plus-circle" />
+                        {item.name} <span class="nav-chevron" aria-hidden="true"></span>
                       </span>
                     </dt>
                     <dd :if={item[:items]}>

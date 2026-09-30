@@ -13295,3 +13295,13 @@ msgid "%{count} folder"
 msgid_plural "%{count} folders"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "Content in %{language}"
+msgstr ""
+
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "Content language"
+msgstr ""

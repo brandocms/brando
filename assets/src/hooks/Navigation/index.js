@@ -9,9 +9,38 @@ export default app => ({
     if (!$navigation) {
       return
     }
-    this.setupNavCircle()
     this.setupNavDropdowns()
     this.setupCurrentUserDropdown()
+
+    // The sidebar stays mounted while pages change under it, so which item
+    // is current is worked out here, on load and after every navigation.
+    this.refreshActive = () => this.markActive()
+    window.addEventListener('phx:page-loading-stop', this.refreshActive)
+    this.markActive()
+  },
+
+  // The link for the page we are on: the one whose path is the longest
+  // prefix of the current path ("/admin" alone would match everything). Its
+  // section is opened if it sits in a closed one.
+  markActive() {
+    const path = window.location.pathname
+    const links = Array.from(document.querySelectorAll('#nav a[href]'))
+    let current = null
+    let longest = -1
+
+    links.forEach(a => {
+      const href = new URL(a.href, window.location.origin).pathname
+      const matches = path === href || path.startsWith(href.endsWith('/') ? href : href + '/')
+      if (matches && href.length > longest) {
+        current = a
+        longest = href.length
+      }
+    })
+
+    links.forEach(a => a.classList.toggle('active', a === current))
+
+    const trigger = current?.closest('dl')?.querySelector('[data-nav-expand]')
+    if (trigger && current.closest('dd') && !trigger.classList.contains('open')) this.openDropdown(trigger)
   },
 
   setupCurrentUserDropdown() {
@@ -33,6 +62,7 @@ export default app => ({
       duration: 0.35,
       rotate: '+=180'
     })
+    this.$currentUserDropdown.classList.toggle('open', !this.currentUserDropdownOpen)
     if (this.currentUserDropdownOpen) {
       gsap.to(Array.from(lis).reverse(), { duration: 0.35, autoAlpha: 0, x: -8, stagger: 0.06 })
       gsap.to(this.$currentUserDropdown, { duration: 0.35, delay: 0.2, height: this.height })
@@ -128,32 +158,6 @@ export default app => ({
     })
   },
 
-  setupNavCircle() {
-    const circle = document.querySelector('.nav-circle')
-    const dts = document.querySelectorAll('nav dl dt')
-    dts.forEach(dt => {
-      dt.addEventListener('mouseover', () => {
-        this.moveCircle(circle, dt)
-      })
-    })
-  },
-
-  showCircle(circle) {
-    gsap.to(circle, { duration: 0.35, opacity: 0.5 })
-  },
-
-  hideCircle(circle) {
-    gsap.to(circle, { duration: 0.35, opacity: 0 })
-  },
-
-  moveCircle(circle, el) {
-    const nav = document.querySelector('#navigation nav')
-    const navTop = nav.getBoundingClientRect().top
-    this.showCircle(circle)
-    const top = el.getBoundingClientRect().top
-    gsap.to(circle, { ease: 'power2.inOut', duration: 0.5, top: top - navTop })
-  },
-
   animateNav() {
     const targets = [
       Dom.find('#navigation-content header'),
@@ -165,6 +169,7 @@ export default app => ({
   },
 
   destroyed() {
+    window.removeEventListener('phx:page-loading-stop', this.refreshActive)
     console.log('(!) Brando.Navigation destroyed')
   }
 })

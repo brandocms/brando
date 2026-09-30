@@ -1,74 +1,102 @@
+/* Which language's content is being listed and edited: a quiet row fixed to
+   the foot of the sidebar, opening a short list above it. */
 .content-language-selector {
-  background-color: var(--brando-color-peach-darker);
   @space width var(--navigation-width);
+
   position: fixed;
   bottom: 0;
   left: 0;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  overflow: hidden;
+  border-top: 1px solid var(--brando-nav-rule);
+  background-color: color-mix(in srgb, var(--brando-color-nav-background) 86%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--brando-nav-ink);
 
-  &:hover {
-    cursor: pointer;
-  }
-
-  .inner {
+  .current-language {
     @space padding-x sm;
 
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
-  }
-
-  h2 {
-    @fontsize 13px;
-    @space margin-bottom 10px;
-  }
-
-  .selected-language {
-    @space margin-top 4px;
     display: flex;
     align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding-top: 12px;
+    padding-bottom: 14px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 13px;
+    line-height: 18px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 200ms ease;
 
-    .circle {
-      font-size: 12px;
-      width: 35px;
-      height: 35px;
+    &:hover {
+      background-color: var(--brando-nav-hover);
     }
 
-    span {
-      display: block;
-      font-size: 18px;
-      margin-left: 10px;
+    .label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    strong {
       font-weight: 500;
     }
-  }
 
-  .instructions {
-    @fontsize sm;
-    margin-top: 15px;
-    padding-right: 35px;
+    > span[data-icon] {
+      flex: none;
+      width: 15px;
+      height: 15px;
+    }
+
+    > span[data-icon].toggle {
+      width: 13px;
+      height: 13px;
+      opacity: 0.55;
+    }
   }
 
   .languages {
-    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 15px;
+    border-bottom: 1px solid var(--brando-nav-rule);
 
     button {
-      width: 100%;
-      font-size: 18px;
-      text-align: center;
-      border: 1px solid;
-      padding: 15px;
-      margin-bottom: 8px;
-      border-radius: 34px;
-      font-weight: 500;
-      transition: color 250ms ease, background-color 250ms ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      color: var(--brando-nav-muted);
+      font-size: 14px;
+      line-height: 20px;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 200ms ease, color 200ms ease;
 
       &:hover {
-        background-color: var(--brando-color-dark);
-        color: var(--brando-color-peach);
+        background-color: var(--brando-nav-hover);
+        color: var(--brando-nav-ink);
+      }
+
+      &.current {
+        color: var(--brando-nav-ink);
+        font-weight: 500;
+      }
+
+      span[data-icon] {
+        width: 14px;
+        height: 14px;
       }
     }
   }
+}
+
+/* The row belongs to the sidebar, and goes when it is hidden. */
+body.sidebar-hidden .content-language-selector {
+  display: none;
 }

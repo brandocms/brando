@@ -469,7 +469,16 @@ body {
   --brando-color-black: theme(colors.black);
   --brando-color-foreground: theme(colors.dark);
   --brando-color-shaded: #fcfcfd;
-  --brando-color-nav-background: #fef9f7;
+  --brando-color-nav-background: #fafbf9;
+  /* The sidebar's own inks: dark green text, a muted green for secondary
+     text, a hairline, the hover tint and the surface of the current page. */
+  --brando-nav-ink: #16261c;
+  --brando-nav-accent: #1f3d2b;
+  --brando-nav-muted: rgba(22, 38, 28, 0.62);
+  --brando-nav-rule: rgba(22, 38, 28, 0.13);
+  --brando-nav-hover: rgba(22, 38, 28, 0.045);
+  --brando-nav-surface: #ffffff;
+  --brando-nav-surface-shadow: 0 1px 2px rgba(22, 38, 28, 0.08), 0 0 0 1px rgba(22, 38, 28, 0.05);
   --brando-color-dark: theme(colors.dark);
   --brando-color-peach: theme(colors.peach);
   --brando-color-peach-darker: theme(colors.peachDarker);
@@ -507,6 +516,13 @@ body {
     --brando-color-black: theme(colors.white);
     --brando-color-shaded: #031122;
     --brando-color-nav-background: #031122;
+    --brando-nav-ink: #f4f5fb;
+    --brando-nav-accent: #f4f5fb;
+    --brando-nav-muted: rgba(244, 245, 251, 0.66);
+    --brando-nav-rule: rgba(244, 245, 251, 0.2);
+    --brando-nav-hover: rgba(255, 255, 255, 0.08);
+    --brando-nav-surface: rgba(255, 255, 255, 0.14);
+    --brando-nav-surface-shadow: none;
     --brando-color-dark: theme(colors.peach);
     --brando-color-peach: theme(colors.dark);
     --brando-color-peach-darker: #072850;

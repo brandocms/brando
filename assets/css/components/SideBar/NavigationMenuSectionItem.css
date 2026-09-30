@@ -1,108 +1,91 @@
 #navigation {
   dl {
-    @space padding-x sm;
-    @space margin-x calc(var[sm] * -1);
-    transition: background-color 350ms ease;
+    /* Rows are inset by their own padding, so a hover or the current page's
+       surface reaches a little past the text on both sides. */
+    margin-inline: -10px;
 
     &:empty {
       display: none;
     }
 
     dt {
-      @fontsize nav.mainItem;
-      color: var(--brando-color-dark);
+      font-size: 19px;
+      line-height: 24px;
+      color: var(--brando-nav-ink);
       cursor: pointer;
       user-select: none;
       font-weight: 400;
 
+      a,
       [data-nav-expand] {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-weight: 400;
+        transition: background-color 200ms ease;
 
-        &.open {
-          > span {
-            transform: rotate(45deg);
-          }
-        }
-
-        > span {
-          transform: rotate(0deg);
-          margin-left: 8px;
-          transition: transform 500ms ease;
+        &:hover {
+          background-color: var(--brando-nav-hover);
         }
       }
 
-      a {
-        font-weight: 400;
-        display: block;
+      a.active {
+        background-color: var(--brando-nav-surface);
+        box-shadow: var(--brando-nav-surface-shadow);
+      }
 
-        &:before {
-          content: "";
-          position: absolute;
-          width: 15px;
-          height: 15px;
-          background-color: var(--brando-color-blue);
-          opacity: 0;
-          margin-top: 7px;
-          margin-left: -20px;
-          transition: opacity 300ms ease;
-          border-radius: 50%;
+      /* Closed points right, open points down. */
+      [data-nav-expand] {
+        .nav-chevron {
+          margin-right: 4px;
+          transform: rotate(-45deg);
         }
 
-        &.active {
-          font-weight: 400;
-          &:before {
-            opacity: 1;
-          }
+        &:hover .nav-chevron {
+          opacity: 0.8;
+        }
+
+        &.open .nav-chevron {
+          transform: rotate(45deg);
+          opacity: 0.7;
         }
       }
     }
 
+    /* Sub-items start at the main items' left edge, each led by a dash. */
     dd {
-      @fontsize nav.mainItem;
       display: none;
-      margin-left: 20px;
-      color: var(--brando-color-dark);
+      padding: 2px 0 6px;
 
-      ul {
-        li {
-          a {
-            @fontsize 16px;
-            line-height: 30px;
-            display: block;
-            font-weight: 400;
-            position: relative;
+      ul li a {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 400;
+        color: var(--brando-nav-muted);
+        transition: background-color 200ms ease, color 200ms ease;
 
-            &.active {
-              font-weight: 400;
-            }
+        &:before {
+          content: "\2014";
+          opacity: 0.45;
+        }
 
-            &:before {
-              content: "";
-              background-image: url("data:image/svg+xml,%3Csvg width='13' height='9' viewBox='0 0 15 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.545998 6.3L11.76 6.3L8.106 9.918L9.15 10.962L14.28 5.832L14.28 5.364L9.15 0.234001L8.106 1.278L11.742 4.878L0.545998 4.878L0.545998 6.3Z' fill='%23052752'/%3E%3C/svg%3E%0A");
-              width: 13px;
-              letter-spacing: 0.05rem;
-              height: 9px;
-              position: absolute;
-              left: -20px;
-              opacity: 0;
-              transition: all 300ms ease;
-              margin-top: 10px;
-            }
+        &:hover {
+          color: var(--brando-nav-ink);
+          background-color: var(--brando-nav-hover);
+        }
 
-            &.active {
-              &:before {
-                opacity: 1;
-              }
-            }
-
-            &:hover {
-              &:before {
-                opacity: 1;
-              }
-            }
-          }
+        &.active {
+          color: var(--brando-nav-ink);
+          background-color: var(--brando-nav-surface);
+          box-shadow: var(--brando-nav-surface-shadow);
+          font-weight: 500;
         }
       }
     }

@@ -13300,3 +13300,13 @@ msgid "%{count} folder"
 msgid_plural "%{count} folders"
 msgstr[0] "%{count} mappe"
 msgstr[1] "%{count} mapper"
+
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "Content in %{language}"
+msgstr "Innhold på %{language}"
+
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "Content language"
+msgstr "Innholdsspråk"
