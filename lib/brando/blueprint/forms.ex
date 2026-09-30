@@ -346,10 +346,14 @@ defmodule Brando.Blueprint.Forms do
       - `hidden`: Hide the block editor, as for other inputs
       - `label`: The field's label
 
-  `template_namespace` and `palette_namespace` are still accepted, so older
-  Blueprints compile, but they do nothing: the block editor no longer offers
-  content templates as starting points, and a container's palettes are
-  narrowed by the container's own `palette_namespace`.
+      - `template_namespace`: An empty editor offers the content templates of
+        this namespace to start from. Without it, the namespace named after
+        the schema is used: `cases` (or `case`) for `MyApp.Cases.Case`. See
+        `Brando.Content.StartingTemplates`.
+
+  `palette_namespace` is still accepted, so older Blueprints compile, but it
+  does nothing: a container's palettes are narrowed by the container's own
+  `palette_namespace`.
 
   ### `color`: Color picker
 

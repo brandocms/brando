@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> assign_sitemap()
        |> set_admin_locale()
        |> assign_info()
+       |> assign(:loose_blocks, Brando.Content.BlockAudit.count_loose())
        |> assign_authorization_tools(params)}
     else
       {:ok, assign(socket, :socket_connected, false)}
@@ -114,6 +115,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               class="utils-button"
             >
               {gettext("Review loose blocks")}
+              <span :if={@loose_blocks > 0} class="utils-button-count">{@loose_blocks}</span>
             </.link>
           </article>
           <article>

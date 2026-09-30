@@ -48,6 +48,7 @@ defmodule Brando.Content.BlockAudit do
           held_by: [map()],
           source: String.t(),
           module: String.t() | nil,
+          module_svg: String.t() | nil,
           description: String.t() | nil,
           excerpt: String.t() | nil,
           image_ids: [integer()],
@@ -85,36 +86,14 @@ defmodule Brando.Content.BlockAudit do
   @spec scan() :: map()
   def scan do
     links = link_tables()
-    linked = linked_block_ids(links)
-
-    blocks =
-      Repo.all(
-        from b in "content_blocks",
-          select: %{
-            id: b.id,
-            parent_id: b.parent_id,
-            uid: b.uid,
-            source: b.source,
-            module_id: b.module_id,
-            description: b.description,
-            inserted_at: b.inserted_at
-          }
-      )
-
-    children = Enum.group_by(blocks, & &1.parent_id)
-
-    loose =
-      for root <- Map.get(children, nil, []),
-          ids = tree_ids(root.id, children),
-          not Enum.any?(ids, &MapSet.member?(linked, &1)),
-          do: {root, ids}
+    {blocks, loose} = loose_trees(links)
 
     {held, undecodable} = Revisions.held_block_ids()
     drafts = draft_texts()
     by_id = Map.new(blocks, &{&1.id, &1})
     loose_ids = Enum.flat_map(loose, &elem(&1, 1))
     evidence = evidence(loose_ids)
-    modules = module_names(Enum.map(loose, fn {root, _} -> root.module_id end))
+    modules = modules(Enum.map(loose, fn {root, _} -> root.module_id end))
 
     trees =
       loose
@@ -138,7 +117,8 @@ defmodule Brando.Content.BlockAudit do
           status: status,
           held_by: held_by,
           source: source_label(root.source),
-          module: Map.get(modules, root.module_id),
+          module: get_in(modules, [root.module_id, :name]),
+          module_svg: get_in(modules, [root.module_id, :svg]),
           description: root.description,
           excerpt: ids |> Enum.find_value(&Map.get(evidence.excerpts, &1)),
           image_ids: ids |> Enum.flat_map(&Map.get(evidence.images, &1, [])) |> Enum.uniq(),
@@ -163,6 +143,46 @@ defmodule Brando.Content.BlockAudit do
         drafts: length(drafts)
       }
     }
+  end
+
+  @doc """
+  How many loose trees there are. Only the links are checked, not what holds
+  them, so this is cheap enough to show beside a link to the audit.
+  """
+  @spec count_loose() :: non_neg_integer()
+  def count_loose do
+    {_blocks, loose} = loose_trees(link_tables())
+    length(loose)
+  end
+
+  # Every block, and the trees no linking table names a block of, as
+  # `{root, ids}`.
+  defp loose_trees(links) do
+    linked = linked_block_ids(links)
+
+    blocks =
+      Repo.all(
+        from b in "content_blocks",
+          select: %{
+            id: b.id,
+            parent_id: b.parent_id,
+            uid: b.uid,
+            source: b.source,
+            module_id: b.module_id,
+            description: b.description,
+            inserted_at: b.inserted_at
+          }
+      )
+
+    children = Enum.group_by(blocks, & &1.parent_id)
+
+    loose =
+      for root <- Map.get(children, nil, []),
+          ids = tree_ids(root.id, children),
+          not Enum.any?(ids, &MapSet.member?(linked, &1)),
+          do: {root, ids}
+
+    {blocks, loose}
   end
 
   @doc """
@@ -348,12 +368,13 @@ defmodule Brando.Content.BlockAudit do
 
   defp excerpt(_), do: nil
 
-  defp module_names(module_ids) do
+  # %{module_id => %{name:, svg:}}: the name and the sketch (base64) of each module.
+  defp modules(module_ids) do
     ids = module_ids |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
     Map.new(
-      Repo.all(from m in Brando.Content.Module, where: m.id in ^ids, select: {m.id, m.name}),
-      fn {id, name} -> {id, I18nString.localized(name)} end
+      Repo.all(from m in Brando.Content.Module, where: m.id in ^ids, select: {m.id, m.name, m.svg}),
+      fn {id, name, svg} -> {id, %{name: I18nString.localized(name), svg: svg}} end
     )
   end
 

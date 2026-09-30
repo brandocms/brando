@@ -13491,3 +13491,14 @@ msgid "%{count} was left: it is in use again."
 msgid_plural "%{count} were left: they are in use again."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Start from a template"
+msgstr ""
+
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Or click the plus to start with an empty page."
+msgstr ""

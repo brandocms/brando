@@ -37,6 +37,7 @@
   .utils-button.primary { color: #fff; background: var(--utils-green); border-color: var(--utils-green); }
   .utils-button.primary:hover:not(:disabled) { background: #163c2e; }
   .utils-button.quiet { border-color: transparent; background: transparent; }
+  .utils-button-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; padding: 0 6px; border-radius: 10px; background: #fff1d6; color: #755929; font-size: 11px; line-height: 18px; font-variant-numeric: tabular-nums; }
   /* Global paragraph resets remove bottom margins; actions own their spacing. */
   .utils-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 16px; }
   .utils-migration-steps .utils-actions { margin-top: auto; }
@@ -201,9 +202,10 @@
     margin-bottom: 28px; padding: 18px 22px; border: 1px solid var(--utils-line); border-radius: 8px; background: #f7f9f5;
     h2 { font-size: 13px; margin-bottom: 10px; }
     ul { list-style: none; display: grid; gap: 8px; }
-    li { color: var(--utils-muted); font-size: 12px; line-height: 1.7; }
-    li strong { display: inline-block; min-width: 172px; color: var(--utils-ink); font-weight: 500; }
-    code { display: inline-block; margin: 0 4px 0 0; padding: 1px 6px; border: 1px solid var(--utils-line); border-radius: 4px; background: #fff; }
+    li { display: grid; grid-template-columns: 172px minmax(0, 1fr); color: var(--utils-muted); font-size: 12px; line-height: 1.7; }
+    li strong { color: var(--utils-ink); font-weight: 500; }
+    .block-audit-tables { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    code { padding: 1px 6px; border: 1px solid var(--utils-line); border-radius: 4px; background: #fff; }
   }
   .block-audit-warning { display: block; margin-top: 4px; color: #8c4232; }
   .block-audit-empty { padding: 28px; border: 1px dashed var(--utils-line); border-radius: 8px; color: var(--utils-muted); text-align: center; }
@@ -234,6 +236,8 @@
     picture { display: block; width: 40px; }
     /* Fixed width, natural height: never a cropped square. */
     img { display: block; width: 40px; height: auto; border-radius: 3px; background: #f1f4f1; }
+    /* The admin's base `img` rule sets `min-width: 100%`. */
+    img.block-audit-sketch { width: 48px; min-width: 0; border: 1px solid var(--utils-line); background: #fff; opacity: .75; }
   }
   .block-audit-what {
     display: flex; flex-direction: column; min-width: 0; line-height: 1.4;

@@ -422,6 +422,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Start from a template.** An empty block field offers the content
+  templates of its namespace as cards; choosing one fills the field with
+  copies of the template's blocks. The namespace is the field's
+  `template_namespace` option, which had stopped doing anything, or else the
+  one named after the schema (`cases` for `MyApp.Cases.Case`). See
+  `Brando.Content.StartingTemplates`.
+
 - **Utilities → Loose blocks.** Removing a block from an entry keeps the
   block, so an older revision can be restored with it; nothing removed them
   once no revision held them, and a site collected unreachable blocks whose

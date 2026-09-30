@@ -1765,6 +1765,21 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign_new(:block_map, fn -> build_block_map(socket) end)
     |> assign_new(:block_changesets, fn -> Map.new(blocks, &{&1.name, nil}) end)
+    |> assign_new(:starting_templates, fn -> starting_templates(socket) end)
+  end
+
+  # The templates each block field offers to start from, by field name (see
+  # `Brando.Content.StartingTemplates`). Looked up once, here, and only for a
+  # field that starts out empty: a field with blocks never shows them. The
+  # block fields themselves mount later and stay free of queries.
+  defp starting_templates(%{assigns: %{has_blocks?: false}}), do: %{}
+
+  defp starting_templates(%{assigns: %{schema: schema, form_blueprint: form_blueprint, entry: entry}}) do
+    for %{name: name, opts: opts} <- form_blueprint.blocks,
+        Map.get(entry, :"entry_#{name}") in [nil, []],
+        into: %{} do
+      {name, Brando.Content.StartingTemplates.list(schema, opts[:template_namespace])}
+    end
   end
 
   defp assign_block_map(socket) do
@@ -2794,6 +2809,7 @@ defmodule BrandoAdmin.Components.Form do
             id={"#{@id}-blocks-#{block_field}"}
             entry={@entry_for_blocks}
             entry_blocks={entry_blocks}
+            templates={Map.get(@starting_templates, block_field, [])}
             current_user={@current_user}
             form_id={@id}
             source_locked={Translation.locked?(@translation)}

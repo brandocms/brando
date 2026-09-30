@@ -215,6 +215,96 @@ section.alert.danger {
   @space margin-y 25px;
 }
 
+/* An empty block field that has templates: a welcome offering them as
+   starting points, each shown as a small outline of the modules it holds. */
+.blocks-welcome {
+  @space margin-y 25px;
+  padding: 28px 28px 24px;
+  border: 1px dashed #d5ddd5;
+  border-radius: 12px;
+  background: #fbfcfa;
+  text-align: center;
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .blocks-welcome-templates {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    margin: 20px 0 18px;
+  }
+
+  .blocks-welcome-template {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 196px;
+    padding: 16px 16px 14px;
+    border: 1px solid #dce2dc;
+    border-radius: 10px;
+    background: #fff;
+    color: inherit;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+
+    &:hover {
+      border-color: #9db3a2;
+      box-shadow: 0 4px 14px rgba(22, 38, 28, 0.08);
+      transform: translateY(-1px);
+    }
+
+    strong {
+      margin-top: 10px;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .blocks-welcome-instructions {
+      color: #626b66;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    small {
+      margin-top: 2px;
+      color: #8a938d;
+      font-size: 11px;
+    }
+  }
+
+  /* One plain bar per block: a stack, not a picture of the content. */
+  .blocks-welcome-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 56px;
+
+    span {
+      display: block;
+      height: 7px;
+      border-radius: 2px;
+      background: #d9e0d9;
+    }
+
+    span:first-child {
+      background: #b9c6bb;
+    }
+  }
+
+  .blocks-welcome-or {
+    color: #8a938d;
+    font-size: 13px;
+  }
+}
+
 .block-bin-toast {
   position: sticky;
   bottom: 15px;

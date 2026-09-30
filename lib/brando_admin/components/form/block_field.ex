@@ -863,6 +863,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> initialize_blocks(assigns)
     |> maybe_arm_blocks_topic()
     |> assign_module_set()
+    |> assign_new(:templates, fn -> [] end)
     |> then(&{:ok, &1})
   end
 
@@ -1375,7 +1376,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # reposition a main block
-  @locked_client_events ~w(reposition paste_block_at_end restore_block outline_root_reposition outline_reposition)
+  @locked_client_events ~w(reposition paste_block_at_end restore_block outline_root_reposition outline_reposition start_from_template)
 
   def handle_event(event, _params, %{assigns: %{source_locked: true}} = socket) when event in @locked_client_events,
     do: {:noreply, refuse_structure(socket, event)}
@@ -1400,6 +1401,28 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> refresh_live_preview()
     |> then(&{:noreply, &1})
+  end
+
+  # "Start from a template", offered while the field is empty: each of the
+  # template's root blocks goes in as a copy, as pasting it would. Only a
+  # template this field offers, and only into an empty field, so a stale
+  # click can't pour a second set of blocks into a page being written.
+  def handle_event("start_from_template", %{"id" => id}, socket) do
+    with true <- socket.assigns.block_ops.order == [],
+         {template_id, ""} <- Integer.parse(to_string(id)),
+         true <- Enum.any?(socket.assigns.templates, &(&1.id == template_id)) do
+      socket =
+        template_id
+        |> Brando.Content.StartingTemplates.blocks()
+        |> Enum.with_index()
+        |> Enum.reduce(socket, fn {block, sequence}, acc ->
+          insert_pasted_root_block(acc, %{changeset: Changeset.change(block)}, sequence)
+        end)
+
+      {:noreply, socket}
+    else
+      _ -> {:noreply, socket}
+    end
   end
 
   def handle_event("paste_block_at_end", _, socket) do
@@ -1963,7 +1986,34 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           hide_sections={false}
         />
         <%= if @root_order == [] && !@note_collection? do %>
-          <div class="blocks-empty-instructions">
+          <div :if={@templates != []} class="blocks-welcome" data-testid="blocks-welcome">
+            <h3>{gettext("Start from a template")}</h3>
+            <div class="blocks-welcome-templates">
+              <button
+                :for={template <- @templates}
+                type="button"
+                class="blocks-welcome-template"
+                phx-click="start_from_template"
+                phx-value-id={template.id}
+                phx-target={@myself}
+                data-testid="start-from-template"
+                title={Enum.map_join(template.modules, " · ", &(Brando.Type.I18nString.localized(&1.name) || "–"))}
+              >
+                <span class="blocks-welcome-stack" aria-hidden="true">
+                  <span :for={_block <- Enum.take(template.modules, 5)}></span>
+                </span>
+                <strong>{template.name}</strong>
+                <span :if={template.instructions not in [nil, ""]} class="blocks-welcome-instructions">
+                  {template.instructions}
+                </span>
+                <small>
+                  {ngettext("%{count} block", "%{count} blocks", template.block_count, count: template.block_count)}
+                </small>
+              </button>
+            </div>
+            <p class="blocks-welcome-or">{gettext("Or click the plus to start with an empty page.")}</p>
+          </div>
+          <div :if={@templates == []} class="blocks-empty-instructions">
             {gettext("Click the plus to start adding content blocks")}
           </div>
         <% end %>

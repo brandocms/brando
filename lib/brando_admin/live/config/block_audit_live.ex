@@ -37,6 +37,12 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
     {:noreply, socket |> assign(:params, params) |> assign(:uri, URI.parse(url))}
   end
 
+  # The tree's first images that still exist; a tree without any shows its
+  # module's sketch instead.
+  defp thumbs(tree, images) do
+    for id <- Enum.take(tree.image_ids, @thumbs), image = images[id], do: image
+  end
+
   defp assign_audit(socket) do
     scan = BlockAudit.scan()
     image_ids = scan.trees |> Enum.flat_map(&Enum.take(&1.image_ids, @thumbs)) |> Enum.uniq()
@@ -181,34 +187,42 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
         <ul>
           <li>
             <strong>{gettext("Links")}</strong>
-            {gettext("No row in any table that points at blocks names a block of the tree:")}
-            <code :for={table <- @scan.checked.link_tables}>{table}</code>
+            <div>
+              {gettext("No row in any table that points at blocks names a block of the tree:")}
+              <span class="block-audit-tables">
+                <code :for={table <- @scan.checked.link_tables}>{table}</code>
+              </span>
+            </div>
           </li>
           <li>
             <strong>{gettext("Versions")}</strong>
-            {ngettext(
-              "%{count} stored version was read; none of them may hold a block of the tree.",
-              "%{count} stored versions were read; none of them may hold a block of the tree.",
-              @scan.checked.revisions,
-              count: @scan.checked.revisions
-            )}
-            <span :if={@scan.checked.undecodable_revisions > 0} class="block-audit-warning">
+            <div>
               {ngettext(
-                "%{count} version could not be read, so nothing can be removed.",
-                "%{count} versions could not be read, so nothing can be removed.",
-                @scan.checked.undecodable_revisions,
-                count: @scan.checked.undecodable_revisions
+                "%{count} stored version was read; none of them may hold a block of the tree.",
+                "%{count} stored versions were read; none of them may hold a block of the tree.",
+                @scan.checked.revisions,
+                count: @scan.checked.revisions
               )}
-            </span>
+              <span :if={@scan.checked.undecodable_revisions > 0} class="block-audit-warning">
+                {ngettext(
+                  "%{count} version could not be read, so nothing can be removed.",
+                  "%{count} versions could not be read, so nothing can be removed.",
+                  @scan.checked.undecodable_revisions,
+                  count: @scan.checked.undecodable_revisions
+                )}
+              </span>
+            </div>
           </li>
           <li>
             <strong>{gettext("Recovery copies")}</strong>
-            {ngettext(
-              "%{count} recovery copy was searched for the tree's blocks.",
-              "%{count} recovery copies were searched for the tree's blocks.",
-              @scan.checked.drafts,
-              count: @scan.checked.drafts
-            )}
+            <div>
+              {ngettext(
+                "%{count} recovery copy was searched for the tree's blocks.",
+                "%{count} recovery copies were searched for the tree's blocks.",
+                @scan.checked.drafts,
+                count: @scan.checked.drafts
+              )}
+            </div>
           </li>
         </ul>
       </section>
@@ -263,11 +277,12 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
                 />
               </label>
               <div class="block-audit-thumbs">
-                <Content.image
-                  :for={id <- Enum.take(tree.image_ids, 3)}
-                  :if={@images[id]}
-                  image={@images[id]}
-                  size={:smallest}
+                <Content.image :for={image <- thumbs(tree, @images)} image={image} size={:smallest} />
+                <img
+                  :if={thumbs(tree, @images) == [] && tree.module_svg}
+                  class="block-audit-sketch"
+                  src={"data:image/svg+xml;base64,#{tree.module_svg}"}
+                  alt=""
                 />
               </div>
               <div class="block-audit-what">

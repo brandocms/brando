@@ -3732,8 +3732,6 @@ msgstr "I bruk nå"
 #, elixir-autogen, elixir-format
 msgid "Florist registers each build here. Activating one takes effect immediately and does not deploy the application."
 msgstr "Florist registrerer hvert bygg her. Å aktivere et bygg virker umiddelbart og deployer ikke applikasjonen."
-"Florist registrerer hvert bygg her. Aktivering trer i kraft umiddelbart og "
-"deployer ikke applikasjonen."
 
 #: lib/brando_admin/live/config/asset_live.ex:43
 #: lib/brando_admin/live/users/groups_live.ex:1070
@@ -13496,3 +13494,14 @@ msgid "%{count} was left: it is in use again."
 msgid_plural "%{count} were left: they are in use again."
 msgstr[0] "%{count} ble stående: den er i bruk igjen."
 msgstr[1] "%{count} ble stående: de er i bruk igjen."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Start from a template"
+msgstr "Start fra en mal"
+
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Or click the plus to start with an empty page."
+msgstr "Eller klikk på plusstegnet for å begynne med en tom side."
