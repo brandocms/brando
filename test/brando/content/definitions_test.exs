@@ -434,6 +434,20 @@ defmodule Brando.Content.DefinitionsTest do
     assert File.read!(Path.join(c.path, "hero.exs")) == File.read!("test/fixtures/definitions/hero.exs.txt")
   end
 
+  test "an import keeps the file list an export wrote to the lock", c do
+    assert {:ok, plan} = Definitions.plan(c.bundle, c.user)
+    assert {:ok, _} = Definitions.apply(plan, c.user)
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+
+    lock_path = Path.join(exported.directory, "modules.lock.json")
+    assert %{"files" => [_ | _] = files} = lock_path |> File.read!() |> Jason.decode!()
+
+    import_args = ["import", "--from", exported.directory, "--user", to_string(c.user.id)]
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+
+    assert %{"files" => ^files, "baseline" => %{}} = lock_path |> File.read!() |> Jason.decode!()
+  end
+
   test "the CLI dry run preserves files and imports advance the baseline for the next edit", c do
     import_args = ["import", "--from", c.path, "--user", to_string(c.user.id)]
     source = File.read!(Path.join(c.path, "hero.exs"))

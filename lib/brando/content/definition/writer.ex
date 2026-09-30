@@ -12,7 +12,7 @@ defmodule Brando.Content.Definition.Writer do
       _ -> Error.raise!(path, "expected a regular lockfile")
     end
 
-    lock = Map.take(bundle, ~w(format_version source baseline references))
+    lock = bundle |> Map.take(~w(format_version source baseline references)) |> Map.merge(listed_files(path))
     temporary = path <> ".tmp-" <> Base.encode16(:crypto.strong_rand_bytes(6), case: :lower)
 
     try do
@@ -23,6 +23,17 @@ defmodule Brando.Content.Definition.Writer do
     end
 
     :ok
+  end
+
+  # An export lists its files in the lock. Moving the baseline forward (an
+  # import, the dev watcher) changes no file, so the list stays as it is.
+  defp listed_files(path) do
+    with {:ok, body} <- File.read(path),
+         {:ok, %{"files" => files}} when is_list(files) <- Jason.decode(body) do
+      %{"files" => files}
+    else
+      _ -> %{}
+    end
   end
 
   def files(bundle) do
