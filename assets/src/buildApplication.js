@@ -10,6 +10,7 @@ import brandoHooks from './hooks'
 import initializeLiveSocket from './initializeLiveSocket'
 import installUICommands from './uiCommands'
 import installFloatingDropdowns from './floatingDropdowns'
+import installConfirm from './confirm'
 import configureFader from './config/FADER'
 import { alertError } from './alerts'
 
@@ -74,6 +75,8 @@ export default (hooks, enableDebug = false) => {
   })
 
   app.registerCallback(Events.APPLICATION_READY, () => {
+    // Before LiveView binds its clicks: a `data-confirm` click waits for an answer.
+    installConfirm()
     app.liveSocket = initializeLiveSocket({ ...hooks, ...brandoHooks(app) })
     if (enableDebug) {
       app.liveSocket.enableDebug()

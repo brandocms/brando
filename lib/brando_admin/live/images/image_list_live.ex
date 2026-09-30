@@ -370,6 +370,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
                 type="button"
                 class="folder-action is-destructive"
                 phx-click="delete_unused"
+                data-confirm-destructive
                 data-confirm={
                   ngettext(
                     "Delete %{count} unused image?",
