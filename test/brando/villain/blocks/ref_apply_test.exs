@@ -282,6 +282,56 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
     end
   end
 
+  describe "FileBlock apply_ref" do
+    defp file_target do
+      Changeset.change(%Content.Ref{
+        name: "media",
+        data: %Brando.Villain.Blocks.FileBlock{
+          type: "file",
+          data: %Brando.Villain.Blocks.FileBlock.Data{class: "old", download: true}
+        }
+      })
+    end
+
+    test "a media slot's file template is merged into a file ref" do
+      media_ref_src = %Content.Ref{
+        name: "media",
+        data: %Brando.Villain.Blocks.MediaBlock{
+          type: "media",
+          data: %Brando.Villain.Blocks.MediaBlock.Data{
+            template_file: %Brando.Villain.Blocks.FileBlock.Data{class: "animation", download: false}
+          }
+        }
+      }
+
+      result =
+        Brando.Villain.Blocks.FileBlock.apply_ref(Brando.Villain.Blocks.MediaBlock, media_ref_src, file_target())
+
+      updated_ref = Changeset.apply_changes(result)
+      assert updated_ref.data.data.class == "animation"
+      assert updated_ref.data.data.download == false
+    end
+
+    test "a media slot without a file template leaves the file ref as it is" do
+      media_ref_src = %Content.Ref{
+        name: "media",
+        data: %Brando.Villain.Blocks.MediaBlock{type: "media", data: %Brando.Villain.Blocks.MediaBlock.Data{}}
+      }
+
+      result =
+        Brando.Villain.Blocks.FileBlock.apply_ref(Brando.Villain.Blocks.MediaBlock, media_ref_src, file_target())
+
+      assert Changeset.apply_changes(result).data.data.class == "old"
+    end
+
+    test "a media module ref still drives a file block ref" do
+      assert Brando.Villain.Blocks.ref_types_compatible?(
+               Brando.Villain.Blocks.MediaBlock,
+               Brando.Villain.Blocks.FileBlock
+             )
+    end
+  end
+
   describe "TextBlock apply_ref" do
     test "applies text ref without protection" do
       ref_src = %Content.Ref{

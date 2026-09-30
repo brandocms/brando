@@ -88,8 +88,8 @@ defmodule Brando.Drafts.Modules do
   end
 
   defp compatible_type?(type, type), do: true
-  defp compatible_type?(type, "media"), do: type in ["picture", "video", "gallery", "svg"]
-  defp compatible_type?("media", type), do: type in ["picture", "video", "gallery", "svg"]
+  defp compatible_type?(type, "media"), do: type in ["picture", "video", "gallery", "svg", "file"]
+  defp compatible_type?("media", type), do: type in ["picture", "video", "gallery", "svg", "file"]
   defp compatible_type?(_, _), do: false
 
   defp add_defaults(block, nil), do: block

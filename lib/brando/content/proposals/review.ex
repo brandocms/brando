@@ -390,7 +390,11 @@ defmodule Brando.Content.Proposals.Review do
     data =
       case Enum.find(List.wrap(module.refs), &(&1.name == ref)) do
         %{data: %{type: "media", data: data}} ->
-          if match?({:video, _}, asset), do: data.template_video, else: data.template_picture
+          case asset do
+            {:video, _} -> data.template_video
+            {:file, _} -> data.template_file
+            _ -> data.template_picture
+          end
 
         %{data: %{data: data}} ->
           data

@@ -21,8 +21,11 @@ defmodule Brando.Villain.Block do
   e.g. PictureBlock reads from `ref_src.data.data.template_picture`.
   """
   def merge_ref_template(template_field, ref_src, ref_target_changeset, protected_attrs) do
-    tpl_src = Map.get(ref_src.data.data, template_field)
-    merge_data(tpl_src, ref_target_changeset, protected_attrs)
+    # A media slot has no template for a type nobody configured: nothing to merge.
+    case Map.get(ref_src.data.data, template_field) do
+      nil -> ref_target_changeset
+      tpl_src -> merge_data(tpl_src, ref_target_changeset, protected_attrs)
+    end
   end
 
   defp merge_data(source_data, ref_target_changeset, protected_attrs) do

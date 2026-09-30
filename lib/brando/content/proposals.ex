@@ -69,7 +69,7 @@ defmodule Brando.Content.Proposals do
 
   @protected_fields ~w(id status publish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
   @text_vars [:string, :text, :html]
-  @media_kinds %{image: "picture", video: "video", gallery: "gallery"}
+  @media_kinds %{image: "picture", video: "video", gallery: "gallery", file: "file"}
 
   ## Prepare
 
@@ -1004,7 +1004,7 @@ defmodule Brando.Content.Proposals do
   @doc """
   The media kinds a module ref accepts: a picture ref takes an image, a video
   ref a video, a file ref a file, a gallery ref a gallery, and a media slot
-  whichever of picture, video and gallery it makes available.
+  whichever of picture, video, gallery and file it makes available.
   """
   @spec accepts(Brando.Content.Ref.t()) :: [:image | :video | :file | :gallery]
   def accepts(%{data: %{type: "picture"}}), do: [:image]
@@ -1616,11 +1616,9 @@ defmodule Brando.Content.Proposals do
 
   defp update_refs(block, fun), do: Changeset.put_assoc(block, :refs, Enum.map(Changeset.get_assoc(block, :refs), fun))
 
-  defp put_media(ref, {:file, id}, _module, _user), do: Changeset.put_change(ref, :file_id, id)
-
   # A media slot is retyped from its module definition's template, as the
-  # editor's media block does when an editor picks a picture, a video or a
-  # gallery.
+  # editor's media block does when an editor picks a picture, a video, a
+  # gallery or a file.
   defp put_media(ref, {kind, value}, module, user) do
     type = Map.fetch!(@media_kinds, kind)
     name = Changeset.get_field(ref, :name)
@@ -1636,6 +1634,7 @@ defmodule Brando.Content.Proposals do
         |> Changeset.put_change(:image_id, nil)
         |> Changeset.put_change(:video_id, nil)
         |> Changeset.put_change(:gallery_id, nil)
+        |> Changeset.put_change(:file_id, nil)
       end
 
     if kind == :gallery,
@@ -1691,6 +1690,12 @@ defmodule Brando.Content.Proposals do
     do: %Brando.Villain.Blocks.GalleryBlock{
       type: "gallery",
       data: data.template_gallery || %Brando.Villain.Blocks.GalleryBlock.Data{}
+    }
+
+  defp template(%{data: %{type: "media", data: data}}, "file"),
+    do: %Brando.Villain.Blocks.FileBlock{
+      type: "file",
+      data: data.template_file || %Brando.Villain.Blocks.FileBlock.Data{}
     }
 
   defp put_values(block, values, _user) when values == %{}, do: block

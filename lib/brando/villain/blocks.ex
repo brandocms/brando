@@ -26,7 +26,7 @@ defmodule Brando.Villain.Blocks do
   # `MediaBlock`-specific `apply_ref/3` clause that reads its own template out of
   # the source. So a block ref of any of these types is still driven by a `media`
   # module ref — it has not been retyped out from under the editor.
-  @media_slot_blocks [:picture, :video, :gallery, :svg]
+  @media_slot_blocks [:picture, :video, :gallery, :svg, :file]
 
   @spec list_blocks() :: keyword(module())
   def list_blocks, do: @blocks
@@ -36,7 +36,7 @@ defmodule Brando.Villain.Blocks do
   type `block_type`.
 
   Identical types always can. Beyond that, only the `media` slot: it exists
-  precisely so one module ref can back a picture, video, gallery or svg,
+  precisely so one module ref can back a picture, video, gallery, svg or file,
   depending on what the editor put there.
   """
   @spec ref_types_compatible?(module() | nil, module() | nil) :: boolean()

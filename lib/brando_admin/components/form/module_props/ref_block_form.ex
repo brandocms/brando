@@ -78,7 +78,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     %{label: gettext_noop("Picture"), value: "picture"},
     %{label: gettext_noop("Video"), value: "video"},
     %{label: gettext_noop("Gallery"), value: "gallery"},
-    %{label: gettext_noop("SVG"), value: "svg"}
+    %{label: gettext_noop("SVG"), value: "svg"},
+    %{label: gettext_noop("File"), value: "file"}
   ]
 
   attr :type, :string, required: true
@@ -404,6 +405,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         :if={"svg" in (block_data[:available_blocks].value || [])}
         field={block_data[:template_svg]}
       />
+
+      <.media_file_template
+        :if={"file" in (block_data[:available_blocks].value || [])}
+        field={block_data[:template_file]}
+      />
     </Primitives.inputs_for_block>
     """
   end
@@ -558,6 +564,25 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     <h2>{gettext("SVG block template")}</h2>
     <.inputs_for :let={tpl_data} field={@field}>
       <Input.text field={tpl_data[:class]} label={gettext("Class")} />
+    </.inputs_for>
+    """
+  end
+
+  attr :field, :any, required: true
+
+  defp media_file_template(assigns) do
+    ~H"""
+    <h2>{gettext("File block template")}</h2>
+    <.inputs_for :let={tpl_data} field={@field}>
+      <Input.text field={tpl_data[:class]} label={gettext("CSS class(es)")} />
+      <Input.toggle field={tpl_data[:target_blank]} label={gettext("Open in new window/tab")} />
+      <Input.toggle field={tpl_data[:download]} label={gettext("Download instead of open")} />
+      <Input.text
+        field={tpl_data[:config_target]}
+        label={gettext("Config target")}
+        instructions={gettext("i.e: `file:Elixir.MyApp.Schema:function:fn_name`")}
+        monospace
+      />
     </.inputs_for>
     """
   end

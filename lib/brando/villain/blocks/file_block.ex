@@ -29,4 +29,12 @@ defmodule Brando.Villain.Blocks.FileBlock do
       attribute :config_target, :text
     end
   end
+
+  def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target_changeset) do
+    Brando.Villain.Block.merge_ref_template(:template_file, ref_src, ref_target_changeset, protected_attrs())
+  end
+
+  def apply_ref(_src_type, ref_src, ref_target_changeset) do
+    Brando.Villain.Block.merge_ref(ref_src, ref_target_changeset, protected_attrs())
+  end
 end

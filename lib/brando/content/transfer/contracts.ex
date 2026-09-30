@@ -105,7 +105,7 @@ defmodule Brando.Content.Transfer.Contracts do
   end
 
   defp compatible?(same, same), do: true
-  defp compatible?(type, "media"), do: type in ~w(picture video gallery svg)
+  defp compatible?(type, "media"), do: type in ~w(picture video gallery svg file)
   defp compatible?(_, _), do: false
 
   def defaults(params, module) do

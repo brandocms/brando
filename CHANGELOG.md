@@ -422,6 +422,14 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **A media ref can hold a file.** Add `"file"` to a media ref's
+  `available_blocks` and the editor can pick a file there, next to picture,
+  video, gallery and svg. The slot's `template_file` sets the file ref's
+  defaults (class, download, `config_target`). A file in a media slot renders
+  as any file ref does; a site that wants something else for some files (a
+  Lottie player, an embedded PDF) overrides `file/2` in its Villain parser.
+  The assistant can put a file in such a slot too.
+
 - **Start from a template.** An empty block field offers the content
   templates of its namespace as cards; choosing one fills the field with
   copies of the template's blocks. The namespace is the field's

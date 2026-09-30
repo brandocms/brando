@@ -53,10 +53,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           picture: block_data.template_picture,
           svg: block_data.template_svg,
           video: block_data.template_video,
-          gallery: block_data.template_gallery
+          gallery: block_data.template_gallery,
+          file: block_data.template_file
         }
       else
-        %{picture: nil, svg: nil, video: nil, gallery: nil}
+        %{picture: nil, svg: nil, video: nil, gallery: nil, file: nil}
       end
     end)
   end
@@ -116,6 +117,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             name={template_video[:container_class].name}
             value={template_video[:container_class].value || ""}
           />
+        </.inputs_for>
+
+        <.inputs_for :let={template_file} field={block_data[:template_file]}>
+          <input type="hidden" name={template_file[:title].name} value={template_file[:title].value || ""} />
+          <input type="hidden" name={template_file[:label].name} value={template_file[:label].value || ""} />
+          <input type="hidden" name={template_file[:description].name} value={template_file[:description].value || ""} />
+          <input type="hidden" name={template_file[:class].name} value={template_file[:class].value || ""} />
+          <input type="hidden" name={template_file[:target_blank].name} value={to_string(template_file[:target_blank].value)} />
+          <input type="hidden" name={template_file[:download].name} value={to_string(template_file[:download].value)} />
+          <input type="hidden" name={template_file[:config_target].name} value={template_file[:config_target].value || ""} />
         </.inputs_for>
 
         <Block.block
@@ -206,6 +217,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     """
   end
 
+  def translate_block(%{key: "file"} = assigns) do
+    ~H"""
+    {gettext("File")}
+    """
+  end
+
   def translate_block(%{key: "video"} = assigns) do
     ~H"""
     {gettext("Video")}
@@ -244,6 +261,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           %Brando.Villain.Blocks.SvgBlock{
             type: "svg",
             data: block_templates.svg
+          }
+
+        "file" ->
+          %Brando.Villain.Blocks.FileBlock{
+            type: "file",
+            data: block_templates.file || %Brando.Villain.Blocks.FileBlock.Data{}
           }
       end
 

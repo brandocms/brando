@@ -189,6 +189,41 @@ defmodule Brando.Content.ProposalsTest do
     assert slot.image_id == c.image.id
   end
 
+  test "a media slot takes a file through its file template", c do
+    file =
+      Repo.insert!(%Brando.Files.File{
+        title: "Animation",
+        filename: "animation.json",
+        filesize: 1,
+        config_target: "default",
+        creator_id: c.user.id
+      })
+
+    module =
+      module!(c.user, "Animated", "<div>{% ref refs.slot %}</div>",
+        refs: [
+          Brando.ProposalFixtures.ref("slot", %{
+            type: "media",
+            data: %{available_blocks: ["picture", "file"], template_file: %{class: "animation", download: false}}
+          })
+        ]
+      )
+
+    assert Proposals.accepts(hd(module.refs)) |> Enum.sort() == [:file, :image]
+
+    op = %InsertBlock{target: {Page, c.identity.id}, module: module.id, media: %{slot: {:file, file.id}}}
+    assert {:ok, proposal} = Proposals.propose([op], c.user)
+    assert proposal.problems == []
+    assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+    slot =
+      load(c.identity, c.user).entry_blocks |> List.last() |> then(& &1.block.refs) |> Enum.find(&(&1.name == "slot"))
+
+    assert slot.data.type == "file"
+    assert slot.data.data.class == "animation"
+    assert slot.file_id == file.id
+  end
+
   test "media and values on saved blocks and blocks inserted earlier in the proposal", c do
     [first | _] = uids(c.identity, c.user)
     uid = Brando.Utils.generate_uid()

@@ -21,7 +21,7 @@ defmodule Brando.Content.Proposals.RefConfig do
   @definition_only %{"text" => [:placeholder], "header" => [:placeholder]}
 
   # A media slot can hold any of these, each with its own settings.
-  @media_types ~w(picture video gallery)
+  @media_types ~w(picture video gallery file)
 
   @doc "The data schema of ref type `type`, or `nil`."
   @spec data_module(String.t()) :: module() | nil

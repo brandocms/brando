@@ -8894,6 +8894,11 @@ msgstr "Rik tekst"
 msgid "Rich, editable body content"
 msgstr "Formatert, redigerbart hovedinnhold"
 
+#: lib/brando_admin/components/form/module_props/ref_block_form.ex:566
+#, elixir-autogen, elixir-format
+msgid "File block template"
+msgstr "Mal for filblokk"
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:548
 #, elixir-autogen, elixir-format
 msgid "SVG block template"
