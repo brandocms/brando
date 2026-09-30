@@ -244,6 +244,34 @@ generated `duplicate_*` mutation already does this for the entry's gallery
 assets and for galleries on block refs and vars. Verify that reordering a
 duplicate does not reorder its source.
 
+## Tidy a folder that has filled up
+
+Block images all upload to the default config's folder (`images/site/default`
+unless you changed it), so over the years it becomes one long list. The image
+library can sort it from where the images are used.
+
+Open the folder under **Resources → Images** and choose **Sort by use**. The
+preview lists a folder per entry that uses images from this one, named by type
+and title (`cases/sommerro`, `pages/about`), with some of its images. Untick
+the ones to leave, rename the folders you want different, and move them. The
+bar above the list offers **Undo** until you leave the page.
+
+- Only images directly in the folder are sorted; what is already in a subfolder
+  stays, so a later run takes only what has arrived since.
+- An entry and its translations share a folder, named after the entry in the
+  default language.
+- Images no entry uses stay where they are. Switch on **Not in use** to see
+  them; with it on, the header offers to delete all of them (a soft delete).
+- A move changes the image's folder, not its files, so no URL changes.
+
+An image several entries use goes to one of them: the entry using the most of
+the folder's images, unless the site ranks its types:
+
+```elixir
+config :brando, Brando.Images,
+  sweep_priority: [MyApp.Projects.Project, MyApp.Articles.Article, Brando.Pages.Page]
+```
+
 ## Upload lifecycle and delivery checks
 
 The sticky UploadManager owns intake, transfer, validation, progress, and delivery

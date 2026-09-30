@@ -13203,3 +13203,95 @@ msgid "Draw one sketch"
 msgid_plural "Draw %{count} sketches"
 msgstr[0] "Draw one sketch"
 msgstr[1] "Draw %{count} sketches"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sort by use"
+msgstr ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sort this folder's images into folders for the entries that use them"
+msgstr ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "None of the images in this folder are used by an entry, so there is nothing to sort."
+msgstr ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move these"
+msgstr ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Folder for %{entry}"
+msgstr ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move the images"
+msgstr ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{count} image back"
+msgid_plural "Moved %{count} images back"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted %{count} image"
+msgid_plural "Deleted %{count} images"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{count} unused image?"
+msgid_plural "Delete all %{count} unused images?"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{count} unused"
+msgid_plural "Delete all %{count} unused"
+msgstr[0] ""
+msgstr[1] ""
+
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image in this folder is used by an entry. It moves to a folder named after that entry; the file itself stays where it is, so no address changes."
+msgid_plural "%{count} images in this folder are used by entries. Each moves to a folder named after its entry; the files themselves stay where they are, so no address changes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unused image stays here."
+msgid_plural "%{count} unused images stay here."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} also used elsewhere"
+msgid_plural "%{count} also used elsewhere"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sorted %{images} into %{folders}."
+msgstr ""
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} folder"
+msgid_plural "%{count} folders"
+msgstr[0] ""
+msgstr[1] ""

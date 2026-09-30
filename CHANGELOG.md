@@ -411,6 +411,14 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Sort by use in the image library.** A folder that has filled up with
+  block images can be sorted into folders for the entries that use them
+  (`cases/sommerro`, `pages/about`): a preview with the folders to make,
+  renaming, per-entry opt-out and undo. Translations share their entry's
+  folder; `config :brando, Brando.Images, sweep_priority: [...]` decides who
+  gets an image several entries use. With **Not in use** switched on, the
+  library offers to delete every unused image in view. See the media guide.
+
 - **System → Assistant** turns a conversation into reviewed content changes
   across entries: create entries, insert blocks, and place text, images and
   videos. The model runs in the backend and only reads content and prepares

@@ -70,7 +70,71 @@ defmodule Brando.Content.Usage do
     kind |> references(:all) |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
   end
 
+  @doc """
+  The entries each of `ids` belongs to, as `%{id => [{schema, entry_id}]}`.
+  Unlike `list/2`, a gallery is not an owner: an image or video in one
+  belongs to the entries that show the gallery. Ids no entry uses are left
+  out.
+  """
+  @spec owners(kind(), [integer()]) :: %{optional(integer()) => [{module(), integer()}]}
+  def owners(_kind, []), do: %{}
+
+  def owners(kind, ids) when kind in @kinds do
+    references = references(kind, ids)
+    gallery_ids = for {_id, {@gallery, gallery_id}} <- references, uniq: true, do: gallery_id
+    gallery_owners = :gallery |> references(gallery_ids) |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    references
+    |> Enum.flat_map(fn
+      {id, {@gallery, gallery_id}} -> Enum.map(Map.get(gallery_owners, gallery_id, []), &{id, &1})
+      reference -> [reference]
+    end)
+    |> Enum.uniq()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  @doc "What to call each `{schema, entry_id}`: its title, admin URL, type, cover and status."
+  @spec labels([{module(), integer()}]) :: %{optional({module(), integer()}) => usage()}
+  def labels(entries) do
+    entries = Enum.uniq(entries)
+
+    identifiers =
+      entries
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.flat_map(fn {schema, ids} ->
+        from(i in Brando.Content.Identifier, where: i.schema == ^schema and i.entry_id in ^ids)
+        |> Brando.Repo.all()
+        |> Enum.map(&{{schema, &1.entry_id}, &1})
+      end)
+      |> Map.new()
+
+    titles = titles(Enum.reject(entries, &Map.has_key?(identifiers, &1)))
+
+    Map.new(entries, fn {schema, id} = entry ->
+      identifier = Map.get(identifiers, entry)
+      type = singular(schema)
+
+      label =
+        case identifier || Map.get(titles, entry) do
+          %{title: title} when is_binary(title) and title != "" -> title
+          title when is_binary(title) and title != "" -> URI.decode(title)
+          _ -> "#{type} ##{id}"
+        end
+
+      {entry,
+       %{
+         label: label,
+         url: admin_url(schema, id),
+         type: type,
+         cover: identifier && identifier.cover,
+         status: identifier && identifier.status
+       }}
+    end)
+  end
+
   # {asset_id, {schema, entry_id}} for every place the assets are used.
+  defp references(_kind, []), do: []
+
   defp references(kind, ids) do
     Enum.uniq(in_blocks(kind, ids) ++ in_vars(kind, ids) ++ in_galleries(kind, ids) ++ in_fields(kind, ids))
   end
@@ -182,45 +246,6 @@ defmodule Brando.Content.Usage do
   defp where_ids(query, foreign_key, ids), do: where(query, [q], field(q, ^foreign_key) in ^ids)
 
   defp fk(kind), do: :"#{kind}_id"
-
-  # Titles, covers and statuses come from the entries' identifiers; entries
-  # without one (a gallery, a global set) are named by type and id.
-  defp labels(entries) do
-    entries = Enum.uniq(entries)
-
-    identifiers =
-      entries
-      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-      |> Enum.flat_map(fn {schema, ids} ->
-        from(i in Brando.Content.Identifier, where: i.schema == ^schema and i.entry_id in ^ids)
-        |> Brando.Repo.all()
-        |> Enum.map(&{{schema, &1.entry_id}, &1})
-      end)
-      |> Map.new()
-
-    titles = titles(Enum.reject(entries, &Map.has_key?(identifiers, &1)))
-
-    Map.new(entries, fn {schema, id} = entry ->
-      identifier = Map.get(identifiers, entry)
-      type = singular(schema)
-
-      label =
-        case identifier || Map.get(titles, entry) do
-          %{title: title} when is_binary(title) and title != "" -> title
-          title when is_binary(title) and title != "" -> URI.decode(title)
-          _ -> "#{type} ##{id}"
-        end
-
-      {entry,
-       %{
-         label: label,
-         url: admin_url(schema, id),
-         type: type,
-         cover: identifier && identifier.cover,
-         status: identifier && identifier.status
-       }}
-    end)
-  end
 
   # An entry without an identifier (a video) is named by its title field.
   defp titles(entries) do

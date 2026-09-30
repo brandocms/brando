@@ -13208,3 +13208,95 @@ msgid "Draw one sketch"
 msgid_plural "Draw %{count} sketches"
 msgstr[0] "Tegn én skisse"
 msgstr[1] "Tegn %{count} skisser"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sort by use"
+msgstr "Sorter etter bruk"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sort this folder's images into folders for the entries that use them"
+msgstr "Sorter bildene i denne mappen i mapper for oppføringene som bruker dem"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "None of the images in this folder are used by an entry, so there is nothing to sort."
+msgstr "Ingen av bildene i denne mappen brukes av en oppføring, så det er ingenting å sortere."
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move these"
+msgstr "Flytt disse"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Folder for %{entry}"
+msgstr "Mappe for %{entry}"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move the images"
+msgstr "Flytt bildene"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{count} image back"
+msgid_plural "Moved %{count} images back"
+msgstr[0] "Flyttet %{count} bilde tilbake"
+msgstr[1] "Flyttet %{count} bilder tilbake"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted %{count} image"
+msgid_plural "Deleted %{count} images"
+msgstr[0] "Slettet %{count} bilde"
+msgstr[1] "Slettet %{count} bilder"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{count} unused image?"
+msgid_plural "Delete all %{count} unused images?"
+msgstr[0] "Slette %{count} ubrukt bilde?"
+msgstr[1] "Slette alle %{count} ubrukte bilder?"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{count} unused"
+msgid_plural "Delete all %{count} unused"
+msgstr[0] "Slett %{count} ubrukt"
+msgstr[1] "Slett alle %{count} ubrukte"
+
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image in this folder is used by an entry. It moves to a folder named after that entry; the file itself stays where it is, so no address changes."
+msgid_plural "%{count} images in this folder are used by entries. Each moves to a folder named after its entry; the files themselves stay where they are, so no address changes."
+msgstr[0] "%{count} bilde i denne mappen brukes av en oppføring. Det flyttes til en mappe med oppføringens navn; selve filen blir liggende, så ingen adresser endres."
+msgstr[1] "%{count} bilder i denne mappen brukes av oppføringer. Hvert bilde flyttes til en mappe med oppføringens navn; selve filene blir liggende, så ingen adresser endres."
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unused image stays here."
+msgid_plural "%{count} unused images stay here."
+msgstr[0] "%{count} ubrukt bilde blir liggende her."
+msgstr[1] "%{count} ubrukte bilder blir liggende her."
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} also used elsewhere"
+msgid_plural "%{count} also used elsewhere"
+msgstr[0] "%{count} brukes også andre steder"
+msgstr[1] "%{count} brukes også andre steder"
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sorted %{images} into %{folders}."
+msgstr "Sorterte %{images} i %{folders}."
+
+#: lib/brando_admin/live/images/image_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} folder"
+msgid_plural "%{count} folders"
+msgstr[0] "%{count} mappe"
+msgstr[1] "%{count} mapper"
