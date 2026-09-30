@@ -712,7 +712,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
               |> toggle_drawer("##{@kind}-picker")
             }
           >
-            {if @kind == "image", do: gettext("Select image"), else: gettext("Browse library")}
+            {if @kind == "image", do: gettext("Select image"), else: gettext("Select video")}
           </button>
           <%!-- A new file from disk, the same way as dropping one on the card:
               TransformerUploader opens the file dialog and registers it as a

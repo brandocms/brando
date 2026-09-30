@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
           </button>
 
           <button class="media-button" type="button" phx-click={toggle_drawer("#file-picker")}>
-            {gettext("Browse library")}
+            {gettext("Select file")}
           </button>
 
           <button class="media-button" type="button" phx-click={reset_file_field(@myself)}>

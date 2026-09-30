@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         if(upload_enabled, do: drop_label(assigns.type, asset), else: gettext("Choose media from the library"))
       )
       |> assign(:icon, media_icon(assigns.type))
-      |> assign(:browse_label, if(assigns.type == :image, do: gettext("Select image"), else: gettext("Browse library")))
+      |> assign(:browse_label, browse_label(assigns.type))
 
     ~H"""
     <div
@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       class={["media-field", "media-field--#{@presentation}", !@asset && "media-field--empty"]}
       phx-hook={@editable && "Brando.UploadTrigger"}
       data-upload-enabled={to_string(@upload_enabled?)}
-      data-upload-unavailable={gettext("Use Browse library to upload a video with this provider.")}
+      data-upload-unavailable={gettext("Use %{action} to upload a video with this provider.", action: @browse_label)}
       data-kind={@kind}
       data-component-id={@component_id}
       data-var-key={@var_key}
@@ -331,6 +331,12 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp drop_label(:image, _), do: gettext("Drop an image to replace")
   defp drop_label(:file, _), do: gettext("Drop a file to replace")
   defp drop_label(:video, _), do: gettext("Drop a video to replace")
+
+  # Short, and named after what is picked: three of these share a row with
+  # Configure and Upload replacement.
+  defp browse_label(:image), do: gettext("Select image")
+  defp browse_label(:video), do: gettext("Select video")
+  defp browse_label(_file), do: gettext("Select file")
 
   defp media_icon(:image), do: "hero-photo"
   defp media_icon(:file), do: "hero-document"

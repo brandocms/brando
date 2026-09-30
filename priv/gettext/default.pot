@@ -7515,12 +7515,6 @@ msgstr ""
 msgid "Browse images"
 msgstr ""
 
-#: lib/brando_admin/components/assets/media_field.ex:55
-#: lib/brando_admin/components/form/file_drawer.ex:113
-#, elixir-autogen, elixir-format
-msgid "Browse library"
-msgstr ""
-
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:263
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1368
 #: lib/brando_admin/components/form/input/gallery_objects.ex:104
@@ -7922,7 +7916,7 @@ msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex:63
 #, elixir-autogen, elixir-format
-msgid "Use Browse library to upload a video with this provider."
+msgid "Use %{action} to upload a video with this provider."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:250
