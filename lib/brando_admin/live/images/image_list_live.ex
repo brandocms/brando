@@ -368,7 +368,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
               <button
                 :if={unused_filter?(@params) and @unused_count > 0}
                 type="button"
-                class="folder-action danger"
+                class="folder-action is-destructive"
                 phx-click="delete_unused"
                 data-confirm={
                   ngettext(
