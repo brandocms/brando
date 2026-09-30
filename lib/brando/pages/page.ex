@@ -266,6 +266,7 @@ defmodule Brando.Pages.Page do
         fieldset do
           size :half
           input :title, :text, label: t("Title")
+
           input :uri, :slug,
             source: :title,
             prefix: &__MODULE__.uri_prefix/1,
