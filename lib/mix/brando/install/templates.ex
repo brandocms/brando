@@ -242,6 +242,13 @@ defmodule Mix.Brando.Install.Templates do
 
   @new @new ++ @brando_migrations
 
+  # The list above is read at compile time, so a new migration template would
+  # go unseen by `mix brando.gen.migrations` until this module was rebuilt.
+  @migration_templates Path.wildcard(Path.join(@root, "templates/brando.upgrade/migrations/*.exs"))
+
+  def __mix_recompile__?,
+    do: Path.wildcard(Path.join(@root, "templates/brando.upgrade/migrations/*.exs")) != @migration_templates
+
   for {format, source, _} <- @new ++ @static do
     if format not in [:keep, :copy] do
       @external_resource Path.join([@root, "templates/brando.install", source])
