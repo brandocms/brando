@@ -157,7 +157,7 @@ defmodule Brando.Content.DefinitionsTest do
         |> put_in(["refs", Access.at(0), "data", "data", "level"], 2)
         |> put_in(["refs", Access.at(0), "data", "data", "text"], "New default")
         |> put_in(["vars", Access.at(0), "width"], "full")
-        |> put_in(["vars", Access.at(0), "options"], [%{"label" => "Dark mode", "value" => "dark"}])
+        |> put_in(["vars", Access.at(0), "options"], [%{"label" => %{"en" => "Dark mode"}, "value" => "dark"}])
       end)
 
     assert {:ok, plan} = Definitions.plan(bundle, c.user)
@@ -449,6 +449,31 @@ defmodule Brando.Content.DefinitionsTest do
     ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
     assert hero().version == version
     assert {:ok, [%{status: :requested}]} = Definitions.refresh(["hero-test"], c.user)
+  end
+
+  test "select option labels are language maps; plain ones are read as the default language", c do
+    import_args = ["import", "--from", c.path, "--user", to_string(c.user.id)]
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+    assert [%{options: [%{label: %{"en" => "Light"}}, %{label: %{"en" => "Dark"}}]}] = hero().vars
+
+    translated =
+      String.replace(
+        source,
+        ~s(options [{"Light", "light"}, {"Dark", "dark"}]),
+        ~s(options [%{"label" => %{"en" => "Light", "no" => "Lys"}, "value" => "light"}, {"Dark", "dark"}])
+      )
+
+    refute translated == source
+    File.write!(Path.join(c.path, "hero.exs"), translated)
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+
+    assert [%{options: [%{label: %{"en" => "Light", "no" => "Lys"}, value: "light"}, %{label: %{"en" => "Dark"}}]}] =
+             hero().vars
+
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+    [file] = Path.wildcard(Path.join(exported.directory, "**/*.exs"))
+    assert File.read!(file) =~ ~s(%{"label" => %{"en" => "Light", "no" => "Lys"}, "value" => "light"})
   end
 
   test "a var label is a language map; a plain one is read as the default language", c do

@@ -827,8 +827,12 @@ defmodule Brando.Content.Proposals.Tools do
   defp settable(:gallery), do: ~s({"gallery":[media, …]}, images and videos in order)
   defp settable(_), do: "no"
 
-  defp option(%{label: label, value: value}) when label in [nil, "", value], do: value
-  defp option(%{label: label, value: value}), do: %{value: value, label: label}
+  defp option(%{label: label, value: value}) do
+    case I18nString.localized(label) do
+      text when text in [nil, value] -> value
+      text -> %{value: value, label: text}
+    end
+  end
 
   # Multi modules the field allows at its root. Their blocks start empty; the
   # entries are inserted as children.

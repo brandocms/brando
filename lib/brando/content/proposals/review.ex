@@ -770,10 +770,15 @@ defmodule Brando.Content.Proposals.Review do
 
   defp option(%{type: :select, options: options}, value) when is_binary(value) do
     case Enum.find(options || [], &(&1.value == value)) do
-      %{label: label} when label in [nil, ""] -> value
-      # "40%" says what "40" means; "Half (50)" needs the value beside it.
-      %{label: label} -> if String.contains?(label, value), do: label, else: "#{label} (#{value})"
-      _ -> value
+      %{label: label} ->
+        case I18nString.localized(label) do
+          nil -> value
+          # "40%" says what "40" means; "Half (50)" needs the value beside it.
+          text -> if String.contains?(text, value), do: text, else: "#{text} (#{value})"
+        end
+
+      _ ->
+        value
     end
   end
 

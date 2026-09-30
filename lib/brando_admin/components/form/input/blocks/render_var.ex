@@ -329,6 +329,21 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp type_settings_heading(:link), do: gettext("Link settings")
   defp type_settings_heading(:select), do: gettext("Choices")
 
+  # A select var's options for the editor, their labels in its language. An
+  # option is a struct, a changeset while being edited, or params.
+  defp select_options(options) do
+    Enum.map(options || [], fn
+      %Ecto.Changeset{} = changeset -> select_option(Ecto.Changeset.apply_changes(changeset))
+      option -> select_option(option)
+    end)
+  end
+
+  defp select_option(option) do
+    value = Map.get(option, :value) || Map.get(option, "value")
+    label = Map.get(option, :label) || Map.get(option, "label")
+    %{label: I18nString.localized(label) || to_string(value), value: value}
+  end
+
   defp width_options do
     [
       %{label: gettext("Full row"), value: "full"},
@@ -650,7 +665,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                                   <span class="drag-grip" aria-hidden="true"></span>
                                 </button>
 
-                                <Input.text field={opt[:label]} label={gettext("Label")} />
+                                <Input.i18n_text field={opt[:label]} label={gettext("Label")} />
                                 <Input.text field={opt[:value]} label={gettext("Value")} />
 
                                 <input type="hidden" name={"#{@var.name}[sort_option_ids][]"} value={opt.index} />
@@ -883,12 +898,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         label={@label}
         field={@var[:value]}
         inline={true}
-        opts={[options: @var[:options].value || []]}
+        opts={[options: select_options(@var[:options].value)]}
         publish={@publish}
       />
 
       <.inputs_for :let={opt} field={@var[:options]}>
-        <Input.hidden field={opt[:label]} id_prefix="hidden_opts" />
+        <Input.hidden_i18n field={opt[:label]} />
         <Input.hidden field={opt[:value]} id_prefix="hidden_opts" />
       </.inputs_for>
     </div>

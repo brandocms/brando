@@ -55,8 +55,8 @@ defmodule Brando.Content.DefinitionTest do
     assert hd(hero["vars"])["placement"] == "config"
 
     assert hd(hero["vars"])["options"] == [
-             %{"label" => "Light", "value" => "light"},
-             %{"label" => "Dark", "value" => "dark"}
+             %{"label" => %{"en" => "Light"}, "value" => "light"},
+             %{"label" => %{"en" => "Dark"}, "value" => "dark"}
            ]
   end
 

@@ -49,6 +49,11 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `Brando.Type.I18nString.localized(var.label)`. Run `mix brando.gen.migrations`
   for `brando_190`, then re-export module definitions: their lock baselines
   were taken from the string labels.
+  A select var's options are translated the same way: an option's `label` is
+  a language map, edited per admin language in the var editor. `brando_191`
+  moves existing option labels under the default language; definitions accept
+  `{"Light", "light"}` or `%{"label" => %{"en" => "Light", "no" => "Lys"},
+  "value" => "light"}`.
 - **Image alt text, title and credits are translated.** `Brando.Images.Image`'s
   `alt`, `title` and `credits` are now maps of content language → text
   (`:i18n_string`). The `brando_180` migration moves existing text under the

@@ -15,7 +15,7 @@ defmodule Brando.Content.Var.Option do
   persist_identifier false
 
   attributes do
-    attribute :label, :text, required: true
+    attribute :label, :i18n_string, required: true
     attribute :value, :text, required: true
   end
 end
