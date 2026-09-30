@@ -81,11 +81,11 @@
   .image-picker-folders-header .folder-actions { border-color: var(--workspace-line); border-radius: 5px; background: #fff; }
   .image-picker-browser .folder-action { min-height: 30px; height: auto; padding: 5px 10px; border-radius: 5px; border-color: var(--workspace-line); color: var(--workspace-ink); background: #fff; font-family: inherit; font-size: 12px; text-transform: none; line-height: 18px; }
   .image-picker-browser .folder-action:hover:not(:disabled) { background: var(--workspace-wash); color: var(--workspace-ink); border-color: #aab9a5; }
-  /* A destructive action among the folder's: red text and icon on the usual
-     button, not the big red one. */
-  .image-picker-browser .folder-action.is-destructive { color: #b3261e; }
+  /* A destructive action among the folder's: red text, icon and border on
+     the usual button, not the big red one. */
+  .image-picker-browser .folder-action.is-destructive { color: #b3261e; border-color: #e6c4c0; }
   .image-picker-browser .folder-action.is-destructive > span[data-icon] { color: inherit; }
-  .image-picker-browser .folder-action.is-destructive:hover:not(:disabled) { color: #9a1f18; }
+  .image-picker-browser .folder-action.is-destructive:hover:not(:disabled) { background: #fdf1ef; color: #9a1f18; border-color: #d99a93; }
   .image-picker-browser .folder-action.icon-only { min-width: 28px; width: 28px; padding-inline: 6px; }
   .image-picker-folders-header .folder-action + .folder-action { border-color: var(--workspace-line); }
   .image-picker-browser .new-folder-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 10px; min-height: 30px; border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; font-family: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--workspace-ink); }
