@@ -58,21 +58,23 @@ export default app => ({
   toggleCurrentUserDropdown() {
     const lis = this.$currentUserDropdownContent.querySelectorAll('li')
 
+    // Quick: the row is one line of content, and a slow reveal made it feel
+    // heavier than the menu groups around it.
     gsap.to(this.$currentUserDropdown.querySelector('.dropdown-icon'), {
-      duration: 0.35,
+      duration: 0.2,
       rotate: '+=180'
     })
     this.$currentUserDropdown.classList.toggle('open', !this.currentUserDropdownOpen)
     if (this.currentUserDropdownOpen) {
-      gsap.to(Array.from(lis).reverse(), { duration: 0.35, autoAlpha: 0, x: -8, stagger: 0.06 })
-      gsap.to(this.$currentUserDropdown, { duration: 0.35, delay: 0.2, height: this.height })
+      gsap.to(Array.from(lis).reverse(), { duration: 0.12, autoAlpha: 0, x: -6, stagger: 0.03 })
+      gsap.to(this.$currentUserDropdown, { duration: 0.18, delay: 0.05, ease: 'power2.inOut', height: this.height })
       this.currentUserDropdownOpen = false
     } else {
       this.height = this.$currentUserDropdown.offsetHeight
 
-      gsap.set(lis, { autoAlpha: 0, x: -8 })
-      gsap.to(this.$currentUserDropdown, { duration: 0.35, height: 'auto' })
-      gsap.to(lis, { duration: 0.35, delay: 0.2, autoAlpha: 1, x: 0, stagger: 0.06 })
+      gsap.set(lis, { autoAlpha: 0, x: -6 })
+      gsap.to(this.$currentUserDropdown, { duration: 0.18, ease: 'power2.out', height: 'auto' })
+      gsap.to(lis, { duration: 0.15, delay: 0.06, autoAlpha: 1, x: 0, stagger: 0.03 })
       this.currentUserDropdownOpen = true
     }
   },
@@ -115,17 +117,17 @@ export default app => ({
     const lis = dd.querySelectorAll('li')
 
     if (trigger.classList.contains('open')) {
-      gsap.to(Array.from(lis).reverse(), { duration: 0.35, autoAlpha: 0, x: -15, stagger: 0.03 })
-      gsap.to(dl, { duration: 0.35, delay: 0.2, height: trigger.dataset.height })
+      gsap.to(Array.from(lis).reverse(), { duration: 0.1, autoAlpha: 0, x: -6, stagger: 0.015 })
+      gsap.to(dl, { duration: 0.18, delay: 0.04, ease: 'power2.inOut', height: trigger.dataset.height })
       trigger.classList.remove('open')
       this.saveOpen(trigger.dataset.navKey, false)
     } else {
       trigger.dataset.height = dl.offsetHeight
       gsap.set(dl, { height: trigger.dataset.height })
-      gsap.set(lis, { autoAlpha: 0, x: -15 })
+      gsap.set(lis, { autoAlpha: 0, x: -6 })
       gsap.set(dd, { opacity: 1, display: 'block' })
-      gsap.to(dl, { duration: 0.35, height: 'auto' })
-      gsap.to(lis, { duration: 0.2, delay: 0.2, autoAlpha: 1, x: 0, stagger: 0.02 })
+      gsap.to(dl, { duration: 0.18, ease: 'power2.out', height: 'auto' })
+      gsap.to(lis, { duration: 0.14, delay: 0.05, autoAlpha: 1, x: 0, stagger: 0.02 })
       trigger.classList.add('open')
       this.saveOpen(trigger.dataset.navKey, true)
     }
