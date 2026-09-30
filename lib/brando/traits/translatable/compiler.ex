@@ -16,9 +16,9 @@ defmodule Brando.Trait.Translatable.Compiler do
 
       if @translatable_runtime do
         # Read from the application's config at runtime, per site: see
-        # `Brando.Trait.Translatable.runtime_config/2`.
+        # `Brando.Trait.Translatable.RuntimeConfig`.
         def __translatable_config__,
-          do: Brando.Trait.Translatable.runtime_config(__MODULE__, @translatable_config)
+          do: Brando.Trait.Translatable.RuntimeConfig.get(__MODULE__, @translatable_config)
       else
         def __translatable_config__, do: @translatable_config
       end

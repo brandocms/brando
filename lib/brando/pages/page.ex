@@ -54,7 +54,7 @@ defmodule Brando.Pages.Page do
   trait :timestamped
   # Independent unless the application configures it, per site if need be:
   # `config :brando, Brando.Pages.Page, translatable: [mode: :synchronized, ...]`
-  # (see Brando.Trait.Translatable.runtime_config/2 and the i18n guide).
+  # (see Brando.Trait.Translatable.RuntimeConfig and the i18n guide).
   trait :translatable, runtime_config: true
   trait :blocks
 
