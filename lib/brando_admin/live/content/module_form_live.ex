@@ -69,10 +69,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={if @shared_library?, do: gettext("Shared module library"), else: gettext("Content Modules")}
-      subtitle={gettext("Edit module")}
-    />
+    <Primitives.form_header>
+      {gettext("Edit module")}
+      <:badge :if={@shared_library?}>{gettext("Shared module library")}</:badge>
+    </Primitives.form_header>
 
     <div id="module_form-el" phx-hook="Brando.Form" data-skip-keydown>
       <.form for={@form} class="main-form" phx-change="validate" phx-submit="save">

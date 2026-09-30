@@ -1024,7 +1024,11 @@ html.not-mac .shortcut-other { display: inline; }
 /* Every form's heading at the size of the workspace headings, whether the
    form is an entry's (pages, cases) or a setting's (identity, menus, SEO);
    entry forms had a 50px display size of their own. */
-.brando-form .form-content .form-header h1 { font-size: 32px; line-height: 1.2; letter-spacing: -.035em; }
+.form-header h1 { display: flex; align-items: center; gap: 12px; font-size: 32px; line-height: 1.2; letter-spacing: -.035em; }
+/* The blueprint form spaces its header itself; a hand-written form (the
+   module editor) gets the same room. */
+.form-header:not(.brando-form .form-header) { @space margin-top sm; @space margin-bottom sm; }
+.form-header-badge { display: inline-flex; align-items: center; padding: 4px 8px; border: 1px solid #dce6dc; border-radius: 5px; background: #eef4eb; color: #526b54; font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
 
 /* The recovery status reads as a caption of the heading: close under it, with
    a small gap before the toolbar. */

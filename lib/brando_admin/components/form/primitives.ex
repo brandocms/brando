@@ -537,6 +537,25 @@ defmodule BrandoAdmin.Components.Form.Primitives do
     """
   end
 
+  slot :inner_block, required: true
+  slot :badge, doc: "A short tag after the heading, e.g. the content language"
+
+  @doc """
+  A form's heading, the same on every form: the blueprint `Form` renders its
+  `<:header>` with it, and hand-written forms (the module editor) use it
+  directly.
+  """
+  def form_header(assigns) do
+    ~H"""
+    <div class="form-header">
+      <h1>
+        {render_slot(@inner_block)}
+        <span :for={badge <- @badge} class="form-header-badge">{render_slot(badge)}</span>
+      </h1>
+    </div>
+    """
+  end
+
   attr :key, :string, required: true
   attr :shift, :boolean, default: false
 

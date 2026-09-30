@@ -2376,11 +2376,7 @@ defmodule BrandoAdmin.Components.Form do
     <div>
       <div id={"#{@id}-loading"} class="brando-form form-loading">
         <div class="form-content">
-          <div :if={@header} class="form-header">
-            <h1>
-              {render_slot(@header)}
-            </h1>
-          </div>
+          <Primitives.form_header :if={@header}>{render_slot(@header)}</Primitives.form_header>
         </div>
         <.entry_loader id={"#{@id}-loader-shell"} status={@entry_load_status} entering />
       </div>
@@ -2448,11 +2444,7 @@ defmodule BrandoAdmin.Components.Form do
         data-draft-leave-message={gettext("Your latest edits have not reached recovery storage. Leave this editor anyway?")}
       >
         <div class={["form-content", @live_preview_active? && "with-live-preview"]}>
-          <div :if={@header} class="form-header">
-            <h1>
-              {render_slot(@header)}
-            </h1>
-          </div>
+          <Primitives.form_header :if={@header}>{render_slot(@header)}</Primitives.form_header>
 
           <.creating_language
             entry_id={@entry_id}
