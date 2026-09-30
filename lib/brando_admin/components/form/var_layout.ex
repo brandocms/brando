@@ -29,6 +29,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
 
   alias Brando.Content.Var
   alias Brando.Content.Var.Layout
+  alias Brando.Type.I18nString
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias Ecto.Changeset
 
@@ -79,7 +80,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
         form: var_form,
         index: var_form.index,
         key: Changeset.get_field(var_form.source, :key),
-        label: Changeset.get_field(var_form.source, :label),
+        label: I18nString.localized(Changeset.get_field(var_form.source, :label)),
         type: Changeset.get_field(var_form.source, :type),
         width: Changeset.get_field(var_form.source, :width) || :full,
         new_row: Changeset.get_field(var_form.source, :new_row) == true,

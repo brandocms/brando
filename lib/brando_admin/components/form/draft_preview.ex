@@ -139,7 +139,7 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
   defp rows(%References{} = reference, path), do: [%{field: Enum.join(path, " › "), value: reference}]
 
   defp rows(%{"key" => key, "type" => type} = var, path) when is_binary(key) do
-    name = if var["label"] in [nil, ""], do: label(key), else: var["label"]
+    name = Brando.Type.I18nString.localized(var["label"]) || label(key)
     path = path ++ [name]
 
     case type do

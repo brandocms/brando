@@ -23,6 +23,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.Proposals.RefConfig
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Media.Folders
+  alias Brando.Type.I18nString
 
   defmodule Context do
     @moduledoc """
@@ -776,7 +777,7 @@ defmodule Brando.Content.Proposals.Tools do
           %{
             key: var.key,
             type: to_string(var.type),
-            label: var.label,
+            label: I18nString.localized(var.label),
             instructions: var.instructions,
             options: if(var.type == :select, do: Enum.map(var.options || [], &option/1)),
             settable: settable(var.type)
@@ -790,7 +791,7 @@ defmodule Brando.Content.Proposals.Tools do
   # A table's rows each have the variables of the module's table template.
   defp table_description(module) do
     for var <- Proposals.table_vars(module) do
-      %{key: var.key, type: to_string(var.type), label: var.label, settable: settable(var.type)}
+      %{key: var.key, type: to_string(var.type), label: I18nString.localized(var.label), settable: settable(var.type)}
     end
   end
 

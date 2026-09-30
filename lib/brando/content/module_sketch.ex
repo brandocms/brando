@@ -121,7 +121,7 @@ defmodule Brando.Content.ModuleSketch do
         "- #{ref.name} (#{ref_type(ref)})#{if ref.description, do: ": #{ref.description}"}"
       end)
 
-    vars = Enum.map_join(module.vars, "\n", &"- #{&1.key} (#{&1.type}): #{&1.label}")
+    vars = Enum.map_join(module.vars, "\n", &"- #{&1.key} (#{&1.type}): #{translations(&1.label)}")
 
     """
     Draw the sketch for this module.

@@ -25,6 +25,17 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   toggles can now be switched off. Active-filter chips and the reset button show
   only while a filter differs from where it starts.
 
+- **Var labels are translated.** `Brando.Content.Var`'s `label` is now a map
+  of admin language → text (`:i18n_string`), like a module's name, so editors
+  see labels in their own admin language. The `brando_190` migration moves
+  each label under the default language. The module editor and the entry var
+  editor take one label per admin language; module definitions accept
+  `label "Size"` (read as the default language) or `label %{"en" => "Size",
+  "no" => "Størrelse"}`, and export writes the map. Code that read
+  `var.label` as a string now gets a map: use
+  `Brando.Type.I18nString.localized(var.label)`. Run `mix brando.gen.migrations`
+  for `brando_190`, then re-export module definitions: their lock baselines
+  were taken from the string labels.
 - **Image alt text, title and credits are translated.** `Brando.Images.Image`'s
   `alt`, `title` and `credits` are now maps of content language → text
   (`:i18n_string`). The `brando_180` migration moves existing text under the

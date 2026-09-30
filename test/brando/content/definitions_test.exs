@@ -417,6 +417,22 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, [%{status: :requested}]} = Definitions.refresh(["hero-test"], c.user)
   end
 
+  test "a var label is a language map; a plain one is read as the default language", c do
+    import_args = ["import", "--from", c.path, "--user", to_string(c.user.id)]
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+    assert [%{label: %{"en" => "Theme"}}] = hero().vars
+
+    translated = String.replace(source, ~s(label "Theme"), ~s(label %{"en" => "Theme", "no" => "Tema"}))
+    File.write!(Path.join(c.path, "hero.exs"), translated)
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+    assert [%{label: %{"en" => "Theme", "no" => "Tema"}}] = hero().vars
+
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+    [file] = Path.wildcard(Path.join(exported.directory, "**/*.exs"))
+    assert File.read!(file) =~ ~s(label %{"en" => "Theme", "no" => "Tema"})
+  end
+
   test "a module without `multi` can be imported again after the database stores false", c do
     # `multi` left out of a definition used to normalise to nil, while
     # content_modules.multi defaults to false in a real database. The two then

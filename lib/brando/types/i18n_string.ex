@@ -68,6 +68,17 @@ defmodule Brando.Type.I18nString do
 
   def get(_value, _language), do: nil
 
+  @doc """
+  The text for whoever is reading: the admin's current language (Brando's
+  Gettext locale), falling back as `get/2` does, then to any language that
+  has text. For labels, where showing something beats showing nothing.
+  """
+  @spec localized(map() | String.t() | nil) :: String.t() | nil
+  def localized(value) do
+    get(value, Gettext.get_locale(Brando.Gettext)) ||
+      if is_map(value), do: value |> Map.values() |> Enum.find_value(&present/1)
+  end
+
   defp default_language, do: to_string(Brando.config(:default_language) || "en")
 
   defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)

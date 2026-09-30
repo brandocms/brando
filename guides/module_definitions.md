@@ -162,7 +162,7 @@ defmodule MySite.Definitions.Hero do
 
   vars do
     var :theme, :select do
-      label "Theme"
+      label %{"en" => "Theme", "no" => "Tema"}
       default "light"
       options [{"Light", "light"}, {"Dark", "dark"}]
       placement :config
@@ -179,6 +179,11 @@ defmodule MySite.Definitions.Hero do
   template_file :heex, "hero.heex"
 end
 ```
+
+A var's `label` is what editors see above the field. Give it per admin
+language as a map, as for `name`; editors see their own language, then the
+default language, then any. A plain string, as in `show_intro`, is read as the
+default language. Export always writes the map.
 
 With `hero.heex` beside it:
 

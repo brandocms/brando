@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   import Ecto.Changeset
 
   alias Brando.Repo
+  alias Brando.Type.I18nString
   alias Brando.Utils
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
@@ -292,7 +293,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:placement, placement)
     # A field that owns the var (a menu item's link) names it with its own,
     # translated label rather than the var's stored one ("Link")
-    |> assign(:label, Map.get(assigns, :label_override) || get_field(changeset, :label))
+    |> assign(:label, Map.get(assigns, :label_override) || I18nString.localized(get_field(changeset, :label)))
     |> assign(:key, var[:key].value)
     |> assign(:type, type)
     |> assign(:value, value)
@@ -467,7 +468,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <span class="variable-type">{@var[:type].value}</span>
               <span class="variable-key">
                 <code>&lcub;&lcub; {@var[:key].value} &rcub;&rcub;</code>
-                <span>{@var[:label].value || gettext("No label")}</span>
+                <span>{I18nString.localized(@var[:label].value) || gettext("No label")}</span>
               </span>
               <.value_summary var={@var} />
               <span class={["variable-chevron", @visible && "is-open"]} aria-hidden="true">
@@ -486,7 +487,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                         label={gettext("Key")}
                         instructions={gettext("How the template refers to it")}
                       />
-                      <Input.text
+                      <Input.i18n_text
                         field={@var[:label]}
                         label={gettext("Label")}
                         instructions={gettext("What the editor sees above the field")}
@@ -698,7 +699,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   Measured: 227 KB of a 4 313 KB mount at 115 blocks. --%>
             <%= if @unsaved_var? do %>
               <Input.input type={:hidden} field={@var[:key]} />
-              <Input.input type={:hidden} field={@var[:label]} />
+              <Input.hidden_i18n field={@var[:label]} />
               <Input.input type={:hidden} field={@var[:type]} />
               <Input.input type={:hidden} field={@var[:placement]} />
               <Input.input type={:hidden} field={@var[:new_row]} />
@@ -1238,7 +1239,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ~H"""
     <Content.modal
       title={gettext("Edit link")}
-      subtitle={@field[:label].value}
+      subtitle={I18nString.localized(@field[:label].value)}
       icon="hero-link"
       layout="picker"
       id={"var-#{@field.id}-link-config"}
@@ -1382,7 +1383,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <Content.modal
       title={gettext("Gallery")}
       icon="hero-squares-2x2"
-      subtitle={@field[:label].value}
+      subtitle={I18nString.localized(@field[:label].value)}
       id={"var-#{@field.id}-gallery-config"}
       wide
     >
@@ -1393,7 +1394,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         data-kind={"#{@upload_kind}_gallery"}
         data-component-id={@component_id}
         data-var-key={@var_key}
-        data-upload-label={@field[:label].value}
+        data-upload-label={I18nString.localized(@field[:label].value)}
         data-asset-type="image"
         data-config-target={@field[:gallery_image_config_target].value || "default"}
         data-video-config-target={@field[:gallery_video_config_target].value || "default"}

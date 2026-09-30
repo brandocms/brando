@@ -531,6 +531,27 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   attr :field, FormField, required: true
+
+  @doc """
+  A language map (an `I18nString`) carried through the form unchanged: one
+  hidden input per language, `field[en]`, `field[no]`. A plain string, as
+  older data or params may hold, goes as one input.
+  """
+  def hidden_i18n(%{field: %{value: value}} = assigns) when is_map(value) do
+    assigns = assign(assigns, :entries, Enum.sort(value))
+
+    ~H"""
+    <input :for={{language, text} <- @entries} type="hidden" name={"#{@field.name}[#{language}]"} value={text} />
+    """
+  end
+
+  def hidden_i18n(assigns) do
+    ~H"""
+    <input type="hidden" name={@field.name} value={@field.value} />
+    """
+  end
+
+  attr :field, FormField, required: true
   attr :value, :any
   attr :id_prefix, :string, default: nil
 

@@ -43,7 +43,7 @@ defmodule Brando.Content.Var do
         # :table?
       ]
 
-    attribute :label, :string, required: true
+    attribute :label, :i18n_string, required: true
     attribute :placeholder, :string
     attribute :key, :string, required: true
     attribute :instructions, :string

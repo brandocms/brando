@@ -400,7 +400,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <.inputs_for :let={var} field={@form[:vars]} skip_hidden>
             <Content.modal
               title={gettext("Edit variable")}
-              subtitle={var[:label].value || var[:key].value}
+              subtitle={Brando.Type.I18nString.localized(var[:label].value) || var[:key].value}
               icon="hero-code-bracket"
               layout="editor"
               id={"#{@form.id}-#{@key}-var-#{var.index}"}

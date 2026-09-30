@@ -30,6 +30,7 @@ defmodule Brando.Content.Proposals.Review do
   }
 
   alias Brando.Content.Proposals.EntryFields
+  alias Brando.Type.I18nString
   alias Brando.Content.Proposals.RefConfig
 
   alias Brando.Content.Transfer.Catalog
@@ -575,7 +576,12 @@ defmodule Brando.Content.Proposals.Review do
   defp select_values(vars, set) do
     for %{type: :select} = var <- vars || [] do
       value = Map.get(set, var.key, var.value)
-      %{label: var.label || var.key, value: option(var, value), changed?: Map.has_key?(set, var.key)}
+
+      %{
+        label: I18nString.localized(var.label) || var.key,
+        value: option(var, value),
+        changed?: Map.has_key?(set, var.key)
+      }
     end
   end
 
@@ -737,7 +743,7 @@ defmodule Brando.Content.Proposals.Review do
 
     %{
       name: key,
-      label: var && var.label,
+      label: var && I18nString.localized(var.label),
       before: saved && var && saved_value(var),
       value: option(var, value),
       media: media_value(value)

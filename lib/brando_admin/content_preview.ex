@@ -66,7 +66,7 @@ defmodule BrandoAdmin.ContentPreview do
   end
 
   defp var_lines(var, assets, location) do
-    label = present(var["label"]) || var["key"]
+    label = present(Brando.Type.I18nString.localized(var["label"])) || var["key"]
     text = if present(var["value"]), do: plain_lines("#{label}: #{var["value"]}"), else: []
     text ++ media_lines(var, %{}, label, assets, location)
   end
