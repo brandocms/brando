@@ -2,16 +2,14 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
 // A ref's config modal holds inputs for its `data` embed — heading level, id,
-// link and so on. That chrome is now rendered only while the modal is open, so
-// those inputs are absent from the block's `validate_block` form the rest of
-// the time.
+// link and so on. A polymorphic embed rebuilds from the params it is given, so
+// those values must reach every `validate_block`, modal open or not. While it
+// is closed, ref types that list their config fields (`carried_config` on
+// `Block.Render.block/1`) send them as bare hidden inputs instead of the full
+// widgets; the rest still render the whole config slot, hidden.
 //
-// That is only safe because ref data is an `embeds_one` under polymorphic_embed,
-// where `cast` leaves fields the params don't mention alone. The block's `vars`
-// are a `has_many`, where the same omission makes Ecto rebuild the record from
-// whatever params remain — see block-config-vars-persistence.spec.js. The two
-// associations behave differently, so both need their own round trip; this one
-// pins the ref side.
+// The block's `vars` are a `has_many` with the same need — see
+// block-config-vars-persistence.spec.js. This one pins the ref side.
 test.describe('Block ref config persistence', () => {
   test.setTimeout(120000)
 
@@ -96,6 +94,51 @@ test.describe('Block ref config persistence', () => {
       'https://example.com/one'
     )
     await expect(configModal(page).getByLabel('H3')).toBeChecked()
+    await closeConfig(page)
+  })
+
+  test('a text ref keeps its type through a closed-config edit, save and reload', async ({ page }) => {
+    await page.goto('/admin')
+    await page.getByRole('link', { name: 'Pages & Sections' }).click()
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Create page' }).click()
+    await syncLV(page)
+    await page.getByLabel('Title', { exact: true }).fill(`${TITLE} text`)
+    await page.getByLabel('URI').fill(`${URI}-text`)
+
+    await page.getByRole('button', { name: 'Add block' }).last().click()
+    await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
+    await page.getByRole('button', { name: 'Rich Text Article' }).click()
+    await syncLV(page)
+
+    const textRef = page.locator('.base-block.ref-block').first()
+    await openRefConfig(page, textRef)
+    await configModal(page).getByLabel('Lede').check()
+    await page.waitForTimeout(400)
+    await syncLV(page)
+    await closeConfig(page)
+
+    // Edit the ref with its config closed: only the carried values are sent.
+    const editor = textRef.locator('.ProseMirror')
+    await editor.click()
+    await editor.press('ControlOrMeta+a')
+    await page.keyboard.type('Edited with the config closed')
+    await page.waitForTimeout(800)
+    await syncLV(page)
+
+    await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
+    await syncLV(page)
+    await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
+
+    await page.getByRole('link', { name: `${TITLE} text`, exact: true }).click()
+    await syncLV(page)
+
+    const savedRef = page.locator('.base-block.ref-block').first()
+    await expect(savedRef.locator('.ProseMirror')).toHaveText('Edited with the config closed')
+    await openRefConfig(page, savedRef)
+    await expect(configModal(page).getByLabel('Lede')).toBeChecked()
     await closeConfig(page)
   })
 })

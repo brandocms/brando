@@ -1755,6 +1755,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :uid, :any
   attr :config_open, :string, default: nil
 
+  attr :carried_config, :list,
+    default: nil,
+    doc: """
+    Scalar config fields to carry as bare hidden inputs while the config is
+    closed: a field (sent as "" when nil, like a text or hidden input) or
+    `{:radio, field}` (left out when nil, like a radio group with nothing checked).
+    """
+
   slot :inner_block
   slot :config
   slot :config_footer
@@ -1812,8 +1820,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             The slot therefore always renders; only the modal chrome is gated.
             Pinned by `blocks/block-ref-config-persistence.spec.js`. --%>
       <div :if={!@config_open?} class="block-config-carried" hidden>
-        <%= if @config do %>
-          {render_slot(@config)}
+        <%!-- A ref type that lists its config fields carries just their
+              values: the full widgets (labels, radios, error and help
+              elements) made up most of a ref's markup and were re-sent on
+              every keystroke in it. Each value is sent the way its widget
+              would send it; see `carried_inputs/1`. --%>
+        <%= if @carried_config do %>
+          <input :for={{name, value} <- carried_inputs(@carried_config)} type="hidden" name={name} value={value} />
+        <% else %>
+          <%= if @config do %>
+            {render_slot(@config)}
+          <% end %>
         <% end %>
       </div>
       <Content.modal
@@ -2063,6 +2080,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           config_open={@config_open}
           multi={false}
           target={@target}
+          carried_config={[{:radio, block_data[:level]}, block_data[:id], block_data[:link]]}
         >
           <:description>
             (H{block_data[:level].value})<%= if @ref_description do %>
@@ -2193,6 +2211,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           config_open={@config_open}
           multi={false}
           target={@target}
+          carried_config={[
+            text_block_data[:footnotes],
+            text_block_data[:footnote_module_set],
+            text_block_data[:placeholder],
+            {:radio, text_block_data[:type]}
+          ]}
         >
           <:description>
             <%= if @ref_description not in [nil, ""] do %>
@@ -2215,15 +2239,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 ]
               ]}
             />
-            <%= if @extensions == "all" do %>
-              <Input.hidden field={text_block_data[:extensions]} />
-            <% else %>
-              <input :if={@extensions == ""} type="hidden" name={text_block_data[:extensions].name <> "[]"} value="" />
-              <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
-                <input type="hidden" name={array_name} value={array_value} />
-              </Primitives.array_inputs>
-            <% end %>
           </:config>
+          <%!-- Not editable in the config, and a list, so it stays out of the
+                carried config and always renders here. --%>
+          <%= if @extensions == "all" do %>
+            <Input.hidden field={text_block_data[:extensions]} />
+          <% else %>
+            <input :if={@extensions == ""} type="hidden" name={text_block_data[:extensions].name <> "[]"} value="" />
+            <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
+              <input type="hidden" name={array_name} value={array_value} />
+            </Primitives.array_inputs>
+          <% end %>
           <div class={["text-block", @text_type]}>
             <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
               <div
@@ -3247,6 +3273,21 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       {if(is_list(values), do: name <> "[]", else: name), value}
     end
   end
+
+  # What the config widgets would submit: a radio group with nothing checked
+  # sends nothing, a text or hidden input sends "". `false` is written out,
+  # because `value={false}` drops the attribute and would submit "".
+  defp carried_inputs(fields) do
+    Enum.flat_map(fields, fn
+      {:radio, %{value: nil}} -> []
+      {:radio, field} -> [{field.name, carried_value(field.value)}]
+      field -> [{field.name, carried_value(field.value)}]
+    end)
+  end
+
+  defp carried_value(nil), do: ""
+  defp carried_value(value) when is_binary(value), do: value
+  defp carried_value(value), do: to_string(value)
 
   # An inline `fn params -> send_update(@target, params) end` closes over the
   # whole `assigns` of the template (`@target` reads `assigns.target`): every
