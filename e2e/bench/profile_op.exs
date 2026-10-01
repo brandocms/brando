@@ -17,7 +17,7 @@
 #   3. the spec performs the operation and writes  DONE
 #   4. this script detaches and reports
 #
-# Run `bench/profile-op.spec.js` (BENCH_OP=insert|outline|copy) alongside it.
+# Run `bench/profile-op.spec.js` (BENCH_OP=insert|outline|copy|config) alongside it.
 # The server must be a named node:
 #
 #   MIX_ENV=e2e elixir --sname brandobench --cookie benchcookie -S mix phx.server
