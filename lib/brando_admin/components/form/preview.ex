@@ -8,13 +8,21 @@ defmodule BrandoAdmin.Components.Form.Preview do
   alias BrandoAdmin.Components.Form.BlockField
 
   @coalesce_ms 25
+  # A full render re-sends the whole document and morphs it into the iframe.
+  # Entry-field validates arrive one per typing pause, so without a floor every
+  # pause paid for one. The first request after a quiet spell still renders
+  # within the coalescing window; later ones wait for this much time since the
+  # previous render and then render the latest state once.
+  @min_interval_ms 1000
   @priority %{live_preview_update: 0, live_preview_full_rerender: 1, live_preview_reload: 2}
 
   def queue(%{assigns: %{live_preview_active?: false}} = socket, _mode, _delay), do: socket
 
   def queue(socket, mode, delay) do
     pending = socket.assigns[:preview_update]
-    deadline = System.monotonic_time(:millisecond) + max(delay, @coalesce_ms)
+    now = System.monotonic_time(:millisecond)
+    wait = Enum.max([delay, @coalesce_ms, interval_left(socket, now)])
+    deadline = now + wait
     mode = if pending, do: strongest(pending.mode, mode), else: mode
 
     if pending && is_nil(pending.parts) && pending.deadline <= deadline do
@@ -27,7 +35,7 @@ defmodule BrandoAdmin.Components.Form.Preview do
         send_update_after(
           Form,
           [id: socket.assigns.id, event: "flush_live_preview", token: token],
-          max(delay, @coalesce_ms)
+          wait
         )
 
       assign(socket, :preview_update, %{token: token, timer: timer, deadline: deadline, mode: mode, parts: nil})
@@ -86,9 +94,15 @@ defmodule BrandoAdmin.Components.Form.Preview do
     if Enum.any?(pending.parts, fn {_, part} -> is_nil(part) end) do
       socket
     else
-      socket |> assign(:preview_update, nil) |> render.(pending.mode, pending.parts)
+      socket
+      |> assign(:preview_update, nil)
+      |> render.(pending.mode, pending.parts)
+      |> assign(:preview_rendered_at, System.monotonic_time(:millisecond))
     end
   end
+
+  defp interval_left(%{assigns: %{preview_rendered_at: at}}, now) when is_integer(at), do: at + @min_interval_ms - now
+  defp interval_left(_socket, _now), do: 0
 
   defp strongest(left, right) do
     if Map.fetch!(@priority, left) >= Map.fetch!(@priority, right), do: left, else: right

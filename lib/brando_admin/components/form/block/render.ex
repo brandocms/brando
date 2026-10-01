@@ -76,6 +76,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         target_ref={{Block, @id}}
         form_id={@form_id}
         entry={@entry}
+        entry_language={@entry_language}
         insert_block={JS.push("insert_block", target: @myself)}
         insert_multi_block={JS.push("insert_block_entry", value: %{multi: true}, target: @myself)}
         insert_child_block={JS.push("insert_block", value: %{multi: true}, target: @myself)}
@@ -157,6 +158,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         block_module={@block_module}
         liquid_splits={@liquid_splits}
         entry={@entry}
+        entry_language={@entry_language}
         insert_block={JS.push("insert_block", target: @myself)}
         module_picker_id={@module_picker_id}
         config_open={@config_open}
@@ -214,6 +216,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         block_module={@block_module}
         liquid_splits={@liquid_splits}
         entry={@entry}
+        entry_language={@entry_language}
         insert_block={JS.push("insert_block_entry", target: @myself)}
         module_picker_id={@module_picker_id}
         config_open={@config_open}
@@ -543,15 +546,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     fragment_id = Changeset.get_field(block_cs, :fragment_id)
 
     assigns =
-      assigns
-      |> assign(:uid, Changeset.get_field(block_cs, :uid))
-      |> assign(:type, Changeset.get_field(block_cs, :type))
-      |> assign(:fragment_id, fragment_id)
-      |> assign(:active, Changeset.get_field(block_cs, :active))
-      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
-      |> assign(
-        :update_url,
-        fragment_id && Brando.Pages.Fragment.__admin_route__(:update, [fragment_id])
+      assign_derived(assigns, [:form, :belongs_to],
+        uid: Changeset.get_field(block_cs, :uid),
+        type: Changeset.get_field(block_cs, :type),
+        fragment_id: fragment_id,
+        active: Changeset.get_field(block_cs, :active),
+        collapsed: Changeset.get_field(block_cs, :collapsed),
+        update_url: fragment_id && Brando.Pages.Fragment.__admin_route__(:update, [fragment_id])
       )
 
     ~H"""
@@ -665,15 +666,16 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     bg_color = extract_block_bg_color(palette)
 
     assigns =
-      assigns
-      |> assign(:uid, Changeset.get_field(block_cs, :uid))
-      |> assign(:type, Changeset.get_field(block_cs, :type))
-      |> assign(:container_id, Changeset.get_field(block_cs, :container_id))
-      |> assign(:description, Changeset.get_field(block_cs, :description))
-      |> assign(:active, Changeset.get_field(block_cs, :active))
-      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
-      |> assign(:palette, palette)
-      |> assign(:bg_color, bg_color)
+      assign_derived(assigns, [:form, :belongs_to],
+        uid: Changeset.get_field(block_cs, :uid),
+        type: Changeset.get_field(block_cs, :type),
+        container_id: Changeset.get_field(block_cs, :container_id),
+        description: Changeset.get_field(block_cs, :description),
+        active: Changeset.get_field(block_cs, :active),
+        collapsed: Changeset.get_field(block_cs, :collapsed),
+        palette: palette,
+        bg_color: bg_color
+      )
 
     ~H"""
     <div
@@ -803,6 +805,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :module_type, :atom, default: :liquid
   attr :heex_compiled_module, :any, default: nil
   attr :entry, :any, default: nil
+  attr :entry_language, :string, default: nil
   attr :hidden_block_fields, :list, default: []
   slot :inner_block
 
@@ -813,12 +816,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
     assigns =
       assigns
-      |> assign(:uid, Changeset.get_field(block_cs, :uid))
-      |> assign(:type, Changeset.get_field(block_cs, :type))
-      |> assign(:module_id, Changeset.get_field(block_cs, :module_id))
-      |> assign(:description, Changeset.get_field(block_cs, :description))
-      |> assign(:active, Changeset.get_field(block_cs, :active))
-      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
+      |> assign_derived([:form, :belongs_to],
+        uid: Changeset.get_field(block_cs, :uid),
+        type: Changeset.get_field(block_cs, :type),
+        module_id: Changeset.get_field(block_cs, :module_id),
+        description: Changeset.get_field(block_cs, :description),
+        active: Changeset.get_field(block_cs, :active),
+        collapsed: Changeset.get_field(block_cs, :collapsed),
+        block_form: belongs_to == :root && nested_block_form(assigns.form)
+      )
       |> assign_new(:heex_compiled_module, fn -> nil end)
 
     ~H"""
@@ -850,61 +856,70 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         class="block"
         phx-hook="Brando.Block"
       >
-        <.form for={@form} phx-value-id={@form.data.id} phx-change="validate_block" phx-target={@target}>
+        <%!-- A plain form with the attributes `<.form>` gives it. The component
+              rebuilds its attributes whenever anything inside it changes, so
+              every entry-field update re-sent them for each consuming block. --%>
+        <form
+          id={@form.id}
+          method={@form.options[:method]}
+          phx-value-id={@form.data.id}
+          phx-change="validate_block"
+          phx-target={@target}
+        >
           <%= if @belongs_to == :root do %>
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
-            <.inputs_for :let={block_form} field={@form[:block]}>
-              <.hidden_block_fields fields={@hidden_block_fields} />
-              <.toolbar
-                uid={@uid}
-                collapsed={@collapsed}
-                type={@type}
-                multi={@multi}
-                config={true}
-                block={block_form}
-                target={@target}
-                is_ref?={false}
-                is_datasource?={@is_datasource?}
-                has_children?={@has_children?}
-              >
-                <:description>
-                  <.i18n map={@module_name} />
-                </:description>
-              </.toolbar>
+            <input :for={{name, value} <- hidden_inputs(@block_form)} type="hidden" name={name} value={value} />
+            <.hidden_block_fields fields={@hidden_block_fields} />
+            <.toolbar
+              uid={@uid}
+              collapsed={@collapsed}
+              type={@type}
+              multi={@multi}
+              config={true}
+              block={@block_form}
+              target={@target}
+              is_ref?={false}
+              is_datasource?={@is_datasource?}
+              has_children?={@has_children?}
+            >
+              <:description>
+                <.i18n map={@module_name} />
+              </:description>
+            </.toolbar>
 
-              <.module_config
-                open={@config_open == @uid}
-                uid={@uid}
-                block_form={block_form}
-                target={@target}
-                form_id={@form_id}
-                language={entry_language(assigns[:entry])}
-              />
-              <.module_content
-                config_open={@config_open}
-                uid={@uid}
-                block_form={block_form}
-                liquid_splits={@liquid_splits}
-                module_class={@module_class}
-                module_type={@module_type}
-                heex_compiled_module={@heex_compiled_module}
-                has_table_template?={@has_table_template?}
-                table_template_name={@table_template_name}
-                target={@target}
-                target_ref={@target_ref}
-                form_id={@form_id}
-                is_datasource?={@is_datasource?}
-                datasource_meta={@datasource_meta}
-                module_datasource_module_label={@module_datasource_module_label}
-                module_datasource_type={@module_datasource_type}
-                module_datasource_query={@module_datasource_query}
-                available_identifiers={@available_identifiers}
-                datasource_preview={@datasource_preview}
-                block_identifiers={block_form[:block_identifiers]}
-                entry={@entry}
-              />
-            </.inputs_for>
+            <.module_config
+              open={@config_open == @uid}
+              uid={@uid}
+              block_form={@block_form}
+              target={@target}
+              form_id={@form_id}
+              language={@entry_language}
+            />
+            <.module_content
+              config_open={@config_open}
+              uid={@uid}
+              block_form={@block_form}
+              liquid_splits={@liquid_splits}
+              module_class={@module_class}
+              module_type={@module_type}
+              heex_compiled_module={@heex_compiled_module}
+              has_table_template?={@has_table_template?}
+              table_template_name={@table_template_name}
+              target={@target}
+              target_ref={@target_ref}
+              form_id={@form_id}
+              is_datasource?={@is_datasource?}
+              datasource_meta={@datasource_meta}
+              module_datasource_module_label={@module_datasource_module_label}
+              module_datasource_type={@module_datasource_type}
+              module_datasource_query={@module_datasource_query}
+              available_identifiers={@available_identifiers}
+              datasource_preview={@datasource_preview}
+              block_identifiers={@block_form[:block_identifiers]}
+              entry={@entry}
+              entry_language={@entry_language}
+            />
           <% else %>
             <Input.hidden field={@form[:sequence]} />
             <input type="hidden" name={@form[:id].name} value={@form[:id].value} />
@@ -932,7 +947,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               block_form={@form}
               target={@target}
               form_id={@form_id}
-              language={entry_language(assigns[:entry])}
+              language={@entry_language}
             />
             <.module_content
               config_open={@config_open}
@@ -956,9 +971,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               datasource_preview={@datasource_preview}
               block_identifiers={@form[:block_identifiers]}
               entry={@entry}
+              entry_language={@entry_language}
             />
           <% end %>
-        </.form>
+        </form>
         <%= if @has_children? do %>
           {render_slot(@inner_block)}
           <.plus
@@ -997,6 +1013,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:heex_assigns, heex_assigns)
       |> assign(:heex_render_fn, heex_render_fn)
+      |> assign_new(:entry_language, fn -> nil end)
 
     ~H"""
     <div class="block-content">
@@ -1007,7 +1024,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           target={@target}
           form_id={@form_id}
           current_user_id={@block_form[:creator_id].value}
-          language={entry_language(assigns[:entry])}
+          language={@entry_language}
         />
         <.datasource
           :if={@is_datasource?}
@@ -1061,8 +1078,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
     assigns =
       assigns
-      |> assign(:footnote_refs, footnote_ref_names(assigns.block_form.source))
+      |> assign_derived([:block_form], footnote_refs: footnote_ref_names(assigns.block_form.source))
       |> assign(:liquid_splits, liquid_splits)
+      |> assign_new(:entry_language, fn -> nil end)
 
     ~H"""
     <div class="block-content">
@@ -1073,7 +1091,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           target={@target}
           form_id={@form_id}
           current_user_id={@block_form[:creator_id].value}
-          language={entry_language(assigns[:entry])}
+          language={@entry_language}
         />
         <.datasource
           :if={@is_datasource?}
@@ -1739,6 +1757,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :uid, :any
   attr :config_open, :string, default: nil
 
+  attr :carried_config, :list,
+    default: nil,
+    doc: """
+    Scalar config fields to carry as bare hidden inputs while the config is
+    closed: a field (sent as "" when nil, like a text or hidden input) or
+    `{:radio, field}` (left out when nil, like a radio group with nothing checked).
+    """
+
   slot :inner_block
   slot :config
   slot :config_footer
@@ -1796,8 +1822,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             The slot therefore always renders; only the modal chrome is gated.
             Pinned by `blocks/block-ref-config-persistence.spec.js`. --%>
       <div :if={!@config_open?} class="block-config-carried" hidden>
-        <%= if @config do %>
-          {render_slot(@config)}
+        <%!-- A ref type that lists its config fields carries just their
+              values: the full widgets (labels, radios, error and help
+              elements) made up most of a ref's markup and were re-sent on
+              every keystroke in it. Each value is sent the way its widget
+              would send it; see `carried_inputs/1`. --%>
+        <%= if @carried_config do %>
+          <input :for={{name, value} <- carried_inputs(@carried_config)} type="hidden" name={name} value={value} />
+        <% else %>
+          <%= if @config do %>
+            {render_slot(@config)}
+          <% end %>
         <% end %>
       </div>
       <Content.modal
@@ -1961,6 +1996,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           config_open={@config_open}
           multi={false}
           target={@target}
+          carried_config={[block_data[:text]]}
         >
           <:description>
             {gettext("Comment — not shown on frontend.")}
@@ -2047,6 +2083,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           config_open={@config_open}
           multi={false}
           target={@target}
+          carried_config={[{:radio, block_data[:level]}, block_data[:id], block_data[:link]]}
         >
           <:description>
             (H{block_data[:level].value})<%= if @ref_description do %>
@@ -2177,6 +2214,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           config_open={@config_open}
           multi={false}
           target={@target}
+          carried_config={[
+            text_block_data[:footnotes],
+            text_block_data[:footnote_module_set],
+            text_block_data[:placeholder],
+            {:radio, text_block_data[:type]}
+          ]}
         >
           <:description>
             <%= if @ref_description not in [nil, ""] do %>
@@ -2199,15 +2242,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 ]
               ]}
             />
-            <%= if @extensions == "all" do %>
-              <Input.hidden field={text_block_data[:extensions]} />
-            <% else %>
-              <input :if={@extensions == ""} type="hidden" name={text_block_data[:extensions].name <> "[]"} value="" />
-              <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
-                <input type="hidden" name={array_name} value={array_value} />
-              </Primitives.array_inputs>
-            <% end %>
           </:config>
+          <%!-- Not editable in the config, and a list, so it stays out of the
+                carried config and always renders here. --%>
+          <%= if @extensions == "all" do %>
+            <Input.hidden field={text_block_data[:extensions]} />
+          <% else %>
+            <input :if={@extensions == ""} type="hidden" name={text_block_data[:extensions].name <> "[]"} value="" />
+            <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
+              <input type="hidden" name={array_name} value={array_value} />
+            </Primitives.array_inputs>
+          <% end %>
           <div class={["text-block", @text_type]}>
             <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
               <div
@@ -2405,7 +2450,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             id={"block-#{@uid}-render-var-#{@placement}-#{entry.form.id}"}
             var={entry.form}
             render={@placement}
-            on_change={fn params -> send_update(@target, params) end}
+            on_change={send_to(@target)}
             form_id={@form_id}
             current_user_id={@current_user_id}
             language={@language}
@@ -2696,9 +2741,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           popover={gettext("Collapse (hide) block in block editor")}
         >
           <span class="visually-hidden">{gettext("Collapse (hide) block in block editor")}</span>
-          <.icon :if={@collapsed} name="hero-eye-slash" />
-          <.icon :if={!@collapsed} name="hero-eye" />
+          <%!-- Both icons, switched in CSS off the checkbox before them, so the
+                click shows at once instead of after the validate round trip.
+                `uiCommands.js` flips the block's `collapsed` class the same way. --%>
           <Input.input type={:checkbox} field={@collapsed_field} />
+          <.icon name="hero-eye-slash" class="when-collapsed" />
+          <.icon name="hero-eye" class="when-expanded" />
         </Primitives.label>
 
         <div
@@ -3200,9 +3248,83 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   # The language of the entry being edited, for link pickers. nil for entries
   # without one, which then offer every language.
-  defp entry_language(%{language: language}) when not is_nil(language), do: to_string(language)
+  def entry_language(%{language: language}) when not is_nil(language), do: to_string(language)
+  def entry_language(_entry), do: nil
 
-  defp entry_language(_entry), do: nil
+  # A root's inner block form exactly as `<.inputs_for field={@form[:block]}>`
+  # builds it, persistent id included, so ids and names are unchanged. Built
+  # here instead, through `assign_derived/3`, because LiveView cannot track
+  # expressions that read an `inputs_for` `:let` variable: any change in the
+  # slot re-sent every input of the block.
+  @doc false
+  def nested_block_form(%Phoenix.HTML.Form{} = form) do
+    [inner] = form.impl.to_form(form.source, form, :block, Keyword.take(form.options, [:multipart]))
+    id = inner.params["_persistent_id"] || "0"
+
+    %{
+      inner
+      | id: "#{form.id}_block_#{id}",
+        params: Map.put(inner.params, "_persistent_id", id),
+        hidden: [{"_persistent_id", id} | inner.hidden],
+        index: 0
+    }
+  end
+
+  # The hidden inputs `inputs_for` renders ahead of its slot.
+  @doc false
+  def hidden_inputs(form) do
+    for {field, values} <- form.hidden, value <- List.wrap(values) do
+      name = Phoenix.HTML.Form.input_name(form, field)
+      {if(is_list(values), do: name <> "[]", else: name), value}
+    end
+  end
+
+  # What each config widget would submit:
+  #
+  #   * a text, number, textarea or hidden input: its value, "" when nil;
+  #   * `{:radio, field}`: nothing when nil, as no radio is checked;
+  #   * `{:checkbox, field}`: "true" or "false", as `Input.toggle` always
+  #     submits its hidden "false" and a checked box overrides it;
+  #   * `{:override, field}`: only a real boolean, as
+  #     `Input.override_toggle_group` leaves an inherited value out.
+  #
+  # `false` is written out, because `value={false}` drops the attribute and
+  # would submit "".
+  defp carried_inputs(fields) do
+    Enum.flat_map(fields, fn
+      {:radio, %{value: nil}} -> []
+      {:radio, field} -> [{field.name, carried_value(field.value)}]
+      {:checkbox, field} -> [{field.name, to_string(Phoenix.HTML.Form.normalize_value("checkbox", field.value))}]
+      {:override, %{value: value} = field} when value in [true, "true"] -> [{field.name, "true"}]
+      {:override, %{value: value} = field} when value in [false, "false"] -> [{field.name, "false"}]
+      {:override, _field} -> []
+      field -> [{field.name, carried_value(field.value)}]
+    end)
+  end
+
+  defp carried_value(nil), do: ""
+  defp carried_value(value) when is_binary(value), do: value
+  defp carried_value(value), do: to_string(value)
+
+  # An inline `fn params -> send_update(@target, params) end` closes over the
+  # whole `assigns` of the template (`@target` reads `assigns.target`): every
+  # var form of the block, ~120 KB, kept alive by each RenderVar, and a new
+  # value on every render. This one holds only the target, and two of them for
+  # the same target are equal, so an unchanged var is not updated.
+  defp send_to(target), do: fn params -> send_update(target, params) end
+
+  # Values a render function derives from its inputs. Set with `assign/3` they
+  # count as changed on every render — a function component's assigns hold only
+  # what the caller passed, so there is no previous value to compare with — and
+  # every expression reading them is sent again. An entry-field keystroke, which
+  # changes nothing but `entry` and `liquid_splits`, re-sent each consuming
+  # block's ids, toolbar and form inputs: ~2.7 KB per block. They only change
+  # when an input they derive from does, so that is when they are marked.
+  defp assign_derived(assigns, inputs, derived) do
+    if Enum.any?(inputs, &changed?(assigns, &1)),
+      do: assign(assigns, derived),
+      else: Map.merge(assigns, Map.new(derived))
+  end
 
   attr :target, :any, required: true
   slot :inner_block, required: true

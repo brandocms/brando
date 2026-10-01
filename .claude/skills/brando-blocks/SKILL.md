@@ -65,6 +65,18 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 | `lib/brando_admin/components/form/input/blocks/render_var.ex` | Var rendering component |
 | `lib/brando_admin/components/form/input/blocks/utils.ex` | Block rendering utilities |
 
+**Ref config fields must be listed in `carried_config`.** A ref's config
+values have to reach every `validate_block`, but while the modal is closed
+only the fields listed in the type's `carried_config` (on
+`Block.Render.block/1`) are sent, as bare hidden inputs. Adding a field to a
+`<:config>` slot without listing it drops its value on the next validate.
+Use the kind its widget submits as: plain (`""` when nil), `{:radio, f}`,
+`{:checkbox, f}` (`Input.toggle`) or `{:override, f}`
+(`Input.override_toggle_group`). Hidden-only config that is a list or a nested
+form belongs in the block body, not the slot.
+`e2e/playwright/tests/blocks/block-ref-config-carried.spec.js` compares what
+each ref type submits with its config closed and open; add new ref types there.
+
 ### Villain (Rendering & Block Types)
 | File | Description |
 |------|-------------|
@@ -249,8 +261,12 @@ Form sends: send_update(BlockField, event: "fetch_root_blocks", tag: :save)
     (Ops.materialize_root/2) — no messages to blocks, no collection cascade
   → send_update(form_cid, event: "provide_root_blocks", ...)
 ```
-After the save completes, `reload_all_blocks/1` hands every mounted root a fresh form via
-the `replace_form` cascade, so blocks stop diffing against pre-save nil-id data.
+After the save completes, `reload_all_blocks/2` hands mounted roots a fresh form via
+the `replace_form` cascade, so blocks stop diffing against pre-save nil-id data. It skips
+a root only when `holds_persisted?/2` proves its mounted form already equals the saved row
+(no store diff in its subtree, seeded row and materialized state both snapshot-equal to the
+reload); everything else is re-seeded. Other reloads (hard reset, failed cross-parent move)
+re-seed every root.
 
 ### Duplication Flow
 ```
@@ -314,7 +330,7 @@ the keyed `:for` — never from a form's `sequence` field, which is stale by des
 - Structural and UI messages: `set_collapsed`, `set_children_collapsed`, `insert_block`,
   `insert_pasted_block`, `paste_block`, `paste_child_block`, `outline_reorder_child`,
   `extract_child`, `update_ref`, `update_ref_data`, `update_block_var`,
-  `update_entry_field`, `enable_live_preview` / `disable_live_preview`.
+  `update_entry_field`.
 
 > There is **no** position-response tracker, no `send_form_to_parent`, and no
 > `signal_position_update`. Those belonged to the pre-2026-07 architecture and were removed
@@ -363,13 +379,16 @@ preserved is anything that had no DOM input to capture in the first place.
 ## 10. Live Preview
 
 ### Enable/Disable
-Cascades through entire block tree:
+`live_preview_active?` and `live_preview_cache_key` are attributes, rendered down
+the tree in one pass:
 ```
-Form → BlockField (event: "enable_live_preview", cache_key: ...) →
-  for each block_uid: send_update(Block, event: "enable_live_preview", cache_key: ...)
-    → Block: assigns live_preview_active?: true, cascades to children
-    → no local HTML render; the initial full-page render already supplies it
+Form (assigns) → BlockField attrs → root Block attrs → child Block attrs
+  → no local HTML render; the initial full-page render already supplies it
 ```
+Do not reintroduce a `send_update` per block for this: each one is its own
+render and diff frame, which made opening the preview at 115 roots take 115
+frames over ~0.8 s. A newly mounted block receives the attributes like any
+other, so it needs no status query.
 
 ### Rendering
 - **`render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)`** — renders a child block's Liquex template, puts `rendered_html` and `rendered_at` into changeset

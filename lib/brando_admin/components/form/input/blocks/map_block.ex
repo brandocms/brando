@@ -39,6 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
           target={@target}
           ref_form={@ref_form}
           config_open={@config_open}
+          carried_config={[block_data[:embed_url], block_data[:source]]}
         >
           <:description>{block_data[:source].value}</:description>
           <:config>

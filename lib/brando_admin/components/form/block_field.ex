@@ -25,9 +25,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   `fetch_root_blocks` materializes every root changeset from the op store in
   one pass (`Ops.materialize_root/2`) and answers the Form — there is no
-  gather protocol. After a completed save, `reload_all_blocks/1` re-seeds
-  every mounted block through the `replace_form` cascade (fresh db ids), the
-  only sanctioned parent→child form handoff after mount.
+  gather protocol. After a completed save, `reload_all_blocks/2` re-seeds
+  mounted roots through the `replace_form` cascade (fresh db ids), the only
+  sanctioned parent→child form handoff after mount. Roots that provably hold
+  the saved rows already are skipped.
 
   ## Multi-user sync
 
@@ -72,7 +73,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   require Logger
 
   def mount(socket) do
-    {:ok, assign(socket, outline_items: [], open_slot_uid: nil, slot_title: nil, note_observers: %{})}
+    {:ok,
+     assign(socket,
+       outline_items: [],
+       open_slot_uid: nil,
+       slot_title: nil,
+       note_observers: %{},
+       live_preview_active?: false,
+       live_preview_cache_key: nil
+     )}
   end
 
   @structural_ops [:insert, :insert_child, :move, :reorder, :reorder_children, :move_to_parent, :remap_slot, :delete]
@@ -605,18 +614,36 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "capture_draft", capture_id: id, reply_to: target, forms: forms}, socket) do
     alias Brando.Drafts.Params
 
-    roots =
-      Enum.map(socket.assigns.block_ops.order, fn uid ->
-        {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, uid)
+    ops = socket.assigns.block_ops
+    cache = socket.assigns[:draft_snapshots] || %{}
+
+    # A root's snapshot is a pure function of its saved row, its store state
+    # and the browser values overlaid on its subtree, so an unchanged key
+    # reuses the last capture's result. Rebuilding all of them cost ~80 ms of
+    # the LiveView process per capture at 115 roots; usually one has changed.
+    {roots, cache} =
+      Enum.map_reduce(ops.order, %{}, fn uid, acc ->
+        {:ok, params} = Ops.materialize_root(ops, uid)
         base = materialize_base_struct(socket, uid)
-        module = socket.assigns.block_module
-        full = module.changeset(base, params, socket.assigns.current_user.id, true) |> Params.snapshot()
-        full = Map.update!(full, "block", &Params.overlay_block(&1, forms))
-        module.changeset(base, full, socket.assigns.current_user.id, true) |> Params.snapshot()
+        key = {base, params, Map.take(forms, [uid | Ops.descendants(ops, uid)])}
+
+        snapshot =
+          case cache do
+            %{^uid => {^key, snapshot}} ->
+              snapshot
+
+            _ ->
+              module = socket.assigns.block_module
+              full = module.changeset(base, params, socket.assigns.current_user.id, true) |> Params.snapshot()
+              full = Map.update!(full, "block", &Params.overlay_block(&1, forms))
+              module.changeset(base, full, socket.assigns.current_user.id, true) |> Params.snapshot()
+          end
+
+        {snapshot, Map.put(acc, uid, {key, snapshot})}
       end)
 
     send_update(target, event: "draft_part", capture_id: id, kind: :block, field: socket.assigns.block_field, data: roots)
-    {:ok, socket}
+    {:ok, assign(socket, :draft_snapshots, cache)}
   rescue
     _ ->
       send_update(target, event: "draft_timeout", capture_id: id)
@@ -652,31 +679,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, socket}
   end
 
-  def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
-    for block_uid <- socket.assigns.block_ops.order do
-      send_update(Block,
-        id: "block-#{block_uid}",
-        event: "enable_live_preview",
-        cache_key: cache_key
-      )
-    end
-
-    {:ok, socket}
-  end
-
-  def update(%{event: "disable_live_preview"}, socket) do
-    for block_uid <- socket.assigns.block_ops.order do
-      send_update(Block,
-        id: "block-#{block_uid}",
-        event: "disable_live_preview"
-      )
-    end
-
-    {:ok, socket}
-  end
-
-  def update(%{event: "reload_all_blocks"}, socket) do
-    {:ok, reload_all_blocks(socket)}
+  def update(%{event: "reload_all_blocks"} = msg, socket) do
+    {:ok, reload_all_blocks(socket, Map.get(msg, :scope, :all))}
   end
 
   # === Block Sync: Data Shipping ===
@@ -1155,14 +1159,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # parent→child form handoff after mount, and it cascades down the tree.
   # Without it, a save-and-continue-editing session would keep diffing
   # against pre-save nil-id data and churn child rows on the next save.
-  defp reload_all_blocks(socket) do
+  #
+  # `:changed` (after a save) skips the roots that provably hold the saved
+  # rows already. Re-seeding one re-sends its whole form (~8 KB, one frame
+  # per root) even when nothing in it changed — 1.1 MB for a save at 115
+  # roots. See `holds_persisted?/2` for what "provably" means.
+  defp reload_all_blocks(socket, scope \\ :all) do
     user_id = socket.assigns.current_user.id
     block_module = socket.assigns.block_module
     entry_blocks = socket.assigns.entry_blocks || []
 
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
 
-    for form <- entry_blocks_forms do
+    for form <- entry_blocks_forms, scope == :all or not holds_persisted?(socket, form) do
       send_update(Block, id: "block-#{get_form_block_uid(form)}", event: "replace_form", form: form)
     end
 
@@ -1176,6 +1185,40 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:pending_remote_snapshots, %{})
     |> assign(:last_synced_snapshots, %{})
     |> assign(:blocks_changed?, false)
+  end
+
+  # Whether the mounted root behind `form` (freshly loaded after a save)
+  # already holds exactly that row, so re-seeding it would change nothing.
+  # All three are required; a root failing any of them is re-seeded, as every
+  # root used to be:
+  #
+  #   * The store has no diff for the root or anything under it, so the
+  #     mounted form is still its seed form. An edited root keeps a form
+  #     rebased on pre-save data even when its values were saved verbatim.
+  #   * The row it was seeded from snapshots equal to the reloaded row — ids,
+  #     sequence, children, vars and refs included. A form whose data is a
+  #     stale row (a reorder shifted its sequence, a child got an id) is not
+  #     the saved entry, even where that difference is ignored at save time.
+  #   * What the editor would save for it — the store's materialization cast
+  #     onto the seeded row, exactly what the save cast — equals it too. That
+  #     catches structure the editor shows but the save did not persist.
+  defp holds_persisted?(socket, form) do
+    alias Brando.Drafts.Params
+
+    uid = get_form_block_uid(form)
+    ops = socket.assigns.block_ops
+
+    with %{source: %Changeset{data: seeded_row} = seed} <- Map.get(socket.assigns.seed_forms, uid),
+         :persisted <- Map.get(ops.statuses, uid),
+         false <- Enum.any?([uid | Ops.descendants(ops, uid)], &Map.has_key?(ops.diffs, &1)),
+         saved = Params.snapshot(form.source),
+         true <- Params.snapshot(seed) == saved,
+         {:ok, params} <- Ops.materialize_root(ops, uid) do
+      held = socket.assigns.block_module.changeset(seeded_row, params, socket.assigns.current_user.id, true)
+      Params.snapshot(held) == saved
+    else
+      _ -> false
+    end
   end
 
   # Ship or catch up on `uid`'s root when its editing session settles (blur,
@@ -2057,6 +2100,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 slot_open={@open_slot_uid == block[:uid].value}
                 slot_title={@slot_title}
                 paste_multi_module_id={@paste_multi_module_id}
+                live_preview_active?={@live_preview_active?}
+                live_preview_cache_key={@live_preview_cache_key}
                 level={0}
               />
             </div>

@@ -439,51 +439,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
-    has_children? = socket.assigns.has_children?
-    changesets = socket.assigns.changesets
-    id = socket.assigns.id
-
-    if has_children? do
-      Enum.each(changesets, fn {block_uid, _} ->
-        child_id = "#{id}-child-#{block_uid}"
-
-        send_update(__MODULE__,
-          id: child_id,
-          event: "enable_live_preview",
-          cache_key: cache_key
-        )
-      end)
-    end
-
-    socket
-    |> assign(:live_preview_active?, true)
-    |> assign(:live_preview_cache_key, cache_key)
-    |> then(&{:ok, &1})
-  end
-
-  def update(%{event: "disable_live_preview"}, socket) do
-    has_children? = socket.assigns.has_children?
-    changesets = socket.assigns.changesets
-    id = socket.assigns.id
-
-    if has_children? do
-      Enum.each(changesets, fn {block_uid, _} ->
-        child_id = "#{id}-child-#{block_uid}"
-
-        send_update(__MODULE__,
-          id: child_id,
-          event: "disable_live_preview"
-        )
-      end)
-    end
-
-    socket
-    |> assign(:live_preview_active?, false)
-    |> assign(:live_preview_cache_key, nil)
-    |> then(&{:ok, &1})
-  end
-
   def update(%{event: "delete_block", uid: uid, dom_id: _dom_id}, socket) do
     changesets = socket.assigns.changesets
     block_list = socket.assigns.block_list
@@ -877,6 +832,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:entry, entry)
+    |> assign_entry_language()
     |> assign(:liquid_splits, updated_liquid_splits)
     |> then(&{:ok, &1})
   end
@@ -888,6 +844,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:entry, entry)
+    |> assign_entry_language()
     |> assign(:liquid_splits, updated_liquid_splits)
     |> then(&{:ok, &1})
   end
@@ -920,6 +877,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(assigns)
+    |> assign_entry_language()
     |> assign(:active, Changeset.get_field(changeset, :active))
     |> assign(:deleted, Changeset.get_field(changeset, :marked_as_deleted))
     |> assign(:form_has_changes, changeset.changes !== %{})
@@ -1021,7 +979,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_assign_datasource_preview()
     |> assign_selected_identifiers()
     |> maybe_parse_module()
-    |> maybe_get_live_preview_status()
     |> assign_hidden_block_fields()
     |> assign(:block_initialized, true)
     |> assign_unused_collections()
@@ -1261,23 +1218,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp put_var_value(var_cs, data_key, data_value) do
     Changeset.put_change(var_cs, data_key, data_value)
-  end
-
-  def maybe_get_live_preview_status(%{assigns: %{form_is_new: true, block_initialized: false}} = socket) do
-    form_id = socket.assigns.form_id
-    block_ref = {__MODULE__, socket.assigns.id}
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      event: "get_live_preview_status",
-      block_ref: block_ref
-    )
-
-    socket
-  end
-
-  def maybe_get_live_preview_status(socket) do
-    socket
   end
 
   def render_module(%{assigns: %{live_preview_active?: false}} = socket), do: socket
@@ -1674,6 +1614,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   # `consumes_entry?` is only set once a module has been resolved, so a block
   # without one (containers, fragments) keeps the old behaviour of accepting
   # every entry update — nil is deliberately not treated as false.
+  # Kept as its own assign so a keystroke in an entry field other than
+  # `language` leaves it unchanged, and the inputs that read it are not re-sent.
+  defp assign_entry_language(socket),
+    do: assign(socket, :entry_language, __MODULE__.Render.entry_language(socket.assigns[:entry]))
+
   defp drop_on_reentry(socket) do
     if socket.assigns[:consumes_entry?] == false do
       [:form, :children, :entry]

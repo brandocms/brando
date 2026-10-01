@@ -36,6 +36,10 @@ an event name at both ends before changing its payload.
 `Form.Preview` owns the pending preview timer, generation token and block-field
 responses. It collects once per burst with a 25 ms minimum window, keeps the
 earliest deadline, and chooses reload over body rerender over main update.
+After a render the next one waits until 1 s has passed since it, so typing in
+an entry field renders the first change at once and then at most once a second
+with the latest state. An `update` broadcast carries only `<main>`, the only
+part `livepreview.js` morphs; the cache keeps the whole document.
 An edit during collection invalidates that generation and collects again;
 late replies are ignored. Keep this accumulator separate from save/share.
 Closing preview or switching targets cancels pending updates.

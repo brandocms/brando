@@ -15,7 +15,7 @@ import path from 'path'
 //
 //   cd e2e/bench && elixir --sname profile --cookie benchcookie profile_op.exs
 //
-// BENCH_OP: insert | outline | copy   BENCH_ENTRY: 5 | 40 | 115 | nested
+// BENCH_OP: insert | outline | copy | config   BENCH_ENTRY: 5 | 40 | 115 | nested
 
 const IDS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture-ids.json'), 'utf8'))
 
@@ -61,6 +61,19 @@ const OPS = {
       .click()
     await syncLV(page, 60000)
     await page.waitForTimeout(2500)
+  },
+  // Open the config modal of the middle root block: ~300-600 ms of server time
+  // for a single assign on one component. The menu toggle is client-only, so
+  // only the Configure click reaches the server.
+  config: async (page) => {
+    const toggles = page.getByRole('button', { name: 'More actions' })
+    const menu = toggles.nth(Math.floor((await toggles.count()) / 2))
+    await menu.scrollIntoViewIfNeeded()
+    await menu.click()
+    const dropdown = page.locator(`[id="${await menu.getAttribute('data-ui-dropdown-toggle')}"]`)
+    await dropdown.getByRole('button', { name: 'Configure', exact: true }).click()
+    await syncLV(page, 60000)
+    await page.waitForTimeout(1500)
   },
 }
 

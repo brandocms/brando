@@ -99,7 +99,7 @@ cd e2e/bench
 BENCH_OP=insert BENCH_ENTRY=115 elixir --sname profile --cookie benchcookie profile_op.exs
 ```
 
-`BENCH_OP` is `insert`, `outline` or `copy`. The report is written to
+`BENCH_OP` is `insert`, `outline`, `copy` or `config`. The report is written to
 `bench/profile-<op>-<entry>.txt` and echoed. Without `BENCH_PROFILE=1` the spec
 skips itself, so a plain sweep of `bench/` does not block on a flag file nobody
 is going to raise.

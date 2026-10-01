@@ -9,6 +9,14 @@ export default function draftRecovery(hook) {
   let lastChanged = 0
   let captureTimer
   let flightTimer
+  // Block forms edited since the last save. Only these travel with a capture:
+  // the server holds every other block already, and sending all of them was
+  // 337 KB per capture at 115 blocks. A form stays listed until a save, so a
+  // raw value the server could not cast — which only this overlay preserves —
+  // stays in every copy. The first capture after (re)connecting sends all.
+  const editedForms = new Set()
+  let captureAll = true
+  const formUid = form => form.id.replace(/^(entry_block_form|child_block_form)-/, '')
   const enabled = () => hook.el.dataset.draftEnabled === 'true'
   const ours = ({ id }) => id === hook.el.dataset.draftFormId
   const encode = form => {
@@ -25,11 +33,11 @@ export default function draftRecovery(hook) {
     if (!form) return
     const blocks = {}
     hook.el.querySelectorAll('form[phx-change="validate_block"]').forEach(block => {
-      const uid = block.id.replace(/^(entry_block_form|child_block_form)-/, '')
-      blocks[uid] = encode(block)
+      const uid = formUid(block)
+      if (captureAll || editedForms.has(uid)) blocks[uid] = encode(block)
     })
     dirtySince = null
-    inFlight = { requestId: crypto.randomUUID(), generation }
+    inFlight = { requestId: crypto.randomUUID(), generation, all: captureAll }
     // The server abandons incomplete captures after ten seconds. Retry only
     // unacknowledged work; a timeout must not leave it stranded until another edit.
     flightTimer = setTimeout(() => { inFlight = null; capture() }, 11000)
@@ -59,7 +67,10 @@ export default function draftRecovery(hook) {
     schedule()
   }
   const onInput = event => {
-    if (event.target.closest('form.main-form, form[phx-change="validate_block"]')) dirty()
+    const form = event.target.closest('form.main-form, form[phx-change="validate_block"]')
+    if (!form) return
+    if (!form.matches('form.main-form')) editedForms.add(formUid(form))
+    dirty()
   }
   const onSubmit = event => {
     if (event.target.matches('form.main-form')) saveGeneration = generation
@@ -112,6 +123,7 @@ export default function draftRecovery(hook) {
   hook.handleEvent('b:draft-saved', event => {
     if (!ours(event) || !inFlight || event.request_id !== inFlight.requestId) return
     pending = inFlight.generation !== generation
+    if (inFlight.all) captureAll = false
     clearTimeout(flightTimer)
     inFlight = null
     if (!pending) dirtySince = null
@@ -122,7 +134,10 @@ export default function draftRecovery(hook) {
     // A server save can finish before newer browser input has been validated.
     // Never acknowledge input typed after the submit that this reset belongs to.
     if (!event.clean) pending = true
-    if (event.clean && (saveGeneration === null || saveGeneration === generation)) pending = false
+    if (event.clean && (saveGeneration === null || saveGeneration === generation)) {
+      pending = false
+      editedForms.clear()
+    }
     saveGeneration = null
     inFlight = null
     dirtySince = pending ? Date.now() : null
@@ -137,7 +152,7 @@ export default function draftRecovery(hook) {
       clearTimeout(captureTimer)
       clearTimeout(flightTimer)
     },
-    reconnected() { hook.js().removeClass(hook.el, 'draft-offline'); capture() },
+    reconnected() { hook.js().removeClass(hook.el, 'draft-offline'); captureAll = true; capture() },
     destroy() {
       clearTimeout(captureTimer); clearTimeout(flightTimer)
       hook.el.removeEventListener('input', onInput, true)

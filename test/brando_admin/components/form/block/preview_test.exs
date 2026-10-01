@@ -13,27 +13,6 @@ defmodule BrandoAdmin.Components.Form.Block.PreviewTest do
 
   defp wrap(block, _), do: Changeset.change(block)
 
-  test "enabling preview retains the form and enables descendants without rendering again" do
-    form = Phoenix.Component.to_form(wrap(%ContentBlock{uid: "root", rendered_html: "existing"}, :root))
-
-    socket =
-      Phoenix.Component.assign(%Phoenix.LiveView.Socket{}, %{
-        id: "block-root",
-        uid: "root",
-        belongs_to: :root,
-        has_children?: true,
-        changesets: [{"child", nil}],
-        form: form
-      })
-
-    assert {:ok, enabled} = Block.update(%{event: "enable_live_preview", cache_key: "preview"}, socket)
-    assert enabled.assigns.form == form
-    assert enabled.assigns.live_preview_active?
-
-    assert_receive {:phoenix, :send_update,
-                    {{Block, "block-root-child-child"}, %{event: "enable_live_preview", cache_key: "preview"}}}
-  end
-
   test "entry delivery updates editor splits without stamping a discarded block render" do
     socket =
       Phoenix.Component.assign(%Phoenix.LiveView.Socket{}, %{

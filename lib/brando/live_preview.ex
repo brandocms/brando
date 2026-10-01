@@ -301,7 +301,7 @@ defmodule Brando.LivePreview do
         wrapper_html = render(schema_module, entry_struct, cache_key, target: target_config.name)
         store_target(cache_key, target_config.name)
         store_cache(cache_key, wrapper_html)
-        broadcast(cache_key, "update", %{html: wrapper_html})
+        broadcast(cache_key, "update", update_payload(wrapper_html))
         {:ok, cache_key}
       else
         _ -> {:error, "You no longer have permission to preview this entry."}
@@ -370,8 +370,26 @@ defmodule Brando.LivePreview do
       wrapper_html = render(Module.concat([schema]), entry_struct, cache_key, target: target.name)
       store_target(cache_key, target.name)
       store_cache(cache_key, wrapper_html)
-      if event, do: broadcast(cache_key, event, if(event == "reload", do: %{}, else: %{html: wrapper_html}))
+      if event, do: broadcast(cache_key, event, payload(event, wrapper_html))
       cache_key
+    end
+  end
+
+  defp payload("reload", _html), do: %{}
+  defp payload("update", html), do: update_payload(html)
+  defp payload(_event, html), do: %{html: html}
+
+  # The iframe morphs only `<main>` on "update" (`livepreview.js`), so the
+  # head, navigation and footer were sent for nothing on every entry-field
+  # keystroke. The cache keeps the whole document for reloads and rejoins.
+  defp update_payload(html) do
+    with [{start, _}] <- Regex.run(~r/<main[\s>]/, html, return: :index),
+         [_ | _] = closes <- :binary.matches(html, "</main>"),
+         {stop, len} = List.last(closes),
+         true <- stop > start do
+      %{html: binary_part(html, start, stop + len - start)}
+    else
+      _ -> %{html: html}
     end
   end
 

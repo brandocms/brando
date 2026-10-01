@@ -32,7 +32,12 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
 
     assert_receive %Phoenix.Socket.Broadcast{event: "update", payload: %{html: html}}, 2_000
     assert html =~ "Unsaved title"
-    assert LivePreview.get_cache(key) == {:ok, html}
+    # Only `<main>` travels; the cache keeps the document it came from.
+    assert html =~ ~r/\A<main[\s>]/
+    assert String.ends_with?(html, "</main>")
+    assert {:ok, document} = LivePreview.get_cache(key)
+    assert document =~ "<head"
+    assert document =~ html
     assert Repo.get!(Brando.Pages.Page, page.id).title == "Stored title"
     refute_receive %Phoenix.Socket.Broadcast{event: "update"}, 75
   end

@@ -561,16 +561,6 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, socket}
   end
 
-  def update(%{event: "get_live_preview_status", block_ref: {mod, id}}, socket) do
-    cache_key = socket.assigns.live_preview_cache_key
-    live_preview_active = socket.assigns.live_preview_active?
-    event = (live_preview_active && "enable_live_preview") || "disable_live_preview"
-
-    send_update(mod, id: id, event: event, cache_key: cache_key)
-
-    {:ok, socket}
-  end
-
   def update(%{event: "update_live_preview"}, %{assigns: %{live_preview_active?: true}} = socket) do
     # update entire live preview (when deleting or inserting blocks)
     {:ok, fetch_root_blocks(socket, :live_preview_update, 0)}
@@ -2265,7 +2255,6 @@ defmodule BrandoAdmin.Components.Form do
             socket
             |> assign(:live_preview_active?, true)
             |> assign(:live_preview_cache_key, cache_key)
-            |> enable_live_preview_in_blocks()
             |> clear_blocks_root_changesets()
             |> assign_entry_fields_demanding_live_preview_rerender(schema)
             |> assign_entry_fields_demanding_live_preview_reassign(schema)
@@ -2843,6 +2832,8 @@ defmodule BrandoAdmin.Components.Form do
             templates={Map.get(@starting_templates, block_field, [])}
             current_user={@current_user}
             form_id={@id}
+            live_preview_active?={@live_preview_active?}
+            live_preview_cache_key={@live_preview_cache_key}
             source_locked={Translation.locked?(@translation)}
             source_url={Translation.source_url(@translation)}
           />
@@ -3527,7 +3518,7 @@ defmodule BrandoAdmin.Components.Form do
                    |> clear_blocks_root_changesets()
                    |> assign_block_map()
                    |> assign_entry_for_blocks()
-                   |> reload_all_blocks()
+                   |> reload_all_blocks(:changed)
                    |> refresh_translation(stale?)
                    |> push_patch(to: update_url)
                  else
@@ -3547,7 +3538,7 @@ defmodule BrandoAdmin.Components.Form do
                    |> clear_blocks_root_changesets()
                    |> assign_block_map()
                    |> assign_entry_for_blocks()
-                   |> reload_all_blocks()
+                   |> reload_all_blocks(:changed)
                    |> refresh_translation(stale?)
                  end
 
@@ -4649,13 +4640,6 @@ defmodule BrandoAdmin.Components.Form do
         |> push_event("b:live_preview", %{cache_key: cache_key})
         |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})
 
-      socket =
-        if socket.assigns.has_blocks? do
-          enable_live_preview_in_blocks(socket)
-        else
-          socket
-        end
-
       # Do not render the preview here. Recovery is two independent
       # `phx-auto-recover` forms — this one and the main form's `validate` — and
       # LiveView orders them however it likes; measured locally they land about a
@@ -4694,7 +4678,6 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:live_preview_menu_open?, false)
     |> assign(:pending_live_preview_target, nil)
     |> assign(:live_preview_cache_key, nil)
-    |> disable_live_preview_in_blocks()
     |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-show"})
     |> then(&{:noreply, &1})
   end
@@ -4724,7 +4707,9 @@ defmodule BrandoAdmin.Components.Form do
   # try to open live_preview, but blocks are not ready.
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_ready?: false}} = socket) do
     send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
-    fetch_root_blocks(socket, :live_preview, 500)
+    # Same margin as save for edits still in flight; blocks are materialized
+    # from the op store, so there is nothing else to wait for.
+    fetch_root_blocks(socket, :live_preview, 150)
     {:noreply, push_event(socket, "js-exec", %{to: "#sidebar", attr: "data-js-hide"})}
   end
 
@@ -5002,48 +4987,16 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp reload_all_blocks(socket) do
+  # `scope: :changed` after a save lets each block field skip roots it can
+  # prove already hold the saved rows; every other reload re-seeds them all.
+  defp reload_all_blocks(socket, scope \\ :all) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
 
     for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
-      send_update(BlockField, id: block_field_id, event: "reload_all_blocks")
+      send_update(BlockField, id: block_field_id, event: "reload_all_blocks", scope: scope)
     end
-
-    socket
-  end
-
-  defp enable_live_preview_in_blocks(socket) do
-    block_map = socket.assigns.block_map
-    id = socket.assigns.id
-    cache_key = socket.assigns.live_preview_cache_key
-
-    Enum.each(block_map, fn {block_field_name, _schema, _entry_blocks, _opts} ->
-      block_field_id = "#{id}-blocks-#{block_field_name}"
-
-      send_update(BlockField,
-        id: block_field_id,
-        event: "enable_live_preview",
-        cache_key: cache_key
-      )
-    end)
-
-    socket
-  end
-
-  defp disable_live_preview_in_blocks(socket) do
-    block_map = socket.assigns.block_map
-    id = socket.assigns.id
-
-    Enum.each(block_map, fn {block_field_name, _schema, _entry_blocks, _opts} ->
-      block_field_id = "#{id}-blocks-#{block_field_name}"
-
-      send_update(BlockField,
-        id: block_field_id,
-        event: "disable_live_preview"
-      )
-    end)
 
     socket
   end

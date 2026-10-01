@@ -51,6 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           target={@target}
           ref_form={@ref_form}
           config_open={@config_open}
+          carried_config={[block_data[:code], block_data[:class]]}
         >
           <:description>
             <%= if @ref_description not in ["", nil] do %>

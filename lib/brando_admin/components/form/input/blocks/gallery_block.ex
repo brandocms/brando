@@ -212,6 +212,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           target={@target}
           ref_form={@ref_form}
           config_open={@config_open}
+          carried_config={[
+            block_data[:type],
+            {:radio, block_data[:display]},
+            block_data[:class],
+            {:checkbox, block_data[:lightbox]},
+            {:radio, block_data[:placeholder]}
+          ]}
         >
           <:description>
             {block_data[:type].value}
@@ -350,15 +357,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               ]}
             />
 
-            <Primitives.array_inputs
-              :let={%{value: array_value, name: array_name}}
-              field={block_data[:formats]}
-            >
-              <input type="hidden" name={array_name} value={array_value} />
-            </Primitives.array_inputs>
-
             <input type="hidden" data-upload-formats={@upload_formats} />
           </:config>
+          <%!-- Never edited in the config; rendered here so it does not depend
+                on whether the config is open. --%>
+          <Primitives.array_inputs
+            :let={%{value: array_value, name: array_name}}
+            field={block_data[:formats]}
+          >
+            <input type="hidden" name={array_name} value={array_value} />
+          </Primitives.array_inputs>
         </Block.block>
       </.inputs_for>
     </div>

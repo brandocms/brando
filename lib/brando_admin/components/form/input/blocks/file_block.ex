@@ -55,6 +55,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
           target={@target}
           ref_form={@ref_form}
           config_open={@config_open}
+          carried_config={[
+            block_data[:title],
+            block_data[:label],
+            block_data[:description],
+            block_data[:class],
+            {:checkbox, block_data[:target_blank]},
+            {:checkbox, block_data[:download]},
+            block_data[:config_target]
+          ]}
           config_layout="editor"
           config_title={gettext("Configure file")}
           config_subtitle={@ref_description || gettext("Settings for this use of the file")}
