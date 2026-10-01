@@ -1013,6 +1013,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:heex_assigns, heex_assigns)
       |> assign(:heex_render_fn, heex_render_fn)
+      |> assign_new(:entry_language, fn -> nil end)
 
     ~H"""
     <div class="block-content">
@@ -1079,6 +1080,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign_derived([:block_form], footnote_refs: footnote_ref_names(assigns.block_form.source))
       |> assign(:liquid_splits, liquid_splits)
+      |> assign_new(:entry_language, fn -> nil end)
 
     ~H"""
     <div class="block-content">
