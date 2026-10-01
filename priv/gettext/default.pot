@@ -13627,3 +13627,73 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Could not set video thumbnail"
 msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} library"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} no longer has this video."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add from %{provider}"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach %{provider}. Try again in a moment."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "In library"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Load more"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Loading videos…"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this %{provider} account."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No videos match “%{query}”."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search %{provider}"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search by title"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Signed playback"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This video needs signed playback, which Brando does not support."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}."
+msgstr ""

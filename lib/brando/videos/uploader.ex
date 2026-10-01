@@ -123,6 +123,37 @@ defmodule Brando.Videos.Uploader do
               {:ok, String.t()} | {:error, any()}
 
   @doc """
+  Lists one page of the provider's own library, newest first.
+
+  Optional; implemented by providers that `Brando.Videos.ProviderLibrary` can
+  browse. Options are `:cursor` (the previous page's `next`), `:query` and
+  `:per_page`. Items are `t:Brando.Videos.ProviderLibrary.item/0` without
+  `:video_id`.
+  """
+  @callback list_remote(opts :: keyword()) ::
+              {:ok, %{items: [map()], next: term() | nil}} | {:error, any()}
+
+  @doc """
+  Creates a Video record for a video already in the provider's library.
+
+  The record carries `meta["imported"] = true`, which keeps it out of
+  `delete_remote/1`. Takes `:config_target` in `opts`.
+  """
+  @callback import_remote(remote_id :: String.t(), user :: user(), opts :: keyword()) ::
+              {:ok, video()} | {:error, any()}
+
+  @doc """
+  The `meta` path that holds the provider's id for a video, as
+  `Brando.Videos.get_video_by_meta/2` takes it — `"vimeo.video_id"`.
+  """
+  @callback library_meta_path() :: String.t()
+
+  @doc "Whether `list_remote/1` honours `:query`."
+  @callback library_searchable?() :: boolean()
+
+  @optional_callbacks list_remote: 1, import_remote: 3, library_meta_path: 0, library_searchable?: 0
+
+  @doc """
   Router function that dispatches to the appropriate uploader based on config.upload_strategy.
 
   ## Parameters
@@ -248,6 +279,10 @@ defmodule Brando.Videos.Uploader do
   - `:ok` if deletion succeeds or is skipped
   - `{:error, reason}` if deletion fails
   """
+  # Added from the provider's library: someone else's video, possibly in use
+  # elsewhere. Brando forgets it but does not delete it.
+  def delete_remote(%Brando.Videos.Video{meta: %{"imported" => true}}), do: :ok
+
   def delete_remote(%Brando.Videos.Video{} = video) do
     case get_provider(video) do
       :mux ->
@@ -273,8 +308,11 @@ defmodule Brando.Videos.Uploader do
   ## Returns
   - `:on_delete` - Delete immediately on soft-delete
   - `:on_purge` - Delete when soft-delete expires (default)
-  - `false` - Never delete remotely
+  - `false` - Never delete remotely, and always for a video added from the
+    provider's library (see `Brando.Videos.ProviderLibrary`)
   """
+  def get_delete_timing(%Brando.Videos.Video{meta: %{"imported" => true}}), do: false
+
   def get_delete_timing(%Brando.Videos.Video{} = video) do
     uploader =
       case get_provider(video) do

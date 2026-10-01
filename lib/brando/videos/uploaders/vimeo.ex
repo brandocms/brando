@@ -183,6 +183,94 @@ defmodule Brando.Videos.Uploaders.Vimeo do
     end
   end
 
+  @impl true
+  def library_meta_path, do: "vimeo.video_id"
+
+  @impl true
+  def library_searchable?, do: true
+
+  @impl true
+  def list_remote(opts) do
+    page = Keyword.get(opts, :cursor) || 1
+
+    params =
+      [
+        page: page,
+        per_page: Keyword.get(opts, :per_page, 24),
+        sort: "date",
+        direction: "desc",
+        fields: @video_fields <> ",created_time"
+      ]
+      |> maybe_put_query(Keyword.get(opts, :query))
+
+    case api_request(:get, "/me/videos", params: params) do
+      {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
+        {:ok,
+         %{
+           items: data |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1),
+           next: if(get_in(body, ["paging", "next"]), do: page + 1)
+         }}
+
+      {:ok, _response} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def import_remote(video_id, user, opts) do
+    with {:ok, payload} <- fetch_video(video_id),
+         {:ok, video} <-
+           Videos.create_video(%{
+             type: :vimeo_account,
+             status: :processing,
+             title: payload["name"],
+             remote_id: video_id,
+             source_url: payload["link"],
+             config_target: Keyword.get(opts, :config_target),
+             meta: %{"provider" => "vimeo", "imported" => true, "vimeo" => %{"video_id" => video_id}},
+             creator_id: user.id
+           }),
+         {:ok, video} <- apply_remote(video, payload) do
+      if video.status == :processing, do: enqueue_status_check(video)
+      {:ok, video}
+    end
+  end
+
+  defp library_item(payload) do
+    case video_id_from_uri(payload["uri"]) do
+      nil ->
+        nil
+
+      video_id ->
+        status =
+          case remote_status(payload) do
+            :uploading -> :processing
+            status -> status
+          end
+
+        %{
+          remote_id: video_id,
+          title: payload["name"],
+          thumbnail_url: thumbnail_url(payload["pictures"]),
+          duration: payload["duration"],
+          width: positive(payload["width"]),
+          height: positive(payload["height"]),
+          status: status,
+          created_at: payload["created_time"],
+          playable?: status == :ready
+        }
+    end
+  end
+
+  defp maybe_put_query(params, query) when is_binary(query) and query != "", do: Keyword.put(params, :query, query)
+  defp maybe_put_query(params, _query), do: params
+
+  defp positive(value) when is_integer(value) and value > 0, do: value
+  defp positive(_value), do: nil
+
   @doc """
   Whether this provider has usable credentials.
 

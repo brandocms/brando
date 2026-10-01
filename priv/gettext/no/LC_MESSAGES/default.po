@@ -13631,3 +13631,73 @@ msgstr "Videoopplasting er ikke satt opp. Bruk %{action} for å velge en video f
 #, elixir-autogen, elixir-format
 msgid "Could not set video thumbnail"
 msgstr "Klarte ikke å sette videominiatyren"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} library"
+msgstr "%{provider}-bibliotek"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} no longer has this video."
+msgstr "%{provider} har ikke lenger denne videoen."
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add from %{provider}"
+msgstr "Legg til fra %{provider}"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach %{provider}. Try again in a moment."
+msgstr "Fikk ikke kontakt med %{provider}. Prøv igjen om litt."
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "In library"
+msgstr "I biblioteket"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Load more"
+msgstr "Last inn flere"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Loading videos…"
+msgstr "Laster inn videoer…"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this %{provider} account."
+msgstr "Ingen videoer i denne %{provider}-kontoen."
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No videos match “%{query}”."
+msgstr "Ingen videoer samsvarer med «%{query}»."
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search %{provider}"
+msgstr "Søk i %{provider}"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search by title"
+msgstr "Søk etter tittel"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Signed playback"
+msgstr "Signert avspilling"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This video needs signed playback, which Brando does not support."
+msgstr "Denne videoen krever signert avspilling, som Brando ikke støtter."
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}."
+msgstr "Videoer som allerede ligger i %{provider}-kontoen din. Sletter du en her senere, blir den liggende i %{provider}."

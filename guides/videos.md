@@ -374,6 +374,41 @@ before creating the CDN-backed File and ready Video rows. Modern AWS buckets
 should use bucket policies/Object Ownership and leave `direct_acl` unset; set it
 only for compatible services that explicitly require an object ACL.
 
+### Adding Videos Already in a Provider
+
+The video picker can add a video that is already in a provider's library —
+uploaded in the provider's own dashboard, by another site, or by Brando earlier.
+Every configured provider gets an "Add from …" button next to "Add from URL";
+it lists the account's videos newest first, with search where the provider's
+API has it (Bunny, Cloudflare and Vimeo; Mux has none).
+
+- A video that is still processing or has failed is listed but cannot be added.
+- Mux and Cloudflare videos that need signed playback cannot be added: Brando
+  has no token signer.
+- A video that already has a record in Brando is marked "In library", and
+  adding it selects that record rather than creating a second one.
+- The button follows `allow_external_urls`, and needs permission to create
+  videos.
+
+An added video is marked `meta["imported"] = true`. Deleting it in Brando
+removes the record only — `delete_remote_on` never applies to it, since the
+video may be in use outside Brando.
+
+The same operations are available in code through
+`Brando.Videos.ProviderLibrary`:
+
+```elixir
+Brando.Videos.ProviderLibrary.providers()
+# => [%{strategy: :vimeo, label: "Vimeo", search?: true}]
+
+{:ok, %{items: items, next: cursor}} = Brando.Videos.ProviderLibrary.list(:vimeo, query: "harbour")
+{:ok, video} = Brando.Videos.ProviderLibrary.import(:vimeo, "76979871", user, config_target: "default")
+```
+
+A provider joins by implementing the optional `list_remote/1`,
+`import_remote/3`, `library_meta_path/0` and `library_searchable?/0`
+callbacks of `Brando.Videos.Uploader`.
+
 ### Remote Video Deletion
 
 When videos are deleted from the Brando admin, you can optionally delete the source video from the provider (Mux/Bunny/Cloudflare/Vimeo). Configure this per-uploader:
@@ -406,6 +441,9 @@ config :brando, Brando.Videos.Uploaders.Vimeo,
 | `:on_delete` | Delete from provider immediately when soft-deleted in admin |
 | `:on_purge` | Delete from provider when soft-delete expires after 30 days (default) |
 | `false` | Never delete from provider |
+
+Videos added from a provider's library are never deleted remotely, whatever
+this is set to.
 
 #### Behavior
 
@@ -530,7 +568,7 @@ Full list of `Brando.Type.VideoConfig` options:
 | `allowed_mimetypes` | list | `["video/mp4", ...]` | Accepted video formats |
 | `size_limit` | integer | `100_000_000` | Max file size in bytes |
 | `allow_uploads` | boolean | `true` | Enable file uploads |
-| `allow_external_urls` | boolean | `true` | Enable URL-based videos |
+| `allow_external_urls` | boolean | `true` | Enable URL-based videos and adding from a provider library |
 | `random_filename` | boolean | `false` | Randomize uploaded filenames |
 | `slugify_filename` | boolean | `true` | Slugify uploaded filenames |
 | `overwrite` | boolean | `false` | Write over an existing file with the same name instead of making the name unique (`:local`/`:s3`) |

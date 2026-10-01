@@ -107,6 +107,99 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
 
   def get_playback_url(_video), do: {:error, :missing_playback_url}
 
+  @impl true
+  def library_meta_path, do: "cloudflare.uid"
+
+  @impl true
+  def library_searchable?, do: true
+
+  # Cloudflare pages by creation date: `before` returns videos created before
+  # the given time, so the last item's `created` is the next page's cursor.
+  @impl true
+  def list_remote(opts) do
+    per_page = Keyword.get(opts, :per_page, 24)
+
+    query =
+      [limit: per_page, before: Keyword.get(opts, :cursor), search: Keyword.get(opts, :query)]
+      |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
+      |> URI.encode_query()
+
+    case api_request(:get, "/stream?" <> query) do
+      {:ok, %Req.Response{body: %{"result" => result}}} when is_list(result) ->
+        {:ok,
+         %{items: result |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1), next: next_before(result, per_page)}}
+
+      {:ok, _response} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def import_remote(uid, user, opts) do
+    with :ok <- check_uid(uid),
+         {:ok, %Req.Response{body: %{"result" => %{} = payload}}} <- api_request(:get, "/stream/#{uid}"),
+         :ok <- check_unsigned(payload),
+         {:ok, video} <-
+           Videos.create_video(%{
+             type: :cloudflare,
+             status: :processing,
+             title: get_in(payload, ["meta", "name"]),
+             remote_id: uid,
+             config_target: Keyword.get(opts, :config_target),
+             meta: %{"provider" => "cloudflare", "imported" => true, "cloudflare" => %{"uid" => uid}},
+             creator_id: user.id
+           }) do
+      update_video_from_payload(video, payload)
+    else
+      {:ok, %Req.Response{}} -> {:error, :invalid_response}
+      error -> error
+    end
+  end
+
+  # A full page has another after it, starting before its last video. Cloudflare
+  # returns at most `limit` videos, so the item at `per_page - 1` is the last.
+  defp next_before(result, per_page) do
+    case Enum.drop(result, per_page - 1) do
+      [%{"created" => created} | _] -> created
+      _ -> nil
+    end
+  end
+
+  defp check_uid(uid), do: if(valid_uid?(uid), do: :ok, else: {:error, :invalid_uid})
+
+  # Signed playback needs a token signer Brando does not have.
+  defp check_unsigned(%{"requireSignedURLs" => true}), do: {:error, :signed_playback_not_supported}
+  defp check_unsigned(_payload), do: :ok
+
+  defp library_item(%{"uid" => uid} = payload) when is_binary(uid) do
+    signed? = payload["requireSignedURLs"] == true
+
+    status =
+      cond do
+        ready_payload?(payload) -> :ready
+        error_payload?(payload) -> :errored
+        true -> :processing
+      end
+
+    %{
+      remote_id: uid,
+      title: get_in(payload, ["meta", "name"]),
+      thumbnail_url: if(signed?, do: nil, else: payload["thumbnail"]),
+      duration: if(is_number(payload["duration"]) and payload["duration"] > 0, do: payload["duration"]),
+      width: get_in(payload, ["input", "width"]),
+      height: get_in(payload, ["input", "height"]),
+      status: status,
+      created_at: payload["created"],
+      # Signed playback needs a token signer Brando does not have.
+      playable?: status == :ready and not signed?
+    }
+  end
+
+  defp library_item(_payload), do: nil
+
   @doc false
   def build_upload_metadata(filename, opts \\ []) do
     max_duration_seconds = Keyword.get(opts, :max_duration_seconds, @default_max_duration_seconds)

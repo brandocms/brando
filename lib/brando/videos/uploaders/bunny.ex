@@ -395,6 +395,106 @@ defmodule Brando.Videos.Uploaders.Bunny do
     end
   end
 
+  @impl true
+  def library_meta_path, do: "bunny.video_guid"
+
+  @impl true
+  def library_searchable?, do: true
+
+  @impl true
+  def list_remote(opts) do
+    library_id = get_config(:library_id)
+    page = Keyword.get(opts, :cursor) || 1
+
+    query =
+      [page: page, itemsPerPage: Keyword.get(opts, :per_page, 24), orderBy: "date", search: Keyword.get(opts, :query)]
+      |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
+      |> URI.encode_query()
+
+    case api_request(:get, "/library/#{library_id}/videos?" <> query) do
+      {:ok, %{"items" => items} = body} when is_list(items) ->
+        {:ok,
+         %{
+           items: items |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1),
+           next: if(more_pages?(body), do: page + 1)
+         }}
+
+      {:ok, _body} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def import_remote(video_guid, user, opts) do
+    library_id = get_config(:library_id)
+
+    with :ok <- check_bunny_id(video_guid),
+         {:ok, %{"guid" => ^video_guid} = bunny_video} <-
+           api_request(:get, "/library/#{library_id}/videos/#{video_guid}"),
+         {:ok, video} <-
+           Videos.create_video(%{
+             type: :bunny,
+             status: :processing,
+             title: bunny_video["title"],
+             config_target: Keyword.get(opts, :config_target),
+             meta: %{
+               "provider" => "bunny",
+               "imported" => true,
+               "bunny" => %{"video_guid" => video_guid, "library_id" => bunny_video["videoLibraryId"]}
+             },
+             creator_id: user.id
+           }) do
+      if bunny_video["status"] in [@status_finished, @status_resolution_finished],
+        do: update_video_with_details(video, bunny_video),
+        else: process_status_update(video, bunny_video["status"])
+    else
+      {:ok, _body} -> {:error, :invalid_response}
+      error -> error
+    end
+  end
+
+  defp more_pages?(%{"currentPage" => page, "itemsPerPage" => per_page, "totalItems" => total})
+       when is_integer(page) and is_integer(per_page) and is_integer(total),
+       do: page * per_page < total
+
+  defp more_pages?(_body), do: false
+
+  defp check_bunny_id(id) when is_binary(id),
+    do: if(valid_bunny_id?(id), do: :ok, else: {:error, :invalid_video_guid})
+
+  defp check_bunny_id(_id), do: {:error, :invalid_video_guid}
+
+  defp library_item(%{"guid" => guid} = bunny_video) when is_binary(guid) do
+    status =
+      cond do
+        bunny_video["status"] in [@status_finished, @status_resolution_finished] -> :ready
+        bunny_video["status"] == @status_failed -> :errored
+        true -> :processing
+      end
+
+    cdn_hostname = get_config(:cdn_hostname)
+
+    %{
+      remote_id: guid,
+      title: bunny_video["title"],
+      thumbnail_url:
+        if(is_binary(cdn_hostname) and is_binary(bunny_video["thumbnailFileName"]),
+          do: "https://#{cdn_hostname}/#{guid}/#{bunny_video["thumbnailFileName"]}"
+        ),
+      duration: bunny_video["length"],
+      width: bunny_video["width"],
+      height: bunny_video["height"],
+      status: status,
+      created_at: bunny_video["dateUploaded"],
+      playable?: status == :ready
+    }
+  end
+
+  defp library_item(_bunny_video), do: nil
+
   @doc """
   Whether this provider has usable credentials.
 
