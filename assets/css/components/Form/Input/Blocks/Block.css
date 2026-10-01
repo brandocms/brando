@@ -1697,6 +1697,11 @@ button.btn-palette {
           width: 0;
         }
 
+        input[type="checkbox"]:checked ~ .when-expanded,
+        input[type="checkbox"]:not(:checked) ~ .when-collapsed {
+          display: none;
+        }
+
         svg {
           pointer-events: none;
         }

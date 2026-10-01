@@ -2696,9 +2696,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           popover={gettext("Collapse (hide) block in block editor")}
         >
           <span class="visually-hidden">{gettext("Collapse (hide) block in block editor")}</span>
-          <.icon :if={@collapsed} name="hero-eye-slash" />
-          <.icon :if={!@collapsed} name="hero-eye" />
+          <%!-- Both icons, switched in CSS off the checkbox before them, so the
+                click shows at once instead of after the validate round trip.
+                `uiCommands.js` flips the block's `collapsed` class the same way. --%>
           <Input.input type={:checkbox} field={@collapsed_field} />
+          <.icon name="hero-eye-slash" class="when-collapsed" />
+          <.icon name="hero-eye" class="when-expanded" />
         </Primitives.label>
 
         <div

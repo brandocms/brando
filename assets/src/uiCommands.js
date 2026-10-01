@@ -174,6 +174,19 @@ export default (app) => {
     }
   })
 
+  // Collapsing a block is a checkbox in its form, so the `collapsed` class
+  // waited for the validate round trip: instant locally, a visible lag on a
+  // real connection. Flip it now; the patch that follows carries the same
+  // class. A plain mutation rather than a sticky JS command, so the server's
+  // value still wins on later patches (undo, a collaborator's edit).
+  document.addEventListener('change', (e) => {
+    const input = e.target
+    if (!input || typeof input.matches !== 'function') return
+    if (!input.matches('.block-action.toggler input[type="checkbox"]')) return
+    const block = input.closest('.base-block')
+    if (block) block.classList.toggle('collapsed', input.checked)
+  })
+
   // A patch can remove the open dropdown from the DOM (block deleted, list
   // reordered) and leave the tracked id pointing at nothing.
   window.addEventListener('phx:page-loading-stop', () => {
