@@ -249,8 +249,12 @@ Form sends: send_update(BlockField, event: "fetch_root_blocks", tag: :save)
     (Ops.materialize_root/2) — no messages to blocks, no collection cascade
   → send_update(form_cid, event: "provide_root_blocks", ...)
 ```
-After the save completes, `reload_all_blocks/1` hands every mounted root a fresh form via
-the `replace_form` cascade, so blocks stop diffing against pre-save nil-id data.
+After the save completes, `reload_all_blocks/2` hands mounted roots a fresh form via
+the `replace_form` cascade, so blocks stop diffing against pre-save nil-id data. It skips
+a root only when `holds_persisted?/2` proves its mounted form already equals the saved row
+(no store diff in its subtree, seeded row and materialized state both snapshot-equal to the
+reload); everything else is re-seeded. Other reloads (hard reset, failed cross-parent move)
+re-seed every root.
 
 ### Duplication Flow
 ```

@@ -3527,7 +3527,7 @@ defmodule BrandoAdmin.Components.Form do
                    |> clear_blocks_root_changesets()
                    |> assign_block_map()
                    |> assign_entry_for_blocks()
-                   |> reload_all_blocks()
+                   |> reload_all_blocks(:changed)
                    |> refresh_translation(stale?)
                    |> push_patch(to: update_url)
                  else
@@ -3547,7 +3547,7 @@ defmodule BrandoAdmin.Components.Form do
                    |> clear_blocks_root_changesets()
                    |> assign_block_map()
                    |> assign_entry_for_blocks()
-                   |> reload_all_blocks()
+                   |> reload_all_blocks(:changed)
                    |> refresh_translation(stale?)
                  end
 
@@ -5002,13 +5002,15 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp reload_all_blocks(socket) do
+  # `scope: :changed` after a save lets each block field skip roots it can
+  # prove already hold the saved rows; every other reload re-seeds them all.
+  defp reload_all_blocks(socket, scope \\ :all) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
 
     for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
-      send_update(BlockField, id: block_field_id, event: "reload_all_blocks")
+      send_update(BlockField, id: block_field_id, event: "reload_all_blocks", scope: scope)
     end
 
     socket
