@@ -548,6 +548,102 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   defp parse_timeout(_), do: nil
 
+  @impl true
+  def library_meta_path, do: "mux.asset_id"
+
+  # Mux's asset list has no search parameter.
+  @impl true
+  def library_searchable?, do: false
+
+  @impl true
+  def list_remote(opts) do
+    page = Keyword.get(opts, :cursor) || 1
+    per_page = Keyword.get(opts, :per_page, 24)
+
+    case api_request(:get, "/assets?" <> URI.encode_query(limit: per_page, page: page)) do
+      {:ok, %{"data" => assets}} when is_list(assets) ->
+        {:ok,
+         %{
+           items: assets |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1),
+           next: if(length(assets) >= per_page, do: page + 1)
+         }}
+
+      {:ok, _body} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def import_remote(asset_id, user, opts) do
+    with {:ok, asset} <- get_asset(asset_id),
+         :ok <- check_public_playback(asset),
+         {:ok, video} <-
+           Videos.create_video(%{
+             type: :mux,
+             status: :processing,
+             title: asset_title(asset),
+             config_target: Keyword.get(opts, :config_target),
+             meta: %{"provider" => "mux", "imported" => true, "mux" => %{"asset_id" => asset_id}},
+             creator_id: user.id
+           }) do
+      update_video_with_asset(video, asset)
+    end
+  end
+
+  # Signed playback needs a token signer Brando does not have.
+  defp check_public_playback(asset) do
+    if public_playback_id(asset), do: :ok, else: {:error, :signed_playback_not_supported}
+  end
+
+  defp library_item(%{"id" => asset_id} = asset) when is_binary(asset_id) do
+    playback_id = public_playback_id(asset)
+    status = video_status(asset["status"])
+    track = Enum.find(asset["tracks"] || [], &(&1["type"] == "video")) || %{}
+
+    %{
+      remote_id: asset_id,
+      title: asset_title(asset),
+      thumbnail_url: playback_id && "https://image.mux.com/#{playback_id}/thumbnail.jpg?width=320",
+      duration: asset["duration"],
+      width: track["max_width"],
+      height: track["max_height"],
+      status: status,
+      created_at: unix_to_iso8601(asset["created_at"]),
+      # Signed playback needs a token signer Brando does not have.
+      playable?: status == :ready and not is_nil(playback_id)
+    }
+  end
+
+  defp library_item(_asset), do: nil
+
+  defp public_playback_id(asset) do
+    Enum.find_value(asset["playback_ids"] || [], fn
+      %{"id" => id, "policy" => "public"} -> id
+      _ -> nil
+    end)
+  end
+
+  defp asset_title(asset) do
+    case get_in(asset, ["meta", "title"]) || asset["passthrough"] do
+      title when is_binary(title) and title != "" -> title
+      _ -> nil
+    end
+  end
+
+  defp unix_to_iso8601(value) when is_binary(value) do
+    with {seconds, ""} <- Integer.parse(value),
+         {:ok, datetime} <- DateTime.from_unix(seconds) do
+      DateTime.to_iso8601(datetime)
+    else
+      _ -> nil
+    end
+  end
+
+  defp unix_to_iso8601(_value), do: nil
+
   @doc """
   Whether this provider has usable credentials.
 

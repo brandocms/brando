@@ -430,6 +430,22 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Add a video that is already in Mux, Bunny, Cloudflare or Vimeo.** The video
+  picker has an "Add from …" button for every configured provider. It lists
+  the provider's library, with search where the API has it, and adds a video
+  to Brando without uploading it again. A video already in Brando is selected
+  rather than duplicated. Added videos are never deleted from the provider,
+  whatever `delete_remote_on` says. Available in code as
+  `Brando.Videos.ProviderLibrary`.
+
+- **Vimeo upload strategy.** `upload_strategy: :vimeo` uploads straight from
+  the browser to Vimeo with tus; the access token stays on the server. Vimeo
+  has no webhooks, so `Brando.Worker.VimeoStatus` polls each upload until it is
+  ready. Ready videos are stored as `:vimeo_account` and play through the
+  `<video>` component from Vimeo's non-expiring HLS file link, falling back to
+  Vimeo's player when the account has no file access. Needs a plan with video
+  file access and a token with the `video_files` scope. See the videos guide.
+
 - **A media ref can hold a file.** Add `"file"` to a media ref's
   `available_blocks` and the editor can pick a file there, next to picture,
   video, gallery and svg. The slot's `template_file` sets the file ref's
@@ -904,6 +920,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   picker hands the new video to the field as an update the field had no
   clause for, so creating one took the entry form down with its unsaved
   changes. The field now selects it.
+
+- **Unlisted Vimeo videos play.** An unlisted Vimeo video only plays when its
+  embed URL carries its privacy hash, and every embed dropped it — the picker
+  even saved `123/abcdef` as the video id. The hash is now read from the
+  pasted URL wherever Vimeo is embedded and in the oEmbed lookup. Existing
+  videos are fixed without a migration.
 
 - **Shared preview links no longer break on deploy.** The stored preview HTML
   links the digested asset names of the build it was rendered with, and the

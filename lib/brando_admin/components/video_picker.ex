@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   use Gettext, backend: Brando.Gettext
   use BrandoAdmin.Components.PickerHelpers
 
+  alias Brando.Videos.ProviderLibrary
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Images.FolderBrowser
@@ -44,6 +45,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
      # Opened by a field's "Add from URL" with the URL input showing; every
      # other opening starts on the library.
      |> assign(:show_url_input, !!assigns[:show_url_input] && resolved_config.allow_external_urls)
+     |> assign(:library, nil)
      |> assign(:video_config, resolved_config)
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
@@ -52,6 +54,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign_videos()
      |> assign_folder_state(nil)
      |> assign_video_upload_available()
+     |> assign_library_providers()
      |> push_selection_state()}
   end
 
@@ -89,7 +92,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
      socket
      |> assign_defaults()
      |> assign(assigns)
-     |> assign_video_upload_available()}
+     |> assign_video_upload_available()
+     |> assign_library_providers()}
   end
 
   # Whether to offer the direct "Upload file" button — computed once per update
@@ -103,6 +107,21 @@ defmodule BrandoAdmin.Components.VideoPicker do
         | upload_strategy: socket.assigns.upload_strategy
       })
     )
+  end
+
+  # Provider libraries the editor can add from. Adding an existing provider
+  # video is linking an external video, so it follows `allow_external_urls`
+  # — which also keeps it out of `config_target: :all` pickers.
+  defp assign_library_providers(socket) do
+    providers =
+      with true <- socket.assigns.allow_external_urls?,
+           :ok <- Brando.Authorization.Media.authorize(socket.assigns.current_user, :video) do
+        ProviderLibrary.providers()
+      else
+        _ -> []
+      end
+
+    assign(socket, :library_providers, providers)
   end
 
   # `config_target: :all` browses every video without adding any, for pickers
@@ -140,6 +159,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> assign_new(:video_config, fn -> Brando.Type.VideoConfig.default_config() end)
     |> assign_new(:upload_progress, fn -> nil end)
     |> assign_new(:show_url_input, fn -> false end)
+    |> assign_new(:library_providers, fn -> [] end)
+    |> assign_new(:library, fn -> nil end)
     |> assign_new(:url_input, fn -> "" end)
     |> assign_new(:creating_video, fn -> false end)
     |> assign_new(:playing_video, fn -> nil end)
@@ -329,8 +350,91 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_event("toggle_url_input", _, socket) do
-    {:noreply, assign(socket, :show_url_input, !socket.assigns.show_url_input)}
+    {:noreply,
+     socket
+     |> assign(:show_url_input, !socket.assigns.show_url_input)
+     |> assign(:library, nil)}
   end
+
+  def handle_event("open_library", %{"strategy" => strategy}, socket) do
+    case Enum.find(socket.assigns.library_providers, &(Atom.to_string(&1.strategy) == strategy)) do
+      nil ->
+        {:noreply, socket}
+
+      provider ->
+        library = %{
+          strategy: provider.strategy,
+          label: provider.label,
+          search?: provider.search?,
+          query: "",
+          items: [],
+          next: nil,
+          loading?: false,
+          error: nil,
+          ref: nil
+        }
+
+        {:noreply,
+         socket
+         |> assign(:show_url_input, false)
+         |> assign(:library, library)
+         |> load_library_page(nil)}
+    end
+  end
+
+  def handle_event("close_library", _, socket), do: {:noreply, assign(socket, :library, nil)}
+
+  def handle_event("search_library", %{"query" => query}, %{assigns: %{library: %{} = library}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:library, %{library | query: String.trim(query), items: [], next: nil})
+     |> load_library_page(nil)}
+  end
+
+  def handle_event("more_library", _, %{assigns: %{library: %{next: next}}} = socket) when not is_nil(next) do
+    {:noreply, load_library_page(socket, next)}
+  end
+
+  # Synchronous, unlike the listing: it creates a record, and runs under the
+  # editor's authorization and tenant context, which an async task would not
+  # carry.
+  def handle_event("add_from_library", %{"remote-id" => remote_id}, %{assigns: %{library: %{} = library}} = socket) do
+    opts = [config_target: normalize_video_config_target(socket.assigns.config_target)]
+
+    case ProviderLibrary.import(library.strategy, remote_id, socket.assigns.current_user, opts) do
+      {:ok, video} ->
+        # Handed over the way "Add from URL" hands over a new video. A picker
+        # opened without a field (nothing to select into) just gains it.
+        if target = socket.assigns.event_target do
+          send_update(target, %{
+            event: "video_created_from_url",
+            video_data: Map.from_struct(video),
+            video_changeset: Ecto.Changeset.change(video)
+          })
+        end
+
+        items =
+          Enum.map(library.items, fn
+            %{remote_id: ^remote_id} = item -> %{item | video_id: video.id}
+            item -> item
+          end)
+
+        {:noreply,
+         socket
+         |> assign(:library, %{library | items: items, error: nil})
+         |> update(:selected_videos, &Enum.uniq([video.id | &1]))
+         |> assign_videos()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> push_selection_state()}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :library, %{library | error: library_error(reason, library.label)})}
+    end
+  end
+
+  def handle_event(event, _params, socket)
+      when event in ["search_library", "more_library", "add_from_library"],
+      do: {:noreply, socket}
 
   # From the video drawer, which opens this picker already configured for its
   # field: "Add from URL" shows the URL input, "Select video" hides it.
@@ -373,6 +477,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     {preview_type, playback_url} =
       case Brando.Videos.Helpers.get_playback_url(video_data) do
         {:ok, url} when video_data.type not in [:youtube, :vimeo] -> {:external_file, url}
+        # No file link (an account without `video_files`): Vimeo's own player.
+        _ when video_data.type == :vimeo_account -> {:vimeo, video_data.source_url}
         _ -> {video_data.type, source_url}
       end
 
@@ -423,7 +529,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
     video_params = %{
       type: video_type,
       source_url: url,
-      remote_id: remote_id,
+      remote_id: url_remote_id(video_type, url, remote_id),
       width: width,
       height: height,
       title: title,
@@ -584,6 +690,86 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   # -- Render --
 
+  def handle_async(:library_page, {:ok, {ref, cursor, result}}, socket) do
+    case socket.assigns.library do
+      %{ref: ^ref} = library -> {:noreply, assign(socket, :library, apply_library_page(library, cursor, result))}
+      # Closed, or superseded by a newer search.
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_async(:library_page, {:exit, _reason}, %{assigns: %{library: %{} = library}} = socket) do
+    {:noreply,
+     assign(socket, :library, %{library | loading?: false, error: library_error(:provider_error, library.label)})}
+  end
+
+  def handle_async(:library_page, _result, socket), do: {:noreply, socket}
+
+  defp apply_library_page(library, cursor, {:ok, %{items: items, next: next}}) do
+    items = if cursor, do: library.items ++ items, else: items
+    %{library | items: items, next: next, loading?: false}
+  end
+
+  defp apply_library_page(library, _cursor, {:error, reason}),
+    do: %{library | loading?: false, error: library_error(reason, library.label)}
+
+  defp load_library_page(socket, cursor) do
+    library = socket.assigns.library
+    ref = make_ref()
+    strategy = library.strategy
+    opts = [cursor: cursor, query: library.query]
+
+    socket
+    |> assign(:library, %{library | loading?: true, error: nil, ref: ref})
+    |> start_async(
+      :library_page,
+      Brando.Tenant.capture_context(fn -> {ref, cursor, ProviderLibrary.list(strategy, opts)} end)
+    )
+  end
+
+  # The client parser hands back everything after `vimeo.com/` — including an
+  # unlisted video's hash — so a Vimeo id is taken from the URL instead.
+  defp url_remote_id(:vimeo, url, remote_id) do
+    case Brando.Videos.VimeoURL.parse(url) do
+      {:ok, %{id: id}} -> id
+      :error -> remote_id
+    end
+  end
+
+  defp url_remote_id(_video_type, _url, remote_id), do: remote_id
+
+  defp library_error(:signed_playback_not_supported, _provider),
+    do: gettext("This video needs signed playback, which Brando does not support.")
+
+  defp library_error(:not_found, provider), do: gettext("%{provider} no longer has this video.", provider: provider)
+
+  defp library_error(reason, _provider) when is_binary(reason), do: reason
+
+  defp library_error(_reason, provider),
+    do: gettext("Could not reach %{provider}. Try again in a moment.", provider: provider)
+
+  defp library_item_meta(item) do
+    [
+      library_duration(item.duration),
+      item.width && item.height && "#{item.width} × #{item.height}",
+      is_binary(item.created_at) && String.slice(item.created_at, 0, 10)
+    ]
+    |> Enum.filter(&is_binary/1)
+    |> Enum.join(" · ")
+  end
+
+  defp library_duration(seconds) when is_number(seconds) and seconds > 0 do
+    total = round(seconds)
+    minutes = div(total, 60)
+    "#{minutes}:#{total |> rem(60) |> Integer.to_string() |> String.pad_leading(2, "0")}"
+  end
+
+  defp library_duration(_seconds), do: nil
+
+  defp library_status(%{status: :processing}), do: gettext("Processing")
+  defp library_status(%{status: :errored}), do: gettext("Failed")
+  defp library_status(_item), do: gettext("Signed playback")
+
   def render(assigns) do
     ~H"""
     <div>
@@ -674,6 +860,18 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     <% end %>
                   </button>
 
+                  <button
+                    :for={provider <- @library_providers}
+                    type="button"
+                    class="video-picker-add-btn"
+                    aria-expanded={to_string(@library != nil && @library.strategy == provider.strategy)}
+                    aria-controls={"#{@id}-library"}
+                    phx-click={JS.push("open_library", value: %{strategy: provider.strategy}, target: @myself)}
+                  >
+                    <.icon name="hero-cloud-arrow-down" />
+                    {gettext("Add from %{provider}", provider: provider.label)}
+                  </button>
+
                   <div
                     :if={@video_upload_available? && @upload_strategy in [:local, :s3]}
                     phx-hook="Brando.UploadTrigger"
@@ -744,6 +942,118 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 </div>
               </div>
             </div>
+
+            <section
+              :if={@library}
+              id={"#{@id}-library"}
+              class="video-picker-library"
+              aria-label={gettext("%{provider} library", provider: @library.label)}
+            >
+              <div class="video-picker-library-header">
+                <div>
+                  <h4>{gettext("%{provider} library", provider: @library.label)}</h4>
+                  <p>
+                    {gettext(
+                      "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}.",
+                      provider: @library.label
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="video-picker-library-close"
+                  aria-label={gettext("Close")}
+                  phx-click="close_library"
+                  phx-target={@myself}
+                >
+                  <.icon name="hero-x-mark" />
+                </button>
+              </div>
+
+              <form
+                :if={@library.search?}
+                class="video-picker-library-search"
+                phx-submit="search_library"
+                phx-target={@myself}
+              >
+                <input
+                  id={"#{@id}-library-query"}
+                  type="search"
+                  name="query"
+                  class="text"
+                  value={@library.query}
+                  aria-label={gettext("Search %{provider}", provider: @library.label)}
+                  placeholder={gettext("Search by title")}
+                />
+                <button type="submit" class="video-picker-add-btn">{gettext("Search")}</button>
+              </form>
+
+              <p :if={@library.error} class="video-picker-library-error" role="alert">{@library.error}</p>
+
+              <ul :if={@library.items != []} class="video-picker-library-items">
+                <li :for={item <- @library.items} class="video-picker-library-item" data-remote-id={item.remote_id}>
+                  <div class="video-picker-library-thumb">
+                    <img :if={item.thumbnail_url} src={item.thumbnail_url} alt="" loading="lazy" />
+                    <.icon :if={!item.thumbnail_url} name="hero-film" />
+                  </div>
+                  <div class="video-picker-library-info">
+                    <span class="video-picker-library-title">{item.title || gettext("Untitled video")}</span>
+                    <span class="video-picker-library-meta">{library_item_meta(item)}</span>
+                  </div>
+                  <div class="video-picker-library-action">
+                    <%= cond do %>
+                      <% item.video_id -> %>
+                        <span class="video-picker-library-status">{gettext("In library")}</span>
+                        <button
+                          type="button"
+                          class="video-picker-add-btn"
+                          phx-click="add_from_library"
+                          phx-value-remote-id={item.remote_id}
+                          phx-target={@myself}
+                        >
+                          {gettext("Select")}
+                        </button>
+                      <% item.playable? -> %>
+                        <button
+                          type="button"
+                          class="video-picker-add-btn"
+                          phx-click="add_from_library"
+                          phx-value-remote-id={item.remote_id}
+                          phx-target={@myself}
+                          phx-disable-with={gettext("Adding…")}
+                        >
+                          {gettext("Add")}
+                        </button>
+                      <% true -> %>
+                        <span class="video-picker-library-status">{library_status(item)}</span>
+                    <% end %>
+                  </div>
+                </li>
+              </ul>
+
+              <p :if={@library.loading?} class="video-picker-library-note" role="status">
+                {gettext("Loading videos…")}
+              </p>
+              <p
+                :if={!@library.loading? && !@library.error && @library.items == []}
+                class="video-picker-library-note"
+              >
+                <%= if @library.query != "" do %>
+                  {gettext("No videos match “%{query}”.", query: @library.query)}
+                <% else %>
+                  {gettext("No videos in this %{provider} account.", provider: @library.label)}
+                <% end %>
+              </p>
+              <button
+                :if={@library.next && !@library.loading?}
+                type="button"
+                class="image-picker-more"
+                phx-click="more_library"
+                phx-target={@myself}
+              >
+                {gettext("Load more")}
+              </button>
+            </section>
 
             <div :if={@upload_progress} class="video-picker-upload-progress">
               <div class="progress-bar">
@@ -992,6 +1302,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_type_label(:external_file), do: gettext("External file")
   defp video_type_label(:youtube), do: "YouTube"
   defp video_type_label(:vimeo), do: "Vimeo"
+  defp video_type_label(:vimeo_account), do: "Vimeo"
   defp video_type_label(type), do: type |> to_string() |> String.capitalize()
 
   defp video_preview(assigns) do
@@ -1076,9 +1387,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
-  defp get_embed_url(%{type: :vimeo, source_url: source_url}) do
-    video_id = String.split(source_url, "/") |> List.last()
-    "https://player.vimeo.com/video/#{video_id}?autoplay=1"
+  defp get_embed_url(%{type: :vimeo} = video) do
+    Brando.Videos.VimeoURL.embed_url(video, autoplay: 1)
   end
 
   defp get_embed_url(%{source_url: source_url}) do
@@ -1138,6 +1448,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_uploader_hook(:mux), do: "Brando.MuxUploader"
   defp video_uploader_hook(:bunny), do: "Brando.BunnyUploader"
   defp video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
+  defp video_uploader_hook(:vimeo), do: "Brando.VimeoUploader"
   defp video_uploader_hook(_strategy), do: nil
 
   defp video_upload_root(config_target) do

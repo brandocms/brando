@@ -19,6 +19,7 @@ defmodule Brando.Videos.ProviderConfigCheckTest do
   alias Brando.Videos.Uploaders.Bunny
   alias Brando.Videos.Uploaders.Cloudflare
   alias Brando.Videos.Uploaders.Mux
+  alias Brando.Videos.Uploaders.Vimeo
 
   setup do
     # A clean slate: no provider configured, and a default strategy that needs
@@ -26,6 +27,7 @@ defmodule Brando.Videos.ProviderConfigCheckTest do
     put_test_env(Mux, [])
     put_test_env(Bunny, [])
     put_test_env(Cloudflare, [])
+    put_test_env(Vimeo, [])
     put_test_env(:default_video_upload_strategy, :local)
     :ok
   end
@@ -77,6 +79,21 @@ defmodule Brando.Videos.ProviderConfigCheckTest do
     assert [problem] = Check.problems()
     assert problem =~ "webhook_secret"
     assert problem =~ "never complete"
+  end
+
+  # Vimeo has no webhooks; a status poll stands in for them.
+  test "vimeo needs only its access token" do
+    put_test_env(Vimeo, access_token: "token")
+
+    assert Check.problems() == []
+    assert Brando.Videos.upload_available?(:vimeo)
+
+    put_test_env(Vimeo, access_token: "")
+    put_test_env(:default_video_upload_strategy, :vimeo)
+
+    assert [problem] = Check.problems()
+    assert problem =~ "default_video_upload_strategy"
+    refute Brando.Videos.upload_available?(:vimeo)
   end
 
   test "bunny accepts its read-only api key in place of a webhook secret" do

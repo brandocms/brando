@@ -57,16 +57,16 @@ defmodule Brando.HTML.Video do
   # reaching `<.video>` — from `{% video entry.video %}` or a gallery — raised
   # FunctionClauseError. `Brando.Villain.Parser.video/2` renders those two types
   # itself, which is why nothing hit it sooner.
-  def video(%{video: %Video{type: :vimeo, remote_id: remote_id, width: width, height: height}} = assigns) do
+  def video(%{video: %Video{type: :vimeo, width: width, height: height} = video} = assigns) do
     assigns =
       assigns
-      |> assign(:remote_id, remote_id)
+      |> assign(:src, Brando.Videos.VimeoURL.embed_url(video, dnt: 1))
       |> assign(:width, width)
       |> assign(:height, height)
 
     ~H"""
     <iframe
-      src={"https://player.vimeo.com/video/#{@remote_id}?dnt=1"}
+      src={@src}
       width={@width}
       height={@height}
       frameborder="0"
@@ -156,6 +156,41 @@ defmodule Brando.HTML.Video do
 
   def video(%{video: %Video{type: :cloudflare}} = assigns) do
     ~H"<!-- Cloudflare Stream video is not ready -->"
+  end
+
+  def video(%{video: %Video{type: :vimeo_account, status: :ready} = video, opts: opts} = assigns) do
+    case Brando.Videos.Helpers.get_playback_url(video) do
+      {:ok, src} ->
+        render_video(assigns, video, opts,
+          class: "video-vimeo",
+          src: src,
+          poster: Brando.Videos.Helpers.thumbnail_url(video)
+        )
+
+      # The account has no `video_files` scope or plan, so there is no file
+      # link to hand <video>. Vimeo's player still plays it.
+      _ ->
+        assigns =
+          assigns
+          |> assign(:src, Brando.Videos.Uploaders.Vimeo.embed_url(video, dnt: 1))
+          |> assign(:width, video.width)
+          |> assign(:height, video.height)
+
+        ~H"""
+        <iframe
+          src={@src}
+          width={@width}
+          height={@height}
+          frameborder="0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowfullscreen
+        >{"\n"}</iframe>
+        """
+    end
+  end
+
+  def video(%{video: %Video{type: :vimeo_account}} = assigns) do
+    ~H"<!-- Vimeo video is not ready -->"
   end
 
   def video(%{video: %Video{type: :external_file} = video, opts: opts} = assigns) do

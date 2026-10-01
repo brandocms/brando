@@ -27,6 +27,7 @@ import BlockSlotHook from './hooks/BlockSlot'
 import MuxUploaderHook from './hooks/MuxUploader'
 import BunnyUploaderHook from './hooks/BunnyUploader'
 import CloudflareUploaderHook from './hooks/CloudflareUploader'
+import VimeoUploaderHook from './hooks/VimeoUploader'
 import NavigationHook from './hooks/Navigation'
 import PublishClosestInputHook from './hooks/PublishClosestInput'
 import PublishInputHook from './hooks/PublishInput'
@@ -86,6 +87,7 @@ export default (app) => {
     'Brando.MuxUploader': MuxUploaderHook(app),
     'Brando.BunnyUploader': BunnyUploaderHook(app),
     'Brando.CloudflareUploader': CloudflareUploaderHook(app),
+    'Brando.VimeoUploader': VimeoUploaderHook(app),
     'Brando.Navigation': NavigationHook(app),
     'Brando.PublishClosestInput': PublishClosestInputHook(app),
     'Brando.PublishInput': PublishInputHook(app),

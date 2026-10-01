@@ -351,6 +351,16 @@ defmodule Brando.HTMLTest do
       assert vimeo_html =~ ~s(width="640")
     end
 
+    test "an unlisted vimeo embed carries its hash" do
+      video = %Brando.Videos.Video{
+        type: :vimeo,
+        remote_id: "987654",
+        source_url: "https://vimeo.com/987654/abcdef1234"
+      }
+
+      assert render_video(video, []) =~ "player.vimeo.com/video/987654?h=abcdef1234&amp;dnt=1"
+    end
+
     test "a youtube embed reads autoplay and controls from opts" do
       video = %Brando.Videos.Video{type: :youtube, remote_id: "abc123", width: 100, height: 100}
 

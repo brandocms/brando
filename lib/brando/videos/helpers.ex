@@ -70,6 +70,10 @@ defmodule Brando.Videos.Helpers do
     Brando.Videos.Uploaders.Cloudflare.get_playback_url(video)
   end
 
+  def get_playback_url(%Video{type: :vimeo_account} = video) do
+    Brando.Videos.Uploaders.Vimeo.get_playback_url(video)
+  end
+
   def get_playback_url(%Video{type: :upload, file: %Brando.Files.File{} = file}) do
     {:ok, Brando.Utils.media_url(file)}
   end
@@ -136,6 +140,10 @@ defmodule Brando.Videos.Helpers do
     do: nil
 
   def thumbnail_url(%Video{type: :cloudflare, meta: %{"cloudflare" => %{"thumbnail_url" => url}}})
+      when is_binary(url),
+      do: url
+
+  def thumbnail_url(%Video{type: :vimeo_account, meta: %{"vimeo" => %{"thumbnail_url" => url}}})
       when is_binary(url),
       do: url
 

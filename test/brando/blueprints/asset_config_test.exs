@@ -160,7 +160,7 @@ defmodule Brando.Blueprint.AssetConfigTest do
       )
     end
 
-    for strategy <- [:s3, :cloudflare] do
+    for strategy <- [:s3, :cloudflare, :vimeo] do
       module =
         compile_blueprint(
           quote do
@@ -192,6 +192,27 @@ defmodule Brando.Blueprint.AssetConfigTest do
                 upload_strategy: :cloudflare,
                 meta: %{cloudflare: %{"require_signed_urls" => true}}
               }
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/Vimeo password privacy is not supported/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :clip, :video, cfg: %{upload_strategy: :vimeo, meta: %{vimeo: %{"privacy_view" => "password"}}}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/Vimeo folder_uri must be an API URI/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :clip, :video,
+              cfg: %{upload_strategy: :vimeo, meta: %{vimeo: %{folder_uri: "https://vimeo.com/manage/folders/1"}}}
           end
         end
       )

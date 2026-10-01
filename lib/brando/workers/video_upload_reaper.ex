@@ -2,7 +2,7 @@ defmodule Brando.Worker.VideoUploadReaper do
   @moduledoc """
   Marks `Video` rows stuck in `:uploading` as `:errored`.
 
-  External providers (Mux/Bunny/Cloudflare) require the row to exist before any bytes
+  External providers (Mux/Bunny/Cloudflare/Vimeo) require the row to exist before any bytes
   move — their webhooks correlate on a provider identifier in `meta` — so an
   abandoned browser upload (closed tab, network loss, cancel) leaves an
   `:uploading` row that can never complete: provider direct-upload URLs

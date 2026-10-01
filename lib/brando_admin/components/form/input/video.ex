@@ -417,6 +417,8 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
                   Bunny Stream
                 <% :cloudflare -> %>
                   Cloudflare Stream
+                <% :vimeo_account -> %>
+                  Vimeo
                 <% :upload -> %>
                   Upload
                 <% :vimeo -> %>

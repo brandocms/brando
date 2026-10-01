@@ -53,14 +53,19 @@ defmodule Brando.Videos.ProviderConfigCheck do
   alias Brando.Videos.Uploaders.Bunny
   alias Brando.Videos.Uploaders.Cloudflare
   alias Brando.Videos.Uploaders.Mux
+  alias Brando.Videos.Uploaders.Vimeo
 
   require Logger
 
   @providers [
     {:mux, Mux, [:access_token_id, :access_token_secret]},
     {:bunny, Bunny, [:api_key]},
-    {:cloudflare, Cloudflare, [:account_id, :api_token]}
+    {:cloudflare, Cloudflare, [:account_id, :api_token]},
+    {:vimeo, Vimeo, [:access_token]}
   ]
+
+  # Vimeo has no webhooks; `Brando.Worker.VimeoStatus` polls instead.
+  @without_webhooks [:vimeo]
 
   @doc """
   Logs any provider configuration problems, or raises when strict mode is on.
@@ -117,7 +122,7 @@ defmodule Brando.Videos.ProviderConfigCheck do
             "Provider calls will raise; uploads are rejected before they start."
         ]
 
-      not present?(webhook_secret(name, cfg)) ->
+      name not in @without_webhooks and not present?(webhook_secret(name, cfg)) ->
         [
           "#{name} has credentials but no #{webhook_key(name)}. Uploads will start and never " <>
             "complete, and the upload control will not render."

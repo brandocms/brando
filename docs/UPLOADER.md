@@ -348,6 +348,7 @@ layouts/live.html.heex
 | **Video** | **Mux** | **client-direct** (UpChunk) | provider transcodes |
 | **Video** | **Bunny** | **client-direct** (tus) | provider transcodes |
 | **Video** | **Cloudflare Stream** | **client-direct** (tus) | provider transcodes; signed terminal webhook |
+| **Video** | **Vimeo** | **client-direct** (tus) | provider transcodes; no webhooks — `Brando.Worker.VimeoStatus` polls |
 | **Video** | **Spaces/S3** | **client-direct presigned PUT** → HEAD verify → create File + Video | original-file storage; no transcoding |
 
 Unknown video strategies are rejected at Blueprint compilation time. Cloudflare

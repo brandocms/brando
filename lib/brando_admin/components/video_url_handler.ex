@@ -14,8 +14,7 @@ defmodule BrandoAdmin.Components.VideoURLHandler do
         [_, video_id] = youtube_match
         {:ok, %{type: :youtube, remote_id: video_id, source_url: url}}
 
-      vimeo_match = Regex.run(~r/vimeo\.com\/(\d+)/, url) ->
-        [_, video_id] = vimeo_match
+      video_id = vimeo_id(url) ->
         {:ok, %{type: :vimeo, remote_id: video_id, source_url: url}}
 
       String.match?(url, ~r/\.(mp4|webm|ogg|mov)$/i) ->
@@ -23,6 +22,15 @@ defmodule BrandoAdmin.Components.VideoURLHandler do
 
       true ->
         {:error, "Unsupported video URL format"}
+    end
+  end
+
+  # Only the numeric id is a remote_id; the unlisted hash stays in source_url,
+  # where `Brando.Videos.VimeoURL` reads it back for embeds.
+  defp vimeo_id(url) do
+    case Brando.Videos.VimeoURL.parse(url) do
+      {:ok, %{id: id}} -> id
+      :error -> nil
     end
   end
 

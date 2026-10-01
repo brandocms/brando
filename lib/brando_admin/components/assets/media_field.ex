@@ -354,7 +354,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
 
   defp video_source(%{type: :upload}), do: gettext("Uploaded video")
   defp video_source(%{type: :youtube}), do: "YouTube"
-  defp video_source(%{type: :vimeo}), do: "Vimeo"
+  defp video_source(%{type: type}) when type in [:vimeo, :vimeo_account], do: "Vimeo"
   defp video_source(_asset), do: gettext("Video")
 
   defp image_ratio(%{width: width, height: height}, :image)
