@@ -84,7 +84,9 @@
   @media (max-width: 600px) {
     .brando-form fieldset.inline > .brando-input { flex-basis: 100%; width: 100%; }
     .brando-form fieldset.half { width: 100%; }
-    .form-content > .form-tabs { flex-wrap: nowrap; gap: 8px; }
+    /* Sections and the labelled save share a row while they fit; with more
+       than one section they no longer do, and must wrap, not widen the page. */
+    .form-content > .form-tabs { flex-wrap: wrap; gap: 8px; }
     .form-content > .form-tabs .form-tab-builtins { width: auto; margin-left: auto; }
     .brando-form .subform { padding: 12px; }
     .brando-form .subform-entry .subform-fields { flex-wrap: wrap; }
@@ -141,7 +143,10 @@
     .brando-form .subform-entry.inline { position: relative; display: block; padding: 14px; }
     .brando-form .subform-entry.inline .subform-tools { position: absolute; top: 12px; right: 12px; flex-direction: row; gap: 6px; padding: 0; }
     .brando-form .subform-entry.inline .subform-tools button { width: 30px; height: 30px; }
-    .brando-form .subform-entry.inline .subform-fields { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    /* Also the rows with a tucked-away key: their three-column rule is more
+       specific, and squeezed an opened key into the 40px status column. */
+    .brando-form .subform-entry.inline .subform-fields,
+    .brando-form .subform-entry.inline .subform-fields:has(> .brando-input .disclosed-text) { grid-template-columns: minmax(0, 1fr); gap: 16px; }
     .brando-form .subform-fields > .brando-input:has(.radios-wrapper.status.compact) { min-height: 40px; padding-right: 80px; }
     .brando-form .subform-fields .field-wrapper:has(> .field-base .radios-wrapper.status.compact) { display: flex; flex-direction: row-reverse; align-items: center; gap: 8px; }
     .brando-form .subform-fields .field-wrapper:has(.radios-wrapper.status.compact) > .label-wrapper { margin: 0; }

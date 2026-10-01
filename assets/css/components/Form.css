@@ -517,8 +517,12 @@
     flex-wrap: wrap;
     gap: 12px;
 
+    /* The labelled save does not fit beside every tool at phone widths;
+       without wrapping the toolbar widens the whole page. */
     .form-tab-builtins {
       width: 100%;
+      flex-wrap: wrap;
+      row-gap: 8px;
       justify-content: space-between;
     }
   }
