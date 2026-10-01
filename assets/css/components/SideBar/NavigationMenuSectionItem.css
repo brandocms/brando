@@ -71,8 +71,9 @@
         color: var(--brando-nav-muted);
         transition: background-color 200ms ease, color 200ms ease;
 
+        /* Empty alt text: the dash is decoration, not part of the link's name. */
         &:before {
-          content: "\2014";
+          content: "\2014" / "";
           opacity: 0.45;
         }
 
