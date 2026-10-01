@@ -2421,7 +2421,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             id={"block-#{@uid}-render-var-#{@placement}-#{entry.form.id}"}
             var={entry.form}
             render={@placement}
-            on_change={fn params -> send_update(@target, params) end}
+            on_change={send_to(@target)}
             form_id={@form_id}
             current_user_id={@current_user_id}
             language={@language}
@@ -3247,6 +3247,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       {if(is_list(values), do: name <> "[]", else: name), value}
     end
   end
+
+  # An inline `fn params -> send_update(@target, params) end` closes over the
+  # whole `assigns` of the template (`@target` reads `assigns.target`): every
+  # var form of the block, ~120 KB, kept alive by each RenderVar, and a new
+  # value on every render. This one holds only the target, and two of them for
+  # the same target are equal, so an unchanged var is not updated.
+  defp send_to(target), do: fn params -> send_update(target, params) end
 
   # Values a render function derives from its inputs. Set with `assign/3` they
   # count as changed on every render — a function component's assigns hold only
