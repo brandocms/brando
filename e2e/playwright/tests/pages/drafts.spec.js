@@ -314,4 +314,30 @@ test.describe('Entry recovery copies', () => {
     await page.evaluate(() => window.liveSocket.connect())
     await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 25000 })
   })
+
+  // A hook push locks its element until the reply. A capture that locked the
+  // form would nest every block field and block hook lock under it, and a
+  // block LiveView added inside such a nested lock was dropped from the page
+  // while the block list still rendered it ("missing component" on the next
+  // patch; synchronized.spec.js lost its new block on reconnect).
+  test('a capture locks only its own element, not the form around the blocks', async ({ page }) => {
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    await page.evaluate(() => {
+      const form = document.querySelector('[phx-hook="Brando.Form"]')
+      window.draftLocks = { form: 0, capture: 0 }
+      new MutationObserver(records => {
+        for (const { target } of records) {
+          if (!target.hasAttribute('data-phx-ref-lock')) continue
+          if (target === form) window.draftLocks.form += 1
+          if (target.matches('[data-draft-capture]')) window.draftLocks.capture += 1
+        }
+      }).observe(form, { attributes: true, attributeFilter: ['data-phx-ref-lock'], subtree: true })
+    })
+    await page.getByLabel('Title', { exact: true }).fill('Captured without locking the form')
+    await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 25000 })
+    const locks = await page.evaluate(() => window.draftLocks)
+    expect(locks.form).toBe(0)
+    expect(locks.capture).toBeGreaterThan(0)
+  })
 })
