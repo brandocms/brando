@@ -174,6 +174,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             target={@target}
             ref_form={@ref_form}
             config_open={@config_open}
+            carried_config={[
+              block_data[:title],
+              block_data[:alt],
+              block_data[:credits],
+              block_data[:link],
+              {:radio, block_data[:fetchpriority]},
+              block_data[:img_class],
+              block_data[:picture_class],
+              block_data[:config_target],
+              block_data[:placeholder],
+              block_data[:moonwalk],
+              block_data[:lazyload]
+            ]}
             config_layout="editor"
             config_title={gettext("Configure image")}
             config_subtitle={@ref_description || gettext("Settings for this use of the image")}

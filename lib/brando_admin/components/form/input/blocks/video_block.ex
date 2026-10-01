@@ -181,6 +181,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           target={@target}
           ref_form={@ref_form}
           config_open={@config_open}
+          carried_config={[
+            block_data[:title],
+            {:override, block_data[:autoplay]},
+            {:override, block_data[:preload]},
+            {:override, block_data[:controls]},
+            {:override, block_data[:loop]},
+            {:override, block_data[:muted]},
+            {:checkbox, block_data[:play_button]},
+            {:checkbox, block_data[:progress]},
+            block_data[:poster],
+            block_data[:cover],
+            block_data[:aspect_ratio],
+            block_data[:video_class],
+            block_data[:container_class],
+            block_data[:opacity],
+            block_data[:config_target]
+          ]}
           config_layout="editor"
           config_title={gettext("Configure video")}
           config_subtitle={@ref_description || gettext("Settings for this use of the video")}
@@ -298,31 +315,33 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               </:section>
             </Content.modal_sections>
             <Input.input type={:hidden} field={block_data[:config_target]} />
-            <.inputs_for :let={cover_image} :if={block_data[:cover_image].value} field={block_data[:cover_image]}>
-              <Input.input type={:hidden} field={cover_image[:placeholder]} />
-              <Input.input type={:hidden} field={cover_image[:cdn]} />
-              <Input.input type={:hidden} field={cover_image[:moonwalk]} />
-              <Input.input type={:hidden} field={cover_image[:lazyload]} />
-              <Input.input type={:hidden} field={cover_image[:credits]} />
-              <Input.input type={:hidden} field={cover_image[:dominant_color]} />
-              <Input.input type={:hidden} field={cover_image[:height]} />
-              <Input.input type={:hidden} field={cover_image[:width]} />
-              <Input.input type={:hidden} field={cover_image[:path]} />
-
-              <.inputs_for :let={focal_form} field={cover_image[:focal]}>
-                <Input.input type={:hidden} field={focal_form[:x]} />
-                <Input.input type={:hidden} field={focal_form[:y]} />
-              </.inputs_for>
-
-              <Primitives.map_inputs :let={%{value: value, name: name}} field={cover_image[:sizes]}>
-                <input type="hidden" name={"#{name}"} value={"#{value}"} />
-              </Primitives.map_inputs>
-
-              <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={cover_image[:formats]}>
-                <input type="hidden" name={array_name} value={array_value} />
-              </Primitives.array_inputs>
-            </.inputs_for>
           </:config>
+          <%!-- Hidden values the config never edits; rendered here so they do
+                not depend on whether the config is open. --%>
+          <.inputs_for :let={cover_image} :if={block_data[:cover_image].value} field={block_data[:cover_image]}>
+            <Input.input type={:hidden} field={cover_image[:placeholder]} />
+            <Input.input type={:hidden} field={cover_image[:cdn]} />
+            <Input.input type={:hidden} field={cover_image[:moonwalk]} />
+            <Input.input type={:hidden} field={cover_image[:lazyload]} />
+            <Input.input type={:hidden} field={cover_image[:credits]} />
+            <Input.input type={:hidden} field={cover_image[:dominant_color]} />
+            <Input.input type={:hidden} field={cover_image[:height]} />
+            <Input.input type={:hidden} field={cover_image[:width]} />
+            <Input.input type={:hidden} field={cover_image[:path]} />
+
+            <.inputs_for :let={focal_form} field={cover_image[:focal]}>
+              <Input.input type={:hidden} field={focal_form[:x]} />
+              <Input.input type={:hidden} field={focal_form[:y]} />
+            </.inputs_for>
+
+            <Primitives.map_inputs :let={%{value: value, name: name}} field={cover_image[:sizes]}>
+              <input type="hidden" name={"#{name}"} value={"#{value}"} />
+            </Primitives.map_inputs>
+
+            <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={cover_image[:formats]}>
+              <input type="hidden" name={array_name} value={array_value} />
+            </Primitives.array_inputs>
+          </.inputs_for>
           <MediaField.field
             id={"block-#{@uid}-video-upload"}
             type={:video}

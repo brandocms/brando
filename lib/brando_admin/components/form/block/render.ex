@@ -1994,6 +1994,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           config_open={@config_open}
           multi={false}
           target={@target}
+          carried_config={[block_data[:text]]}
         >
           <:description>
             {gettext("Comment — not shown on frontend.")}
@@ -3274,13 +3275,25 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     end
   end
 
-  # What the config widgets would submit: a radio group with nothing checked
-  # sends nothing, a text or hidden input sends "". `false` is written out,
-  # because `value={false}` drops the attribute and would submit "".
+  # What each config widget would submit:
+  #
+  #   * a text, number, textarea or hidden input: its value, "" when nil;
+  #   * `{:radio, field}`: nothing when nil, as no radio is checked;
+  #   * `{:checkbox, field}`: "true" or "false", as `Input.toggle` always
+  #     submits its hidden "false" and a checked box overrides it;
+  #   * `{:override, field}`: only a real boolean, as
+  #     `Input.override_toggle_group` leaves an inherited value out.
+  #
+  # `false` is written out, because `value={false}` drops the attribute and
+  # would submit "".
   defp carried_inputs(fields) do
     Enum.flat_map(fields, fn
       {:radio, %{value: nil}} -> []
       {:radio, field} -> [{field.name, carried_value(field.value)}]
+      {:checkbox, field} -> [{field.name, to_string(Phoenix.HTML.Form.normalize_value("checkbox", field.value))}]
+      {:override, %{value: value} = field} when value in [true, "true"] -> [{field.name, "true"}]
+      {:override, %{value: value} = field} when value in [false, "false"] -> [{field.name, "false"}]
+      {:override, _field} -> []
       field -> [{field.name, carried_value(field.value)}]
     end)
   end
