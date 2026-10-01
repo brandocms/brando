@@ -129,6 +129,20 @@ the script made them. When it changes, the element is patched like any other,
 and the script has to follow the new value. Video players are preserved the
 same way without the attribute.
 
+Your script initialised the page once, when it loaded. Elements the preview
+patches or inserts afterwards are not initialised again unless the script
+listens for `brando:livepreview:patched`, dispatched on `document` after
+every update:
+
+```js
+document.addEventListener('brando:livepreview:patched', ({ detail }) => {
+  // detail.type: 'block', 'update' (<main>) or 'rerender' (<body>)
+  // detail.uid: the block, for 'block'
+  // detail.elements: what was patched; empty when a block was removed
+  detail.elements.forEach(el => initWidgets(el))
+})
+```
+
 ## Recovery and sharing
 
 The selected view belongs to the preview session. A reconnect restores that

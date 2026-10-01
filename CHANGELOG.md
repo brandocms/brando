@@ -461,6 +461,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   marker). An element marked `data-lp-preserve="VALUE"` is left alone while
   the value is unchanged.
 
+- **Live preview tells the site's scripts what it patched.** After each
+  update the preview dispatches `brando:livepreview:patched` on `document`,
+  with `detail.type` (`block`, `update` or `rerender`), the block's `uid` and
+  the patched `elements`. A site can re-initialise sliders, lightboxes and
+  other widgets in those elements; until now they stayed inert until the
+  preview reloaded.
+
 - **A site without tenancy can clean up its media files.** Deleting an image
   soft-deletes the row and the purge removes it after 30 days, but the files
   stayed on disk for good: the nightly `Brando.Worker.MediaOrphanCleanup`
@@ -915,6 +922,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   compilation and raised from the changeset instead.
 
 #### Fixes
+
+- **Live preview block updates keep all of a block's markup.** A block whose
+  HTML started with `<style>`, `<script>`, `<link>` or `<meta>` lost it on its
+  first edit, and table rows outside a table vanished. A block whose top-level
+  element changed tag stopped updating after that edit. An entry-field update
+  threw on a template without `<main>`, and went to a detached element after a
+  full rerender had replaced `<main>`.
 
 - **"Add from URL" on an entry's video field no longer crashes the form.** The
   picker hands the new video to the field as an update the field had no
