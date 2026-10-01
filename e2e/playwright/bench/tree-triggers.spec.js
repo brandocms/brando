@@ -187,7 +187,11 @@ test('BENCH: entry-field fan-out at 115 consuming blocks', async ({ page }) => {
   }
 
   const title = page.getByLabel('Title', { exact: true })
-  await typeInto('ENTRY_FIELD read', title)
+  const read = await typeInto('ENTRY_FIELD read', title)
+  // 320 KB until each consuming block stopped re-sending its whole form for a
+  // changed entry value (`Render.assign_derived/3`, `nested_block_form/1`);
+  // ~40 KB since, about 250 B per block.
+  expect(read, 'fan-out for a read entry field (budget 80 000 B)').toBeLessThan(80_000)
 
   // Assert the effect, not just the cost. A cheap fan-out and a fan-out that
   // silently reaches nobody produce the same byte count — which is how the

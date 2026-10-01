@@ -101,6 +101,13 @@ records why the other candidates in #2701 do not need standalone skills.
 - **Form Index for DOM IDs**: Use `form.index` (not database ID) for DOM element identification in nested forms. New records don't have database IDs yet.
 - **CID Stability**: When a component remounts, its `@myself` CID changes. Any stored references to the old CID become invalid.
 - **Constant Options in Templates**: Never call functions that return constant lists directly in HEEx templates (e.g., `opts={[options: my_options()]}`). Instead, assign constants once in `mount/1` using `assign_new/3` and reference via assigns (e.g., `opts={[options: @my_options]}`). This makes the dependency explicit and avoids rebuilding constants when a component is invoked. A zero-assign-dependency expression in HEEx is normally skipped during tracked patches; it does not run on every patch merely because it is a function call.
+- **Derived assigns in function components are always "changed"**: a function
+  component's assigns hold only what the caller passed, so `assign(assigns, :uid, …)`
+  marks `:uid` changed on every render and re-sends every expression reading it.
+  Expressions reading an `inputs_for` `:let` variable are never tracked either. In the
+  block editor this re-sent each block's whole form for an unrelated entry-field change
+  (320 KB per keystroke at 115 blocks). Use `assign_derived/3` and `nested_block_form/1`
+  in `Block.Render`, or pass precomputed values from the LiveComponent.
 - **Sticky JS for persistent client-side decorations**: DOM state that must survive
   LiveView patches (presence locks, etc.) MUST go through the hook's `this.js()`
   commands (`addClass`/`setAttribute`/… → `DOM.putSticky`) — plain

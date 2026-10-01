@@ -832,6 +832,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:entry, entry)
+    |> assign_entry_language()
     |> assign(:liquid_splits, updated_liquid_splits)
     |> then(&{:ok, &1})
   end
@@ -843,6 +844,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:entry, entry)
+    |> assign_entry_language()
     |> assign(:liquid_splits, updated_liquid_splits)
     |> then(&{:ok, &1})
   end
@@ -875,6 +877,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(assigns)
+    |> assign_entry_language()
     |> assign(:active, Changeset.get_field(changeset, :active))
     |> assign(:deleted, Changeset.get_field(changeset, :marked_as_deleted))
     |> assign(:form_has_changes, changeset.changes !== %{})
@@ -1611,6 +1614,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   # `consumes_entry?` is only set once a module has been resolved, so a block
   # without one (containers, fragments) keeps the old behaviour of accepting
   # every entry update — nil is deliberately not treated as false.
+  # Kept as its own assign so a keystroke in an entry field other than
+  # `language` leaves it unchanged, and the inputs that read it are not re-sent.
+  defp assign_entry_language(socket),
+    do: assign(socket, :entry_language, __MODULE__.Render.entry_language(socket.assigns[:entry]))
+
   defp drop_on_reentry(socket) do
     if socket.assigns[:consumes_entry?] == false do
       [:form, :children, :entry]
