@@ -357,9 +357,14 @@ defmodule Brando.Blueprint.Forms.Verifier do
     end
   end
 
+  # Virtual fields too: a form may carry one (a hidden input the changeset
+  # reads back), and Ecto lists those apart from `:fields`.
   defp schema_fields(module) do
     module
-    |> then(&(&1.__schema__(:fields) ++ &1.__schema__(:associations) ++ &1.__schema__(:embeds)))
+    |> then(
+      &(&1.__schema__(:fields) ++
+          &1.__schema__(:virtual_fields) ++ &1.__schema__(:associations) ++ &1.__schema__(:embeds))
+    )
     |> MapSet.new()
   end
 

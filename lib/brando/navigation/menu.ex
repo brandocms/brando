@@ -96,6 +96,7 @@ defmodule Brando.Navigation.Menu do
             input :link, :link, compact: true, label: t("Link", Item)
             # Taken from the link until set (`Item.DeriveKey`); tucked away
             input :key, :disclosed_text, monospace: true, compact: true, label: t("Key", Item)
+            input :derived_key, :hidden
           end
         end
       end

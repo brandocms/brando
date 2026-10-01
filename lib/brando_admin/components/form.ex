@@ -3918,6 +3918,43 @@ defmodule BrandoAdmin.Components.Form do
      |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
   end
 
+  def handle_event("browse_video_thumbnail", _, socket) do
+    video = socket.assigns.edit_video.video
+
+    send_update(ImagePicker,
+      id: "image-picker",
+      config_target: Brando.Assets.ConfigTarget.serialize({"image", Brando.Videos.Video, :thumbnail}),
+      event_target: socket.assigns.myself,
+      multi: false,
+      selected_images: if(video && video.thumbnail_id, do: [video.thumbnail_id], else: []),
+      form_id: socket.assigns.id
+    )
+
+    {:noreply, socket}
+  end
+
+  # The image picker's pick, when the video drawer opened it for a thumbnail
+  # (`browse_video_thumbnail`) — the only time the form is its target. Saved
+  # at once, like `reset_video_thumbnail`.
+  def handle_event("select_image", %{"id" => image_id}, socket) do
+    edit_video = socket.assigns.edit_video
+
+    with %{video: %{id: video_id} = video} when not is_nil(video_id) <- edit_video,
+         {:ok, image} <- Brando.Images.get_image(image_id),
+         {:ok, updated_video} <-
+           video
+           |> change(%{thumbnail_id: image.id})
+           |> Map.put(:action, :update)
+           |> Brando.Videos.update_video(socket.assigns.current_user) do
+      send_update(ImagePicker, id: "image-picker", selected_images: [image.id])
+      {:noreply, assign(socket, :edit_video, %{edit_video | video: %{updated_video | thumbnail: image}})}
+    else
+      _ ->
+        send(self(), {:toast, gettext("Could not set video thumbnail")})
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("reset_video_thumbnail", _, socket) do
     edit_video = socket.assigns.edit_video
 

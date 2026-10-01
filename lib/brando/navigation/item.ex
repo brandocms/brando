@@ -21,6 +21,10 @@ defmodule Brando.Navigation.Item do
 
   attributes do
     attribute :key, :string, required: true
+    # The key `Item.DeriveKey` last took from the link. The menu form posts it
+    # back beside the key, so a key that still matches it is still following
+    # the link rather than one the editor typed.
+    attribute :derived_key, :string, virtual: true
   end
 
   relations do

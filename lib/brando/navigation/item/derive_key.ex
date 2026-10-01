@@ -7,6 +7,11 @@ defmodule Brando.Navigation.Item.DeriveKey do
   unset (empty, or the old default "key") it is taken from the link: its text,
   or the title of the entry it links to, as `snake_case`. Once set it stays,
   so renaming the item doesn't break a template that uses the key.
+
+  The form renders the derived key in the key field and posts it back, which
+  reads exactly like a key the editor typed. So the derived key also goes into
+  the virtual `derived_key`, which the form posts back beside it: a key that
+  still equals it has not been edited, and follows the link again.
   """
   use Brando.Trait
 
@@ -18,11 +23,20 @@ defmodule Brando.Navigation.Item.DeriveKey do
   @unset [nil, "", "key"]
 
   def changeset_mutator(_module, _config, changeset, _user, _opts) do
-    if get_field(changeset, :key) in @unset do
-      put_change(changeset, :key, derive(get_field(changeset, :link)) || "item")
+    if unset?(changeset) do
+      key = derive(get_field(changeset, :link)) || "item"
+
+      changeset
+      |> put_change(:key, key)
+      |> put_change(:derived_key, key)
     else
       changeset
     end
+  end
+
+  defp unset?(changeset) do
+    key = get_field(changeset, :key)
+    key in @unset or key == get_field(changeset, :derived_key)
   end
 
   defp derive(%{link_text: text}) when is_binary(text) and text != "", do: to_key(text)

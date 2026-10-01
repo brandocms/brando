@@ -13626,3 +13626,8 @@ msgstr "Lenket fil fra %{host}"
 #, elixir-autogen, elixir-format
 msgid "Video upload isn't set up. Use %{action} to pick a video from the library or add one by URL."
 msgstr "Videoopplasting er ikke satt opp. Bruk %{action} for å velge en video fra biblioteket eller legge til en via URL."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Could not set video thumbnail"
+msgstr "Klarte ikke å sette videominiatyren"

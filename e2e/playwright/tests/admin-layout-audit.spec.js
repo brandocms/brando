@@ -63,7 +63,7 @@ test('menu controls align, keyboard status works and save follows the items', as
   await expect(page.locator('#menu_items_0_key')).toBeFocused()
   const fields = [row.locator('.radios-wrapper.status.compact').first(), page.locator('#menu_items_0_key'), row.locator('.link-preview').first()]
   await sameHeight(fields, 40)
-  const labels = await row.locator('.subform-fields > .brando-input').evaluateAll(inputs => inputs.map(input => input.querySelector('.label-wrapper').getBoundingClientRect().y))
+  const labels = await row.locator('.subform-fields > .brando-input:not([data-component="hidden"])').evaluateAll(inputs => inputs.map(input => input.querySelector('.label-wrapper').getBoundingClientRect().y))
   expect(Math.max(...labels) - Math.min(...labels)).toBeLessThanOrEqual(1)
   const compactTrigger = row.locator('.status-trigger').first()
   await compactTrigger.focus()
