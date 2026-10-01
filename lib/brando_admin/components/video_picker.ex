@@ -802,6 +802,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 :for={{dom_id, video} <- @streams.visible_videos}
                 id={dom_id}
                 video={video}
+                selected={Enum.any?(@selected_videos, &same_item_id?(&1, video.id))}
                 multi={@multi}
                 event_target={@event_target}
                 myself={@myself}
@@ -869,9 +870,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
     assigns = assign(assigns, :editing, assigns.editing_video_id == assigns.video.id)
 
     ~H"""
+    <%!-- Rendered as well as pushed, as in the image picker: rows streamed in
+    on opening arrive after `video_picker_selection_changed` has run. --%>
     <div
       id={@id}
-      class="video-picker__video"
+      class={["video-picker__video", @selected && "selected"]}
       role="button"
       tabindex="0"
       phx-key="Enter"

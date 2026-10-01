@@ -185,6 +185,22 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:noreply, close_list(socket)}
   end
 
+  # Opening again for the target it was last set up for — the image drawer's
+  # "Select image". A closed picker has emptied its list (`close_list/1`), and
+  # only the openings that send a new target load it again, so this one came
+  # up blank.
+  def handle_event("reopen", _, %{assigns: %{config_target: config_target}} = socket)
+      when not is_nil(config_target) do
+    {:noreply,
+     socket
+     |> assign(:opened?, true)
+     |> assign_config_target()
+     |> assign_folder_state(socket.assigns.current_folder)
+     |> push_selection_state()}
+  end
+
+  def handle_event("reopen", _, socket), do: {:noreply, socket}
+
   def handle_event("search_images", %{"search" => search}, socket) do
     {:noreply,
      socket
@@ -485,6 +501,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 :for={{dom_id, image} <- @streams.visible_images}
                 id={dom_id}
                 image={image}
+                selected={Enum.any?(@selected_images, &same_item_id?(&1, image.id))}
                 multi={@multi}
                 event_target={@event_target}
                 picker_mode={@picker_mode}
@@ -574,9 +591,13 @@ defmodule BrandoAdmin.Components.ImagePicker do
     assigns = assign(assigns, :menu_id, menu_id)
 
     ~H"""
+    <%!-- `selected` is rendered as well as pushed: opening the picker streams
+    its rows in after the `image_picker_selection_changed` event has run, so a
+    row that only waited for the hook came in unmarked. The hook still owns
+    every later change. --%>
     <div
       id={@id}
-      class="image-picker__image"
+      class={["image-picker__image", @selected && "selected"]}
       data-id={@image.id}
       data-selectable={to_string(@picker_mode == :select)}
       role={if @picker_mode == :select, do: "button"}
