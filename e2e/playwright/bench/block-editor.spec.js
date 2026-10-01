@@ -140,24 +140,32 @@ const measureEntry = async (page, label, entryId, expectedBlocks) => {
   return row
 }
 
-// Budgets, not targets. Each is ~10% above what was measured on 2026-07-29,
-// on fixtures that now carry config- and hidden-placement vars, so ordinary
-// noise passes and a real regression fails. Raising one is a deliberate act — record why in
-// `.claude/plans/block-editor-architecture/plan.md`.
+// Budgets, not targets. Each is ~10% above what was measured, so ordinary
+// noise passes and a real regression fails. Changing one is a deliberate act:
+// say why here, with the measurement.
 //
 // Mount is the number that matters: it is what an editor waits through when
 // opening an entry, and it is the one that scales with block count.
+//
+// Re-measured 2026-10-01 after #2894 (three runs, spread under 0.2%):
+//
+//   entry     mount     edit    save
+//   flat-5    368 KB    8.1 KB  49 KB
+//   flat-40   1.42 MB   8.1 KB  53 KB
+//   flat-115  3.64 MB   8.1 KB  63 KB
+//   nested    1.96 MB   3.4 KB  52 KB
+//
+// Most budgets tightened (flat-115 mount 4.38 -> 4.0 MB, edit 11.8 -> 9 KB,
+// save 75 -> 69 KB). Two were already failing before #2894 and are loosened:
+// flat-5 mount (360 -> 405 KB), which is mostly fixed page chrome that grew
+// after the July budget, and nested edit (3.2 -> 3.7 KB, measured 3.5 KB on
+// 2026-10-01 before the change).
 const BUDGETS = {
-  // `edit` tightened 13_000 -> 11_800 on 2026-08-05: the block's identity
-  // inputs (uid/type/anchor/multi/module_id/parent_id/creator_id/
-  // marked_as_deleted/source) now render from a tracked assign instead of
-  // from the form, so they leave the diff entirely on an edit that does not
-  // change them. Measured 12_233 -> 10_707 B at 115 blocks.
-  'flat-5': { mount: 360_000, edit: 11_800, save: 60_000 },
-  'flat-40': { mount: 1_650_000, edit: 11_800, save: 65_000 },
-  'flat-115': { mount: 4_380_000, edit: 11_800, save: 75_000 },
-  // Nested mount swings ~9% run to run, so its headroom is wider on purpose.
-  nested: { mount: 2_150_000, edit: 3_200, save: 235_000 },
+  'flat-5': { mount: 405_000, edit: 9_000, save: 54_000 },
+  'flat-40': { mount: 1_560_000, edit: 9_000, save: 59_000 },
+  'flat-115': { mount: 4_000_000, edit: 9_000, save: 69_000 },
+  // Nested mount swung ~9% run to run in July, so its headroom stays wider.
+  nested: { mount: 2_150_000, edit: 3_700, save: 57_000 },
 }
 
 const assertBudget = (row) => {
