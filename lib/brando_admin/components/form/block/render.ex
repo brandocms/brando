@@ -3254,7 +3254,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   # here instead, through `assign_derived/3`, because LiveView cannot track
   # expressions that read an `inputs_for` `:let` variable: any change in the
   # slot re-sent every input of the block.
-  defp nested_block_form(%Phoenix.HTML.Form{} = form) do
+  @doc false
+  def nested_block_form(%Phoenix.HTML.Form{} = form) do
     [inner] = form.impl.to_form(form.source, form, :block, Keyword.take(form.options, [:multipart]))
     id = inner.params["_persistent_id"] || "0"
 
@@ -3268,7 +3269,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   end
 
   # The hidden inputs `inputs_for` renders ahead of its slot.
-  defp hidden_inputs(form) do
+  @doc false
+  def hidden_inputs(form) do
     for {field, values} <- form.hidden, value <- List.wrap(values) do
       name = Phoenix.HTML.Form.input_name(form, field)
       {if(is_list(values), do: name <> "[]", else: name), value}

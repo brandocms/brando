@@ -65,6 +65,18 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 | `lib/brando_admin/components/form/input/blocks/render_var.ex` | Var rendering component |
 | `lib/brando_admin/components/form/input/blocks/utils.ex` | Block rendering utilities |
 
+**Ref config fields must be listed in `carried_config`.** A ref's config
+values have to reach every `validate_block`, but while the modal is closed
+only the fields listed in the type's `carried_config` (on
+`Block.Render.block/1`) are sent, as bare hidden inputs. Adding a field to a
+`<:config>` slot without listing it drops its value on the next validate.
+Use the kind its widget submits as: plain (`""` when nil), `{:radio, f}`,
+`{:checkbox, f}` (`Input.toggle`) or `{:override, f}`
+(`Input.override_toggle_group`). Hidden-only config that is a list or a nested
+form belongs in the block body, not the slot.
+`e2e/playwright/tests/blocks/block-ref-config-carried.spec.js` compares what
+each ref type submits with its config closed and open; add new ref types there.
+
 ### Villain (Rendering & Block Types)
 | File | Description |
 |------|-------------|
