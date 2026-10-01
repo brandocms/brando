@@ -82,6 +82,21 @@ defmodule BrandoAdmin.Components.Form.PreviewTest do
     refute_received {:rendered, _, _}
   end
 
+  test "after a render the next one waits out the interval, then renders the latest state once" do
+    first = Preview.queue(socket([]), :live_preview_update, 0)
+    assert Process.read_timer(first.assigns.preview_update.timer) <= 25
+    {socket, _token} = flush(first)
+    assert_received {:rendered, :live_preview_update, %{}}
+
+    socket = Enum.reduce(1..5, socket, fn _, s -> Preview.queue(s, :live_preview_update, 0) end)
+    %{timer: timer, token: token} = socket.assigns.preview_update
+    assert Process.read_timer(timer) > 900
+    socket = Preview.flush(socket, token, &rendered/3)
+    assert_received {:rendered, :live_preview_update, %{}}
+    refute_received {:rendered, _, _}
+    assert socket.assigns.preview_update == nil
+  end
+
   test "cancelled timers and collected replies cannot revive a closed preview" do
     {socket, token} = socket() |> Preview.queue(:live_preview_update, 0) |> flush()
     socket = socket |> Preview.cancel() |> Component.assign(:live_preview_active?, false)

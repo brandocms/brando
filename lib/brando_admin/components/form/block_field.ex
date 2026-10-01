@@ -73,7 +73,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   require Logger
 
   def mount(socket) do
-    {:ok, assign(socket, outline_items: [], open_slot_uid: nil, slot_title: nil, note_observers: %{})}
+    {:ok,
+     assign(socket,
+       outline_items: [],
+       open_slot_uid: nil,
+       slot_title: nil,
+       note_observers: %{},
+       live_preview_active?: false,
+       live_preview_cache_key: nil
+     )}
   end
 
   @structural_ops [:insert, :insert_child, :move, :reorder, :reorder_children, :move_to_parent, :remap_slot, :delete]
@@ -649,29 +657,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       block_field: socket.assigns.block_field,
       tag: tag
     )
-
-    {:ok, socket}
-  end
-
-  def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
-    for block_uid <- socket.assigns.block_ops.order do
-      send_update(Block,
-        id: "block-#{block_uid}",
-        event: "enable_live_preview",
-        cache_key: cache_key
-      )
-    end
-
-    {:ok, socket}
-  end
-
-  def update(%{event: "disable_live_preview"}, socket) do
-    for block_uid <- socket.assigns.block_ops.order do
-      send_update(Block,
-        id: "block-#{block_uid}",
-        event: "disable_live_preview"
-      )
-    end
 
     {:ok, socket}
   end
@@ -2097,6 +2082,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 slot_open={@open_slot_uid == block[:uid].value}
                 slot_title={@slot_title}
                 paste_multi_module_id={@paste_multi_module_id}
+                live_preview_active?={@live_preview_active?}
+                live_preview_cache_key={@live_preview_cache_key}
                 level={0}
               />
             </div>

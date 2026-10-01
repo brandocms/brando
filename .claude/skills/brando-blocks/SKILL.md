@@ -318,7 +318,7 @@ the keyed `:for` — never from a form's `sequence` field, which is stale by des
 - Structural and UI messages: `set_collapsed`, `set_children_collapsed`, `insert_block`,
   `insert_pasted_block`, `paste_block`, `paste_child_block`, `outline_reorder_child`,
   `extract_child`, `update_ref`, `update_ref_data`, `update_block_var`,
-  `update_entry_field`, `enable_live_preview` / `disable_live_preview`.
+  `update_entry_field`.
 
 > There is **no** position-response tracker, no `send_form_to_parent`, and no
 > `signal_position_update`. Those belonged to the pre-2026-07 architecture and were removed
@@ -367,13 +367,16 @@ preserved is anything that had no DOM input to capture in the first place.
 ## 10. Live Preview
 
 ### Enable/Disable
-Cascades through entire block tree:
+`live_preview_active?` and `live_preview_cache_key` are attributes, rendered down
+the tree in one pass:
 ```
-Form → BlockField (event: "enable_live_preview", cache_key: ...) →
-  for each block_uid: send_update(Block, event: "enable_live_preview", cache_key: ...)
-    → Block: assigns live_preview_active?: true, cascades to children
-    → no local HTML render; the initial full-page render already supplies it
+Form (assigns) → BlockField attrs → root Block attrs → child Block attrs
+  → no local HTML render; the initial full-page render already supplies it
 ```
+Do not reintroduce a `send_update` per block for this: each one is its own
+render and diff frame, which made opening the preview at 115 roots take 115
+frames over ~0.8 s. A newly mounted block receives the attributes like any
+other, so it needs no status query.
 
 ### Rendering
 - **`render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)`** — renders a child block's Liquex template, puts `rendered_html` and `rendered_at` into changeset

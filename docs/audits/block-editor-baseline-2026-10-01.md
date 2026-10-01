@@ -85,3 +85,36 @@ Nested entry (40 × 3 levels): mount 1.94 MB, edit 3.5 KB, save 263 KB.
 - **Entry-field fan-out to consuming blocks** is 321 KB over 118 frames for one
   title keystroke on `/bench-entry-consumers`; unread fields are 9 KB.
 - **Draft capture** is unchanged at 117 / 337 KB per capture.
+
+## Follow-up: save re-seed and live preview (same day)
+
+Measured with the same bench on `/bench-flat-115` unless noted.
+
+| Metric | Baseline | After |
+|---|---|---|
+| Save frame, 115 / 40 / 5 roots | 1.10 MB (134 frames) / 406 / 83 KB | 76 KB (21 frames) / 66 / 62 KB |
+| Save frame, nested | 263 KB | 161 KB |
+| Preview open round trip | 1.65 s, 115 diff frames | 0.81 s, one 19.5 KB diff |
+| 5 title keystrokes, preview open | 6 `update`s × 34 KB = 253 KB | 3 `update`s × 21 KB = 112 KB |
+
+- **Save:** after a save each block field re-seeds only the roots it cannot
+  prove already hold the saved row (`BlockField.holds_persisted?/2`). What
+  remains in the frame is the three roots the bench edits or inserts.
+- **Server time for a full preview render is about 10 ms** at 115 roots
+  (materialize 1 ms, render 5–11 ms); 25 ms of the 35 ms between `validate`
+  and the broadcast is the coalescing window. The 80 ms the browser sees
+  after the `validate` reply is its own main thread applying that reply, not
+  the server. Fixture modules are small, so real pages render slower and
+  their documents are larger.
+- **Preview renders are now at least 1 s apart.** The first change after a
+  pause still renders within the 25 ms window; later ones render the latest
+  state once the interval has passed (`Form.Preview`).
+- **`update` broadcasts carry only `<main>`,** the only part the iframe
+  morphs: 34 → 21 KB per update here.
+- **Opening and closing the preview is one render.** The flag travels as
+  attributes, Form → BlockField → blocks. The single diff is larger than the
+  115 small frames were (19.5 vs ~8 KB), because BlockField re-sends every
+  root's wrapper fields. Collection on open also waits 150 ms instead of
+  500 ms, the same margin save uses.
+- Still open: opening the preview triggers a 337 KB draft capture (item 8),
+  and most of the remaining 0.8 s is the iframe loading the page.
