@@ -118,3 +118,35 @@ Measured with the same bench on `/bench-flat-115` unless noted.
   500 ms, the same margin save uses.
 - Still open: opening the preview triggers a 337 KB draft capture (item 8),
   and most of the remaining 0.8 s is the iframe loading the page.
+
+## Follow-up: collapse, picker, draft capture, entry fan-out (same day)
+
+| Metric (115 roots) | Baseline | After |
+|---|---|---|
+| Collapse, icon and block flip | after the validate reply | at once (e2e test holds server frames for 1.5 s) |
+| Draft capture after the first | 337 KB up, ~145 ms of LiveView time | 4.5 KB up, root rebuild 0 ms |
+| Entry-field fan-out, 115 consumers | 320 KB, 118 frames | 40 KB, 118 frames |
+| Keystroke inside a block | 13.2 KB | 12.8 KB |
+
+- **Collapse** flips its class and icon on the client (`uiCommands.js`, CSS
+  off the checkbox); the validate still runs and its patch agrees.
+  `e2e/playwright/test-support/latency.js` holds server frames so a test can
+  assert what shows before the reply.
+- **The picker already opens without a round trip.** `data-ui-modal-show`
+  shows it client-side with the module list it last had; the round trip only
+  re-filters that list and records where to insert, and LiveView processes the
+  insert after it.
+- **Draft capture:** the browser sends only block forms edited since the last
+  save (all of them on the first capture after load or reconnect), and
+  BlockField reuses a root's snapshot while its inputs are unchanged. The
+  remaining ~35 ms per changed capture is writing the full draft row
+  (option 3, on hold).
+- **Entry fan-out:** each consuming block re-sent its whole form because of
+  derived assigns in function components, the `inputs_for` `:let` slot and
+  `<.form>` rebuilding its attributes. Now about 250 B per block. Mount fell
+  from 5.50 to 4.80 MB in the e2e build, mostly HEEx debug annotations that
+  production does not send.
+- **Item 7, the keystroke diff, is the block's whole form.** Every input reads
+  the one Phoenix form, so an edit anywhere re-sends the toolbar and every ref
+  input. Vars avoid it by being their own components (~0.7 KB). Doing the same
+  for refs is the fix; it is a larger change and not started.
