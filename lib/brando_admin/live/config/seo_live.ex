@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
      |> assign_current_user(token)
      |> assign_entry_id()
      |> assign_404s()
+     |> assign(:redirect_drafts, MapSet.new())
      |> assign_audit_defaults()
      |> assign(:page_title, gettext("SEO"))}
   end
@@ -67,31 +68,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
               </p>
             </div>
           </header>
-          <BrandoAdmin.Components.Workspace.empty
-            :if={@four_oh_fours == []}
-            title={gettext("No missing URLs recorded")}
-            description={gettext("Missing pages will appear here when they are requested.")}
-          />
-          <div
-            :if={@four_oh_fours != []}
-            class="workspace-table-scroll"
-            tabindex="0"
-            role="region"
-            aria-label={gettext("Not found (404)")}
-          >
-            <table class="workspace-table">
-              <thead>
-                <tr>
-                  <th>{gettext("URL")}</th><th>{gettext("Hits")}</th><th>{gettext("Last hit")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr :for={item <- @four_oh_fours}>
-                  <td class="workspace-mono">{item.url}</td><td>{item.hits}</td><td>{item.last_hit_at}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <.not_found_lists items={@four_oh_fours} redirect_drafts={@redirect_drafts} />
         </section>
       </div>
 
@@ -116,6 +93,74 @@ defmodule BrandoAdmin.Sites.SEOLive do
           queries={@queries}
         />
       </div>
+    </div>
+    """
+  end
+
+  attr :items, :list, required: true
+  attr :redirect_drafts, :any, required: true
+
+  # Real misses first, where a redirect may help; scanner probes folded away
+  # under them, closed by default.
+  defp not_found_lists(assigns) do
+    {probes, misses} = Enum.split_with(assigns.items, &Brando.Sites.FourOhFour.probe?(&1.url))
+    assigns = assign(assigns, probes: probes, misses: misses)
+
+    ~H"""
+    <BrandoAdmin.Components.Workspace.empty
+      :if={@misses == []}
+      title={gettext("No missing URLs recorded")}
+      description={gettext("Missing pages will appear here when they are requested.")}
+    />
+    <.not_found_table
+      :if={@misses != []}
+      items={@misses}
+      label={gettext("Not found (404)")}
+      redirectable
+      redirect_drafts={@redirect_drafts}
+    />
+    <details :if={@probes != []} class="seo-not-found-probes">
+      <summary>
+        {ngettext("%{count} bot probe", "%{count} bot probes", length(@probes), count: length(@probes))}
+        <span>
+          {gettext("Scanners looking for WordPress, PHP scripts and exposed config files. Nothing to redirect.")}
+        </span>
+      </summary>
+      <.not_found_table items={@probes} label={gettext("Bot probes")} />
+    </details>
+    """
+  end
+
+  attr :items, :list, required: true
+  attr :label, :string, required: true
+  attr :redirectable, :boolean, default: false
+  attr :redirect_drafts, :any, default: MapSet.new()
+
+  defp not_found_table(assigns) do
+    ~H"""
+    <div class="workspace-table-scroll" tabindex="0" role="region" aria-label={@label}>
+      <table class="workspace-table">
+        <thead>
+          <tr>
+            <th>{gettext("URL")}</th><th>{gettext("Hits")}</th><th>{gettext("Last hit")}</th>
+            <th :if={@redirectable}><span class="visually-hidden">{gettext("Actions")}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={item <- @items}>
+            <td class="workspace-mono">{item.url}</td><td>{item.hits}</td><td>{item.last_hit_at}</td>
+            <td :if={@redirectable} class="seo-not-found-action">
+              <%= if MapSet.member?(@redirect_drafts, item.url) do %>
+                <span class="seo-not-found-added"><.icon name="hero-check-mini" />{gettext("Added above")}</span>
+              <% else %>
+                <button type="button" class="seo-row-action" phx-click="redirect_404" phx-value-url={item.url}>
+                  <.icon name="hero-arrow-uturn-right-mini" />{gettext("Redirect")}
+                </button>
+              <% end %>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     """
   end
@@ -796,6 +841,29 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   def handle_event("sort", %{"sort" => sort}, socket) when sort in ~w(score visitors impressions) do
     {:noreply, assign(socket, :sort, sort)}
+  end
+
+  # Adds the 404 to the redirects in the form above as a new, unsaved row, so
+  # the editor picks where it goes and saves it with the form. Written into
+  # the form rather than the database: the form holds the redirects too, and
+  # its next save would drop a row it never saw. The destination is filled in
+  # when the content audit already matched the URL to an entry.
+  def handle_event("redirect_404", %{"url" => url}, socket) do
+    to =
+      case socket.assigns.audit do
+        %{redirect_suggestions: suggestions} -> Enum.find_value(suggestions, &(&1.url == url && &1.to))
+        _ -> nil
+      end
+
+    send_update(Form,
+      id: "seo_form",
+      event: "append_embed",
+      field: :redirects,
+      attrs: %{from: url, to: to || "", code: 301},
+      focus: :to
+    )
+
+    {:noreply, update(socket, :redirect_drafts, &MapSet.put(&1, url))}
   end
 
   def handle_event("create_redirect", %{"from" => from, "to" => to}, socket) do

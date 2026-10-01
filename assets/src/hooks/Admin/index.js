@@ -68,11 +68,12 @@ export default app => ({
       }
     })
 
-    this.handleEvent('b:scroll_to', ({ selector }) => {
+    this.handleEvent('b:scroll_to', ({ selector, focus }) => {
       setTimeout(() => {
         const $node = Dom.find(selector)
         if ($node) {
           app.scrollTo({ y: $node, offsetY: 50 })
+          if (focus) $node.focus({ preventScroll: true })
         }
       }, 250)
     })

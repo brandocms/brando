@@ -148,7 +148,7 @@ defmodule Brando.Videos.ProviderConfigCheck do
         else
           [
             "default_video_upload_strategy is #{inspect(name)}, but #{name} has no usable " <>
-              "credentials. Every video field without its own strategy is unusable."
+              "credentials. Video fields, blocks and pickers without their own strategy can't upload."
           ]
         end
     end

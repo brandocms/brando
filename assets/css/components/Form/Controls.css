@@ -10,6 +10,21 @@
     line-height: 20px;
     padding-block: 0;
   }
+  /* Textareas match the inputs' type. `display: block`, because an inline
+     textarea sits on a text baseline and left a gap under it. */
+  .field-wrapper textarea.text {
+    display: block;
+    box-sizing: border-box;
+    font-size: var(--admin-field-font-size);
+    line-height: 20px;
+    padding-block: 12px;
+  }
+  /* So does a rich text field's body text. The block editor's text blocks
+     and the expanded writing view keep their own, larger type. */
+  .field-base > .tiptap-wrapper :is(.tiptap-preview, .tiptap-editor-shell:not(.expanded)) :is(p, li, blockquote) {
+    font-size: var(--admin-field-font-size);
+    line-height: 1.55;
+  }
   .field-wrapper .multiselect { padding-inline: 12px 8px; gap: 12px; }
   .multiselect > div:first-child { min-width: 0; }
   .multiselect .select-label { line-height: 20px; overflow-wrap: anywhere; }

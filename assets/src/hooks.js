@@ -51,6 +51,7 @@ import UploadManagerHook from './hooks/UploadManager'
 import UploadTriggerHook from './hooks/UploadTrigger'
 import VarLayoutHook from './hooks/VarLayout'
 import VideoPickerGridHook from './hooks/VideoPickerGrid'
+import VideoDimensionsHook from './hooks/VideoDimensions'
 import VideoURLParserHook from './hooks/VideoURLParser'
 import VideoPlayerHook from './hooks/VideoPlayer'
 
@@ -109,6 +110,7 @@ export default (app) => {
     'Brando.UploadTrigger': UploadTriggerHook(app),
     'Brando.VarLayout': VarLayoutHook(app),
     'Brando.VideoPickerGrid': VideoPickerGridHook(app),
+    'Brando.VideoDimensions': VideoDimensionsHook(app),
     'Brando.VideoURLParser': VideoURLParserHook(app),
     'Brando.VideoPlayer': VideoPlayerHook(app),
   }

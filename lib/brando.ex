@@ -38,7 +38,9 @@ defmodule Brando do
   @doc """
   Gets the default video upload strategy
   """
-  def default_video_upload_strategy, do: config(:default_video_upload_strategy) || :local
+  # Uploads are opt-in: a site that hasn't chosen where videos go gets `:none`,
+  # which picks from the library or adds by URL but never uploads.
+  defdelegate default_video_upload_strategy, to: Brando.RuntimeConfig
 
   @doc """
   Gets the parent app's endpoint

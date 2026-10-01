@@ -12,7 +12,8 @@ defmodule Brando.Blueprint.AssetConfigValidator do
     :slugify_filename
   ]
   @image_formats [:avif, :gif, :jpg, :original, :png, :webp]
-  @video_strategies [:bunny, :cloudflare, :local, :mux, :s3]
+  # `nil` inherits `default_video_upload_strategy` when the config is read.
+  @video_strategies [nil, :bunny, :cloudflare, :local, :mux, :none, :s3]
 
   @doc false
   @spec validate!(map(), term()) :: term()

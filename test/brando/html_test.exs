@@ -180,6 +180,31 @@ defmodule Brando.HTMLTest do
              "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"landscape\" data-preload=\"https://src.vid\" data-src=\"https://src.vid\" data-autoplay style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\">\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"/images/my_poster.jpg\" style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\" data-src=\"https://src.vid\">\n  </video>\n\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             alt=\"Video cover image\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  \n</div>"
   end
 
+  test "video_tag with a set aspect ratio" do
+    for ratio <- ["16/9", "16:9", " 16 / 9 "] do
+      assigns = %{opts: [aspect_ratio: ratio]}
+
+      html =
+        rendered_to_string(~H"""
+        <.video video="https://src.vid" opts={@opts} />
+        """)
+
+      assert html =~ "--aspect-ratio: 0.5625; --aspect-ratio-division: 16/9;"
+      assert html =~ ~s(width="16" height="9")
+    end
+  end
+
+  test "video_tag ignores an aspect ratio it can't read" do
+    assigns = %{opts: [aspect_ratio: "wide", width: 400, height: 300]}
+
+    html =
+      rendered_to_string(~H"""
+      <.video video="https://src.vid" opts={@opts} />
+      """)
+
+    assert html =~ "--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;"
+  end
+
   test "video component with %Video{type: :upload}" do
     video_struct = %Brando.Videos.Video{
       type: :upload,

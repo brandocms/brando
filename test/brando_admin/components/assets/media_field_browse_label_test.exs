@@ -22,7 +22,16 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldBrowseLabelTest do
   end
 
   test "an image field offers Select image" do
-    image = %Brando.Images.Image{id: 1, status: :processed, path: "images/a.jpg", width: 10, height: 10, alt: %{}}
+    image = %Brando.Images.Image{
+      id: 1,
+      status: :processed,
+      path: "images/a.jpg",
+      width: 10,
+      height: 10,
+      alt: %{},
+      sizes: %{"small" => "images/small/a.jpg", "xlarge" => "images/xlarge/a.jpg"}
+    }
+
     assert render(:image, image) =~ "Select image"
   end
 
@@ -33,7 +42,8 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldBrowseLabelTest do
       html = render(:video, asset)
       assert html =~ "Select video"
       refute html =~ "Browse library"
-      assert html =~ "Use Select video to upload a video with this provider."
+      # Uploads are opt-in, and the test config doesn't choose a strategy.
+      assert html =~ "Video upload isn&#39;t set up. Use Select video to pick a video from the library or add one by URL."
     end
   end
 

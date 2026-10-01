@@ -125,7 +125,7 @@ defmodule Brando.SEO.Audit do
       low_click_through: count_failing(rows, :search_click_through, [:warn]),
       analytics: analytics && Map.delete(analytics, :pages),
       sitemap?: sitemap != nil,
-      redirect_suggestions: Brando.SEO.RedirectSuggestions.suggest(Brando.Sites.FourOhFour.list(), rows, language)
+      redirect_suggestions: Brando.SEO.RedirectSuggestions.suggest(redirectable_404s(), rows, language)
     }
   end
 
@@ -385,5 +385,10 @@ defmodule Brando.SEO.Audit do
     |> Enum.map(fn [_, loc] -> loc end)
   rescue
     _ -> []
+  end
+
+  # A scanner's probe (/wp-login.php, /.env) never had a page to redirect to.
+  defp redirectable_404s do
+    Enum.reject(Brando.Sites.FourOhFour.list(), &Brando.Sites.FourOhFour.probe?(&1.url))
   end
 end

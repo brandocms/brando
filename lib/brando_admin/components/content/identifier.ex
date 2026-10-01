@@ -35,14 +35,18 @@ defmodule BrandoAdmin.Components.Content.Identifier do
     </span>
     <span class="identifier-copy">
       {render_slot(@inner_block)}
-      <span class="identifier-title">{@identifier.title}</span>
+      <%!-- Status is the dot before the title; its name is there for screen
+            readers and on hover. --%>
+      <span class="identifier-title">
+        <span class="identifier-status" data-status={@status} title={status_label(@status)}>
+          <i aria-hidden="true"></i><span class="visually-hidden">{status_label(@status)}</span>
+        </span>
+        {@identifier.title}
+      </span>
       <span :if={@show_url && @url not in [nil, ""]} class="identifier-url">{@url}</span>
       <span class="identifier-details">
         <span class="identifier-type">{@type}</span>
         <span :if={@language} class="identifier-language">{String.upcase(to_string(@language))}</span>
-        <span class="identifier-status" data-status={@status}>
-          <i aria-hidden="true"></i>{status_label(@status)}
-        </span>
       </span>
     </span>
     <span :if={@selectable} class="identifier-check" aria-hidden="true">

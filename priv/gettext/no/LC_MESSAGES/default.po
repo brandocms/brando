@@ -13504,3 +13504,125 @@ msgstr "Start fra en mal"
 #, elixir-autogen, elixir-format
 msgid "Or click the plus to start with an empty page."
 msgstr "Eller klikk på plusstegnet for å begynne med en tom side."
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Video details"
+msgstr "Videodetaljer"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Edit the shared library video."
+msgstr "Rediger den delte videoen i biblioteket."
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Open source"
+msgstr "Åpne kilden"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "More video actions"
+msgstr "Flere videohandlinger"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Changes apply wherever this video is used."
+msgstr "Endringene gjelder overalt hvor denne videoen brukes."
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Shown before the video plays."
+msgstr "Vises før videoen spilles av."
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Select from library"
+msgstr "Velg fra biblioteket"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Playback defaults"
+msgstr "Standardvalg for avspilling"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Shared video settings"
+msgstr "Felles videoinnstillinger"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Custom"
+msgstr "Egendefinert"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The shape the video is shown in. Original uses the video's own size."
+msgstr "Formen videoen vises i. Original bruker videoens egne mål."
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Width/height, e.g. 3/2"
+msgstr "Bredde/høyde, f.eks. 3/2"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Bot probes"
+msgstr "Botforsøk"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect"
+msgstr "Omdiriger"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added above"
+msgstr "Lagt til ovenfor"
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Scanners looking for WordPress, PHP scripts and exposed config files. Nothing to redirect."
+msgstr "Skannere som leter etter WordPress, PHP-skript og eksponerte konfigurasjonsfiler. Ingenting å videresende."
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} bot probe"
+msgid_plural "%{count} bot probes"
+msgstr[0] "%{count} botforsøk"
+msgstr[1] "%{count} botforsøk"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Default"
+msgstr "Standard"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "On"
+msgstr "På"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Off"
+msgstr "Av"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Default leaves it to the page or block showing the video. On and Off apply wherever it's shown, unless a block overrides them."
+msgstr "Standard overlater valget til siden eller blokken som viser videoen. På og Av gjelder overalt hvor den vises, med mindre en blokk overstyrer dem."
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Linked file"
+msgstr "Lenket fil"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Linked file from %{host}"
+msgstr "Lenket fil fra %{host}"
+
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Video upload isn't set up. Use %{action} to pick a video from the library or add one by URL."
+msgstr "Videoopplasting er ikke satt opp. Bruk %{action} for å velge en video fra biblioteket eller legge til en via URL."

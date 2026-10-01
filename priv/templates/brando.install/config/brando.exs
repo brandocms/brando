@@ -101,3 +101,8 @@ config :brando, Brando.Images,
 
 config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser
+
+# Video uploads are opt-in. Without this, editors pick videos from the library
+# or add them by URL. Use :local for the server, or :mux, :bunny, :cloudflare
+# or :s3 once their credentials are set (see the videos guide).
+# config :brando, :default_video_upload_strategy, :local

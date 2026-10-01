@@ -6,7 +6,10 @@ defmodule Brando.Type.VideoConfig do
 
   The `upload_strategy` field determines where videos are uploaded:
 
-  - `:local` (default) - Traditional server upload, files stored on server/CDN
+  - `nil` (default) - Follow `config :brando, :default_video_upload_strategy`,
+    which is `:none` unless the site sets it
+  - `:none` - No uploads; videos are picked from the library or added by URL
+  - `:local` - Traditional server upload, files stored on server/CDN
   - `:s3` - Direct upload of the original file to S3-compatible storage
   - `:mux` - Direct upload to Mux for streaming
   - `:bunny` - Direct upload to Bunny.net storage
@@ -96,7 +99,7 @@ defmodule Brando.Type.VideoConfig do
   use Ecto.Type
   import Brando.Utils, only: [stringy_struct: 2]
 
-  @type upload_strategy :: :bunny | :cloudflare | :local | :mux | :s3
+  @type upload_strategy :: :bunny | :cloudflare | :local | :mux | :none | :s3 | nil
   @type t :: %__MODULE__{
           allow_external_urls: boolean(),
           allow_uploads: boolean(),
@@ -119,7 +122,7 @@ defmodule Brando.Type.VideoConfig do
             allow_external_urls: true,
             allowed_mimetypes: ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-msvideo"],
             upload_path: Path.join("videos", "default"),
-            upload_strategy: :local,
+            upload_strategy: nil,
             random_filename: false,
             slugify_filename: true,
             force_filename: nil,

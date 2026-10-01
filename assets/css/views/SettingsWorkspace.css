@@ -49,7 +49,7 @@
   .brando-form .subform-tools button [data-icon] { background-color: currentColor; }
   /* A button in a media group takes the group's size and corners. */
   .brando-form button.primary:not(.media-button), .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
-  .brando-form button.primary:not(.media-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
+  .brando-form button.primary:not(.media-button, .submit-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
   .brando-form .submit-button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 116px; margin-top: 24px; }
   .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid #d7dfd9; border-radius: 6px; background: #fff; color: #3d5c48; font-family: inherit; font-size: 13px; line-height: 18px; }
   .add-entry-button [data-icon] { display: block; width: 14px; height: 14px; margin: 0; }
@@ -68,6 +68,18 @@
   .seo-search-preview small { margin-top: 8px; color: var(--workspace-muted); font-size: 11px; }
   .seo-not-found { margin-top: 32px; }
   .seo-not-found td:first-child { overflow-wrap: anywhere; }
+  .seo-not-found-action { width: 1%; text-align: right; white-space: nowrap; }
+  .seo-not-found-action .seo-row-action { display: inline-flex; align-items: center; gap: 4px; color: var(--workspace-ink); }
+  .seo-not-found-action [class^="hero-"] { width: 14px; height: 14px; }
+  .seo-not-found-added { display: inline-flex; align-items: center; gap: 4px; color: #48613f; font-size: 12px; }
+  .seo-not-found-probes { border-top: 1px solid var(--workspace-line); }
+  .seo-not-found-probes > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 14px 16px; cursor: pointer; list-style: none; color: var(--workspace-ink); font-size: 14px; line-height: 20px; }
+  .seo-not-found-probes > summary::-webkit-details-marker { display: none; }
+  .seo-not-found-probes > summary::before { content: ""; align-self: center; width: 6px; height: 6px; margin-right: 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform 150ms ease; }
+  .seo-not-found-probes[open] > summary::before { transform: rotate(45deg); }
+  .seo-not-found-probes > summary:hover { background: #f7f9f4; }
+  .seo-not-found-probes > summary span { color: var(--workspace-muted); font-size: 12px; }
+  .seo-not-found-probes .workspace-table td { color: var(--workspace-muted); }
 
   @media (max-width: 600px) {
     .brando-form fieldset.inline > .brando-input { flex-basis: 100%; width: 100%; }

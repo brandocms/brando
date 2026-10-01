@@ -154,6 +154,62 @@ defmodule Brando.Videos.Helpers do
     Enum.map_join([hours, minutes, remaining_seconds], ":", &String.pad_leading(to_string(&1), 2, "0"))
   end
 
+  @common_ratios [{16, 9}, {9, 16}, {4, 3}, {3, 4}, {3, 2}, {2, 3}, {1, 1}, {4, 5}, {5, 4}, {21, 9}, {2, 1}]
+
+  @doc """
+  The video's shape as a label like `"16:9"`: its set `aspect_ratio` when that
+  reads as a ratio, else its own width and height. `nil` when neither is known.
+  """
+  @spec aspect_ratio_label(map() | nil) :: String.t() | nil
+  def aspect_ratio_label(%{aspect_ratio: ratio} = video) when is_binary(ratio) do
+    case parse_ratio(ratio) do
+      {w, h} -> ratio_label(w, h)
+      nil -> aspect_ratio_label(%{video | aspect_ratio: nil})
+    end
+  end
+
+  def aspect_ratio_label(%{width: w, height: h}) when is_integer(w) and is_integer(h) and w > 0 and h > 0,
+    do: ratio_label(w, h)
+
+  def aspect_ratio_label(_), do: nil
+
+  @doc """
+  Labels a width and height as a ratio. Exact when that stays short
+  (`1920×1080` is `"16:9"`, `720×900` is `"4:5"`), a common ratio it is within
+  1.5% of after `≈` (`1920×1088` is `"≈ 16:9"`), else a decimal against 1
+  (`"2.39:1"`).
+  """
+  @spec ratio_label(number(), number()) :: String.t()
+  def ratio_label(w, h) when is_integer(w) and is_integer(h) and w > 0 and h > 0 do
+    d = Integer.gcd(w, h)
+    {rw, rh} = {div(w, d), div(h, d)}
+
+    if max(rw, rh) <= 21, do: "#{rw}:#{rh}", else: approximate_label(w / h)
+  end
+
+  def ratio_label(w, h) when is_number(w) and is_number(h) and w > 0 and h > 0 do
+    if w == trunc(w) and h == trunc(h), do: ratio_label(trunc(w), trunc(h)), else: approximate_label(w / h)
+  end
+
+  defp approximate_label(ratio) do
+    case Enum.find(@common_ratios, fn {cw, ch} -> abs(ratio / (cw / ch) - 1) <= 0.015 end) do
+      {cw, ch} -> "≈ #{cw}:#{ch}"
+      nil when ratio >= 1 -> "#{Float.round(ratio, 2)}:1"
+      nil -> "1:#{Float.round(1 / ratio, 2)}"
+    end
+  end
+
+  # "16/9", "16:9" and "1.91/1" read as ratios; anything else doesn't.
+  defp parse_ratio(ratio) do
+    with [w, h] <- ratio |> String.split(["/", ":"]) |> Enum.map(&String.trim/1),
+         {w, ""} when w > 0 <- Float.parse(w),
+         {h, ""} when h > 0 <- Float.parse(h) do
+      {w, h}
+    else
+      _ -> nil
+    end
+  end
+
   @doc """
   Attempt to derive a thumbnail URL from an external file video's source URL
   by matching against known provider URL patterns.

@@ -58,6 +58,26 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     refute Enum.any?(Brando.Sites.FourOhFour.list(), &(&1.url == "/blog/moved-page"))
   end
 
+  test "a 404 can be added to the form's redirects, and bot probes are folded away", %{conn: conn} do
+    Brando.Cache.SEO.set()
+    Brando.Sites.FourOhFour.add_404(%Plug.Conn{path_info: ["projects", "old-case"]})
+    Brando.Sites.FourOhFour.add_404(%Plug.Conn{path_info: ["wp-login.php"]})
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+    render_async(view, 5_000)
+
+    assert has_element?(view, ~s(.seo-not-found-probes td), "/wp-login.php")
+    refute has_element?(view, ~s(button[phx-click="redirect_404"][phx-value-url="/wp-login.php"]))
+
+    view |> element(~s(button[phx-click="redirect_404"][phx-value-url="/projects/old-case"])) |> render_click()
+    html = render(view)
+
+    # A new, unsaved row in the form, not a write behind its back.
+    assert html =~ ~r/name="[^"]*\[redirects\]\[\d+\]\[from\]"[^>]*value="\/projects\/old-case"/
+    assert has_element?(view, ".seo-not-found-added")
+    refute Enum.any?(Brando.Cache.SEO.get("en").redirects || [], &(&1.from == "/projects/old-case"))
+  end
+
   test "opening the content tab directly runs the audit", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
     html = render_async(view, 5_000)

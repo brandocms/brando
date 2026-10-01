@@ -60,7 +60,8 @@ The `upload_strategy` determines where videos are uploaded:
 
 | Strategy      | Description |
 |---------------|-------------|
-| `:local`      | Traditional server upload, files stored on server/CDN (default) |
+| `:none`       | No uploads: pick from the library or add by URL (the default when nothing is configured) |
+| `:local`      | Traditional server upload, files stored on server/CDN |
 | `:s3`         | Direct original-file upload to S3-compatible storage; no transcoding |
 | `:mux`        | Direct upload to Mux for streaming |
 | `:bunny`      | Direct upload to Bunny Stream with TUS resumable uploads |
@@ -72,18 +73,24 @@ Cloudflare when adaptive streaming/transcoding is required.
 
 ### Global Default Strategy
 
-Set a default upload strategy for video blocks and other contexts that don't have a specific field config:
+Uploads are opt-in. Choose where videos go for the whole site:
 
 ```elixir
 # config/config.exs
 config :brando, :default_video_upload_strategy, :mux
 ```
 
-When not configured, defaults to `:local`.
+When not configured, it is `:none`: editors can pick a video from the library
+or add one by URL, but nothing offers an upload. Set `:local` to keep uploading
+to the server.
 
 This setting affects:
+- Video fields whose `cfg` doesn't set `upload_strategy`
 - Video blocks in the Villain editor
 - Any video picker without a specific config target
+
+A field that sets its own `upload_strategy` keeps it. A provider strategy
+without credentials offers no upload either, the same as `:none`.
 
 ### Provider Requirements
 

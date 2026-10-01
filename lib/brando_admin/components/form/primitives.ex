@@ -578,6 +578,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   attr :label, :any, required: true
   attr :class, :any, default: nil
   attr :shortcut, :map, default: nil, doc: "`%{key: \"S\", shift: true}`, shown after the label"
+  attr :icon, :string, default: nil, doc: "a hero icon shown before the label"
 
   def submit_button(assigns) do
     ~H"""
@@ -605,6 +606,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
           {gettext("Processing. Please wait...")}
         </div>
       <% else %>
+        <.icon :if={@icon} name={@icon} />
         {@label}
         <.shortcut :if={@shortcut} key={@shortcut.key} shift={Map.get(@shortcut, :shift, false)} />
       <% end %>

@@ -360,7 +360,7 @@ defmodule Brando.HTML.Video do
   # come from Mux meta, which is not guaranteed to be two integers, and the
   # `String.to_integer/1` this replaces raised on anything else.
   defp fallback_dimensions(nil), do: {nil, nil}
-  defp fallback_dimensions(aspect_ratio), do: aspect_ratio |> String.split("/") |> parsed_dimensions()
+  defp fallback_dimensions(aspect_ratio), do: aspect_ratio |> String.split(["/", ":"]) |> parsed_dimensions()
 
   defp parsed_dimensions([width, height]) do
     with {width, ""} <- Integer.parse(String.trim(width)),
@@ -470,8 +470,19 @@ defmodule Brando.HTML.Video do
     ~s(--aspect-ratio: #{height / width}; --aspect-ratio-division: #{width}/#{height};)
   end
 
-  defp build_aspect_ratio_style_string(aspect_ratio, _, _),
-    do: ~s(--aspect-ratio: #{aspect_ratio}; --aspect-ratio-division: #{aspect_ratio};)
+  # A set ratio reads "16/9" (or "16:9", as Mux and older records write it).
+  # `--aspect-ratio` is height over width, as in the clause above — embeds pad
+  # by it — and `--aspect-ratio-division` is CSS `aspect-ratio`'s width/height.
+  # A ratio that doesn't parse is ignored for the video's own dimensions.
+  defp build_aspect_ratio_style_string(aspect_ratio, width, height) do
+    with [ratio_width, ratio_height] <- aspect_ratio |> String.split(["/", ":"]) |> Enum.map(&String.trim/1),
+         {w, ""} when w > 0 <- Float.parse(ratio_width),
+         {h, ""} when h > 0 <- Float.parse(ratio_height) do
+      ~s(--aspect-ratio: #{h / w}; --aspect-ratio-division: #{ratio_width}/#{ratio_height};)
+    else
+      _ -> build_aspect_ratio_style_string(nil, width, height)
+    end
+  end
 
   defp get_bunny_cdn_hostname do
     :brando

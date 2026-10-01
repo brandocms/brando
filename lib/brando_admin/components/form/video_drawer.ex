@@ -27,130 +27,24 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Primitives
-  alias BrandoAdmin.Components.Form.Tab
   alias Phoenix.LiveView.JS
 
   # prop video_changeset, :any, required: true
   # prop myself, :any, required: true
   # prop schema, :atom, required: true
   # prop edit_video, :map, required: true
-  # prop active_video_tab, :string, required: true
   # prop video_context, :any, required: true
   #
   # `myself` is the *parent* form's CID, not this module's — this is a function
   # component, so it has none. Every event the drawer emits is routed back to
   # `Form`, which is where its `handle_event/3` clauses stayed.
 
-  @aspect_ratio_options [
-    {"16:9 (Standard Widescreen)", "16:9"},
-    {"4:3 (Classic)", "4:3"},
-    {"21:9 (Ultrawide)", "21:9"},
-    {"1:1 (Square)", "1:1"},
-    {"4:5 (Portrait)", "4:5"},
-    {"9:16 (Vertical/Stories)", "9:16"},
-    {"1.91:1 (Landscape)", "1.91:1"},
-    {"Custom", "custom"}
-  ]
-
-  defp metadata_inputs(assigns) do
-    assigns = assign(assigns, :aspect_ratio_options, @aspect_ratio_options)
-
-    ~H"""
-    <div class="brando-input">
-      <Input.text field={@video_form[:title]} label={gettext("Title")} />
-    </div>
-
-    <div class="brando-input">
-      <Input.text field={@video_form[:caption]} label={gettext("Caption")} />
-    </div>
-
-    <Primitives.input
-      type={:select}
-      field={@video_form[:aspect_ratio]}
-      label={gettext("Aspect Ratio")}
-      placeholder={nil}
-      instructions={nil}
-      current_user={nil}
-      form_id={nil}
-      opts={[allow_custom: true]}
-      options={@aspect_ratio_options}
-    />
-    """
-  end
-
-  defp thumbnail_section(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:show_extract_button, fn -> false end)
-
-    ~H"""
-    <div class="brando-input">
-      <div class="field-wrapper">
-        <div class="label-wrapper">
-          <label class="control-label"><span>{gettext("Thumbnail")}</span></label>
-        </div>
-        <%= if @video && Ecto.assoc_loaded?(@video.thumbnail) && @video.thumbnail do %>
-          <figure>
-            <Content.image image={@video.thumbnail} size={:medium} />
-          </figure>
-          <figcaption class="tiny">{@video.thumbnail.path}</figcaption>
-        <% else %>
-          <div class="img-placeholder">
-            <div class="placeholder-wrapper">
-              <.icon name="hero-video-camera" />
-            </div>
-          </div>
-        <% end %>
-
-        <div class="button-group vertical">
-          <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
-            {gettext("Select thumbnail from library")}
-          </button>
-          <button
-            :if={@show_extract_button}
-            class="secondary"
-            type="button"
-            phx-click={extract_thumbnail(@myself)}
-          >
-            {gettext("Extract thumbnail from video")}
-          </button>
-          <button
-            :if={@video && Ecto.assoc_loaded?(@video.thumbnail) && @video.thumbnail}
-            class="secondary"
-            type="button"
-            phx-click={reset_video_thumbnail(@myself)}
-          >
-            {gettext("Remove thumbnail")}
-          </button>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  defp settings_section(assigns) do
-    ~H"""
-    <div class="video-settings-section">
-      <div class="label-wrapper">
-        <label class="control-label"><span>{gettext("Video Settings (Defaults)")}</span></label>
-      </div>
-      <p class="section-help">
-        {gettext("These settings will be used as defaults when this video is displayed.")}
-      </p>
-
-      <div class="settings-grid">
-        <Input.toggle field={@video_form[:autoplay]} label={gettext("Autoplay")} tiny={true} />
-        <Input.toggle field={@video_form[:muted]} label={gettext("Muted")} tiny={true} />
-        <Input.toggle field={@video_form[:controls]} label={gettext("Show controls")} tiny={true} />
-        <Input.toggle field={@video_form[:loop]} label={gettext("Loop")} tiny={true} />
-        <Input.toggle field={@video_form[:preload]} label={gettext("Preload")} tiny={true} />
-      </div>
-    </div>
-    """
-  end
+  # Stored as "width/height", what `Brando.HTML.Video` reads and providers
+  # write. Anything else goes in the custom input below the presets.
+  @aspect_ratios [{16, 9}, {4, 3}, {1, 1}, {4, 5}, {9, 16}, {21, 9}]
 
   def render(assigns) do
     cfg =
@@ -163,41 +57,64 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
         Brando.Type.VideoConfig.default_config()
       end
 
-    upload_strategy = Map.get(cfg, :upload_strategy, :local)
+    # A field's config already carries the inherited strategy; the default
+    # config doesn't, so it gets the site's default here.
+    upload_strategy = Map.get(cfg, :upload_strategy) || Brando.default_video_upload_strategy()
     allow_uploads? = Map.get(cfg, :allow_uploads, true)
-    allow_external_urls? = Map.get(cfg, :allow_external_urls, true)
 
+    video_cfg =
+      if is_struct(cfg, Brando.Type.VideoConfig),
+        do: %{cfg | upload_strategy: upload_strategy},
+        else: struct(Brando.Type.VideoConfig, Map.put(cfg, :upload_strategy, upload_strategy))
+
+    video_upload_available? = Brando.Uploads.video_upload_available?(video_cfg)
+
+    # Mux, Bunny and Cloudflare upload straight to the provider through their
+    # own hook on a file input; local and S3 go through UploadTrigger.
     video_uploader_hook =
-      case {allow_uploads?, upload_strategy} do
+      case {video_upload_available? && allow_uploads?, upload_strategy} do
         {true, :mux} -> "Brando.MuxUploader"
         {true, :bunny} -> "Brando.BunnyUploader"
         {true, :cloudflare} -> "Brando.CloudflareUploader"
         _ -> nil
       end
 
-    video_cfg =
-      if is_struct(cfg, Brando.Type.VideoConfig),
-        do: cfg,
-        else: struct(Brando.Type.VideoConfig, cfg)
+    upload_trigger? = video_upload_available? && allow_uploads? && is_nil(video_uploader_hook)
 
-    video_upload_available? = Brando.Uploads.video_upload_available?(video_cfg)
-
-    video_filename =
-      case assigns.edit_video do
-        %{video: %{file: %{filename: filename}}} when is_binary(filename) -> filename
-        _ -> nil
+    upload_input =
+      cond do
+        video_uploader_hook -> "#video-uploader-#{assigns.edit_video.field}"
+        upload_trigger? -> "#video-drawer-upload-input"
+        true -> nil
       end
+
+    video = assigns.edit_video[:video]
+    video = if video && video.id, do: video
+    url_allowed? = Map.get(cfg, :allow_external_urls, true)
+    dimensions = stored_dimensions(video) || assigns.edit_video[:preview_dimensions]
 
     assigns =
       assigns
-      |> assign(:upload_strategy, upload_strategy)
+      |> assign(:video, video)
       |> assign(:video_uploader_hook, video_uploader_hook)
-      |> assign(:video_upload_available?, video_upload_available?)
-      |> assign(:allow_external_urls?, allow_external_urls?)
-      |> assign(:video_filename, video_filename)
+      |> assign(:upload_trigger?, upload_trigger?)
+      |> assign(:upload_input, upload_input)
+      |> assign(:url_allowed?, url_allowed?)
+      |> assign(:dimensions, dimensions)
+      |> assign(:aspect_ratios, @aspect_ratios)
 
     ~H"""
-    <Content.drawer id="video-drawer" title={gettext("Video")} close={close_video()} z={1001} narrow light>
+    <Content.drawer
+      id="video-drawer"
+      title={gettext("Video details")}
+      close={close_video()}
+      z={1001}
+      narrow
+      light
+      workspace
+      icon="hero-film"
+      subtitle={gettext("Edit the shared library video.")}
+    >
       <.form
         :let={video_form}
         :if={@video_changeset}
@@ -207,170 +124,368 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
         phx-change="validate_video"
         phx-target={@myself}
       >
-        <Tab.tabs active_tab={@active_video_tab}>
-          <:buttons>
-            <Tab.tab_button
-              :if={@video_upload_available?}
-              id="upload"
-              label={gettext("Upload / File")}
-              active_tab={@active_video_tab}
-              target={@myself}
-            />
-            <Tab.tab_button
-              :if={@allow_external_urls?}
-              id="external"
-              label={gettext("External (Vimeo/YouTube)")}
-              active_tab={@active_video_tab}
-              target={@myself}
-            />
-          </:buttons>
-
-          <:tabs>
-            <Tab.tab_content :if={@video_upload_available?} id="upload" active_tab={@active_video_tab}>
-              <Input.input
-                type={:hidden}
-                field={video_form[:type]}
-                value={(@edit_video.video && @edit_video.video.type) || :upload}
-              />
-
-              <div class="button-group vertical">
-                <%!-- Direct upload strategies (Mux, Cloudflare, S3, Bunny) use external hooks --%>
-                <%!-- Local strategy uses standard LiveView upload --%>
-                <%= if @video_uploader_hook do %>
-                  <div class="file-input-button">
-                    <span class="label">
-                      {gettext("Upload video file")}
-                    </span>
-                    <input
-                      id={"video-uploader-#{@edit_video.field}"}
-                      type="file"
-                      accept=".mp4,.webm,.mov,.avi"
-                      phx-hook={@video_uploader_hook}
-                    />
-                  </div>
-                <% else %>
-                  <div
-                    id="video-drawer-upload-trigger"
-                    class="file-input-button upload-trigger"
-                    phx-hook="Brando.UploadTrigger"
-                    data-kind="entry_field"
-                    data-asset-type="video"
-                    data-max-files="1"
-                    data-asset-id={@edit_video.video && @edit_video.video.id}
-                    data-field={@edit_video.field}
-                    data-path={Jason.encode!(@edit_video.path || [])}
-                    data-config-target={
-                      @edit_video.field &&
-                        Brando.Assets.ConfigTarget.serialize(
-                          {"video", Map.get(@edit_video, :schema) || @schema, @edit_video.field}
-                        )
-                    }
-                    data-accept=".mp4,.webm,.mov,.avi,.ogv"
-                  >
-                    <span class="label">
-                      {gettext("Upload video file")}
-                    </span>
-                    <input type="file" class="file-input" />
-                  </div>
-                <% end %>
-
-                <button class="secondary" type="button" phx-click={toggle_drawer("#video-picker")}>
-                  {gettext("Select existing video")}
-                </button>
-              </div>
-
-              <%= if @edit_video.video && @edit_video.video.type == :upload do %>
-                <div class="video-info">
-                  <h5>{gettext("Video Information")}</h5>
-                  <%= if @video_filename do %>
-                    <div><strong>{gettext("Filename")}:</strong> {@video_filename}</div>
-                  <% end %>
-                  <%= if @edit_video.video.width && @edit_video.video.height do %>
-                    <div>
-                      <strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}
-                    </div>
-                  <% end %>
-                </div>
-              <% end %>
-
-              <%= if @edit_video.video && @edit_video.video.id do %>
-                <.metadata_inputs video_form={video_form} />
-                <.thumbnail_section
-                  video={@edit_video.video}
-                  myself={@myself}
-                  show_extract_button={@edit_video.video.type == :upload}
-                />
-              <% end %>
-            </Tab.tab_content>
-
-            <Tab.tab_content :if={@allow_external_urls?} id="external" active_tab={@active_video_tab}>
-              <div class="brando-input">
-                <Primitives.input
-                  type={:select}
-                  field={video_form[:type]}
-                  label={gettext("Video Service")}
-                  placeholder={nil}
-                  instructions={nil}
-                  current_user={nil}
-                  form_id={nil}
-                  opts={[]}
-                  options={[
-                    {gettext("Vimeo"), :vimeo},
-                    {gettext("YouTube"), :youtube}
-                  ]}
-                />
-              </div>
-
-              <div class="brando-input">
-                <Input.text
-                  field={video_form[:source_url]}
-                  label={gettext("Video URL")}
-                  placeholder="https://vimeo.com/123456789 or https://youtube.com/watch?v=..."
-                />
-              </div>
-
-              <div class="button-group vertical">
-                <button class="primary" type="button" phx-click={parse_video_url(@myself)}>
-                  {gettext("Parse URL and extract metadata")}
-                </button>
-              </div>
-
-              <%= if @edit_video.video && @edit_video.video.remote_id do %>
-                <div class="parsed-info">
-                  <h5>{gettext("Parsed Information")}</h5>
-                  <div><strong>{gettext("Remote ID")}:</strong> {@edit_video.video.remote_id}</div>
-                  <div><strong>{gettext("Type")}:</strong> {@edit_video.video.type}</div>
-                  <%= if @edit_video.video.width && @edit_video.video.height do %>
-                    <div>
-                      <strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}
-                    </div>
-                  <% end %>
-                </div>
-              <% end %>
-
-              <%= if @edit_video.video && @edit_video.video.id do %>
-                <.metadata_inputs video_form={video_form} />
-                <.thumbnail_section video={@edit_video.video} myself={@myself} />
-              <% end %>
-            </Tab.tab_content>
-          </:tabs>
-        </Tab.tabs>
-
-        <%= if @video_context == :asset && @edit_video.video && @edit_video.video.id do %>
-          <.settings_section video_form={video_form} />
-        <% end %>
-
-        <%= if @edit_video.video && @edit_video.video.id do %>
-          <div class="button-group vertical">
-            <button class="secondary" type="button" phx-click={reset_video_field(@myself)}>
-              {gettext("Reset video field")}
-            </button>
+        <%!-- `data-click-mode="trigger"` for the same reason as the image
+        drawer: the preview is a playable <video>, and under the default mode
+        every click on its controls would also open the file chooser. Only the
+        empty state's `.upload-trigger` opens it now, besides the Upload
+        action. --%>
+        <div
+          id="video-drawer-preview"
+          class="video-drawer-preview"
+          phx-hook={@upload_trigger? && "Brando.UploadTrigger"}
+          data-kind="entry_field"
+          data-asset-type="video"
+          data-max-files="1"
+          data-asset-id={@video && @video.id}
+          data-field={@edit_video.field}
+          data-path={Jason.encode!(@edit_video.path || [])}
+          data-config-target={
+            @edit_video.field &&
+              Brando.Assets.ConfigTarget.serialize({"video", Map.get(@edit_video, :schema) || @schema, @edit_video.field})
+          }
+          data-accept=".mp4,.webm,.mov,.avi,.ogv"
+          data-click-mode="trigger"
+        >
+          <input :if={@upload_trigger?} id="video-drawer-upload-input" type="file" class="file-input" />
+          <input
+            :if={@video_uploader_hook}
+            id={"video-uploader-#{@edit_video.field}"}
+            type="file"
+            class="file-input"
+            accept=".mp4,.webm,.mov,.avi"
+            phx-hook={@video_uploader_hook}
+          />
+          <div
+            id="video-drawer-upload-progress"
+            class="media-field-progress"
+            phx-update="ignore"
+            role="status"
+            aria-live="polite"
+          >
           </div>
+
+          <%= cond do %>
+            <% @video && MediaField.video_url(@video) -> %>
+              <video
+                id="video-drawer-preview-video"
+                phx-hook={!stored_dimensions(@video) && "Brando.VideoDimensions"}
+                controls
+                muted
+                playsinline
+                preload="metadata"
+                src={"#{MediaField.video_url(@video)}#t=0.1"}
+                aria-label={gettext("Video preview")}
+              />
+            <% @video && thumbnail(@video) -> %>
+              <Content.image image={thumbnail(@video)} size={:medium} />
+            <% true -> %>
+              <div class={["video-drawer-placeholder", !@video && @upload_input && "upload-trigger"]}>
+                <.icon name="hero-film" />
+                <span :if={!@video}>{gettext("No video selected")}</span>
+              </div>
+          <% end %>
+
+          <div :if={@video} class="video-detail-file-info">
+            <span>{source_name(@video)}</span>
+            <span :if={@dimensions}>{dimensions_label(@dimensions)}</span>
+          </div>
+          <p :if={@video} class="video-detail-source">
+            {source_label(@video)}
+            <a :if={source_link(@video)} href={source_link(@video)} target="_blank" rel="noopener">
+              {gettext("Open source")}<.icon name="hero-arrow-top-right-on-square-mini" />
+            </a>
+          </p>
+        </div>
+
+        <div class="video-detail-actions">
+          <%= if @video do %>
+            <div id="video-drawer-replace" class="media-action-menu" phx-hook="Brando.FloatingDropdown">
+              <button
+                type="button"
+                class="workspace-button"
+                popovertarget="video-drawer-replace-menu"
+                aria-expanded="false"
+              >
+                <.icon name="hero-arrow-path" />{gettext("Replace")}<.icon name="hero-chevron-down-mini" />
+              </button>
+              <div id="video-drawer-replace-menu" class="media-action-options" popover="auto">
+                <button :if={@upload_input} type="button" phx-click={JS.dispatch("click", to: @upload_input)}>
+                  <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+                </button>
+                <button type="button" phx-click={open_picker(false)}>
+                  <.icon name="hero-folder" />{gettext("Select video")}
+                </button>
+                <button :if={@url_allowed?} type="button" phx-click={open_picker(true)}>
+                  <.icon name="hero-link" />{gettext("Add from URL")}
+                </button>
+              </div>
+            </div>
+            <div
+              id="video-drawer-more"
+              class="media-action-menu video-detail-more"
+              phx-hook="Brando.FloatingDropdown"
+              data-placement="bottom-end"
+            >
+              <button
+                type="button"
+                class="workspace-button"
+                aria-label={gettext("More video actions")}
+                popovertarget="video-drawer-more-menu"
+                aria-expanded="false"
+              >
+                <.icon name="hero-ellipsis-horizontal" />
+              </button>
+              <div id="video-drawer-more-menu" class="media-action-options" popover="auto">
+                <button type="button" class="destructive" phx-click={reset_video_field(@myself)}>
+                  <.icon name="hero-trash" />{gettext("Remove")}
+                </button>
+              </div>
+            </div>
+          <% else %>
+            <button
+              :if={@upload_input}
+              type="button"
+              class="workspace-button primary"
+              phx-click={JS.dispatch("click", to: @upload_input)}
+            >
+              <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+            </button>
+            <button type="button" class="workspace-button" phx-click={open_picker(false)}>
+              <.icon name="hero-folder" />{gettext("Select video")}
+            </button>
+            <button :if={@url_allowed?} type="button" class="workspace-button" phx-click={open_picker(true)}>
+              <.icon name="hero-link" />{gettext("Add from URL")}
+            </button>
+          <% end %>
+        </div>
+
+        <%= if @video do %>
+          <section class="video-detail-section">
+            <div class="video-detail-section-heading">
+              <h3>{gettext("Library details")}</h3>
+              <p>{gettext("Changes apply wherever this video is used.")}</p>
+            </div>
+            <Input.text field={video_form[:title]} label={gettext("Title")} />
+            <Input.text field={video_form[:caption]} label={gettext("Caption")} />
+          </section>
+
+          <section class="video-detail-section">
+            <div class="video-detail-section-heading">
+              <h3 id="video-drawer-ratio-heading">{gettext("Aspect ratio")}</h3>
+              <p>{gettext("The shape the video is shown in. Original uses the video's own size.")}</p>
+            </div>
+            <div class="video-detail-ratios" role="radiogroup" aria-labelledby="video-drawer-ratio-heading">
+              <%!-- The known ratio sits where the other cards have theirs, with
+                    "Original" under it; without one, "Original" is all it says. --%>
+              <.ratio_option
+                label={
+                  if @dimensions,
+                    do: Brando.Videos.Helpers.ratio_label(elem(@dimensions, 0), elem(@dimensions, 1)),
+                    else: gettext("Original")
+                }
+                hint={@dimensions && gettext("Original")}
+                value=""
+                ratio={@dimensions || {16, 9}}
+                current={video_form[:aspect_ratio].value}
+                myself={@myself}
+              />
+              <.ratio_option
+                :for={{w, h} <- @aspect_ratios}
+                label={"#{w}:#{h}"}
+                value={"#{w}/#{h}"}
+                ratio={{w, h}}
+                current={video_form[:aspect_ratio].value}
+                myself={@myself}
+              />
+            </div>
+            <Input.text
+              field={video_form[:aspect_ratio]}
+              label={gettext("Custom")}
+              placeholder={gettext("Width/height, e.g. 3/2")}
+              monospace
+            />
+          </section>
+
+          <section class="video-detail-section">
+            <div class="video-detail-section-heading">
+              <h3>{gettext("Thumbnail")}</h3>
+              <p>{gettext("Shown before the video plays.")}</p>
+            </div>
+            <div class="video-detail-thumbnail">
+              <%= if thumbnail(@video) do %>
+                <Content.image image={thumbnail(@video)} size={:thumb} />
+              <% else %>
+                <div class="video-detail-thumbnail-empty"><.icon name="hero-photo" /></div>
+              <% end %>
+              <div class="video-detail-thumbnail-actions">
+                <button type="button" class="workspace-button" phx-click={toggle_drawer("#image-picker")}>
+                  {gettext("Select from library")}
+                </button>
+                <button
+                  :if={thumbnail(@video)}
+                  type="button"
+                  class="workspace-button quiet"
+                  phx-click={reset_video_thumbnail(@myself)}
+                >
+                  {gettext("Remove")}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section :if={@video_context == :asset} class="video-detail-section">
+            <div class="video-detail-section-heading">
+              <h3>{gettext("Playback defaults")}</h3>
+              <p>
+                {gettext(
+                  "Default leaves it to the page or block showing the video. On and Off apply wherever it's shown, unless a block overrides them."
+                )}
+              </p>
+            </div>
+            <div class="video-detail-flags">
+              <.flag_choice field={video_form[:autoplay]} label={gettext("Autoplay")} />
+              <.flag_choice field={video_form[:muted]} label={gettext("Muted")} />
+              <.flag_choice field={video_form[:controls]} label={gettext("Show controls")} />
+              <.flag_choice field={video_form[:loop]} label={gettext("Loop")} />
+              <.flag_choice field={video_form[:preload]} label={gettext("Preload")} />
+            </div>
+          </section>
         <% end %>
       </.form>
+      <:footer>
+        <span>{gettext("Shared video settings")}</span>
+        <button type="button" class="workspace-button primary" phx-click={close_video()}>{gettext("Done")}</button>
+      </:footer>
     </Content.drawer>
     """
   end
+
+  attr :label, :string, required: true
+  # "Original", under the video's own ratio when that's known
+  attr :hint, :string, default: nil
+  attr :value, :string, required: true
+  attr :ratio, :any, required: true
+  attr :current, :any, required: true
+  attr :myself, :any, required: true
+
+  # A preset as a radio card, drawn at its own proportions inside a 28px box.
+  defp ratio_option(assigns) do
+    {w, h} = assigns.ratio
+    scale = 28 / max(w, h)
+
+    assigns =
+      assigns
+      |> assign(:checked?, normalize_ratio(assigns.current) == assigns.value)
+      |> assign(:rect_w, Float.round(w * scale, 1))
+      |> assign(:rect_h, Float.round(h * scale, 1))
+
+    ~H"""
+    <button
+      type="button"
+      role="radio"
+      aria-checked={to_string(@checked?)}
+      class={["video-detail-ratio", @checked? && "is-checked"]}
+      phx-click={JS.push("set_video_aspect_ratio", value: %{value: @value}, target: @myself)}
+    >
+      <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
+        <rect
+          x={16 - @rect_w / 2}
+          y={16 - @rect_h / 2}
+          width={@rect_w}
+          height={@rect_h}
+          rx="2"
+          stroke-dasharray={@value == "" && "3 2"}
+        />
+      </svg>
+      <span>{@label}</span>
+      <small :if={@hint} class="video-detail-ratio-hint">{@hint}</small>
+    </button>
+    """
+  end
+
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :label, :string, required: true
+
+  # A playback flag has three states, not two: unset leaves it to whatever
+  # shows the video (`Brando.HTML.Video` and the template's opts), which a
+  # switch can only show as off — and saving the drawer then stored that off
+  # as an explicit false, which beats the template. A blank radio casts back
+  # to nil.
+  defp flag_choice(assigns) do
+    assigns = assign(assigns, :current, flag_value(assigns.field.value))
+
+    ~H"""
+    <fieldset class="video-detail-flag">
+      <legend>{@label}</legend>
+      <div class="video-detail-flag-options">
+        <label :for={{value, text} <- [{"", gettext("Default")}, {"true", gettext("On")}, {"false", gettext("Off")}]}>
+          <input type="radio" name={@field.name} value={value} checked={@current == value} />
+          <span>{text}</span>
+        </label>
+      </div>
+    </fieldset>
+    """
+  end
+
+  defp flag_value(value) when value in [true, "true"], do: "true"
+  defp flag_value(value) when value in [false, "false"], do: "false"
+  defp flag_value(_), do: ""
+
+  # What the presets compare against: "16:9" and " 16 / 9 " select 16/9, and a
+  # blank value selects Original.
+  defp normalize_ratio(value) when is_binary(value) do
+    value |> String.replace(":", "/") |> String.replace(" ", "")
+  end
+
+  defp normalize_ratio(_), do: ""
+
+  # Original is drawn at the video's own proportions when they're known: from
+  # the record, or from the preview (`Brando.VideoDimensions`) when it has none.
+  defp stored_dimensions(%{width: w, height: h}) when is_integer(w) and is_integer(h) and w > 0 and h > 0, do: {w, h}
+  defp stored_dimensions(_), do: nil
+
+  defp dimensions_label({w, h}), do: "#{w} × #{h} · #{Brando.Videos.Helpers.ratio_label(w, h)}"
+
+  # The picker was set up for this field when the drawer opened; this only
+  # chooses whether it opens on its URL input.
+  defp open_picker(url?) do
+    "set_url_input"
+    |> JS.push(value: %{show: url?}, target: "#video-picker")
+    |> toggle_drawer("#video-picker")
+  end
+
+  defp thumbnail(%{thumbnail: %Brando.Images.Image{} = image}), do: image
+  defp thumbnail(_), do: nil
+
+  # What the preview card names the video by: an upload's filename, else its
+  # title. Not a linked file's filename — provider URLs end in names like
+  # Vimeo's `file.mp4`, which say nothing; its host goes in the source line.
+  defp source_name(%{file: %Brando.Files.File{filename: filename}}) when is_binary(filename), do: filename
+  defp source_name(%{title: title}) when is_binary(title) and title != "", do: title
+  defp source_name(_), do: gettext("Untitled video")
+
+  defp source_label(%{type: :upload}), do: gettext("Uploaded video")
+
+  defp source_label(%{type: :external_file, source_url: url}) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{host: host} when is_binary(host) -> gettext("Linked file from %{host}", host: host)
+      _ -> gettext("Linked file")
+    end
+  end
+
+  defp source_label(%{type: :external_file}), do: gettext("Linked file")
+  defp source_label(%{type: :vimeo}), do: "Vimeo"
+  defp source_label(%{type: :youtube}), do: "YouTube"
+  defp source_label(%{type: :mux}), do: "Mux"
+  defp source_label(%{type: :bunny}), do: "Bunny"
+  defp source_label(%{type: :cloudflare}), do: "Cloudflare"
+  defp source_label(_), do: gettext("Video")
+
+  defp source_link(%{type: type, source_url: url})
+       when type in [:external_file, :vimeo, :youtube] and is_binary(url) and url != "",
+       do: url
+
+  defp source_link(_), do: nil
 
   def reset_video_field(js \\ %JS{}, target) do
     js
@@ -380,14 +495,6 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
 
   def reset_video_thumbnail(js \\ %JS{}, target) do
     JS.push(js, "reset_video_thumbnail", target: target)
-  end
-
-  def parse_video_url(js \\ %JS{}, target) do
-    JS.push(js, "parse_video_url", target: target)
-  end
-
-  def extract_thumbnail(js \\ %JS{}, target) do
-    JS.push(js, "extract_thumbnail", target: target)
   end
 
   def close_video(js \\ %JS{}) do

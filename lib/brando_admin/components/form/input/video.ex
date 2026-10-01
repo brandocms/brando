@@ -155,7 +155,9 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   # hard match here raised MatchError and destroyed the whole entry form process
   # along with every unsaved change in it. Fall back to the empty picker state.
   defp fetch_video(socket, video_id) do
-    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+    # `:file` too: an uploaded video's preview (here and in the drawer) plays
+    # from it. `select_video` below already preloads both.
+    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]}) do
       {:ok, video} ->
         socket
         |> assign(:video, video)
@@ -207,6 +209,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
               label={@label}
               configure={open_video(@myself)}
               browse={JS.push("browse_video", target: @myself) |> toggle_drawer("#video-picker")}
+              link={JS.push("browse_video", value: %{url: true}, target: @myself) |> toggle_drawer("#video-picker")}
               remove={JS.push("remove_video", target: @myself)}
             >
               <Input.hidden field={@relation_field} value={@video_id || ""} />
@@ -236,12 +239,13 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     |> toggle_drawer("#video-drawer")
   end
 
-  def handle_event("browse_video", _, socket) do
+  def handle_event("browse_video", params, socket) do
     send_update(BrandoAdmin.Components.VideoPicker,
       id: "video-picker",
       config_target: MediaField.entry_config(socket.assigns.field, :video),
       event_target: socket.assigns.myself,
       multi: false,
+      show_url_input: params["url"] in [true, "true"],
       selected_videos: if(socket.assigns.video_id, do: [socket.assigns.video_id], else: [])
     )
 

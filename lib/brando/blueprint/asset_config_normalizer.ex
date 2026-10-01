@@ -25,7 +25,11 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   @spec normalize(struct()) :: struct()
   def normalize(%{opts: %{cfg: config}} = asset) when is_function(config, 0) do
     normalized = normalize_declared_value!(asset.type, asset.name, config.())
-    %{asset | opts: Map.put(asset.opts, :cfg, normalized)}
+    %{asset | opts: Map.put(asset.opts, :cfg, inherit_video_strategy(asset.type, normalized))}
+  end
+
+  def normalize(%{type: type, opts: %{cfg: config}} = asset) when type in [:video, :gallery] do
+    %{asset | opts: Map.put(asset.opts, :cfg, inherit_video_strategy(type, config))}
   end
 
   def normalize(asset), do: asset
@@ -49,8 +53,20 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   """
   @spec normalize_resolved_value!(asset_type(), atom() | String.t(), term()) :: struct() | map()
   def normalize_resolved_value!(type, name, config) do
-    normalize_value!(type, name, config, [])
+    inherit_video_strategy(type, normalize_value!(type, name, config, []))
   end
+
+  # A video config without its own `upload_strategy` follows the site's
+  # `default_video_upload_strategy`. Resolved here, on every runtime read,
+  # because a Blueprint's literal config is normalized at compile time, before
+  # the site's runtime configuration can be trusted.
+  defp inherit_video_strategy(:video, %{upload_strategy: nil} = config),
+    do: %{config | upload_strategy: RuntimeConfig.default_video_upload_strategy()}
+
+  defp inherit_video_strategy(:gallery, %{video: video} = config),
+    do: %{config | video: inherit_video_strategy(:video, video)}
+
+  defp inherit_video_strategy(_type, config), do: config
 
   defp normalize_value!(type, name, config, passthrough_values) when type in [:file, :image, :video] do
     asset = %{name: name, type: type}

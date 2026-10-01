@@ -14,6 +14,14 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
 
+- **Video uploads are opt-in.** `default_video_upload_strategy` now defaults
+  to `:none`, and a video field without its own `upload_strategy` follows it
+  instead of uploading to the server. A site that never set it loses its
+  "Upload" buttons for video; picking from the library and adding by URL still
+  work. To keep server uploads, add
+  `config :brando, :default_video_upload_strategy, :local`, or set
+  `upload_strategy: :local` on the fields that should upload.
+
 - **Brando requires Elixir 1.18 or later.** Its dependencies already did:
   `req_llm` depends on `llm_db`, which requires 1.18. Upgrade Elixir before
   updating Brando. New sites are generated with the same requirement.

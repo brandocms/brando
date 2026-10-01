@@ -13500,3 +13500,125 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Or click the plus to start with an empty page."
 msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Video details"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Edit the shared library video."
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Open source"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "More video actions"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Changes apply wherever this video is used."
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Shown before the video plays."
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Select from library"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Playback defaults"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Shared video settings"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Custom"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The shape the video is shown in. Original uses the video's own size."
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Width/height, e.g. 3/2"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Bot probes"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added above"
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Scanners looking for WordPress, PHP scripts and exposed config files. Nothing to redirect."
+msgstr ""
+
+#: lib/brando_admin/live/config/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} bot probe"
+msgid_plural "%{count} bot probes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Default"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "On"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Off"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Default leaves it to the page or block showing the video. On and Off apply wherever it's shown, unless a block overrides them."
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Linked file"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Linked file from %{host}"
+msgstr ""
+
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Video upload isn't set up. Use %{action} to pick a video from the library or add one by URL."
+msgstr ""

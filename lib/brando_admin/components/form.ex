@@ -107,7 +107,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_file?, false)
      |> assign(:editing_video?, false)
      |> assign(:video_context, :asset)
-     |> assign(:active_video_tab, "upload")
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:has_meta?, false)
@@ -962,6 +961,38 @@ defmodule BrandoAdmin.Components.Form do
      |> force_svelte_remounts()}
   end
 
+  # Appends a row to an `embeds_many` field, as if the editor had pressed its
+  # add button: unsaved, every other unsaved change kept, and saved with the
+  # form. For views that offer a row from outside the form, like the SEO
+  # view's "Redirect" on a 404. `focus` names the new row's field to scroll to
+  # and focus.
+  def update(%{event: "append_embed", field: field, attrs: attrs} = params, socket) do
+    changeset = socket.assigns.form.source
+    %Ecto.Embedded{cardinality: :many, related: module} = changeset.data.__struct__.__schema__(:embed, field)
+
+    row =
+      module
+      |> struct()
+      |> Ecto.Changeset.change(attrs)
+      |> Map.put(:action, :insert)
+
+    rows = Ecto.Changeset.get_embed(changeset, field) ++ [row]
+    updated = Ecto.Changeset.put_embed(changeset, field, rows)
+    form = to_form(updated, [])
+
+    socket =
+      case params[:focus] do
+        nil ->
+          socket
+
+        focus ->
+          name = "#{form.name}[#{field}][#{length(rows) - 1}][#{focus}]"
+          push_event(socket, "b:scroll_to", %{selector: ~s([name="#{name}"]), focus: true})
+      end
+
+    {:ok, socket |> put_form(form) |> Drafts.dirty()}
+  end
+
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     updated_form = to_form(updated_changeset, [])
 
@@ -1145,7 +1176,6 @@ defmodule BrandoAdmin.Components.Form do
         nil
       end)
       |> assign_new(:instructions, fn -> [] end)
-      |> assign_new(:active_video_tab, fn -> "upload" end)
       |> assign_new(:video_context, fn -> :asset end)
 
     cond do
@@ -2710,7 +2740,6 @@ defmodule BrandoAdmin.Components.Form do
             myself={@myself}
             schema={@schema}
             edit_video={@edit_video}
-            active_video_tab={@active_video_tab}
             video_context={@video_context}
           />
 
@@ -2821,6 +2850,7 @@ defmodule BrandoAdmin.Components.Form do
             form_id={@id}
             label={gettext("Save and close")}
             shortcut={%{key: "S", shift: true}}
+            icon="hero-check"
             class="primary submit-button"
           />
 
@@ -3915,18 +3945,6 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_event("parse_video_url", _, socket) do
-    # Placeholder for URL parsing functionality
-    send(self(), {:toast, gettext("URL parsing not yet implemented")})
-    {:noreply, socket}
-  end
-
-  def handle_event("extract_thumbnail", _, socket) do
-    # Placeholder for thumbnail extraction functionality
-    send(self(), {:toast, gettext("Thumbnail extraction not yet implemented")})
-    {:noreply, socket}
-  end
-
   def handle_event("change_preview_target", %{"target" => target}, socket) do
     {:noreply, assign(socket, :live_preview_target, target)}
   end
@@ -4346,6 +4364,34 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # The drawer's ratio presets. They write the same `aspect_ratio` its custom
+  # input does, which then re-renders with the preset, so closing the drawer
+  # submits it like any typed value.
+  def handle_event(
+        "set_video_aspect_ratio",
+        %{"value" => value},
+        %{assigns: %{video_changeset: %Ecto.Changeset{}}} = socket
+      ) do
+    value = if value in [nil, ""], do: nil, else: value
+    {:noreply, update(socket, :video_changeset, &Ecto.Changeset.put_change(&1, :aspect_ratio, value))}
+  end
+
+  def handle_event("set_video_aspect_ratio", _, socket), do: {:noreply, socket}
+
+  # The drawer's preview reports the size of the file it loaded, so a video
+  # without stored dimensions still shows its shape. Display only; nothing is
+  # saved.
+  def handle_event(
+        "video_preview_dimensions",
+        %{"width" => w, "height" => h},
+        %{assigns: %{edit_video: %{} = edit_video}} = socket
+      )
+      when is_integer(w) and is_integer(h) and w > 0 and h > 0 do
+    {:noreply, assign(socket, :edit_video, Map.put(edit_video, :preview_dimensions, {w, h}))}
+  end
+
+  def handle_event("video_preview_dimensions", _, socket), do: {:noreply, socket}
+
   def handle_event("save_video", %{"video" => video_params} = params, socket) do
     if external_video_params?(video_params) and not external_video_urls_allowed?(socket) do
       send(self(), {:toast, gettext("External video URLs are disabled for this field")})
@@ -4757,12 +4803,6 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("select_tab", %{"name" => tab_name}, socket) do
     {:noreply, assign(socket, :active_tab, tab_name)}
-  end
-
-  # TODO: This is not a very good solution. We should just add a class with JS.add_class to the tab,
-  # we probably don't need state for this.
-  def handle_event("select_tab", %{"tab" => video_tab}, socket) do
-    {:noreply, assign(socket, :active_video_tab, video_tab)}
   end
 
   def handle_event("save_redirect_target", _, socket) do

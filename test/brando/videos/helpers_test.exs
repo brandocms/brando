@@ -103,4 +103,24 @@ defmodule Brando.Videos.HelpersTest do
       assert Helpers.thumbnail_url(video(type: :upload, thumbnail: nil)) == nil
     end
   end
+
+  describe "ratio_label/2" do
+    test "reduces exact ratios, approximates near-common ones, else uses a decimal" do
+      assert Helpers.ratio_label(1920, 1080) == "16:9"
+      assert Helpers.ratio_label(720, 900) == "4:5"
+      assert Helpers.ratio_label(1080, 1920) == "9:16"
+      assert Helpers.ratio_label(1920, 1088) == "≈ 16:9"
+      assert Helpers.ratio_label(1280, 536) == "2.39:1"
+      assert Helpers.ratio_label(1.91, 1.0) == "1.91:1"
+    end
+  end
+
+  describe "aspect_ratio_label/1" do
+    test "prefers the set ratio, then the video's own size" do
+      assert Helpers.aspect_ratio_label(%Video{aspect_ratio: "4/5", width: 1920, height: 1080}) == "4:5"
+      assert Helpers.aspect_ratio_label(%Video{aspect_ratio: "720:900"}) == "4:5"
+      assert Helpers.aspect_ratio_label(%Video{aspect_ratio: "wide", width: 1920, height: 1080}) == "16:9"
+      assert Helpers.aspect_ratio_label(%Video{}) == nil
+    end
+  end
 end

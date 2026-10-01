@@ -87,6 +87,9 @@ defmodule Brando.Uploads do
         :local ->
           {:ok, :server}
 
+        :none ->
+          {:error, "Video uploads are not set up for this field"}
+
         :s3 ->
           if direct_video_transport?(cfg) do
             initiate_direct_asset(cfg, resolved_target, file_meta)

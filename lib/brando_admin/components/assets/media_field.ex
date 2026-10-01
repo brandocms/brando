@@ -20,6 +20,9 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   attr :path, :list, default: []
   attr :config_target, :any, default: "default"
   attr :browse, :any, default: nil
+  # Adds an asset by URL instead (a video's "Add from URL"); hidden when the
+  # field's config doesn't allow external URLs.
+  attr :link, :any, default: nil
   attr :configure, :any, default: nil
   attr :remove, :any, default: nil
   attr :editable, :boolean, default: true
@@ -44,6 +47,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:compact?, assigns.presentation in [:field, :line])
       |> assign(:config_target, target)
       |> assign(:upload_enabled?, upload_enabled)
+      |> assign(:upload_unavailable, upload_unavailable(assigns.type, config))
       |> assign(:accept, accept(config))
       |> assign(:limit, upload_limit(config))
       |> assign(:folder, Map.get(config, :upload_path))
@@ -58,6 +62,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       )
       |> assign(:icon, media_icon(assigns.type))
       |> assign(:browse_label, browse_label(assigns.type))
+      |> assign(:link, if(Map.get(config, :allow_external_urls, false), do: assigns.link))
 
     ~H"""
     <div
@@ -65,7 +70,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       class={["media-field", "media-field--#{@presentation}", !@asset && "media-field--empty"]}
       phx-hook={@editable && "Brando.UploadTrigger"}
       data-upload-enabled={to_string(@upload_enabled?)}
-      data-upload-unavailable={gettext("Use %{action} to upload a video with this provider.", action: @browse_label)}
+      data-upload-unavailable={@upload_unavailable}
       data-kind={@kind}
       data-component-id={@component_id}
       data-var-key={@var_key}
@@ -135,6 +140,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <.icon name="hero-arrow-up-tray" />{if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
         </button>
         <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{@browse_label}</button>
+        <button :if={@link} type="button" phx-click={@link}><.icon name="hero-link" />{gettext("Add from URL")}</button>
         <button :if={@configure && (@asset || !@upload_enabled?)} type="button" phx-click={@configure}>
           <.icon name="hero-adjustments-horizontal" />{gettext("Configure")}
         </button>
@@ -150,12 +156,15 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       <div :if={@editable && @presentation != :line} class="media-field-actions">
         <%!-- The two ways of filling an empty field read as one segmented control,
               the same as the asset's own actions do once it has been filled. --%>
-        <div :if={!@asset && (@upload_enabled? || @browse)} class="media-field-split">
+        <div :if={!@asset && (@upload_enabled? || @browse || @link)} class="media-field-split">
           <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
             <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
           </button>
           <button :if={@browse} type="button" class="media-button" phx-click={@browse}>
             <.icon name="hero-folder" />{@browse_label}
+          </button>
+          <button :if={@link} type="button" class="media-button" phx-click={@link}>
+            <.icon name="hero-link" />{gettext("Add from URL")}
           </button>
         </div>
         <%!-- A filled field's own actions are one segmented control too. The
@@ -193,7 +202,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           </button>
           {render_slot(@actions)}
           <div
-            :if={@asset && !@compact? && (@upload_enabled? || @browse)}
+            :if={@asset && !@compact? && (@upload_enabled? || @browse || @link)}
             id={"#{@id}-replace"}
             class="media-field-replace"
             phx-hook="Brando.FloatingDropdown"
@@ -207,6 +216,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
                 "Upload replacement"
               )}</button>
               <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{@browse_label}</button>
+              <button :if={@link} type="button" phx-click={@link}><.icon name="hero-link" />{gettext("Add from URL")}</button>
             </div>
           </div>
         </div>
@@ -273,15 +283,35 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp upload_enabled?(:video, cfg), do: Uploads.video_upload_available?(cfg) && cfg.upload_strategy in [:local, :s3]
   defp upload_enabled?(_, _), do: true
 
+  # What a file dropped on a field that can't take it is told. A provider
+  # video field (Mux, Bunny, Cloudflare) uploads through the picker instead —
+  # unless the provider has no credentials, when nothing can upload and the
+  # picker can only pick or add by URL.
+  defp upload_unavailable(:video, cfg) do
+    if Uploads.video_upload_available?(cfg) do
+      gettext("Use %{action} to upload a video with this provider.", action: browse_label(:video))
+    else
+      gettext("Video upload isn't set up. Use %{action} to pick a video from the library or add one by URL.",
+        action: browse_label(:video)
+      )
+    end
+  end
+
+  defp upload_unavailable(_type, _cfg), do: nil
+
   defp accept(%{allowed_mimetypes: types}) when is_list(types), do: Enum.join(types, ",")
   defp accept(_), do: nil
   defp loaded_asset(%Ecto.Association.NotLoaded{}), do: nil
   defp loaded_asset(%Ecto.Changeset{} = asset), do: Ecto.Changeset.apply_changes(asset)
   defp loaded_asset(asset), do: asset
 
-  defp video_url(%{type: :upload, file: %Brando.Files.File{} = file}), do: Brando.Utils.media_url(file)
-  defp video_url(%{type: :external_file, source_url: url}) when is_binary(url) and url != "", do: url
-  defp video_url(_), do: nil
+  @doc false
+  # A playable address for a video, when it has one: an uploaded file, or a
+  # linked one. Vimeo, YouTube and provider videos have none to put in <video>.
+  # Also used by the video drawer's preview.
+  def video_url(%{type: :upload, file: %Brando.Files.File{} = file}), do: Brando.Utils.media_url(file)
+  def video_url(%{type: :external_file, source_url: url}) when is_binary(url) and url != "", do: url
+  def video_url(_), do: nil
 
   defp asset_name(nil, _), do: nil
   defp asset_name(asset, :image), do: Path.basename(asset.path || "")
@@ -314,10 +344,18 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
 
   defp asset_details(_, :image), do: nil
   defp asset_details(asset, :file), do: Brando.Utils.human_size(asset.filesize)
-  defp asset_details(%{type: :upload}, :video), do: gettext("Uploaded video")
-  defp asset_details(%{type: :youtube}, :video), do: "YouTube"
-  defp asset_details(%{type: :vimeo}, :video), do: "Vimeo"
-  defp asset_details(_asset, :video), do: gettext("Video")
+
+  defp asset_details(video, :video) do
+    case Brando.Videos.Helpers.aspect_ratio_label(video) do
+      nil -> video_source(video)
+      ratio -> "#{video_source(video)} · #{ratio}"
+    end
+  end
+
+  defp video_source(%{type: :upload}), do: gettext("Uploaded video")
+  defp video_source(%{type: :youtube}), do: "YouTube"
+  defp video_source(%{type: :vimeo}), do: "Vimeo"
+  defp video_source(_asset), do: gettext("Video")
 
   defp image_ratio(%{width: width, height: height}, :image)
        when is_number(width) and width > 0 and is_number(height) and height > 0,

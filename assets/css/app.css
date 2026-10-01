@@ -461,7 +461,9 @@ html {
 body {
   @fontsize base;
 
-  --brando-color-background: theme(colors.peach);
+  /* The page's own ground, seen before the content paints and around
+     previews: the sidebar's green-grey, not the old peach. */
+  --brando-color-background: #fafbf9;
   --brando-color-content-background: theme(colors.white);
   --brando-color-white: theme(colors.white);
   --brando-color-gray: theme(colors.gray);

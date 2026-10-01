@@ -41,6 +41,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
      )
      |> assign(:allow_uploads?, resolved_config.allow_uploads)
      |> assign(:allow_external_urls?, resolved_config.allow_external_urls)
+     # Opened by a field's "Add from URL" with the URL input showing; every
+     # other opening starts on the library.
+     |> assign(:show_url_input, !!assigns[:show_url_input] && resolved_config.allow_external_urls)
      |> assign(:video_config, resolved_config)
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
@@ -327,6 +330,12 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   def handle_event("toggle_url_input", _, socket) do
     {:noreply, assign(socket, :show_url_input, !socket.assigns.show_url_input)}
+  end
+
+  # From the video drawer, which opens this picker already configured for its
+  # field: "Add from URL" shows the URL input, "Select video" hides it.
+  def handle_event("set_url_input", %{"show" => show}, socket) do
+    {:noreply, assign(socket, :show_url_input, show in [true, "true"] && socket.assigns.allow_external_urls?)}
   end
 
   def handle_event("start_rename", %{"video-id" => video_id}, socket) do
@@ -719,6 +728,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     type="text"
                     class="text"
                     placeholder={gettext("Paste YouTube, Vimeo or direct video URL")}
+                    phx-mounted={JS.focus()}
                   />
                   <button type="button" class="video-picker-add-btn">
                     <%= if @creating_video do %>

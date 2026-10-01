@@ -17,7 +17,15 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldAltTest do
   end
 
   defp image(alt),
-    do: %Brando.Images.Image{id: 1, status: :processed, path: "images/a.jpg", width: 10, height: 10, alt: alt}
+    do: %Brando.Images.Image{
+      id: 1,
+      status: :processed,
+      path: "images/a.jpg",
+      width: 10,
+      height: 10,
+      alt: alt,
+      sizes: %{"small" => "images/small/a.jpg", "xlarge" => "images/xlarge/a.jpg"}
+    }
 
   test "an image without alt text says so" do
     assert render(image(%{})) =~ "No alt text"

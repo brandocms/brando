@@ -16,6 +16,12 @@ defmodule Brando.RuntimeConfig do
   def get(key), do: Application.get_env(:brando, key)
 
   @doc """
+  Where videos upload when a config doesn't choose: the site's
+  `default_video_upload_strategy`, else `:none`. Uploads are opt-in.
+  """
+  def default_video_upload_strategy, do: get(:default_video_upload_strategy) || :none
+
+  @doc """
   Gets `key` from a module's keyword configuration.
   """
   @spec get(module(), term()) :: term()
