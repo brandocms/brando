@@ -38,6 +38,7 @@ for (const [type, module, file] of [
     await page.getByLabel('Title', { exact: true }).fill(`${type} dropdown`)
     await page.getByRole('button', { name: 'Add block', exact: true }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: module, exact: true }).click()
     const field = page.locator(`.${type === 'image' ? 'picture' : type}-block .media-field--block:visible`)
     await field.locator('input[type=file]').setInputFiles(`./fixtures/${file}`)
@@ -58,7 +59,7 @@ for (const [type, module, file] of [
 
       await trigger.press('Space')
       await expectUnclipped(menu)
-      await menu.getByRole('button', { name: type === 'image' ? 'Select image' : 'Browse library', exact: true }).click()
+      await menu.getByRole('button', { name: `Select ${type}`, exact: true }).click()
       const picker = page.locator(`#${type}-picker`)
       await expect(picker).toBeVisible()
       await expect(menu).not.toBeVisible()

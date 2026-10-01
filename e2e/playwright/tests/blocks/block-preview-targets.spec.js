@@ -10,6 +10,7 @@ test('switches preview views with unsaved content and restores the selected view
   await page.getByLabel('URI', { exact: true }).fill('a-story-in-progress')
   await page.getByRole('button', { name: 'Add block', exact: true }).click()
   await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+  await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
   await page.getByRole('button', { name: 'Styled Header', exact: true }).click()
   await syncLV(page)
 

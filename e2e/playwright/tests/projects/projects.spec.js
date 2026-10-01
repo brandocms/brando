@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, dragAndDrop, fillSlugSource, confirmUploadFolder } from '../../utils'
+import { syncLV, dragAndDrop, fillSlugSource, confirmUploadFolder, keepDuplicateUploads } from '../../utils'
 
 test('creates project', async ({ page }, testInfo) => {
   test.setTimeout(120000)
@@ -117,6 +117,10 @@ test('creates project', async ({ page }, testInfo) => {
 
   await expect(firstGalleryObjectImg).toBeVisible()
   await expect(secondGalleryObjectImg).toBeVisible()
+
+  // Both gallery files were just uploaded to the listing image as well; keep
+  // the new copies rather than the library's, so the gallery images are its own.
+  await keepDuplicateUploads(page)
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 })
     await gallery.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))

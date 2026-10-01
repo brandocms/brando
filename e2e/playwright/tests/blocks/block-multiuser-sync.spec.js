@@ -26,6 +26,7 @@ test.describe('Multi-user block sync', () => {
     const addHeader = async (textIndex, text) => {
       await page.getByRole('button', { name: 'Add block' }).last().click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
       const ta = page.locator('.header-block textarea').nth(textIndex)
@@ -207,6 +208,7 @@ test.describe('Multi-user block sync', () => {
 
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Rich Text Article' }).click()
     await syncLV(page)
 

@@ -157,7 +157,7 @@ test('global sets have compact rows and readable variable help at both widths', 
   await disclosure.press('Enter')
   await expect(disclosure).toHaveAttribute('aria-expanded', 'true')
   await page.locator('#global_set_vars_0_key').fill('map_url')
-  await page.locator('#global_set_vars_0_label').fill('Map URL')
+  await page.locator('#global_set_vars_0_label_en').fill('Map URL')
   await page.getByLabel('Map URL', { exact: true }).fill('https://maps.example.com/studio')
   const control = await page.locator('#global_set_vars_0_key').boundingBox()
   const help = await page.locator('#global_set_vars_0_key-instructions').boundingBox()

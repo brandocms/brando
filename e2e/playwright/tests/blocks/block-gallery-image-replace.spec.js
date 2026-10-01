@@ -20,6 +20,7 @@ test.describe('Gallery block image replacement', () => {
     // Add a Gallery with Controls block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Gallery with Controls' }).click()
     await syncLV(page)
 
@@ -59,7 +60,7 @@ test.describe('Gallery block image replacement', () => {
     })
 
     // Save the page — this is the operation that previously failed
-    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await page.getByTestId('submit').click()
 
     // Wait for save + image processing to complete and redirect away from create page
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })

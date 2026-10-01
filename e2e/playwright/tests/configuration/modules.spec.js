@@ -130,11 +130,11 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   let varModal = page.locator('#module-default-var-0')
   await expect(varModal).toBeVisible()
   await varModal.getByLabel('Key', { exact: true }).fill('theme')
-  await varModal.getByLabel('Label', { exact: true }).fill('Theme')
+  await varModal.getByRole('textbox', { name: 'Label (English)', exact: true }).fill('Theme')
   await varModal.getByRole('tab', { name: 'Choices', exact: true }).click()
   await varModal.getByRole('button', { name: 'Add option' }).click()
   await varModal
-    .locator('input[name*="[options]"][name$="[label]"]')
+    .locator('input[name*="[options]"][name$="[label][en]"]')
     .filter({ visible: true })
     .fill('Dark')
   await varModal
@@ -153,7 +153,7 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   await expect(varModal.getByLabel('Key', { exact: true })).toHaveValue('theme_copy')
   await varModal.getByRole('tab', { name: 'Choices', exact: true }).click()
   await expect(
-    varModal.locator('input[name*="[options]"][name$="[label]"]').filter({ visible: true })
+    varModal.locator('input[name*="[options]"][name$="[label][en]"]').filter({ visible: true })
   ).toHaveValue('Dark')
   await expect(
     varModal.locator('input[name*="[options]"][name$="[value]"]').filter({ visible: true })

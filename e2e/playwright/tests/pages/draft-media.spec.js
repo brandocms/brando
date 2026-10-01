@@ -278,8 +278,8 @@ test.describe('Media in entry recovery copies', () => {
     for (const type of ['image', 'file', 'video']) {
       await projectMediaField(page, type).getByRole('button', { name: 'Configure', exact: true }).click()
       const drawer = page.locator(`#${type}-drawer`)
-      if (type === 'image') await drawer.getByLabel('More image actions', { exact: true }).click()
-      await drawer.getByRole('button', { name: type === 'video' ? 'Reset video field' : 'Remove', exact: true }).click()
+      if (type !== 'file') await drawer.getByLabel(`More ${type} actions`, { exact: true }).click()
+      await drawer.getByRole('button', { name: 'Remove', exact: true }).click()
       await expect(page.locator(`#${type}-drawer`)).toBeHidden()
     }
     const cleared = Object.fromEntries(fields.map(field => [field, null]))
@@ -397,7 +397,7 @@ test.describe('Media in entry recovery copies', () => {
     await confirmUploadFolder(page)
     await expect(picture.locator('.media-field--block:visible img')).toBeVisible({ timeout: 30000 })
     await addBlock(page, 'Video Player')
-    await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Browse library', exact: true }).click()
+    await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Select video', exact: true }).click()
     await page.locator('.video-picker__video', { hasText: 'Test Video' }).first().click()
     await expect(page.locator('.video-block .media-field:visible')).toContainText('Test Video')
     await addBlock(page, 'Image and File Vars', '07 VAR UPLOAD TEST')
@@ -470,7 +470,7 @@ test.describe('Media in entry recovery copies', () => {
       await syncLV(page)
       const field = entry.locator('.media-field[id$="-media"]')
       if (type === 'video') {
-        await field.getByRole('button', { name: 'Browse library', exact: true }).click()
+        await field.getByRole('button', { name: 'Select video', exact: true }).click()
         await page.locator('.video-picker__video', { hasText: 'Test Video' }).first().click()
         await expect(page.locator('#video-picker')).toBeHidden()
         await expect(field).toContainText('Test Video')

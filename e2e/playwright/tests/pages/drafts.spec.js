@@ -12,6 +12,7 @@ test.describe('Entry recovery copies', () => {
     await page.getByLabel('URI').fill('autumn-campaign')
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Styled Header' }).click()
     await syncLV(page)
     const input = page.locator('.header-block textarea')
@@ -32,8 +33,9 @@ test.describe('Entry recovery copies', () => {
     expect((await page.request.post('/e2e/drafts/duplicates')).ok()).toBeTruthy()
     await review(page)
     await expect(page.locator('.draft-copy-table tbody tr')).toHaveCount(1)
-    page.once('dialog', dialog => dialog.accept())
     await page.getByRole('button', { name: 'Discard copy', exact: true }).click()
+    // data-confirm asks with the admin's own dialog, not window.confirm.
+    await page.getByRole('dialog').getByRole('button', { name: 'OK', exact: true }).click()
     await expect(page.getByTestId('draft-panel')).toHaveCount(0)
     await page.reload()
     await expect(page.getByTestId('draft-notice')).toHaveCount(0)

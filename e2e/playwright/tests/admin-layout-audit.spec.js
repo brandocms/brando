@@ -37,7 +37,9 @@ test('listing filters align, disclose children by keyboard and retain creators o
   await page.keyboard.press('Enter')
   await expect(childButton).toHaveAttribute('aria-expanded', 'true')
   await expect(page.locator('.child-row').first()).toBeVisible()
-  const count = await childButton.locator('.children-number').boundingBox()
+  // ce48d6d21: the toggle names what it opens ("1 fragment"), which replaces
+  // the bare number beside the chevron.
+  const count = await childButton.locator('.children-button-text').boundingBox()
   const chevron = await childButton.locator('[data-icon]').boundingBox()
   expect(count.y + count.height / 2).toBeCloseTo(chevron.y + chevron.height / 2, 0)
   await page.screenshot({ path: testInfo.outputPath('pages-expanded-desktop.png'), fullPage: true })
@@ -55,6 +57,10 @@ test('menu controls align, keyboard status works and save follows the items', as
   const status = page.locator('#menu_status-field-wrapper')
   await sameHeight([page.locator('#menu_title'), page.locator('#menu_key'), status.locator('.multiselect'), page.locator('#menu_language-field-wrapper .multiselect')], 40)
   const row = page.locator('.subform-entry').first()
+  // b128cde75 tucks an item's key behind a "Key: …" summary; opened, it must
+  // still line up with the row's other fields.
+  await row.locator('#menu_items_0_key-disclosure .disclosed-text-summary').click()
+  await expect(page.locator('#menu_items_0_key')).toBeFocused()
   const fields = [row.locator('.radios-wrapper.status.compact').first(), page.locator('#menu_items_0_key'), row.locator('.link-preview').first()]
   await sameHeight(fields, 40)
   const labels = await row.locator('.subform-fields > .brando-input').evaluateAll(inputs => inputs.map(input => input.querySelector('.label-wrapper').getBoundingClientRect().y))
@@ -76,7 +82,9 @@ test('menu controls align, keyboard status works and save follows the items', as
   await page.screenshot({ path: testInfo.outputPath('menu-editor-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await noOverflow(page)
-  await expect(page.locator('#menu_items_1_key-field-wrapper label')).toBeVisible()
+  await expect(page.locator('#menu_items_0_key-field-wrapper label')).toBeVisible()
+  // The opened key takes the row's width, not the status column's.
+  expect((await page.locator('#menu_items_0_key').boundingBox()).width).toBeGreaterThan(200)
   await page.screenshot({ path: testInfo.outputPath('menu-editor-mobile.png'), fullPage: true })
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')

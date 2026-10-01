@@ -8,6 +8,7 @@ async function createVarPage(page, title) {
   await page.getByLabel('URI').fill(title.toLowerCase().replaceAll(' ', '-'))
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: '07 VAR UPLOAD TEST' }).click()
+  await expect(page.locator('.module-picker-namespace.active')).toContainText('07 VAR UPLOAD TEST')
   await page.getByRole('button', { name: 'Image and File Vars' }).click()
   await syncLV(page)
 }
@@ -31,7 +32,7 @@ for (const type of ['image', 'file']) {
     const modal = page.locator(`[id$="${type}-config"]:visible`)
     await expect(modal.locator('.media-field')).toHaveAttribute('data-asset-id', /\d+/)
     await modal.getByRole('button', { name: 'Done', exact: true }).click()
-    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await page.getByTestId('submit').click()
     await syncLV(page)
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 10000 })
     await page.getByRole('link', { name: title, exact: true }).click()
@@ -55,6 +56,6 @@ for (const type of ['image', 'file']) {
     await expect(mediaMenuButton(field)).toHaveText('Add')
     await mediaMenuButton(field).click()
     await expect(field.locator('.media-field-menu').getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
-    await expect(field.locator('.media-field-menu').getByRole('button', { name: type === 'image' ? 'Select image' : 'Browse library', exact: true })).toBeVisible()
+    await expect(field.locator('.media-field-menu').getByRole('button', { name: `Select ${type}`, exact: true })).toBeVisible()
   })
 }

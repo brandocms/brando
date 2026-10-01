@@ -32,6 +32,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add a simple header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
@@ -73,6 +74,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add a simple header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
@@ -125,6 +127,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add a block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
@@ -162,6 +165,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Single Image with Caption block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Single Image with Caption' }).click()
       await syncLV(page)
 
@@ -208,6 +212,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Single Image with Caption block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Single Image with Caption' }).click()
       await syncLV(page)
 
@@ -251,6 +256,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Gallery with Controls block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Gallery with Controls' }).click()
       await syncLV(page)
 
@@ -326,6 +332,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Styled Header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
@@ -376,6 +383,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Rich Text Article block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Rich Text Article' }).click()
       await syncLV(page)
 
@@ -419,6 +427,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Video Player block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Video Player' }).click()
       await syncLV(page)
 
@@ -464,6 +473,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Styled Header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
@@ -508,12 +518,14 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Styled Header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
       // Add Single Image with Caption block (use first() because there are now 2 add buttons)
       await page.getByRole('button', { name: 'Add block' }).first().click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Single Image with Caption' }).click()
       await syncLV(page)
 
@@ -553,12 +565,14 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Styled Header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
       // Add Single Image with Caption block
       await page.getByRole('button', { name: 'Add block' }).first().click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Single Image with Caption' }).click()
       await syncLV(page)
 
@@ -601,6 +615,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Styled Header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
@@ -643,6 +658,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Styled Header block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
 
@@ -694,6 +710,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Image and File Vars module
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '07 VAR UPLOAD TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('07 VAR UPLOAD TEST')
       await page.getByRole('button', { name: 'Image and File Vars' }).click()
       await syncLV(page)
 
@@ -738,6 +755,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Morph Preservation block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Morph Preservation' }).click()
       await syncLV(page)
 
@@ -785,6 +803,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Add Morph Preservation block
       await page.getByRole('button', { name: 'Add block' }).click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Morph Preservation' }).click()
       await syncLV(page)
 

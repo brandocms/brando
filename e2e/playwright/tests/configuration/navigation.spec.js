@@ -38,7 +38,8 @@ test('create menu item', async ({ page }) => {
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
 
   await page.getByRole('button', { name: 'Add entry' }).click()
-  await page.locator('#menu_items_3_key').click()
+  // The key sits behind its "Key: …" summary; opening it focuses the field
+  await page.locator('#menu_items_3_key-disclosure .disclosed-text-summary').click()
   await page.locator('#menu_items_3_key').fill('new_item')
   await page.locator('#menu_items_3_link_0_identifier_id-field-base .link-preview').click()
   await page.locator('#var-menu_items_3_link_0-link-config').getByRole('radio', { name: 'URL', exact: true }).check()

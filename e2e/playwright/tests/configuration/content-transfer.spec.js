@@ -293,7 +293,7 @@ test('select, export, review, cancel, apply and recover saved content at desktop
   expect((await page.request.post('/e2e/setup_fixtures/content-transfer')).ok()).toBeTruthy()
   await page.goto('/admin/config/import-export')
   await syncLV(page)
-  await expect(page.getByRole('heading', { level: 1, name: 'Import/Export' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Content transfer' })).toBeVisible()
   await page.getByText('Advanced export options', { exact: true }).click()
   await page.getByLabel('Export scope', { exact: true }).selectOption('fields')
   await expect(page.getByRole('button', { name: 'Prepare export', exact: true })).toBeDisabled()

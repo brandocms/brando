@@ -38,7 +38,13 @@ test('browses folders, uploads and searches images without exposing folder filte
     await page.getByRole('button', { name: 'Root', exact: true }).click()
     await expect(path).not.toContainText('design-review')
     await expect(rows.filter({ hasText: filename })).toHaveCount(0)
-    await page.getByRole('complementary').getByRole('button', { name: 'design-review', exact: true }).click()
+    // The library opens where uploads land (`site/default`), so that is where
+    // the folder was created; "Root" is the real root above it.
+    const folders = page.getByRole('complementary')
+    for (const folder of ['site', 'default', 'design-review']) {
+      await folders.getByRole('button', { name: folder, exact: true }).click()
+      await syncLV(page)
+    }
     await expect(rows).toHaveCount(1)
     await expect(rows.first()).toContainText(filename)
     const imageId = (await rows.first().getAttribute('id')).replace('list-row-', '')

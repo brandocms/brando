@@ -318,6 +318,24 @@ const confirmUploadFolder = async page => {
   await expect(confirm).not.toBeVisible({ timeout: 10000 })
 }
 
+// An image upload of a file the library already has asks, in the upload
+// manager, whether to use the existing image (947c92cef). The manager stays
+// open over the bottom-right of the page — drawer and modal footers included —
+// until that is answered. Keep the uploads, which is what specs written before
+// the question expect. Waits for every queued transfer to be stored first: the
+// question arrives with the stored upload.
+const keepDuplicateUploads = async page => {
+  const manager = page.locator('#brando-upload-manager-lv')
+  await expect(
+    manager.locator('.upload-item.status-queued, .upload-item.status-uploading')
+  ).toHaveCount(0, { timeout: 20000 })
+  const keep = manager.getByRole('button', { name: /^(Upload anyway|Last opp likevel)$/ })
+  for (let pending = await keep.count(); pending > 0; pending--) {
+    await keep.first().click()
+    await expect(keep).toHaveCount(pending - 1)
+  }
+}
+
 // The image editor draws the crop frame, grid and focal pin on an overlay canvas
 // stacked on top of the image canvas, so the two must occupy the same box. They
 // used to drift apart on a viewport change: the overlay was positioned from
@@ -370,6 +388,7 @@ module.exports = {
   setPreviewDevice,
   fillSlugSource,
   confirmUploadFolder,
+  keepDuplicateUploads,
   expectCanvasOverlayAligned,
   mediaMenu,
   mediaMenuButton

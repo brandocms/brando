@@ -25,6 +25,7 @@ test.describe('Block regressions: media persistence + insert position', () => {
   const addStyledHeader = async (page) => {
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Styled Header' }).click()
     await syncLV(page)
   }
@@ -43,6 +44,7 @@ test.describe('Block regressions: media persistence + insert position', () => {
     // Add a picture block
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Single Image with Caption' }).click()
     await syncLV(page)
 
@@ -97,6 +99,7 @@ test.describe('Block regressions: media persistence + insert position', () => {
       const count = await headers.count()
       await page.locator('.entry-block').nth(entryIndex).locator('.block-plus').first().click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
       await expect(headers).toHaveCount(count + 1)

@@ -23,7 +23,7 @@ test.describe('Block delete undo', () => {
   }
 
   const saveAndReopen = async (page, title) => {
-    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await page.getByTestId('submit').click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
@@ -48,6 +48,7 @@ test.describe('Block delete undo', () => {
 
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Styled Header' }).click()
     await syncLV(page)
 
