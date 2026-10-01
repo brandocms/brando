@@ -20,7 +20,7 @@ test('CMS pages render through their own layout and keep unpublished content pri
   await page.goto('/admin/pages')
   await page.getByText('CMS smoke home', { exact: true }).click()
   await page.getByRole('textbox', { name: 'Title', exact: true }).fill('CMS smoke home updated')
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/pages$/)
   response = await page.goto('/')
   expect(response.status()).toBe(200)
