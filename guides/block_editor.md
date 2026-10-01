@@ -9,6 +9,23 @@ when debugging).
 For exporting modules to editable Elixir DSL and importing changes back, see
 [Module definitions as files](module_definitions.md).
 
+## Terminology
+
+"Module" here means a reusable block definition, not an Elixir module:
+
+- **Module** (`Brando.Content.Module`, table `content_modules`) — the
+  definition: template, refs and vars. Edited under Configuration → Modules.
+- **Block** (`Brando.Content.Block`) — one instance in an entry. A block with
+  `type: :module` renders the module named by its `module_id`.
+- **Multi module** — a module with `multi: true` whose template renders child
+  blocks. Each child is a block with `type: :module_entry`; these are distinct
+  from blocks nested inside a container.
+- **Module set** (`Brando.Content.ModuleSet`) — a named subset of modules that
+  a `blocks` form field offers via `module_set:`.
+
+Names such as `datasource_module`, `parser_module` and `Brando.Type.Module`
+refer to actual Elixir modules.
+
 ## Wiring blocks into a blueprint
 
 Add a `:blocks` relation and a `blocks` declaration in the form:
