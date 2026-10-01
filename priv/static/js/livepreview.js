@@ -21,9 +21,9 @@ const NODE_TYPES = {
 // Valid node types for lazy loading operations
 const VALID_TARGET_NODES = [NODE_TYPES.ELEMENT, NODE_TYPES.DOCUMENT, NODE_TYPES.DOCUMENT_FRAGMENT]
 
-// Cache DOM references
+// Cache DOM references. `<main>` is looked up on every update instead: a full
+// rerender may replace it, and a template need not have one.
 const token = document.querySelector('meta[name="user_token"]').getAttribute('content')
-const main = document.querySelector('main')
 const body = document.querySelector('body')
 const parser = new DOMParser()
 
@@ -380,6 +380,42 @@ function findContentInsertionMarker(blockElement) {
 }
 
 /**
+ * Parse a block's HTML as a fragment, the way it sits in the page.
+ *
+ * `DOMParser` parses a whole document: a leading `<style>`, `<script>`, `<link>`
+ * or `<meta>` is moved into its `<head>`, and table rows outside a table are
+ * dropped, so a block starting with any of them lost it on its first edit.
+ * A `<template>` keeps them in place.
+ * @param {string} html
+ * @returns {Element[]} The fragment's top-level elements
+ */
+function parseFragment(html) {
+  const template = document.createElement('template')
+  template.innerHTML = html
+  return Array.from(template.content.childNodes).filter(node => node.nodeType === NODE_TYPES.ELEMENT)
+}
+
+/**
+ * Tell the site's own scripts what the preview just changed.
+ *
+ * The site's JS initialised the page once, on load. Elements patched in or
+ * inserted afterwards — a slider, a lightbox, a canvas whose `data-lp-preserve`
+ * value changed — are never initialised again unless the site listens:
+ *
+ *   document.addEventListener('brando:livepreview:patched', ({ detail }) => {
+ *     detail.elements.forEach(el => initWidgets(el))
+ *   })
+ *
+ * `detail.type` is `block` (one block, with its `uid`; no elements when it was
+ * removed), `update` (`<main>`) or `rerender` (`<body>`).
+ */
+function announcePatch(type, elements, uid) {
+  document.dispatchEvent(
+    new CustomEvent('brando:livepreview:patched', { detail: { type, uid, elements } })
+  )
+}
+
+/**
  * Insert animation override styles on first update
  */
 function insertOverrideStyles() {
@@ -415,19 +451,17 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   if (rendered_html === '') {
     block.elements.forEach(el => el.element.remove())
     contentBlockRegistry.delete(uid)
+    announcePatch('block', [], uid)
     return
   }
 
   // Parse new content. `rebuildContentBlockRegistry` only tracks ELEMENT nodes,
-  // so the parsed nodes have to be filtered the same way or the two lists do not
-  // line up: index 0 would pair the `[+:B<uid>]` boundary comment against the
-  // block's first element, the nodeType check below would fail, and the replace
-  // branch would drop the live element without ever running the child splice —
-  // which is how a multi-module's children vanished from the preview.
-  const doc = parser.parseFromString(rendered_html, 'text/html')
-  const newBlocks = Array.from(doc.querySelector('body').childNodes).filter(
-    node => node.nodeType === NODE_TYPES.ELEMENT
-  )
+  // so the parsed nodes are filtered the same way or the two lists do not line
+  // up: index 0 would pair the `[+:B<uid>]` boundary comment against the block's
+  // first element, the nodeType check below would fail, and the replace branch
+  // would drop the live element without ever running the child splice — which
+  // is how a multi-module's children vanished from the preview.
+  const newBlocks = parseFragment(rendered_html)
 
   // Update children map if needed
   if (has_children) {
@@ -454,8 +488,11 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
       const existingEl = block.elements[idx]
 
       if (existingEl && existingEl.element.nodeType === newBlock.nodeType) {
-        // Update existing element with morphdom
-        morphdom(existingEl.element, newBlock, MORPHDOM_CONFIG_FULL)
+        // Update existing element with morphdom. When the tag changes, morphdom
+        // replaces the node and returns the new one; keeping the old reference
+        // left the registry pointing at a detached node, so the block's next
+        // update went nowhere.
+        existingEl.element = morphdom(existingEl.element, newBlock, MORPHDOM_CONFIG_FULL)
 
         // Handle nested children
         if (has_children && existingEl.children) {
@@ -501,6 +538,8 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
 
     block.elements = newEls
   }
+
+  announcePatch('block', block.elements.map(el => el.element), uid)
 })
 
 /**
@@ -508,9 +547,18 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
  */
 channel.on('update', function (payload) {
   document.documentElement.classList.add('is-updated-live-preview')
-  
+
   const doc = parser.parseFromString(payload.html, 'text/html')
+  const main = document.querySelector('main')
   const newMain = doc.querySelector('main')
+
+  // Without a `<main>` on either side the server sent the whole document
+  // (`Brando.LivePreview` only trims it to `<main>` when there is one), so
+  // patch the body instead of throwing.
+  if (!main || !newMain) {
+    rerender(doc)
+    return
+  }
 
   // Both trees, before the morph — see stampBlockKeys.
   stampBlockKeys(document)
@@ -522,16 +570,20 @@ channel.on('update', function (payload) {
   initializeLazyVideos()
   stampBlockKeys(document)
   rebuildContentBlockRegistry()
+  announcePatch('update', [main])
 })
 
 /**
  * Handle full page re-renders (entire body)
  */
 channel.on('rerender', function (payload) {
+  rerender(parser.parseFromString(payload.html, 'text/html'))
+})
+
+function rerender(doc) {
   insertOverrideStyles()
   document.documentElement.classList.add('is-updated-live-preview')
-  
-  const doc = parser.parseFromString(payload.html, 'text/html')
+
   const newBody = doc.querySelector('body')
 
   stampBlockKeys(document)
@@ -545,7 +597,8 @@ channel.on('rerender', function (payload) {
   rebuildContentBlockRegistry()
 
   body.classList.remove('unloaded')
-})
+  announcePatch('rerender', [body])
+}
 
 /**
  * Handle a full iframe reload request.
