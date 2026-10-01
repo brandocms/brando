@@ -38,9 +38,6 @@ test('create menu item', async ({ page }) => {
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
 
   await page.getByRole('button', { name: 'Add entry' }).click()
-  // The key sits behind its "Key: …" summary; opening it focuses the field
-  await page.locator('#menu_items_3_key-disclosure .disclosed-text-summary').click()
-  await page.locator('#menu_items_3_key').fill('new_item')
   await page.locator('#menu_items_3_link_0_identifier_id-field-base .link-preview').click()
   await page.locator('#var-menu_items_3_link_0-link-config').getByRole('radio', { name: 'URL', exact: true }).check()
   await page.getByRole('textbox', { name: 'URL' }).click()
@@ -60,6 +57,13 @@ test('create menu item', async ({ page }) => {
   await expect(
     page.locator('#menu_items_3_link_0_identifier_id-field-base')
   ).toContainText('https://google.com')
+  // Until set, the key follows the link text — not the "text" the new item's
+  // placeholder link gave it on the first render, which the form posts back.
+  const key = page.locator('#menu_items_3_key-disclosure')
+  await expect(key.locator('.disclosed-text-summary code')).toHaveText('google')
+  // The key sits behind its "Key: …" summary; opening it focuses the field
+  await key.locator('.disclosed-text-summary').click()
+  await page.locator('#menu_items_3_key').fill('new_item')
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
   await syncLV(page)
