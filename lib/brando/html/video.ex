@@ -57,16 +57,16 @@ defmodule Brando.HTML.Video do
   # reaching `<.video>` — from `{% video entry.video %}` or a gallery — raised
   # FunctionClauseError. `Brando.Villain.Parser.video/2` renders those two types
   # itself, which is why nothing hit it sooner.
-  def video(%{video: %Video{type: :vimeo, remote_id: remote_id, width: width, height: height}} = assigns) do
+  def video(%{video: %Video{type: :vimeo, width: width, height: height} = video} = assigns) do
     assigns =
       assigns
-      |> assign(:remote_id, remote_id)
+      |> assign(:src, Brando.Videos.VimeoURL.embed_url(video, dnt: 1))
       |> assign(:width, width)
       |> assign(:height, height)
 
     ~H"""
     <iframe
-      src={"https://player.vimeo.com/video/#{@remote_id}?dnt=1"}
+      src={@src}
       width={@width}
       height={@height}
       frameborder="0"

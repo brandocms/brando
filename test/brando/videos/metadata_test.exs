@@ -100,6 +100,17 @@ defmodule Brando.Videos.MetadataTest do
     refute Videos.placeholder_title?(%Videos.Video{title: "Sommerro", source_url: url})
   end
 
+  test "looks up an unlisted Vimeo video through its hashed page URL" do
+    stub(fn "/api/oembed.json", query ->
+      assert URI.decode_query(query)["url"] == "https://vimeo.com/42/abcdef1234"
+      {:json, %{"title" => "Unlisted"}}
+    end)
+
+    video = %Videos.Video{type: :vimeo, remote_id: "42", source_url: "https://vimeo.com/42/abcdef1234"}
+
+    assert {:ok, %{title: "Unlisted"}} = Metadata.lookup(video)
+  end
+
   test "fills in what the video lacks, storing the thumbnail as an image, and keeps what it has" do
     user = Factory.insert(:random_user)
     jpeg = File.read!(Path.join([__DIR__, "..", "..", "fixtures", "sample.jpg"]))

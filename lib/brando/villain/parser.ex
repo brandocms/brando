@@ -595,7 +595,7 @@ defmodule Brando.Villain.Parser do
     )
   end
 
-  def video(%{remote_id: remote_id, type: :vimeo} = data, _) do
+  def video(%{remote_id: _remote_id, type: :vimeo} = data, _) do
     video_fields = extract_video_dimensions(data, 500, 281)
 
     # Ensure values are integers
@@ -609,7 +609,7 @@ defmodule Brando.Villain.Parser do
       height,
       video_fields.orientation,
       aspect_ratio,
-      "//player.vimeo.com/video/#{remote_id}?dnt=1",
+      Brando.Videos.VimeoURL.embed_url(data, dnt: 1),
       # Enable additional fullscreen attributes for Vimeo
       true
     )

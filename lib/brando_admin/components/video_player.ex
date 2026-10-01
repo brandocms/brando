@@ -40,8 +40,12 @@ defmodule BrandoAdmin.Components.VideoPlayer do
     """
   end
 
-  defp source(%Video{type: :vimeo, remote_id: id}) when is_binary(id),
-    do: {:embed, "https://player.vimeo.com/video/#{id}?autoplay=1"}
+  defp source(%Video{type: :vimeo} = video) do
+    case Brando.Videos.VimeoURL.embed_url(video, autoplay: 1) do
+      nil -> :none
+      url -> {:embed, url}
+    end
+  end
 
   defp source(%Video{type: :youtube, remote_id: id}) when is_binary(id),
     do: {:embed, "https://www.youtube.com/embed/#{id}?autoplay=1"}

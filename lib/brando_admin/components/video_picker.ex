@@ -420,6 +420,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
         _ -> {extract_title_from_url(url), nil, nil}
       end
 
+    # The client parser hands back everything after `vimeo.com/` — including
+    # an unlisted video's hash — so the id is taken from the URL here.
+    remote_id =
+      case {video_type, Brando.Videos.VimeoURL.parse(url)} do
+        {:vimeo, {:ok, %{id: id}}} -> id
+        _ -> remote_id
+      end
+
     video_params = %{
       type: video_type,
       source_url: url,
@@ -1076,9 +1084,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
-  defp get_embed_url(%{type: :vimeo, source_url: source_url}) do
-    video_id = String.split(source_url, "/") |> List.last()
-    "https://player.vimeo.com/video/#{video_id}?autoplay=1"
+  defp get_embed_url(%{type: :vimeo} = video) do
+    Brando.Videos.VimeoURL.embed_url(video, autoplay: 1)
   end
 
   defp get_embed_url(%{source_url: source_url}) do

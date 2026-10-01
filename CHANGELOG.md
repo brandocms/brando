@@ -905,6 +905,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   clause for, so creating one took the entry form down with its unsaved
   changes. The field now selects it.
 
+- **Unlisted Vimeo videos play.** An unlisted Vimeo video only plays when its
+  embed URL carries its privacy hash, and every embed dropped it — the picker
+  even saved `123/abcdef` as the video id. The hash is now read from the
+  pasted URL wherever Vimeo is embedded and in the oEmbed lookup. Existing
+  videos are fixed without a migration.
+
 - **Shared preview links no longer break on deploy.** The stored preview HTML
   links the digested asset names of the build it was rendered with, and the
   next release removed those files. Sharing now pins the preview to an

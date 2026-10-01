@@ -48,7 +48,7 @@ defmodule Brando.Villain.ParserTest do
 
   test "video/2 vimeo" do
     assert video(%{remote_id: "asdf1234", type: :vimeo}, []) ==
-             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.562\">\n         <iframe src=\"//player.vimeo.com/video/asdf1234?dnt=1\"\n                 width=\"500\"\n                 height=\"281\"\n                 frameborder=\"0\"\n                 webkitallowfullscreen\n                 mozallowfullscreen\n                 allowfullscreen>\n         </iframe>\n       </div>"
+             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.562\">\n         <iframe src=\"https://player.vimeo.com/video/asdf1234?dnt=1\"\n                 width=\"500\"\n                 height=\"281\"\n                 frameborder=\"0\"\n                 webkitallowfullscreen\n                 mozallowfullscreen\n                 allowfullscreen>\n         </iframe>\n       </div>"
   end
 
   test "video/2 youtube keeps start time from url" do

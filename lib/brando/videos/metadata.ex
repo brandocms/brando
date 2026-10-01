@@ -19,6 +19,7 @@ defmodule Brando.Videos.Metadata do
 
   alias Brando.Videos.Helpers
   alias Brando.Videos.Video
+  alias Brando.Videos.VimeoURL
 
   @type found :: %{
           optional(:thumbnail_url) => String.t(),
@@ -37,8 +38,12 @@ defmodule Brando.Videos.Metadata do
   key may be missing; `{:error, :unsupported}` for sources it cannot read.
   """
   @spec lookup(Video.t()) :: {:ok, found()} | {:error, term()}
-  def lookup(%Video{type: :vimeo, remote_id: id}) when is_binary(id) and id != "",
-    do: vimeo(id)
+  def lookup(%Video{type: :vimeo} = video) do
+    case VimeoURL.id_and_hash(video) do
+      nil -> {:error, :unsupported}
+      parsed -> vimeo(parsed)
+    end
+  end
 
   def lookup(%Video{type: :youtube, remote_id: id}) when is_binary(id) and id != "",
     do: oembed(@youtube_oembed <> encode("https://www.youtube.com/watch?v=#{id}"))
@@ -46,7 +51,7 @@ defmodule Brando.Videos.Metadata do
   def lookup(%Video{type: :external_file, source_url: url} = video) when is_binary(url) do
     cond do
       match = Regex.run(@vimeo_file, url, capture: :all_but_first) ->
-        vimeo(hd(match))
+        vimeo(%{id: hd(match), hash: nil})
 
       String.contains?(url, ".b-cdn.net/") and String.ends_with?(url, "/playlist.m3u8") ->
         bunny(url, Helpers.derive_external_thumbnail_url(video))
@@ -87,8 +92,8 @@ defmodule Brando.Videos.Metadata do
     end
   end
 
-  defp vimeo(id) do
-    with {:ok, found} <- oembed(@vimeo_oembed <> encode("https://vimeo.com/#{id}")) do
+  defp vimeo(parsed) do
+    with {:ok, found} <- oembed(@vimeo_oembed <> encode(VimeoURL.page_url(parsed))) do
       # oEmbed answers with a 295×166 thumbnail; the same image is available larger.
       {:ok, Map.update(found, :thumbnail_url, nil, &larger_vimeo_thumbnail/1)}
     end
