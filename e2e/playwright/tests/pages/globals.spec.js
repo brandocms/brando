@@ -13,7 +13,7 @@ test('updates and persists content globals', async ({ page }, testInfo) => {
   const globalVar = page.locator('#global_set_vars_0-edit')
   await globalVar.locator('.variable-header').click()
   await page.locator('#global_set_vars_0_key').fill('announcement')
-  await page.locator('#global_set_vars_0_label').fill('Announcement')
+  await page.locator('#global_set_vars_0_label_en').fill('Announcement')
   await page
     .locator('#global_set_vars_0_width-field-base')
     .getByRole('button', { name: 'Select' })

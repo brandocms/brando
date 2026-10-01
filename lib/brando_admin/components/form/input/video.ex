@@ -24,6 +24,14 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      |> assign_new(:placeholder, fn -> nil end)}
   end
 
+  # The picker hands over a video it just created — "Add from URL", or "Add
+  # from <provider>" — instead of pushing `select_video`. Selecting it is the
+  # same thing a click on the row does.
+  def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
+    {:noreply, socket} = select_video(socket, video_id)
+    {:ok, socket}
+  end
+
   def update(assigns, socket) do
     socket =
       socket
@@ -325,7 +333,9 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      |> assign(:form_id, form_id)}
   end
 
-  def handle_event("select_video", %{"id" => selected_video_id}, %{assigns: %{form_id: form_id}} = socket) do
+  def handle_event("select_video", %{"id" => selected_video_id}, socket), do: select_video(socket, selected_video_id)
+
+  defp select_video(%{assigns: %{form_id: form_id}} = socket, selected_video_id) do
     on_change = socket.assigns.on_change
     {:ok, video} = Brando.Videos.get_video(%{matches: %{id: selected_video_id}, preload: [:thumbnail, :file]})
 

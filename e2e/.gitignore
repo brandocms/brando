@@ -35,4 +35,7 @@ deployment.cfg
 fabfile.pyc
 assets/frontend/.yalc
 /release-archives
-/certs
+/certs/tmp/
+
+# test_e2e_parallel.sh shard logs and media
+/tmp/

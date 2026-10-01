@@ -40,7 +40,7 @@ test('reorders the entries of a multi block and reviews the new order', async ({
     await syncLV(page)
   }
 
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
   await syncLV(page)
   await page.getByRole('link', { name: 'Assistant Team', exact: true }).click()
@@ -103,8 +103,8 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   // Undo, after confirming, puts Alice first again.
   await page.goBack()
   await syncLV(page)
-  page.once('dialog', dialog => dialog.accept())
   await review.getByRole('button', { name: 'Undo' }).click()
+  await page.getByRole('button', { name: 'OK', exact: true }).click()
   await expect(review.getByRole('heading', { name: 'Undone' })).toBeVisible({ timeout: 15000 })
 
   await page.goto(`/admin/pages/update/${id}`)

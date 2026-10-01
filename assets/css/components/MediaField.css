@@ -145,7 +145,10 @@
     .image-content, img, picture { width: 100%; height: auto; object-fit: contain; }
   }
 }
-.media-field > .media-field-destination { display: none; }
+/* The folder is already in the menu and the drop overlay. The line stays only
+   where it carries "Change": an image field on the default target, whose
+   uploads go to a folder the editor picks. `:has()` is scoped to this line. */
+.media-field > .media-field-destination:not(:has(.media-destination-change)) { display: none; }
 .media-field-drop > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .media-field-drop-destination { font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
 .media-field > .media-field-drop { padding: 16px; }

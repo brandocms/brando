@@ -28,6 +28,7 @@ test.describe('Block media save persistence', () => {
   const appendBlock = async (page, moduleName) => {
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: moduleName }).click()
     await syncLV(page)
   }
@@ -41,7 +42,7 @@ test.describe('Block media save persistence', () => {
   }
 
   const saveAndReopen = async (page, title) => {
-    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await page.getByTestId('submit').click()
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
@@ -78,7 +79,7 @@ test.describe('Block media save persistence', () => {
     await page.locator('.header-block textarea').first().fill('Edited after reload')
     await syncLV(page)
 
-    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await page.getByTestId('submit').click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
@@ -133,6 +134,7 @@ test.describe('Block media save persistence', () => {
     // Module with image var + file var + string var in ONE block
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '07 VAR UPLOAD TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('07 VAR UPLOAD TEST')
     await page.getByRole('button', { name: 'Image and File Vars' }).click()
     await syncLV(page)
 

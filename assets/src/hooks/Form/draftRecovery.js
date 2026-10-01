@@ -33,9 +33,16 @@ export default function draftRecovery(hook) {
     // The server abandons incomplete captures after ten seconds. Retry only
     // unacknowledged work; a timeout must not leave it stranded until another edit.
     flightTimer = setTimeout(() => { inFlight = null; capture() }, 11000)
-    hook.pushEventTo(hook.el, 'draft_capture', {
-      main: encode(form), blocks, generation, request_id: inFlight.requestId,
-    })
+    const payload = { main: encode(form), blocks, generation, request_id: inFlight.requestId }
+    // A hook push locks its element until the reply, and LiveView applies
+    // updates to a locked element's copy. Locking the whole form nests every
+    // block field and block hook push under this one: a block LiveView adds
+    // inside such a nested lock is dropped when the form unlocks, and its
+    // component is destroyed while the block list still renders it. The
+    // capture is pushed from an empty element so only that element is locked.
+    const source = hook.el.querySelector(':scope > [data-draft-capture]')
+    if (source) hook.js().push(source, 'draft_capture', { value: payload })
+    else hook.pushEventTo(hook.el, 'draft_capture', payload)
   }
   const schedule = () => {
     clearTimeout(captureTimer)

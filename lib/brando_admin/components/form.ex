@@ -2488,6 +2488,8 @@ defmodule BrandoAdmin.Components.Form do
         data-draft-form-id={@id}
         data-draft-leave-message={gettext("Your latest edits have not reached recovery storage. Leave this editor anyway?")}
       >
+        <%!-- Recovery captures are pushed from this empty element, see `draftRecovery.js` --%>
+        <span id={"#{@id}-draft-capture"} data-draft-capture phx-target={@myself} hidden></span>
         <div class={["form-content", @live_preview_active? && "with-live-preview"]}>
           <Primitives.form_header :if={@header}>{render_slot(@header)}</Primitives.form_header>
 

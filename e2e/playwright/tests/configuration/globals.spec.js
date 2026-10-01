@@ -22,7 +22,7 @@ async function addGlobalVar(
 
   // Fill in the key and label
   await page.locator(`#global_set_vars_${index}_key`).fill(key)
-  await page.locator(`#global_set_vars_${index}_label`).fill(label)
+  await page.locator(`#global_set_vars_${index}_label_en`).fill(label)
 
   // If the type is something other than "String," select it
   if (type.toLowerCase() !== 'string') {
@@ -61,7 +61,7 @@ async function addGlobalVar(
 test('add global string', async ({ page }) => {
   await page.goto('/admin')
   await page.getByText('Configuration').click()
-  await page.getByText('Globals').first().click()
+  await page.getByRole('link', { name: 'Global fields (setup)' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
   await page.getByLabel('Label').fill('Configuration')

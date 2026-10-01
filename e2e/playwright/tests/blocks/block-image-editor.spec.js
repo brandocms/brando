@@ -19,6 +19,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Single Image with Caption block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Single Image with Caption' }).click()
     await syncLV(page)
 
@@ -192,6 +193,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Single Image with Caption block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Single Image with Caption' }).click()
     await syncLV(page)
 
@@ -252,6 +254,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Gallery with Controls block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Gallery with Controls' }).click()
     await syncLV(page)
 
@@ -315,6 +318,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Gallery with Controls block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Gallery with Controls' }).click()
     await syncLV(page)
 
@@ -384,6 +388,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Gallery with Controls block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Gallery with Controls' }).click()
     await syncLV(page)
 
@@ -466,6 +471,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Gallery with Controls block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Gallery with Controls' }).click()
     await syncLV(page)
 
@@ -523,6 +529,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Gallery with Controls block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Gallery with Controls' }).click()
     await syncLV(page)
 
@@ -562,6 +569,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Single Image with Caption block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Single Image with Caption' }).click()
     await syncLV(page)
 
@@ -635,6 +643,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Gallery with Controls block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Gallery with Controls' }).click()
     await syncLV(page)
 
@@ -703,6 +712,7 @@ test.describe('Image Editor from Blocks', () => {
     // Add Single Image with Caption block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: 'Single Image with Caption' }).click()
     await syncLV(page)
 

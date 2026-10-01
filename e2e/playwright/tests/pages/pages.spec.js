@@ -39,7 +39,7 @@ test('creates a simple page', async ({ page }) => {
 
   // we can wait until we have [data-block-type="video"] in the DOM
   await page.waitForSelector('[data-block-type="video"]', { state: 'visible' })
-  await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Browse library', exact: true }).click()
+  await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Select video', exact: true }).click()
 
   // Wait for the video picker drawer to be visible
   const videoPicker = page.locator('#video-picker')

@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, mediaMenu } from '../../utils'
+import { syncLV, confirmUploadFolder, keepDuplicateUploads, mediaMenu } from '../../utils'
 import fs from 'node:fs'
 
 async function createPage(page, title, module) {
@@ -10,6 +10,7 @@ async function createPage(page, title, module) {
   await page.getByLabel('URI').fill(title.toLowerCase().replaceAll(' ', '-'))
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+  await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
   await page.getByRole('button', { name: module, exact: true }).click()
   await syncLV(page)
 }
@@ -55,6 +56,7 @@ test('processing image refs reserve their proportions and show one animated stat
   // field when bringing its mobile preview into the middle of the viewport.
   await page.getByRole('button', { name: 'Add block' }).last().click()
   await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+  await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
   await page.getByRole('button', { name: 'Styled Header', exact: true }).click()
   await syncLV(page)
   const portrait = await page.evaluate(() => {
@@ -163,6 +165,7 @@ test('image drops validate destination, preserve ref settings, and keep the moda
   // the next uploads, without files waiting.
   await drop(page, picture(page), [['image.jpg', 'image/jpeg']])
   await expect(picture(page)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
+  const uploadedId = await picture(page).getAttribute('data-asset-id')
   await picture(page).locator('.media-destination-change').first().click()
   const picker = page.locator('#image-picker')
   await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeVisible()
@@ -173,10 +176,13 @@ test('image drops validate destination, preserve ref settings, and keep the moda
   await page.setViewportSize({ width: 1440, height: 1000 })
   await picker.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(picker).not.toBeVisible()
-  await expect(picture(page)).not.toHaveAttribute('data-asset-id', /\d+/)
+  // Cancelling the folder choice leaves the uploaded image in place.
+  await expect(picture(page)).toHaveAttribute('data-asset-id', uploadedId)
   await drop(page, picture(page), [['image.jpg', 'image/jpeg']])
   await confirmUploadFolder(page)
   await expect(picture(page).locator('img')).toBeVisible({ timeout: 20000 })
+  // The same file again: answer the upload manager before it covers the modal.
+  await keepDuplicateUploads(page)
   await picture(page).getByRole('button', { name: 'Configure', exact: true }).click()
   const modal = page.getByRole('dialog', { name: 'Configure image', exact: true })
   await modal.getByLabel('Alternative text', { exact: true }).fill('Specific to this reference')
@@ -194,7 +200,7 @@ test('image drops validate destination, preserve ref settings, and keep the moda
   await drop(page, picture(page), [['image2.jpg', 'image/jpeg']])
   await confirmUploadFolder(page)
   await expect(picture(page).locator('img')).toBeVisible({ timeout: 20000 })
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('submit').click()
   await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })
   await page.getByRole('link', { name: title, exact: true }).click()
   await picture(page).getByRole('button', { name: 'Configure', exact: true }).click()
@@ -220,7 +226,7 @@ test('a mixed drop on the empty gallery preserves order and survives save', asyn
   expect(before[0].image).toMatch(/\d+/)
   expect(before[1].video).toMatch(/\d+/)
   expect(before[2].image).toMatch(/\d+/)
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('submit').click()
   await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })
   await page.getByRole('link', { name: title, exact: true }).click()
   await expect(gallery.locator('.gallery-object')).toHaveCount(3, { timeout: 15000 })
@@ -241,7 +247,7 @@ test('the gallery resource editor accepts a mixed drop and saves its collection'
   await confirmUploadFolder(page)
   await expect(gallery.locator('.gallery-object')).toHaveCount(initial + 2, { timeout: 20000 })
   await expect(gallery.locator('img').last()).toBeVisible({ timeout: 20000 })
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('submit').click()
   await expect(page).not.toHaveURL(path)
   await page.goto(path)
   await syncLV(page)
@@ -290,7 +296,7 @@ test('video replacement preserves playback overrides and display settings', asyn
   await modal.getByRole('button', { name: 'Done', exact: true }).click()
   await drop(page, field, [['video.mp4', 'video/mp4']])
   await expect(field).not.toHaveAttribute('data-asset-id', initialId)
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('submit').click()
   await expect(page).not.toHaveURL(/\/create$/)
   await page.getByRole('link', { name: 'Video ref settings', exact: true }).click()
   await field.getByRole('button', { name: 'Configure', exact: true }).click()
@@ -337,7 +343,7 @@ test('file refs keep their settings through replacement and gallery vars accept 
   await page.screenshot({ path: testInfo.outputPath('gallery-variable-mobile.png') })
   await page.setViewportSize({ width: 1440, height: 1000 })
   await galleryModal.getByRole('button', { name: 'Done', exact: true }).click()
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('submit').click()
   await expect(page).not.toHaveURL(/\/create$/)
   await page.getByRole('link', { name: 'File and gallery settings', exact: true }).click()
   await expect(gallery).toContainText('2 items')
@@ -355,7 +361,7 @@ test('configured file and video fields browse the current unsaved selection', as
     await field.locator('input[type="file"]').setInputFiles(`./fixtures/${name}`)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
     const id = await field.getAttribute('data-asset-id')
-    const opener = field.getByRole('button', { name: 'Browse library', exact: true })
+    const opener = field.getByRole('button', { name: `Select ${kind}`, exact: true })
     await opener.click()
     const picker = page.locator(`#${kind}-picker`)
     const selected = picker.locator(`.${kind}-picker__${kind}.selected`)

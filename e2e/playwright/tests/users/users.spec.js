@@ -37,7 +37,7 @@ test('creates, updates and deletes a user with content transfer', async ({ page 
     await syncLV(page)
     let userRow = page.locator('.content-list .list-row').filter({ hasText: email })
     await expect(userRow).toContainText('Coverage Editor')
-    await expect(userRow.locator('.user-role')).toContainText(groups ? 'user' : 'editor')
+    await expect(userRow.locator('.user-role')).toContainText(groups ? /user/i : /editor/i)
     await expect(userRow.locator('.user-last-login')).toContainText('Not recorded')
 
     const search = page.getByRole('textbox', { name: 'Filter by Name', exact: true })

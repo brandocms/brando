@@ -97,6 +97,7 @@ test('simultaneous editors never share fields or blocks across environments', as
   const ownerHeaderCount = await ownerHeaders.count()
   await owner.getByRole('button', { name: 'Add block', exact: true }).last().click()
   await owner.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+  await expect(owner.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
   await owner.getByRole('button', { name: 'Styled Header' }).click()
   await expect(ownerHeaders).toHaveCount(ownerHeaderCount + 1)
   await ownerHeaders.last().fill('Private production block')

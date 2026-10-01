@@ -900,6 +900,11 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Fixes
 
+- **"Add from URL" on an entry's video field no longer crashes the form.** The
+  picker hands the new video to the field as an update the field had no
+  clause for, so creating one took the entry form down with its unsaved
+  changes. The field now selects it.
+
 - **Shared preview links no longer break on deploy.** The stored preview HTML
   links the digested asset names of the build it was rendered with, and the
   next release removed those files. Sharing now pins the preview to an

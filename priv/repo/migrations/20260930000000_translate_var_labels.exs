@@ -22,9 +22,12 @@ defmodule BrandoIntegration.Repo.Migrations.TranslateVarLabels do
   def down do
     language = to_string(Application.get_env(:brando, :default_language) || "en")
 
+    # No subquery: Postgres refuses one in a USING clause ("cannot use
+    # subquery in transform expression"). The first value of the map is
+    # taken with a jsonpath function instead.
     execute("""
     ALTER TABLE content_vars ALTER COLUMN label TYPE text USING
-      coalesce(label ->> '#{language}', (SELECT value FROM jsonb_each_text(label) LIMIT 1))
+      coalesce(label ->> '#{language}', jsonb_path_query_first(label, '$.*') #>> '{}')
     """)
   end
 end

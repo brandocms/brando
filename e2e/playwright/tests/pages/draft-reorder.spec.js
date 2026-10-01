@@ -4,6 +4,7 @@ import { syncLV, awaitBlockShip, confirmUploadFolder } from '../../utils'
 async function addBlock(page, name) {
   await page.getByRole('button', { name: 'Add block' }).last().click()
   await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+  await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
   await page.getByRole('button', { name, exact: true }).click()
   await syncLV(page)
 }

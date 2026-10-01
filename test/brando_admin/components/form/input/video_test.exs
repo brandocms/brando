@@ -56,6 +56,25 @@ defmodule BrandoAdmin.Components.Form.Input.VideoTest do
     assert socket.assigns.video_id == nil
   end
 
+  # The video picker hands over a video it has just created — "Add from URL",
+  # "Add from <provider>" — as an update rather than a `select_video` push.
+  # Without a clause for it the generic `update/2` raised KeyError on `:field`
+  # and took the entry form down.
+  test "selects a video the picker created" do
+    video = Factory.insert(:video)
+    socket = update_socket(video_field(nil))
+    socket = %{socket | assigns: Map.merge(socket.assigns, %{on_change: nil})}
+
+    assert {:ok, _socket} =
+             Input.Video.update(%{event: "video_created_from_url", video_data: %{id: video.id}}, socket)
+
+    assert_received {:phoenix, :send_update,
+                     {{BrandoAdmin.Components.Form, "ref_form"},
+                      %{event: "entry_field_upload_complete", asset_type: :video, asset: %{id: id}}}}
+
+    assert id == video.id
+  end
+
   test "loads a video that does exist" do
     video = Factory.insert(:video)
 
