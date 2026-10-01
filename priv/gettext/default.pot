@@ -13622,3 +13622,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Video upload isn't set up. Use %{action} to pick a video from the library or add one by URL."
 msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Could not set video thumbnail"
+msgstr ""

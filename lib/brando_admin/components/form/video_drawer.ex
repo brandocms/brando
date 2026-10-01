@@ -318,7 +318,11 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                 <div class="video-detail-thumbnail-empty"><.icon name="hero-photo" /></div>
               <% end %>
               <div class="video-detail-thumbnail-actions">
-                <button type="button" class="workspace-button" phx-click={toggle_drawer("#image-picker")}>
+                <button
+                  type="button"
+                  class="workspace-button"
+                  phx-click={browse_video_thumbnail(@myself)}
+                >
                   {gettext("Select from library")}
                 </button>
                 <button
@@ -491,6 +495,15 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
     js
     |> JS.push("reset_video_field", target: target)
     |> toggle_drawer("#video-drawer")
+  end
+
+  # Sets the image picker up for this video's thumbnail before showing it.
+  # Toggled on its own, the picker kept whatever the last field had set: its
+  # folder, and its target, so a pick replaced that field's image instead.
+  def browse_video_thumbnail(js \\ %JS{}, target) do
+    js
+    |> JS.push("browse_video_thumbnail", target: target)
+    |> toggle_drawer("#image-picker")
   end
 
   def reset_video_thumbnail(js \\ %JS{}, target) do
