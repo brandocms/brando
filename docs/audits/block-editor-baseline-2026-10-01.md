@@ -167,3 +167,7 @@ Measured with the same bench on `/bench-flat-115` unless noted.
 - Refs as their own components would not shrink a keystroke in a block's only
   ref, which is the fixture's case: the edited ref is what re-renders. Memory
   for it was estimated, not prototyped: about 5–20 KB per ref component.
+- Follow-up: every ref type now carries closed config (comment, file,
+  picture, video and gallery added, with checkbox and inherited-override
+  kinds). At 115 roots mount 4.32 -> 3.61 MB, 20.3k DOM nodes, 5.08 MB server
+  memory.
