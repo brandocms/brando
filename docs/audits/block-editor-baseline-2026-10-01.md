@@ -150,3 +150,20 @@ Measured with the same bench on `/bench-flat-115` unless noted.
   the one Phoenix form, so an edit anywhere re-sends the toolbar and every ref
   input. Vars avoid it by being their own components (~0.7 KB). Doing the same
   for refs is the fix; it is a larger change and not started.
+
+## Follow-up: block variables and ref config (same day)
+
+| Metric (115 roots) | Before | After |
+|---|---|---|
+| Server memory, open editor (settled GC) | 5.52 MB | 5.26 MB |
+| Keystroke in a header block | 12.8 KB | 8.1 KB |
+| Mount payload / DOM nodes | 4.80 MB / 26.7k | 4.32 MB / 23.6k |
+
+- Each RenderVar's `on_change` closure held the vars template's whole
+  assigns and changed every render; it now holds only the target.
+- Closed ref config is carried as bare hidden inputs for header, text, map and
+  SVG refs (`carried_config` on `Block.Render.block/1`). Picture, video, file
+  and gallery still render their config slot hidden.
+- Refs as their own components would not shrink a keystroke in a block's only
+  ref, which is the fixture's case: the edited ref is what re-renders. Memory
+  for it was estimated, not prototyped: about 5–20 KB per ref component.
