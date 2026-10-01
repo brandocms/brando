@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ReloadAfterSaveTest do
   @block_module Brando.Pages.Page.Blocks
   @user %{id: 1}
 
-  defp block(uid, id, sequence, attrs \\ %{}) do
+  defp block(uid, id, sequence, attrs) do
     struct(
       Block,
       Map.merge(
