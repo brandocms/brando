@@ -34,7 +34,13 @@ defmodule BrandoAdmin.Components.Form.DraftRecoveryBadgeTest do
     assert html =~ "Recovery copies (1)"
   end
 
-  test "no badge when every copy is dismissed" do
-    refute render_with([copy(DateTime.utc_now()), copy(DateTime.utc_now())]) =~ "Recovery copies ("
+  test "no badge when every copy is dismissed, but the copies stay reachable" do
+    html = render_with([copy(DateTime.utc_now()), copy(DateTime.utc_now())])
+    refute html =~ "Recovery copies ("
+    assert html =~ ~s(phx-click="draft_open")
+  end
+
+  test "no button without any copies" do
+    refute render_with([]) =~ ~s(phx-click="draft_open")
   end
 end

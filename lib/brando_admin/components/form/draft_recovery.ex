@@ -20,17 +20,18 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           <span class="draft-online-status" data-testid="draft-status">{status(@state)}</span>
           <span class="draft-offline-status">{gettext("Offline — recent edits have not reached recovery storage")}</span>
         </div>
-        <%!-- Only copies still waiting for a decision: a dismissed copy stays
-              listed in the open panel, but doesn't call for attention. --%>
+        <%!-- Counts only copies still waiting for a decision: a dismissed copy
+              doesn't call for attention, but the button stays so it can still
+              be reopened (e.g. content left out of a partial restore). --%>
         <button
-          :if={@state && (actionable(@state.candidates) != [] or @state.open?)}
+          :if={@state && (@state.candidates != [] or @state.open?)}
           type="button"
           class="draft-button draft-button-quiet"
           phx-click="draft_open"
           phx-target={@target}
           aria-expanded={to_string(@state.open?)}
         >
-          {gettext("Recovery copies (%{count})", count: length(actionable(@state.candidates)))}
+          {history_label(@state.candidates)}
           <.recovery_icon name="chevron" />
         </button>
       </div>
@@ -389,6 +390,13 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   end
 
   defp actionable(candidates), do: Enum.filter(candidates, &is_nil(&1.dismissed_at))
+
+  defp history_label(candidates) do
+    case length(actionable(candidates)) do
+      0 -> gettext("Recovery copies")
+      count -> gettext("Recovery copies (%{count})", count: count)
+    end
+  end
 
   defp status(nil), do: gettext("Recovery storage is unavailable")
   defp status(%{status: :error}), do: gettext("Recovery copy could not be saved — keep this editor open")
