@@ -58,7 +58,7 @@ const measureEntry = async (page, size) => {
   const row = { entry: `flat-${size}`, blocks: Number(size) }
 
   // ---- mount, until no long task for 1 s
-  let mark = frames.length
+  const mark = frames.length
   const t0 = Date.now()
   await page.goto(`/admin/pages/update/${IDS.flat[size]}`)
   await syncLV(page, 120000)
@@ -149,18 +149,21 @@ const measureEntry = async (page, size) => {
   // ---- keystroke, preview closed
   row.keystroke = await step(() => type('B'))
 
-  // ---- draft capture: fires 3 s after the last input
-  mark = frames.length
-  await page.waitForTimeout(4500)
-  const capture = frames.slice(mark).find((f) => f.dir === 'out' && f.p.includes('"draft_capture"'))
-  if (capture) {
+  // ---- draft capture: fires 3 s after the last input. The first one after
+  // load sends every block form; later ones only the forms edited since.
+  const measureCapture = async () => {
+    const mark = frames.length
+    await page.waitForTimeout(4500)
+    const capture = frames.slice(mark).find((f) => f.dir === 'out' && f.p.includes('"draft_capture"'))
+    if (!capture) return null
     const reply = frames
       .slice(mark)
       .find((f) => f.dir === 'in' && f.t >= capture.t && f.p.includes('"phx_reply"'))
-    row.draftCapture = { bytesOut: capture.p.length, replyMs: reply ? reply.t - capture.t : null }
-  } else {
-    row.draftCapture = null
+    return { bytesOut: capture.p.length, replyMs: reply ? reply.t - capture.t : null }
   }
+  row.draftCapture = await measureCapture()
+  await type('C')
+  row.draftCaptureNext = await measureCapture()
 
   // ---- collapse / expand the first block
   const firstBlock = page.locator('[data-block-uid]').first()
@@ -209,7 +212,7 @@ const measureEntry = async (page, size) => {
   }, 1500)
 
   await header.click()
-  await type('C') // prime with preview open
+  await type('c') // prime with preview open
   await page.waitForTimeout(1500)
   row.keystrokePreview = await step(() => type('D'), 1500)
 

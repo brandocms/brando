@@ -614,18 +614,36 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "capture_draft", capture_id: id, reply_to: target, forms: forms}, socket) do
     alias Brando.Drafts.Params
 
-    roots =
-      Enum.map(socket.assigns.block_ops.order, fn uid ->
-        {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, uid)
+    ops = socket.assigns.block_ops
+    cache = socket.assigns[:draft_snapshots] || %{}
+
+    # A root's snapshot is a pure function of its saved row, its store state
+    # and the browser values overlaid on its subtree, so an unchanged key
+    # reuses the last capture's result. Rebuilding all of them cost ~80 ms of
+    # the LiveView process per capture at 115 roots; usually one has changed.
+    {roots, cache} =
+      Enum.map_reduce(ops.order, %{}, fn uid, acc ->
+        {:ok, params} = Ops.materialize_root(ops, uid)
         base = materialize_base_struct(socket, uid)
-        module = socket.assigns.block_module
-        full = module.changeset(base, params, socket.assigns.current_user.id, true) |> Params.snapshot()
-        full = Map.update!(full, "block", &Params.overlay_block(&1, forms))
-        module.changeset(base, full, socket.assigns.current_user.id, true) |> Params.snapshot()
+        key = {base, params, Map.take(forms, [uid | Ops.descendants(ops, uid)])}
+
+        snapshot =
+          case cache do
+            %{^uid => {^key, snapshot}} ->
+              snapshot
+
+            _ ->
+              module = socket.assigns.block_module
+              full = module.changeset(base, params, socket.assigns.current_user.id, true) |> Params.snapshot()
+              full = Map.update!(full, "block", &Params.overlay_block(&1, forms))
+              module.changeset(base, full, socket.assigns.current_user.id, true) |> Params.snapshot()
+          end
+
+        {snapshot, Map.put(acc, uid, {key, snapshot})}
       end)
 
     send_update(target, event: "draft_part", capture_id: id, kind: :block, field: socket.assigns.block_field, data: roots)
-    {:ok, socket}
+    {:ok, assign(socket, :draft_snapshots, cache)}
   rescue
     _ ->
       send_update(target, event: "draft_timeout", capture_id: id)
