@@ -69,13 +69,14 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
 
     video_upload_available? = Brando.Uploads.video_upload_available?(video_cfg)
 
-    # Mux, Bunny and Cloudflare upload straight to the provider through their
+    # Mux, Bunny, Cloudflare and Vimeo upload straight to the provider through their
     # own hook on a file input; local and S3 go through UploadTrigger.
     video_uploader_hook =
       case {video_upload_available? && allow_uploads?, upload_strategy} do
         {true, :mux} -> "Brando.MuxUploader"
         {true, :bunny} -> "Brando.BunnyUploader"
         {true, :cloudflare} -> "Brando.CloudflareUploader"
+        {true, :vimeo} -> "Brando.VimeoUploader"
         _ -> nil
       end
 
@@ -483,6 +484,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   defp source_label(%{type: :mux}), do: "Mux"
   defp source_label(%{type: :bunny}), do: "Bunny"
   defp source_label(%{type: :cloudflare}), do: "Cloudflare"
+  defp source_label(%{type: :vimeo_account}), do: "Vimeo"
   defp source_label(_), do: gettext("Video")
 
   defp source_link(%{type: type, source_url: url})

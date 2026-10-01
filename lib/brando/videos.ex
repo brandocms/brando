@@ -378,6 +378,9 @@ defmodule Brando.Videos do
     Brando.Videos.Uploaders.Cloudflare.configured?() and present?(cfg[:webhook_secret])
   end
 
+  # Vimeo has no webhooks to configure — `Brando.Worker.VimeoStatus` polls.
+  def upload_available?(:vimeo), do: Brando.Videos.Uploaders.Vimeo.configured?()
+
   # :local uses the traditional upload flow (not this direct-upload button);
   # unsupported strategies are rejected by Blueprint config validation.
   def upload_available?(_strategy), do: false

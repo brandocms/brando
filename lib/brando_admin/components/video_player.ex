@@ -51,9 +51,18 @@ defmodule BrandoAdmin.Components.VideoPlayer do
     do: {:embed, "https://www.youtube.com/embed/#{id}?autoplay=1"}
 
   defp source(%Video{} = video) do
-    case Brando.Videos.Helpers.get_playback_url(video) do
-      {:ok, url} -> {:file, url}
+    case {Brando.Videos.Helpers.get_playback_url(video), video.type} do
+      {{:ok, url}, _type} -> {:file, url}
+      {_error, :vimeo_account} -> vimeo_account_embed(video)
       _ -> :none
+    end
+  end
+
+  # No file link — the account lacks `video_files`, or Vimeo has not issued one.
+  defp vimeo_account_embed(video) do
+    case Brando.Videos.Uploaders.Vimeo.embed_url(video, autoplay: 1) do
+      nil -> :none
+      url -> {:embed, url}
     end
   end
 

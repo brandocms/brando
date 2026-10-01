@@ -53,7 +53,7 @@ defmodule Brando.Videos.Video do
   end
 
   attributes do
-    attribute :type, :enum, values: [:upload, :external_file, :vimeo, :youtube, :mux, :bunny, :cloudflare]
+    attribute :type, :enum, values: [:upload, :external_file, :vimeo, :youtube, :mux, :bunny, :cloudflare, :vimeo_account]
     attribute :title, :text
     attribute :caption, :text
     attribute :aspect_ratio, :string
@@ -127,7 +127,8 @@ defmodule Brando.Videos.Video do
               %{label: "YouTube", value: :youtube},
               %{label: "Mux", value: :mux},
               %{label: "Bunny", value: :bunny},
-              %{label: "Cloudflare Stream", value: :cloudflare}
+              %{label: "Cloudflare Stream", value: :cloudflare},
+              %{label: "Vimeo (account)", value: :vimeo_account}
             ]
 
           input :source_url, :text, label: t("Source URL"), monospace: true
@@ -260,5 +261,6 @@ defmodule Brando.Videos.Video do
   defp video_type_label(:external_file), do: gettext("External file")
   defp video_type_label(:youtube), do: "YouTube"
   defp video_type_label(:vimeo), do: "Vimeo"
+  defp video_type_label(:vimeo_account), do: "Vimeo"
   defp video_type_label(type), do: type |> to_string() |> String.capitalize()
 end

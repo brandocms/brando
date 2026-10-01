@@ -13,7 +13,12 @@ defmodule Brando.Blueprint.AssetConfigValidator do
   ]
   @image_formats [:avif, :gif, :jpg, :original, :png, :webp]
   # `nil` inherits `default_video_upload_strategy` when the config is read.
-  @video_strategies [nil, :bunny, :cloudflare, :local, :mux, :none, :s3]
+  @video_strategies [nil, :bunny, :cloudflare, :local, :mux, :none, :s3, :vimeo]
+  # Vimeo's `privacy.view` values that need nothing Brando does not have.
+  # `"password"` is left out on purpose — see `validate_vimeo_settings!/2`.
+  # Kept here rather than read from the uploader: this runs while Blueprints
+  # compile, and a call into the uploader would make it a compile dependency.
+  @vimeo_privacy_views ~w(anybody unlisted nobody disable)
 
   @doc false
   @spec validate!(map(), term()) :: term()
@@ -78,6 +83,7 @@ defmodule Brando.Blueprint.AssetConfigValidator do
     validate_map!(asset, :video, config, :meta)
     validate_mux_playback_policies!(asset, config)
     validate_cloudflare_settings!(asset, config)
+    validate_vimeo_settings!(asset, config)
   end
 
   # `meta` reaches us with atom keys from a blueprint and string keys from
@@ -96,6 +102,56 @@ defmodule Brando.Blueprint.AssetConfigValidator do
       nil -> :ok
       ["public"] -> :ok
       value -> invalid!(asset, :video, :meta, "Mux playback_policies must be [\"public\"], got: #{inspect(value)}")
+    end
+  end
+
+  defp validate_vimeo_settings!(asset, config) do
+    meta = string_keyed(Map.get(config, :meta, %{}))
+    vimeo = Map.get(meta, "vimeo") || %{}
+
+    unless is_map(vimeo) do
+      invalid!(asset, :video, :meta, "Vimeo settings must be a map")
+    end
+
+    vimeo = string_keyed(vimeo)
+
+    validate_vimeo_privacy!(asset, Map.get(vimeo, "privacy_view"))
+    validate_vimeo_folder!(asset, Map.get(vimeo, "folder_uri"))
+  end
+
+  defp validate_vimeo_privacy!(asset, privacy_view) do
+    case privacy_view do
+      view when is_nil(view) or view in @vimeo_privacy_views ->
+        :ok
+
+      "password" ->
+        invalid!(asset, :video, :meta, "Vimeo password privacy is not supported: Brando has nowhere to keep the password")
+
+      view ->
+        invalid!(
+          asset,
+          :video,
+          :meta,
+          "Vimeo privacy_view must be one of #{inspect(@vimeo_privacy_views)}, got: #{inspect(view)}"
+        )
+    end
+  end
+
+  defp validate_vimeo_folder!(asset, folder_uri) do
+    case folder_uri do
+      nil ->
+        :ok
+
+      "/" <> _ ->
+        :ok
+
+      value ->
+        invalid!(
+          asset,
+          :video,
+          :meta,
+          "Vimeo folder_uri must be an API URI like \"/users/1/projects/2\", got: #{inspect(value)}"
+        )
     end
   end
 

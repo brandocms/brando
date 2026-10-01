@@ -54,6 +54,11 @@ plug BrandoWeb.Plugs.CloudflareStreamWebhook,
 plug Plug.Parsers, #...
 ```
 
+#### Vimeo
+
+Vimeo has no webhooks, so there is no plug to mount. `Brando.Worker.VimeoStatus`
+polls each upload until it is ready; it runs on the `:default` Oban queue.
+
 ### Upload Strategies
 
 The `upload_strategy` determines where videos are uploaded:
@@ -66,10 +71,11 @@ The `upload_strategy` determines where videos are uploaded:
 | `:mux`        | Direct upload to Mux for streaming |
 | `:bunny`      | Direct upload to Bunny Stream with TUS resumable uploads |
 | `:cloudflare` | Direct resumable upload to Cloudflare Stream |
+| `:vimeo`      | Direct resumable upload to Vimeo (plan with video file access) |
 
 Only implemented strategies are accepted during Blueprint compilation. S3 stores
-the original video and creates a normal `:upload` Video; use Mux, Bunny, or
-Cloudflare when adaptive streaming/transcoding is required.
+the original video and creates a normal `:upload` Video; use Mux, Bunny,
+Cloudflare or Vimeo when adaptive streaming/transcoding is required.
 
 ### Global Default Strategy
 
@@ -102,9 +108,11 @@ A provider strategy only offers the "Upload file" button when
 | `:mux`        | `access_token_id`, `access_token_secret`, `webhook_secret` |
 | `:bunny`      | `api_key`, `library_id`, `cdn_hostname`, `webhook_secret` |
 | `:cloudflare` | `account_id`, `api_token`, `webhook_secret` |
+| `:vimeo`      | `access_token` |
 
 The webhook secret is required because an upload without it starts and never
-completes. Bunny signs its webhooks with the library Read-Only API key, so it
+completes. Vimeo is the exception: it has no webhooks, and its uploads are
+polled instead. Bunny signs its webhooks with the library Read-Only API key, so it
 accepts `read_only_api_key` as an alias for `webhook_secret` — both the upload
 check and `BrandoWeb.Plugs.BunnyWebhook` fall back to it.
 
@@ -291,6 +299,52 @@ Cloudflare signed playback is intentionally rejected until the application has
 a token-signing boundary. Brando stores the HLS/DASH and thumbnail URLs from the
 signed processing webhook rather than constructing a customer hostname.
 
+### Vimeo Configuration
+
+```elixir
+# config/runtime.exs
+config :brando, Brando.Videos.Uploaders.Vimeo,
+  access_token: System.get_env("VIMEO_ACCESS_TOKEN"),
+  # Optional: the folder new uploads go into
+  folder_uri: System.get_env("VIMEO_FOLDER_URI"),
+  delete_remote_on: :on_purge
+```
+
+Vimeo needs a plan with access to video files — Standard, Advanced, Pro,
+Business, Premium or Enterprise — and a personal access token (generated at
+developer.vimeo.com) with the `public`, `private`, `upload`, `edit`, `delete`
+and `video_files` scopes.
+
+Uploads go straight from the browser to Vimeo with tus; the token never leaves
+the server. Vimeo has no webhooks, so `Brando.Worker.VimeoStatus` polls each
+upload until Vimeo reports it available: every 15 seconds at first, backing off
+to every 15 minutes, and giving up after 24 hours.
+
+A ready video is stored as type `:vimeo_account` and renders through Brando's
+`<video>` component from the adaptive HLS link in Vimeo's `files` field. Those
+links do not expire (unlike the `play` links, which last 24 hours), so cached
+pages and static builds keep working. They carry the token's id: revoking the
+token stops them playing. Without the `video_files` scope there are no file
+links, and the video falls back to Vimeo's embedded player.
+
+```elixir
+asset :video, :video,
+  cfg: %{
+    upload_strategy: :vimeo,
+    size_limit: 5_000_000_000,
+    meta: %{vimeo: %{"privacy_view" => "unlisted", "folder_uri" => "/users/1/projects/2"}}
+  }
+```
+
+`privacy_view` is `"unlisted"` by default, and may be `"anybody"`, `"nobody"` or
+`"disable"`. `"nobody"` keeps the video off vimeo.com entirely and still plays
+through the HLS link. Password privacy is rejected — Brando has nowhere to keep
+the password.
+
+`:vimeo_account` is separate from `:vimeo`, which is a pasted link to any
+Vimeo video. A pasted link is never deleted remotely; a `:vimeo_account` video
+follows `delete_remote_on`.
+
 ### S3-compatible Original Video Storage
 
 `:s3` requires an explicit direct CDN config on the video config. `media_url`
@@ -322,7 +376,7 @@ only for compatible services that explicitly require an object ACL.
 
 ### Remote Video Deletion
 
-When videos are deleted from the Brando admin, you can optionally delete the source video from the provider (Mux/Bunny/Cloudflare). Configure this per-uploader:
+When videos are deleted from the Brando admin, you can optionally delete the source video from the provider (Mux/Bunny/Cloudflare/Vimeo). Configure this per-uploader:
 
 #### Configuration
 
@@ -337,6 +391,10 @@ config :brando, Brando.Videos.Uploaders.Bunny,
   delete_remote_on: :on_purge
 
 config :brando, Brando.Videos.Uploaders.Cloudflare,
+  # ... existing config ...
+  delete_remote_on: :on_purge
+
+config :brando, Brando.Videos.Uploaders.Vimeo,
   # ... existing config ...
   delete_remote_on: :on_purge
 ```

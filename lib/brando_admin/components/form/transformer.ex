@@ -1611,6 +1611,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   defp video_uploader_hook(:mux), do: "Brando.MuxUploader"
   defp video_uploader_hook(:bunny), do: "Brando.BunnyUploader"
   defp video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
+  defp video_uploader_hook(:vimeo), do: "Brando.VimeoUploader"
   defp video_uploader_hook(_strategy), do: nil
 
   defp provider_strategy?(strategy), do: not is_nil(video_uploader_hook(strategy))

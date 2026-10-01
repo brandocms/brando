@@ -595,7 +595,7 @@ defmodule Brando.Uploads do
   defp validate_upload_enabled(_cfg), do: {:error, "Video uploads are disabled for this field"}
 
   defp validate_provider_strategy(%{upload_strategy: strategy})
-       when strategy in [:mux, :bunny, :cloudflare],
+       when strategy in [:mux, :bunny, :cloudflare, :vimeo],
        do: :ok
 
   defp validate_provider_strategy(%{upload_strategy: strategy}),
@@ -641,7 +641,8 @@ defmodule Brando.Uploads do
   @provider_modules %{
     mux: Brando.Videos.Uploaders.Mux,
     bunny: Brando.Videos.Uploaders.Bunny,
-    cloudflare: Brando.Videos.Uploaders.Cloudflare
+    cloudflare: Brando.Videos.Uploaders.Cloudflare,
+    vimeo: Brando.Videos.Uploaders.Vimeo
   }
 
   defp validate_provider_credentials(%{upload_strategy: strategy}) do

@@ -11,6 +11,7 @@ defmodule Brando.Videos.Uploader do
   - `:mux` - Routes to `Brando.Videos.Uploaders.Mux`
   - `:bunny` - Routes to `Brando.Videos.Uploaders.Bunny`
   - `:cloudflare` - Routes to `Brando.Videos.Uploaders.Cloudflare`
+  - `:vimeo` - Routes to `Brando.Videos.Uploaders.Vimeo`
 
   ## Implementing Upload Providers
 
@@ -19,6 +20,7 @@ defmodule Brando.Videos.Uploader do
   - Mux (lib/brando/videos/uploaders/mux.ex)
   - Bunny.net (lib/brando/videos/uploaders/bunny.ex)
   - Cloudflare Stream (lib/brando/videos/uploaders/cloudflare.ex)
+  - Vimeo (lib/brando/videos/uploaders/vimeo.ex)
 
   Unsupported strategies are rejected during Blueprint configuration rather
   than producing dead upload controls at runtime.
@@ -142,6 +144,7 @@ defmodule Brando.Videos.Uploader do
 
   - `:mux` - Direct upload to Mux
   - `:bunny` - Direct upload to Bunny.net
+  - `:vimeo` - Direct upload to Vimeo
   - `:local` - Returns error, use traditional upload flow instead
 
   ## Never raises
@@ -188,6 +191,9 @@ defmodule Brando.Videos.Uploader do
       :cloudflare ->
         Brando.Videos.Uploaders.Cloudflare.initiate_upload(filename, user, opts)
 
+      :vimeo ->
+        Brando.Videos.Uploaders.Vimeo.initiate_upload(filename, user, opts)
+
       strategy when strategy in [:local, :s3] ->
         {:error, :use_traditional_upload}
 
@@ -214,11 +220,17 @@ defmodule Brando.Videos.Uploader do
   Records that the browser finished transferring a provider upload.
 
   Cloudflare webhooks are terminal-only, so this moves its row from
-  `:uploading` to `:processing` while encoding is underway. Other providers
-  already expose intermediate webhook states and are left unchanged.
+  `:uploading` to `:processing` while encoding is underway. Vimeo has no
+  webhooks at all; its row moves the same way and its status poll is nudged.
+  Other providers already expose intermediate webhook states and are left
+  unchanged.
   """
   def complete_client_upload(%Brando.Videos.Video{type: :cloudflare} = video) do
     Brando.Videos.Uploaders.Cloudflare.complete_upload(video, %{})
+  end
+
+  def complete_client_upload(%Brando.Videos.Video{type: :vimeo_account} = video) do
+    Brando.Videos.Uploaders.Vimeo.complete_upload(video, %{})
   end
 
   def complete_client_upload(%Brando.Videos.Video{} = video), do: {:ok, video}
@@ -247,6 +259,9 @@ defmodule Brando.Videos.Uploader do
       :cloudflare ->
         Brando.Videos.Uploaders.Cloudflare.delete_remote(video)
 
+      :vimeo ->
+        Brando.Videos.Uploaders.Vimeo.delete_remote(video)
+
       _ ->
         :ok
     end
@@ -266,6 +281,7 @@ defmodule Brando.Videos.Uploader do
         :mux -> Brando.Videos.Uploaders.Mux
         :bunny -> Brando.Videos.Uploaders.Bunny
         :cloudflare -> Brando.Videos.Uploaders.Cloudflare
+        :vimeo -> Brando.Videos.Uploaders.Vimeo
         _ -> nil
       end
 
@@ -280,5 +296,6 @@ defmodule Brando.Videos.Uploader do
   defp get_provider(%{type: :mux}), do: :mux
   defp get_provider(%{type: :bunny}), do: :bunny
   defp get_provider(%{type: :cloudflare}), do: :cloudflare
+  defp get_provider(%{type: :vimeo_account}), do: :vimeo
   defp get_provider(_), do: nil
 end

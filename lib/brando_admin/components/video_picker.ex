@@ -373,6 +373,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     {preview_type, playback_url} =
       case Brando.Videos.Helpers.get_playback_url(video_data) do
         {:ok, url} when video_data.type not in [:youtube, :vimeo] -> {:external_file, url}
+        # No file link (an account without `video_files`): Vimeo's own player.
+        _ when video_data.type == :vimeo_account -> {:vimeo, video_data.source_url}
         _ -> {video_data.type, source_url}
       end
 
@@ -1000,6 +1002,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_type_label(:external_file), do: gettext("External file")
   defp video_type_label(:youtube), do: "YouTube"
   defp video_type_label(:vimeo), do: "Vimeo"
+  defp video_type_label(:vimeo_account), do: "Vimeo"
   defp video_type_label(type), do: type |> to_string() |> String.capitalize()
 
   defp video_preview(assigns) do
@@ -1145,6 +1148,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_uploader_hook(:mux), do: "Brando.MuxUploader"
   defp video_uploader_hook(:bunny), do: "Brando.BunnyUploader"
   defp video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
+  defp video_uploader_hook(:vimeo), do: "Brando.VimeoUploader"
   defp video_uploader_hook(_strategy), do: nil
 
   defp video_upload_root(config_target) do

@@ -1,6 +1,6 @@
 /**
  * Shared machinery for browser-to-provider video uploads (Mux, Bunny,
- * Cloudflare).
+ * Cloudflare, Vimeo).
  *
  * Every provider follows the same shape: ask the server for a one-time upload
  * destination correlated by `request_ref`, transfer the bytes directly, and

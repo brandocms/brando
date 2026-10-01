@@ -14,6 +14,7 @@ defmodule Brando.Type.VideoConfig do
   - `:mux` - Direct upload to Mux for streaming
   - `:bunny` - Direct upload to Bunny.net storage
   - `:cloudflare` - Resumable direct upload to Cloudflare Stream
+  - `:vimeo` - Resumable direct upload to Vimeo (plan with video file access)
 
   The `Brando.Videos.Uploader.initiate_upload/3` function automatically routes
   to the appropriate uploader based on this strategy.
@@ -99,7 +100,7 @@ defmodule Brando.Type.VideoConfig do
   use Ecto.Type
   import Brando.Utils, only: [stringy_struct: 2]
 
-  @type upload_strategy :: :bunny | :cloudflare | :local | :mux | :none | :s3 | nil
+  @type upload_strategy :: :bunny | :cloudflare | :local | :mux | :none | :s3 | :vimeo | nil
   @type t :: %__MODULE__{
           allow_external_urls: boolean(),
           allow_uploads: boolean(),

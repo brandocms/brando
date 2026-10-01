@@ -70,6 +70,12 @@ config :brando,
 #   api_token: System.get_env("CLOUDFLARE_STREAM_API_TOKEN"),
 #   webhook_secret: System.get_env("CLOUDFLARE_STREAM_WEBHOOK_SECRET")
 
+# Vimeo video upload configuration
+# Needs a plan with video file access and a token with the public, private,
+# upload, edit, delete and video_files scopes. No webhook: uploads are polled.
+# config :brando, Brando.Videos.Uploaders.Vimeo,
+#   access_token: System.get_env("VIMEO_ACCESS_TOKEN")
+
 config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom
