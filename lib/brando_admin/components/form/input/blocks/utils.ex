@@ -37,10 +37,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     }
   end
 
-  def inputs_for_blocks(field, opts \\ []) do
-    to_form_multi(field.form.source, field, opts)
-  end
-
   def inputs_for_poly(field, opts \\ []) do
     to_form_multi(field.form.source, field, opts)
   end

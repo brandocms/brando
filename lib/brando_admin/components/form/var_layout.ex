@@ -27,7 +27,6 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias Brando.Content.Var
   alias Brando.Content.Var.Layout
   alias Brando.Type.I18nString
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -592,7 +591,4 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
 
   @doc false
   def surfaces, do: @surfaces
-
-  @doc false
-  def default_width_for(%Var{type: type}), do: Layout.default_width(type)
 end

@@ -139,8 +139,6 @@ defmodule BrandoAdmin.Chrome do
     |> stream(:inactive_presences, Enum.reverse(inactive), reset: true)
   end
 
-  def assign_presences(socket), do: refresh_authorization(socket)
-
   # Most recently seen first; never-seen users sort last rather than first.
   defp sort_recent_first(nil, nil), do: true
   defp sort_recent_first(nil, _b), do: false

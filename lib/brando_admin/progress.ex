@@ -24,17 +24,4 @@ defmodule BrandoAdmin.Progress do
       content: content
     })
   end
-
-  def update_delayed(:system, _, _), do: nil
-
-  def update_delayed(user_id, status, content) do
-    Task.start(fn ->
-      :timer.sleep(500)
-
-      Brando.endpoint().broadcast!("user:#{user_id}", "progress:update", %{
-        status: status,
-        content: content
-      })
-    end)
-  end
 end
