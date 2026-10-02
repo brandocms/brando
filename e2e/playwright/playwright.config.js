@@ -35,7 +35,9 @@ module.exports = defineConfig({
       process.env.BRANDO_E2E_REUSE_SERVER === undefined
         ? !process.env.CI
         : process.env.BRANDO_E2E_REUSE_SERVER === 'true',
-    gracefulShutdown: { signal: 'SIGTERM', timeout: 5000 },
+    // A coverage run (BRANDO_E2E_COVER=1) writes its export on shutdown,
+    // which takes several seconds; don't kill the server halfway through it.
+    gracefulShutdown: { signal: 'SIGTERM', timeout: process.env.BRANDO_E2E_COVER ? 60000 : 5000 },
   },
   testDir: './tests',
   fullyParallel: false,

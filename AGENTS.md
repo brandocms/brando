@@ -16,6 +16,10 @@
   - **Start server manually**: `cd e2e && source .envrc && MIX_ENV=e2e PORT=4444 mix phx.server`
   - **Seeding**: `cd e2e && source .envrc && BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs`
   - **E2E migrations**: `e2e/priv/repo/migrations` is a **symlink** to `priv/repo/migrations/`. The e2e project shares the same test migration file as unit tests. Any schema changes to the monolithic test migration file automatically apply to both.
+- Test coverage (Elixir's built-in `:cover`; CI runs it weekly via `.github/workflows/coverage.yml`):
+  - Unit only: `mix test --cover`
+  - Unit + E2E merged: `mix test --cover --export-coverage unit`, then an E2E run with `BRANDO_E2E_COVER=1` (the server exports `cover/e2e.coverdata` on shutdown), then `mix test.coverage` in the Brando root
+  - lcov for Codecov (after the above): `MIX_ENV=test mix run --no-start .github/scripts/coverage_lcov.exs` writes `cover/lcov.info`
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`

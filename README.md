@@ -10,8 +10,8 @@
     <a href="https://github.com/brandocms/brando/actions/workflows/ci.yml">
       <img src="https://github.com/brandocms/brando/actions/workflows/ci.yml/badge.svg">
     </a>
-    <a href="https://coveralls.io/github/brandocms/brando?branch=master">
-      <img src="https://coveralls.io/repos/github/brandocms/brando/badge.svg?branch=master">
+    <a href="https://codecov.io/gh/brandocms/brando">
+      <img src="https://codecov.io/gh/brandocms/brando/branch/main/graph/badge.svg">
     </a>
 </p>
 
