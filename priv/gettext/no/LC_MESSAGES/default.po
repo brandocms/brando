@@ -13701,3 +13701,63 @@ msgstr "Denne videoen krever signert avspilling, som Brando ikke støtter."
 #, elixir-autogen, elixir-format
 msgid "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}."
 msgstr "Videoer som allerede ligger i %{provider}-kontoen din. Sletter du en her senere, blir den liggende i %{provider}."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Image sizes"
+msgstr "Bildestørrelser"
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate the sizes and formats of every image from its original, using the current image settings."
+msgstr "Lag størrelser og formater for alle bilder på nytt fra originalen, med gjeldende bildeinnstillinger."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Running in the background"
+msgstr "Kjører i bakgrunnen"
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate the sizes of every image? This runs in the background and can take a long time for a large library."
+msgstr "Lage størrelsene for alle bilder på nytt? Dette kjører i bakgrunnen og kan ta lang tid for et stort bibliotek."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate image sizes"
+msgstr "Lag bildestørrelser på nytt"
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Dominant colors"
+msgstr "Dominerende farger"
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Read the dominant color of every image again. It is used as a placeholder while images load."
+msgstr "Les den dominerende fargen for alle bilder på nytt. Den brukes som plassholder mens bildene lastes."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Read the dominant color of every image again? This runs in the background."
+msgstr "Lese den dominerende fargen for alle bilder på nytt? Dette kjører i bakgrunnen."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recalculate colors"
+msgstr "Beregn farger på nytt"
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreating image sizes in the background."
+msgstr "Lager bildestørrelser på nytt i bakgrunnen."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recalculating dominant colors in the background."
+msgstr "Beregner dominerende farger på nytt i bakgrunnen."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "This is already running."
+msgstr "Dette kjører allerede."

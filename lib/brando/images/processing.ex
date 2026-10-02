@@ -81,35 +81,65 @@ defmodule Brando.Images.Processing do
   end
 
   @doc """
-  Recreate all transforms for all images
-  """
-  @spec recreate_sizes_for_images(user) :: list
-  def recreate_sizes_for_images(user) do
-    {:ok, images} = Images.list_images()
+  Recreate all transforms for all images.
 
-    for image <- images do
-      recreate_sizes_for_image(image, user)
+  Queues a background job that walks the images in batches and queues each
+  one for processing, so it is safe to call from the admin or a release shell.
+  Returns `{:error, :already_running}` while an earlier run is unfinished.
+  """
+  @spec recreate_sizes_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | term}
+  def recreate_sizes_for_images(user), do: start_image_maintenance("recreate_sizes", user)
+
+  @doc """
+  Set dominant color for a single image.
+
+  Leaves the stored color alone when none can be read from the file.
+  """
+  @spec set_dominant_color(image, user) :: {:ok, image} | {:error, changeset | :no_dominant_color}
+  def set_dominant_color(image, user) do
+    case Images.Operations.Info.get_dominant_color(image.path) do
+      nil -> {:error, :no_dominant_color}
+      dominant_color -> Images.update_image(image, %{dominant_color: dominant_color}, user)
     end
   end
 
   @doc """
-  Set dominant color for a single image
+  Set dominant color for all images.
+
+  Runs in the background like `recreate_sizes_for_images/1`.
   """
-  @spec set_dominant_color(image, user) :: {:ok, image} | {:error, changeset}
-  def set_dominant_color(image, user) do
-    dominant_color = Images.Operations.Info.get_dominant_color(image.path)
-    Images.update_image(image, %{dominant_color: dominant_color}, user)
-  end
+  @spec set_dominant_color_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | term}
+  def set_dominant_color_for_images(user), do: start_image_maintenance("dominant_colors", user)
 
   @doc """
-  Set dominant color for all images
+  Is a bulk image task (`"recreate_sizes"` or `"dominant_colors"`) queued or
+  running for the current tenant?
   """
-  @spec set_dominant_color_for_images(user) :: list
-  def set_dominant_color_for_images(user) do
-    {:ok, images} = Images.list_images()
+  @spec image_maintenance_running?(String.t()) :: boolean
+  def image_maintenance_running?(task) do
+    worker = Oban.Worker.to_string(Worker.ImageMaintenance)
+    args = TenantJob.attach(%{task: task})
 
-    for image <- images do
-      set_dominant_color(image, user)
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and
+            j.state in ^@unfinished_states and
+            fragment("? @> ?", j.args, ^args),
+        select: true,
+        limit: 1
+
+    Brando.Repo.one(query) == true
+  end
+
+  defp start_image_maintenance(task, user) do
+    if image_maintenance_running?(task) do
+      {:error, :already_running}
+    else
+      %{task: task, user_id: user.id}
+      |> TenantJob.attach()
+      |> Worker.ImageMaintenance.new()
+      |> Oban.insert()
     end
   end
 
