@@ -102,8 +102,18 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
 COPY assets/frontend/ ./
 
 RUN pnpm build
-RUN mkdir -p ../../priv/static/assets/__srcmaps && \
-  mv ../../priv/static/assets/*.map ../../priv/static/assets/__srcmaps/
+
+# Vite writes hidden source maps and `mix brando.digest` deletes them, so they
+# never ship. To upload them to Sentry first, commit an
+# assets/frontend/.sentryclirc with your org and project, then build with
+#   --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN
+# Without the secret this step does nothing.
+RUN --mount=type=secret,id=sentry_auth_token \
+  if [ -s /run/secrets/sentry_auth_token ]; then \
+    export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)" && \
+    npx --yes @sentry/cli@3 sourcemaps inject ../../priv/static/assets && \
+    npx --yes @sentry/cli@3 sourcemaps upload ../../priv/static/assets; \
+  fi
 
 
 # -----------------------------------

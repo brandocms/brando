@@ -39,6 +39,16 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `cfg` that still sets `accept:` now fails to compile with "unknown config
   fields"; remove the key.
 
+- **Source maps are no longer published.** `mix brando.digest` deletes every
+  `*.map` file under `priv/static` instead of digesting it, including the
+  `assets/__srcmaps/` copies older Dockerfiles moved there, where `Plug.Static`
+  still served them. `mix brando.migrate55` switches `sourcemap: true` to
+  `'hidden'` in the Vite configs under `assets/`, so built scripts stop
+  pointing at maps that no longer exist. A site whose Sentry fetched public
+  maps to symbolicate frontend errors must upload them during the build:
+  see "Source maps" in the [deployment guide](guides/deployment.md). Pass
+  `--keep-source-maps` to the digest to publish them as before.
+
 - **Module definition baselines ignore empty values.** A Brando upgrade that
   added a field to a block type made every module using that block a
   `conflict` on its next definition import ("target changed since export"),

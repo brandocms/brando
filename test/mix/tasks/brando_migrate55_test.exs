@@ -11,6 +11,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
   @brando_config_path "config/brando.exs"
   @config_path "config/config.exs"
   @package_json_path "assets/package.json"
+  @vite_config_path "assets/frontend/vite.config.js"
   @deployment_config_path "deployment.cfg"
   @fabfile_path "fabfile.py"
   @florist_config_path "florist.config.exs"
@@ -150,6 +151,15 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
   }
   """
 
+  @vite_config """
+  export default defineConfig({
+    css: { devSourcemap: true },
+    build: {
+      sourcemap: true, // we want to debug our code in production
+    },
+  })
+  """
+
   @deployment_config """
   [DEPLOYMENT]
   PROJECT_MODULE = LegacyApp
@@ -200,6 +210,10 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
              ~s("phoenix_live_view": "#{live_view_version}")
 
     assert source(igniter, @package_json_path) =~ ~s("unrelated": "1.0.0")
+
+    vite_config = source(igniter, @vite_config_path)
+    assert vite_config =~ "sourcemap: 'hidden', // we want"
+    assert vite_config =~ "devSourcemap: true"
 
     assert_creates(igniter, @florist_config_path, fn config ->
       assert config =~ "project_name(\"legacy_app\")"
@@ -366,6 +380,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
         @brando_config_path => @brando_config,
         @config_path => @config,
         @package_json_path => @package_json,
+        @vite_config_path => @vite_config,
         @deployment_config_path => @deployment_config,
         @fabfile_path => @fabfile,
         @gettext_script_path => File.read!("test/fixtures/brando_054/sync_gettext.sh"),
