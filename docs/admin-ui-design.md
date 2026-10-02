@@ -24,7 +24,7 @@ Implementation references:
 
 - [Utilities styles](../assets/css/views/config/Utils.css)
 - [Authorization tools component](../lib/brando_admin/components/authorization_tools.ex)
-- [Utilities LiveView](../lib/brando_admin/live/config/utils_live.ex)
+- [Utilities LiveView](../lib/brando_admin/live/sites/utils_live.ex)
 
 ## Start with the task and hierarchy
 

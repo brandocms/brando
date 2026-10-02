@@ -271,7 +271,7 @@ direct-video routes are already isolated and are the models we generalize from.
   `images/uploads/schema.ex:37-44`) — so the storage layer is transport-agnostic (works from
   a controller POST *or* a consumed LiveView entry).
 
-CDN = DigitalOcean **Spaces** via `ExAws.S3` (`cdn/cdn.ex:56-57`, host
+CDN = DigitalOcean **Spaces** via `ExAws.S3` (`cdn.ex:56-57`, host
 `ams3.digitaloceanspaces.com`, bucket from `BRANDO_CDN_FILES_BUCKET`).
 `ExAws.S3.presigned_url/4` powers **client-direct file uploads to Spaces/S3**. The
 presign includes the exact `Content-Type` header and an optional configured ACL
@@ -744,7 +744,7 @@ the editor never re-renders for an upload again.
   (queued upload), mounted `form.ex:1695`.
 - Direct video: `form.ex:337-405` (`get_video_upload_url`/`video_upload_progress`),
   `videos/uploader.ex:150-166`, hooks `assets/src/hooks/{MuxUploader,BunnyUploader}/index.js`.
-- Storage: `upload.ex:38,44,75-140`; `files.ex:67,105-130`; `cdn/cdn.ex:56-57`;
+- Storage: `upload.ex:38,44,75-140`; `files.ex:67,105-130`; `cdn.ex:56-57`;
   `files/uploads/schema.ex:42-49`, `images/uploads/schema.ex:37-44`.
 - Sticky precedent: `layouts/live.html.heex:2`. Legacy POST API: `router.ex:44-45`.
 - LiveView assign-skip guarantee (basis for §2.1 in-place option and safe re-assigns):
