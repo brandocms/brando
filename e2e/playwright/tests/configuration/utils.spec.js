@@ -26,4 +26,14 @@ test('runs administrative utilities and displays system information', async ({ p
   await maintenance.getByRole('button', { name: 'Generate sitemap', exact: true }).click()
   await syncLV(page)
   await expect(page.getByText('Generated sitemap.')).toBeAttached()
+
+  // Both bulk image tools ask first. Recalculating colors is the cheaper of
+  // the two to run in full, since E2E executes Oban jobs inline.
+  await expect(maintenance.getByRole('heading', { name: 'Image sizes', level: 3 })).toBeVisible()
+  await expect(maintenance.getByRole('heading', { name: 'Dominant colors', level: 3 })).toBeVisible()
+  await maintenance.getByRole('button', { name: 'Recalculate colors', exact: true }).click()
+  await expect(page.getByText('Read the dominant color of every image again? This runs in the background.')).toBeVisible()
+  await page.getByRole('button', { name: 'OK', exact: true }).click()
+  await syncLV(page)
+  await expect(page.getByText('Recalculating dominant colors in the background.')).toBeAttached()
 })

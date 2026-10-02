@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   import Phoenix.Component
 
   alias Brando.Authorization.{Configuration, Engine, Scope}
+  alias Brando.Images
   alias BrandoAdmin.Components.AuthorizationTools
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
@@ -20,6 +21,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> set_admin_locale()
        |> assign_info()
        |> assign(:loose_blocks, Brando.Content.BlockAudit.count_loose())
+       |> assign_image_tasks()
        |> assign_authorization_tools(params)}
     else
       {:ok, assign(socket, :socket_connected, false)}
@@ -39,6 +41,13 @@ defmodule BrandoAdmin.Sites.UtilsLive do
       end
 
     assign(socket, :sitemap_last_updated, sitemap_last_updated)
+  end
+
+  defp assign_image_tasks(socket) do
+    assign(socket, :image_tasks, %{
+      "recreate_sizes" => Images.Processing.image_maintenance_running?("recreate_sizes"),
+      "dominant_colors" => Images.Processing.image_maintenance_running?("dominant_colors")
+    })
   end
 
   defp assign_info(socket) do
@@ -134,6 +143,44 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               "Generate sitemap"
             )}</button>
           </article>
+          <article>
+            <div>
+              <h3>{gettext("Image sizes")}</h3><p>
+                {gettext("Recreate the sizes and formats of every image from its original, using the current image settings.")}
+              </p>
+              <small :if={@image_tasks["recreate_sizes"]}>{gettext("Running in the background")}</small>
+            </div>
+            <button
+              type="button"
+              class="utils-button"
+              phx-click="recreate_image_sizes"
+              disabled={@image_tasks["recreate_sizes"]}
+              data-confirm={
+                gettext(
+                  "Recreate the sizes of every image? This runs in the background and can take a long time for a large library."
+                )
+              }
+            >
+              {gettext("Recreate image sizes")}
+            </button>
+          </article>
+          <article>
+            <div>
+              <h3>{gettext("Dominant colors")}</h3><p>
+                {gettext("Read the dominant color of every image again. It is used as a placeholder while images load.")}
+              </p>
+              <small :if={@image_tasks["dominant_colors"]}>{gettext("Running in the background")}</small>
+            </div>
+            <button
+              type="button"
+              class="utils-button"
+              phx-click="recalculate_dominant_colors"
+              disabled={@image_tasks["dominant_colors"]}
+              data-confirm={gettext("Read the dominant color of every image again? This runs in the background.")}
+            >
+              {gettext("Recalculate colors")}
+            </button>
+          </article>
         </div>
       </section>
       <footer class="utils-system-info" aria-label={gettext("System information")}>
@@ -186,6 +233,33 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     send(self(), {:toast, gettext("Generated sitemap.")})
 
     {:noreply, assign_sitemap(socket)}
+  end
+
+  def handle_event("recreate_image_sizes", _, socket) do
+    socket.assigns.current_user
+    |> Images.Processing.recreate_sizes_for_images()
+    |> image_task_started(socket, gettext("Recreating image sizes in the background."))
+  end
+
+  def handle_event("recalculate_dominant_colors", _, socket) do
+    socket.assigns.current_user
+    |> Images.Processing.set_dominant_color_for_images()
+    |> image_task_started(socket, gettext("Recalculating dominant colors in the background."))
+  end
+
+  defp image_task_started({:ok, _job}, socket, message) do
+    send(self(), {:toast, message})
+    {:noreply, assign_image_tasks(socket)}
+  end
+
+  defp image_task_started({:error, :already_running}, socket, _message) do
+    send(self(), {:toast, gettext("This is already running.")})
+    {:noreply, assign_image_tasks(socket)}
+  end
+
+  defp image_task_started({:error, _reason}, socket, _message) do
+    send(self(), {:toast, gettext("The operation could not be completed. Check the application logs and try again.")})
+    {:noreply, socket}
   end
 
   defp assign_authorization_tools(socket, params) do
