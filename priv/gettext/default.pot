@@ -13715,7 +13715,17 @@ msgstr ""
 
 #: lib/brando_admin/live/config/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreate the sizes of every image? This runs in the background and can take a long time for a large library."
+msgid "Recreate the sizes of every image?"
+msgstr ""
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "This runs in the background and can take a long time for a large library."
+msgstr ""
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate sizes"
 msgstr ""
 
 #: lib/brando_admin/live/config/utils_live.ex
@@ -13735,7 +13745,12 @@ msgstr ""
 
 #: lib/brando_admin/live/config/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Read the dominant color of every image again? This runs in the background."
+msgid "Read the dominant color of every image again?"
+msgstr ""
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "This runs in the background."
 msgstr ""
 
 #: lib/brando_admin/live/config/utils_live.ex
