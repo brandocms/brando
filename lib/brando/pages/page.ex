@@ -409,6 +409,7 @@ defmodule Brando.Pages.Page do
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
       |> Brando.HTML.replace_timestamp()
+      |> Brando.Forms.Delivery.finalize()
     end
   end
 

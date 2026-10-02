@@ -70,6 +70,11 @@ defmodule Brando.Forms.Form do
 
       tab t("Form") do
         fieldset do
+          size :full
+          component &__MODULE__.submissions_link/1
+        end
+
+        fieldset do
           style :inline
           input :title, :text, label: t("Title")
           input :key, :text, monospace: true, label: t("Key")
@@ -129,6 +134,18 @@ defmodule Brando.Forms.Form do
         end
       end
     end
+  end
+
+  # Rendered with every validate of the form, so it links without counting.
+  def submissions_link(assigns) do
+    assigns = assign(assigns, :key, assigns.form.source.data.key)
+
+    ~H"""
+    <div :if={@form.source.data.id} class="form-submissions-link">
+      <span>{gettext("What visitors have sent with this form, in every language.")}</span>
+      <.link navigate={"/admin/forms/#{@key}/submissions"} class="workspace-button">{gettext("Submissions")}</.link>
+    </div>
+    """
   end
 
   listings do

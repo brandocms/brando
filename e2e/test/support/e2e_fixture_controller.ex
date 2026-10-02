@@ -54,6 +54,9 @@ defmodule E2EFixtureController do
           Brando.Repo.insert!(%Brando.Galleries.GalleryObject{gallery_id: gallery.id, image_id: image.id, sequence: 0})
           get_admin_user()
 
+        "site-form" ->
+          create_site_form()
+
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
@@ -92,6 +95,68 @@ defmodule E2EFixtureController do
     else
       send_resp(conn, 200, "")
     end
+  end
+
+  # A published contact form on a published page, in a module's form var. The
+  # page is rendered as a save would, so it serves stored block HTML.
+  defp create_site_form do
+    user = get_admin_user()
+
+    {:ok, form} =
+      Brando.Forms.create_form(
+        %{
+          "title" => "Contact us",
+          "key" => "contact",
+          "language" => "en",
+          "status" => "published",
+          "success_message" => "Thanks, we will be in touch.",
+          "fields" => [
+            %{"key" => "name", "type" => "text", "label" => "Name", "required" => "true", "width" => "half"},
+            %{"key" => "email", "type" => "email", "label" => "Email", "required" => "true", "width" => "half"},
+            %{"key" => "message", "type" => "textarea", "label" => "Message"}
+          ]
+        },
+        user
+      )
+
+    module =
+      Brando.Repo.insert!(%Brando.Content.Module{
+        uid: Ecto.UUID.generate(),
+        type: :liquid,
+        name: %{"en" => "Contact form"},
+        class: "contact-form",
+        namespace: %{"en" => "Content"},
+        help_text: %{},
+        code: "{% form contact %}",
+        refs: [],
+        vars: [%Brando.Content.Var{key: "contact", label: %{"en" => "Form"}, type: :form, form_id: form.id}]
+      })
+
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: "Contact",
+        uri: "contact-us",
+        language: :en,
+        status: :published,
+        template: "default.html",
+        creator_id: user.id
+      })
+
+    params = %{
+      "uid" => Brando.Utils.generate_uid(),
+      "type" => "module",
+      "module_id" => module.id,
+      "creator_id" => user.id,
+      "source" => to_string(Brando.Pages.Page.Blocks),
+      "vars" => [%{"key" => "contact", "label" => %{"en" => "Form"}, "type" => "form", "form_id" => form.id}]
+    }
+
+    block =
+      %Brando.Content.Block{} |> Brando.Content.Block.recursive_block_changeset(params, user) |> Brando.Repo.insert!()
+
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+    user
   end
 
   defp create_norwegian_admin_user do

@@ -851,6 +851,7 @@ defmodule Brando.Content do
   def render_var(%{type: :file, file: file}), do: file
   def render_var(%{type: :video, video: video}), do: video
   def render_var(%{type: :gallery, gallery: gallery}), do: gallery
+  def render_var(%{type: :form, form: form}), do: form
 
   @doc """
   Trims encoded module string, base decodes and converts to terms

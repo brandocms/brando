@@ -9,7 +9,8 @@ linked to the others as a [synchronized translation](i18n.md): the source form
 decides which fields there are, and each translation words them in its own
 language.
 
-Run `mix brando.gen.migrations` for `brando_193` to add the tables.
+Run `mix brando.gen.migrations` for `brando_193` and `brando_194` to add the
+tables.
 
 ## Build a form
 
@@ -65,19 +66,48 @@ any language can be read side by side.
 
 ## Render a form
 
+### In a block
+
+Give a module a **Form** variable and render it with the `form` tag. Editors
+then pick the form in the block:
+
+```liquid
+{% form contact %}
+{% form contact { class: 'wide', id: 'contact-us' } %}
+```
+
+The tag also takes a key, `{% form 'contact' %}`, for a form that is always
+the same. Either way it shows the published form with that key in the entry's
+language, so a translated page shows the translated form. Saving a form
+re-renders the entries whose blocks hold it in a variable; an entry that names
+a form by key in its module code is re-rendered when it is next saved.
+
+A HEEx module renders it with `<.site_form>`, which takes the same slots as
+`site_form/1` below:
+
+```heex
+<.site_form form={@contact}>
+  <:submit>Send it</:submit>
+</.site_form>
+```
+
+Liquid cannot pass slots. For your own markup in every Liquid block, set a
+function component that the tag renders instead; it gets the same assigns:
+
+```elixir
+config :brando, Brando.Forms, component: {MyAppWeb.Forms, :site_form}
+```
+
+### In a template
+
 `Brando.HTML.Forms.site_form/1` renders a form with its fields loaded:
 
 ```elixir
-{:ok, form} =
-  Brando.Forms.get_form(%{
-    matches: %{key: "contact", language: "en"},
-    status: :published,
-    preload: [:fields]
-  })
+form = Brando.Forms.get_published_form("contact", "en")
 ```
 
 ```heex
-<Brando.HTML.Forms.site_form form={@form} action={~p"/contact"} />
+<Brando.HTML.Forms.site_form form={@form} />
 ```
 
 Without slots it renders the whole form, grouped by section, with labels,
@@ -133,3 +163,77 @@ replacing it:
 `:section` replaces a section's heading, `:intro` the text above the fields and
 `:submit` the button's content. `only` and `except` take field keys, to render
 part of a form.
+
+`:success` and `:failure` replace the messages shown once the form has been
+sent, or when sending failed.
+
+## Submissions
+
+A form posts to Brando's route, `/__brando/forms/<key>`, which `page_routes/1`
+adds to your browser pipeline. The submission is checked against the form's
+fields, stored, and listed under **Submissions** on the form's page in the
+admin, where it can be read, deleted or exported as CSV. A submission in any
+language is listed with the form, and keeps the labels its fields had when it
+was sent.
+
+The form submits itself with a small inline script: errors appear by their
+fields, and the success message replaces the form. Without JavaScript the post
+returns to the page at the `#<form id>-sent` (or `-failed`) anchor, and a
+`:target` rule shows the message. Pass `enhance={false}` to leave the script out,
+and `nonce` when your content security policy requires one.
+
+### Protection
+
+- **CSRF.** A form carries the visitor's CSRF token, checked by your pipeline's
+  `protect_from_forgery`. Block HTML is stored when an entry is saved, so a form
+  in a block stores a `$csrftoken` placeholder that pages, fragments and
+  `Brando.HTML.render_blocks/1` fill in as they are sent. If you output stored
+  block HTML some other way, pass it through `Brando.HTML.replace_csrf_token/1`.
+  Do not cache a page with a form in front of Phoenix: every visitor would get
+  the same token, and their submissions would fail.
+- **Origin.** A post whose `Origin` (or `Referer`) is another site is refused.
+- **Honeypot.** A hidden field people never see; a submission that fills it in
+  is answered as a success and not stored.
+- **Rate limit.** Ten submissions per visitor and 200 per form in ten minutes,
+  counted by a hash of the visitor's IP address:
+
+  ```elixir
+  config :brando, Brando.Forms,
+    rate_limit: [window: :timer.minutes(10), per_visitor: 10, per_form: 200]
+  ```
+
+- **Turnstile.** With Cloudflare Turnstile keys configured, forms render the
+  widget and every submission must carry a token Cloudflare confirms:
+
+  ```elixir
+  config :brando, Brando.Forms,
+    turnstile: [
+      site_key: System.get_env("TURNSTILE_SITE_KEY"),
+      secret_key: System.get_env("TURNSTILE_SECRET_KEY")
+    ]
+  ```
+
+  Brando's default production headers allow `challenges.cloudflare.com`; if you
+  set your own content security policy, allow it in `script-src` and
+  `frame-src`.
+
+### Static sites
+
+A statically delivered site (`delivery_mode: :static`) has no backend serving
+its pages, and no session for a CSRF token. Its forms post to your Brando
+backend instead, at `/__brando/forms/static/<site>/<environment>/<key>`, and the
+request must come from one of the site's own domains. Add the route at the top
+level of your router, outside the browser pipeline:
+
+```elixir
+form_routes()
+
+scope "/" do
+  pipe_through :browser
+  page_routes()
+end
+```
+
+The forms post to the endpoint's URL; set another with
+`config :brando, Brando.Forms, submit_url: "https://admin.example.com"`.
+

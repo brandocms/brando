@@ -2574,6 +2574,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   defp value_fields(:file), do: [:value, :file_id]
   defp value_fields(:video), do: [:value, :video_id]
   defp value_fields(:gallery), do: [:value, :gallery_id]
+  defp value_fields(:form), do: [:value, :form_id]
   defp value_fields(:link), do: [:value, :identifier_id, :link_text, :link_type, :link_target_blank]
   defp value_fields(:color), do: [:value, :palette_id]
   defp value_fields(_), do: [:value]

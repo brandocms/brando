@@ -38,6 +38,7 @@ defmodule Brando.Content.Var do
         :select,
         :file,
         :link,
+        :form,
         # todo
         :date
         # :table?
@@ -112,6 +113,7 @@ defmodule Brando.Content.Var do
     relation :video, :belongs_to, module: Brando.Videos.Video
     relation :gallery, :belongs_to, module: Brando.Galleries.Gallery
     relation :identifier, :belongs_to, module: Brando.Content.Identifier
+    relation :form, :belongs_to, module: Brando.Forms.Form
 
     # a var can belong to a page, a block, a module, a table template or row,
     # a global variables set or a menu item link
@@ -131,6 +133,7 @@ defmodule Brando.Content.Var do
       :palette,
       :identifier,
       :menu_item,
+      :form,
       video: [:thumbnail, :file],
       gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
     ]

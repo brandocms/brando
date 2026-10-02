@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Authorization do
     "Elixir.BrandoAdmin.Sites.BlockAuditLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Sites.ScheduledPublishingLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Globals.GlobalsLive" => {:update, Brando.Sites.GlobalSet},
+    "Elixir.BrandoAdmin.Forms.SubmissionsLive" => {:read, Brando.Forms.Form},
     "Elixir.BrandoAdmin.Users.GroupsLive" => {:read, :groups},
     "Elixir.BrandoAdmin.Nav" => {:access, :backend},
     "Elixir.BrandoAdmin.Chrome" => {:access, :backend}

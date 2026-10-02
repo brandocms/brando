@@ -21,6 +21,7 @@ defmodule Brando.Villain.LiquexParser.Builder do
         {tag_module.("Route"), Brando.Villain.LiquexParser.Syntax.route()},
         {tag_module.("RouteI18n"), Brando.Villain.LiquexParser.Syntax.route_i18n()},
         {tag_module.("Fragment"), Brando.Villain.LiquexParser.Syntax.fragment()},
+        {tag_module.("Form"), Brando.Villain.LiquexParser.Syntax.form()},
         {tag_module.("Hide"), Brando.Villain.LiquexParser.Syntax.hide()},
         {tag_module.("EndHide"), Brando.Villain.LiquexParser.Syntax.end_hide()},
         {tag_module.("T"), Brando.Villain.LiquexParser.Syntax.translation()},

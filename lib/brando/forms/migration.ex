@@ -54,4 +54,43 @@ defmodule Brando.Forms.Migration do
     drop table(:forms_fields, prefix: prefix)
     drop table(:forms, prefix: prefix)
   end
+
+  # A block var can hold a form, like it holds an image.
+  def vars_up(prefix \\ nil) do
+    alter table(:content_vars, prefix: prefix) do
+      add :form_id, references(:forms, prefix: prefix, on_delete: :nilify_all)
+    end
+
+    create index(:content_vars, [:form_id], prefix: prefix)
+  end
+
+  def vars_down(prefix \\ nil) do
+    alter table(:content_vars, prefix: prefix) do
+      remove :form_id
+    end
+  end
+
+  # Submissions are kept in `public`, scoped by tenant prefix: promoting an
+  # environment replaces its schema, and must not take visitors' submissions
+  # with it. `form_id` is therefore a plain column, not a foreign key.
+  def shared_up do
+    create table(:forms_submissions, prefix: "public") do
+      add :scope, :text, null: false
+      add :form_id, :bigint, null: false
+      add :form_key, :text, null: false
+      add :language, :text
+      add :data, :map, null: false, default: %{}
+      add :labels, :map, null: false, default: %{}
+      add :url, :text
+      add :ip_hash, :text
+      add :user_agent, :text
+      timestamps(type: :utc_datetime_usec, updated_at: false)
+    end
+
+    create index(:forms_submissions, [:scope, :form_key, :inserted_at], prefix: "public")
+  end
+
+  def shared_down do
+    drop table(:forms_submissions, prefix: "public")
+  end
 end

@@ -59,6 +59,15 @@ defmodule Brando.HTML.Forms do
   Values are posted as `fields[<key>]` (`fields[<key>][]` for checkboxes).
   `values` and `errors`, keyed by field key, fill the form in again after a
   failed submission.
+
+  ## Submitting
+
+  By default the form posts to Brando's submission route for the current site
+  (`Brando.Forms.Delivery`) with the visitor's CSRF token, a honeypot field and,
+  when configured, the Turnstile widget (`Brando.Forms.Turnstile`). A small
+  inline script submits it with `fetch` and shows errors and the success
+  message in place; `enhance={false}` leaves it out, and `nonce` sets a CSP
+  nonce on it. `:success` and `:failure` replace the two messages.
   """
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
@@ -69,7 +78,17 @@ defmodule Brando.HTML.Forms do
 
   attr :form, :any, required: true, doc: "a `Brando.Forms.Form` with its fields loaded"
   attr :id, :string, default: nil, doc: "the form element's id; defaults to `form-<key>`"
-  attr :action, :string, default: nil
+  attr :action, :string, default: nil, doc: "where the form posts; defaults to Brando's submission route"
+
+  attr :csrf_token, :any,
+    default: :auto,
+    doc: "the CSRF token to carry; `:auto` takes the current one, `false` carries none"
+
+  attr :enhance, :boolean,
+    default: true,
+    doc: "submits with `fetch` and shows errors and the success message in place"
+
+  attr :nonce, :string, default: nil, doc: "a CSP nonce for the inline script and style"
   attr :method, :string, default: "post"
   attr :preview, :boolean, default: false, doc: "renders disabled inputs that cannot be submitted"
   attr :only, :list, default: nil, doc: "field keys to render; the rest are left out"
@@ -81,6 +100,8 @@ defmodule Brando.HTML.Forms do
 
   slot :intro, doc: "replaces the form's introduction"
   slot :submit, doc: "replaces the submit button's content"
+  slot :success, doc: "replaces the message shown once the form has been sent"
+  slot :failure, doc: "replaces the message shown when sending failed"
 
   slot :section, doc: "replaces a section's heading; receives the section field" do
     attr :key, :string
@@ -101,6 +122,8 @@ defmodule Brando.HTML.Forms do
       |> assign(:groups, groups(form, assigns.only, assigns.except))
       |> assign(:hidden_fields, hidden_fields(form, assigns.only, assigns.except))
       |> assign(:root_attrs, root_attrs(assigns))
+      |> assign(:token, token(assigns))
+      |> assign(:turnstile_key, !assigns.preview && Brando.Forms.Turnstile.site_key())
 
     # A preview is shown inside another form (the admin's), where a nested
     # <form> would be dropped by the HTML parser.
@@ -154,6 +177,22 @@ defmodule Brando.HTML.Forms do
         disabled={@preview}
       />
 
+      <%= unless @preview do %>
+        <input :if={@token} type="hidden" name="_csrf_token" value={@token} />
+        <input type="hidden" name="_language" value={@form.language} />
+        <input type="hidden" name="_form_id" value={@dom_id} />
+        <%!-- Left empty by people, who never see it; filled in by bots that
+              fill in every field. --%>
+        <div
+          class="site-form-hp"
+          aria-hidden="true"
+          style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden"
+        >
+          <label>{field_hint(@form)} <input type="text" name="_hp" value="" tabindex="-1" autocomplete="off" /></label>
+        </div>
+        <div :if={@turnstile_key} class="cf-turnstile" data-sitekey={@turnstile_key} data-language={@form.language}></div>
+      <% end %>
+
       <div class="site-form-actions">
         <button type="submit" class={["site-form-submit", @classes[:submit]]} disabled={@preview}>
           <%= if @submit != [] do %>
@@ -163,7 +202,114 @@ defmodule Brando.HTML.Forms do
           <% end %>
         </button>
       </div>
+
+      <%= unless @preview do %>
+        <div id={"#{@dom_id}-sent"} class="site-form-status site-form-sent" role="status" tabindex="-1">
+          <%= if @success != [] do %>
+            {render_slot(@success)}
+          <% else %>
+            <p>{Brando.Forms.success_message(@form)}</p>
+          <% end %>
+        </div>
+        <div id={"#{@dom_id}-failed"} class="site-form-status site-form-failed" role="alert" tabindex="-1">
+          <%= if @failure != [] do %>
+            {render_slot(@failure)}
+          <% else %>
+            <p>{failure_message(@form)}</p>
+          <% end %>
+        </div>
+      <% end %>
     </.dynamic_tag>
+    <script
+      :if={@turnstile_key}
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+      async
+      defer
+      nonce={@nonce}
+    >
+    </script>
+    <.enhancement :if={!@preview} enhance={@enhance} nonce={@nonce} />
+    """
+  end
+
+  # Submits with `fetch` and shows the outcome in place: the success message,
+  # or each field's errors. It asks for JSON but still accepts HTML, since an
+  # application's browser pipeline usually only accepts HTML (`plug :accepts`).
+  # Each form reads its own reply, so one copy per
+  # page is enough; later copies return at once.
+  @enhancement_script """
+  (function () {
+    if (window.__brandoSiteForms) return; window.__brandoSiteForms = true;
+    var show = function (form, outcome) {
+      var el = document.getElementById(form.id + '-' + outcome);
+      if (el) { el.classList.add('is-shown'); el.focus(); }
+    };
+    document.addEventListener('submit', function (event) {
+      var form = event.target;
+      if (!form.matches || !form.matches('form[data-site-form]')) return;
+      event.preventDefault();
+      var button = form.querySelector('[type=submit]');
+      if (button) button.disabled = true;
+      form.classList.add('is-sending');
+      ['sent', 'failed'].forEach(function (o) { var el = document.getElementById(form.id + '-' + o); if (el) el.classList.remove('is-shown'); });
+      form.querySelectorAll('[data-site-form-error]').forEach(function (el) { el.remove(); });
+      form.querySelectorAll('[aria-invalid]').forEach(function (el) { el.removeAttribute('aria-invalid'); });
+      fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json, text/html;q=0.1' }, credentials: 'same-origin' })
+        .then(function (response) { return response.json().catch(function () { return {}; }).then(function (body) { return { ok: response.ok, body: body }; }); })
+        .then(function (result) {
+          if (result.ok && result.body.ok) {
+            form.classList.add('is-sent');
+            form.querySelectorAll('.site-form-section, .site-form-actions, .site-form-intro').forEach(function (el) { el.hidden = true; });
+            show(form, 'sent');
+            return;
+          }
+          var errors = result.body.errors || {};
+          var first = null;
+          Object.keys(errors).forEach(function (key) {
+            var wrapper = form.querySelector('.site-form-field[data-key="' + key + '"]');
+            if (!wrapper) return;
+            var input = wrapper.querySelector('input, select, textarea');
+            if (input) { input.setAttribute('aria-invalid', 'true'); first = first || input; }
+            var message = document.createElement('p');
+            message.className = 'site-form-error';
+            message.setAttribute('data-site-form-error', '');
+            message.id = form.id + '-' + key + '-error';
+            message.textContent = errors[key].join(' ');
+            wrapper.appendChild(message);
+            if (input) input.setAttribute('aria-describedby', ((input.getAttribute('aria-describedby') || '') + ' ' + message.id).trim());
+          });
+          if (first) { first.focus(); } else {
+            var failed = document.getElementById(form.id + '-failed');
+            if (failed && result.body.message) failed.textContent = result.body.message;
+            show(form, 'failed');
+          }
+        })
+        .catch(function () { show(form, 'failed'); })
+        .then(function () {
+          form.classList.remove('is-sending');
+          if (button) button.disabled = false;
+          if (window.turnstile) form.querySelectorAll('.cf-turnstile').forEach(function (el) { window.turnstile.reset(el); });
+        });
+    });
+  })();
+  """
+
+  attr :enhance, :boolean, required: true
+  attr :nonce, :string, default: nil
+
+  # Without the script, a plain post lands back on the page at the
+  # `#<id>-sent` or `#<id>-failed` anchor, and `:target` reveals the message.
+  defp enhancement(assigns) do
+    assigns = assign(assigns, :script, @enhancement_script)
+
+    ~H"""
+    <style nonce={@nonce}>
+      .site-form-status:not(:target):not(.is-shown) { display: none; }
+    </style>
+    <%!-- HEEx does not interpolate `{…}` inside <script>; EEx tags it does. --%>
+    <script :if={@enhance} nonce={@nonce}>
+      <%= Phoenix.HTML.raw(@script) %>
+    </script>
     """
   end
 
@@ -352,7 +498,29 @@ defmodule Brando.HTML.Forms do
   end
 
   defp root_attrs(%{preview: true, rest: rest}), do: rest
-  defp root_attrs(%{action: action, method: method, rest: rest}), do: Map.merge(%{action: action, method: method}, rest)
+
+  defp root_attrs(%{form: form, action: action, method: method, enhance: enhance, rest: rest}) do
+    Map.merge(
+      %{action: action || Brando.Forms.Delivery.action(form.key), method: method, "data-site-form": enhance},
+      rest
+    )
+  end
+
+  defp token(%{preview: true}), do: nil
+  defp token(%{csrf_token: :auto}), do: Brando.Forms.Delivery.csrf_token()
+  defp token(%{csrf_token: token}) when is_binary(token), do: token
+  defp token(_), do: nil
+
+  defp failure_message(form) do
+    in_language(form, fn -> gettext("Your message could not be sent. Check the form and try again.") end)
+  end
+
+  defp field_hint(form), do: in_language(form, fn -> gettext("Leave this field empty") end)
+
+  defp in_language(%{language: language}, fun) when not is_nil(language),
+    do: Gettext.with_locale(Brando.Gettext, to_string(language), fun)
+
+  defp in_language(_form, fun), do: fun.()
 
   @doc """
   The fields of a form in sections, as rendered: `%{section: field | nil,

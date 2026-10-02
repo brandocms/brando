@@ -5,7 +5,7 @@ defmodule Brando.Router do
 
   @default_extra_secure_headers [
     {"content-security-policy",
-     "default-src 'self'; connect-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.google-analytics.com https://ssl.google-analytics.com; img-src * data:; media-src *"},
+     "default-src 'self'; connect-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.google-analytics.com https://ssl.google-analytics.com https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; img-src * data:; media-src *"},
     {"referrer-policy", "strict-origin-when-cross-origin"},
     {"permissions-policy",
      "accelerometer=(), camera=(), fullscreen=(self), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"}
@@ -20,11 +20,42 @@ defmodule Brando.Router do
         get "/__p__/:preview_key", Brando.PreviewController, :show
         get "/__ssg_preview__/:token/*path", Brando.SSG.PreviewController, :show
         get "/sitemaps/:file", Brando.SitemapController, :show
+        # Inside the application's browser pipeline, so `protect_from_forgery`
+        # checks the token `Brando.HTML.Forms.site_form/1` carries.
+        post "/__brando/forms/:key", Brando.Forms.SubmissionController, :create
       end
 
       if unquote(options)[:catch_all] do
         get "/", Brando.web_module(PageController), :index
         get "/*path", Brando.web_module(PageController), :show
+      end
+    end
+  end
+
+  @doc """
+  The route statically delivered sites post their forms to.
+
+  A static site has no session for a CSRF token, so this route must sit outside
+  the browser pipeline; it checks that the request comes from one of the
+  site's own domains instead (see `Brando.Forms.Delivery`). Add it at the top
+  level of the router, before the scope that calls `page_routes/1`:
+
+      form_routes()
+
+      scope "/" do
+        pipe_through :browser
+        page_routes()
+      end
+  """
+  defmacro form_routes do
+    quote do
+      pipeline :brando_static_forms do
+        plug :accepts, ["html", "json"]
+      end
+
+      scope "/__brando/forms/static" do
+        pipe_through :brando_static_forms
+        post "/:site/:environment/:key", Brando.Forms.SubmissionController, :create_static
       end
     end
   end
@@ -92,6 +123,7 @@ defmodule Brando.Router do
 
         get "/access-denied", BrandoAdmin.AccessDeniedController, :show
         get "/content-transfer/download/:token", BrandoAdmin.ContentTransferDownloadController, :show
+        get "/forms/:key/submissions/export", BrandoAdmin.FormSubmissionsExportController, :export
 
         post "/environment", BrandoAdmin.EnvironmentController, :update
         post "/api/content/image/replace_crop", BrandoAdmin.API.Content.Upload.ImageController, :replace_crop
@@ -208,6 +240,7 @@ defmodule Brando.Router do
             live "/", BrandoAdmin.Forms.FormListLive
             live "/create", BrandoAdmin.Forms.FormFormLive, :create
             live "/update/:entry_id", BrandoAdmin.Forms.FormFormLive, :update
+            live "/:key/submissions", BrandoAdmin.Forms.SubmissionsLive
           end
 
           scope "/pages" do

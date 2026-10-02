@@ -12,7 +12,7 @@ defmodule Brando.Blueprint.TemplateParser do
   alias Brando.Exception.BlueprintError
 
   @custom_tag_pattern ~r/{%-?\s*(?:
-    datasource|enddatasource|endhide|fragment|headless_ref|hide|inspect|link|
+    datasource|enddatasource|endhide|form|fragment|headless_ref|hide|inspect|link|
     picture|ref|route_i18n|route|t|video
   )\b/x
 

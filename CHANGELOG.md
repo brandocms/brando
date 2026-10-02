@@ -444,9 +444,17 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   **Content → Forms**, laying out fields on the same 12-unit canvas as module
   variables, beside the form as visitors will see it. Forms are synchronized
   translations: the source decides the fields, keys, layout and option values,
-  and each translation words them in its own language. Sites render a form with
-  `Brando.HTML.Forms.site_form/1`, whose slots replace any field's markup. Run
-  `mix brando.gen.migrations` for `brando_193`. See the [Forms guide](guides/forms.md).
+  and each translation words them in its own language. A module's new **Form**
+  variable and `{% form %}` tag (or `<.site_form>` in HEEx modules) put a form in
+  a block, shown in each page's language; sites can also render one with
+  `Brando.HTML.Forms.site_form/1`, whose slots replace any field's markup.
+  Submissions are checked, stored in `public` so promoting an environment keeps
+  them, and read, deleted or exported as CSV in the admin. Forms carry the
+  visitor's CSRF token, refuse posts from other sites, and use a honeypot, rate
+  limiting and optional Cloudflare Turnstile. Run `mix brando.gen.migrations`
+  for `brando_193` and `brando_194`; statically delivered sites also add
+  `form_routes()` to their router. Brando's default production CSP now allows
+  `challenges.cloudflare.com`. See the [Forms guide](guides/forms.md).
 
 - **Add a video that is already in Mux, Bunny, Cloudflare or Vimeo.** The video
   picker has an "Add from …" button for every configured provider. It lists

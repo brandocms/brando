@@ -417,3 +417,52 @@
     opacity: 1;
   }
 }
+
+/* ── submissions ────────────────────────────────────────── */
+
+.form-submissions-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background-color: #fbf8f7;
+  font-size: 13px;
+
+  span {
+    opacity: 0.7;
+  }
+}
+
+.form-submissions-table td {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-submissions-more {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.form-submission-detail {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.4fr) minmax(0, 1fr);
+  gap: 10px 20px;
+  margin: 0;
+
+  dt {
+    font-size: 12px;
+    opacity: 0.6;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 14px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

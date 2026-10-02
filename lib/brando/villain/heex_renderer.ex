@@ -131,6 +131,10 @@ defmodule Brando.Villain.HeexRenderer do
       ~r/<\.content(?![^>]*\bcontent=)(?=\s|\/>)/,
       "<.content content={@content}"
     )
+    |> String.replace(
+      ~r/<\.site_form(?![^>]*\b_heex_ctx=)(?=\s|\/>|>)/,
+      "<.site_form _heex_ctx={@_heex_ctx}"
+    )
   end
 
   defp module_name_for(id, code_string) do

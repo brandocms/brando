@@ -31,6 +31,7 @@ defmodule Brando.Tenant.SharedTables do
     environments
     markdown_webhook_deliveries
     environment_operation_logs
+    forms_submissions
     schema_migrations
     site_asset_sets
     ssg_builds

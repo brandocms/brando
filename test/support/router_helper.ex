@@ -166,6 +166,8 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/update/:entry_id", BrandoAdmin.SyncTest.ArticleFormLive, :update
   end
 
+  form_routes()
+
   scope "/coming-soon" do
     get "/", BrandoIntegration.LockdownController, :index
   end

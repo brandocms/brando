@@ -49,6 +49,8 @@ defmodule Brando.Content.VarAttrs do
     :file_id,
     :video_id,
     :gallery_id,
+    # A form var's form (`Brando.Forms.Form`), chosen like media
+    :form_id,
     # Upload/picker configuration for media vars, set through the var's config UI
     :config_target,
     :gallery_image_config_target,
