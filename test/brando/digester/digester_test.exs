@@ -111,6 +111,43 @@ defmodule Brando.DigesterTest do
       File.rm_rf!("test/fixtures/nested_test")
     end
 
+    test "deletes source maps instead of publishing them" do
+      test_path = "test/fixtures/source_map_test"
+
+      File.mkdir_p!(Path.join(test_path, "assets/__srcmaps"))
+      File.write!(Path.join(test_path, "assets/main-abc123.js"), "console.log('test');")
+      File.write!(Path.join(test_path, "assets/main-abc123.js.map"), ~s({"version":3}))
+      File.write!(Path.join(test_path, "assets/main-abc123.js.map.gz"), "stale")
+      File.write!(Path.join(test_path, "assets/__srcmaps/legacy-abc123.js.map"), ~s({"version":3}))
+
+      :ok = Brando.Digester.compile(test_path, test_path, true)
+
+      files = assets_files(test_path)
+      assert "assets/main-abc123.js" in files
+      refute Enum.any?(files, &String.contains?(&1, ".map"))
+
+      manifest = test_path |> Path.join("cache_manifest.json") |> File.read!() |> Jason.decode!()
+      refute Enum.any?(Map.keys(manifest["latest"]), &String.contains?(&1, ".map"))
+    after
+      File.rm_rf!("test/fixtures/source_map_test")
+    end
+
+    test "keeps source maps when asked to" do
+      test_path = "test/fixtures/source_map_keep_test"
+
+      File.mkdir_p!(test_path)
+      File.write!(Path.join(test_path, "main-abc123.js"), "console.log('test');")
+      File.write!(Path.join(test_path, "main-abc123.js.map"), ~s({"version":3}))
+
+      :ok = Brando.Digester.compile(test_path, @output_path, true, keep_source_maps: true)
+
+      files = assets_files(@output_path)
+      assert "main-abc123.js.map" in files
+      assert "main-abc123.js.map.gz" in files
+    after
+      File.rm_rf!("test/fixtures/source_map_keep_test")
+    end
+
     test "fails when the given path is invalid" do
       assert {:error, :invalid_path} = Brando.Digester.compile("nonexistent_path", @output_path, true)
     end

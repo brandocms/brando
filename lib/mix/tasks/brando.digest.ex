@@ -41,6 +41,13 @@ defmodule Mix.Tasks.Brando.Digest do
   It is possible to digest the stylesheet asset references without the query
   string "?vsn=d" with the option `--no-vsn`.
 
+  ## Source maps
+
+  Source maps (`*.map`) are deleted from the output path rather than digested,
+  so a release never serves them. Vite builds them `hidden`, so no script
+  points at them; upload them to an error tracker before this task runs if
+  you need them. Pass `--keep-source-maps` to publish them anyway.
+
   ## Options
 
     * `-o, --output` - indicates the path to your compiled
@@ -49,10 +56,12 @@ defmodule Mix.Tasks.Brando.Digest do
     * `--no-vsn` - do not add version query string to assets
 
     * `--no-compile` - do not run mix compile
+
+    * `--keep-source-maps` - digest `*.map` files instead of deleting them
   """
 
   @default_opts [vsn: true]
-  @switches [output: :string, vsn: :boolean]
+  @switches [output: :string, vsn: :boolean, keep_source_maps: :boolean]
 
   @doc false
   def run(all_args) do
@@ -70,7 +79,9 @@ defmodule Mix.Tasks.Brando.Digest do
     output_path = opts[:output] || input_path
     with_vsn? = Keyword.merge(@default_opts, opts)[:vsn]
 
-    case Brando.Digester.compile(input_path, output_path, with_vsn?) do
+    case Brando.Digester.compile(input_path, output_path, with_vsn?,
+           keep_source_maps: Keyword.get(opts, :keep_source_maps, false)
+         ) do
       :ok ->
         # We need to call build structure so everything we have
         # generated into priv is copied to _build in case we have

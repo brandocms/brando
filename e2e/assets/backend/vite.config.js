@@ -19,7 +19,10 @@ export default defineConfig({
     emptyOutDir: false,
     target: 'es2022',
     outDir: "../../priv/static", // <- Phoenix expects our files here
-    sourcemap: true, // we want to debug our code in production
+    // Maps are written without a sourceMappingURL comment, so browsers never
+    // ask for them. `mix brando.digest` deletes them before release; upload
+    // them to Sentry first if you want readable stack traces.
+    sourcemap: 'hidden',
     rolldownOptions: {
       input: {
         admin: "src/main.js"

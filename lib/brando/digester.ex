@@ -15,13 +15,20 @@ defmodule Brando.Digester do
   @doc """
   Digests and compresses the static files in the given `input_path`
   and saves them in the given `output_path`.
+
+  Source maps are not published: they are left out of the digest and deleted
+  from `output_path`, along with their compressed copies. Pass
+  `keep_source_maps: true` to digest them like any other Vite output.
   """
-  @spec compile(String.t(), String.t(), boolean()) :: :ok | {:error, :invalid_path}
-  def compile(input_path, output_path, with_vsn?) do
+  @spec compile(String.t(), String.t(), boolean(), keyword()) :: :ok | {:error, :invalid_path}
+  def compile(input_path, output_path, with_vsn?, opts \\ []) do
     if File.exists?(input_path) do
       File.mkdir_p!(output_path)
+      keep_source_maps? = Keyword.get(opts, :keep_source_maps, false)
 
-      files = filter_files(input_path)
+      unless keep_source_maps?, do: delete_source_maps(output_path)
+
+      files = filter_files(input_path, keep_source_maps?)
       latest = generate_latest(files)
       digests = load_compile_digests(output_path)
       digested_files = Enum.map(files, &digested_contents(&1, latest, with_vsn?))
@@ -36,11 +43,26 @@ defmodule Brando.Digester do
     end
   end
 
-  defp filter_files(input_path) do
+  defp delete_source_maps(output_path) do
+    output_path
+    |> Path.join("**")
+    |> Path.wildcard()
+    |> Enum.filter(&(source_map?(Path.basename(&1)) and File.regular?(&1)))
+    |> Enum.each(&File.rm!/1)
+  end
+
+  defp source_map?(filename) do
+    Path.extname(filename) == ".map" or
+      (Path.extname(filename) in compressed_extensions() and
+         filename |> Path.rootname() |> Path.extname() == ".map")
+  end
+
+  defp filter_files(input_path, keep_source_maps?) do
     input_path
     |> Path.join("**")
     |> Path.wildcard()
     |> Enum.filter(&(not (File.dir?(&1) or compiled_file?(&1))))
+    |> Enum.reject(&(not keep_source_maps? and source_map?(Path.basename(&1))))
     |> Enum.map(&map_file(&1, input_path))
   end
 

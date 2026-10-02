@@ -369,6 +369,46 @@ Assets (CSS, JS) are built inside the Docker container and baked into the releas
 at `priv/static/`. There is no separate asset upload step — everything ships as
 one tarball.
 
+### Source maps
+
+Source maps are kept out of the release. Vite builds them with
+`sourcemap: 'hidden'`, so the scripts carry no `sourceMappingURL` comment, and
+`mix brando.digest` deletes every `*.map` file under `priv/static` before the
+release is assembled. Pass `--keep-source-maps` to the digest task if a site
+should publish them after all.
+
+To keep readable stack traces in Sentry, upload the maps in the
+`assets_frontend` stage, before the digest deletes them. The generated
+Dockerfile does this when it gets a `sentry_auth_token` build secret:
+
+1. Commit `assets/frontend/.sentryclirc` with the organisation and project
+   (add `url` for a self-hosted Sentry). It holds no secret:
+
+   ```ini
+   [defaults]
+   org = my-org
+   project = my-site
+   ```
+
+2. Create an auth token with the `project:releases` scope and pass it to the
+   build as a secret. It never lands in an image layer:
+
+   ```bash
+   export SENTRY_AUTH_TOKEN=sntrys_...
+   docker build --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN .
+   ```
+
+The step injects debug IDs into the built scripts and uploads the maps with
+`sentry-cli`, so Sentry pairs them with an event without a matching release
+name. Your frontend still has to report errors with `@sentry/browser`. Without
+the secret the step does nothing.
+
+Projects generated before 0.55 move their frontend maps to
+`priv/static/assets/__srcmaps/`, which `Plug.Static` still serves. The digest
+now deletes them there too. To upload them, replace those `mkdir`/`mv` lines
+with the `RUN --mount=type=secret,id=sentry_auth_token` step from the
+[Dockerfile template](https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/Dockerfile).
+
 ## Deploying
 
 ### Full deploy (build + upload + activate)

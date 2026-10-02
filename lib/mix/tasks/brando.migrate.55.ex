@@ -17,7 +17,7 @@ if Code.ensure_loaded?(Igniter) do
 
     The task adds the explicit listing component imports, configures Req as
     Swoosh's API client, pins the declared `phoenix_live_view` JavaScript
-    dependency, converts a legacy Fabric deployment to a reviewable Florist
+    dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
     configuration, refreshes the gettext recovery helper, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
@@ -35,6 +35,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
       |> SourceUpgrade.configure_swoosh_client()
       |> SourceUpgrade.pin_live_view_javascript()
+      |> SourceUpgrade.hide_source_maps()
       |> SourceUpgrade.create_florist_config()
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.warn_image_text_reads()
@@ -50,7 +51,10 @@ if Code.ensure_loaded?(Igniter) do
       Custom listing rows get the narrow component imports they use. The task
       adds Req as Swoosh's API client when none is configured and pins the
       declared `phoenix_live_view` JavaScript dependency under `assets/` to the
-      loaded server version.
+      loaded server version. Vite configs under `assets/` that set
+      `sourcemap: true` now build hidden maps, and `mix brando.digest` deletes
+      them before release. See the Docker build section of
+      `guides/deployment.md` to upload them to Sentry instead.
 
       When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
       configuration exists, the task also creates a reviewable

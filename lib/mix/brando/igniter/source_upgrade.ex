@@ -24,6 +24,7 @@ if Code.ensure_loaded?(Igniter) do
     @font_vsn_regex ~r/(\.(?:woff2?|ttf|otf|eot))\?vsn=d\b/
     @live_view_package_regex ~r/("phoenix_live_view"\s*:\s*")[^"]+("\s*[,}])/
     @phx_digest_regex ~r/\bmix[\t ]+phx\.digest(?=[\t ]|$)/m
+    @vite_sourcemap_regex ~r/(?<![\w$])(sourcemap\s*:\s*)true\b/
     @phoenix_live_view_fallback_version "1.2.12"
 
     @listing_core_components ~w(<.field <.i18n <.update_link <.url)
@@ -966,6 +967,20 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
+    @doc """
+    Switches Vite's `build.sourcemap: true` to `'hidden'` in the application's
+    asset configs, so built scripts no longer point browsers at their maps.
+    `mix brando.digest` deletes the maps before release.
+    """
+    def hide_source_maps(igniter) do
+      igniter
+      |> Igniter.include_glob("assets/vite.config.{js,mjs,cjs,ts,mts}")
+      |> Igniter.include_glob("assets/*/vite.config.{js,mjs,cjs,ts,mts}")
+      |> rewrite_matching_sources(&vite_config?/1, fn content ->
+        Regex.replace(@vite_sourcemap_regex, content, "\\1'hidden'")
+      end)
+    end
+
     defp phoenix_live_view_version do
       case Application.spec(:phoenix_live_view, :vsn) do
         nil -> @phoenix_live_view_fallback_version
@@ -1046,6 +1061,10 @@ if Code.ensure_loaded?(Igniter) do
     defp font_source?(path) do
       (String.starts_with?(path, "assets/") or String.starts_with?(path, "lib/")) and
         Path.extname(path) in @font_source_extensions
+    end
+
+    defp vite_config?(path) do
+      String.starts_with?(path, "assets/") and String.starts_with?(Path.basename(path), "vite.config.")
     end
 
     defp assets_package_json?(path) do
