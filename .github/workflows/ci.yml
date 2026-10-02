@@ -371,8 +371,6 @@ jobs:
       - name: Run fast rich-text regressions
         if: matrix.suite == 'legacy-1'
         working-directory: brando/e2e
-        env:
-          BRANDO_E2E_COVER_EXPORT: ${{ github.workspace }}/brando/cover/e2e-tiptap.coverdata
         run: |
           source .envrc
           node --test ../test/javascript/tiptap.test.mjs
