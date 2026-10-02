@@ -13719,8 +13719,18 @@ msgstr "Kjører i bakgrunnen"
 
 #: lib/brando_admin/live/config/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreate the sizes of every image? This runs in the background and can take a long time for a large library."
-msgstr "Lage størrelsene for alle bilder på nytt? Dette kjører i bakgrunnen og kan ta lang tid for et stort bibliotek."
+msgid "Recreate the sizes of every image?"
+msgstr "Lage størrelsene for alle bilder på nytt?"
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "This runs in the background and can take a long time for a large library."
+msgstr "Dette kjører i bakgrunnen og kan ta lang tid for et stort bibliotek."
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate sizes"
+msgstr "Lag størrelser på nytt"
 
 #: lib/brando_admin/live/config/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -13739,8 +13749,13 @@ msgstr "Les den dominerende fargen for alle bilder på nytt. Den brukes som plas
 
 #: lib/brando_admin/live/config/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Read the dominant color of every image again? This runs in the background."
-msgstr "Lese den dominerende fargen for alle bilder på nytt? Dette kjører i bakgrunnen."
+msgid "Read the dominant color of every image again?"
+msgstr "Lese den dominerende fargen for alle bilder på nytt?"
+
+#: lib/brando_admin/live/config/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "This runs in the background."
+msgstr "Dette kjører i bakgrunnen."
 
 #: lib/brando_admin/live/config/utils_live.ex
 #, elixir-autogen, elixir-format

@@ -155,11 +155,9 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               class="utils-button"
               phx-click="recreate_image_sizes"
               disabled={@image_tasks["recreate_sizes"]}
-              data-confirm={
-                gettext(
-                  "Recreate the sizes of every image? This runs in the background and can take a long time for a large library."
-                )
-              }
+              data-confirm-title={gettext("Recreate the sizes of every image?")}
+              data-confirm={gettext("This runs in the background and can take a long time for a large library.")}
+              data-confirm-ok={gettext("Recreate sizes")}
             >
               {gettext("Recreate image sizes")}
             </button>
@@ -176,7 +174,9 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               class="utils-button"
               phx-click="recalculate_dominant_colors"
               disabled={@image_tasks["dominant_colors"]}
-              data-confirm={gettext("Read the dominant color of every image again? This runs in the background.")}
+              data-confirm-title={gettext("Read the dominant color of every image again?")}
+              data-confirm={gettext("This runs in the background.")}
+              data-confirm-ok={gettext("Recalculate colors")}
             >
               {gettext("Recalculate colors")}
             </button>
