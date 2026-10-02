@@ -4,12 +4,20 @@ on:
   pull_request:
   # Lets the E2E job be run on demand without raising a PR — it is skipped on
   # push because it is slow, so this is the only other way to exercise it.
+  # `coverage` is ticked by the weekly coverage.yml run; it can also be ticked
+  # by hand.
   workflow_dispatch:
+    inputs:
+      coverage:
+        description: Measure test coverage (unit + E2E) and publish a merged report
+        type: boolean
+        default: false
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # A coverage run gets its own group so a push to main does not cancel it.
+  group: ci-${{ github.workflow }}-${{ github.ref }}${{ inputs.coverage && '-coverage' || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -77,7 +85,15 @@ jobs:
         run: mix ecto.reset
 
       - name: Run Tests
-        run: mix test --warnings-as-errors
+        run: mix test --warnings-as-errors ${{ inputs.coverage && matrix.elixir == '1.20.3' && '--cover --export-coverage unit' || '' }}
+
+      - name: Upload unit coverage data
+        if: inputs.coverage && matrix.elixir == '1.20.3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverdata-unit
+          path: cover/unit.coverdata
+          retention-days: 7
 
   quality:
     name: Blueprint quality gates
@@ -225,6 +241,10 @@ jobs:
       # worktree-aware path used locally.
       BRANDO_E2E_INSTANCE: ci
       BRANDO_E2E_POOL_SIZE: 50
+      # Coverage runs only: each server Playwright starts exports its data to
+      # BRANDO_E2E_COVER_EXPORT on shutdown. Every step that starts a server
+      # names its own file so a later server does not overwrite an earlier one.
+      BRANDO_E2E_COVER: ${{ inputs.coverage && '1' || '' }}
     # Each shard gets its own runner, PostgreSQL service, server, PubSub and
     # caches. Keep workers: 1 within a server; only isolated jobs run in parallel.
     # Authorization runs independently so it need not wait for the legacy suite.
@@ -348,6 +368,8 @@ jobs:
       - name: Run fast rich-text regressions
         if: matrix.suite == 'legacy-1'
         working-directory: brando/e2e
+        env:
+          BRANDO_E2E_COVER_EXPORT: ${{ github.workspace }}/brando/cover/e2e-tiptap.coverdata
         run: |
           source .envrc
           node --test ../test/javascript/tiptap.test.mjs
@@ -357,6 +379,8 @@ jobs:
       - name: Run legacy E2E shard
         if: matrix.shard != ''
         working-directory: brando/e2e
+        env:
+          BRANDO_E2E_COVER_EXPORT: ${{ github.workspace }}/brando/cover/e2e-${{ matrix.suite }}.coverdata
         run: |
           source .envrc
           if [ '${{ matrix.suite }}' = 'legacy-1' ]; then
@@ -368,6 +392,8 @@ jobs:
       - name: Run group authorization, preview and collaboration regressions
         if: matrix.suite == 'authorization'
         working-directory: brando/e2e
+        env:
+          BRANDO_E2E_COVER_EXPORT: ${{ github.workspace }}/brando/cover/e2e-authorization-groups.coverdata
         run: |
           source .envrc
           PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/groups \
@@ -381,6 +407,8 @@ jobs:
       - name: Run multi-site authorization regressions
         if: matrix.suite == 'authorization'
         working-directory: brando/e2e
+        env:
+          BRANDO_E2E_COVER_EXPORT: ${{ github.workspace }}/brando/cover/e2e-authorization-multi.coverdata
         run: |
           source .envrc
           PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/multi \
@@ -391,6 +419,8 @@ jobs:
       - name: Run single-site authorization regressions
         if: matrix.suite == 'authorization'
         working-directory: brando/e2e
+        env:
+          BRANDO_E2E_COVER_EXPORT: ${{ github.workspace }}/brando/cover/e2e-authorization-single.coverdata
         run: |
           source .envrc
           PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/single \
@@ -408,3 +438,93 @@ jobs:
             brando/e2e/playwright/test-results
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Upload E2E coverage data
+        if: always() && inputs.coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverdata-e2e-${{ matrix.suite }}
+          path: brando/cover/*.coverdata
+          if-no-files-found: warn
+          retention-days: 7
+
+  # Merges the unit and E2E exports into one report. Runs even when E2E
+  # failed (it is still informational), using whatever data was exported.
+  coverage_report:
+    name: Coverage report
+    needs: [mix_test, e2e]
+    if: always() && inputs.coverage
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: 1.20.3
+          otp-version: 28.4.1
+
+      - name: Restore deps and _build cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            deps-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
+            deps-${{ runner.os }}-28.4.1-1.20.3
+
+      - name: Install dependencies
+        run: mix deps.get --only test
+
+      - name: Compile
+        run: mix compile
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverdata-*
+          path: cover
+          merge-multiple: true
+
+      # `mix test.coverage` cover-compiles this job's own build and imports
+      # every cover/*.coverdata into it, so the jobs' differing checkout paths
+      # do not matter.
+      - name: Merge coverage
+        run: |
+          ls -la cover
+          mix test.coverage | tee coverage.txt
+          {
+            echo '## Test coverage (unit + E2E)'
+            echo
+            echo "Merged from: $(cd cover && ls *.coverdata | tr '\n' ' ')"
+            echo
+            grep -E '\| Total' coverage.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Convert to lcov
+        run: mix run --no-start .github/scripts/coverage_lcov.exs
+
+      # Feeds the README badge and the trend on codecov.io. Needs the
+      # CODECOV_TOKEN repository secret.
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: cover/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            cover/*.html
+            cover/lcov.info
+            coverage.txt
+          retention-days: 30

@@ -34,7 +34,7 @@ defmodule E2eProject.MixProject do
   def application do
     [
       mod: {E2eProject.Application, []},
-      extra_applications: [:logger, :runtime_tools, :recon, :sasl, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :recon, :sasl, :os_mon, :tools]
     ]
   end
 

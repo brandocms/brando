@@ -1,0 +1,32 @@
+name: Weekly coverage
+on:
+  schedule:
+    # Mondays 04:00 UTC.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    name: Start a coverage run if main changed this week
+    runs-on: ubuntu-latest
+    steps:
+      # The coverage itself runs in ci.yml (`coverage: true`), so the unit and
+      # E2E jobs stay defined in one place. A week without commits on main would
+      # only reproduce last week's report, so skip it.
+      - name: Dispatch CI with coverage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          since=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          commits=$(gh api "repos/$REPO/commits?sha=main&since=$since&per_page=1" --jq length)
+          if [ "$commits" = "0" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "No commits on main since $since; skipping." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh workflow run ci.yml --repo "$REPO" --ref main -f coverage=true
+          echo "Started CI with coverage on main." >> "$GITHUB_STEP_SUMMARY"

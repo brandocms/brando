@@ -12,7 +12,21 @@ defmodule Brando.Mixfile do
       deps: deps(),
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
-      test_coverage: [tool: ExCoveralls],
+      # `mix test --cover`. The weekly coverage run in CI exports unit and E2E
+      # data separately and merges them with `mix test.coverage`.
+      test_coverage: [
+        summary: [threshold: 0],
+        ignore_modules: [
+          Brando.System,
+          Brando.Plug.E2ETest,
+          Mix.Tasks.Brando.Static.Deploy,
+          Brando.ConnCase,
+          Brando.Factory,
+          ~r/^BrandoIntegration/,
+          RouterHelper,
+          ~r/^BrandoAdmin\.SyncTest\./
+        ]
+      ],
       description: @description,
       aliases: aliases(),
 
@@ -110,10 +124,6 @@ defmodule Brando.Mixfile do
   def cli do
     [
       preferred_envs: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test,
         # `ex_doc` and `inch_ex` are `only: :docs`, so `mix docs` in the default
         # env could never find the task.
         docs: :docs,
@@ -260,7 +270,6 @@ defmodule Brando.Mixfile do
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},
-      {:excoveralls, "~> 0.6", only: :test, runtime: false},
       # Required by Phoenix.LiveViewTest — see `Brando.LiveCase`
       {:lazy_html, ">= 0.1.0", only: :test},
       # Mocks the S3 seam — see `Brando.CDN.Client`
