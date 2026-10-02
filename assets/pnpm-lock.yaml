@@ -103,9 +103,6 @@ importers:
       idle-js:
         specifier: ^1.2.0
         version: 1.2.0
-      izitoast:
-        specifier: ^1.4.0
-        version: 1.4.0
       linkifyjs:
         specifier: ^4.3.3
         version: 4.3.3
@@ -136,9 +133,6 @@ importers:
       sortablejs:
         specifier: ^1.15.7
         version: 1.15.7
-      sweetalert2:
-        specifier: ^11.26.24
-        version: 11.26.24
       tippy.js:
         specifier: ^6.3.7
         version: 6.3.7
@@ -965,9 +959,6 @@ packages:
     resolution: {integrity: sha512-hFoiJiTl63nn+kstHGBtewWSKnQLpyb155KHheA1l39uvtO9nWIop1p3udqPcUd/xbF1VLMO4n7OI6p7RbngDg==}
     engines: {node: '>=8'}
 
-  izitoast@1.4.0:
-    resolution: {integrity: sha512-Oc1X2wiQtPp39i5VpIjf3GJf5sfCtHKXZ5szx7RareyEeFLUlcEW0FSfBni28+Ul6KNKZRKzhVuWzSP4Xngh0w==}
-
   js-base64@3.7.8:
     resolution: {integrity: sha512-hNngCeKxIUQiEUN3GPJOkz4wF/YvdUdbNL9hsBcMQTkKzboD7T/q3OYOuuPZLUE6dBxSGpwhk5mwuDud7JVAow==}
 
@@ -1324,9 +1315,6 @@ packages:
   svelte@5.55.5:
     resolution: {integrity: sha512-2uCs/LZ9us+AktdzYJM8OcxQ8qnPS1kpaO7syGT/MgO+6Qr1Ybl+TqPq+97u7PHqmmMlye5ZkoyXONy5mjjAbw==}
     engines: {node: '>=18'}
-
-  sweetalert2@11.26.24:
-    resolution: {integrity: sha512-SLgukW4wicewpW5VOukSXY5Z6DL/z7HCOK2ODSjmQPiSphCN8gJAmh9npoceXOtBRNoDN0xIz+zHYthtfiHmjg==}
 
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
@@ -2181,8 +2169,6 @@ snapshots:
 
   is-stream@2.0.1: {}
 
-  izitoast@1.4.0: {}
-
   js-base64@3.7.8: {}
 
   lightningcss-android-arm64@1.33.0:
@@ -2530,8 +2516,6 @@ snapshots:
       zimmerframe: 1.1.4
     transitivePeerDependencies:
       - '@typescript-eslint/types'
-
-  sweetalert2@11.26.24: {}
 
   tinyglobby@0.2.17:
     dependencies:

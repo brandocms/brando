@@ -86,30 +86,14 @@ export default app => ({
     app.disconnected = true
     app.reconnected = false
     console.log('==> socket disconnected')
-    app.toast.show({
-      title: '⚡️',
-      message: 'Mainframe connection was dropped. Attempting automatic reconnect...',
-      theme: 'small-error',
-      displayMode: 2,
-      position: 'topRight',
-      close: false,
-      progressBar: false
-    })
+    app.toast.connection(false, 'Mainframe connection was dropped. Attempting automatic reconnect...')
   },
 
   reconnected() {
     app.reconnected = true
     app.disconnected = false
     console.log('==> socket reconnected')
-    app.toast.show({
-      title: '✌️',
-      message: 'Reconnected to mainframe!',
-      theme: 'small-success',
-      displayMode: 2,
-      position: 'topRight',
-      close: false,
-      progressBar: false
-    })
+    app.toast.connection(true, 'Reconnected to mainframe!')
   },
 
   animateNav() {

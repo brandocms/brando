@@ -29,7 +29,7 @@ async function buildUserPage(browser, userAgentString, email) {
   // Hide toast notifications so they don't intercept pointer events in tests
   await context.addInitScript(() => {
     const style = document.createElement('style')
-    style.textContent = '.iziToast-wrapper { display: none !important; }'
+    style.textContent = '.toast-stack { display: none !important; }'
     const inject = () => document.head?.appendChild(style.cloneNode(true))
     if (document.head) inject()
     else document.addEventListener('DOMContentLoaded', inject)
