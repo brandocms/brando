@@ -96,6 +96,8 @@ defmodule Brando.Supervisor do
               # Purge inactive/unprotected revisions older than 30 days
               {"0 4 * * *", Brando.Worker.RevisionPurger},
               {"15 4 * * *", Brando.Worker.DraftPurger},
+              # Remove activity events past their retention period
+              {"20 4 * * *", Brando.Worker.ActivityPurger},
               # Mark video rows stuck in :uploading as errored (abandoned external uploads)
               {"30 4 * * *", Brando.Worker.VideoUploadReaper},
               # Delete bucket objects of client-direct uploads that never finalized

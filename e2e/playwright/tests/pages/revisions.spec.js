@@ -30,9 +30,10 @@ test.describe('Entry revisions', () => {
     await page.locator('.entry-block textarea').first().blur()
     await syncLV(page)
 
-    await page.getByRole('button', { name: 'Revisions' }).click()
+    await page.getByRole('button', { name: 'History', exact: true }).click()
     const drawer = page.locator('[id$="-revisions-drawer"]')
     await expect(drawer).toBeVisible()
+    await drawer.getByRole('tab', { name: /Revisions/ }).click()
     await drawer.getByRole('button', { name: 'Store current editor state' }).click()
     await expect(drawer.locator('#preview-revision-1')).toBeVisible({ timeout: 30000 })
 
@@ -42,7 +43,8 @@ test.describe('Entry revisions', () => {
     await page.locator('.entry-block textarea').first().blur()
     await syncLV(page)
 
-    await page.getByRole('button', { name: 'Revisions' }).click()
+    await page.getByRole('button', { name: 'History', exact: true }).click()
+    await drawer.getByRole('tab', { name: /Revisions/ }).click()
     await drawer.locator('#preview-revision-1').click()
     await page.getByRole('button', { name: 'OK' }).click()
 

@@ -2538,11 +2538,11 @@ defmodule BrandoAdmin.Components.Form do
                   |> toggle_drawer("##{@id}-revisions-drawer")
                 }
                 type="button"
-                aria-label={gettext("Revisions")}
-                title={gettext("Revisions")}
+                aria-label={gettext("History")}
+                title={gettext("History")}
               >
                 <.icon name="hero-clock" class="s" />
-                <span class="tab-text">{gettext("Revisions")}</span>
+                <span class="tab-text">{gettext("History")}</span>
               </button>
               <button
                 :if={@has_scheduled_publishing?}

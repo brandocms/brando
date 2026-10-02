@@ -443,7 +443,11 @@ defmodule Brando.Content.Transfer do
 
             before = snapshot_fields(current.fields)
             bindings = persist_dependencies!(current, stage, actor)
-            persist_fields!(current.fields, bindings, actor)
+            label = plan.archive.bundle["source"]["label"]
+
+            Brando.Activity.with_source(:import, fn ->
+              Brando.Activity.with_batch(plan.id, fn -> persist_fields!(current.fields, bindings, actor, label) end)
+            end)
 
             after_fields =
               Enum.map(current.fields, fn field ->
@@ -539,7 +543,7 @@ defmodule Brando.Content.Transfer do
     end)
   end
 
-  defp persist_fields!(fields, bindings, actor) do
+  defp persist_fields!(fields, bindings, actor, label) do
     available = bindings |> Map.values() |> Enum.filter(&match?(%Brando.Galleries.Gallery{}, &1)) |> MapSet.new(& &1.id)
 
     fields
@@ -568,7 +572,8 @@ defmodule Brando.Content.Transfer do
             )
           )
 
-      Repo.update!(cs)
+      updated = Repo.update!(cs)
+      Brando.Activity.imported(updated, actor, :update, label, Brando.Activity.changed_fields(cs))
       available
     end)
   end
@@ -874,7 +879,13 @@ defmodule Brando.Content.Transfer do
                    if Boundary.change(actor, :update, cs) != :ok,
                      do: Error.fail!(dgettext("content_transfer", "Recovery is no longer authorized."))
 
-                   Repo.update!(cs)
+                   updated = Repo.update!(cs)
+
+                   Brando.Activity.with_source(:import, fn ->
+                     Brando.Activity.with_batch(receipt.id, fn ->
+                       Brando.Activity.import_undone(updated, actor, :update)
+                     end)
+                   end)
                  end)
                end
 

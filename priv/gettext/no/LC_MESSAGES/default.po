@@ -13776,3 +13776,374 @@ msgstr "Beregner dominerende farger på nytt i bakgrunnen."
 #, elixir-autogen, elixir-format
 msgid "This is already running."
 msgstr "Dette kjører allerede."
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Action"
+msgstr "Handling"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Activated revision #%{revision}, as scheduled"
+msgstr "Aktiverte versjon #%{revision}, som planlagt"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All actions"
+msgstr "Alle handlinger"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "All activity"
+msgstr "All aktivitet"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All content types"
+msgstr "Alle innholdstyper"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All kept activity"
+msgstr "All lagret aktivitet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Also changed %{fields}"
+msgstr "Endret også %{fields}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Approved by %{name}"
+msgstr "Godkjent av %{name}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "As scheduled"
+msgstr "Som planlagt"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by a content transfer"
+msgstr "av en innholdsoverføring"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by %{name}"
+msgstr "av %{name}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by scheduled publishing"
+msgstr "av planlagt publisering"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by the assistant"
+msgstr "av assistenten"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by the system"
+msgstr "av systemet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Can be restored from the trash until %{date}"
+msgstr "Kan gjenopprettes fra papirkurven til %{date}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Changed %{fields}"
+msgstr "Endret %{fields}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Compare"
+msgstr "Sammenlign"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Compare revisions"
+msgstr "Sammenlign versjoner"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Compare with #%{revision}"
+msgstr "Sammenlign med #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Copied from %{title}"
+msgstr "Kopiert fra %{title}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} event"
+msgid_plural "%{count} events"
+msgstr[0] "%{count} hendelse"
+msgstr[1] "%{count} hendelser"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Created by the import"
+msgstr "Opprettet av importen"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Created from %{source}"
+msgstr "Opprettet fra %{source}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted permanently"
+msgstr "Slettet permanent"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicated"
+msgstr "Duplisert"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Entry history"
+msgstr "Historikk"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone"
+msgstr "Alle"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Everything that happened to this entry, including publishing, trash and restores. Open a revision to see or reuse its content."
+msgstr "Alt som har skjedd med denne oppføringen, også publisering, papirkurv og gjenoppretting. Åpne en versjon for å se eller gjenbruke innholdet."
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "from %{source}"
+msgstr "fra %{source}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Imported"
+msgstr "Importert"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept for %{count} day"
+msgid_plural "Kept for %{count} days"
+msgstr[0] "Lagres i %{count} dag"
+msgstr[1] "Lagres i %{count} dager"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 12 months"
+msgstr "Siste 12 måneder"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 30 days"
+msgstr "Siste 30 dager"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 7 days"
+msgstr "Siste 7 dager"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Loading activity..."
+msgstr "Laster aktivitet …"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Load older activity"
+msgstr "Last eldre aktivitet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{count} entry"
+msgid_plural "Moved %{count} entries"
+msgstr[0] "Flyttet %{count} oppføring"
+msgstr[1] "Flyttet %{count} oppføringer"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved to trash"
+msgstr "Flyttet til papirkurven"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been recorded for this entry yet."
+msgstr "Ingenting er registrert for denne oppføringen ennå."
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has happened in this period."
+msgstr "Ingenting har skjedd i denne perioden."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "One of these revisions is no longer kept, so they can't be compared."
+msgstr "En av disse versjonene er ikke lenger lagret, så de kan ikke sammenlignes."
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open trash"
+msgstr "Åpne papirkurven"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Period"
+msgstr "Periode"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Person"
+msgstr "Person"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed by undoing the import that created it"
+msgstr "Fjernet da importen som opprettet den ble angret"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from the trash after %{days} days"
+msgstr "Fjernet fra papirkurven etter %{days} dager"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reordered"
+msgstr "Endret rekkefølge"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced %{fields}"
+msgstr "Erstattet %{fields}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced revision #%{revision}"
+msgstr "Erstattet versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored a revision"
+msgstr "Gjenopprettet en versjon"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored from trash"
+msgstr "Gjenopprettet fra papirkurven"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored revision #%{revision}"
+msgstr "Gjenopprettet versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{from} → revision #%{to}"
+msgstr "Versjon #%{from} → versjon #%{to}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision}"
+msgstr "Versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Run by %{name}"
+msgstr "Kjørt av %{name}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Saved as %{status}"
+msgstr "Lagret som %{status}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search entries"
+msgstr "Søk i oppføringer"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set back by undoing an import"
+msgstr "Satt tilbake da en import ble angret"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set by %{name}"
+msgstr "Satt opp av %{name}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Showing %{shown} of %{count}"
+msgstr "Viser %{shown} av %{count}"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Show older activity"
+msgstr "Vis eldre aktivitet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Status changed from %{from} to %{to}"
+msgstr "Status endret fra %{from} til %{to}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "The entry no longer exists"
+msgstr "Oppføringen finnes ikke lenger"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "These revisions have the same content."
+msgstr "Disse versjonene har samme innhold."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} is now first"
+msgstr "%{title} er nå først"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr "I dag"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown"
+msgstr "Ukjent"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Updated by the import"
+msgstr "Oppdatert av importen"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Updated from %{source}"
+msgstr "Oppdatert fra %{source}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Who created, changed, published and deleted content, and when. Changes that saved a revision can be compared with the one before."
+msgstr "Hvem som opprettet, endret, publiserte og slettet innhold, og når. Endringer som lagret en versjon kan sammenlignes med den forrige."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Yesterday"
+msgstr "I går"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted user"
+msgstr "Slettet bruker"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by a deleted user"
+msgstr "av en slettet bruker"

@@ -714,7 +714,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   defp editor_facts(%{deleted_at: %{} = deleted_at} = entry, true) do
-    {Map.get(entry, :updated_by) || entry.creator, gettext("Deleted"), deleted_at}
+    {Map.get(entry, :trashed_by) || Map.get(entry, :updated_by) || entry.creator, gettext("Deleted"), deleted_at}
   end
 
   defp editor_facts(%{updated_by: %Brando.Users.User{} = updated_by} = entry, _) do
