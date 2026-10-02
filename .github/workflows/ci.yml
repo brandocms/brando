@@ -1,6 +1,9 @@
 name: CI
 on:
+  # Only main: a branch with a PR is covered by `pull_request`, which tests the
+  # merge result. Building it on `push` as well ran everything twice.
   push:
+    branches: [main]
   pull_request:
   # Lets the E2E job be run on demand without raising a PR — it is skipped on
   # push because it is slow, so this is the only other way to exercise it.
