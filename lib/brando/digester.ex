@@ -102,10 +102,6 @@ defmodule Brando.Digester do
     File.write!(Path.join(output_path, "cache_manifest.json"), json)
   end
 
-  defp remove_manifest(output_path) do
-    File.rm(Path.join(output_path, "cache_manifest.json"))
-  end
-
   defp generate_digests(files) do
     Map.new(
       files,
@@ -307,35 +303,6 @@ defmodule Brando.Digester do
     end
   end
 
-  @doc """
-  Deletes compiled/compressed asset files, including the cache manifest.
-
-  ## Arguments
-
-    * `path` - The path where the compiled/compressed files are saved
-
-  """
-  @spec clean_all(String.t()) :: :ok | {:error, :invalid_path}
-  def clean_all(path) do
-    if File.exists?(path) do
-      %{"digests" => digests} = load_manifest(path)
-      grouped_digests = group_by_logical_path(digests)
-      logical_paths = Map.keys(grouped_digests)
-
-      files =
-        for {_, versions} <- grouped_digests,
-            {file, _attrs} <- versions,
-            do: file
-
-      remove_files(files, path)
-      remove_compressed_files(logical_paths, path)
-      remove_manifest(path)
-      :ok
-    else
-      {:error, :invalid_path}
-    end
-  end
-
   defp files_to_clean(latest, digests, max_age, keep) do
     digests = Map.drop(digests, Map.values(latest))
 
@@ -365,10 +332,6 @@ defmodule Brando.Digester do
 
       remove_compressed_file(file, output_path)
     end
-  end
-
-  defp remove_compressed_files(files, output_path) do
-    for file <- files, do: remove_compressed_file(file, output_path)
   end
 
   defp remove_compressed_file(file, output_path) do

@@ -206,8 +206,6 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     end
   end
 
-  def folders_from_filesystem(_upload_root), do: [""]
-
   def create_folder(folder, upload_root \\ nil) do
     case storage_location(folder, upload_root) do
       nil ->

@@ -80,12 +80,6 @@ defmodule Brando.Blueprint.Assets.Dsl do
     {:ok, %{asset | opts: Enum.into(asset.opts, %{})}}
   end
 
-  @doc false
-  def normalize_runtime_config(asset) do
-    config_normalizer = Module.concat(["Brando", "Blueprint", "AssetConfigNormalizer"])
-    config_normalizer.normalize(asset)
-  end
-
   defp association_module(:image), do: @image_schema
   defp association_module(:video), do: @video_schema
   defp association_module(:file), do: @file_schema

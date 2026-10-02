@@ -4,7 +4,6 @@ defmodule Brando.Content.SharedLibraryTest do
 
   alias Brando.Content.Block
   alias Brando.Content.Module
-  alias Brando.Content.ModuleResolver
   alias Brando.Content.SharedLibrary
   alias Brando.Repo
   alias Brando.Tenant
@@ -242,10 +241,10 @@ defmodule Brando.Content.SharedLibraryTest do
     assert :ok = SharedLibrary.enable(site, :module, shared.id)
 
     assert %{name: %{"en" => "Local collision"}, library_origin: :local} =
-             ModuleResolver.get_module(shared.id, site, @prefix)
+             SharedLibrary.get(:module, shared.id, site, @prefix)
 
     assert %{name: %{"en" => "Shared collision"}, library_origin: :shared} =
-             ModuleResolver.get_module(shared.id, :shared, site, @prefix)
+             SharedLibrary.get(:module, shared.id, :shared, site, @prefix)
   end
 
   test "deletion remains blocked after access is revoked when an existing block still references shared", %{
