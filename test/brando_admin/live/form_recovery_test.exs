@@ -168,7 +168,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
     # `pushFormRecovery` — the failure message says so, and the stub's own
     # comment points back here.
     test "the recovery target mirrors a known LiveView version" do
-      assert to_string(Application.spec(:phoenix_live_view, :vsn)) == "1.2.11",
+      assert to_string(Application.spec(:phoenix_live_view, :vsn)) == "1.2.12",
              """
              phoenix_live_view moved. Two things to re-read before bumping this:
 

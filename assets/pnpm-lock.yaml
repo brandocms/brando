@@ -122,14 +122,14 @@ importers:
         specifier: ^2.7.8
         version: 2.7.8
       phoenix:
-        specifier: 1.8.13
-        version: 1.8.13
+        specifier: 1.8.15
+        version: 1.8.15
       phoenix_html:
         specifier: ^4.3.0
         version: 4.3.0
       phoenix_live_view:
-        specifier: 1.2.11
-        version: 1.2.11
+        specifier: 1.2.12
+        version: 1.2.12
       slugify:
         specifier: ^1.6.9
         version: 1.6.9
@@ -1131,14 +1131,14 @@ packages:
     resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
     engines: {node: '>=0.10.0'}
 
-  phoenix@1.8.13:
-    resolution: {integrity: sha512-5UByH7ejdsPLd6eihwzV3L3i6YX4mHUtFjLaE8S1YuA+3aBj37rzH6KDjxBuPlB04o9ZHVz+PKRiUg3aYYvzmQ==}
+  phoenix@1.8.15:
+    resolution: {integrity: sha512-AU2t9smrLcSy7DF1ic3VKDVNmjnhcsOgdeXBiVrR29BgFLmO4EN+tyGx/lRY3naxl7eJtyLrnlBOfJu8gYvXdQ==}
 
   phoenix_html@4.3.0:
     resolution: {integrity: sha512-6vnR2Y7KxEPX1DdN59AuO98TTFtsYBqfUiUOo3NY6vyVp3o94RTawdaKtELFOKfiUD7LCEclBcpCltJM2GWuKw==}
 
-  phoenix_live_view@1.2.11:
-    resolution: {integrity: sha512-52aAL+cW0IGxZT9QMEkN+3+pRfCTCBEQZUL6C1gRgAlqmOf15VkMFxISHX71IAj+Px7uQl31ROmYUsWXDUT95g==}
+  phoenix_live_view@1.2.12:
+    resolution: {integrity: sha512-MmJSXZrqThk4mTzyvxSujzdRj6OHdVf5P5IS+qLPKdquCzHBYC7YXCkltBPCaom4uKS1cBKGahU7fGhU3Vyo4w==}
 
   picocolors@0.2.1:
     resolution: {integrity: sha512-cMlDqaLEqfSaW8Z7N5Jw+lyIW869EzT73/F5lhtY9cLGoVxSXznfgfXMO0Z5K0o0Q2TkTXq+0KFsdnSe3jDViA==}
@@ -2312,11 +2312,11 @@ snapshots:
 
   path-is-absolute@1.0.1: {}
 
-  phoenix@1.8.13: {}
+  phoenix@1.8.15: {}
 
   phoenix_html@4.3.0: {}
 
-  phoenix_live_view@1.2.11: {}
+  phoenix_live_view@1.2.12: {}
 
   picocolors@0.2.1: {}
 
