@@ -62,7 +62,7 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 | `lib/brando_admin/components/form/input/blocks/gallery_block.ex` | Gallery ref block input |
 | `lib/brando_admin/components/form/input/blocks/svg_block.ex` | SVG ref block input |
 | `lib/brando_admin/components/form/input/blocks/map_block.ex` | Map ref block input |
-| `lib/brando_admin/components/form/input/blocks/render_var.ex` | Var rendering component |
+| `lib/brando_admin/components/form/input/render_var.ex` | Var rendering component |
 | `lib/brando_admin/components/form/input/blocks/utils.ex` | Block rendering utilities |
 
 **Ref config fields must be listed in `carried_config`.** A ref's config
@@ -80,7 +80,7 @@ each ref type submits with its config closed and open; add new ref types there.
 ### Villain (Rendering & Block Types)
 | File | Description |
 |------|-------------|
-| `lib/brando/villain/villain.ex` | Main Villain module: rendering, parsing, duplicate helpers |
+| `lib/brando/villain.ex` | Main Villain module: rendering, parsing, duplicate helpers |
 | `lib/brando/villain/parser.ex` | Liquex template parser |
 | `lib/brando/villain/block.ex` | Base block behaviour and macros |
 | `lib/brando/villain/blocks.ex` | Block type registry (lists all available block types) |
