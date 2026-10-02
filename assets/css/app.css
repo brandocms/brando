@@ -35,6 +35,7 @@
 @import "./components/Form/Loader.css";
 @import "./components/Form/Subform.css";
 @import "./components/Form/VarLayout.css";
+@import "./components/Form/FormFields.css";
 @import "./components/Form/Input/AssetField.css";
 @import "./components/Form/Input/CodeEditor.css";
 @import "./components/Form/Input/ColorPicker.css";

@@ -1,0 +1,57 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+#: lib/brando/forms/form.ex:111
+#, elixir-autogen, elixir-format
+msgid "Default value"
+msgstr ""
+
+#: lib/brando/forms/form.ex:110
+#, elixir-autogen, elixir-format
+msgid "Help text"
+msgstr ""
+
+#: lib/brando/forms/form.ex:106
+#, elixir-autogen, elixir-format
+msgid "Key"
+msgstr ""
+
+#: lib/brando/forms/form.ex:108
+#, elixir-autogen, elixir-format
+msgid "Label"
+msgstr ""
+
+#: lib/brando/forms/form.ex:114
+#, elixir-autogen, elixir-format
+msgid "New row"
+msgstr ""
+
+#: lib/brando/forms/form.ex:109
+#, elixir-autogen, elixir-format
+msgid "Placeholder"
+msgstr ""
+
+#: lib/brando/forms/form.ex:112
+#, elixir-autogen, elixir-format
+msgid "Required"
+msgstr ""
+
+#: lib/brando/forms/form.ex:107
+#, elixir-autogen, elixir-format
+msgid "Type"
+msgstr ""
+
+#: lib/brando/forms/form.ex:113
+#, elixir-autogen, elixir-format
+msgid "Width"
+msgstr ""

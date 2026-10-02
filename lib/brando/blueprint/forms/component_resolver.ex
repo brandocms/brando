@@ -7,6 +7,7 @@ defmodule Brando.Blueprint.Forms.ComponentResolver do
   """
 
   @components %{
+    form_fields: ["BrandoAdmin", "Components", "Form", "Input", "FormFields"],
     gallery_objects: ["BrandoAdmin", "Components", "Form", "Input", "GalleryObjects"],
     identity_type_config: ["BrandoAdmin", "Components", "Form", "Input", "IdentityTypeConfig"],
     image_focal: ["BrandoAdmin", "Components", "Form", "Input", "ImageFocal"],

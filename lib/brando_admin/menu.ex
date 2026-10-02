@@ -378,6 +378,10 @@ defmodule BrandoAdmin.Menu do
               name: gettext("Pages & Sections"),
               url: "/admin/pages"
             },
+            %{
+              name: gettext("Forms"),
+              url: "/admin/forms"
+            },
             globals_menu_item()
           ]
           |> Enum.reject(&is_nil/1)

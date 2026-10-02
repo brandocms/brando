@@ -1,0 +1,419 @@
+/* ===========================================================
+   Form builder · field designer
+
+   The module editor's variable canvas (VarLayout.css) applied to the fields
+   of a front-end form. Only what forms add is styled here: section bands,
+   the required marker and toggle, the quick-add row, the edit modal and the
+   preview of the form's default markup.
+   =========================================================== */
+
+.form-fields-designer {
+  width: 100%;
+
+  .var-layout-split {
+    grid-template-columns: minmax(0, 1.1fr) minmax(400px, 0.9fr);
+
+    @responsive $sm {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+/* A section is a heading across the form, so its row is a band rather than
+   a row of chips. */
+.form-section-row {
+  min-height: 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background-color: transparent;
+}
+
+.var-chip.form-section-chip {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background-color: #f5f1ef;
+
+  .var-chip-type {
+    margin-left: 0;
+    background-color: var(--brando-color-white);
+  }
+
+  .var-chip-label {
+    flex: 1;
+    width: auto;
+    font-size: 14px;
+    opacity: 1;
+  }
+
+  .var-chip-actions {
+    margin-left: 0;
+  }
+}
+
+.form-field-required {
+  margin-left: 2px;
+  color: #c2412d;
+}
+
+.var-chip-actions .form-field-required-toggle {
+  width: auto;
+  padding: 0 6px;
+  @font mono;
+  font-size: 10px;
+
+  &.on {
+    background-color: #fbe3df;
+    color: #8c2b1c;
+  }
+}
+
+.form-fields-designer[data-locked] .var-chip {
+  cursor: default;
+}
+
+.form-fields-designer[data-locked] .var-width-group button {
+  cursor: default;
+
+  &:not(.on) {
+    display: none;
+  }
+}
+
+.form-fields-quick-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  button {
+    padding: 4px 10px;
+    border: 1px dashed #d8ceca;
+    border-radius: 999px;
+    background-color: var(--brando-color-white);
+    font-size: 12px;
+    opacity: 0.8;
+    transition: opacity 120ms ease, border-color 120ms ease;
+
+    &:hover {
+      border-style: solid;
+      opacity: 1;
+    }
+  }
+}
+
+.var-layout-tray-items .form-fields-tray-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px dashed #d8ceca;
+  border-radius: 999px;
+  background-color: transparent;
+  font-size: 11.5px;
+
+  [data-icon] {
+    width: 12px;
+    height: 12px;
+    background-color: currentColor;
+  }
+}
+
+/* ── edit modal ─────────────────────────────────────────── */
+
+.form-field-editor {
+  &.is-translation {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 24px;
+
+    @responsive $sm {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+.form-field-locked {
+  align-self: start;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background-color: #fbf8f7;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+
+    [data-icon] {
+      width: 13px;
+      height: 13px;
+      background-color: currentColor;
+      opacity: 0.6;
+    }
+  }
+
+  p {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.45;
+    opacity: 0.6;
+  }
+
+  dl {
+    display: grid;
+    gap: 2px;
+    margin-top: 14px;
+  }
+
+  dt {
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.55;
+  }
+
+  dd {
+    @font mono;
+    font-size: 12px;
+  }
+}
+
+.form-field-main {
+  display: grid;
+  gap: 18px;
+}
+
+.form-field-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 8px;
+
+  @responsive $sm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.form-field-options {
+  margin-top: 8px;
+
+  table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+  }
+
+  th {
+    padding: 0 8px 6px 0;
+    font-size: 11px;
+    font-weight: 400;
+    text-align: left;
+    opacity: 0.55;
+  }
+
+  td {
+    padding: 4px 8px 4px 0;
+    vertical-align: middle;
+
+    input.text {
+      width: 100%;
+    }
+
+    input[readonly] {
+      background-color: #fbf8f7;
+    }
+  }
+
+  td:last-child {
+    width: 1%;
+  }
+
+  .module-add-button {
+    margin-top: 10px;
+  }
+}
+
+.form-field-options-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  small {
+    font-size: 12px;
+    opacity: 0.55;
+  }
+}
+
+.form-field-source {
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0.55;
+}
+
+.form-field-option-remove {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background-color: #f5f1ef;
+
+  &:hover {
+    background-color: #f6dcd8;
+  }
+
+  [data-icon] {
+    width: 13px;
+    height: 13px;
+    background-color: var(--brando-color-dark);
+  }
+}
+
+/* ── preview of the default markup ──────────────────────── */
+
+/* A neutral rendering of `Brando.HTML.Forms.site_form`: what the structural
+   classes amount to before a site styles them. */
+.form-fields-designer .form-fields-preview .site-form {
+  padding: 22px 24px 24px;
+  border-radius: 10px;
+  background-color: var(--brando-color-white);
+  box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.06);
+
+  .site-form-intro p {
+    margin: 0 0 18px;
+    font-size: 13px;
+    opacity: 0.65;
+  }
+
+  .site-form-section {
+    margin: 0 0 18px;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Settings workspaces float and enlarge every legend in the admin form,
+     which this preview sits inside. */
+  .site-form-section legend.site-form-legend {
+    display: block;
+    float: none;
+    width: 100%;
+    line-height: 1.4;
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .site-form-section-description {
+    margin: 0 0 10px;
+    font-size: 12px;
+    opacity: 0.6;
+  }
+
+  .site-form-fields {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .site-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    grid-column: span 12;
+
+    &[data-width="half"] {
+      grid-column: span 6;
+    }
+
+    &[data-width="third"] {
+      grid-column: span 4;
+    }
+
+    &[data-width="fourth"] {
+      grid-column: span 3;
+    }
+
+    &[data-new-row] {
+      grid-column-start: 1;
+    }
+  }
+
+  .site-form-label {
+    padding: 0;
+    font-size: 12px;
+  }
+
+  .site-form-required {
+    margin-left: 2px;
+    color: #c2412d;
+  }
+
+  .site-form-input {
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid #ddd5d2;
+    border-radius: 6px;
+    background-color: var(--brando-color-white);
+    font-size: 13px;
+  }
+
+  textarea.site-form-input {
+    min-height: 74px;
+    resize: none;
+  }
+
+  .site-form-choices {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .site-form-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin-top: 4px;
+    font-size: 12.5px;
+
+    input {
+      margin-top: 2px;
+    }
+  }
+
+  .site-form-consent-text {
+    display: block;
+    font-size: 11.5px;
+    opacity: 0.6;
+  }
+
+  .site-form-help {
+    margin: 0;
+    font-size: 11px;
+    opacity: 0.55;
+  }
+
+  .site-form-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .site-form-submit {
+    padding: 10px 22px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--brando-color-dark);
+    color: var(--brando-color-white);
+    font-size: 13px;
+  }
+
+  fieldset:disabled,
+  button:disabled {
+    opacity: 1;
+  }
+}
