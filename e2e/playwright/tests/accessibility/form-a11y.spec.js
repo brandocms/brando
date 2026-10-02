@@ -38,6 +38,11 @@ test.describe('Accessible form validation', () => {
     await expect(title).toHaveAttribute('aria-invalid', 'true')
     await expect(errors).not.toBeEmpty()
 
+    // The save error is a modal alert, so focus waits for it to be dismissed.
+    const alert = page.getByRole('dialog')
+    await alert.getByRole('button', { name: 'OK' }).click()
+    await expect(alert).toBeHidden()
+
     // The caret lands in the offending control, not on the submit button —
     // and `aria-describedby` means arriving there reads the message out.
     await expect(title).toBeFocused()
@@ -52,6 +57,7 @@ test.describe('Accessible form validation', () => {
     await page.getByTestId('submit').click()
     await syncLV(page)
     await expect(title).toHaveAttribute('aria-invalid', 'true')
+    await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click()
 
     await title.fill('An acceptable title')
     await syncLV(page)

@@ -63,7 +63,16 @@ export default app => ({
       // fights it with its own jump.
       const wrapper = firstError.closest('.field-wrapper')
       const control = wrapper && wrapper.querySelector('[aria-invalid="true"]')
-      if (control) {
+      if (!control) return
+
+      // The save error arrives as a modal alert (b:alert, pushed just before
+      // this). While it is open the form is inert and focus() does nothing, and
+      // closing it hands focus back to the submit button — so land in the field
+      // when it closes instead.
+      const alert = document.querySelector('dialog.admin-dialog[open]')
+      if (alert) {
+        alert.addEventListener('close', () => control.focus({ preventScroll: true }), { once: true })
+      } else {
         setTimeout(() => control.focus({ preventScroll: true }), 300)
       }
     })
