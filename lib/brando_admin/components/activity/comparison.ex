@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Activity.Comparison do
   @moduledoc """
   What changed between two revisions of an entry, for the activity log's
-  Compare: the sections `BrandoAdmin.Components.Form.DraftPreview` builds for
-  a recovery copy, with the older revision in place of the saved entry.
+  Compare: the same field and block sections a recovery copy's preview
+  shows, with the older revision in place of the saved entry.
   """
   import Ecto.Query
 
