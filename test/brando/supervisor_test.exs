@@ -33,6 +33,7 @@ defmodule Brando.SupervisorTest do
       assert Brando.Worker.SitemapGenerator in workers
       assert Brando.Worker.SoftDeletePurger in workers
       assert Brando.Worker.RevisionPurger in workers
+      assert Brando.Worker.ActivityPurger in workers
       assert Brando.Worker.VideoUploadReaper in workers
       assert Brando.Worker.UploadIntentReaper in workers
       assert Brando.Worker.MediaOrphanCleanup in workers

@@ -1902,7 +1902,9 @@ defmodule Brando.Content.Proposals do
   has no revision to go back to.
   """
   @spec undo(Ecto.UUID.t(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
-  def undo(id, actor) do
+  def undo(id, actor), do: Brando.Activity.with_source(:assistant, fn -> do_undo(id, actor) end)
+
+  defp do_undo(id, actor) do
     Error.protect(fn ->
       record = record!(id, actor)
       user = user!(actor)
@@ -2050,7 +2052,10 @@ defmodule Brando.Content.Proposals do
   returns its receipt.
   """
   @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
-  def apply(id, version, actor, opts \\ []) do
+  def apply(id, version, actor, opts \\ []),
+    do: Brando.Activity.with_source(:assistant, fn -> do_apply(id, version, actor, opts) end)
+
+  defp do_apply(id, version, actor, opts) do
     result =
       Error.protect(fn ->
         record = record!(id, actor)

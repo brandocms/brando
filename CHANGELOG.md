@@ -440,6 +440,20 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Activity log.** Configuration → Activity lists who created, changed,
+  published, trashed, restored and deleted entries, and when: by day, with
+  the fields that changed, filters for person, content type, action and
+  period, and Compare to see a change against the revision before it.
+  Scheduled publishing, the assistant and content imports show as the source,
+  with the person behind them. The editor's **Revisions** button is now
+  **History**, with an Activity tab for the entry and the revisions on the
+  second tab. The trash listing names who deleted an entry instead of
+  guessing from the last editor. Events keep titles and field names, not
+  values; they are removed after `retention_days` (365). Run
+  `mix brando.gen.migrations` for `brando_193`. With group authorization,
+  grant `brando.activity.read` to existing groups that should see it. See
+  the activity guide and `Brando.Activity`.
+
 - **Add a video that is already in Mux, Bunny, Cloudflare or Vimeo.** The video
   picker has an "Add from …" button for every configured provider. It lists
   the provider's library, with search where the API has it, and adds a video

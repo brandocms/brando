@@ -13772,3 +13772,374 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This is already running."
 msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Action"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Activated revision #%{revision}, as scheduled"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All actions"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "All activity"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All content types"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All kept activity"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Also changed %{fields}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Approved by %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "As scheduled"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by a content transfer"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by scheduled publishing"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by the assistant"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by the system"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Can be restored from the trash until %{date}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Changed %{fields}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Compare"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Compare revisions"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Compare with #%{revision}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Copied from %{title}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} event"
+msgid_plural "%{count} events"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Created by the import"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Created from %{source}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted permanently"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicated"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Entry history"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Everything that happened to this entry, including publishing, trash and restores. Open a revision to see or reuse its content."
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "from %{source}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Imported"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept for %{count} day"
+msgid_plural "Kept for %{count} days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 12 months"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 30 days"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 7 days"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Loading activity..."
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Load older activity"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{count} entry"
+msgid_plural "Moved %{count} entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved to trash"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been recorded for this entry yet."
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has happened in this period."
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "One of these revisions is no longer kept, so they can't be compared."
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open trash"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Period"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Person"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed by undoing the import that created it"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from the trash after %{days} days"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reordered"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced %{fields}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced revision #%{revision}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored a revision"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored from trash"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored revision #%{revision}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{from} → revision #%{to}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Run by %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Saved as %{status}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search entries"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set back by undoing an import"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set by %{name}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Showing %{shown} of %{count}"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Show older activity"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Status changed from %{from} to %{to}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "The entry no longer exists"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "These revisions have the same content."
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} is now first"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Updated by the import"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Updated from %{source}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Who created, changed, published and deleted content, and when. Changes that saved a revision can be compared with the one before."
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Yesterday"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted user"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by a deleted user"
+msgstr ""

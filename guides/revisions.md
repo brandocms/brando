@@ -14,9 +14,10 @@ Revision operations run in the entry's environment and obey the entry's
 
 1. Create a page with a heading block and save it. Revisions require a persisted
    entry ID; a brand-new unsaved page has no history yet.
-2. Change its title and heading without saving the entry. Open **Revisions** and
-   choose **Store current editor state**. Brando collects the editor's current
-   fields and blocks, validates them, and stores an **inactive** revision.
+2. Change its title and heading without saving the entry. Open **History**,
+   switch to **Revisions** and choose **Store current editor state**. Brando
+   collects the editor's current fields and blocks, validates them, and stores
+   an **inactive** revision.
    The public entry is unchanged.
 3. Give the revision a useful description, such as **Autumn launch**. Make another
    temporary edit, then select the stored revision to preview it. Confirm the

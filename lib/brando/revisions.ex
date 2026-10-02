@@ -325,8 +325,10 @@ defmodule Brando.Revisions do
              {:ok, updated_entry} <- Query.update(changeset),
              {:ok, identifier_result} <- Content.update_identifier(entry_schema, updated_entry),
              {:ok, _} <- Brando.Publisher.schedule_publishing(updated_entry, changeset, user) do
+          replaced = active_revision_number(to_string(entry_schema), entry_id)
           deactivate_all_revisions(to_string(entry_schema), entry_id)
           activate_revision(revision)
+          Brando.Activity.revision_restored(updated_entry, user, revision_number, replaced, publish?: publish?)
 
           %{
             changeset: changeset,
@@ -601,6 +603,15 @@ defmodule Brando.Revisions do
       update: [set: [active: true, scheduled: false]]
     )
     |> Repo.update_all([])
+  end
+
+  defp active_revision_number(entry_type, entry_id) do
+    from(r in Revision,
+      where: r.active == true and r.entry_type == ^entry_type and r.entry_id == ^entry_id,
+      select: r.revision,
+      limit: 1
+    )
+    |> Repo.one()
   end
 
   defp deactivate_all_revisions(entry_type, entry_id) do

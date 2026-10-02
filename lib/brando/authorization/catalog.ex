@@ -30,6 +30,7 @@ defmodule Brando.Authorization.Catalog do
     {:shared_library, "brando.shared_library", "Shared content library", "Installation", [:read, :update],
      [:installation]},
     {:utilities, "brando.utilities", "Utilities & caches", "Settings", [:read, :update], [:standalone, :site]},
+    {:activity, "brando.activity", "Activity", "Settings", [:read], [:standalone, :site]},
     {:assistant, "brando.assistant", "Content assistant", "Content", [:use, :configure], [:standalone, :site]}
   ]
 

@@ -605,6 +605,13 @@ defmodule Brando.Content.Transfer.Entries do
 
             bindings = Transfer.persist_dependencies!(current, stage, actor)
             {saved, bindings} = persist!(current, bindings, actor)
+            label = plan.archive.bundle["source"]["label"]
+
+            Brando.Activity.with_source(:import, fn ->
+              Brando.Activity.with_batch(plan.id, fn ->
+                Enum.each(saved, &Brando.Activity.imported(&1.entry, actor, &1.mode, label))
+              end)
+            end)
 
             after_entries =
               Map.new(saved, fn item ->
@@ -769,6 +776,12 @@ defmodule Brando.Content.Transfer.Entries do
   end
 
   def restore!(receipt, actor) do
+    Brando.Activity.with_source(:import, fn ->
+      Brando.Activity.with_batch(receipt.id, fn -> do_restore!(receipt, actor) end)
+    end)
+  end
+
+  defp do_restore!(receipt, actor) do
     current =
       Map.new(receipt.after, fn {key, expected} ->
         entry = EntryCodec.load!(expected["schema"], expected["id"], actor, :update, lock: true)
@@ -814,6 +827,7 @@ defmodule Brando.Content.Transfer.Entries do
         Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
         bindings = Transfer.persist_dependencies!(plan, %{items: %{}}, actor)
         persist!(plan, bindings, actor)
+        Brando.Activity.import_undone(current[key], actor, :update)
       end
     end)
 
@@ -827,6 +841,7 @@ defmodule Brando.Content.Transfer.Entries do
       if Map.get(entry, :status) == :published, do: Catalog.authorize!(actor, :publish, entry)
       cancel_status_jobs(entry)
       delete_owned!(entry)
+      Brando.Activity.import_undone(entry, actor, :delete)
     end)
 
     # Delete identifiers after all owned selections. Their FK cascades must not
