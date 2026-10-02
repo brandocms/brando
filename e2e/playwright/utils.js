@@ -8,6 +8,9 @@ const randomString = (size = 21) => Crypto.randomBytes(size).toString('base64').
 const syncLV = async (page, timeout = 15000) => {
   const promises = [
     expect(page.locator('.phx-connected').first()).toBeVisible({ timeout }),
+    // Every LiveView, not just the first: the sticky nav joins after the page
+    // view, and a click on its server render before then is lost.
+    expect(page.locator('[data-phx-session]:not(.phx-connected)')).toHaveCount(0, { timeout }),
     expect(page.locator('.phx-change-loading')).toHaveCount(0, { timeout }),
     expect(page.locator('.phx-click-loading')).toHaveCount(0, { timeout }),
     expect(page.locator('.phx-submit-loading')).toHaveCount(0, { timeout }),

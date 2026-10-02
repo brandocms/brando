@@ -4,6 +4,10 @@ import { alertConfirm } from './alerts'
  * `data-confirm="Really?"` on anything clickable: ask before the click does
  * its work. A phx-click, a link and a submit button all wait for the answer.
  * `data-confirm-destructive` gives the red dialog, with Cancel focused.
+ * Optional `data-confirm-title` makes the dialog a question with the message
+ * under it, and `data-confirm-ok` / `data-confirm-cancel` name its buttons
+ * (say "Recreate sizes" rather than "OK"). Without a title the message is the
+ * dialog's heading.
  *
  * Nothing else in the admin reads the attribute (phoenix_html's script, which
  * does on ordinary Phoenix pages, isn't loaded here), so without this a
@@ -33,13 +37,16 @@ export default function installConfirm() {
       e.preventDefault()
       e.stopImmediatePropagation()
 
-      // The message is plain text; the dialog takes HTML.
-      const text = document.createElement('span')
-      text.textContent = message
+      // The attributes are plain text; the dialog takes HTML.
+      const escape = value => {
+        const text = document.createElement('span')
+        text.textContent = value || ''
+        return text.innerHTML
+      }
 
       alertConfirm(
-        '',
-        text.innerHTML,
+        escape(el.getAttribute('data-confirm-title')),
+        escape(message),
         ok => {
           if (!ok) return
           // A patch may have replaced the element while the dialog was open.
@@ -48,7 +55,11 @@ export default function installConfirm() {
           confirmed.add(target)
           target.click()
         },
-        { destructive: el.hasAttribute('data-confirm-destructive') }
+        {
+          destructive: el.hasAttribute('data-confirm-destructive'),
+          confirmText: el.getAttribute('data-confirm-ok'),
+          cancelText: el.getAttribute('data-confirm-cancel')
+        }
       )
     },
     true
