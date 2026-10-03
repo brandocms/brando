@@ -8,7 +8,6 @@ defmodule Mix.Tasks.Brando.Identifiers.Sync do
 
   @spec run(any) :: no_return
   def run([]) do
-    Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
 
     Mix.Tasks.Run.run([])

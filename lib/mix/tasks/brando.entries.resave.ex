@@ -25,7 +25,6 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
     {opts, rest} = OptionParser.parse!(args, strict: [force: :boolean])
     force? = Keyword.get(opts, :force, false)
 
-    Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
 
     Mix.Tasks.Run.run([])
