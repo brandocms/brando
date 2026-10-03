@@ -17,6 +17,7 @@ defmodule Brando.Content.Transfer.Portable do
     "file_id" => "file",
     "video_id" => "video",
     "gallery_id" => "gallery",
+    "form_id" => "form",
     "identifier_id" => "identifier",
     "thumbnail_id" => "image"
   }
@@ -25,9 +26,7 @@ defmodule Brando.Content.Transfer.Portable do
   @unquoted_attribute ~r/(\bdata-(?:identifier-id|footnote-uid)\s*=\s*)([^"'\s>][^\s>]*)/i
 
   def asset_fields, do: @asset_fields
-  # A form var's choice is an id in this installation's forms, which content
-  # transfer cannot match on the destination yet; it arrives unchosen.
-  def var_fields, do: Enum.map(Brando.Content.VarAttrs.carried() -- [:form_id], &to_string/1) ++ ["options"]
+  def var_fields, do: Enum.map(Brando.Content.VarAttrs.carried(), &to_string/1) ++ ["options"]
 
   def encode(block, state) do
     if block.module_origin == :shared || block.container_origin == :shared || block.palette_origin == :shared,

@@ -891,6 +891,47 @@ defmodule Brando.Content.TransferTest do
     assert Enum.find(block.refs, &(&1.name == "optional_picture")).image_id == c.user.avatar.id
   end
 
+  test "a form variable follows its form's key to the destination", c do
+    {:ok, form} =
+      Brando.Forms.create_form(
+        %{"title" => "Contact", "key" => "contact", "language" => "en", "status" => "published"},
+        c.user
+      )
+
+    {:ok, other} =
+      Brando.Forms.create_form(
+        %{"title" => "Newsletter", "key" => "newsletter", "language" => "en", "status" => "published"},
+        c.user
+      )
+
+    var = %{key: "contact", label: %{"en" => "Contact"}, type: :form, creator_id: c.user.id}
+    c.module |> Repo.preload(:vars) |> Changeset.change() |> Changeset.put_assoc(:vars, [var]) |> Repo.update!()
+
+    c.block
+    |> Repo.preload(:vars)
+    |> Changeset.change()
+    |> Changeset.put_assoc(:vars, [Map.put(var, :form_id, form.id)])
+    |> Repo.update!()
+
+    archive = export(c)
+    token = "form:#{form.id}"
+    assert %{"kind" => "form", "key" => "contact", "language" => "en"} = archive.bundle["dependencies"][token]
+
+    plan = preview(c, archive)
+    assert plan.problems == []
+    assert %{action: :reuse, id: id} = Enum.find(plan.dependencies, &(&1.token == token))
+    assert id == form.id
+
+    # Without a form by that key, the editor chooses one
+    form |> Changeset.change(key: "renamed") |> Repo.update!()
+    assert %{action: :unresolved} = Enum.find(preview(c, archive).dependencies, &(&1.token == token))
+    plan = preview(c, archive, "replace", %{token => to_string(other.id)})
+    assert plan.problems == []
+    assert {:ok, _} = Transfer.apply(plan, c.user)
+    assert [%{vars: [%{form_id: form_id}]}] = blocks(c.target, c.user)
+    assert form_id == other.id
+  end
+
   test "unquoted rich-text identifiers cannot bypass portable reference validation", c do
     archive = export(c)
     [field] = archive.bundle["fields"]

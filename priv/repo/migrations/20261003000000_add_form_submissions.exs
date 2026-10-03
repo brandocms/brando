@@ -6,9 +6,11 @@ defmodule BrandoIntegration.Repo.Migrations.AddFormSubmissions do
   def up do
     Brando.Forms.Migration.shared_up()
     Brando.Forms.Migration.vars_up()
+    Brando.Forms.Migration.messages_up()
   end
 
   def down do
+    Brando.Forms.Migration.messages_down()
     Brando.Forms.Migration.vars_down()
     Brando.Forms.Migration.shared_down()
   end

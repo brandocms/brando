@@ -45,7 +45,20 @@ stores, and its **label** is what visitors see. Hidden fields are kept in their
 own tray below the canvas.
 
 The **Messages** tab holds the text above the fields, the submit button's label
-and the message shown once the form has been sent.
+and the message shown once the form has been sent. Leave the last two empty to
+use the site's wording.
+
+## Messages
+
+What visitors read around every form — the submit button, what is said once a
+form is sent or could not be, and the error next to a field that is empty or
+filled in wrongly — is set once for the site, under **Content → Forms →
+Messages**. Each message has a field per content language.
+
+The first time the page is opened, the messages are filled in with Brando's own
+wording in the languages Brando is translated into (English and Norwegian). The
+others are left empty and marked as missing, for an editor to write. A language
+left empty uses Brando's wording, in English where Brando has no translation.
 
 ## Translate a form
 
@@ -63,6 +76,10 @@ shows its value until it is translated.
 
 Because keys and option values are the same in every language, submissions in
 any language can be read side by side.
+
+When content moves between installations with content transfer, a block's form
+is matched by its key on the destination. Without a form by that key there,
+the import asks which form to use.
 
 ## Render a form
 
@@ -189,8 +206,10 @@ and `nonce` when your content security policy requires one.
   in a block stores a `$csrftoken` placeholder that pages, fragments and
   `Brando.HTML.render_blocks/1` fill in as they are sent. If you output stored
   block HTML some other way, pass it through `Brando.HTML.replace_csrf_token/1`.
-  Do not cache a page with a form in front of Phoenix: every visitor would get
-  the same token, and their submissions would fail.
+  A cache in front of the site would keep the token of whoever the page was
+  cached for, so before it sends, the form's script fetches the visitor's own
+  from `/__brando/forms/csrf-token` (also added by `page_routes/1`). A visitor
+  without JavaScript on such a cached page is refused.
 - **Origin.** A post whose `Origin` (or `Referer`) is another site is refused.
 - **Honeypot.** A hidden field people never see; a submission that fills it in
   is answered as a success and not stored.

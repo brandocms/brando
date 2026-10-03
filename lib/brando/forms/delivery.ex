@@ -12,7 +12,9 @@ defmodule Brando.Forms.Delivery do
 
   Block HTML is rendered when an entry is saved, so `{% form %}` cannot know the
   visitor's token. It stores the dynamic action and a `$csrftoken` placeholder;
-  `finalize/1` fills them in as the HTML is sent.
+  `finalize/1` fills them in as the HTML is sent. A cache in front of the site
+  would keep one visitor's token for everyone, so the form's script fetches a
+  fresh one from `token_path/0` before it sends.
 
   The backend URL static forms post to defaults to the endpoint's URL:
 
@@ -34,6 +36,12 @@ defmodule Brando.Forms.Delivery do
       {site_key, environment_key} -> static_action(site_key, environment_key, form_key)
     end
   end
+
+  @doc """
+  Where a form's script asks for the visitor's CSRF token before sending, in
+  case the page came from a cache: `Brando.Router.page_routes/1` serves it.
+  """
+  def token_path, do: @dynamic_prefix <> "csrf-token"
 
   @doc "The token a form carries on the current site; nil on a static site."
   def csrf_token do

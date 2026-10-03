@@ -86,7 +86,8 @@ defmodule Brando.Forms.SubmitTest do
       assert Map.keys(errors) |> Enum.sort() == ~w(email name privacy service topics)
 
       assert {:error, %{"name" => [message]}} = Validation.validate(%{form | language: :no}, valid(%{"name" => ""}))
-      refute message == "can't be blank"
+      assert message == Brando.Forms.Messages.built_in(:required, :no)
+      refute message == Brando.Forms.Messages.built_in(:required, :en)
     end
 
     test "a post that is not a map counts as empty", %{form: form} do

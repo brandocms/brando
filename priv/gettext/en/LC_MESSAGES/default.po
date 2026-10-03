@@ -14212,38 +14212,58 @@ msgstr ""
 msgid "Your message could not be sent. Check the form and try again."
 msgstr ""
 
-#: lib/brando/forms/validation.ex:51
+#: lib/brando/forms/messages.ex:133
 #, elixir-autogen, elixir-format
-msgid "choose at least one"
+msgid "Choose at least one."
 msgstr ""
 
-#: lib/brando/forms/validation.ex:81
+#: lib/brando/forms/messages.ex:137
 #, elixir-autogen, elixir-format
-msgid "is not a date"
+msgid "Choose one of the options."
 msgstr ""
 
-#: lib/brando/forms/validation.ex:74
+#: lib/brando/forms/messages.ex:136
 #, elixir-autogen, elixir-format
-msgid "is not a number"
+msgid "Enter a date."
 msgstr ""
 
-#: lib/brando/forms/validation.ex:68
+#: lib/brando/forms/messages.ex:135
 #, elixir-autogen, elixir-format
-msgid "is not an email address"
+msgid "Enter a number."
 msgstr ""
 
-#: lib/brando/forms/validation.ex:50
-#: lib/brando/forms/validation.ex:86
+#: lib/brando/forms/messages.ex:134
 #, elixir-autogen, elixir-format
-msgid "is not one of the choices"
+msgid "Enter a valid email address."
 msgstr ""
 
-#: lib/brando/forms/validation.ex:62
+#: lib/brando/forms/messages.ex:131
 #, elixir-autogen, elixir-format
-msgid "is too long"
+msgid "Fill in this field."
 msgstr ""
 
-#: lib/brando/forms/validation.ex:43
+#: lib/brando_admin/live/forms/messages_live.ex:17
+#: lib/brando_admin/live/forms/messages_live.ex:25
 #, elixir-autogen, elixir-format
-msgid "must be ticked"
+msgid "Form messages"
+msgstr ""
+
+#: lib/brando_admin/live/forms/form_list_live.ex:18
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:138
+#, elixir-autogen, elixir-format
+msgid "This is too long."
+msgstr ""
+
+#: lib/brando/forms/messages.ex:132
+#, elixir-autogen, elixir-format
+msgid "Tick this box to continue."
+msgstr ""
+
+#: lib/brando_admin/live/forms/messages_live.ex:28
+#, elixir-autogen, elixir-format
+msgid "What visitors read around every form, in each of the site's languages. A language left empty uses Brando's wording, in English where Brando has no translation."
 msgstr ""

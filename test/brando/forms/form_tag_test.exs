@@ -48,6 +48,8 @@ defmodule Brando.Forms.FormTagTest do
     assert html =~ ~s(name="_language" value="no")
     # Stored with the block, so the token is filled in per request
     assert html =~ ~s(<input type="hidden" name="_csrf_token" value="$csrftoken">)
+    # A cache in front of the site keeps the token; the script asks for a fresh one
+    assert html =~ ~s(data-site-form-token="/__brando/forms/csrf-token")
 
     assert render("{% form 'contact' %}", %{"language" => "en"}) =~ ">\n  Email"
   end
@@ -64,6 +66,7 @@ defmodule Brando.Forms.FormTagTest do
     assert html =~ ~s(<div id="form-contact")
     refute html =~ "<form"
     refute html =~ "_csrf_token"
+    refute html =~ "data-site-form-token"
   end
 
   test "a form that is not published in the language renders a comment", %{user: user, norwegian: norwegian} do

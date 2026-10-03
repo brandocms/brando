@@ -2199,3 +2199,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Sharing image"
 msgstr ""
+
+#: lib/brando/content/transfer/labels.ex:82
+#, elixir-autogen, elixir-format
+msgid "Form"
+msgstr ""

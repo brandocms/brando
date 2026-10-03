@@ -69,6 +69,17 @@ defmodule Brando.Forms.SubmissionControllerTest do
     assert %{"ok" => true} = json_response(conn, 200)
   end
 
+  test "the visitor's token is served for the form's script, never cached", %{conn: conn} do
+    conn =
+      conn
+      |> put_req_header("accept", "application/json, text/html;q=0.1")
+      |> get("/__brando/forms/csrf-token")
+
+    assert %{"token" => token} = json_response(conn, 200)
+    assert is_binary(token) and token != ""
+    assert get_resp_header(conn, "cache-control") == ["no-store, private"]
+  end
+
   test "an unknown form is not found", %{conn: conn} do
     conn =
       conn

@@ -14215,38 +14215,58 @@ msgstr "Det besøkende sender med dette skjemaet, vises her."
 msgid "Your message could not be sent. Check the form and try again."
 msgstr "Meldingen kunne ikke sendes. Sjekk skjemaet og prøv igjen."
 
-#: lib/brando/forms/validation.ex:51
+#: lib/brando/forms/messages.ex:133
 #, elixir-autogen, elixir-format
-msgid "choose at least one"
-msgstr "velg minst ett"
+msgid "Choose at least one."
+msgstr "Velg minst ett."
 
-#: lib/brando/forms/validation.ex:81
+#: lib/brando/forms/messages.ex:137
 #, elixir-autogen, elixir-format
-msgid "is not a date"
-msgstr "er ikke en dato"
+msgid "Choose one of the options."
+msgstr "Velg ett av alternativene."
 
-#: lib/brando/forms/validation.ex:74
+#: lib/brando/forms/messages.ex:136
 #, elixir-autogen, elixir-format
-msgid "is not a number"
-msgstr "er ikke et tall"
+msgid "Enter a date."
+msgstr "Skriv inn en dato."
 
-#: lib/brando/forms/validation.ex:68
+#: lib/brando/forms/messages.ex:135
 #, elixir-autogen, elixir-format
-msgid "is not an email address"
-msgstr "er ikke en e-postadresse"
+msgid "Enter a number."
+msgstr "Skriv inn et tall."
 
-#: lib/brando/forms/validation.ex:50
-#: lib/brando/forms/validation.ex:86
+#: lib/brando/forms/messages.ex:134
 #, elixir-autogen, elixir-format
-msgid "is not one of the choices"
-msgstr "er ikke et av valgene"
+msgid "Enter a valid email address."
+msgstr "Skriv inn en gyldig e-postadresse."
 
-#: lib/brando/forms/validation.ex:62
+#: lib/brando/forms/messages.ex:131
 #, elixir-autogen, elixir-format
-msgid "is too long"
-msgstr "er for lang"
+msgid "Fill in this field."
+msgstr "Fyll ut dette feltet."
 
-#: lib/brando/forms/validation.ex:43
+#: lib/brando_admin/live/forms/messages_live.ex:17
+#: lib/brando_admin/live/forms/messages_live.ex:25
 #, elixir-autogen, elixir-format
-msgid "must be ticked"
-msgstr "må krysses av"
+msgid "Form messages"
+msgstr "Skjemameldinger"
+
+#: lib/brando_admin/live/forms/form_list_live.ex:18
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr "Meldinger"
+
+#: lib/brando/forms/messages.ex:138
+#, elixir-autogen, elixir-format
+msgid "This is too long."
+msgstr "Dette er for langt."
+
+#: lib/brando/forms/messages.ex:132
+#, elixir-autogen, elixir-format
+msgid "Tick this box to continue."
+msgstr "Kryss av her for å fortsette."
+
+#: lib/brando_admin/live/forms/messages_live.ex:28
+#, elixir-autogen, elixir-format
+msgid "What visitors read around every form, in each of the site's languages. A language left empty uses Brando's wording, in English where Brando has no translation."
+msgstr "Det besøkende leser rundt hvert skjema, på hvert av nettstedets språk. Et språk som står tomt, bruker Brandos formulering – på engelsk der Brando ikke har en oversettelse."

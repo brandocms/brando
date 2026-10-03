@@ -12,6 +12,7 @@ defmodule Brando.Forms do
   alias Brando.Content.Blocks
   alias Brando.Forms.Field
   alias Brando.Forms.Form
+  alias Brando.Forms.Messages
   alias Brando.Forms.RateLimit
   alias Brando.Forms.Submission
   alias Brando.Forms.Turnstile
@@ -100,8 +101,10 @@ defmodule Brando.Forms do
   form var, so their stored HTML shows its fields as they are now.
   """
   def render_entries_using_form(%Form{key: key}) do
-    form_ids = Repo.all(from f in Form, where: f.key == ^key, select: f.id)
+    render_entries_using_forms(Repo.all(from f in Form, where: f.key == ^key, select: f.id))
+  end
 
+  defp render_entries_using_forms(form_ids) do
     form_ids
     |> BlockReferences.list_block_ids_using_forms()
     |> Blocks.list_root_block_ids_by_source()
@@ -227,12 +230,63 @@ defmodule Brando.Forms do
     if language, do: where(query, [s], s.language == ^to_string(language)), else: query
   end
 
-  @doc "The message shown once `form` has been sent."
+  @doc "The message shown once `form` has been sent: its own, or the site's."
   def success_message(%Form{success_message: message}) when is_binary(message) and message != "", do: message
+  def success_message(%Form{language: language}), do: message(:success_message, language)
 
-  def success_message(%Form{language: language}) do
-    Gettext.with_locale(Brando.Gettext, to_string(language || "en"), fn ->
-      gettext("Thank you. Your message has been sent.")
-    end)
+  # -- Messages ---------------------------------------------------------------
+
+  query :single, Messages, do: fn query -> from(q in query) end
+
+  matches Messages do
+    fn
+      {:id, id}, query -> from q in query, where: q.id == ^id
+    end
+  end
+
+  mutation :create, Messages
+
+  # The messages are in the stored HTML of every block holding a form.
+  mutation :update, Messages do
+    fn messages ->
+      render_entries_using_forms(Repo.all(from f in Form, select: f.id))
+      {:ok, messages}
+    end
+  end
+
+  @doc """
+  The site's message `key` (see `Brando.Forms.Messages`) in `language`: as the
+  site words it, or Brando's own wording when the site has left it empty.
+  """
+  @spec message(atom(), String.t() | atom() | nil) :: String.t()
+  def message(key, language) do
+    texts =
+      case site_messages() do
+        %Messages{} = messages -> Map.get(messages, key) || %{}
+        _ -> %{}
+      end
+
+    case texts[to_string(language)] do
+      text when is_binary(text) and text != "" -> text
+      _ -> Messages.built_in(key, language)
+    end
+  end
+
+  # One row, read when a form renders and when one is sent.
+  defp site_messages, do: Repo.one(from m in Messages, order_by: [asc: m.id], limit: 1)
+
+  @doc """
+  The site's messages, created on first use with Brando's wording in the
+  content languages Brando has translations for.
+  """
+  def ensure_messages(user) do
+    case site_messages() do
+      nil ->
+        languages = :languages |> Brando.config() |> List.wrap() |> Enum.map(&to_string(&1[:value]))
+        create_messages(Messages.prefilled(languages), user)
+
+      messages ->
+        {:ok, messages}
+    end
   end
 end

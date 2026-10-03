@@ -12,7 +12,6 @@ defmodule Brando.Forms.SubmissionController do
   domains on a static one.
   """
   use Phoenix.Controller, formats: [:html, :json]
-  use Gettext, backend: Brando.Gettext
 
   import Plug.Conn
 
@@ -24,6 +23,17 @@ defmodule Brando.Forms.SubmissionController do
     if same_origin?(conn, [conn.host]),
       do: handle(conn, key, params),
       else: refuse(conn)
+  end
+
+  @doc """
+  The visitor's CSRF token. The form's script asks for it before sending, so
+  a form on a page served from a cache in front of the site — carrying
+  whichever token the page was cached with — still sends the visitor's own.
+  """
+  def csrf_token(conn, _params) do
+    conn
+    |> put_resp_header("cache-control", "no-store, private")
+    |> json(%{token: Plug.CSRFProtection.get_csrf_token()})
   end
 
   @doc "A submission from a statically delivered site, without a session."
@@ -56,11 +66,11 @@ defmodule Brando.Forms.SubmissionController do
         respond(conn, form, 422, %{ok: false, errors: errors}, "failed")
 
       {:error, :rate_limited, form} ->
-        message = localized(form, fn -> gettext("Too many submissions. Wait a few minutes and try again.") end)
+        message = Forms.message(:rate_limited, form.language)
         respond(conn, form, 429, %{ok: false, message: message}, "failed")
 
       {:error, :rejected, form} ->
-        message = localized(form, fn -> gettext("The spam check failed. Reload the page and try again.") end)
+        message = Forms.message(:spam_check, form.language)
         respond(conn, form, 403, %{ok: false, message: message}, "failed")
 
       {:error, :not_found} ->
@@ -93,8 +103,6 @@ defmodule Brando.Forms.SubmissionController do
   end
 
   defp refuse(conn), do: conn |> put_status(403) |> respond_plain(%{ok: false})
-
-  defp localized(form, fun), do: Gettext.with_locale(Brando.Gettext, to_string(form.language || "en"), fun)
 
   defp json?(conn) do
     conn |> get_req_header("accept") |> Enum.any?(&String.contains?(&1, "application/json"))

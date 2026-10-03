@@ -11,17 +11,17 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/forms/form.ex:88
+#: lib/brando/forms/form.ex:93
 #, elixir-autogen, elixir-format
 msgid "Deactivated"
 msgstr ""
 
-#: lib/brando/forms/form.ex:85
+#: lib/brando/forms/form.ex:90
 #, elixir-autogen, elixir-format
 msgid "Draft"
 msgstr ""
 
-#: lib/brando/forms/form.ex:102
+#: lib/brando/forms/form.ex:107
 #, elixir-autogen, elixir-format
 msgid "Fields"
 msgstr ""
@@ -31,68 +31,58 @@ msgstr ""
 msgid "Form"
 msgstr ""
 
-#: lib/brando/forms/form.ex:123
+#: lib/brando/forms/form.ex:128
 #, elixir-autogen, elixir-format
 msgid "Introduction"
 msgstr ""
 
-#: lib/brando/forms/form.ex:75
+#: lib/brando/forms/form.ex:80
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/forms/form.ex:94
+#: lib/brando/forms/form.ex:99
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/forms/form.ex:120
+#: lib/brando/forms/form.ex:125
 #, elixir-autogen, elixir-format
 msgid "Messages"
 msgstr ""
 
-#: lib/brando/forms/form.ex:86
+#: lib/brando/forms/form.ex:91
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr ""
 
-#: lib/brando/forms/form.ex:87
+#: lib/brando/forms/form.ex:92
 #, elixir-autogen, elixir-format
 msgid "Published"
 msgstr ""
 
-#: lib/brando/forms/form.ex:124
-#, elixir-autogen, elixir-format
-msgid "Send"
-msgstr ""
-
-#: lib/brando/forms/form.ex:123
+#: lib/brando/forms/form.ex:128
 #, elixir-autogen, elixir-format
 msgid "Shown above the fields."
 msgstr ""
 
-#: lib/brando/forms/form.ex:128
-#, elixir-autogen, elixir-format
-msgid "Shown in place of the form once it has been sent."
-msgstr ""
-
-#: lib/brando/forms/form.ex:82
+#: lib/brando/forms/form.ex:87
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/brando/forms/form.ex:124
+#: lib/brando/forms/form.ex:130
 #, elixir-autogen, elixir-format
 msgid "Submit button"
 msgstr ""
 
-#: lib/brando/forms/form.ex:127
+#: lib/brando/forms/form.ex:134
 #, elixir-autogen, elixir-format
 msgid "Success message"
 msgstr ""
 
-#: lib/brando/forms/form.ex:74
-#: lib/brando/forms/form.ex:137
+#: lib/brando/forms/form.ex:79
+#: lib/brando/forms/form.ex:159
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
@@ -105,4 +95,14 @@ msgstr ""
 #: lib/brando/forms/form.ex:62
 #, elixir-autogen, elixir-format
 msgid "forms"
+msgstr ""
+
+#: lib/brando/forms/form.ex:131
+#, elixir-autogen, elixir-format
+msgid "Leave empty to use the site's wording, set under Forms → Messages."
+msgstr ""
+
+#: lib/brando/forms/form.ex:136
+#, elixir-autogen, elixir-format
+msgid "Shown in place of the form once it has been sent. Leave empty to use the site's wording, set under Forms → Messages."
 msgstr ""

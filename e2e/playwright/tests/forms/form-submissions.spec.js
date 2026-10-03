@@ -14,6 +14,8 @@ test('a visitor sends the form and an editor reads it', async ({ page }) => {
   await page.goto('/contact-us')
   const form = page.locator('form#form-contact')
   await expect(form.locator('input[name="_csrf_token"]')).not.toHaveValue('$csrftoken')
+  // As a cache in front of the site would serve it: someone else's token, which the script replaces
+  await form.locator('input[name="_csrf_token"]').evaluate(input => { input.value = 'cached-for-someone-else' })
 
   // Sent empty: the required fields are marked where they are
   await form.locator('input[name="fields[name]"]').evaluate(input => input.removeAttribute('required'))
@@ -53,4 +55,25 @@ test('without JavaScript a post lands back on the page at its message', async ({
   await expect(visitor.locator('#form-contact-sent')).toBeVisible()
   await expect(visitor.locator('#form-contact-failed')).toBeHidden()
   await context.close()
+})
+
+test('the site words the messages around its forms', async ({ page }) => {
+  await page.goto('/admin/forms')
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Messages' }).click()
+  await expect(page).toHaveURL('/admin/forms/messages')
+  await syncLV(page)
+
+  const required = page.locator('.i18n-field').filter({ has: page.locator('input[name="messages[required][en]"]') })
+  await required.getByRole('tab', { name: 'en', exact: true }).click()
+  await required.locator('input[name="messages[required][en]"]').fill('We need this one.')
+  await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/forms')
+
+  await page.goto('/contact-us')
+  const form = page.locator('form#form-contact')
+  await form.locator('input[name="fields[name]"]').evaluate(input => input.removeAttribute('required'))
+  await form.getByLabel('Email').fill('ada@example.com')
+  await form.getByRole('button', { name: 'Send' }).click()
+  await expect(form.locator('.site-form-field[data-key="name"] .site-form-error')).toHaveText('We need this one.')
 })

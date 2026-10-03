@@ -449,9 +449,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   a block, shown in each page's language; sites can also render one with
   `Brando.HTML.Forms.site_form/1`, whose slots replace any field's markup.
   Submissions are checked, stored in `public` so promoting an environment keeps
-  them, and read, deleted or exported as CSV in the admin. Forms carry the
-  visitor's CSRF token, refuse posts from other sites, and use a honeypot, rate
-  limiting and optional Cloudflare Turnstile. Run `mix brando.gen.migrations`
+  them, and read, deleted or exported as CSV in the admin. The wording visitors
+  read around forms — the submit button, sent and error messages — is set once
+  per site under **Forms → Messages**, in every content language. Content
+  transfer matches a block's form by key. Forms carry the visitor's CSRF token,
+  refreshed before sending so cached pages still work, refuse posts from other
+  sites, and use a honeypot, rate limiting and optional Cloudflare Turnstile. Run `mix brando.gen.migrations`
   for `brando_193` and `brando_194`; statically delivered sites also add
   `form_routes()` to their router. Brando's default production CSP now allows
   `challenges.cloudflare.com`. See the [Forms guide](guides/forms.md).

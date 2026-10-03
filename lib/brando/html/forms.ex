@@ -121,8 +121,8 @@ defmodule Brando.HTML.Forms do
       |> assign(:dom_id, id)
       |> assign(:groups, groups(form, assigns.only, assigns.except))
       |> assign(:hidden_fields, hidden_fields(form, assigns.only, assigns.except))
-      |> assign(:root_attrs, root_attrs(assigns))
       |> assign(:token, token(assigns))
+      |> then(&assign(&1, :root_attrs, root_attrs(&1)))
       |> assign(:turnstile_key, !assigns.preview && Brando.Forms.Turnstile.site_key())
 
     # A preview is shown inside another form (the admin's), where a nested
@@ -254,7 +254,18 @@ defmodule Brando.HTML.Forms do
       ['sent', 'failed'].forEach(function (o) { var el = document.getElementById(form.id + '-' + o); if (el) el.classList.remove('is-shown'); });
       form.querySelectorAll('[data-site-form-error]').forEach(function (el) { el.remove(); });
       form.querySelectorAll('[aria-invalid]').forEach(function (el) { el.removeAttribute('aria-invalid'); });
-      fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json, text/html;q=0.1' }, credentials: 'same-origin' })
+      // A page served from a cache carries the token it was cached with; send the visitor's own.
+      var token = form.querySelector('input[name="_csrf_token"]');
+      var tokenPath = form.getAttribute('data-site-form-token');
+      var accept = { Accept: 'application/json, text/html;q=0.1' };
+      var refreshed = token && tokenPath
+        ? fetch(tokenPath, { headers: accept, credentials: 'same-origin', cache: 'no-store' })
+            .then(function (response) { return response.ok ? response.json() : {}; })
+            .then(function (body) { if (body.token) token.value = body.token; })
+            .catch(function () {})
+        : Promise.resolve();
+      refreshed
+        .then(function () { return fetch(form.action, { method: 'POST', body: new FormData(form), headers: accept, credentials: 'same-origin' }); })
         .then(function (response) { return response.json().catch(function () { return {}; }).then(function (body) { return { ok: response.ok, body: body }; }); })
         .then(function (result) {
           if (result.ok && result.body.ok) {
@@ -499,9 +510,14 @@ defmodule Brando.HTML.Forms do
 
   defp root_attrs(%{preview: true, rest: rest}), do: rest
 
-  defp root_attrs(%{form: form, action: action, method: method, enhance: enhance, rest: rest}) do
+  defp root_attrs(%{form: form, action: action, method: method, enhance: enhance, token: token, rest: rest}) do
     Map.merge(
-      %{action: action || Brando.Forms.Delivery.action(form.key), method: method, "data-site-form": enhance},
+      %{
+        action: action || Brando.Forms.Delivery.action(form.key),
+        method: method,
+        "data-site-form": enhance,
+        "data-site-form-token": token && Brando.Forms.Delivery.token_path()
+      },
       rest
     )
   end
@@ -511,9 +527,7 @@ defmodule Brando.HTML.Forms do
   defp token(%{csrf_token: token}) when is_binary(token), do: token
   defp token(_), do: nil
 
-  defp failure_message(form) do
-    in_language(form, fn -> gettext("Your message could not be sent. Check the form and try again.") end)
-  end
+  defp failure_message(form), do: Brando.Forms.message(:failure_message, form.language)
 
   defp field_hint(form), do: in_language(form, fn -> gettext("Leave this field empty") end)
 
@@ -607,11 +621,8 @@ defmodule Brando.HTML.Forms do
 
   defp submit_label(%{submit_label: label}) when is_binary(label) and label != "", do: label
   # Rendered when an entry is saved, so the admin's locale is no guide: the
-  # fallback is worded in the form's own language.
-  defp submit_label(%{language: language}) when not is_nil(language),
-    do: Gettext.with_locale(Brando.Gettext, to_string(language), fn -> gettext("Send") end)
-
-  defp submit_label(_), do: gettext("Send")
+  # site's wording in the form's own language.
+  defp submit_label(form), do: Brando.Forms.message(:submit_label, form.language)
 
   defp present?(value), do: is_binary(value) and String.trim(value) != ""
 end

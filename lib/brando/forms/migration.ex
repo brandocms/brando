@@ -70,6 +70,22 @@ defmodule Brando.Forms.Migration do
     end
   end
 
+  # The site's wording around its forms (`Brando.Forms.Messages`): one row,
+  # each message a map of language → text.
+  def messages_up(prefix \\ nil) do
+    create table(:forms_messages, prefix: prefix) do
+      for key <- ~w(submit_label success_message failure_message rate_limited spam_check required unticked
+                    none_chosen invalid_email invalid_number invalid_date invalid_choice too_long)a,
+          do: add(key, :map)
+
+      timestamps()
+    end
+  end
+
+  def messages_down(prefix \\ nil) do
+    drop table(:forms_messages, prefix: prefix)
+  end
+
   # Submissions are kept in `public`, scoped by tenant prefix: promoting an
   # environment replaces its schema, and must not take visitors' submissions
   # with it. `form_id` is therefore a plain column, not a foreign key.

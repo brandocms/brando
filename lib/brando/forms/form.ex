@@ -126,11 +126,17 @@ defmodule Brando.Forms.Form do
         fieldset do
           size :half
           input :intro, :textarea, label: t("Introduction"), instructions: t("Shown above the fields.")
-          input :submit_label, :text, label: t("Submit button"), placeholder: t("Send")
+
+          input :submit_label, :text,
+            label: t("Submit button"),
+            instructions: t("Leave empty to use the site's wording, set under Forms → Messages.")
 
           input :success_message, :textarea,
             label: t("Success message"),
-            instructions: t("Shown in place of the form once it has been sent.")
+            instructions:
+              t(
+                "Shown in place of the form once it has been sent. Leave empty to use the site's wording, set under Forms → Messages."
+              )
         end
       end
     end

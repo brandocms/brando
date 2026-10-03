@@ -23,6 +23,7 @@ defmodule Brando.Router do
         # Inside the application's browser pipeline, so `protect_from_forgery`
         # checks the token `Brando.HTML.Forms.site_form/1` carries.
         post "/__brando/forms/:key", Brando.Forms.SubmissionController, :create
+        get "/__brando/forms/csrf-token", Brando.Forms.SubmissionController, :csrf_token
       end
 
       if unquote(options)[:catch_all] do
@@ -240,6 +241,7 @@ defmodule Brando.Router do
             live "/", BrandoAdmin.Forms.FormListLive
             live "/create", BrandoAdmin.Forms.FormFormLive, :create
             live "/update/:entry_id", BrandoAdmin.Forms.FormFormLive, :update
+            live "/messages", BrandoAdmin.Forms.MessagesLive
             live "/:key/submissions", BrandoAdmin.Forms.SubmissionsLive
           end
 

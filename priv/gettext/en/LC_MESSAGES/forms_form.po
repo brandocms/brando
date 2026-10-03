@@ -61,19 +61,9 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
-#: lib/brando/forms/form.ex:124
-#, elixir-autogen, elixir-format
-msgid "Send"
-msgstr ""
-
 #: lib/brando/forms/form.ex:123
 #, elixir-autogen, elixir-format
 msgid "Shown above the fields."
-msgstr ""
-
-#: lib/brando/forms/form.ex:128
-#, elixir-autogen, elixir-format
-msgid "Shown in place of the form once it has been sent."
 msgstr ""
 
 #: lib/brando/forms/form.ex:82
@@ -105,4 +95,14 @@ msgstr ""
 #: lib/brando/forms/form.ex:62
 #, elixir-autogen, elixir-format
 msgid "forms"
+msgstr ""
+
+#: lib/brando/forms/form.ex:131
+#, elixir-autogen, elixir-format
+msgid "Leave empty to use the site's wording, set under Forms → Messages."
+msgstr ""
+
+#: lib/brando/forms/form.ex:136
+#, elixir-autogen, elixir-format
+msgid "Shown in place of the form once it has been sent. Leave empty to use the site's wording, set under Forms → Messages."
 msgstr ""
