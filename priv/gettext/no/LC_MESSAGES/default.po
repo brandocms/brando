@@ -14651,3 +14651,8 @@ msgstr "av en slettet bruker"
 #, elixir-autogen, elixir-format
 msgid "This email was sent by %{site}."
 msgstr "Denne e-posten ble sendt av %{site}."
+
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No linked entries yet."
+msgstr "Ingen sammenkoblede innlegg ennå."

@@ -28,7 +28,15 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Alternates")} close={@on_close}>
+      <Content.drawer
+        id={@id}
+        title={gettext("Alternates")}
+        close={@on_close}
+        icon="hero-language"
+        workspace
+        editor
+        narrow
+      >
         <:info>
           <p>
             {gettext(
@@ -36,48 +44,54 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
             )}
           </p>
         </:info>
-        <h3 class="mb-1">{gettext("Currently linked entries")}</h3>
-        <div :if={@identifiers != []} class="identifier-list">
-          <Entries.identifier
-            :for={identifier <- @identifiers}
-            :key={identifier.id}
-            identifier_id={identifier.id}
-            available_identifiers={@identifiers}
+        <section class="alternates-section">
+          <h3>{gettext("Currently linked entries")}</h3>
+          <div :if={@identifiers != []} class="identifier-list">
+            <Entries.identifier
+              :for={identifier <- @identifiers}
+              :key={identifier.id}
+              identifier_id={identifier.id}
+              available_identifiers={@identifiers}
+            >
+              <:delete>
+                <button
+                  type="button"
+                  aria-label={gettext("Remove")}
+                  phx-click={
+                    JS.push("remove_entry",
+                      target: @myself,
+                      value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
+                    )
+                  }
+                >
+                  <.icon name="hero-x-mark" />
+                </button>
+              </:delete>
+            </Entries.identifier>
+          </div>
+          <p :if={@identifiers == []} class="alternates-empty">{gettext("No linked entries yet.")}</p>
+          <button
+            class="workspace-button"
+            type="button"
+            phx-click={JS.push("get_entries_identifiers", target: @myself)}
           >
-            <:delete>
-              <button
-                type="button"
-                aria-label={gettext("Remove")}
-                phx-click={
-                  JS.push("remove_entry",
-                    target: @myself,
-                    value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
-                  )
-                }
-              >
-                <.icon name="hero-x-mark" />
-              </button>
-            </:delete>
-          </Entries.identifier>
-        </div>
+            <.icon name="hero-link" />{gettext("Select entries to link")}
+          </button>
+        </section>
 
-        <button class="secondary mt-1" type="button" phx-click={JS.push("get_entries_identifiers", target: @myself)}>
-          {gettext("Select entries to link")}
-        </button>
-
-        <div :if={Enum.count(@new_identifiers) > 1} class="mt-3">
+        <section :if={Enum.count(@new_identifiers) > 1} class="alternates-section">
           <p>
             {gettext(
               "When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well."
             )}
           </p>
-          <button type="button" class="primary mt-1" phx-click={JS.push("store_alternates", target: @myself)}>
+          <button type="button" class="workspace-button primary" phx-click={JS.push("store_alternates", target: @myself)}>
             {gettext("Link children")}
           </button>
-        </div>
+        </section>
 
-        <div :if={@entries_identifiers != []} class="entries-identifiers mt-3">
-          <h3 class="mb-1">{gettext("Available entries")}</h3>
+        <section :if={@entries_identifiers != []} class="alternates-section entries-identifiers">
+          <h3>{gettext("Available entries")}</h3>
           <div class="identifier-list">
             <Entries.identifier
               :for={identifier <- @entries_identifiers}
@@ -93,7 +107,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
               }
             />
           </div>
-        </div>
+        </section>
       </Content.drawer>
     </div>
     """
