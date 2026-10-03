@@ -51,6 +51,8 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:accept, accept(config))
       |> assign(:limit, upload_limit(config))
       |> assign(:folder, Map.get(config, :upload_path))
+      # An image on the default target uploads to a folder the editor picks
+      |> assign(:choose_folder?, upload_enabled && assigns.type == :image && target == "default")
       |> assign(:name, asset_name(asset, assigns.type))
       |> assign(:details, asset_details(asset, assigns.type))
       |> assign(:alt, if(assigns.presentation != :line, do: alt_status(asset, assigns.type, assigns.alt_override)))
@@ -148,10 +150,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <button :if={@asset && @remove} type="button" class="destructive" phx-click={@remove}>
           <.icon name="hero-trash" />{gettext("Remove")}
         </button>
-        <p :if={@upload_enabled?} class="media-field-menu-note">
-          <.icon name="hero-folder" />
-          <span data-media-destination>{@folder}</span>
-        </p>
+        <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
       </.action_menu>
       <div :if={@editable && @presentation != :line} class="media-field-actions">
         <%!-- The two ways of filling an empty field read as one segmented control,
@@ -217,6 +216,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
               )}</button>
               <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{@browse_label}</button>
               <button :if={@link} type="button" phx-click={@link}><.icon name="hero-link" />{gettext("Add from URL")}</button>
+              <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
             </div>
           </div>
         </div>
@@ -229,13 +229,16 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           {gettext("Remove")}
         </button>
       </div>
-      <div :if={@upload_enabled? && @presentation != :line} class="media-field-destination">
+      <%!-- Where the next upload goes matters only when uploading is the next
+            thing to do. A filled block keeps it in its Replace menu instead. --%>
+      <div
+        :if={@choose_folder? && (@presentation == :field || (@presentation == :block && !@asset))}
+        class="media-field-destination"
+      >
         <.icon name="hero-folder" />
         <span>{gettext("Saved in")}</span>
         <span data-media-destination>{@folder}</span>
-        <button :if={@type == :image && @config_target == "default"} type="button" class="media-destination-change">
-          {gettext("Change")}
-        </button>
+        <.change_folder_button />
       </div>
       <div id={"#{@id}-progress"} class="media-field-progress" phx-update="ignore" role="status" aria-live="polite"></div>
       <div class="media-field-drop" aria-hidden="true">
@@ -248,6 +251,29 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         </div>
       </div>
     </div>
+    """
+  end
+
+  # Where the next upload goes, under a menu's actions
+  attr :folder, :string, required: true
+  attr :choose_folder?, :boolean, required: true
+
+  defp folder_note(assigns) do
+    ~H"""
+    <p class="media-field-menu-note">
+      <.icon name="hero-folder" />
+      <span data-media-destination>{@folder}</span>
+      <.change_folder_button :if={@choose_folder?} />
+    </p>
+    """
+  end
+
+  # Handled by the UploadTrigger hook, which opens the folder chooser
+  defp change_folder_button(assigns) do
+    ~H"""
+    <button type="button" class="media-destination-change" aria-label={gettext("Change upload folder")}>
+      {gettext("Change")}
+    </button>
     """
   end
 

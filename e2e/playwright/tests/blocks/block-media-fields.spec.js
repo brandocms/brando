@@ -161,12 +161,20 @@ test('image drops validate destination, preserve ref settings, and keep the moda
   await drop(page, picture(page), [['image.jpg', 'image/jpeg'], ['image2.jpg', 'image/jpeg']])
   await expect(picture(page).getByRole('status')).toContainText('Choose one file')
   await expect(picture(page)).not.toHaveAttribute('data-asset-id', /\d+/)
-  // An image goes straight to the field's folder; "Change" picks another for
-  // the next uploads, without files waiting.
+  // An empty field says where an upload goes. An image goes straight to that
+  // folder; once filled, the folder and "Change" move into the Replace menu,
+  // which picks another folder for the next uploads, without files waiting.
+  await expect(picture(page).locator('.media-field-destination')).toBeVisible()
   await drop(page, picture(page), [['image.jpg', 'image/jpeg']])
   await expect(picture(page)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
   const uploadedId = await picture(page).getAttribute('data-asset-id')
-  await picture(page).locator('.media-destination-change').first().click()
+  await expect(picture(page).locator('.media-field-destination')).toHaveCount(0)
+  await picture(page).getByRole('button', { name: 'Replace', exact: true }).click()
+  const replaceMenu = picture(page).locator('.media-field-menu')
+  await expect(replaceMenu.locator('[data-media-destination]')).not.toBeEmpty()
+  await page.screenshot({ path: testInfo.outputPath('replace-menu-folder.png') })
+  await replaceMenu.getByRole('button', { name: 'Change upload folder', exact: true }).click()
+  await expect(replaceMenu).not.toBeVisible()
   const picker = page.locator('#image-picker')
   await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('upload-folder-desktop.png') })

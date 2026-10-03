@@ -12966,6 +12966,11 @@ msgstr ""
 msgid "Saved in"
 msgstr ""
 
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Change upload folder"
+msgstr ""
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "The source changed these. The new values are already in the form, so saving is all they need."
