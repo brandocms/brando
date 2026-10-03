@@ -110,6 +110,20 @@ defmodule Brando.Images.AltTextTest do
     assert text =~ "English: A ferry at dusk"
   end
 
+  test "a site's own prompt replaces the default instructions, keeping the reply format" do
+    image = %{alt: nil, title: %{"en" => "Oslo harbour"}}
+
+    default = AltText.prompt(image, ["en"])
+    assert default =~ "screen reader"
+    assert default =~ "never guess"
+
+    own = AltText.prompt(image, ["en"], prompt: "Describe the boats only.")
+    assert own =~ "Describe the boats only."
+    refute own =~ "screen reader"
+    assert own =~ "one JSON object"
+    assert own =~ "The image's title: Oslo harbour"
+  end
+
   test "reads replies in a code fence, plain text for one language, and refuses the rest" do
     assert AltText.parse(~s(```json\n{"no": "Hei"}\n```), ["no"]) == {:ok, %{"no" => "Hei"}}
     assert AltText.parse(~s("Just the text"), ["no"]) == {:ok, %{"no" => "Just the text"}}
