@@ -12,14 +12,14 @@ defmodule BrandoAdmin.Forms.FormListLive do
       <Workspace.header title={gettext("Forms")} subtitle={gettext("Forms visitors fill in on the site")}>
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:update, Brando.Forms.Messages)}
-          navigate="/admin/forms/messages"
+          navigate="/admin/config/forms/messages"
           class="workspace-button"
         >
           {gettext("Messages")}
         </.link>
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
-          navigate="/admin/forms/create"
+          navigate="/admin/config/forms/create"
           class="workspace-button primary"
         >
           {gettext("Create new")}

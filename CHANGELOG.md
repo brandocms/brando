@@ -457,7 +457,7 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   [Email guide](guides/email.md).
 
 - **Forms.** Editors build forms visitors fill in, such as a contact form, under
-  **Content → Forms**, laying out fields on the same 12-unit canvas as module
+  **Configuration → Forms**, laying out fields on the same 12-unit canvas as module
   variables, beside the form as visitors will see it. Forms are synchronized
   translations: the source decides the fields, keys, layout and option values,
   and each translation words them in its own language. A module's new **Form**
@@ -465,9 +465,10 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   a block, shown in each page's language; sites can also render one with
   `Brando.HTML.Forms.site_form/1`, whose slots replace any field's markup.
   Submissions are checked, stored in `public` so promoting an environment keeps
-  them, and read, deleted or exported as CSV in the admin. The wording visitors
+  them, and read, deleted or exported as CSV under **Content → Forms**, which
+  appears once a form has been built. The wording visitors
   read around forms — the submit button, sent and error messages — is set once
-  per site under **Forms → Messages**, in every content language. Content
+  per site under **Configuration → Forms → Messages**, in every content language. Content
   transfer matches a block's form by key. Forms carry the visitor's CSRF token,
   refreshed before sending so cached pages still work, refuse posts from other
   sites, and use a honeypot, rate limiting and optional Cloudflare Turnstile. Run `mix brando.gen.migrations`

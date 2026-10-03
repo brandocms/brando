@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Forms.FormFormLiveTest do
   end
 
   defp open(conn, id) do
-    {view, html} = live_form(conn, "/admin/forms/update/#{id}", "form_form")
+    {view, html} = live_form(conn, "/admin/config/forms/update/#{id}", "form_form")
     {view, html}
   end
 

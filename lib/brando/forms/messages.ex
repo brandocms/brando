@@ -4,7 +4,7 @@ defmodule Brando.Forms.Messages do
   button, what is said once a form is sent or could not be, and the errors
   next to a field — in each of the site's languages.
 
-  There is one set per site, edited under Forms → Messages. A language left
+  There is one set per site, edited under Configuration → Forms → Messages. A language left
   empty uses Brando's own wording, which is English where Brando has no
   translation. A form's own submit label and success message, when it has
   them, come before these.
@@ -98,7 +98,7 @@ defmodule Brando.Forms.Messages do
   end
 
   @doc false
-  def redirect(_socket, _entry, _mutation_type), do: "/admin/forms"
+  def redirect(_socket, _entry, _mutation_type), do: "/admin/config/forms"
 
   @doc "The keys of the messages."
   def keys, do: @keys

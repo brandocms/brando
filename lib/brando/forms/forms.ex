@@ -201,6 +201,34 @@ defmodule Brando.Forms do
     |> Repo.all()
   end
 
+  @doc """
+  Every form, once per key, with what visitors have sent with it in every
+  language: `%{key, title, form_id, count, latest}`, the most recently used
+  first. `title` and `form_id` are the source form's, the oldest of its
+  languages.
+  """
+  def list_submission_summaries do
+    scope = Submission.current_scope()
+
+    counts =
+      from(s in Submission,
+        where: s.scope == ^scope,
+        group_by: s.form_key,
+        select: {s.form_key, {count(s.id), max(s.inserted_at)}}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    from(f in Form, order_by: [asc: f.id], select: %{key: f.key, title: f.title, form_id: f.id})
+    |> Repo.all()
+    |> Enum.uniq_by(& &1.key)
+    |> Enum.map(fn form ->
+      {count, latest} = Map.get(counts, form.key, {0, nil})
+      Map.merge(form, %{count: count, latest: latest})
+    end)
+    |> Enum.sort_by(&{is_nil(&1.latest), &1.latest && -DateTime.to_unix(&1.latest, :microsecond), &1.title})
+  end
+
   @doc "How many submissions the form `key` has, in every language or in `language`."
   def count_submissions(key, language \\ nil) do
     key |> submissions_query(language) |> Repo.aggregate(:count)

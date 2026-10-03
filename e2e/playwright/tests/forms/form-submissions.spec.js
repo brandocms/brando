@@ -32,7 +32,10 @@ test('a visitor sends the form and an editor reads it', async ({ page }) => {
   await expect(page.locator('#form-contact-sent')).toBeVisible()
   await expect(form.locator('.site-form-actions')).toBeHidden()
 
-  await page.goto('/admin/forms/contact/submissions')
+  await page.goto('/admin/forms')
+  await syncLV(page)
+  await page.locator('#form-inbox-contact').getByRole('link', { name: 'Open' }).click()
+  await expect(page).toHaveURL('/admin/forms/contact/submissions')
   await syncLV(page)
   const row = page.locator('.form-submissions-table tbody tr').first()
   await expect(row).toContainText('Ada Lovelace')
@@ -58,17 +61,17 @@ test('without JavaScript a post lands back on the page at its message', async ({
 })
 
 test('the site words the messages around its forms', async ({ page }) => {
-  await page.goto('/admin/forms')
+  await page.goto('/admin/config/forms')
   await syncLV(page)
   await page.getByRole('link', { name: 'Messages' }).click()
-  await expect(page).toHaveURL('/admin/forms/messages')
+  await expect(page).toHaveURL('/admin/config/forms/messages')
   await syncLV(page)
 
   const required = page.locator('.i18n-field').filter({ has: page.locator('input[name="messages[required][en]"]') })
   await required.getByRole('tab', { name: 'en', exact: true }).click()
   await required.locator('input[name="messages[required][en]"]').fill('We need this one.')
   await page.getByTestId('submit').click()
-  await expect(page).toHaveURL('/admin/forms')
+  await expect(page).toHaveURL('/admin/config/forms')
 
   await page.goto('/contact-us')
   const form = page.locator('form#form-contact')

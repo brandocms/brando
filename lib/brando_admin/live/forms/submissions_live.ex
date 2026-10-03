@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Forms.SubmissionsLive do
     socket
     |> assign(:forms, Map.new(forms, &{to_string(&1.language), &1}))
     |> assign(:title, forms |> List.first() |> then(&(&1 && &1.title)) || socket.assigns.key)
-    |> assign(:edit_url, forms |> List.first() |> then(&(&1 && "/admin/forms/update/#{&1.id}")))
+    |> assign(:edit_url, forms |> List.first() |> then(&(&1 && "/admin/config/forms/update/#{&1.id}")))
     |> assign(:columns, columns)
     |> assign(:can_delete, BrandoAdmin.Authorization.allowed?(:update, Brando.Forms.Form))
   end
