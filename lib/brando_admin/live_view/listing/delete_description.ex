@@ -15,8 +15,8 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Blueprint
-  alias Brando.Content.Usage
   alias Brando.Blueprint.Relations
+  alias Brando.Content.Usage
   alias Brando.Trait.SoftDelete
 
   @doc """

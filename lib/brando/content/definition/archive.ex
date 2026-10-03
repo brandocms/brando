@@ -5,6 +5,7 @@ defmodule Brando.Content.Definition.Archive do
   Record.defrecordp(:zip_file, Record.extract(:zip_file, from_lib: "stdlib/include/zip.hrl"))
   Record.defrecordp(:file_info, Record.extract(:file_info, from_lib: "kernel/include/file.hrl"))
 
+  alias Brando.Content.ArchivePaths
   alias Brando.Content.Definition.{Error, Value, Writer}
   alias Brando.Content.Definitions
 
@@ -80,7 +81,7 @@ defmodule Brando.Content.Definition.Archive do
         cond do
           file_info(info, :type) == :directory -> []
           file_info(info, :type) != :regular -> Error.raise!("ZIP", "only regular files are supported")
-          ignored?(name) -> []
+          ArchivePaths.ignored?(name) -> []
           true -> [{name, entry}]
         end
       end)
@@ -98,7 +99,7 @@ defmodule Brando.Content.Definition.Archive do
 
     files = Enum.map(extracted, fn {name, body} -> {List.to_string(name), body} end)
     validate_sizes!(Enum.map(files, fn {_name, body} -> byte_size(body) end))
-    files = unwrap_directory(files)
+    files = ArchivePaths.unwrap_directory(files)
 
     Enum.each(files, fn {name, _} ->
       validate_path!(name)
@@ -124,18 +125,6 @@ defmodule Brando.Content.Definition.Archive do
     Map.new(files)
   end
 
-  defp unwrap_directory(files) do
-    case files |> Enum.map(fn {name, _} -> hd(Path.split(name)) end) |> Enum.uniq() do
-      [directory] ->
-        if Enum.all?(files, fn {name, _} -> String.starts_with?(name, directory <> "/") end),
-          do: Enum.map(files, fn {name, body} -> {String.replace_prefix(name, directory <> "/", ""), body} end),
-          else: files
-
-      _ ->
-        files
-    end
-  end
-
   defp validate_path!(name) do
     if name == "" or Path.type(name) != :relative or String.contains?(name, ["\\", ":", <<0>>]) or
          Enum.any?(String.split(name, "/"), &(&1 in ["", ".", ".."])) do
@@ -159,8 +148,6 @@ defmodule Brando.Content.Definition.Archive do
         Error.raise!("ZIP", "invalid file header")
     end
   end
-
-  defp ignored?(name), do: String.starts_with?(name, "__MACOSX/") or Path.basename(name) == ".DS_Store"
 
   # ZIP size metadata is untrusted. Bound actual inflation before letting OTP
   # allocate complete files, and require consistent local/central size headers.

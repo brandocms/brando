@@ -90,7 +90,10 @@ defmodule Brando.Content.Definitions do
   @doc "Retries block synchronization, render enqueueing and notifications for local module UIDs."
   def refresh(uids, actor), do: Brando.Content.Definition.Importer.retry_refresh(uids, actor)
 
-  @doc false
+  @doc """
+  Returns `:ok` for `:system` or an active, undeleted account whose authorization
+  scope matches the current tenant prefix. Raises a definition error otherwise.
+  """
   def validate_actor!(:system), do: :ok
 
   def validate_actor!(%{id: id} = actor) do
@@ -109,7 +112,10 @@ defmodule Brando.Content.Definitions do
 
   def validate_actor!(_), do: Error.raise!("authorization", "expected an account or explicit :system actor")
 
-  @doc false
+  @doc """
+  Runs `fun` and returns `{:ok, result}`, or `{:error, message}` when it raises a
+  definition, file or JSON decoding error. Other exceptions propagate.
+  """
   def protect(fun) do
     {:ok, fun.()}
   rescue

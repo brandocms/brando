@@ -6,6 +6,7 @@ defmodule Brando.SEO.AnalyticsTest do
   alias Brando.SEO.Analytics
   alias Brando.SEO.Analytics.Plausible
   alias Brando.SEO.Analytics.SearchConsole
+  alias Req.Test
 
   # The seeded SEO settings' base URL is https://www.domain.tld.
   @host "www.domain.tld"
@@ -27,7 +28,7 @@ defmodule Brando.SEO.AnalyticsTest do
   end
 
   defp plausible(overrides \\ []) do
-    Keyword.merge([api_key: "plausible-key", req_options: [plug: {Req.Test, Plausible}]], overrides)
+    Keyword.merge([api_key: "plausible-key", req_options: [plug: {Test, Plausible}]], overrides)
   end
 
   defp search_console do
@@ -42,14 +43,14 @@ defmodule Brando.SEO.AnalyticsTest do
       })
 
     Brando.Cache.del({:seo_search_console_token, "audit@project.iam.gserviceaccount.com"})
-    {[credentials: credentials, req_options: [plug: {Req.Test, SearchConsole}]], key}
+    {[credentials: credentials, req_options: [plug: {Test, SearchConsole}]], key}
   end
 
   defp stub_plausible(results) do
-    Req.Test.stub(Plausible, fn conn ->
+    Test.stub(Plausible, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
       send(self(), {:plausible, conn.request_path, Plug.Conn.get_req_header(conn, "authorization"), Jason.decode!(body)})
-      Req.Test.json(conn, %{"results" => results})
+      Test.json(conn, %{"results" => results})
     end)
   end
 
@@ -60,7 +61,7 @@ defmodule Brando.SEO.AnalyticsTest do
     public_key = {:RSAPublicKey, modulus, public_exponent}
     test = self()
 
-    Req.Test.stub(SearchConsole, fn conn ->
+    Test.stub(SearchConsole, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
 
       case conn.host do
@@ -77,7 +78,7 @@ defmodule Brando.SEO.AnalyticsTest do
             )
 
           send(test, {:token_request, valid?, claims |> Base.url_decode64!(padding: false) |> Jason.decode!()})
-          Req.Test.json(conn, %{"access_token" => "google-token", "expires_in" => 3600})
+          Test.json(conn, %{"access_token" => "google-token", "expires_in" => 3600})
 
         "www.googleapis.com" ->
           send(
@@ -85,7 +86,7 @@ defmodule Brando.SEO.AnalyticsTest do
             {:search_request, conn.request_path, Plug.Conn.get_req_header(conn, "authorization"), Jason.decode!(body)}
           )
 
-          Req.Test.json(conn, %{"rows" => rows})
+          Test.json(conn, %{"rows" => rows})
       end
     end)
   end
@@ -114,8 +115,8 @@ defmodule Brando.SEO.AnalyticsTest do
     test "an API error is reported with its message" do
       configure(plausible: plausible(site_id: "example.com"))
 
-      Req.Test.stub(Plausible, fn conn ->
-        conn |> Plug.Conn.put_status(401) |> Req.Test.json(%{"error" => "Invalid API key"})
+      Test.stub(Plausible, fn conn ->
+        conn |> Plug.Conn.put_status(401) |> Test.json(%{"error" => "Invalid API key"})
       end)
 
       assert Plausible.page_stats(28) == {:error, "HTTP 401: Invalid API key"}
@@ -206,7 +207,7 @@ defmodule Brando.SEO.AnalyticsTest do
       assert Enum.map(stats.sources, & &1.source) == [:plausible, :search_console]
       assert %{visitors: 5, clicks: 1, impressions: 120} = stats.pages["/about"]
 
-      Req.Test.stub(Plausible, fn _conn -> raise "the cache should have answered" end)
+      Test.stub(Plausible, fn _conn -> raise "the cache should have answered" end)
       assert Analytics.page_stats() == stats
     end
 
@@ -214,7 +215,7 @@ defmodule Brando.SEO.AnalyticsTest do
       {config, key} = search_console()
       configure(plausible: plausible(), search_console: config)
 
-      Req.Test.stub(Plausible, fn conn -> conn |> Plug.Conn.put_status(500) |> Req.Test.text("down") end)
+      Test.stub(Plausible, fn conn -> conn |> Plug.Conn.put_status(500) |> Test.text("down") end)
 
       stub_search_console(key, [
         %{"keys" => ["https://#{@host}/"], "clicks" => 2, "impressions" => 10, "ctr" => 0.2, "position" => 1.0}

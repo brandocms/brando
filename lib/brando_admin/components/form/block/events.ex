@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   import BrandoAdmin.Utils, only: [send_to_ref: 2]
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
+  alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias Ecto.Changeset
 
   def attach_block_events(socket) do
@@ -992,29 +993,13 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   def handle_block_event("tiptap_link_dialog", params, socket) do
     content_language = Brando.Gettext |> Gettext.get_locale()
 
-    send_update(BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog,
-      id: "tiptap-link-dialog",
-      event: :open,
-      current_href: params["current_href"] || "",
-      current_target: params["current_target"],
-      current_rel: params["current_rel"],
-      current_class: params["current_class"],
-      link_text: params["link_text"],
-      has_selection: params["has_selection"],
-      anchors: params["anchors"] || [],
-      appearances: params["appearances"],
-      request_id: params["request_id"],
-      current_identifier_id: params["current_identifier_id"],
-      mark_type: params["mark_type"] || "link",
-      tiptap_id: params["tiptap_id"],
-      language: content_language
-    )
+    TipTapLinkDialog.open(params, content_language)
 
     {:halt, socket}
   end
 
   def handle_block_event("tiptap_link_result", params, socket) do
-    BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog.receive_result(params)
+    TipTapLinkDialog.receive_result(params)
     {:halt, socket}
   end
 

@@ -34,6 +34,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
 
   require Logger
@@ -338,20 +339,8 @@ defmodule Brando.Videos.Uploaders.Bunny do
       status: :ready
     }
 
-    # Add dimensions if available
-    params =
-      case {bunny_video["width"], bunny_video["height"]} do
-        {width, height} when is_integer(width) and is_integer(height) and width > 0 and height > 0 ->
-          params
-          |> Map.put(:width, width)
-          |> Map.put(:height, height)
-          |> Map.put(:aspect_ratio, "#{width}/#{height}")
+    params = ProviderUpdate.put_dimensions(params, bunny_video)
 
-        _ ->
-          params
-      end
-
-    # Add duration if available
     params =
       case bunny_video["length"] do
         length when is_number(length) and length > 0 ->
@@ -361,32 +350,10 @@ defmodule Brando.Videos.Uploaders.Bunny do
           params
       end
 
-    {:ok, creator} = Brando.Users.get_user(video.creator_id)
-
-    with {:ok, updated_video} <- Videos.update_video(video, params, creator) do
-      Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast_video_update(updated_video)
-      {:ok, updated_video}
-    end
+    ProviderUpdate.update_video(video, params)
   end
 
-  defp update_video_status(video, status) do
-    {:ok, creator} = Brando.Users.get_user(video.creator_id)
-
-    with {:ok, updated_video} <- Videos.update_video(video, %{status: status}, creator) do
-      Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast_video_update(updated_video)
-      {:ok, updated_video}
-    end
-  end
-
-  defp broadcast_video_update(video) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:video:#{video.id}",
-      {video, [:video, :updated]}
-    )
-  end
+  defp update_video_status(video, status), do: ProviderUpdate.update_video(video, %{status: status})
 
   defp find_video_by_guid(video_guid) do
     case Videos.get_video_by_meta("bunny.video_guid", video_guid) do

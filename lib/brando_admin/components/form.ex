@@ -35,14 +35,15 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.Images
+  alias Brando.LivePreview
   alias Brando.Villain
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.Form.AlternatesDrawer
   alias BrandoAdmin.Components.Form.BlockField
-  alias BrandoAdmin.Components.Form.Drafts
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
+  alias BrandoAdmin.Components.Form.Drafts
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
   alias BrandoAdmin.Components.Form.FrontendEditor
@@ -53,14 +54,15 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
-  alias BrandoAdmin.Components.Form.Visibility
   alias BrandoAdmin.Components.Form.RevisionsDrawer
-  alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
+  alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.VideoDrawer
+  alias BrandoAdmin.Components.Form.Visibility
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.SplitDropdown
   alias BrandoAdmin.Components.VideoPicker
+  alias Ecto.Changeset
 
   def mount(socket) do
     # Per-form-INSTANCE topic for asset delivery from the sticky UploadManager
@@ -220,9 +222,9 @@ defmodule BrandoAdmin.Components.Form do
       Enum.reduce(changes, changeset, fn %{field: field, value: value, assoc?: assoc?}, cs ->
         cs =
           if assoc? do
-            Ecto.Changeset.put_assoc(cs, field, value)
+            Changeset.put_assoc(cs, field, value)
           else
-            Ecto.Changeset.put_change(cs, field, value)
+            Changeset.put_change(cs, field, value)
           end
 
         # If this is an asset FK (e.g. :cover_id), load the record
@@ -557,7 +559,7 @@ defmodule BrandoAdmin.Components.Form do
     if socket.assigns.frontend_edit do
       FrontendEditor.update_block(payload)
     else
-      Brando.LivePreview.broadcast(socket.assigns.live_preview_cache_key, "update_block", payload)
+      LivePreview.broadcast(socket.assigns.live_preview_cache_key, "update_block", payload)
     end
 
     {:ok, socket}
@@ -965,11 +967,11 @@ defmodule BrandoAdmin.Components.Form do
     row =
       module
       |> struct()
-      |> Ecto.Changeset.change(attrs)
+      |> Changeset.change(attrs)
       |> Map.put(:action, :insert)
 
-    rows = Ecto.Changeset.get_embed(changeset, field) ++ [row]
-    updated = Ecto.Changeset.put_embed(changeset, field, rows)
+    rows = Changeset.get_embed(changeset, field) ++ [row]
+    updated = Changeset.put_embed(changeset, field, rows)
     form = to_form(updated, [])
 
     socket =
@@ -1359,7 +1361,7 @@ defmodule BrandoAdmin.Components.Form do
     case {result, socket.assigns[:entry]} do
       {{:ok, {:ok, %{values: values}}}, %{id: ^image_id}} ->
         changeset = socket.assigns.form.source
-        alt = Map.merge(Ecto.Changeset.get_field(changeset, :alt) || %{}, values)
+        alt = Map.merge(Changeset.get_field(changeset, :alt) || %{}, values)
         changeset = put_change(changeset, :alt, alt)
         {:noreply, socket |> put_form(to_form(changeset, [])) |> Drafts.dirty()}
 
@@ -1380,8 +1382,8 @@ defmodule BrandoAdmin.Components.Form do
     case {result, socket.assigns[:edit_image]} do
       {{:ok, {:ok, %{values: values}}}, %{image: %{id: ^image_id}}} ->
         changeset = socket.assigns.image_changeset
-        alt = Map.merge(Ecto.Changeset.get_field(changeset, :alt) || %{}, values)
-        {:noreply, assign(socket, :image_changeset, Ecto.Changeset.put_change(changeset, :alt, alt))}
+        alt = Map.merge(Changeset.get_field(changeset, :alt) || %{}, values)
+        {:noreply, assign(socket, :image_changeset, Changeset.put_change(changeset, :alt, alt))}
 
       # The drawer moved on to another image; its suggestion is not wanted
       {{:ok, {:ok, _}}, _} ->
@@ -1771,7 +1773,7 @@ defmodule BrandoAdmin.Components.Form do
     schema = socket.assigns.schema
     cache_key = socket.assigns.live_preview_cache_key
 
-    Brando.LivePreview.update(schema, changeset, cache_key, updated_entry_assocs)
+    LivePreview.update(schema, changeset, cache_key, updated_entry_assocs)
 
     socket
   end
@@ -1893,9 +1895,9 @@ defmodule BrandoAdmin.Components.Form do
       schema.has_trait(Brando.Trait.ScheduledPublishing)
     end)
     |> assign_new(:has_live_preview?, fn -> check_live_preview(schema) end)
-    |> assign_new(:live_preview_targets, fn -> Brando.LivePreview.get_targets(schema) end)
+    |> assign_new(:live_preview_targets, fn -> LivePreview.get_targets(schema) end)
     |> assign_new(:live_preview_default_target, fn ->
-      if Brando.LivePreview.has_live_preview_target(schema), do: Brando.LivePreview.get_target_config(schema).name
+      if LivePreview.has_live_preview_target(schema), do: LivePreview.get_target_config(schema).name
     end)
     |> assign_transformer_statuses()
     |> assign(
@@ -1923,7 +1925,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp check_live_preview(schema) do
     Code.ensure_compiled!(Brando.live_preview())
-    Brando.LivePreview.has_live_preview_target(schema)
+    LivePreview.has_live_preview_target(schema)
   end
 
   defp assign_default_params(%{assigns: %{initial_params: initial_params}} = socket)
@@ -2150,7 +2152,7 @@ defmodule BrandoAdmin.Components.Form do
       user = socket.assigns.current_user
       socket = assign(socket, :sharing_preview?, false)
 
-      case Brando.LivePreview.share(
+      case LivePreview.share(
              schema,
              changeset,
              user,
@@ -2201,7 +2203,7 @@ defmodule BrandoAdmin.Components.Form do
     schema = socket.assigns.schema
 
     if changeset.errors == [] do
-      case Brando.LivePreview.initialize(
+      case LivePreview.initialize(
              schema,
              changeset,
              updated_entry_assocs,
@@ -2251,7 +2253,7 @@ defmodule BrandoAdmin.Components.Form do
 
       if changeset.errors == [] do
         # fetch all blocks' rendered_html
-        case Brando.LivePreview.initialize(
+        case LivePreview.initialize(
                schema,
                changeset,
                updated_entry_assocs,
@@ -2296,7 +2298,7 @@ defmodule BrandoAdmin.Components.Form do
     if changeset.errors == [] do
       cache_key = socket.assigns.live_preview_cache_key
 
-      Brando.LivePreview.update_cache(cache_key, schema, changeset, updated_entry_assocs)
+      LivePreview.update_cache(cache_key, schema, changeset, updated_entry_assocs)
       send(self(), {:toast, gettext("Opening standalone live preview...")})
 
       url = "/__livepreview?key=#{cache_key}&mode=standalone"
@@ -2327,7 +2329,7 @@ defmodule BrandoAdmin.Components.Form do
         cache_key = socket.assigns.live_preview_cache_key
         schema = socket.assigns.schema
 
-        Brando.LivePreview.update_cache(cache_key, schema, changeset, updated_entry_assocs)
+        LivePreview.update_cache(cache_key, schema, changeset, updated_entry_assocs)
         send(self(), {:toast, gettext("Opening standalone live preview...")})
 
         url = "/__livepreview?key=#{cache_key}&mode=standalone"
@@ -2358,7 +2360,7 @@ defmodule BrandoAdmin.Components.Form do
       socket = socket |> clear_blocks_root_changesets() |> assign(:pending_live_preview_target, nil)
 
       if changeset.errors == [] do
-        case Brando.LivePreview.switch_target(
+        case LivePreview.switch_target(
                schema,
                changeset,
                socket.assigns.live_preview_cache_key,
@@ -2398,12 +2400,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
-    lp_opts = Brando.LivePreview.get_target_config(schema, socket.assigns.live_preview_schema_target)
+    lp_opts = LivePreview.get_target_config(schema, socket.assigns.live_preview_schema_target)
     assign(socket, :fields_demanding_full_live_preview_rerender, lp_opts.rerender_on_change)
   end
 
   def assign_entry_fields_demanding_live_preview_reassign(socket, schema) do
-    lp_opts = Brando.LivePreview.get_target_config(schema, socket.assigns.live_preview_schema_target)
+    lp_opts = LivePreview.get_target_config(schema, socket.assigns.live_preview_schema_target)
     assign(socket, :fields_demanding_live_preview_reassign, lp_opts.reassign_on_change)
   end
 
@@ -3285,23 +3287,7 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("tiptap_link_dialog", params, socket) do
     content_language = socket.assigns.current_user.config.content_language
 
-    send_update(TipTapLinkDialog,
-      id: "tiptap-link-dialog",
-      event: :open,
-      current_href: params["current_href"] || "",
-      current_target: params["current_target"],
-      current_rel: params["current_rel"],
-      current_class: params["current_class"],
-      link_text: params["link_text"],
-      has_selection: params["has_selection"],
-      anchors: params["anchors"] || [],
-      appearances: params["appearances"],
-      request_id: params["request_id"],
-      current_identifier_id: params["current_identifier_id"],
-      mark_type: params["mark_type"] || "link",
-      tiptap_id: params["tiptap_id"],
-      language: content_language
-    )
+    TipTapLinkDialog.open(params, content_language)
 
     {:noreply, socket}
   end
@@ -3604,7 +3590,7 @@ defmodule BrandoAdmin.Components.Form do
          |> reset_transformer_changesets()
          |> source_controlled_error(paths)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
+      {:error, %Changeset{} = changeset} ->
         require Logger
         Logger.error(inspect(changeset, pretty: true))
         send(self(), {:progress_popup, "Saving entry failed..."})
@@ -3745,7 +3731,7 @@ defmodule BrandoAdmin.Components.Form do
            |> assign(:processing, false)
          end)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
+      {:error, %Changeset{} = changeset} ->
         require Logger
         Logger.error(inspect(changeset, pretty: true))
 
@@ -4021,7 +4007,7 @@ defmodule BrandoAdmin.Components.Form do
             updated_video = %{updated_video | thumbnail: nil}
             {:noreply, assign(socket, :edit_video, %{edit_video | video: updated_video})}
 
-          {:error, %Ecto.Changeset{} = failed_changeset} ->
+          {:error, %Changeset{} = failed_changeset} ->
             require Logger
             Logger.error("==> reset_video_thumbnail failed: #{inspect(failed_changeset.errors)}")
             send(self(), {:toast, gettext("Could not reset video thumbnail")})
@@ -4458,10 +4444,10 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event(
         "set_video_aspect_ratio",
         %{"value" => value},
-        %{assigns: %{video_changeset: %Ecto.Changeset{}}} = socket
+        %{assigns: %{video_changeset: %Changeset{}}} = socket
       ) do
     value = if value in [nil, ""], do: nil, else: value
-    {:noreply, update(socket, :video_changeset, &Ecto.Changeset.put_change(&1, :aspect_ratio, value))}
+    {:noreply, update(socket, :video_changeset, &Changeset.put_change(&1, :aspect_ratio, value))}
   end
 
   def handle_event("set_video_aspect_ratio", _, socket), do: {:noreply, socket}
@@ -4692,7 +4678,7 @@ defmodule BrandoAdmin.Components.Form do
         socket
         |> assign(:live_preview_active?, true)
         |> assign(:live_preview_cache_key, cache_key)
-        |> assign(:live_preview_schema_target, Brando.LivePreview.target_name(cache_key))
+        |> assign(:live_preview_schema_target, LivePreview.target_name(cache_key))
         |> assign_entry_fields_demanding_live_preview_rerender(schema)
         |> assign_entry_fields_demanding_live_preview_reassign(schema)
         |> push_event("b:live_preview", %{cache_key: cache_key})
@@ -4728,7 +4714,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # close live_preview
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
-    Brando.LivePreview.cleanup_cache(socket.assigns.live_preview_cache_key)
+    LivePreview.cleanup_cache(socket.assigns.live_preview_cache_key)
 
     socket
     |> Preview.cancel()
@@ -4920,7 +4906,7 @@ defmodule BrandoAdmin.Components.Form do
     cache_key = socket.assigns.live_preview_cache_key
 
     case Enum.find(fdlpr, fn {_key, trigger_path} -> trigger_path == path end) do
-      {key, _} -> Brando.LivePreview.invalidate_var(cache_key, key)
+      {key, _} -> LivePreview.invalidate_var(cache_key, key)
       nil -> nil
     end
 
@@ -5040,7 +5026,7 @@ defmodule BrandoAdmin.Components.Form do
         :live_preview_reload -> :reload
       end
 
-    apply(Brando.LivePreview, function, [
+    apply(LivePreview, function, [
       socket.assigns.schema,
       changeset,
       socket.assigns.live_preview_cache_key,
@@ -5220,21 +5206,21 @@ defmodule BrandoAdmin.Components.Form do
         |> Brando.Content.Blocks.strip_render_artifacts()
         |> Brando.Utils.set_action()
 
-      Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)
+      Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)
     end)
   end
 
   defp assoc_all_transformer_fields(changeset, transformer_changesets) do
     Enum.reduce(transformer_changesets, changeset, fn
       {_field_name, nil}, acc -> acc
-      {field_name, data}, acc -> Ecto.Changeset.put_assoc(acc, field_name, data)
+      {field_name, data}, acc -> Changeset.put_assoc(acc, field_name, data)
     end)
   end
 
   defp store_revision(socket, changeset) do
     result =
       with :ok <- Brando.Authorization.Boundary.change(socket.assigns.current_user, :update, changeset),
-           do: Ecto.Changeset.apply_action(changeset, :update)
+           do: Changeset.apply_action(changeset, :update)
 
     case result do
       {:ok, entry} ->
@@ -5585,7 +5571,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
   end
 
-  defp upload_error_noreply(socket, _kind, %Ecto.Changeset{} = changeset) do
+  defp upload_error_noreply(socket, _kind, %Changeset{} = changeset) do
     require Logger
 
     Logger.error("""
@@ -5819,8 +5805,8 @@ defmodule BrandoAdmin.Components.Form do
     |> Enum.map(fn {block_field_name, _schema, _entry_blocks, _opts} ->
       rendered_field_name = :"rendered_#{block_field_name}"
 
-      Ecto.Changeset.get_change(rendered_changeset, rendered_field_name) ||
-        Ecto.Changeset.get_field(rendered_changeset, rendered_field_name)
+      Changeset.get_change(rendered_changeset, rendered_field_name) ||
+        Changeset.get_field(rendered_changeset, rendered_field_name)
     end)
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.map_join("\n\n", &HtmlSanitizeEx.strip_tags/1)
@@ -6122,7 +6108,7 @@ defmodule BrandoAdmin.Components.Form do
   #     text, and `queue_processing/4` deletes any matching job before inserting
   #     a new one, so closing the drawer twice while the first job is still
   #     running discards it and starts a second pass over the same files.
-  defp requeue_processing?(%Ecto.Changeset{changes: changes}, image) do
+  defp requeue_processing?(%Changeset{changes: changes}, image) do
     if Enum.any?(@processing_inputs, &Map.has_key?(changes, &1)) do
       true
     else
@@ -6374,8 +6360,8 @@ defmodule BrandoAdmin.Components.Form do
   # enum that `change/2` would happily store unconverted.
   defp replay_drawer_changes(resource, params, allowed_fields) do
     case decode_drawer_changes(params["changes"]) do
-      changes when map_size(changes) == 0 -> Ecto.Changeset.change(resource)
-      changes -> Ecto.Changeset.cast(resource, changes, allowed_fields)
+      changes when map_size(changes) == 0 -> Changeset.change(resource)
+      changes -> Changeset.cast(resource, changes, allowed_fields)
     end
   end
 
@@ -6427,7 +6413,7 @@ defmodule BrandoAdmin.Components.Form do
   # Only what the user actually changed, and only the text fields — everything
   # else in a drawer changeset either is not JSON-encodable or is not something
   # the drawer can edit. An empty map is the common case and encodes to "{}".
-  defp encode_drawer_changes(type, %Ecto.Changeset{changes: changes}) do
+  defp encode_drawer_changes(type, %Changeset{changes: changes}) do
     changes
     |> Map.take(drawer_fields(type))
     |> Jason.encode!()

@@ -2,6 +2,8 @@ defmodule Brando.Sites.Redirects do
   @moduledoc false
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Repo
+
   @doc """
   Removes an exact permalink redirect on a newly saved URL in its language.
 
@@ -14,8 +16,8 @@ defmodule Brando.Sites.Redirects do
     source = exact_source(URI.parse(url).path)
 
     result =
-      Brando.Repo.transaction(fn ->
-        case Brando.Repo.one(from s in schema, where: s.language == ^language, lock: "FOR UPDATE") do
+      Repo.transaction(fn ->
+        case Repo.one(from s in schema, where: s.language == ^language, lock: "FOR UPDATE") do
           nil ->
             nil
 
@@ -42,10 +44,10 @@ defmodule Brando.Sites.Redirects do
     destination_source = exact_source(URI.parse(to).path)
 
     result =
-      Brando.Repo.transaction(fn ->
-        case Brando.Repo.one(from s in schema, where: s.language == ^language, lock: "FOR UPDATE") do
+      Repo.transaction(fn ->
+        case Repo.one(from s in schema, where: s.language == ^language, lock: "FOR UPDATE") do
           nil ->
-            Brando.Repo.repo().rollback(:seo_not_found)
+            Repo.repo().rollback(:seo_not_found)
 
           seo ->
             redirect = struct(Brando.Sites.Redirect, from: source, to: to, code: 301)
@@ -75,7 +77,7 @@ defmodule Brando.Sites.Redirects do
 
     case Brando.Sites.update_seo(changeset, user) do
       {:ok, updated_seo} -> updated_seo
-      {:error, changeset} -> Brando.Repo.repo().rollback(changeset)
+      {:error, changeset} -> Repo.repo().rollback(changeset)
     end
   end
 

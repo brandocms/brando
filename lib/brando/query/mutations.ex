@@ -4,6 +4,7 @@ defmodule Brando.Query.Mutations do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Activity
+  alias Brando.Authorization.Boundary
   alias Brando.Content
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Datasource
@@ -15,7 +16,6 @@ defmodule Brando.Query.Mutations do
   alias Brando.Tenant.Job
   alias Brando.Trait
   alias Brando.Utils
-  alias Brando.Authorization.Boundary
 
   def create(module, params, user, callback_block, opts) do
     Boundary.run(user, :create, module, &do_create(module, params, &1, callback_block, opts))

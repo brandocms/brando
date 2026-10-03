@@ -1,7 +1,7 @@
 defmodule Brando.RichTextTest do
   use ExUnit.Case, async: true
-  alias Brando.RichText
   alias Brando.Blueprint.Forms.RichText, as: Configuration
+  alias Brando.RichText
   alias Brando.Villain.Blocks.TextBlock.Data
 
   test "shared client/server URL fixtures" do

@@ -48,7 +48,6 @@ defmodule Brando.ContentTest do
 
       {:ok, child} = Content.create_module(child_attrs, user)
 
-      # Add a var directly to the parent module
       var = %Var{
         type: :text,
         label: "Test Variable",
@@ -197,9 +196,7 @@ defmodule Brando.ContentTest do
 
     test "full export/import cycle preserves structure" do
       user = Factory.insert(:random_user)
-      # Create complex module structure
 
-      # Create the parent module
       parent_attrs = %{
         name: %{"en" => "Complex Parent"},
         namespace: %{"en" => "complex"},
@@ -413,7 +410,6 @@ defmodule Brando.ContentTest do
           user
         )
 
-      # Create a parent module with its own table template
       {:ok, parent} =
         Content.create_module(
           %{
@@ -430,7 +426,7 @@ defmodule Brando.ContentTest do
           user
         )
 
-      # Create a child with a different table template
+      # A template distinct from the parent's, so the assertions can tell which module each export came from
       {:ok, _child} =
         Content.create_module(
           %{

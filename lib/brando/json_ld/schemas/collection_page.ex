@@ -9,6 +9,8 @@ defmodule Brando.JSONLD.Schema.CollectionPage do
   describes the document, the CollectionPage describes what it collects.
   """
 
+  @type t :: %__MODULE__{}
+
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
             "@type": "CollectionPage",

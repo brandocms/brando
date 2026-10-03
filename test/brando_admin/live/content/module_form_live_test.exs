@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Live.Content.ModuleFormLiveTest do
   alias Brando.Villain.Blocks.TextBlock
   alias BrandoAdmin.Content.ModuleFormLive
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   describe "stripped refs lint" do
     defp validate(code, type) do
@@ -18,10 +19,10 @@ defmodule BrandoAdmin.Live.Content.ModuleFormLiveTest do
 
       socket =
         %Phoenix.LiveView.Socket{}
-        |> Phoenix.Component.assign(:entry, entry)
-        |> Phoenix.Component.assign(:current_user, user)
-        |> Phoenix.Component.assign(:shared_library?, false)
-        |> Phoenix.Component.assign(:form, to_form(Changeset.change(entry), []))
+        |> Component.assign(:entry, entry)
+        |> Component.assign(:current_user, user)
+        |> Component.assign(:shared_library?, false)
+        |> Component.assign(:form, to_form(Changeset.change(entry), []))
 
       assert {:noreply, socket} =
                ModuleFormLive.handle_event("validate", %{"module" => %{"code" => code}}, socket)
@@ -50,7 +51,7 @@ defmodule BrandoAdmin.Live.Content.ModuleFormLiveTest do
       |> Changeset.put_assoc(:refs, [])
 
     form = to_form(changeset, [])
-    socket = Phoenix.Component.assign(%Phoenix.LiveView.Socket{}, :form, form)
+    socket = Component.assign(%Phoenix.LiveView.Socket{}, :form, form)
 
     assert {:noreply, updated_socket} =
              ModuleFormLive.handle_event("create_ref", %{"type" => "text"}, socket)
@@ -175,6 +176,6 @@ defmodule BrandoAdmin.Live.Content.ModuleFormLiveTest do
   end
 
   defp form_socket(changeset) do
-    Phoenix.Component.assign(%Phoenix.LiveView.Socket{}, :form, to_form(changeset, []))
+    Component.assign(%Phoenix.LiveView.Socket{}, :form, to_form(changeset, []))
   end
 end

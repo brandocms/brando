@@ -3,6 +3,7 @@ defmodule Brando.MarkdownSources do
   import Ecto.Query, only: [from: 2]
   alias Brando.MarkdownSources.{Connection, Event, Source, Version}
   alias Brando.Repo
+  alias Ecto.Changeset
 
   def authorize(:system, _), do: :ok
   def authorize(id, action) when is_integer(id), do: authorize(%{id: id}, action)
@@ -48,18 +49,18 @@ defmodule Brando.MarkdownSources do
   def save_source(source, attrs, actor) do
     with :ok <- authorize(actor, if(source.id, do: :update, else: :create)) do
       changeset = Source.changeset(source, attrs)
-      key = Ecto.Changeset.get_field(changeset, :connection)
+      key = Changeset.get_field(changeset, :connection)
 
       changeset =
-        if not Ecto.Changeset.get_field(changeset, :enabled) or match?({:ok, _}, Connection.current(key)),
+        if not Changeset.get_field(changeset, :enabled) or match?({:ok, _}, Connection.current(key)),
           do: changeset,
-          else: Ecto.Changeset.add_error(changeset, :connection, "is not enabled for this environment")
+          else: Changeset.add_error(changeset, :connection, "is not enabled for this environment")
 
       # Changing a document identity would also reinterpret old pins. Require a
       # new source once imported; names and enabled state can still be edited.
       changeset =
-        if source.latest_version_id && Enum.any?([:connection, :ref, :path], &Ecto.Changeset.changed?(changeset, &1)),
-          do: Ecto.Changeset.add_error(changeset, :path, "create a new source to change an imported document's identity"),
+        if source.latest_version_id && Enum.any?([:connection, :ref, :path], &Changeset.changed?(changeset, &1)),
+          do: Changeset.add_error(changeset, :path, "create a new source to change an imported document's identity"),
           else: changeset
 
       Brando.MarkdownSources.Publication.with_source_lock(source.id || "new", fn ->
@@ -154,11 +155,11 @@ defmodule Brando.MarkdownSources do
   # Clear only this validator's old error before the op store preserves invalid
   # raw params; otherwise it would replay the earlier empty version on save.
   def revalidate_placement(changeset, actor) do
-    case Ecto.Changeset.get_field(changeset, :data) do
-      %Ecto.Changeset{data: %Brando.Villain.Blocks.MarkdownSourceBlock{}} = data ->
+    case Changeset.get_field(changeset, :data) do
+      %Changeset{data: %Brando.Villain.Blocks.MarkdownSourceBlock{}} = data ->
         errors = Enum.reject(changeset.errors, fn {_, {_, opts}} -> opts[:validation] == :markdown_source end)
         changeset = %{changeset | errors: errors, valid?: errors == [] and data.valid?}
-        changeset |> Ecto.Changeset.force_change(:data, Ecto.Changeset.apply_changes(data)) |> validate_placement(actor)
+        changeset |> Changeset.force_change(:data, Changeset.apply_changes(data)) |> validate_placement(actor)
 
       _ ->
         changeset
@@ -166,7 +167,7 @@ defmodule Brando.MarkdownSources do
   end
 
   def validate_placement(changeset, actor) do
-    case Ecto.Changeset.get_field(changeset, :data) do
+    case Changeset.get_field(changeset, :data) do
       %Brando.Villain.Blocks.MarkdownSourceBlock{data: data} ->
         old =
           case changeset.data.data do
@@ -193,9 +194,7 @@ defmodule Brando.MarkdownSources do
         changeset
 
       authorize(actor, :publish) != :ok ->
-        Ecto.Changeset.add_error(changeset, :data, "You cannot publish Markdown source updates",
-          validation: :markdown_source
-        )
+        Changeset.add_error(changeset, :data, "You cannot publish Markdown source updates", validation: :markdown_source)
 
       is_nil(data.source_id) ->
         changeset
@@ -208,7 +207,7 @@ defmodule Brando.MarkdownSources do
           changeset
         else
           _ ->
-            Ecto.Changeset.add_error(
+            Changeset.add_error(
               changeset,
               :data,
               "Choose an available source and an exact version for review or pinning",

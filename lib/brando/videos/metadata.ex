@@ -138,7 +138,10 @@ defmodule Brando.Videos.Metadata do
     end
   end
 
-  @doc false
+  @doc """
+  The highest-resolution variant in an HLS master playlist, as
+  `{:ok, {width, height, uri}}`, or `{:error, :no_renditions}`.
+  """
   def largest_rendition(master) do
     ~r/#EXT-X-STREAM-INF:[^\n]*RESOLUTION=(\d+)x(\d+)[^\n]*\n([^\n#]+)/
     |> Regex.scan(master, capture: :all_but_first)
@@ -150,7 +153,7 @@ defmodule Brando.Videos.Metadata do
     end
   end
 
-  @doc false
+  @doc "The total of an HLS media playlist's segment durations in seconds, or nil when it is zero."
   def playlist_duration(playlist) do
     ~r/#EXTINF:([\d.]+)/
     |> Regex.scan(playlist, capture: :all_but_first)

@@ -17,8 +17,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Primitives
-  alias BrandoAdmin.Components.Form.Visibility
   alias BrandoAdmin.Components.Form.Subform
+  alias BrandoAdmin.Components.Form.Visibility
 
   import Ecto.Changeset, only: [change: 2]
 
@@ -1149,17 +1149,20 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   # --- Items ---
 
-  # The single definition of an item's shape. Every construction site goes
-  # through here: hand-written literals drift, and a missing key surfaces as a
-  # KeyError from deep inside render rather than anywhere near the cause.
-  #
-  # - `source`   the struct (existing row) or map (unsaved) the entry wraps
-  # - `changes`  inline field edits, merged over source at save
-  # - `pending`  upload placeholder state, or nil once the asset lands
-  # - `replacing` upload state for a file dropped on an existing entry to
-  #              replace its asset; the entry keeps its asset until it lands
-  # - `assets`   render-only resolved assets; never merged into save data
-  @doc false
+  @doc """
+  Builds an item, the single definition of its shape. Every construction site
+  goes through here: hand-written literals drift, and a missing key surfaces
+  as a KeyError from deep inside render rather than anywhere near the cause.
+
+    * `source` - the struct (existing row) or map (unsaved) the entry wraps
+    * `changes` - inline field edits, merged over source at save
+    * `pending` - upload placeholder state, or nil once the asset lands
+    * `replacing` - upload state for a file dropped on an existing entry to
+      replace its asset; the entry keeps its asset until it lands
+    * `assets` - render-only resolved assets; never merged into save data
+
+  Options: `:is_new` (default `true`), `:pending`, `:replacing` and `:assets`.
+  """
   def new_item(dom_id, source, opts \\ []) do
     %{
       dom_id: dom_id,
@@ -1172,7 +1175,14 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     }
   end
 
-  @doc false
+  @doc """
+  Rebuilds an item from a recovered changeset, keeping invalid params as
+  inline changes so the user's input survives.
+
+  Unsaved rows get a plain map as source. Assets for `asset_fields` are
+  resolved from the restored foreign keys for display only, as they may
+  differ from the saved row's preloads.
+  """
   def recovery_item(cs, asset_fields) do
     entry = Ecto.Changeset.apply_changes(cs)
 
@@ -1207,10 +1217,14 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   # --- Placeholder helpers ---
 
-  # A placeholder is an ordinary item carrying a `pending` map. It renders as a
-  # queued card, is skipped at save time, and becomes a real item the moment its
-  # asset id lands — the position it was given on drop never changes.
-  @doc false
+  @doc """
+  Builds a placeholder item for a dropped file, or `nil` when the file
+  description cannot be tracked safely.
+
+  A placeholder is an ordinary item carrying a `pending` map. It renders as a
+  queued card, is skipped at save time, and becomes a real item the moment its
+  asset id lands — the position it was given on drop never changes.
+  """
   def build_placeholder(file, subform, relation_module, entry_data) do
     case upload_state(file) do
       nil ->
@@ -1247,7 +1261,6 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   defp parse_size(size) when is_integer(size), do: size
   defp parse_size(_), do: nil
 
-  @doc false
   # What a `listing:` component receives as `entry`.
   #
   # An unsaved item carries a plain map as its source, because that map is what
@@ -1255,7 +1268,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # know that. It always gets a struct of the related schema, with the resolved
   # assets attached, so `entry.image` works the same for a row loaded from the
   # database and a file dropped a second ago.
-  def listing_entry(data, relation_module, assets) do
+  defp listing_entry(data, relation_module, assets) do
     entry = if is_struct(data), do: data, else: struct(relation_module, data)
 
     Enum.reduce(assets, entry, fn
@@ -1576,7 +1589,11 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     |> notify_relation_change()
   end
 
-  @doc false
+  @doc """
+  Returns the insertable params map for a new item from the subform's
+  `default`: nothing (the relation's struct defaults), a map or struct, or a
+  2-arity function called with the parent entry and the item's asset.
+  """
   def build_default(%{default: nil}, relation_module, _entry, _asset) do
     relation_module
     |> struct()

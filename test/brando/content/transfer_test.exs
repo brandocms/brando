@@ -4,6 +4,7 @@ defmodule Brando.Content.TransferTest do
   alias Brando.Content.Transfer.{Catalog, Receipt}
   alias Brando.{Factory, Repo}
   alias Brando.Pages.Page
+  alias Brando.Utils
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias Ecto.Changeset
 
@@ -19,20 +20,20 @@ defmodule Brando.Content.TransferTest do
           namespace: %{"en" => "Content"},
           help_text: %{},
           code: "{% ref refs.body %}",
-          refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}}]
+          refs: [%{name: "body", uid: Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}}]
         ),
         user
       )
 
     params = %{
-      "uid" => Brando.Utils.generate_uid(),
+      "uid" => Utils.generate_uid(),
       "type" => "module",
       "module_id" => module.id,
       "creator_id" => user.id,
       "source" => to_string(Page.Blocks),
       "refs" => [
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => Utils.generate_uid(),
           "name" => "body",
           "data" => %{"type" => "text", "data" => %{"text" => "<p>Saved content</p>"}}
         }
@@ -131,7 +132,7 @@ defmodule Brando.Content.TransferTest do
       status: :published,
       meta_title: "Campaign SEO",
       css_classes: "campaign",
-      publish_at: DateTime.add(DateTime.utc_now(), 86400) |> DateTime.truncate(:second)
+      publish_at: DateTime.add(DateTime.utc_now(), 86_400) |> DateTime.truncate(:second)
     )
     |> Repo.update!()
 
@@ -317,7 +318,10 @@ defmodule Brando.Content.TransferTest do
       id = receipt.after[entry["key"]]["id"]
 
       jobs = fn ->
-        Repo.all(Oban.Job) |> Enum.filter(&(&1.worker == "Brando.Worker.EntryPublisher" && &1.args["id"] == id))
+        Repo.all(
+          from j in Oban.Job,
+            where: j.worker == "Brando.Worker.EntryPublisher" and fragment("? @> ?", j.args, ^%{"id" => id})
+        )
       end
 
       assert [job] = jobs.()
@@ -537,7 +541,7 @@ defmodule Brando.Content.TransferTest do
     gallery_ref = %{
       name: "gallery",
       gallery_id: gallery.id,
-      uid: Brando.Utils.generate_uid(),
+      uid: Utils.generate_uid(),
       data: %{
         type: "gallery",
         data: %{
@@ -559,14 +563,14 @@ defmodule Brando.Content.TransferTest do
       )
 
     params = %{
-      "uid" => Brando.Utils.generate_uid(),
+      "uid" => Utils.generate_uid(),
       "type" => "module",
       "module_id" => module.id,
       "source" => to_string(Page.Blocks),
       "creator_id" => c.user.id,
       "refs" => [
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => Utils.generate_uid(),
           "name" => "gallery",
           "gallery_id" => gallery.id,
           "data" => %{
@@ -696,7 +700,7 @@ defmodule Brando.Content.TransferTest do
           namespace: %{},
           help_text: %{},
           code: "Gallery",
-          refs: [%{name: "gallery", uid: Brando.Utils.generate_uid(), data: %{type: "gallery", data: %{}}}]
+          refs: [%{name: "gallery", uid: Utils.generate_uid(), data: %{type: "gallery", data: %{}}}]
         ),
         c.user
       )
@@ -709,14 +713,14 @@ defmodule Brando.Content.TransferTest do
     ]
 
     params = %{
-      "uid" => Brando.Utils.generate_uid(),
+      "uid" => Utils.generate_uid(),
       "type" => "module",
       "module_id" => module.id,
       "source" => to_string(Page.Blocks),
       "creator_id" => c.user.id,
       "refs" => [
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => Utils.generate_uid(),
           "name" => "gallery",
           "gallery_id" => gallery.id,
           "data" => %{
@@ -989,7 +993,7 @@ defmodule Brando.Content.TransferTest do
   test "retained region slots, nested content and footnote markers keep fresh consistent identities", c do
     slot =
       %Block{
-        uid: Brando.Utils.generate_uid(),
+        uid: Utils.generate_uid(),
         type: :slot,
         slot_kind: :region,
         slot_name: "unused_region",
@@ -1002,7 +1006,7 @@ defmodule Brando.Content.TransferTest do
 
     child =
       %Block{
-        uid: Brando.Utils.generate_uid(),
+        uid: Utils.generate_uid(),
         type: :module,
         module_id: c.module.id,
         source: Page.Blocks,

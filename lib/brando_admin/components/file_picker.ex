@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.FilePicker do
   alias Brando.Utils
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.PickerFolders
   alias BrandoAdmin.Images.FolderBrowser
 
   def mount(socket) do
@@ -139,12 +140,7 @@ defmodule BrandoAdmin.Components.FilePicker do
       |> Enum.sort_by(& &1.id, :desc)
 
     recent_folders_for_root =
-      socket.assigns.recent_folders
-      |> Enum.map(&FolderBrowser.normalize_folder/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.filter(&folder_under_root?(&1, upload_root))
-      |> Enum.reject(&(FolderBrowser.relative_folder(&1, upload_root) == ""))
-      |> Enum.take(5)
+      PickerFolders.recent_folders_for_root(socket.assigns.recent_folders, upload_root, &folder_under_root?/2)
 
     socket
     |> assign(:upload_root, upload_root)

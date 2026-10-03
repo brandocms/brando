@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ContentPreviewTest do
   use ExUnit.Case, async: true
-  alias BrandoAdmin.ContentPreview
   alias BrandoAdmin.Components.TextDiff
+  alias BrandoAdmin.ContentPreview
 
   defp block(title, refs \\ [], extra \\ %{}),
     do: Map.merge(%{"description" => title, "refs" => refs}, extra)

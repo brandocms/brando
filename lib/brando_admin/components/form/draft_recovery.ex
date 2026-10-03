@@ -2,8 +2,8 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   @moduledoc false
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
-  alias Phoenix.LiveView.JS
   alias BrandoAdmin.Components.TextDiff
+  alias Phoenix.LiveView.JS
 
   attr :id, :string, required: true
 

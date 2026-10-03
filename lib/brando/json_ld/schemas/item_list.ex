@@ -9,6 +9,8 @@ defmodule Brando.JSONLD.Schema.ItemList do
 
   alias Brando.JSONLD.Schema.ListItem
 
+  @type t :: %__MODULE__{}
+
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
             "@type": "ItemList",

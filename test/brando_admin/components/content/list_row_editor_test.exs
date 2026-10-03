@@ -2,9 +2,9 @@ defmodule BrandoAdmin.Components.Content.ListRowEditorTest do
   use ExUnit.Case, async: true
   import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
 
-  alias BrandoAdmin.Components.Content.List.Row
   alias Brando.Pages.Page
   alias Brando.Users.User
+  alias BrandoAdmin.Components.Content.List.Row
 
   defp user(name), do: %User{id: System.unique_integer([:positive]), name: name, avatar: nil}
 

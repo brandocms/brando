@@ -14,6 +14,7 @@ defmodule Brando.AnalyticsStub do
   alias Brando.SEO.Analytics
   alias Brando.SEO.Analytics.Plausible
   alias Brando.SEO.Analytics.SearchConsole
+  alias Req.Test
 
   def configure(opts) do
     previous = Application.get_env(:brando, Analytics)
@@ -22,19 +23,19 @@ defmodule Brando.AnalyticsStub do
     credentials = Jason.encode!(%{"client_email" => "stub@stub.iam.gserviceaccount.com", "private_key" => pem})
 
     Application.put_env(:brando, Analytics,
-      plausible: [api_key: "stub", site_id: "stub.test", req_options: [plug: {Req.Test, Plausible}]],
+      plausible: [api_key: "stub", site_id: "stub.test", req_options: [plug: {Test, Plausible}]],
       search_console: [
         credentials: credentials,
         property: "sc-domain:stub.test",
-        req_options: [plug: {Req.Test, SearchConsole}]
+        req_options: [plug: {Test, SearchConsole}]
       ]
     )
 
-    Req.Test.set_req_test_to_shared(%{async: false})
+    Test.set_req_test_to_shared(%{async: false})
     clear_cache()
 
     on_exit(fn ->
-      Req.Test.set_req_test_to_private()
+      Test.set_req_test_to_private()
       clear_cache()
 
       if previous,
@@ -45,27 +46,27 @@ defmodule Brando.AnalyticsStub do
     pages = Keyword.get(opts, :pages, %{})
     queries = Keyword.get(opts, :queries, [])
 
-    Req.Test.stub(Plausible, fn conn ->
+    Test.stub(Plausible, fn conn ->
       results =
         for {path, %{visitors: visitors} = page} <- pages,
             do: %{"metrics" => [visitors, page[:pageviews] || visitors], "dimensions" => [path]}
 
-      Req.Test.json(conn, %{"results" => results})
+      Test.json(conn, %{"results" => results})
     end)
 
-    Req.Test.stub(SearchConsole, fn conn ->
+    Test.stub(SearchConsole, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
 
       cond do
         conn.host == "oauth2.googleapis.com" ->
-          Req.Test.json(conn, %{"access_token" => "stub-token", "expires_in" => 3600})
+          Test.json(conn, %{"access_token" => "stub-token", "expires_in" => 3600})
 
         Jason.decode!(body)["dimensions"] == ["query"] ->
-          Req.Test.json(conn, %{"rows" => Enum.map(queries, &row(&1.query, &1))})
+          Test.json(conn, %{"rows" => Enum.map(queries, &row(&1.query, &1))})
 
         true ->
           rows = for {path, %{impressions: _} = page} <- pages, do: row("https://stub.test" <> path, page)
-          Req.Test.json(conn, %{"rows" => rows})
+          Test.json(conn, %{"rows" => rows})
       end
     end)
 

@@ -8,8 +8,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   import Phoenix.LiveView.TagEngine
   import PolymorphicEmbed.HTML.Component
 
-  alias Brando.Content.VarAttrs
+  alias Brando.AI
   alias Brando.Content.Var.Layout
+  alias Brando.Content.VarAttrs
   alias Brando.Villain.Parser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
@@ -2218,7 +2219,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
       |> assign(
         :ai_enabled?,
-        Brando.AI.field_ai_opts(:block_text) != [] && Brando.AI.configured?(Brando.AI.field_ai_opts(:block_text))
+        AI.field_ai_opts(:block_text) != [] && AI.configured?(AI.field_ai_opts(:block_text))
       )
       |> assign(:extensions, extensions)
       |> assign(:styles, styles)
@@ -3274,12 +3275,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   def entry_language(%{language: language}) when not is_nil(language), do: to_string(language)
   def entry_language(_entry), do: nil
 
-  # A root's inner block form exactly as `<.inputs_for field={@form[:block]}>`
-  # builds it, persistent id included, so ids and names are unchanged. Built
-  # here instead, through `assign_derived/3`, because LiveView cannot track
-  # expressions that read an `inputs_for` `:let` variable: any change in the
-  # slot re-sent every input of the block.
-  @doc false
+  @doc """
+  Returns a root's inner block form exactly as `<.inputs_for field={@form[:block]}>`
+  builds it, persistent id included, so ids and names are unchanged.
+
+  Built here instead, through `assign_derived/3`, because LiveView cannot track
+  expressions that read an `inputs_for` `:let` variable: any change in the
+  slot would re-send every input of the block.
+  """
   def nested_block_form(%Phoenix.HTML.Form{} = form) do
     [inner] = form.impl.to_form(form.source, form, :block, Keyword.take(form.options, [:multipart]))
     id = inner.params["_persistent_id"] || "0"
@@ -3293,8 +3296,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     }
   end
 
-  # The hidden inputs `inputs_for` renders ahead of its slot.
-  @doc false
+  @doc """
+  Returns the `{name, value}` pairs of the hidden inputs `inputs_for` renders
+  ahead of its slot, for forms built with `nested_block_form/1`.
+  """
   def hidden_inputs(form) do
     for {field, values} <- form.hidden, value <- List.wrap(values) do
       name = Phoenix.HTML.Form.input_name(form, field)

@@ -5,8 +5,8 @@ defmodule Brando.Villain.RenderSourceQueryTest do
   alias Brando.Content.Container
   alias Brando.Factory
   alias Brando.Repo
-  alias Brando.Villain.RenderSourceQuery
   alias Brando.Villain.RenderScope
+  alias Brando.Villain.RenderSourceQuery
 
   test "cold module projections share the library query" do
     first = Factory.insert(:module)

@@ -23,12 +23,20 @@ defmodule BrandoAdmin.LiveView.Listing do
   @doc false
   defmacro __using__(opts), do: BrandoAdmin.LiveView.Listing.Compiler.build(opts)
 
-  @doc false
+  @doc """
+  Runs the listing's mount hooks for `schema` and returns the `on_mount`
+  result. Kept as a stable entry point for listings compiled before the
+  hooks moved to their own module.
+  """
   def hooks(params, session, socket, schema) do
     call_hooks(:hooks, [params, session, socket, schema])
   end
 
-  @doc false
+  @doc """
+  Assigns the `page_title` option to a continuing `on_mount` result. Takes a
+  string or a zero-arity function; `nil` and halted results pass through
+  unchanged. Called from the code `use BrandoAdmin.LiveView.Listing` generates.
+  """
   def put_page_title({:cont, socket}, nil), do: {:cont, socket}
 
   def put_page_title({:cont, socket}, title) when is_function(title, 0),

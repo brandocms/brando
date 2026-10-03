@@ -11,9 +11,9 @@ defmodule Brando.Assets.PreviewPinningTest do
   alias Brando.Assets.Vite.Manifest
   alias Brando.LivePreview
   alias Brando.Pages.Page
+  alias Brando.SiteAssetsFixtures
   alias Brando.Sites.Preview
   alias Brando.Tenant
-  alias Brando.Tenant.Registry
 
   @public_opts [prefix: "public"]
 
@@ -104,7 +104,7 @@ defmodule Brando.Assets.PreviewPinningTest do
 
   test "activation during rendering cannot mix sets in the snapshot", %{release: release} do
     write_release(release, "aaaa")
-    next_path = create_set(nil, "next-build", "js-next", "next.css")
+    next_path = SiteAssetsFixtures.create_set(nil, "next-build", "js-next", "next.css")
     assert {:ok, next} = SiteAssets.register_set(next_path)
 
     assert {:ok, {inside_manifest, inside_critical}} =
@@ -121,7 +121,7 @@ defmodule Brando.Assets.PreviewPinningTest do
   test "reuses a self-contained uploaded set and merges a partial one with the release", %{release: release} do
     write_release(release, "aaaa")
 
-    full_path = create_set(nil, "full-upload", "js-full", "full.css")
+    full_path = SiteAssetsFixtures.create_set(nil, "full-upload", "js-full", "full.css")
     assert {:ok, full} = SiteAssets.register_set(full_path)
     assert {:ok, _active} = SiteAssets.activate_set(full.id)
     assert {:ok, pinned} = SiteAssets.with_preview_set(nil, & &1)
@@ -181,7 +181,7 @@ defmodule Brando.Assets.PreviewPinningTest do
             {"middle", "2026-02-01T00:00:00Z"},
             {"newest", "2026-03-01T00:00:00Z"}
           ] do
-        path = create_set(nil, name, "js-#{name}", "#{name}.css")
+        path = SiteAssetsFixtures.create_set(nil, name, "js-#{name}", "#{name}.css")
         assert {:ok, set} = SiteAssets.register_set(path, %{uploaded_at: uploaded_at})
         set
       end
@@ -243,8 +243,8 @@ defmodule Brando.Assets.PreviewPinningTest do
     Brando.Tenant.Cache.clear()
     write_release(release, "aaaa")
 
-    {:ok, acme} = create_site("Pin Acme", "pin-acme", "pin.acme.test")
-    {:ok, beta} = create_site("Pin Beta", "pin-beta", "pin.beta.test")
+    {:ok, acme} = SiteAssetsFixtures.create_site("Pin Acme", "pin-acme", "pin.acme.test")
+    {:ok, beta} = SiteAssetsFixtures.create_site("Pin Beta", "pin-beta", "pin.beta.test")
 
     assert {:ok, set} = SiteAssets.with_preview_set(acme, & &1)
     assert set.site_id == acme.id
@@ -296,37 +296,6 @@ defmodule Brando.Assets.PreviewPinningTest do
       expires_at: DateTime.utc_now() |> DateTime.add(seconds_from_now, :second) |> DateTime.truncate(:second),
       asset_set_id: set.id
     })
-  end
-
-  defp create_set(site, name, js_content, css_file) do
-    path = Path.join(SiteAssets.sets_root(site), name)
-    File.mkdir_p!(Path.join(path, "assets"))
-    File.write!(Path.join([path, "assets", "#{name}.js"]), js_content)
-    File.write!(Path.join([path, "assets", css_file]), "body{}")
-
-    manifest = %{
-      "src/main.js" => %{"isEntry" => true, "file" => "assets/#{name}.js", "css" => ["assets/#{css_file}"]}
-    }
-
-    File.write!(Path.join(path, "manifest.json"), Jason.encode!(manifest))
-    path
-  end
-
-  defp create_site(name, key, domain) do
-    {:ok, site} =
-      Registry.create_site(%{
-        name: name,
-        key: key,
-        languages: ["en"],
-        default_language: "en",
-        status: :active,
-        delivery_mode: :dynamic
-      })
-
-    {:ok, _environment} =
-      Registry.create_environment(site, %{name: "Production", key: "production", live: true, domain: domain})
-
-    {:ok, Registry.get_site(site.id)}
   end
 
   defp conn(relative_path, host \\ "standalone.test") do

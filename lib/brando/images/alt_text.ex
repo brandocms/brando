@@ -243,10 +243,12 @@ defmodule Brando.Images.AltText do
     """
   end
 
-  @doc false
-  # The model's reply as language → text, keeping only the languages asked
-  # for. A reply that is not JSON is taken as the text for a single
-  # requested language.
+  @doc """
+  The model's reply as `{:ok, %{language => text}}`, keeping only the languages
+  asked for. A reply that is not JSON is taken as the text for a single requested
+  language. Returns `{:error, :empty_response}` or `{:error, :invalid_response}`
+  when nothing usable remains.
+  """
   def parse(text, languages) do
     json = text |> String.trim() |> String.replace(~r/^```(?:json)?\s*|\s*```$/, "")
 
@@ -304,9 +306,8 @@ defmodule Brando.Images.AltText do
     if is_binary(path) and Map.has_key?(@media_types, extension(path)), do: key, else: :original
   end
 
-  @doc false
   # The dimensions the rendition has, for the estimate.
-  def sent_dimensions(image) do
+  defp sent_dimensions(image) do
     width = image.width || 1024
     height = image.height || 768
 
@@ -387,11 +388,12 @@ defmodule Brando.Images.AltText do
 
   defp clean(text), do: text |> String.trim() |> String.trim(~s(")) |> String.trim()
 
-  @doc false
-  # The last resort for text still over the limit: cut at the last sentence or
-  # clause that fits and end it with a full stop, so it reads as finished.
-  # Only when no clause keeps half the limit does it cut at a word, with an
-  # ellipsis to show the cut.
+  @doc """
+  Cleans the text and fits it to the alt text limit, as a last resort for text
+  still over it: cut at the last sentence or clause that fits and end it with a
+  full stop, so it reads as finished. Only when no clause keeps half the limit
+  does it cut at a word, with an ellipsis to show the cut.
+  """
   def trim(text) do
     text = clean(text)
     if String.length(text) <= @alt_length, do: text, else: cut(text)

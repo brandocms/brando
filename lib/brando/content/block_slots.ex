@@ -129,7 +129,11 @@ defmodule Brando.Content.BlockSlots do
       a.uid == b.uid && a.type == :module && b.type == :module &&
         a.module_id == b.module_id && a.module_origin == b.module_origin && children(b) == []
 
-  @doc false
+  @doc """
+  True when a module ref enables this slot: a footnote slot needs a text ref with
+  footnotes on, a region slot needs a blocks ref, and both must match the slot's
+  name and module set.
+  """
   def allowed_for_refs?(%{slot_kind: kind, slot_name: name, slot_module_set: set}, refs) do
     Enum.any?(refs, fn
       %{name: ^name, data: %{type: "text", data: %{footnotes: true, footnote_module_set: ^set}}} -> kind == :footnote
@@ -170,7 +174,13 @@ defmodule Brando.Content.BlockSlots do
     end
   end
 
-  @doc false
+  @doc """
+  Validates the block in an entry's join changeset for the blocks `field` of `schema`.
+
+  Entry fields cannot remap regions, a field that only stores footnotes accepts only
+  slots, and a new slot must be a footnote collection the schema's form enables for
+  that field.
+  """
   def validate_entry_slot(changeset, field, schema) do
     block = Changeset.get_assoc(changeset, :block, :struct)
 

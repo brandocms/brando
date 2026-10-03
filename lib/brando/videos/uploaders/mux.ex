@@ -32,6 +32,7 @@ defmodule Brando.Videos.Uploaders.Mux do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
 
   require Logger
@@ -432,13 +433,7 @@ defmodule Brando.Videos.Uploaders.Mux do
       |> put_aspect_ratio(asset["aspect_ratio"])
       |> put_duration(asset["duration"])
 
-    {:ok, creator} = Brando.Users.get_user(video.creator_id)
-
-    with {:ok, updated_video} <- Videos.update_video(video, params, creator) do
-      Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast_video_update(updated_video)
-      {:ok, updated_video}
-    end
+    ProviderUpdate.update_video(video, params)
   end
 
   defp playback_info(%{"playback_ids" => playback_ids}) when is_list(playback_ids) do
@@ -507,25 +502,7 @@ defmodule Brando.Videos.Uploaders.Mux do
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
-  defp update_video_status(video, status) do
-    {:ok, creator} = Brando.Users.get_user(video.creator_id)
-
-    with {:ok, updated_video} <- Videos.update_video(video, %{status: status}, creator) do
-      Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast_video_update(updated_video)
-      {:ok, updated_video}
-    end
-  end
-
-  defp broadcast_video_update(video) do
-    # Broadcast video update event
-    # The media_item_id will be provided by the subscriber context
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:video:#{video.id}",
-      {video, [:video, :updated]}
-    )
-  end
+  defp update_video_status(video, status), do: ProviderUpdate.update_video(video, %{status: status})
 
   defp find_video_by_upload_id(upload_id) do
     case Videos.get_video_by_meta("mux.upload_id", upload_id) do

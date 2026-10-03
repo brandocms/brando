@@ -4,6 +4,7 @@ defmodule Brando.Publisher do
   """
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Blueprint.Identifier
   alias Brando.Repo
   alias Brando.Revisions
@@ -58,16 +59,16 @@ defmodule Brando.Publisher do
 
   @doc "Schedule a historical revision for restoration and publication."
   def schedule_revision(schema, id, revision_number, publish_at, user) do
-    with :ok <- Brando.Authorization.Boundary.authorize(user, :schedule, schema_module(schema)),
-         :ok <- Brando.Authorization.Boundary.authorize(user, :publish, schema_module(schema)),
+    with :ok <- Boundary.authorize(user, :schedule, schema_module(schema)),
+         :ok <- Boundary.authorize(user, :publish, schema_module(schema)),
          {:ok, id} <- cast_entry_id(id),
          {:ok, revision_number} <- cast_revision_number(revision_number),
          {:ok, publish_at} <- parse_future_datetime(publish_at) do
       schema = schema_module(schema)
 
-      Brando.Authorization.Boundary.run(user, :schedule, schema, fn user ->
-        with :ok <- Brando.Authorization.Boundary.authorize_record(user, :publish, schema, id),
-             :ok <- Brando.Authorization.Boundary.authorize_record(user, :schedule, schema, id),
+      Boundary.run(user, :schedule, schema, fn user ->
+        with :ok <- Boundary.authorize_record(user, :publish, schema, id),
+             :ok <- Boundary.authorize_record(user, :schedule, schema, id),
              do: schedule_valid_revision(schema, id, revision_number, publish_at, user)
       end)
     end
@@ -124,7 +125,7 @@ defmodule Brando.Publisher do
   def cancel_scheduled_revision(schema, id, revision_number) do
     with {:ok, id} <- cast_entry_id(id),
          {:ok, revision_number} <- cast_revision_number(revision_number),
-         :ok <- Brando.Authorization.Boundary.admin_record(:schedule, schema_module(schema), id) do
+         :ok <- Boundary.admin_record(:schedule, schema_module(schema), id) do
       cancel_valid_scheduled_revision(schema_module(schema), id, revision_number)
     end
   end
@@ -251,7 +252,7 @@ defmodule Brando.Publisher do
     jobs = Repo.all(query)
 
     jobs =
-      if Brando.Authorization.enabled?() and Brando.Authorization.Boundary.current_scope(),
+      if Brando.Authorization.enabled?() and Boundary.current_scope(),
         do: Enum.filter(jobs, &(job_authorized?(&1, :read) == :ok)),
         else: jobs
 
@@ -277,7 +278,7 @@ defmodule Brando.Publisher do
 
   defp job_authorized?(%Oban.Job{worker: worker, args: %{"schema" => schema, "id" => id}}, action) do
     if worker == inspect(Worker.EntryPublisher),
-      do: Brando.Authorization.Boundary.admin_record(action, schema_module(schema), id),
+      do: Boundary.admin_record(action, schema_module(schema), id),
       else: {:error, :forbidden}
   end
 

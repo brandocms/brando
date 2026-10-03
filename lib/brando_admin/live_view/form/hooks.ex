@@ -6,6 +6,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   import Phoenix.Component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Tenant.Topic
   alias Phoenix.PubSub
 
   def on_mount({:setup, schema}, %{"entry_id" => entry_id}, _session, socket) do
@@ -20,10 +21,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         |> assign_title()
         |> assign(:mutation_listeners, %{})
 
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry_id))
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry_id))
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id))
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id))
+      subscribe_entry_topics(socket.assigns.schema, entry_id)
 
       {:cont, assign(socket, :current_focused_block_uid, nil)}
     else
@@ -216,10 +214,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp maybe_arm_entry_scope(%{"entry_id" => entry_id}, _uri, %{assigns: %{entry_id: nil}} = socket) do
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry_id))
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry_id))
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id))
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id))
+    subscribe_entry_topics(socket.assigns.schema, entry_id)
 
     {:cont,
      socket
@@ -229,6 +224,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp maybe_arm_entry_scope(_params, _uri, socket), do: {:cont, socket}
+
+  defp subscribe_entry_topics(schema, entry_id) do
+    Enum.each(
+      ~w(dirty_fields active_field block_presence field_sync),
+      &PubSub.subscribe(Brando.pubsub(), Topic.entry(&1, schema, entry_id))
+    )
+  end
 
   defp handle_hooks_focal_point_event(
          "update_focal_point",
@@ -274,34 +276,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         image = Map.put(image, :status, :unprocessed)
 
         case full_path do
-          # Currently unreachable: no producer emits a path headed by
-          # `:transformer`. `field_full_path` comes from `queue_processing/4`,
-          # whose callers pass either the default `[]` (crop.ex, form.ex:2920/
-          # 3264/4153), `edit_image.path ++ [field]` (form.ex:3358 — and
-          # `edit_image.path` is only ever set by `Input.Image`, which a
-          # transformer never renders; it draws its own `asset_picker` because
-          # "a transformer item deliberately has none"), or
-          # `image_field_path(target)` (upload_manager.ex:425), which returns a
-          # path only for `"kind" => "entry_field"` while the transformer
-          # enqueues `"transformer_image"`. Transformer image cards are updated
-          # through `pending_block_image_updates` instead, not through here.
-          #
-          # Kept rather than deleted, but with the id corrected: it was built
-          # off the Form *component* id (`<singular>_form`) where the component
-          # is registered under the HTML form id (`<singular>`), so anything
-          # that made this live would have addressed a component that does not
-          # exist and failed silently.
           [:transformer, relation_key | _] ->
-            relation_atom = String.to_existing_atom(relation_key)
-            transformer_id = "#{singular}-transformer-#{relation_atom}"
-
-            send_update(BrandoAdmin.Components.Form.Transformer,
-              id: transformer_id,
-              event: "image_updated",
-              image: image
-            )
-
-            {:halt, socket}
+            update_transformer_image(socket, singular, relation_key, image)
 
           _ ->
             if valid_struct_path?(full_path) do
@@ -320,19 +296,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         end
 
       ["gallery", _schema, field_name] ->
-        # Gallery images during processing - update the gallery input
-        schema = socket.assigns.schema
-        singular = schema.__naming__().singular
-        target_id = "#{singular}_#{field_name}"
-
-        send_update(BrandoAdmin.Components.Form.Input.Gallery,
-          id: target_id,
-          action: :update_image,
-          updated_image: image,
-          force_validation: true
-        )
-
-        {:halt, socket}
+        update_gallery_image(socket, field_name, image)
 
       _ ->
         pending = Map.get(socket.assigns, :pending_block_image_updates, %{})
@@ -373,34 +337,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
         # Route transformer image updates to the Transformer component
         case full_path do
-          # Currently unreachable: no producer emits a path headed by
-          # `:transformer`. `field_full_path` comes from `queue_processing/4`,
-          # whose callers pass either the default `[]` (crop.ex, form.ex:2920/
-          # 3264/4153), `edit_image.path ++ [field]` (form.ex:3358 — and
-          # `edit_image.path` is only ever set by `Input.Image`, which a
-          # transformer never renders; it draws its own `asset_picker` because
-          # "a transformer item deliberately has none"), or
-          # `image_field_path(target)` (upload_manager.ex:425), which returns a
-          # path only for `"kind" => "entry_field"` while the transformer
-          # enqueues `"transformer_image"`. Transformer image cards are updated
-          # through `pending_block_image_updates` instead, not through here.
-          #
-          # Kept rather than deleted, but with the id corrected: it was built
-          # off the Form *component* id (`<singular>_form`) where the component
-          # is registered under the HTML form id (`<singular>`), so anything
-          # that made this live would have addressed a component that does not
-          # exist and failed silently.
           [:transformer, relation_key | _] ->
-            relation_atom = String.to_existing_atom(relation_key)
-            transformer_id = "#{singular}-transformer-#{relation_atom}"
-
-            send_update(BrandoAdmin.Components.Form.Transformer,
-              id: transformer_id,
-              event: "image_updated",
-              image: image
-            )
-
-            {:halt, socket}
+            update_transformer_image(socket, singular, relation_key, image)
 
           _ ->
             # Only send update_entry_relation if the path is a valid struct field path.
@@ -422,19 +360,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         end
 
       ["gallery", _schema, field_name] ->
-        schema = socket.assigns.schema
-        singular = schema.__naming__().singular
-        target_id = "#{singular}_#{field_name}"
-
-        # update image in gallery input
-        send_update(BrandoAdmin.Components.Form.Input.Gallery,
-          id: target_id,
-          action: :update_image,
-          updated_image: image,
-          force_validation: true
-        )
-
-        {:halt, socket}
+        update_gallery_image(socket, field_name, image)
 
       _ ->
         deliver_pending_image(socket, image)
@@ -465,6 +391,48 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
+
+  # Currently unreachable: no producer emits a path headed by
+  # `:transformer`. `field_full_path` comes from `queue_processing/4`,
+  # whose callers pass either the default `[]` (crop.ex, form.ex:2920/
+  # 3264/4153), `edit_image.path ++ [field]` (form.ex:3358 — and
+  # `edit_image.path` is only ever set by `Input.Image`, which a
+  # transformer never renders; it draws its own `asset_picker` because
+  # "a transformer item deliberately has none"), or
+  # `image_field_path(target)` (upload_manager.ex:425), which returns a
+  # path only for `"kind" => "entry_field"` while the transformer
+  # enqueues `"transformer_image"`. Transformer image cards are updated
+  # through `pending_block_image_updates` instead, not through here.
+  #
+  # Kept rather than deleted, but with the id corrected: it was built off the
+  # Form *component* id (`<singular>_form`) where the component is registered
+  # under the HTML form id (`<singular>`), so anything that made this live
+  # would have addressed a component that does not exist and failed silently.
+  defp update_transformer_image(socket, singular, relation_key, image) do
+    relation_atom = String.to_existing_atom(relation_key)
+    transformer_id = "#{singular}-transformer-#{relation_atom}"
+
+    send_update(BrandoAdmin.Components.Form.Transformer,
+      id: transformer_id,
+      event: "image_updated",
+      image: image
+    )
+
+    {:halt, socket}
+  end
+
+  defp update_gallery_image(socket, field_name, image) do
+    singular = socket.assigns.schema.__naming__().singular
+
+    send_update(BrandoAdmin.Components.Form.Input.Gallery,
+      id: "#{singular}_#{field_name}",
+      action: :update_image,
+      updated_image: image,
+      force_validation: true
+    )
+
+    {:halt, socket}
+  end
 
   # All NINE form-side subscribes sit immediately before a processing round is
   # queued — `form.ex:3550,3993,4785` (upload, focal re-crop, block re-crop) and
@@ -1215,7 +1183,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
         PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
+          Topic.entry("block_presence", socket.assigns.schema, entry_id),
           {:block_blur, %{uid: old_uid, user_id: current_user_id}}
         )
       end
@@ -1223,7 +1191,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       # Focus new block
       PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
+        Topic.entry("block_presence", socket.assigns.schema, entry_id),
         {:block_focus, %{uid: uid, user_id: current_user_id}}
       )
     end
@@ -1248,7 +1216,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       unless still_inside do
         PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
+          Topic.entry("block_presence", socket.assigns.schema, entry_id),
           {:block_blur, %{uid: uid, user_id: current_user_id}}
         )
       end
@@ -1277,7 +1245,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
       PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
+        Topic.entry("block_presence", socket.assigns.schema, entry_id),
         {:block_blur, %{uid: current_uid, user_id: current_user_id}}
       )
     end
@@ -1366,7 +1334,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       if focused_uid && entry_id do
         PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
+          Topic.entry("block_presence", socket.assigns.schema, entry_id),
           {:block_focus, %{uid: focused_uid, user_id: socket.assigns.current_user.id}}
         )
       end
@@ -1472,7 +1440,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   defp handle_hooks_modules_info(_, socket), do: {:cont, socket}
 
   defp handle_hooks_mutation_listener_info({:register_mutation_listener, schema, target}, socket) do
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(schema)}"))
+    PubSub.subscribe(Brando.pubsub(), Topic.scoped("brando:mutations:#{inspect(schema)}"))
 
     {:halt,
      update(socket, :mutation_listeners, fn mls ->

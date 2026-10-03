@@ -46,7 +46,7 @@ defmodule Brando.Sites.Services do
   identity node by reference. A service without its own `area_served`
   inherits the identity's.
   """
-  @spec to_json_ld(map()) :: [%Schema.Service{}]
+  @spec to_json_ld(map()) :: [Schema.Service.t()]
   def to_json_ld(%{services: services} = identity) when is_list(services) do
     hostname = Utils.hostname()
     inherited = identity |> identity_area_served() |> list_or_nil()

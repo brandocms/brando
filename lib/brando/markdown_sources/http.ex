@@ -54,30 +54,32 @@ defmodule Brando.MarkdownSources.HTTP do
   end
 
   defp receive_response(conn, ref, state, deadline) do
+    case next_response(conn, ref, state, deadline) do
+      {:more, conn, state} ->
+        receive_response(conn, ref, state, deadline)
+
+      {:halt, conn, result} ->
+        Mint.HTTP.close(conn)
+        result
+    end
+  end
+
+  defp next_response(conn, ref, state, deadline) do
     remaining = deadline - System.monotonic_time(:millisecond)
 
     if remaining <= 0 do
-      Mint.HTTP.close(conn)
-      {:error, :github_timeout}
+      {:halt, conn, {:error, :github_timeout}}
     else
       case Mint.HTTP.recv(conn, 0, min(remaining, 5_000)) do
         {:ok, conn, responses} ->
           case consume(responses, ref, state) do
-            {:more, state} ->
-              receive_response(conn, ref, state, deadline)
-
-            {:done, state} ->
-              Mint.HTTP.close(conn)
-              decode(state)
-
-            {:error, reason} ->
-              Mint.HTTP.close(conn)
-              {:error, reason}
+            {:more, state} -> {:more, conn, state}
+            {:done, state} -> {:halt, conn, decode(state)}
+            {:error, reason} -> {:halt, conn, {:error, reason}}
           end
 
         {:error, conn, _, _} ->
-          Mint.HTTP.close(conn)
-          {:error, :github_unavailable}
+          {:halt, conn, {:error, :github_unavailable}}
       end
     end
   end

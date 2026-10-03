@@ -4,10 +4,10 @@ defmodule BrandoAdmin.TranslationFormTest do
   # what the editor reviewed.
   use Brando.LiveCase
 
-  alias Brando.Content.Block
   alias Brando.Repo
   alias Brando.SyncTest
   alias Brando.SyncTest.Article
+  alias Brando.TranslationFixtures
   alias Brando.Translations
 
   setup %{current_user: user} do
@@ -29,32 +29,11 @@ defmodule BrandoAdmin.TranslationFormTest do
         user
       )
 
-    add_block(source, module, user, "Første avsnitt", 0)
+    TranslationFixtures.add_block(source, module, user, "Første avsnitt", 0)
     {:ok, target} = Translations.create_target(Article, source.id, :en, user)
     translate(target, ["First paragraph"])
 
     %{module: module, source: source, target: target}
-  end
-
-  defp add_block(article, module, user, text, sequence) do
-    params = %{
-      "uid" => Brando.Utils.generate_uid(),
-      "type" => "module",
-      "module_id" => module.id,
-      "creator_id" => user.id,
-      "source" => to_string(Article.Blocks),
-      "refs" => [
-        %{
-          "uid" => Brando.Utils.generate_uid(),
-          "name" => "body",
-          "data" => %{"type" => "text", "data" => %{"text" => text}}
-        }
-      ]
-    }
-
-    block = %Block{} |> Block.recursive_block_changeset(params, user) |> Repo.insert!()
-    struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
-    block
   end
 
   defp load(id) do
@@ -79,7 +58,7 @@ defmodule BrandoAdmin.TranslationFormTest do
 
   # The source adds a block and changes the year.
   defp change_source(c) do
-    add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 1)
+    TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 1)
     {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
     Translations.source_saved(load(c.source.id))
     Translations.get_pending_version(Article, c.target.id)

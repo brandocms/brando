@@ -1,14 +1,15 @@
 defmodule Brando.MarkdownSources.Publication do
   @moduledoc false
-  alias Brando.MarkdownSources.{Connection, Source}
   import Ecto.Query, only: [from: 2]
+  alias Brando.MarkdownSources
+  alias Brando.MarkdownSources.{Connection, Source}
   alias Brando.Repo
 
   def entry_saved(%{__struct__: schema, id: id}, actor) do
     if function_exported?(schema, :__blocks_fields__, 0) and schema.__blocks_fields__() != [] do
-      Enum.each(Brando.MarkdownSources.list_sources(), fn source ->
-        if id in Map.get(Brando.MarkdownSources.consumer_entries(source.id, ["follow", "review", "pinned"]), schema, []) do
-          Brando.MarkdownSources.audit(source, "placement.saved", actor, %{message: "#{inspect(schema)} ##{id}"})
+      Enum.each(MarkdownSources.list_sources(), fn source ->
+        if id in Map.get(MarkdownSources.consumer_entries(source.id, ["follow", "review", "pinned"]), schema, []) do
+          MarkdownSources.audit(source, "placement.saved", actor, %{message: "#{inspect(schema)} ##{id}"})
 
           with {:ok,
                 %{auto_deploy: true, destination: %{site: %{delivery_mode: :static}, environment: %{live: true}}} =
@@ -30,7 +31,7 @@ defmodule Brando.MarkdownSources.Publication do
                 :ok
 
               _ ->
-                Brando.MarkdownSources.audit(source, "publication.failed", actor, %{
+                MarkdownSources.audit(source, "publication.failed", actor, %{
                   message: "Could not queue publication; use Publishing to request a build"
                 })
             end
@@ -74,7 +75,7 @@ defmodule Brando.MarkdownSources.Publication do
   end
 
   def enqueue(source, %{destination: %{site: %{delivery_mode: :static}, environment: %{live: true}}} = connection) do
-    if Map.get(connection, :auto_deploy, false) and map_size(Brando.MarkdownSources.consumer_entries(source.id)) > 0 do
+    if Map.get(connection, :auto_deploy, false) and map_size(MarkdownSources.consumer_entries(source.id)) > 0 do
       args = %{
         source_id: source.id,
         version_id: source.latest_version_id,
@@ -94,7 +95,7 @@ defmodule Brando.MarkdownSources.Publication do
   def publish(args), do: with_source_lock(args["source_id"], fn -> do_publish(args) end)
 
   defp do_publish(args) do
-    with %Source{} = source <- Brando.MarkdownSources.get_source(args["source_id"]),
+    with %Source{} = source <- MarkdownSources.get_source(args["source_id"]),
          true <-
            source.enabled and source.publication_sequence == args["source_revision"] and
              same_content?(source, args["version_id"]),
@@ -104,12 +105,12 @@ defmodule Brando.MarkdownSources.Publication do
          true <- entry_current?(args),
          %{site: %{delivery_mode: :static} = site, environment: %{live: true} = environment} <- connection.destination,
          publisher when not is_nil(publisher) <- publisher(connection),
-         :ok <- Brando.MarkdownSources.authorize(publisher, :publish),
+         :ok <- MarkdownSources.authorize(publisher, :publish),
          :ok <- ensure_rendered(source),
          args <- refresh_entry_revision(args),
          args <- Map.put(args, "placements", placement_fingerprint(source.id)),
          {:ok, _build} <- request_build_once(source, site, environment, publisher, args) do
-      Brando.MarkdownSources.broadcast(source)
+      MarkdownSources.broadcast(source)
     else
       {:error, reason} when reason in [:connection_disabled, :destination_forbidden, :forbidden] ->
         {:cancel, :publication_superseded}
@@ -138,7 +139,7 @@ defmodule Brando.MarkdownSources.Publication do
              ) do
           {:ok, build} ->
             source |> Ecto.Changeset.change(build_id: build.id, publication_status: "Build queued") |> Repo.update!()
-            Brando.MarkdownSources.audit(source, "publication.queued", publisher, %{version_id: source.latest_version_id})
+            MarkdownSources.audit(source, "publication.queued", publisher, %{version_id: source.latest_version_id})
             build
 
           {:error, reason} ->
@@ -154,7 +155,7 @@ defmodule Brando.MarkdownSources.Publication do
 
   def current?(%{markdown_context: context, site_id: site_id, environment_id: environment_id}) do
     Brando.Tenant.Job.run(context, fn ->
-      with %Source{enabled: true} = source <- Brando.MarkdownSources.get_source(context["source_id"]),
+      with %Source{enabled: true} = source <- MarkdownSources.get_source(context["source_id"]),
            true <-
              source.publication_sequence == context["source_revision"] and same_content?(source, context["version_id"]),
            true <- placement_fingerprint(source.id) == context["placements"],
@@ -163,7 +164,7 @@ defmodule Brando.MarkdownSources.Publication do
            %{site: %{id: ^site_id}, environment: %{id: ^environment_id, live: true}} <- connection.destination,
            true <- Map.get(connection, :auto_deploy, false),
            publisher when not is_nil(publisher) <- publisher(connection),
-           :ok <- Brando.MarkdownSources.authorize(publisher, :publish),
+           :ok <- MarkdownSources.authorize(publisher, :publish),
            :ok <- Brando.Authorization.Operations.authorize(publisher, :deploy, :publishing, site_id) do
         entry_current?(context)
       else
@@ -176,7 +177,7 @@ defmodule Brando.MarkdownSources.Publication do
 
   defp ensure_rendered(source) do
     case Repo.transaction(fn ->
-           source.id |> Brando.MarkdownSources.consumer_entries(["follow", "review", "pinned"]) |> render_consumers!()
+           source.id |> MarkdownSources.consumer_entries(["follow", "review", "pinned"]) |> render_consumers!()
          end) do
       {:ok, _} -> :ok
       {:error, _} -> {:error, :render_failed}
@@ -216,8 +217,8 @@ defmodule Brando.MarkdownSources.Publication do
   def guard_deploy(_, fun), do: fun.()
 
   defp same_content?(source, version_id) do
-    old = Brando.MarkdownSources.get_version(source.id, version_id)
-    latest = Brando.MarkdownSources.get_version(source.id, source.latest_version_id)
+    old = MarkdownSources.get_version(source.id, version_id)
+    latest = MarkdownSources.get_version(source.id, source.latest_version_id)
     old && latest && old.content_hash == latest.content_hash
   end
 
@@ -235,7 +236,7 @@ defmodule Brando.MarkdownSources.Publication do
 
     entries =
       source_id
-      |> Brando.MarkdownSources.consumer_entries(["follow", "review", "pinned"])
+      |> MarkdownSources.consumer_entries(["follow", "review", "pinned"])
       |> Enum.flat_map(fn {schema, ids} ->
         Enum.map(ids, fn id ->
           case Brando.Blueprint.EntryQuery.get(schema, id) do

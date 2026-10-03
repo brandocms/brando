@@ -20,6 +20,7 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
   alias Brando.Videos.Video
 
@@ -47,7 +48,7 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
 
   @impl true
   def complete_upload(%Video{status: :uploading} = video, _provider_data) do
-    update_video(video, %{status: :processing})
+    ProviderUpdate.update_video(video, %{status: :processing})
   end
 
   def complete_upload(%Video{} = video, _provider_data), do: {:ok, video}
@@ -296,27 +297,11 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
           |> Map.put("provider", "cloudflare")
           |> Map.put("cloudflare", cloudflare_meta)
       }
-      |> put_dimensions(payload["input"])
+      |> ProviderUpdate.put_dimensions(payload["input"])
       |> put_duration(payload["duration"])
 
-    update_video(video, params)
+    ProviderUpdate.update_video(video, params)
   end
-
-  defp update_video(video, params) do
-    with {:ok, creator} <- Brando.Users.get_user(video.creator_id),
-         {:ok, updated_video} <- Videos.update_video(video, params, creator) do
-      Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast_video_update(updated_video)
-      {:ok, updated_video}
-    end
-  end
-
-  defp put_dimensions(params, %{"width" => width, "height" => height})
-       when is_integer(width) and width > 0 and is_integer(height) and height > 0 do
-    Map.merge(params, %{width: width, height: height, aspect_ratio: "#{width}/#{height}"})
-  end
-
-  defp put_dimensions(params, _input), do: params
 
   defp put_duration(params, duration) when is_number(duration) and duration >= 0 do
     Map.put(params, :duration, Videos.Helpers.format_duration(duration))
@@ -335,14 +320,6 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
       nil -> {:error, :not_found}
       video -> {:ok, video}
     end
-  end
-
-  defp broadcast_video_update(video) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:video:#{video.id}",
-      {video, [:video, :updated]}
-    )
   end
 
   defp cloudflare_setting(opts, key, default) do

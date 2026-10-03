@@ -5,7 +5,7 @@ defmodule Brando.Type.Enum do
 
       use Ecto.Type
       import unquote(__MODULE__)
-      @doc false
+      @impl true
       def type, do: :integer
       @before_compile unquote(__MODULE__)
     end
@@ -17,8 +17,7 @@ defmodule Brando.Type.Enum do
     compile(attrs)
   end
 
-  @doc false
-  def compile(attrs) do
+  defp compile(attrs) do
     attrs_cast = for {val, idx} <- Enum.with_index(attrs), do: defenumcast(val, idx)
     attrs_load = for {val, idx} <- Enum.with_index(attrs), do: defenumload(val, idx)
     attrs_dump = for {val, idx} <- Enum.with_index(attrs), do: defenumdump(val, idx)
@@ -34,7 +33,7 @@ defmodule Brando.Type.Enum do
     str = Atom.to_string(val)
 
     quote do
-      @doc false
+      @impl true
       def cast(unquote(idx)), do: {:ok, unquote(val)}
       def cast(unquote(val)), do: {:ok, unquote(val)}
       def cast(unquote(str)), do: {:ok, unquote(val)}
@@ -43,14 +42,14 @@ defmodule Brando.Type.Enum do
 
   defp defenumload(val, idx) do
     quote do
-      @doc false
+      @impl true
       def load(unquote(idx)), do: {:ok, unquote(val)}
     end
   end
 
   defp defenumdump(val, idx) do
     quote do
-      @doc false
+      @impl true
       def dump(unquote(val)), do: {:ok, unquote(idx)}
     end
   end

@@ -10,12 +10,14 @@ defmodule Brando.LobbyChannel do
   def join("lobby", %{"url" => url} = params, socket) when is_binary(url) do
     Realtime.allow_sandbox(socket)
 
-    with {:ok, scope} <- resolve_scope(params["scope_token"], socket.assigns.user_id) do
-      Realtime.subscribe()
-      send(self(), :after_join)
-      {:ok, %{}, socket |> assign(:url, URI.parse(url).path) |> assign(:scope, scope)}
-    else
-      _ -> {:error, %{reason: "forbidden"}}
+    case resolve_scope(params["scope_token"], socket.assigns.user_id) do
+      {:ok, scope} ->
+        Realtime.subscribe()
+        send(self(), :after_join)
+        {:ok, %{}, socket |> assign(:url, URI.parse(url).path) |> assign(:scope, scope)}
+
+      _ ->
+        {:error, %{reason: "forbidden"}}
     end
   end
 

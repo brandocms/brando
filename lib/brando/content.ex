@@ -84,24 +84,7 @@ defmodule Brando.Content do
         from(q in query, where: q.parent_id == ^parent_id)
 
       {:namespace, namespace}, query ->
-        query =
-          from(t in query,
-            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-          )
-
-        namespace =
-          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
-
-        case namespace do
-          "all" ->
-            query
-
-          namespace_list when is_list(namespace_list) ->
-            from(t in query, where: t.namespace in ^namespace_list)
-
-          _ ->
-            from(t in query, where: t.namespace == ^namespace)
-        end
+        filter_by_namespace(query, namespace)
 
       {:datasource, datasource}, query ->
         from(q in query, where: q.datasource == ^datasource)
@@ -398,6 +381,28 @@ defmodule Brando.Content do
     end
   end
 
+  # "all" skips the filter; a comma-separated value matches any of its namespaces.
+  defp filter_by_namespace(query, namespace) do
+    query =
+      from(t in query,
+        order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+      )
+
+    namespace =
+      (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+
+    case namespace do
+      "all" ->
+        query
+
+      namespace_list when is_list(namespace_list) ->
+        from(t in query, where: t.namespace in ^namespace_list)
+
+      _ ->
+        from(t in query, where: t.namespace == ^namespace)
+    end
+  end
+
   defp library_origin(entry), do: Map.get(entry, :library_origin) || :local
   defp normalize_library_origin(origin) when origin in [:shared, "shared"], do: :shared
   defp normalize_library_origin(_origin), do: :local
@@ -429,24 +434,7 @@ defmodule Brando.Content do
         from(q in query, where: ilike(q.name, ^"%#{name}%"))
 
       {:namespace, namespace}, query ->
-        query =
-          from(t in query,
-            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-          )
-
-        namespace =
-          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
-
-        case namespace do
-          "all" ->
-            query
-
-          namespace_list when is_list(namespace_list) ->
-            from(t in query, where: t.namespace in ^namespace_list)
-
-          _ ->
-            from(t in query, where: t.namespace == ^namespace)
-        end
+        filter_by_namespace(query, namespace)
     end
   end
 

@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
     case Translations.editor_state(schema, id) do
       nil ->
         state = if Translations.synchronized?(schema), do: unlinked(schema, entry, socket.assigns.current_user)
-        Phoenix.Component.assign(socket, :translation, state)
+        assign(socket, :translation, state)
 
       state ->
         previous = socket.assigns[:translation]
@@ -40,12 +40,12 @@ defmodule BrandoAdmin.Components.Form.Translation do
           end
 
         socket
-        |> Phoenix.Component.assign(:translation, state)
-        |> Phoenix.Component.assign(:translation_acknowledged, nil)
+        |> assign(:translation, state)
+        |> assign(:translation_acknowledged, nil)
     end
   end
 
-  def assign_state(socket), do: Phoenix.Component.assign(socket, :translation, nil)
+  def assign_state(socket), do: assign(socket, :translation, nil)
 
   # A synchronized schema's entry that has no translations yet: it becomes the
   # source when the first one is created.
@@ -237,7 +237,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
     case Brando.Drafts.Restore.prepare(draft, entry, schema, user, accept_conflict: true, compatible_only: true) do
       {:ok, changeset, _issues} ->
         state = %{state | applied_version_id: state.pending.id}
-        {:ok, changeset, Phoenix.Component.assign(socket, :translation, state)}
+        {:ok, changeset, assign(socket, :translation, state)}
 
       _ ->
         :error
@@ -259,8 +259,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
       end
 
     case socket.assigns[:translation] do
-      %{} = state -> Phoenix.Component.assign(socket, :translation, %{state | acknowledged: paths})
-      nil -> Phoenix.Component.assign(socket, :translation_acknowledged, paths)
+      %{} = state -> assign(socket, :translation, %{state | acknowledged: paths})
+      nil -> assign(socket, :translation_acknowledged, paths)
     end
   end
 

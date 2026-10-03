@@ -315,7 +315,10 @@ defmodule Brando.Uploads do
     end
   end
 
-  @doc false
+  @doc """
+  Checks the HEAD response for a directly uploaded object against the size and
+  MIME type the client declared. Returns `:ok` or `{:error, message}`.
+  """
   def validate_direct_object(%{headers: headers}, expected_size, expected_mime_type)
       when is_list(headers) do
     normalized_headers =
@@ -330,8 +333,10 @@ defmodule Brando.Uploads do
   def validate_direct_object(_response, _expected_size, _expected_mime_type),
     do: {:error, "Uploaded object metadata is unavailable"}
 
-  @doc false
-  # Public for testability — the decision matrix is the contract.
+  @doc """
+  True when files for this config upload straight to the CDN bucket: the CDN is
+  enabled with direct uploads and no `content_disposition` has to be set.
+  """
   def direct_transport?(cfg) do
     cdn_config = file_cdn_config(cfg)
 
@@ -339,7 +344,10 @@ defmodule Brando.Uploads do
          is_nil(Map.get(cfg, :content_disposition)))
   end
 
-  @doc false
+  @doc """
+  True when videos for this config upload straight to S3: the video CDN is
+  enabled with direct uploads and has both a bucket and a media URL.
+  """
   def direct_video_transport?(%{upload_strategy: :s3} = cfg) do
     case video_cdn_config(cfg) do
       %Brando.CDN.Config{
@@ -358,7 +366,10 @@ defmodule Brando.Uploads do
 
   def direct_video_transport?(_cfg), do: false
 
-  @doc false
+  @doc """
+  Whether a video field can offer uploads: they must be allowed, and the strategy
+  must be local, direct S3, or a provider with complete credentials.
+  """
   def video_upload_available?(%{allow_uploads: true, upload_strategy: :local}), do: true
   def video_upload_available?(%{allow_uploads: true, upload_strategy: :s3} = cfg), do: direct_video_transport?(cfg)
 

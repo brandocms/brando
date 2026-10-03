@@ -4,6 +4,8 @@ defmodule Brando.HTML.ViteAssetsTest do
   import Brando.Test.Support, only: [put_test_env: 2]
   import Phoenix.LiveViewTest, only: [render_component: 1, render_component: 2]
 
+  alias Brando.HTML
+
   @host_app :brando_html_vite_test
   @env_vars ~w(BRANDO_VITE_FRONTEND_HOST BRANDO_VITE_FRONTEND_PORT BRANDO_VITE_ADMIN_HOST BRANDO_VITE_ADMIN_PORT)
 
@@ -65,9 +67,9 @@ defmodule Brando.HTML.ViteAssetsTest do
   end
 
   test "unconfigured HMR output is byte-identical" do
-    assert render_component(&Brando.HTML.include_assets/1) == @frontend_html
-    assert render_component(&Brando.HTML.include_assets/1, only_css: true) == @frontend_html
-    assert render_component(&Brando.HTML.include_assets/1, admin: true) == @admin_html
+    assert render_component(&HTML.include_assets/1) == @frontend_html
+    assert render_component(&HTML.include_assets/1, only_css: true) == @frontend_html
+    assert render_component(&HTML.include_assets/1, admin: true) == @admin_html
   end
 
   test "frontend overrides affect all frontend scripts without moving the admin server" do
@@ -75,49 +77,49 @@ defmodule Brando.HTML.ViteAssetsTest do
     System.put_env("BRANDO_VITE_FRONTEND_PORT", "4300")
     expected = String.replace(@frontend_html, "localhost:3000", "frontend.localhost:4300")
 
-    assert render_component(&Brando.HTML.include_assets/1) == expected
-    assert render_component(&Brando.HTML.include_assets/1, only_css: true) == expected
-    assert render_component(&Brando.HTML.include_assets/1, admin: true) == @admin_html
+    assert render_component(&HTML.include_assets/1) == expected
+    assert render_component(&HTML.include_assets/1, only_css: true) == expected
+    assert render_component(&HTML.include_assets/1, admin: true) == @admin_html
   end
 
   test "admin overrides do not move the frontend server" do
     System.put_env("BRANDO_VITE_ADMIN_HOST", "admin.localhost")
     System.put_env("BRANDO_VITE_ADMIN_PORT", "4333")
 
-    assert render_component(&Brando.HTML.include_assets/1, admin: true) ==
+    assert render_component(&HTML.include_assets/1, admin: true) ==
              String.replace(@admin_html, "localhost:3333", "admin.localhost:4333")
 
-    assert render_component(&Brando.HTML.include_assets/1) == @frontend_html
+    assert render_component(&HTML.include_assets/1) == @frontend_html
   end
 
   test "ports can change independently of hosts and are read again on each render" do
     System.put_env("BRANDO_VITE_FRONTEND_PORT", "3001")
     System.put_env("BRANDO_VITE_ADMIN_PORT", "3334")
 
-    assert render_component(&Brando.HTML.include_assets/1) == String.replace(@frontend_html, ":3000", ":3001")
-    assert render_component(&Brando.HTML.include_assets/1, admin: true) == String.replace(@admin_html, ":3333", ":3334")
+    assert render_component(&HTML.include_assets/1) == String.replace(@frontend_html, ":3000", ":3001")
+    assert render_component(&HTML.include_assets/1, admin: true) == String.replace(@admin_html, ":3333", ":3334")
 
     System.put_env("BRANDO_VITE_FRONTEND_PORT", "3002")
-    assert render_component(&Brando.HTML.include_assets/1) == String.replace(@frontend_html, ":3000", ":3002")
+    assert render_component(&HTML.include_assets/1) == String.replace(@frontend_html, ":3000", ":3002")
   end
 
   test "hosts can change independently of ports, including IPv6 addresses" do
     System.put_env("BRANDO_VITE_FRONTEND_HOST", "127.0.0.1")
     System.put_env("BRANDO_VITE_ADMIN_HOST", "::1")
 
-    assert render_component(&Brando.HTML.include_assets/1) == String.replace(@frontend_html, "localhost", "127.0.0.1")
+    assert render_component(&HTML.include_assets/1) == String.replace(@frontend_html, "localhost", "127.0.0.1")
 
-    assert render_component(&Brando.HTML.include_assets/1, admin: true) ==
+    assert render_component(&HTML.include_assets/1, admin: true) ==
              String.replace(@admin_html, "localhost", "[::1]")
   end
 
   test "only_js and legacy helpers do not load a dev server a second time" do
     invalid_dev_ports()
 
-    assert render_component(&Brando.HTML.include_assets/1, only_js: true) ==
+    assert render_component(&HTML.include_assets/1, only_js: true) ==
              "<!-- prevent double loading of vite client, handled in only_css -->\n"
 
-    assert render_component(&Brando.HTML.include_legacy_assets/1) == ""
+    assert render_component(&HTML.include_legacy_assets/1) == ""
   end
 
   test "the host app's hmr: false keeps all manifest branches independent of dev-server settings" do
@@ -150,7 +152,7 @@ defmodule Brando.HTML.ViteAssetsTest do
     test "admin still uses its manifest in #{env}" do
       Application.put_env(:brando, :env, unquote(env))
       invalid_dev_ports()
-      html = render_component(&Brando.HTML.include_assets/1, admin: true)
+      html = render_component(&HTML.include_assets/1, admin: true)
 
       assert html =~ "/assets/admin.css"
       assert html =~ "/assets/admin.js"
@@ -159,12 +161,12 @@ defmodule Brando.HTML.ViteAssetsTest do
   end
 
   defp manifest_output do
-    admin = render_component(&Brando.HTML.include_assets/1, admin: true)
+    admin = render_component(&HTML.include_assets/1, admin: true)
     assert admin =~ "/assets/admin.css"
     assert admin =~ "/assets/admin.js"
     refute admin =~ "@vite/client"
 
-    legacy = render_component(&Brando.HTML.include_legacy_assets/1)
+    legacy = render_component(&HTML.include_legacy_assets/1)
 
     if Application.get_env(@host_app, :hmr) === false do
       assert legacy =~ "/assets/app-legacy.js"
@@ -176,9 +178,9 @@ defmodule Brando.HTML.ViteAssetsTest do
   end
 
   defp frontend_manifest_output do
-    all = render_component(&Brando.HTML.include_assets/1)
-    css = render_component(&Brando.HTML.include_assets/1, only_css: true)
-    js = render_component(&Brando.HTML.include_assets/1, only_js: true)
+    all = render_component(&HTML.include_assets/1)
+    css = render_component(&HTML.include_assets/1, only_css: true)
+    js = render_component(&HTML.include_assets/1, only_js: true)
     assert all =~ "/assets/app.css"
     assert all =~ "/assets/app.js"
     assert css =~ "/assets/app.css"

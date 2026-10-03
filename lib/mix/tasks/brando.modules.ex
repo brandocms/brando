@@ -23,8 +23,8 @@ defmodule Mix.Tasks.Brando.Modules do
   """
   use Mix.Task
 
-  alias Brando.Content.Definitions
   alias Brando.Content.Definition.Plan
+  alias Brando.Content.Definitions
   alias Brando.Tenant
   alias Brando.Tenant.Registry
 

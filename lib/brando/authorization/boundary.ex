@@ -17,7 +17,11 @@ defmodule Brando.Authorization.Boundary do
   def put_scope(%Scope{} = scope), do: Process.put(@scope_key, scope)
   def put_scope(nil), do: Process.delete(@scope_key)
 
-  @doc false
+  @doc """
+  Caches the admin's authorization snapshot for menus and other presentation in this process.
+
+  `presentation/0` only returns it while the same scope is current.
+  """
   def put_presentation(snapshot), do: Process.put(@presentation_key, snapshot)
 
   def presentation do
@@ -39,7 +43,14 @@ defmodule Brando.Authorization.Boundary do
     end
   end
 
-  @doc false
+  @doc """
+  Runs `fun` as a context mutation after checking that `actor` may perform `action` on `schema`.
+
+  With groups enabled the check and `fun` share one transaction inside the actor's scope and
+  tenant prefix, and `fun` receives the authorized user. A denied check or an `{:error, reason}`
+  from `fun` rolls back and returns `{:error, reason}`. `:system` and disabled groups run `fun`
+  directly.
+  """
   def run(:system, _action, _schema, fun), do: with_scope(nil, fn -> fun.(:system) end)
 
   def run(actor, action, schema, fun) do
@@ -201,7 +212,11 @@ defmodule Brando.Authorization.Boundary do
     end
   end
 
-  @doc false
+  @doc """
+  Checks `action` on the record `id` against the current admin scope.
+
+  Returns `:ok` outside an admin scope, so public callers keep their existing behaviour.
+  """
   def admin_record(action, schema, id) do
     if current_scope(), do: authorize_record(current_scope(), action, schema, id), else: :ok
   end

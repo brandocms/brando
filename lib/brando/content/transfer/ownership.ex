@@ -1,5 +1,6 @@
 defmodule Brando.Content.Transfer.Ownership do
   @moduledoc false
+  alias Brando.Content.Transfer.Dependencies
   alias Brando.Repo
 
   # A newly inserted bundle gallery can be claimed once. Existing galleries
@@ -12,15 +13,15 @@ defmodule Brando.Content.Transfer.Ownership do
     else
       original =
         value["gallery"] ||
-          Brando.Content.Transfer.Dependencies.load!("gallery", id, actor)
+          Dependencies.load!("gallery", id, actor)
           |> Repo.preload(:gallery_objects)
           |> Brando.Drafts.Params.snapshot()
 
       objects = Enum.map(original["gallery_objects"], &Map.take(&1, ~w(image_id video_id config sequence)))
 
       Enum.each(objects, fn object ->
-        if object["image_id"], do: Brando.Content.Transfer.Dependencies.load!("image", object["image_id"], actor)
-        if object["video_id"], do: Brando.Content.Transfer.Dependencies.load!("video", object["video_id"], actor)
+        if object["image_id"], do: Dependencies.load!("image", object["image_id"], actor)
+        if object["video_id"], do: Dependencies.load!("video", object["video_id"], actor)
       end)
 
       Brando.Content.Transfer.Catalog.authorize!(actor, :create, Brando.Galleries.Gallery)

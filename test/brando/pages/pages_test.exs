@@ -257,7 +257,6 @@ defmodule Brando.PagesTest do
   test "breadcrumbs are computed on create and update" do
     user = Factory.insert(:random_user)
 
-    # Create a homepage
     {:ok, homepage} =
       Pages.create_page(
         %{title: "Home", uri: "index", language: "en", template: "default.html", is_homepage: true, status: :published},
@@ -269,7 +268,6 @@ defmodule Brando.PagesTest do
 
     app_name = Brando.config(:app_name)
 
-    # Create a parent page
     {:ok, parent} =
       Pages.create_page(
         %{title: "About", uri: "about", language: "en", template: "default.html", status: :published},
@@ -281,7 +279,6 @@ defmodule Brando.PagesTest do
              %{"title" => "About", "uri" => "/about"}
            ]
 
-    # Create a child page
     {:ok, child} =
       Pages.create_page(
         %{
@@ -321,7 +318,6 @@ defmodule Brando.PagesTest do
   test "duplicate_page duplicates fragments and child pages with their blocks and vars" do
     user = Factory.insert(:random_user)
 
-    # Create a module for blocks
     module_params =
       Factory.params_for(:module, %{
         name: "test_module",

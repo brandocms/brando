@@ -5,9 +5,10 @@ defmodule BrandoAdmin.Components.ModuleFiles do
 
   import Ecto.Query, only: [from: 2]
   alias Brando.Authorization.Boundary
-  alias Brando.Content.{Definitions, Module}
   alias Brando.Content.Definition.{Archive, Plan}
+  alias Brando.Content.{Definitions, Module}
   alias Brando.Repo
+  alias BrandoAdmin.Authorization
   alias BrandoAdmin.Components.{Content, TextDiff}
   alias Phoenix.LiveView.JS
 
@@ -38,9 +39,8 @@ defmodule BrandoAdmin.Components.ModuleFiles do
 
     {:ok,
      assign(socket,
-       can_export: BrandoAdmin.Authorization.allowed?(:export, Module),
-       can_import:
-         BrandoAdmin.Authorization.allowed?(:create, Module) || BrandoAdmin.Authorization.allowed?(:update, Module)
+       can_export: Authorization.allowed?(:export, Module),
+       can_import: Authorization.allowed?(:create, Module) || Authorization.allowed?(:update, Module)
      )}
   end
 

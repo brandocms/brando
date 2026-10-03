@@ -5,6 +5,7 @@ defmodule Brando.Videos.MetadataTest do
   alias Brando.Factory
   alias Brando.Videos
   alias Brando.Videos.Metadata
+  alias Plug.Conn
 
   @master """
   #EXTM3U
@@ -28,13 +29,13 @@ defmodule Brando.Videos.MetadataTest do
     test = self()
 
     Req.Test.stub(Metadata, fn conn ->
-      send(test, {:request, conn.request_path, Plug.Conn.get_req_header(conn, "referer")})
+      send(test, {:request, conn.request_path, Conn.get_req_header(conn, "referer")})
 
       case routes.(conn.request_path, conn.query_string) do
         {:json, body} -> Req.Test.json(conn, body)
-        {:jpeg, body} -> conn |> Plug.Conn.put_resp_content_type("image/jpeg") |> Plug.Conn.send_resp(200, body)
-        {:text, body} -> Plug.Conn.send_resp(conn, 200, body)
-        status -> Plug.Conn.send_resp(conn, status, "")
+        {:jpeg, body} -> conn |> Conn.put_resp_content_type("image/jpeg") |> Conn.send_resp(200, body)
+        {:text, body} -> Conn.send_resp(conn, 200, body)
+        status -> Conn.send_resp(conn, status, "")
       end
     end)
   end

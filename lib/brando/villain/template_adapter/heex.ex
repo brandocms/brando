@@ -101,7 +101,11 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
     put_vars(base, processed_vars)
   end
 
-  @doc false
+  @doc """
+  The site-wide assigns a HEEx module template reads (globals, identity, entry,
+  language and so on), taken from the Liquex render context with defaults for
+  anything missing.
+  """
   def context_assigns(nil), do: @context_assign_defaults
 
   def context_assigns(context) do
@@ -111,7 +115,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
     end)
   end
 
-  @doc false
+  @doc "Merges processed block vars into `assigns` as top-level atom keys, so templates read `@my_var`."
   def put_vars(assigns, processed_vars) do
     Enum.reduce(processed_vars, assigns, fn {k, v}, acc ->
       key = if is_atom(k), do: k, else: String.to_atom(k)

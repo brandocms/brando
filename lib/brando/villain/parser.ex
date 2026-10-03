@@ -1107,14 +1107,7 @@ defmodule Brando.Villain.Parser do
           ""
 
         :force_render ->
-          (children || [])
-          |> Enum.reduce([], fn
-            %{active: false}, acc -> acc
-            %{marked_as_deleted: true}, acc -> acc
-            d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
-          end)
-          |> Enum.reverse()
-          |> annotate_children(block.uid)
+          render_children(children, block, opts)
       end
 
     # we might want to annotate disabled containers
@@ -1134,14 +1127,7 @@ defmodule Brando.Villain.Parser do
         "[$ content $]"
         |> annotate_children(block.uid)
       else
-        (children || [])
-        |> Enum.reduce([], fn
-          %{active: false}, acc -> acc
-          %{marked_as_deleted: true}, acc -> acc
-          d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
-        end)
-        |> Enum.reverse()
-        |> annotate_children(block.uid)
+        render_children(children, block, opts)
       end
 
     target_id =
@@ -1184,7 +1170,6 @@ defmodule Brando.Villain.Parser do
         opts
       ) do
     containers = opts.containers
-    # palettes = opts.palettes
     skip_children? = Map.get(opts, :skip_children, false)
 
     {:ok, container} =
@@ -1194,14 +1179,7 @@ defmodule Brando.Villain.Parser do
       if skip_children? === true do
         annotate_children("[$ content $]", block.uid)
       else
-        (children || [])
-        |> Enum.reduce([], fn
-          %{active: false}, acc -> acc
-          %{marked_as_deleted: true}, acc -> acc
-          d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
-        end)
-        |> Enum.reverse()
-        |> annotate_children(block.uid)
+        render_children(children, block, opts)
       end
 
     adapter = adapter_for(container.type)
@@ -1209,6 +1187,18 @@ defmodule Brando.Villain.Parser do
     adapter.render_container(container, IO.iodata_to_binary(children_html), block, opts)
     |> maybe_annotate(block.uid, opts)
     |> maybe_format(opts)
+  end
+
+  # Inactive and deleted children are left out of the container's output.
+  defp render_children(children, block, opts) do
+    (children || [])
+    |> Enum.reduce([], fn
+      %{active: false}, acc -> acc
+      %{marked_as_deleted: true}, acc -> acc
+      d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
+    end)
+    |> Enum.reverse()
+    |> annotate_children(block.uid)
   end
 
   def timeline(items, _) do
@@ -1275,7 +1265,6 @@ defmodule Brando.Villain.Parser do
     # Determine if autoplay should be enabled
     autoplay = autoplay_setting not in [nil, false]
 
-    # Build the options list
     [
       width: Map.get(data, :width),
       height: Map.get(data, :height),
@@ -1420,8 +1409,14 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  # ...
-  @doc false
+  @doc """
+  Turns a block's vars into the `%{key => value}` map templates render from.
+
+  Media, file and link vars resolve to their records, preloading any association
+  that is not loaded yet; booleans resolve to `value_boolean` and everything else
+  to `value`. Used by template adapters and the admin's HEEx preview as well as
+  the parser itself. `nil` or an unloaded association gives `%{}`.
+  """
   def process_vars(nil), do: %{}
   def process_vars(%Ecto.Association.NotLoaded{}), do: %{}
   def process_vars(vars), do: Map.new(vars, &process_var(&1))
@@ -1514,12 +1509,21 @@ defmodule Brando.Villain.Parser do
   defp chosen_form(%{form: %Brando.Forms.Form{id: id} = form, form_id: id}), do: form
   defp chosen_form(%{form_id: id}), do: Brando.Repo.get(Brando.Forms.Form, id)
 
-  @doc false
+  @doc """
+  Turns a block's refs into a `%{name => ref}` map, each ref merged with its
+  image, video, gallery or file and its caption overrides. Block-slot refs are
+  left unrendered; use `process_refs/3` to render them. `nil` or an unloaded
+  association gives `%{}`.
+  """
   def process_refs(nil), do: %{}
   def process_refs(%Ecto.Association.NotLoaded{}), do: %{}
 
   def process_refs(refs), do: Map.new(refs, &process_ref(&1))
 
+  @doc """
+  Like `process_refs/1`, but also renders each active block-slot ref of `owner`
+  with `opts` into its `rendered_html`.
+  """
   def process_refs(refs, owner, opts) do
     refs
     |> process_refs()
@@ -1662,7 +1666,6 @@ defmodule Brando.Villain.Parser do
           # TODO: Consider caching this merge operation for large galleries with many objects
           updated_gallery = apply_gallery_caption_overrides(loaded_gallery, override_data)
 
-          # Return the block data with the updated gallery association
           {
             struct(ref.data.data.__struct__, Map.put(override_data, :gallery, updated_gallery)),
             updated_gallery
@@ -1685,7 +1688,6 @@ defmodule Brando.Villain.Parser do
 
   # Handle all other ref types (text, html, svg, etc.)
   defp merge_ref_associations(%{data: %{type: _type} = data} = ref) do
-    # Return the ref structure with data, including active status
     %{
       data: data,
       name: ref.name,

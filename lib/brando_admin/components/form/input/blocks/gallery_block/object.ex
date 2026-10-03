@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   import Brando.Utils, only: [loaded_assoc?: 2]
   import Phoenix.HTML, only: [raw: 1]
 
+  alias Brando.Images
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
@@ -28,7 +29,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     obj = Enum.at(assigns.gallery_objects, assigns.gallery_object_form.index)
     object_modal_id = "gallery-object-modal-#{assigns.uid}-#{assigns.gallery_object_form.index}"
 
-    # Get the current override form data from the block_data form
     current_override = get_current_override_from_form(assigns.block_data, media_key(obj))
 
     # Determine the actual display values (considering current form overrides)
@@ -260,7 +260,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   def gallery_caption_overrides(assigns) do
     media_key = media_key(assigns.obj)
 
-    # Get the precomputed override info for this object
     override_info = media_key && Map.get(assigns.override_data, media_key)
 
     if override_info do
@@ -302,9 +301,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     cond do
       loaded_assoc?(obj, :image) ->
         %{
-          title: Brando.Images.text(obj.image, :title, nil),
-          alt: Brando.Images.text(obj.image, :alt, nil),
-          credits: Brando.Images.text(obj.image, :credits, nil)
+          title: Images.text(obj.image, :title, nil),
+          alt: Images.text(obj.image, :alt, nil),
+          credits: Images.text(obj.image, :credits, nil)
         }
 
       loaded_assoc?(obj, :video) ->

@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Live.Content.ModuleDestructiveSaveTest do
   alias Brando.Villain.Blocks.TextBlock
   alias BrandoAdmin.Content.ModuleFormLive
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   defp text_ref(name) do
     %Ref{
@@ -55,12 +56,12 @@ defmodule BrandoAdmin.Live.Content.ModuleDestructiveSaveTest do
     form = module |> Module.changeset(%{}, user) |> to_form([])
 
     %Phoenix.LiveView.Socket{}
-    |> Phoenix.Component.assign(:form, form)
-    |> Phoenix.Component.assign(:entry, module)
-    |> Phoenix.Component.assign(:current_user, user)
-    |> Phoenix.Component.assign(:shared_library?, false)
-    |> Phoenix.Component.assign(:save_redirect_target, :self)
-    |> Phoenix.Component.assign(:pending_destructive_save, nil)
+    |> Component.assign(:form, form)
+    |> Component.assign(:entry, module)
+    |> Component.assign(:current_user, user)
+    |> Component.assign(:shared_library?, false)
+    |> Component.assign(:save_redirect_target, :self)
+    |> Component.assign(:pending_destructive_save, nil)
   end
 
   # The params a save event carries. Refs and vars come back as index-keyed maps,

@@ -52,11 +52,14 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
 
   def init(socket), do: socket
 
-  @doc false
+  @doc """
+  Runs `fun` on the socket outside frontend edit mode and returns the socket
+  untouched inside it, for form setup that belongs to the full editor only.
+  """
   def unless_frontend(%{assigns: %{frontend_edit: %{}}} = socket, _fun), do: socket
   def unless_frontend(socket, fun), do: fun.(socket)
 
-  @doc false
+  @doc "Whether the form is in frontend edit mode."
   def frontend?(%{assigns: %{frontend_edit: %{}}}), do: true
   def frontend?(_), do: false
 
@@ -119,13 +122,13 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
   def field_changed(%{assigns: %{frontend_edit: %{}}}), do: notify(:dirty)
   def field_changed(_socket), do: :ok
 
-  @doc false
+  @doc "Tells the editor's LiveView a save has started. Returns the socket."
   def saving(socket), do: tap(socket, fn _ -> notify(:saving) end)
 
-  @doc false
+  @doc "Tells the editor's LiveView the save of `entry` succeeded. Returns the socket."
   def saved(socket, entry), do: tap(socket, fn _ -> notify({:saved, entry}) end)
 
-  @doc false
+  @doc "Tells the editor's LiveView the save failed with `reason`. Returns the socket."
   def save_failed(socket, reason), do: tap(socket, fn _ -> notify({:save_failed, reason}) end)
 
   defp notify(message), do: send(self(), {:frontend_edit, message})

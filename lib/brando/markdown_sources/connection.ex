@@ -36,11 +36,9 @@ defmodule Brando.MarkdownSources.Connection do
   end
 
   def destination(connection, prefix) do
-    with true <- prefix in connection.destinations do
-      resolve_destination(prefix)
-    else
-      _ -> {:error, :destination_forbidden}
-    end
+    if prefix in connection.destinations,
+      do: resolve_destination(prefix),
+      else: {:error, :destination_forbidden}
   end
 
   defp resolve_destination(nil) do

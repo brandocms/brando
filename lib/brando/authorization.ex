@@ -121,8 +121,7 @@ defmodule Brando.Authorization do
     [compile_types(types, types_reversed), compile_rules(rules, types, types_reversed)]
   end
 
-  @doc false
-  def compile_types(types, types_reversed) do
+  defp compile_types(types, types_reversed) do
     quote do
       def __types__(:binary_to_atom) do
         unquote(Macro.escape(types))
@@ -159,8 +158,7 @@ defmodule Brando.Authorization do
   def denormalize_subject(%Rule{subject: subject} = rule, types) when is_atom(subject),
     do: Map.put(rule, :subject, Map.get(types, subject))
 
-  @doc false
-  def compile_rules(rules, types, types_reversed) do
+  defp compile_rules(rules, types, types_reversed) do
     role_buckets =
       rules
       |> Keyword.keys()

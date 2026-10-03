@@ -2,8 +2,8 @@ defmodule Brando.Content.Definition.Snapshot do
   @moduledoc false
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.{Module, TableTemplate}
   alias Brando.Content.Definition.{Error, Model, References, Value}
+  alias Brando.Content.{Module, TableTemplate}
   alias Brando.Repo
 
   def take!(opts \\ []) do

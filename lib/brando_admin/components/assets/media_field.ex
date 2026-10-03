@@ -331,10 +331,13 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp loaded_asset(%Ecto.Changeset{} = asset), do: Ecto.Changeset.apply_changes(asset)
   defp loaded_asset(asset), do: asset
 
-  @doc false
-  # A playable address for a video, when it has one: an uploaded file, or a
-  # linked one. Vimeo, YouTube and provider videos have none to put in <video>.
-  # Also used by the video drawer's preview.
+  @doc """
+  Returns a playable address for a video, or `nil` when it has none.
+
+  Uploaded files and linked external files have one. Vimeo, YouTube and
+  provider videos have nothing to put in a `<video>` element. The video
+  drawer uses this for its preview as well.
+  """
   def video_url(%{type: :upload, file: %Brando.Files.File{} = file}), do: Brando.Utils.media_url(file)
   def video_url(%{type: :external_file, source_url: url}) when is_binary(url) and url != "", do: url
   def video_url(_), do: nil
@@ -344,7 +347,10 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp asset_name(asset, :file), do: asset.filename
   defp asset_name(asset, :video), do: asset.title || gettext("Untitled video")
 
-  @doc false
+  @doc """
+  Returns the human-readable upload size limit for a field config, such as
+  `"25 MB"`. Falls back to the global upload limit when the config sets none.
+  """
   def upload_limit(config) do
     bytes =
       case Map.get(config, :size_limit) do

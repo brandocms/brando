@@ -37,7 +37,7 @@ defmodule Brando.Villain.RefRenderingTest do
               data: %Brando.Villain.Blocks.TextBlock.Data{
                 type: :paragraph,
                 text:
-                  "<a data-identifier-id=\"42\" href=\"/case\">{{ entry.title }}</a>" <>
+                  ~s(<a data-identifier-id="42" href="/case">{{ entry.title }}</a>) <>
                     "{% if entry.title %}<strong>Visible</strong>{% endif %}"
               }
             }

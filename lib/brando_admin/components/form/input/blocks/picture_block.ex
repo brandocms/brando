@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset

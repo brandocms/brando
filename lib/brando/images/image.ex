@@ -14,6 +14,7 @@ defmodule Brando.Images.Image do
   import Brando.Blueprint.Listings.Components.Core
   import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
 
+  alias Brando.Images.AltText
   alias Brando.Images.Focal
 
   trait :creator, derived: [:sizes, :formats, :status, :cdn, :dominant_color, :config_fingerprint]
@@ -106,9 +107,9 @@ defmodule Brando.Images.Image do
       |> assign(:image_formats, formats)
       |> assign(:size_count, map_size(assigns.entry.sizes || %{}))
       |> assign(:title, Brando.Images.text(assigns.entry, :title, nil))
-      |> assign(:alt_from_entry?, Brando.Images.AltText.alt_from_entry?(assigns.entry))
-      |> assign(:alt_missing, Brando.Images.AltText.missing_languages(assigns.entry))
-      |> assign(:language_count, length(Brando.Images.AltText.languages()))
+      |> assign(:alt_from_entry?, AltText.alt_from_entry?(assigns.entry))
+      |> assign(:alt_missing, AltText.missing_languages(assigns.entry))
+      |> assign(:language_count, length(AltText.languages()))
 
     ~H"""
     <.cover image={@entry} columns={2} size={:smallest} class="library-thumbnail" />

@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
@@ -74,7 +74,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def update(%{event: "video_created_from_url"} = assigns, socket) do
-    # Handle the video creation event from VideoPicker
     socket
     |> Block.commit_ref_data(
       ref_data: Block.current_block_data_map(socket.assigns.block, @video_override_fields),
@@ -91,27 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def update(%{event: "select_video", video_id: video_id}, socket) do
-    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]}) do
-      {:ok, video} ->
-        video_data = Map.from_struct(video)
-
-        socket
-        |> Block.commit_ref_data(
-          ref_data: Block.current_block_data_map(socket.assigns.block, @video_override_fields),
-          video_id: video_id,
-          form: socket.assigns.ref_form,
-          force_render: true
-        )
-        |> assign(:video, video)
-        |> assign(:video_data, video_data)
-        |> assign(:type, Map.get(video_data, :type, :file))
-        |> assign(:cover_image, Map.get(video_data, :thumbnail))
-        |> assign(:cover_image_id, cover_image_id(Map.get(video_data, :thumbnail)))
-        |> then(&{:ok, &1})
-
-      {:error, _reason} ->
-        {:ok, socket}
-    end
+    {:ok, select_video(socket, video_id)}
   end
 
   def update(assigns, socket) do
@@ -493,6 +472,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("select_video", %{"id" => video_id}, socket) do
+    {:noreply, select_video(socket, video_id)}
+  end
+
+  defp select_video(socket, video_id) do
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]}) do
       {:ok, video} ->
         video_data = Map.from_struct(video)
@@ -510,10 +493,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         |> assign(:type, Map.get(video_data, :type, :file))
         |> assign(:cover_image, Map.get(video_data, :thumbnail))
         |> assign(:cover_image_id, cover_image_id(Map.get(video_data, :thumbnail)))
-        |> then(&{:noreply, &1})
 
-      {:error, _} ->
-        {:noreply, socket}
+      {:error, _reason} ->
+        socket
     end
   end
 
