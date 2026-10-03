@@ -114,6 +114,19 @@ have a consistent size, stroke, alignment, and open state. Omit decorative arrow
 that add no information. Keep visible keyboard focus, accessible names for
 icon-only controls, and understandable loading and disabled states.
 
+## Tab views
+
+Build tab views like the link modal's URL / Content switch. Tabs sit in a
+sage track: `#f1f5ef` with a 1px `#dce5d8` border, a 5px radius and 3px of
+padding. Each tab has an icon and a label at 13px/18px, is 32px tall, and has
+6px 14px of padding. The selected tab is a white pill with a `#d6e2d0` border
+and accent text. The other tabs are muted, with no border. Do not use
+underlined tabs or button groups.
+
+The switch is `Input.radios` with an `icon` on each option. It is styled under
+`.modal--picker .link-picker-modes` in `ModalWorkspace.css`. The first new tab
+view that reuses it should move those rules to a shared class.
+
 ## Use typography and color to establish hierarchy
 
 Retain Brando's existing typefaces. The Utilities scale is approximately 30px for
