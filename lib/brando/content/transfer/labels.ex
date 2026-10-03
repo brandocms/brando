@@ -79,6 +79,7 @@ defmodule Brando.Content.Transfer.Labels do
   defp label("file"), do: dgettext("content_transfer", "File")
   defp label("video"), do: dgettext("content_transfer", "Video")
   defp label("gallery"), do: dgettext("content_transfer", "Gallery")
+  defp label("form"), do: dgettext("content_transfer", "Form")
   defp label("markdown_source"), do: dgettext("content_transfer", "Markdown source")
   defp label("markdown_version"), do: dgettext("content_transfer", "Markdown version")
   defp label("vars"), do: dgettext("content_transfer", "Variables")

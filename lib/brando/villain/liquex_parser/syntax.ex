@@ -51,6 +51,20 @@ defmodule Brando.Villain.LiquexParser.Syntax do
     |> ignore(Tag.close_tag())
   end
 
+  @doc """
+  Builds the parser combinator for the `form` tag:
+  `{% form contact %}`, `{% form 'contact' { class: 'wide' } %}`.
+  """
+  def form do
+    ignore(Tag.open_tag())
+    |> ignore(string("form"))
+    |> ignore(Literal.whitespace(empty(), 1))
+    |> unwrap_and_tag(Argument.argument(), :source)
+    |> ignore(Literal.whitespace())
+    |> optional(tag(picture_args(), :args))
+    |> ignore(Tag.close_tag())
+  end
+
   @doc "Builds the parser combinator for the `video` tag."
   def video do
     ignore(Tag.open_tag())

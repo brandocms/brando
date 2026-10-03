@@ -299,14 +299,12 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Replace $csrftoken in `html` with .. csrf token!
+  Fills in `$csrftoken` in rendered block HTML with the visitor's CSRF token.
 
-  This is useful for rendered forms from Villain that needs a token for submission
+  Pages, fragments and `render_blocks/1` already do this; call it for block
+  HTML output any other way. See `Brando.Forms.Delivery.finalize/1`.
   """
-  def replace_csrf_token(html) when is_binary(html),
-    do: String.replace(html, "$csrftoken", Plug.CSRFProtection.get_csrf_token())
-
-  def replace_csrf_token(html), do: html
+  def replace_csrf_token(html), do: Brando.Forms.Delivery.finalize(html)
 
   def replace_timestamp(html) when is_binary(html) do
     timestamp =
@@ -843,6 +841,7 @@ defmodule Brando.HTML do
         assigns.entry,
         conn: assigns.conn
       )
+      |> Brando.Forms.Delivery.finalize()
 
     [pre, post] =
       case String.split(parsed_data, "$__CONTENT__") do
@@ -877,7 +876,7 @@ defmodule Brando.HTML do
       assigns
       |> assign(:rendered_field, rendered_field)
       |> assign(:rendered_field_at, rendered_field_at)
-      |> assign(:html, Map.get(assigns.entry, rendered_field, ""))
+      |> assign(:html, assigns.entry |> Map.get(rendered_field, "") |> Brando.Forms.Delivery.finalize())
       |> assign(:at, assigns.entry |> Map.get(rendered_field_at) |> inspect())
 
     ~H"""

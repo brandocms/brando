@@ -154,7 +154,7 @@ msgstr ""
 msgid "After import"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:99
+#: lib/brando/content/transfer/labels.ex:100
 #, elixir-autogen, elixir-format
 msgid "Alternative text"
 msgstr ""
@@ -324,7 +324,7 @@ msgstr ""
 msgid "Choose your content"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:109
+#: lib/brando/content/transfer/labels.ex:110
 #, elixir-autogen, elixir-format
 msgid "Collection"
 msgstr ""
@@ -436,7 +436,7 @@ msgstr ""
 msgid "Create this entry with its authored fields, metadata and owned content."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:100
+#: lib/brando/content/transfer/labels.ex:101
 #: lib/brando_admin/content_preview.ex:145
 #, elixir-autogen, elixir-format
 msgid "Credits"
@@ -457,17 +457,17 @@ msgstr ""
 msgid "Current workspace"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:112
+#: lib/brando/content/transfer/labels.ex:113
 #, elixir-autogen, elixir-format
 msgid "Datasource"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:91
+#: lib/brando/content/transfer/labels.ex:92
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:90
+#: lib/brando/content/transfer/labels.ex:91
 #, elixir-autogen, elixir-format
 msgid "Date and time"
 msgstr ""
@@ -482,7 +482,7 @@ msgstr ""
 msgid "Dependencies"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:87
+#: lib/brando/content/transfer/labels.ex:88
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
@@ -676,22 +676,22 @@ msgstr ""
 msgid "Gallery"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:102
+#: lib/brando/content/transfer/labels.ex:103
 #, elixir-autogen, elixir-format
 msgid "Gallery items"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:107
+#: lib/brando/content/transfer/labels.ex:108
 #, elixir-autogen, elixir-format
 msgid "HTML"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:106
+#: lib/brando/content/transfer/labels.ex:107
 #, elixir-autogen, elixir-format
 msgid "Heading"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:98
+#: lib/brando/content/transfer/labels.ex:99
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr ""
@@ -839,7 +839,7 @@ msgstr ""
 msgid "Key"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:94
+#: lib/brando/content/transfer/labels.ex:95
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr ""
@@ -854,13 +854,13 @@ msgstr ""
 msgid "Lineage matched"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:104
+#: lib/brando/content/transfer/labels.ex:105
 #: lib/brando_admin/content_preview.ex:146
 #, elixir-autogen, elixir-format
 msgid "Link"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:95
+#: lib/brando/content/transfer/labels.ex:96
 #, elixir-autogen, elixir-format
 msgid "Link text"
 msgstr ""
@@ -885,22 +885,22 @@ msgstr ""
 msgid "Map the table template used by the selected destination module."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:82
+#: lib/brando/content/transfer/labels.ex:83
 #, elixir-autogen, elixir-format
 msgid "Markdown source"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:83
+#: lib/brando/content/transfer/labels.ex:84
 #, elixir-autogen, elixir-format
 msgid "Markdown version"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:110
+#: lib/brando/content/transfer/labels.ex:111
 #, elixir-autogen, elixir-format
 msgid "Media"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:101
+#: lib/brando/content/transfer/labels.ex:102
 #, elixir-autogen, elixir-format
 msgid "Media configuration"
 msgstr ""
@@ -1073,7 +1073,7 @@ msgid "Owned entry content exceeds 20 nested levels."
 msgstr ""
 
 #: lib/brando/content/transfer/labels.ex:75
-#: lib/brando/content/transfer/labels.ex:103
+#: lib/brando/content/transfer/labels.ex:104
 #, elixir-autogen, elixir-format
 msgid "Palette"
 msgstr ""
@@ -1154,7 +1154,7 @@ msgstr ""
 msgid "Recovery is no longer authorized."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:85
+#: lib/brando/content/transfer/labels.ex:86
 #, elixir-autogen, elixir-format
 msgid "References"
 msgstr ""
@@ -1297,7 +1297,7 @@ msgstr ""
 msgid "Review your entries"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:86
+#: lib/brando/content/transfer/labels.ex:87
 #, elixir-autogen, elixir-format
 msgid "Rows"
 msgstr ""
@@ -1312,7 +1312,7 @@ msgstr ""
 msgid "SEO title"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:108
+#: lib/brando/content/transfer/labels.ex:109
 #, elixir-autogen, elixir-format
 msgid "SVG"
 msgstr ""
@@ -1392,7 +1392,7 @@ msgstr ""
 msgid "Suggestions use content keys and language. Confirm each destination before applying."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:111
+#: lib/brando/content/transfer/labels.ex:112
 #, elixir-autogen, elixir-format
 msgid "Table"
 msgstr ""
@@ -1412,8 +1412,8 @@ msgstr ""
 msgid "Template"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:92
-#: lib/brando/content/transfer/labels.ex:105
+#: lib/brando/content/transfer/labels.ex:93
+#: lib/brando/content/transfer/labels.ex:106
 #, elixir-autogen, elixir-format
 msgid "Text"
 msgstr ""
@@ -1661,7 +1661,7 @@ msgstr ""
 msgid "Two source fields point to the same destination field. Choose distinct destinations."
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:93
+#: lib/brando/content/transfer/labels.ex:94
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
@@ -1671,7 +1671,7 @@ msgstr ""
 msgid "URI"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:96
+#: lib/brando/content/transfer/labels.ex:97
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr ""
@@ -1746,13 +1746,13 @@ msgstr ""
 msgid "Use the content mapping if available"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:88
 #: lib/brando/content/transfer/labels.ex:89
+#: lib/brando/content/transfer/labels.ex:90
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:84
+#: lib/brando/content/transfer/labels.ex:85
 #, elixir-autogen, elixir-format
 msgid "Variables"
 msgstr ""
@@ -1790,7 +1790,7 @@ msgstr ""
 msgid "Whole entry"
 msgstr ""
 
-#: lib/brando/content/transfer/labels.ex:97
+#: lib/brando/content/transfer/labels.ex:98
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""
@@ -2198,4 +2198,9 @@ msgstr ""
 #: lib/brando/content/transfer/labels.ex:52
 #, elixir-autogen, elixir-format
 msgid "Sharing image"
+msgstr ""
+
+#: lib/brando/content/transfer/labels.ex:82
+#, elixir-autogen, elixir-format
+msgid "Form"
 msgstr ""

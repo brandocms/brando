@@ -143,10 +143,17 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
     path = path ++ [name]
 
     case type do
-      "boolean" -> rows(var["value_boolean"], path)
-      asset when asset in ["image", "video", "file", "gallery"] -> rows(Map.take(var, [asset <> "_id", asset]), path)
-      "link" -> rows(Map.take(var, ~w(value identifier_id identifier link_text link_type link_target_blank)), path)
-      _ -> rows(var["value"], path)
+      "boolean" ->
+        rows(var["value_boolean"], path)
+
+      asset when asset in ["image", "video", "file", "gallery", "form"] ->
+        rows(Map.take(var, [asset <> "_id", asset]), path)
+
+      "link" ->
+        rows(Map.take(var, ~w(value identifier_id identifier link_text link_type link_target_blank)), path)
+
+      _ ->
+        rows(var["value"], path)
     end
   end
 

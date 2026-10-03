@@ -40,6 +40,20 @@ defmodule Brando.Content.BlockReferences do
     repo().all(query)
   end
 
+  @doc "Lists blocks holding one of `form_ids` in a block var or table-row var."
+  @spec list_block_ids_using_forms([integer()]) :: [integer()]
+  def list_block_ids_using_forms(form_ids) do
+    query =
+      from var in "content_vars",
+        left_join: row in "content_table_rows",
+        on: row.id == var.table_row_id,
+        where: var.form_id in ^form_ids,
+        where: not is_nil(var.block_id) or not is_nil(row.block_id),
+        select: coalesce(var.block_id, row.block_id)
+
+    query |> repo().all() |> Enum.uniq()
+  end
+
   @doc """
   Lists blocks referencing a file through refs, block vars, or table-row vars.
   """

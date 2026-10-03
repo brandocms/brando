@@ -18,6 +18,7 @@ defmodule Brando.Content.Transfer.Dependencies do
     "file" => Brando.Files.File,
     "video" => Brando.Videos.Video,
     "gallery" => Brando.Galleries.Gallery,
+    "form" => Brando.Forms.Form,
     "module_set" => Brando.Content.ModuleSet,
     "markdown_source" => Brando.MarkdownSources.Source,
     "markdown_version" => Brando.MarkdownSources.Version
@@ -31,6 +32,7 @@ defmodule Brando.Content.Transfer.Dependencies do
     end
 
     if kind in ~w(module table_template), do: Value.nonempty!(dep["uid"], "definition UID")
+    if kind == "form", do: Value.nonempty!(dep["key"], "form key")
 
     if kind == "module" do
       contract = dep["contract"]
@@ -229,6 +231,11 @@ defmodule Brando.Content.Transfer.Dependencies do
     {%{"members" => members}, state}
   end
 
+  # A form is matched by its key on the destination, which renders it in the
+  # page's language whichever language's form is chosen.
+  defp describe("form", record, state),
+    do: {%{"key" => record.key, "language" => to_string(record.language)}, state}
+
   defp describe("gallery", record, state) do
     record = Repo.preload(record, :gallery_objects)
 
@@ -368,6 +375,15 @@ defmodule Brando.Content.Transfer.Dependencies do
         rescue
           _ in Error -> []
         end
+
+      kind == "form" ->
+        from(f in Brando.Forms.Form, where: f.key == ^to_string(dependency["key"]))
+        |> Catalog.scoped_query(Brando.Forms.Form, actor, :read)
+        |> Repo.all()
+        |> Enum.filter(&(Brando.Authorization.Boundary.authorize(actor, :read, &1) == :ok))
+        |> Enum.sort_by(&{to_string(&1.language) != dependency["language"], &1.id})
+        |> Enum.take(1)
+        |> Enum.map(&%{id: &1.id, label: label(&1), match: :uid})
 
       kind in ~w(module table_template) ->
         schema = schema!(kind)

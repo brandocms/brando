@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
   import Ecto.Changeset
+  import Ecto.Query, only: [from: 2]
 
   alias Brando.Repo
   alias Brando.Type.I18nString
@@ -316,6 +317,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:file_id, if(type == :file, do: value))
     |> assign(:video_id, if(type == :video, do: value))
     |> assign(:gallery_id, if(type == :gallery, do: value))
+    |> assign_form_options(type)
     |> assign(:identifier_id, get_field(changeset, :identifier_id))
     |> assign(:instructions, get_field(changeset, :instructions))
     |> assign(:placeholder, get_field(changeset, :placeholder))
@@ -355,10 +357,27 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ]
   end
 
+  # A form var chooses a form by key; each key is listed once, in the
+  # language its first version was made in, since rendering resolves the
+  # page's language anyway.
+  defp assign_form_options(socket, :form) do
+    assign_new(socket, :form_options, fn ->
+      Brando.Repo.all(
+        from f in Brando.Forms.Form,
+          distinct: f.key,
+          order_by: [asc: f.key, asc: f.id],
+          select: %{label: f.title, value: f.id}
+      )
+    end)
+  end
+
+  defp assign_form_options(socket, _type), do: assign_new(socket, :form_options, fn -> [] end)
+
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
   defp extract_value(:file, changeset), do: get_field(changeset, :file_id)
   defp extract_value(:video, changeset), do: get_field(changeset, :video_id)
   defp extract_value(:gallery, changeset), do: get_field(changeset, :gallery_id)
+  defp extract_value(:form, changeset), do: get_field(changeset, :form_id)
   defp extract_value(:boolean, changeset), do: get_field(changeset, :value_boolean)
   defp extract_value(_type, changeset), do: get_field(changeset, :value)
 
@@ -410,6 +429,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp control_value(:gallery, value) when is_boolean(value), do: nil
   defp control_value(:gallery, value), do: value
 
+  defp control_value(:form, value) when is_integer(value), do: value
+  defp control_value(:form, _value), do: nil
+
   defp control_value(:link, value) when is_binary(value), do: nil
   defp control_value(:link, value) when is_boolean(value), do: nil
   defp control_value(:link, value), do: value
@@ -436,7 +458,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp summary("boolean", var),
     do: if(var[:value_boolean].value in [true, "true"], do: gettext("Yes"), else: gettext("No"))
 
-  defp summary(type, var) when type in ~w(image video gallery file) do
+  defp summary(type, var) when type in ~w(image video gallery file form) do
     if present(var[:"#{type}_id"].value), do: gettext("Chosen")
   end
 
@@ -528,6 +550,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                             %{label: gettext("Color"), value: "color"},
                             %{label: gettext("Datetime"), value: "datetime"},
                             %{label: gettext("File"), value: "file"},
+                            %{label: gettext("Form"), value: "form"},
                             %{label: gettext("Gallery"), value: "gallery"},
                             %{label: gettext("Html"), value: "html"},
                             %{label: gettext("Image"), value: "image"},
@@ -949,6 +972,22 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           monospace
         />
       </div>
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :form} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <.live_component
+        module={Input.Select}
+        id={"#{@var.id}-form"}
+        label={@label}
+        field={@var[:form_id]}
+        inline={true}
+        opts={[options: @form_options, instructions: gettext("Shown in the page's language when the form has a translation.")]}
+        publish={@publish}
+      />
     </div>
     """
   end

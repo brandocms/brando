@@ -1,0 +1,118 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/brando/forms/messages.ex:88
+#, elixir-autogen, elixir-format
+msgid "A required box is not ticked"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:87
+#, elixir-autogen, elixir-format
+msgid "A required field is empty"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:86
+#, elixir-autogen, elixir-format
+msgid "Field errors"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:57
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:89
+#, elixir-autogen, elixir-format
+msgid "No choice is ticked"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:92
+#, elixir-autogen, elixir-format
+msgid "Not a date"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:91
+#, elixir-autogen, elixir-format
+msgid "Not a number"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:90
+#, elixir-autogen, elixir-format
+msgid "Not an email address"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:93
+#, elixir-autogen, elixir-format
+msgid "Not one of the choices"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:69
+#, elixir-autogen, elixir-format
+msgid "Not sent"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:60
+#, elixir-autogen, elixir-format
+msgid "Sending"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:64
+#, elixir-autogen, elixir-format
+msgid "Sent"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:65
+#, elixir-autogen, elixir-format
+msgid "Shown in place of a form once it has been sent."
+msgstr ""
+
+#: lib/brando/forms/messages.ex:70
+#, elixir-autogen, elixir-format
+msgid "Shown when a form could not be sent, and no field says why."
+msgstr ""
+
+#: lib/brando/forms/messages.ex:75
+#, elixir-autogen, elixir-format
+msgid "Shown when a visitor sends too many forms in a short time."
+msgstr ""
+
+#: lib/brando/forms/messages.ex:80
+#, elixir-autogen, elixir-format
+msgid "Shown when the Turnstile check does not let a submission through."
+msgstr ""
+
+#: lib/brando/forms/messages.ex:79
+#, elixir-autogen, elixir-format
+msgid "Spam check failed"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:61
+#, elixir-autogen, elixir-format
+msgid "Submit button"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:94
+#, elixir-autogen, elixir-format
+msgid "Too long"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:74
+#, elixir-autogen, elixir-format
+msgid "Too many submissions"
+msgstr ""
+
+#: lib/brando/forms/messages.ex:48
+#: lib/brando/forms/messages.ex:49
+#, elixir-autogen, elixir-format
+msgid "form messages"
+msgstr ""

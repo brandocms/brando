@@ -17,6 +17,7 @@ defmodule Brando.Content.Transfer.Portable do
     "file_id" => "file",
     "video_id" => "video",
     "gallery_id" => "gallery",
+    "form_id" => "form",
     "identifier_id" => "identifier",
     "thumbnail_id" => "image"
   }

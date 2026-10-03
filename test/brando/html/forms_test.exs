@@ -8,6 +8,11 @@ defmodule Brando.HTML.FormsTest do
   alias Brando.Forms.Form
   alias Brando.HTML.Forms
 
+  # The wording around a form is the site's (`Brando.Forms.Messages`), read from the database
+  setup do
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(BrandoIntegration.Repo)
+  end
+
   defp form do
     %Form{
       key: "contact",

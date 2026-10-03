@@ -1496,6 +1496,10 @@ defmodule Brando.Villain.Parser do
 
   defp process_var(%Brando.Content.Var{type: :gallery, key: key, gallery: gallery}), do: {key, gallery}
 
+  # The form chosen, by id: in the block editor the loaded `form` can lag a
+  # pick that only changed `form_id`. `{% form %}` resolves its language.
+  defp process_var(%{type: :form, key: key} = var), do: {key, chosen_form(var)}
+
   defp process_var(%{key: key, label: _, type: :boolean, value_boolean: value_boolean}),
     do: {key, value_boolean}
 
@@ -1503,6 +1507,10 @@ defmodule Brando.Villain.Parser do
     do: {key, link}
 
   defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
+
+  defp chosen_form(%{form_id: nil}), do: nil
+  defp chosen_form(%{form: %Brando.Forms.Form{id: id} = form, form_id: id}), do: form
+  defp chosen_form(%{form_id: id}), do: Brando.Repo.get(Brando.Forms.Form, id)
 
   @doc false
   def process_refs(nil), do: %{}

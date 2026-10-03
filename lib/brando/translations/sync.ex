@@ -52,8 +52,9 @@ defmodule Brando.Translations.Sync do
   @excluded_fields ~w(id language status publish_at inserted_at updated_at deleted_at
                       creator_id updated_by_id edited_at sequence)a
   @text_inputs [:text, :textarea, :rich_text]
-  @media_fks [:image_id, :video_id, :file_id, :gallery_id]
-  @media_assocs [:image, :video, :file, :gallery]
+  # A form var follows its source too; the form is shown in each page's language.
+  @media_fks [:image_id, :video_id, :file_id, :gallery_id, :form_id]
+  @media_assocs [:image, :video, :file, :gallery, :form]
   # What a source-controlled module variable takes from the source.
   @var_values [:value, :value_boolean, :link_text, :link_type, :link_target_blank]
 

@@ -49,7 +49,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     %{value: "image", label: gettext_noop("Image"), description: gettext_noop("A reusable image value")},
     %{value: "video", label: gettext_noop("Video"), description: gettext_noop("A reusable video value")},
     %{value: "file", label: gettext_noop("File"), description: gettext_noop("A reusable file value")},
-    %{value: "gallery", label: gettext_noop("Gallery"), description: gettext_noop("A reusable media collection")}
+    %{value: "gallery", label: gettext_noop("Gallery"), description: gettext_noop("A reusable media collection")},
+    %{value: "form", label: gettext_noop("Form"), description: gettext_noop("A form visitors fill in")}
   ]
 
   @format_options [

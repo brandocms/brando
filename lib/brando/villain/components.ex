@@ -356,6 +356,62 @@ defmodule Brando.Villain.Components do
     """
   end
 
+  # -- site_form component --
+
+  attr :form, :any, required: true, doc: "a `:form` var, or a form key"
+  attr :_heex_ctx, :map, default: nil
+  attr :rest, :global
+  slot :intro
+  slot :submit
+  slot :success
+  slot :failure
+
+  slot :section do
+    attr :key, :string
+  end
+
+  slot :field do
+    attr :key, :string
+    attr :type, :string
+  end
+
+  @doc """
+  Renders a form, like `{% form %}`: the published form with this key in the
+  entry's language, as a preview inside the admin. Slots are those of
+  `Brando.HTML.Forms.site_form/1`.
+
+      <.site_form form={@contact}>
+        <:submit>Send it</:submit>
+      </.site_form>
+  """
+  def site_form(assigns) do
+    ctx = assigns._heex_ctx || %{}
+    language = ctx[:liquex_context] && Liquex.Context.get(ctx.liquex_context, "language")
+
+    key =
+      case assigns.form do
+        %Brando.Forms.Form{key: key} -> key
+        key when is_binary(key) -> key
+        _ -> nil
+      end
+
+    case key && Brando.Forms.get_published_form(key, language) do
+      nil ->
+        ~H"<!-- form not published -->"
+
+      form ->
+        assigns
+        |> Map.drop([:_heex_ctx])
+        |> Map.merge(%{
+          form: form,
+          preview: ctx[:render_context] == :admin,
+          action: "/__brando/forms/#{form.key}",
+          csrf_token: Brando.Forms.Delivery.csrf_placeholder()
+        })
+        |> Brando.HTML.Forms.site_form()
+    end
+  end
+
   # -- fragment component --
 
   attr :parent_key, :string, required: true

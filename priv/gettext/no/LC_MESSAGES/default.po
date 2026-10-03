@@ -14100,6 +14100,177 @@ msgstr "påkr."
 msgid "use lowercase letters, digits and underscores, starting with a letter"
 msgstr "bruk små bokstaver, sifre og understrek, og start med en bokstav"
 
+#: lib/brando_admin/live/forms/submissions_live.ex:86
+#, elixir-autogen, elixir-format
+msgid "1 submission"
+msgid_plural "%{count} submissions"
+msgstr[0] "1 innsending"
+msgstr[1] "%{count} innsendinger"
+
+#: lib/brando_admin/components/form/module_props.ex:53
+#, elixir-autogen, elixir-format
+msgid "A form visitors fill in"
+msgstr "Et skjema besøkende fyller ut"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:92
+#, elixir-autogen, elixir-format
+msgid "All languages"
+msgstr "Alle språk"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:162
+#, elixir-autogen, elixir-format
+msgid "Delete this submission? This cannot be undone."
+msgstr "Slette denne innsendingen? Det kan ikke angres."
+
+#: lib/brando_admin/live/forms/submissions_live.ex:79
+#, elixir-autogen, elixir-format
+msgid "Export CSV"
+msgstr "Eksporter CSV"
+
+#: lib/brando_admin/components/form/input/blocks/render_var.ex:553
+#: lib/brando_admin/components/form/module_props.ex:53
+#, elixir-autogen, elixir-format
+msgid "Form"
+msgstr "Skjema"
+
+#: lib/brando/html/forms.ex:505
+#, elixir-autogen, elixir-format
+msgid "Leave this field empty"
+msgstr "La dette feltet stå tomt"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:87
+#, elixir-autogen, elixir-format
+msgid "Newest first. Open a submission to read all of it."
+msgstr "Nyeste først. Åpne en innsending for å lese hele."
+
+#: lib/brando_admin/live/forms/submissions_live.ex:102
+#, elixir-autogen, elixir-format
+msgid "No submissions yet"
+msgstr "Ingen innsendinger ennå"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:151
+#, elixir-autogen, elixir-format
+msgid "Page"
+msgstr "Side"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:110
+#, elixir-autogen, elixir-format
+msgid "Received"
+msgstr "Mottatt"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:132
+#, elixir-autogen, elixir-format
+msgid "Show more"
+msgstr "Vis flere"
+
+#: lib/brando_admin/components/form/input/blocks/render_var.ex:988
+#, elixir-autogen, elixir-format
+msgid "Shown in the page's language when the form has a translation."
+msgstr "Vises på sidens språk når skjemaet har en oversettelse."
+
+#: lib/brando_admin/live/forms/submissions_live.ex:139
+#, elixir-autogen, elixir-format
+msgid "Submission"
+msgstr "Innsending"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:192
+#, elixir-autogen, elixir-format
+msgid "Submission deleted"
+msgstr "Innsendingen er slettet"
+
+#: lib/brando/forms/form.ex:146
+#: lib/brando_admin/live/forms/submissions_live.ex:71
+#: lib/brando_admin/live/forms/submissions_live.ex:106
+#, elixir-autogen, elixir-format
+msgid "Submissions"
+msgstr "Innsendinger"
+
+#: lib/brando/forms/forms.ex:235
+#, elixir-autogen, elixir-format
+msgid "Thank you. Your message has been sent."
+msgstr "Takk! Meldingen din er sendt."
+
+#: lib/brando/forms/submission_controller.ex:63
+#, elixir-autogen, elixir-format
+msgid "The spam check failed. Reload the page and try again."
+msgstr "Spamsjekken feilet. Last inn siden på nytt og prøv igjen."
+
+#: lib/brando/forms/submission_controller.ex:59
+#, elixir-autogen, elixir-format
+msgid "Too many submissions. Wait a few minutes and try again."
+msgstr "For mange innsendinger. Vent noen minutter og prøv igjen."
+
+#: lib/brando/forms/form.ex:145
+#, elixir-autogen, elixir-format
+msgid "What visitors have sent with this form, in every language."
+msgstr "Det besøkende har sendt med dette skjemaet, på alle språk."
+
+#: lib/brando_admin/live/forms/submissions_live.ex:103
+#, elixir-autogen, elixir-format
+msgid "What visitors send with this form is listed here."
+msgstr "Det besøkende sender med dette skjemaet, vises her."
+
+#: lib/brando/html/forms.ex:502
+#, elixir-autogen, elixir-format
+msgid "Your message could not be sent. Check the form and try again."
+msgstr "Meldingen kunne ikke sendes. Sjekk skjemaet og prøv igjen."
+
+#: lib/brando/forms/messages.ex:133
+#, elixir-autogen, elixir-format
+msgid "Choose at least one."
+msgstr "Velg minst ett."
+
+#: lib/brando/forms/messages.ex:137
+#, elixir-autogen, elixir-format
+msgid "Choose one of the options."
+msgstr "Velg ett av alternativene."
+
+#: lib/brando/forms/messages.ex:136
+#, elixir-autogen, elixir-format
+msgid "Enter a date."
+msgstr "Skriv inn en dato."
+
+#: lib/brando/forms/messages.ex:135
+#, elixir-autogen, elixir-format
+msgid "Enter a number."
+msgstr "Skriv inn et tall."
+
+#: lib/brando/forms/messages.ex:134
+#, elixir-autogen, elixir-format
+msgid "Enter a valid email address."
+msgstr "Skriv inn en gyldig e-postadresse."
+
+#: lib/brando/forms/messages.ex:131
+#, elixir-autogen, elixir-format
+msgid "Fill in this field."
+msgstr "Fyll ut dette feltet."
+
+#: lib/brando_admin/live/forms/messages_live.ex:17
+#: lib/brando_admin/live/forms/messages_live.ex:25
+#, elixir-autogen, elixir-format
+msgid "Form messages"
+msgstr "Skjemameldinger"
+
+#: lib/brando_admin/live/forms/form_list_live.ex:18
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr "Meldinger"
+
+#: lib/brando/forms/messages.ex:138
+#, elixir-autogen, elixir-format
+msgid "This is too long."
+msgstr "Dette er for langt."
+
+#: lib/brando/forms/messages.ex:132
+#, elixir-autogen, elixir-format
+msgid "Tick this box to continue."
+msgstr "Kryss av her for å fortsette."
+
+#: lib/brando_admin/live/forms/messages_live.ex:28
+#, elixir-autogen, elixir-format
+msgid "What visitors read around every form, in each of the site's languages. A language left empty uses Brando's wording, in English where Brando has no translation."
+msgstr "Det besøkende leser rundt hvert skjema, på hvert av nettstedets språk. Et språk som står tomt, bruker Brandos formulering – på engelsk der Brando ikke har en oversettelse."
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Action"

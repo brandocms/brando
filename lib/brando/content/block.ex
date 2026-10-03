@@ -346,7 +346,7 @@ defmodule Brando.Content.Block do
   # the repo instead of returning an invalid changeset — which in the editor
   # means the LiveView dies and takes every unsaved change with it. That is the
   # same crash-loses-your-work failure this audit's A2 fixed.
-  @media_fks [:image_id, :video_id, :file_id, :gallery_id]
+  @media_fks [:image_id, :video_id, :file_id, :gallery_id, :form_id]
 
   defp validate_media_fks(changeset) do
     Enum.reduce(@media_fks, changeset, fn fk, acc ->
