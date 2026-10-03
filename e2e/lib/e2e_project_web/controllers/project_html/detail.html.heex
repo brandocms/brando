@@ -1,13 +1,18 @@
 <main id="content">
   <div class="project-header">
-    <h2><%= @entry.title %></h2>
-    <.picture :if={@entry.listing_image} src={@entry.listing_image} opts={[
-      prefix: media_url(),
-      lazyload: true,
-      srcset: {E2eProject.Projects.Project, :listing_image},
-      placeholder: :dominant_color,
-      moonwalk: true
-    ]} />
+    <h2><.editable_field entry={@entry} field={:title} /></h2>
+    <.editable entry={@entry} field={:listing_image}>
+      <.picture :if={@entry.listing_image} src={@entry.listing_image} opts={[
+        prefix: media_url(),
+        lazyload: true,
+        srcset: {E2eProject.Projects.Project, :listing_image},
+        placeholder: :dominant_color,
+        moonwalk: true
+      ]} />
+    </.editable>
+    <div :if={@entry.introduction} class="project-introduction">
+      <.editable_field entry={@entry} field={:introduction} />
+    </div>
   </div>
   <%= Phoenix.HTML.raw(@entry.rendered_blocks) %>
 </main>

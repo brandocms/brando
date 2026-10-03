@@ -7,6 +7,7 @@ defmodule Brando.Villain do
   lives in `Brando.Content.Blocks`.
   """
   alias Brando.Blueprint.URL
+  alias Brando.FrontendEdit
   alias Brando.Media.URL, as: MediaURL
   alias Brando.Pages.FragmentQuery
   alias Brando.RuntimeConfig
@@ -58,7 +59,11 @@ defmodule Brando.Villain do
   def parse(nil, _, _), do: ""
 
   def parse(entry_blocks_list, entry, opts) do
-    RenderScope.run(fn -> do_parse(entry_blocks_list, entry, opts) end)
+    annotate? = opts[:annotate_blocks] == true
+
+    RenderScope.run(fn ->
+      FrontendEdit.annotation_scope(annotate?, fn -> do_parse(entry_blocks_list, entry, opts) end)
+    end)
   end
 
   defp do_parse(entry_blocks_list, entry, opts) do
@@ -120,7 +125,8 @@ defmodule Brando.Villain do
   def render_block(%{marked_as_deleted: true}, _entry, _opts), do: ""
 
   def render_block(%{__struct__: block_module} = block, entry, opts) when block_module == @block_module do
-    RenderScope.run(fn -> do_render_block(block, entry, opts) end)
+    annotate? = opts[:annotate_blocks] == true
+    RenderScope.run(fn -> FrontendEdit.annotation_scope(annotate?, fn -> do_render_block(block, entry, opts) end) end)
   end
 
   def render_block(%{block: block} = _entry_block, entry, opts) do

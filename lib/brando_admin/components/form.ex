@@ -3197,6 +3197,8 @@ defmodule BrandoAdmin.Components.Form do
           request_select_options_update(socket)
         end
 
+        if rest != ["__force_change"], do: FrontendEditor.field_changed(socket)
+
         socket
         |> maybe_invalidate_live_preview_assign(rest, :string_path)
         |> maybe_fetch_root_blocks(:live_preview_update, 0)
@@ -3606,7 +3608,9 @@ defmodule BrandoAdmin.Components.Form do
         require Logger
         Logger.error(inspect(changeset, pretty: true))
         send(self(), {:progress_popup, "Saving entry failed..."})
-        if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :invalid)
+
+        if FrontendEditor.frontend?(socket),
+          do: FrontendEditor.save_failed(socket, {:invalid, changeset |> traverse_errors(& &1) |> Map.keys()})
 
         {:noreply,
          socket

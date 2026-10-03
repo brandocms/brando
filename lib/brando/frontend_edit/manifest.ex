@@ -5,7 +5,8 @@ defmodule Brando.FrontendEdit.Manifest do
 
       %{
         owners: %{"Brando.Pages.Page:12:blocks" => %{label: "About", kind: "Page", editable: true, ...}},
-        blocks: %{"uid" => %{target: "uid", owner: "Brando.Pages.Page:12:blocks", label: "Text"}}
+        blocks: %{"uid" => %{target: "uid", owner: "Brando.Pages.Page:12:blocks", label: "Text"}},
+        fields: %{"Brando.Pages.Page:12:title" => %{label: "Title", entry: "About", editable: true, ...}}
       }
 
   `blocks` maps every marked block to the block a click on it opens (see
@@ -18,14 +19,20 @@ defmodule Brando.FrontendEdit.Manifest do
 
   alias Brando.Authorization.Boundary
   alias Brando.FrontendEdit
+  alias Brando.FrontendEdit.Fields
   alias Brando.FrontendEdit.Targets
   alias Brando.Type.I18nString
 
   @field_marker ~r/<!-- \[\+:F<([^>]+)>\] -->/
   @block_marker ~r/<!-- \[\+:B<([^>]+)>\] -->/
+  @entry_field_marker ~r/<!-- \[\+:[EW]<([^>]+)>\] -->/
 
   @doc "The field keys marked in `html`, in order of appearance."
   def field_keys(html), do: @field_marker |> Regex.scan(html, capture: :all_but_first) |> List.flatten() |> Enum.uniq()
+
+  @doc "The entry field keys marked in `html` (`editable_field`, `editable`), in order."
+  def entry_field_keys(html),
+    do: @entry_field_marker |> Regex.scan(html, capture: :all_but_first) |> List.flatten() |> Enum.uniq()
 
   @doc "The block uids marked in `html`, in order of appearance."
   def block_uids(html), do: @block_marker |> Regex.scan(html, capture: :all_but_first) |> List.flatten() |> Enum.uniq()
@@ -65,8 +72,37 @@ defmodule Brando.FrontendEdit.Manifest do
 
     %{
       owners: Map.new(owners, fn {key, owner} -> {key, describe_owner(owner, user)} end),
-      blocks: blocks
+      blocks: blocks,
+      fields: entry_fields(html, user)
     }
+  end
+
+  # Entry fields marked by `editable_field`/`editable`: what the field is
+  # called, whose it is, and whether `user` may edit it here.
+  defp entry_fields(html, user) do
+    html
+    |> entry_field_keys()
+    |> Enum.flat_map(fn key ->
+      case Fields.parse_key(key) do
+        {:ok, {schema, id, field} = owner} ->
+          entry = load_entry(schema, id)
+
+          [
+            {key,
+             %{
+               label: Fields.label(schema, field),
+               kind: Brando.Blueprint.get_singular(schema),
+               entry: entry && title(schema, entry),
+               editable: not is_nil(entry) and editable?(owner, user),
+               shared: schema == Brando.Pages.Fragment
+             }}
+          ]
+
+        :error ->
+          []
+      end
+    end)
+    |> Map.new()
   end
 
   # root block id => field key, read from each owner's join table.
@@ -104,9 +140,10 @@ defmodule Brando.FrontendEdit.Manifest do
       Boundary.authorize_record(user, :update, schema, id) == :ok
   end
 
+  # A block field, or an input, on the schema's default admin form.
   defp form_field?(schema, field) do
     case function_exported?(schema, :__form__, 1) && schema.__form__(:default) do
-      %{blocks: blocks} -> Enum.any?(blocks, &(&1.name == field))
+      %{blocks: blocks} -> Enum.any?(blocks, &(&1.name == field)) or not is_nil(Fields.input(schema, field))
       _ -> false
     end
   end

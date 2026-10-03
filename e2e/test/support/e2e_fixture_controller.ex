@@ -165,6 +165,7 @@ defmodule E2EFixtureController do
   # block, a container holding a text block, and an embedded shared fragment.
   # Rendered as a save would, so the page serves stored block HTML.
   defp create_frontend_edit_page do
+    import Ecto.Query, only: [from: 2]
     user = get_admin_user()
 
     module =
@@ -238,7 +239,7 @@ defmodule E2EFixtureController do
         uri: "frontend-edit",
         language: :en,
         status: :published,
-        template: "default.html",
+        template: "frontend_edit.html",
         creator_id: user.id
       })
 
@@ -247,6 +248,36 @@ defmodule E2EFixtureController do
     container = insert_block.(%{"type" => "container", "source" => to_string(source)})
     _child = block.(source, "Inside the section", container)
     embed = insert_block.(%{"type" => "fragment", "fragment_id" => fragment.id, "source" => to_string(source)})
+
+    # A block printing the page's title with the Liquid tag.
+    title_module =
+      Brando.Repo.insert!(%Brando.Content.Module{
+        uid: Ecto.UUID.generate(),
+        type: :liquid,
+        name: %{"en" => "Page title", "no" => "Sidetittel"},
+        class: "frontend-edit-title",
+        namespace: %{"en" => "Content"},
+        help_text: %{},
+        code: ~s(<p class="fe-block-title">On {% editable_field entry.title %}</p>),
+        refs: [],
+        vars: []
+      })
+
+    title_block =
+      insert_block.(%{"type" => "module", "module_id" => title_module.id, "source" => to_string(source)})
+
+    # A listing of selected projects: a datasource block with Alpha selected.
+    featured_module = Brando.Repo.get_by!(Brando.Content.Module, class: "featured-projects")
+    featured = insert_block.(%{"type" => "module", "module_id" => featured_module.id, "source" => to_string(source)})
+    alpha = Brando.Repo.get_by!(E2eProject.Projects.Project, slug: "test-project-alpha")
+
+    alpha_identifier =
+      Brando.Repo.one!(
+        from i in Brando.Content.Identifier,
+          where: i.entry_id == ^alpha.id and i.schema == ^to_string(E2eProject.Projects.Project)
+      )
+
+    Brando.Repo.insert!(%Brando.Content.BlockIdentifier{block_id: featured.id, identifier_id: alpha_identifier.id, sequence: 0})
 
     # A picture block without an image yet, from the seeded live preview module.
     picture_module = Brando.Repo.get_by!(Brando.Content.Module, name: %{"en" => "Single Image with Caption", "no" => "Enkelt bilde med bildetekst"})
@@ -261,13 +292,30 @@ defmodule E2EFixtureController do
       var |> Ecto.Changeset.change(value: "A picture caption") |> Brando.Repo.update!()
     end
 
-    [intro, container, embed, picture]
+    [intro, container, embed, picture, title_block, featured]
     |> Enum.with_index()
     |> Enum.each(fn {root, sequence} ->
       Brando.Repo.insert!(struct(source, %{entry_id: page.id, block_id: root.id, sequence: sequence}))
     end)
 
     {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+
+    # A project whose template marks its title, introduction and listing
+    # image as editable fields (`project_html/detail.html.heex`).
+    {_filename, image} = create_directory_avatar()
+    image = image |> Ecto.Changeset.change(focal: %Brando.Images.Focal{x: 50, y: 50}) |> Brando.Repo.update!()
+
+    client = Brando.Repo.insert!(%E2eProject.Projects.Client{name: "Alpha client", slug: "alpha-client"})
+
+    E2eProject.Projects.Project
+    |> Brando.Repo.get_by!(slug: "test-project-alpha")
+    |> Ecto.Changeset.change(
+      introduction: "<p>An introduction to Alpha.</p>",
+      listing_image_id: image.id,
+      client_id: client.id
+    )
+    |> Brando.Repo.update!()
+
     user
   end
 

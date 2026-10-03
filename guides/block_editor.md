@@ -111,6 +111,10 @@ Villain imports these HEEx components into module templates:
 - `<.route ... />`, `<.route_i18n ... />`, `<.fragment ... />` and `<.t ... />`
   provide the corresponding Villain helpers.
 - `<.content />` inserts rendered children in multi modules and containers.
+- `<.editable_field entry={@entry} field={:title} />` and `<.editable …>`
+  make an entry field editable in [frontend edit mode](frontend_edit.md#entry-fields);
+  in Liquex, `{% editable_field entry.title %}` and
+  `{% editable entry.cover %}…{% endeditable %}`.
 
 HEEx uses normal Elixir expressions, comprehensions and conditionals in place
 of Liquex filters and control-flow tags. Parent and child modules may use

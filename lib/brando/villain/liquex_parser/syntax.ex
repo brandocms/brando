@@ -134,6 +134,15 @@ defmodule Brando.Villain.LiquexParser.Syntax do
     |> ignore(Tag.close_tag())
   end
 
+  @doc "Builds the parser combinator for the `editable_field` tag: `{% editable_field entry.title %}`."
+  def editable_field, do: tag_with_argument("editable_field", :field)
+
+  @doc "Builds the parser combinator for the `editable` tag: `{% editable entry.cover %}`."
+  def editable, do: tag_with_argument("editable", :field)
+
+  @doc "Builds the parser combinator for the `endeditable` tag."
+  def end_editable, do: empty_tag("endeditable")
+
   @doc "Builds the parser combinator for the `datasource` tag."
   def datasource, do: empty_tag("datasource")
 

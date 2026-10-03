@@ -6,7 +6,7 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
   alias Brando.FrontendEdit
   alias Brando.Pages.Page
 
-  @form "frontend_edit_form"
+  @form "page_form"
 
   setup %{current_user: user} do
     previous = Application.get_env(:brando, FrontendEdit)
@@ -21,7 +21,7 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
     page_with_blocks(user)
   end
 
-  defp editor(conn, uid), do: live_form(conn, "/admin/frontend-edit?uid=#{uid}", @form)
+  defp editor(conn, uid, form \\ @form), do: live_form(conn, "/admin/frontend-edit?uid=#{uid}", form)
 
   defp save(view) do
     view |> form("##{@form}_form") |> render_submit()
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
 
   test "a fragment says it is shared", %{conn: conn, current_user: user, module: module} do
     %{block: block} = fragment_with_block(user, module)
-    {view, _html} = editor(conn, block.uid)
+    {view, _html} = editor(conn, block.uid, "fragment_form")
     assert has_element?(view, "[data-testid=frontend-edit-shared]")
   end
 
@@ -152,5 +152,70 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
     [href] = view |> render() |> Floki.parse_document!() |> Floki.attribute(".frontend-editor-open", "href")
     [_, id] = Regex.run(~r{/admin/pages/update/(\d+)}, href)
     {id}
+  end
+
+  describe "an entry field" do
+    defp field_editor(conn, page),
+      do: live_form(conn, "/admin/frontend-edit?field=#{Brando.FrontendEdit.Fields.key(Page, page.id, :title)}", @form)
+
+    test "opens alone, without the entry's blocks", %{conn: conn, page: page, intro: intro} do
+      {view, html} = field_editor(conn, page)
+
+      assert has_element?(view, ".frontend-editor-heading h1", "Title")
+      assert has_element?(view, "##{@form}_form input[name='page[title]']")
+      refute has_element?(view, "##{@form}_form input[name='page[uri]']")
+      refute has_element?(view, "#base-#{intro.uid}")
+      assert html =~ "?field=title"
+    end
+
+    test "shows the value on the page as it changes, and saves only it", %{conn: conn, page: page} do
+      {view, _html} = field_editor(conn, page)
+      key = Brando.FrontendEdit.Fields.key(Page, page.id, :title)
+
+      view
+      |> element("##{@form}_form")
+      |> render_change(%{"page" => %{"title" => "Fish & chips"}, "_target" => ["page", "title"]})
+
+      assert_push_event(view, "b:frontend-edit", %{type: "dirty", dirty: true})
+      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, html: "Fish &amp; chips"})
+
+      view |> form("##{@form}_form", %{"page" => %{"title" => "Fish & chips"}}) |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("##{@form}_form", %{"page" => %{"title" => "Fish & chips"}}) |> render_submit()
+      assert_push_event(view, "b:frontend-edit", %{type: "saved"}, 3_000)
+
+      saved = Repo.get!(Page, page.id)
+      assert saved.title == "Fish & chips"
+      assert saved.uri == page.uri
+      assert saved.rendered_blocks =~ "Hello from the intro"
+    end
+
+    test "a block of the same entry opens in the same editor", %{conn: conn, page: page, intro: intro} do
+      {view, _html} = field_editor(conn, page)
+      pid = view.pid
+
+      view |> element("#frontend-editor") |> render_hook("select", %{"uid" => intro.uid})
+      assert_patch(view, "/admin/frontend-edit?uid=#{intro.uid}")
+      assert view.pid == pid
+      await_selector(view, "#base-#{intro.uid}")
+      refute has_element?(view, "##{@form}_form input[name='page[title]']")
+    end
+
+    @tag :capture_log
+    test "an error in a field not shown here points to the full editor", %{conn: conn, page: page} do
+      page |> Ecto.Changeset.change(uri: nil) |> Repo.update!()
+      {view, _html} = field_editor(conn, page)
+
+      view |> form("##{@form}_form", %{"page" => %{"title" => "Valid"}}) |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("##{@form}_form", %{"page" => %{"title" => "Valid"}}) |> render_submit()
+      assert_push_event(view, "b:frontend-edit", %{type: "save_failed"}, 3_000)
+      assert has_element?(view, "[data-testid=frontend-edit-invalid] a[href='/admin/pages/update/#{page.id}']")
+    end
+
+    test "an unknown field says so", %{conn: conn, page: page} do
+      {:ok, view, _html} = live(conn, "/admin/frontend-edit?field=Brando.Pages.Page:#{page.id}:nope")
+      assert has_element?(view, ".frontend-editor.is-unavailable")
+    end
   end
 end

@@ -25,6 +25,9 @@ defmodule Brando.Villain.LiquexParser.Builder do
         {tag_module.("Hide"), Brando.Villain.LiquexParser.Syntax.hide()},
         {tag_module.("EndHide"), Brando.Villain.LiquexParser.Syntax.end_hide()},
         {tag_module.("T"), Brando.Villain.LiquexParser.Syntax.translation()},
+        {tag_module.("EditableField"), Brando.Villain.LiquexParser.Syntax.editable_field()},
+        {tag_module.("Editable"), Brando.Villain.LiquexParser.Syntax.editable()},
+        {tag_module.("EndEditable"), Brando.Villain.LiquexParser.Syntax.end_editable()},
         {tag_module.("Datasource"), Brando.Villain.LiquexParser.Syntax.datasource()},
         {tag_module.("EndDatasource"), Brando.Villain.LiquexParser.Syntax.end_datasource()}
       ]

@@ -450,7 +450,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   the full editor, which scrolls to it. Switch it on with
   `config :brando, Brando.FrontendEdit, enabled: true` and
   `plug Brando.Plug.FrontendEdit` in the browser pipeline. Visitors and caches
-  never see the edit-mode markup. See the
+  never see the edit-mode markup. Entry fields become editable where a
+  template marks them: `<.editable_field entry={@page} field={:title} />` and
+  `<.editable …>` in HEEx, `{% editable_field entry.title %}` and
+  `{% editable … %}…{% endeditable %}` in Liquex modules; the sidebar then
+  shows that field's input alone, and the page shows the value as it is typed.
+  Datasource selections are edited in place like any block. See the
   [Frontend edit guide](guides/frontend_edit.md).
 
 - **Brando sends email.** Brando now sends its own email through the

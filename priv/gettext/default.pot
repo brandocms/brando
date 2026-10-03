@@ -14849,3 +14849,13 @@ msgstr[1] ""
 msgctxt "frontend edit"
 msgid "Edit page"
 msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved: the entry has errors in fields not shown here."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fix them in the full editor"
+msgstr ""
