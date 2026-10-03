@@ -65,7 +65,15 @@ defmodule Brando.Upload do
     with {:ok, ops} <- Images.Operations.create(image, cfg, user),
          {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
       image
-      |> Images.update_image(%{sizes: result.sizes, formats: result.formats, status: :processed}, user)
+      |> Images.update_image(
+        %{
+          sizes: result.sizes,
+          formats: result.formats,
+          status: :processed,
+          config_fingerprint: ImageConfig.fingerprint(cfg)
+        },
+        user
+      )
       |> run_completed_callback(cfg, user)
     end
   end

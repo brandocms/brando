@@ -14,6 +14,14 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
 
+- **Image configs with a mistyped size key or a `srcset` naming a missing
+  size no longer compile.** Brando used to ignore unknown keys in a size such
+  as `"crp" => true`, and a `srcset` naming a size `sizes` doesn't have only
+  warned at render. Both now raise a `BlueprintError` naming the field and the
+  size; fix the config it points to. A config that replaces `sizes` without
+  its own `srcset` no longer inherits a default `srcset` naming sizes it lacks:
+  that srcset is dropped instead of rendering broken URLs.
+
 - **Video uploads are opt-in.** `default_video_upload_strategy` now defaults
   to `:none`, and a video field without its own `upload_strategy` follows it
   instead of uploading to the server. A site that never set it loses its
@@ -439,6 +447,20 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   Not yet done: associating a field's `help-text` instructions with its control.
 
 #### Features
+
+- **Image sizes are checked when a Blueprint compiles, can start from a
+  preset, and only changed images need recreating** (#1322). A size entry with
+  an unknown key (`"crp"`, `"qualty"`), an unreadable geometry, or a cropped
+  single-dimension size without a `"ratio"` now fails the build, and so does a
+  `srcset` naming a size that isn't in `sizes`; these were ignored or warned
+  only at render. `%Brando.Images.Size{}` and atom-keyed sizes are accepted and
+  stored as the usual string-keyed maps. `sizes: :standard` gives Brando's
+  micro…xlarge list and `sizes: {:standard, %{"hero" => …}}` adds to it,
+  instead of copying the list. Each processed image stores a fingerprint of the
+  sizes and formats it was made with, and Utilities counts the images whose
+  config has changed and offers **Recreate changed images** next to
+  **Recreate image sizes**. Run `mix brando.gen.migrations` for `brando_196`.
+  Images processed before it have no fingerprint and count as changed once.
 
 - **Frontend edit mode.** Signed-in admins can edit blocks on the published
   site: an **Edit page** button switches edit mode on, a click on a block opens

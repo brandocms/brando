@@ -26,14 +26,8 @@ config :brando, Brando.Images,
     default_size: :xlarge,
     random_filename: true,
     size_limit: 10_240_000,
-    sizes: %{
-      "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
-      "thumb" => %{"size" => "400x400>", "quality" => 75, "crop" => true},
-      "small" => %{"size" => "700", "quality" => 75},
-      "medium" => %{"size" => "1100", "quality" => 75},
-      "large" => %{"size" => "1700", "quality" => 75},
-      "xlarge" => %{"size" => "2100", "quality" => 75}
-    },
+    # micro, thumb, small, medium, large and xlarge; see `Brando.Images.Size`
+    sizes: :standard,
     srcset: %{
       default: [
         {"small", "700w"},

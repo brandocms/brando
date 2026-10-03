@@ -13,6 +13,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
     @moduledoc false
     def get_dominant_color("image/unreadable.jpg"), do: nil
     def get_dominant_color(_path), do: "#123456"
+    defdelegate process_image(conversion_parameters), to: Brando.Images.Processor.Vix
   end
 
   setup do
@@ -49,6 +50,54 @@ defmodule Brando.Images.ImageMaintenanceTest do
       refute deleted.id in queued_ids
       refute unconfigured.id in queued_ids
     end)
+  end
+
+  test "recreating changed sizes queues only images made with another config", %{user: user} do
+    current = Processing.current_fingerprint("default")
+    assert is_binary(current)
+
+    # Fixtures (the user's avatar) may add images; mark them all as current.
+    for target <- Repo.all(from i in Image, where: not is_nil(i.config_target), distinct: true, select: i.config_target) do
+      Repo.update_all(from(i in Image, where: i.config_target == ^target),
+        set: [config_fingerprint: Processing.current_fingerprint(target)]
+      )
+    end
+
+    unchanged = Factory.insert(:image, config_fingerprint: current)
+    changed = Factory.insert(:image, config_fingerprint: "0123456789ab")
+    # Processed before fingerprints were stored.
+    unknown = Factory.insert(:image, config_fingerprint: nil)
+    # A target that no longer resolves has nothing to recreate with.
+    removed = Factory.insert(:image, config_target: "image:Brando.Pages.Page:removed_field", config_fingerprint: nil)
+
+    assert Processing.current_fingerprint(removed.config_target) == nil
+    assert Processing.count_changed_images() == 2
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _} = Processing.recreate_sizes_for_changed_images(user)
+      # Either recreate run blocks the other.
+      assert {:error, :already_running} = Processing.recreate_sizes_for_images(user)
+
+      Oban.drain_queue(queue: :default, with_recursion: true)
+
+      queued_ids = Enum.map(all_enqueued(worker: Worker.ImageProcessor), & &1.args["image_id"])
+      assert Enum.sort(queued_ids) == Enum.sort([changed.id, unknown.id])
+      refute unchanged.id in queued_ids
+      refute removed.id in queued_ids
+    end)
+  end
+
+  test "processing stores the fingerprint of the config it used", %{user: user} do
+    # A fixture original test_helper copies into the media path.
+    image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg", config_fingerprint: nil, status: :unprocessed)
+
+    # Oban runs inline here, so this processes the image.
+    assert {:ok, _job} = Processing.queue_processing(image, user)
+
+    image = Repo.get!(Image, image.id)
+    assert image.status == :processed
+    assert image.config_fingerprint == Processing.current_fingerprint("default")
+    refute Processing.changed_config?(image, Processing.current_fingerprint("default"))
   end
 
   test "recalculating colors updates readable images and keeps the rest", %{user: user} do

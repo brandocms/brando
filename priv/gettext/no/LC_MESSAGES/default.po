@@ -13714,8 +13714,8 @@ msgstr "Bildestørrelser"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreate the sizes and formats of every image from its original, using the current image settings."
-msgstr "Lag størrelser og formater for alle bilder på nytt fra originalen, med gjeldende bildeinnstillinger."
+msgid "Recreate the sizes and formats of images from their originals, using the current image settings."
+msgstr "Lag størrelser og formater for bilder på nytt fra originalene, med gjeldende bildeinnstillinger."
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -13741,6 +13741,38 @@ msgstr "Lag størrelser på nytt"
 #, elixir-autogen, elixir-format
 msgid "Recreate image sizes"
 msgstr "Lag bildestørrelser på nytt"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate changed images"
+msgstr "Lag endrede bilder på nytt"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate the sizes of changed images?"
+msgstr "Lage størrelsene for endrede bilder på nytt?"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only images made with older settings are recreated. This runs in the background."
+msgstr "Bare bilder laget med eldre innstillinger lages på nytt. Dette kjører i bakgrunnen."
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreating changed image sizes in the background."
+msgstr "Lager størrelser for endrede bilder på nytt i bakgrunnen."
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "All images match their settings"
+msgstr "Alle bilder samsvarer med innstillingene sine"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image was made with older settings"
+msgid_plural "%{count} images were made with older settings"
+msgstr[0] "%{count} bilde ble laget med eldre innstillinger"
+msgstr[1] "%{count} bilder ble laget med eldre innstillinger"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
