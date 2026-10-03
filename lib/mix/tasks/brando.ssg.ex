@@ -45,6 +45,8 @@ defmodule Mix.Tasks.Brando.Ssg do
   @impl Mix.Task
   def run(args) do
     {opts, _argv} = OptionParser.parse!(args, strict: @switches)
+    # The build requests every page from the running endpoint (see
+    # `Brando.SSG`'s base URL), so unlike the other tasks this one must listen.
     Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
 

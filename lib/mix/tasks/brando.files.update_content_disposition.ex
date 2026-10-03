@@ -42,7 +42,6 @@ defmodule Mix.Tasks.Brando.Files.UpdateContentDisposition do
         _ -> Mix.raise("Usage: mix brando.files.update_content_disposition \"file:MyApp.Schema:field\"")
       end
 
-    Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
 
     Mix.Tasks.Run.run([])
