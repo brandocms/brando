@@ -9,7 +9,7 @@ linked to the others as a [synchronized translation](i18n.md): the source form
 decides which fields there are, and each translation words them in its own
 language.
 
-Run `mix brando.gen.migrations` for `brando_193` and `brando_194` to add the
+Run `mix brando.gen.migrations` for `brando_194` and `brando_195` to add the
 tables.
 
 ## Build a form

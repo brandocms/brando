@@ -12,7 +12,8 @@ defmodule Brando.Worker.EntryPublisher do
 
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
-  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+  def perform(%Oban.Job{} = job),
+    do: TenantJob.run(job, fn -> Brando.Activity.with_source(:scheduler, fn -> perform_tenant(job) end) end)
 
   defp perform_tenant(
          %Oban.Job{

@@ -23,6 +23,15 @@ defmodule Brando.Forms.RateLimit do
     if visitor <= config[:per_visitor] and form <= config[:per_form], do: :ok, else: {:error, :rate_limited}
   end
 
+  @doc false
+  # Forgets every count, for tests. Clearing the whole cache would also drop
+  # the warm caches other tests read without a database connection.
+  def reset do
+    {:ok, keys} = Cachex.keys(:cache)
+    for key <- keys, is_tuple(key) and elem(key, 0) == :form_rate, do: Cachex.del(:cache, key)
+    :ok
+  end
+
   defp count(key, ttl) do
     {_, count} = Cachex.incr(:cache, key, 1)
     if count == 1, do: Cachex.expire(:cache, key, ttl * 2)

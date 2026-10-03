@@ -92,6 +92,8 @@ defmodule Brando.SoftDelete.Query do
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
     Repo.transaction(fn ->
+      purged = if Brando.Activity.logged?(schema), do: Repo.all(query), else: []
+
       if schema.__trait__(Brando.Trait.Revisioned) do
         query
         |> select([t], t.id)
@@ -99,7 +101,9 @@ defmodule Brando.SoftDelete.Query do
         |> Enum.each(&Brando.Revisions.delete_entry_revisions(schema, &1))
       end
 
-      Repo.delete_all(query)
+      result = Repo.delete_all(query)
+      Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))
+      result
     end)
   end
 end

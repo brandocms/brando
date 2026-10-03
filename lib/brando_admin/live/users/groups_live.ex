@@ -1067,6 +1067,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :frontend_assets}), do: gettext("Frontend assets")
   defp resource_label(%{subject: :shared_library}), do: gettext("Shared content library")
   defp resource_label(%{subject: :utilities}), do: gettext("Utilities & caches")
+  defp resource_label(%{subject: :activity}), do: gettext("Activity")
   defp resource_label(permission), do: permission.label
 
   defp activity_label("group.created"), do: gettext("Group created")

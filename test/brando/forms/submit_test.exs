@@ -7,7 +7,7 @@ defmodule Brando.Forms.SubmitTest do
   alias Brando.Forms.Validation
 
   setup do
-    Cachex.clear(:cache)
+    Brando.Forms.RateLimit.reset()
     previous = Application.get_env(:brando, Brando.Forms)
     on_exit(fn -> Application.put_env(:brando, Brando.Forms, previous || []) end)
 

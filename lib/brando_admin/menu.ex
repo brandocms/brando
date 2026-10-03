@@ -292,6 +292,7 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Scheduled publishing"),
                     url: "/admin/config/scheduled_publishing"
                   },
+                  activity_menu_item(current_user),
                   if(Brando.Authorization.enabled?() or match?(%{role: :superuser}, current_user),
                     do: %{name: gettext("Permissions"), url: "/admin/groups"}
                   ),
@@ -436,6 +437,13 @@ defmodule BrandoAdmin.Menu do
     if Brando.Authorization.enabled?() or (user && user.role == :superuser) do
       if Tenant.mode() == :multi, do: %{name: gettext("Sites"), url: "/admin/sites"}
     end
+  end
+
+  # Without group authorization the log is for administrators; with it, the
+  # `brando.activity.read` permission decides (`filter_authorized/2`).
+  defp activity_menu_item(user) do
+    if Brando.Authorization.enabled?() or match?(%{role: role} when role in [:admin, :superuser], user),
+      do: %{name: gettext("Activity"), url: "/admin/config/activity"}
   end
 
   defp environments_menu_item do

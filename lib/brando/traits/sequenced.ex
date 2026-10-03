@@ -27,7 +27,8 @@ defmodule Brando.Trait.Sequenced do
   def generate_code(module, config), do: Compiler.generate_code(module, config)
 
   @doc """
-  Sequences ids or composite keys
+  Sequences ids or composite keys. The activity log credits `opts[:user]`,
+  else `actor`, else the current authorization scope.
 
   With composite keys:
 
@@ -38,7 +39,31 @@ defmodule Brando.Trait.Sequenced do
       sequence %{module, "ids" => [3, 5, 1]}
 
   """
-  def sequence(module, params, actor \\ nil) do
+  def sequence(module, params, actor \\ nil, opts \\ []) do
+    result = do_sequence(module, params, actor)
+    by = Keyword.get(opts, :user) || actor || Brando.Authorization.Boundary.current_scope()
+    record_reorder(result, module, params, by)
+    result
+  end
+
+  # One event for the whole reorder, naming the entry now first.
+  defp record_reorder({:error, _}, _module, _params, _actor), do: :ok
+
+  defp record_reorder(_result, module, params, actor) do
+    keys = Map.get(params, "ids") || Enum.map(Map.get(params, "composite_keys") || [], &Map.get(&1, "id"))
+
+    first =
+      case keys do
+        [first | _] -> Brando.Repo.one(from(e in module, where: e.id == ^first))
+        _ -> nil
+      end
+
+    Brando.Activity.reordered(module, length(keys), first, actor)
+  rescue
+    _ -> :ok
+  end
+
+  defp do_sequence(module, params, actor) do
     if Brando.Authorization.enabled?() do
       actor = actor || Brando.Authorization.Boundary.current_scope()
 

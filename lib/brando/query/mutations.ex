@@ -3,6 +3,7 @@ defmodule Brando.Query.Mutations do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Activity
   alias Brando.Content
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Datasource
@@ -48,7 +49,8 @@ defmodule Brando.Query.Mutations do
         # Revision capture must happen before another save can replace the
         # persisted state this mutation represents.
         revisioned? = module.__trait__(Trait.Revisioned)
-        {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
+        {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
+        Activity.saved(changeset, entry, user, revision_number(revision))
         maybe_notify(entry, "created", user, notify?)
         maybe_broadcast(module, entry, :created, pubsub?)
 
@@ -85,7 +87,8 @@ defmodule Brando.Query.Mutations do
 
       # Capture the exact state from this mutation synchronously.
       revisioned? = module.__trait__(Trait.Revisioned)
-      {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
+      {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
+      Activity.saved(changeset, entry, user, revision_number(revision))
       maybe_notify(entry, "created", user, notify?)
       maybe_broadcast(module, entry, :created, pubsub?)
 
@@ -132,7 +135,8 @@ defmodule Brando.Query.Mutations do
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
-        {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
+        {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
+        Activity.saved(changeset, entry, user, revision_number(revision))
         maybe_notify(entry, "updated", user, notify?)
 
         callback.(entry)
@@ -173,7 +177,8 @@ defmodule Brando.Query.Mutations do
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
-        {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
+        {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
+        Activity.saved(changeset, entry, user, revision_number(revision))
         maybe_notify(entry, "updated", user, notify?)
         maybe_broadcast(module, entry, :updated, pubsub?)
 
@@ -236,7 +241,10 @@ defmodule Brando.Query.Mutations do
 
       with :ok <- Boundary.change(user, :create, Ecto.Changeset.change(cloned_entry)),
            {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
-           do: Brando.Repo.insert(cloned_entry)
+           {:ok, copy} <- Brando.Repo.insert(cloned_entry) do
+        Activity.duplicated(copy, entry, user)
+        {:ok, copy}
+      end
     end
   end
 
@@ -591,6 +599,8 @@ defmodule Brando.Query.Mutations do
         Revisions.delete_entry_revisions(module, entry.id)
       end
 
+      Activity.deleted(entry, user, soft_deletable?)
+
       maybe_notify(entry, "deleted", user, true)
       maybe_broadcast(module, entry, :deleted, true)
 
@@ -625,6 +635,9 @@ defmodule Brando.Query.Mutations do
       {:ok, revision}
     end
   end
+
+  defp revision_number(%{revision: number}), do: number
+  defp revision_number(_), do: nil
 
   defp maybe_notify(_entry, _action, _user, false), do: :ok
 

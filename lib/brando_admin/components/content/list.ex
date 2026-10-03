@@ -202,12 +202,12 @@ defmodule BrandoAdmin.Components.Content.List do
         relation =
           Brando.Blueprint.Relations.__relation__(schema, String.to_existing_atom(child_field))
 
-        Sequenced.sequence(relation.opts.module, params)
+        Sequenced.sequence(relation.opts.module, params, nil, user: socket.assigns.current_user)
         send(self(), {:toast, gettext("Sequence updated")})
         {:noreply, assign_entries(socket, socket.assigns)}
 
       ["content_listing", _] ->
-        Sequenced.sequence(schema, params)
+        Sequenced.sequence(schema, params, nil, user: socket.assigns.current_user)
         send(self(), {:toast, gettext("Sequence updated")})
         {:noreply, assign_entries(socket, socket.assigns)}
     end
@@ -442,6 +442,7 @@ defmodule BrandoAdmin.Components.Content.List do
       entries
       |> decorate(listing.decorate)
       |> decorate(&put_translation_status(&1, schema, socket.assigns.current_user))
+      |> decorate(&put_trashed_by(&1, schema))
 
     socket
     |> assign(:list_opts, list_opts)
@@ -455,6 +456,17 @@ defmodule BrandoAdmin.Components.Content.List do
     case Brando.Translations.listing_status(schema, entries, user) do
       status when map_size(status) == 0 -> entries
       status -> Enum.map(entries, &Map.put(&1, :translation_status, status[&1.id]))
+    end
+  end
+
+  # Who moved each trashed entry there, from the activity log; the row
+  # otherwise has only the last editor to go by.
+  defp put_trashed_by(entries, schema) do
+    ids = for %{deleted_at: deleted_at, id: id} <- entries, not is_nil(deleted_at), do: id
+
+    case Brando.Activity.trashed_by(schema, ids) do
+      by when map_size(by) == 0 -> entries
+      by -> Enum.map(entries, &if(user = by[&1.id], do: Map.put(&1, :trashed_by, user), else: &1))
     end
   end
 

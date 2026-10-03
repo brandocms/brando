@@ -67,7 +67,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawerTest do
           }),
         schema_version: 2,
         show_publish_at: nil,
-        status: :open
+        status: :open,
+        tab: :revisions,
+        activity: nil,
+        comparison: nil
       })
 
     assert html =~ "<thead>"
@@ -99,11 +102,73 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawerTest do
         revision_data: failed_result,
         schema_version: 2,
         show_publish_at: nil,
-        status: :open
+        status: :open,
+        tab: :revisions,
+        activity: nil,
+        comparison: nil
       })
 
     assert html =~ "Failed to load revisions"
     assert html =~ "Try again"
     assert html =~ ~s(phx-click="fetch_revisions")
+  end
+
+  test "the activity tab lists what happened to the entry, with who and when" do
+    user = %Brando.Users.User{id: 7, name: "Ola Hansen"}
+    now = DateTime.utc_now()
+
+    events = [
+      %Brando.Activity.Event{
+        id: 2,
+        action: :revision_restored,
+        source: :admin,
+        user: user,
+        schema: "Elixir.Brando.Pages.Page",
+        entry_id: 1,
+        revision: 7,
+        details: %{"replaced" => 11},
+        fields: [],
+        inserted_at: now
+      },
+      %Brando.Activity.Event{
+        id: 1,
+        action: :published,
+        source: :scheduler,
+        user: user,
+        schema: "Elixir.Brando.Pages.Page",
+        entry_id: 1,
+        revision: 3,
+        details: %{"scheduled" => true},
+        fields: [],
+        inserted_at: DateTime.add(now, -86_400 * 3, :second)
+      }
+    ]
+
+    html =
+      render_component(&RevisionsDrawer.render/1, %{
+        id: "revisions-drawer",
+        close: %JS{},
+        form_cid: "form-target",
+        myself: "drawer-target",
+        preview_revision: nil,
+        revision_data: AsyncResult.ok(%{revisions: [], has_more: false}),
+        schema_version: 2,
+        show_publish_at: nil,
+        status: :open,
+        tab: :activity,
+        activity: %{events: events, states: %{}, has_more: true},
+        comparison: nil
+      })
+
+    assert html =~ "Entry history"
+    assert html =~ ~s(aria-selected="true")
+    assert html =~ "Restored revision #7"
+    assert html =~ "by Ola Hansen"
+    assert html =~ "Replaced revision #11"
+    assert html =~ "Compare with #11"
+    assert html =~ "by scheduled publishing"
+    assert html =~ "Activated revision #3, as scheduled"
+    assert html =~ "Show older activity"
+    refute html =~ "Store current editor state"
   end
 end

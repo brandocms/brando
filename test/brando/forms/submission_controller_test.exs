@@ -5,7 +5,7 @@ defmodule Brando.Forms.SubmissionControllerTest do
   alias Brando.Forms
 
   setup do
-    Cachex.clear(:cache)
+    Brando.Forms.RateLimit.reset()
     user = Factory.insert(:random_user)
 
     {:ok, _form} =

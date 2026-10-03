@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Forms.SubmissionsLiveTest do
   alias Brando.Forms
 
   setup %{current_user: user} do
-    Cachex.clear(:cache)
+    Brando.Forms.RateLimit.reset()
 
     {:ok, _form} =
       Forms.create_form(

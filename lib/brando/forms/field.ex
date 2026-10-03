@@ -45,8 +45,8 @@ defmodule Brando.Forms.Field do
 
   @option_types [:select, :radio, :checkboxes]
 
-  trait Brando.Trait.EnsureUID
-  trait Brando.Trait.Sequenced
+  trait :ensure_uid
+  trait :sequenced
   trait Brando.Forms.Field.Normalize
 
   identifier false

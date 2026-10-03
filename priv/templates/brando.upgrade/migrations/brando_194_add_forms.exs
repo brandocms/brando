@@ -1,4 +1,4 @@
-defmodule Brando.Repo.Migrations.Brando193AddForms do
+defmodule Brando.Repo.Migrations.Brando194AddForms do
   use Ecto.Migration
 
   @moduledoc """
