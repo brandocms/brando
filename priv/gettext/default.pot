@@ -14656,3 +14656,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "by a deleted user"
 msgstr ""
+
+#: lib/brando/mailer/layout.ex:33
+#, elixir-autogen, elixir-format
+msgid "This email was sent by %{site}."
+msgstr ""

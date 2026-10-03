@@ -70,6 +70,9 @@ when Igniter becomes available. The dependency remains optional at runtime.
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;
+- points Brando at the application's `Mailer` when it has one
+  (`config :brando, mailer: MyApp.Mailer`); set the address it sends from
+  yourself, as described in [Email](email.md);
 - refreshes `scripts/sync_gettext.sh` and archives the consumer-owned
   `mix brando.upgrade` task that 0.54 installed, so Brando's own
   `mix brando.upgrade FROM TO` hook can take over the task name (copying

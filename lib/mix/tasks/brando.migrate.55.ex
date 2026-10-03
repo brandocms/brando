@@ -16,7 +16,7 @@ if Code.ensure_loaded?(Igniter) do
     `mix brando.migrate54` first.
 
     The task adds the explicit listing component imports, configures Req as
-    Swoosh's API client, pins the declared `phoenix_live_view` JavaScript
+    Swoosh's API client, points Brando at the application's mailer, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
     configuration, refreshes the gettext recovery helper, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
@@ -34,6 +34,7 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
       |> SourceUpgrade.configure_swoosh_client()
+      |> SourceUpgrade.configure_brando_mailer()
       |> SourceUpgrade.pin_live_view_javascript()
       |> SourceUpgrade.hide_source_maps()
       |> SourceUpgrade.create_florist_config()
@@ -49,7 +50,8 @@ if Code.ensure_loaded?(Igniter) do
       Brando 0.55 source migration prepared.
 
       Custom listing rows get the narrow component imports they use. The task
-      adds Req as Swoosh's API client when none is configured and pins the
+      adds Req as Swoosh's API client when none is configured, points Brando at
+      the application's `Mailer` when it has one, and pins the
       declared `phoenix_live_view` JavaScript dependency under `assets/` to the
       loaded server version. Vite configs under `assets/` that set
       `sourcemap: true` now build hidden maps, and `mix brando.digest` deletes
@@ -119,6 +121,10 @@ if Code.ensure_loaded?(Igniter) do
         * Move function-based asset `config_target` callbacks from helper modules
           onto their Blueprint schema. The hardened resolver rejects plain helper
           modules and there is no safe target schema the task can choose.
+        * Brando now sends email through the application's Swoosh mailer
+          (`config :brando, mailer: MyApp.Mailer`; `mix brando.gen.mail` adds
+          one). Set the address it sends from, which the mail provider must
+          accept: `config :brando, Brando.Mailer, from: {"My site", "noreply@example.com"}`.
         * Fabric deployments must ensure the application database role owns the
           `oban_job_state` enum before `brando_153` upgrades Oban to v14. Follow
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.
