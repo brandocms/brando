@@ -87,7 +87,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
             >
               <.icon name="hero-x-mark" />
             </button>
-            <kbd class="module-picker-esc">esc</kbd>
+            <button
+              type="button"
+              class="module-picker-close"
+              phx-click={JS.push("close_modal", target: @myself) |> hide_modal("##{@id}")}
+              aria-label={gettext("Close")}
+            >
+              <.icon name="hero-x-mark" />
+            </button>
           </div>
 
           <div class="module-picker-body">

@@ -470,6 +470,37 @@ section.alert.danger {
   }
 }
 
+/* The palette hides the modal's header, so it closes from its own corner */
+.module-picker-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  margin: 0 -6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5d6a63;
+  cursor: pointer;
+
+  [data-icon] {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: #f1f4f1;
+    color: var(--modal-ink, #272b2a);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #758f75;
+    outline-offset: 1px;
+  }
+}
+
 .module-picker kbd {
   display: inline-block;
   min-width: 18px;
