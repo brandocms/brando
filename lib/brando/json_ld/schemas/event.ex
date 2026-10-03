@@ -5,6 +5,8 @@ defmodule Brando.JSONLD.Schema.Event do
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
             "@type": "Event",
+            name: nil,
+            url: nil,
             startDate: nil,
             endDate: nil,
             location: nil,
