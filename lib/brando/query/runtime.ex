@@ -583,6 +583,14 @@ defmodule Brando.Query.Runtime do
   Handle single queries
   """
   def handle_single_query(context, query_key, args, module, block, schema_atom) do
+    # In frontend edit mode the entry's block fields come back annotated.
+    # After the cache write below, so the cache only ever holds stored HTML.
+    context
+    |> do_handle_single_query(query_key, args, module, block, schema_atom)
+    |> Brando.FrontendEdit.annotate_query_result(args)
+  end
+
+  defp do_handle_single_query(context, query_key, args, module, block, schema_atom) do
     args = Brando.Authorization.Boundary.cache_options(args)
     original_block = block
     block = fn query -> Brando.Authorization.Boundary.query(original_block.(query), module) end

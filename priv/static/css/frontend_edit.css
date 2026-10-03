@@ -1,0 +1,412 @@
+/*
+ * Brando frontend edit mode. Loaded into the overlay's shadow root, so
+ * nothing here reaches the site and the site's styles do not reach it.
+ */
+:host {
+  --fe-ink: #0b1a33;
+  --fe-ink-soft: #3d4a60;
+  --fe-muted: #6b7587;
+  --fe-line: rgba(11, 26, 51, 0.12);
+  --fe-accent: #0047ff;
+  --fe-accent-soft: rgba(0, 71, 255, 0.1);
+  --fe-locked: #8a93a3;
+  --fe-surface: #fff;
+  --fe-radius: 10px;
+  --fe-shadow: 0 1px 2px rgba(11, 26, 51, 0.08), 0 8px 28px rgba(11, 26, 51, 0.16);
+  --fe-sidebar-width: min(460px, calc(100vw - 48px));
+  --fe-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  all: initial;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  font-family: var(--fe-font);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--fe-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+svg {
+  display: block;
+  flex: none;
+}
+
+/* -- Toggle (edit mode off) ----------------------------------------------- */
+
+.fe-toggle {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px 0 13px;
+  border: 1px solid var(--fe-line);
+  border-radius: 999px;
+  background: var(--fe-surface);
+  box-shadow: var(--fe-shadow);
+  font-weight: 550;
+  pointer-events: auto;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.fe-toggle:hover {
+  border-color: var(--fe-accent);
+  color: var(--fe-accent);
+}
+
+.fe-toggle:active {
+  transform: scale(0.97);
+}
+
+.fe-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* -- Toolbar (edit mode on) ----------------------------------------------- */
+
+.fe-toolbar {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 40px);
+  height: 44px;
+  padding: 0 6px 0 16px;
+  border-radius: 999px;
+  background: var(--fe-ink);
+  box-shadow: var(--fe-shadow);
+  color: #fff;
+  pointer-events: auto;
+  transition: left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), right 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:host(.is-docked-left) .fe-toolbar {
+  left: auto;
+  right: 20px;
+}
+
+.fe-toolbar-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.fe-toolbar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4f7dff;
+  box-shadow: 0 0 0 3px rgba(79, 125, 255, 0.28);
+}
+
+.fe-toolbar-title {
+  font-weight: 600;
+}
+
+.fe-toolbar-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.fe-toolbar-done {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--fe-ink);
+  font-weight: 600;
+  transition: background-color 0.15s;
+}
+
+.fe-toolbar-done:hover {
+  background: #dfe6ff;
+}
+
+.fe-toast {
+  position: fixed;
+  left: 20px;
+  bottom: 74px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--fe-surface);
+  box-shadow: var(--fe-shadow);
+  color: var(--fe-ink);
+  font-weight: 550;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+:host(.is-docked-left) .fe-toast {
+  left: auto;
+  right: 20px;
+}
+
+.fe-toast.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.fe-toast svg {
+  width: 16px;
+  height: 16px;
+  color: #12a150;
+}
+
+/* -- Outlines ----------------------------------------------------------- */
+
+.fe-outline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--fe-accent), 0 0 0 6px var(--fe-accent-soft);
+  pointer-events: none;
+}
+
+.fe-outline.is-visible {
+  display: block;
+}
+
+.fe-outline.is-locked {
+  box-shadow: 0 0 0 2px var(--fe-locked), 0 0 0 6px rgba(138, 147, 163, 0.14);
+}
+
+.fe-outline.is-hover:not(.is-locked) {
+  box-shadow: 0 0 0 1.5px var(--fe-accent), 0 0 0 5px var(--fe-accent-soft);
+}
+
+.fe-outline.is-selected {
+  box-shadow: 0 0 0 2px var(--fe-accent), 0 0 0 9999px rgba(11, 26, 51, 0.06);
+}
+
+.fe-label {
+  position: absolute;
+  left: -2px;
+  bottom: calc(100% + 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 320px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: var(--fe-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 71, 255, 0.25);
+}
+
+.fe-outline.is-inside .fe-label {
+  top: 6px;
+  bottom: auto;
+  left: 6px;
+}
+
+.fe-outline.is-locked .fe-label {
+  background: #5d6676;
+  box-shadow: none;
+}
+
+.fe-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fe-label-note {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.fe-label svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* -- Sidebar -------------------------------------------------------------- */
+
+.fe-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--fe-sidebar-width);
+  background: #f6f7f9;
+  box-shadow: -1px 0 0 var(--fe-line), -16px 0 48px rgba(11, 26, 51, 0.16);
+  pointer-events: auto;
+  transform: translateX(105%);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:host(.is-docked-left) .fe-sidebar {
+  right: auto;
+  left: 0;
+  box-shadow: 1px 0 0 var(--fe-line), 16px 0 48px rgba(11, 26, 51, 0.16);
+  transform: translateX(-105%);
+}
+
+.fe-sidebar.is-open,
+:host(.is-docked-left) .fe-sidebar.is-open {
+  transform: none;
+}
+
+.fe-sidebar iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
+.fe-sidebar-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #f6f7f9;
+  color: var(--fe-muted);
+  transition: opacity 0.2s;
+}
+
+.fe-sidebar-loading.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fe-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(11, 26, 51, 0.12);
+  border-top-color: var(--fe-accent);
+  border-radius: 50%;
+  animation: fe-spin 0.8s linear infinite;
+}
+
+@keyframes fe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -- Dialog --------------------------------------------------------------- */
+
+.fe-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(11, 26, 51, 0.32);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+.fe-dialog {
+  width: min(400px, 100%);
+  padding: 22px 22px 18px;
+  border-radius: 14px;
+  background: var(--fe-surface);
+  box-shadow: 0 24px 64px rgba(11, 26, 51, 0.3);
+}
+
+.fe-dialog h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.fe-dialog p {
+  margin: 0 0 20px;
+  color: var(--fe-ink-soft);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.fe-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fe-button {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--fe-line);
+  border-radius: 8px;
+  background: var(--fe-surface);
+  font-weight: 550;
+}
+
+.fe-button:hover {
+  border-color: rgba(11, 26, 51, 0.28);
+}
+
+.fe-button.is-primary {
+  border-color: var(--fe-accent);
+  background: var(--fe-accent);
+  color: #fff;
+}
+
+.fe-button.is-primary:hover {
+  background: #0039d1;
+}
+
+.fe-button.is-danger {
+  color: #c0262d;
+}
+
+.fe-button:focus-visible,
+.fe-toggle:focus-visible,
+.fe-toolbar-done:focus-visible {
+  outline: 2px solid var(--fe-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fe-sidebar,
+  .fe-toolbar,
+  .fe-toast {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .fe-toolbar-hint {
+    display: none;
+  }
+}

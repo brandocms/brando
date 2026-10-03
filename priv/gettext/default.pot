@@ -14696,3 +14696,156 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "No linked entries yet."
 msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Editing"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Click a block to edit it"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "This page has no blocks to edit here"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Shared fragment"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "You can’t edit this"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Close editor"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Opening editor…"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Save your changes before you leave this block?"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Saved"
+msgstr ""
+
+#: lib/brando_admin/components/form/frontend_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Changes show on the page as you type"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} saved this page after you opened the editor. Reload the block to get their changes, then make yours again."
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} · editing on the website"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit block"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "You don’t have permission to edit this content."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Frontend editing is switched off for this site."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "This block could not be found. It may have been deleted since the page was loaded."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open in the full editor"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} saved this page after you opened it. Reload to get their changes before you save."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} deleted this page."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reload"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is also editing this page on the website"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has this page open in the admin"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shared fragment."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Changes show everywhere it is used."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "A version of this page is scheduled to be published. It will replace changes made here."
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Someone"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Changes show everywhere it is used, including %{count} page."
+msgid_plural "Changes show everywhere it is used, including %{count} pages."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgctxt "frontend edit"
+msgid "Edit page"
+msgstr ""

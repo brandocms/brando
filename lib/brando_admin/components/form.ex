@@ -45,6 +45,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
+  alias BrandoAdmin.Components.Form.FrontendEditor
   alias BrandoAdmin.Components.Form.ImageDrawer
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.Input.MultiSelect
@@ -551,13 +552,13 @@ defmodule BrandoAdmin.Components.Form do
         },
         socket
       ) do
-    cache_key = socket.assigns.live_preview_cache_key
+    payload = %{uid: uid, rendered_html: rendered_html, has_children: has_children?}
 
-    Brando.LivePreview.broadcast(cache_key, "update_block", %{
-      uid: uid,
-      rendered_html: rendered_html,
-      has_children: has_children?
-    })
+    if socket.assigns.frontend_edit do
+      FrontendEditor.update_block(payload)
+    else
+      Brando.LivePreview.broadcast(socket.assigns.live_preview_cache_key, "update_block", payload)
+    end
 
     {:ok, socket}
   end
@@ -1168,6 +1169,9 @@ defmodule BrandoAdmin.Components.Form do
       end)
       |> assign_new(:instructions, fn -> [] end)
       |> assign_new(:video_context, fn -> :asset end)
+      |> assign_new(:frontend_edit, fn -> nil end)
+      |> assign_new(:frontend_status, fn -> %{} end)
+      |> FrontendEditor.init()
 
     cond do
       # async load in flight — parent re-rendered (presence etc.); the new
@@ -1197,9 +1201,9 @@ defmodule BrandoAdmin.Components.Form do
     |> maybe_assign_uploads()
     |> maybe_assign_block_map()
     |> maybe_assign_entry_for_blocks()
-    |> Drafts.init()
+    |> FrontendEditor.unless_frontend(&Drafts.init/1)
     |> Translation.assign_state()
-    |> schedule_translation_apply()
+    |> FrontendEditor.unless_frontend(&schedule_translation_apply/1)
     |> assign(:initial_update, false)
   end
 
@@ -2420,6 +2424,8 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  def render(%{frontend_edit: %{}} = assigns), do: FrontendEditor.render(assigns)
+
   def render(assigns) do
     ~H"""
     <div>
@@ -2934,20 +2940,27 @@ defmodule BrandoAdmin.Components.Form do
       <div
         :for={{_, user} <- @presences}
         :key={user.id}
-        class="user-presence visible"
+        class={["user-presence visible", user[:frontend?] && "is-frontend"]}
         data-presence-user-id={user.id}
       >
-        <div class="avatar" data-popover={user.name} role="img" aria-label={user.name}>
+        <div class="avatar" data-popover={presence_label(user)} role="img" aria-label={presence_label(user)}>
           <%= if user.avatar do %>
             <Content.image image={user.avatar} size={:thumb} />
           <% else %>
             <.icon name="hero-user" class="avatar-placeholder" />
           <% end %>
+          <span :if={user[:frontend?]} class="user-presence-website" aria-hidden="true">
+            <.icon name="hero-globe-alt" />
+          </span>
         </div>
       </div>
     </div>
     """
   end
+
+  # Someone editing from the website (frontend edit mode) says so.
+  defp presence_label(%{frontend?: true, name: name}), do: gettext("%{name} · editing on the website", name: name)
+  defp presence_label(user), do: user.name
 
   def form_tabs(assigns) do
     ~H"""
@@ -3370,6 +3383,23 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, finish_permalink_redirect(socket)}
   end
 
+  # Someone else saved the entry after the frontend editor loaded it. Saving
+  # now would write this editor's copy of the blocks over their save.
+  def handle_event("save", _params, %{assigns: %{frontend_edit: %{}, frontend_status: %{stale: %{} = stale}}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:processing, false)
+     |> push_event("b:alert", %{
+       title: gettext("Not saved"),
+       message:
+         gettext(
+           "%{name} saved this page after you opened the editor. Reload the block to get their changes, then make yours again.",
+           name: stale.name
+         ),
+       type: "error"
+     })}
+  end
+
   def handle_event("save", params, %{assigns: %{draft_save_checked?: false}} = socket) do
     socket = Drafts.before_save(socket)
 
@@ -3483,10 +3513,12 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:progress_popup, "Saving entry..."})
 
     socket = Translation.put_acknowledged(socket, params)
+    if FrontendEditor.frontend?(socket), do: FrontendEditor.saving(socket)
 
     case save_entry(socket, context, mutation_type, singular, rendered_changeset) do
       {:ok, entry} ->
         send(self(), {:progress_popup, "Entry saved."})
+        if FrontendEditor.frontend?(socket), do: FrontendEditor.saved(socket, entry)
 
         Brando.Blueprint.AfterSave.run(
           schema,
@@ -3556,10 +3588,12 @@ defmodule BrandoAdmin.Components.Form do
                  push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
              end
 
-           assign(maybe_redirected_socket, :save_redirect_target, :listing)
+           assign(maybe_redirected_socket, :save_redirect_target, FrontendEditor.save_target(socket))
          end)}
 
       {:error, {:source_controlled, paths}} ->
+        if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :source_controlled)
+
         {:noreply,
          socket
          |> assign(:processing, false)
@@ -3572,6 +3606,7 @@ defmodule BrandoAdmin.Components.Form do
         require Logger
         Logger.error(inspect(changeset, pretty: true))
         send(self(), {:progress_popup, "Saving entry failed..."})
+        if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :invalid)
 
         {:noreply,
          socket
@@ -4979,6 +5014,12 @@ defmodule BrandoAdmin.Components.Form do
   defp clear_blocks_root_changesets(socket) do
     blocks = socket.assigns.form_blueprint.blocks
     assign(socket, :block_changesets, Map.new(blocks, &{&1.name, nil}))
+  end
+
+  defp render_preview_update(%{assigns: %{frontend_edit: %{}}} = socket, mode, block_changesets) do
+    changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
+    FrontendEditor.replace_fields(socket, changeset, mode)
+    socket
   end
 
   defp render_preview_update(socket, mode, block_changesets) do

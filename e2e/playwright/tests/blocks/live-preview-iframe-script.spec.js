@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test'
 import path from 'path'
 
-// The script inside the live preview iframe (`priv/static/js/livepreview.js`),
+// The script inside the live preview iframe (`priv/static/js/livepreview.js`)
+// and the block patching it shares with frontend edit mode (`block_patch.js`),
 // loaded into a blank page with a stub Phoenix channel so each server push can
 // be fired directly. No server or fixtures involved.
 const JS = path.join(__dirname, '../../../../priv/static/js')
@@ -38,6 +39,7 @@ const load = async (page, bodyHtml) => {
     })
   })
   await page.addScriptTag({ path: path.join(JS, 'morphdom-umd.min.js') })
+  await page.addScriptTag({ path: path.join(JS, 'block_patch.js') })
   await page.addScriptTag({ path: path.join(JS, 'livepreview.js') })
   return errors
 }
@@ -110,6 +112,35 @@ test.describe('Live preview iframe script', () => {
     await push(page, 'update', { html: '<main id="after"><p>typed</p></main>' })
 
     await expect(page.locator('main p')).toHaveText('typed')
+    expect(errors).toEqual([])
+  })
+
+  // Frontend edit mode replaces a whole block field between its markers.
+  test('a field is replaced in place, keeping what surrounds it and unchanged blocks', async ({ page }) => {
+    const errors = await load(
+      page,
+      `<main><h1 id="title">Title</h1><!-- [+:F<Page:1:blocks>] --><!-- [+:B<a>] --><p class="a">A</p><!-- [-:B<a>] --><!-- [+:B<b>] --><p class="b">B</p><!-- [-:B<b>] --><!-- [-:F<Page:1:blocks>] --><footer>Foot</footer></main>`
+    )
+    await page.evaluate(() => {
+      window.__kept = document.querySelector('p.a')
+      window.__title = document.getElementById('title')
+    })
+
+    const patchedParent = await page.evaluate(
+      () =>
+        window.BrandoBlockPatch.replaceField(
+          'Page:1:blocks',
+          '<!-- [+:B<a>] --><p class="a">A</p><!-- [-:B<a>] --><!-- [+:B<b>] --><p class="b">Changed</p><!-- [-:B<b>] -->'
+        )?.tagName
+    )
+
+    expect(patchedParent).toBe('MAIN')
+    await expect(page.locator('p.b')).toHaveText('Changed')
+    await expect(page.locator('footer')).toHaveText('Foot')
+    expect(await page.evaluate(() => document.querySelector('p.a') === window.__kept)).toBe(true)
+    expect(await page.evaluate(() => document.getElementById('title') === window.__title)).toBe(true)
+    expect(await page.evaluate(() => window.BrandoBlockPatch.findField('Page:1:blocks') !== null)).toBe(true)
+    expect(await page.evaluate(() => window.BrandoBlockPatch.replaceField('Missing:1:blocks', '<p></p>'))).toBeNull()
     expect(errors).toEqual([])
   })
 })

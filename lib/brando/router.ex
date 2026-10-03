@@ -141,6 +141,8 @@ defmodule Brando.Router do
           live "/assistant", BrandoAdmin.AI.AssistantLive
           live "/assistant/shared/:token", BrandoAdmin.AI.AssistantLive, :shared
           live "/assistant/:conversation_id", BrandoAdmin.AI.AssistantLive, :show
+          # The sidebar of frontend edit mode, framed by the published page.
+          live "/frontend-edit", BrandoAdmin.FrontendEdit.EditorLive
           # brando routes
           live "/sites", BrandoAdmin.Sites.SiteLive
           live "/assets/images", BrandoAdmin.Images.ImageListLive

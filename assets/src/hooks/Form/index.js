@@ -1,6 +1,7 @@
 import { Dom, Events, gsap } from '@brandocms/jupiter'
 import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
+import locateBlock from './locateBlock'
 import {
   setBlockLock,
   clearBlockLock,
@@ -15,6 +16,7 @@ export default (app) => ({
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
     this.draftRecovery = draftRecovery(this)
+    this.stopLocatingBlock = locateBlock(this)
     // Keep the measurement outside LiveView's patched inline attributes.
     this.toolbarStyle = document.createElement('style')
     document.head.appendChild(this.toolbarStyle)
@@ -155,6 +157,7 @@ export default (app) => ({
   updated() { this.updateToolbarOffset() },
 
   destroyed() {
+    this.stopLocatingBlock?.()
     this.toolbarObserver?.disconnect()
     this.toolbarStyle?.remove()
     this.draftRecovery?.destroy()

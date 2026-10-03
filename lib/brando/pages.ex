@@ -553,12 +553,12 @@ defmodule Brando.Pages do
       fragment ->
         # rendered_blocks is pre-rendered CMS content from our own rendering pipeline
         # nosec
-        {:safe, fragment.rendered_blocks}
+        {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
     end
   end
 
   # nosec
-  def render_fragment(%Fragment{} = fragment), do: {:safe, fragment.rendered_blocks}
+  def render_fragment(%Fragment{} = fragment), do: {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
@@ -570,7 +570,7 @@ defmodule Brando.Pages do
            </div>))
 
       fragment ->
-        {:safe, fragment.rendered_blocks}
+        {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
     end
   end
 
@@ -594,7 +594,7 @@ defmodule Brando.Pages do
            </div>))
 
       {:ok, fragment} ->
-        {:safe, fragment.rendered_blocks}
+        {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
     end
   end
 

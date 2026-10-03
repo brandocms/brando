@@ -57,6 +57,8 @@ defmodule E2EFixtureController do
         "site-form" ->
           create_site_form()
 
+        "frontend-edit" ->
+          create_frontend_edit_page()
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
@@ -156,6 +158,116 @@ defmodule E2EFixtureController do
 
     Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
     Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+    user
+  end
+
+  # A published page for frontend edit mode (`/frontend-edit`): a headline
+  # block, a container holding a text block, and an embedded shared fragment.
+  # Rendered as a save would, so the page serves stored block HTML.
+  defp create_frontend_edit_page do
+    user = get_admin_user()
+
+    module =
+      Brando.Repo.insert!(%Brando.Content.Module{
+        uid: Ecto.UUID.generate(),
+        type: :liquid,
+        name: %{"en" => "Headline", "no" => "Overskrift"},
+        class: "frontend-edit-headline",
+        namespace: %{"en" => "Content"},
+        help_text: %{},
+        code: ~s(<div class="fe-block"><h2 class="fe-headline">{{ headline }}</h2>{% ref refs.body %}</div>),
+        refs: [
+          %Brando.Content.Ref{
+            name: "body",
+            uid: Brando.Utils.generate_uid(),
+            data: %Brando.Villain.Blocks.TextBlock{type: "text", data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}}
+          }
+        ],
+        vars: [%Brando.Content.Var{key: "headline", label: %{"en" => "Headline", "no" => "Overskrift"}, type: :string}]
+      })
+
+    block = fn source, headline, parent ->
+      params = %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => module.id,
+        "creator_id" => user.id,
+        "parent_id" => parent && parent.id,
+        "source" => to_string(source),
+        "vars" => [
+          %{"key" => "headline", "label" => %{"en" => "Headline", "no" => "Overskrift"}, "type" => "string", "value" => headline}
+        ],
+        "refs" => [
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "name" => "body",
+            "data" => %{"type" => "text", "data" => %{"text" => "<p>Body of #{headline}</p>"}}
+          }
+        ]
+      }
+
+      %Brando.Content.Block{} |> Brando.Content.Block.recursive_block_changeset(params, user) |> Brando.Repo.insert!()
+    end
+
+    insert_block = fn params ->
+      %Brando.Content.Block{}
+      |> Brando.Content.Block.recursive_block_changeset(
+        Map.merge(%{"uid" => Brando.Utils.generate_uid(), "creator_id" => user.id}, params),
+        user
+      )
+      |> Brando.Repo.insert!()
+    end
+
+    fragment =
+      Brando.Repo.insert!(%Brando.Pages.Fragment{
+        title: "Shared notice",
+        parent_key: "frontend-edit",
+        key: "notice",
+        language: :en,
+        status: :published,
+        creator_id: user.id
+      })
+
+    fragment_text = block.(Brando.Pages.Fragment.Blocks, "Shared notice text", nil)
+    Brando.Repo.insert!(struct(Brando.Pages.Fragment.Blocks, %{entry_id: fragment.id, block_id: fragment_text.id, sequence: 0}))
+    {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
+
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: "Frontend edit",
+        uri: "frontend-edit",
+        language: :en,
+        status: :published,
+        template: "default.html",
+        creator_id: user.id
+      })
+
+    source = Brando.Pages.Page.Blocks
+    intro = block.(source, "Welcome to the page", nil)
+    container = insert_block.(%{"type" => "container", "source" => to_string(source)})
+    _child = block.(source, "Inside the section", container)
+    embed = insert_block.(%{"type" => "fragment", "fragment_id" => fragment.id, "source" => to_string(source)})
+
+    # A picture block without an image yet, from the seeded live preview module.
+    picture_module = Brando.Repo.get_by!(Brando.Content.Module, name: %{"en" => "Single Image with Caption", "no" => "Enkelt bilde med bildetekst"})
+
+    picture =
+      picture_module.id
+      |> Brando.Content.Blocks.build_module_block(user.id, nil, source, :module)
+      |> Brando.Repo.insert!()
+      |> Brando.Repo.preload(:vars)
+
+    for %{key: "caption"} = var <- picture.vars do
+      var |> Ecto.Changeset.change(value: "A picture caption") |> Brando.Repo.update!()
+    end
+
+    [intro, container, embed, picture]
+    |> Enum.with_index()
+    |> Enum.each(fn {root, sequence} ->
+      Brando.Repo.insert!(struct(source, %{entry_id: page.id, block_id: root.id, sequence: sequence}))
+    end)
+
+    {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
     user
   end
 

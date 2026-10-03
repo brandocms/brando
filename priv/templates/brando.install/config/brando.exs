@@ -102,6 +102,11 @@ config :brando, Brando.Images,
 config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser
 
+# Frontend edit mode: signed-in admins get an "Edit page" button on the site
+# and edit blocks in place. Needs `plug Brando.Plug.FrontendEdit` in the
+# router's browser pipeline (see the frontend edit guide).
+# config :brando, Brando.FrontendEdit, enabled: true
+
 # Video uploads are opt-in. Without this, editors pick videos from the library
 # or add them by URL. Use :local for the server, or :mux, :bunny, :cloudflare,
 # :vimeo or :s3 once their credentials are set (see the videos guide).
