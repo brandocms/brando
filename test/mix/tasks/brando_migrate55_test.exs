@@ -303,6 +303,23 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     refute config =~ "Swoosh.ApiClient.Req"
   end
 
+  test "points Brando at the application's mailer" do
+    mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
+    igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer})
+
+    assert source(igniter, @brando_config_path) =~ "mailer: LegacyApp.Mailer"
+    assert_has_warning(igniter, &String.contains?(&1, "config :brando, Brando.Mailer, from:"))
+  end
+
+  test "leaves the mailer alone when the application has none, or has chosen one" do
+    assert_unchanged(migrate(@blueprint_054), @brando_config_path)
+
+    chosen = @brando_config <> "\nconfig :brando, mailer: LegacyApp.Notifications.Mailer\n"
+    mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
+    igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => chosen})
+    assert_unchanged(igniter, @brando_config_path)
+  end
+
   describe "image text reads" do
     @hero_blueprint String.replace(@blueprint_054, "attribute :title, :string", """
                     attribute :title, :string

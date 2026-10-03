@@ -14267,3 +14267,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "What visitors read around every form, in each of the site's languages. A language left empty uses Brando's wording, in English where Brando has no translation."
 msgstr ""
+
+#: lib/brando/mailer/layout.ex:33
+#, elixir-autogen, elixir-format
+msgid "This email was sent by %{site}."
+msgstr ""

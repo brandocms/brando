@@ -47,9 +47,14 @@ if Code.ensure_loaded?(Igniter) do
       |> Config.configure_new("dev.exs", project.otp_app, [mailer, :adapter], Swoosh.Adapters.Local)
       |> Config.configure_new("test.exs", project.otp_app, [mailer, :adapter], Swoosh.Adapters.Test)
       |> Config.configure_new("config.exs", :swoosh, [:api_client], Swoosh.ApiClient.Req)
+      |> Mix.Brando.Igniter.SourceUpgrade.configure_brando_mailer(mailer)
       |> Igniter.add_notice("""
       Mail helpers are ready for review. Pass explicit :from and :to addresses to
       #{inspect(project.app_module)}.Emails.contact/2, then deliver with #{inspect(mailer)}.
+      Brando sends its own email through #{inspect(mailer)} too; set the address it sends from:
+
+          config :brando, Brando.Mailer, from: {"My site", "noreply@example.com"}
+
       Configure your production Swoosh adapter and credentials in runtime.exs before deployment.
       """)
     end

@@ -102,6 +102,12 @@ config :brando, :default_language, "en"
 config :brando, :ecto_repos, [BrandoIntegration.Repo]
 config :brando, :env, :test
 
+# Email is delivered to Swoosh's test adapter; see `Swoosh.TestAssertions`
+config :brando, mailer: BrandoIntegration.Mailer
+config :brando, BrandoIntegration.Mailer, adapter: Swoosh.Adapters.Test
+config :brando, Brando.Mailer, from: {"Brando", "noreply@example.com"}
+config :swoosh, :api_client, false
+
 config :brando, :languages, [
   [value: "no", text: "Norsk"],
   [value: "en", text: "English"]

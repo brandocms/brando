@@ -357,7 +357,9 @@ after public migrations. History in a different directory requires an explicit
 transition decision.
 
 Mail generation reuses a Phoenix mailer, adds missing Swoosh/Req dependencies,
-and supplies local/test adapter defaults plus a default Req API client.
+and supplies local/test adapter defaults plus a default Req API client. It
+also points Brando at the mailer, for the email Brando sends itself; see
+[Email](email.md).
 Build notifications with `MyApp.Emails.contact(changeset, from: ..., to: ...)`.
 Invalid form data raises before constructing an email. Configure the production
 adapter and credentials deliberately; generating mail helpers never sends mail.
