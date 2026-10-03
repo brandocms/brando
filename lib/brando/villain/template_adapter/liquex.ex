@@ -9,6 +9,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
   @behaviour Brando.Villain.TemplateAdapter
 
   alias Brando.Villain
+  alias Brando.Villain.TemplateAdapter
   alias Liquex.Context
 
   @impl true
@@ -95,20 +96,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
     do: Context.assign(context, :brando_module_id, module_id)
 
   defp add_block_to_context(context, module, block) do
-    simple_block =
-      block
-      |> Map.take([
-        :uid,
-        :type,
-        :module_id,
-        :sequence,
-        :active,
-        :collapsed,
-        :table_rows,
-        :anchor,
-        :description
-      ])
-      |> Map.merge(%{class: module.class})
+    simple_block = TemplateAdapter.simple_block(module, block)
 
     Context.assign(context, :block, simple_block)
   end
