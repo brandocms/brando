@@ -119,6 +119,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_schema_target, nil)
      |> assign(:pending_live_preview_target, nil)
      |> assign(:live_preview_menu_open?, false)
+     |> assign(:sharing_preview?, false)
      |> assign(:live_preview_ready?, false)
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)
@@ -2143,6 +2144,7 @@ defmodule BrandoAdmin.Components.Form do
       schema = socket.assigns.schema
       changeset = assoc_all_block_fields(block_changesets, changeset)
       user = socket.assigns.current_user
+      socket = assign(socket, :sharing_preview?, false)
 
       case Brando.LivePreview.share(
              schema,
@@ -2655,8 +2657,13 @@ defmodule BrandoAdmin.Components.Form do
                 phx-click={JS.push("share_link", target: @myself)}
                 type="button"
                 aria-label={gettext("Share preview")}
+                aria-busy={to_string(@sharing_preview?)}
                 title={gettext("Share preview")}
+                disabled={@sharing_preview?}
               >
+                <%!-- Spins from the click until the link is ready, which
+                      takes a moment while the blocks are gathered. --%>
+                <span class="form-tool-share-spinner" aria-hidden="true"></span>
                 <.icon name="hero-arrow-top-right-on-square" class="s" />
               </button>
               <div class="split-dropdown form-tool-save">
@@ -4585,8 +4592,8 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("share_link", _, socket) do
     send(self(), {:toast, gettext("Gathering blocks for sharing...")})
-    fetch_root_blocks(socket, :share, 500)
-    {:noreply, socket}
+    socket = assign(socket, :sharing_preview?, true)
+    {:noreply, fetch_root_blocks(socket, :share, 500)}
   end
 
   def handle_event("store_revision", _, socket) do

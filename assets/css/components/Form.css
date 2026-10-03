@@ -1045,6 +1045,17 @@ html.not-mac .shortcut-other { display: inline; }
   color: var(--brando-color-dark); font-size: 13px; font-weight: 500; white-space: nowrap;
 }
 
+/* Sharing takes a moment while the blocks are gathered: the share button
+   spins in place of its icon until the link is ready. */
+.form-tabs .form-tab-builtins .form-tool-share {
+  .form-tool-share-spinner { display: none; width: 14px; height: 14px; border: 1.5px solid #dce2dc; border-top-color: #254e3f; border-radius: 50%; animation: form-tool-share-spin 900ms linear infinite; }
+  &[aria-busy="true"] { cursor: progress; opacity: 1; }
+  &[aria-busy="true"] .form-tool-share-spinner { display: inline-block; }
+  &[aria-busy="true"] > [data-icon] { display: none; }
+}
+@keyframes form-tool-share-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .form-tool-share-spinner { animation-duration: 2.4s; } }
+
 /* Text for screen readers only, e.g. the name of an icon-only control. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
