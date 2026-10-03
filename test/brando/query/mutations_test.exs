@@ -411,7 +411,6 @@ defmodule Brando.Query.MutationsTest do
 
       {:ok, page} = Brando.Pages.create_page(page_cs, user)
 
-      # Verify the original page has table rows with vars
       {:ok, original} =
         TestContext.get_page(%{
           matches: %{id: page.id},

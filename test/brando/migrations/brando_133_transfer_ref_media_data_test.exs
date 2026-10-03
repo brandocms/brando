@@ -5,9 +5,9 @@ defmodule Brando.Migrations.TransferRefMediaDataTest do
   alias Brando.Factory
   alias BrandoIntegration.Repo
 
-  @migration Path.expand(
-               "../../../priv/templates/brando.upgrade/migrations/brando_133_transfer_ref_media_data.exs",
-               __DIR__
+  @migration Application.app_dir(
+               :brando,
+               "priv/templates/brando.upgrade/migrations/brando_133_transfer_ref_media_data.exs"
              )
 
   setup_all do

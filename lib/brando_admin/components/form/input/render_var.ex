@@ -340,9 +340,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     end)
   end
 
+  # Params arrive with string keys; structs and applied changesets use atoms.
+  defp select_option(option) when is_map_key(option, "value") or is_map_key(option, "label"),
+    do: select_option(%{value: option["value"], label: option["label"]})
+
   defp select_option(option) do
-    value = Map.get(option, :value) || Map.get(option, "value")
-    label = Map.get(option, :label) || Map.get(option, "label")
+    value = Map.get(option, :value)
+    label = Map.get(option, :label)
     %{label: I18nString.localized(label) || to_string(value), value: value}
   end
 

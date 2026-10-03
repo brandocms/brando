@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
 
   alias Brando.Blueprint.Forms.Subform
   alias BrandoAdmin.Components.Form.Transformer
+  alias Phoenix.Component
 
   defmodule Item do
     use Ecto.Schema
@@ -50,13 +51,13 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
 
   defp recovery_socket(item) do
     %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
-    |> Phoenix.Component.assign(:items, [item])
-    |> Phoenix.Component.assign(:form_id, "collection_form")
-    |> Phoenix.Component.assign(:relation_key, :items)
-    |> Phoenix.Component.assign(:relation_module, MediaItem)
-    |> Phoenix.Component.assign(:image_field, :cover)
-    |> Phoenix.Component.assign(:video_field, nil)
-    |> Phoenix.Component.assign(:subform, %Subform{
+    |> Component.assign(:items, [item])
+    |> Component.assign(:form_id, "collection_form")
+    |> Component.assign(:relation_key, :items)
+    |> Component.assign(:relation_module, MediaItem)
+    |> Component.assign(:image_field, :cover)
+    |> Component.assign(:video_field, nil)
+    |> Component.assign(:subform, %Subform{
       sub_fields: [input(:cover, :image), input(:title, :text), input(:size, :radios)]
     })
     |> Phoenix.LiveView.stream(:transformer_items, [])
@@ -146,7 +147,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     field =
       %Collection{items: [%MediaItem{id: 1, title: "Editable caption", cover: nil}]}
       |> Ecto.Changeset.change()
-      |> Phoenix.Component.to_form()
+      |> Component.to_form()
       |> Access.get(:items)
 
     subform = %Subform{
@@ -313,7 +314,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
 
       socket =
         recovery_socket(item)
-        |> Phoenix.Component.assign(:subform, %Subform{})
+        |> Component.assign(:subform, %Subform{})
         |> register()
 
       {:ok, socket} =

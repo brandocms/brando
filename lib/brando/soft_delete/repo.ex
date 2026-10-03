@@ -118,6 +118,8 @@ defmodule Brando.SoftDelete.Repo do
         obfuscated_fields =
           Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
 
+        # Generated into the consuming app's Repo, where no `Changeset` alias exists.
+        # credo:disable-for-next-line ExSlop.Check.Readability.UnaliasedModuleUse
         changeset = Ecto.Changeset.change(struct)
 
         obfuscated_fields

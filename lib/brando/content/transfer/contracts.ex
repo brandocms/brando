@@ -1,8 +1,8 @@
 defmodule Brando.Content.Transfer.Contracts do
   use Gettext, backend: Brando.Gettext
   @moduledoc false
-  alias Brando.Drafts.Params
   alias Brando.Content.Transfer.Error
+  alias Brando.Drafts.Params
   alias Brando.Repo
 
   @settings ~w(type multi datasource datasource_module datasource_type datasource_query)

@@ -1,9 +1,10 @@
 defmodule Brando.Content.Transfer.Dependencies do
   use Gettext, backend: Brando.Gettext
   @moduledoc false
-  import Ecto.Query, only: [from: 2]
-  alias Brando.Content.Transfer.{Archive, Catalog, Contracts, Error, Media, Portable}
+  import Ecto.Query, only: [from: 2, dynamic: 2]
+  alias Brando.Authorization.Boundary
   alias Brando.Content.Definition.Value
+  alias Brando.Content.Transfer.{Archive, Catalog, Contracts, Error, Media, Portable}
   alias Brando.Drafts.Params
   alias Brando.Repo
 
@@ -380,7 +381,7 @@ defmodule Brando.Content.Transfer.Dependencies do
         from(f in Brando.Forms.Form, where: f.key == ^to_string(dependency["key"]))
         |> Catalog.scoped_query(Brando.Forms.Form, actor, :read)
         |> Repo.all()
-        |> Enum.filter(&(Brando.Authorization.Boundary.authorize(actor, :read, &1) == :ok))
+        |> Enum.filter(&(Boundary.authorize(actor, :read, &1) == :ok))
         |> Enum.sort_by(&{to_string(&1.language) != dependency["language"], &1.id})
         |> Enum.take(1)
         |> Enum.map(&%{id: &1.id, label: label(&1), match: :uid})
@@ -398,7 +399,7 @@ defmodule Brando.Content.Transfer.Dependencies do
         candidates = if exact, do: [exact], else: if(kind == "module", do: Repo.all(query), else: [])
 
         candidates
-        |> Enum.filter(&(Brando.Authorization.Boundary.authorize(actor, :read, &1) == :ok))
+        |> Enum.filter(&(Boundary.authorize(actor, :read, &1) == :ok))
         |> Enum.filter(fn record ->
           record.uid == dependency["uid"] ||
             (kind == "module" && Contracts.normalized(record) == dependency["definition"])
@@ -430,8 +431,8 @@ defmodule Brando.Content.Transfer.Dependencies do
     label =
       label_fields
       |> Enum.reverse()
-      |> Enum.reduce(Ecto.Query.dynamic([r], ""), fn key, fallback ->
-        Ecto.Query.dynamic([r], fragment("COALESCE(CAST(? AS text), ?)", field(r, ^key), ^fallback))
+      |> Enum.reduce(dynamic([r], ""), fn key, fallback ->
+        dynamic([r], fragment("COALESCE(CAST(? AS text), ?)", field(r, ^key), ^fallback))
       end)
 
     # Restrict in SQL before loading assets. The cast also supports translated
@@ -444,7 +445,7 @@ defmodule Brando.Content.Transfer.Dependencies do
          |> String.replace("%", "\\%")
          |> String.replace("_", "\\_")) <> "%"
 
-    matching = Ecto.Query.dynamic([r], ilike(^label, ^pattern))
+    matching = dynamic([r], ilike(^label, ^pattern))
 
     from(r in schema,
       where: ^matching,
@@ -469,8 +470,8 @@ defmodule Brando.Content.Transfer.Dependencies do
 
   defp scope_options(query, "identifier", _, actor),
     do:
-      Brando.Authorization.Boundary.with_scope(Brando.Authorization.Boundary.actor_scope(actor), fn ->
-        Brando.Authorization.Boundary.identifiers(query)
+      Boundary.with_scope(Boundary.actor_scope(actor), fn ->
+        Boundary.identifiers(query)
       end)
 
   defp scope_options(query, kind, _, actor) when kind in ~w(markdown_source markdown_version),

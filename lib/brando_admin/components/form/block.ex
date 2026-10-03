@@ -617,7 +617,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           old_ref_name = Changeset.get_field(old_ref, :name)
 
           if old_ref_name == ref.name do
-            # Update the existing changeset with new data
             updated_ref_changeset =
               old_ref
               |> Changeset.change(%{
@@ -680,7 +679,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         ref, acc ->
           if Changeset.get_field(ref, :name) == ref_name do
-            # Update the block data (only if ref_data provided)
             block =
               ref
               |> Changeset.get_field(:data)
@@ -785,7 +783,6 @@ defmodule BrandoAdmin.Components.Form.Block do
                   {updated_ref, updated_block}
               end
 
-            # Update the ref with the modified block data
             updated_ref =
               updated_ref
               |> Changeset.force_change(:data, updated_block)
@@ -1003,14 +1000,18 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, focus: focus, focus_role: role)
   end
 
-  @doc false
-  # What a parent hands its children: the focus while it is on the way to
-  # the selected block, nothing below it.
+  @doc """
+  Returns the focus a parent passes to its children: the focus itself while
+  the parent is an ancestor of the selected block, `nil` otherwise.
+  """
   def child_focus(focus, :ancestor), do: focus
   def child_focus(_focus, _role), do: nil
 
-  @doc false
-  # A parent on the way to the selected block renders only that branch.
+  @doc """
+  Narrows child shells to the branch leading to the selected block when the
+  parent is its ancestor, so a focused editor renders only that path. Any
+  other role returns the shells unchanged.
+  """
   def focus_shells(shells, focus, :ancestor) do
     keep = [focus.target | focus.path]
     Enum.filter(shells, fn {uid, _, _} -> uid in keep end)
@@ -2312,7 +2313,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     )
   end
 
-  @doc false
+  @doc """
+  Returns whether this block can patch its own HTML into the live preview.
+
+  Slots and single-entry modules with children cannot render alone, so
+  they fall back to refreshing the whole preview.
+  """
   def render_live_preview_block?(%{assigns: %{live_preview_active?: true} = assigns}) do
     assigns[:belongs_to] != :slot && assigns[:type] != :slot &&
       !(assigns[:type] == :module && assigns[:multi] == false && assigns[:has_children?] == true)
@@ -3084,7 +3090,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  # Add an image to a gallery ref association
   defp add_media_to_gallery_ref(ref_changeset, media_type, media_id, current_user) do
     if gallery_contains_media?(Changeset.get_field(ref_changeset, :gallery), media_type, media_id) do
       ref_changeset

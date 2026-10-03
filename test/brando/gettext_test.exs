@@ -5,7 +5,7 @@ defmodule Brando.GettextTest do
   alias Expo.Message.{Plural, Singular}
   alias Expo.PO
 
-  @gettext_path Path.expand("../../priv/gettext", __DIR__)
+  @gettext_path Application.app_dir(:brando, "priv/gettext")
 
   test "Norwegian catalogs cover every extracted message with complete translations" do
     for template <- Path.wildcard(Path.join(@gettext_path, "*.pot")) do

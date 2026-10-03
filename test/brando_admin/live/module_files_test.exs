@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ModuleFilesTest do
   use Brando.LiveCase
-  alias Brando.Content.{Definitions, Module}
   alias Brando.Content.Definition.Archive
+  alias Brando.Content.{Definitions, Module}
   alias Ecto.Changeset
 
   setup %{current_user: user} do

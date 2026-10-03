@@ -386,12 +386,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     {:noreply, assign(socket, :show, false)}
   end
 
-  @doc false
-  # What the list shows: `{namespace, modules}` pairs, filtered by the search
-  # box within the selected group ("Everything" searches all). The group rail
-  # counts the matches in every group, so another group's hits stay in view.
-  # Without a search, "Everything" starts with the recently used modules, which
-  # are then left out of their own groups; "Recently used" shows only those.
+  @doc """
+  Returns the `{namespace, modules}` pairs the list shows, filtered by the
+  search box within the selected group ("Everything" searches all). Groups
+  left empty by the search are dropped.
+
+  The group rail counts the matches in every group, so another group's hits
+  stay in view. Without a search, "Everything" starts with the recently used
+  modules, which are then left out of their own groups; "Recently used"
+  shows only those.
+  """
   def visible_groups(assigns) do
     query = String.trim(assigns[:query] || "")
     recent = recent_modules(assigns)
@@ -455,9 +459,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
   defp module_ref(module), do: Brando.Content.SharedLibrary.encode_reference(module.library_origin, module.id)
 
-  @doc false
-  # A module without its own sketch gets an icon for what it holds, read from
-  # its refs: namespaces are free text, so they can't pick one.
+  @doc """
+  Returns the hero icon name for a module without its own sketch, chosen
+  from what it holds as read from its refs. Namespaces are free text, so
+  they cannot pick one. Falls back to `"hero-cube"`.
+  """
   def module_icon(%{datasource: true}), do: "hero-queue-list"
   def module_icon(%{multi: true}), do: "hero-rectangle-stack"
 

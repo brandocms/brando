@@ -50,6 +50,7 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
   alias Brando.Videos.Video
   alias Brando.Videos.VimeoURL
@@ -90,7 +91,7 @@ defmodule Brando.Videos.Uploaders.Vimeo do
 
   @impl true
   def complete_upload(%Video{status: :uploading} = video, _provider_data) do
-    with {:ok, video} <- update_video(video, %{status: :processing}) do
+    with {:ok, video} <- ProviderUpdate.update_video(video, %{status: :processing}) do
       enqueue_status_check(video)
       {:ok, video}
     end
@@ -398,10 +399,10 @@ defmodule Brando.Videos.Uploaders.Vimeo do
           |> Map.put("vimeo", Map.merge(previous_meta, vimeo_meta(payload)))
       }
       |> maybe_put_source_url(video, payload["link"])
-      |> put_dimensions(payload)
+      |> ProviderUpdate.put_dimensions(payload)
       |> put_duration(payload["duration"])
 
-    update_video(video, params)
+    ProviderUpdate.update_video(video, params)
   end
 
   defp maybe_put_source_url(params, %Video{source_url: url}, _link) when is_binary(url) and url != "",
@@ -409,23 +410,6 @@ defmodule Brando.Videos.Uploaders.Vimeo do
 
   defp maybe_put_source_url(params, _video, link) when is_binary(link), do: Map.put(params, :source_url, link)
   defp maybe_put_source_url(params, _video, _link), do: params
-
-  defp update_video(video, params) do
-    with {:ok, creator} <- Brando.Users.get_user(video.creator_id),
-         {:ok, updated_video} <- Videos.update_video(video, params, creator) do
-      Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast_video_update(updated_video)
-      {:ok, updated_video}
-    end
-  end
-
-  # Vimeo reports 0×0 until it has probed the source.
-  defp put_dimensions(params, %{"width" => width, "height" => height})
-       when is_integer(width) and width > 0 and is_integer(height) and height > 0 do
-    Map.merge(params, %{width: width, height: height, aspect_ratio: "#{width}/#{height}"})
-  end
-
-  defp put_dimensions(params, _payload), do: params
 
   defp put_duration(params, duration) when is_number(duration) and duration > 0,
     do: Map.put(params, :duration, Videos.Helpers.format_duration(duration))
@@ -471,14 +455,6 @@ defmodule Brando.Videos.Uploaders.Vimeo do
         Logger.error("Could not schedule Vimeo status check for video #{id}: #{inspect(reason)}")
         :ok
     end
-  end
-
-  defp broadcast_video_update(video) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:video:#{video.id}",
-      {video, [:video, :updated]}
-    )
   end
 
   defp find_video(nil), do: {:error, :not_found}

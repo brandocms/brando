@@ -77,13 +77,16 @@ defmodule Brando.FrontendEdit do
   @spec active?() :: boolean()
   def active?, do: Process.get(@active_key) == true
 
-  @doc false
+  @doc """
+  Switches edit mode on for the current process. The frontend edit plug calls it
+  for an admin request; pair it with `deactivate/0`.
+  """
   def activate do
     Process.put(@active_key, true)
     :ok
   end
 
-  @doc false
+  @doc "Switches edit mode off and clears the process's render memo and field stack."
   def deactivate do
     Process.delete(@active_key)
     Process.delete(@memo_key)
@@ -107,9 +110,11 @@ defmodule Brando.FrontendEdit do
     end
   end
 
-  @doc false
-  # Villain wraps each render in this, so the editable tags and components in
-  # module templates know whether to add markers.
+  @doc """
+  Runs `fun` with `annotating?/0` fixed to `annotate?`, restoring the previous
+  value afterwards. Villain wraps each render in this, so the editable tags and
+  components in module templates know whether to add markers.
+  """
   def annotation_scope(annotate?, fun) do
     previous = Process.get(@annotate_key)
     Process.put(@annotate_key, annotate? == true)
@@ -184,9 +189,11 @@ defmodule Brando.FrontendEdit do
 
   def annotate_entry(entry), do: entry
 
-  @doc false
-  # Single-entry query results pass through here. Revisions are left alone:
-  # they show content that is not what the blocks hold now.
+  @doc """
+  Annotates the entry in a single-entry query result, passing other results through.
+
+  Revisions are left alone: they show content that is not what the blocks hold now.
+  """
   def annotate_query_result({:ok, entry}, args) when is_map(args) do
     if Map.has_key?(args, :revision), do: {:ok, entry}, else: {:ok, annotate_entry(entry)}
   end
@@ -310,6 +317,6 @@ defmodule Brando.FrontendEdit do
     end
   end
 
-  @doc false
-  def wrap_field(html, key), do: ["<!-- [+:F<", key, ">] -->", html, "<!-- [-:F<", key, ">] -->"] |> IO.iodata_to_binary()
+  defp wrap_field(html, key),
+    do: ["<!-- [+:F<", key, ">] -->", html, "<!-- [-:F<", key, ">] -->"] |> IO.iodata_to_binary()
 end

@@ -13,6 +13,8 @@ defmodule Brando.Content.Blocks do
   alias Brando.Content.BlockPreloads
   alias Brando.Content.Ref
   alias Brando.Content.Var
+  alias Brando.Repo
+  alias Brando.RichText
   alias Brando.Trait
   alias Brando.Utils
   alias Brando.Villain
@@ -154,7 +156,7 @@ defmodule Brando.Content.Blocks do
         select: m
 
     query
-    |> Brando.Repo.all()
+    |> Repo.all()
     |> Enum.map(&%{name: &1.name, namespace: &1.namespace, id: &1.id})
   end
 
@@ -177,7 +179,7 @@ defmodule Brando.Content.Blocks do
   """
   def list_orphaned_blocks do
     from(b in Block, where: is_nil(b.parent_id), select: %{id: b.id, source: b.source})
-    |> Brando.Repo.all()
+    |> Repo.all()
     |> Enum.group_by(& &1.source, & &1.id)
     |> Enum.flat_map(fn {source, ids} -> reject_linked_blocks(source, ids) end)
   end
@@ -192,7 +194,7 @@ defmodule Brando.Content.Blocks do
       table ->
         linked =
           from(j in table, where: j.block_id in ^ids, select: j.block_id)
-          |> Brando.Repo.all()
+          |> Repo.all()
           |> MapSet.new()
 
         ids
@@ -222,7 +224,7 @@ defmodule Brando.Content.Blocks do
 
     query
     |> maybe_filter_library_origin(:palette_origin, origin)
-    |> Brando.Repo.all()
+    |> Repo.all()
   end
 
   @doc "Return list of all blocks using `container_id`."
@@ -234,7 +236,7 @@ defmodule Brando.Content.Blocks do
 
     query
     |> maybe_filter_library_origin(:container_origin, origin)
-    |> Brando.Repo.all()
+    |> Repo.all()
   end
 
   @doc """
@@ -246,7 +248,7 @@ defmodule Brando.Content.Blocks do
         select: r.block_id,
         where: r.gallery_id == ^gallery_id and not is_nil(r.block_id)
 
-    Brando.Repo.all(query)
+    Repo.all(query)
   end
 
   @doc """
@@ -259,7 +261,7 @@ defmodule Brando.Content.Blocks do
         left_join: v in assoc(b, :vars),
         where: v.identifier_id == ^identifier_id
 
-    Brando.Repo.all(query)
+    Repo.all(query)
   end
 
   @doc """
@@ -269,10 +271,10 @@ defmodule Brando.Content.Blocks do
     from(r in Ref,
       where: not is_nil(r.block_id) and fragment("CAST(? AS TEXT) ILIKE ?", r.data, "%data-identifier-id%")
     )
-    |> Brando.Repo.all()
+    |> Repo.all()
     |> Enum.filter(fn ref ->
       case ref.data do
-        %{data: %{text: text}} -> Brando.RichText.contains_identifier?(text, identifier_id)
+        %{data: %{text: text}} -> RichText.contains_identifier?(text, identifier_id)
         _ -> false
       end
     end)
@@ -291,7 +293,7 @@ defmodule Brando.Content.Blocks do
 
     query
     |> maybe_filter_library_origin(:module_origin, origin)
-    |> Brando.Repo.all()
+    |> Repo.all()
   end
 
   @doc """
@@ -303,7 +305,7 @@ defmodule Brando.Content.Blocks do
         select: b.id,
         where: b.fragment_id == ^fragment_id
 
-    Brando.Repo.all(query)
+    Repo.all(query)
   end
 
   @doc """
@@ -362,7 +364,7 @@ defmodule Brando.Content.Blocks do
       end)
 
     built_query
-    |> Brando.Repo.all()
+    |> Repo.all()
     |> Enum.map(& &1["id"])
     |> Enum.uniq()
   end
@@ -396,7 +398,7 @@ defmodule Brando.Content.Blocks do
         )
       end)
 
-    Brando.Repo.all(built_query)
+    Repo.all(built_query)
   end
 
   @doc """
@@ -491,14 +493,14 @@ defmodule Brando.Content.Blocks do
       from r in Brando.Content.Ref,
         where: fragment("CAST(? AS TEXT) ILIKE ?", r.data, ^search_term)
 
-    refs = Brando.Repo.all(query)
+    refs = Repo.all(query)
 
     for ref <- refs,
         match?(%{data: %{text: text}} when is_binary(text), ref.data),
-        Brando.RichText.contains_identifier?(ref.data.data.text, identifier_id) do
-      Brando.Repo.transaction(fn ->
+        RichText.contains_identifier?(ref.data.data.text, identifier_id) do
+      Repo.transaction(fn ->
         # Re-read under a row lock so a URL refresh cannot replace newer wording.
-        case Brando.Repo.one(from r in Ref, where: r.id == ^ref.id, lock: "FOR UPDATE") do
+        case Repo.one(from r in Ref, where: r.id == ^ref.id, lock: "FOR UPDATE") do
           nil -> :ok
           current -> update_ref_identifier_link(current, identifier_id, new_url)
         end
@@ -518,7 +520,7 @@ defmodule Brando.Content.Blocks do
 
             ref
             |> Ecto.Changeset.change(%{data: new_data})
-            |> Brando.Repo.update()
+            |> Repo.update()
 
           :unchanged ->
             :ok
@@ -537,7 +539,7 @@ defmodule Brando.Content.Blocks do
   and updates the href to the new URL.
   """
   def update_identifier_links_in_rich_text_fields(identifier_id, new_url) do
-    if Brando.RichText.allowed_uri?(new_url) do
+    if RichText.allowed_uri?(new_url) do
       for module <- Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando),
           rich_field <- rich_text_fields_for(module) do
         query =
@@ -545,16 +547,16 @@ defmodule Brando.Content.Blocks do
             where: ilike(field(entry, ^rich_field), "%data-identifier-id%"),
             select: {entry.id, field(entry, ^rich_field)}
 
-        for {id, html} <- Brando.Repo.all(query), Brando.RichText.contains_identifier?(html, identifier_id) do
-          Brando.Repo.transaction(fn ->
+        for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id) do
+          Repo.transaction(fn ->
             # Lock only the matching owner while rewriting. A concurrent author
             # must never lose new wording to a stale read/replace operation.
-            entry = Brando.Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE")
+            entry = Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE")
 
             if entry do
-              case Brando.RichText.update_identifier_url(Map.get(entry, rich_field), identifier_id, new_url) do
+              case RichText.update_identifier_url(Map.get(entry, rich_field), identifier_id, new_url) do
                 {:updated, html} ->
-                  updated = entry |> Changeset.change([{rich_field, html}]) |> Brando.Repo.update!()
+                  updated = entry |> Changeset.change([{rich_field, html}]) |> Repo.update!()
                   Brando.Cache.Query.evict({:ok, updated})
                   enqueue_entry_for_render(%{schema: module, entry_id: id})
 
@@ -632,7 +634,7 @@ defmodule Brando.Content.Blocks do
   """
   def render_all_entries(schema) do
     entry_ids =
-      Brando.Repo.all(
+      Repo.all(
         from(s in schema,
           select: s.id
         )
@@ -666,7 +668,7 @@ defmodule Brando.Content.Blocks do
           |> Changeset.change()
           |> render_all_block_fields_and_add_to_changeset(schema, entry)
 
-        case Brando.Repo.update(changeset) do
+        case Repo.update(changeset) do
           {:ok, %{__struct__: fragment_module} = fragment} when fragment_module == @fragment_module ->
             Brando.Cache.Query.evict({:ok, fragment})
             render_entries_with_fragment_id(fragment.id)
@@ -743,7 +745,7 @@ defmodule Brando.Content.Blocks do
     do: query_stale_block_ids(module_id, version || 1, origin)
 
   def list_stale_block_ids(module_id, origin) when is_integer(module_id) do
-    case Brando.Repo.get(Brando.Content.Module, module_id) do
+    case Repo.get(Brando.Content.Module, module_id) do
       nil -> []
       module -> query_stale_block_ids(module_id, module.version || 1, origin)
     end
@@ -761,7 +763,7 @@ defmodule Brando.Content.Blocks do
       select: b.id
     )
     |> maybe_filter_library_origin(:module_origin, origin)
-    |> Brando.Repo.all()
+    |> Repo.all()
   end
 
   @doc """
@@ -783,7 +785,7 @@ defmodule Brando.Content.Blocks do
 
     blocks
     |> Enum.reduce([], fn block, acc ->
-      case block |> sync_module(module) |> Brando.Repo.update() do
+      case block |> sync_module(module) |> Repo.update() do
         {:ok, _} -> [block.id | acc]
         {:error, changeset} -> log_failed_sync(block, module, changeset, acc)
       end
@@ -932,7 +934,7 @@ defmodule Brando.Content.Blocks do
 
     blocks
     |> Enum.reduce([], fn block, acc ->
-      case block |> sync_module(module) |> Brando.Repo.update() do
+      case block |> sync_module(module) |> Repo.update() do
         {:ok, _} -> [block.id | acc]
         {:error, changeset} -> log_failed_sync(block, module, changeset, acc)
       end
@@ -979,7 +981,7 @@ defmodule Brando.Content.Blocks do
           select: [js.entry_id, fragment("array_agg(?)", js.block_id)],
           group_by: js.entry_id
 
-      grouped_block_ids = Brando.Repo.all(query)
+      grouped_block_ids = Repo.all(query)
 
       for {entry_id, block_ids} <- grouped_block_ids do
         {:ok, entry} = Brando.Blueprint.EntryQuery.get(schema, entry_id)
@@ -1007,7 +1009,7 @@ defmodule Brando.Content.Blocks do
 
     block
     |> Changeset.change(changes)
-    |> Brando.Repo.update()
+    |> Repo.update()
   end
 
   @doc """
@@ -1267,7 +1269,7 @@ defmodule Brando.Content.Blocks do
           |> then(&:"#{&1}")
 
         join_schema = Module.concat([schema, field_as_module])
-        acc + Brando.Repo.aggregate(from(j in join_schema, where: j.entry_id == ^entry_id), :count)
+        acc + Repo.aggregate(from(j in join_schema, where: j.entry_id == ^entry_id), :count)
       end)
     else
       0

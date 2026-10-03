@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Phoenix.HTML
+
   def mount(socket) do
     {:ok, assign(socket, :show_language_picker, false)}
   end
@@ -69,13 +71,13 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   # being the exception.
   defp content_in(language) do
     name = if Gettext.get_locale(Brando.Gettext) == "en", do: language, else: String.downcase(to_string(language))
-    strong = "<strong>" <> (name |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()) <> "</strong>"
+    strong = "<strong>" <> (name |> HTML.html_escape() |> HTML.safe_to_string()) <> "</strong>"
 
     gettext("Content in %{language}", language: "\x00")
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
+    |> HTML.html_escape()
+    |> HTML.safe_to_string()
     |> String.replace("\x00", strong)
-    |> Phoenix.HTML.raw()
+    |> HTML.raw()
   end
 
   def handle_event("select_language", %{"id" => id}, %{assigns: %{content_language: content_language}} = socket) do

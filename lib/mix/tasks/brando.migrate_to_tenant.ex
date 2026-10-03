@@ -109,8 +109,11 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     end
   end
 
-  @doc false
-  # Public so the size reporting can be tested without running a migration.
+  @doc """
+  Returns the total size in bytes of the files under `path`, or 0 when it
+  does not exist. Public so the size reporting can be tested without running
+  a migration.
+  """
   def directory_size(path) do
     case File.stat(path) do
       {:ok, %{type: :directory}} ->
@@ -126,7 +129,7 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     end
   end
 
-  @doc false
+  @doc "Formats a byte count for the media size report, such as `\"5.7 GB\"`."
   def format_bytes(bytes) when bytes >= 1_000_000_000,
     do: "#{Float.round(bytes / 1_000_000_000, 1)} GB"
 

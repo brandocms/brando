@@ -8,6 +8,7 @@ defmodule Brando.Villain do
   """
   alias Brando.Blueprint.URL
   alias Brando.FrontendEdit
+  alias Brando.Images
   alias Brando.Media.URL, as: MediaURL
   alias Brando.Pages.FragmentQuery
   alias Brando.RuntimeConfig
@@ -487,9 +488,9 @@ defmodule Brando.Villain do
         sizes: sizes,
         dominant_color: image.dominant_color,
         formats: image.formats,
-        alt: Brando.Images.text(image, :alt, language),
-        title: Brando.Images.text(image, :title, language),
-        credits: Brando.Images.text(image, :credits, language),
+        alt: Images.text(image, :alt, language),
+        title: Images.text(image, :title, language),
+        credits: Images.text(image, :credits, language),
         inserted_at: image.inserted_at,
         width: image.width,
         height: image.height

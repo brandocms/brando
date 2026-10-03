@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.FormId
   alias BrandoAdmin.Components.Form.Primitives
 
   # prop field, :atom
@@ -57,20 +58,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     socket =
       socket
       |> assign(assigns)
-      |> assign_new(:form_id, fn ->
-        form = assigns.field.form
-        path = Brando.Utils.get_path_from_field_name(form.name)
-        module_from_form = form.source.data.__struct__
-
-        module =
-          if path == [] do
-            module_from_form
-          else
-            Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
-          end
-
-        "#{module.__naming__().singular}_form"
-      end)
+      |> assign_new(:form_id, fn -> FormId.for_form(assigns.field.form) end)
 
     changeset = assigns.field.form.source
     relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")
@@ -297,16 +285,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     )
 
     path = Brando.Utils.get_path_from_field_name(form.name)
-    module_from_form = form.source.data.__struct__
-
-    module =
-      if path == [] do
-        module_from_form
-      else
-        Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
-      end
-
-    form_id = "#{module.__naming__().singular}_form"
+    form_id = FormId.for_form(form)
 
     # No per-field LiveView upload anymore — uploads go through the sticky
     # UploadManager; the picker is browse/select only.

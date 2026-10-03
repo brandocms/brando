@@ -11,7 +11,9 @@ defmodule Brando.Authorization.Groups do
   alias Brando.Repo
   alias Ecto.Changeset
 
-  @lock_id 303_20260906
+  # pg_advisory_xact_lock key: the prefix 303 followed by the date the lock was
+  # introduced (2026-09-06). Every node must take the same key, so it must never change.
+  @lock_id 30_320_260_906
 
   @doc "Lists groups and member counts in the authorized scope."
   def list(%Scope{} = scope) do
@@ -237,12 +239,20 @@ defmodule Brando.Authorization.Groups do
     end
   end
 
-  @doc false
+  @doc """
+  Takes the shared authorization administration lock for the current transaction.
+
+  Call it inside `Repo.transaction/1` before reading authority that a concurrent
+  group, membership or account change could invalidate. The lock is released at commit.
+  """
   def lock! do
     Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock($1)", [@lock_id])
   end
 
-  @doc false
+  @doc """
+  Rolls back the current transaction with `:last_superuser` when deactivating or deleting `user_id` would
+  remove the last installation Superuser. Returns `:ok` otherwise.
+  """
   def protect_account!(user_id) do
     group = Repo.one(from(g in Group, where: g.preset == :superuser and g.scope_kind == :installation))
     if group, do: protect_last_superuser!(group, user_id)

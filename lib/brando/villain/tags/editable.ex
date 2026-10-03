@@ -27,8 +27,10 @@ defmodule Brando.Villain.Tags.Editable do
     {[if(key, do: Fields.open(:markup, key), else: "")], context}
   end
 
-  @doc false
-  # Closes the innermost `{% editable %}`.
+  @doc """
+  Closes the innermost `{% editable %}`, popping its key from the render context.
+  `{% endeditable %}` renders through this.
+  """
   def close(context) do
     case Map.get(context.private, @stack, []) do
       [key | rest] ->
@@ -40,9 +42,11 @@ defmodule Brando.Villain.Tags.Editable do
     end
   end
 
-  @doc false
-  # `entry.title` → the entry and `"title"`: the field is the last key of the
-  # path, the entry everything before it.
+  @doc """
+  Resolves a Liquid field path to `{entry, field, context}`: `entry.title` gives the
+  entry and `"title"`, since the field is the last key of the path and the entry
+  everything before it. Returns `{nil, nil, context}` for any other argument.
+  """
   def resolve({:field, accesses}, context) when length(accesses) > 1 do
     case Enum.split(accesses, -1) do
       {parent, [{:key, name}]} ->

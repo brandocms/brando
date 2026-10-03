@@ -10,18 +10,18 @@ defmodule Brando.Content.ProposalsTest do
     DeleteBlock,
     InsertBlock,
     MoveBlock,
+    Preview,
+    Receipt,
     Review,
     SetBlockActive,
     SetBlockDetails,
+    SetBlockMedia,
     SetBlockSelection,
     SetBlockTable,
-    SetRefConfig,
-    Preview,
-    Receipt,
-    SetBlockMedia,
     SetBlockText,
     SetBlockValues,
-    SetFields
+    SetFields,
+    SetRefConfig
   }
 
   alias Brando.Content.Transfer.Catalog

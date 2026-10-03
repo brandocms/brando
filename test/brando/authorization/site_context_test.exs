@@ -7,6 +7,7 @@ defmodule Brando.Authorization.SiteContextTest do
   alias Brando.Pages.Page
   alias Brando.Tenant
   alias Brando.Tenant.Registry
+  alias Ecto.Adapters.SQL
 
   setup do
     put_test_env(:authorization_mode, :groups)
@@ -208,16 +209,16 @@ defmodule Brando.Authorization.SiteContextTest do
   defp environment(site, key) do
     {:ok, environment} = Registry.create_environment(site, %{name: key, key: key, live: key == "production"})
     prefix = Tenant.prefix(site, environment)
-    Ecto.Adapters.SQL.query!(Repo, ~s(CREATE SCHEMA "#{prefix}"))
-    %{rows: rows} = Ecto.Adapters.SQL.query!(Repo, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+    SQL.query!(Repo, ~s(CREATE SCHEMA "#{prefix}"))
+    %{rows: rows} = SQL.query!(Repo, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
 
     rows
     |> List.flatten()
     |> Enum.reject(&Tenant.SharedTables.member?/1)
     |> Enum.each(fn table ->
       escaped = String.replace(table, "\"", "\"\"")
-      Ecto.Adapters.SQL.query!(Repo, ~s|CREATE TABLE "#{prefix}"."#{escaped}" (LIKE public."#{escaped}" INCLUDING ALL)|)
-      Ecto.Adapters.SQL.query!(Repo, ~s(INSERT INTO "#{prefix}"."#{escaped}" SELECT * FROM public."#{escaped}"))
+      SQL.query!(Repo, ~s|CREATE TABLE "#{prefix}"."#{escaped}" (LIKE public."#{escaped}" INCLUDING ALL)|)
+      SQL.query!(Repo, ~s(INSERT INTO "#{prefix}"."#{escaped}" SELECT * FROM public."#{escaped}"))
     end)
 
     environment

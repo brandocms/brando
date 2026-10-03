@@ -117,8 +117,8 @@ defmodule Brando.SEO.Generate do
   end
 
   @doc """
-  The context fields stored for `schema` in the site's SEO settings, or `nil`
-  when the site has never picked any.
+  Context fields the site's SEO settings keep for `schema`, or `nil` when the
+  site has never picked any.
 
   Stored per schema on `Brando.Sites.SEO` so the choice survives a deploy and
   can be changed without one.

@@ -753,7 +753,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def maybe_assign_select_changeset(%{assigns: %{entry_form: {module, _form_name}, current_user: current_user}} = socket) do
     singular = module.__naming__().singular
 
-    # Create an empty struct for the changeset
     empty_struct = struct!(module)
     select_changeset = module.changeset(empty_struct, %{}, current_user)
 

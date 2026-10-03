@@ -41,7 +41,6 @@ defmodule Brando.Images.Processor.VixTest do
       assert result.format == "jpg"
       assert File.exists?(dest)
 
-      # Verify the output has correct dimensions
       {:ok, img} = Image.open(dest)
       assert Image.width(img) <= 100
     end

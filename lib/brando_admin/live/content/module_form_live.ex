@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     </Primitives.form_header>
 
     <div id="module_form-el" phx-hook="Brando.Form" data-skip-keydown>
-      <.form for={@form} class="main-form" phx-change="validate" phx-submit="save">
+      <.form id="module_form" for={@form} class="main-form" phx-change="validate" phx-submit="save">
         <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
 
         <BrandoAdmin.Components.DefinitionFile.notice file={@definition_file} />

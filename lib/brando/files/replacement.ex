@@ -4,9 +4,12 @@ defmodule Brando.Files.Replacement do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Assets.CompletedCallback
+  alias Brando.Authorization.Boundary
+  alias Brando.CDN
   alias Brando.Content.BlockReferences
   alias Brando.Content.RenderQueue
   alias Brando.Files
+  alias Brando.Repo
   alias Brando.Tenant.Storage
   alias Brando.Uploads
 
@@ -15,10 +18,10 @@ defmodule Brando.Files.Replacement do
   @doc "Validate a replacement against the stored file, before transferring bytes."
   def initiate(file_id, meta, actor \\ nil) do
     with :ok <-
-           Brando.Authorization.Media.authorize(actor || Brando.Authorization.Boundary.current_scope(), :file, :update),
+           Brando.Authorization.Media.authorize(actor || Boundary.current_scope(), :file, :update),
          {:ok, %{deleted_at: nil} = file} <- Files.get_file(file_id),
          :ok <-
-           Brando.Authorization.Boundary.authorize(actor || Brando.Authorization.Boundary.current_scope(), :update, file),
+           Boundary.authorize(actor || Boundary.current_scope(), :update, file),
          {:ok, cfg} <- Files.get_config_for(file.config_target),
          :ok <- validate(file, cfg, meta) do
       # A replacement is staged on the server, including for CDN files. Never
@@ -34,56 +37,59 @@ defmodule Brando.Files.Replacement do
 
   @doc "Store a completed replacement. The original is retained on validation or storage failure."
   def store(file_id, %{path: path}, entry, user) do
-    with {:ok, stat} <- File.stat(path) do
-      meta = %{name: entry.client_name, size: stat.size, type: entry.client_type}
-      schema = Brando.Files.File
-
-      result =
-        Brando.Repo.transaction(
-          fn ->
-            file = Brando.Repo.one(from f in schema, where: f.id == ^file_id and is_nil(f.deleted_at), lock: "FOR UPDATE")
-
-            with %{id: _} <- file,
-                 :ok <- Brando.Authorization.Boundary.authorize(user, :update, file),
-                 {:ok, cfg} <- Files.get_config_for(file.config_target),
-                 :ok <- validate(file, cfg, meta),
-                 {:ok, destination} <- destination(file, cfg),
-                 {:ok, updated} <-
-                   file |> Ecto.Changeset.change(filesize: stat.size, mime_type: meta.type) |> Brando.Repo.update(),
-                 :ok <- store_contents(updated, cfg, path, destination) do
-              {updated, cfg}
-            else
-              {:error, message} when is_binary(message) -> Brando.Repo.repo().rollback(message)
-              nil -> Brando.Repo.repo().rollback("The file is no longer available")
-              _ -> Brando.Repo.repo().rollback("Could not replace the file")
-            end
-          end,
-          timeout: :infinity
-        )
-
-      case result do
-        {:ok, {file, cfg}} ->
-          Brando.Cache.Query.evict({:ok, file})
-
-          file.id
-          |> BlockReferences.list_block_ids_using_file()
-          |> BlockReferences.list_root_block_ids_by_source()
-          |> BlockReferences.list_entry_ids_for_root_blocks_by_source()
-          |> RenderQueue.enqueue_map()
-
-          CompletedCallback.run(cfg, file, user)
-          {:ok, file}
-
-        error ->
-          error
-      end
-    else
+    case File.stat(path) do
+      {:ok, stat} -> store_stat(file_id, path, stat, entry, user)
       _ -> {:error, "Could not read the replacement file"}
     end
   rescue
     exception ->
       Logger.error("File replacement failed (#{inspect(exception.__struct__)})")
       {:error, "Could not replace the file"}
+  end
+
+  defp store_stat(file_id, path, stat, entry, user) do
+    meta = %{name: entry.client_name, size: stat.size, type: entry.client_type}
+    schema = Brando.Files.File
+
+    result =
+      Repo.transaction(
+        fn ->
+          file = Repo.one(from f in schema, where: f.id == ^file_id and is_nil(f.deleted_at), lock: "FOR UPDATE")
+
+          with %{id: _} <- file,
+               :ok <- Boundary.authorize(user, :update, file),
+               {:ok, cfg} <- Files.get_config_for(file.config_target),
+               :ok <- validate(file, cfg, meta),
+               {:ok, destination} <- destination(file, cfg),
+               {:ok, updated} <-
+                 file |> Ecto.Changeset.change(filesize: stat.size, mime_type: meta.type) |> Repo.update(),
+               :ok <- store_contents(updated, cfg, path, destination) do
+            {updated, cfg}
+          else
+            {:error, message} when is_binary(message) -> Repo.repo().rollback(message)
+            nil -> Repo.repo().rollback("The file is no longer available")
+            _ -> Repo.repo().rollback("Could not replace the file")
+          end
+        end,
+        timeout: :infinity
+      )
+
+    case result do
+      {:ok, {file, cfg}} ->
+        Brando.Cache.Query.evict({:ok, file})
+
+        file.id
+        |> BlockReferences.list_block_ids_using_file()
+        |> BlockReferences.list_root_block_ids_by_source()
+        |> BlockReferences.list_entry_ids_for_root_blocks_by_source()
+        |> RenderQueue.enqueue_map()
+
+        CompletedCallback.run(cfg, file, user)
+        {:ok, file}
+
+      error ->
+        error
+    end
   end
 
   defp validate(file, cfg, %{name: name, size: size, type: mime_type}) do
@@ -113,15 +119,15 @@ defmodule Brando.Files.Replacement do
   end
 
   defp store_contents(%{cdn: true} = file, cfg, source, destination) do
-    cdn = cfg.cdn || Brando.CDN.config(Files)
+    cdn = cfg.cdn || CDN.config(Files)
 
     if cdn.enabled do
       key = Path.join(["media", cfg.upload_path, file.filename])
-      opts = [content_type: file.mime_type] ++ Brando.CDN.build_content_disposition_opts(cfg, file.filename)
+      opts = [content_type: file.mime_type] ++ CDN.build_content_disposition_opts(cfg, file.filename)
       opts = if cdn.direct_acl, do: Keyword.put(opts, :acl, cdn.direct_acl), else: opts
-      s3_config = Brando.CDN.get_s3_config(%{cdn: cdn}, as: :keyword_list)
+      s3_config = CDN.get_s3_config(%{cdn: cdn}, as: :keyword_list)
 
-      case Brando.CDN.Client.impl().replace_file(cdn.bucket, key, source, opts, s3_config) do
+      case CDN.Client.impl().replace_file(cdn.bucket, key, source, opts, s3_config) do
         {:ok, _} ->
           # A CDN URL remains a CDN URL. Refresh a retained local copy only
           # after the object store has accepted the complete replacement.

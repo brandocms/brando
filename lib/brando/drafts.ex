@@ -64,10 +64,12 @@ defmodule Brando.Drafts do
   end
 
   def get(identity, id) do
-    with {:ok, uuid} <- Ecto.UUID.cast(id) do
-      Repo.one(from d in owned_query(identity), where: d.id == ^uuid and d.expires_at > ^DateTime.utc_now())
-    else
-      _ -> nil
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} ->
+        Repo.one(from d in owned_query(identity), where: d.id == ^uuid and d.expires_at > ^DateTime.utc_now())
+
+      _ ->
+        nil
     end
   end
 

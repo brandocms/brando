@@ -7,8 +7,8 @@ defmodule BrandoAdmin.Components.Form.Input.ChangeTrackingTest do
   require Phoenix.LiveViewTest
   alias Brando.Factory
   alias BrandoAdmin.Components.Form.Block
-  alias BrandoAdmin.Components.Form.Input.{RenderVar, Select, MultiSelect}
   alias BrandoAdmin.Components.Form.Input.Blocks.{PictureBlock, VideoBlock}
+  alias BrandoAdmin.Components.Form.Input.{MultiSelect, RenderVar, Select}
   alias Ecto.Changeset
 
   for type <- [:image, :file, :video, :gallery] do

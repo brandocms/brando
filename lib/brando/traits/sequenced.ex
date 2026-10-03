@@ -15,8 +15,10 @@ defmodule Brando.Trait.Sequenced do
 
   """
   use Brando.Trait
+  alias Brando.Authorization.Boundary
   alias Brando.Cache
   alias Brando.Datasource
+  alias Brando.Repo
   alias Brando.Trait.Sequenced.Compiler
   alias Ecto.Changeset
   import Ecto.Query
@@ -41,7 +43,7 @@ defmodule Brando.Trait.Sequenced do
   """
   def sequence(module, params, actor \\ nil, opts \\ []) do
     result = do_sequence(module, params, actor)
-    by = Keyword.get(opts, :user) || actor || Brando.Authorization.Boundary.current_scope()
+    by = Keyword.get(opts, :user) || actor || Boundary.current_scope()
     record_reorder(result, module, params, by)
     result
   end
@@ -54,7 +56,7 @@ defmodule Brando.Trait.Sequenced do
 
     first =
       case keys do
-        [first | _] -> Brando.Repo.one(from(e in module, where: e.id == ^first))
+        [first | _] -> Repo.one(from(e in module, where: e.id == ^first))
         _ -> nil
       end
 
@@ -65,14 +67,14 @@ defmodule Brando.Trait.Sequenced do
 
   defp do_sequence(module, params, actor) do
     if Brando.Authorization.enabled?() do
-      actor = actor || Brando.Authorization.Boundary.current_scope()
+      actor = actor || Boundary.current_scope()
 
-      Brando.Authorization.Boundary.run(actor, :reorder, module, fn user ->
+      Boundary.run(actor, :reorder, module, fn user ->
         composites = Map.get(params, "composite_keys")
         keys = Map.get(params, "ids") || if(is_list(composites), do: Enum.map(composites, &Map.get(&1, "id")))
-        if not is_list(keys) or length(keys) > 1000, do: Brando.Repo.rollback(:forbidden)
-        entries = Brando.Repo.all(from(e in module, where: e.id in ^keys, lock: "FOR UPDATE"))
-        if length(entries) != length(Enum.uniq(keys)), do: Brando.Repo.rollback(:forbidden)
+        if not is_list(keys) or length(keys) > 1000, do: Repo.rollback(:forbidden)
+        entries = Repo.all(from(e in module, where: e.id in ^keys, lock: "FOR UPDATE"))
+        if length(entries) != length(Enum.uniq(keys)), do: Repo.rollback(:forbidden)
 
         if composites do
           unless Enum.all?(composites, fn keys ->
@@ -84,18 +86,18 @@ defmodule Brando.Trait.Sequenced do
                        schema_field && to_string(Map.get(entry, schema_field)) == to_string(value)
                      end)
                  end),
-                 do: Brando.Repo.rollback(:forbidden)
+                 do: Repo.rollback(:forbidden)
         end
 
         Enum.each(entries, fn entry ->
           changeset = Ecto.Changeset.change(entry, sequence: -1)
 
           unless Brando.Authorization.Engine.authorize_change(
-                   Brando.Authorization.Boundary.actor_scope(user),
+                   Boundary.actor_scope(user),
                    :reorder,
                    changeset
                  ) == :ok,
-                 do: Brando.Repo.rollback(:forbidden)
+                 do: Repo.rollback(:forbidden)
         end)
 
         legacy_sequence(module, params)
@@ -108,7 +110,7 @@ defmodule Brando.Trait.Sequenced do
   defp legacy_sequence(module, %{"composite_keys" => composite_keys}) do
     table = module.__schema__(:source)
 
-    Brando.Repo.transaction(fn ->
+    Repo.transaction(fn ->
       for {o, idx} <- Enum.with_index(composite_keys) do
         q = from t in table, update: [set: [sequence: ^idx]]
 
@@ -117,7 +119,7 @@ defmodule Brando.Trait.Sequenced do
             from t in nq, where: field(t, ^String.to_existing_atom(k)) == ^v
           end)
 
-        Brando.Repo.update_all(q, [])
+        Repo.update_all(q, [])
       end
     end)
 
@@ -149,7 +151,7 @@ defmodule Brando.Trait.Sequenced do
         on: a.id == numbers.key,
         update: [set: [sequence: numbers.value]]
 
-    Brando.Repo.update_all(q, [])
+    Repo.update_all(q, [])
 
     # throw out cached listings
     Cache.Query.evict_schema(module)
@@ -190,12 +192,12 @@ defmodule Brando.Trait.Sequenced do
 
   def increase_sequence(module, nil) do
     query = from t in module, update: [inc: [sequence: 1]]
-    Brando.Repo.update_all(query, [])
+    Repo.update_all(query, [])
   end
 
   def increase_sequence(module, language) do
     query = from t in module, where: t.language == ^language, update: [inc: [sequence: 1]]
-    Brando.Repo.update_all(query, [])
+    Repo.update_all(query, [])
   end
 
   def get_highest_sequence(module, language) do
@@ -207,7 +209,7 @@ defmodule Brando.Trait.Sequenced do
 
     query = (language && from(t in query, where: t.language == ^language)) || query
 
-    case Brando.Repo.all(query) do
+    case Repo.all(query) do
       [] -> 0
       [nil] -> 0
       [seq] -> seq + 1

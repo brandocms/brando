@@ -3,8 +3,8 @@ defmodule Brando.Images.Crop do
   Handles saving cropped/edited images from the Image Editor.
   """
 
-  alias Brando.Images
   alias Brando.Authorization.Boundary
+  alias Brando.Images
   alias Brando.Tenant.Storage
 
   @doc """

@@ -1,7 +1,7 @@
 defmodule Brando.MarkdownSources.WebhookTest do
   use Brando.ConnCase, async: false
-  alias BrandoWeb.Plugs.GitHubMarkdownWebhook, as: Webhook
   alias Brando.MarkdownSources.Delivery
+  alias BrandoWeb.Plugs.GitHubMarkdownWebhook, as: Webhook
   @secret String.duplicate("s", 40)
 
   setup do

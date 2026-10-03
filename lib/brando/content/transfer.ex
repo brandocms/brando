@@ -15,6 +15,7 @@ defmodule Brando.Content.Transfer do
   intentional new operation. See the content transfer guide.
   """
   import Ecto.Query, only: [from: 2]
+  alias Brando.Activity
   alias Brando.Authorization.Boundary
   alias Brando.Content.Block
   alias Brando.Content.Definition.{References, Snapshot, Value}
@@ -227,7 +228,13 @@ defmodule Brando.Content.Transfer do
     }
   end
 
-  @doc false
+  @doc """
+  Resolves each dependency the bundle requires to a reuse, create, bundle or
+  unresolved action, preferring a supplied mapping, then a UID match, then a mapping
+  remembered from this actor's earlier imports.
+
+  Returns `{items, bindings}`, where bindings map tokens to the reused records.
+  """
   def resolve_dependencies(bundle, supplied, files, actor, bundled \\ %{}) do
     remembered = remembered_mappings(bundle, actor)
 
@@ -445,8 +452,8 @@ defmodule Brando.Content.Transfer do
             bindings = persist_dependencies!(current, stage, actor)
             label = plan.archive.bundle["source"]["label"]
 
-            Brando.Activity.with_source(:import, fn ->
-              Brando.Activity.with_batch(plan.id, fn -> persist_fields!(current.fields, bindings, actor, label) end)
+            Activity.with_source(:import, fn ->
+              Activity.with_batch(plan.id, fn -> persist_fields!(current.fields, bindings, actor, label) end)
             end)
 
             after_fields =
@@ -499,7 +506,10 @@ defmodule Brando.Content.Transfer do
     end
   end
 
-  @doc false
+  @doc """
+  Inside the apply transaction, persists bundled media and creates the dependencies
+  planned for creation. Returns the plan's bindings extended with the new records.
+  """
   def persist_dependencies!(plan, stage, actor) do
     bindings =
       Enum.reduce(stage.items, plan.bindings, fn {token, item}, bindings ->
@@ -573,7 +583,7 @@ defmodule Brando.Content.Transfer do
           )
 
       updated = Repo.update!(cs)
-      Brando.Activity.imported(updated, actor, :update, label, Brando.Activity.changed_fields(cs))
+      Activity.imported(updated, actor, :update, label, Activity.changed_fields(cs))
       available
     end)
   end
@@ -602,7 +612,10 @@ defmodule Brando.Content.Transfer do
     params
   end
 
-  @doc false
+  @doc """
+  Builds the entry changeset that casts transferred block params, keeping the
+  collection slots the params retain from module and slot validation.
+  """
   def field_changeset(entry, params, actor) do
     entry.__struct__.changeset(entry, params, actor, nil,
       cast_blocks: true,
@@ -610,7 +623,10 @@ defmodule Brando.Content.Transfer do
     )
   end
 
-  @doc false
+  @doc """
+  Adds unsaved placeholder records with negative IDs for unbound media and gallery
+  dependencies, so a preview can validate blocks before anything is created.
+  """
   def preview_bindings(bundle, bindings) do
     bundle["dependencies"]
     |> Enum.with_index(1)
@@ -625,7 +641,10 @@ defmodule Brando.Content.Transfer do
     end)
   end
 
-  @doc false
+  @doc """
+  Fills a portable block and its children with the defaults of the bound module's
+  current contract.
+  """
   def adapt(block, bindings) do
     module =
       Enum.find_value(bindings, fn
@@ -637,7 +656,10 @@ defmodule Brando.Content.Transfer do
     Map.update!(block, "children", &Enum.map(&1, fn child -> adapt(child, bindings) end))
   end
 
-  @doc false
+  @doc """
+  Sets `module_version` on every new block changeset, including nested ones, from
+  the module bound in `bindings`.
+  """
   def stamp_versions(%Changeset{} = cs, bindings) do
     cs =
       if cs.data.__struct__ == Block && is_nil(cs.data.id) do
@@ -708,7 +730,11 @@ defmodule Brando.Content.Transfer do
     end)
   end
 
-  @doc false
+  @doc """
+  Re-renders the imported entries and queues processing for created images, then
+  stores the per-item outcome on the receipt. A failed step is recorded as
+  `"failed"` so the import can be retried with `retry_refresh/2`.
+  """
   def refresh_receipt(receipt, actor) do
     media_results =
       Enum.map(receipt.mappings["created_images"] || [], fn id ->
@@ -725,6 +751,9 @@ defmodule Brando.Content.Transfer do
               end
             end
           rescue
+            # A post-commit refresh records any failure as a step the user can retry,
+            # instead of crashing after the import has already been committed.
+            # credo:disable-for-next-line ExSlop.Check.Warning.BlanketRescue
             _ -> :error
           end
 
@@ -766,6 +795,8 @@ defmodule Brando.Content.Transfer do
                    do: :ok
             end
           rescue
+            # Rendering can raise from any template or block; see the media rescue above.
+            # credo:disable-for-next-line ExSlop.Check.Warning.BlanketRescue
             _ -> {:error, :refresh_failed}
           end
 
@@ -790,7 +821,10 @@ defmodule Brando.Content.Transfer do
     end)
   end
 
-  @doc false
+  @doc """
+  Locks `FOR UPDATE` every persisted entry, its loaded associations and the bound
+  records, in a stable order to avoid deadlocks. Fails when one has been removed.
+  """
   def lock_records!(plan) do
     records = Enum.flat_map(plan.fields, fn field -> lockable(field.entry) end) ++ Map.values(plan.bindings)
 
@@ -881,9 +915,9 @@ defmodule Brando.Content.Transfer do
 
                    updated = Repo.update!(cs)
 
-                   Brando.Activity.with_source(:import, fn ->
-                     Brando.Activity.with_batch(receipt.id, fn ->
-                       Brando.Activity.import_undone(updated, actor, :update)
+                   Activity.with_source(:import, fn ->
+                     Activity.with_batch(receipt.id, fn ->
+                       Activity.import_undone(updated, actor, :update)
                      end)
                    end)
                  end)
@@ -919,7 +953,9 @@ defmodule Brando.Content.Transfer do
     |> Map.new()
   end
 
-  @doc false
+  @doc """
+  Fails unless the plan was previewed by this actor in the current site and environment.
+  """
   def authorize_plan!(plan, actor) do
     unless plan.scope == scope() && plan.actor_id == actor_id!(actor),
       do: Error.fail!(dgettext("content_transfer", "This preview belongs to another actor, site or environment."))
@@ -929,7 +965,10 @@ defmodule Brando.Content.Transfer do
   defp actor_id!(%{id: id}) when is_integer(id), do: id
   defp actor_id!(_), do: Error.fail!(dgettext("content_transfer", "Content transfer requires an authenticated actor."))
 
-  @doc false
+  @doc """
+  Fails unless the definition snapshot scope is active and the actor is an active
+  account whose authorization scope matches the current tenant prefix.
+  """
   def ensure_scope!(actor) do
     Snapshot.ensure_scope!()
     Brando.Content.Definitions.validate_actor!(actor)

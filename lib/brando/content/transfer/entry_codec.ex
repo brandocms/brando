@@ -3,8 +3,8 @@ defmodule Brando.Content.Transfer.EntryCodec do
   @moduledoc false
   import Ecto.Query, only: [from: 2]
   alias Brando.Blueprint.{Attributes, Relations}
-  alias Brando.Content.Transfer.{Catalog, Dependencies, Error, Portable}
   alias Brando.Content.Definition.Value
+  alias Brando.Content.Transfer.{Catalog, Dependencies, Error, Portable}
   alias Brando.Drafts.Params
   alias Brando.Repo
 

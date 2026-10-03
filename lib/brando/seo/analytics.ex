@@ -156,10 +156,9 @@ defmodule Brando.SEO.Analytics do
     end
   end
 
-  @doc false
-  def config, do: Application.get_env(:brando, __MODULE__, [])
+  defp config, do: Application.get_env(:brando, __MODULE__, [])
 
-  @doc false
+  @doc "The keyword options configured for one source, such as `:plausible`, or `[]`."
   def source_config(source), do: Keyword.get(config(), source, [])
 
   defp fetch(days) do

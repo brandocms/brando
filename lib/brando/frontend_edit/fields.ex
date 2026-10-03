@@ -167,11 +167,14 @@ defmodule Brando.FrontendEdit.Fields do
 
   def marker_key(_entry, _field), do: nil
 
-  @doc false
+  @doc """
+  The comment that opens a field marker: `:value` wraps the field's own rendered
+  value, `:markup` wraps other markup that shows it. Close it with `close/2`.
+  """
   def open(:value, key), do: ["<!-- [+:E<", key, ">] -->"]
   def open(:markup, key), do: ["<!-- [+:W<", key, ">] -->"]
 
-  @doc false
+  @doc "The comment that closes a marker opened with `open/2` for the same kind and key."
   def close(:value, key), do: ["<!-- [-:E<", key, ">] -->"]
   def close(:markup, key), do: ["<!-- [-:W<", key, ">] -->"]
 end

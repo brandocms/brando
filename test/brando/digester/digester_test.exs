@@ -49,7 +49,6 @@ defmodule Brando.DigesterTest do
 
       manifest = Path.join(@output_path, "cache_manifest.json") |> File.read!()
 
-      # Parse the manifest JSON for easier testing
       parsed_manifest = Jason.decode!(manifest)
 
       # Test the structure and fixed values
@@ -173,7 +172,6 @@ defmodule Brando.DigesterTest do
       # Run the compile to test the whole process
       :ok = Brando.Digester.compile(test_path, @output_path, true)
 
-      # Get the digested CSS
       output_files = assets_files(@output_path)
       digested_css_file = Enum.find(output_files, &String.match?(&1, ~r/css\/app\.css$/))
       digested_css = Path.join(@output_path, digested_css_file) |> File.read!()

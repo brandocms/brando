@@ -675,9 +675,7 @@ defmodule Brando.Content.Proposals.Tools do
     blocks = schema.__blocks_fields__() |> Enum.flat_map(&Map.fetch!(entry, :"entry_#{&1.name}")) |> Enum.map(& &1.block)
 
     blocks
-    |> Enum.flat_map(&tree_media/1)
-    |> Enum.flat_map(&media_rows/1)
-    |> Enum.flat_map(fn row -> for kind <- [:image, :video], id = Map.get(row, :"#{kind}_id"), do: {kind, id} end)
+    |> block_media()
     |> Enum.concat(Map.values(entry_assets(schema, entry)))
     |> Enum.uniq()
   end
@@ -971,7 +969,6 @@ defmodule Brando.Content.Proposals.Tools do
   defp gallery_summary(items, dimensions),
     do: %{kind: :gallery, items: Enum.map(items, fn {kind, id} -> media_summary(kind, id, dimensions) end)}
 
-  # Width, height and orientation of the media in `blocks`, in one query per kind.
   # The entry's own image and video fields, such as a listing image.
   defp entry_assets(schema, entry) do
     for %{name: name, type: kind} <- Brando.Blueprint.Assets.__assets__(schema),
@@ -983,12 +980,11 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp media_summary(kind, id, dimensions), do: Map.merge(%{kind: kind, id: id}, Map.get(dimensions, {kind, id}, %{}))
 
+  # Width, height and orientation of the media in `blocks`, in one query per kind.
   defp dimensions(blocks, extra) do
     ids =
       blocks
-      |> Enum.flat_map(&tree_media/1)
-      |> Enum.flat_map(&media_rows/1)
-      |> Enum.flat_map(fn row -> for kind <- [:image, :video], id = Map.get(row, :"#{kind}_id"), do: {kind, id} end)
+      |> block_media()
       |> Enum.concat(extra)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
@@ -999,6 +995,14 @@ defmodule Brando.Content.Proposals.Tools do
           Brando.Repo.all(from(m in schema, where: m.id in ^ids, select: {m.id, m.width, m.height})),
         into: %{},
         do: {{kind, id}, %{width: width, height: height, orientation: orientation(width, height)}}
+  end
+
+  # `{kind, id}` for every image and video in `blocks`, in the order they show them.
+  defp block_media(blocks) do
+    blocks
+    |> Enum.flat_map(&tree_media/1)
+    |> Enum.flat_map(&media_rows/1)
+    |> Enum.flat_map(fn row -> for kind <- [:image, :video], id = Map.get(row, :"#{kind}_id"), do: {kind, id} end)
   end
 
   # A gallery's objects hold media too.

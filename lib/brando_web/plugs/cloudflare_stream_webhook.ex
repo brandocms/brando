@@ -30,8 +30,7 @@ defmodule BrandoWeb.Plugs.CloudflareStreamWebhook do
     end
   end
 
-  @doc false
-  def handle_webhook(conn) do
+  defp handle_webhook(conn) do
     with {:ok, body, conn} <- read_full_body(conn),
          :ok <- verify_signature(conn, body, webhook_secret()),
          {:ok, payload} <- Jason.decode(body),
@@ -54,7 +53,14 @@ defmodule BrandoWeb.Plugs.CloudflareStreamWebhook do
     end
   end
 
-  @doc false
+  @doc """
+  Checks the `Webhook-Signature` header (`time=<unix>,sig1=<hex>`) against an
+  HMAC-SHA256 of `"<time>.<body>"` keyed with `secret`.
+
+  Returns `:ok`, or `{:error, :invalid_signature}` when the secret is unset,
+  the header is missing or malformed, the timestamp is more than five minutes
+  from `now`, or the signature does not match.
+  """
   def verify_signature(conn, body, secret, now \\ System.system_time(:second)) do
     signature_header = conn |> get_req_header("webhook-signature") |> List.first()
 

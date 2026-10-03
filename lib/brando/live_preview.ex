@@ -70,6 +70,7 @@ defmodule Brando.LivePreview do
   alias Brando.Exception.LivePreviewError
   alias Brando.Utils
   alias Brando.Worker
+  alias Plug.Conn
 
   defstruct layout: nil,
             template: nil,
@@ -157,9 +158,9 @@ defmodule Brando.LivePreview do
       Phoenix.ConnTest.build_conn(:get, "/#{language}/__LIVE_PREVIEW")
       |> Map.put(:secret_key_base, Brando.endpoint().config(:secret_key_base))
       |> Plug.Session.call(session_opts)
-      |> Plug.Conn.assign(:language, to_string(language))
-      |> Plug.Conn.put_private(:brando_live_preview, true)
-      |> Plug.Conn.put_private(:brando_preview_context, preview_context())
+      |> Conn.assign(:language, to_string(language))
+      |> Conn.put_private(:brando_live_preview, true)
+      |> Conn.put_private(:brando_preview_context, preview_context())
       |> Brando.router().browser([])
       |> Brando.Plug.HTML.put_section(section)
       |> Brando.Plug.HTML.put_css_classes(css_classes)
@@ -296,15 +297,17 @@ defmodule Brando.LivePreview do
     entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
     try do
-      with :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
-        target_config = get_target_config(schema_module, target)
-        wrapper_html = render(schema_module, entry_struct, cache_key, target: target_config.name)
-        store_target(cache_key, target_config.name)
-        store_cache(cache_key, wrapper_html)
-        broadcast(cache_key, "update", update_payload(wrapper_html))
-        {:ok, cache_key}
-      else
-        _ -> {:error, "You no longer have permission to preview this entry."}
+      case Brando.Authorization.Preview.register(cache_key, changeset) do
+        :ok ->
+          target_config = get_target_config(schema_module, target)
+          wrapper_html = render(schema_module, entry_struct, cache_key, target: target_config.name)
+          store_target(cache_key, target_config.name)
+          store_cache(cache_key, wrapper_html)
+          broadcast(cache_key, "update", update_payload(wrapper_html))
+          {:ok, cache_key}
+
+        _ ->
+          {:error, "You no longer have permission to preview this entry."}
       end
     rescue
       err in [KeyError] ->

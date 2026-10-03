@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   import Brando.Utils, only: [loaded_assoc?: 2]
   import Ecto.Changeset
 
+  alias Brando.Uploads
   alias Brando.Utils
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
@@ -120,8 +121,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     schema = assigns.field.form.data.__struct__
     path = Brando.Utils.get_path_from_field_name(assigns.field.form.name)
     config_target = Brando.Assets.ConfigTarget.serialize({"gallery", schema, assigns.field.field})
-    {image_config, _resolved_target} = Brando.Uploads.resolve_image_config(config_target)
-    {video_config, _resolved_target} = Brando.Uploads.resolve_video_config(config_target)
+    {image_config, _resolved_target} = Uploads.resolve_image_config(config_target)
+    {video_config, _resolved_target} = Uploads.resolve_video_config(config_target)
 
     {:ok,
      socket
@@ -134,7 +135,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> assign(:image_upload_limit, MediaField.upload_limit(image_config))
      |> assign(:video_upload_limit, MediaField.upload_limit(video_config))
      |> assign_new(:config_modal, fn -> nil end)
-     |> assign(:video_upload_enabled?, Brando.Uploads.video_upload_available?(video_config))
+     |> assign(:video_upload_enabled?, Uploads.video_upload_available?(video_config))
      |> assign_value()}
   end
 
@@ -694,7 +695,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   def handle_event("open_video_picker", _, socket) do
     {_video_config, video_config_target} =
-      Brando.Uploads.resolve_video_config(socket.assigns.config_target)
+      Uploads.resolve_video_config(socket.assigns.config_target)
 
     send_update(VideoPicker,
       id: "video-picker",

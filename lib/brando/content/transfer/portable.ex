@@ -1,8 +1,8 @@
 defmodule Brando.Content.Transfer.Portable do
   use Gettext, backend: Brando.Gettext
   @moduledoc "Version 1 of the portable block tree. Ownership is rebuilt exclusively at the destination."
-  alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Content.Definition.Value
+  alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Drafts.Params
   alias Brando.Villain.Blocks.GalleryObjectOverride
 

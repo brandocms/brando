@@ -9,6 +9,7 @@ defmodule Brando.Content.SharedLibrary do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.Block
   alias Brando.Content.Blocks
   alias Brando.Content.Container
@@ -372,14 +373,13 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   defp authorize_shared(actor) do
-    actor = Brando.Authorization.Boundary.current_scope() || actor
-    scope = if actor == :system, do: :system, else: Brando.Authorization.Boundary.actor_scope(actor)
-    Brando.Authorization.Boundary.authorize(scope, :update, :shared_library)
+    actor = Boundary.current_scope() || actor
+    scope = if actor == :system, do: :system, else: Boundary.actor_scope(actor)
+    Boundary.authorize(scope, :update, :shared_library)
   end
 
   defp authorize_local(kind, site, prefix, actor) do
-    boundary = Brando.Authorization.Boundary
-    scope = boundary.current_scope()
+    scope = Boundary.current_scope()
 
     cond do
       not Brando.Authorization.enabled?() ->
@@ -396,7 +396,7 @@ defmodule Brando.Content.SharedLibrary do
         target_scope = Tenant.with_prefix(prefix, fn -> Brando.Authorization.Scope.current(actor) end)
 
         if target_scope.site_id == site.id,
-          do: boundary.authorize(target_scope, :update, definition(kind).schema),
+          do: Boundary.authorize(target_scope, :update, definition(kind).schema),
           else: {:error, :forbidden}
     end
   end

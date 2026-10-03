@@ -16,6 +16,8 @@ defmodule Brando.AIStub do
   """
   import ExUnit.Callbacks, only: [on_exit: 1]
 
+  alias Req.Test
+
   @doc """
   Configures a provider and restores the previous configuration on exit.
   `shared: true` makes the stub global — only for tests that are not async.
@@ -24,15 +26,15 @@ defmodule Brando.AIStub do
     previous = Application.get_env(:brando, Brando.AI)
 
     if opts[:shared] do
-      Req.Test.set_req_test_to_shared(%{async: false})
-      on_exit(fn -> Req.Test.set_req_test_to_private() end)
+      Test.set_req_test_to_shared(%{async: false})
+      on_exit(fn -> Test.set_req_test_to_private() end)
     end
 
     Application.put_env(:brando, Brando.AI,
       enabled: true,
       default_model: "openai:gpt-4o-mini",
       providers: [openai: [api_key: "test-key"]],
-      default_opts: [req_http_options: [plug: {Req.Test, Brando.AI}, retry: false]]
+      default_opts: [req_http_options: [plug: {Test, Brando.AI}, retry: false]]
     )
 
     on_exit(fn ->
@@ -49,15 +51,15 @@ defmodule Brando.AIStub do
   def reply(text) when is_binary(text), do: reply(fn _prompt -> text end)
 
   def reply(fun) when is_function(fun, 1) do
-    Req.Test.stub(Brando.AI, fn conn ->
+    Test.stub(Brando.AI, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
 
       case fun.(prompt(body)) do
         {:error, status} ->
-          conn |> Plug.Conn.put_status(status) |> Req.Test.json(%{"error" => %{"message" => "stubbed failure"}})
+          conn |> Plug.Conn.put_status(status) |> Test.json(%{"error" => %{"message" => "stubbed failure"}})
 
         text ->
-          Req.Test.json(conn, response(text))
+          Test.json(conn, response(text))
       end
     end)
   end
@@ -71,16 +73,16 @@ defmodule Brando.AIStub do
     test = self()
     {:ok, counter} = Elixir.Agent.start_link(fn -> 0 end)
 
-    Req.Test.stub(Brando.AI, fn conn ->
+    Test.stub(Brando.AI, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
       send(test, {:ai_request, Jason.decode!(body)})
       n = Elixir.Agent.get_and_update(counter, &{&1, &1 + 1})
 
       case Enum.at(turns, n) do
-        {:text, text} -> Req.Test.json(conn, response(text))
-        {:tools, calls} -> Req.Test.json(conn, tool_response(calls, n))
-        {:error, status} -> conn |> Plug.Conn.put_status(status) |> Req.Test.json(%{"error" => %{"message" => "stubbed"}})
-        nil -> Req.Test.json(conn, response("(script exhausted)"))
+        {:text, text} -> Test.json(conn, response(text))
+        {:tools, calls} -> Test.json(conn, tool_response(calls, n))
+        {:error, status} -> conn |> Plug.Conn.put_status(status) |> Test.json(%{"error" => %{"message" => "stubbed"}})
+        nil -> Test.json(conn, response("(script exhausted)"))
       end
     end)
   end

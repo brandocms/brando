@@ -120,7 +120,6 @@ defmodule Brando.VillainTest do
   end
 
   test "parse with module block", %{user: user, image: image} do
-    # Create a module with text and picture references
     module_params =
       Factory.params_for(:module, %{
         code: "Module code with {{ testvar }} and refs: {% ref refs.headline %} - {% ref refs.cover %}",
@@ -185,7 +184,6 @@ defmodule Brando.VillainTest do
             description: nil,
             uid: Brando.Utils.generate_uid(),
             image_id: image.id,
-            # Add the actual image association
             image: image,
             data: %{
               type: "picture",
@@ -217,7 +215,6 @@ defmodule Brando.VillainTest do
   end
 
   test "parse with container block", %{user: user} do
-    # Create a palette for the container
     palette_params = %{
       status: :published,
       name: "test",
@@ -232,7 +229,6 @@ defmodule Brando.VillainTest do
 
     {:ok, palette} = Brando.Content.create_palette(palette_params, user)
 
-    # Create a module to use inside the container
     module_params =
       Factory.params_for(:module, %{
         code: "Module in container: {% ref refs.content %}",
@@ -258,7 +254,6 @@ defmodule Brando.VillainTest do
 
     {:ok, module} = Brando.Content.create_module(module_params, user)
 
-    # Create a child block with module reference
     child_block = %{
       type: :module,
       module_id: module.id,
@@ -301,7 +296,6 @@ defmodule Brando.VillainTest do
   end
 
   test "parse with multi module block", %{user: user, image: image} do
-    # Create a module with multi flag
     module_params =
       Factory.params_for(:module, %{
         code: "Multi module with child modules: {{ content }}",
@@ -316,7 +310,6 @@ defmodule Brando.VillainTest do
 
     {:ok, module} = Brando.Content.create_module(module_params, user)
 
-    # Create a child module with text and picture references
     child_module_params =
       Factory.params_for(:module, %{
         code: "Child module with {{ child_var }} and {% ref refs.headline %} and {% ref refs.thumbnail %}",
@@ -375,7 +368,6 @@ defmodule Brando.VillainTest do
           name: "thumbnail",
           description: nil,
           image_id: image.id,
-          # Add the actual image association
           image: image,
           uid: Brando.Utils.generate_uid(),
           data: %{

@@ -6,6 +6,7 @@ defmodule Brando.TranslationsTest do
   alias Brando.Repo
   alias Brando.SyncTest
   alias Brando.SyncTest.Article
+  alias Brando.TranslationFixtures
   alias Brando.Translations
   alias Brando.Translations.PendingVersion
 
@@ -37,31 +38,10 @@ defmodule Brando.TranslationsTest do
         user
       )
 
-    add_block(source, module, user, "Første avsnitt", 0)
-    add_block(source, module, user, "Andre avsnitt", 1)
+    TranslationFixtures.add_block(source, module, user, "Første avsnitt", 0)
+    TranslationFixtures.add_block(source, module, user, "Andre avsnitt", 1)
 
     %{user: user, module: module, source: source}
-  end
-
-  defp add_block(article, module, user, text, sequence) do
-    params = %{
-      "uid" => Brando.Utils.generate_uid(),
-      "type" => "module",
-      "module_id" => module.id,
-      "creator_id" => user.id,
-      "source" => to_string(Article.Blocks),
-      "refs" => [
-        %{
-          "uid" => Brando.Utils.generate_uid(),
-          "name" => "body",
-          "data" => %{"type" => "text", "data" => %{"text" => text}}
-        }
-      ]
-    }
-
-    block = %Block{} |> Block.recursive_block_changeset(params, user) |> Repo.insert!()
-    struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
-    block
   end
 
   defp add_raw_block(article, c, params, sequence) do
@@ -216,7 +196,7 @@ defmodule Brando.TranslationsTest do
 
     [first, _second] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
     set_text(first, "Første avsnitt, endret")
-    add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
+    TranslationFixtures.add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
 
     Translations.source_saved(load(c.source.id))
 
@@ -239,7 +219,7 @@ defmodule Brando.TranslationsTest do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
     translate(target, ["First paragraph", "Second paragraph"])
 
-    add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
+    TranslationFixtures.add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
     Translations.source_saved(load(c.source.id))
     first = pending(target)
 
@@ -419,7 +399,7 @@ defmodule Brando.TranslationsTest do
       translate(en, ["First paragraph", "Second paragraph"])
       [first, _] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
       set_text(first, "Første avsnitt, endret")
-      add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
+      TranslationFixtures.add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
       Translations.source_saved(load(c.source.id))
 
       {:ok, loner} =
@@ -451,7 +431,7 @@ defmodule Brando.TranslationsTest do
 
   test "make_independent stops synchronization and keeps content and links", c do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
-    add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
+    TranslationFixtures.add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
     Translations.source_saved(load(c.source.id))
     version = pending(target)
 
@@ -462,7 +442,7 @@ defmodule Brando.TranslationsTest do
     assert [_] = load(target.id).alternate_entries
     assert length(load(target.id).entry_blocks) == 2
 
-    add_block(c.source, c.module, c.user, "Fjerde avsnitt", 3)
+    TranslationFixtures.add_block(c.source, c.module, c.user, "Fjerde avsnitt", 3)
     Translations.source_saved(load(c.source.id))
     assert pending(target) == nil
 
@@ -490,12 +470,12 @@ defmodule Brando.TranslationsTest do
     assert pending(c.source) == nil
 
     # The former source no longer drives the group…
-    add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
+    TranslationFixtures.add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
     Translations.source_saved(load(c.source.id))
     assert pending(en) == nil
 
     # …the new one does, and removes the block the old source added.
-    add_block(en, c.module, c.user, "Third paragraph", 2)
+    TranslationFixtures.add_block(en, c.module, c.user, "Third paragraph", 2)
     Translations.source_saved(load(en.id))
 
     payload = c.source |> pending() |> Translations.decode_payload()

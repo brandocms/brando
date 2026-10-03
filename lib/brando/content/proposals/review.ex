@@ -30,8 +30,8 @@ defmodule Brando.Content.Proposals.Review do
   }
 
   alias Brando.Content.Proposals.EntryFields
-  alias Brando.Type.I18nString
   alias Brando.Content.Proposals.RefConfig
+  alias Brando.Type.I18nString
 
   alias Brando.Content.Transfer.Catalog
 

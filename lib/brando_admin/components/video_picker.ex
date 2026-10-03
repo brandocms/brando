@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   alias Brando.Videos.ProviderLibrary
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.PickerFolders
   alias BrandoAdmin.Images.FolderBrowser
   alias Phoenix.LiveView.JS
 
@@ -258,12 +259,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
 
     recent_folders_for_root =
-      socket.assigns.recent_folders
-      |> Enum.map(&FolderBrowser.normalize_folder/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.filter(&folder_under_root?(&1, upload_root))
-      |> Enum.reject(&(FolderBrowser.relative_folder(&1, upload_root) == ""))
-      |> Enum.take(5)
+      PickerFolders.recent_folders_for_root(socket.assigns.recent_folders, upload_root, &folder_under_root?/2)
 
     socket
     |> assign(:upload_root, upload_root)

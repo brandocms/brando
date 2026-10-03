@@ -13,12 +13,14 @@ defmodule Brando.LivePreviewChannel do
   def join("live_preview:" <> preview_id, _params, socket) do
     Realtime.allow_sandbox(socket)
 
-    with :ok <- Preview.authorize(preview_id, socket.assigns.user_id) do
-      Realtime.subscribe()
-      send(self(), :sync_preview)
-      {:ok, socket.assigns.user_id, assign(socket, :preview_id, preview_id)}
-    else
-      _ -> {:error, %{reason: "forbidden"}}
+    case Preview.authorize(preview_id, socket.assigns.user_id) do
+      :ok ->
+        Realtime.subscribe()
+        send(self(), :sync_preview)
+        {:ok, socket.assigns.user_id, assign(socket, :preview_id, preview_id)}
+
+      _ ->
+        {:error, %{reason: "forbidden"}}
     end
   end
 

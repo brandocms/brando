@@ -3,10 +3,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Button
-  alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Activity, as: Events
   alias BrandoAdmin.Components.Activity.Comparison
+  alias BrandoAdmin.Components.Button
+  alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content
   alias Phoenix.LiveView.AsyncResult
 

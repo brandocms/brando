@@ -149,7 +149,6 @@ defmodule Brando.Content.RefTest do
       {:ok, module} = Content.create_module(module_params, user)
       original_ref = List.first(module.refs)
 
-      # Update the module's refs
       update_params = %{
         refs: [
           %{
@@ -175,7 +174,6 @@ defmodule Brando.Content.RefTest do
 
   describe "protected attributes" do
     test "SVG blocks preserve protected code attribute" do
-      # Create a module with SVG ref
       module_with_svg = %Content.Module{
         vars: [],
         refs: [
@@ -428,7 +426,6 @@ defmodule Brando.Content.RefTest do
 
       {:ok, module} = Content.create_module(module_params, user)
 
-      # Create a block that uses this module
       block = %{
         block: %{
           type: :module,
@@ -465,7 +462,6 @@ defmodule Brando.Content.RefTest do
         }
       }
 
-      # Parse the block
       parsed = Brando.Villain.parse([block], %Brando.Pages.Page{})
 
       # Should contain the overridden content

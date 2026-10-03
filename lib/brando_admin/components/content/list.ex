@@ -120,7 +120,6 @@ defmodule BrandoAdmin.Components.Content.List do
 
   # Update select filter - params come as %{"filter" => %{"key" => "value"}}
   def handle_event("update_select_filter", %{"filter" => filter_map}, socket) do
-    # Extract the single key-value pair from the filter map
     [{filter_key, value}] = Map.to_list(filter_map)
     {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => value})}
   end

@@ -277,6 +277,8 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       }
       |> then(fn query ->
         Brando.Authorization.Boundary.with_query_action(:export, Brando.Content.Module, fn ->
+          # `Content` is already aliased to BrandoAdmin.Components.Content here.
+          # credo:disable-for-next-line ExSlop.Check.Readability.UnaliasedModuleUse
           Brando.Content.list_modules!(query)
         end)
       end)
@@ -302,8 +304,10 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     end)
   end
 
-  # "Block modules" as in the menu, not the schema's plural ("Modules").
-  @doc false
+  @doc """
+  The listing's page title: "Block modules" as in the menu, not the
+  schema's plural ("Modules"). Public because the `use` options capture it.
+  """
   def page_title, do: gettext("Block modules")
 
   # Closes the menu and puts focus on its button first, so a dialog opened
@@ -333,7 +337,10 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   attr :sketches, :map, required: true
 
-  @doc false
+  @doc """
+  Renders the AI sketch dialog body: the modules missing a sketch, progress
+  while they are drawn, and each result or failure.
+  """
   def sketches(assigns) do
     assigns =
       assign(assigns,

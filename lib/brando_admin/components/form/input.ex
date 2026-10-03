@@ -28,8 +28,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   ##
   ## Form inputs (function components)
 
-  alias Phoenix.LiveView.JS
   alias Phoenix.HTML.FormField
+  alias Phoenix.LiveView.JS
 
   def checkbox(assigns) do
     assigns = prepare_input_component(assigns)

@@ -145,12 +145,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def update(%{event: "region_remap_targets", owner_uid: owner_uid, uid: uid, reply_to: reply_to}, socket) do
     targets =
-      with {:ok, owner} <- collection_owner(socket, owner_uid) do
-        owner
-        |> CollectionLifecycle.remap_targets(CollectionLifecycle.definitions(owner), uid)
-        |> Enum.map(&{&1.description || &1.name, &1.name})
-      else
-        _ -> []
+      case collection_owner(socket, owner_uid) do
+        {:ok, owner} ->
+          owner
+          |> CollectionLifecycle.remap_targets(CollectionLifecycle.definitions(owner), uid)
+          |> Enum.map(&{&1.description || &1.name, &1.name})
+
+        _ ->
+          []
       end
 
     send_update(reply_to, event: "region_remap_targets", uid: uid, targets: targets)
@@ -2481,7 +2483,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     entry_id = socket.assigns.entry.id
 
     # The clipboard changeset may be an entry_block or a direct block.
-    # Extract the inner block changeset.
     block_cs = extract_block_changeset(clipboard.changeset)
     new_uid = Brando.Utils.generate_uid()
 

@@ -4,8 +4,8 @@ defmodule Brando.Assets.SiteAssetsTest do
 
   alias Brando.Assets.SiteAssets
   alias Brando.Assets.Vite.Manifest
+  alias Brando.SiteAssetsFixtures
   alias Brando.Tenant
-  alias Brando.Tenant.Registry
 
   setup do
     root = Path.join(System.tmp_dir!(), "brando-site-assets-#{System.unique_integer([:positive])}")
@@ -32,7 +32,7 @@ defmodule Brando.Assets.SiteAssetsTest do
   end
 
   test "registers, activates, serves, and reverts a standalone set" do
-    set_path = create_set(nil, "20260816_abc123", "standalone", "standalone.css")
+    set_path = SiteAssetsFixtures.create_set(nil, "20260816_abc123", "standalone", "standalone.css")
 
     assert {:ok, registered} =
              SiteAssets.register_set(set_path, %{
@@ -69,7 +69,7 @@ defmodule Brando.Assets.SiteAssetsTest do
   end
 
   test "activation validates manifests before replacing the current set" do
-    first_path = create_set(nil, "first", "first", "first.css")
+    first_path = SiteAssetsFixtures.create_set(nil, "first", "first", "first.css")
     assert {:ok, first} = SiteAssets.register_set(first_path)
     assert {:ok, _active} = SiteAssets.activate_set(first.id)
 
@@ -93,11 +93,11 @@ defmodule Brando.Assets.SiteAssetsTest do
     put_test_env(:tenancy_mode, :multi)
     Brando.Tenant.Cache.clear()
 
-    {:ok, acme} = create_site("Asset Acme", "asset-acme", "assets.acme.test")
-    {:ok, beta} = create_site("Asset Beta", "asset-beta", "assets.beta.test")
+    {:ok, acme} = SiteAssetsFixtures.create_site("Asset Acme", "asset-acme", "assets.acme.test")
+    {:ok, beta} = SiteAssetsFixtures.create_site("Asset Beta", "asset-beta", "assets.beta.test")
 
-    acme_path = create_set(acme, "acme-set", "acme-js", "acme.css")
-    beta_path = create_set(beta, "beta-set", "beta-js", "beta.css")
+    acme_path = SiteAssetsFixtures.create_set(acme, "acme-set", "acme-js", "acme.css")
+    beta_path = SiteAssetsFixtures.create_set(beta, "beta-set", "beta-js", "beta.css")
 
     assert {:ok, acme_set} = SiteAssets.register_set(acme, acme_path, %{revision: "acme"})
     assert {:ok, beta_set} = SiteAssets.register_set(beta.key, beta_path, %{revision: "beta"})
@@ -116,46 +116,6 @@ defmodule Brando.Assets.SiteAssetsTest do
 
     Tenant.put_prefix(Tenant.prefix(beta.key, "production"))
     assert Manifest.read(:app).entries.files == ["/assets/beta-set.js"]
-  end
-
-  defp create_set(site, name, js_content, css_file) do
-    path = Path.join(SiteAssets.sets_root(site), name)
-    File.mkdir_p!(Path.join(path, "assets"))
-    File.write!(Path.join([path, "assets", "#{name}.js"]), js_content)
-    File.write!(Path.join([path, "assets", css_file]), "body{}")
-
-    manifest = %{
-      "src/main.js" => %{
-        "isEntry" => true,
-        "file" => "assets/#{name}.js",
-        "css" => ["assets/#{css_file}"]
-      }
-    }
-
-    File.write!(Path.join(path, "manifest.json"), Jason.encode!(manifest))
-    path
-  end
-
-  defp create_site(name, key, domain) do
-    {:ok, site} =
-      Registry.create_site(%{
-        name: name,
-        key: key,
-        languages: ["en"],
-        default_language: "en",
-        status: :active,
-        delivery_mode: :dynamic
-      })
-
-    {:ok, _environment} =
-      Registry.create_environment(site, %{
-        name: "Production",
-        key: "production",
-        live: true,
-        domain: domain
-      })
-
-    {:ok, Registry.get_site(site.id)}
   end
 
   defp conn(relative_path, host \\ "standalone.test") do

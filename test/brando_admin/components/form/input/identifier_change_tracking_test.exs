@@ -3,11 +3,11 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 2]
-  alias Phoenix.Component
   alias Brando.Content.Identifier
   alias BrandoAdmin.Components.Content.SelectIdentifier
   alias BrandoAdmin.Components.Form.Input.Entries
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   test "identifier picker refreshes schemas, counts and results for language and status changes" do
     page_en = identifier(Brando.Pages.Page, :en, :published)

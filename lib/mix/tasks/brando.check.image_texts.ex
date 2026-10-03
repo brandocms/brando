@@ -4,6 +4,7 @@ defmodule Mix.Tasks.Brando.Check.ImageTexts do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Images.TextUsage
+  alias Brando.Repo
 
   @shortdoc "Finds templates that print an image's texts without choosing a language"
 
@@ -64,7 +65,7 @@ defmodule Mix.Tasks.Brando.Check.ImageTexts do
 
   defp templates do
     modules =
-      Brando.Repo.all(
+      Repo.all(
         from m in Brando.Content.Module,
           where: is_nil(m.deleted_at),
           select: {m.name, m.type, m.code}
@@ -72,11 +73,11 @@ defmodule Mix.Tasks.Brando.Check.ImageTexts do
       |> Enum.map(fn {name, type, code} -> {"Module", Brando.Type.I18nString.get(name, nil), type, code} end)
 
     containers =
-      Brando.Repo.all(from c in Brando.Content.Container, where: is_nil(c.deleted_at), select: {c.name, c.type, c.code})
+      Repo.all(from c in Brando.Content.Container, where: is_nil(c.deleted_at), select: {c.name, c.type, c.code})
       |> Enum.map(fn {name, type, code} -> {"Container", name, type, code} end)
 
     menus =
-      Brando.Repo.all(from m in Brando.Navigation.Menu, where: not is_nil(m.template), select: {m.key, m.template})
+      Repo.all(from m in Brando.Navigation.Menu, where: not is_nil(m.template), select: {m.key, m.template})
       |> Enum.map(fn {key, template} -> {"Menu", key, :liquid, template} end)
 
     modules ++ containers ++ menus

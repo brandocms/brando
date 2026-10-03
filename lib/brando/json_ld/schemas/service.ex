@@ -24,6 +24,8 @@ defmodule Brando.JSONLD.Schema.Service do
       })
   """
 
+  @type t :: %__MODULE__{}
+
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
             "@type": "Service",

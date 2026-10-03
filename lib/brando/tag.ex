@@ -6,15 +6,6 @@ defmodule Brando.Tag do
 
   ## Example/Usage
 
-  Controller:
-
-      use Brando.Tag,
-        [:controller, [schema: Brando.Post]]
-
-  View:
-
-      use Brando.Tag, :view
-
   Schema:
 
       use Brando.Tag, :schema
@@ -38,12 +29,8 @@ defmodule Brando.Tag do
         end
       end
 
-  Vue frontend:
-
-    * Add a `KInputTags` component to your view
-    * Add `tags` to your gql schema as `:json`
-    * Add `tags` to your gql input object as `list_of(:string)`
-
+  Use `split_tags/1` to turn a comma-separated `"tags"` param into a list
+  before casting it.
   """
 
   defmodule Schema do
@@ -66,13 +53,19 @@ defmodule Brando.Tag do
     end
   end
 
-  @doc false
+  @doc """
+  Quoted code for `use Brando.Tag, [:controller, opts]`. It injects nothing; the
+  clause remains so existing controllers that use it still compile.
+  """
   def controller(_schema, _filter \\ nil) do
     quote do
     end
   end
 
-  @doc false
+  @doc """
+  Quoted code for `use Brando.Tag, :schema`: imports the `tags` field macro and
+  defines `by_tag/1`.
+  """
   def schema do
     quote do
       import Brando.Tag.Schema, only: [tags: 0]
@@ -87,7 +80,7 @@ defmodule Brando.Tag do
     end
   end
 
-  @doc false
+  @doc "Quoted code for `use Brando.Tag, :migration`: imports the `tags` column macro."
   def migration do
     quote do
       import Brando.Tag.Migration, only: [tags: 0]
@@ -95,7 +88,8 @@ defmodule Brando.Tag do
   end
 
   @doc """
-  When used, dispatch to the appropriate controller/view/etc.
+  Injects the `:schema` or `:migration` helpers. `[:controller, opts]` is still
+  accepted so existing controllers compile, but injects nothing.
   """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])

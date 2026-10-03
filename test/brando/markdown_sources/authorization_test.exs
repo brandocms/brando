@@ -1,9 +1,9 @@
 defmodule Brando.MarkdownSources.AuthorizationTest do
   use Brando.ConnCase, async: false
+  alias Brando.Authorization.{Groups, Migration, Scope}
   alias Brando.MarkdownSources
   alias Brando.MarkdownSources.{Source, Version}
   alias Brando.Villain.Blocks.MarkdownSourceBlock
-  alias Brando.Authorization.{Groups, Migration, Scope}
 
   setup do
     put_test_env(:tenancy_mode, :none)

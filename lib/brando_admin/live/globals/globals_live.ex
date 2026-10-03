@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Sites.GlobalSet, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Components.GlobalTabs
+  alias BrandoAdmin.Components.Workspace
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :active_tab, nil)}

@@ -1,8 +1,8 @@
 defmodule Brando.Authorization.PolicyTest do
   use Brando.ConnCase
-  alias Brando.Factory
   alias Brando.Authorization.{Boundary, Engine, Migration, Scope}
   alias Brando.AuthorizationTestResources.{Page, UnscopedPage}
+  alias Brando.Factory
 
   setup do
     put_test_env(:authorization_mode, :groups)

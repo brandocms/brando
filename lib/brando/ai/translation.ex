@@ -563,7 +563,6 @@ defmodule Brando.AI.Translation do
 
       changes =
         Enum.reduce(slug_fields, %{}, fn slug_field, acc ->
-          # Get the source field from the form input opts
           source = get_slug_source(schema, slug_field.name)
 
           slug_value =

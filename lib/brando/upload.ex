@@ -76,31 +76,14 @@ defmodule Brando.Upload do
   Image or file
   """
   def handle_upload_type(%{cfg: %FileConfig{}} = upload, user, :direct_to_s3) do
-    file_params = %{
-      title: upload.upload_entry.client_name,
-      mime_type: upload.upload_entry.client_type,
-      filesize: upload.upload_entry.client_size,
-      filename: extract_filename_from_key(upload.meta.key),
-      config_target: upload.meta.config_target,
-      cdn: true,
-      folder_id: upload.meta[:folder_id]
-    }
-
-    file_params
+    upload
+    |> direct_file_params()
     |> Files.create_file(user)
     |> run_completed_callback(upload.cfg, user)
   end
 
   def handle_upload_type(%{cfg: %VideoConfig{}} = upload, user, :direct_to_s3) do
-    file_params = %{
-      title: upload.upload_entry.client_name,
-      mime_type: upload.upload_entry.client_type,
-      filesize: upload.upload_entry.client_size,
-      filename: extract_filename_from_key(upload.meta.key),
-      config_target: upload.meta.config_target,
-      cdn: true,
-      folder_id: upload.meta[:folder_id]
-    }
+    file_params = direct_file_params(upload)
 
     with {:ok, file} <- Files.create_file(file_params, user),
          {:ok, video} <-
@@ -356,6 +339,19 @@ defmodule Brando.Upload do
       {:error, reason} ->
         {:error, :cp, {reason, src, dest}}
     end
+  end
+
+  # File record params for an object the client already PUT to S3.
+  defp direct_file_params(upload) do
+    %{
+      title: upload.upload_entry.client_name,
+      mime_type: upload.upload_entry.client_type,
+      filesize: upload.upload_entry.client_size,
+      filename: extract_filename_from_key(upload.meta.key),
+      config_target: upload.meta.config_target,
+      cdn: true,
+      folder_id: upload.meta[:folder_id]
+    }
   end
 
   defp extract_filename_from_key(key) do

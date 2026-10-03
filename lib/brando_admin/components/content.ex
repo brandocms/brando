@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Content do
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
-  alias Phoenix.LiveView.JS
   alias BrandoAdmin.Components.Image
+  alias Phoenix.LiveView.JS
 
   def header(assigns) do
     assigns =
