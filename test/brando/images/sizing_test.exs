@@ -25,6 +25,19 @@ defmodule Brando.Images.Processing.SizingTest do
            }
   end
 
+  test "add_size_cfg picks the orientation entry matching the original" do
+    size_cfg = %{
+      "portrait" => %{"crop" => true, "quality" => 70, "size" => "200x500"},
+      "landscape" => %{"crop" => true, "quality" => 70, "size" => "500x200"}
+    }
+
+    landscape = add_size_cfg(%ConversionParameters{original_width: 2560, original_height: 1600}, size_cfg)
+    assert landscape.size_cfg["size"] == "500x200"
+
+    portrait = add_size_cfg(%ConversionParameters{original_width: 1600, original_height: 2560}, size_cfg)
+    assert portrait.size_cfg["size"] == "200x500"
+  end
+
   test "add_crop_dimensions" do
     cp = %ConversionParameters{
       crop: true,

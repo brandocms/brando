@@ -150,7 +150,7 @@ defmodule Brando.Images.Operations.Sizing do
     Map.put(
       conversion_parameters,
       :size_cfg,
-      get_size_cfg_orientation(size_cfg, height, width)
+      get_size_cfg_orientation(size_cfg, width, height)
     )
   end
 
