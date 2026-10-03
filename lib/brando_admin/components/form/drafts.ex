@@ -387,21 +387,9 @@ defmodule BrandoAdmin.Components.Form.Drafts do
             _ -> socket.assigns.entry
           end
 
-        saved = socket.assigns.schema.changeset(entry, %{}, socket.assigns.current_user)
-        main = main_params(socket, saved)
-
         # Compare with the freshly loaded saved entry, never the working editor.
-        saved_payload = %{
-          "main" => main,
-          "blocks" =>
-            Map.new(socket.assigns.form_blueprint.blocks, fn field ->
-              {to_string(field.name), Params.snapshot(Map.get(entry, :"entry_#{field.name}") || [])}
-            end),
-          "transformers" =>
-            Map.new(socket.assigns.form_blueprint.transformers, fn {name, _, _} ->
-              {to_string(name), Params.snapshot(Map.get(entry, name) || [])}
-            end)
-        }
+        saved_payload =
+          saved_payload(socket.assigns.schema, socket.assigns.form_blueprint, entry, socket.assigns.current_user)
 
         put_draft(socket, %{
           socket.assigns.draft
@@ -508,17 +496,39 @@ defmodule BrandoAdmin.Components.Form.Drafts do
        })}
   end
 
-  def main_params(socket, changeset) do
-    schema = socket.assigns.schema
-    names = Enum.flat_map(socket.assigns.form_blueprint.tabs, &field_names/1)
+  def main_params(socket, changeset), do: main_params(socket.assigns.schema, socket.assigns.form_blueprint, changeset)
+
+  def main_params(schema, blueprint, changeset) do
+    names = Enum.flat_map(blueprint.tabs, &field_names/1)
     allowed = Enum.map(schema.__schema__(:fields), &to_string/1) ++ names
-    blocks = Enum.map(socket.assigns.form_blueprint.blocks, &"entry_#{&1.name}")
-    transformers = Enum.map(socket.assigns.form_blueprint.transformers, fn {name, _, _} -> to_string(name) end)
+    blocks = Enum.map(blueprint.blocks, &"entry_#{&1.name}")
+    transformers = Enum.map(blueprint.transformers, fn {name, _, _} -> to_string(name) end)
 
     changeset
     |> Params.snapshot()
     |> Map.take(allowed)
     |> Map.drop(blocks ++ transformers ++ ["id", "creator_id", "deleted_at"])
+  end
+
+  @doc """
+  A saved entry in the shape of a recovery payload (`"main"`, `"blocks"`,
+  `"transformers"`), so `DraftPreview.comparisons/3` can compare it with a
+  recovery copy or with another saved state of the entry, such as a revision.
+  """
+  def saved_payload(schema, blueprint, entry, user) do
+    saved = schema.changeset(entry, %{}, user)
+
+    %{
+      "main" => main_params(schema, blueprint, saved),
+      "blocks" =>
+        Map.new(blueprint.blocks, fn field ->
+          {to_string(field.name), Params.snapshot(Map.get(entry, :"entry_#{field.name}") || [])}
+        end),
+      "transformers" =>
+        Map.new(blueprint.transformers, fn {name, _, _} ->
+          {to_string(name), Params.snapshot(Map.get(entry, name) || [])}
+        end)
+    }
   end
 
   defp fresh_entry(%{assigns: %{entry: %{id: nil} = entry}}), do: {:ok, entry}

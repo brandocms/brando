@@ -5,13 +5,16 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.CircleDropdown
+  alias BrandoAdmin.Components.Activity, as: Events
+  alias BrandoAdmin.Components.Activity.Comparison
   alias BrandoAdmin.Components.Content
   alias Phoenix.LiveView.AsyncResult
 
   @page_size 50
+  @activity_page_size 30
 
   def update(%{action: action}, socket) when action in [:fetch_revisions, :refresh_revisions] do
-    {:ok, load_revisions(socket)}
+    {:ok, socket |> load_revisions() |> load_activity()}
   end
 
   def update(assigns, socket) do
@@ -24,6 +27,9 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
        entry_type = socket.assigns.form.source.data.__struct__
        Brando.Blueprint.Snapshot.get_current_version(entry_type)
      end)
+     |> assign_new(:tab, fn -> :activity end)
+     |> assign_new(:activity, fn -> nil end)
+     |> assign_new(:comparison, fn -> nil end)
      |> assign_new(:show_publish_at, fn -> nil end)
      |> assign_new(:preview_revision, fn -> nil end)
      |> assign_new(:revision_data, fn -> AsyncResult.loading() end)}
@@ -32,19 +38,44 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Entry revisions")} close={@close} icon="hero-clock" workspace editor>
+      <Content.drawer id={@id} title={gettext("Entry history")} close={@close} icon="hero-clock" workspace editor>
         <:info>
-          <p>
+          <div class="activity-tabs" role="tablist" aria-label={gettext("Entry history")}>
+            <button
+              type="button"
+              role="tab"
+              id={"#{@id}-tab-activity"}
+              aria-selected={to_string(@tab == :activity)}
+              phx-click={JS.push("tab", value: %{tab: "activity"}, target: @myself)}
+            >
+              {gettext("Activity")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id={"#{@id}-tab-revisions"}
+              aria-selected={to_string(@tab == :revisions)}
+              phx-click={JS.push("tab", value: %{tab: "revisions"}, target: @myself)}
+            >
+              {gettext("Revisions")} <span :if={revision_count(@revision_data)}>{revision_count(@revision_data)}</span>
+            </button>
+          </div>
+          <p :if={@tab == :activity}>
+            {gettext(
+              "Everything that happened to this entry, including publishing, trash and restores. Open a revision to see or reuse its content."
+            )}
+          </p>
+          <p :if={@tab == :revisions}>
             {gettext(
               "Load a revision into the editor to inspect or reuse it. Loading replaces unsaved editor changes, but does not update the saved entry until you save or activate it."
             )}
           </p>
-          <p>
+          <p :if={@tab == :revisions}>
             {gettext(
               "You can also store the editor's current state as an inactive revision for later previewing or scheduled publishing."
             )}
           </p>
-          <div class="button-group">
+          <div :if={@tab == :revisions} class="button-group">
             <button
               type="button"
               class="secondary"
@@ -68,7 +99,16 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
           </div>
         </:info>
 
-        <%= if @status == :open do %>
+        <.activity
+          :if={@status == :open and @tab == :activity}
+          id={"#{@id}-activity"}
+          activity={@activity}
+          comparison={@comparison}
+          schema_version={@schema_version}
+          myself={@myself}
+        />
+
+        <%= if @status == :open and @tab == :revisions do %>
           <div :if={@preview_revision} class="revision-preview-notice" role="status">
             {gettext(
               "Revision %{revision} is loaded as an unsaved working copy.",
@@ -313,6 +353,27 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     """
   end
 
+  def handle_event("tab", %{"tab" => tab}, socket) when tab in ["activity", "revisions"] do
+    {:noreply, socket |> assign(:tab, String.to_existing_atom(tab)) |> assign(:comparison, nil)}
+  end
+
+  def handle_event("activity_more", _, socket) do
+    {:noreply, load_activity(socket, length(socket.assigns.activity.events) + @activity_page_size)}
+  end
+
+  def handle_event("compare", %{"id" => id}, socket) do
+    with %{events: events} <- socket.assigns.activity,
+         event when not is_nil(event) <- Enum.find(events, &(to_string(&1.id) == id)),
+         {from, to} <- Comparison.revisions(event) do
+      result = Comparison.build(entry_schema(socket), socket.assigns.entry_id, from, to, socket.assigns.current_user)
+      {:noreply, assign(socket, :comparison, %{event: event, result: result})}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_compare", _, socket), do: {:noreply, assign(socket, :comparison, nil)}
+
   def handle_event("fetch_revisions", _, socket) do
     {:noreply, load_revisions(socket)}
   end
@@ -438,7 +499,8 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
         {:noreply,
          socket
          |> assign(:preview_revision, nil)
-         |> load_revisions()}
+         |> load_revisions()
+         |> load_activity()}
 
       {:error, _reason} ->
         {:noreply, alert_error(socket, gettext("The revision could not be activated."))}
@@ -469,6 +531,106 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
         |> AsyncResult.failed(reason)
 
       assign(socket, :revision_data, failed_result)
+  end
+
+  defp load_activity(socket, limit \\ @activity_page_size) do
+    events = Brando.Activity.for_entry(entry_schema(socket), socket.assigns.entry_id, limit: limit + 1)
+    shown = Enum.take(events, limit)
+
+    assign(socket, :activity, %{
+      events: shown,
+      states: Events.states(shown),
+      has_more: length(events) > limit
+    })
+  rescue
+    _ -> assign(socket, :activity, %{events: [], states: %{}, has_more: false})
+  end
+
+  defp revision_count(%AsyncResult{ok?: true, result: %{revisions: revisions, has_more: true}}),
+    do: "#{length(revisions)}+"
+
+  defp revision_count(%AsyncResult{ok?: true, result: %{revisions: revisions}}), do: length(revisions)
+  defp revision_count(_), do: nil
+
+  attr :id, :string, required: true
+  attr :activity, :any, required: true
+  attr :comparison, :any, required: true
+  attr :schema_version, :any, required: true
+  attr :myself, :any, required: true
+
+  defp activity(%{comparison: %{event: event}} = assigns) do
+    {from, to} = Comparison.revisions(event)
+    assigns = assign(assigns, from: from, to: to)
+
+    ~H"""
+    <div class="activity-drawer-compare">
+      <button type="button" class="secondary" phx-click="close_compare" phx-target={@myself}>
+        ← {gettext("All activity")}
+      </button>
+      <h3>{gettext("Revision #%{from} → revision #%{to}", from: @from, to: @to)}</h3>
+      <Events.comparison id={"#{@id}-comparison"} comparison={@comparison.result} />
+    </div>
+    """
+  end
+
+  defp activity(%{activity: nil} = assigns) do
+    ~H"""
+    <div class="revisions-loading" role="status"><span>{gettext("Loading activity...")}</span></div>
+    """
+  end
+
+  defp activity(assigns) do
+    ~H"""
+    <p :if={@activity.events == []} class="revisions-empty">
+      {gettext("Nothing has been recorded for this entry yet.")}
+    </p>
+    <ol :if={@activity.events != []} id={@id} class="activity-timeline">
+      <li :for={event <- @activity.events} id={"#{@id}-#{event.id}"}>
+        <Events.marker event={event} />
+        <div>
+          <p><Events.action event={event} /> {Events.by_phrase(event)}</p>
+          <Events.details event={event} states={@activity.states} />
+          <p class="activity-meta">
+            <time datetime={DateTime.to_iso8601(event.inserted_at)}>{Events.when_label(event.inserted_at)}</time>
+            <button
+              :if={event.revision && event.action != :deleted}
+              type="button"
+              id={"#{@id}-#{event.id}-revision"}
+              class="activity-revision"
+              phx-hook="Brando.ConfirmClick"
+              phx-confirm-click-message={
+                gettext("Load revision %{revision} into the editor? Unsaved editor changes will be replaced.",
+                  revision: event.revision
+                )
+              }
+              phx-confirm-click={JS.push("select_revision", value: %{revision: event.revision}, target: @myself)}
+            >
+              {gettext("Revision #%{revision}", revision: event.revision)}
+            </button>
+            <button
+              :if={Comparison.revisions(event)}
+              type="button"
+              class="activity-compare-link"
+              phx-click="compare"
+              phx-value-id={event.id}
+              phx-target={@myself}
+            >
+              {gettext("Compare with #%{revision}", revision: elem(Comparison.revisions(event), 0))}
+            </button>
+          </p>
+        </div>
+      </li>
+    </ol>
+    <button
+      :if={@activity.has_more}
+      type="button"
+      class="secondary activity-drawer-more"
+      phx-click="activity_more"
+      phx-target={@myself}
+    >
+      {gettext("Show older activity")}
+    </button>
+    """
   end
 
   defp update_protection(socket, revision, protect?) do

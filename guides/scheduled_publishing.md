@@ -65,7 +65,7 @@ cannot undo its publication.
 
 ## Schedule an approved revision
 
-In **Revisions**, store the editor state as an inactive revision, describe it,
+In **History → Revisions**, store the editor state as an inactive revision, describe it,
 and use its schedule action. Only inactive revisions can be scheduled.
 For application tooling:
 

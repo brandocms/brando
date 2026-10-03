@@ -97,7 +97,10 @@ defmodule Brando.Authorization.Boundary do
       with :ok <- authorize(user, :restore, entry),
            changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
            :ok <- change(user, :update, changeset),
-           do: Repo.restore(entry)
+           {:ok, restored} <- Repo.restore(entry) do
+        Brando.Activity.restored(restored, user)
+        {:ok, restored}
+      end
     end)
   end
 

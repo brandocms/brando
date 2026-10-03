@@ -112,13 +112,14 @@ test('entry drawers retain input and use their own scrolling surface', async ({ 
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/admin/pages/update/1')
   await syncLV(page)
-  for (const [trigger, suffix] of [['Meta', 'meta-drawer'], ['Revisions', 'revisions-drawer'], ['Scheduled publishing', 'scheduled-publishing-drawer']]) {
+  for (const [trigger, suffix] of [['Meta', 'meta-drawer'], ['History', 'revisions-drawer'], ['Scheduled publishing', 'scheduled-publishing-drawer']]) {
     await page.getByRole('button', { name: trigger, exact: true }).click()
     const drawer = page.locator(`[id$="-${suffix}"]`)
     await expect(drawer).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await page.waitForTimeout(350)
     if (trigger === 'Meta') await drawer.getByLabel('Meta title', { exact: true }).fill('Panel metadata')
-    if (trigger === 'Revisions') {
+    if (trigger === 'History') {
+      await drawer.getByRole('tab', { name: /Revisions/ }).click()
       await drawer.getByRole('button', { name: 'Store current editor state', exact: true }).click()
       await expect(drawer.locator('.revisions-line').first()).toBeVisible()
     }
@@ -243,8 +244,10 @@ test('revision metadata is readable in Norwegian at desktop and mobile widths', 
   expect((await page.request.post('/e2e/setup_fixtures/revision-panel')).ok()).toBe(true)
   await page.goto('/admin/pages/update/1')
   await syncLV(page)
-  await page.getByRole('button', { name: 'Versjoner', exact: true }).click()
+  await page.getByRole('button', { name: 'Historikk', exact: true }).click()
   const drawer = page.locator('[id$="-revisions-drawer"]')
+  await expect(drawer.getByRole('tab', { name: 'Aktivitet' })).toHaveAttribute('aria-selected', 'true')
+  await drawer.getByRole('tab', { name: /Versjoner/ }).click()
   await expect(drawer.locator('.revision-status.is-active')).toHaveText('Aktiv')
   await expect(drawer.locator('.revision-status.is-scheduled')).toHaveText('Planlagt')
   await expect(drawer.locator('.revision-protection')).toHaveText('Beskyttet')

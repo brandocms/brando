@@ -134,6 +134,7 @@ defmodule Brando.Router do
             live "/global_sets/update/:entry_id", BrandoAdmin.Sites.GlobalSetFormLive, :update
             live "/identity", BrandoAdmin.Sites.IdentityLive
             live "/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
+            live "/activity", BrandoAdmin.Sites.ActivityLive
             live "/seo", BrandoAdmin.Sites.SEOLive
             live "/utils", BrandoAdmin.Sites.UtilsLive
             live "/utils/loose-blocks", BrandoAdmin.Sites.BlockAuditLive

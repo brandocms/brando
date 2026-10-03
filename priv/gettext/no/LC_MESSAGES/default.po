@@ -62,15 +62,15 @@ msgstr "publisert"
 msgid "Fragment contains circular reference to itself, %{ref_string}"
 msgstr "Fragmentet inneholder en referanse til seg selv, %{ref_string}"
 
-#: lib/brando_admin/live/config/cache_live.ex:35
+#: lib/brando_admin/live/sites/cache_live.ex:35
 #: lib/brando_admin/menu.ex:308
 #, elixir-autogen, elixir-format
 msgid "Cache"
 msgstr "Mellomlagring"
 
 #: lib/brando_admin/live/ai/guidance_live.ex:58
-#: lib/brando_admin/live/config/markdown_sources_live.ex:45
-#: lib/brando_admin/live/config/utils_live.ex:65
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:45
+#: lib/brando_admin/live/sites/utils_live.ex:65
 #: lib/brando_admin/menu.ex:275
 #, elixir-autogen, elixir-format
 msgid "Configuration"
@@ -78,9 +78,9 @@ msgstr "Konfigurasjon"
 
 #: lib/brando_admin/components/form/draft_recovery.ex:90
 #: lib/brando_admin/components/form/draft_recovery.ex:314
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1186
+#: lib/brando_admin/components/form/input/render_var.ex:1186
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:165
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:65
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:65
 #: lib/brando_admin/live/users/groups_live.ex:1057
 #: lib/brando_admin/menu.ex:374
 #, elixir-autogen, elixir-format
@@ -116,10 +116,10 @@ msgstr "Logg ut"
 #: lib/brando/content/table_template.ex:64
 #: lib/brando_admin/components/authorization_tools.ex:249
 #: lib/brando_admin/components/form/module_props.ex:125
-#: lib/brando_admin/live/config/environment_live.ex:174
-#: lib/brando_admin/live/config/markdown_sources_live.ex:91
-#: lib/brando_admin/live/config/markdown_sources_live.ex:436
-#: lib/brando_admin/live/config/site_live.ex:52
+#: lib/brando_admin/live/sites/environment_live.ex:174
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:91
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:436
+#: lib/brando_admin/live/sites/site_live.ex:52
 #: lib/brando_admin/live/content/shared_library_live.ex:339
 #: lib/brando_admin/live/content/shared_library_live.ex:372
 #, elixir-autogen, elixir-format
@@ -196,7 +196,7 @@ msgid "Clear selection"
 msgstr "Nullstill utvalg"
 
 #: lib/brando_admin/live/content/module_form_live.ex:71
-#: lib/brando_admin/live/content/modules_list_live.ex:20
+#: lib/brando_admin/live/content/module_list_live.ex:20
 #, elixir-autogen, elixir-format
 msgid "Content Modules"
 msgstr "Innholdsmoduler"
@@ -285,7 +285,7 @@ msgstr "Feil"
 msgid "Filter"
 msgstr "Filter"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1025
+#: lib/brando_admin/components/form/input/render_var.ex:1025
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:317
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:536
 #: lib/brando_admin/components/image_picker.ex:280
@@ -391,7 +391,7 @@ msgstr "Avansert"
 msgid "Alt. text"
 msgstr "Alternativ tekst"
 
-#: lib/brando_admin/live/config/cache_live.ex:131
+#: lib/brando_admin/live/sites/cache_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Caches cleared!"
 msgstr "Mellomlagringene ble tømt!"
@@ -411,7 +411,7 @@ msgstr "Bildetekst"
 #: lib/brando_admin/components/form/input.ex:187
 #: lib/brando_admin/components/image_picker.ex:400
 #: lib/brando_admin/components/video_picker.ex:781
-#: lib/brando_admin/live/config/cache_live.ex:113
+#: lib/brando_admin/live/sites/cache_live.ex:113
 #: lib/brando_admin/live/files/file_list_live.ex:339
 #: lib/brando_admin/live/images/image_list_live.ex:292
 #: lib/brando_admin/live/videos/video_list_live.ex:277
@@ -480,7 +480,7 @@ msgstr "Opprett palett"
 msgid "Create template"
 msgstr "Opprett mal"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:94
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:94
 #, elixir-autogen, elixir-format
 msgid "Delete job"
 msgstr "Slett jobb"
@@ -496,7 +496,7 @@ msgstr "Slett jobb"
 msgid "Display"
 msgstr "Vis"
 
-#: lib/brando_admin/live/config/global_set_form_live.ex:20
+#: lib/brando_admin/live/sites/global_set_form_live.ex:20
 #, elixir-autogen, elixir-format
 msgid "Edit global set"
 msgstr "Oppdater globalsett"
@@ -539,9 +539,9 @@ msgstr "Filtrér valg"
 #: lib/brando/galleries/gallery.ex:112
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:227
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:205
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:465
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:987
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1314
+#: lib/brando_admin/components/form/input/render_var.ex:465
+#: lib/brando_admin/components/form/input/render_var.ex:987
+#: lib/brando_admin/components/form/input/render_var.ex:1314
 #: lib/brando_admin/components/form/input/gallery_objects.ex:79
 #: lib/brando_admin/components/form/module_props.ex:24
 #: lib/brando_admin/components/form/module_props.ex:52
@@ -557,7 +557,7 @@ msgid "Get map info"
 msgstr "Hent kartinfo"
 
 #: lib/brando_admin/components/global_tabs.ex:29
-#: lib/brando_admin/live/config/global_set_list_live.ex:11
+#: lib/brando_admin/live/sites/global_set_list_live.ex:11
 #, elixir-autogen, elixir-format
 msgid "Global sets"
 msgstr "Globalsett"
@@ -570,13 +570,13 @@ msgstr "Globalsett"
 msgid "Globals"
 msgstr "Globaler"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:124
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:124
 #, elixir-autogen, elixir-format
 msgid "Job queue refreshed"
 msgstr "Arbeidskøen ble oppdatert"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:441
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:601
+#: lib/brando_admin/components/form/input/render_var.ex:441
+#: lib/brando_admin/components/form/input/render_var.ex:601
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:590
 #, elixir-autogen, elixir-format
 msgid "Label"
@@ -628,10 +628,10 @@ msgstr "Bilde"
 
 #: lib/brando_admin/components/form.ex:5718
 #: lib/brando_admin/components/form.ex:5721
-#: lib/brando_admin/live/config/asset_live.ex:46
-#: lib/brando_admin/live/config/environment_live.ex:65
-#: lib/brando_admin/live/config/publishing_live.ex:55
-#: lib/brando_admin/live/config/site_live.ex:42
+#: lib/brando_admin/live/sites/asset_live.ex:46
+#: lib/brando_admin/live/sites/environment_live.ex:65
+#: lib/brando_admin/live/sites/publishing_live.ex:55
+#: lib/brando_admin/live/sites/site_live.ex:42
 #: lib/brando_admin/live/content/shared_library_live.ex:69
 #, elixir-autogen, elixir-format
 msgid "Refresh"
@@ -642,7 +642,7 @@ msgstr "Oppdater"
 msgid "Refreshing Live Preview..."
 msgstr "Oppdaterer live-forhåndsvisning …"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:40
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:40
 #, elixir-autogen, elixir-format
 msgid "Refresh job queue"
 msgstr "Oppdater jobbkø"
@@ -672,7 +672,7 @@ msgstr "Nullstill verdi"
 msgid "Save"
 msgstr "Lagre"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:36
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:36
 #, elixir-autogen, elixir-format
 msgid "Scheduled Publishing"
 msgstr "Planlagt publisering"
@@ -710,9 +710,9 @@ msgstr "Laster opp…"
 #: lib/brando_admin/components/assets/media_field.ex:245
 #: lib/brando_admin/components/form/draft_preview_references.ex:187
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:211
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:472
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1284
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1412
+#: lib/brando_admin/components/form/input/render_var.ex:472
+#: lib/brando_admin/components/form/input/render_var.ex:1284
+#: lib/brando_admin/components/form/input/render_var.ex:1412
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:213
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:221
 #: lib/brando_admin/components/form/input/gallery.ex:521
@@ -891,15 +891,15 @@ msgid "Img class(es)"
 msgstr "Bildeklasse(r)"
 
 #: lib/brando_admin/components/form/block/render.ex:2725
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:446
+#: lib/brando_admin/components/form/input/render_var.ex:446
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:61
 #, elixir-autogen, elixir-format
 msgid "Instructions"
 msgstr "Instruksjoner"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:436
-#: lib/brando_admin/live/config/environment_live.ex:178
-#: lib/brando_admin/live/config/site_live.ex:56
+#: lib/brando_admin/components/form/input/render_var.ex:436
+#: lib/brando_admin/live/sites/environment_live.ex:178
+#: lib/brando_admin/live/sites/site_live.ex:56
 #: lib/brando_admin/live/content/shared_library_live.ex:341
 #: lib/brando_admin/live/content/shared_library_live.ex:374
 #, elixir-autogen, elixir-format
@@ -924,7 +924,7 @@ msgid "Limit"
 msgstr "Antallsbegrensing"
 
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:221
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:468
+#: lib/brando_admin/components/form/input/render_var.ex:468
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:17
 #: lib/brando_admin/components/form/module_props.ex:46
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:25
@@ -938,7 +938,7 @@ msgstr "Lenke"
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:60
 #: lib/brando_admin/components/image_picker.ex:322
 #: lib/brando_admin/components/video_picker.ex:621
-#: lib/brando_admin/live/config/cache_live.ex:88
+#: lib/brando_admin/live/sites/cache_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "List"
 msgstr "Liste"
@@ -967,7 +967,7 @@ msgstr "Metatittel"
 #: lib/brando_admin/components/form/block/render.ex:2586
 #: lib/brando_admin/components/form/block_field.ex:2257
 #: lib/brando_admin/components/form/block_field/outline.ex:133
-#: lib/brando_admin/live/config/cache_live.ex:64
+#: lib/brando_admin/live/sites/cache_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Module"
 msgstr "Modul"
@@ -989,7 +989,7 @@ msgid "Picture class(es)"
 msgstr "Bildeklasse(r)"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:341
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:447
+#: lib/brando_admin/components/form/input/render_var.ex:447
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:308
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:458
 #, elixir-autogen, elixir-format
@@ -1053,7 +1053,7 @@ msgid "Sequence updated"
 msgstr "Rekkefølge oppdatert"
 
 #: lib/brando_admin/components/form/module_props.ex:489
-#: lib/brando_admin/live/config/cache_live.ex:89
+#: lib/brando_admin/live/sites/cache_live.ex:89
 #, elixir-autogen, elixir-format
 msgid "Single"
 msgstr "Enkeltstående"
@@ -1063,7 +1063,7 @@ msgstr "Enkeltstående"
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:149
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:333
 #: lib/brando_admin/components/form/translation.ex:649
-#: lib/brando_admin/live/config/environment_live.ex:444
+#: lib/brando_admin/live/sites/environment_live.ex:444
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr "Kilde"
@@ -1071,7 +1071,7 @@ msgstr "Kilde"
 #: lib/brando_admin/components/form/block/render.ex:1901
 #: lib/brando_admin/components/form/block/render.ex:1937
 #: lib/brando_admin/components/form/block/render.ex:2213
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:471
+#: lib/brando_admin/components/form/input/render_var.ex:471
 #: lib/brando_admin/components/form/module_props.ex:16
 #: lib/brando_admin/components/form/module_props.ex:42
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:94
@@ -1085,33 +1085,33 @@ msgstr "Tekst"
 msgid "Title/Caption"
 msgstr "Tittel/Bildetekst"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:457
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1182
+#: lib/brando_admin/components/form/input/render_var.ex:457
+#: lib/brando_admin/components/form/input/render_var.ex:1182
 #: lib/brando_admin/components/form/module_props.ex:485
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:296
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:516
 #: lib/brando_admin/components/form/video_drawer.ex:342
 #: lib/brando_admin/live/ai/assistant_live.ex:541
-#: lib/brando_admin/live/config/cache_live.ex:64
+#: lib/brando_admin/live/sites/cache_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr "Type"
 
 #: lib/brando/seo/checks.ex:232
 #: lib/brando_admin/components/content/select_identifier.ex:348
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1087
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1146
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1185
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1194
+#: lib/brando_admin/components/form/input/render_var.ex:1087
+#: lib/brando_admin/components/form/input/render_var.ex:1146
+#: lib/brando_admin/components/form/input/render_var.ex:1185
+#: lib/brando_admin/components/form/input/render_var.ex:1194
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:157
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:330
-#: lib/brando_admin/live/config/seo_live.ex:84
-#: lib/brando_admin/live/config/seo_live.ex:286
+#: lib/brando_admin/live/sites/seo_live.ex:84
+#: lib/brando_admin/live/sites/seo_live.ex:286
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr "URL"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:602
+#: lib/brando_admin/components/form/input/render_var.ex:602
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr "Verdi"
@@ -1127,26 +1127,26 @@ msgstr "+ Slipp her for å laste opp"
 msgid "Available options"
 msgstr "Tilgjengelige alternativer"
 
-#: lib/brando_admin/live/config/cache_live.ex:64
+#: lib/brando_admin/live/sites/cache_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Cache key"
 msgstr "Mellomlagringsnøkkel"
 
-#: lib/brando_admin/live/config/cache_live.ex:37
+#: lib/brando_admin/live/sites/cache_live.ex:37
 #, elixir-autogen, elixir-format
 msgid "Empty all caches"
 msgstr "Tøm alle lagre"
 
-#: lib/brando_admin/live/config/cache_live.ex:65
+#: lib/brando_admin/live/sites/cache_live.ex:65
 #, elixir-autogen, elixir-format
 msgid "Entry ID"
 msgstr "Oppførings-ID"
 
 #: lib/brando_admin/components/form/draft_preview_references.ex:186
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:223
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:467
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1234
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1410
+#: lib/brando_admin/components/form/input/render_var.ex:467
+#: lib/brando_admin/components/form/input/render_var.ex:1234
+#: lib/brando_admin/components/form/input/render_var.ex:1410
 #: lib/brando_admin/components/form/module_props.ex:49
 #: lib/brando_admin/components/form/transformer.ex:608
 #, elixir-autogen, elixir-format
@@ -1154,7 +1154,7 @@ msgid "Image"
 msgstr "Bilde"
 
 #: lib/brando_admin/components/content/list.ex:1117
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:470
+#: lib/brando_admin/components/form/input/render_var.ex:470
 #: lib/brando_admin/components/form/input/multi_select.ex:111
 #: lib/brando_admin/components/form/input/select.ex:80
 #: lib/brando_admin/components/form/input/select.ex:92
@@ -1184,10 +1184,10 @@ msgstr "Velg alternativer"
 msgid "Error deleting"
 msgstr "Feil ved sletting av"
 
-#: lib/brando_admin/live/config/global_set_list_live.ex:17
+#: lib/brando_admin/live/sites/global_set_list_live.ex:17
 #: lib/brando_admin/live/content/container_list_live.ex:16
 #: lib/brando_admin/live/content/module_set_list_live.ex:12
-#: lib/brando_admin/live/content/modules_list_live.ex:32
+#: lib/brando_admin/live/content/module_list_live.ex:32
 #: lib/brando_admin/live/content/palette_list_live.ex:16
 #: lib/brando_admin/live/content/table_template_list_live.ex:16
 #: lib/brando_admin/live/content/template_list_live.ex:16
@@ -1210,7 +1210,7 @@ msgstr "Tilgjengelige alternativer"
 #: lib/brando_admin/components/form/block/render.ex:1424
 #: lib/brando_admin/components/form/block/render.ex:1812
 #: lib/brando_admin/components/form/block/render.ex:2730
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:996
+#: lib/brando_admin/components/form/input/render_var.ex:996
 #: lib/brando_admin/components/form/input/gallery.ex:437
 #, elixir-autogen, elixir-format
 msgid "Configure"
@@ -1322,12 +1322,12 @@ msgstr "%{count} valgt"
 msgid "<None selected>"
 msgstr "<Ingen valgt>"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:560
+#: lib/brando_admin/components/form/input/render_var.ex:560
 #, elixir-autogen, elixir-format
 msgid "Allow picking custom colors"
 msgstr "Tillat å velge egendefinerte farger"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:561
+#: lib/brando_admin/components/form/input/render_var.ex:561
 #, elixir-autogen, elixir-format
 msgid "Allow setting opacity"
 msgstr "Tillat å sette gjennomsiktighet"
@@ -1352,7 +1352,7 @@ msgstr "Feil ved duplisering av fragment"
 msgid "Fragment duplicated"
 msgstr "Fragment duplisert"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:562
+#: lib/brando_admin/components/form/input/render_var.ex:562
 #, elixir-autogen, elixir-format
 msgid "ID of palette to choose colors from"
 msgstr "ID for palett å velge farger fra"
@@ -1368,17 +1368,17 @@ msgstr "Ingen valgt"
 msgid "Open preview in new window"
 msgstr "Åpne forhåndsvisning i nytt vindu"
 
-#: lib/brando_admin/live/config/seo_live.ex:57
+#: lib/brando_admin/live/sites/seo_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Update SEO"
 msgstr "Oppdater SEO"
 
-#: lib/brando_admin/live/config/identity_live.ex:21
+#: lib/brando_admin/live/sites/identity_live.ex:21
 #, elixir-autogen, elixir-format
 msgid "Update identity"
 msgstr "Oppdater identitet"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:498
+#: lib/brando_admin/components/form/input/render_var.ex:498
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr "Bredde"
@@ -1403,8 +1403,8 @@ msgstr "Feil ved opplasting av fil"
 #: lib/brando_admin/components/form/draft_preview_references.ex:188
 #: lib/brando_admin/components/form/input/blocks/file_block.ex:107
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex:64
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:464
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1259
+#: lib/brando_admin/components/form/input/render_var.ex:464
+#: lib/brando_admin/components/form/input/render_var.ex:1259
 #: lib/brando_admin/components/form/module_props.ex:27
 #: lib/brando_admin/components/form/module_props.ex:51
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:74
@@ -1506,13 +1506,13 @@ msgstr "bekreft"
 msgid "Content from datasource will be inserted here"
 msgstr "Innhold fra datakilden settes inn her"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:131
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Job deleted"
 msgstr "Jobb slettet"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex:284
-#: lib/brando_admin/live/config/publishing_live.ex:138
+#: lib/brando_admin/live/sites/publishing_live.ex:138
 #: lib/brando_admin/live/users/groups_live.ex:1040
 #, elixir-autogen, elixir-format
 msgid "Schedule"
@@ -1563,10 +1563,10 @@ msgstr "Delbar link"
 #: lib/brando_admin/components/form/block/render.ex:1296
 #: lib/brando_admin/components/form/block/render.ex:2747
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex:99
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:611
+#: lib/brando_admin/components/form/input/render_var.ex:611
 #: lib/brando_admin/components/form/module_props.ex:297
 #: lib/brando_admin/components/form/var_layout.ex:411
-#: lib/brando_admin/live/config/environment_live.ex:155
+#: lib/brando_admin/live/sites/environment_live.ex:155
 #: lib/brando_admin/live/content/shared_library_live.ex:191
 #: lib/brando_admin/live/users/groups_live.ex:1037
 #, elixir-autogen, elixir-format
@@ -1600,19 +1600,19 @@ msgstr "Sammenkoblede innlegg"
 msgid "Duplicate to"
 msgstr "Dupliser til"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:57
+#: lib/brando_admin/live/content/module_list_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Exported modules"
 msgstr "Eksporterte moduler"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:25
-#: lib/brando_admin/live/content/modules_list_live.ex:62
-#: lib/brando_admin/live/content/modules_list_live.ex:93
+#: lib/brando_admin/live/content/module_list_live.ex:25
+#: lib/brando_admin/live/content/module_list_live.ex:62
+#: lib/brando_admin/live/content/module_list_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "Import modules"
 msgstr "Importer moduler"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:148
+#: lib/brando_admin/live/content/module_list_live.ex:148
 #, elixir-autogen, elixir-format
 msgid "Modules imported"
 msgstr "Modulene ble importert"
@@ -1622,7 +1622,7 @@ msgstr "Modulene ble importert"
 msgid "Select entries to link"
 msgstr "Velg innlegg som skal sammenkobles"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:73
+#: lib/brando_admin/live/content/module_list_live.ex:73
 #, elixir-autogen, elixir-format
 msgid "encoded modules found."
 msgstr "kodede moduler fantes."
@@ -1632,7 +1632,7 @@ msgstr "kodede moduler fantes."
 msgid "/cookies"
 msgstr "/cookies"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:625
+#: lib/brando_admin/components/form/input/render_var.ex:625
 #, elixir-autogen, elixir-format
 msgid "Add option"
 msgstr "Legg til alternativ"
@@ -1649,7 +1649,7 @@ msgstr "Dupliser"
 
 #: lib/brando_admin/components/content/list/row.ex:267
 #: lib/brando_admin/components/form/subform.ex:194
-#: lib/brando_admin/live/config/markdown_sources_live.ex:230
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:230
 #: lib/brando_admin/live/content/shared_library_live.ex:181
 #: lib/brando_admin/live/users/groups_live.ex:1033
 #, elixir-autogen, elixir-format
@@ -1667,7 +1667,7 @@ msgid "More info"
 msgstr "Mer informasjon"
 
 #: lib/brando/html.ex:372
-#: lib/brando_admin/live/config/seo_live.ex:1238
+#: lib/brando_admin/live/sites/seo_live.ex:1238
 #, elixir-autogen, elixir-format
 msgid "OK"
 msgstr "OK"
@@ -1782,7 +1782,7 @@ msgstr "Sortér etter filnavn"
 msgid "Edit video"
 msgstr "Rediger video"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1025
+#: lib/brando_admin/components/form/input/render_var.ex:1025
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:317
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:536
 #: lib/brando_admin/components/video_picker.ex:598
@@ -1804,7 +1804,7 @@ msgstr "Du må lukke bildeskuffen før du kan lagre skjemaet. Det kan være endr
 msgid "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own meta image which will override your entry's cover image, if it has one."
 msgstr "Metainformasjon for søkemotorer. Prøv å holde tittelfeltet under 70 tegn mens du forsøker å inkorporere nøkkelord relatert til innholdet ditt. Beskrivelsesfeltet bør være rundt 155 tegn for å forhindre at teksten kuttes i søkeresultatene. Du kan også velge ditt eget metabilde som vil overstyre innleggets coverbilde, om det har et."
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1148
+#: lib/brando_admin/components/form/input/render_var.ex:1148
 #, elixir-autogen, elixir-format
 msgid "<No URL>"
 msgstr "<Ingen URL>"
@@ -1844,12 +1844,12 @@ msgstr "En delbar tidsbegrenset URL har blitt opprettet. URL-en vil utløpe om %
 msgid "Add fragment"
 msgstr "Legg til fragment"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:571
+#: lib/brando_admin/components/form/input/render_var.ex:571
 #, elixir-autogen, elixir-format
 msgid "Allow setting custom link text"
 msgstr "Tillat egen lenketekst"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:567
+#: lib/brando_admin/components/form/input/render_var.ex:567
 #, elixir-autogen, elixir-format
 msgid "Allowed identifier schemas"
 msgstr "Tillatte skjema"
@@ -1910,9 +1910,9 @@ msgstr "Klikk på ‘ny rad’-knappen under for å komme i gang."
 msgid "Collapse (hide) block in block editor"
 msgstr "Gjem blokken (kun i blokkeditoren)"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:871
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:913
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:953
+#: lib/brando_admin/components/form/input/render_var.ex:871
+#: lib/brando_admin/components/form/input/render_var.ex:913
+#: lib/brando_admin/components/form/input/render_var.ex:953
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:258
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:277
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:348
@@ -2014,7 +2014,7 @@ msgstr "Kartets embed URL"
 #: lib/brando_admin/components/form/block_field/outline.ex:134
 #: lib/brando_admin/components/form/draft_recovery.ex:88
 #: lib/brando_admin/live/ai/assistant_live.ex:534
-#: lib/brando_admin/live/config/seo_live.ex:285
+#: lib/brando_admin/live/sites/seo_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "Entry"
 msgstr "Oppføring"
@@ -2062,8 +2062,8 @@ msgstr "Heex"
 msgid "High"
 msgstr "Høy"
 
-#: lib/brando_admin/live/config/seo_live.ex:84
-#: lib/brando_admin/live/config/seo_live.ex:654
+#: lib/brando_admin/live/sites/seo_live.ex:84
+#: lib/brando_admin/live/sites/seo_live.ex:654
 #, elixir-autogen, elixir-format
 msgid "Hits"
 msgstr "Treff"
@@ -2073,13 +2073,13 @@ msgstr "Treff"
 msgid "Input the full URL of the map you want to embed. This could be from services like Google Maps or any other map provider that supports embedding."
 msgstr "Skriv inn den fullstendige URL-en til kartet du ønsker å bygge inn. Dette kan være fra tjenester som Google Maps eller andre kartleverandører som støtter innbygging."
 
-#: lib/brando_admin/live/config/seo_live.ex:84
+#: lib/brando_admin/live/sites/seo_live.ex:84
 #, elixir-autogen, elixir-format
 msgid "Last hit"
 msgstr "Siste treff"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1198
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1215
+#: lib/brando_admin/components/form/input/render_var.ex:1198
+#: lib/brando_admin/components/form/input/render_var.ex:1215
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:270
 #, elixir-autogen, elixir-format
 msgid "Link text"
@@ -2112,8 +2112,8 @@ msgstr "Markdown"
 msgid "Only superusers can change the password of other users."
 msgstr "Kun superbrukere kan endre passord for andre brukere."
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1199
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1216
+#: lib/brando_admin/components/form/input/render_var.ex:1199
+#: lib/brando_admin/components/form/input/render_var.ex:1216
 #, elixir-autogen, elixir-format
 msgid "Open link in new window/tab"
 msgstr "Åpne lenke i nytt vindu/fane"
@@ -2203,8 +2203,8 @@ msgstr "For å bygge inn et kart i innholdet ditt, følg disse stegene:"
 msgid "Too many selections"
 msgstr "For mange valgt"
 
-#: lib/brando/cdn/cdn.ex:321
-#: lib/brando/cdn/cdn.ex:362
+#: lib/brando/cdn.ex:321
+#: lib/brando/cdn.ex:362
 #, elixir-autogen, elixir-format
 msgid "Uploading image to CDN &rarr; %{s3_bucket}"
 msgstr "Laster opp bilde til CDN &rarr; %{s3_bucket}"
@@ -2233,18 +2233,18 @@ msgstr "Du har ikke rett til å endre rollen"
 msgid "fragment"
 msgstr "fragment"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:914
+#: lib/brando_admin/components/form/input/render_var.ex:914
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:278
 #, elixir-autogen, elixir-format
 msgid "i.e: `file:Elixir.MyApp.Schema:function:fn_name`"
 msgstr "f.eks: `file:Elixir.MyApp.Schema:function:fn_name`"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1195
+#: lib/brando_admin/components/form/input/render_var.ex:1195
 #, elixir-autogen, elixir-format
 msgid "i.e: `https://example.com`"
 msgstr "f.eks: `https://example.com`"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:872
+#: lib/brando_admin/components/form/input/render_var.ex:872
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:259
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:474
 #, elixir-autogen, elixir-format
@@ -2312,7 +2312,7 @@ msgstr "Modulsett"
 msgid "Multi"
 msgstr "Multi"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1092
+#: lib/brando_admin/components/form/input/render_var.ex:1092
 #, elixir-autogen, elixir-format
 msgid "No link set"
 msgstr "Ingen lenke valgt"
@@ -2364,17 +2364,17 @@ msgstr "Brukeraktivitet"
 msgid "Sort by"
 msgstr "Sortering"
 
-#: lib/brando_admin/live/config/utils_live.ex:118
+#: lib/brando_admin/live/sites/utils_live.ex:118
 #, elixir-autogen, elixir-format
 msgid "Generate sitemap"
 msgstr "Generer nettstedskart"
 
-#: lib/brando_admin/live/config/utils_live.ex:171
+#: lib/brando_admin/live/sites/utils_live.ex:171
 #, elixir-autogen, elixir-format
 msgid "Generated sitemap."
 msgstr "Generert nettstedskart."
 
-#: lib/brando_admin/live/config/utils_live.ex:164
+#: lib/brando_admin/live/sites/utils_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "Identifiers synced."
 msgstr "Identifikatorer synkronisert."
@@ -2385,7 +2385,7 @@ msgstr "Identifikatorer synkronisert."
 msgid "New"
 msgstr "Ny"
 
-#: lib/brando_admin/live/config/utils_live.ex:66
+#: lib/brando_admin/live/sites/utils_live.ex:66
 #: lib/brando_admin/menu.ex:312
 #, elixir-autogen, elixir-format
 msgid "Utilities"
@@ -2403,7 +2403,7 @@ msgstr "Videoens coverbilde"
 msgid "Blocks"
 msgstr "Blokker"
 
-#: lib/brando_admin/live/config/utils_live.ex:134
+#: lib/brando_admin/live/sites/utils_live.ex:134
 #, elixir-autogen, elixir-format
 msgid "Concurrency"
 msgstr "Samtidighet"
@@ -2414,18 +2414,18 @@ msgstr "Samtidighet"
 msgid "Dimensions"
 msgstr "Dimensjoner"
 
-#: lib/brando_admin/live/config/utils_live.ex:131
+#: lib/brando_admin/live/sites/utils_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Locale"
 msgstr "Språk"
 
-#: lib/brando_admin/live/config/utils_live.ex:128
+#: lib/brando_admin/live/sites/utils_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Tidssone"
 
 #: lib/brando_admin/live/ai/assistant_live.ex:941
-#: lib/brando_admin/live/config/publishing_live.ex:227
+#: lib/brando_admin/live/sites/publishing_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Version"
 msgstr "Versjon"
@@ -2477,7 +2477,7 @@ msgstr "Blå"
 msgid "Emerald"
 msgstr "Grønn"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:583
+#: lib/brando_admin/components/form/input/render_var.ex:583
 #, elixir-autogen, elixir-format
 msgid "Options"
 msgstr "Valg"
@@ -2541,8 +2541,8 @@ msgstr "Overstyring av sideforhold"
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:47
 #: lib/brando_admin/components/image_picker.ex:460
 #: lib/brando_admin/live/ai/assistant_live.ex:718
-#: lib/brando_admin/live/config/environment_live.ex:297
-#: lib/brando_admin/live/config/seo_live.ex:459
+#: lib/brando_admin/live/sites/environment_live.ex:297
+#: lib/brando_admin/live/sites/seo_live.ex:459
 #: lib/brando_admin/live/content/module_form_live.ex:164
 #: lib/brando_admin/live/upload_manager.ex:808
 #: lib/brando_admin/live/users/groups_live.ex:431
@@ -2591,7 +2591,7 @@ msgstr "Ekstern video"
 msgid "Extract thumbnail from video"
 msgstr "Trekk ut miniatyrbilde fra video"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:157
+#: lib/brando_admin/live/content/module_list_live.ex:157
 #, elixir-autogen, elixir-format
 msgid "Failed to import modules: %{reason}"
 msgstr "Klarte ikke importere moduler: %{reason}"
@@ -2813,14 +2813,14 @@ msgstr "YouTube"
 msgid "Your browser does not support the video tag."
 msgstr "Nettleseren din støtter ikke video-taggen."
 
-#: lib/brando_admin/live/content/modules_list_live.ex:80
-#: lib/brando_admin/live/content/modules_list_live.ex:85
+#: lib/brando_admin/live/content/module_list_live.ex:80
+#: lib/brando_admin/live/content/module_list_live.ex:85
 #, elixir-autogen, elixir-format
 msgid "references"
 msgstr "referanser"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:79
-#: lib/brando_admin/live/content/modules_list_live.ex:84
+#: lib/brando_admin/live/content/module_list_live.ex:79
+#: lib/brando_admin/live/content/module_list_live.ex:84
 #, elixir-autogen, elixir-format
 msgid "variables"
 msgstr "variabler"
@@ -2928,8 +2928,8 @@ msgid "Save changes"
 msgstr "Lagre endringer"
 
 #: lib/brando_admin/components/file_picker.ex:221
-#: lib/brando_admin/live/config/asset_live.ex:74
-#: lib/brando_admin/live/config/asset_live.ex:150
+#: lib/brando_admin/live/sites/asset_live.ex:74
+#: lib/brando_admin/live/sites/asset_live.ex:150
 #: lib/brando_admin/live/files/file_list_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "%{count} file"
@@ -2975,12 +2975,12 @@ msgstr "KI returnerte et tomt svar"
 #: lib/brando_admin/components/content/list.ex:1263
 #: lib/brando_admin/components/form/input/gallery.ex:404
 #: lib/brando_admin/components/form/revisions_drawer.ex:126
-#: lib/brando_admin/live/config/asset_live.ex:134
-#: lib/brando_admin/live/config/cache_live.ex:66
-#: lib/brando_admin/live/config/environment_live.ex:101
-#: lib/brando_admin/live/config/environment_live.ex:280
-#: lib/brando_admin/live/config/publishing_live.ex:232
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:66
+#: lib/brando_admin/live/sites/asset_live.ex:134
+#: lib/brando_admin/live/sites/cache_live.ex:66
+#: lib/brando_admin/live/sites/environment_live.ex:101
+#: lib/brando_admin/live/sites/environment_live.ex:280
+#: lib/brando_admin/live/sites/publishing_live.ex:232
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "Actions"
 msgstr "Handlinger"
@@ -3310,7 +3310,7 @@ msgid "Paste"
 msgstr "Lim inn"
 
 #: lib/brando_admin/components/video_picker.ex:951
-#: lib/brando_admin/live/config/publishing_live.ex:258
+#: lib/brando_admin/live/sites/publishing_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "Preview"
 msgstr "Forhåndsvisning"
@@ -3446,7 +3446,7 @@ msgid "image"
 msgstr "bilde"
 
 #: lib/brando_admin/components/form.ex:5321
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1421
+#: lib/brando_admin/components/form/input/render_var.ex:1421
 #, elixir-autogen, elixir-format
 msgid "video"
 msgstr "video"
@@ -3668,159 +3668,159 @@ msgstr[1] "%{count} blokker slettet"
 msgid "Undo"
 msgstr "Angre"
 
-#: lib/brando_admin/live/config/asset_live.ex:109
-#: lib/brando_admin/live/config/publishing_live.ex:215
+#: lib/brando_admin/live/sites/asset_live.ex:109
+#: lib/brando_admin/live/sites/publishing_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "%{count} build"
 msgid_plural "%{count} builds"
 msgstr[0] "%{count} bygg"
 msgstr[1] "%{count} bygg"
 
-#: lib/brando_admin/live/config/asset_live.ex:166
+#: lib/brando_admin/live/sites/asset_live.ex:166
 #, elixir-autogen, elixir-format
 msgid "Activate %{name} now? Frontend requests will switch immediately."
 msgstr "Aktiver %{name} nå? Frontend-filene byttes umiddelbart."
 
-#: lib/brando_admin/live/config/asset_live.ex:169
+#: lib/brando_admin/live/sites/asset_live.ex:169
 #, elixir-autogen, elixir-format
 msgid "Activate build"
 msgstr "Aktiver bygg"
 
-#: lib/brando_admin/live/config/asset_live.ex:189
+#: lib/brando_admin/live/sites/asset_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "Activated %{name}"
 msgstr "Aktiverte %{name}"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex:160
-#: lib/brando_admin/live/config/asset_live.ex:220
+#: lib/brando_admin/live/sites/asset_live.ex:220
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr "Aktiv"
 
-#: lib/brando_admin/live/config/asset_live.ex:225
+#: lib/brando_admin/live/sites/asset_live.ex:225
 #, elixir-autogen, elixir-format
 msgid "Available"
 msgstr "Tilgjengelig"
 
-#: lib/brando_admin/live/config/asset_live.ex:100
+#: lib/brando_admin/live/sites/asset_live.ex:100
 #, elixir-autogen, elixir-format
 msgid "Build library"
 msgstr "Byggbibliotek"
 
-#: lib/brando_admin/live/config/asset_live.ex:72
-#: lib/brando_admin/live/config/asset_live.ex:132
+#: lib/brando_admin/live/sites/asset_live.ex:72
+#: lib/brando_admin/live/sites/asset_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "Bundle"
 msgstr "Pakke"
 
-#: lib/brando_admin/live/config/asset_live.ex:193
+#: lib/brando_admin/live/sites/asset_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Could not activate the frontend asset set"
 msgstr "Kunne ikke aktivere frontend-pakken"
 
-#: lib/brando_admin/live/config/asset_live.ex:205
+#: lib/brando_admin/live/sites/asset_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Could not revert the frontend assets"
 msgstr "Kunne ikke bytte til frontend-filene fra releasen"
 
-#: lib/brando_admin/live/config/asset_live.ex:53
+#: lib/brando_admin/live/sites/asset_live.ex:53
 #, elixir-autogen, elixir-format
 msgid "Currently served"
 msgstr "I bruk nå"
 
-#: lib/brando_admin/live/config/asset_live.ex:103
+#: lib/brando_admin/live/sites/asset_live.ex:103
 #, elixir-autogen, elixir-format
 msgid "Florist registers each build here. Activating one takes effect immediately and does not deploy the application."
 msgstr "Florist registrerer hvert bygg her. Å aktivere et bygg virker umiddelbart og deployer ikke applikasjonen."
 
-#: lib/brando_admin/live/config/asset_live.ex:43
+#: lib/brando_admin/live/sites/asset_live.ex:43
 #: lib/brando_admin/live/users/groups_live.ex:1070
 #: lib/brando_admin/menu.ex:410
 #, elixir-autogen, elixir-format
 msgid "Frontend assets"
 msgstr "Frontend-ressurser"
 
-#: lib/brando_admin/live/config/asset_live.ex:44
+#: lib/brando_admin/live/sites/asset_live.ex:44
 #, elixir-autogen, elixir-format
 msgid "Manage the frontend build currently served by Phoenix"
 msgstr "Administrer frontend-bygget som leveres av Phoenix"
 
-#: lib/brando_admin/live/config/asset_live.ex:114
+#: lib/brando_admin/live/sites/asset_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "No uploaded builds yet"
 msgstr "Ingen opplastede bygg ennå"
 
-#: lib/brando_admin/live/config/asset_live.ex:65
+#: lib/brando_admin/live/sites/asset_live.ex:65
 #, elixir-autogen, elixir-format
 msgid "Not provided"
 msgstr "Ikke oppgitt"
 
-#: lib/brando_admin/live/config/asset_live.ex:55
+#: lib/brando_admin/live/sites/asset_live.ex:55
 #, elixir-autogen, elixir-format
 msgid "Release assets"
 msgstr "Frontend-filer fra release"
 
-#: lib/brando_admin/live/config/asset_live.ex:201
+#: lib/brando_admin/live/sites/asset_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "Reverted to release assets"
 msgstr "Byttet til frontend-filer fra release"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex:122
-#: lib/brando_admin/live/config/asset_live.ex:64
+#: lib/brando_admin/live/sites/asset_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Revision"
 msgstr "Revisjon"
 
-#: lib/brando_admin/live/config/asset_live.ex:83
+#: lib/brando_admin/live/sites/asset_live.ex:83
 #, elixir-autogen, elixir-format
 msgid "Serving now"
 msgstr "I bruk nå"
 
-#: lib/brando_admin/live/config/asset_live.ex:59
+#: lib/brando_admin/live/sites/asset_live.ex:59
 #, elixir-autogen, elixir-format
 msgid "The CSS and JavaScript packaged with the current application release are being served."
 msgstr "CSS og JavaScript fra gjeldende applikasjonsrelease er i bruk."
 
-#: lib/brando_admin/live/config/asset_live.ex:116
+#: lib/brando_admin/live/sites/asset_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "The frontend packaged with the current release remains active until Florist registers a build."
 msgstr "Frontenden som følger med gjeldende release, er aktiv til Florist registrerer et bygg."
 "Frontend-filene som følger med gjeldende release, forblir aktive til Florist "
 "registrerer et bygg."
 
-#: lib/brando_admin/live/config/asset_live.ex:240
+#: lib/brando_admin/live/sites/asset_live.ex:240
 #, elixir-autogen, elixir-format
 msgid "This installation"
 msgstr "Denne installasjonen"
 
-#: lib/brando_admin/live/config/asset_live.ex:58
+#: lib/brando_admin/live/sites/asset_live.ex:58
 #, elixir-autogen, elixir-format
 msgid "This uploaded build is serving frontend requests now."
 msgstr "Dette opplastede bygget leverer frontend-filene nå."
 
-#: lib/brando_admin/live/config/asset_live.ex:68
-#: lib/brando_admin/live/config/asset_live.ex:131
+#: lib/brando_admin/live/sites/asset_live.ex:68
+#: lib/brando_admin/live/sites/asset_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Uploaded"
 msgstr "Lastet opp"
 
-#: lib/brando_admin/live/config/asset_live.ex:101
-#: lib/brando_admin/live/config/asset_live.ex:125
+#: lib/brando_admin/live/sites/asset_live.ex:101
+#: lib/brando_admin/live/sites/asset_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Uploaded builds"
 msgstr "Opplastede bygg"
 
-#: lib/brando_admin/live/config/asset_live.ex:92
+#: lib/brando_admin/live/sites/asset_live.ex:92
 #, elixir-autogen, elixir-format
 msgid "Use release assets"
 msgstr "Bruk filer fra release"
 
-#: lib/brando_admin/live/config/asset_live.ex:90
+#: lib/brando_admin/live/sites/asset_live.ex:90
 #, elixir-autogen, elixir-format
 msgid "Use the frontend assets included in the current release?"
 msgstr "Bruk frontend-filene som følger med gjeldende release?"
 
-#: lib/brando_admin/live/config/environment_live.ex:90
+#: lib/brando_admin/live/sites/environment_live.ex:90
 #, elixir-autogen, elixir-format
 msgid "%{count} environment"
 msgid_plural "%{count} environments"
@@ -3879,12 +3879,12 @@ msgstr "Godta oppdatering"
 msgid "Access controls what appears when creating content. Disabling an item never breaks existing blocks."
 msgstr "Tilgang styrer hva som vises når innhold opprettes. Å deaktivere et element ødelegger aldri eksisterende blokker."
 
-#: lib/brando_admin/live/config/site_live.ex:53
+#: lib/brando_admin/live/sites/site_live.ex:53
 #, elixir-autogen, elixir-format
 msgid "Acme Corporation"
 msgstr "Acme Corporation"
 
-#: lib/brando_admin/live/config/site_live.ex:125
+#: lib/brando_admin/live/sites/site_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Activate"
 msgstr "Aktivér"
@@ -3924,7 +3924,7 @@ msgstr "Legg til referanse"
 msgid "Add variable"
 msgstr "Legg til variabel"
 
-#: lib/brando_admin/live/config/site_live.ex:200
+#: lib/brando_admin/live/sites/site_live.ex:200
 #: lib/brando_admin/live/users/user_list_live.ex:159
 #, elixir-autogen, elixir-format
 msgid "Administrator"
@@ -3935,49 +3935,49 @@ msgstr "Administrator"
 msgid "Allow multiple entries"
 msgstr "Tillat flere oppføringer"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1024
+#: lib/brando_admin/components/form/input/render_var.ex:1024
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:316
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:535
 #, elixir-autogen, elixir-format
 msgid "Allowed media"
 msgstr "Tillatte medier"
 
-#: lib/brando_admin/live/config/site_live.ex:135
+#: lib/brando_admin/live/sites/site_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "Archive"
 msgstr "Arkivér"
 
-#: lib/brando_admin/live/config/site_live.ex:133
+#: lib/brando_admin/live/sites/site_live.ex:133
 #, elixir-autogen, elixir-format
 msgid "Archive %{name}? Its domains will stop serving immediately."
 msgstr "Arkivere %{name}? Domenene slutter å levere innhold umiddelbart."
 
-#: lib/brando_admin/live/config/environment_live.ex:624
+#: lib/brando_admin/live/sites/environment_live.ex:624
 #, elixir-autogen, elixir-format
 msgid "Archive restored as %{name}."
 msgstr "Arkivet ble gjenopprettet som %{name}."
 
-#: lib/brando_admin/live/config/environment_live.ex:137
+#: lib/brando_admin/live/sites/environment_live.ex:137
 #, elixir-autogen, elixir-format
 msgid "Archive the current live environment and promote %{name}?"
 msgstr "Arkivere gjeldende live-miljø og forfremme %{name}?"
 
-#: lib/brando_admin/live/config/environment_live.ex:372
+#: lib/brando_admin/live/sites/environment_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "Archives live in the same database and do not replace external backups."
 msgstr "Arkivene ligger i samme database og erstatter ikke eksterne sikkerhetskopier."
 
-#: lib/brando_admin/live/config/environment_live.ex:201
+#: lib/brando_admin/live/sites/environment_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "Archives the target, then replaces all of its database content from the source."
 msgstr "Arkiverer målet og erstatter deretter alt databaseinnholdet fra kilden."
 
-#: lib/brando_admin/live/config/publishing_live.ex:180
+#: lib/brando_admin/live/sites/publishing_live.ex:180
 #, elixir-autogen, elixir-format
 msgid "Artifact retention"
 msgstr "Oppbevaring av artefakter"
 
-#: lib/brando_admin/live/config/publishing_live.ex:212
+#: lib/brando_admin/live/sites/publishing_live.ex:212
 #, elixir-autogen, elixir-format
 msgid "Artifacts are stored outside the OTP release and survive blue/green switches."
 msgstr "Artefakter lagres utenfor OTP-utgivelsen og overlever blå/grønn-bytter."
@@ -3993,7 +3993,7 @@ msgstr "Like bred som innholdet"
 msgid "Author"
 msgstr "Forfatter"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:335
+#: lib/brando_admin/components/form/input/render_var.ex:335
 #, elixir-autogen, elixir-format
 msgid "Auto — fits its content"
 msgstr "Auto – tilpasser seg innholdet"
@@ -4003,22 +4003,22 @@ msgstr "Auto – tilpasser seg innholdet"
 msgid "Behavior"
 msgstr "Oppførsel"
 
-#: lib/brando_admin/live/config/publishing_live.ex:154
+#: lib/brando_admin/live/sites/publishing_live.ex:154
 #, elixir-autogen, elixir-format
 msgid "Build and preview only"
 msgstr "Kun bygg og forhåndsvisning"
 
-#: lib/brando_admin/live/config/publishing_live.ex:211
+#: lib/brando_admin/live/sites/publishing_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Build history"
 msgstr "Bygghistorikk"
 
-#: lib/brando_admin/live/config/publishing_live.ex:102
+#: lib/brando_admin/live/sites/publishing_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Build now"
 msgstr "Bygg nå"
 
-#: lib/brando_admin/live/config/publishing_live.ex:53
+#: lib/brando_admin/live/sites/publishing_live.ex:53
 #, elixir-autogen, elixir-format
 msgid "Build, preview, deploy, and roll back versioned static artifacts"
 msgstr "Bygg, forhåndsvis, publiser og rull tilbake versjonerte statiske artefakter"
@@ -4028,7 +4028,7 @@ msgstr "Bygg, forhåndsvis, publiser og rull tilbake versjonerte statiske artefa
 msgid "Building block editor"
 msgstr "Bygger blokkeditoren"
 
-#: lib/brando_admin/live/config/environment_live.ex:328
+#: lib/brando_admin/live/sites/environment_live.ex:328
 #, elixir-autogen, elixir-format
 msgid "By"
 msgstr "Av"
@@ -4054,7 +4054,7 @@ msgstr "Avbryt planlegging"
 msgid "Cancel scheduled publishing for this revision?"
 msgstr "Avbryte planlagt publisering for denne versjonen?"
 
-#: lib/brando_admin/live/config/environment_live.ex:295
+#: lib/brando_admin/live/sites/environment_live.ex:295
 #, elixir-autogen, elixir-format
 msgid "Cancel this pending environment operation?"
 msgstr "Avbryte denne ventende miljøoperasjonen?"
@@ -4065,13 +4065,13 @@ msgstr "Avbryte denne ventende miljøoperasjonen?"
 msgid "Changelog note"
 msgstr "Endringslogg-notat"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:327
+#: lib/brando_admin/components/form/input/render_var.ex:327
 #, elixir-autogen, elixir-format
 msgid "Choices"
 msgstr "Valg"
 
-#: lib/brando_admin/live/config/environment_live.ex:780
-#: lib/brando_admin/live/config/publishing_live.ex:322
+#: lib/brando_admin/live/sites/environment_live.ex:780
+#: lib/brando_admin/live/sites/publishing_live.ex:322
 #, elixir-autogen, elixir-format
 msgid "Choose a valid future date and time."
 msgstr "Velg en gyldig dato og tid frem i tid."
@@ -4099,7 +4099,7 @@ msgstr "Nullstill filter"
 msgid "Clear search"
 msgstr "Nullstill søk"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:325
+#: lib/brando_admin/components/form/input/render_var.ex:325
 #, elixir-autogen, elixir-format
 msgid "Color settings"
 msgstr "Fargeinnstillinger"
@@ -4110,12 +4110,12 @@ msgstr "Fargeinnstillinger"
 msgid "Colors (JSON)"
 msgstr "Farger (JSON)"
 
-#: lib/brando_admin/live/config/publishing_live.ex:172
+#: lib/brando_admin/live/sites/publishing_live.ex:172
 #, elixir-autogen, elixir-format
 msgid "Completion webhook (optional)"
 msgstr "Webhook ved fullføring (valgfritt)"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:486
+#: lib/brando_admin/components/form/input/render_var.ex:486
 #: lib/brando_admin/components/form/var_layout.ex:427
 #, elixir-autogen, elixir-format
 msgid "Configure modal"
@@ -4126,28 +4126,28 @@ msgstr "Konfigurasjonsvindu"
 msgid "Content defaults"
 msgstr "Standardverdier for innhold"
 
-#: lib/brando_admin/live/config/publishing_live.ex:74
-#: lib/brando_admin/live/config/publishing_live.ex:113
+#: lib/brando_admin/live/sites/publishing_live.ex:74
+#: lib/brando_admin/live/sites/publishing_live.ex:113
 #, elixir-autogen, elixir-format
 msgid "Content environment"
 msgstr "Innholdsmiljø"
 
-#: lib/brando_admin/live/config/environment_live.ex:725
+#: lib/brando_admin/live/sites/environment_live.ex:725
 #, elixir-autogen, elixir-format
 msgid "Copy %{source} → %{target}"
 msgstr "Kopier %{source} → %{target}"
 
-#: lib/brando_admin/live/config/environment_live.ex:198
+#: lib/brando_admin/live/sites/environment_live.ex:198
 #, elixir-autogen, elixir-format
 msgid "Copy now"
 msgstr "Kopier nå"
 
-#: lib/brando_admin/live/config/publishing_live.ex:361
+#: lib/brando_admin/live/sites/publishing_live.ex:361
 #, elixir-autogen, elixir-format
 msgid "Could not queue the publishing action."
 msgstr "Klarte ikke legge publiseringshandlingen i kø."
 
-#: lib/brando_admin/live/config/publishing_live.ex:381
+#: lib/brando_admin/live/sites/publishing_live.ex:381
 #, elixir-autogen, elixir-format
 msgid "Could not queue the static build."
 msgstr "Klarte ikke legge det statiske bygget i kø."
@@ -4167,12 +4167,12 @@ msgstr "Klarte ikke lagre modulen. Sjekk de markerte feltene."
 msgid "Could not save revision"
 msgstr "Klarte ikke lagre versjonen"
 
-#: lib/brando_admin/live/config/publishing_live.ex:345
+#: lib/brando_admin/live/sites/publishing_live.ex:345
 #, elixir-autogen, elixir-format
 msgid "Could not save static deployment settings."
 msgstr "Klarte ikke lagre innstillingene for statisk publisering."
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1674
+#: lib/brando_admin/components/form/input/render_var.ex:1674
 #, elixir-autogen, elixir-format
 msgid "Could not update gallery: %{error}"
 msgstr "Klarte ikke oppdatere galleriet: %{error}"
@@ -4191,8 +4191,8 @@ msgstr "Opprett"
 msgid "Create a site before assigning library access."
 msgstr "Opprett et nettsted før du tildeler bibliotektilgang."
 
-#: lib/brando_admin/live/config/environment_live.ex:167
-#: lib/brando_admin/live/config/environment_live.ex:191
+#: lib/brando_admin/live/sites/environment_live.ex:167
+#: lib/brando_admin/live/sites/environment_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "Create environment"
 msgstr "Opprett miljø"
@@ -4202,35 +4202,35 @@ msgstr "Opprett miljø"
 msgid "Create shared %{kind}"
 msgstr "Opprett delt %{kind}"
 
-#: lib/brando_admin/live/config/site_live.ex:47
-#: lib/brando_admin/live/config/site_live.ex:79
+#: lib/brando_admin/live/sites/site_live.ex:47
+#: lib/brando_admin/live/sites/site_live.ex:79
 #, elixir-autogen, elixir-format
 msgid "Create site"
 msgstr "Opprett nettsted"
 
-#: lib/brando_admin/live/config/environment_live.ex:62
+#: lib/brando_admin/live/sites/environment_live.ex:62
 #, elixir-autogen, elixir-format
 msgid "Create, copy, promote, schedule, and recover isolated content environments"
 msgstr "Opprett, kopier, forfrem, planlegg og gjenopprett isolerte innholdsmiljøer"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex:124
 #: lib/brando_admin/components/form/revisions_drawer.ex:170
-#: lib/brando_admin/live/config/publishing_live.ex:231
+#: lib/brando_admin/live/sites/publishing_live.ex:231
 #, elixir-autogen, elixir-format
 msgid "Created"
 msgstr "Opprettet"
 
-#: lib/brando_admin/live/config/site_live.ex:48
+#: lib/brando_admin/live/sites/site_live.ex:48
 #, elixir-autogen, elixir-format
 msgid "Creates Production and Staging schemas, seeds initial content, and grants you site admin access."
 msgstr "Oppretter skjemaene Production og Staging, legger inn startinnhold og gir deg administratortilgang til nettstedet."
 
-#: lib/brando_admin/live/config/environment_live.ex:170
+#: lib/brando_admin/live/sites/environment_live.ex:170
 #, elixir-autogen, elixir-format
 msgid "Creates an empty schema and runs all application tenant migrations."
 msgstr "Oppretter et tomt skjema og kjører alle tenant-migreringene til applikasjonen."
 
-#: lib/brando_admin/live/config/environment_live.ex:189
+#: lib/brando_admin/live/sites/environment_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "Creating…"
 msgstr "Oppretter …"
@@ -4250,28 +4250,28 @@ msgstr "Tilpass"
 msgid "Customized"
 msgstr "Tilpasset"
 
-#: lib/brando_admin/live/config/site_live.ex:64
+#: lib/brando_admin/live/sites/site_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Default language"
 msgstr "Standardspråk"
 
-#: lib/brando_admin/live/config/publishing_live.ex:196
+#: lib/brando_admin/live/sites/publishing_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Default new builds to automatic deployment"
 msgstr "La nye bygg som standard publiseres automatisk"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:512
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:514
+#: lib/brando_admin/components/form/input/render_var.ex:512
+#: lib/brando_admin/components/form/input/render_var.ex:514
 #, elixir-autogen, elixir-format
 msgid "Default value"
 msgstr "Standardverdi"
 
-#: lib/brando_admin/live/config/environment_live.ex:150
+#: lib/brando_admin/live/sites/environment_live.ex:150
 #, elixir-autogen, elixir-format
 msgid "Delete %{name} and its complete PostgreSQL schema? This cannot be undone."
 msgstr "Slette %{name} og hele PostgreSQL-skjemaet? Dette kan ikke angres."
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:610
+#: lib/brando_admin/components/form/input/render_var.ex:610
 #, elixir-autogen, elixir-format
 msgid "Delete option"
 msgstr "Slett alternativ"
@@ -4306,38 +4306,38 @@ msgstr "Slett variabelen %{key}"
 msgid "Delete variable %{key}?"
 msgstr "Slette variabelen %{key}?"
 
-#: lib/brando_admin/live/config/site_live.ex:68
+#: lib/brando_admin/live/sites/site_live.ex:68
 #, elixir-autogen, elixir-format
 msgid "Delivery"
 msgstr "Levering"
 
-#: lib/brando_admin/live/config/publishing_live.ex:280
+#: lib/brando_admin/live/sites/publishing_live.ex:280
 #: lib/brando_admin/live/users/groups_live.ex:1044
 #, elixir-autogen, elixir-format
 msgid "Deploy"
 msgstr "Publiser"
 
-#: lib/brando_admin/live/config/publishing_live.ex:278
+#: lib/brando_admin/live/sites/publishing_live.ex:278
 #, elixir-autogen, elixir-format
 msgid "Deploy %{version}?"
 msgstr "Publisere %{version}?"
 
-#: lib/brando_admin/live/config/publishing_live.ex:128
+#: lib/brando_admin/live/sites/publishing_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Deploy automatically"
 msgstr "Publiser automatisk"
 
-#: lib/brando_admin/live/config/publishing_live.ex:93
+#: lib/brando_admin/live/sites/publishing_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "Deploy automatically after a successful build"
 msgstr "Publiser automatisk etter et vellykket bygg"
 
-#: lib/brando_admin/live/config/publishing_live.ex:470
+#: lib/brando_admin/live/sites/publishing_live.ex:470
 #, elixir-autogen, elixir-format
 msgid "Deploy via %{strategy} to %{target}"
 msgstr "Publiser via %{strategy} til %{target}"
 
-#: lib/brando_admin/live/config/publishing_live.ex:144
+#: lib/brando_admin/live/sites/publishing_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Deployment target"
 msgstr "Publiseringsmål"
@@ -4357,22 +4357,22 @@ msgstr "Deaktiver alle"
 msgid "Discard this environment's customization and use shared again?"
 msgstr "Forkaste tilpasningen i dette miljøet og bruke den delte versjonen igjen?"
 
-#: lib/brando_admin/live/config/environment_live.ex:99
+#: lib/brando_admin/live/sites/environment_live.ex:99
 #, elixir-autogen, elixir-format
 msgid "Domain"
 msgstr "Domene"
 
-#: lib/brando_admin/live/config/environment_live.ex:182
+#: lib/brando_admin/live/sites/environment_live.ex:182
 #, elixir-autogen, elixir-format
 msgid "Domain (optional)"
 msgstr "Domene (valgfritt)"
 
-#: lib/brando_admin/live/config/environment_live.ex:119
+#: lib/brando_admin/live/sites/environment_live.ex:119
 #, elixir-autogen, elixir-format
 msgid "Domain for %{name}"
 msgstr "Domene for %{name}"
 
-#: lib/brando_admin/live/config/environment_live.ex:498
+#: lib/brando_admin/live/sites/environment_live.ex:498
 #, elixir-autogen, elixir-format
 msgid "Domain updated."
 msgstr "Domenet ble oppdatert."
@@ -4381,11 +4381,11 @@ msgstr "Domenet ble oppdatert."
 #: lib/brando_admin/components/form/block/render.ex:1349
 #: lib/brando_admin/components/form/block/render.ex:1827
 #: lib/brando_admin/components/form/image_drawer.ex:226
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1226
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1251
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1276
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1297
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1438
+#: lib/brando_admin/components/form/input/render_var.ex:1226
+#: lib/brando_admin/components/form/input/render_var.ex:1251
+#: lib/brando_admin/components/form/input/render_var.ex:1276
+#: lib/brando_admin/components/form/input/render_var.ex:1297
+#: lib/brando_admin/components/form/input/render_var.ex:1438
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:38
 #: lib/brando_admin/components/form/module_props.ex:199
 #: lib/brando_admin/components/form/module_props.ex:357
@@ -4401,7 +4401,7 @@ msgstr "Ferdig"
 msgid "Download instead of open"
 msgstr "Last ned i stedet for å åpne"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:596
+#: lib/brando_admin/components/form/input/render_var.ex:596
 #: lib/brando_admin/components/form/module_props.ex:257
 #, elixir-autogen, elixir-format
 msgid "Drag to reorder"
@@ -4437,7 +4437,7 @@ msgstr "Slipp bilder her, eller klikk for å velge"
 msgid "Drop videos here, or click to pick"
 msgstr "Slipp videoer her, eller klikk for å velge"
 
-#: lib/brando_admin/live/config/environment_live.ex:637
+#: lib/brando_admin/live/sites/environment_live.ex:637
 #, elixir-autogen, elixir-format
 msgid "Dropped %{count} archive."
 msgid_plural "Dropped %{count} archives."
@@ -4454,12 +4454,12 @@ msgstr "Dupliser referansen %{name}"
 msgid "Duplicate variable %{key}"
 msgstr "Dupliser variabelen %{key}"
 
-#: lib/brando_admin/live/config/site_live.ex:70
+#: lib/brando_admin/live/sites/site_live.ex:70
 #, elixir-autogen, elixir-format
 msgid "Dynamic"
 msgstr "Dynamisk"
 
-#: lib/brando_admin/live/config/site_live.ex:74
+#: lib/brando_admin/live/sites/site_live.ex:74
 #, elixir-autogen, elixir-format
 msgid "Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline."
 msgstr "Dynamisk leveres direkte av Phoenix. Statisk krever en konfigurert SSG-bygg- og publiseringsflyt."
@@ -4516,7 +4516,7 @@ msgstr "Rediger variabelen %{key}"
 msgid "Editable content and media used by the template."
 msgstr "Redigerbart innhold og medier som malen bruker."
 
-#: lib/brando_admin/live/config/site_live.ex:199
+#: lib/brando_admin/live/sites/site_live.ex:199
 #: lib/brando_admin/live/users/user_list_live.ex:160
 #, elixir-autogen, elixir-format
 msgid "Editor"
@@ -4542,32 +4542,32 @@ msgstr "Editoroppsett"
 msgid "Enable all"
 msgstr "Aktiver alle"
 
-#: lib/brando_admin/live/config/environment_live.ex:98
-#: lib/brando_admin/live/config/environment_live.ex:244
-#: lib/brando_admin/live/config/environment_live.ex:326
-#: lib/brando_admin/live/config/publishing_live.ex:228
+#: lib/brando_admin/live/sites/environment_live.ex:98
+#: lib/brando_admin/live/sites/environment_live.ex:244
+#: lib/brando_admin/live/sites/environment_live.ex:326
+#: lib/brando_admin/live/sites/publishing_live.ex:228
 #: lib/brando_admin/live/nav.ex:159
 #: lib/brando_admin/live/nav.ex:172
 #, elixir-autogen, elixir-format
 msgid "Environment"
 msgstr "Miljø"
 
-#: lib/brando_admin/live/config/environment_live.ex:511
+#: lib/brando_admin/live/sites/environment_live.ex:511
 #, elixir-autogen, elixir-format
 msgid "Environment %{name} created."
 msgstr "Miljøet %{name} ble opprettet."
 
-#: lib/brando_admin/live/config/environment_live.ex:529
+#: lib/brando_admin/live/sites/environment_live.ex:529
 #, elixir-autogen, elixir-format
 msgid "Environment copy queued."
 msgstr "Miljøkopiering lagt i kø."
 
-#: lib/brando_admin/live/config/environment_live.ex:548
+#: lib/brando_admin/live/sites/environment_live.ex:548
 #, elixir-autogen, elixir-format
 msgid "Environment copy scheduled."
 msgstr "Miljøkopiering planlagt."
 
-#: lib/brando_admin/live/config/environment_live.ex:594
+#: lib/brando_admin/live/sites/environment_live.ex:594
 #, elixir-autogen, elixir-format
 msgid "Environment deleted."
 msgstr "Miljøet ble slettet."
@@ -4577,13 +4577,13 @@ msgstr "Miljøet ble slettet."
 msgid "Environment for overrides"
 msgstr "Miljø for overstyringer"
 
-#: lib/brando_admin/live/config/environment_live.ex:785
+#: lib/brando_admin/live/sites/environment_live.ex:785
 #, elixir-autogen, elixir-format
 msgid "Environment operation failed: %{reason}"
 msgstr "Miljøoperasjonen feilet: %{reason}"
 
-#: lib/brando_admin/live/config/environment_live.ex:61
-#: lib/brando_admin/live/config/site_live.ex:95
+#: lib/brando_admin/live/sites/environment_live.ex:61
+#: lib/brando_admin/live/sites/site_live.ex:95
 #: lib/brando_admin/live/users/groups_live.ex:1068
 #: lib/brando_admin/menu.ex:405
 #, elixir-autogen, elixir-format
@@ -4610,7 +4610,7 @@ msgstr "Klarte ikke laste versjoner."
 msgid "Fetching content"
 msgstr "Henter innhold"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:336
+#: lib/brando_admin/components/form/input/render_var.ex:336
 #, elixir-autogen, elixir-format
 msgid "Fill — takes what is left"
 msgstr "Fyll – tar det som er igjen"
@@ -4621,14 +4621,14 @@ msgstr "Fyll – tar det som er igjen"
 msgid "Filter options…"
 msgstr "Filtrér valg …"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:331
+#: lib/brando_admin/components/form/input/render_var.ex:331
 #: lib/brando_admin/components/form/var_layout.ex:110
 #, elixir-autogen, elixir-format
 msgid "Full row"
 msgstr "Hel rad"
 
-#: lib/brando_admin/live/config/site_live.ex:187
-#: lib/brando_admin/live/config/site_live.ex:203
+#: lib/brando_admin/live/sites/site_live.ex:187
+#: lib/brando_admin/live/sites/site_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Grant access"
 msgstr "Gi tilgang"
@@ -4638,12 +4638,12 @@ msgstr "Gi tilgang"
 msgid "Half a row — 6 of 12 units"
 msgstr "En halv rad – 6 av 12 enheter"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:332
+#: lib/brando_admin/components/form/input/render_var.ex:332
 #, elixir-autogen, elixir-format
 msgid "Half — 6 units"
 msgstr "Halv – 6 enheter"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:487
+#: lib/brando_admin/components/form/input/render_var.ex:487
 #: lib/brando_admin/components/form/var_layout.ex:199
 #, elixir-autogen, elixir-format
 msgid "Hidden from editors"
@@ -4656,18 +4656,18 @@ msgid "Hide from editors — template only"
 msgstr "Skjul for redaktører – kun i malen"
 
 #: lib/brando_admin/live/ai/guidance_live.ex:144
-#: lib/brando_admin/live/config/environment_live.ex:307
-#: lib/brando_admin/live/config/markdown_sources_live.ex:234
+#: lib/brando_admin/live/sites/environment_live.ex:307
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:234
 #, elixir-autogen, elixir-format
 msgid "History"
 msgstr "Historikk"
 
-#: lib/brando_admin/live/config/publishing_live.ex:83
+#: lib/brando_admin/live/sites/publishing_live.ex:83
 #, elixir-autogen, elixir-format
 msgid "Homepage campaign update"
 msgstr "Kampanjeoppdatering på forsiden"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:437
+#: lib/brando_admin/components/form/input/render_var.ex:437
 #, elixir-autogen, elixir-format
 msgid "How the template refers to it"
 msgstr "Hvordan malen refererer til den"
@@ -4677,14 +4677,14 @@ msgstr "Hvordan malen refererer til den"
 msgid "How this module appears to editors"
 msgstr "Hvordan denne modulen fremstår for redaktører"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1027
+#: lib/brando_admin/components/form/input/render_var.ex:1027
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:319
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:538
 #, elixir-autogen, elixir-format
 msgid "Image config target"
 msgstr "Konfigurasjonsmål for bilde"
 
-#: lib/brando_admin/live/config/environment_live.ex:312
+#: lib/brando_admin/live/sites/environment_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "Immutable record of every lifecycle operation. Notes added when scheduling are recorded here."
 msgstr "Uforanderlig logg over alle livssyklusoperasjoner. Notater lagt inn ved planlegging registreres her."
@@ -4694,7 +4694,7 @@ msgstr "Uforanderlig logg over alle livssyklusoperasjoner. Notater lagt inn ved 
 msgid "Impact"
 msgstr "Konsekvens"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:485
+#: lib/brando_admin/components/form/input/render_var.ex:485
 #: lib/brando_admin/components/form/var_layout.ex:426
 #, elixir-autogen, elixir-format
 msgid "In the block"
@@ -4705,12 +4705,12 @@ msgstr "I blokken"
 msgid "Inactive"
 msgstr "Inaktiv"
 
-#: lib/brando_admin/live/config/environment_live.ex:640
+#: lib/brando_admin/live/sites/environment_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "Invalid archive retention count."
 msgstr "Ugyldig antall arkiver å beholde."
 
-#: lib/brando_admin/live/config/environment_live.ex:610
+#: lib/brando_admin/live/sites/environment_live.ex:610
 #, elixir-autogen, elixir-format
 msgid "Invalid job identifier."
 msgstr "Ugyldig jobb-ID."
@@ -4732,12 +4732,12 @@ msgstr "Skjemaversjonen avviker fra gjeldende skjema, så noen felter gjenoppret
 
 #: lib/brando_admin/components/form.ex:2457
 #: lib/brando_admin/components/form.ex:2458
-#: lib/brando_admin/live/config/site_live.ex:60
+#: lib/brando_admin/live/sites/site_live.ex:60
 #, elixir-autogen, elixir-format
 msgid "Languages"
 msgstr "Språk"
 
-#: lib/brando_admin/live/config/site_live.ex:104
+#: lib/brando_admin/live/sites/site_live.ex:104
 #, elixir-autogen, elixir-format
 msgid "Last page edit"
 msgstr "Siste sideredigering"
@@ -4754,22 +4754,22 @@ msgstr "Bibliotekoverstyringen ble oppdatert."
 msgid "Link label"
 msgstr "Lenketekst"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:326
+#: lib/brando_admin/components/form/input/render_var.ex:326
 #, elixir-autogen, elixir-format
 msgid "Link settings"
 msgstr "Lenkeinnstillinger"
 
-#: lib/brando_admin/live/config/environment_live.ex:125
+#: lib/brando_admin/live/sites/environment_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Live"
 msgstr "Live"
 
-#: lib/brando_admin/live/config/environment_live.ex:562
+#: lib/brando_admin/live/sites/environment_live.ex:562
 #, elixir-autogen, elixir-format
 msgid "Live switch queued."
 msgstr "Live-bytte lagt i kø."
 
-#: lib/brando_admin/live/config/environment_live.ex:580
+#: lib/brando_admin/live/sites/environment_live.ex:580
 #, elixir-autogen, elixir-format
 msgid "Live switch scheduled."
 msgstr "Live-bytte planlagt."
@@ -4806,13 +4806,13 @@ msgstr[1] "Laster %{count} blokker"
 msgid "Loading blocks"
 msgstr "Laster blokker"
 
-#: lib/brando_admin/live/config/publishing_live.ex:296
+#: lib/brando_admin/live/sites/publishing_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Log"
 msgstr "Logg"
 
 #: lib/brando_admin/components/form/module_props.ex:26
-#: lib/brando_admin/live/config/site_live.ex:101
+#: lib/brando_admin/live/sites/site_live.ex:101
 #: lib/brando_admin/live/users/groups_live.ex:1058
 #, elixir-autogen, elixir-format
 msgid "Media"
@@ -4848,18 +4848,18 @@ msgstr "Flytt inn i blokken"
 msgid "Move to the Configure modal"
 msgstr "Flytt til konfigurasjonsvinduet"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:432
+#: lib/brando_admin/components/form/input/render_var.ex:432
 #, elixir-autogen, elixir-format
 msgid "Naming"
 msgstr "Navngivning"
 
-#: lib/brando_admin/live/config/environment_live.ex:271
+#: lib/brando_admin/live/sites/environment_live.ex:271
 #, elixir-autogen, elixir-format
 msgid "No copy or live-switch operations are pending."
 msgstr "Ingen kopierings- eller live-byttoperasjoner venter."
 
-#: lib/brando_admin/live/config/publishing_live.ex:466
-#: lib/brando_admin/live/config/publishing_live.ex:472
+#: lib/brando_admin/live/sites/publishing_live.ex:466
+#: lib/brando_admin/live/sites/publishing_live.ex:472
 #, elixir-autogen, elixir-format
 msgid "No deployment target configured; builds and previews remain available."
 msgstr "Ingen publiseringsmål er konfigurert; bygg og forhåndsvisninger er fortsatt tilgjengelige."
@@ -4871,12 +4871,12 @@ msgstr "Ingen publiseringsmål er konfigurert; bygg og forhåndsvisninger er for
 msgid "No description"
 msgstr "Ingen beskrivelse"
 
-#: lib/brando_admin/live/config/environment_live.ex:118
+#: lib/brando_admin/live/sites/environment_live.ex:118
 #, elixir-autogen, elixir-format
 msgid "No domain"
 msgstr "Ingen domene"
 
-#: lib/brando_admin/live/config/site_live.ex:164
+#: lib/brando_admin/live/sites/site_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "No explicit user assignments."
 msgstr "Ingen eksplisitte brukertildelinger."
@@ -4891,7 +4891,7 @@ msgstr "Ingen fil valgt"
 msgid "No files in this folder"
 msgstr "Ingen filer i denne mappen"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:421
+#: lib/brando_admin/components/form/input/render_var.ex:421
 #, elixir-autogen, elixir-format
 msgid "No label"
 msgstr "Ingen etikett"
@@ -4907,17 +4907,17 @@ msgstr "Ingen valg samsvarer"
 msgid "No modules match \"%{query}\""
 msgstr "Ingen moduler samsvarer med «%{query}»"
 
-#: lib/brando_admin/live/config/environment_live.ex:318
+#: lib/brando_admin/live/sites/environment_live.ex:318
 #, elixir-autogen, elixir-format
 msgid "No operations have been recorded for this site."
 msgstr "Ingen operasjoner er registrert for dette nettstedet."
 
-#: lib/brando_admin/live/config/environment_live.ex:784
+#: lib/brando_admin/live/sites/environment_live.ex:784
 #, elixir-autogen, elixir-format
 msgid "No recovery archive exists for this site."
 msgstr "Det finnes ikke noe gjenopprettingsarkiv for dette nettstedet."
 
-#: lib/brando_admin/live/config/environment_live.ex:401
+#: lib/brando_admin/live/sites/environment_live.ex:401
 #, elixir-autogen, elixir-format
 msgid "No recovery archives exist for this site."
 msgstr "Det finnes ingen gjenopprettingsarkiver for dette nettstedet."
@@ -4937,7 +4937,7 @@ msgstr "Ingen versjoner er lagret ennå."
 msgid "No shared entries yet."
 msgstr "Ingen delte oppføringer ennå."
 
-#: lib/brando_admin/live/config/environment_live.ex:75
+#: lib/brando_admin/live/sites/environment_live.ex:75
 #, elixir-autogen, elixir-format
 msgid "No site and live environment could be resolved for this admin session."
 msgstr "Klarte ikke finne nettsted og live-miljø for denne administratorøkten."
@@ -4947,7 +4947,7 @@ msgstr "Klarte ikke finne nettsted og live-miljø for denne administratorøkten.
 msgid "No sites currently use this entry."
 msgstr "Ingen nettsteder bruker denne oppføringen nå."
 
-#: lib/brando_admin/live/config/publishing_live.ex:220
+#: lib/brando_admin/live/sites/publishing_live.ex:220
 #, elixir-autogen, elixir-format
 msgid "No static builds have been requested yet."
 msgstr "Ingen statiske bygg er bestilt ennå."
@@ -4962,14 +4962,14 @@ msgstr "Ingen variabler på denne flaten ennå."
 msgid "No variables yet"
 msgstr "Ingen variabler ennå"
 
-#: lib/brando_admin/live/config/environment_live.ex:327
+#: lib/brando_admin/live/sites/environment_live.ex:327
 #, elixir-autogen, elixir-format
 msgid "Note"
 msgstr "Notat"
 
-#: lib/brando_admin/live/config/environment_live.ex:206
-#: lib/brando_admin/live/config/environment_live.ex:473
-#: lib/brando_admin/live/config/publishing_live.ex:82
+#: lib/brando_admin/live/sites/environment_live.ex:206
+#: lib/brando_admin/live/sites/environment_live.ex:473
+#: lib/brando_admin/live/sites/publishing_live.ex:82
 #, elixir-autogen, elixir-format
 msgid "Note (optional)"
 msgstr "Notat (valgfritt)"
@@ -4979,12 +4979,12 @@ msgstr "Notat (valgfritt)"
 msgid "Nothing hidden."
 msgstr "Ingenting er skjult."
 
-#: lib/brando_admin/live/config/environment_live.ex:79
+#: lib/brando_admin/live/sites/environment_live.ex:79
 #, elixir-autogen, elixir-format
 msgid "Only administrators and superusers can change environment lifecycle state."
 msgstr "Bare administratorer og superbrukere kan endre livssyklustilstanden til miljøer."
 
-#: lib/brando_admin/live/config/publishing_live.ex:60
+#: lib/brando_admin/live/sites/publishing_live.ex:60
 #, elixir-autogen, elixir-format
 msgid "Only site administrators and superusers can publish static builds."
 msgstr "Bare nettstedsadministratorer og superbrukere kan publisere statiske bygg."
@@ -4995,7 +4995,7 @@ msgstr "Bare nettstedsadministratorer og superbrukere kan publisere statiske byg
 msgid "Open in new window/tab"
 msgstr "Åpne i nytt vindu/fane"
 
-#: lib/brando_admin/live/config/publishing_live.ex:267
+#: lib/brando_admin/live/sites/publishing_live.ex:267
 #, elixir-autogen, elixir-format
 msgid "Open site"
 msgstr "Åpne nettstedet"
@@ -5005,13 +5005,13 @@ msgstr "Åpne nettstedet"
 msgid "Opening entry"
 msgstr "Åpner oppføring"
 
-#: lib/brando_admin/live/config/environment_live.ex:277
-#: lib/brando_admin/live/config/environment_live.ex:325
+#: lib/brando_admin/live/sites/environment_live.ex:277
+#: lib/brando_admin/live/sites/environment_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Operation"
 msgstr "Operasjon"
 
-#: lib/brando_admin/live/config/environment_live.ex:308
+#: lib/brando_admin/live/sites/environment_live.ex:308
 #, elixir-autogen, elixir-format
 msgid "Operation log"
 msgstr "Operasjonslogg"
@@ -5027,7 +5027,7 @@ msgid "Or insert"
 msgstr "Eller sett inn"
 
 #: lib/brando_admin/dashboard.ex:94
-#: lib/brando_admin/live/config/site_live.ex:98
+#: lib/brando_admin/live/sites/site_live.ex:98
 #, elixir-autogen, elixir-format
 msgid "Pages"
 msgstr "Sider"
@@ -5037,27 +5037,27 @@ msgstr "Sider"
 msgid "Parent module"
 msgstr "Overordnet modul"
 
-#: lib/brando_admin/live/config/environment_live.ex:268
+#: lib/brando_admin/live/sites/environment_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "Pending operations"
 msgstr "Ventende operasjoner"
 
-#: lib/brando_admin/live/config/site_live.ex:154
+#: lib/brando_admin/live/sites/site_live.ex:154
 #, elixir-autogen, elixir-format
 msgid "Permanently delete"
 msgstr "Slett permanent"
 
-#: lib/brando_admin/live/config/site_live.ex:152
+#: lib/brando_admin/live/sites/site_live.ex:152
 #, elixir-autogen, elixir-format
 msgid "Permanently delete %{name}, all schemas, media, and uploaded assets?"
 msgstr "Slette %{name}, alle skjemaer, medier og opplastede ressurser permanent?"
 
-#: lib/brando_admin/live/config/environment_live.ex:393
+#: lib/brando_admin/live/sites/environment_live.ex:393
 #, elixir-autogen, elixir-format
 msgid "Permanently drop all but the three newest archives?"
 msgstr "Slette alle arkiver unntatt de tre nyeste permanent?"
 
-#: lib/brando_admin/live/config/publishing_live.ex:229
+#: lib/brando_admin/live/sites/publishing_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Progress"
 msgstr "Fremdrift"
@@ -5069,27 +5069,27 @@ msgstr "Fremdrift"
 msgid "Progress bar"
 msgstr "Fremdriftsindikator"
 
-#: lib/brando_admin/live/config/environment_live.ex:166
+#: lib/brando_admin/live/sites/environment_live.ex:166
 #, elixir-autogen, elixir-format
 msgid "Provision"
 msgstr "Opprett"
 
-#: lib/brando_admin/live/config/site_live.ex:40
+#: lib/brando_admin/live/sites/site_live.ex:40
 #, elixir-autogen, elixir-format
 msgid "Provision isolated sites, control lifecycle, and assign users"
 msgstr "Opprett isolerte nettsteder, styr livssyklus og tildel brukere"
 
-#: lib/brando_admin/live/config/site_live.ex:78
+#: lib/brando_admin/live/sites/site_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Provisioning…"
 msgstr "Oppretter …"
 
-#: lib/brando_admin/live/config/environment_live.ex:395
+#: lib/brando_admin/live/sites/environment_live.ex:395
 #, elixir-autogen, elixir-format
 msgid "Prune to three"
 msgstr "Behold tre"
 
-#: lib/brando_admin/live/config/publishing_live.ex:168
+#: lib/brando_admin/live/sites/publishing_live.ex:168
 #, elixir-autogen, elixir-format
 msgid "Public CDN URL (optional)"
 msgstr "Offentlig CDN-URL (valgfritt)"
@@ -5099,8 +5099,8 @@ msgstr "Offentlig CDN-URL (valgfritt)"
 msgid "Publish version"
 msgstr "Publiser versjon"
 
-#: lib/brando_admin/live/config/publishing_live.ex:52
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:107
+#: lib/brando_admin/live/sites/publishing_live.ex:52
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:107
 #: lib/brando_admin/menu.ex:393
 #, elixir-autogen, elixir-format
 msgid "Publishing"
@@ -5116,37 +5116,37 @@ msgstr "Slette alle inaktive versjoner som ikke er beskyttet eller planlagt? Det
 msgid "Purged %{count} revisions"
 msgstr "Slettet %{count} versjoner"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:334
+#: lib/brando_admin/components/form/input/render_var.ex:334
 #, elixir-autogen, elixir-format
 msgid "Quarter — 3 units"
 msgstr "Fjerdedel – 3 enheter"
 
-#: lib/brando_admin/live/config/environment_live.ex:267
+#: lib/brando_admin/live/sites/environment_live.ex:267
 #, elixir-autogen, elixir-format
 msgid "Queue"
 msgstr "Kø"
 
-#: lib/brando_admin/live/config/environment_live.ex:216
+#: lib/brando_admin/live/sites/environment_live.ex:216
 #, elixir-autogen, elixir-format
 msgid "Queue copy now"
 msgstr "Legg kopiering i kø nå"
 
-#: lib/brando_admin/live/config/publishing_live.ex:378
+#: lib/brando_admin/live/sites/publishing_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "Queued static build %{version}"
 msgstr "La statisk bygg %{version} i kø"
 
-#: lib/brando_admin/live/config/publishing_live.ex:100
+#: lib/brando_admin/live/sites/publishing_live.ex:100
 #, elixir-autogen, elixir-format
 msgid "Queueing…"
 msgstr "Legger i kø …"
 
-#: lib/brando_admin/live/config/environment_live.ex:410
+#: lib/brando_admin/live/sites/environment_live.ex:410
 #, elixir-autogen, elixir-format
 msgid "Recovered archive"
 msgstr "Gjenopprettet arkiv"
 
-#: lib/brando_admin/live/config/environment_live.ex:369
+#: lib/brando_admin/live/sites/environment_live.ex:369
 #, elixir-autogen, elixir-format
 msgid "Recovery archives"
 msgstr "Gjenopprettingsarkiver"
@@ -5177,7 +5177,7 @@ msgstr "Referanser plasserer redigerbart innhold og medier direkte i modulmalen.
 #: lib/brando_admin/components/assets/media_field.ex:179
 #: lib/brando_admin/components/form/file_drawer.ex:117
 #: lib/brando_admin/components/form/image_drawer.ex:206
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1426
+#: lib/brando_admin/components/form/input/render_var.ex:1426
 #: lib/brando_admin/components/form/input/multi_select.ex:947
 #: lib/brando_admin/components/form/input/multi_select.ex:991
 #: lib/brando_admin/components/form/input/multi_select.ex:1020
@@ -5200,7 +5200,7 @@ msgstr "Fjern fil"
 msgid "Rendering, nesting and editor presentation"
 msgstr "Rendring, nesting og presentasjon i editoren"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:595
+#: lib/brando_admin/components/form/input/render_var.ex:595
 #, elixir-autogen, elixir-format
 msgid "Reorder option"
 msgstr "Endre rekkefølge på valget"
@@ -5222,7 +5222,7 @@ msgstr "Endre rekkefølge på rad %{number}"
 msgid "Replace"
 msgstr "Erstatt"
 
-#: lib/brando_admin/live/config/environment_live.ex:197
+#: lib/brando_admin/live/sites/environment_live.ex:197
 #, elixir-autogen, elixir-format
 msgid "Replace content"
 msgstr "Erstatt innhold"
@@ -5237,7 +5237,7 @@ msgstr "Erstatt fil"
 msgid "Replace the customized version with the current shared version?"
 msgstr "Erstatte den tilpassede versjonen med den gjeldende delte versjonen?"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1437
+#: lib/brando_admin/components/form/input/render_var.ex:1437
 #, elixir-autogen, elixir-format
 msgid "Reset gallery"
 msgstr "Nullstill galleri"
@@ -5247,24 +5247,24 @@ msgstr "Nullstill galleri"
 msgid "Reset to shared"
 msgstr "Tilbakestill til delt"
 
-#: lib/brando_admin/live/config/environment_live.ex:419
-#: lib/brando_admin/live/config/site_live.ex:144
+#: lib/brando_admin/live/sites/environment_live.ex:419
+#: lib/brando_admin/live/sites/site_live.ex:144
 #: lib/brando_admin/live/users/groups_live.ex:1041
 #, elixir-autogen, elixir-format
 msgid "Restore"
 msgstr "Gjenopprett"
 
-#: lib/brando_admin/live/config/environment_live.ex:383
+#: lib/brando_admin/live/sites/environment_live.ex:383
 #, elixir-autogen, elixir-format
 msgid "Restore newest"
 msgstr "Gjenopprett nyeste"
 
-#: lib/brando_admin/live/config/environment_live.ex:381
+#: lib/brando_admin/live/sites/environment_live.ex:381
 #, elixir-autogen, elixir-format
 msgid "Restore the newest archive as a new non-live environment?"
 msgstr "Gjenopprette det nyeste arkivet som et nytt miljø som ikke er live?"
 
-#: lib/brando_admin/live/config/environment_live.ex:417
+#: lib/brando_admin/live/sites/environment_live.ex:417
 #, elixir-autogen, elixir-format
 msgid "Restore this archive as a new, non-live environment?"
 msgstr "Gjenopprette dette arkivet som et nytt miljø som ikke er live?"
@@ -5294,28 +5294,28 @@ msgstr "Versjonsfeil"
 msgid "Revision saved"
 msgstr "Versjon lagret"
 
-#: lib/brando_admin/live/config/site_live.ex:178
+#: lib/brando_admin/live/sites/site_live.ex:178
 #, elixir-autogen, elixir-format
 msgid "Revoke"
 msgstr "Trekk tilbake"
 
-#: lib/brando_admin/live/config/site_live.ex:197
+#: lib/brando_admin/live/sites/site_live.ex:197
 #: lib/brando_admin/live/users/user_list_live.ex:54
 #, elixir-autogen, elixir-format
 msgid "Role"
 msgstr "Rolle"
 
-#: lib/brando_admin/live/config/publishing_live.ex:293
+#: lib/brando_admin/live/sites/publishing_live.ex:293
 #, elixir-autogen, elixir-format
 msgid "Roll back"
 msgstr "Rull tilbake"
 
-#: lib/brando_admin/live/config/publishing_live.ex:291
+#: lib/brando_admin/live/sites/publishing_live.ex:291
 #, elixir-autogen, elixir-format
 msgid "Roll back to %{version}?"
 msgstr "Rulle tilbake til %{version}?"
 
-#: lib/brando_admin/live/config/environment_live.ex:469
+#: lib/brando_admin/live/sites/environment_live.ex:469
 #, elixir-autogen, elixir-format
 msgid "Run at"
 msgstr "Kjøres"
@@ -5325,7 +5325,7 @@ msgstr "Kjøres"
 msgid "Save access"
 msgstr "Lagre tilgang"
 
-#: lib/brando_admin/live/config/publishing_live.ex:203
+#: lib/brando_admin/live/sites/publishing_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Save deployment settings"
 msgstr "Lagre publiseringsinnstillinger"
@@ -5335,33 +5335,33 @@ msgstr "Lagre publiseringsinnstillinger"
 msgid "Saving a revision..."
 msgstr "Lagrer en versjon …"
 
-#: lib/brando_admin/live/config/publishing_live.ex:109
+#: lib/brando_admin/live/sites/publishing_live.ex:109
 #, elixir-autogen, elixir-format
 msgid "Schedule a build"
 msgstr "Planlegg et bygg"
 
-#: lib/brando_admin/live/config/environment_live.ex:223
-#: lib/brando_admin/live/config/environment_live.ex:234
+#: lib/brando_admin/live/sites/environment_live.ex:223
+#: lib/brando_admin/live/sites/environment_live.ex:234
 #, elixir-autogen, elixir-format
 msgid "Schedule copy"
 msgstr "Planlegg kopiering"
 
-#: lib/brando_admin/live/config/environment_live.ex:241
-#: lib/brando_admin/live/config/environment_live.ex:260
+#: lib/brando_admin/live/sites/environment_live.ex:241
+#: lib/brando_admin/live/sites/environment_live.ex:260
 #, elixir-autogen, elixir-format
 msgid "Schedule live switch"
 msgstr "Planlegg live-bytte"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex:163
-#: lib/brando_admin/live/config/environment_live.ex:222
-#: lib/brando_admin/live/config/environment_live.ex:240
-#: lib/brando_admin/live/config/environment_live.ex:278
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:105
+#: lib/brando_admin/live/sites/environment_live.ex:222
+#: lib/brando_admin/live/sites/environment_live.ex:240
+#: lib/brando_admin/live/sites/environment_live.ex:278
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:105
 #, elixir-autogen, elixir-format
 msgid "Scheduled"
 msgstr "Planlagt"
 
-#: lib/brando_admin/live/config/environment_live.ex:607
+#: lib/brando_admin/live/sites/environment_live.ex:607
 #, elixir-autogen, elixir-format
 msgid "Scheduled operation cancelled."
 msgstr "Den planlagte operasjonen ble avbrutt."
@@ -5381,7 +5381,7 @@ msgstr "Planlagt publisering kunne ikke oppdateres."
 msgid "Schema"
 msgstr "Skjema"
 
-#: lib/brando_admin/live/config/environment_live.ex:87
+#: lib/brando_admin/live/sites/environment_live.ex:87
 #, elixir-autogen, elixir-format
 msgid "Schema prefix: tenant_%{site}_<environment>"
 msgstr "Skjemaprefiks: tenant_%{site}_<environment>"
@@ -5397,12 +5397,12 @@ msgstr "Søk i moduler"
 msgid "Selected environment"
 msgstr "Valgt miljø"
 
-#: lib/brando_admin/live/config/environment_live.ex:729
+#: lib/brando_admin/live/sites/environment_live.ex:729
 #, elixir-autogen, elixir-format
 msgid "Set %{environment} live"
 msgstr "Sett %{environment} live"
 
-#: lib/brando_admin/live/config/environment_live.ex:140
+#: lib/brando_admin/live/sites/environment_live.ex:140
 #, elixir-autogen, elixir-format
 msgid "Set live"
 msgstr "Sett live"
@@ -5460,7 +5460,7 @@ msgstr "Delte innpakninger for grupper av blokker."
 msgid "Show"
 msgstr "Vis"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:481
+#: lib/brando_admin/components/form/input/render_var.ex:481
 #, elixir-autogen, elixir-format
 msgid "Shown"
 msgstr "Vises"
@@ -5472,7 +5472,7 @@ msgstr "Vises"
 msgid "Site"
 msgstr "Nettsted"
 
-#: lib/brando_admin/live/config/site_live.ex:226
+#: lib/brando_admin/live/sites/site_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "Site %{name} created."
 msgstr "Nettstedet %{name} ble opprettet."
@@ -5482,12 +5482,12 @@ msgstr "Nettstedet %{name} ble opprettet."
 msgid "Site access and overrides"
 msgstr "Nettstedstilgang og overstyringer"
 
-#: lib/brando_admin/live/config/site_live.ex:251
+#: lib/brando_admin/live/sites/site_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "Site access revoked."
 msgstr "Nettstedstilgangen ble trukket tilbake."
 
-#: lib/brando_admin/live/config/site_live.ex:241
+#: lib/brando_admin/live/sites/site_live.ex:241
 #, elixir-autogen, elixir-format
 msgid "Site access updated."
 msgstr "Nettstedstilgangen ble oppdatert."
@@ -5502,64 +5502,64 @@ msgstr "Innholdsbibliotek for nettstedet"
 msgid "Site library"
 msgstr "Nettstedsbibliotek"
 
-#: lib/brando_admin/live/config/site_live.ex:266
-#: lib/brando_admin/live/config/site_live.ex:266
-#: lib/brando_admin/live/config/site_live.ex:266
-#: lib/brando_admin/live/config/site_live.ex:266
+#: lib/brando_admin/live/sites/site_live.ex:266
+#: lib/brando_admin/live/sites/site_live.ex:266
+#: lib/brando_admin/live/sites/site_live.ex:266
+#: lib/brando_admin/live/sites/site_live.ex:266
 #, elixir-autogen, elixir-format
 msgid "Site lifecycle updated."
 msgstr "Nettstedets livssyklus ble oppdatert."
 
-#: lib/brando_admin/live/config/site_live.ex:163
+#: lib/brando_admin/live/sites/site_live.ex:163
 #, elixir-autogen, elixir-format
 msgid "Site users"
 msgstr "Nettstedsbrukere"
 
-#: lib/brando_admin/live/config/site_live.ex:39
+#: lib/brando_admin/live/sites/site_live.ex:39
 #: lib/brando_admin/live/users/groups_live.ex:1067
 #: lib/brando_admin/menu.ex:400
 #, elixir-autogen, elixir-format
 msgid "Sites"
 msgstr "Nettsteder"
 
-#: lib/brando_admin/live/config/environment_live.ex:778
+#: lib/brando_admin/live/sites/environment_live.ex:778
 #, elixir-autogen, elixir-format
 msgid "Source and target must be different environments."
 msgstr "Kilde og mål må være forskjellige miljøer."
 
-#: lib/brando_admin/live/config/environment_live.ex:175
+#: lib/brando_admin/live/sites/environment_live.ex:175
 #, elixir-autogen, elixir-format
 msgid "Spring redesign"
 msgstr "Vårens redesign"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:504
+#: lib/brando_admin/components/form/input/render_var.ex:504
 #, elixir-autogen, elixir-format
 msgid "Start a new row"
 msgstr "Start en ny rad"
 
-#: lib/brando_admin/live/config/environment_live.ex:100
-#: lib/brando_admin/live/config/environment_live.ex:279
-#: lib/brando_admin/live/config/publishing_live.ex:230
+#: lib/brando_admin/live/sites/environment_live.ex:100
+#: lib/brando_admin/live/sites/environment_live.ex:279
+#: lib/brando_admin/live/sites/publishing_live.ex:230
 #, elixir-autogen, elixir-format
 msgid "State"
 msgstr "Tilstand"
 
-#: lib/brando_admin/live/config/site_live.ex:71
+#: lib/brando_admin/live/sites/site_live.ex:71
 #, elixir-autogen, elixir-format
 msgid "Static"
 msgstr "Statisk"
 
-#: lib/brando_admin/live/config/publishing_live.ex:358
+#: lib/brando_admin/live/sites/publishing_live.ex:358
 #, elixir-autogen, elixir-format
 msgid "Static %{action} queued"
 msgstr "Statisk %{action} lagt i kø"
 
-#: lib/brando_admin/live/config/publishing_live.ex:69
+#: lib/brando_admin/live/sites/publishing_live.ex:69
 #, elixir-autogen, elixir-format
 msgid "Static delivery"
 msgstr "Statisk levering"
 
-#: lib/brando_admin/live/config/publishing_live.ex:338
+#: lib/brando_admin/live/sites/publishing_live.ex:338
 #, elixir-autogen, elixir-format
 msgid "Static deployment settings saved"
 msgstr "Innstillingene for statisk publisering ble lagret"
@@ -5567,10 +5567,10 @@ msgstr "Innstillingene for statisk publisering ble lagret"
 #: lib/brando_admin/components/content/select_identifier.ex:196
 #: lib/brando_admin/components/form/input.ex:863
 #: lib/brando_admin/components/form/revisions_drawer.ex:123
-#: lib/brando_admin/live/config/asset_live.ex:133
-#: lib/brando_admin/live/config/markdown_sources_live.ex:214
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:65
-#: lib/brando_admin/live/config/seo_live.ex:337
+#: lib/brando_admin/live/sites/asset_live.ex:133
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:214
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:65
+#: lib/brando_admin/live/sites/seo_live.ex:337
 #: lib/brando_admin/live/users/user_list_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Status"
@@ -5581,12 +5581,12 @@ msgstr "Status"
 msgid "Store current editor state"
 msgstr "Lagre gjeldende editortilstand"
 
-#: lib/brando_admin/live/config/publishing_live.ex:152
+#: lib/brando_admin/live/sites/publishing_live.ex:152
 #, elixir-autogen, elixir-format
 msgid "Strategy"
 msgstr "Strategi"
 
-#: lib/brando_admin/live/config/site_live.ex:116
+#: lib/brando_admin/live/sites/site_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "Suspend"
 msgstr "Suspender"
@@ -5601,8 +5601,8 @@ msgstr "Tabellmal"
 msgid "Takes the units left over"
 msgstr "Tar enhetene som er til overs"
 
-#: lib/brando_admin/live/config/environment_live.ex:453
-#: lib/brando_admin/live/config/publishing_live.ex:160
+#: lib/brando_admin/live/sites/environment_live.ex:453
+#: lib/brando_admin/live/sites/publishing_live.ex:160
 #, elixir-autogen, elixir-format
 msgid "Target"
 msgstr "Mål"
@@ -5642,7 +5642,7 @@ msgstr "Konstanter kun for malen. Fortsatt tilgjengelige i malen."
 msgid "Templates, variables, and references used by content blocks."
 msgstr "Maler, variabler og referanser som innholdsblokker bruker."
 
-#: lib/brando_admin/live/config/environment_live.ex:71
+#: lib/brando_admin/live/sites/environment_live.ex:71
 #, elixir-autogen, elixir-format
 msgid "Tenancy is disabled. Set tenancy_mode to single or multi before managing environments."
 msgstr "Tenancy er deaktivert. Sett tenancy_mode til single eller multi før du administrerer miljøer."
@@ -5652,12 +5652,12 @@ msgstr "Tenancy er deaktivert. Sett tenancy_mode til single eller multi før du 
 msgid "The active revision cannot be scheduled."
 msgstr "Den aktive versjonen kan ikke planlegges."
 
-#: lib/brando_admin/live/config/environment_live.ex:782
+#: lib/brando_admin/live/sites/environment_live.ex:782
 #, elixir-autogen, elixir-format
 msgid "The environment no longer exists."
 msgstr "Miljøet finnes ikke lenger."
 
-#: lib/brando_admin/live/config/environment_live.ex:781
+#: lib/brando_admin/live/sites/environment_live.ex:781
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
 msgstr "Live-miljøet kan ikke slettes."
@@ -5677,7 +5677,7 @@ msgstr "Versjonen kunne ikke aktiveres."
 msgid "The revision was not saved. Please try again."
 msgstr "Versjonen ble ikke lagret. Prøv igjen."
 
-#: lib/brando_admin/live/config/environment_live.ex:783
+#: lib/brando_admin/live/sites/environment_live.ex:783
 #, elixir-autogen, elixir-format
 msgid "The scheduled operation no longer exists."
 msgstr "Den planlagte operasjonen finnes ikke lenger."
@@ -5687,7 +5687,7 @@ msgstr "Den planlagte operasjonen finnes ikke lenger."
 msgid "The video provider could not be reached. Please try again."
 msgstr "Videoleverandøren kunne ikke nås. Prøv igjen."
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:333
+#: lib/brando_admin/components/form/input/render_var.ex:333
 #, elixir-autogen, elixir-format
 msgid "Third — 4 units"
 msgstr "Tredjedel – 4 enheter"
@@ -5697,7 +5697,7 @@ msgstr "Tredjedel – 4 enheter"
 msgid "This entry is still enabled, customized, or referenced by: %{sites}"
 msgstr "Denne oppføringen er fortsatt aktivert, tilpasset eller referert av: %{sites}"
 
-#: lib/brando_admin/live/config/publishing_live.ex:146
+#: lib/brando_admin/live/sites/publishing_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "This publishes static artifacts only. Florist continues to deploy and roll back the Phoenix application release."
 msgstr "Dette publiserer kun statiske artefakter. Florist fortsetter å publisere og rulle tilbake Phoenix-applikasjonsutgivelsen."
@@ -5714,7 +5714,7 @@ msgstr "Denne versjonen kunne ikke lastes."
 msgid "This revision no longer exists."
 msgstr "Denne versjonen finnes ikke lenger."
 
-#: lib/brando_admin/live/config/site_live.ex:390
+#: lib/brando_admin/live/sites/site_live.ex:390
 #, elixir-autogen, elixir-format
 msgid "This site must remain archived for %{days} days before permanent deletion."
 msgstr "Dette nettstedet må være arkivert i %{days} dager før permanent sletting."
@@ -5736,12 +5736,12 @@ msgstr "Overstyr tittel"
 msgid "Try again"
 msgstr "Prøv igjen"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:452
+#: lib/brando_admin/components/form/input/render_var.ex:452
 #, elixir-autogen, elixir-format
 msgid "Type and placement"
 msgstr "Type og plassering"
 
-#: lib/brando_admin/live/config/environment_live.ex:738
+#: lib/brando_admin/live/sites/environment_live.ex:738
 #, elixir-autogen, elixir-format
 msgid "Unknown environment"
 msgstr "Ukjent miljø"
@@ -5753,7 +5753,7 @@ msgid "Unknown user"
 msgstr "Ukjent bruker"
 
 #: lib/brando_admin/components/assets/media_field.ex:225
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1407
+#: lib/brando_admin/components/form/input/render_var.ex:1407
 #, elixir-autogen, elixir-format
 msgid "Untitled video"
 msgstr "Video uten tittel"
@@ -5780,7 +5780,7 @@ msgstr "Opplastinger pågår fortsatt"
 msgid "Use references for editable content and variables for reusable values."
 msgstr "Bruk referanser for redigerbart innhold og variabler for gjenbrukbare verdier."
 
-#: lib/brando_admin/live/config/site_live.ex:191
+#: lib/brando_admin/live/sites/site_live.ex:191
 #: lib/brando_admin/live/users/user_list_live.ex:53
 #, elixir-autogen, elixir-format
 msgid "User"
@@ -5791,7 +5791,7 @@ msgstr "Bruker"
 msgid "Variables expose reusable values to the template and the block editor."
 msgstr "Variabler eksponerer gjenbrukbare verdier for malen og blokkeditoren."
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1028
+#: lib/brando_admin/components/form/input/render_var.ex:1028
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:320
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:539
 #, elixir-autogen, elixir-format
@@ -5823,22 +5823,22 @@ msgstr "Venter …"
 msgid "What the editor sees"
 msgstr "Det redaktøren ser"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:442
+#: lib/brando_admin/components/form/input/render_var.ex:442
 #, elixir-autogen, elixir-format
 msgid "What the editor sees above the field"
 msgstr "Det redaktøren ser over feltet"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:508
+#: lib/brando_admin/components/form/input/render_var.ex:508
 #, elixir-autogen, elixir-format
 msgid "Width and row breaks are easier to judge on the layout canvas."
 msgstr "Bredde og radskift er lettere å vurdere på oppsettflaten."
 
-#: lib/brando_admin/live/config/environment_live.ex:125
+#: lib/brando_admin/live/sites/environment_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Working"
 msgstr "Arbeid"
 
-#: lib/brando_admin/live/config/environment_live.ex:777
+#: lib/brando_admin/live/sites/environment_live.ex:777
 #, elixir-autogen, elixir-format
 msgid "You are not allowed to manage environments."
 msgstr "Du har ikke lov til å administrere miljøer."
@@ -5848,7 +5848,7 @@ msgstr "Du har ikke lov til å administrere miljøer."
 msgid "You can also store the editor's current state as an inactive revision for later previewing or scheduled publishing."
 msgstr "Du kan også lagre editorens nåværende tilstand som en inaktiv versjon for senere forhåndsvisning eller planlagt publisering."
 
-#: lib/brando_admin/live/config/publishing_live.ex:247
+#: lib/brando_admin/live/sites/publishing_live.ex:247
 #, elixir-autogen, elixir-format
 msgid "artifact pruned"
 msgstr "artefakt slettet"
@@ -5869,7 +5869,7 @@ msgstr "tilpasset i %{envs}"
 msgid "enabled"
 msgstr "aktivert"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:954
+#: lib/brando_admin/components/form/input/render_var.ex:954
 #, elixir-autogen, elixir-format
 msgid "i.e: `video:Elixir.MyApp.Schema:function:fn_name`"
 msgstr "f.eks: `video:Elixir.MyApp.Schema:function:fn_name`"
@@ -5884,7 +5884,7 @@ msgstr "live"
 msgid "or"
 msgstr "eller"
 
-#: lib/brando_admin/live/config/publishing_live.ex:476
+#: lib/brando_admin/live/sites/publishing_live.ex:476
 #, elixir-autogen, elixir-format
 msgid "release assets"
 msgstr "release-ressurser"
@@ -5939,99 +5939,99 @@ msgstr "Prøv et annet navn eller en annen e-postadresse."
 msgid "Filter by %{field}"
 msgstr "Filtrer etter %{field}"
 
-#: lib/brando_admin/live/config/cache_live.ex:35
+#: lib/brando_admin/live/sites/cache_live.ex:35
 #, elixir-format, elixir-autogen
 msgid "Inspect cached content and clear outdated entries."
 msgstr "Se mellomlagret innhold og tøm utdatert hurtigbuffer."
 
-#: lib/brando_admin/live/config/cache_live.ex:36
+#: lib/brando_admin/live/sites/cache_live.ex:36
 #, elixir-format, elixir-autogen
 msgid "Clearing…"
 msgstr "Tømmer…"
 
-#: lib/brando_admin/live/config/cache_live.ex:45
+#: lib/brando_admin/live/sites/cache_live.ex:45
 #, elixir-format, elixir-autogen
 msgid "Stored results used to serve your website."
 msgstr "Lagrede resultater som brukes til å vise nettstedet."
 
-#: lib/brando_admin/live/config/cache_live.ex:51
+#: lib/brando_admin/live/sites/cache_live.ex:51
 #, elixir-format, elixir-autogen
 msgid "No cached entries"
 msgstr "Hurtigbufferen er tom"
 
-#: lib/brando_admin/live/config/cache_live.ex:52
+#: lib/brando_admin/live/sites/cache_live.ex:52
 #, elixir-format, elixir-autogen
 msgid "The cache fills automatically as content is requested."
 msgstr "Hurtigbufferen fylles automatisk når innhold blir hentet."
 
-#: lib/brando_admin/live/config/cache_live.ex:59
+#: lib/brando_admin/live/sites/cache_live.ex:59
 #, elixir-format, elixir-autogen
 msgid "Cache entries"
 msgstr "Mellomlagrede oppføringer"
 
-#: lib/brando_admin/live/config/cache_live.ex:76
+#: lib/brando_admin/live/sites/cache_live.ex:76
 #, elixir-format, elixir-autogen
 msgid "Clear the cache if saved changes are not appearing on the website. Content is rebuilt on the next request."
 msgstr "Tøm hurtigbufferen hvis lagrede endringer ikke vises på nettstedet. Innholdet bygges opp på nytt ved neste forespørsel."
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:37
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:37
 #, elixir-format, elixir-autogen
 msgid "Review upcoming content and manage the publishing queue."
 msgstr "Se kommende publiseringer og administrer publiseringskøen."
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:39
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:39
 #, elixir-format, elixir-autogen
 msgid "Refreshing…"
 msgstr "Oppdaterer…"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:46
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:60
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:46
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:60
 #, elixir-format, elixir-autogen
 msgid "Publishing queue"
 msgstr "Publiseringskø"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:46
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:46
 #, elixir-format, elixir-autogen
 msgid "Times shown in %{timezone}"
 msgstr "Tidspunkter vises i %{timezone}"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:52
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:52
 #, elixir-format, elixir-autogen
 msgid "No scheduled publications"
 msgstr "Ingen planlagte publiseringer"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:53
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:53
 #, elixir-format, elixir-autogen
 msgid "Choose a publishing date in an entry to add it to this queue."
 msgstr "Velg en publiseringsdato i en oppføring for å legge den til i køen."
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:65
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:65
 #, elixir-format, elixir-autogen
 msgid "Scheduled for"
 msgstr "Planlagt tidspunkt"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:106
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:106
 #, elixir-format, elixir-autogen
 msgid "Queued"
 msgstr "I kø"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:108
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:108
 #, elixir-format, elixir-autogen
 msgid "Completed"
 msgstr "Fullført"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:109
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:109
 #, elixir-format, elixir-autogen
 msgid "Retrying"
 msgstr "Prøver på nytt"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:110
-#: lib/brando_admin/live/config/seo_live.ex:1240
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:110
+#: lib/brando_admin/live/sites/seo_live.ex:1240
 #, elixir-format, elixir-autogen
 msgid "Failed"
 msgstr "Mislyktes"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:111
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:111
 #, elixir-format, elixir-autogen
 msgid "Cancelled"
 msgstr "Avbrutt"
@@ -6074,22 +6074,22 @@ msgstr "Har alt-tekst"
 msgid "Processing"
 msgstr "Behandler"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:48
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:48
 #, elixir-format, elixir-autogen
 msgid "%{count} job"
 msgid_plural "%{count} jobs"
 msgstr[0] "%{count} jobb"
 msgstr[1] "%{count} jobber"
 
-#: lib/brando_admin/live/config/cache_live.ex:47
-#: lib/brando_admin/live/config/seo_live.ex:735
+#: lib/brando_admin/live/sites/cache_live.ex:47
+#: lib/brando_admin/live/sites/seo_live.ex:735
 #, elixir-format, elixir-autogen
 msgid "%{count} entry"
 msgid_plural "%{count} entries"
 msgstr[0] "%{count} oppføring"
 msgstr[1] "%{count} oppføringer"
 
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:74
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex:74
 #, elixir-format, elixir-autogen
 msgid "Entry #%{id}"
 msgstr "Oppføring #%{id}"
@@ -6109,12 +6109,12 @@ msgstr "Sist sett"
 msgid "Last logged in"
 msgstr "Sist innlogget"
 
-#: lib/brando_admin/live/config/cache_live.ex:111
+#: lib/brando_admin/live/sites/cache_live.ex:111
 #, elixir-format, elixir-autogen
 msgid "Clear cache %{key}"
 msgstr "Tøm hurtigbuffer %{key}"
 
-#: lib/brando_admin/live/config/asset_live.ex:130
+#: lib/brando_admin/live/sites/asset_live.ex:130
 #: lib/brando_admin/live/users/groups_live.ex:1043
 #, elixir-format, elixir-autogen
 msgid "Build"
@@ -6142,7 +6142,7 @@ msgstr "%{count} eksisterende medlemmer berøres"
 msgid "Accounts"
 msgstr "Kontoer"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:46
+#: lib/brando_admin/live/content/module_list_live.ex:46
 #: lib/brando_admin/live/navigation/menu_list_live.ex:32
 #: lib/brando_admin/live/pages/page_list_live.ex:33
 #, elixir-autogen, elixir-format
@@ -6354,7 +6354,7 @@ msgstr "Grupper med samsvarende nøkler oppdateres. Andre grupper beholdes. Kont
 msgid "Migration report"
 msgstr "Migreringsrapport"
 
-#: lib/brando_admin/live/config/seo_live.ex:72
+#: lib/brando_admin/live/sites/seo_live.ex:72
 #, elixir-autogen, elixir-format
 msgid "Missing pages will appear here when they are requested."
 msgstr "Manglende sider vises her når noen forsøker å åpne dem."
@@ -6381,12 +6381,12 @@ msgstr "Ingen filer i denne visningen"
 msgid "No menus in this view"
 msgstr "Ingen menyer i denne visningen"
 
-#: lib/brando_admin/live/config/seo_live.ex:71
+#: lib/brando_admin/live/sites/seo_live.ex:71
 #, elixir-autogen, elixir-format
 msgid "No missing URLs recorded"
 msgstr "Ingen manglende URL-er registrert"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:45
+#: lib/brando_admin/live/content/module_list_live.ex:45
 #, elixir-autogen, elixir-format
 msgid "No modules in this view"
 msgstr "Ingen moduler i denne visningen"
@@ -6410,13 +6410,13 @@ msgstr "Ingen videoer i denne visningen"
 #: lib/brando_admin/components/authorization_tools.ex:267
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:43
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:68
-#: lib/brando_admin/live/config/seo_live.ex:1228
+#: lib/brando_admin/live/sites/seo_live.ex:1228
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Ingen"
 
-#: lib/brando_admin/live/config/seo_live.ex:64
-#: lib/brando_admin/live/config/seo_live.ex:79
+#: lib/brando_admin/live/sites/seo_live.ex:64
+#: lib/brando_admin/live/sites/seo_live.ex:79
 #, elixir-autogen, elixir-format
 msgid "Not found (404)"
 msgstr "Ikke funnet (404)"
@@ -6514,7 +6514,7 @@ msgstr "Erstatningsfil"
 msgid "Report available"
 msgstr "Rapport er tilgjengelig"
 
-#: lib/brando_admin/live/config/seo_live.ex:65
+#: lib/brando_admin/live/sites/seo_live.ex:65
 #, elixir-autogen, elixir-format
 msgid "Requests for URLs that do not exist. Add a redirect above when a page has moved."
 msgstr "Forespørsler til URL-er som ikke finnes. Legg til en omdirigering ovenfor når en side har flyttet."
@@ -6734,7 +6734,7 @@ msgstr "Legg til en tekstmodul i modulsettet %{set} før du oppretter en fotnote
 msgid "Add text, a source or supporting media from this collection’s module set."
 msgstr "Legg til tekst, en kilde eller tilhørende medier fra modulsettet til denne samlingen."
 
-#: lib/brando_admin/live/config/utils_live.ex:67
+#: lib/brando_admin/live/sites/utils_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "Administrative tools for this workspace."
 msgstr "Administrative verktøy for dette arbeidsområdet."
@@ -6775,7 +6775,7 @@ msgstr "Endringer lagres sammen med dette elementet."
 msgid "Checking copy…"
 msgstr "Kontrollerer kopi…"
 
-#: lib/brando_admin/live/config/utils_live.ex:259
+#: lib/brando_admin/live/sites/utils_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Choose a JSON file and wait for the upload to finish."
 msgstr "Velg en JSON-fil og vent til opplastingen er ferdig."
@@ -6826,7 +6826,7 @@ msgstr "Lukk forhåndsvisningen"
 msgid "Close recovery panel"
 msgstr "Lukk gjenopprettingspanelet"
 
-#: lib/brando_admin/live/config/utils_live.ex:284
+#: lib/brando_admin/live/sites/utils_live.ex:284
 #, elixir-autogen, elixir-format
 msgid "Configuration imported. %{created} groups created, %{updated} updated, %{unchanged} unchanged. Memberships preserved."
 msgstr "Konfigurasjonen er importert. %{created} grupper opprettet, %{updated} oppdatert, %{unchanged} uendret. Medlemskap er beholdt."
@@ -6836,7 +6836,7 @@ msgstr "Konfigurasjonen er importert. %{created} grupper opprettet, %{updated} o
 msgid "Content / Block region"
 msgstr "Innhold / blokkregion"
 
-#: lib/brando_admin/live/config/utils_live.ex:98
+#: lib/brando_admin/live/sites/utils_live.ex:98
 #, elixir-autogen, elixir-format
 msgid "Content identifiers"
 msgstr "Innholdsidentifikatorer"
@@ -6853,7 +6853,7 @@ msgstr "Innholdstype"
 
 #: lib/brando_admin/components/content/select_identifier.ex:160
 #: lib/brando_admin/components/content/select_identifier.ex:161
-#: lib/brando_admin/live/config/seo_live.ex:184
+#: lib/brando_admin/live/sites/seo_live.ex:184
 #, elixir-autogen, elixir-format
 msgid "Content types"
 msgstr "Innholdstyper"
@@ -6879,7 +6879,7 @@ msgid "Could not switch preview"
 msgstr "Kunne ikke bytte forhåndsvisning"
 
 #: lib/brando_admin/components/form.ex:2371
-#: lib/brando_admin/live/config/seo_live.ex:674
+#: lib/brando_admin/live/sites/seo_live.ex:674
 #, elixir-autogen, elixir-format
 msgid "Create redirect"
 msgstr "Opprett omdirigering"
@@ -6894,7 +6894,7 @@ msgstr "Oppretter omdirigering..."
 msgid "Creator"
 msgstr "Opprettet av"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:430
+#: lib/brando_admin/components/form/input/render_var.ex:430
 #, elixir-autogen, elixir-format
 msgid "Definition"
 msgstr "Definisjon"
@@ -6914,14 +6914,14 @@ msgstr "Forkaste denne gjenopprettingskopien?"
 msgid "Edit blocks"
 msgstr "Rediger blokker"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1172
+#: lib/brando_admin/components/form/input/render_var.ex:1172
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:132
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:52
 #, elixir-autogen, elixir-format
 msgid "Edit link"
 msgstr "Rediger lenke"
 
-#: lib/brando_admin/live/config/utils_live.ex:347
+#: lib/brando_admin/live/sites/utils_live.ex:347
 #: lib/brando_admin/live/users/groups_live.ex:1082
 #, elixir-autogen, elixir-format
 msgid "Entire installation"
@@ -6961,27 +6961,27 @@ msgstr "Fotnoter"
 msgid "From"
 msgstr "Fra"
 
-#: lib/brando_admin/live/config/utils_live.ex:118
+#: lib/brando_admin/live/sites/utils_live.ex:118
 #, elixir-autogen, elixir-format
 msgid "Generating…"
 msgstr "Genererer…"
 
-#: lib/brando_admin/live/config/utils_live.ex:339
+#: lib/brando_admin/live/sites/utils_live.ex:339
 #, elixir-autogen, elixir-format
 msgid "Groups or memberships changed after this preview. Choose the file again to review the latest changes."
 msgstr "Grupper eller medlemskap er endret siden denne forhåndsvisningen. Velg filen på nytt for å gjennomgå de siste endringene."
 
-#: lib/brando_admin/live/config/utils_live.ex:319
+#: lib/brando_admin/live/sites/utils_live.ex:319
 #, elixir-autogen, elixir-format
 msgid "Groups prepared. Existing permission edits and previously removed memberships were preserved."
 msgstr "Gruppene er klargjort. Eksisterende endringer i tillatelser er beholdt, og tidligere fjernede medlemskap er fortsatt fjernet."
 
-#: lib/brando_admin/live/config/utils_live.ex:137
+#: lib/brando_admin/live/sites/utils_live.ex:137
 #, elixir-autogen, elixir-format
 msgid "Image jobs"
 msgstr "Bildejobber"
 
-#: lib/brando_admin/live/config/utils_live.ex:112
+#: lib/brando_admin/live/sites/utils_live.ex:112
 #, elixir-autogen, elixir-format
 msgid "Last generated: %{last_updated}"
 msgstr "Sist generert: %{last_updated}"
@@ -6993,7 +6993,7 @@ msgstr "Sist generert: %{last_updated}"
 msgid "Live preview"
 msgstr "Direkte forhåndsvisning"
 
-#: lib/brando_admin/live/config/utils_live.ex:91
+#: lib/brando_admin/live/sites/utils_live.ex:91
 #, elixir-autogen, elixir-format
 msgid "Maintenance"
 msgstr "Vedlikehold"
@@ -7003,12 +7003,12 @@ msgstr "Vedlikehold"
 msgid "Make room for more"
 msgstr "Gi plass til mer"
 
-#: lib/brando_admin/live/config/site_live.ex:233
+#: lib/brando_admin/live/sites/site_live.ex:233
 #, elixir-autogen, elixir-format
 msgid "Manage access through this site’s groups."
 msgstr "Administrer tilgang gjennom gruppene på dette nettstedet."
 
-#: lib/brando_admin/live/config/site_live.ex:159
+#: lib/brando_admin/live/sites/site_live.ex:159
 #, elixir-autogen, elixir-format
 msgid "Manage this site’s groups and members →"
 msgstr "Administrer nettstedets grupper og medlemmer →"
@@ -7028,7 +7028,7 @@ msgstr "Flytt dette innholdet til en tom region"
 msgid "No matching identifiers"
 msgstr "Ingen oppføringer funnet"
 
-#: lib/brando_admin/live/config/utils_live.ex:116
+#: lib/brando_admin/live/sites/utils_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "Not generated"
 msgstr "Ikke generert"
@@ -7038,7 +7038,7 @@ msgstr "Ikke generert"
 msgid "Offline — recent edits have not reached recovery storage"
 msgstr "Frakoblet — de siste endringene er ikke lagret i gjenopprettingskopien"
 
-#: lib/brando_admin/live/config/utils_live.ex:341
+#: lib/brando_admin/live/sites/utils_live.ex:341
 #, elixir-autogen, elixir-format
 msgid "Only an active Superuser can use authorization tools."
 msgstr "Bare en aktiv superbruker kan bruke verktøyene for tilgangsstyring."
@@ -7122,12 +7122,12 @@ msgid "Recovery storage is unavailable"
 msgstr "Lagring av gjenopprettingskopier er utilgjengelig"
 
 #: lib/brando_admin/components/form.ex:3206
-#: lib/brando_admin/live/config/seo_live.ex:807
+#: lib/brando_admin/live/sites/seo_live.ex:807
 #, elixir-autogen, elixir-format
 msgid "Redirect created"
 msgstr "Omdirigering opprettet"
 
-#: lib/brando_admin/live/config/utils_live.ex:109
+#: lib/brando_admin/live/sites/utils_live.ex:109
 #, elixir-autogen, elixir-format
 msgid "Regenerate the sitemap from published content."
 msgstr "Generer nettstedskartet på nytt fra publisert innhold."
@@ -7153,7 +7153,7 @@ msgstr "Fjern element"
 msgid "Reorder entry"
 msgstr "Endre rekkefølgen på elementet"
 
-#: lib/brando_admin/live/config/utils_live.ex:320
+#: lib/brando_admin/live/sites/utils_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "Report ready. Review application rules before switching to groups."
 msgstr "Rapporten er klar. Gjennomgå applikasjonsreglene før du bytter til grupper."
@@ -7224,14 +7224,14 @@ msgstr "Velg en oppføring for å se detaljer."
 msgid "Selected destination"
 msgstr "Valgt mål"
 
-#: lib/brando_admin/live/config/utils_live.ex:350
+#: lib/brando_admin/live/sites/utils_live.ex:350
 #: lib/brando_admin/live/users/groups_live.ex:1085
 #, elixir-autogen, elixir-format
 msgid "Selected site"
 msgstr "Valgt nettsted"
 
 #: lib/brando_admin/components/form/block/render.ex:1255
-#: lib/brando_admin/live/config/seo_live.ex:46
+#: lib/brando_admin/live/sites/seo_live.ex:46
 #: lib/brando_admin/live/users/groups_live.ex:1059
 #, elixir-autogen, elixir-format
 msgid "Settings"
@@ -7243,8 +7243,8 @@ msgstr "Innstillinger"
 msgid "Share preview"
 msgstr "Del forhåndsvisning"
 
-#: lib/brando_admin/live/config/seo_live.ex:639
-#: lib/brando_admin/live/config/utils_live.ex:108
+#: lib/brando_admin/live/sites/seo_live.ex:639
+#: lib/brando_admin/live/sites/utils_live.ex:108
 #, elixir-autogen, elixir-format
 msgid "Sitemap"
 msgstr "Nettstedskart"
@@ -7260,18 +7260,18 @@ msgstr "Begynn på nytt"
 msgid "Superuser"
 msgstr "Superbruker"
 
-#: lib/brando_admin/live/config/utils_live.ex:102
+#: lib/brando_admin/live/sites/utils_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Sync identifiers"
 msgstr "Synkroniser identifikatorer"
 
-#: lib/brando_admin/live/config/utils_live.ex:102
+#: lib/brando_admin/live/sites/utils_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Syncing…"
 msgstr "Synkroniserer…"
 
-#: lib/brando_admin/live/config/utils_live.ex:124
-#: lib/brando_admin/live/config/utils_live.ex:125
+#: lib/brando_admin/live/sites/utils_live.ex:124
+#: lib/brando_admin/live/sites/utils_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "System information"
 msgstr "Systeminformasjon"
@@ -7286,7 +7286,7 @@ msgstr "Tekst / fotnoter"
 msgid "Text link"
 msgstr "Tekstlenke"
 
-#: lib/brando_admin/live/config/utils_live.ex:344
+#: lib/brando_admin/live/sites/utils_live.ex:344
 #, elixir-autogen, elixir-format
 msgid "The configured site was not found. Check the site configuration before preparing groups."
 msgstr "Det konfigurerte nettstedet ble ikke funnet. Kontroller nettstedskonfigurasjonen før du klargjør grupper."
@@ -7306,7 +7306,7 @@ msgstr "Elementet ble lagret, men omdirigeringen kunne ikke opprettes. Prøv igj
 msgid "The module set available in this region. Use all for all suitable modules."
 msgstr "Modulsettet som er tilgjengelig i denne regionen. Bruk all for alle egnede moduler."
 
-#: lib/brando_admin/live/config/utils_live.ex:346
+#: lib/brando_admin/live/sites/utils_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "The operation could not be completed. Check the application logs and try again."
 msgstr "Handlingen kunne ikke fullføres. Kontroller applikasjonsloggene og prøv igjen."
@@ -7366,7 +7366,7 @@ msgstr "Denne modulen er ikke tilgjengelig i denne samlingen."
 msgid "This module was changed by someone else while you were editing. Reload to see their version before saving yours."
 msgstr "Noen andre endret denne modulen mens du redigerte. Last inn på nytt for å se deres versjon før du lagrer din."
 
-#: lib/brando_admin/live/config/utils_live.ex:348
+#: lib/brando_admin/live/sites/utils_live.ex:348
 #: lib/brando_admin/live/users/groups_live.ex:1083
 #, elixir-autogen, elixir-format
 msgid "This workspace"
@@ -7418,7 +7418,7 @@ msgstr "Element uten tittel"
 msgid "Unused content"
 msgstr "Ubrukt innhold"
 
-#: lib/brando_admin/live/config/utils_live.ex:99
+#: lib/brando_admin/live/sites/utils_live.ex:99
 #, elixir-autogen, elixir-format
 msgid "Update the identifiers used to reference content."
 msgstr "Oppdater identifikatorene som brukes til å referere til innhold."
@@ -7471,8 +7471,8 @@ msgid_plural "%{count} images to this folder"
 msgstr[0] "%{count} bilde til denne mappen"
 msgstr[1] "%{count} bilder til denne mappen"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:988
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1348
+#: lib/brando_admin/components/form/input/render_var.ex:988
+#: lib/brando_admin/components/form/input/render_var.ex:1348
 #: lib/brando_admin/live/ai/assistant_live.ex:575
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
@@ -7493,7 +7493,7 @@ msgid "%{field} · Block %{number}"
 msgstr "%{field} · blokk %{number}"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:320
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1008
+#: lib/brando_admin/components/form/input/render_var.ex:1008
 #: lib/brando_admin/components/form/input/gallery.ex:266
 #, elixir-autogen, elixir-format
 msgid "Add to gallery"
@@ -7513,20 +7513,20 @@ msgid "Block %{number}"
 msgstr "Blokk %{number}"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:255
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1360
+#: lib/brando_admin/components/form/input/render_var.ex:1360
 #: lib/brando_admin/components/form/input/gallery_objects.ex:97
 #, elixir-autogen, elixir-format
 msgid "Browse images"
 msgstr "Bla gjennom bilder"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:263
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1368
+#: lib/brando_admin/components/form/input/render_var.ex:1368
 #: lib/brando_admin/components/form/input/gallery_objects.ex:104
 #, elixir-autogen, elixir-format
 msgid "Browse videos"
 msgstr "Bla gjennom videoer"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1374
+#: lib/brando_admin/components/form/input/render_var.ex:1374
 #, elixir-autogen, elixir-format
 msgid "Build your gallery"
 msgstr "Bygg galleriet ditt"
@@ -7661,7 +7661,7 @@ msgstr "Slipp et bilde her"
 msgid "Drop an image to replace"
 msgstr "Slipp et bilde for å erstatte"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1349
+#: lib/brando_admin/components/form/input/render_var.ex:1349
 #, elixir-autogen, elixir-format
 msgid "Drop images or videos here to add them."
 msgstr "Slipp bilder eller videoer her for å legge dem til."
@@ -7676,7 +7676,7 @@ msgstr "Slipp bilder eller videoer for å legge til"
 msgid "Drop images to add"
 msgstr "Slipp bilder for å legge til"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:988
+#: lib/brando_admin/components/form/input/render_var.ex:988
 #, elixir-autogen, elixir-format
 msgid "Drop media here to add"
 msgstr "Slipp medier her for å legge til"
@@ -7687,7 +7687,7 @@ msgstr "Slipp medier her for å legge til"
 msgid "Drop media here to build your gallery"
 msgstr "Slipp medier her for å bygge galleriet ditt"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1345
+#: lib/brando_admin/components/form/input/render_var.ex:1345
 #: lib/brando_admin/components/form/input/gallery_objects.ex:85
 #, elixir-autogen, elixir-format
 msgid "Drop to add to this gallery"
@@ -7710,7 +7710,7 @@ msgstr "Elementfelter"
 msgid "File details"
 msgstr "Fildetaljer"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1377
+#: lib/brando_admin/components/form/input/render_var.ex:1377
 #, elixir-autogen, elixir-format
 msgid "Gallery items"
 msgstr "Gallerielementer"
@@ -7783,7 +7783,7 @@ msgstr "Behandler bilde…"
 msgid "Recovery content preview"
 msgstr "Forhåndsvisning av gjenopprettingsinnhold"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1420
+#: lib/brando_admin/components/form/input/render_var.ex:1420
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"
 msgstr "Fjern %{name}"
@@ -7893,8 +7893,8 @@ msgstr[1] "Last opp %{count} filer til denne mappen"
 
 #: lib/brando_admin/components/assets/media_field.ex:81
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:247
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:993
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1353
+#: lib/brando_admin/components/form/input/render_var.ex:993
+#: lib/brando_admin/components/form/input/render_var.ex:1353
 #: lib/brando_admin/components/form/input/gallery.ex:324
 #: lib/brando_admin/components/form/input/gallery_objects.ex:91
 #: lib/brando_admin/live/ai/assistant_live.ex:340
@@ -7902,7 +7902,7 @@ msgstr[1] "Last opp %{count} filer til denne mappen"
 msgid "Upload media"
 msgstr "Last opp medier"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1375
+#: lib/brando_admin/components/form/input/render_var.ex:1375
 #, elixir-autogen, elixir-format
 msgid "Upload media or choose from your library."
 msgstr "Last opp medier eller velg fra biblioteket ditt."
@@ -7934,7 +7934,7 @@ msgid "Video CSS classes"
 msgstr "CSS-klasser for video"
 
 #: lib/brando_admin/components/assets/media_field.ex:95
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:1397
+#: lib/brando_admin/components/form/input/render_var.ex:1397
 #, elixir-autogen, elixir-format
 msgid "Video preview"
 msgstr "Forhåndsvisning av video"
@@ -8730,7 +8730,7 @@ msgstr "En ordnet samling moduler i en navngitt region"
 msgid "Bold"
 msgstr "Fet"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:461
+#: lib/brando_admin/components/form/input/render_var.ex:461
 #: lib/brando_admin/components/form/module_props.ex:44
 #, elixir-autogen, elixir-format
 msgid "Boolean"
@@ -8743,7 +8743,7 @@ msgstr "Boolsk verdi"
 msgid "Button"
 msgstr "Knapp"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:462
+#: lib/brando_admin/components/form/input/render_var.ex:462
 #: lib/brando_admin/components/form/module_props.ex:48
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex:31
 #, elixir-autogen, elixir-format
@@ -8913,7 +8913,7 @@ msgstr "Lysbildefremvisning"
 msgid "Smart Text"
 msgstr "Smart tekst"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:469
+#: lib/brando_admin/components/form/input/render_var.ex:469
 #: lib/brando_admin/components/form/module_props.ex:41
 #, elixir-autogen, elixir-format
 msgid "String"
@@ -8962,7 +8962,7 @@ msgstr "webp"
 msgid "Add footnote"
 msgstr "Legg til fotnote"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:463
+#: lib/brando_admin/components/form/input/render_var.ex:463
 #, elixir-autogen, elixir-format
 msgid "Datetime"
 msgstr "Dato og klokkeslett"
@@ -8979,7 +8979,7 @@ msgstr "Rediger fotnote"
 msgid "Edit footnote %{number}"
 msgstr "Rediger fotnote %{number}"
 
-#: lib/brando_admin/components/form/input/blocks/render_var.ex:466
+#: lib/brando_admin/components/form/input/render_var.ex:466
 #, elixir-autogen, elixir-format
 msgid "Html"
 msgstr "HTML"
@@ -9098,7 +9098,7 @@ msgstr "Lenken kunne ikke legges til. Kontroller lenkemålet og den valgte tekst
 msgid "Link destination"
 msgstr "Lenkemål"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:309
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:309
 #, elixir-autogen, elixir-format
 msgid "%{count} document added. Refresh it to import the content."
 msgid_plural "%{count} documents added. Refresh them to import the content."
@@ -9112,97 +9112,97 @@ msgid_plural "%{count} variables"
 msgstr[0] "%{count} variabel"
 msgstr[1] "%{count} variabler"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:54
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:54
 #, elixir-autogen, elixir-format
 msgid "A developer needs to connect your repository"
 msgstr "En utvikler må koble til repositoriet"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:183
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "Add %{count} document"
 msgid_plural "Add %{count} documents"
 msgstr[0] "Legg til %{count} dokument"
 msgstr[1] "Legg til %{count} dokumenter"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:199
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "Add a file or choose a folder. Each document becomes a source you can use in a content block."
 msgstr "Legg til en fil eller velg en mappe. Hvert dokument blir en kilde du kan bruke i en innholdsblokk."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:66
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "Add a source"
 msgstr "Legg til kilde"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:162
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:162
 #, elixir-autogen, elixir-format
 msgid "Add another source"
 msgstr "Legg til en kilde til"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:69
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:69
 #, elixir-autogen, elixir-format
 msgid "Add documents"
 msgstr "Legg til dokumenter"
 
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex:67
-#: lib/brando_admin/live/config/markdown_sources_live.ex:211
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Branch"
 msgstr "Gren"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:109
-#: lib/brando_admin/live/config/markdown_sources_live.ex:438
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:109
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:438
 #, elixir-autogen, elixir-format
 msgid "Branch ref"
 msgstr "Grenreferanse"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:402
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:402
 #, elixir-autogen, elixir-format
 msgid "Build failed — see Publishing"
 msgstr "Bygging feilet – se Publisering"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:404
-#: lib/brando_admin/live/config/markdown_sources_live.ex:415
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:404
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:415
 #, elixir-autogen, elixir-format
 msgid "Build queued"
 msgstr "Bygging satt i kø"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:405
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:405
 #, elixir-autogen, elixir-format
 msgid "Building"
 msgstr "Bygger"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:403
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:403
 #, elixir-autogen, elixir-format
 msgid "Built — see Publishing for deployment"
 msgstr "Ferdig bygget – gå til Publisering"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:104
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:104
 #, elixir-autogen, elixir-format
 msgid "Choose a connection"
 msgstr "Velg tilkobling"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:283
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:283
 #, elixir-autogen, elixir-format
 msgid "Choose an available repository connection."
 msgstr "Velg en tilgjengelig GitHub-tilkobling."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:48
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:48
 #, elixir-autogen, elixir-format
 msgid "Connect repository documents to entry blocks."
 msgstr "Koble dokumenter fra et GitHub-repositorium til innholdsblokker."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:193
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Connected documents"
 msgstr "Tilkoblede dokumenter"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:208
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Connection"
 msgstr "Tilkobling"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:434
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:434
 #, elixir-autogen, elixir-format
 msgid "Could not read this folder. Check the repository connection, branch and folder path, then try again."
 msgstr "Kunne ikke lese mappen. Sjekk GitHub-tilkoblingen, grenen og mappestien, og prøv igjen."
@@ -9212,58 +9212,58 @@ msgstr "Kunne ikke lese mappen. Sjekk GitHub-tilkoblingen, grenen og mappestien,
 msgid "Create a gallery in an entry to see it here."
 msgstr "Opprett et galleri i en oppføring for å se det her."
 
-#: lib/brando_admin/live/content/modules_list_live.ex:218
+#: lib/brando_admin/live/content/module_list_live.ex:218
 #, elixir-autogen, elixir-format
 msgid "Current workspace"
 msgstr "Gjeldende arbeidsområde"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:401
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:401
 #, elixir-autogen, elixir-format
 msgid "Deployed"
 msgstr "Publisert"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:420
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:420
 #, elixir-autogen, elixir-format
 msgid "Document imported"
 msgstr "Dokument importert"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:421
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:421
 #, elixir-autogen, elixir-format
 msgid "Document unchanged"
 msgstr "Dokument uendret"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:66
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "Edit source"
 msgstr "Rediger kilde"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:143
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:143
 #, elixir-autogen, elixir-format
 msgid "Enable synchronization"
 msgstr "Aktiver synkronisering"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:156
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "Find Markdown files"
 msgstr "Finn Markdown-filer"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:164
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "Finding Markdown files…"
 msgstr "Finner Markdown-filer…"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:132
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:132
 #: lib/brando_admin/live/images/alt_text_live.ex:86
 #, elixir-autogen, elixir-format
 msgid "Folder"
 msgstr "Mappe"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:81
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:81
 #, elixir-autogen, elixir-format
 msgid "From a folder"
 msgstr "Fra en mappe"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:56
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:56
 #, elixir-autogen, elixir-format
 msgid "GitHub connections are configured by a developer in the project's runtime.exs. Ask them to add a repository and enable it for this environment. The connection will then appear here."
 msgstr "GitHub-tilkoblinger settes opp av en utvikler i prosjektets runtime.exs. Be utvikleren legge til et repositorium og aktivere det for dette miljøet. Tilkoblingen vil da vises her."
@@ -9278,44 +9278,44 @@ msgstr "Samlinger av bilder og videoer som brukes i innholdet."
 msgid "Images and videos"
 msgstr "Bilder og videoer"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:22
+#: lib/brando_admin/live/content/module_list_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Import / export DSL"
 msgstr "Importer / eksporter DSL"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:135
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "Includes subfolders. Leave blank for the repository root. Choose which files to add in the next step."
 msgstr "Inkluderer undermapper. La feltet stå tomt for roten av repositoriet. Velg filene du vil legge til i neste steg."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:219
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:219
 #, elixir-autogen, elixir-format
 msgid "Last checked"
 msgstr "Sist sjekket"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:120
-#: lib/brando_admin/live/config/markdown_sources_live.ex:439
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:120
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:439
 #, elixir-autogen, elixir-format
 msgid "Markdown file"
 msgstr "Markdown-fil"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:47
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:47
 #: lib/brando_admin/menu.ex:304
 #, elixir-autogen, elixir-format
 msgid "Markdown sources"
 msgstr "Markdown-kilder"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:222
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:222
 #, elixir-autogen, elixir-format
 msgid "Never"
 msgstr "Aldri"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:176
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:176
 #, elixir-autogen, elixir-format
 msgid "No Markdown files found in this folder."
 msgstr "Ingen Markdown-filer ble funnet i denne mappen."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:198
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:198
 #, elixir-autogen, elixir-format
 msgid "No documents connected yet"
 msgstr "Ingen dokumenter er koblet til ennå"
@@ -9325,108 +9325,108 @@ msgstr "Ingen dokumenter er koblet til ennå"
 msgid "No galleries yet"
 msgstr "Ingen gallerier ennå"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:413
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:413
 #, elixir-autogen, elixir-format
 msgid "Not imported"
 msgstr "Ikke importert"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:172
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:172
 #, elixir-autogen, elixir-format
 msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
 msgstr "Det opprettes én kilde per valgt fil. Eksisterende kilder hoppes over. Nye filer som legges i mappen senere, må velges her på nytt."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:226
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "Open Publishing"
 msgstr "Åpne publisering"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:129
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:129
 #, elixir-autogen, elixir-format
 msgid "Path from the repository root. Use From a folder to add several files at once."
 msgstr "Sti fra roten av repositoriet. Velg «Fra en mappe» for å legge til flere filer samtidig."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:155
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Please wait…"
 msgstr "Vennligst vent…"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:406
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:406
 #, elixir-autogen, elixir-format
 msgid "Previous build archived"
 msgstr "Forrige bygg er arkivert"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:231
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:231
 #, elixir-autogen, elixir-format
 msgid "Refresh from GitHub"
 msgstr "Hent fra GitHub"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:353
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:353
 #, elixir-autogen, elixir-format
 msgid "Refresh is unavailable. Check the source connection and your permissions."
 msgstr "Henting er ikke tilgjengelig. Sjekk kildens tilkobling og tilgangene dine."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:349
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:349
 #, elixir-autogen, elixir-format
 msgid "Refresh queued."
 msgstr "Henting er satt i kø."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:419
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:419
 #, elixir-autogen, elixir-format
 msgid "Refresh requested"
 msgstr "Henting forespurt"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:414
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:414
 #, elixir-autogen, elixir-format
 msgid "Rendered"
 msgstr "Innhold hentet"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:102
-#: lib/brando_admin/live/config/markdown_sources_live.ex:437
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:102
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:437
 #, elixir-autogen, elixir-format
 msgid "Repository connection"
 msgstr "GitHub-tilkobling"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:156
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "Save source"
 msgstr "Lagre kilde"
 
-#: lib/brando_admin/live/config/global_set_list_live.ex:11
+#: lib/brando_admin/live/sites/global_set_list_live.ex:11
 #, elixir-autogen, elixir-format
 msgid "Shared values available across your site."
 msgstr "Felles verdier som kan brukes på hele nettstedet."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:75
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:75
 #, elixir-autogen, elixir-format
 msgid "Single file"
 msgstr "Enkeltfil"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:418
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:418
 #, elixir-autogen, elixir-format
 msgid "Source saved"
 msgstr "Kilde lagret"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:329
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:329
 #, elixir-autogen, elixir-format
 msgid "Source saved. Refresh it to import the document."
 msgstr "Kilden er lagret. Hent fra GitHub for å importere dokumentet."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:215
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "Synchronization disabled"
 msgstr "Synkronisering deaktivert"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:318
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:318
 #, elixir-autogen, elixir-format
 msgid "The documents could not be added. Check the connection and try again."
 msgstr "Dokumentene kunne ikke legges til. Sjekk tilkoblingen og prøv igjen."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:336
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "The source could not be saved. Check your access and reload if it changed."
 msgstr "Kilden kunne ikke lagres. Sjekk tilgangen din og last siden på nytt hvis den har endret seg."
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:429
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:429
 #, elixir-autogen, elixir-format
 msgid "This folder is too large. Choose a smaller folder with up to 200 Markdown files."
 msgstr "Denne mappen er for stor. Velg en mindre mappe med opptil 200 Markdown-filer."
@@ -9436,22 +9436,22 @@ msgstr "Denne mappen er for stor. Velg en mindre mappe med opptil 200 Markdown-f
 msgid "Delete variable"
 msgstr "Slett variabel"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:423
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:423
 #, elixir-autogen, elixir-format
 msgid "Document placement saved"
 msgstr "Dokumentplassering lagret"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:422
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:422
 #, elixir-autogen, elixir-format
 msgid "Document refresh failed"
 msgstr "Henting av dokument feilet"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:425
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:425
 #, elixir-autogen, elixir-format
 msgid "Publication failed"
 msgstr "Publisering feilet"
 
-#: lib/brando_admin/live/config/markdown_sources_live.ex:424
+#: lib/brando_admin/live/sites/markdown_sources_live.ex:424
 #, elixir-autogen, elixir-format
 msgid "Publication queued"
 msgstr "Publisering satt i kø"
@@ -9461,7 +9461,7 @@ msgstr "Publisering satt i kø"
 msgid "Reorder variable"
 msgstr "Flytt variabel"
 
-#: lib/brando_admin/live/content/modules_list_live.ex:67
+#: lib/brando_admin/live/content/module_list_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "This imports independent module copies with new identities. Use Import/Export in Configuration to move saved content while preserving module lineage."
 msgstr "Dette importerer frittstående modulkopier med nye identiteter. Bruk Import/Eksport under Konfigurasjon for å flytte lagret innhold og samtidig beholde modulidentiteten."
@@ -9575,7 +9575,7 @@ msgid "Order changed"
 msgstr "Rekkefølge endret"
 
 #: lib/brando_admin/components/form/draft_recovery.ex:315
-#: lib/brando_admin/live/config/seo_live.ex:508
+#: lib/brando_admin/live/sites/seo_live.ex:508
 #, elixir-autogen
 msgid "Position"
 msgstr "Plassering"
@@ -9644,155 +9644,155 @@ msgstr "Dra rammen for å flytte utsnittet. Dra i et hjørne for å endre størr
 msgid "Crop settings"
 msgstr "Beskjæring"
 
-#: lib/brando_admin/live/config/seo_live.ex:44
+#: lib/brando_admin/live/sites/seo_live.ex:44
 #, elixir-autogen, elixir-format
 msgid "SEO sections"
 msgstr "SEO-seksjoner"
 
-#: lib/brando_admin/live/config/seo_live.ex:49
-#: lib/brando_admin/live/config/seo_live.ex:165
+#: lib/brando_admin/live/sites/seo_live.ex:49
+#: lib/brando_admin/live/sites/seo_live.ex:165
 #, elixir-autogen, elixir-format
 msgid "Content SEO"
 msgstr "Innholds-SEO"
 
-#: lib/brando_admin/live/config/seo_live.ex:130
+#: lib/brando_admin/live/sites/seo_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "Score %{score} of 100"
 msgstr "Poengsum %{score} av 100"
 
-#: lib/brando_admin/live/config/seo_live.ex:166
+#: lib/brando_admin/live/sites/seo_live.ex:166
 #, elixir-autogen, elixir-format
 msgid "Published entries with a page of their own, checked for a meta title and description, an image, a URL and copy shared with other entries. Language: %{language}."
 msgstr "Publiserte oppføringer med egen side, sjekket for metatittel og -beskrivelse, bilde, URL og tekst som deles med andre oppføringer. Språk: %{language}."
 
-#: lib/brando_admin/live/config/seo_live.ex:179
+#: lib/brando_admin/live/sites/seo_live.ex:179
 #, elixir-autogen, elixir-format
 msgid "Run again"
 msgstr "Kjør på nytt"
 
-#: lib/brando_admin/live/config/seo_live.ex:201
+#: lib/brando_admin/live/sites/seo_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "Include drafts"
 msgstr "Ta med utkast"
 
-#: lib/brando_admin/live/config/seo_live.ex:243
+#: lib/brando_admin/live/sites/seo_live.ex:243
 #, elixir-autogen, elixir-format
 msgid "Auditing entries…"
 msgstr "Sjekker oppføringer …"
 
-#: lib/brando_admin/live/config/seo_live.ex:247
+#: lib/brando_admin/live/sites/seo_live.ex:247
 #, elixir-autogen, elixir-format
 msgid "The audit could not run."
 msgstr "Sjekken kunne ikke kjøres."
 
-#: lib/brando_admin/live/config/seo_live.ex:271
+#: lib/brando_admin/live/sites/seo_live.ex:271
 #, elixir-autogen, elixir-format
 msgid "Nothing to audit"
 msgstr "Ingenting å sjekke"
 
-#: lib/brando_admin/live/config/seo_live.ex:272
+#: lib/brando_admin/live/sites/seo_live.ex:272
 #, elixir-autogen, elixir-format
 msgid "No published entries in the selected content types for this language."
 msgstr "Ingen publiserte oppføringer i de valgte innholdstypene for dette språket."
 
-#: lib/brando_admin/live/config/seo_live.ex:280
+#: lib/brando_admin/live/sites/seo_live.ex:280
 #, elixir-autogen, elixir-format
 msgid "Audited entries"
 msgstr "Sjekkede oppføringer"
 
-#: lib/brando_admin/live/config/seo_live.ex:287
-#: lib/brando_admin/live/config/seo_live.ex:607
+#: lib/brando_admin/live/sites/seo_live.ex:287
+#: lib/brando_admin/live/sites/seo_live.ex:607
 #, elixir-autogen, elixir-format
 msgid "Score"
 msgstr "Poengsum"
 
-#: lib/brando_admin/live/config/seo_live.ex:290
+#: lib/brando_admin/live/sites/seo_live.ex:290
 #, elixir-autogen, elixir-format
 msgid "Issues"
 msgstr "Problemer"
 
-#: lib/brando_admin/live/config/seo_live.ex:291
-#: lib/brando_admin/live/config/seo_live.ex:325
+#: lib/brando_admin/live/sites/seo_live.ex:291
+#: lib/brando_admin/live/sites/seo_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Details"
 msgstr "Detaljer"
 
-#: lib/brando_admin/live/config/seo_live.ex:325
+#: lib/brando_admin/live/sites/seo_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Hide"
 msgstr "Skjul"
 
-#: lib/brando_admin/live/config/seo_live.ex:336
+#: lib/brando_admin/live/sites/seo_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "Check"
 msgstr "Sjekk"
 
-#: lib/brando_admin/live/config/seo_live.ex:359
+#: lib/brando_admin/live/sites/seo_live.ex:359
 #, elixir-autogen, elixir-format
 msgid "(no description — the site fallback is shown)"
 msgstr "(ingen beskrivelse — nettstedets standardbeskrivelse vises)"
 
-#: lib/brando_admin/live/config/seo_live.ex:362
-#: lib/brando_admin/live/config/seo_live.ex:761
+#: lib/brando_admin/live/sites/seo_live.ex:362
+#: lib/brando_admin/live/sites/seo_live.ex:761
 #, elixir-autogen, elixir-format
 msgid "Open entry"
 msgstr "Åpne oppføring"
 
 #: lib/brando_admin/components/suggestion_review.ex:66
-#: lib/brando_admin/live/config/seo_live.ex:374
-#: lib/brando_admin/live/config/seo_live.ex:758
+#: lib/brando_admin/live/sites/seo_live.ex:374
+#: lib/brando_admin/live/sites/seo_live.ex:758
 #, elixir-autogen, elixir-format
 msgid "Writing…"
 msgstr "Skriver …"
 
-#: lib/brando_admin/live/config/seo_live.ex:376
+#: lib/brando_admin/live/sites/seo_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Rewrite description"
 msgstr "Skriv beskrivelsen på nytt"
 
-#: lib/brando_admin/live/config/seo_live.ex:376
+#: lib/brando_admin/live/sites/seo_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Write description"
 msgstr "Skriv beskrivelse"
 
-#: lib/brando_admin/live/config/seo_live.ex:397
+#: lib/brando_admin/live/sites/seo_live.ex:397
 #, elixir-autogen, elixir-format
 msgid "Review with AI"
 msgstr "Vurder med KI"
 
-#: lib/brando_admin/live/config/seo_live.ex:433
+#: lib/brando_admin/live/sites/seo_live.ex:433
 #, elixir-autogen, elixir-format
 msgid "One entry has no meta description."
 msgid_plural "%{count} entries have no meta description."
 msgstr[0] "Én oppføring mangler metabeskrivelse."
 msgstr[1] "%{count} oppføringer mangler metabeskrivelse."
 
-#: lib/brando_admin/live/config/seo_live.ex:440
+#: lib/brando_admin/live/sites/seo_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "Writes a description for one entry. Nothing is saved until you accept it."
 msgid_plural "Writes descriptions for %{count} entries. Nothing is saved until you accept them."
 msgstr[0] "Skriver en beskrivelse for én oppføring. Ingenting lagres før du godtar den."
 msgstr[1] "Skriver beskrivelser for %{count} oppføringer. Ingenting lagres før du godtar dem."
 
-#: lib/brando_admin/live/config/seo_live.ex:446
+#: lib/brando_admin/live/sites/seo_live.ex:446
 #: lib/brando_admin/live/images/alt_text_live.ex:115
 #, elixir-autogen, elixir-format
 msgid "At most %{max} per run; run it again for the rest."
 msgstr "Høyst %{max} per kjøring; kjør igjen for resten."
 
-#: lib/brando_admin/live/config/seo_live.ex:452
+#: lib/brando_admin/live/sites/seo_live.ex:452
 #, elixir-autogen, elixir-format
 msgid "Write missing descriptions"
 msgstr "Skriv manglende beskrivelser"
 
-#: lib/brando_admin/live/config/seo_live.ex:456
+#: lib/brando_admin/live/sites/seo_live.ex:456
 #, elixir-autogen, elixir-format
 msgid "Write one description"
 msgid_plural "Write %{count} descriptions"
 msgstr[0] "Skriv én beskrivelse"
 msgstr[1] "Skriv %{count} beskrivelser"
 
-#: lib/brando_admin/live/config/seo_live.ex:262
+#: lib/brando_admin/live/sites/seo_live.ex:262
 #, elixir-autogen, elixir-format
 msgid "Suggested descriptions"
 msgstr "Foreslåtte beskrivelser"
@@ -9820,7 +9820,7 @@ msgstr "%{count} mislyktes"
 msgid "Accept all"
 msgstr "Godta alle"
 
-#: lib/brando_admin/live/config/seo_live.ex:266
+#: lib/brando_admin/live/sites/seo_live.ex:266
 #, elixir-autogen, elixir-format
 msgid "Suggested description for %{title}"
 msgstr "Foreslått beskrivelse for %{title}"
@@ -9836,163 +9836,163 @@ msgstr "Godta"
 msgid "Reject"
 msgstr "Avvis"
 
-#: lib/brando_admin/live/config/seo_live.ex:537
+#: lib/brando_admin/live/sites/seo_live.ex:537
 #, elixir-autogen, elixir-format
 msgid "Reviewing…"
 msgstr "Vurderer …"
 
-#: lib/brando_admin/live/config/seo_live.ex:539
+#: lib/brando_admin/live/sites/seo_live.ex:539
 #, elixir-autogen, elixir-format
 msgid "AI review"
 msgstr "KI-vurdering"
 
-#: lib/brando_admin/live/config/seo_live.ex:566
+#: lib/brando_admin/live/sites/seo_live.ex:566
 #, elixir-autogen, elixir-format
 msgid "What the AI reads"
 msgstr "Hva KI-en leser"
 
-#: lib/brando_admin/live/config/seo_live.ex:570
+#: lib/brando_admin/live/sites/seo_live.ex:570
 #, elixir-autogen, elixir-format
 msgid "The entry fields a generated description is written from. Block fields are read from the last rendered version of the entry."
 msgstr "Feltene i oppføringen som en generert beskrivelse skrives ut fra. Blokkfelter leses fra sist rendrede versjon av oppføringen."
 
-#: lib/brando_admin/live/config/seo_live.ex:611
+#: lib/brando_admin/live/sites/seo_live.ex:611
 #, elixir-autogen, elixir-format
 msgid "Audited"
 msgstr "Sjekket"
 
-#: lib/brando_admin/live/config/seo_live.ex:615
+#: lib/brando_admin/live/sites/seo_live.ex:615
 #, elixir-autogen, elixir-format
 msgid "Missing description"
 msgstr "Mangler beskrivelse"
 
-#: lib/brando_admin/live/config/seo_live.ex:619
+#: lib/brando_admin/live/sites/seo_live.ex:619
 #, elixir-autogen, elixir-format
 msgid "Missing image"
 msgstr "Mangler bilde"
 
-#: lib/brando_admin/live/config/seo_live.ex:623
+#: lib/brando_admin/live/sites/seo_live.ex:623
 #, elixir-autogen, elixir-format
 msgid "No URL"
 msgstr "Ingen URL"
 
-#: lib/brando_admin/live/config/seo_live.ex:627
+#: lib/brando_admin/live/sites/seo_live.ex:627
 #, elixir-autogen, elixir-format
 msgid "Thin content"
 msgstr "Tynt innhold"
 
-#: lib/brando_admin/live/config/seo_live.ex:640
+#: lib/brando_admin/live/sites/seo_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "checked"
 msgstr "sjekket"
 
-#: lib/brando_admin/live/config/seo_live.ex:640
+#: lib/brando_admin/live/sites/seo_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "not generated"
 msgstr "ikke generert"
 
-#: lib/brando_admin/live/config/seo_live.ex:645
+#: lib/brando_admin/live/sites/seo_live.ex:645
 #, elixir-autogen, elixir-format
 msgid "Missing redirects"
 msgstr "Manglende omdirigeringer"
 
-#: lib/brando_admin/live/config/seo_live.ex:647
+#: lib/brando_admin/live/sites/seo_live.ex:647
 #, elixir-autogen, elixir-format
 msgid "Requested URLs that no longer exist but match an entry's slug. Creating a redirect adds it to the settings."
 msgstr "Etterspurte URL-er som ikke lenger finnes, men som passer med en oppførings slug. En ny omdirigering legges til i innstillingene."
 
-#: lib/brando_admin/live/config/seo_live.ex:654
+#: lib/brando_admin/live/sites/seo_live.ex:654
 #, elixir-autogen, elixir-format
 msgid "Requested"
 msgstr "Etterspurt"
 
-#: lib/brando_admin/live/config/seo_live.ex:654
+#: lib/brando_admin/live/sites/seo_live.ex:654
 #, elixir-autogen, elixir-format
 msgid "Suggested destination"
 msgstr "Foreslått mål"
 
-#: lib/brando_admin/live/config/seo_live.ex:664
+#: lib/brando_admin/live/sites/seo_live.ex:664
 #, elixir-autogen, elixir-format
 msgid "Close match — check before creating"
 msgstr "Nær treff — sjekk før du oppretter"
 
-#: lib/brando_admin/live/config/seo_live.ex:683
+#: lib/brando_admin/live/sites/seo_live.ex:683
 #, elixir-autogen, elixir-format
 msgid "Duplicates"
 msgstr "Duplikater"
 
-#: lib/brando_admin/live/config/seo_live.ex:815
+#: lib/brando_admin/live/sites/seo_live.ex:815
 #, elixir-autogen, elixir-format
 msgid "Could not create the redirect"
 msgstr "Klarte ikke opprette omdirigeringen"
 
-#: lib/brando_admin/live/config/seo_live.ex:841
+#: lib/brando_admin/live/sites/seo_live.ex:841
 #, elixir-autogen, elixir-format
 msgid "Could not store the AI context fields"
 msgstr "Klarte ikke lagre KI-kontekstfeltene"
 
-#: lib/brando_admin/live/config/seo_live.ex:910
+#: lib/brando_admin/live/sites/seo_live.ex:910
 #, elixir-autogen, elixir-format
 msgid "Writing one description"
 msgid_plural "Writing %{count} descriptions"
 msgstr[0] "Skriver én beskrivelse"
 msgstr[1] "Skriver %{count} beskrivelser"
 
-#: lib/brando_admin/live/config/seo_live.ex:920
+#: lib/brando_admin/live/sites/seo_live.ex:920
 #, elixir-autogen, elixir-format
 msgid "Description saved"
 msgstr "Beskrivelsen er lagret"
 
-#: lib/brando_admin/live/config/seo_live.ex:967
+#: lib/brando_admin/live/sites/seo_live.ex:967
 #, elixir-autogen, elixir-format
 msgid "Description written"
 msgstr "Beskrivelsen er skrevet"
 
-#: lib/brando_admin/live/config/seo_live.ex:1012
+#: lib/brando_admin/live/sites/seo_live.ex:1012
 #, elixir-autogen, elixir-format
 msgid "One description saved"
 msgid_plural "%{count} descriptions saved"
 msgstr[0] "Én beskrivelse lagret"
 msgstr[1] "%{count} beskrivelser lagret"
 
-#: lib/brando_admin/live/config/seo_live.ex:1017
+#: lib/brando_admin/live/sites/seo_live.ex:1017
 #: lib/brando_admin/live/images/alt_text_live.ex:250
 #, elixir-autogen, elixir-format
 msgid "%{accepted} saved, %{failed} could not be saved"
 msgstr "%{accepted} lagret, %{failed} kunne ikke lagres"
 
-#: lib/brando_admin/live/config/seo_live.ex:1021
+#: lib/brando_admin/live/sites/seo_live.ex:1021
 #, elixir-autogen, elixir-format
 msgid "Could not save the descriptions"
 msgstr "Klarte ikke lagre beskrivelsene"
 
-#: lib/brando_admin/live/config/seo_live.ex:1162
+#: lib/brando_admin/live/sites/seo_live.ex:1162
 #: lib/brando_admin/live/images/alt_text_live.ex:219
 #, elixir-autogen, elixir-format
 msgid "This suggestion was already reviewed"
 msgstr "Dette forslaget er allerede gjennomgått"
 
-#: lib/brando_admin/live/config/seo_live.ex:1163
+#: lib/brando_admin/live/sites/seo_live.ex:1163
 #, elixir-autogen, elixir-format
 msgid "Write a description before accepting it"
 msgstr "Skriv en beskrivelse før du godtar den"
 
-#: lib/brando_admin/live/config/seo_live.ex:1172
+#: lib/brando_admin/live/sites/seo_live.ex:1172
 #, elixir-autogen, elixir-format
 msgid "Could not save the description"
 msgstr "Klarte ikke lagre beskrivelsen"
 
-#: lib/brando_admin/live/config/seo_live.ex:1230
+#: lib/brando_admin/live/sites/seo_live.ex:1230
 #, elixir-autogen, elixir-format
 msgid "%{label} +%{count}"
 msgstr "%{label} +%{count}"
 
-#: lib/brando_admin/live/config/seo_live.ex:1239
+#: lib/brando_admin/live/sites/seo_live.ex:1239
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr "Advarsel"
 
-#: lib/brando_admin/live/config/seo_live.ex:1241
+#: lib/brando_admin/live/sites/seo_live.ex:1241
 #, elixir-autogen, elixir-format
 msgid "Not checked"
 msgstr "Ikke sjekket"
@@ -10107,115 +10107,115 @@ msgstr "Sikt mot %{min}–%{max} tegn."
 msgid "This entry has no text to describe"
 msgstr "Oppføringen har ingen tekst å beskrive"
 
-#: lib/brando_admin/live/config/seo_live.ex:1169
+#: lib/brando_admin/live/sites/seo_live.ex:1169
 #, elixir-autogen, elixir-format
 msgid "The entry cannot be saved until these fields are fixed: %{fields}"
 msgstr "Oppføringen kan ikke lagres før disse feltene er rettet: %{fields}"
 
-#: lib/brando_admin/live/config/seo_live.ex:207
+#: lib/brando_admin/live/sites/seo_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Traffic from %{sources}, last %{days} days."
 msgstr "Trafikk fra %{sources}, siste %{days} dager."
 
-#: lib/brando_admin/live/config/seo_live.ex:213
+#: lib/brando_admin/live/sites/seo_live.ex:213
 #, elixir-autogen, elixir-format
 msgid "%{source} could not be read: %{error}"
 msgstr "Klarte ikke lese %{source}: %{error}"
 
-#: lib/brando_admin/live/config/seo_live.ex:219
+#: lib/brando_admin/live/sites/seo_live.ex:219
 #, elixir-autogen, elixir-format
 msgid "Sort entries"
 msgstr "Sorter oppføringer"
 
-#: lib/brando_admin/live/config/seo_live.ex:221
+#: lib/brando_admin/live/sites/seo_live.ex:221
 #, elixir-autogen, elixir-format
 msgid "Sort"
 msgstr "Sorter"
 
-#: lib/brando_admin/live/config/seo_live.ex:288
-#: lib/brando_admin/live/config/seo_live.ex:476
+#: lib/brando_admin/live/sites/seo_live.ex:288
+#: lib/brando_admin/live/sites/seo_live.ex:476
 #, elixir-autogen, elixir-format
 msgid "Visitors"
 msgstr "Besøkende"
 
-#: lib/brando_admin/live/config/seo_live.ex:289
-#: lib/brando_admin/live/config/seo_live.ex:505
+#: lib/brando_admin/live/sites/seo_live.ex:289
+#: lib/brando_admin/live/sites/seo_live.ex:505
 #, elixir-autogen, elixir-format
 msgid "Search"
 msgstr "Søk"
 
-#: lib/brando_admin/live/config/seo_live.ex:312
+#: lib/brando_admin/live/sites/seo_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "of %{impressions}"
 msgstr "av %{impressions}"
 
-#: lib/brando_admin/live/config/seo_live.ex:480
+#: lib/brando_admin/live/sites/seo_live.ex:480
 #, elixir-autogen, elixir-format
 msgid "Search impressions"
 msgstr "Visninger i søk"
 
-#: lib/brando_admin/live/config/seo_live.ex:484
-#: lib/brando_admin/live/config/seo_live.ex:507
+#: lib/brando_admin/live/sites/seo_live.ex:484
+#: lib/brando_admin/live/sites/seo_live.ex:507
 #, elixir-autogen, elixir-format
 msgid "Clicks"
 msgstr "Klikk"
 
-#: lib/brando_admin/live/config/seo_live.ex:488
+#: lib/brando_admin/live/sites/seo_live.ex:488
 #, elixir-autogen, elixir-format
 msgid "Click-through"
 msgstr "Klikkrate"
 
-#: lib/brando_admin/live/config/seo_live.ex:492
+#: lib/brando_admin/live/sites/seo_live.ex:492
 #, elixir-autogen, elixir-format
 msgid "Average position"
 msgstr "Gjennomsnittlig plassering"
 
-#: lib/brando_admin/live/config/seo_live.ex:497
+#: lib/brando_admin/live/sites/seo_live.ex:497
 #, elixir-autogen, elixir-format
 msgid "Top searches"
 msgstr "Vanligste søk"
 
-#: lib/brando_admin/live/config/seo_live.ex:500
+#: lib/brando_admin/live/sites/seo_live.ex:500
 #, elixir-autogen, elixir-format
 msgid "Google has not shown this page for any search in the period."
 msgstr "Google har ikke vist denne siden for noe søk i perioden."
 
-#: lib/brando_admin/live/config/seo_live.ex:506
+#: lib/brando_admin/live/sites/seo_live.ex:506
 #, elixir-autogen, elixir-format
 msgid "Impressions"
 msgstr "Visninger"
 
-#: lib/brando_admin/live/config/seo_live.ex:523
+#: lib/brando_admin/live/sites/seo_live.ex:523
 #, elixir-autogen, elixir-format
 msgid "Loading searches…"
 msgstr "Henter søk …"
 
-#: lib/brando_admin/live/config/seo_live.ex:631
+#: lib/brando_admin/live/sites/seo_live.ex:631
 #, elixir-autogen, elixir-format
 msgid "Not visited"
 msgstr "Ikke besøkt"
 
-#: lib/brando_admin/live/config/seo_live.ex:635
+#: lib/brando_admin/live/sites/seo_live.ex:635
 #, elixir-autogen, elixir-format
 msgid "Low click-through"
 msgstr "Lav klikkrate"
 
-#: lib/brando_admin/live/config/seo_live.ex:994
+#: lib/brando_admin/live/sites/seo_live.ex:994
 #, elixir-autogen, elixir-format
 msgid "Could not read the searches"
 msgstr "Klarte ikke hente søkene"
 
-#: lib/brando_admin/live/config/seo_live.ex:1145
+#: lib/brando_admin/live/sites/seo_live.ex:1145
 #, elixir-autogen, elixir-format
 msgid "Lowest score"
 msgstr "Lavest poengsum"
 
-#: lib/brando_admin/live/config/seo_live.ex:1146
+#: lib/brando_admin/live/sites/seo_live.ex:1146
 #, elixir-autogen, elixir-format
 msgid "Most visited"
 msgstr "Mest besøkt"
 
-#: lib/brando_admin/live/config/seo_live.ex:1147
+#: lib/brando_admin/live/sites/seo_live.ex:1147
 #, elixir-autogen, elixir-format
 msgid "Most seen in search"
 msgstr "Mest vist i søk"
@@ -10412,7 +10412,7 @@ msgstr "Punktliste"
 msgid "Cancel preview"
 msgstr "Avbryt forhåndsvisning"
 
-#: lib/brando_admin/live/config/asset_live.ex:146
+#: lib/brando_admin/live/sites/asset_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "Captured from a release for shared previews"
 msgstr "Lagret fra en utgivelse for delte forhåndsvisninger"
@@ -10629,7 +10629,7 @@ msgstr "Importen er fullført"
 msgid "Import definitions"
 msgstr "Importer definisjoner"
 
-#: lib/brando_admin/live/config/asset_live.ex:224
+#: lib/brando_admin/live/sites/asset_live.ex:224
 #, elixir-autogen, elixir-format
 msgid "In use by shared previews or builds"
 msgstr "I bruk i delte forhåndsvisninger eller bygg"
@@ -11096,7 +11096,7 @@ msgstr "Klarte ikke lese bildefilen"
 msgid "The image is in a format the AI model cannot read"
 msgstr "Bildet er i et format KI-modellen ikke kan lese"
 
-#: lib/brando_admin/live/config/seo_live.ex:386
+#: lib/brando_admin/live/sites/seo_live.ex:386
 #, elixir-autogen, elixir-format
 msgid "Write alt text"
 msgstr "Skriv alt-tekst"
@@ -11187,27 +11187,27 @@ msgstr "Søkeresultatene viser tekst hentet fra oppføringen; en beskrivelse skr
 msgid "from the entry"
 msgstr "fra oppføringen"
 
-#: lib/brando_admin/live/config/seo_live.ex:686
+#: lib/brando_admin/live/sites/seo_live.ex:686
 #, elixir-autogen, elixir-format
 msgid "Same description"
 msgstr "Samme beskrivelse"
 
-#: lib/brando_admin/live/config/seo_live.ex:696
+#: lib/brando_admin/live/sites/seo_live.ex:696
 #, elixir-autogen, elixir-format
 msgid "Same title"
 msgstr "Samme tittel"
 
-#: lib/brando_admin/live/config/seo_live.ex:967
+#: lib/brando_admin/live/sites/seo_live.ex:967
 #, elixir-autogen, elixir-format
 msgid "Title written"
 msgstr "Tittel skrevet"
 
-#: lib/brando_admin/live/config/seo_live.ex:688
+#: lib/brando_admin/live/sites/seo_live.ex:688
 #, elixir-autogen, elixir-format
 msgid "Write a new description"
 msgstr "Skriv ny beskrivelse"
 
-#: lib/brando_admin/live/config/seo_live.ex:698
+#: lib/brando_admin/live/sites/seo_live.ex:698
 #, elixir-autogen, elixir-format
 msgid "Write a new title"
 msgstr "Skriv ny tittel"
@@ -11227,7 +11227,7 @@ msgstr "%{model} står ikke i modellkatalogen Brando leser, så prisen og om den
 msgid "The configured AI model is not in the model catalogue, so its price and abilities are unknown"
 msgstr "Den konfigurerte KI-modellen står ikke i modellkatalogen, så prisen og hva den kan, er ukjent"
 
-#: lib/brando_admin/live/config/seo_live.ex:575
+#: lib/brando_admin/live/sites/seo_live.ex:575
 #, elixir-autogen, elixir-format
 msgid "Written by %{model}."
 msgstr "Skrives av %{model}."
@@ -12859,7 +12859,7 @@ msgstr "Lagre og lukk"
 msgid "Global fields (setup)"
 msgstr "Globale felt (oppsett)"
 
-#: lib/brando_admin/live/config/global_set_list_live.ex
+#: lib/brando_admin/live/sites/global_set_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Which global fields exist and where. Their values are edited under Globals."
 msgstr "Hvilke globale felt som finnes, og hvor. Verdiene redigeres under Globaler."
@@ -13308,186 +13308,186 @@ msgstr "Innhold på %{language}"
 msgid "Content language"
 msgstr "Innholdsspråk"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Loose blocks"
 msgstr "Løse blokker"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Blocks no entry links to any more. A block removed from an entry is kept so that an older version of the entry can be restored with it; once no version holds it, nothing can bring it back, and it only keeps its images looking used."
 msgstr "Blokker som ingen oppføring lenker til lenger. En blokk som fjernes fra en oppføring beholdes, slik at en eldre versjon av oppføringen kan gjenopprettes med den. Når ingen versjon lenger har den, kan ingenting hente den tilbake, og den gjør bare at bildene dens ser ut som de er i bruk."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "can be removed"
 msgstr "kan fjernes"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "still held"
 msgstr "holdes fortsatt"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "blocks in all"
 msgstr "blokker totalt"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "What was checked"
 msgstr "Dette er sjekket"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Links"
 msgstr "Lenker"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "No row in any table that points at blocks names a block of the tree:"
 msgstr "Ingen rad i noen tabell som peker på blokker nevner en blokk i treet:"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Versions"
 msgstr "Versjoner"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "No loose blocks."
 msgstr "Ingen løse blokker."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Select all that can be removed"
 msgstr "Velg alle som kan fjernes"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Select none"
 msgstr "Velg ingen"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Remove selected"
 msgstr "Fjern valgte"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Select block %{id}"
 msgstr "Velg blokk %{id}"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Can be removed"
 msgstr "Kan fjernes"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "In a recovery copy"
 msgstr "I en gjenopprettingskopi"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot be verified"
 msgstr "Kan ikke bekreftes"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Held by a version"
 msgstr "Holdes av en versjon"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "version %{number}"
 msgstr "versjon %{number}"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Removed block trees, kept as they were. Restoring one puts it back as a loose block."
 msgstr "Fjernede blokktrær, bevart som de var. Gjenoppretting legger treet tilbake som en løs blokk."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "removed %{date}"
 msgstr "fjernet %{date}"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing was removed: %{reason}"
 msgstr "Ingenting ble fjernet: %{reason}"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "The blocks are back, as loose as they were."
 msgstr "Blokkene er tilbake, like løse som de var."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not restore: %{reason}"
 msgstr "Kunne ikke gjenopprette: %{reason}"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Find blocks no entry uses any more, and remove the ones nothing can bring back."
 msgstr "Finn blokker ingen oppføring bruker lenger, og fjern dem som ingenting kan hente tilbake."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Review loose blocks"
 msgstr "Gå gjennom løse blokker"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "loose block tree"
 msgid_plural "loose block trees"
 msgstr[0] "løst blokktre"
 msgstr[1] "løse blokktrær"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} stored version was read; none of them may hold a block of the tree."
 msgid_plural "%{count} stored versions were read; none of them may hold a block of the tree."
 msgstr[0] "%{count} lagret versjon er lest; ingen av dem kan ha en blokk fra treet."
 msgstr[1] "%{count} lagrede versjoner er lest; ingen av dem kan ha en blokk fra treet."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} version could not be read, so nothing can be removed."
 msgid_plural "%{count} versions could not be read, so nothing can be removed."
 msgstr[0] "%{count} versjon kunne ikke leses, så ingenting kan fjernes."
 msgstr[1] "%{count} versjoner kunne ikke leses, så ingenting kan fjernes."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} recovery copy was searched for the tree's blocks."
 msgid_plural "%{count} recovery copies were searched for the tree's blocks."
 msgstr[0] "%{count} gjenopprettingskopi er gjennomsøkt etter treets blokker."
 msgstr[1] "%{count} gjenopprettingskopier er gjennomsøkt etter treets blokker."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Remove %{count} loose block tree? It goes to the archive and can be restored from there."
 msgid_plural "Remove %{count} loose block trees? They go to the archive and can be restored from there."
 msgstr[0] "Fjerne %{count} løst blokktre? Det legges i arkivet og kan gjenopprettes derfra."
 msgstr[1] "Fjerne %{count} løse blokktrær? De legges i arkivet og kan gjenopprettes derfra."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} tree"
 msgid_plural "%{count} trees"
 msgstr[0] "%{count} tre"
 msgstr[1] "%{count} trær"
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Removed %{count} loose block tree (%{blocks} blocks). It is in the archive below."
 msgid_plural "Removed %{count} loose block trees (%{blocks} blocks). They are in the archive below."
 msgstr[0] "Fjernet %{count} løst blokktre (%{blocks} blokker). Det ligger i arkivet nedenfor."
 msgstr[1] "Fjernet %{count} løse blokktrær (%{blocks} blokker). De ligger i arkivet nedenfor."
 
-#: lib/brando_admin/live/config/block_audit_live.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} was left: it is in use again."
 msgid_plural "%{count} were left: they are in use again."
@@ -13565,27 +13565,27 @@ msgstr "Formen videoen vises i. Original bruker videoens egne mål."
 msgid "Width/height, e.g. 3/2"
 msgstr "Bredde/høyde, f.eks. 3/2"
 
-#: lib/brando_admin/live/config/seo_live.ex
+#: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Bot probes"
 msgstr "Botforsøk"
 
-#: lib/brando_admin/live/config/seo_live.ex
+#: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Redirect"
 msgstr "Omdiriger"
 
-#: lib/brando_admin/live/config/seo_live.ex
+#: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Added above"
 msgstr "Lagt til ovenfor"
 
-#: lib/brando_admin/live/config/seo_live.ex
+#: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Scanners looking for WordPress, PHP scripts and exposed config files. Nothing to redirect."
 msgstr "Skannere som leter etter WordPress, PHP-skript og eksponerte konfigurasjonsfiler. Ingenting å videresende."
 
-#: lib/brando_admin/live/config/seo_live.ex
+#: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} bot probe"
 msgid_plural "%{count} bot probes"
@@ -13702,77 +13702,77 @@ msgstr "Denne videoen krever signert avspilling, som Brando ikke støtter."
 msgid "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}."
 msgstr "Videoer som allerede ligger i %{provider}-kontoen din. Sletter du en her senere, blir den liggende i %{provider}."
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Image sizes"
 msgstr "Bildestørrelser"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate the sizes and formats of every image from its original, using the current image settings."
 msgstr "Lag størrelser og formater for alle bilder på nytt fra originalen, med gjeldende bildeinnstillinger."
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Running in the background"
 msgstr "Kjører i bakgrunnen"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate the sizes of every image?"
 msgstr "Lage størrelsene for alle bilder på nytt?"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "This runs in the background and can take a long time for a large library."
 msgstr "Dette kjører i bakgrunnen og kan ta lang tid for et stort bibliotek."
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate sizes"
 msgstr "Lag størrelser på nytt"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate image sizes"
 msgstr "Lag bildestørrelser på nytt"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Dominant colors"
 msgstr "Dominerende farger"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Read the dominant color of every image again. It is used as a placeholder while images load."
 msgstr "Les den dominerende fargen for alle bilder på nytt. Den brukes som plassholder mens bildene lastes."
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Read the dominant color of every image again?"
 msgstr "Lese den dominerende fargen for alle bilder på nytt?"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "This runs in the background."
 msgstr "Dette kjører i bakgrunnen."
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Recalculate colors"
 msgstr "Beregn farger på nytt"
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Recreating image sizes in the background."
 msgstr "Lager bildestørrelser på nytt i bakgrunnen."
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Recalculating dominant colors in the background."
 msgstr "Beregner dominerende farger på nytt i bakgrunnen."
 
-#: lib/brando_admin/live/config/utils_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "This is already running."
 msgstr "Dette kjører allerede."
@@ -14099,3 +14099,374 @@ msgstr "påkr."
 #, elixir-autogen, elixir-format
 msgid "use lowercase letters, digits and underscores, starting with a letter"
 msgstr "bruk små bokstaver, sifre og understrek, og start med en bokstav"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Action"
+msgstr "Handling"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Activated revision #%{revision}, as scheduled"
+msgstr "Aktiverte versjon #%{revision}, som planlagt"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All actions"
+msgstr "Alle handlinger"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "All activity"
+msgstr "All aktivitet"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All content types"
+msgstr "Alle innholdstyper"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All kept activity"
+msgstr "All lagret aktivitet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Also changed %{fields}"
+msgstr "Endret også %{fields}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Approved by %{name}"
+msgstr "Godkjent av %{name}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "As scheduled"
+msgstr "Som planlagt"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by a content transfer"
+msgstr "av en innholdsoverføring"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by %{name}"
+msgstr "av %{name}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by scheduled publishing"
+msgstr "av planlagt publisering"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by the assistant"
+msgstr "av assistenten"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by the system"
+msgstr "av systemet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Can be restored from the trash until %{date}"
+msgstr "Kan gjenopprettes fra papirkurven til %{date}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Changed %{fields}"
+msgstr "Endret %{fields}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Compare"
+msgstr "Sammenlign"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Compare revisions"
+msgstr "Sammenlign versjoner"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Compare with #%{revision}"
+msgstr "Sammenlign med #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Copied from %{title}"
+msgstr "Kopiert fra %{title}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} event"
+msgid_plural "%{count} events"
+msgstr[0] "%{count} hendelse"
+msgstr[1] "%{count} hendelser"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Created by the import"
+msgstr "Opprettet av importen"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Created from %{source}"
+msgstr "Opprettet fra %{source}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted permanently"
+msgstr "Slettet permanent"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicated"
+msgstr "Duplisert"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Entry history"
+msgstr "Historikk"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone"
+msgstr "Alle"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Everything that happened to this entry, including publishing, trash and restores. Open a revision to see or reuse its content."
+msgstr "Alt som har skjedd med denne oppføringen, også publisering, papirkurv og gjenoppretting. Åpne en versjon for å se eller gjenbruke innholdet."
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "from %{source}"
+msgstr "fra %{source}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Imported"
+msgstr "Importert"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept for %{count} day"
+msgid_plural "Kept for %{count} days"
+msgstr[0] "Lagres i %{count} dag"
+msgstr[1] "Lagres i %{count} dager"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 12 months"
+msgstr "Siste 12 måneder"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 30 days"
+msgstr "Siste 30 dager"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last 7 days"
+msgstr "Siste 7 dager"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Loading activity..."
+msgstr "Laster aktivitet …"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Load older activity"
+msgstr "Last eldre aktivitet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{count} entry"
+msgid_plural "Moved %{count} entries"
+msgstr[0] "Flyttet %{count} oppføring"
+msgstr[1] "Flyttet %{count} oppføringer"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved to trash"
+msgstr "Flyttet til papirkurven"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been recorded for this entry yet."
+msgstr "Ingenting er registrert for denne oppføringen ennå."
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has happened in this period."
+msgstr "Ingenting har skjedd i denne perioden."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "One of these revisions is no longer kept, so they can't be compared."
+msgstr "En av disse versjonene er ikke lenger lagret, så de kan ikke sammenlignes."
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open trash"
+msgstr "Åpne papirkurven"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Period"
+msgstr "Periode"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Person"
+msgstr "Person"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed by undoing the import that created it"
+msgstr "Fjernet da importen som opprettet den ble angret"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from the trash after %{days} days"
+msgstr "Fjernet fra papirkurven etter %{days} dager"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reordered"
+msgstr "Endret rekkefølge"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced %{fields}"
+msgstr "Erstattet %{fields}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced revision #%{revision}"
+msgstr "Erstattet versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored a revision"
+msgstr "Gjenopprettet en versjon"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored from trash"
+msgstr "Gjenopprettet fra papirkurven"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Restored revision #%{revision}"
+msgstr "Gjenopprettet versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{from} → revision #%{to}"
+msgstr "Versjon #%{from} → versjon #%{to}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision}"
+msgstr "Versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Run by %{name}"
+msgstr "Kjørt av %{name}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Saved as %{status}"
+msgstr "Lagret som %{status}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search entries"
+msgstr "Søk i oppføringer"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set back by undoing an import"
+msgstr "Satt tilbake da en import ble angret"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set by %{name}"
+msgstr "Satt opp av %{name}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Showing %{shown} of %{count}"
+msgstr "Viser %{shown} av %{count}"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Show older activity"
+msgstr "Vis eldre aktivitet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Status changed from %{from} to %{to}"
+msgstr "Status endret fra %{from} til %{to}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "The entry no longer exists"
+msgstr "Oppføringen finnes ikke lenger"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "These revisions have the same content."
+msgstr "Disse versjonene har samme innhold."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} is now first"
+msgstr "%{title} er nå først"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr "I dag"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown"
+msgstr "Ukjent"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Updated by the import"
+msgstr "Oppdatert av importen"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Updated from %{source}"
+msgstr "Oppdatert fra %{source}"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Who created, changed, published and deleted content, and when. Changes that saved a revision can be compared with the one before."
+msgstr "Hvem som opprettet, endret, publiserte og slettet innhold, og når. Endringer som lagret en versjon kan sammenlignes med den forrige."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Yesterday"
+msgstr "I går"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted user"
+msgstr "Slettet bruker"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by a deleted user"
+msgstr "av en slettet bruker"

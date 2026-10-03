@@ -167,7 +167,7 @@ defmodule Brando.Users do
   def get_user_content_summary(user_id) do
     get_user_foreign_key_references()
     |> Enum.reject(fn {table, _column} ->
-      table == "users_tokens" or table == "user_sites" or String.starts_with?(table, "authorization_")
+      table in ["users_tokens", "user_sites", "activity_events"] or String.starts_with?(table, "authorization_")
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.map(fn {table, columns} ->
@@ -210,6 +210,8 @@ defmodule Brando.Users do
 
   defp transfer_or_delete_ref("authorization_" <> _, _column, _from, _to), do: 0
   defp transfer_or_delete_ref("user_sites", _column, _from, _to), do: 0
+  # The activity log records who did what; handing it to another user would rewrite history.
+  defp transfer_or_delete_ref("activity_events", _column, _from, _to), do: 0
 
   defp transfer_or_delete_ref(table, column, from_user_id, to_user_id) do
     %{num_rows: num_rows} =

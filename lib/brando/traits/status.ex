@@ -26,17 +26,15 @@ defmodule Brando.Trait.Status do
         {:error, :forbidden}
       end
     else
-      legacy_update_status(schema, id, status)
+      legacy_update_status(schema, id, status, actor)
     end
   end
 
-  defp legacy_update_status(schema, id, status) do
+  defp legacy_update_status(schema, id, status, actor) do
     entry = Brando.Repo.one(from q in schema, where: q.id == ^id)
-
-    {:ok, updated_entry} =
-      entry
-      |> Ecto.Changeset.cast(%{status: status}, [:status])
-      |> Brando.Repo.update()
+    changeset = Ecto.Changeset.cast(entry, %{status: status}, [:status])
+    {:ok, updated_entry} = Brando.Repo.update(changeset)
+    Brando.Activity.saved(changeset, updated_entry, actor)
 
     {:ok, identifier_result} = Brando.Content.update_identifier(schema, updated_entry)
 
