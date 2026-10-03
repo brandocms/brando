@@ -43,6 +43,47 @@ updates:
     prefix-development: chore
     include: scope
     
+# BrandoJS and the E2E backend that builds it: the pnpm lockfiles the admin
+# bundle is actually built from. The backend template above has no lockfile;
+# each application generates its own.
+- package-ecosystem: npm
+  directory: "/assets/"
+  schedule:
+    interval: weekly
+    time: '00:00'
+  open-pull-requests-limit: 10
+  allow:
+  - dependency-type: production
+  reviewers:
+  - tmjoen
+  assignees:
+  - tmjoen
+  labels:
+  - dependencies
+  commit-message:
+    prefix: fix
+    prefix-development: chore
+    include: scope
+
+- package-ecosystem: npm
+  directory: "/e2e/assets/backend/"
+  schedule:
+    interval: weekly
+    time: '00:00'
+  open-pull-requests-limit: 10
+  allow:
+  - dependency-type: production
+  reviewers:
+  - tmjoen
+  assignees:
+  - tmjoen
+  labels:
+  - dependencies
+  commit-message:
+    prefix: fix
+    prefix-development: chore
+    include: scope
+
 - package-ecosystem: mix
   directory: "/"
   schedule:

@@ -1,4 +1,4 @@
-# syntax = docker/dockerfile:1.0-experimental
+# syntax = docker/dockerfile:1
 
 # -----------------------------------
 # - stage: install
@@ -54,23 +54,43 @@ RUN mix compile
 # -----------------------------------
 
 FROM node:22 AS assets_backend
-WORKDIR /opt/app/assets/backend
-ENV YARN_CACHE_FOLDER ~/.yarn
 
-# COPY --from=deps /opt/app/deps /opt/app/deps/
-COPY assets/backend/package.json assets/backend/yarn.lock ./
-COPY assets/backend/.yalc ./.yalc
-# Use the yarn cache directory as a cache mount
-RUN --mount=type=cache,target=~/.yarn,sharing=locked \
-      yarn \
-      install \
-      --pure-lockfile \
-      --prefer-offline \
-      --progress=false
+# Keep in step with `packageManager` in assets/backend/package.json
+RUN npm install --global pnpm@10.32.1
+
+# @brandocms/europacss fetches postcss-functions from GitHub, and the lockfile
+# may record it as an SSH remote. The build has no SSH key; the repository is
+# public, so fetch it over HTTPS.
+RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+# The backend links BrandoJS from this checkout (`link:../../../assets`),
+# outside this build context. Pass it in as a named context:
+#
+#   docker build --build-context brandojs=../assets .
+#
+# It is placed where the link points, with its own dependencies installed,
+# the same way CI builds the backend.
+WORKDIR /opt/assets
+COPY --from=brandojs package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+      pnpm install \
+      --frozen-lockfile \
+      --prefer-offline
+COPY --from=brandojs europa.config.js ./
+COPY --from=brandojs src ./src
+COPY --from=brandojs css ./css
+COPY --from=brandojs vite ./vite
+
+WORKDIR /opt/app/assets/backend
+COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+      pnpm install \
+      --frozen-lockfile \
+      --prefer-offline
 
 COPY assets/backend/ ./
 
-RUN yarn build
+RUN pnpm build
 
 
 # -----------------------------------

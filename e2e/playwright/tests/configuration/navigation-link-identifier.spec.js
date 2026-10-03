@@ -9,7 +9,7 @@ test.describe('Link var identifier picker', () => {
   test('filtering hides non-matching identifiers', async ({ page }) => {
     await page.goto('/admin')
     await page.getByText('Configuration').click()
-    await page.getByRole('link', { name: 'Navigation' }).click()
+    await page.locator('#nav-sections').getByRole('link', { name: 'Navigation' }).click()
     await page.getByRole('link', { name: 'Main menu' }).click()
     await syncLV(page)
 

@@ -1,4 +1,4 @@
-import { gsap } from '@brandocms/jupiter'
+import { set } from '../motion'
 
 // How long to keep covering if the login reveal never announces itself.
 const LOGIN_REVEAL_TIMEOUT = 2000
@@ -6,7 +6,7 @@ const LOGIN_REVEAL_TIMEOUT = 2000
 export default () => ({
   fadeIn: callback => {
     const hide = () => {
-      gsap.set('.fader', { display: 'none' })
+      set(document.querySelectorAll('.fader'), { display: 'none' })
       document.body.classList.remove('unloaded')
       callback()
     }

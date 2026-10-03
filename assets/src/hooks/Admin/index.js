@@ -1,5 +1,5 @@
 import tippy from 'tippy.js'
-import { Dom, gsap } from '@brandocms/jupiter'
+import { Dom } from '@brandocms/jupiter'
 import { alertError, alertWarning, alertInfo } from '../../alerts'
 
 export default app => ({
@@ -53,7 +53,9 @@ export default app => ({
       if (!$fieldErrors.length) return
 
       const firstError = $fieldErrors[0]
-      app.scrollTo({ y: firstError, offsetY: 50 })
+      // Jupiter adds offsetY to the target, so a negative one stops short of
+      // it and leaves the field clear of the top edge.
+      app.scrollTo({ y: firstError, offsetY: -50 })
 
       // Scrolling alone leaves a keyboard or screen-reader user wherever they
       // were — usually the submit button — with no indication of which field
@@ -81,7 +83,7 @@ export default app => ({
       setTimeout(() => {
         const $node = Dom.find(selector)
         if ($node) {
-          app.scrollTo({ y: $node, offsetY: 50 })
+          app.scrollTo({ y: $node, offsetY: -50 })
           if (focus) $node.focus({ preventScroll: true })
         }
       }, 250)
@@ -103,16 +105,6 @@ export default app => ({
     app.disconnected = false
     console.log('==> socket reconnected')
     app.toast.connection(true, 'Reconnected to mainframe!')
-  },
-
-  animateNav() {
-    const targets = [
-      Dom.find('#navigation-content header'),
-      Dom.find('#navigation-content .current-user'),
-      Dom.all('#navigation-content .navigation-section > *')
-    ]
-    gsap.to(targets, { duration: 0.35, x: 0, stagger: 0.02, ease: 'circ.out' })
-    gsap.to(targets, { duration: 0.35, opacity: 1, stagger: 0.02, ease: 'none' })
   },
 
   initializeTippy() {

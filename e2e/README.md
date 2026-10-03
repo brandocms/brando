@@ -46,23 +46,18 @@ To start your server:
 
   * Install dependencies with `mix deps.get`
   * Create and migrate your database with `mix ecto.setup`
+  * Install BrandoJS's own dependencies with `cd ../assets && pnpm install` —
+    the backend links BrandoJS from this checkout and builds it from source
+  * Install Node.js b/e dependencies with `cd assets/backend && pnpm install`
   * Install Node.js f/e dependencies with `cd assets/frontend && yarn install`
-  * Install Node.js b/e dependencies with `cd assets/backend && yarn install`
+
+`./run_e2e.sh` does all of the above, builds both asset projects and starts the
+server.
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
-## End to end tests with Cypress
+## End to end tests with Playwright
 
-  * Install your E2E deps:
-
-    `$ cd e2e && yarn install`
-
-  * Dump your SQL structure:
-
-    `$ mix ecto.dump`
-
-  * Start server and open Cypress:
-
-    `$ mix test.e2e`
-
-  * Select your project - `myapp/assets/backend`
+  * Install Playwright: `cd playwright && pnpm install && pnpm exec playwright install chromium`
+  * Run the suite against a freshly seeded database: `source .envrc && ./test_e2e.sh --reset`
+  * Run one spec: `source .envrc && ./test_e2e.sh --reset tests/path/to/test.spec.js`

@@ -56,22 +56,28 @@ RUN mix compile
 
 FROM node:22 AS assets_backend
 WORKDIR /opt/app/assets/backend
-ENV YARN_CACHE_FOLDER ~/.yarn
 
-# COPY --from=deps /opt/app/deps /opt/app/deps/
-COPY assets/backend/package.json assets/backend/yarn.lock ./
+# Keep in step with `packageManager` in assets/backend/package.json
+RUN npm install --global pnpm@10.32.1
+
+# @brandocms/europacss fetches postcss-functions from GitHub, and the lockfile
+# may record it as an SSH remote. The build has no SSH key; the repository is
+# public, so fetch it over HTTPS.
+RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+# The lockfile is the one `mix brando.assets.setup` writes; commit it.
+# BrandoJS itself is installed from .yalc.
+COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
 COPY assets/backend/.yalc ./.yalc
-# Use the yarn cache directory as a cache mount
-RUN --mount=type=cache,target=~/.yarn,sharing=locked \
-  yarn \
-  install \
-  --pure-lockfile \
-  --prefer-offline \
-  --progress=false
+
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+  pnpm install \
+  --frozen-lockfile \
+  --prefer-offline
 
 COPY assets/backend/ ./
 
-RUN yarn build
+RUN pnpm build
 
 
 # -----------------------------------

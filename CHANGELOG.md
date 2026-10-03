@@ -376,7 +376,26 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
     shared renderer uses, and it defeated `preload` by making the browser fetch
     the manifest eagerly.
 
+- **The admin animates with Motion, on Jupiter 5** (#2814). BrandoJS depends
+  on `@brandocms/jupiter` `5.0.0-beta.19` and no longer on GSAP. Jupiter 5
+  exports Motion's `animate`, `stagger`, `scroll` and `motionValue` in place
+  of `gsap`, so a custom admin hook in `assets/backend` that imports `gsap`
+  from Jupiter must move to those or depend on `gsap` itself. Set
+  `@brandocms/jupiter` in `assets/backend/package.json` to the same version.
+  Jupiter 5's `app.scrollTo({y: el, offsetY})` adds the offset to the target,
+  where GSAP subtracted it: negate offsets passed from custom hooks.
+
 #### Improvements
+
+- **The backend assets build with pnpm, like the frontend** (#2814). New
+  applications' Dockerfiles install `assets/backend` with pnpm 10.32.1 and
+  `--frozen-lockfile`, and the backend template pins the same version in
+  `packageManager`. An existing Dockerfile that runs Yarn in its
+  `assets_backend` stage keeps building, but `mix brando.assets.setup` only
+  maintains `pnpm-lock.yaml`. To switch, copy the `assets_backend` stage from
+  `priv/templates/brando.install/Dockerfile`, commit the
+  `assets/backend/pnpm-lock.yaml` that `mix brando.assets.setup` writes, and
+  delete `assets/backend/yarn.lock`.
 
 - **The source upgrade task is split by version.** `mix brando.migrate54` now
   covers only the 0.53 to 0.54 source changes and `mix brando.migrate55` covers

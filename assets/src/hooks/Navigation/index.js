@@ -1,10 +1,12 @@
-import { Dom, gsap } from '@brandocms/jupiter'
+import { Dom } from '@brandocms/jupiter'
+import { animate, animationTracker, ease, set, stagger } from '../../motion'
 
 const OPEN_KEY = 'brando:nav:open'
 
 export default app => ({
   mounted() {
     console.log('==> Navigation mounted.')
+    this.animations = animationTracker()
     const $navigation = Dom.find('#navigation')
     if (!$navigation) {
       return
@@ -50,6 +52,7 @@ export default app => ({
     }
     this.$currentUserDropdownContent = Dom.find(this.$currentUserDropdown, '.dropdown-content')
     this.currentUserDropdownOpen = false
+    this.currentUserIconRotation = 0
     this.$currentUserDropdown.addEventListener('click', e => {
       this.toggleCurrentUserDropdown()
     })
@@ -57,26 +60,52 @@ export default app => ({
 
   toggleCurrentUserDropdown() {
     const lis = this.$currentUserDropdownContent.querySelectorAll('li')
+    const { track } = this.animations
 
     // Quick: the row is one line of content, and a slow reveal made it feel
-    // heavier than the menu groups around it.
-    gsap.to(this.$currentUserDropdown.querySelector('.dropdown-icon'), {
-      duration: 0.2,
-      rotate: '+=180'
-    })
+    // heavier than the menu groups around it. The icon keeps turning the same
+    // way, half a turn per click.
+    this.currentUserIconRotation += 180
+    track(
+      animate(
+        this.$currentUserDropdown.querySelector('.dropdown-icon'),
+        { rotate: this.currentUserIconRotation },
+        { duration: 0.2 }
+      )
+    )
     this.$currentUserDropdown.classList.toggle('open', !this.currentUserDropdownOpen)
     if (this.currentUserDropdownOpen) {
-      gsap.to(Array.from(lis).reverse(), { duration: 0.12, autoAlpha: 0, x: -6, stagger: 0.03 })
-      gsap.to(this.$currentUserDropdown, { duration: 0.18, delay: 0.05, ease: 'power2.inOut', height: this.height })
+      this.hideItems(lis, { duration: 0.12, delay: stagger(0.03) })
+      track(
+        animate(
+          this.$currentUserDropdown,
+          { height: `${this.height}px` },
+          { duration: 0.18, delay: 0.05, ease: ease.power2InOut }
+        )
+      )
       this.currentUserDropdownOpen = false
     } else {
-      this.height = this.$currentUserDropdown.offsetHeight
+      // The closed height, measured once: a click during the closing animation
+      // would otherwise record a half-open height to close to.
+      this.height ??= this.$currentUserDropdown.offsetHeight
 
-      gsap.set(lis, { autoAlpha: 0, x: -6 })
-      gsap.to(this.$currentUserDropdown, { duration: 0.18, ease: 'power2.out', height: 'auto' })
-      gsap.to(lis, { duration: 0.15, delay: 0.06, autoAlpha: 1, x: 0, stagger: 0.03 })
+      track(animate(this.$currentUserDropdown, { height: 'auto' }, { duration: 0.18, ease: ease.power2Out }))
+      this.showItems(lis, { duration: 0.15, delay: stagger(0.03, { startDelay: 0.06 }) })
       this.currentUserDropdownOpen = true
     }
+  },
+
+  // GSAP's autoAlpha: items are faded and then hidden, so a collapsed menu
+  // cannot be tabbed into. A fade that is interrupted never finishes, and so
+  // never hides items that are being shown again.
+  hideItems(items, options) {
+    const animation = animate(Array.from(items).reverse(), { opacity: 0, x: -6 }, options)
+    this.animations.track(animation).finished.then(() => set(items, { visibility: 'hidden' }))
+  },
+
+  showItems(items, options) {
+    set(items, { visibility: 'visible' })
+    this.animations.track(animate(items, { opacity: [0, 1], x: [-6, 0] }, options))
   },
 
   // Which sidebar sections are open survives page loads: the keys (item
@@ -100,14 +129,18 @@ export default app => ({
   },
 
   // Opens a section at once, without the animation: on load, for sections
-  // that were open, or that hold the current page.
+  // that were open, or that hold the current page. Instant animations rather
+  // than plain styles, so Motion knows where a later toggle starts from.
   openDropdown(trigger) {
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
-    trigger.dataset.height = dl.offsetHeight
-    gsap.set(dd, { opacity: 1, display: 'block' })
-    gsap.set(dd.querySelectorAll('li'), { autoAlpha: 1, x: 0 })
-    gsap.set(dl, { height: 'auto' })
+    const lis = dd.querySelectorAll('li')
+    // Measured once, while the section is closed: see toggleCurrentUserDropdown.
+    trigger.dataset.height ||= dl.offsetHeight
+    set(dd, { opacity: 1, display: 'block' })
+    set(lis, { visibility: 'visible' })
+    animate(lis, { opacity: 1, x: 0 }, { duration: 0 })
+    animate(dl, { height: 'auto' }, { duration: 0 })
     trigger.classList.add('open')
   },
 
@@ -115,35 +148,30 @@ export default app => ({
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
     const lis = dd.querySelectorAll('li')
+    const { track } = this.animations
 
     if (trigger.classList.contains('open')) {
-      gsap.to(Array.from(lis).reverse(), { duration: 0.1, autoAlpha: 0, x: -6, stagger: 0.015 })
-      gsap.to(dl, { duration: 0.18, delay: 0.04, ease: 'power2.inOut', height: trigger.dataset.height })
+      this.hideItems(lis, { duration: 0.1, delay: stagger(0.015) })
+      track(
+        animate(
+          dl,
+          { height: `${trigger.dataset.height}px` },
+          { duration: 0.18, delay: 0.04, ease: ease.power2InOut }
+        )
+      )
       trigger.classList.remove('open')
       this.saveOpen(trigger.dataset.navKey, false)
     } else {
-      trigger.dataset.height = dl.offsetHeight
-      gsap.set(dl, { height: trigger.dataset.height })
-      gsap.set(lis, { autoAlpha: 0, x: -6 })
-      gsap.set(dd, { opacity: 1, display: 'block' })
-      gsap.to(dl, { duration: 0.18, ease: 'power2.out', height: 'auto' })
-      gsap.to(lis, { duration: 0.14, delay: 0.05, autoAlpha: 1, x: 0, stagger: 0.02 })
+      trigger.dataset.height ||= dl.offsetHeight
+      set(dd, { opacity: 1, display: 'block' })
+      track(animate(dl, { height: 'auto' }, { duration: 0.18, ease: ease.power2Out }))
+      this.showItems(lis, { duration: 0.14, delay: stagger(0.02, { startDelay: 0.05 }) })
       trigger.classList.add('open')
       this.saveOpen(trigger.dataset.navKey, true)
     }
   },
 
   setupNavDropdowns() {
-    const targets = [
-      Dom.find('#navigation-content header'),
-      Dom.find('#navigation-content .current-user'),
-      Dom.all('#navigation-content .navigation-section > *')
-    ]
-
-    if (targets.filter(t => t !== null).length > 0) {
-      // gsap.set(targets, { opacity: 0, x: -10 })
-    }
-
     const dropdowns = document.querySelectorAll('nav [data-nav-expand]')
     const saved = this.savedOpen()
     const path = window.location.pathname
@@ -160,18 +188,9 @@ export default app => ({
     })
   },
 
-  animateNav() {
-    const targets = [
-      Dom.find('#navigation-content header'),
-      Dom.find('#navigation-content .current-user'),
-      Dom.all('#navigation-content .navigation-section > *')
-    ]
-    gsap.to(targets, { duration: 0.35, x: 0, stagger: 0.02, ease: 'circ.out' })
-    gsap.to(targets, { duration: 0.35, opacity: 1, stagger: 0.02, ease: 'none' })
-  },
-
   destroyed() {
     window.removeEventListener('phx:page-loading-stop', this.refreshActive)
+    this.animations.stopAll()
     console.log('(!) Brando.Navigation destroyed')
   }
 })

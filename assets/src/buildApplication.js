@@ -1,4 +1,4 @@
-import { Application, Dom, Moonwalk, Events, gsap } from '@brandocms/jupiter'
+import { Application, Dom, Events } from '@brandocms/jupiter'
 
 import { Socket } from 'phoenix'
 import topbar from './topbar'
@@ -13,17 +13,7 @@ import installFloatingDropdowns from './floatingDropdowns'
 import installConfirm from './confirm'
 import configureFader from './config/FADER'
 import { alertError } from './alerts'
-
-const prmEl = Dom.find('meta[name="prefers_reduced_motion"]')
-const PREFERS_REDUCED_MOTION = prmEl
-  ? prmEl.getAttribute('content') === 'true'
-    ? true
-    : false
-  : false
-
-if (PREFERS_REDUCED_MOTION) {
-  gsap.globalTimeline.timeScale(200)
-}
+import { animate, ease, sequence, set, stagger } from './motion'
 
 topbar.config({
   barThickness: 1,
@@ -86,9 +76,11 @@ export default (hooks, enableDebug = false) => {
     // if login screen, do some animations
     const el = Dom.find('#application-login')
     if (el) {
-      const timeline = gsap.timeline()
-      const loginBox = Dom.find('#application-login .login-box')
-      const figureWrapper = Dom.find('#application-login .figure-wrapper')
+      // Lists rather than single elements: Motion throws on a missing target.
+      const loginBox = Dom.all(el, '.login-box')
+      const figureWrapper = Dom.all(el, '.figure-wrapper')
+      const versioning = Dom.all('.brando-versioning')
+      const fields = ['.title', '.field-wrapper', '.primary'].flatMap(selector => Dom.all(selector))
 
       // Run once, whichever trigger arrives first. The reveal is driven by the
       // element's own mount rather than a fixed delay, so it starts as soon as
@@ -103,55 +95,33 @@ export default (hooks, enableDebug = false) => {
 
         // Hide the pieces before lifting the rule, so the container never paints
         // fully assembled for a frame on its way to the animation.
-        gsap.set(loginBox, { opacity: 0 })
-        gsap.set(figureWrapper, { opacity: 0 })
-
-        gsap.set(
-          ['.field-wrapper', '.brando-versioning', '.primary', '.title'],
-          { opacity: 0 }
-        )
-        gsap.set('.login-box', { y: 35 })
-        gsap.set(['.field-wrapper', '.primary', '.title'], { x: -15 })
-        gsap.set('.figure-wrapper', { x: -10 })
-        gsap.set('.brando-versioning', { xPercent: -200 })
+        set(loginBox, { opacity: 0, transform: 'translateY(35px)' })
+        set(figureWrapper, { opacity: 0, transform: 'translateX(-10px)' })
+        set(fields, { opacity: 0, transform: 'translateX(-15px)' })
+        set(versioning, { opacity: 0, transform: 'translateX(-200%)' })
 
         // Hand the container from the stylesheet rule to an inline opacity
-        // before lifting the rule, so the timeline's opening beat still fades it
+        // before lifting the rule, so the sequence's opening beat still fades it
         // in rather than finding it already opaque and idling for half a second.
-        // From here visibility is GSAP's inline style, so a patch that strips it
+        // From here visibility is an inline style, so a patch that strips it
         // leaves the form visible rather than blank.
-        gsap.set(el, { opacity: 0 })
+        set(el, { opacity: 0 })
         document.documentElement.classList.add('login-revealed')
 
         // Only now is there something worth looking at — tell the fader to lift.
         window.dispatchEvent(new CustomEvent('brando:login-revealing'))
 
-        timeline
-          .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
-          .to('.login-box', { y: 0, duration: 0.5, ease: 'power3.out' })
-          .to('.login-box', { opacity: 1, duration: 0.5, ease: 'none' }, '<')
-          .to(
-            ['.title', '.field-wrapper', '.primary'],
-            { x: 0, duration: 0.35, ease: 'circ.out', stagger: 0.1 },
-            '<0.25'
-          )
-          .to(
-            ['.title', '.field-wrapper', '.primary'],
-            { opacity: 1, duration: 0.35, ease: 'none', stagger: 0.1 },
-            '<'
-          )
-          .to(
-            '.figure-wrapper',
-            { x: 0, duration: 0.35, ease: 'circ.out' },
-            '<'
-          )
-          .to(
-            '.figure-wrapper',
-            { opacity: 1, duration: 0.35, ease: 'none' },
-            '<'
-          )
-          .to('.brando-versioning', { opacity: 1, ease: 'none' })
-          .to('.brando-versioning', { xPercent: 0, ease: 'circ.out' })
+        sequence([
+          [el, { opacity: 1 }, { duration: 0.5, ease: ease.none }],
+          [loginBox, { y: 0 }, { duration: 0.5, ease: ease.power3Out }],
+          [loginBox, { opacity: 1 }, { duration: 0.5, ease: ease.none, at: '<' }],
+          [figureWrapper, { x: 0 }, { duration: 0.35, ease: ease.circOut, at: '<0.25' }],
+          [figureWrapper, { opacity: 1 }, { duration: 0.35, ease: ease.none, at: '<' }],
+          [fields, { x: 0 }, { duration: 0.35, ease: ease.circOut, delay: stagger(0.1), at: '<' }],
+          [fields, { opacity: 1 }, { duration: 0.35, ease: ease.none, delay: stagger(0.1), at: '<' }],
+          [versioning, { opacity: 1 }, { duration: 0.5, ease: ease.none }],
+          [versioning, { x: 0 }, { duration: 0.5, ease: ease.circOut }],
+        ])
       }
 
       window.addEventListener('brando:login-mounted', revealLogin, { once: true })
@@ -240,7 +210,7 @@ export default (hooks, enableDebug = false) => {
 
   if ($progressWrapper) {
     $progress = Dom.find($progressWrapper, '.progress')
-    gsap.set($progressWrapper, { yPercent: -100 })
+    set($progressWrapper, { transform: 'translateY(-100%)' })
   }
 
   if (app.userToken) {
@@ -268,19 +238,11 @@ export default (hooks, enableDebug = false) => {
     })
 
     app.userChannel.on('progress:show', () => {
-      gsap.to($progressWrapper, {
-        yPercent: 0,
-        ease: 'circ.out',
-        duration: 0.35,
-      })
+      animate($progressWrapper, { y: '0%' }, { ease: ease.circOut, duration: 0.35 })
     })
 
     app.userChannel.on('progress:hide', () => {
-      gsap.to($progressWrapper, {
-        yPercent: -100,
-        ease: 'circ.in',
-        duration: 0.35,
-      })
+      animate($progressWrapper, { y: '-100%' }, { ease: ease.circIn, duration: 0.35 })
     })
 
     app.userChannel.on(
@@ -299,7 +261,7 @@ export default (hooks, enableDebug = false) => {
 
           if (parseInt(percent) === 100) {
             keyEl.remove()
-            gsap.set($progressWrapper, { height: getHeights() })
+            set($progressWrapper, { height: `${getHeights()}px` })
           }
         } else {
           const updateProgress = document.createRange()
@@ -319,10 +281,10 @@ export default (hooks, enableDebug = false) => {
             `)
           $progress.append(updateProgress)
           const keyEl = Dom.find(`[data-progress-key="${key}"]`)
-          gsap.set(keyEl, { opacity: 1 })
+          set(keyEl, { opacity: 1 })
         }
 
-        gsap.set($progressWrapper, { height: getHeights() })
+        set($progressWrapper, { height: `${getHeights()}px` })
       }
     )
 

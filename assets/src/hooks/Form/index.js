@@ -1,4 +1,3 @@
-import { Dom, Events, gsap } from '@brandocms/jupiter'
 import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
 import locateBlock from './locateBlock'
