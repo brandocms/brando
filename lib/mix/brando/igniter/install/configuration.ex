@@ -156,6 +156,10 @@ if Code.ensure_loaded?(Igniter) do
         Module.concat(project.app_module, Villain.Parser)
       )
       |> configure_tenancy(tenancy.mode, tenancy.site_key)
+      # Brando depends on Swoosh, which will not start without an API client;
+      # Req is already one of Brando's dependencies.
+      |> Mix.Brando.Igniter.SourceUpgrade.configure_swoosh_client()
+      |> Mix.Brando.Igniter.SourceUpgrade.configure_brando_mailer(Module.concat(project.app_module, Mailer))
     end
 
     def configure_tenancy(igniter, mode, key) do

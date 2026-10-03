@@ -19,6 +19,13 @@ config :brando, Brando.Mailer,
   reply_to: "post@example.com"
 ```
 
+Swoosh itself needs an API client to start; `mix brando.install` and
+`mix brando.migrate55` set Req, which Brando already depends on:
+
+```elixir
+config :swoosh, api_client: Swoosh.ApiClient.Req
+```
+
 `:from` must be an address your mail provider sends for. Given as a plain
 address, it is sent in the name of the site's identity. `:reply_to` is
 optional. Configure the mailer's production adapter and credentials in

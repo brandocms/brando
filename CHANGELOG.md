@@ -450,7 +450,11 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `Brando.Mailer.Layout` puts a message in a shared HTML and plain-text layout.
   Without a mailer, sending raises in development and test, and logs a warning
   in production. `Brando.Users.UserNotifier` sends real email now instead of
-  logging it. Brando depends on Swoosh. See the [Email guide](guides/email.md).
+  logging it. Brando depends on Swoosh now, and Swoosh does not start without
+  an API client: an application created without a mailer must set one, as
+  `mix brando.migrate55` and `mix brando.install` do
+  (`config :swoosh, api_client: Swoosh.ApiClient.Req`). See the
+  [Email guide](guides/email.md).
 
 - **Forms.** Editors build forms visitors fill in, such as a contact form, under
   **Content → Forms**, laying out fields on the same 12-unit canvas as module
