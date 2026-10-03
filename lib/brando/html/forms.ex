@@ -68,6 +68,12 @@ defmodule Brando.HTML.Forms do
   inline script submits it with `fetch` and shows errors and the success
   message in place; `enhance={false}` leaves it out, and `nonce` sets a CSP
   nonce on it. `:success` and `:failure` replace the two messages.
+
+  A form with a page to go to once it is sent (`redirect_url`) sends the
+  visitor there instead of showing the success message.
+
+  Inside a LiveView, render it with `Brando.HTML.Forms.LiveForm`, which takes
+  the same slots and validates as the visitor types.
   """
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
@@ -95,6 +101,8 @@ defmodule Brando.HTML.Forms do
   attr :except, :list, default: [], doc: "field keys to leave out"
   attr :values, :map, default: %{}, doc: "submitted values by field key"
   attr :errors, :map, default: %{}, doc: "error messages by field key"
+  attr :sent, :boolean, default: false, doc: "shows the success message in place of the fields"
+  attr :failure_message, :string, default: nil, doc: "shows this in the failure message"
   attr :classes, :map, default: %{}, doc: "extra classes by part: #{Enum.join(@parts, ", ")}"
   attr :rest, :global
 
@@ -131,11 +139,11 @@ defmodule Brando.HTML.Forms do
     <.dynamic_tag
       tag_name={if @preview, do: "div", else: "form"}
       id={@dom_id}
-      class={["site-form", @classes[:form]]}
+      class={["site-form", @sent && "is-sent", @classes[:form]]}
       data-form-key={@form.key}
       {@root_attrs}
     >
-      <div :if={@intro != [] or present?(@form.intro)} class="site-form-intro">
+      <div :if={@intro != [] or present?(@form.intro)} class="site-form-intro" hidden={@sent}>
         <%= if @intro != [] do %>
           {render_slot(@intro)}
         <% else %>
@@ -143,7 +151,12 @@ defmodule Brando.HTML.Forms do
         <% end %>
       </div>
 
-      <fieldset :for={group <- @groups} class={["site-form-section", @classes[:section]]} disabled={@preview}>
+      <fieldset
+        :for={group <- @groups}
+        class={["site-form-section", @classes[:section]]}
+        disabled={@preview}
+        hidden={@sent}
+      >
         <%= if group.section do %>
           <%= if slot = find_section_slot(@section, group.section) do %>
             {render_slot(slot, group.section)}
@@ -190,10 +203,19 @@ defmodule Brando.HTML.Forms do
         >
           <label>{field_hint(@form)} <input type="text" name="_hp" value="" tabindex="-1" autocomplete="off" /></label>
         </div>
-        <div :if={@turnstile_key} class="cf-turnstile" data-sitekey={@turnstile_key} data-language={@form.language}></div>
+        <%!-- Ignored by LiveView, which would otherwise remove the widget's iframe. --%>
+        <div
+          :if={@turnstile_key}
+          id={"#{@dom_id}-turnstile"}
+          class="cf-turnstile"
+          data-sitekey={@turnstile_key}
+          data-language={@form.language}
+          phx-update="ignore"
+        >
+        </div>
       <% end %>
 
-      <div class="site-form-actions">
+      <div class="site-form-actions" hidden={@sent}>
         <button type="submit" class={["site-form-submit", @classes[:submit]]} disabled={@preview}>
           <%= if @submit != [] do %>
             {render_slot(@submit)}
@@ -204,18 +226,31 @@ defmodule Brando.HTML.Forms do
       </div>
 
       <%= unless @preview do %>
-        <div id={"#{@dom_id}-sent"} class="site-form-status site-form-sent" role="status" tabindex="-1">
+        <div
+          id={"#{@dom_id}-sent"}
+          class={["site-form-status site-form-sent", @sent && "is-shown"]}
+          role="status"
+          tabindex="-1"
+        >
           <%= if @success != [] do %>
             {render_slot(@success)}
           <% else %>
             <p>{Brando.Forms.success_message(@form)}</p>
           <% end %>
         </div>
-        <div id={"#{@dom_id}-failed"} class="site-form-status site-form-failed" role="alert" tabindex="-1">
-          <%= if @failure != [] do %>
-            {render_slot(@failure)}
-          <% else %>
-            <p>{failure_message(@form)}</p>
+        <div
+          id={"#{@dom_id}-failed"}
+          class={["site-form-status site-form-failed", @failure_message && "is-shown"]}
+          role="alert"
+          tabindex="-1"
+        >
+          <%= cond do %>
+            <% @failure_message -> %>
+              <p>{@failure_message}</p>
+            <% @failure != [] -> %>
+              {render_slot(@failure)}
+            <% true -> %>
+              <p>{failure_message(@form)}</p>
           <% end %>
         </div>
       <% end %>
@@ -268,6 +303,10 @@ defmodule Brando.HTML.Forms do
         .then(function () { return fetch(form.action, { method: 'POST', body: new FormData(form), headers: accept, credentials: 'same-origin' }); })
         .then(function (response) { return response.json().catch(function () { return {}; }).then(function (body) { return { ok: response.ok, body: body }; }); })
         .then(function (result) {
+          if (result.ok && result.body.ok && result.body.redirect) {
+            window.location.assign(result.body.redirect);
+            return;
+          }
           if (result.ok && result.body.ok) {
             form.classList.add('is-sent');
             form.querySelectorAll('.site-form-section, .site-form-actions, .site-form-intro').forEach(function (el) { el.hidden = true; });

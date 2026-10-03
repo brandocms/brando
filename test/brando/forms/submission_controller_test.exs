@@ -8,7 +8,7 @@ defmodule Brando.Forms.SubmissionControllerTest do
     Brando.Forms.RateLimit.reset()
     user = Factory.insert(:random_user)
 
-    {:ok, _form} =
+    {:ok, form} =
       Forms.create_form(
         %{
           "title" => "Contact",
@@ -20,7 +20,7 @@ defmodule Brando.Forms.SubmissionControllerTest do
         user
       )
 
-    :ok
+    %{form: form, user: user}
   end
 
   defp post_form(conn, fields, headers) do
@@ -55,6 +55,36 @@ defmodule Brando.Forms.SubmissionControllerTest do
 
     failed = post_form(build_conn(), %{"email" => ""}, referer)
     assert redirected_to(failed, 303) == "http://www.example.com/contact?x=1#contact-box-failed"
+  end
+
+  describe "with a page to go to once it is sent" do
+    setup %{form: form, user: user} do
+      {:ok, _} = Forms.update_form(form.id, %{"redirect_url" => "/thank-you?from=contact"}, user)
+      :ok
+    end
+
+    test "a plain post goes to it, resolved against the page the form was on", %{conn: conn} do
+      referer = [{"referer", "http://www.example.com/contact#top"}]
+
+      sent = post_form(conn, %{"email" => "ada@example.com"}, referer)
+      assert redirected_to(sent, 303) == "http://www.example.com/thank-you?from=contact"
+
+      # A failure still goes back to the form
+      failed = post_form(build_conn(), %{"email" => ""}, referer)
+      assert redirected_to(failed, 303) == "http://www.example.com/contact#contact-box-failed"
+    end
+
+    test "a JSON reply carries it for the form's script", %{conn: conn} do
+      conn = post_form(conn, %{"email" => "ada@example.com"}, @json)
+      assert %{"ok" => true, "redirect" => "/thank-you?from=contact"} = json_response(conn, 200)
+    end
+
+    test "a full address is gone to as it is", %{conn: conn, form: form, user: user} do
+      {:ok, _} = Forms.update_form(form.id, %{"redirect_url" => "https://example.com/thanks"}, user)
+
+      sent = post_form(conn, %{"email" => "ada@example.com"}, [{"referer", "http://www.example.com/contact"}])
+      assert redirected_to(sent, 303) == "https://example.com/thanks"
+    end
   end
 
   test "a post from another site is refused", %{conn: conn} do

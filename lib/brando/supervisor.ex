@@ -103,7 +103,9 @@ defmodule Brando.Supervisor do
               # Delete bucket objects of client-direct uploads that never finalized
               {"45 4 * * *", Brando.Worker.UploadIntentReaper},
               # Delete local files no environment has referenced for at least 24 hours
-              {"0 5 * * *", Brando.Worker.MediaOrphanCleanup}
+              {"0 5 * * *", Brando.Worker.MediaOrphanCleanup},
+              # Delete form submissions older than their form's retention
+              {"15 5 * * *", Brando.Worker.FormSubmissionPurger}
             ] ++ extra_oban_cron_jobs(),
           timezone: "Etc/UTC"
         ],

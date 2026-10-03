@@ -27,6 +27,9 @@
   .brando-form fieldset.inline > .brando-input { margin: 0; flex: 1 1 0; min-width: 0; }
   .brando-form fieldset.inline > legend { flex-basis: 100%; margin-bottom: 0; }
   .brando-form fieldset:not(.inline) > .brando-input + .brando-input { margin-top: 16px; }
+  /* A subform renders in a bare fieldset beside the inputs of its fieldset. */
+  .brando-form fieldset:not(.inline) > .brando-input + fieldset,
+  .brando-form fieldset:not(.inline) > fieldset + .brando-input { margin-top: 16px; }
   .brando-form .field-wrapper { margin-bottom: 0; }
   .field-wrapper > .label-wrapper { margin-bottom: 8px; }
   .field-wrapper > .label-wrapper label { font-size: 13px; line-height: 20px; color: #46554c; }

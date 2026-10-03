@@ -14844,3 +14844,93 @@ msgstr "Ikke lagret: innlegget har feil i felt som ikke vises her."
 #, elixir-autogen, elixir-format
 msgid "Fix them in the full editor"
 msgstr "Rett dem i full redigering"
+
+#: lib/brando/forms/form/validate.ex:74
+#, elixir-autogen, elixir-format
+msgid "Add an Email field to send a confirmation to."
+msgstr "Legg til et e-postfelt å sende kvitteringen til."
+
+#: lib/brando/forms/form/validate.ex:49
+#, elixir-autogen, elixir-format
+msgid "Enter a path starting with /, or an address starting with https://"
+msgstr "Skriv inn en sti som begynner med /, eller en adresse som begynner med https://"
+
+#: lib/brando/forms/notification.ex:168
+#, elixir-autogen, elixir-format
+msgid "From the page"
+msgstr "Fra siden"
+
+#: lib/brando/forms/notification.ex:143
+#, elixir-autogen, elixir-format
+msgid "New submission: %{form}"
+msgstr "Ny innsending: %{form}"
+
+#: lib/brando/forms/notification.ex:128
+#, elixir-autogen, elixir-format
+msgid "No address to send from is configured."
+msgstr "Ingen avsenderadresse er satt opp."
+
+#: lib/brando/forms/notification.ex:127
+#, elixir-autogen, elixir-format
+msgid "No mailer is configured, so the site cannot send email."
+msgstr "Ingen e-posttjeneste er satt opp, så nettstedet kan ikke sende e-post."
+
+#: lib/brando_admin/live/forms/submissions_live.ex:265
+#, elixir-autogen, elixir-format
+msgid "Not sent"
+msgstr "Ikke sendt"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:229
+#, elixir-autogen, elixir-format
+msgid "Notification queued"
+msgstr "Varselet står i kø"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:227
+#, elixir-autogen, elixir-format
+msgid "Notification sent"
+msgstr "Varselet er sendt"
+
+#: lib/brando/forms/notification.ex:171
+#, elixir-autogen, elixir-format
+msgid "Read it in the admin"
+msgstr "Les den i admin"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Send again"
+msgstr "Send på nytt"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:263
+#, elixir-autogen, elixir-format
+msgid "Sent"
+msgstr "Sendt"
+
+#: lib/brando/forms/notification.ex:149
+#, elixir-autogen, elixir-format
+msgid "Sent with the form %{form}."
+msgstr "Sendt med skjemaet %{form}."
+
+#: lib/brando/forms/notification.ex:130
+#, elixir-autogen, elixir-format
+msgid "The form has been deleted."
+msgstr "Skjemaet er slettet."
+
+#: lib/brando/forms/notification.ex:129
+#, elixir-autogen, elixir-format
+msgid "The form has no recipients."
+msgstr "Skjemaet har ingen mottakere."
+
+#: lib/brando_admin/live/forms/submissions_live.ex:228
+#, elixir-autogen, elixir-format
+msgid "The notification could not be sent"
+msgstr "Varselet kunne ikke sendes"
+
+#: lib/brando/forms/notification.ex:219
+#, elixir-autogen, elixir-format
+msgid "What you sent"
+msgstr "Det du sendte"
+
+#: lib/brando_admin/live/forms/submissions_live.ex:126
+#, elixir-autogen, elixir-format
+msgid "Notification"
+msgstr "Varsel"

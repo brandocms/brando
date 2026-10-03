@@ -142,6 +142,56 @@ defmodule Brando.Forms.FormTagTest do
     assert html =~ "$csrftoken"
   end
 
+  test "a form lists the pages holding it in any language, and its delete dialog names them", %{
+    user: user,
+    english: english,
+    norwegian: norwegian
+  } do
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module, %{
+          code: "{% form contact %}",
+          name: "Form",
+          namespace: "all",
+          help_text: "Help",
+          vars: [%{key: "contact", label: "Contact", type: "form"}]
+        }),
+        user
+      )
+
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: "Get in touch",
+        uri: "contact",
+        language: :en,
+        status: :published,
+        template: "default.html",
+        creator_id: user.id
+      })
+
+    params = %{
+      "uid" => Brando.Utils.generate_uid(),
+      "type" => "module",
+      "module_id" => module.id,
+      "creator_id" => user.id,
+      "source" => to_string(Brando.Pages.Page.Blocks),
+      "vars" => [%{"key" => "contact", "label" => %{"en" => "Contact"}, "type" => "form", "form_id" => english.id}]
+    }
+
+    block =
+      %Brando.Content.Block{} |> Brando.Content.Block.recursive_block_changeset(params, user) |> Brando.Repo.insert!()
+
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+
+    assert [%{label: "Get in touch", url: url}] = Forms.list_usage("contact")
+    assert url =~ "/admin/pages/update/#{page.id}"
+    assert Forms.list_usage("newsletter") == []
+
+    # Deleting the Norwegian form takes it from Norwegian pages holding the form
+    description = BrandoAdmin.LiveView.Listing.DeleteDescription.describe(Form, Brando.Repo.get!(Form, norwegian.id))
+    assert description.message =~ "Get in touch"
+  end
+
   test "saving a form re-renders the pages that hold it", %{user: user, english: english} do
     {:ok, module} =
       Brando.Content.create_module(

@@ -7,6 +7,13 @@ defmodule Brando.Forms.Form do
   translation: the source decides which fields there are, their keys, types,
   layout and option values; a translation words them in its own language. A
   form is addressed by `key`, which is the same in every language.
+
+  A submission is emailed to the form's `recipients`, and can be confirmed to
+  the visitor (see `Brando.Forms.Notification`). With `redirect_url` the
+  visitor goes there once the form is sent; with `retention_days`, older
+  submissions are deleted every night (`Brando.Worker.FormSubmissionPurger`).
+  The source owns the recipients, the confirmation switch and the retention;
+  each language words its own subjects, confirmation and redirect.
   """
   use Brando.Blueprint,
     application: "Brando",
@@ -21,6 +28,7 @@ defmodule Brando.Forms.Form do
   import Brando.Blueprint.Listings.Components.Core
 
   alias Brando.Forms.Field
+  alias Brando.Forms.Recipient
 
   trait :creator
   trait :timestamped
@@ -30,7 +38,10 @@ defmodule Brando.Forms.Form do
     mode: :synchronized,
     source_controlled_fields: [
       :key,
-      fields: [:key, :type, :required, :width, :new_row, :option_values]
+      :confirmation,
+      :retention_days,
+      fields: [:key, :type, :required, :width, :new_row, :option_values],
+      recipients: [:name, :email, :bcc]
     ]
 
   trait Brando.Forms.Form.Validate
@@ -44,6 +55,12 @@ defmodule Brando.Forms.Form do
     attribute :intro, :text
     attribute :submit_label, :string
     attribute :success_message, :text
+    attribute :redirect_url, :string
+    attribute :subject, :string
+    attribute :confirmation, :boolean, default: false
+    attribute :confirmation_subject, :string
+    attribute :confirmation_message, :text
+    attribute :retention_days, :integer
   end
 
   relations do
@@ -54,6 +71,12 @@ defmodule Brando.Forms.Form do
       sort_param: :sort_fields_ids,
       on_replace: :delete,
       preload_order: [asc: :sequence]
+
+    relation :recipients, :embeds_many,
+      module: Recipient,
+      on_replace: :delete,
+      drop_param: :drop_recipients_ids,
+      sort_param: :sort_recipients_ids
   end
 
   translations do
@@ -137,10 +160,74 @@ defmodule Brando.Forms.Form do
               t(
                 "Shown in place of the form once it has been sent. Leave empty to use the site's wording, set under Forms → Messages."
               )
+
+          input :redirect_url, :text,
+            label: t("Page after sending"),
+            instructions:
+              t(
+                "A path on the site, like /thank-you, or a full address. Visitors go there once the form is sent, instead of seeing the success message."
+              )
+        end
+      end
+
+      tab t("Submissions") do
+        fieldset do
+          size :half
+          label t("Notification")
+
+          input :subject, :text,
+            label: t("Subject"),
+            instructions:
+              t(
+                "Put in what a visitor filled in by its field key, like {{ name }}. Leave empty for “New submission” and the form's title. Replies go to the email address the visitor filled in."
+              )
+
+          inputs_for :recipients do
+            label t("Recipients")
+            style :inline
+            cardinality :many
+            default &__MODULE__.default_recipient/2
+
+            input :name, :text, label: t("Name", Recipient)
+            input :email, :email, label: t("Email", Recipient)
+            input :bcc, :toggle, label: t("Blind copy", Recipient)
+          end
+        end
+
+        fieldset do
+          size :half
+          label t("Confirmation to the visitor")
+
+          input :confirmation, :toggle,
+            label: t("Send a confirmation"),
+            instructions:
+              t("Emailed to the address the visitor filled in, with a copy of what they sent. Needs an Email field.")
+
+          input :confirmation_subject, :text,
+            label: t("Subject"),
+            instructions: t("Leave empty to use the form's title.")
+
+          input :confirmation_message, :textarea,
+            label: t("Message"),
+            instructions: t("Shown above the copy. Leave empty to use the success message.")
+        end
+
+        # A third: two halves fill the row above, and a third half would sit
+        # in the right column.
+        fieldset do
+          size :third
+          label t("Keeping submissions")
+
+          input :retention_days, :number,
+            label: t("Delete submissions after (days)"),
+            instructions: t("Submissions older than this are deleted every night. Leave empty to keep them.")
         end
       end
     end
   end
+
+  @doc false
+  def default_recipient(_form, _field), do: %Recipient{}
 
   # Rendered with every validate of the form, so it links without counting.
   def submissions_link(assigns) do

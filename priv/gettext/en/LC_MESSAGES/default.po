@@ -14307,3 +14307,93 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "No linked entries yet."
 msgstr "No linked entries yet."
+
+#: lib/brando/forms/form/validate.ex:74
+#, elixir-autogen, elixir-format
+msgid "Add an Email field to send a confirmation to."
+msgstr ""
+
+#: lib/brando/forms/form/validate.ex:49
+#, elixir-autogen, elixir-format
+msgid "Enter a path starting with /, or an address starting with https://"
+msgstr ""
+
+#: lib/brando/forms/notification.ex:168
+#, elixir-autogen, elixir-format
+msgid "From the page"
+msgstr ""
+
+#: lib/brando/forms/notification.ex:143
+#, elixir-autogen, elixir-format
+msgid "New submission: %{form}"
+msgstr ""
+
+#: lib/brando/forms/notification.ex:128
+#, elixir-autogen, elixir-format
+msgid "No address to send from is configured."
+msgstr ""
+
+#: lib/brando/forms/notification.ex:127
+#, elixir-autogen, elixir-format
+msgid "No mailer is configured, so the site cannot send email."
+msgstr ""
+
+#: lib/brando_admin/live/forms/submissions_live.ex:265
+#, elixir-autogen, elixir-format
+msgid "Not sent"
+msgstr ""
+
+#: lib/brando_admin/live/forms/submissions_live.ex:229
+#, elixir-autogen, elixir-format
+msgid "Notification queued"
+msgstr ""
+
+#: lib/brando_admin/live/forms/submissions_live.ex:227
+#, elixir-autogen, elixir-format
+msgid "Notification sent"
+msgstr ""
+
+#: lib/brando/forms/notification.ex:171
+#, elixir-autogen, elixir-format
+msgid "Read it in the admin"
+msgstr ""
+
+#: lib/brando_admin/live/forms/submissions_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Send again"
+msgstr ""
+
+#: lib/brando_admin/live/forms/submissions_live.ex:263
+#, elixir-autogen, elixir-format
+msgid "Sent"
+msgstr ""
+
+#: lib/brando/forms/notification.ex:149
+#, elixir-autogen, elixir-format
+msgid "Sent with the form %{form}."
+msgstr ""
+
+#: lib/brando/forms/notification.ex:130
+#, elixir-autogen, elixir-format
+msgid "The form has been deleted."
+msgstr ""
+
+#: lib/brando/forms/notification.ex:129
+#, elixir-autogen, elixir-format
+msgid "The form has no recipients."
+msgstr ""
+
+#: lib/brando_admin/live/forms/submissions_live.ex:228
+#, elixir-autogen, elixir-format
+msgid "The notification could not be sent"
+msgstr ""
+
+#: lib/brando/forms/notification.ex:219
+#, elixir-autogen, elixir-format
+msgid "What you sent"
+msgstr ""
+
+#: lib/brando_admin/live/forms/submissions_live.ex:126
+#, elixir-autogen, elixir-format
+msgid "Notification"
+msgstr ""

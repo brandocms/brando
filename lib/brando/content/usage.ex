@@ -1,7 +1,7 @@
 defmodule Brando.Content.Usage do
   @moduledoc """
   Where media is used: which entries show an image, a video, a gallery or a
-  file. The admin shows it beside each asset so an editor can recognise what
+  file — and where a form is, which blocks hold in a form variable. The admin shows it beside each asset so an editor can recognise what
   they are looking at and see what is safe to remove.
 
   Media is used from:
@@ -20,7 +20,7 @@ defmodule Brando.Content.Usage do
 
   alias Brando.Content.BlockReferences
 
-  @type kind :: :image | :video | :gallery | :file
+  @type kind :: :image | :video | :gallery | :file | :form
   @type usage :: %{
           label: String.t(),
           url: String.t() | nil,
@@ -29,7 +29,7 @@ defmodule Brando.Content.Usage do
           status: atom() | nil
         }
 
-  @kinds [:image, :video, :gallery, :file]
+  @kinds [:image, :video, :gallery, :file, :form]
   @gallery Module.concat(["Brando", "Galleries", "Gallery"])
   @gallery_object Module.concat(["Brando", "Galleries", "GalleryObject"])
   @page Module.concat(["Brando", "Pages", "Page"])
@@ -139,12 +139,29 @@ defmodule Brando.Content.Usage do
     Enum.uniq(in_blocks(kind, ids) ++ in_vars(kind, ids) ++ in_galleries(kind, ids) ++ in_fields(kind, ids))
   end
 
-  defp in_blocks(kind, ids) do
-    rows =
-      (by_ids(from(r in "content_refs", where: not is_nil(r.block_id)), kind, ids) ++
-         by_ids(from(v in "content_vars", where: not is_nil(v.block_id)), kind, ids, :block_id))
-      |> Enum.uniq()
+  # A form is only ever in a variable, of a block or of a block's table row.
+  defp in_blocks(:form, ids) do
+    from(v in "content_vars",
+      left_join: row in "content_table_rows",
+      on: row.id == v.table_row_id,
+      where: not is_nil(v.block_id) or not is_nil(row.block_id),
+      select: {v.form_id, coalesce(v.block_id, row.block_id)}
+    )
+    |> where_ids(:form_id, ids)
+    |> Brando.Repo.all()
+    |> Enum.uniq()
+    |> credit_blocks()
+  end
 
+  defp in_blocks(kind, ids) do
+    (by_ids(from(r in "content_refs", where: not is_nil(r.block_id)), kind, ids) ++
+       by_ids(from(v in "content_vars", where: not is_nil(v.block_id)), kind, ids, :block_id))
+    |> Enum.uniq()
+    |> credit_blocks()
+  end
+
+  # {id, block_id} to {id, entry}, for the entries owning the blocks.
+  defp credit_blocks(rows) do
     entries = rows |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> BlockReferences.list_entries_for_block_ids()
 
     for {id, block_id} <- rows, entry <- Map.get(entries, block_id, []), do: {id, entry}

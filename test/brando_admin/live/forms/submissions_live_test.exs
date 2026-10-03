@@ -75,6 +75,30 @@ defmodule BrandoAdmin.Forms.SubmissionsLiveTest do
     assert Forms.count_submissions("contact") == 0
   end
 
+  test "shows whether a submission was emailed, and sends it again", %{conn: conn, current_user: user} do
+    form = Forms.get_published_form("contact", "en")
+    {:ok, _} = Forms.update_form(form.id, %{"recipients" => [%{"email" => "post@example.com"}]}, user)
+
+    previous = Application.get_env(:brando, :mailer)
+    on_exit(fn -> Application.put_env(:brando, :mailer, previous) end)
+    Application.put_env(:brando, :mailer, BrandoIntegration.FailingMailer)
+
+    {:ok, submission, _} =
+      Forms.submit("contact", %{"fields" => %{"name" => "Ada"}, "_language" => "en"}, %{ip: "203.0.113.1"})
+
+    {:ok, view, _html} = live(conn, "/admin/forms/contact/submissions")
+    assert has_element?(view, "#submission-#{submission.id} .form-submission-email.is-failed")
+
+    view |> element("#submission-#{submission.id} button", "Open") |> render_click()
+    assert has_element?(view, "#submission-detail .form-submission-error", "503")
+
+    Application.put_env(:brando, :mailer, BrandoIntegration.Mailer)
+    view |> element("#submission-detail button", "Send again") |> render_click()
+
+    assert has_element?(view, "#submission-#{submission.id} .form-submission-email.is-sent")
+    refute has_element?(view, "#submission-detail .form-submission-error")
+  end
+
   test "exports CSV with labelled columns and spreadsheet formulas neutralised", %{conn: conn, submit: submit} do
     submit.(%{"name" => "=HYPERLINK(\"x\")", "service" => "web"})
 

@@ -466,3 +466,42 @@
     overflow-wrap: anywhere;
   }
 }
+
+.form-submission-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+
+  &::before {
+    content: "";
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #b8c0ba;
+  }
+
+  &.is-sent::before {
+    background: #3aa76d;
+  }
+
+  &.is-failed::before {
+    background: #d4574e;
+  }
+
+  &.is-queued::before {
+    background: #e2a93b;
+  }
+}
+
+.form-submission-detail .form-submission-notification {
+  white-space: normal;
+}
+
+.form-submission-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  opacity: 0.8;
+}

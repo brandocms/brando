@@ -162,6 +162,37 @@ defmodule BrandoAdmin.Forms.FormFormLiveTest do
     assert service.option_labels == %{"web" => "Nettside"}
   end
 
+  test "who is emailed, the page after sending and the retention are saved with the form", %{
+    conn: conn,
+    form: form
+  } do
+    {view, html} = open(conn, form.id)
+    assert html =~ ~s(id="form-usage-title")
+
+    params =
+      html
+      |> form_params("#form_form_form")
+      |> put_in(["form", "recipients"], %{
+        "0" => %{"name" => "Post", "email" => "post@example.com", "bcc" => "false"},
+        "1" => %{"name" => "", "email" => "archive@example.com", "bcc" => "true"}
+      })
+      |> put_in(["form", "subject"], "From {{ name }}")
+      |> put_in(["form", "confirmation"], "true")
+      |> put_in(["form", "redirect_url"], "/thank-you")
+      |> put_in(["form", "retention_days"], "90")
+
+    view |> element("#form_form_form") |> render_change(params)
+    save(view)
+
+    {:ok, saved} = Forms.get_form(%{matches: %{id: form.id}})
+    assert Enum.map(saved.recipients, &{&1.email, &1.bcc}) == [{"post@example.com", false}, {"archive@example.com", true}]
+    assert Enum.all?(saved.recipients, & &1.uid)
+    assert saved.subject == "From {{ name }}"
+    assert saved.confirmation
+    assert saved.redirect_url == "/thank-you"
+    assert saved.retention_days == 90
+  end
+
   # A browser posts the whole form on every change; each `validate/1` does the same.
   defp validate(view) do
     html = render(view)
