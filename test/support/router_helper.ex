@@ -146,6 +146,29 @@ defmodule BrandoAdmin.SyncTest.ArticleFormLive do
   end
 end
 
+defmodule BrandoAdmin.SyncTest.ArticleNoBlocksFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="article_no_blocks_form"
+      name={:no_blocks}
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Article</:header>
+    </.live_component>
+    """
+  end
+end
+
 defmodule BrandoIntegrationWeb.Router do
   @moduledoc false
   use Phoenix.Router
@@ -164,6 +187,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles", BrandoAdmin.SyncTest.ArticleListLive
     live "/articles/create", BrandoAdmin.SyncTest.ArticleFormLive, :create
     live "/articles/update/:entry_id", BrandoAdmin.SyncTest.ArticleFormLive, :update
+    live "/articles/update/:entry_id/no-blocks", BrandoAdmin.SyncTest.ArticleNoBlocksFormLive, :update
   end
 
   form_routes()

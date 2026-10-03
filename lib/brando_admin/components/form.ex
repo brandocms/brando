@@ -3625,14 +3625,17 @@ defmodule BrandoAdmin.Components.Form do
     # has blocks, but not all blocks have been received
     # Force-ship the currently focused block before collecting for save
     send(self(), :force_ship_focused_block)
-    fetch_root_blocks(socket, :save, 150)
     fetch_transformer_data(socket, :save)
     send(self(), {:progress_popup, "Saving..."})
 
+    # A form that declares none of the schema's block fields has no BlockField
+    # to answer, so `fetch_root_blocks/3` handles the tag itself and returns the
+    # socket carrying the submit. Dropping that socket left the save hanging.
     {:noreply,
      socket
      |> ship_all_field_changes()
-     |> assign(:processing, true)}
+     |> assign(:processing, true)
+     |> fetch_root_blocks(:save, 150)}
   end
 
   def handle_event(
@@ -4764,7 +4767,7 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
     # Same margin as save for edits still in flight; blocks are materialized
     # from the op store, so there is nothing else to wait for.
-    fetch_root_blocks(socket, :live_preview, 150)
+    socket = fetch_root_blocks(socket, :live_preview, 150)
     {:noreply, push_event(socket, "js-exec", %{to: "#sidebar", attr: "data-js-hide"})}
   end
 
@@ -4783,8 +4786,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("open_live_preview_standalone", _, socket) do
     send(self(), {:toast, gettext("Opening stand alone live preview window...")})
-    fetch_root_blocks(socket, :live_preview_standalone, 500)
-    {:noreply, socket}
+    {:noreply, fetch_root_blocks(socket, :live_preview_standalone, 500)}
   end
 
   # One save that asks the translations for no new review of text that
