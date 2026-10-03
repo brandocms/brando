@@ -47,13 +47,13 @@ defmodule Brando.Blueprint.AssetConfigValidator do
   end
 
   defp validate_type_specific!(asset, :image, config) do
-    validate_non_empty_map!(asset, :image, config, :sizes)
-    validate_formats!(asset, config)
-
-    case Map.get(config, :srcset) do
-      value when is_nil(value) or is_map(value) or is_list(value) -> :ok
-      value -> invalid!(asset, :image, :srcset, "expected nil, a map, or a legacy list, got: #{inspect(value)}")
+    case Map.get(config, :sizes) do
+      value when is_map(value) and map_size(value) > 0 -> :ok
+      value -> invalid!(asset, :image, :sizes, "expected a non-empty map or a size preset, got: #{inspect(value)}")
     end
+
+    validate_formats!(asset, config)
+    validate_srcset!(asset, config)
   end
 
   defp validate_type_specific!(asset, :file, config) do
@@ -267,12 +267,96 @@ defmodule Brando.Blueprint.AssetConfigValidator do
     end
   end
 
-  defp validate_non_empty_map!(asset, type, config, field) do
-    case Map.get(config, field) do
-      value when is_map(value) and map_size(value) > 0 -> :ok
-      value -> invalid!(asset, type, field, "expected a non-empty map, got: #{inspect(value)}")
+  @doc """
+  Returns the size names a srcset refers to, in any of its forms, or `:error`
+  when it isn't a srcset.
+  """
+  @spec srcset_size_names(term()) :: {:ok, [String.t()]} | :error
+  def srcset_size_names(nil), do: {:ok, []}
+
+  def srcset_size_names(srcset) when is_list(srcset) or is_map(srcset) do
+    pairs =
+      if is_map(srcset) and Enum.all?(Map.values(srcset), &is_list/1),
+        do: srcset |> Map.values() |> List.flatten(),
+        else: Enum.to_list(srcset)
+
+    if Enum.all?(pairs, &match?({name, _descriptor} when is_binary(name) or is_atom(name), &1)),
+      do: {:ok, Enum.map(pairs, &to_string(elem(&1, 0)))},
+      else: :error
+  end
+
+  def srcset_size_names(_srcset), do: :error
+
+  # A srcset is keyed (`%{default: [{"small", "700w"}, …]}`), or in the legacy
+  # forms a list of pairs or a flat map of size => descriptor. Each pair must
+  # name a size in `sizes`; rendering only warns when one is missing.
+  defp validate_srcset!(asset, config) do
+    case Map.get(config, :srcset) do
+      nil ->
+        :ok
+
+      pairs when is_list(pairs) ->
+        validate_srcset_pairs!(asset, config.sizes, "", pairs)
+
+      srcset when is_map(srcset) ->
+        validate_srcset_map!(asset, config.sizes, srcset)
+
+      value ->
+        invalid!(asset, :image, :srcset, "expected nil, a map, or a legacy list, got: #{inspect(value)}")
     end
   end
+
+  defp validate_srcset_map!(asset, sizes, srcset) do
+    cond do
+      Enum.all?(Map.values(srcset), &is_list/1) ->
+        Enum.each(srcset, fn {key, pairs} -> validate_srcset_pairs!(asset, sizes, "[#{inspect(key)}] ", pairs) end)
+
+      Enum.any?(Map.values(srcset), &is_list/1) ->
+        invalid!(asset, :image, :srcset, "mixes keyed lists with size => descriptor entries")
+
+      true ->
+        validate_srcset_pairs!(asset, sizes, "", Enum.to_list(srcset))
+    end
+  end
+
+  defp validate_srcset_pairs!(asset, _sizes, prefix, []), do: invalid!(asset, :image, :srcset, "#{prefix}is empty")
+
+  defp validate_srcset_pairs!(asset, sizes, prefix, pairs) do
+    Enum.each(pairs, fn
+      {size_key, descriptor} when is_binary(size_key) or is_atom(size_key) ->
+        if !Map.has_key?(sizes, to_string(size_key)) do
+          invalid!(
+            asset,
+            :image,
+            :srcset,
+            "#{prefix}names the size #{inspect(size_key)}, which is not in :sizes #{inspect(sizes |> Map.keys() |> Enum.sort())}"
+          )
+        end
+
+        if !srcset_descriptor?(descriptor) do
+          invalid!(
+            asset,
+            :image,
+            :srcset,
+            "#{prefix}has an invalid descriptor #{inspect(descriptor)}, expected a width such as \"700w\""
+          )
+        end
+
+      pair ->
+        invalid!(asset, :image, :srcset, "#{prefix}expected {size, descriptor} pairs, got: #{inspect(pair)}")
+    end)
+  end
+
+  # "700w" or "2x"/"1.5x", the descriptors a browser accepts.
+  defp srcset_descriptor?(descriptor) when is_binary(descriptor) do
+    case String.split_at(descriptor, -1) do
+      {width, "w"} -> match?({integer, ""} when integer > 0, Integer.parse(width))
+      {density, "x"} -> match?({float, ""} when float > 0, Float.parse(density))
+      _other -> false
+    end
+  end
+
+  defp srcset_descriptor?(_descriptor), do: false
 
   defp validate_formats!(asset, config) do
     case Map.get(config, :formats) do

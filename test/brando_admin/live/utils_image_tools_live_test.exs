@@ -2,6 +2,7 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
   use Brando.LiveCase
   use Oban.Testing, repo: BrandoIntegration.Repo
 
+  alias Brando.Factory
   alias Brando.Worker.ImageMaintenance
 
   setup do
@@ -22,6 +23,43 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
 
     refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
     refute has_element?(view, "small", "Running in the background")
+  end
+
+  test "recreates only the images made with older settings", %{conn: conn} do
+    current = Brando.Images.Processing.current_fingerprint("default")
+    # The fixture original test_helper copies into the media path.
+    path = "images/avatars/27i97a.jpeg"
+    Factory.insert(:image, path: path, config_fingerprint: "0123456789ab")
+    Factory.insert(:image, path: path, config_fingerprint: current)
+
+    changed = Brando.Images.Processing.count_changed_images()
+    assert changed > 0
+
+    {:ok, view, _} = live(conn, "/admin/config/utils")
+
+    assert has_element?(view, "small", "#{changed} images were made with older settings")
+
+    # Inline in the LiveView: the changed images are processed at once.
+    view |> element("button", "Recreate changed images") |> render_click()
+
+    assert Brando.Images.Processing.count_changed_images() == 0
+    assert has_element?(view, "small", "All images match their settings")
+    assert has_element?(view, "button[phx-click=recreate_changed_image_sizes][disabled]")
+    refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+  end
+
+  test "either recreate run blocks both buttons", %{conn: conn, current_user: user} do
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, _job} = Oban.insert(ImageMaintenance.new(%{task: "recreate_changed_sizes", user_id: user.id}))
+
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+
+      assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+      assert has_element?(view, "button[phx-click=recreate_changed_image_sizes][disabled]")
+
+      render_click(view, "recreate_image_sizes")
+      assert [] = all_enqueued(worker: ImageMaintenance, args: %{task: "recreate_sizes"})
+    end)
   end
 
   test "an unfinished run disables its tool and is not started again", %{conn: conn, current_user: user} do

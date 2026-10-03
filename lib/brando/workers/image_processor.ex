@@ -5,6 +5,7 @@ defmodule Brando.Worker.ImageProcessor do
   alias Brando.Assets.CompletedCallback
   alias Brando.Images
   alias Brando.Tenant.Job, as: TenantJob
+  alias Brando.Type.ImageConfig
   alias Brando.Users
 
   require Logger
@@ -49,7 +50,12 @@ defmodule Brando.Worker.ImageProcessor do
   def timeout(_job), do: :timer.seconds(400)
 
   defp finish_processing(image, result, config, user, field_full_path) do
-    image_params = %{formats: result.formats, sizes: result.sizes, status: :processed}
+    image_params = %{
+      formats: result.formats,
+      sizes: result.sizes,
+      status: :processed,
+      config_fingerprint: ImageConfig.fingerprint(config)
+    }
 
     with {:ok, image} <- Images.update_image(image, image_params, user) do
       CompletedCallback.run(config, image, user)

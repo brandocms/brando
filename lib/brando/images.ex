@@ -235,6 +235,7 @@ defmodule Brando.Images do
         # A deliberate copy (another crop, say) is never offered in place of
         # an upload of the same file
         |> Map.put(:content_hash, nil)
+        |> Map.put(:config_fingerprint, nil)
 
       create_image(new_image_params, user)
     end

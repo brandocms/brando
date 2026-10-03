@@ -13728,7 +13728,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreate the sizes and formats of every image from its original, using the current image settings."
+msgid "Recreate the sizes and formats of images from their originals, using the current image settings."
 msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -13755,6 +13755,38 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Recreate image sizes"
 msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate changed images"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreate the sizes of changed images?"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only images made with older settings are recreated. This runs in the background."
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recreating changed image sizes in the background."
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "All images match their settings"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image was made with older settings"
+msgid_plural "%{count} images were made with older settings"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format

@@ -140,6 +140,7 @@
   .utils-maintenance-list .utils-empty-status { display: flex; align-items: center; gap: 6px; }
   .utils-empty-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #a1aaa3; }
   .utils-maintenance-list .utils-button { min-width: 140px; }
+  .utils-maintenance-list .utils-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
   .utils-system-info { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--utils-line); }
   .utils-system-info h2 { font-size: 12px; letter-spacing: 0; margin-bottom: 16px; }
   .utils-system-info dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; max-width: 800px; }
@@ -174,6 +175,7 @@
     .utils-transfer-grid > * { padding: 20px; }
     .utils-maintenance-list article { grid-template-columns: 1fr; justify-items: start; gap: 16px; padding: 20px; }
     .utils-maintenance-list .utils-button { min-width: 0; }
+    .utils-maintenance-list .utils-row-actions { justify-content: flex-start; }
     .utils-system-info dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .utils-rule-role { grid-template-columns: 1fr; gap: 8px; }
     .utils-apply-bar { align-items: flex-start; flex-direction: column; }

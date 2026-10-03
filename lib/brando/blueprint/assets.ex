@@ -63,6 +63,10 @@ defmodule Brando.Blueprint.Assets do
   ### Image
 
   Image assets store single images with automatic resizing and srcset generation.
+  Each size is checked when the Blueprint compiles, and `sizes` can name a
+  preset instead of listing every size: `sizes: :standard`, or
+  `sizes: {:standard, %{"hero" => %{"size" => "2400"}}}` to add to it. See
+  `Brando.Images.Size`.
 
   #### Example
 

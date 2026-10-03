@@ -53,12 +53,39 @@ For SVG, use an explicitly allowed MIME type and inspect its rendering separatel
 from raster variants.
 
 To use application defaults instead, declare `cfg: :default` and configure
-`default_config` under `Brando.Images`. Field configs are normalized and checked
-at compilation; malformed sizes or unsupported formats should fail early.
-Changing size definitions does not magically regenerate every existing image.
-Reprocess affected assets and confirm the new size paths exist before rendering
-them. A requested size absent from `image.sizes` is a configuration/processing
-error, not a fallback image.
+`default_config` under `Brando.Images`.
+
+A size takes `"size"` (a geometry such as `"700"`, `"x400"` or `"400x400>"`),
+`"quality"` (1–100), `"crop"` and `"ratio"` (`"3/2"`, needed when a cropped
+size gives only a width or a height). Atom keys and `%Brando.Images.Size{}` work
+too. A Blueprint's literal config is checked when it compiles: a mistyped key
+such as `"crp"`, an unreadable geometry, or a `srcset` naming a size that isn't
+in `sizes` fails the build with the field and the size it is about. Configs
+from a function or `config_target` are checked when they are first read.
+
+`sizes` replaces the default list rather than merging with it. To start from
+the standard list (micro, thumb, small, medium, large and xlarge) instead of
+copying it, name the preset, alone or with sizes to add or replace:
+
+```elixir
+asset :cover, :image,
+  cfg: %{
+    upload_path: "images/products/covers",
+    sizes: {:standard, %{"hero" => %{"size" => "2400", "quality" => 80}}},
+    srcset: %{default: [{"small", "700w"}, {"large", "1700w"}, {"hero", "2400w"}]}
+  }
+```
+
+When a config replaces `sizes` without its own `srcset`, the inherited default
+`srcset` is dropped if it names sizes the config no longer has.
+
+Changing size definitions does not regenerate existing images by itself. Each
+processed image records a fingerprint of the sizes and formats it was made
+with, and **Utilities → Image sizes** counts the images whose config has changed
+since; **Recreate changed images** reprocesses only those. Images processed
+before Brando stored fingerprints count as changed once. Confirm the new size
+paths exist before rendering them. A requested size absent from `image.sizes`
+is a configuration/processing error, not a fallback image.
 
 ## Render responsive images
 

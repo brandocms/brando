@@ -8,6 +8,7 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   """
 
   alias Brando.Blueprint.AssetConfigValidator
+  alias Brando.Images.Size
   alias Brando.RuntimeConfig
 
   @image_config Module.concat(["Brando", "Type", "ImageConfig"])
@@ -72,12 +73,9 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
     asset = %{name: name, type: type}
 
     normalized =
-      normalize_config(
-        asset,
-        config_module(type),
-        config,
-        passthrough_values
-      )
+      asset
+      |> normalize_config(config_module(type), config, passthrough_values)
+      |> normalize_image_sizes(asset)
 
     AssetConfigValidator.validate!(asset, normalized)
   end
@@ -95,7 +93,7 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
         true -> invalid_config!(asset, "expected :default, an image config struct, a map, or a keyword list")
       end
 
-    AssetConfigValidator.validate!(asset, normalized)
+    AssetConfigValidator.validate!(asset, %{normalized | image: normalize_image_sizes(normalized.image, asset)})
   end
 
   defp declared_passthrough(:image), do: [:db]
@@ -152,7 +150,25 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
       end
 
     default_config = configured || config_module.default_config()
-    normalize_asset_config(%{name: :default, type: type}, config_module, default_config)
+    default_asset = %{name: :default, type: type}
+
+    default_asset
+    |> normalize_asset_config(config_module, default_config)
+    |> normalize_image_sizes(default_asset)
+  end
+
+  # Resolves a size preset and checks each size, leaving them as the
+  # string-keyed maps processing reads. Done before a gallery merges its sizes
+  # over the defaults, so a preset there behaves like the map it stands for.
+  defp normalize_image_sizes(config, asset) do
+    if is_struct(config, @image_config) do
+      case Size.normalize_sizes(config.sizes) do
+        {:ok, sizes} -> %{config | sizes: sizes}
+        {:error, message} -> invalid_config!(asset, message)
+      end
+    else
+      config
+    end
   end
 
   defp asset_context(:image), do: @image_context
@@ -262,10 +278,24 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   defp merge_image_config(default_config, override) do
     merged = deep_merge(default_config, override)
 
-    if Map.has_key?(override, :sizes) do
-      Map.put(merged, :sizes, override.sizes)
+    cond do
+      not Map.has_key?(override, :sizes) -> merged
+      Map.has_key?(override, :srcset) -> Map.put(merged, :sizes, override.sizes)
+      true -> %{merged | sizes: override.sizes, srcset: inherited_srcset(merged.srcset, override.sizes)}
+    end
+  end
+
+  # A config that replaces `sizes` but gives no `srcset` inherits the default
+  # one, which may name sizes it no longer has. Only a field rendered with its
+  # own srcset reads it, and that would get broken URLs, so drop it instead of
+  # failing the Blueprint over a srcset it never declared.
+  defp inherited_srcset(srcset, sizes) do
+    with {:ok, sizes} when is_map(sizes) <- Size.normalize_sizes(sizes),
+         {:ok, names} <- AssetConfigValidator.srcset_size_names(srcset),
+         false <- Enum.all?(names, &Map.has_key?(sizes, &1)) do
+      nil
     else
-      merged
+      _keep -> srcset
     end
   end
 
