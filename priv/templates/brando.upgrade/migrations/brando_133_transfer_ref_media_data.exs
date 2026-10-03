@@ -8,7 +8,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET image_id = i.id
     FROM images i
     WHERE r.data->>'type' = 'picture'
-    AND i.path = r.data->'data'->>'path'
+    AND i.path IN (#{path_candidates("r.data->'data'->>'path'")})
     AND i.deleted_at IS NULL
     """
 
@@ -150,7 +150,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET image_id = i.id
     FROM images i
     WHERE r.data->>'type' = 'media'
-    AND r.data->'data'->'template_picture'->>'path' = i.path
+    AND i.path IN (#{path_candidates("r.data->'data'->'template_picture'->>'path'")})
     AND i.deleted_at IS NULL
     """
 
@@ -309,11 +309,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
         FROM images i
         WHERE sz.value IS NOT NULL
         AND i.deleted_at IS NULL
-        AND regexp_replace(i.path, '\\.[^.]+$', '') =
-            regexp_replace(
-              regexp_replace(sz.value, '/[^/]+/([^/]+)$', '/\\1'),
-              '\\.[^.]+$', ''
-            )
+        AND regexp_replace(i.path, '\\.[^.]+$', '') IN (#{size_path_candidates("sz.value")})
         LIMIT 1
       ) by_size ON TRUE
       -- Fall back to `path` when the ref has no sizes, or when the image its
@@ -322,7 +318,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
         SELECT i.id
         FROM images i
         WHERE i.deleted_at IS NULL
-        AND i.path = gallery_images.img_data->>'path'
+        AND i.path IN (#{path_candidates("gallery_images.img_data->>'path'")})
         LIMIT 1
       ) by_path ON TRUE
     )
@@ -521,4 +517,46 @@ defmodule Brando.Migrations.TransferRefMediaData do
     )
     """
   end
+
+  # Villain data from before 0.4x stored media paths as URLs under the media
+  # prefix (`/media/images/site/x.jpg`), while `images.path` has no prefix
+  # (`images/site/x.jpg`). Match a stored path as it is, and with the configured
+  # media URL's path (and the default `/media`) stripped off its front.
+  defp path_candidates(expression), do: expression |> path_variants() |> Enum.join(", ")
+
+  # A gallery size path names the size directory in front of the filename and
+  # may carry a converted extension, so compare it extensionless and without
+  # the size directory.
+  defp size_path_candidates(expression) do
+    expression
+    |> path_variants()
+    |> Enum.map_join(", ", fn variant ->
+      "regexp_replace(regexp_replace(#{variant}, '/[^/]+/([^/]+)$', '/\\1'), '\\.[^.]+$', '')"
+    end)
+  end
+
+  defp path_variants(expression) do
+    stripped =
+      Enum.map(media_prefixes(), fn prefix ->
+        "CASE WHEN substr(#{expression}, 1, #{String.length(prefix)}) = #{literal(prefix)} " <>
+          "THEN substr(#{expression}, #{String.length(prefix) + 1}) ELSE #{expression} END"
+      end)
+
+    [expression | stripped]
+  end
+
+  defp media_prefixes do
+    configured =
+      case Brando.config(:media_url) do
+        url when is_binary(url) -> URI.parse(url).path
+        _ -> nil
+      end
+
+    [configured, "/media"]
+    |> Enum.reject(&(&1 in [nil, "", "/"]))
+    |> Enum.map(&(String.trim_trailing(&1, "/") <> "/"))
+    |> Enum.uniq()
+  end
+
+  defp literal(value), do: "'" <> String.replace(value, "'", "''") <> "'"
 end
