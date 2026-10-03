@@ -2,7 +2,7 @@
 
 Brando combines Phoenix and Ecto with a Blueprint system for content schemas,
 admin forms, and structured content. These guides cover the developing **0.55**
-API on the `next` branch. Use documentation from your application's Brando
+API on the `main` branch. Use documentation from your application's Brando
 version when maintaining an older installation.
 
 ## Start with your task
@@ -82,6 +82,6 @@ resource policies, application enforcement, and legacy compatibility.
 routing, content environments, asset sets, and static publication.
 [Deployment](deployment.md) covers releases through Florist.
 
-The repository's [documentation coverage record](https://github.com/brandocms/brando/blob/next/docs/documentation-coverage.md)
+The repository's [documentation coverage record](https://github.com/brandocms/brando/blob/main/docs/documentation-coverage.md)
 maps the original documentation topics to guides and records how the remaining
 0.54 guide workflows were checked.
