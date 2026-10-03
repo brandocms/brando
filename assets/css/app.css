@@ -67,6 +67,7 @@
 @import "./components/Form/Input/Blocks/TableBlock.css";
 @import "./components/Form/Input/Blocks/TextBlock.css";
 @import "./components/Form/Input/Blocks/VideoBlock.css";
+@import "./components/FrontendEditor.css";
 @import "./components/Modal.css";
 @import "./components/Progress.css";
 @import "./components/Image/ImagePicker.css";

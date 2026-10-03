@@ -864,6 +864,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(assigns)
     |> assign_new(:hidden, fn -> false end)
+    |> assign_new(:focus, fn -> nil end)
     |> initialize_blocks(assigns)
     |> maybe_arm_blocks_topic()
     |> assign_module_set()
@@ -1072,10 +1073,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        when elem(op, 0) in @structural_ops,
        do: refuse_structure(socket, elem(op, 0))
 
-  defp apply_block_op(socket, op, _mode) do
+  defp apply_block_op(socket, op, mode) do
     case Ops.apply_op(socket.assigns.block_ops, op) do
       {:ok, ops_state} ->
         send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty")
+        # The frontend editor's own edits, not ones synced from other editors.
+        if mode == :local and socket.assigns.focus, do: send(self(), {:frontend_edit, :dirty})
 
         socket
         |> assign_ops(ops_state)
@@ -1399,6 +1402,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The shells the keyed :for renders: order is the op store's projection,
   # the form is the per-uid mount seed. Fails loudly on a missing seed —
   # every insert path must put a seed before applying its op.
+  defp focus_shells(root_order, seed_forms, %{root: root}) do
+    root_order
+    |> root_shells(seed_forms)
+    |> Enum.filter(fn {uid, _, _} -> uid == root end)
+  end
+
   defp root_shells(root_order, seed_forms) do
     root_order
     |> Enum.with_index()
@@ -1894,6 +1903,94 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     )
 
     socket
+  end
+
+  # Frontend edit mode: the root holding the selected block, and nothing
+  # around it. Structure (adding, moving and removing roots) belongs to the
+  # full editor. See `BrandoAdmin.Components.Form.FrontendEditor`.
+  def render(%{focus: %{}} = assigns) do
+    ~H"""
+    <div
+      id={"#{@id}-wrapper"}
+      phx-hook="Brando.BlockField"
+      class={["blocks-wrapper is-frontend-focus", @source_locked && "is-source-locked"]}
+      data-block-field={"#{@form_name}[#{@block_field}]"}
+      data-entry-id={@entry.id}
+      data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
+    >
+      <p :if={@source_locked && @focus.root} class="blocks-source-note">
+        {gettext("Blocks, their order and media follow the source. Edit the text here.")}
+      </p>
+      <div class="blocks-content">
+        <.live_component
+          :if={@focus.root}
+          module={BrandoAdmin.Components.Form.BlockField.ModulePicker}
+          id={"block-field-#{@block_field}-module-picker"}
+          templates={[]}
+          hide_fragments={false}
+          hide_sections={false}
+        />
+        <div id={"block-field-#{@block_field}"}>
+          <.inputs_for
+            :let={block}
+            :for={{uid, entry_block_form, list_index} <- focus_shells(@root_order, @seed_forms, @focus)}
+            :key={uid}
+            field={entry_block_form[:block]}
+            skip_hidden
+          >
+            <div
+              id={"base-#{block[:uid].value}"}
+              data-id={entry_block_form[:id].value}
+              data-uid={block[:uid].value}
+              class="entry-block"
+            >
+              <.live_component
+                module={Block}
+                id={"block-#{block[:uid].value}"}
+                list_index={list_index}
+                block_module={@block_module}
+                block_field={@block_field}
+                children={block[:children].value}
+                parent_ref={{__MODULE__, @id}}
+                parent_uid={}
+                parent_path={[]}
+                module_set={@module_set}
+                entry={@entry}
+                form={entry_block_form}
+                form_id={@form_id}
+                current_user_id={@current_user.id}
+                belongs_to={:root}
+                slot_open={@open_slot_uid == block[:uid].value}
+                slot_title={@slot_title}
+                paste_multi_module_id={@paste_multi_module_id}
+                live_preview_active?={@live_preview_active?}
+                live_preview_cache_key={@live_preview_cache_key}
+                focus={@focus}
+                level={0}
+              />
+            </div>
+          </.inputs_for>
+        </div>
+        <div :if={@block_bin != []} id={"block-field-#{@block_field}-bin"} class="block-bin-toast" data-testid="block-bin">
+          <span class="block-bin-message">
+            {ngettext("Block deleted", "%{count} blocks deleted", length(@block_bin))}
+          </span>
+          <button type="button" class="block-bin-undo" phx-click="restore_block" phx-target={@myself}>
+            {gettext("Undo")}
+          </button>
+          <button
+            type="button"
+            class="block-bin-dismiss"
+            phx-click="clear_block_bin"
+            phx-target={@myself}
+            aria-label={gettext("Dismiss")}
+          >
+            <.icon name="hero-x-mark" />
+          </button>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   def render(assigns) do

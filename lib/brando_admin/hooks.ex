@@ -34,15 +34,27 @@ defmodule BrandoAdmin.Hooks do
       |> default_page_title(uri, user)
 
     if connected?(socket) do
-      if socket.assigns[:previous_uri] do
-        Brando.presence().untrack_url(socket.assigns.previous_uri, user_id)
+      # A view can be present at another view's URL: the frontend editor
+      # tracks itself at the admin form of the entry it edits (see
+      # `BrandoAdmin.FrontendEdit.EditorLive`).
+      path = socket.assigns[:presence_path] || uri.path
+      previous = socket.assigns[:previous_presence_path]
+
+      if previous && previous != path do
+        Brando.presence().untrack_url(previous, user_id)
+        Phoenix.PubSub.unsubscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("url:#{previous}"))
       end
 
-      socket = assign(socket, :previous_uri, uri)
-      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("url:#{uri.path}"))
-      Brando.presence().track_url(uri.path, user_id)
+      socket =
+        if previous == path do
+          socket
+        else
+          Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("url:#{path}"))
+          Brando.presence().track_url(path, user_id, socket.assigns[:presence_meta] || %{})
+          assign_uri_presences(socket, path)
+        end
 
-      {:cont, assign_uri_presences(socket, uri)}
+      {:cont, assign(socket, previous_uri: uri, previous_presence_path: path)}
     else
       {:cont, socket}
     end
@@ -115,7 +127,9 @@ defmodule BrandoAdmin.Hooks do
     if presence.metas == [] do
       {:halt, remove_presence(socket, user)}
     else
-      {:halt, socket}
+      # Another of the user's sessions is still here, perhaps in a different
+      # place (the admin form or the website).
+      {:halt, assign_uri_presence(socket, presence)}
     end
   end
 
@@ -128,11 +142,11 @@ defmodule BrandoAdmin.Hooks do
     {:cont, socket}
   end
 
-  defp assign_uri_presences(socket, uri) do
+  defp assign_uri_presences(socket, path) do
     socket = assign(socket, presences: %{}, presence_ids: %{})
 
     Enum.reduce(
-      Brando.presence().list(Brando.Tenant.Topic.scoped("url:#{uri.path}")),
+      Brando.presence().list(Brando.Tenant.Topic.scoped("url:#{path}")),
       socket,
       fn
         {_, %{user: nil}}, updated_socket ->
@@ -166,15 +180,15 @@ defmodule BrandoAdmin.Hooks do
 
   defp assign_uri_presence(socket, presence) do
     %{user: user} = presence
-    %{presence_ids: presence_ids} = socket.assigns
+    metas = Map.get(presence, :metas, [])
 
-    if Map.has_key?(presence_ids, user.id) do
-      socket
-    else
-      socket
-      |> update(:presences, &Map.put(&1, user.id, user))
-      |> update(:presence_ids, &Map.put(&1, user.id, System.system_time()))
-    end
+    # Someone editing only from the website is shown as such; any admin
+    # session at the URL counts as being in the admin.
+    user = Map.put(user, :frontend?, metas != [] and Enum.all?(metas, &(Map.get(&1, :frontend) == true)))
+
+    socket
+    |> update(:presences, &Map.put(&1, user.id, user))
+    |> update(:presence_ids, &Map.put_new(&1, user.id, System.system_time()))
   end
 
   defp remove_presence(socket, nil), do: socket

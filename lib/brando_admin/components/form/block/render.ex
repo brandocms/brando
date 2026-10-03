@@ -56,6 +56,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div data-module-multi="true">
       <.module
         form={@form}
+        focus_role={@focus_role}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -96,7 +97,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           data-sortable-selector=".block"
         >
           <div
-            :for={{child_uid, child_block_form, list_index} <- Block.child_shells(@block_list, @children_forms)}
+            :for={
+              {child_uid, child_block_form, list_index} <-
+                Block.child_shells(@block_list, @children_forms) |> Block.focus_shells(@focus, @focus_role)
+            }
             :key={child_uid}
             id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form.data.id}
@@ -128,6 +132,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               belongs_to={:multi}
               paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
+              focus={Block.child_focus(@focus, @focus_role)}
             />
           </div>
         </div>
@@ -141,6 +146,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div>
       <.module
         form={@form}
+        focus_role={@focus_role}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -199,6 +205,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div>
       <.module
         form={@form}
+        focus_role={@focus_role}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -236,6 +243,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div>
       <.container
         form={@form}
+        focus_role={@focus_role}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -264,7 +272,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           data-sortable-selector=".block"
         >
           <div
-            :for={{child_uid, child_block_form, list_index} <- Block.child_shells(@block_list, @children_forms)}
+            :for={
+              {child_uid, child_block_form, list_index} <-
+                Block.child_shells(@block_list, @children_forms) |> Block.focus_shells(@focus, @focus_role)
+            }
             :key={child_uid}
             id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form[:id].value}
@@ -294,6 +305,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               belongs_to={:container}
               paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
+              focus={Block.child_focus(@focus, @focus_role)}
             >
             </.live_component>
           </div>
@@ -377,6 +389,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div>
       <.fragment_block
         form={@form}
+        focus_role={@focus_role}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -423,7 +436,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   def collection_children(assigns) do
     ~H"""
     <div
-      :for={{child_uid, child_form, list_index} <- Block.child_shells(@block_list, @children_forms)}
+      :for={
+        {child_uid, child_form, list_index} <-
+          Block.child_shells(@block_list, @children_forms) |> Block.focus_shells(@focus, @focus_role)
+      }
       :key={child_uid}
       id={"child-#{child_uid}"}
       data-uid={child_uid}
@@ -454,6 +470,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         slot_title={@slot_title}
         paste_multi_module_id={@paste_multi_module_id}
         level={@level + 1}
+        focus={Block.child_focus(@focus, @focus_role)}
       />
     </div>
     """
@@ -538,6 +555,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :fragments, :list, default: []
   attr :paste_multi_module_id, :any, default: nil
   attr :hidden_block_fields, :list, default: []
+  attr :focus_role, :atom, default: nil
 
   def fragment_block(assigns) do
     changeset = assigns.form.source
@@ -561,10 +579,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       data-block-uid={@uid}
       class={[
         "base-block",
-        @collapsed && "collapsed",
+        @collapsed && @focus_role != :target && "collapsed",
         @active == false && "disabled",
         @deleted && "deleted",
-        (@dirty or @new) && "dirty"
+        (@dirty or @new) && "dirty",
+        @focus_role && "focus-#{@focus_role}"
       ]}
     >
       <.plus
@@ -683,10 +702,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       data-block-uid={@uid}
       class={[
         "base-block",
-        @collapsed && "collapsed",
+        @collapsed && @focus_role != :target && "collapsed",
         @active == false && "disabled",
         @deleted && "deleted",
-        (@dirty or @new) && "dirty"
+        (@dirty or @new) && "dirty",
+        @focus_role && "focus-#{@focus_role}"
       ]}
     >
       <.plus
@@ -807,6 +827,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :entry, :any, default: nil
   attr :entry_language, :string, default: nil
   attr :hidden_block_fields, :list, default: []
+  attr :focus_role, :atom, default: nil
   slot :inner_block
 
   def module(assigns) do
@@ -833,10 +854,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       data-block-uid={@uid}
       class={[
         "base-block",
-        @collapsed && "collapsed",
+        @collapsed && @focus_role != :target && "collapsed",
         @active == false && "disabled",
         @deleted && "deleted",
-        (@dirty or @new) && "dirty"
+        (@dirty or @new) && "dirty",
+        @focus_role && "focus-#{@focus_role}"
       ]}
     >
       <.plus

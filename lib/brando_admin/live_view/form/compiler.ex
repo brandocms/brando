@@ -8,44 +8,56 @@ defmodule BrandoAdmin.LiveView.Form.Compiler do
       use BrandoAdmin.LiveView.Form, schema: MyApp.Projects.Project
   """
 
+  @hooks [
+    :setup,
+    :hooks_toast,
+    :hooks_progress_popup,
+    :hooks_alert,
+    :hooks_content_language,
+    :hooks_dirty_fields,
+    :hooks_active_field,
+    :hooks_block_presence,
+    :hooks_block_sync,
+    :hooks_modules,
+    :hooks_focal_point,
+    :hooks_focus,
+    :hooks_mutations,
+    :hooks_mutation_listener,
+    :hooks_images,
+    :hooks_asset_delivery,
+    :hooks_tiptap_link,
+    :hooks_videos,
+    :hooks_video_events,
+    # Catch port exits from image processing (ImageMagick, etc)
+    :hooks_port_exits
+  ]
+
+  @doc """
+  The `BrandoAdmin.LiveView.Form.Hooks` a form LiveView runs on mount, in
+  order. A view that picks its schema at runtime (the frontend editor) runs
+  the same list itself.
+  """
+  def hooks(opts \\ []) do
+    if Keyword.get(opts, :skip_image_hooks, false), do: List.delete(@hooks, :hooks_images), else: @hooks
+  end
+
   defmacro __using__(opts), do: build(opts)
 
   @doc "Builds the setup expanded by the public form LiveView API."
   def build(opts) do
     schema = Keyword.fetch!(opts, :schema)
-    skip_image_hooks = Keyword.get(opts, :skip_image_hooks, false)
+
+    mounts =
+      for hook <- hooks(opts) do
+        quote do: on_mount({BrandoAdmin.LiveView.Form.Hooks, {unquote(hook), unquote(schema)}})
+      end
 
     quote do
       use BrandoAdmin, :live_view
 
       def __authorization_resource__, do: {:form, unquote(schema)}
 
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:setup, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_toast, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_progress_popup, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_alert, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_content_language, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_dirty_fields, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_active_field, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_block_presence, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_block_sync, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_modules, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_focal_point, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_focus, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_mutations, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_mutation_listener, unquote(schema)}})
-
-      unless unquote(skip_image_hooks) do
-        on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_images, unquote(schema)}})
-      end
-
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_asset_delivery, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_tiptap_link, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_videos, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_video_events, unquote(schema)}})
-
-      # Catch port exits from image processing (ImageMagick, etc)
-      on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_port_exits, unquote(schema)}})
+      unquote_splicing(mounts)
     end
   end
 end

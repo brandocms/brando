@@ -1238,12 +1238,14 @@ defmodule Brando.Villain.Parser do
   def fragment(%{fragment_id: nil}, _),
     do: "<!-- fragment not embedded. fragment_id = nil -->"
 
-  def fragment(%{fragment_id: id}, opts) do
+  def fragment(%{fragment_id: id} = block, opts) do
     fragments = opts.fragments
     {:ok, fragment} = Brando.Pages.find_fragment(fragments, id)
 
     case fragment.status do
-      :published -> fragment.rendered_blocks
+      # In frontend edit mode the fragment's blocks carry their own markers,
+      # so a click inside the fragment edits it, not the page embedding it.
+      :published -> fragment |> Brando.FrontendEdit.rendered_html(:blocks) |> maybe_annotate(block.uid, opts)
       _ -> "<!-- fragment##{id} not embedded. status != :published -->"
     end
   end

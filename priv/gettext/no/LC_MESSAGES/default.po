@@ -14681,3 +14681,156 @@ msgstr "Denne e-posten ble sendt av %{site}."
 #, elixir-autogen, elixir-format
 msgid "No linked entries yet."
 msgstr "Ingen sammenkoblede innlegg ennå."
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Editing"
+msgstr "Redigerer"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Click a block to edit it"
+msgstr "Klikk på en blokk for å redigere den"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "This page has no blocks to edit here"
+msgstr "Denne siden har ingen blokker å redigere her"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Shared fragment"
+msgstr "Delt fragment"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "You can’t edit this"
+msgstr "Du kan ikke redigere dette"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Close editor"
+msgstr "Lukk redigering"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Opening editor…"
+msgstr "Åpner redigering …"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Save your changes before you leave this block?"
+msgstr "Vil du lagre endringene før du forlater denne blokken?"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr "Fortsett å redigere"
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgid "Saved"
+msgstr "Lagret"
+
+#: lib/brando_admin/components/form/frontend_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Changes show on the page as you type"
+msgstr "Endringene vises på siden mens du skriver"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved"
+msgstr "Ikke lagret"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} saved this page after you opened the editor. Reload the block to get their changes, then make yours again."
+msgstr "%{name} lagret denne siden etter at du åpnet redigeringen. Last inn blokken på nytt for å få med endringene deres, og gjør dine endringer igjen."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} · editing on the website"
+msgstr "%{name} · redigerer på nettsiden"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit block"
+msgstr "Rediger blokk"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "You don’t have permission to edit this content."
+msgstr "Du har ikke tilgang til å redigere dette innholdet."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Frontend editing is switched off for this site."
+msgstr "Redigering på nettsiden er slått av for dette nettstedet."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "This block could not be found. It may have been deleted since the page was loaded."
+msgstr "Fant ikke blokken. Den kan ha blitt slettet etter at siden ble lastet."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open in the full editor"
+msgstr "Åpne i full redigering"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} saved this page after you opened it. Reload to get their changes before you save."
+msgstr "%{name} lagret denne siden etter at du åpnet den. Last inn på nytt for å få med endringene deres før du lagrer."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} deleted this page."
+msgstr "%{name} slettet denne siden."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reload"
+msgstr "Last inn på nytt"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is also editing this page on the website"
+msgstr "%{name} redigerer også denne siden på nettsiden"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has this page open in the admin"
+msgstr "%{name} har denne siden åpen i administrasjonen"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shared fragment."
+msgstr "Delt fragment."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Changes show everywhere it is used."
+msgstr "Endringene vises overalt der det brukes."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "A version of this page is scheduled to be published. It will replace changes made here."
+msgstr "En versjon av denne siden er planlagt publisert. Den vil erstatte endringer gjort her."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Someone"
+msgstr "Noen"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Changes show everywhere it is used, including %{count} page."
+msgid_plural "Changes show everywhere it is used, including %{count} pages."
+msgstr[0] "Endringene vises overalt der det brukes, blant annet på %{count} side."
+msgstr[1] "Endringene vises overalt der det brukes, blant annet på %{count} sider."
+
+#: lib/brando/frontend_edit/text.ex
+#, elixir-autogen, elixir-format
+msgctxt "frontend edit"
+msgid "Edit page"
+msgstr "Rediger side"

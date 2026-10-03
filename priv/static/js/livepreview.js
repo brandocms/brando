@@ -9,17 +9,9 @@
 // Initialize live preview environment
 document.documentElement.classList.add('is-live-preview')
 
-// DOM Node Type Constants
-const NODE_TYPES = {
-  ELEMENT: 1,
-  TEXT: 3,
-  COMMENT: 8,
-  DOCUMENT: 9,
-  DOCUMENT_FRAGMENT: 11
-}
-
-// Valid node types for lazy loading operations
-const VALID_TARGET_NODES = [NODE_TYPES.ELEMENT, NODE_TYPES.DOCUMENT, NODE_TYPES.DOCUMENT_FRAGMENT]
+// Block patching is shared with frontend edit mode (`block_patch.js`, loaded
+// before this file).
+const BlockPatch = window.BrandoBlockPatch
 
 // Cache DOM references. `<main>` is looked up on every update instead: a full
 // rerender may replace it, and a template need not have one.
@@ -56,363 +48,8 @@ const MOONWALK_OVERRIDE_STYLES = `
   }
 `
 
-/**
- * Force lazy-loaded images to load immediately
- * @param {Node} target - The DOM node to search within (defaults to document)
- */
-function initializeLazyImages(target = document) {
-  // Ensure target is a valid element node
-  if (!VALID_TARGET_NODES.includes(target.nodeType)) {
-    return
-  }
-
-  // Load images with data-ll-image or data-ll-srcset-image attributes
-  target
-    .querySelectorAll('[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])')
-    .forEach(lazyImage => {
-      if (lazyImage.dataset.src) {
-        lazyImage.src = lazyImage.dataset.src
-      }
-      if (lazyImage.dataset.srcset) {
-        lazyImage.srcset = lazyImage.dataset.srcset
-      }
-      lazyImage.dataset.llLoaded = ''
-    })
-
-  // Initialize srcset elements
-  target
-    .querySelectorAll('[data-ll-srcset]:not([data-data-ll-srcset-initialized])')
-    .forEach(lazySrcSet => {
-      lazySrcSet.dataset.llSrcsetInitialized = ''
-    })
-}
-
-/**
- * Force lazy-loaded videos to load immediately
- * Only processes new videos that haven't been initialized
- * @param {Node} target - The DOM node to search within (defaults to document)
- */
-function initializeLazyVideos(target = document) {
-  // Ensure target is a valid element node
-  if (!VALID_TARGET_NODES.includes(target.nodeType)) {
-    return
-  }
-
-  // Initialize video elements that haven't been booted
-  target.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(videoElement => {
-    // Only set src if data-src exists and src is not already set
-    if (videoElement.dataset.src && !videoElement.src) {
-      videoElement.src = videoElement.dataset.src
-    }
-    videoElement.dataset.booted = ''
-  })
-
-  // Initialize smart video containers
-  target.querySelectorAll('[data-smart-video]:not([data-revealed])').forEach(videoContainer => {
-    videoContainer.dataset.revealed = ''
-    videoContainer.dataset.booted = ''
-    videoContainer.dataset.playing = ''
-  })
-}
-
-/**
- * Stamp each block's top-level elements with a key morphdom can match on.
- *
- * Blocks are delimited by HTML comments (`[+:B<uid>]` … `[-:B<uid>]`), and
- * comments are invisible to morphdom's matching. With nothing to key on,
- * morphdom pairs `main`'s children up by POSITION, so any structural change —
- * reordering a block, inserting or deleting one above it — makes every element
- * after the change point get rewritten into its neighbour's content. For a
- * video that means the live player is morphed away and a fresh, unbooted
- * container appears in its place: the preview re-initializes a video that never
- * actually changed.
- *
- * Keyed nodes are MOVED instead. morphdom looks the element up by key anywhere
- * in the old tree and relocates it, so a reorder becomes a DOM move and the
- * mounted player survives untouched — as do the `data-smart-video` guards
- * below, which then have a booted player left to protect.
- *
- * Both trees have to be stamped before morphing, or the keys cannot pair up.
- *
- * @param {Node} root - document or parsed document body to stamp
- */
-function stampBlockKeys(root) {
-  if (!root || !VALID_TARGET_NODES.includes(root.nodeType)) {
-    return
-  }
-
-  const iterator = document.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
-  let curNode
-
-  while ((curNode = iterator.nextNode())) {
-    const value = curNode.nodeValue.trim()
-    if (!value.startsWith('[+:B')) {
-      continue
-    }
-
-    const uid = value.substring(value.indexOf('<') + 1, value.indexOf('>'))
-    let sibling = curNode.nextSibling
-    let index = 0
-    let safety = 0
-
-    while (sibling && safety++ < 10000) {
-      if (
-        sibling.nodeType === NODE_TYPES.COMMENT &&
-        sibling.nodeValue.trim().startsWith(`[-:B<${uid}`)
-      ) {
-        break
-      }
-      if (sibling.nodeType === NODE_TYPES.ELEMENT) {
-        sibling.setAttribute('data-lp-key', `${uid}:${index++}`)
-      }
-      sibling = sibling.nextSibling
-    }
-  }
-}
-
-/**
- * An element the host frontend has taken over: a canvas it draws on, a widget
- * it mounted into. Its script sets attributes and children the server's HTML
- * knows nothing about, and morphing would strip them. The template opts in
- * with `data-lp-preserve="<what it shows>"`; while that value is unchanged,
- * the element and its subtree are left as the frontend made them.
- * @param {Element} fromEl - The element in the page
- * @param {Element} toEl - The element in the new HTML
- * @returns {boolean}
- */
-function isPreserved(fromEl, toEl) {
-  return fromEl.hasAttribute('data-lp-preserve') &&
-    fromEl.getAttribute('data-lp-preserve') === toEl.getAttribute('data-lp-preserve')
-}
-
-/**
- * Creates a reusable morphdom configuration
- * @param {boolean} childrenOnly - Whether to only update children
- * @returns {Object} - Morphdom configuration object
- */
-function getMorphdomConfig(childrenOnly = true) {
-  return {
-    // Falls back to morphdom's own default (`node.id`) so anything already
-    // relying on ids keeps working.
-    getNodeKey(node) {
-      if (node.nodeType !== NODE_TYPES.ELEMENT) {
-        return undefined
-      }
-      return node.getAttribute('data-lp-key') || node.id || undefined
-    },
-
-    skipFromChildren(fromEl, toEl) {
-      // Preserve a live video player's internals when its source is unchanged.
-      // A container counts as booted if EITHER the live-preview stub (data-booted)
-      // OR the host frontend's real player (data-view-type, set by SmartVideo on
-      // init) has claimed it. The frontend boots on full load and marks the
-      // container with data-view-type — NOT data-booted — so a full-body rerender
-      // that only checked data-booted would re-morph the container, tear out the
-      // mounted player, and leave a gray box. Checking both markers keeps booted
-      // videos intact across rerender while still re-rendering ones whose source
-      // actually changed.
-      if (fromEl.hasAttribute('data-smart-video') &&
-          (fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) &&
-          fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
-        return true
-      }
-      // Iframes are opaque — never morph their children
-      if (fromEl.tagName === 'IFRAME') {
-        return true
-      }
-      if (isPreserved(fromEl, toEl)) {
-        return true
-      }
-      return false
-    },
-
-    onBeforeElUpdated(fromEl, toEl) {
-      // Skip update if nodes are identical
-      if (fromEl.isEqualNode(toEl)) {
-        return false
-      }
-
-      // Preserve a live video player ENTIRELY when its source is unchanged.
-      // The host frontend mounts Vidstack on full load and marks the container
-      // with data-view-type (the stub marks it data-booted). Morphing the
-      // container at all — even just its attributes — detaches the player and
-      // strips the data-view-type marker, leaving a gray box. So a booted player
-      // whose source hasn't changed must be a no-op for both the element and its
-      // subtree. A genuine source change has no marker match (different data-src)
-      // and falls through to re-render normally.
-      if (fromEl.hasAttribute('data-smart-video') &&
-          (fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) &&
-          fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
-        return false
-      }
-
-      if (isPreserved(fromEl, toEl)) {
-        return false
-      }
-
-      // Preserve iframes when src hasn't changed (prevents reload flash)
-      if (fromEl.tagName === 'IFRAME' && fromEl.getAttribute('src') === toEl.getAttribute('src')) {
-        return false
-      }
-
-      // Handle lazy-loaded images
-      if (fromEl.dataset.src && toEl.dataset.src) {
-        // Compare image URLs without query parameters
-        const fromSrc = fromEl.dataset.src.split('?')[0]
-        const toSrc = toEl.dataset.src.split('?')[0]
-
-        if (fromSrc === toSrc && toEl.dataset.llLoaded) {
-          return false
-        }
-
-        // Update src if data-src has changed
-        toEl.src = toEl.dataset.src
-      }
-
-      return true
-    },
-    childrenOnly: childrenOnly,
-  }
-}
-
-// Pre-built morphdom configs to avoid creating new objects on every call
-const MORPHDOM_CONFIG_CHILDREN_ONLY = getMorphdomConfig(true)
-const MORPHDOM_CONFIG_FULL = getMorphdomConfig(false)
-
-/**
- * Build a map of content blocks for efficient updates
- * Blocks are identified by HTML comments with UIDs
- */
 function rebuildContentBlockRegistry() {
-  contentBlockRegistry = new Map()
-  const iterator = document.createNodeIterator(
-    document.body,
-    NodeFilter.SHOW_COMMENT,
-    null,
-    false
-  )
-
-  let curNode
-  while ((curNode = iterator.nextNode())) {
-    if (curNode.nodeValue.trim().startsWith('[+:B')) {
-      // Extract UID from comment
-      const uidStart = curNode.nodeValue.indexOf('<')
-      const uidEnd = curNode.nodeValue.indexOf('>')
-      const uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
-      const blockElements = []
-
-      // Collect all elements until the closing comment
-      let sibling = curNode.nextSibling
-      let safety = 0
-      while (sibling && safety++ < 10000) {
-        if (sibling.nodeType === NODE_TYPES.COMMENT && sibling.nodeValue.trim().startsWith(`[-:B<${uid}`)) {
-          contentBlockRegistry.set(uid, { uid, elements: blockElements, insertionPoint: sibling })
-          break
-        } else if (sibling.nodeType === NODE_TYPES.ELEMENT) {
-          blockElements.push({ element: sibling, children: [] })
-        }
-        sibling = sibling.nextSibling
-      }
-    }
-  }
-}
-
-/**
- * Map nested content within block elements
- * @param {Array} blockElements - Array of element objects
- * @returns {Array} - Elements with their children mapped
- */
-function mapNestedContent(blockElements) {
-  return blockElements.map(blockEl => {
-    const element = blockEl.element
-    const childNodes = []
-
-    const iterator = document.createNodeIterator(
-      element,
-      NodeFilter.SHOW_COMMENT,
-      null,
-      false
-    )
-
-    let curNode
-    while ((curNode = iterator.nextNode())) {
-      if (curNode.nodeValue.trim().startsWith('[+:C')) {
-        // Extract UID from comment
-        const uidStart = curNode.nodeValue.indexOf('<')
-        const uidEnd = curNode.nodeValue.indexOf('>')
-        const uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
-
-        // Collect children until closing comment
-        let sibling = curNode.nextSibling
-        let safety = 0
-        while (sibling && safety++ < 10000) {
-          if (sibling.nodeType === NODE_TYPES.COMMENT && sibling.nodeValue.trim().startsWith(`[-:C<${uid}`)) {
-            blockEl.childInsertionPoint = sibling
-            break
-          } else {
-            childNodes.push(sibling)
-          }
-          sibling = sibling.nextSibling
-        }
-      }
-    }
-    
-    blockEl.children = childNodes
-    return blockEl
-  })
-}
-
-/**
- * Find the content insertion point within a block
- * @param {Node} blockElement - The block element to search within
- * @returns {Node|null} - The text node marking the insertion point
- */
-function findContentInsertionMarker(blockElement) {
-  const iterator = document.createNodeIterator(blockElement, NodeFilter.SHOW_TEXT, null, false)
-  let curNode
-
-  while ((curNode = iterator.nextNode())) {
-    if (curNode.nodeValue.trim().startsWith('[$ content $]')) {
-      return curNode
-    }
-  }
-  return null
-}
-
-/**
- * Parse a block's HTML as a fragment, the way it sits in the page.
- *
- * `DOMParser` parses a whole document: a leading `<style>`, `<script>`, `<link>`
- * or `<meta>` is moved into its `<head>`, and table rows outside a table are
- * dropped, so a block starting with any of them lost it on its first edit.
- * A `<template>` keeps them in place.
- * @param {string} html
- * @returns {Element[]} The fragment's top-level elements
- */
-function parseFragment(html) {
-  const template = document.createElement('template')
-  template.innerHTML = html
-  return Array.from(template.content.childNodes).filter(node => node.nodeType === NODE_TYPES.ELEMENT)
-}
-
-/**
- * Tell the site's own scripts what the preview just changed.
- *
- * The site's JS initialised the page once, on load. Elements patched in or
- * inserted afterwards — a slider, a lightbox, a canvas whose `data-lp-preserve`
- * value changed — are never initialised again unless the site listens:
- *
- *   document.addEventListener('brando:livepreview:patched', ({ detail }) => {
- *     detail.elements.forEach(el => initWidgets(el))
- *   })
- *
- * `detail.type` is `block` (one block, with its `uid`; no elements when it was
- * removed), `update` (`<main>`) or `rerender` (`<body>`).
- */
-function announcePatch(type, elements, uid) {
-  document.dispatchEvent(
-    new CustomEvent('brando:livepreview:patched', { detail: { type, uid, elements } })
-  )
+  contentBlockRegistry = BlockPatch.buildRegistry()
 }
 
 /**
@@ -433,113 +70,24 @@ function insertOverrideStyles() {
 channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   insertOverrideStyles()
 
-  // Find the block in our registry
-  let block = contentBlockRegistry.get(uid)
-
   // If not found, rebuild the registry and try again
-  if (!block) {
+  if (!contentBlockRegistry.has(uid)) {
     rebuildContentBlockRegistry()
-    block = contentBlockRegistry.get(uid)
   }
 
-  if (!block) {
+  const elements = BlockPatch.patchBlock(contentBlockRegistry, { uid, rendered_html, has_children })
+
+  if (!elements) {
     console.warn(`[LivePreview] Block not found in registry: ${uid}`)
     return
   }
 
   // Handle empty content (removed blocks)
   if (rendered_html === '') {
-    block.elements.forEach(el => el.element.remove())
     contentBlockRegistry.delete(uid)
-    announcePatch('block', [], uid)
-    return
   }
 
-  // Parse new content. `rebuildContentBlockRegistry` only tracks ELEMENT nodes,
-  // so the parsed nodes are filtered the same way or the two lists do not line
-  // up: index 0 would pair the `[+:B<uid>]` boundary comment against the block's
-  // first element, the nodeType check below would fail, and the replace branch
-  // would drop the live element without ever running the child splice — which
-  // is how a multi-module's children vanished from the preview.
-  const newBlocks = parseFragment(rendered_html)
-
-  // Update children map if needed
-  if (has_children) {
-    block.elements = mapNestedContent(block.elements)
-  }
-
-  // Handle new blocks (no existing elements)
-  if (!block.elements.length) {
-    newBlocks.forEach((newBlock, idx) => {
-      const newElement = block.insertionPoint.parentNode.insertBefore(
-        newBlock,
-        block.insertionPoint
-      )
-
-      block.elements[idx] = { element: newElement }
-      initializeLazyImages(newElement)
-      initializeLazyVideos(newElement)
-    })
-  } else {
-    // Update existing blocks
-    const newEls = []
-
-    newBlocks.forEach((newBlock, idx) => {
-      const existingEl = block.elements[idx]
-
-      if (existingEl && existingEl.element.nodeType === newBlock.nodeType) {
-        // Update existing element with morphdom. When the tag changes, morphdom
-        // replaces the node and returns the new one; keeping the old reference
-        // left the registry pointing at a detached node, so the block's next
-        // update went nowhere.
-        existingEl.element = morphdom(existingEl.element, newBlock, MORPHDOM_CONFIG_FULL)
-
-        // Handle nested children
-        if (has_children && existingEl.children) {
-          const childInsertionPoint = findContentInsertionMarker(existingEl.element)
-          if (childInsertionPoint) {
-            existingEl.children.forEach(child => {
-              // Skip boundary comments
-              if (child.nodeType === NODE_TYPES.COMMENT && child.nodeValue.trim().startsWith(`[-:C<${block.uid}`)) {
-                return
-              }
-              childInsertionPoint.parentNode.insertBefore(child, childInsertionPoint)
-            })
-            childInsertionPoint.remove()
-          }
-        }
-
-        newEls.push(existingEl)
-        initializeLazyImages(existingEl.element)
-        initializeLazyVideos(existingEl.element)
-      } else {
-        // Replace element if types don't match
-        const newElement = block.insertionPoint.parentNode.insertBefore(
-          newBlock,
-          block.insertionPoint
-        )
-
-        if (existingEl) {
-          existingEl.element.remove()
-        }
-
-        newEls.push({ element: newElement })
-        initializeLazyImages(newElement)
-        initializeLazyVideos(newElement)
-      }
-    })
-
-    // Clean up any extra old elements
-    for (let idx = newEls.length; idx < block.elements.length; idx++) {
-      if (block.elements[idx]) {
-        block.elements[idx].element.remove()
-      }
-    }
-
-    block.elements = newEls
-  }
-
-  announcePatch('block', block.elements.map(el => el.element), uid)
+  BlockPatch.announcePatch('block', elements, uid)
 })
 
 /**
@@ -560,17 +108,16 @@ channel.on('update', function (payload) {
     return
   }
 
-  // Both trees, before the morph — see stampBlockKeys.
-  stampBlockKeys(document)
-  stampBlockKeys(doc)
+  // Both trees, before the morph — see `stampBlockKeys` in block_patch.js.
+  BlockPatch.stampBlockKeys(document)
+  BlockPatch.stampBlockKeys(doc)
 
-  morphdom(main, newMain, MORPHDOM_CONFIG_CHILDREN_ONLY)
+  morphdom(main, newMain, BlockPatch.MORPHDOM_CONFIG_CHILDREN_ONLY)
 
-  initializeLazyImages()
-  initializeLazyVideos()
-  stampBlockKeys(document)
+  BlockPatch.initializeMedia(document)
+  BlockPatch.stampBlockKeys(document)
   rebuildContentBlockRegistry()
-  announcePatch('update', [main])
+  BlockPatch.announcePatch('update', [main])
 })
 
 /**
@@ -586,18 +133,17 @@ function rerender(doc) {
 
   const newBody = doc.querySelector('body')
 
-  stampBlockKeys(document)
-  stampBlockKeys(doc)
+  BlockPatch.stampBlockKeys(document)
+  BlockPatch.stampBlockKeys(doc)
 
-  morphdom(body, newBody, MORPHDOM_CONFIG_FULL)
+  morphdom(body, newBody, BlockPatch.MORPHDOM_CONFIG_FULL)
 
-  initializeLazyImages()
-  initializeLazyVideos()
-  stampBlockKeys(document)
+  BlockPatch.initializeMedia(document)
+  BlockPatch.stampBlockKeys(document)
   rebuildContentBlockRegistry()
 
   body.classList.remove('unloaded')
-  announcePatch('rerender', [body])
+  BlockPatch.announcePatch('rerender', [body])
 }
 
 /**

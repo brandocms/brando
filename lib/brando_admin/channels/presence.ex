@@ -197,7 +197,9 @@ defmodule BrandoAdmin.Presence do
       end
 
       # URL tracking functions
-      def track_url(url, current_user_id) do
+      # `meta` adds to the defaults; the frontend editor tracks itself under
+      # the entry's admin URL with `%{frontend: true}`.
+      def track_url(url, current_user_id, meta \\ %{}) do
         timestamp =
           DateTime.utc_now()
           |> DateTime.to_unix()
@@ -207,11 +209,14 @@ defmodule BrandoAdmin.Presence do
           self(),
           Brando.Tenant.Topic.scoped("url:#{url}"),
           current_user_id,
-          %{
-            last_active: timestamp,
-            active_field: nil,
-            dirty_fields: []
-          }
+          Map.merge(
+            %{
+              last_active: timestamp,
+              active_field: nil,
+              dirty_fields: []
+            },
+            meta
+          )
         )
       end
 

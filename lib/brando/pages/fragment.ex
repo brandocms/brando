@@ -152,7 +152,8 @@ defmodule Brando.Pages.Fragment do
 
   defimpl Phoenix.HTML.Safe do
     def to_iodata(%{wrapper: nil} = fragment) do
-      fragment.rendered_blocks
+      fragment
+      |> Brando.FrontendEdit.rendered_html(:blocks)
       |> Brando.Forms.Delivery.finalize()
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
@@ -160,7 +161,7 @@ defmodule Brando.Pages.Fragment do
 
     def to_iodata(%{wrapper: wrapper} = fragment) do
       wrapper
-      |> String.replace("{{ content }}", fragment.rendered_blocks)
+      |> String.replace("{{ content }}", Brando.FrontendEdit.rendered_html(fragment, :blocks) || "")
       |> String.replace("{{ parent_key }}", fragment.parent_key)
       |> String.replace("{{ key }}", fragment.key)
       |> String.replace("{{ language }}", to_string(fragment.language))

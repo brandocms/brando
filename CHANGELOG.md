@@ -440,6 +440,19 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Frontend edit mode.** Signed-in admins can edit blocks on the published
+  site: an **Edit page** button switches edit mode on, a click on a block opens
+  it alone in a sidebar with the admin's block editor, the page updates as it
+  changes, and saving stores it through its entry. The sidebar shows who else
+  has the entry open (the admin form shows website editors too), refuses to
+  save over someone else's newer save, says when a block belongs to a shared
+  fragment or a scheduled revision will replace it, and links to the block in
+  the full editor, which scrolls to it. Switch it on with
+  `config :brando, Brando.FrontendEdit, enabled: true` and
+  `plug Brando.Plug.FrontendEdit` in the browser pipeline. Visitors and caches
+  never see the edit-mode markup. See the
+  [Frontend edit guide](guides/frontend_edit.md).
+
 - **Brando sends email.** Brando now sends its own email through the
   application's Swoosh mailer: set `config :brando, mailer: MyApp.Mailer` and
   the address to send from, `config :brando, Brando.Mailer, from: {"My site",

@@ -246,21 +246,25 @@ defmodule Brando.HTML do
   attr :language, :string
 
   def fragment(%{fragment: fragment} = assigns) when not is_nil(fragment) do
+    assigns = assign(assigns, :html, Brando.FrontendEdit.rendered_html(fragment, :blocks))
+
     ~H"""
-    {raw(@fragment.rendered_blocks)}
+    {raw(@html)}
     """
   end
 
+  # `render_fragment/3` returns safe HTML (or a missing-fragment notice), not
+  # the fragment itself.
   def fragment(assigns) do
     assigns =
       assign(
         assigns,
-        :fragment,
+        :html,
         Brando.Pages.render_fragment(assigns.parent_key, assigns.key, assigns.language)
       )
 
     ~H"""
-    {raw(@fragment.rendered_blocks)}
+    {@html}
     """
   end
 
@@ -876,13 +880,16 @@ defmodule Brando.HTML do
       assigns
       |> assign(:rendered_field, rendered_field)
       |> assign(:rendered_field_at, rendered_field_at)
-      |> assign(:html, assigns.entry |> Map.get(rendered_field, "") |> Brando.Forms.Delivery.finalize())
+      |> assign(:html, assigns.entry |> rendered_field_html(assigns.field) |> Brando.Forms.Delivery.finalize())
       |> assign(:at, assigns.entry |> Map.get(rendered_field_at) |> inspect())
 
     ~H"""
     {@html |> raw}
     """
   end
+
+  # Stored HTML, or in frontend edit mode the field rendered with block markers.
+  defp rendered_field_html(entry, field), do: Brando.FrontendEdit.rendered_html(entry, field) || ""
 
   @doc "Render a Blueprint rich-text field with its configured footnote blocks."
   attr :entry, :map, required: true

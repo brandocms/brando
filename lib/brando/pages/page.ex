@@ -404,8 +404,9 @@ defmodule Brando.Pages.Page do
   defp filter_language(parents, _), do: parents
 
   defimpl Phoenix.HTML.Safe do
-    def to_iodata(%{rendered_blocks: html}) do
-      html
+    def to_iodata(page) do
+      page
+      |> Brando.FrontendEdit.rendered_html(:blocks)
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
       |> Brando.HTML.replace_timestamp()

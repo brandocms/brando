@@ -9,10 +9,12 @@ defmodule Brando.Plug.LivePreview do
 
   @external_resource Application.app_dir(:phoenix, "priv/static/phoenix.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")
+  @external_resource Application.app_dir(:brando, "priv/static/js/block_patch.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview.js")
 
   @phoenix_js File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js"))
   @morphdom_js File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"))
+  @block_patch_js File.read!(Application.app_dir(:brando, "priv/static/js/block_patch.js"))
   @livepreview_js File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js"))
 
   @override_css """
@@ -88,6 +90,7 @@ defmodule Brando.Plug.LivePreview do
           var livePreviewKey = '#{key}';
           #{@phoenix_js}
           #{@morphdom_js}
+          #{@block_patch_js}
           #{@livepreview_js}
           </script>
           <style>

@@ -23,6 +23,9 @@ defmodule E2eProjectWeb.Router do
     plug Brando.Plug.Identity
     plug Brando.Plug.Navigation, key: "main", as: :navigation
     plug Brando.Plug.Fragment, parent_key: "partials", as: :partials
+    # Frontend edit mode for signed-in admins, when switched on in config
+    # (`config :brando, Brando.FrontendEdit, enabled: true`).
+    plug Brando.Plug.FrontendEdit
     # plug :put_meta, %{
     #   "google-site-verification" => "GSV"
     # }

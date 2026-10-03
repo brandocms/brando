@@ -11,6 +11,12 @@ the producer in `lib/brando_admin/components/form.ex`, and the consumer in
 `assets/src/hooks/LivePreview/index.js` plus the preview channel/client. Search
 an event name at both ends before changing its payload.
 
+Patching blocks into the page (`priv/static/js/block_patch.js`) is shared with
+frontend edit mode (`priv/static/js/frontend_edit.js`, `guides/frontend_edit.md`),
+whose sidebar form routes the same `update_block` and full-render requests to
+the page in the parent window instead of a preview session
+(`BrandoAdmin.Components.Form.FrontendEditor`). Check both when changing either.
+
 ## Preserve render and cache ordering
 
 - Form requests materialized BlockField state before initializing a block

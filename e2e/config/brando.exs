@@ -102,6 +102,7 @@ config :brando, Brando.Images,
   }
 
 config :brando, Brando.Villain, parser: E2eProject.Villain.Parser
+config :brando, Brando.FrontendEdit, enabled: true
 
 # Video uploads are opt-in since 0.55. The specs upload local fixture videos
 # into fields, blocks and pickers, so the e2e site uploads to the server.

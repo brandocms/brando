@@ -971,6 +971,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     # own several ref configs, so this is an id rather than a boolean. Config
     # chrome renders only for the open one — see `Render.module_config/1`.
     |> assign_new(:config_open, fn -> nil end)
+    |> assign_focus()
     |> maybe_assign_children()
     |> maybe_assign_module()
     |> maybe_assign_container()
@@ -984,6 +985,38 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_unused_collections()
     |> then(&{:ok, &1})
   end
+
+  # Frontend edit mode narrows the tree to one block: its ancestors render
+  # only the way down to it, and it renders as a whole. Blocks below it get
+  # no focus and render as they always do.
+  defp assign_focus(socket) do
+    focus = socket.assigns[:focus]
+    uid = socket.assigns.uid
+
+    role =
+      case focus do
+        %{target: ^uid} -> :target
+        %{path: path} -> if uid in path, do: :ancestor
+        _ -> nil
+      end
+
+    assign(socket, focus: focus, focus_role: role)
+  end
+
+  @doc false
+  # What a parent hands its children: the focus while it is on the way to
+  # the selected block, nothing below it.
+  def child_focus(focus, :ancestor), do: focus
+  def child_focus(_focus, _role), do: nil
+
+  @doc false
+  # A parent on the way to the selected block renders only that branch.
+  def focus_shells(shells, focus, :ancestor) do
+    keep = [focus.target | focus.path]
+    Enum.filter(shells, fn {uid, _, _} -> uid in keep end)
+  end
+
+  def focus_shells(shells, _focus, _role), do: shells
 
   defp insert_child_module(%{sequence: sequence, module_id: module_id, type: type}, socket) do
     module_reference = Brando.Content.SharedLibrary.reference(module_id)
