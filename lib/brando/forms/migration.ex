@@ -109,4 +109,48 @@ defmodule Brando.Forms.Migration do
   def shared_down do
     drop table(:forms_submissions, prefix: "public")
   end
+
+  # Who a form's submissions are emailed to, the confirmation sent to the
+  # visitor, where the visitor goes once it is sent, and how long its
+  # submissions are kept.
+  def settings_up(prefix \\ nil) do
+    alter table(:forms, prefix: prefix) do
+      add :recipients, :jsonb, null: false, default: fragment("'[]'::jsonb")
+      add :subject, :text
+      add :confirmation, :boolean, null: false, default: false
+      add :confirmation_subject, :text
+      add :confirmation_message, :text
+      add :redirect_url, :text
+      add :retention_days, :integer
+    end
+  end
+
+  def settings_down(prefix \\ nil) do
+    alter table(:forms, prefix: prefix) do
+      remove :recipients
+      remove :subject
+      remove :confirmation
+      remove :confirmation_subject
+      remove :confirmation_message
+      remove :redirect_url
+      remove :retention_days
+    end
+  end
+
+  # Whether a submission's notification went out: queued, sent, or why not.
+  def shared_status_up do
+    alter table(:forms_submissions, prefix: "public") do
+      add :queued_at, :utc_datetime_usec
+      add :sent_at, :utc_datetime_usec
+      add :send_error, :text
+    end
+  end
+
+  def shared_status_down do
+    alter table(:forms_submissions, prefix: "public") do
+      remove :queued_at
+      remove :sent_at
+      remove :send_error
+    end
+  end
 end

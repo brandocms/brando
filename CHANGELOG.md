@@ -494,6 +494,25 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `form_routes()` to their router. Brando's default production CSP now allows
   `challenges.cloudflare.com`. See the [Forms guide](guides/forms.md).
 
+- **Forms email their submissions.** A form's new **Submissions** tab takes
+  recipients (name, address, and whether it is a blind copy) and a subject,
+  which can carry what the visitor filled in (`{{ name }}`). Each submission
+  is emailed to them in Brando's mail layout from a background job, with
+  replies going to the visitor's address. The submissions admin shows whether
+  it was sent, queued or why it was not, and **Send again** sends it once
+  more. A form can also send the visitor a confirmation with a copy of what
+  they sent. The source of a synchronized form owns its recipients; each
+  language words its own subjects. The same tab sets how many days
+  submissions are kept: `Brando.Worker.FormSubmissionPurger` deletes older ones
+  every night at 05:15 UTC, in every active environment. A form can send
+  visitors to a page once it is sent, instead of showing the success message,
+  with or without JavaScript. The form's screen lists the entries whose
+  blocks hold it, and deleting a form names them. `Brando.HTML.Forms.LiveForm`
+  renders a form inside a LiveView, checked as the visitor types, with the
+  same slots as `site_form/1`. Run `mix brando.gen.migrations` for
+  `brando_196`. Applications that set their own `config :brando, Oban` add the
+  purger to their crontab to keep submissions for a limited time.
+
 - **Activity log.** Configuration → Activity lists who created, changed,
   published, trashed, restored and deleted entries, and when: by day, with
   the fields that changed, filters for person, content type, action and

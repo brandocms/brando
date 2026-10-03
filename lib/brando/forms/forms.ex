@@ -13,6 +13,7 @@ defmodule Brando.Forms do
   alias Brando.Forms.Field
   alias Brando.Forms.Form
   alias Brando.Forms.Messages
+  alias Brando.Forms.Notification
   alias Brando.Forms.RateLimit
   alias Brando.Forms.Submission
   alias Brando.Forms.Turnstile
@@ -123,6 +124,9 @@ defmodule Brando.Forms do
 
   A filled-in honeypot returns `{:ok, :ignored}`, the same as a success to the
   sender, and stores nothing.
+
+  A stored submission is emailed to the form's recipients, and confirmed to
+  the visitor when the form asks for it (`Brando.Forms.Notification`).
   """
   @spec submit(String.t(), map(), map()) ::
           {:ok, Submission.t() | :ignored, Form.t()}
@@ -136,7 +140,8 @@ defmodule Brando.Forms do
          :ok <- tag(verify_turnstile(params, meta), form),
          {:ok, data} <- tag(Validation.validate(form, params["fields"] || %{}), form),
          {:ok, submission} <- insert_submission(form, data, meta) do
-      {:ok, submission, form}
+      Notification.confirm(submission, form)
+      {:ok, Notification.enqueue(submission), form}
     else
       {:ignored, form} -> {:ok, :ignored, form}
       other -> other
@@ -172,7 +177,8 @@ defmodule Brando.Forms do
       labels: labels,
       url: truncate(meta[:url], 2000),
       ip_hash: ip_hash(meta[:ip]),
-      user_agent: truncate(meta[:user_agent], 500)
+      user_agent: truncate(meta[:user_agent], 500),
+      queued_at: if(Notification.notifies?(form), do: DateTime.utc_now())
     })
   end
 
@@ -250,6 +256,57 @@ defmodule Brando.Forms do
       nil -> {:error, :not_found}
       submission -> Repo.delete(submission)
     end
+  end
+
+  @doc """
+  Sends the notification of a submission of the form `key` again, to the
+  form's recipients as they are now. Returns `{:ok, submission}` once it is
+  queued, or `{:error, :not_found | :no_recipients}`.
+  """
+  def resend_submission(key, id) do
+    with %Submission{} = submission <- get_submission(key, id) || {:error, :not_found},
+         true <- key |> list_forms_by_key() |> Enum.any?(&Notification.notifies?/1) || {:error, :no_recipients} do
+      submission
+      |> Ecto.Changeset.change(queued_at: DateTime.utc_now(), sent_at: nil, send_error: nil)
+      |> Repo.update!()
+      |> Notification.enqueue()
+      |> then(&{:ok, Repo.reload!(&1)})
+    end
+  end
+
+  @doc """
+  Deletes the submissions in the current scope that are older than their
+  form's `retention_days`. Returns how many were deleted.
+  """
+  def purge_submissions(now \\ DateTime.utc_now()) do
+    scope = Submission.current_scope()
+
+    from(f in Form, where: not is_nil(f.retention_days), order_by: [asc: f.id], select: {f.key, f.retention_days})
+    |> Repo.all()
+    |> Enum.uniq_by(&elem(&1, 0))
+    |> Enum.reduce(0, fn {key, days}, total ->
+      cutoff = DateTime.add(now, -days, :day)
+
+      {count, _} =
+        Repo.delete_all(from s in Submission, where: s.scope == ^scope and s.form_key == ^key and s.inserted_at < ^cutoff)
+
+      total + count
+    end)
+  end
+
+  @doc """
+  Where the form `key` is used: the entries whose blocks hold it, in any
+  language, in a form variable (see `Brando.Content.Usage`).
+  """
+  def list_usage(key) do
+    ids = Repo.all(from f in Form, where: f.key == ^key, select: f.id)
+
+    :form
+    |> Brando.Content.Usage.list(ids)
+    |> Map.values()
+    |> List.flatten()
+    |> Enum.uniq_by(&{&1.url, &1.label})
+    |> Enum.sort_by(&String.downcase(&1.label))
   end
 
   defp submissions_query(key, language) do

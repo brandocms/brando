@@ -1,8 +1,8 @@
 # Email
 
-Brando sends its email — account email to admin users, and later the
-notifications of a form submission — through your application's own Swoosh
-mailer. It needs to know which mailer that is, and which address to send from.
+Brando sends its email — account email to admin users, and the notifications
+and confirmations of a form submission (see the [Forms guide](forms.md)) —
+through your application's own Swoosh mailer. It needs to know which mailer that is, and which address to send from.
 
 ## Set up
 

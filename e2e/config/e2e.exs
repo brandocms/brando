@@ -38,6 +38,10 @@ config :brando, Oban,
 
 config :e2e_project, hmr: false
 
+# Form notifications are sent while the tests run; the test adapter keeps
+# them in the sending process instead of a mail provider.
+config :e2e_project, E2eProject.Mailer, adapter: Swoosh.Adapters.Test
+
 # Minimal image sizes for faster uploads in e2e tests.
 # Core code now uses :largest (resolved dynamically) so we can safely
 # drop medium/large/xlarge. 3 sizes × 1 format vs the default 6 × 2.

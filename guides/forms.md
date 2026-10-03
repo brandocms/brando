@@ -9,8 +9,8 @@ linked to the others as a [synchronized translation](i18n.md): the source form
 decides which fields there are, and each translation words them in its own
 language.
 
-Run `mix brando.gen.migrations` for `brando_194` and `brando_195` to add the
-tables.
+Run `mix brando.gen.migrations` for `brando_194`, `brando_195` and `brando_196`
+to add the tables.
 
 ## Build a form
 
@@ -46,7 +46,18 @@ own tray below the canvas.
 
 The **Messages** tab holds the text above the fields, the submit button's label
 and the message shown once the form has been sent. Leave the last two empty to
-use the site's wording.
+use the site's wording. **Page after sending** sends visitors on to a page
+instead of showing the message: a path on the site, such as `/thank-you`, or a
+full address.
+
+The **Submissions** tab sets who each submission is emailed to, the
+confirmation sent to the visitor, and how long submissions are kept; see
+[Email](#email) and [Keeping submissions](#keeping-submissions) below.
+
+Once a form is saved, its screen lists the entries whose blocks hold it, in any
+of its languages. Deleting a form from the list names them too: a page that
+holds a deleted form shows nothing in its place. A form named by key in a
+module's code (`{% form 'contact' %}`) is not listed.
 
 ## Messages
 
@@ -68,8 +79,11 @@ starts as a copy of the source, and from then on the source decides:
 - which fields there are, in what order and layout
 - each field's key, type and whether it is required
 - the option values of dropdowns and choices
+- who submissions are emailed to, whether the visitor gets a confirmation, and
+  how long submissions are kept
 
-A translation's designer is read-only. Its edit dialogs show what the source
+Each translation words its own email subjects and confirmation, and has its
+own page after sending. A translation's designer is read-only. Its edit dialogs show what the source
 decides beside the text to translate: labels, placeholders, help text and option
 labels, with the source's wording as a reference. An option the source adds
 shows its value until it is translated.
@@ -147,6 +161,39 @@ it was built:
 .site-form-field[data-new-row] { grid-column-start: 1; }
 ```
 
+### In a LiveView
+
+`Brando.HTML.Forms.LiveForm` renders a form inside a LiveView with the same
+slots as `site_form/1`. A field shows its errors once the visitor has been in
+it, and the form is sent over the LiveView's socket, through the same checks
+and email as a posted form:
+
+```elixir
+def mount(_params, _session, socket) do
+  {:ok,
+   socket
+   |> assign(:contact, Brando.Forms.get_published_form("contact", "en"))
+   |> assign(:form_meta, Brando.HTML.Forms.LiveForm.connect_meta(socket))}
+end
+```
+
+```heex
+<.live_component module={Brando.HTML.Forms.LiveForm} id="contact" form={@contact} meta={@form_meta}>
+  <:submit>Send it</:submit>
+</.live_component>
+```
+
+`connect_meta/1` reads the visitor's IP address and user agent for the rate
+limit and the stored submission, so the socket must give them:
+
+```elixir
+socket "/live", Phoenix.LiveView.Socket,
+  websocket: [connect_info: [:peer_data, :user_agent, session: @session_options]]
+```
+
+With Turnstile, load its script in the layout. A Turnstile token is good for
+one submission, so a visitor whose check fails is asked to reload the page.
+
 ### Change the markup
 
 `classes` adds classes to the parts — `form`, `section`, `legend`, `fields`,
@@ -198,8 +245,50 @@ was sent.
 The form submits itself with a small inline script: errors appear by their
 fields, and the success message replaces the form. Without JavaScript the post
 returns to the page at the `#<form id>-sent` (or `-failed`) anchor, and a
-`:target` rule shows the message. Pass `enhance={false}` to leave the script out,
+`:target` rule shows the message. A form with a page after sending goes there
+instead, either way; on a static site a path is resolved against the page the
+form was on. Pass `enhance={false}` to leave the script out,
 and `nonce` when your content security policy requires one.
+
+### Email
+
+Add **Recipients** on the form's **Submissions** tab, and each submission is
+emailed to them, with the visitor's answers labelled as on the form, the page it
+was sent from and a link to it in the admin. A recipient marked **Blind copy**
+is hidden from the others; when every recipient is one, the email is addressed
+to the site's own sender. Replies go to the first email address the visitor
+filled in.
+
+The **Subject** is worded per language and can carry what the visitor filled
+in, by field key: `Message from {{ name }}`. A choice shows its label. Left
+empty, the subject is "New submission" and the form's title.
+
+The email is sent from a background job (`Brando.Worker.FormNotification`)
+through the mailer set up in the [Email guide](email.md), and tried again up to
+five times when the provider fails. The form's submissions page has an
+**Email** column — sent, queued, or not sent — and an opened submission says
+why one was not sent and has **Send again**, which sends it to the recipients
+the form has now. With no mailer configured, nothing is sent and the
+submission says so; it is stored either way.
+
+**Send a confirmation** emails the visitor at the address they filled in, so
+the form needs an Email field. It carries the confirmation message, or the
+success message when there is none, and a copy of what they sent, without
+hidden fields. Replies go to the form's first recipient that is not a blind
+copy. Anyone can type someone else's address into a form, so use Turnstile on
+forms that send confirmations.
+
+### Keeping submissions
+
+**Delete submissions after (days)** keeps a form's submissions for that long.
+`Brando.Worker.FormSubmissionPurger` deletes older ones every night at 05:15
+UTC, in every active environment. Leave it empty to keep them until they are
+deleted by hand. An application that sets its own `config :brando, Oban`
+replaces Brando's crontab, and adds the job to its own:
+
+```elixir
+{"15 5 * * *", Brando.Worker.FormSubmissionPurger}
+```
 
 ### Protection
 

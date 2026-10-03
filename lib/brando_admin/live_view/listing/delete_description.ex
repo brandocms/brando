@@ -9,7 +9,8 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
   Media with usage tracking (`Brando.Content.Usage`: images, videos,
   galleries, files) also says where it is used, linked, so the editor sees
-  what the delete takes from. Deleting is still allowed.
+  what the delete takes from. So does a form, in any of its languages: a
+  page shows the form in its own language. Deleting is still allowed.
   """
   use Gettext, backend: Brando.Gettext
 
@@ -66,33 +67,43 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   # A long list is cut: the dialog names the first few and counts the rest.
   @usage_shown 5
 
-  defp usage(schema, %{id: id}) do
-    with kind when not is_nil(kind) <- Map.get(@usage_kinds, schema),
-         [_ | _] = usages <- Map.get(Usage.list(kind, [id]), id, []) do
-      shown = Enum.take(usages, @usage_shown)
-      rest = length(usages) - length(shown)
+  defp usage(schema, entry) do
+    case usages(schema, entry) do
+      [] ->
+        ""
 
-      links =
-        Enum.map(shown, fn
-          %{url: url, label: label} when is_binary(url) ->
-            ~s(<a href="#{escape(url)}" target="_blank">#{escape(label)}</a>)
+      usages ->
+        shown = Enum.take(usages, @usage_shown)
+        rest = length(usages) - length(shown)
 
-          %{label: label} ->
-            escape(label)
-        end)
+        links =
+          Enum.map(shown, fn
+            %{url: url, label: label} when is_binary(url) ->
+              ~s(<a href="#{escape(url)}" target="_blank">#{escape(label)}</a>)
 
-      links = if rest > 0, do: links ++ [gettext("%{count} more", count: rest)], else: links
+            %{label: label} ->
+              escape(label)
+          end)
 
-      " " <>
-        ngettext("It is used in one place: %{places}.", "It is used in %{count} places: %{places}.", length(usages),
-          places: to_sentence(links)
-        )
-    else
-      _ -> ""
+        links = if rest > 0, do: links ++ [gettext("%{count} more", count: rest)], else: links
+
+        " " <>
+          ngettext("It is used in one place: %{places}.", "It is used in %{count} places: %{places}.", length(usages),
+            places: to_sentence(links)
+          )
     end
   end
 
-  defp usage(_schema, _entry), do: ""
+  defp usages(Brando.Forms.Form, %{key: key}), do: Brando.Forms.list_usage(key)
+
+  defp usages(schema, %{id: id}) do
+    case Map.get(@usage_kinds, schema) do
+      nil -> []
+      kind -> Map.get(Usage.list(kind, [id]), id, [])
+    end
+  end
+
+  defp usages(_schema, _entry), do: []
 
   defp sentence(parts), do: (parts |> Enum.reject(&(&1 in [nil, false])) |> Enum.join(" ")) <> "."
 

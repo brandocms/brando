@@ -7,6 +7,10 @@ defmodule Brando.Forms.SubmissionController do
   A plain HTML post is redirected to the page it came from, to the form's
   `#<id>-sent` or `#<id>-failed` message.
 
+  A form with a `redirect_url` sends the visitor there once it is sent: a
+  plain post is redirected to it, resolved against the page the form was on,
+  and the JSON reply carries it as `redirect`.
+
   Both routes refuse a request whose `Origin` (or, without one, `Referer`) is
   not the site's own: the current host on a dynamic site, one of the site's
   domains on a static one.
@@ -60,7 +64,7 @@ defmodule Brando.Forms.SubmissionController do
 
     case Forms.submit(key, params, meta) do
       {:ok, _submission, form} ->
-        respond(conn, form, 200, %{ok: true, message: Forms.success_message(form)}, "sent")
+        sent(conn, form)
 
       {:error, {:invalid, errors}, form} ->
         respond(conn, form, 422, %{ok: false, errors: errors}, "failed")
@@ -80,6 +84,14 @@ defmodule Brando.Forms.SubmissionController do
         conn |> put_status(500) |> respond_plain(%{ok: false})
     end
   end
+
+  defp sent(conn, %{redirect_url: url} = form) when is_binary(url) and url != "" do
+    if json?(conn),
+      do: json(conn, %{ok: true, message: Forms.success_message(form), redirect: url}),
+      else: conn |> put_status(303) |> redirect(external: resolve(conn, url))
+  end
+
+  defp sent(conn, form), do: respond(conn, form, 200, %{ok: true, message: Forms.success_message(form)}, "sent")
 
   defp respond(conn, form, status, body, outcome) do
     if json?(conn) do
@@ -115,6 +127,17 @@ defmodule Brando.Forms.SubmissionController do
       url -> (url |> String.split("#") |> hd()) <> "##{anchor}"
     end
   end
+
+  # A path is on the site the form was on, which for a static site is not
+  # the host that received the post.
+  defp resolve(conn, "/" <> _ = path) do
+    case referer(conn) do
+      nil -> path
+      url -> url |> URI.merge(path) |> URI.to_string()
+    end
+  end
+
+  defp resolve(_conn, url), do: url
 
   defp referer(conn), do: conn |> get_req_header("referer") |> List.first()
 
