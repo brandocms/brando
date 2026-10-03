@@ -21,7 +21,7 @@
     "vite-plugin-eslint": "^1.8.1"
   },
   "dependencies": {
-    "@brandocms/jupiter": "5.0.0-beta.18"
+    "@brandocms/jupiter": "5.0.0-beta.19"
   },
   "packageManager": "pnpm@9.14.3+sha256.652c47dac7c2b9350db4cdb9330c087d527114a0c2dff4cbac7ea9b96be928bd",
   "engines": {
