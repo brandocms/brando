@@ -1,15 +1,17 @@
 defmodule BrandoAdmin.FrontendEdit.EditorLive do
   @moduledoc """
-  The sidebar of frontend edit mode: one block of an entry, opened from the
-  published page (`priv/static/js/frontend_edit.js`) in an iframe.
+  The sidebar of frontend edit mode: one block or one field of an entry,
+  opened from the published page (`priv/static/js/frontend_edit.js`) in an
+  iframe.
 
-  Mounted with the uid of the clicked block. It resolves the block to edit
-  and its entry (`Brando.FrontendEdit.Targets`), runs the same form hooks an
-  entry's admin form does, and renders the entry form narrowed to the block
-  (`BrandoAdmin.Components.Form.FrontendEditor`).
+  Mounted with the uid of a clicked block (`?uid=`) or the key of a clicked
+  entry field (`?field=`, see `Brando.FrontendEdit.Fields`). It resolves what
+  to edit and its entry (`Brando.FrontendEdit.Targets`), runs the same form
+  hooks an entry's admin form does, and renders the entry form narrowed to
+  it (`BrandoAdmin.Components.Form.FrontendEditor`).
 
-  Selecting another block of the same entry moves the focus; one in another
-  entry remounts the view for that entry. Preview HTML and editor state go
+  Selecting something else of the same entry moves the focus; something of
+  another entry remounts the view for that entry. Preview HTML and editor state go
   to the page through the `Brando.FrontendEditBridge` hook.
 
   The editor is present at the entry's admin URL, marked as a frontend
@@ -25,8 +27,6 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.LiveView.Form.Compiler
 
-  @form_id "frontend_edit_form"
-
   @doc false
   # Entry-level authorization is checked on mount (the entry is only known
   # from the block) and again by the context when saving.
@@ -37,14 +37,14 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
     socket =
       socket
       |> assign(:socket_connected, connected?(socket))
-      |> assign(:form_id, @form_id)
       |> assign(:dirty?, false)
       |> assign(:saved?, false)
       |> assign(:stale, nil)
+      |> assign(:save_error, nil)
       |> assign(:expect_own_mutation, false)
       |> assign(:presences, %{})
 
-    case resolve(params["uid"], socket.assigns.current_user) do
+    case resolve(target(params), socket.assigns.current_user) do
       {:ok, resolved} ->
         {:ok, socket |> assign_resolved(resolved) |> setup(session), layout: {BrandoAdmin.Layouts, :frontend_edit}}
 
@@ -54,9 +54,13 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
     end
   end
 
-  defp resolve(uid, user) do
+  defp target(%{"field" => key}) when is_binary(key), do: {:field, key}
+  defp target(%{"uid" => uid}) when is_binary(uid), do: {:block, uid}
+  defp target(_params), do: nil
+
+  defp resolve(target, user) do
     with {:enabled, true} <- {:enabled, FrontendEdit.enabled?()},
-         {:ok, resolved} <- Targets.resolve(uid),
+         {:ok, resolved} <- resolve_target(target),
          true <- Manifest.editable?(resolved.owner, user) || {:error, :forbidden} do
       {:ok, resolved}
     else
@@ -65,16 +69,45 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
     end
   end
 
+  defp resolve_target({:block, uid}) do
+    with {:ok, resolved} <- Targets.resolve(uid) do
+      {_schema, _id, field} = resolved.owner
+
+      {:ok,
+       %{
+         owner: resolved.owner,
+         focus: %{target: resolved.target.uid, root: resolved.root.uid, path: resolved.path, field: field},
+         title:
+           Manifest.labels([resolved.target]) |> Map.get(resolved.target.uid) || block_type_label(resolved.target.type)
+       }}
+    end
+  end
+
+  defp resolve_target({:field, key}) do
+    case FrontendEdit.Fields.parse_key(key) do
+      {:ok, {schema, _id, field} = owner} ->
+        {:ok,
+         %{owner: owner, focus: %{target: key, input: field, field: nil}, title: FrontendEdit.Fields.label(schema, field)}}
+
+      :error ->
+        {:error, :not_found}
+    end
+  end
+
+  defp resolve_target(nil), do: {:error, :not_found}
+
   defp assign_resolved(socket, resolved) do
-    {schema, id, field} = resolved.owner
+    {schema, id, _field} = resolved.owner
 
     socket
     |> assign(:unavailable, nil)
     |> assign(:schema, schema)
+    # The id the entry's own admin form has: asset delivery and image inputs
+    # find the form by it.
+    |> assign(:form_id, "#{schema.__naming__().singular}_form")
     |> assign(:owner, resolved.owner)
-    |> assign(:focus, %{target: resolved.target.uid, root: resolved.root.uid, path: resolved.path, field: field})
-    |> assign(:block_label, Manifest.labels([resolved.target]) |> Map.get(resolved.target.uid))
-    |> assign(:block_type, resolved.target.type)
+    |> assign(:focus, resolved.focus)
+    |> assign(:title, resolved.title)
     # Present at the entry's admin form, as someone editing from the website.
     |> assign(:presence_path, schema.__admin_route__(:update, [id]))
     |> assign(:presence_meta, %{frontend: true})
@@ -119,17 +152,23 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
   end
 
   @impl true
-  def handle_params(%{"uid" => uid}, _uri, %{assigns: %{unavailable: nil, focus: %{target: target}}} = socket)
-      when uid != target do
-    # Another block. One in this entry moves the focus; one in another entry
-    # needs a view set up for that entry.
-    case resolve(uid, socket.assigns.current_user) do
-      {:ok, %{owner: {schema, id, _}} = resolved}
-      when {schema, id} == {elem(socket.assigns.owner, 0), elem(socket.assigns.owner, 1)} ->
-        {:noreply, socket |> assign_resolved(resolved) |> assign(:saved?, false)}
+  def handle_params(params, _uri, %{assigns: %{unavailable: nil, focus: %{target: current}}} = socket) do
+    case target(params) do
+      {_kind, value} = target when value != current ->
+        # Something else. In this entry it moves the focus; in another entry
+        # it needs a view set up for that entry.
+        {schema, id, _field} = socket.assigns.owner
+
+        case resolve(target, socket.assigns.current_user) do
+          {:ok, %{owner: {^schema, ^id, _}} = resolved} ->
+            {:noreply, socket |> assign_resolved(resolved) |> assign(:saved?, false)}
+
+          _ ->
+            {:noreply, push_navigate(socket, to: editor_path(target))}
+        end
 
       _ ->
-        {:noreply, push_navigate(socket, to: editor_path(uid))}
+        {:noreply, socket}
     end
   end
 
@@ -137,7 +176,11 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
 
   @impl true
   def handle_event("select", %{"uid" => uid}, socket) when is_binary(uid) do
-    {:noreply, push_patch(socket, to: editor_path(uid))}
+    {:noreply, push_patch(socket, to: editor_path({:block, uid}))}
+  end
+
+  def handle_event("select", %{"field" => key}, socket) when is_binary(key) do
+    {:noreply, push_patch(socket, to: editor_path({:field, key}))}
   end
 
   # The page reloads to drop this editor's changes and fetch someone else's,
@@ -157,6 +200,9 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
   defp frontend_edit({:replace_field, payload}, socket),
     do: push_event(socket, "b:frontend-edit", Map.put(payload, :type, "replace_field"))
 
+  defp frontend_edit({:entry_field, payload}, socket),
+    do: push_event(socket, "b:frontend-edit", Map.put(payload, :type, "entry_field"))
+
   defp frontend_edit(:dirty, %{assigns: %{dirty?: true}} = socket), do: socket
 
   defp frontend_edit(:dirty, socket) do
@@ -169,13 +215,13 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
 
   defp frontend_edit({:saved, _entry}, socket) do
     socket
-    |> assign(dirty?: false, saved?: true)
+    |> assign(dirty?: false, saved?: true, save_error: nil)
     |> push_event("b:frontend-edit", %{type: "saved"})
   end
 
-  defp frontend_edit({:save_failed, _reason}, socket) do
+  defp frontend_edit({:save_failed, reason}, socket) do
     socket
-    |> assign(:expect_own_mutation, false)
+    |> assign(expect_own_mutation: false, save_error: hidden_errors(reason, socket.assigns.focus))
     |> push_event("b:frontend-edit", %{type: "save_failed"})
   end
 
@@ -217,7 +263,10 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
   defp bridge(socket, :reload),
     do: push_event(socket, "b:frontend-edit", %{type: "reload", uid: socket.assigns.focus.target})
 
-  defp editor_path(uid), do: Brando.Plug.FrontendEdit.editor_path() <> "?" <> URI.encode_query(%{"uid" => uid})
+  defp editor_path({:block, uid}), do: Brando.Plug.FrontendEdit.editor_path() <> "?" <> URI.encode_query(%{"uid" => uid})
+
+  defp editor_path({:field, key}),
+    do: Brando.Plug.FrontendEdit.editor_path() <> "?" <> URI.encode_query(%{"field" => key})
 
   @impl true
   def render(%{unavailable: reason} = assigns) when not is_nil(reason) do
@@ -263,10 +312,10 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
             <span>{@kind}</span>
             <span :if={@entry_title} class="frontend-editor-entry">{@entry_title}</span>
           </p>
-          <h1>{@block_label || block_type_label(@block_type)}</h1>
+          <h1>{@title}</h1>
         </div>
         <.link
-          href={"#{@admin_url}?block=#{@focus.target}"}
+          href={full_editor_url(@admin_url, @focus)}
           target="_blank"
           class="frontend-editor-open"
           title={gettext("Open in the full editor")}
@@ -292,6 +341,21 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
             <button :if={!@stale.deleted?} type="button" class="frontend-editor-notice-action" phx-click="reload">
               {gettext("Reload")}
             </button>
+          </div>
+        </div>
+
+        <div
+          :if={@save_error == :invalid}
+          class="frontend-editor-notice is-error"
+          role="alert"
+          data-testid="frontend-edit-invalid"
+        >
+          <.icon name="hero-exclamation-triangle" />
+          <div>
+            <p>{gettext("Not saved: the entry has errors in fields not shown here.")}</p>
+            <.link href={@admin_url} target="_blank" class="frontend-editor-notice-action">
+              {gettext("Fix them in the full editor")}
+            </.link>
           </div>
         </div>
 
@@ -345,12 +409,24 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
           frontend_edit={@focus}
           frontend_status={%{dirty?: @dirty?, saved?: @saved?, stale: @stale}}
         >
-          <:header>{@block_label}</:header>
+          <:header>{@title}</:header>
         </.live_component>
       </div>
     </div>
     """
   end
+
+  # Errors in fields the sidebar does not show need the full editor; the
+  # field it shows has its error inline.
+  defp hidden_errors({:invalid, fields}, focus) do
+    if Enum.any?(fields, &(&1 != focus[:input])), do: :invalid
+  end
+
+  defp hidden_errors(_reason, _focus), do: nil
+
+  # The full editor opens at the block, or at the field's tab.
+  defp full_editor_url(admin_url, %{input: field}) when not is_nil(field), do: "#{admin_url}?field=#{field}"
+  defp full_editor_url(admin_url, %{target: uid}), do: "#{admin_url}?block=#{uid}"
 
   defp others(presences, current_user) do
     presences

@@ -24,7 +24,7 @@ export default () => ({
       }
 
       if (event.data.type === 'select') {
-        this.pushEvent('select', { uid: event.data.uid })
+        this.pushEvent('select', event.data.field ? { field: event.data.field } : { uid: event.data.uid })
       } else if (event.data.type === 'save') {
         // The form's own save button, so saving runs exactly as from here.
         document.getElementById(this.el.dataset.submitId)?.click()

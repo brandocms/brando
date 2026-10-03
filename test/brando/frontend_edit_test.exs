@@ -221,8 +221,10 @@ defmodule Brando.FrontendEditTest do
     end
 
     test "ignores markers it cannot resolve", %{user: user} do
-      html = "<!-- [+:F<Brando.Users.User:1:blocks>] --><!-- [+:B<missing>] --><!-- [-:B<missing>] -->"
-      assert Manifest.build(html, user) == %{owners: %{}, blocks: %{}}
+      html =
+        "<!-- [+:F<Brando.Users.User:1:blocks>] --><!-- [+:B<missing>] --><!-- [-:B<missing>] --><!-- [+:E<Brando.Users.User:1:not_a_field>] -->"
+
+      assert Manifest.build(html, user) == %{owners: %{}, blocks: %{}, fields: %{}}
     end
   end
 

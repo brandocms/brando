@@ -197,7 +197,10 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
 }
 
 .frontend-editor-notice-action {
+  display: inline-flex;
+  align-items: center;
   height: 30px;
+  text-decoration: none;
   padding: 5px 12px;
   border: 1px solid #dce2dc;
   border-radius: 5px;
@@ -397,8 +400,9 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   }
 }
 
-/* The block a link from the website opened the editor at. */
-.base-block.is-deep-linked > .block {
+/* The block or field a link from the website opened the editor at. */
+.base-block.is-deep-linked > .block,
+.field-wrapper.is-deep-linked {
   animation: frontend-edit-located 2.4s ease-out;
 }
 
@@ -414,7 +418,8 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .base-block.is-deep-linked > .block {
+  .base-block.is-deep-linked > .block,
+  .field-wrapper.is-deep-linked {
     animation: none;
     box-shadow: 0 0 0 3px color-mix(in srgb, #254e3f 45%, transparent);
   }

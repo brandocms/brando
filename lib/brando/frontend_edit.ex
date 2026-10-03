@@ -57,6 +57,7 @@ defmodule Brando.FrontendEdit do
   @loading_key {__MODULE__, :loading}
   @memo_key {__MODULE__, :memo}
   @stack_key {__MODULE__, :stack}
+  @annotate_key {__MODULE__, :annotate}
 
   @cookie "_brando_frontend_edit"
 
@@ -88,6 +89,36 @@ defmodule Brando.FrontendEdit do
     Process.delete(@memo_key)
     Process.delete(@stack_key)
     :ok
+  end
+
+  @doc """
+  Whether markup rendered now should carry frontend edit markers.
+
+  Inside a block render this follows the render's `annotate_blocks` option
+  (`annotation_scope/2`): edit-mode and preview renders carry markers, the
+  stored HTML never does. Outside one, in the site's own templates, it
+  follows edit mode.
+  """
+  @spec annotating?() :: boolean()
+  def annotating? do
+    case Process.get(@annotate_key) do
+      nil -> active?()
+      annotate? -> annotate?
+    end
+  end
+
+  @doc false
+  # Villain wraps each render in this, so the editable tags and components in
+  # module templates know whether to add markers.
+  def annotation_scope(annotate?, fun) do
+    previous = Process.get(@annotate_key)
+    Process.put(@annotate_key, annotate? == true)
+
+    try do
+      fun.()
+    after
+      if is_nil(previous), do: Process.delete(@annotate_key), else: Process.put(@annotate_key, previous)
+    end
   end
 
   @doc """

@@ -195,6 +195,37 @@ defmodule Brando.Villain.Components do
     """
   end
 
+  # -- editable field components --
+
+  attr :entry, :map, required: true
+  attr :field, :atom, required: true
+
+  @doc """
+  Prints an entry field, editable in place in frontend edit mode. Delegates to
+  `Brando.HTML.editable_field/1`.
+
+      <h2><.editable_field entry={@entry} field={:title} /></h2>
+  """
+  def editable_field(assigns) do
+    ~H"""
+    <Brando.HTML.editable_field entry={@entry} field={@field} />
+    """
+  end
+
+  attr :entry, :map, required: true
+  attr :field, :atom, required: true
+  slot :inner_block, required: true
+
+  @doc """
+  Makes an entry field editable in frontend edit mode where other markup
+  shows it. Delegates to `Brando.HTML.editable/1`.
+  """
+  def editable(assigns) do
+    ~H"""
+    <Brando.HTML.editable entry={@entry} field={@field}>{render_slot(@inner_block)}</Brando.HTML.editable>
+    """
+  end
+
   # -- video component --
 
   attr :src, :any, required: true

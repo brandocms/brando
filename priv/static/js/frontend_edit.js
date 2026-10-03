@@ -9,9 +9,15 @@
  * Reads its configuration from `#brando-frontend-edit-config`. Block patching
  * comes from `block_patch.js` (`window.BrandoBlockPatch`).
  *
+ * Besides blocks, entry fields a template marks with `editable_field` or
+ * `editable` can be clicked (`[+:E<key>]` and `[+:W<key>]` comments). Field
+ * targets are their keys (`Schema:id:field`), block targets their uids; a uid
+ * never contains a colon.
+ *
  * The sidebar and this script talk with `postMessage`, same origin only:
  *
- *   sidebar → page: ready, update_block, replace_field, dirty, saved, close
+ *   sidebar → page: ready, selected, update_block, replace_field, entry_field,
+ *                   dirty, saved, save_failed, reload, close
  *   page → sidebar: select, save
  */
 (function () {
@@ -74,14 +80,18 @@
   }
 
   const BlockPatch = window.BrandoBlockPatch
-  const manifest = config.manifest || { owners: {}, blocks: {} }
-  const editableCount = Object.keys(manifest.blocks).length
+  const manifest = { owners: {}, blocks: {}, fields: {}, ...(config.manifest || {}) }
+  const editableCount = Object.keys(manifest.blocks).length + Object.keys(manifest.fields).length
+  const isField = id => typeof id === 'string' && id.includes(':')
 
   // -- State ------------------------------------------------------------------
 
   const state = {
     registry: new Map(),
     elementToUid: new WeakMap(),
+    fields: new Map(),
+    hoverOccurrence: null,
+    selectedOccurrence: null,
     registryBuiltAt: 0,
     hoverUid: null,
     selectedUid: null,
@@ -148,7 +158,88 @@
     state.registry.forEach(({ uid, elements }) => {
       elements.forEach(({ element }) => state.elementToUid.set(element, uid))
     })
+    state.fields = buildFieldRegistry()
     state.registryBuiltAt = Date.now()
+  }
+
+  // key → the places the field is marked: `{ start, end, kind }`, `kind` being
+  // `E` (a printed value) or `W` (other markup showing the field).
+  function buildFieldRegistry() {
+    const fields = new Map()
+    const iterator = document.createNodeIterator(document.body, NodeFilter.SHOW_COMMENT)
+    const open = []
+    let node
+
+    while ((node = iterator.nextNode())) {
+      const value = node.nodeValue.trim()
+      const match = value.match(/^\[([+-]):([EW])<(.+)>\]$/)
+      if (!match) continue
+
+      const [, sign, kind, key] = match
+      if (sign === '+') {
+        open.push({ start: node, kind, key })
+      } else {
+        const index = open.findLastIndex(entry => entry.key === key && entry.kind === kind)
+        if (index === -1) continue
+        const [entry] = open.splice(index, 1)
+        if (!fields.has(key)) fields.set(key, [])
+        fields.get(key).push({ start: entry.start, end: node, kind })
+      }
+    }
+
+    return fields
+  }
+
+  function occurrenceRange(occurrence) {
+    if (!occurrence || !occurrence.start.isConnected || !occurrence.end.isConnected) return null
+    const range = document.createRange()
+    range.setStartAfter(occurrence.start)
+    range.setEndBefore(occurrence.end)
+    return range
+  }
+
+  // The element a field fills on its own, like `<h1>{title}</h1>`: the whole
+  // element is the field's, not just its text. Null when it shares it.
+  function soleHost(occurrence) {
+    const parent = occurrence.start.parentNode
+    if (!parent || parent.nodeType !== 1 || parent === document.body) return null
+
+    let inside = false
+    for (const node of parent.childNodes) {
+      if (node === occurrence.start) inside = true
+      else if (node === occurrence.end) inside = false
+      else if (!inside && !(node.nodeType === 8 || (node.nodeType === 3 && !node.nodeValue.trim()))) return null
+    }
+
+    return parent
+  }
+
+  function occurrenceRects(occurrence) {
+    const host = occurrence && occurrence.start.isConnected && soleHost(occurrence)
+    if (host) return [host.getBoundingClientRect()]
+    const range = occurrenceRange(occurrence)
+    return range ? Array.from(range.getClientRects()) : []
+  }
+
+  // The marked field under the point, the smallest if they nest.
+  function fieldAt(x, y) {
+    let best = null
+
+    state.fields.forEach((occurrences, key) => {
+      if (!manifest.fields[key]) return
+
+      occurrences.forEach(occurrence => {
+        for (const rect of occurrenceRects(occurrence)) {
+          if (x >= rect.left - 2 && x <= rect.right + 2 && y >= rect.top - 2 && y <= rect.bottom + 2) {
+            const area = rect.width * rect.height
+            if (!best || area < best.area) best = { key, occurrence, area }
+            break
+          }
+        }
+      })
+    })
+
+    return best
   }
 
   // The innermost block holding `node`: block elements nest inside their
@@ -167,16 +258,21 @@
     return null
   }
 
-  function findTarget(node) {
-    let uid = blockUidFor(node)
+  // What a click at the event would open: a marked field, or else the
+  // block's target. `{ id, occurrence }`, or null.
+  function findTarget(event) {
+    const field = fieldAt(event.clientX, event.clientY)
+    if (field) return { id: field.key, occurrence: field.occurrence }
+
+    let uid = blockUidFor(event.target)
 
     // The site may have replaced elements since the registry was built.
     if (!uid && Date.now() - state.registryBuiltAt > 500) {
       rebuildRegistry()
-      uid = blockUidFor(node)
+      uid = blockUidFor(event.target)
     }
 
-    return uid ? manifest.blocks[uid].target : null
+    return uid ? { id: manifest.blocks[uid].target, occurrence: null } : null
   }
 
   function blockRect(uid) {
@@ -193,18 +289,37 @@
     return rect.width || rect.height ? rect : null
   }
 
-  function ownerOf(uid) {
-    const block = manifest.blocks[uid]
+  function fieldRect(key, occurrence) {
+    const occurrences = state.fields.get(key) || []
+    const chosen = occurrences.includes(occurrence) ? occurrence : occurrences[0]
+    if (!chosen) return null
+
+    const host = chosen.start.isConnected && soleHost(chosen)
+    const range = !host && occurrenceRange(chosen)
+    const rect = host ? host.getBoundingClientRect() : range && range.getBoundingClientRect()
+    return rect && (rect.width || rect.height) ? rect : null
+  }
+
+  function targetRect(id, occurrence) {
+    if (!id) return null
+    return isField(id) ? fieldRect(id, occurrence) : blockRect(id)
+  }
+
+  // For a field, its manifest entry carries `editable` and `shared` itself.
+  function ownerOf(id) {
+    if (isField(id)) return manifest.fields[id] || null
+    const block = manifest.blocks[id]
     return block ? manifest.owners[block.owner] : null
   }
 
-  function labelFor(uid) {
-    const block = manifest.blocks[uid]
+  function labelFor(id) {
+    if (isField(id)) return (manifest.fields[id] && manifest.fields[id].label) || T.block
+    const block = manifest.blocks[id]
     return (block && block.label) || T.block
   }
 
-  function placeOutline(el, uid, text) {
-    const rect = uid && blockRect(uid)
+  function placeOutline(el, uid, text, occurrence = null) {
+    const rect = targetRect(uid, occurrence)
 
     if (!rect) {
       el.classList.remove('is-visible')
@@ -233,10 +348,15 @@
   }
 
   function render() {
-    placeOutline(selectedOutline, state.selectedUid, `${T.editing} · ${labelFor(state.selectedUid)}`)
+    placeOutline(
+      selectedOutline,
+      state.selectedUid,
+      `${T.editing} · ${labelFor(state.selectedUid)}`,
+      state.selectedOccurrence
+    )
 
     if (state.hoverUid && state.hoverUid !== state.selectedUid && !state.altHeld) {
-      placeOutline(hoverOutline, state.hoverUid, labelFor(state.hoverUid))
+      placeOutline(hoverOutline, state.hoverUid, labelFor(state.hoverUid), state.hoverOccurrence)
     } else {
       hoverOutline.classList.remove('is-visible')
     }
@@ -269,9 +389,12 @@
         return
       }
 
-      const target = state.altHeld ? null : findTarget(event.target)
-      if (target !== state.hoverUid) {
-        state.hoverUid = target
+      const target = state.altHeld ? null : findTarget(event)
+      const id = target && target.id
+      const occurrence = target && target.occurrence
+      if (id !== state.hoverUid || occurrence !== state.hoverOccurrence) {
+        state.hoverUid = id
+        state.hoverOccurrence = occurrence
         scheduleRender()
       }
     },
@@ -290,16 +413,16 @@
     event => {
       if (fromOverlay(event) || event.altKey || event.button !== 0) return
 
-      const target = findTarget(event.target)
+      const target = findTarget(event)
       if (!target) return
 
       event.preventDefault()
       event.stopPropagation()
 
-      const owner = ownerOf(target)
+      const owner = ownerOf(target.id)
       if (!owner || !owner.editable) return
 
-      select(target)
+      select(target.id, target.occurrence)
     },
     true
   )
@@ -329,25 +452,29 @@
 
   // -- Sidebar -----------------------------------------------------------------
 
-  function editorUrl(uid) {
-    return `${config.editorUrl}?uid=${encodeURIComponent(uid)}`
+  function editorUrl(id) {
+    const param = isField(id) ? 'field' : 'uid'
+    return `${config.editorUrl}?${param}=${encodeURIComponent(id)}`
   }
 
-  function select(uid) {
+  function select(uid, occurrence = null) {
     if (uid === state.selectedUid && state.sidebar) {
+      state.selectedOccurrence = occurrence
+      scheduleRender()
       return
     }
 
     if (state.sidebar && state.dirty) {
-      guardUnsaved(() => select(uid), uid)
+      guardUnsaved(() => select(uid, occurrence), uid)
       return
     }
 
     state.selectedUid = uid
+    state.selectedOccurrence = occurrence
     scheduleRender()
 
     if (state.sidebar && state.ready) {
-      post({ type: 'select', uid })
+      post(isField(uid) ? { type: 'select', field: uid } : { type: 'select', uid })
     } else {
       openSidebar(uid)
     }
@@ -401,7 +528,7 @@
 
   // Dock on the side the block is not on, so the sidebar does not cover it.
   function dock(uid) {
-    const rect = blockRect(uid)
+    const rect = targetRect(uid, state.selectedOccurrence)
     const width = Math.min(460, window.innerWidth - 48)
     let left = false
 
@@ -415,7 +542,7 @@
   }
 
   function revealSelected() {
-    const rect = blockRect(state.selectedUid)
+    const rect = targetRect(state.selectedUid, state.selectedOccurrence)
     if (!rect) return
 
     if (rect.top < 0 || rect.top > window.innerHeight * 0.7) {
@@ -507,17 +634,84 @@
     document.head.appendChild(style)
   }
 
+  function replaceBetween(start, end, html) {
+    if (!start.isConnected || start.parentNode !== end.parentNode) return
+    let node = start.nextSibling
+    while (node && node !== end) {
+      const next = node.nextSibling
+      node.remove()
+      node = next
+    }
+    const template = document.createElement('template')
+    template.innerHTML = html
+    end.parentNode.insertBefore(template.content, end)
+    BlockPatch.initializeMedia(end.parentNode)
+  }
+
+  // After a save, marked fields show what was saved: markup an `editable`
+  // wraps can only be rendered by the page itself, so the page is fetched
+  // again (in edit mode, with markers) and each marked place is replaced.
+  async function refreshFields() {
+    if (!state.fields.size) return
+
+    try {
+      const response = await fetch(window.location.href, { credentials: 'same-origin', headers: { accept: 'text/html' } })
+      if (!response.ok) return
+      const doc = new DOMParser().parseFromString(await response.text(), 'text/html')
+      const fresh = new Map()
+      const iterator = doc.createNodeIterator(doc.body, NodeFilter.SHOW_COMMENT)
+      const open = []
+      let node
+
+      while ((node = iterator.nextNode())) {
+        const match = node.nodeValue.trim().match(/^\[([+-]):([EW])<(.+)>\]$/)
+        if (!match) continue
+        const [, sign, kind, key] = match
+        if (sign === '+') {
+          open.push({ start: node, kind, key })
+        } else {
+          const index = open.findLastIndex(entry => entry.key === key && entry.kind === kind)
+          if (index === -1) continue
+          const [entry] = open.splice(index, 1)
+          const range = doc.createRange()
+          range.setStartAfter(entry.start)
+          range.setEndBefore(node)
+          const holder = doc.createElement('div')
+          holder.appendChild(range.cloneContents())
+          const id = `${kind}:${key}`
+          if (!fresh.has(id)) fresh.set(id, [])
+          fresh.get(id).push(holder.innerHTML)
+        }
+      }
+
+      rebuildRegistry()
+      state.fields.forEach((occurrences, key) => {
+        occurrences.forEach((occurrence, index) => {
+          const html = (fresh.get(`${occurrence.kind}:${key}`) || [])[index]
+          if (html !== undefined) replaceBetween(occurrence.start, occurrence.end, html)
+        })
+      })
+      rebuildRegistry()
+      BlockPatch.announcePatch('field', [], null, 'frontend-edit')
+      scheduleRender()
+    } catch (_error) {
+      // The page keeps what it shows; a reload brings it up to date.
+    }
+  }
+
   const handlers = {
     ready({ target }) {
       state.ready = true
       state.sidebar?.querySelector('.fe-sidebar-loading')?.classList.add('is-done')
-      if (target && target !== state.selectedUid && manifest.blocks[target]) {
+      if (target && target !== state.selectedUid && (manifest.blocks[target] || manifest.fields[target])) {
         state.selectedUid = target
+        state.selectedOccurrence = null
       }
       scheduleRender()
     },
 
     selected({ target }) {
+      if (target !== state.selectedUid) state.selectedOccurrence = null
       state.selectedUid = target
       scheduleRender()
       revealSelected()
@@ -545,6 +739,16 @@
       scheduleRender()
     },
 
+    // A printed field value changed: every place it is printed shows it.
+    entry_field({ key, html }) {
+      rebuildRegistry()
+      ;(state.fields.get(key) || [])
+        .filter(occurrence => occurrence.kind === 'E')
+        .forEach(occurrence => replaceBetween(occurrence.start, occurrence.end, html))
+      rebuildRegistry()
+      scheduleRender()
+    },
+
     dirty({ dirty }) {
       state.dirty = !!dirty
     },
@@ -552,6 +756,7 @@
     saved() {
       state.dirty = false
       showToast(T.saved)
+      refreshFields()
 
       const proceed = state.pending
       state.pending = null
@@ -603,7 +808,9 @@
   const reopen = sessionStorage.getItem(REOPEN_KEY)
   sessionStorage.removeItem(REOPEN_KEY)
 
-  if (reopen && manifest.blocks[reopen]) {
+  if (reopen && manifest.fields[reopen]) {
+    select(reopen)
+  } else if (reopen && manifest.blocks[reopen]) {
     select(manifest.blocks[reopen].target)
   }
 })()

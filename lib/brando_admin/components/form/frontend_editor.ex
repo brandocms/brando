@@ -1,7 +1,8 @@
 defmodule BrandoAdmin.Components.Form.FrontendEditor do
   @moduledoc """
-  The entry form in frontend edit mode: one block of the entry, edited from a
-  sidebar on the published page (`BrandoAdmin.FrontendEdit.EditorLive`).
+  The entry form in frontend edit mode: one block or one field of the entry,
+  edited from a sidebar on the published page
+  (`BrandoAdmin.FrontendEdit.EditorLive`).
 
   The form keeps all of its machinery — the block field's op store, media
   pickers and drawers, multi-user block sync, saving through the entry's
@@ -10,7 +11,8 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
     * only the block field holding the selected block is shown, and in it only
       the root holding it, narrowed down to the block (see `focus/2`);
     * the entry's own fields are not shown and not submitted, so a save
-      writes the block changes alone;
+      writes the block changes alone — or, for a field (`frontend_edit.input`),
+      only that field's input is shown and submitted;
     * preview HTML goes to the page in the parent window, through the
       editor's LiveView (`{:frontend_edit, message}`), not to a live-preview
       session;
@@ -25,6 +27,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
   alias BrandoAdmin.Components.Form.ImageDrawer
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
@@ -80,12 +83,16 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
     entry = changeset |> apply_changes() |> Map.drop(block_fields)
 
     for {name, _block_module, _entry_blocks, _opts} <- block_map do
+      # In edit mode, as the page was rendered: embedded fragments keep their
+      # own markers. Nothing rendered here is stored.
       html =
-        changeset
-        |> get_assoc(:"entry_#{name}")
-        |> Brando.Utils.apply_changes_recursively()
-        |> Brando.Villain.parse(entry, annotate_blocks: true)
-        |> IO.iodata_to_binary()
+        Brando.FrontendEdit.with_active(fn ->
+          changeset
+          |> get_assoc(:"entry_#{name}")
+          |> Brando.Utils.apply_changes_recursively()
+          |> Brando.Villain.parse(entry, annotate_blocks: true)
+          |> IO.iodata_to_binary()
+        end)
 
       key = Brando.FrontendEdit.field_key(schema, id, name)
       notify({:replace_field, %{key: key, html: html, media: mode == :live_preview_reload}})
@@ -93,6 +100,24 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
 
     :ok
   end
+
+  @doc """
+  An entry field changed in the form. In field mode the page shows the new
+  value at once; blocks reading the field follow with the next preview
+  render (`replace_fields/3`).
+  """
+  def field_changed(%{assigns: %{frontend_edit: %{input: field} = frontend_edit}} = socket) when not is_nil(field) do
+    entry = Ecto.Changeset.apply_changes(socket.assigns.form.source)
+    notify(:dirty)
+
+    notify(
+      {:entry_field,
+       %{key: frontend_edit.target, html: IO.iodata_to_binary(Brando.FrontendEdit.Fields.render_value(entry, field))}}
+    )
+  end
+
+  def field_changed(%{assigns: %{frontend_edit: %{}}}), do: notify(:dirty)
+  def field_changed(_socket), do: :ok
 
   @doc false
   def saving(socket), do: tap(socket, fn _ -> notify(:saving) end)
@@ -110,10 +135,12 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
   down to the selected block, and the block. Other block fields of the entry
   get an empty focus — they stay mounted, as saving collects every field.
   """
-  def focus(%{field: field} = frontend_edit, field),
+  def focus(%{field: field} = frontend_edit, field) when not is_nil(field),
     do: %{target: frontend_edit.target, root: frontend_edit.root, path: frontend_edit.path}
 
   def focus(_frontend_edit, _field), do: %{target: nil, root: nil, path: []}
+
+  defp input(form_blueprint, field), do: Brando.Blueprint.Forms.get_field(field, form_blueprint)
 
   def render(assigns) do
     ~H"""
@@ -190,6 +217,17 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             <div style="display:none">
               <.live_file_input upload={@uploads[:image_editor_upload]} />
             </div>
+            <%!-- Field mode: the one input, as the admin form renders it. --%>
+            <Fieldset.render
+              :if={@frontend_edit[:input]}
+              id={"#{@id}-frontend-field"}
+              relations={Brando.Blueprint.Relations.__relations__(@schema)}
+              form={@form}
+              fieldset={%Brando.Blueprint.Forms.Fieldset{fields: [input(@form_blueprint, @frontend_edit.input)]}}
+              current_user={@current_user}
+              form_cid={@myself}
+              form_id={@id}
+            />
           </.form>
 
           <.live_component

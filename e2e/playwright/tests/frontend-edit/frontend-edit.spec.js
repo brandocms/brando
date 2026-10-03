@@ -277,3 +277,114 @@ test('the toolbar and sidebar fit a phone', async ({ page }) => {
   await expect(editor.getByTestId('submit')).toBeInViewport()
   await shot(page, '14-phone-sidebar')
 })
+
+test.describe('entry fields', () => {
+  const titleField = page => page.locator('h1.fe-page-title')
+  const titleInput = editor => editor.locator('.frontend-editor input[name="page[title]"]')
+
+  test('a title printed in the template and in a block is edited in both places', async ({ page }) => {
+    await startEditing(page)
+    await titleField(page).hover()
+    await shot(page, '15-field-hover')
+    await titleField(page).click()
+
+    const editor = sidebar(page)
+    await expect(titleInput(editor)).toHaveValue('Frontend edit', { timeout: 15000 })
+    await expect(editor.locator('.frontend-editor-heading h1')).toHaveText('Title')
+    await expect(editor.locator('.entry-block')).toHaveCount(0)
+    await shot(page, '16-field-sidebar')
+
+    await titleInput(editor).fill('Edited title')
+    // The HEEx component at once, the Liquid tag in a block with the next render
+    await expect(titleField(page)).toHaveText('Edited title', { timeout: 10000 })
+    await expect(page.locator('p.fe-block-title')).toHaveText('On Edited title', { timeout: 10000 })
+
+    await editor.getByTestId('submit').click()
+    await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+
+    await page.reload()
+    await expect(titleField(page)).toHaveText('Edited title')
+    await expect(page.locator('p.fe-block-title')).toHaveText('On Edited title')
+
+    // The Liquid tag opens the same field. The paragraph is full width, and
+    // only its text is the field; the rest of it opens the block.
+    await page.locator('p.fe-block-title').click({ position: { x: 50, y: 8 } })
+    await expect(titleInput(sidebar(page))).toHaveValue('Edited title', { timeout: 15000 })
+  })
+
+  test('rich text and an image field open from the project page', async ({ page }) => {
+    await page.goto('/project/test-project-alpha')
+    await page.getByTestId('frontend-edit-toggle').click()
+    await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
+
+    await page.locator('.project-introduction p').click()
+    const editor = sidebar(page)
+    await expect(editor.locator('.frontend-editor-heading h1')).toHaveText('Introduction', { timeout: 15000 })
+    await expect(editor.locator('.frontend-editor [data-testid], .frontend-editor .tiptap-wrapper, .frontend-editor [phx-hook="Brando.TipTap"]').first()).toBeAttached()
+    await shot(page, '17-rich-text')
+
+    // The picture is wrapped markup: after replacing it and saving, the page
+    // shows what was saved
+    const picture = page.locator('.project-header picture').first()
+    const before = await picture.innerHTML()
+    await picture.click()
+    await expect(editor.locator('.frontend-editor-heading h1')).toHaveText('Listing image', { timeout: 15000 })
+    await shot(page, '18-image-field')
+
+    const field = editor.locator('.frontend-editor .media-field').first()
+    const previousId = await field.getAttribute('data-asset-id')
+    await field.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
+    const uploadHere = editor.getByRole('button', { name: /^(Upload here|Last opp her)$/ })
+    if (await uploadHere.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)) {
+      await uploadHere.click()
+    }
+    const keep = editor.locator('#brando-upload-manager-lv').getByRole('button', { name: /^(Upload anyway|Last opp likevel)$/ })
+    if (await keep.first().waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)) {
+      await keep.first().click()
+    }
+    await expect(field).not.toHaveAttribute('data-asset-id', previousId || '', { timeout: 30000 })
+
+    await editor.getByTestId('submit').click()
+    await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+    await expect.poll(() => page.locator('.project-header picture').first().innerHTML(), { timeout: 10000 }).not.toBe(before)
+  })
+
+  test('the full editor opens at the field', async ({ page }) => {
+    await startEditing(page)
+    await titleField(page).click()
+    const editor = sidebar(page)
+    await expect(titleInput(editor)).toBeVisible({ timeout: 15000 })
+    const href = await editor.locator('.frontend-editor-open').getAttribute('href')
+    expect(href).toContain('?field=title')
+
+    await page.goto(href)
+    await syncLV(page)
+    const wrapper = page.locator('form.main-form .field-wrapper:has(input[name="page[title]"])')
+    await expect(wrapper).toHaveClass(/is-deep-linked/, { timeout: 15000 })
+    expect(page.url()).not.toContain('field=')
+  })
+})
+
+test('a listing of selected entries gets a new selection', async ({ page }) => {
+  await startEditing(page)
+  const listing = page.locator('section[b-tpl="featured-projects"]')
+  await expect(listing.locator('.project')).toHaveText(['Test Project Alpha'])
+  await listing.locator('.project').first().click()
+
+  const editor = sidebar(page)
+  const selected = editor.locator('.module-datasource-selected .selected-entries .identifier')
+  await expect(selected).toHaveCount(1, { timeout: 15000 })
+
+  await editor.getByRole('button', { name: /^(Select entries|Velg oppføringer|Velg innlegg)$/ }).click()
+  await editor.locator('.identifier').filter({ hasText: 'Test Project Beta' }).click()
+  await editor.locator('[id^="select-entries-"] .modal-close').click()
+  await expect(selected).toHaveCount(2)
+  // The page lists the new selection before it is saved
+  await expect(listing.locator('.project')).toHaveText(['Test Project Alpha', 'Test Project Beta'], { timeout: 10000 })
+  await shot(page, '19-selection')
+
+  await editor.getByTestId('submit').click()
+  await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+  await page.reload()
+  await expect(listing.locator('.project')).toHaveText(['Test Project Alpha', 'Test Project Beta'])
+})

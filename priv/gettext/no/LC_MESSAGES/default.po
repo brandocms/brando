@@ -14834,3 +14834,13 @@ msgstr[1] "Endringene vises overalt der det brukes, blant annet på %{count} sid
 msgctxt "frontend edit"
 msgid "Edit page"
 msgstr "Rediger side"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved: the entry has errors in fields not shown here."
+msgstr "Ikke lagret: innlegget har feil i felt som ikke vises her."
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fix them in the full editor"
+msgstr "Rett dem i full redigering"

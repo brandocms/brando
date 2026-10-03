@@ -900,10 +900,73 @@ defmodule Brando.HTML do
   def render_rich_text(assigns) do
     opts = if assigns.scope, do: [scope: assigns.scope], else: []
     result = Brando.Villain.Footnotes.render_field(assigns.entry, assigns.field, opts)
-    assigns = assign(assigns, :html, Brando.Villain.Footnotes.to_html(result, title: assigns.title))
+
+    # Editable in frontend edit mode. Notes are rendered from the field's
+    # footnote blocks, so with notes the page shows the change after saving.
+    kind = if result.notes == [], do: :value, else: :markup
+
+    html =
+      result
+      |> Brando.Villain.Footnotes.to_html(title: assigns.title)
+      |> Brando.FrontendEdit.Fields.wrap(assigns.entry, assigns.field, kind)
+
+    assigns = assign(assigns, :html, html)
 
     ~H"""
     {@html |> raw}
+    """
+  end
+
+  @doc """
+  Prints an entry field, editable in place in frontend edit mode.
+
+  Use it where the value shows as text on the page — not inside an
+  attribute, `<title>` or a script, where markers would break the markup:
+
+      <h1><.editable_field entry={@page} field={:title} /></h1>
+
+  Rich-text fields print their HTML; other values are escaped. Outside edit
+  mode this prints the value and nothing else. See `Brando.FrontendEdit.Fields`
+  and the frontend edit guide.
+  """
+  attr :entry, :map, required: true
+  attr :field, :atom, required: true
+
+  def editable_field(assigns) do
+    html = Brando.FrontendEdit.Fields.render_value(assigns.entry, assigns.field)
+    assigns = assign(assigns, :html, Brando.FrontendEdit.Fields.wrap(html, assigns.entry, assigns.field, :value))
+
+    ~H"""
+    {raw(@html)}
+    """
+  end
+
+  @doc """
+  Makes an entry field editable in frontend edit mode where it is shown by
+  other markup, such as an image field's picture:
+
+      <.editable entry={@project} field={:cover}>
+        <.picture src={@project.cover} opts={[…]} />
+      </.editable>
+
+  A click on it opens the field in the sidebar; the page shows the change
+  after saving. Outside edit mode this renders its content and nothing else.
+  """
+  attr :entry, :map, required: true
+  attr :field, :atom, required: true
+  slot :inner_block, required: true
+
+  def editable(assigns) do
+    assigns = assign(assigns, :key, Brando.FrontendEdit.Fields.marker_key(assigns.entry, assigns.field))
+
+    ~H"""
+    <%= if @key do %>
+      {raw(Brando.FrontendEdit.Fields.open(:markup, @key))}{render_slot(@inner_block)}{raw(
+        Brando.FrontendEdit.Fields.close(:markup, @key)
+      )}
+    <% else %>
+      {render_slot(@inner_block)}
+    <% end %>
     """
   end
 
