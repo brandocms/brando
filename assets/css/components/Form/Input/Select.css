@@ -494,7 +494,9 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       pointer-events: none;
     }
 
-    input.text {
+    /* Room for the icon before the text and the clear button after it. Keyed
+       on the icon, so the general modal input padding can't outrank it. */
+    .filter-icon ~ input.text {
       width: 100%;
       padding-left: 34px;
       padding-right: 34px;

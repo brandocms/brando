@@ -793,7 +793,9 @@ button.btn-palette {
         --admin-field-height: 30px;
       }
 
-      input.text {
+      /* Not a modal's own fields, such as the link picker's search: the
+         modal opens from inside the var */
+      input.text:not(.variable .modal input) {
         @font main;
         font-size: var(--vars-value-size);
         height: 30px;
