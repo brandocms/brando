@@ -257,7 +257,7 @@ defmodule Brando.Mixfile do
       {:req_llm, "~> 1.6"},
       {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 1.0.0"},
-      {:mdex, "~> 0.13.0"},
+      {:mdex, "~> 0.14.1"},
       {:mint, "~> 1.7"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
