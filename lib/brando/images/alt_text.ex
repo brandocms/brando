@@ -132,7 +132,7 @@ defmodule Brando.Images.AltText do
 
     Brando.AI.Cost.images(Enum.map(images, &sent_dimensions/1), ai_opts(),
       reply_tokens: @reply_tokens_per_language * languages,
-      prompt_tokens: 150 + @prompt_tokens_per_language * languages
+      prompt_tokens: 200 + @prompt_tokens_per_language * languages
     )
   end
 
@@ -204,11 +204,15 @@ defmodule Brando.Images.AltText do
       case ai_opts |> Keyword.get(:prompt) |> to_string() |> String.trim() do
         "" ->
           """
-          Write alt text for this image. Describe what it shows that matters to someone \
+          Write alt text for this image. A screen reader reads it aloud in place of the \
+          image, as part of the page. Describe what it shows that matters to someone \
           who cannot see it, in one complete sentence of at most #{@alt_length} characters \
-          — count them; a short sentence that ends is better than a long one. Do not \
-          begin with "Image of" or "Picture of". If the image is mostly text, give the text. \
-          Plain text, no quotes.\
+          — count them; a short sentence that ends is better than a long one. Leave out \
+          photographic style (close-up, black-and-white, shallow focus) unless it is the \
+          point of the image, and leave out decorative detail. Name people, places, brands \
+          and products only when the image or the details below give them; never guess. \
+          Do not begin with "Image of" or "Picture of". If the image is mostly text, give \
+          the text. Plain text, no quotes.\
           """
 
         prompt ->
