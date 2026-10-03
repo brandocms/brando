@@ -1,4 +1,4 @@
-import { gsap } from '@brandocms/jupiter'
+import { animate, animationTracker, ease } from '../../motion'
 
 const calc = (c, mw, w) => {
   return Math.round(((c - mw) / w) * 100)
@@ -6,6 +6,7 @@ const calc = (c, mw, w) => {
 
 export default app => ({
   mounted() {
+    this.animations = animationTracker()
     const field = this.el.dataset.field
     this.movePoint(this.el, this.el.dataset.x, this.el.dataset.y)
 
@@ -28,11 +29,17 @@ export default app => ({
 
   movePoint(rootEl, x, y) {
     const fpEl = rootEl.querySelector('.focus-point-pin')
-    gsap.to(fpEl, { left: `${x}%`, top: `${y}%`, duration: 0.2, ease: 'sine.out' })
+    this.animations.track(animate(fpEl, { left: `${x}%`, top: `${y}%` }, { duration: 0.2, ease: ease.sineOut }))
     this.previousX = x
     this.previousY = y
-    setTimeout(() => {
+    clearTimeout(this.visibleTimer)
+    this.visibleTimer = setTimeout(() => {
       fpEl.classList.add('visible')
     }, 250)
+  },
+
+  destroyed() {
+    this.animations.stopAll()
+    clearTimeout(this.visibleTimer)
   }
 })

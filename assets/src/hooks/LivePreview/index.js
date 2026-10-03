@@ -1,8 +1,10 @@
-import { Dom, Events, gsap } from '@brandocms/jupiter'
+import { Dom, Events } from '@brandocms/jupiter'
+import { animate, animationTracker, ease, set } from '../../motion'
 
 export default app => ({
   mounted() {
     this.active = false
+    this.animations = animationTracker()
 
     this.handleEvent(`b:live_preview`, () => {
       this.toggle()
@@ -32,9 +34,12 @@ export default app => ({
       this.lpSetMaxWidth()
       window.addEventListener(Events.APPLICATION_RESIZE, this.windowResizeListener)
 
-      gsap.set(this.$livePreview, { opacity: 0 })
+      // Hidden now: Motion only applies the first keyframe once the delay ends.
+      set(this.$livePreview, { opacity: 0 })
       this.setPreviewTarget('desktop', this.lpMaxWidth > 600 ? 600 : this.lpMaxWidth, 0.5)
-      gsap.to(this.$livePreview, { opacity: 1, ease: 'none', duration: 0.35, delay: 0.7 })
+      this.animations.track(
+        animate(this.$livePreview, { opacity: [0, 1] }, { ease: ease.none, duration: 0.35, delay: 0.7 })
+      )
 
       // bind target buttons
       const targetBtns = this.$livePreview.querySelectorAll('button[data-live-preview-target]')
@@ -88,10 +93,12 @@ export default app => ({
   },
 
   setPreviewWidth(width, duration) {
-    gsap.to(this.$livePreview, { width: width, ease: 'sine.inOut', duration })
+    this.animations.track(animate(this.$livePreview, { width: `${width}px` }, { ease: ease.sineInOut, duration }))
   },
 
   destroyed() {
+    this.animations.stopAll()
+    clearTimeout(this.scaleTimer)
     const lpDivider = Dom.find('.live-preview-divider')
     if (lpDivider) {
       lpDivider.removeEventListener('mousedown', this.resizeListener)
@@ -129,19 +136,19 @@ export default app => ({
     this.livePreviewWidth = previewWidth
     this.setPreviewWidth(previewWidth, duration)
 
-    setTimeout(() => {
+    // Only the latest target is scaled for: a drag sets a new width per move.
+    clearTimeout(this.scaleTimer)
+    this.scaleTimer = setTimeout(() => {
       upFactor = deviceWidth / previewWidth
       downFactor = previewWidth / deviceWidth
-      gsap.set(this.$iframe, { scale: downFactor })
-      gsap.set(this.$iframe, { width: deviceWidth })
       const targetsHeight = Dom.find('.live-preview-targets').getBoundingClientRect().height
       const calcHeight = deviceHeight || (window.innerHeight - targetsHeight) * upFactor
-      gsap.set(this.$iframeWrapper, { height: window.innerHeight - targetsHeight })
-      if (deviceHeight) {
-        gsap.set(this.$iframe, { height: deviceHeight })
-      } else {
-        gsap.set(this.$iframe, { height: calcHeight })
-      }
+      set(this.$iframe, {
+        transform: `scale(${downFactor})`,
+        width: `${deviceWidth}px`,
+        height: `${deviceHeight || calcHeight}px`,
+      })
+      set(this.$iframeWrapper, { height: `${window.innerHeight - targetsHeight}px` })
     }, duration * 1000)
   }
 })

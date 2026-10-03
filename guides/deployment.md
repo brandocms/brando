@@ -359,7 +359,7 @@ Brando projects use a multi-stage Dockerfile that builds the OTP release:
 Stage 1: deps          → mix deps.get
 Stage 2: compile_deps  → mix deps.compile
 Stage 3: compile_app   → mix compile
-Stage 4: assets_backend  → yarn build (admin Svelte app)
+Stage 4: assets_backend  → pnpm build (admin Svelte app)
 Stage 5: assets_frontend → pnpm build (site CSS/JS via Vite + EuropaCSS)
 Stage 6: digest        → mix brando.digest (fingerprint static assets)
 Stage 7: release       → mix release (create OTP release tarball)
@@ -368,6 +368,13 @@ Stage 7: release       → mix release (create OTP release tarball)
 Assets (CSS, JS) are built inside the Docker container and baked into the release
 at `priv/static/`. There is no separate asset upload step — everything ships as
 one tarball.
+
+Both asset stages install with the pnpm version pinned in the Dockerfile and
+`pnpm install --frozen-lockfile`, so commit `assets/backend/pnpm-lock.yaml` and
+`assets/frontend/pnpm-lock.yaml`. `mix brando.assets.setup` writes them. After
+updating BrandoJS through Yalc, run `pnpm install` in `assets/backend` and commit
+the lockfile it changes; the build stops on a stale one rather than resolving
+different packages.
 
 ### Source maps
 

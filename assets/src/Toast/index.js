@@ -1,4 +1,4 @@
-import { gsap } from '@brandocms/jupiter'
+import { animate, set } from '../motion'
 
 // One stack of toasts in the bottom right corner, for two kinds of message:
 //
@@ -85,7 +85,7 @@ export default class Toast {
     }
 
     this.stack.append(toast)
-    gsap.from(toast, { opacity: 0, y: 8, duration: 0.18 })
+    animate(toast, { opacity: [0, 1], y: [8, 0] }, { duration: 0.18 })
 
     const timeout = TIMEOUTS[kind]
     if (timeout) {
@@ -106,7 +106,7 @@ export default class Toast {
   remove(toast) {
     if (!toast || !toast.isConnected || toast.classList.contains('leaving')) return
     toast.classList.add('leaving')
-    gsap.to(toast, { opacity: 0, duration: 0.2, onComplete: () => toast.remove() })
+    animate(toast, { opacity: 0 }, { duration: 0.2 }).finished.then(() => toast.remove())
   }
 
   progressPopup(message) {
@@ -125,29 +125,30 @@ export default class Toast {
       this.popup = document.createElement('div')
       this.popup.className = 'progress-popup'
       this.popup.innerHTML = `<div class="message">[${this.msgNo}] &rarr; ${message}</div>`
+      set(this.popup, { opacity: 0 })
       document.body.appendChild(this.popup)
-      gsap.set(this.popup, { opacity: 0 })
       this.popup.setAttribute('popover', '')
       if (typeof this.popup.showPopover === 'function') {
         this.popup.showPopover()
       }
-      gsap.to(this.popup, { opacity: 1, duration: 0.15 })
+      animate(this.popup, { opacity: 1 }, { duration: 0.15 })
     } else {
       this.msgNo++
       this.popup.querySelector('.message').innerHTML =
         `[${this.msgNo}] &rarr; ${message}`
+      // A message during the fade-out brings the popup back. Starting a new
+      // opacity animation stops the fade, and a stopped fade never finishes,
+      // so the popup is not removed under the new message.
+      animate(this.popup, { opacity: 1 }, { duration: 0.15 })
     }
   }
 
   closePopup() {
-    if (this.popup) {
-      gsap.to(this.popup, {
-        opacity: 0,
-        duration: 0.5,
-        onComplete: () => {
-          this.popup.remove()
-          this.popup = null
-        },
+    const popup = this.popup
+    if (popup) {
+      animate(popup, { opacity: 0 }, { duration: 0.5 }).finished.then(() => {
+        popup.remove()
+        this.popup = null
       })
     }
   }

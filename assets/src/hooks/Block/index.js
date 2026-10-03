@@ -1,5 +1,4 @@
 import autosize from 'autosize'
-import { gsap } from '@brandocms/jupiter'
 
 const PRESENCE_THROTTLE_MS = 500
 // Focus-settle delay before shipping on focusout — long enough for the

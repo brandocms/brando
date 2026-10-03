@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@brandocms/brandojs": "file:.yalc/@brandocms/brandojs",
-    "@brandocms/jupiter": "^3.55.0"
+    "@brandocms/jupiter": "5.0.0-beta.19"
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.13.1",
@@ -27,5 +27,6 @@
   },
   "engines": {
     "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.32.1"
 }
