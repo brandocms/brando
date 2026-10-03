@@ -1,12 +1,14 @@
-# Brando 0.54 documentation coverage
+# Documentation coverage
 
 The entry-point audit in [#627](https://github.com/brandocms/brando/issues/627)
 identified missing application-developer guidance. The remaining writing packages
 are completed by [#2771](https://github.com/brandocms/brando/issues/2771), with live
 preview delivered separately in [#2770](https://github.com/brandocms/brando/pull/2770).
-The reader entry point is [Brando 0.54 guides](../guides/overview.md).
+The reader entry point is [Brando 0.55 guides](../guides/overview.md).
 
-Coverage reviewed on 6 September 2026 against the developing 0.54 source. A guide
+The inventory and verification below were reviewed on 6 September 2026 against the
+developing 0.54 source. Guides written after that review are listed in
+[Guides added since the review](#guides-added-since-the-review). A guide
 here means practical instructions with prerequisites, current APIs, an example,
 and relevant failure states. It does not imply every provider or deployment
 combination has been exercised against an external service.
@@ -42,9 +44,26 @@ which were not listed separately in that checklist, also have a complete guide.
 | Navigation | [Navigation](../guides/navigation.md) | Translated menus, link identifiers, nesting, rendering, ordering and cache refresh |
 | Query | [Querying](../guides/querying.md) | Contexts, filters, ordering, pagination, association loading, caching and mutation behavior |
 
-Additional guides cover [Revisions](../guides/revisions.md), Blueprint migrations,
-tenancy/environments, videos, deployment, and migration to 0.54. There are no
+Additional guides cover [Revisions](../guides/revisions.md),
+[Blueprint migrations](../guides/blueprint_migrations.md),
+[sites and environments](../guides/tenancy_and_environments.md),
+[videos](../guides/videos.md), [deployment](../guides/deployment.md), and
+[migrating from 0.53 or 0.54](../guides/migrating_from_053.md). There are no
 heading-only guide stubs left in this inventory.
+
+## Guides added since the review
+
+These guides were written with their features. They are not covered by the
+verification table below.
+
+| Guide | Scope |
+| --- | --- |
+| [Module definitions](../guides/module_definitions.md) | Exporting admin modules to a DSL, editing and importing them, authoring new modules in files, conflicts and plans |
+| [Markdown sources](../guides/markdown_sources.md) | GitHub Markdown documents in module refs, publishing policies, signed webhooks, permissions and recovery |
+| [Content import and export](../guides/content_transfer.md) | Moving saved entries and block fields between installations, sites and environments, media, retries and recovery |
+| [Content SEO](../guides/content_seo.md) | Scoring published entries, custom checks, AI-written descriptions and alt text, Plausible and Search Console data |
+| [Content assistant](../guides/content_assistant.md) | Model configuration, permissions, proposals reviewed before saving, site guidance, media folders and previews |
+| [Activity log](../guides/activity.md) | What is recorded and by whom, access, configuration and reading events in code |
 
 ## Verification for the remaining writing packages
 
