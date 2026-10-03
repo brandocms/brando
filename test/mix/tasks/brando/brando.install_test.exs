@@ -6,6 +6,14 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     :ok
   end
 
+  test "configures Swoosh, which Brando depends on, so the application starts" do
+    result =
+      Brando.IgniterCase.phoenix_project(module: "MailInstallStudio")
+      |> Igniter.compose_task("brando.install", ["--yes", "--tenancy-mode", "none"])
+
+    assert Brando.IgniterCase.source(result, "config/config.exs") =~ "api_client: Swoosh.ApiClient.Req"
+  end
+
   test "parses valid installer tenancy options" do
     assert Mix.Tasks.Brando.Install.parse_tenancy_options!([]) == %{
              mode: :none,

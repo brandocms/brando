@@ -4,6 +4,10 @@ import Config
 
 config :e2e_project, ecto_repos: [E2eProject.Repo]
 
+# Brando sends its email through the application's mailer
+config :brando, mailer: E2eProject.Mailer
+config :brando, Brando.Mailer, from: {"E2E Project", "noreply@example.com"}
+
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]

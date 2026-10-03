@@ -48,3 +48,6 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
+
+# Sent email is kept in memory, viewable with Plug.Swoosh.MailboxPreview
+config :e2e_project, E2eProject.Mailer, adapter: Swoosh.Adapters.Local

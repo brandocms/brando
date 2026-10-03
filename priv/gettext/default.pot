@@ -14681,3 +14681,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "What visitors have sent with the site's forms"
 msgstr ""
+
+#: lib/brando/mailer/layout.ex:33
+#, elixir-autogen, elixir-format
+msgid "This email was sent by %{site}."
+msgstr ""

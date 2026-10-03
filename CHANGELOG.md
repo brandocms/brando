@@ -440,6 +440,22 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Brando sends email.** Brando now sends its own email through the
+  application's Swoosh mailer: set `config :brando, mailer: MyApp.Mailer` and
+  the address to send from, `config :brando, Brando.Mailer, from: {"My site",
+  "noreply@example.com"}`, with an optional `reply_to` and a sender per site key
+  on multi-site installations. `mix brando.gen.mail` and `mix brando.migrate55`
+  set the mailer when the application has one. `Brando.Mailer.deliver_later/1`
+  sends from a background job that keeps the site and retries, and
+  `Brando.Mailer.Layout` puts a message in a shared HTML and plain-text layout.
+  Without a mailer, sending raises in development and test, and logs a warning
+  in production. `Brando.Users.UserNotifier` sends real email now instead of
+  logging it. Brando depends on Swoosh now, and Swoosh does not start without
+  an API client: an application created without a mailer must set one, as
+  `mix brando.migrate55` and `mix brando.install` do
+  (`config :swoosh, api_client: Swoosh.ApiClient.Req`). See the
+  [Email guide](guides/email.md).
+
 - **Forms.** Editors build forms visitors fill in, such as a contact form, under
   **Configuration → Forms**, laying out fields on the same 12-unit canvas as module
   variables, beside the form as visitors will see it. Forms are synchronized

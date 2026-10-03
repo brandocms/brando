@@ -937,6 +937,27 @@ if Code.ensure_loaded?(Igniter) do
       )
     end
 
+    @doc """
+    Points Brando at the application's Swoosh mailer, `MyApp.Mailer` or
+    `mailer` when given, so Brando can send email through it. Writes to
+    `config/brando.exs` when the application has one, and leaves an existing
+    setting alone. Without the mailer module it does nothing.
+    """
+    def configure_brando_mailer(igniter, mailer \\ nil) do
+      mailer = mailer || Igniter.Project.Module.module_name(igniter, "Mailer")
+
+      configured? = Enum.any?(~w(config.exs brando.exs), &Config.configures_key?(igniter, &1, :brando, :mailer))
+
+      case Igniter.Project.Module.module_exists(igniter, mailer) do
+        {true, igniter} when not configured? ->
+          file = if Igniter.exists?(igniter, "config/brando.exs"), do: "brando.exs", else: "config.exs"
+          Config.configure_new(igniter, file, :brando, [:mailer], mailer)
+
+        {_exists, igniter} ->
+          igniter
+      end
+    end
+
     def rewrite_dockerfiles(igniter) do
       igniter
       |> Igniter.include_glob("Dockerfile*")

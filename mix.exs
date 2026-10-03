@@ -68,6 +68,7 @@ defmodule Brando.Mixfile do
           "guides/sitemaps.md",
           "guides/content_seo.md",
           "guides/users.md",
+          "guides/email.md",
           "guides/authorization.md",
           "guides/i18n.md",
           "guides/querying.md",
@@ -115,6 +116,7 @@ defmodule Brando.Mixfile do
           Operations: [
             "guides/tenancy_and_environments.md",
             "guides/users.md",
+            "guides/email.md",
             "guides/authorization.md",
             "guides/i18n.md",
             "guides/querying.md",
@@ -226,6 +228,9 @@ defmodule Brando.Mixfile do
 
       # cron & processing
       {:oban, "~> 2.23"},
+
+      # email, sent through the application's own Swoosh mailer
+      {:swoosh, "~> 1.17"},
 
       # sitemaps
       {:sitemapper, "~> 0.10.0"},

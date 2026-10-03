@@ -14666,3 +14666,8 @@ msgstr "Ingen skjemaer ennå"
 #, elixir-autogen, elixir-format
 msgid "What visitors have sent with the site's forms"
 msgstr "Det besøkende har sendt med nettstedets skjemaer"
+
+#: lib/brando/mailer/layout.ex:33
+#, elixir-autogen, elixir-format
+msgid "This email was sent by %{site}."
+msgstr "Denne e-posten ble sendt av %{site}."

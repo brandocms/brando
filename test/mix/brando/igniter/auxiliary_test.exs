@@ -12,6 +12,7 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     assert result.tasks == [{"deps.get", []}]
     assert result.rms == []
     assert IgniterCase.source(result, "lib/acme/shop/mailer.ex") =~ "otp_app: :shop"
+    assert IgniterCase.source(result, "config/config.exs") =~ "mailer: Acme.Shop.Mailer"
     assert IgniterCase.source(result, "lib/acme/web/sitemap.ex") =~ "defmodule Acme.Web.Sitemap"
     assert IgniterCase.source(result, "lib/acme/shop/authorization.ex") =~ "Brando.Images.Image"
     assert IgniterCase.source(result, "mix.exs") =~ "steps: [:assemble, :tar]"
