@@ -82,6 +82,16 @@ defmodule Brando.SyncTest.Article do
         end
       end
     end
+
+    # Leaves the schema's `blocks` relation out, which a form may do.
+    form :no_blocks do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, from: :title
+        end
+      end
+    end
   end
 end
 
