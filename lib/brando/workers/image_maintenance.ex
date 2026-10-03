@@ -16,7 +16,7 @@ defmodule Brando.Worker.ImageMaintenance do
 
   require Logger
 
-  @tasks ~w(recreate_sizes dominant_colors)
+  @tasks ~w(recreate_sizes recreate_changed_sizes dominant_colors)
   # Overridable per job through a "batch_size" argument.
   @batch_size 100
 
@@ -32,7 +32,11 @@ defmodule Brando.Worker.ImageMaintenance do
     with {:ok, user} <- Users.get_user(user_id) do
       batch_size = Map.get(args, "batch_size", @batch_size)
       images = next_batch(task, Map.get(args, "after_id", 0), batch_size)
-      Enum.each(images, &run_task(task, &1, user))
+
+      images
+      |> only_changed(task)
+      |> Enum.each(&run_task(task, &1, user))
+
       continue(images, batch_size, args)
     end
   end
@@ -49,11 +53,29 @@ defmodule Brando.Worker.ImageMaintenance do
 
   # Sizes come from the image's config; without a target there is nothing to
   # recreate them from.
-  defp only_configured(query, "recreate_sizes"), do: where(query, [i], not is_nil(i.config_target))
+  defp only_configured(query, task) when task in ["recreate_sizes", "recreate_changed_sizes"],
+    do: where(query, [i], not is_nil(i.config_target))
+
   defp only_configured(query, _task), do: query
 
+  # Filtered after the batch is read rather than in the query, since the
+  # current fingerprint comes from code, not the database. Each target's is
+  # resolved once per batch.
+  defp only_changed(images, "recreate_changed_sizes") do
+    current =
+      images
+      |> Enum.map(& &1.config_target)
+      |> Enum.uniq()
+      |> Map.new(&{&1, Processing.current_fingerprint(&1)})
+
+    Enum.filter(images, &Processing.changed_config?(&1, current[&1.config_target]))
+  end
+
+  defp only_changed(images, _task), do: images
+
   # The per-image work is already a job of its own, so this only enqueues it.
-  defp run_task("recreate_sizes", image, user), do: Processing.queue_processing(image, user, [], silent: true)
+  defp run_task(task, image, user) when task in ["recreate_sizes", "recreate_changed_sizes"],
+    do: Processing.queue_processing(image, user, [], silent: true)
 
   defp run_task("dominant_colors", image, user) do
     case Processing.set_dominant_color(image, user) do

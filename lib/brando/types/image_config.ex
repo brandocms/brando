@@ -21,6 +21,9 @@ defmodule Brando.Type.ImageConfig do
 
   alias Brando.Utils.Struct, as: StructUtils
 
+  # Bump to mark every stored fingerprint stale, should what goes into one change.
+  @fingerprint_version 1
+
   @type cdn_config :: %Brando.CDN.Config{}
   @type t :: %__MODULE__{
           allowed_mimetypes: [String.t()],
@@ -112,14 +115,7 @@ defmodule Brando.Type.ImageConfig do
       random_filename: false,
       slugify_filename: true,
       size_limit: 10_240_000,
-      sizes: %{
-        "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
-        "thumb" => %{"size" => "400x400>", "quality" => 75, "crop" => true},
-        "small" => %{"size" => "700", "quality" => 75},
-        "medium" => %{"size" => "1100", "quality" => 75},
-        "large" => %{"size" => "1700", "quality" => 75},
-        "xlarge" => %{"size" => "2100", "quality" => 75}
-      },
+      sizes: Brando.Images.Size.preset!(:standard),
       srcset: %{
         default: [
           {"small", "700w"},
@@ -130,4 +126,45 @@ defmodule Brando.Type.ImageConfig do
       }
     }
   end
+
+  @doc """
+  A short fingerprint of the settings that decide an image's processed files:
+  its `sizes` and `formats`.
+
+  Processing stores it on the image (`config_fingerprint`), so the images made
+  with an older config can be found and only those recreated. Other settings,
+  such as `upload_path` or `srcset`, don't change the files and are left out.
+  """
+  @spec fingerprint(t() | map()) :: String.t()
+  def fingerprint(%{sizes: sizes, formats: formats}) do
+    canonical =
+      Enum.join(
+        [
+          "v#{@fingerprint_version}",
+          canonical_term(sizes),
+          formats |> List.wrap() |> Enum.map(&to_string/1) |> Enum.sort() |> Enum.join(",")
+        ],
+        "|"
+      )
+
+    :sha256
+    |> :crypto.hash(canonical)
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 12)
+  end
+
+  # Sorted keys and plain text, so the fingerprint doesn't depend on map order
+  # or on how the runtime serializes terms.
+  defp canonical_term(map) when is_map(map) do
+    entries =
+      map
+      |> Enum.map(fn {key, value} -> {to_string(key), canonical_term(value)} end)
+      |> Enum.sort()
+      |> Enum.map_join(",", fn {key, value} -> "#{key}=#{value}" end)
+
+    "{" <> entries <> "}"
+  end
+
+  defp canonical_term(value) when is_binary(value), do: inspect(value)
+  defp canonical_term(value), do: to_string(value)
 end

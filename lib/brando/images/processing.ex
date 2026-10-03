@@ -6,6 +6,7 @@ defmodule Brando.Images.Processing do
   alias Brando.Images.Image
   alias Brando.Images.Operations
   alias Brando.Tenant.Job, as: TenantJob
+  alias Brando.Type.ImageConfig
   alias Brando.Upload
   alias Brando.Users.User
   alias Brando.Worker
@@ -91,6 +92,65 @@ defmodule Brando.Images.Processing do
   def recreate_sizes_for_images(user), do: start_image_maintenance("recreate_sizes", user)
 
   @doc """
+  Recreate the sizes of the images whose config has changed since they were
+  processed. See `changed_config?/2`.
+
+  Runs in the background like `recreate_sizes_for_images/1`, and neither starts
+  while the other is unfinished.
+  """
+  @spec recreate_sizes_for_changed_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | term}
+  def recreate_sizes_for_changed_images(user), do: start_image_maintenance("recreate_changed_sizes", user)
+
+  @doc """
+  The fingerprint of the config images with `config_target` are processed
+  with today, or nil when the target no longer resolves to a config.
+  """
+  @spec current_fingerprint(String.t()) :: String.t() | nil
+  def current_fingerprint(config_target) do
+    {:ok, config} = Images.get_config_for(config_target)
+    ImageConfig.fingerprint(config)
+  rescue
+    # A removed field or module: processing would fail the same way, so there
+    # is nothing to recreate these images with.
+    _error -> nil
+  end
+
+  @doc """
+  Was the image processed with a config other than its target's current one?
+
+  `current_fingerprint` is `current_fingerprint/1` for the image's target.
+  Images processed before fingerprints were stored have none and count as
+  changed. Images whose target no longer resolves never do.
+  """
+  @spec changed_config?(image, String.t() | nil) :: boolean
+  def changed_config?(_image, nil), do: false
+  def changed_config?(%{config_fingerprint: fingerprint}, current_fingerprint), do: fingerprint != current_fingerprint
+
+  @doc """
+  Counts the images `recreate_sizes_for_changed_images/1` would recreate.
+  """
+  @spec count_changed_images() :: non_neg_integer
+  def count_changed_images do
+    query =
+      from i in Image,
+        where: is_nil(i.deleted_at) and not is_nil(i.config_target),
+        group_by: [i.config_target, i.config_fingerprint],
+        select: {i.config_target, i.config_fingerprint, count(i.id)}
+
+    rows = Brando.Repo.all(query)
+
+    current =
+      rows
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.uniq()
+      |> Map.new(&{&1, current_fingerprint(&1)})
+
+    Enum.reduce(rows, 0, fn {config_target, fingerprint, count}, total ->
+      if changed_config?(%{config_fingerprint: fingerprint}, current[config_target]), do: total + count, else: total
+    end)
+  end
+
+  @doc """
   Set dominant color for a single image.
 
   Leaves the stored color alone when none can be read from the file.
@@ -112,8 +172,8 @@ defmodule Brando.Images.Processing do
   def set_dominant_color_for_images(user), do: start_image_maintenance("dominant_colors", user)
 
   @doc """
-  Is a bulk image task (`"recreate_sizes"` or `"dominant_colors"`) queued or
-  running for the current tenant?
+  Is a bulk image task (`"recreate_sizes"`, `"recreate_changed_sizes"` or
+  `"dominant_colors"`) queued or running for the current tenant?
   """
   @spec image_maintenance_running?(String.t()) :: boolean
   def image_maintenance_running?(task) do
@@ -132,8 +192,13 @@ defmodule Brando.Images.Processing do
     Brando.Repo.one(query) == true
   end
 
+  # Both recreate tasks queue the same per-image jobs, so one waits for the other.
+  @recreate_tasks ~w(recreate_sizes recreate_changed_sizes)
+
   defp start_image_maintenance(task, user) do
-    if image_maintenance_running?(task) do
+    blocking = if task in @recreate_tasks, do: @recreate_tasks, else: [task]
+
+    if Enum.any?(blocking, &image_maintenance_running?/1) do
       {:error, :already_running}
     else
       %{task: task, user_id: user.id}
@@ -181,7 +246,11 @@ defmodule Brando.Images.Processing do
       for {image_id, result} <- operation_results do
         images_by_id
         |> Map.fetch!(image_id)
-        |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
+        |> Changeset.change(%{
+          sizes: result.sizes,
+          formats: result.formats,
+          config_fingerprint: ImageConfig.fingerprint(cfg)
+        })
         |> Brando.Repo.update!()
       end
 
@@ -213,7 +282,11 @@ defmodule Brando.Images.Processing do
       for {image_id, result} <- operation_results do
         images_by_id
         |> Map.fetch!(image_id)
-        |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
+        |> Changeset.change(%{
+          sizes: result.sizes,
+          formats: result.formats,
+          config_fingerprint: ImageConfig.fingerprint(cfg)
+        })
         |> Brando.Repo.update!()
       end
 

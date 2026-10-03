@@ -16,7 +16,7 @@ defmodule Brando.Images.Image do
 
   alias Brando.Images.Focal
 
-  trait :creator, derived: [:sizes, :formats, :status, :cdn, :dominant_color]
+  trait :creator, derived: [:sizes, :formats, :status, :cdn, :dominant_color, :config_fingerprint]
   trait :timestamped
   trait :soft_delete
   trait :focal
@@ -40,6 +40,9 @@ defmodule Brando.Images.Image do
     attribute :cdn, :boolean, default: false
     attribute :dominant_color, :text
     attribute :config_target, :text
+    # `Brando.Type.ImageConfig.fingerprint/1` of the config the sizes were made
+    # with, to find images whose config has changed since
+    attribute :config_fingerprint, :text
     attribute :folder_id, :integer
     attribute :fetchpriority, :enum, values: [:high, :low, :auto], default: :auto
     # SHA-256 of the uploaded original, to find the same file uploaded again

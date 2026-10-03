@@ -31,6 +31,10 @@ test('runs administrative utilities and displays system information', async ({ p
   // the two to run in full, since E2E executes Oban jobs inline.
   await expect(maintenance.getByRole('heading', { name: 'Image sizes', level: 3 })).toBeVisible()
   await expect(maintenance.getByRole('heading', { name: 'Dominant colors', level: 3 })).toBeVisible()
+  await expect(maintenance.getByRole('button', { name: 'Recreate image sizes', exact: true })).toBeEnabled()
+  // The seeded site has no images made with older settings.
+  await expect(maintenance.getByText('All images match their settings', { exact: true })).toBeVisible()
+  await expect(maintenance.getByRole('button', { name: 'Recreate changed images', exact: true })).toBeDisabled()
   await maintenance.getByRole('button', { name: 'Recalculate colors', exact: true }).click()
   const confirm = page.getByRole('dialog', { name: 'Read the dominant color of every image again?' })
   await expect(confirm).toContainText('This runs in the background.')

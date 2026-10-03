@@ -243,6 +243,109 @@ defmodule Brando.Blueprint.AssetConfigTest do
     end
   end
 
+  test "checks image sizes and srcsets during Blueprint compilation" do
+    assert_raise BlueprintError, ~r/:sizes\["thumb"\] has an unknown key "crp" \(did you mean "crop"\?\)/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: %{sizes: %{"thumb" => %{"size" => "400x400", "crp" => true}}}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/:sizes\["thumb"\] is cropped but its "size" gives one dimension/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :gallery, :gallery, cfg: %{image: %{sizes: %{"thumb" => %{"size" => "400", "crop" => true}}}}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError,
+                 ~r/:srcset \[:cropped\] names the size "huge", which is not in :sizes \["large", "small"\]/,
+                 fn ->
+                   compile_blueprint(
+                     quote do
+                       assets do
+                         asset :cover, :image,
+                           cfg: %{
+                             sizes: %{"small" => %{"size" => "700"}, "large" => %{"size" => "1400"}},
+                             srcset: %{default: [{"small", "700w"}], cropped: [{"huge", "2400w"}]}
+                           }
+                       end
+                     end
+                   )
+                 end
+
+    assert_raise BlueprintError, ~r/:srcset has an invalid descriptor "700"/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: %{srcset: [{"small", "700"}]}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/:sizes uses the unknown size preset :huge/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: %{sizes: :huge}
+          end
+        end
+      )
+    end
+  end
+
+  test "image sizes accept presets and atom keys, and are stored as string-keyed maps" do
+    module =
+      compile_blueprint(
+        quote do
+          assets do
+            asset :standard, :image, cfg: %{sizes: :standard}
+
+            asset :extended, :image,
+              cfg: %{
+                sizes: {:standard, %{hero: %{size: "2400", quality: 80}}},
+                srcset: %{default: [{"small", "700w"}, {"hero", "2400w"}]}
+              }
+
+            asset :gallery, :gallery, cfg: %{image: %{sizes: {:standard, %{"hero" => %{"size" => "2400"}}}}}
+          end
+        end
+      )
+
+    standard = Brando.Images.Size.preset!(:standard)
+
+    assert Assets.__asset__(module, :standard).opts.cfg.sizes == standard
+
+    extended = Assets.__asset__(module, :extended).opts.cfg
+    assert extended.sizes == Map.put(standard, "hero", %{"size" => "2400", "quality" => 80})
+
+    assert %{"hero" => %{"size" => "2400"}, "xlarge" => _} = Assets.__asset__(module, :gallery).opts.cfg.image.sizes
+  end
+
+  test "replacing sizes drops an inherited srcset that names sizes no longer there" do
+    module =
+      compile_blueprint(
+        quote do
+          assets do
+            # The default srcset names small … xlarge.
+            asset :logo, :image, cfg: %{sizes: %{"thumb" => %{"size" => "300x300", "crop" => true}}}
+
+            asset :cover, :image, cfg: %{sizes: {:standard, %{"hero" => %{"size" => "2400"}}}}
+          end
+        end
+      )
+
+    assert Assets.__asset__(module, :logo).opts.cfg.srcset == nil
+    assert %{default: [_ | _]} = Assets.__asset__(module, :cover).opts.cfg.srcset
+  end
+
   test "validates deferred config functions when they are materialized" do
     module =
       compile_blueprint(

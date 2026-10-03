@@ -44,10 +44,16 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   defp assign_image_tasks(socket) do
-    assign(socket, :image_tasks, %{
-      "recreate_sizes" => Images.Processing.image_maintenance_running?("recreate_sizes"),
+    recreate_sizes? = Images.Processing.image_maintenance_running?("recreate_sizes")
+    recreate_changed_sizes? = Images.Processing.image_maintenance_running?("recreate_changed_sizes")
+
+    socket
+    |> assign(:image_tasks, %{
+      # Either recreate run blocks both buttons; they queue the same jobs.
+      "recreate_sizes" => recreate_sizes? or recreate_changed_sizes?,
       "dominant_colors" => Images.Processing.image_maintenance_running?("dominant_colors")
     })
+    |> assign(:changed_images, Images.Processing.count_changed_images())
   end
 
   defp assign_info(socket) do
@@ -146,21 +152,44 @@ defmodule BrandoAdmin.Sites.UtilsLive do
           <article>
             <div>
               <h3>{gettext("Image sizes")}</h3><p>
-                {gettext("Recreate the sizes and formats of every image from its original, using the current image settings.")}
+                {gettext("Recreate the sizes and formats of images from their originals, using the current image settings.")}
               </p>
               <small :if={@image_tasks["recreate_sizes"]}>{gettext("Running in the background")}</small>
+              <small :if={!@image_tasks["recreate_sizes"] && @changed_images > 0}>
+                {ngettext(
+                  "%{count} image was made with older settings",
+                  "%{count} images were made with older settings",
+                  @changed_images
+                )}
+              </small>
+              <small :if={!@image_tasks["recreate_sizes"] && @changed_images == 0} class="utils-empty-status">
+                {gettext("All images match their settings")}
+              </small>
             </div>
-            <button
-              type="button"
-              class="utils-button"
-              phx-click="recreate_image_sizes"
-              disabled={@image_tasks["recreate_sizes"]}
-              data-confirm-title={gettext("Recreate the sizes of every image?")}
-              data-confirm={gettext("This runs in the background and can take a long time for a large library.")}
-              data-confirm-ok={gettext("Recreate sizes")}
-            >
-              {gettext("Recreate image sizes")}
-            </button>
+            <div class="utils-row-actions">
+              <button
+                type="button"
+                class="utils-button"
+                phx-click="recreate_image_sizes"
+                disabled={@image_tasks["recreate_sizes"]}
+                data-confirm-title={gettext("Recreate the sizes of every image?")}
+                data-confirm={gettext("This runs in the background and can take a long time for a large library.")}
+                data-confirm-ok={gettext("Recreate sizes")}
+              >
+                {gettext("Recreate image sizes")}
+              </button>
+              <button
+                type="button"
+                class={["utils-button", @changed_images > 0 && "primary"]}
+                phx-click="recreate_changed_image_sizes"
+                disabled={@image_tasks["recreate_sizes"] || @changed_images == 0}
+                data-confirm-title={gettext("Recreate the sizes of changed images?")}
+                data-confirm={gettext("Only images made with older settings are recreated. This runs in the background.")}
+                data-confirm-ok={gettext("Recreate sizes")}
+              >
+                {gettext("Recreate changed images")}
+              </button>
+            </div>
           </article>
           <article>
             <div>
@@ -239,6 +268,12 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     socket.assigns.current_user
     |> Images.Processing.recreate_sizes_for_images()
     |> image_task_started(socket, gettext("Recreating image sizes in the background."))
+  end
+
+  def handle_event("recreate_changed_image_sizes", _, socket) do
+    socket.assigns.current_user
+    |> Images.Processing.recreate_sizes_for_changed_images()
+    |> image_task_started(socket, gettext("Recreating changed image sizes in the background."))
   end
 
   def handle_event("recalculate_dominant_colors", _, socket) do

@@ -28,8 +28,7 @@ defmodule Brando.MigrationTest.Project do
         upload_path: Path.join("images", "avatars"),
         random_filename: true,
         size_limit: 10_240_000,
-        sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}},
-        srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
+        sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}}
       ]
   end
 
@@ -69,8 +68,7 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
         upload_path: Path.join("images", "avatars"),
         random_filename: true,
         size_limit: 10_240_000,
-        sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}},
-        srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
+        sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}}
       ]
 
     asset :photos, :gallery,
