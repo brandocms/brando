@@ -923,13 +923,17 @@ defmodule Brando.HTML.Images do
     Kernel./(w, h)
   end
 
+  # ImageMagick geometry flags (`400x400>`, `300x300^`) don't change the ratio,
+  # so strip them. A geometry without both dimensions has no ratio to report.
   defp calc_ratio(%{"size" => size}) do
-    [w, h] =
-      size
-      |> String.split("x")
-      |> Enum.map(&String.to_integer/1)
-
-    Kernel./(w, h)
+    size
+    |> String.replace(~r/[^\dx]/, "")
+    |> String.split("x")
+    |> Enum.map(&Integer.parse/1)
+    |> case do
+      [{w, ""}, {h, ""}] when h > 0 -> w / h
+      _ -> false
+    end
   end
 
   def get_mq(image_field, mq, opts) do

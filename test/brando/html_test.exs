@@ -1568,4 +1568,30 @@ defmodule Brando.HTMLTest do
 
     "<div class=\"dbg-grid\"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>"
   end
+
+  test "a cropped srcset ending in a flagged size reports its ratio" do
+    user = Factory.build(:user)
+
+    cfg = %Brando.Type.ImageConfig{
+      sizes: %{
+        "small" => %{"size" => "300x200", "crop" => true},
+        "thumb" => %{"size" => "400x400>", "crop" => true}
+      },
+      srcset: %{default: [{"small", "300w"}, {"thumb", "400w"}]}
+    }
+
+    assert {1.0, srcset} = Brando.HTML.Images.get_srcset(user.avatar, cfg, prefix: media_url())
+    assert srcset =~ "/thumb/27i97a.jpeg 400w"
+  end
+
+  test "a cropped size with a single dimension has no ratio" do
+    user = Factory.build(:user)
+
+    cfg = %Brando.Type.ImageConfig{
+      sizes: %{"thumb" => %{"size" => "x400", "crop" => true}},
+      srcset: %{default: [{"thumb", "400w"}]}
+    }
+
+    assert {false, _srcset} = Brando.HTML.Images.get_srcset(user.avatar, cfg, prefix: media_url())
+  end
 end
