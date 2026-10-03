@@ -821,7 +821,22 @@ defmodule Brando.HTML.Images do
       raise ArgumentError, message: "no `:srcset` key set in supplied image config"
     end
 
-    srcset = sort_srcset(cfg.srcset)
+    {cropped_ratio, srcset} =
+      case cfg.srcset do
+        %{default: list} ->
+          {check_cropped(cfg, :default), list}
+
+        %{} = map ->
+          if Enum.any?(Map.values(map), &is_list/1) do
+            # keyed without a `default` key — raise with the bare map clause's message
+            get_srcset(image_field, map, opts, placeholder)
+          else
+            {false, sort_srcset(map)}
+          end
+
+        list ->
+          {false, list}
+      end
 
     srcset_values =
       for {k, v} <- srcset do
@@ -835,7 +850,7 @@ defmodule Brando.HTML.Images do
         "#{encode_candidate_url(path)} #{v}"
       end
 
-    {false, Enum.join(srcset_values, ", ")}
+    {cropped_ratio, Enum.join(srcset_values, ", ")}
   end
 
   # a keyed srcset map, without a key. try to get default
@@ -967,6 +982,4 @@ defmodule Brando.HTML.Images do
       t1 > t2
     end)
   end
-
-  defp sort_srcset(list), do: list
 end
