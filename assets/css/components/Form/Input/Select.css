@@ -75,10 +75,6 @@ h2.titlecase + .button-group-vertical button:first-of-type {
         flex: 1;
         font-size: 13px;
         font-weight: 500;
-
-        svg {
-          margin-right: 9px;
-        }
       }
 
       button.delete.tiny {

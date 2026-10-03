@@ -161,7 +161,7 @@
 .modal-metadata > div:last-child { grid-column: 1 / -1; }
 .modal-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--modal-muted); }
 .modal-status > span { text-box: trim-both cap alphabetic; }
-.modal-status svg { width: 1em; height: 1em; flex: 0 0 1em; margin: 0; }
+.modal-status svg { width: 1cap; height: 1cap; flex: 0 0 1cap; margin: 0; }
 .modal-status circle.published { fill: #39ae72; }
 .modal-status circle.draft { fill: #656967; }
 .modal-status circle.pending { fill: #edaa00; }

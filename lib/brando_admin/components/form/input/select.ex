@@ -475,7 +475,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     assigns = assign_new(assigns, :deletable, fn -> false end)
 
     ~H"""
-    <.status_circle status={@opt.status} /> {@opt.label}
+    <span class="status-label"><.status_circle status={@opt.status} /> {@opt.label}</span>
     """
   end
 
@@ -511,7 +511,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <.status_circle status={@identifier.status} /> {@identifier.title}
+    <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
     <%= if @deletable do %>
       <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

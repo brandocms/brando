@@ -1035,6 +1035,14 @@ button.btn-palette {
       display: none;
     }
 
+    /* Under a title, the URL is a quiet second line. It tells apart entries
+       that share a title, such as one in each language. */
+    .variable.link .link-preview .link-text + dl {
+      font-size: 10px;
+      line-height: 14px;
+      color: var(--vars-muted);
+    }
+
     /* Files, images and videos are one line too: a thumbnail, the name (or
        "Drop a … here") and the media field's own buttons, made small. The
        whole field is still a drop target. */

@@ -480,7 +480,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         |> toggle_dropdown("##{@id}")
       }
     >
-      <.status_circle status={@status} /> {render_status_label(@status)}
+      <span class="status-label"><.status_circle status={@status} /> {render_status_label(@status)}</span>
     </button>
     """
   end
@@ -492,6 +492,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   def status_circle(%{status: :pending, publish_at: publish_at} = assigns) when not is_nil(publish_at) do
     ~H"""
     <svg
+      class="status-dot"
       data-testid="status-pending"
       width="15"
       height="15"
@@ -508,7 +509,14 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def status_circle(%{status: _status} = assigns) do
     ~H"""
-    <svg data-testid={"status-#{@status}"} xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15">
+    <svg
+      class="status-dot"
+      data-testid={"status-#{@status}"}
+      xmlns="http://www.w3.org/2000/svg"
+      width="15"
+      height="15"
+      viewBox="0 0 15 15"
+    >
       <circle r="7.5" cy="7.5" cx="7.5" class={@status} />
     </svg>
     """

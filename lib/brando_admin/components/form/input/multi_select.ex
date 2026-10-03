@@ -940,7 +940,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <.status_circle status={@opt.status} /> {@opt.label}
+    <span class="status-label"><.status_circle status={@opt.status} /> {@opt.label}</span>
     <%= if @deletable do %>
       <button
         class="delete tiny"
@@ -984,7 +984,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <.status_circle status={@identifier.status} /> {@identifier.title}
+    <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
     <%= if @deletable do %>
       <button
         class="delete tiny"
@@ -1013,7 +1013,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <.status_circle status={@identifier.status} /> {@identifier.title}
+    <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
     <%= if @deletable do %>
       <button
         class="delete tiny"

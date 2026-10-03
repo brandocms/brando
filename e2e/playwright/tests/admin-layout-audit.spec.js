@@ -22,10 +22,20 @@ test('listing filters align, disclose children by keyboard and retain creators o
   const sort = page.locator('.sorts .simple-dropdown-button')
   await sameHeight([filter, sort], 38)
   expect((await filter.boundingBox()).y).toBeCloseTo((await sort.boundingBox()).y, 0)
+  // A status dot is as tall as a capital letter of its label and level with it
   for (const status of await page.locator('.statuses button').all()) {
     const circle = await status.locator('svg').boundingBox()
-    await expect(status.locator('.label')).toBeVisible()
-    expect(circle.height).toBeGreaterThanOrEqual(parseFloat(await status.evaluate(e => getComputedStyle(e).fontSize)))
+    const label = status.locator('.label')
+    await expect(label).toBeVisible()
+    const cap = await label.evaluate(el => {
+      const cs = getComputedStyle(el)
+      const ctx = document.createElement('canvas').getContext('2d')
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+      return ctx.measureText('H').actualBoundingBoxAscent
+    })
+    const box = await label.boundingBox()
+    expect(circle.height).toBeCloseTo(cap, 0)
+    expect(circle.y + circle.height / 2).toBeCloseTo(box.y + box.height / 2, 0)
   }
   // Optical alignment follows visible glyphs, not the label's line-box center.
   await page.locator('.statuses').screenshot({ path: testInfo.outputPath('status-alignment-desktop.png') })

@@ -701,18 +701,16 @@
             border: none;
             display: flex;
             align-items: center;
-
-            svg {
-              margin-right: 10px;
-            }
           }
         }
 
-        svg {
+        > div > svg {
           border: 3px solid #fff;
           border-radius: 50%;
           box-sizing: content-box;
+        }
 
+        svg {
           circle {
             fill: theme(colors.blue);
 

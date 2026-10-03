@@ -848,8 +848,8 @@ defmodule BrandoAdmin.Components.Form.Input do
                 value={status.value}
                 checked={status.value == to_string(@field.value)}
               />
-              <span class={["label-text", status.value]}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
+              <span class={["label-text", "status-label", status.value]}>
+                <svg class="status-dot" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
                   <circle class={status.value} r="6" cy="6" cx="6" />
                 </svg>
                 {status.label}
@@ -924,8 +924,8 @@ defmodule BrandoAdmin.Components.Form.Input do
                   phx-keydown={@hide |> JS.focus(to: "##{@id}-trigger")}
                   phx-key="Escape"
                 />
-                <span class={["label-text", status.value]}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
+                <span class={["label-text", "status-label", status.value]}>
+                  <svg class="status-dot" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
                     <circle class={status.value} r="6" cy="6" cx="6" />
                   </svg>
                   {status.label}

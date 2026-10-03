@@ -1,1 +1,15 @@
 @europa base;
+
+/* A status dot beside its label is as tall as a capital letter and stands on
+   the baseline, so it spans exactly what a capital does at any font size. Dot
+   and label share one inline box: as separate flex items, the space between
+   them would collapse and the row would centre them on the line box. */
+:is(span.status-label, span.link-status) > svg.status-dot {
+  display: inline-block;
+  flex: none;
+  width: 1cap;
+  height: 1cap;
+  margin: 0;
+  border: 0;
+  vertical-align: baseline;
+}

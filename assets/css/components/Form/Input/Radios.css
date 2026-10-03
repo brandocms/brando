@@ -105,6 +105,7 @@
     }
 
     .label-text {
+      display: inline-block;
       @font mono;
       font-size: 12px;
       line-height: 1.8;
