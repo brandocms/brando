@@ -187,12 +187,6 @@ defmodule Brando.Router do
                  BrandoAdmin.Navigation.MenuFormLive,
                  :update
 
-            live "/navigation/menus/item/create", BrandoAdmin.Navigation.ItemFormLive, :create
-
-            live "/navigation/menus/item/update/:entry_id",
-                 BrandoAdmin.Navigation.ItemFormLive,
-                 :update
-
             live "/content/containers", BrandoAdmin.Content.ContainerListLive
             live "/content/containers/create", BrandoAdmin.Content.ContainerFormLive, :create
 
