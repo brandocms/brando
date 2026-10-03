@@ -50,6 +50,19 @@ defmodule BrandoAdmin.Forms.SubmissionsLiveTest do
     assert html =~ "/contact"
   end
 
+  test "the forms page lists each form once, with what visitors have sent", %{conn: conn, submit: submit} do
+    submit.(%{"name" => "Ada"})
+    submit.(%{"name" => "Grace"})
+
+    {:ok, _view, html} = live(conn, "/admin/forms")
+    [row] = html |> Floki.parse_document!() |> Floki.find("#form-inbox-contact")
+
+    assert Floki.text(row) =~ "Contact"
+    assert row |> Floki.find("td.monospace") |> hd() |> Floki.text() |> String.trim() == "2"
+    assert Floki.attribute(row, "a", "href") == ["/admin/forms/contact/submissions"]
+    assert html =~ ~s(href="/admin/config/forms")
+  end
+
   test "a submission can be deleted", %{conn: conn, submit: submit} do
     submission = submit.(%{"name" => "Ada"})
     {:ok, view, _html} = live(conn, "/admin/forms/contact/submissions")

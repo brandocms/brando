@@ -23,9 +23,12 @@ const closeModal = async page => {
 test('build a form, then translate it', async ({ page }) => {
   const key = `contact_${Date.now()}`
 
+  // Forms are built under Configuration; the content menu only lists what they receive
   await page.goto('/admin')
-  await page.getByRole('link', { name: 'Forms' }).click()
-  await expect(page).toHaveURL('/admin/forms')
+  await expect(page.locator('a[href="/admin/forms"]')).toHaveCount(0)
+  await page.getByText('Configuration').click()
+  await page.locator('a[href="/admin/config/forms"]').click()
+  await expect(page).toHaveURL('/admin/config/forms')
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
 
@@ -56,7 +59,7 @@ test('build a form, then translate it', async ({ page }) => {
   await expect(preview.locator('.site-form-field[data-key="service"] option[value="option_1"]')).toHaveText('Website')
 
   await page.getByTestId('submit').click()
-  await expect(page).toHaveURL('/admin/forms')
+  await expect(page).toHaveURL('/admin/config/forms')
   await syncLV(page)
 
   await page.getByRole('link', { name: key }).click()
@@ -84,5 +87,12 @@ test('build a form, then translate it', async ({ page }) => {
   await expect(preview.locator('.site-form-field[data-key="service"] option[value="option_1"]')).toHaveText('Nettside')
 
   await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/config/forms')
+
+  // With a form built, the content menu lists what it receives
+  await page.goto('/admin')
+  await page.locator('a[href="/admin/forms"]').click()
   await expect(page).toHaveURL('/admin/forms')
+  await syncLV(page)
+  await expect(page.locator(`#form-inbox-${key}`)).toContainText(key)
 })

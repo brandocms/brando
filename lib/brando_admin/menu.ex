@@ -281,6 +281,10 @@ defmodule BrandoAdmin.Menu do
                     url: "/admin/config/navigation/menus"
                   },
                   %{
+                    name: gettext("Forms"),
+                    url: "/admin/config/forms"
+                  },
+                  %{
                     name: gettext("Identity"),
                     url: "/admin/config/identity"
                   },
@@ -379,10 +383,7 @@ defmodule BrandoAdmin.Menu do
               name: gettext("Pages & Sections"),
               url: "/admin/pages"
             },
-            %{
-              name: gettext("Forms"),
-              url: "/admin/forms"
-            },
+            forms_menu_item(),
             globals_menu_item()
           ]
           |> Enum.reject(&is_nil/1)
@@ -391,6 +392,13 @@ defmodule BrandoAdmin.Menu do
     ]
 
     if Brando.Authorization.enabled?(), do: filter_authorized(menus, current_user), else: menus
+  end
+
+  # What visitors have sent: there is nothing to read until a form is built
+  # under Configuration. With tenants the item stays, as for Globals.
+  defp forms_menu_item do
+    if Tenant.mode() != :none or Brando.Repo.aggregate(Brando.Forms.Form, :count) > 0,
+      do: %{name: gettext("Forms"), url: "/admin/forms"}
   end
 
   # Globals is empty until a developer adds a global set; a menu item leading

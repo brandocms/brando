@@ -1,7 +1,7 @@
 # Forms
 
 A form is something visitors fill in on the site, such as a contact or signup
-form. Editors build it in the admin under **Content → Forms**, and the site
+form. Editors build it in the admin under **Configuration → Forms**, and the site
 renders it with `Brando.HTML.Forms.site_form/1`.
 
 A form is addressed by **key and language**. Each language has its own form,
@@ -14,7 +14,7 @@ tables.
 
 ## Build a form
 
-Open **Content → Forms**, create **Contact** and give it the key `contact`. The
+Open **Configuration → Forms**, create **Contact** and give it the key `contact`. The
 **Form** tab holds the field designer: a canvas of 12-unit rows on the left, and
 the form as visitors will see it on the right.
 
@@ -52,7 +52,7 @@ use the site's wording.
 
 What visitors read around every form — the submit button, what is said once a
 form is sent or could not be, and the error next to a field that is empty or
-filled in wrongly — is set once for the site, under **Content → Forms →
+filled in wrongly — is set once for the site, under **Configuration → Forms →
 Messages**. Each message has a field per content language.
 
 The first time the page is opened, the messages are filled in with Brando's own
@@ -188,8 +188,10 @@ sent, or when sending failed.
 
 A form posts to Brando's route, `/__brando/forms/<key>`, which `page_routes/1`
 adds to your browser pipeline. The submission is checked against the form's
-fields, stored, and listed under **Submissions** on the form's page in the
-admin, where it can be read, deleted or exported as CSV. A submission in any
+fields, and stored. **Content → Forms** lists every form with how many
+submissions it has had and when the latest came in; the item appears once a
+form has been built. Open a form there to read, delete or export its
+submissions as CSV. A submission in any
 language is listed with the form, and keeps the labels its fields had when it
 was sent.
 

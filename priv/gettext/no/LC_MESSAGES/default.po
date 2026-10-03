@@ -14641,3 +14641,28 @@ msgstr "Slettet bruker"
 #, elixir-autogen, elixir-format
 msgid "by a deleted user"
 msgstr "av en slettet bruker"
+
+#: lib/brando_admin/live/forms/inbox_live.ex:33
+#, elixir-autogen, elixir-format
+msgid "Configure forms"
+msgstr "Sett opp skjemaer"
+
+#: lib/brando_admin/live/forms/inbox_live.ex:41
+#, elixir-autogen, elixir-format
+msgid "Forms are built under Configuration → Forms."
+msgstr "Skjemaer bygges under Konfigurasjon → Skjemaer."
+
+#: lib/brando_admin/live/forms/inbox_live.ex:50
+#, elixir-autogen, elixir-format
+msgid "Latest"
+msgstr "Siste"
+
+#: lib/brando_admin/live/forms/inbox_live.ex:40
+#, elixir-autogen, elixir-format
+msgid "No forms yet"
+msgstr "Ingen skjemaer ennå"
+
+#: lib/brando_admin/live/forms/inbox_live.ex:31
+#, elixir-autogen, elixir-format
+msgid "What visitors have sent with the site's forms"
+msgstr "Det besøkende har sendt med nettstedets skjemaer"

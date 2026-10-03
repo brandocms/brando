@@ -14656,3 +14656,28 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "by a deleted user"
 msgstr ""
+
+#: lib/brando_admin/live/forms/inbox_live.ex:33
+#, elixir-autogen, elixir-format
+msgid "Configure forms"
+msgstr ""
+
+#: lib/brando_admin/live/forms/inbox_live.ex:41
+#, elixir-autogen, elixir-format
+msgid "Forms are built under Configuration → Forms."
+msgstr ""
+
+#: lib/brando_admin/live/forms/inbox_live.ex:50
+#, elixir-autogen, elixir-format
+msgid "Latest"
+msgstr ""
+
+#: lib/brando_admin/live/forms/inbox_live.ex:40
+#, elixir-autogen, elixir-format
+msgid "No forms yet"
+msgstr ""
+
+#: lib/brando_admin/live/forms/inbox_live.ex:31
+#, elixir-autogen, elixir-format
+msgid "What visitors have sent with the site's forms"
+msgstr ""

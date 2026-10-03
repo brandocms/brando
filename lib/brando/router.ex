@@ -162,6 +162,10 @@ defmodule Brando.Router do
             live "/publishing", BrandoAdmin.Sites.PublishingLive
             live "/markdown-sources", BrandoAdmin.Sites.MarkdownSourcesLive
             live "/cache", BrandoAdmin.Sites.CacheLive
+            live "/forms", BrandoAdmin.Forms.FormListLive
+            live "/forms/create", BrandoAdmin.Forms.FormFormLive, :create
+            live "/forms/update/:entry_id", BrandoAdmin.Forms.FormFormLive, :update
+            live "/forms/messages", BrandoAdmin.Forms.MessagesLive
             live "/global_sets", BrandoAdmin.Sites.GlobalSetListLive
             live "/global_sets/create", BrandoAdmin.Sites.GlobalSetFormLive, :create
             live "/global_sets/update/:entry_id", BrandoAdmin.Sites.GlobalSetFormLive, :update
@@ -238,11 +242,9 @@ defmodule Brando.Router do
             live "/", BrandoAdmin.Globals.GlobalsLive
           end
 
+          # What visitors sent; the forms themselves are built under Configuration
           scope "/forms" do
-            live "/", BrandoAdmin.Forms.FormListLive
-            live "/create", BrandoAdmin.Forms.FormFormLive, :create
-            live "/update/:entry_id", BrandoAdmin.Forms.FormFormLive, :update
-            live "/messages", BrandoAdmin.Forms.MessagesLive
+            live "/", BrandoAdmin.Forms.InboxLive
             live "/:key/submissions", BrandoAdmin.Forms.SubmissionsLive
           end
 

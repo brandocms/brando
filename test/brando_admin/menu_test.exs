@@ -74,6 +74,23 @@ defmodule BrandoAdmin.MenuTest do
     assert menu_urls(BrandoAdmin.Menu.get_menu(nil)) =~ "/admin/globals"
   end
 
+  test "submissions are in the content menu once a form is configured" do
+    menu = BrandoAdmin.Menu.get_menu(nil)
+    assert menu_urls(menu) =~ "/admin/config/forms"
+    refute content_urls(menu) =~ "/admin/forms"
+
+    user = Brando.Factory.insert(:random_user)
+
+    {:ok, _} =
+      Brando.Forms.create_form(%{"title" => "Contact", "key" => "contact", "language" => "en", "status" => "draft"}, user)
+
+    assert content_urls(BrandoAdmin.Menu.get_menu(nil)) =~ "/admin/forms"
+  end
+
+  defp content_urls(menu) do
+    menu |> Enum.find(&(&1.name == "Content")) |> Map.fetch!(:items) |> Enum.map_join(" ", & &1.url)
+  end
+
   test "frontend assets is translated in the Norwegian menu" do
     menu_names =
       Gettext.with_locale("no", fn ->
