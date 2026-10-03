@@ -440,6 +440,14 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Forms.** Editors build forms visitors fill in, such as a contact form, under
+  **Content → Forms**, laying out fields on the same 12-unit canvas as module
+  variables, beside the form as visitors will see it. Forms are synchronized
+  translations: the source decides the fields, keys, layout and option values,
+  and each translation words them in its own language. Sites render a form with
+  `Brando.HTML.Forms.site_form/1`, whose slots replace any field's markup. Run
+  `mix brando.gen.migrations` for `brando_194`. See the [Forms guide](guides/forms.md).
+
 - **Activity log.** Configuration → Activity lists who created, changed,
   published, trashed, restored and deleted entries, and when: by day, with
   the fields that changed, filters for person, content type, action and

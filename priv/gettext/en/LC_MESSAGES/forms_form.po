@@ -1,0 +1,108 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+#: lib/brando/forms/form.ex:88
+#, elixir-autogen, elixir-format
+msgid "Deactivated"
+msgstr ""
+
+#: lib/brando/forms/form.ex:85
+#, elixir-autogen, elixir-format
+msgid "Draft"
+msgstr ""
+
+#: lib/brando/forms/form.ex:102
+#, elixir-autogen, elixir-format
+msgid "Fields"
+msgstr ""
+
+#: lib/brando/forms/form.ex:71
+#, elixir-autogen, elixir-format
+msgid "Form"
+msgstr ""
+
+#: lib/brando/forms/form.ex:123
+#, elixir-autogen, elixir-format
+msgid "Introduction"
+msgstr ""
+
+#: lib/brando/forms/form.ex:75
+#, elixir-autogen, elixir-format
+msgid "Key"
+msgstr ""
+
+#: lib/brando/forms/form.ex:94
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr ""
+
+#: lib/brando/forms/form.ex:120
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr ""
+
+#: lib/brando/forms/form.ex:86
+#, elixir-autogen, elixir-format
+msgid "Pending"
+msgstr ""
+
+#: lib/brando/forms/form.ex:87
+#, elixir-autogen, elixir-format
+msgid "Published"
+msgstr ""
+
+#: lib/brando/forms/form.ex:124
+#, elixir-autogen, elixir-format
+msgid "Send"
+msgstr ""
+
+#: lib/brando/forms/form.ex:123
+#, elixir-autogen, elixir-format
+msgid "Shown above the fields."
+msgstr ""
+
+#: lib/brando/forms/form.ex:128
+#, elixir-autogen, elixir-format
+msgid "Shown in place of the form once it has been sent."
+msgstr ""
+
+#: lib/brando/forms/form.ex:82
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/brando/forms/form.ex:124
+#, elixir-autogen, elixir-format
+msgid "Submit button"
+msgstr ""
+
+#: lib/brando/forms/form.ex:127
+#, elixir-autogen, elixir-format
+msgid "Success message"
+msgstr ""
+
+#: lib/brando/forms/form.ex:74
+#: lib/brando/forms/form.ex:137
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/forms/form.ex:61
+#, elixir-autogen, elixir-format
+msgid "form"
+msgstr ""
+
+#: lib/brando/forms/form.ex:62
+#, elixir-autogen, elixir-format
+msgid "forms"
+msgstr ""

@@ -3712,6 +3712,15 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:minor_save?, false)
          |> put_form(to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
+
+      # A synchronized translation that changed what its source controls. The
+      # block-editor clause above refuses it the same way; without this an
+      # entry without blocks crashed the form instead.
+      {:error, {:source_controlled, paths}} ->
+        {:noreply,
+         socket
+         |> assign(:processing, false)
+         |> source_controlled_error(paths)}
     end
   end
 

@@ -13777,6 +13777,329 @@ msgstr "Beregner dominerende farger på nytt i bakgrunnen."
 msgid "This is already running."
 msgstr "Dette kjører allerede."
 
+#: lib/brando_admin/components/form/input/form_fields.ex:699
+#, elixir-autogen, elixir-format
+msgid "%{width} needs %{needed} units — only %{free} free in that row. Narrow another field, or start a new row."
+msgstr "%{width} trenger %{needed} enheter — bare %{free} er ledige i den raden. Gjør et annet felt smalere, eller start en ny rad."
+
+#: lib/brando/forms/form.ex:149
+#, elixir-autogen, elixir-format
+msgid "1 field"
+msgid_plural "%{count} fields"
+msgstr[0] "1 felt"
+msgstr[1] "%{count} felter"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:911
+#, elixir-autogen, elixir-format
+msgid "A box visitors must tick, such as accepting a privacy policy"
+msgstr "En boks besøkende må krysse av, for eksempel for å godta personvernerklæringen"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:906
+#, elixir-autogen, elixir-format
+msgid "A date, picked from a calendar"
+msgstr "En dato, valgt fra en kalender"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:912
+#, elixir-autogen, elixir-format
+msgid "A fixed value sent with every submission"
+msgstr "En fast verdi som sendes med hver innsending"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:913
+#, elixir-autogen, elixir-format
+msgid "A heading that starts a new group of fields"
+msgstr "En overskrift som starter en ny gruppe felter"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:905
+#, elixir-autogen, elixir-format
+msgid "A number"
+msgstr "Et tall"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:903
+#, elixir-autogen, elixir-format
+msgid "A phone number"
+msgstr "Et telefonnummer"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:901
+#, elixir-autogen, elixir-format
+msgid "A single line, such as a name"
+msgstr "Én linje, for eksempel et navn"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:910
+#, elixir-autogen, elixir-format
+msgid "A single yes or no"
+msgstr "Ett ja eller nei"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:215
+#: lib/brando_admin/components/form/input/form_fields.ex:280
+#, elixir-autogen, elixir-format
+msgid "Add field"
+msgstr "Legg til felt"
+
+#: lib/brando_admin/live/forms/form_list_live.ex:32
+#, elixir-autogen, elixir-format
+msgid "Adjust your search or create a new form."
+msgstr "Juster søket eller opprett et nytt skjema."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:909
+#, elixir-autogen, elixir-format
+msgid "Any number of options"
+msgstr "Så mange valg man vil"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:450
+#, elixir-autogen, elixir-format
+msgid "Change these on the source, so every language submits the same fields."
+msgstr "Endre disse i kilden, slik at alle språk sender inn de samme feltene."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:895
+#, elixir-autogen, elixir-format
+msgid "Checkbox"
+msgstr "Avkrysningsboks"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:902
+#, elixir-autogen, elixir-format
+msgid "Checked as an email address; can be replied to"
+msgstr "Kontrolleres som e-postadresse; kan besvares"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:896
+#, elixir-autogen, elixir-format
+msgid "Consent"
+msgstr "Samtykke"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:868
+#, elixir-autogen, elixir-format
+msgid "Consent text"
+msgstr "Samtykketekst"
+
+#: lib/brando_admin/live/forms/form_form_live.ex:19
+#, elixir-autogen, elixir-format
+msgid "Create form"
+msgstr "Opprett skjema"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:891
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Dato"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:246
+#: lib/brando_admin/components/form/input/form_fields.ex:414
+#, elixir-autogen, elixir-format
+msgid "Delete field %{key}"
+msgstr "Slett feltet %{key}"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:147
+#, elixir-autogen, elixir-format
+msgid "Drag fields between rows, or drag a row by its handle to reorder."
+msgstr "Dra felter mellom rader, eller dra en rad i håndtaket for å endre rekkefølgen."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:892
+#, elixir-autogen, elixir-format
+msgid "Dropdown"
+msgstr "Nedtrekksliste"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:405
+#, elixir-autogen, elixir-format
+msgid "Duplicate field %{key}"
+msgstr "Dupliser feltet %{key}"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:148
+#, elixir-autogen, elixir-format
+msgid "Each row holds 12 units. A section starts a new group of fields."
+msgstr "Hver rad har plass til 12 enheter. En seksjon starter en ny gruppe felter."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:439
+#, elixir-autogen, elixir-format
+msgid "Edit field"
+msgstr "Rediger felt"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:358
+#, elixir-autogen, elixir-format
+msgid "Edit field %{key}"
+msgstr "Rediger feltet %{key}"
+
+#: lib/brando_admin/live/forms/form_form_live.ex:21
+#, elixir-autogen, elixir-format
+msgid "Edit form"
+msgstr "Rediger skjema"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:505
+#, elixir-autogen, elixir-format
+msgid "Empty choice"
+msgstr "Tomt valg"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:145
+#, elixir-autogen, elixir-format
+msgid "Fields"
+msgstr "Felter"
+
+#: lib/brando_admin/live/forms/form_list_live.ex:12
+#: lib/brando_admin/menu.ex:382
+#, elixir-autogen, elixir-format
+msgid "Forms"
+msgstr "Skjemaer"
+
+#: lib/brando_admin/live/forms/form_list_live.ex:12
+#, elixir-autogen, elixir-format
+msgid "Forms visitors fill in on the site"
+msgstr "Skjemaer besøkende fyller ut på nettstedet"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:867
+#, elixir-autogen, elixir-format
+msgid "Heading"
+msgstr "Overskrift"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:897
+#, elixir-autogen, elixir-format
+msgid "Hidden"
+msgstr "Skjult"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:258
+#, elixir-autogen, elixir-format
+msgid "Hidden field"
+msgstr "Skjult felt"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:230
+#, elixir-autogen, elixir-format
+msgid "Hidden fields"
+msgstr "Skjulte felter"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:889
+#, elixir-autogen, elixir-format
+msgid "Long text"
+msgstr "Lang tekst"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:894
+#, elixir-autogen, elixir-format
+msgid "Multiple choice"
+msgstr "Flervalg"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:471
+#, elixir-autogen, elixir-format
+msgid "Names the value in submissions. Lowercase letters, digits and underscores."
+msgstr "Navngir verdien i innsendinger. Små bokstaver, sifre og understrek."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:170
+#, elixir-autogen, elixir-format
+msgid "No fields yet."
+msgstr "Ingen felter ennå."
+
+#: lib/brando_admin/live/forms/form_list_live.ex:31
+#, elixir-autogen, elixir-format
+msgid "No forms in this view"
+msgstr "Ingen skjemaer i denne visningen"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:234
+#, elixir-autogen, elixir-format
+msgid "No hidden fields."
+msgstr "Ingen skjulte felter."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:890
+#, elixir-autogen, elixir-format
+msgid "Number"
+msgstr "Tall"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:907
+#, elixir-autogen, elixir-format
+msgid "One option from a list"
+msgstr "Ett valg fra en liste"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:908
+#, elixir-autogen, elixir-format
+msgid "One option, all shown at once"
+msgstr "Ett valg, med alle alternativene synlige"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:396
+#, elixir-autogen, elixir-format
+msgid "Optional — click to require"
+msgstr "Valgfritt — klikk for å gjøre påkrevd"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:888
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr "Telefon"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:612
+#, elixir-autogen, elixir-format
+msgid "Remove option %{value}"
+msgstr "Fjern valget %{value}"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:349
+#: lib/brando_admin/components/form/input/form_fields.ex:458
+#: lib/brando_admin/components/form/input/form_fields.ex:485
+#, elixir-autogen, elixir-format
+msgid "Required"
+msgstr "Påkrevd"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:396
+#, elixir-autogen, elixir-format
+msgid "Required — click to make optional"
+msgstr "Påkrevd — klikk for å gjøre valgfritt"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:335
+#: lib/brando_admin/components/form/input/form_fields.ex:898
+#, elixir-autogen, elixir-format
+msgid "Section"
+msgstr "Seksjon"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:231
+#, elixir-autogen, elixir-format
+msgid "Sent with every submission and never shown to visitors."
+msgstr "Sendes med hver innsending og vises aldri for besøkende."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:449
+#, elixir-autogen, elixir-format
+msgid "Set by the source form"
+msgstr "Bestemt av kildeskjemaet"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:904
+#, elixir-autogen, elixir-format
+msgid "Several lines, such as a message"
+msgstr "Flere linjer, for eksempel en melding"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:893
+#, elixir-autogen, elixir-format
+msgid "Single choice"
+msgstr "Enkeltvalg"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:269
+#, elixir-autogen, elixir-format
+msgid "The form's default markup, live from the fields beside it."
+msgstr "Skjemaets standardoppmerking, oppdatert fra feltene ved siden av."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:151
+#, elixir-autogen, elixir-format
+msgid "The source form decides which fields there are and how they are laid out. Translate their text here."
+msgstr "Kildeskjemaet bestemmer hvilke felter som finnes og hvordan de er plassert. Oversett teksten deres her."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:573
+#, elixir-autogen, elixir-format
+msgid "The value is stored with each submission; the label is what visitors see."
+msgstr "Verdien lagres med hver innsending; etiketten er det besøkende ser."
+
+#: lib/brando/forms/form/validate.ex:29
+#, elixir-autogen, elixir-format
+msgid "Two fields share the key %{keys}. Each field needs its own key."
+msgstr "To felter har nøkkelen %{keys}. Hvert felt må ha sin egen nøkkel."
+
+#: lib/brando_admin/components/form/input/form_fields.ex:337
+#, elixir-autogen, elixir-format
+msgid "Untitled section"
+msgstr "Seksjon uten tittel"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:268
+#, elixir-autogen, elixir-format
+msgid "What visitors see"
+msgstr "Det besøkende ser"
+
+#: lib/brando_admin/components/form/input/form_fields.ex:400
+#, elixir-autogen, elixir-format
+msgid "req"
+msgstr "påkr."
+
+#: lib/brando/forms/field/normalize.ex:24
+#, elixir-autogen, elixir-format
+msgid "use lowercase letters, digits and underscores, starting with a letter"
+msgstr "bruk små bokstaver, sifre og understrek, og start med en bokstav"
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Action"

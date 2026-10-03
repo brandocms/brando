@@ -205,6 +205,12 @@ defmodule Brando.Router do
             live "/", BrandoAdmin.Globals.GlobalsLive
           end
 
+          scope "/forms" do
+            live "/", BrandoAdmin.Forms.FormListLive
+            live "/create", BrandoAdmin.Forms.FormFormLive, :create
+            live "/update/:entry_id", BrandoAdmin.Forms.FormFormLive, :update
+          end
+
           scope "/pages" do
             live "/", BrandoAdmin.Pages.PageListLive
             live "/create", BrandoAdmin.Pages.PageFormLive, :create
