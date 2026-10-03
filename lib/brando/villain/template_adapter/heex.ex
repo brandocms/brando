@@ -9,6 +9,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
   @behaviour Brando.Villain.TemplateAdapter
 
   alias Brando.Villain.HeexRenderer
+  alias Brando.Villain.TemplateAdapter
 
   @context_assign_defaults %{
     configs: %{},
@@ -70,20 +71,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
   # -- Private --
 
   defp build_assigns(module, block, processed_vars, processed_refs, opts) do
-    simple_block =
-      block
-      |> Map.take([
-        :uid,
-        :type,
-        :module_id,
-        :sequence,
-        :active,
-        :collapsed,
-        :table_rows,
-        :anchor,
-        :description
-      ])
-      |> Map.merge(%{class: module.class})
+    simple_block = TemplateAdapter.simple_block(module, block)
 
     base =
       context_assigns(opts[:context])
