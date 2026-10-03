@@ -1296,6 +1296,43 @@ defmodule Brando.HTMLTest do
              {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
   end
 
+  # The struct clause handed a keyed srcset straight to `sort_srcset/1`, so
+  # `:default` was taken for a size name (one key) or the sort tried to
+  # `String.replace/3` a list (two keys).
+  describe "get_srcset with a keyed image config struct" do
+    test "uses the `:default` key" do
+      img_field = Factory.build(:image)
+      img_cfg = Factory.build(:image_cfg, srcset: %{default: [{"small", "300w"}, {"large", "700w"}]})
+
+      assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg) ==
+               {false, "image/small/1.jpg 300w, image/large/1.jpg 700w"}
+    end
+
+    test "uses the `:default` key alongside other keys and reports its crop ratio" do
+      img_field = Factory.build(:image)
+
+      img_cfg =
+        Factory.build(:image_cfg,
+          srcset: %{
+            default: [{"thumb", "150w"}],
+            regular: [{"small", "300w"}, {"large", "700w"}]
+          }
+        )
+
+      assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg) ==
+               {1.0, "image/thumb/1.jpg 150w"}
+    end
+
+    test "raises without a `:default` key" do
+      img_field = Factory.build(:image)
+      img_cfg = Factory.build(:image_cfg, srcset: %{regular: [{"small", "300w"}]})
+
+      assert_raise RuntimeError, ~r/no `default` key in srcset/, fn ->
+        Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg)
+      end
+    end
+  end
+
   test "get_srcset escapes whitespace and commas in filenames" do
     srcset = [{"small", "300w"}, {"large", "700w"}]
 
