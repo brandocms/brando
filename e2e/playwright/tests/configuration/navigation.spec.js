@@ -4,7 +4,7 @@ import { syncLV } from '../../utils'
 test('deactivate menu item', async ({ page }) => {
   await page.goto('/admin')
   await page.getByText('Configuration').click()
-  await page.getByRole('link', { name: 'Navigation' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
   await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
@@ -32,7 +32,7 @@ test('deactivate menu item', async ({ page }) => {
 test('create menu item', async ({ page }) => {
   await page.goto('/admin')
   await page.getByText('Configuration').click()
-  await page.getByRole('link', { name: 'Navigation' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
   await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
@@ -77,7 +77,7 @@ test('create menu item', async ({ page }) => {
 test('delete menu item', async ({ page }) => {
   await page.goto('/admin')
   await page.getByText('Configuration').click()
-  await page.getByRole('link', { name: 'Navigation' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
   await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
@@ -99,7 +99,7 @@ test('delete menu item', async ({ page }) => {
 test('reorder menu items', async ({ page }) => {
   await page.goto('/admin')
   await page.getByText('Configuration').click()
-  await page.getByRole('link', { name: 'Navigation' }).click()
+  await page.locator('#nav-sections').getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
   await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
