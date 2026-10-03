@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-<img src="priv/static/brando.png" width="350">
+<img src="https://raw.githubusercontent.com/brandocms/brando/main/priv/static/brando.png" width="350">
 </p>
 
 <p align="center">
@@ -20,9 +20,8 @@ content types as Blueprints, and Brando generates their schemas, migrations,
 queries and LiveView admin screens. Pages are built in a block editor from
 reusable modules.
 
-> [!WARNING]
-> Brando is pre-1.0. APIs change between minor versions. Each release comes with
-> migration tasks and an upgrade guide.
+> **Brando is pre-1.0.** APIs change between minor versions. Each release comes
+> with migration tasks and an upgrade guide.
 
 ## Features
 
@@ -71,7 +70,7 @@ Projects on 0.54 run `mix brando.migrate55`. Projects still on 0.53 run
 `mix brando.migrate54` first. The complete steps, covering source, database,
 derived data and Gettext, are in
 [Migrating from 0.53 or 0.54](guides/migrating_from_053.md). Breaking changes
-are listed in the [changelog](CHANGELOG.md).
+are listed in the [changelog](https://github.com/brandocms/brando/blob/main/CHANGELOG.md).
 
 ## Documentation
 
@@ -80,4 +79,4 @@ each task, such as starting a site, defining a content type or deploying.
 
 ## License
 
-[MIT](LICENSE.md)
+[MIT](https://github.com/brandocms/brando/blob/main/LICENSE.md)
