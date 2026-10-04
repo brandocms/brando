@@ -38,8 +38,10 @@ export default app => ({
       minuteIncrement: 15,
       time_24hr: true,
       altInput: true,
-      // A caller can ask for a shorter display, e.g. a one-line block variable
-      altFormat: this.el.dataset.altFormat || 'l j F, Y @ H:i',
+      // Compact so two fit side by side, matching the date picker's d/m/y; the
+      // short weekday stays, it is what shows a date fell on the wrong day.
+      // A caller can still ask for its own (`alt_format:` on the input)
+      altFormat: this.el.dataset.altFormat || 'D d/m/y @ H:i',
       dateFormat: 'Z',
       allowInput: true
     }

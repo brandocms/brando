@@ -487,6 +487,11 @@ body {
   --brando-color-peach-darker: theme(colors.peachDarker);
   --brando-color-input: #ffffff;
   --brando-color-blue: theme(colors.blue);
+  /* Badges: a sage pill with muted ink, as the workspace badges */
+  --brando-badge-bg: #eef0eb;
+  --brando-badge-ink: #566153;
+  /* Shaded fieldsets: a faint sage surface inside the inputs' own border */
+  --brando-shaded-surface: #fbfcfa;
   --brando-color-block-ref-background: #fcfcfc;
   --brando-input-border: #e0e0e0;
   --brando-input-radius: 8px;
@@ -531,6 +536,9 @@ body {
     --brando-color-peach-darker: #072850;
     --brando-color-input: theme(colors.dark);
     --brando-color-blue: theme(colors.blue);
+    --brando-badge-bg: rgba(244, 245, 251, 0.12);
+    --brando-badge-ink: rgba(244, 245, 251, 0.82);
+    --brando-shaded-surface: rgba(244, 245, 251, 0.03);
   }
 }
 
@@ -1242,6 +1250,23 @@ h3 {
   display: inline;
 }
 
+/* `Content.user_avatar/1` for a user without a photo: the first letter of
+   their name on the green disc the listings give creators. Fills its box. */
+.user-initial {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #eaf0e5;
+  color: #48634e;
+  font-size: 13px;
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
 .badges {
   gap: 5px;
   margin-top: 0.5vw;
@@ -1257,16 +1282,14 @@ h3 {
   align-items: center;
   font-family: theme(typography.families.mono);
   text-transform: uppercase;
-  padding: 5px 8px 4px;
+  padding: 5px 9px 4px;
   line-height: 1;
-  border: 1px solid var(--brando-color-dark);
+  border: 0;
   border-radius: 12px;
+  background-color: var(--brando-badge-bg);
+  color: var(--brando-badge-ink);
   user-select: none;
   gap: 3px;
-
-  & + .badge {
-    margin-left: -1px;
-  }
 
   &.large {
     font-size: 22px;
@@ -1295,9 +1318,12 @@ h3 {
     text-transform: none !important;
   }
 
+  /* Text set like a badge, without the pill */
   &.no-border {
     border: none;
     padding-left: 0;
+    background: none;
+    color: inherit;
   }
 
   a {

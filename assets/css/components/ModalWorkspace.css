@@ -57,6 +57,10 @@
 .modal :is(button, input, a, select):focus-visible { outline: 2px solid #758f75; outline-offset: 3px; }
 .modal .modal-content .field-wrapper { margin: 0 0 20px; }
 .modal .modal-content .field-wrapper:last-child { margin-bottom: 0; }
+/* Each input's wrapper is the last child of its own `.brando-input`, so the
+   rule above zeroes every field in a form-in-a-modal (a multi-select's
+   "Create client"); space consecutive inputs instead. */
+.modal .modal-content .brando-input + .brando-input { margin-top: 16px; }
 .modal .modal-content .field-wrapper .label-wrapper { margin: 0 0 8px; }
 .modal .modal-content .field-wrapper .control-label, .modal .modal-content .field-wrapper .control-label > span { color: var(--modal-ink); font: 14px/20px "Main", sans-serif; }
 .modal .modal-content .field-wrapper :is(input.text, input[type="number"], input[type="url"], .multiselect) { height: 40px; min-height: 40px; font-size: 14px; line-height: 20px; padding-block: 0; }

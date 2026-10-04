@@ -1363,6 +1363,16 @@ msgstr "ID for palett å velge farger fra"
 msgid "None selected"
 msgstr "Ingen valgt"
 
+#: lib/brando_admin/components/form/input/multi_select.ex:128
+#, elixir-autogen, elixir-format
+msgid "Create %{singular}"
+msgstr "Opprett %{singular}"
+
+#: lib/brando_admin/components/form/input/multi_select.ex:847
+#, elixir-autogen, elixir-format
+msgid "Nothing selected — use Select to add"
+msgstr "Ingenting valgt — bruk Velg for å legge til"
+
 #: lib/brando_admin/components/form.ex:5729
 #, elixir-autogen, elixir-format
 msgid "Open preview in new window"
