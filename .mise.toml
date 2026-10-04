@@ -1,3 +1,6 @@
 [tools]
 elixir = "1.20.3-otp-28"
 erlang = "28.4.1"
+# Vite 8 and the asset packages require ^20.19, ^22.12 or >=24; an odd release
+# such as 23 fails their engines check in yarn and pnpm installs.
+node = "24.9.0"
