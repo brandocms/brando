@@ -24,9 +24,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   def render(%{module_not_found: true} = assigns) do
     ~H"""
-    <.missing_target target={@myself}>
-      {gettext("This block uses module #%{id}, which no longer exists.", id: @module_id)}
-    </.missing_target>
+    <div>
+      <.missing_target target={@myself}>
+        {gettext("This block uses module #%{id}, which no longer exists.", id: @module_id)}
+      </.missing_target>
+    </div>
     """
   end
 
@@ -38,17 +40,21 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   # and offer the same escape hatch as `module_not_found`.
   def render(%{container_not_found: true} = assigns) do
     ~H"""
-    <.missing_target target={@myself}>
-      {gettext("This block uses container #%{id}, which no longer exists.", id: @container_id)}
-    </.missing_target>
+    <div>
+      <.missing_target target={@myself}>
+        {gettext("This block uses container #%{id}, which no longer exists.", id: @container_id)}
+      </.missing_target>
+    </div>
     """
   end
 
   def render(%{fragment_not_found: true} = assigns) do
     ~H"""
-    <.missing_target target={@myself}>
-      {gettext("This block uses fragment #%{id}, which no longer exists.", id: @fragment_id)}
-    </.missing_target>
+    <div>
+      <.missing_target target={@myself}>
+        {gettext("This block uses fragment #%{id}, which no longer exists.", id: @fragment_id)}
+      </.missing_target>
+    </div>
     """
   end
 
@@ -3354,6 +3360,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       else: Map.merge(assigns, Map.new(derived))
   end
 
+  # A stateful component's root must be a static tag, so the `*_not_found`
+  # clauses wrap this in a `<div>`.
   attr :target, :any, required: true
   slot :inner_block, required: true
 

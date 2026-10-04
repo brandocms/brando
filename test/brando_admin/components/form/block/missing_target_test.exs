@@ -14,10 +14,11 @@ defmodule BrandoAdmin.Components.Form.Block.MissingTargetTest do
         {:fragment_not_found, :fragment_id, "fragment"}
       ] do
     test "a missing #{noun} names its id" do
-      html =
-        %{unquote(flag) => true, unquote(key) => 42, myself: nil, __changed__: nil}
-        |> Render.render()
-        |> rendered_to_string()
+      rendered = Render.render(%{unquote(flag) => true, unquote(key) => 42, myself: nil, __changed__: nil})
+      html = rendered_to_string(rendered)
+
+      # A live component's root must be one static tag, or LiveView raises.
+      assert %Phoenix.LiveView.Rendered{root: true} = rendered
 
       assert html =~ "This block uses #{unquote(noun)} #42, which no longer exists."
       assert html =~ ~s(phx-click="delete_block")
