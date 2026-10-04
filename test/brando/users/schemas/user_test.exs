@@ -31,4 +31,20 @@ defmodule BrandoIntegration.UserTest do
     refute old_pass == updated_password_user.password
     refute updated_password_user.password == "newpass"
   end
+
+  test "a blank password keeps the current one" do
+    user = Factory.insert(:random_user)
+
+    assert {:ok, updated_user} =
+             Users.update_user(user.id, %{"name" => "Elvis Presley", "password" => ""}, :system)
+
+    assert updated_user.name == "Elvis Presley"
+    assert updated_user.password == user.password
+  end
+
+  test "a new user still needs a password" do
+    changeset = Brando.Users.User.changeset(%Brando.Users.User{}, %{"password" => ""}, :system)
+
+    assert {"can't be blank", _} = changeset.errors[:password]
+  end
 end

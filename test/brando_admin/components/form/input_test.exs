@@ -254,4 +254,25 @@ defmodule BrandoAdmin.Components.Form.InputTest do
       assert html =~ ~s(name="user[password_confirmation]")
     end
   end
+
+  test "password inputs never render the stored value, only what was typed" do
+    stored = %Brando.Users.User{password: "$2b$12$storedhashstoredhash"}
+
+    untouched = stored |> Ecto.Changeset.change() |> to_form(as: :user)
+
+    html =
+      render_component(&Input.password/1, %{field: untouched[:password], label: "Password", opts: [confirmation: true]})
+
+    refute html =~ "storedhash"
+
+    typed =
+      stored
+      |> cast(%{"password" => "typed-pass", "password_confirmation" => "typed-conf"}, [:password])
+      |> to_form(as: :user)
+
+    html = render_component(&Input.password/1, %{field: typed[:password], label: "Password", opts: [confirmation: true]})
+
+    assert html =~ ~s(value="typed-pass")
+    assert html =~ ~s(value="typed-conf")
+  end
 end
