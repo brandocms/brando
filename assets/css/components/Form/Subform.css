@@ -150,7 +150,9 @@
         }
       }
 
-      &.inline {
+      /* The module editor's text styles. Blueprint inline subforms are
+         tables (SubformTable.css). */
+      &.inline:not(.subform-table-body > *) {
         display: flex;
         flex-wrap: nowrap;
         flex-direction: row;

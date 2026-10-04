@@ -37,7 +37,7 @@ test('an editor sets who a form emails, and sends a submission again', async ({ 
 
   await tab(page, 'Submissions').click()
   const recipients = page.locator('[data-sortable-id="form[recipients]-sortable"]')
-  await recipients.locator('xpath=..').getByRole('button', { name: 'Add entry' }).click()
+  await page.locator('.subform--table').filter({ has: recipients }).getByRole('button', { name: 'Add entry' }).click()
   await syncLV(page)
   await recipients.locator('input[name$="[name]"]').fill('Post')
   await recipients.locator('input[name$="[email]"]').fill('post@example.com')

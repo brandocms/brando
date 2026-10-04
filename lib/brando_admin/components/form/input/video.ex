@@ -197,6 +197,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
             <MediaField.field
               id={"#{@field.id}-media"}
               type={:video}
+              presentation={@opts[:presentation] || :field}
               asset={@video}
               kind="entry_field"
               field={@field.field}

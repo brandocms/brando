@@ -129,7 +129,10 @@
     }
   }
 
+  /* A fieldset's default `min-width: min-content` would let a wide table
+     (an inline subform) widen the form instead of scrolling inside it */
   fieldset {
+    min-width: 0;
     border: none;
     width: 100%;
 

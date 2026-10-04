@@ -71,8 +71,9 @@ test('menu controls align, keyboard status works and save follows the items', as
   // still line up with the row's other fields.
   await row.locator('#menu_items_0_key-disclosure .disclosed-text-summary').click()
   await expect(page.locator('#menu_items_0_key')).toBeFocused()
+  // Menu items are an inline subform table: every control is 32px
   const fields = [row.locator('.radios-wrapper.status.compact').first(), page.locator('#menu_items_0_key'), row.locator('.link-preview').first()]
-  await sameHeight(fields, 40)
+  await sameHeight(fields, 32)
   const labels = await row.locator('.subform-fields > .brando-input:not([data-component="hidden"])').evaluateAll(inputs => inputs.map(input => input.querySelector('.label-wrapper').getBoundingClientRect().y))
   expect(Math.max(...labels) - Math.min(...labels)).toBeLessThanOrEqual(1)
   const compactTrigger = row.locator('.status-trigger').first()
@@ -92,9 +93,9 @@ test('menu controls align, keyboard status works and save follows the items', as
   await page.screenshot({ path: testInfo.outputPath('menu-editor-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await noOverflow(page)
-  await expect(page.locator('#menu_items_0_key-field-wrapper label')).toBeVisible()
-  // The opened key takes the row's width, not the status column's.
-  expect((await page.locator('#menu_items_0_key').boundingBox()).width).toBeGreaterThan(200)
+  // The table scrolls inside its frame, and the opened key keeps a usable width
+  await expect(page.locator('.subform-table-head').getByText('Key')).toBeVisible()
+  expect((await page.locator('#menu_items_0_key').boundingBox()).width).toBeGreaterThanOrEqual(150)
   await page.screenshot({ path: testInfo.outputPath('menu-editor-mobile.png'), fullPage: true })
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')

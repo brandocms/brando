@@ -34,6 +34,7 @@
 @import "./components/Form/FieldBase.css";
 @import "./components/Form/Loader.css";
 @import "./components/Form/Subform.css";
+@import "./components/Form/SubformTable.css";
 @import "./components/Form/VarLayout.css";
 @import "./components/Form/FormFields.css";
 @import "./components/Form/Input/AssetField.css";

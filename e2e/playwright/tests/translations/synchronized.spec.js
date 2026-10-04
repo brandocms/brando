@@ -32,7 +32,7 @@ test('a translation opens with its pending version, is reviewed and saved', asyn
   await expect(page.locator('#article_year-field-wrapper')).toHaveAttribute('inert', '', { timeout: 5000 })
   await expect(page.locator('.blocks-wrapper.is-source-locked .blocks-source-note')).toBeVisible()
   await expect(page.locator('.blocks-wrapper.is-source-locked .block-plus:visible')).toHaveCount(0)
-  await expect(page.locator('[data-sortable-id="article[items]-sortable"]').locator('xpath=ancestor::*[contains(@class,"subform")][1]'))
+  await expect(page.locator('.field-wrapper.subform').filter({ has: page.locator('[data-sortable-id="article[items]-sortable"]') }))
     .toHaveAttribute('data-source-structure', 'true')
   // The new block, still in Norwegian, is marked.
   await expect(page.locator('.block[data-translation-work]')).toHaveCount(1)

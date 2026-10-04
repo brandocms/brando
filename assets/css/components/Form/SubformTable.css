@@ -1,0 +1,855 @@
+/* An inline subform (`inputs_for … style :inline`) is a table: one line per
+   entry under one row of column headings, inside a single bordered list like
+   `.identifier-list`. It is a CSS table rather than a grid so each column takes
+   the width of its widest cell, whatever input it holds, and the headings stay
+   over their cells. Controls take the block variables' compact look: 32px,
+   13px, borderless until the row is hovered or the control focused.
+
+   Markup: subform.ex, `@table?`, and a table block's rows (block/render.ex
+   `table/1`), whose cells are block variables. */
+:is(.field-wrapper.subform--table, .table-block) {
+  --table-line: #dce2dc;
+  --table-head: #fbfcfa;
+  --table-hover: #f5f8f3;
+  --table-ink: #272b2a;
+  --table-muted: #626b66;
+  --table-faint: #99a39b;
+  --table-focus: #a6bba8;
+  --admin-field-height: 32px;
+  --admin-field-font-size: 13px;
+
+  .subform-table-frame {
+    border: 1px solid var(--table-line);
+    border-radius: 6px;
+    background: #fff;
+    overflow: clip;
+  }
+
+  /* Wide rows scroll sideways rather than wrapping onto a second line */
+  .subform-table-scroll {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .subform-table {
+    display: table;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .subform-table-head {
+    display: table-header-group;
+  }
+
+  .subform-table-body {
+    display: table-row-group;
+  }
+
+  .subform-table-row,
+  .subform-table-body > :is(.subform-entry, .table-row) {
+    display: table-row;
+  }
+
+  .subform-table-body > .subform-entry > .subform-fields {
+    display: contents;
+  }
+
+  /* Cells */
+  .subform-table-row > *,
+  .subform-table-body > :is(.subform-entry, .table-row) > :is(.subform-tools, .subform-row-end),
+  .subform-table-body > .subform-entry > .subform-fields > .brando-input,
+  .subform-table-body > .table-row > .variable {
+    display: table-cell;
+    /* `.brando-input` is 100% wide elsewhere, which here would make every
+       column ask for the whole table */
+    width: auto;
+    max-width: none;
+    vertical-align: top;
+    margin: 0;
+    padding: 6px 4px;
+    border-top: 1px solid var(--table-line);
+  }
+
+  .subform-table-body > .subform-entry > .subform-fields > .brando-input:is([data-component="hidden"]) {
+    display: none;
+  }
+
+  /* Headings */
+  .subform-table-row > * {
+    padding: 8px 4px 7px;
+    border-top: 0;
+    background: var(--table-head);
+    color: var(--table-muted);
+    font: 12px/16px "Main", sans-serif;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .subform-table-row > .brando-input {
+    padding-inline: 13px;
+  }
+
+  /* The status dot is centred in its column, under its heading */
+  .subform-table-row > .brando-input[data-component="status"] {
+    padding-inline: 4px;
+    text-align: center;
+  }
+
+  /* Entries: the old card look is replaced by the row */
+  .subform-table-body > :is(.subform-entry, .table-row) {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    transition: background-color 150ms ease;
+
+    &:hover {
+      background: var(--table-hover);
+    }
+  }
+
+  /* The grip and the insert button share the first column */
+  .subform-table-row > .subform-tools,
+  :is(.subform-entry, .table-row) > .subform-tools {
+    position: relative;
+    width: 1%;
+    padding-left: 8px;
+    padding-right: 0;
+  }
+
+  :is(.subform-entry, .table-row) > .subform-tools {
+    display: table-cell;
+  }
+
+  :is(.subform-handle, .table-row .sort-handle) {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--table-faint);
+    cursor: grab;
+
+    [data-icon] {
+      width: 15px;
+      height: 15px;
+      color: currentColor;
+    }
+
+    &:hover {
+      background: #eef3ed;
+      color: var(--table-ink);
+
+      [data-icon] {
+        color: currentColor;
+      }
+    }
+  }
+
+  /* Insert sits on the line above its row, at the left edge */
+  .subform-insert {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    left: 6px;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--table-line);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--table-muted);
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity 120ms ease;
+    cursor: pointer;
+
+    [data-icon] {
+      width: 12px;
+      height: 12px;
+      color: currentColor;
+    }
+
+    &:hover,
+    &:focus-visible {
+      border-color: #254e3f;
+      background: #254e3f;
+      color: #fff;
+      opacity: 1;
+
+      [data-icon] {
+        color: currentColor;
+      }
+    }
+  }
+
+  :is(.subform-entry, .table-row):hover .subform-insert {
+    opacity: 1;
+  }
+
+  /* The line the new entry would go on */
+  :is(.subform-entry, .table-row):has(> .subform-tools > .subform-insert:is(:hover, :focus-visible)) > :is(.subform-tools, .subform-row-end, .variable),
+  .subform-entry:has(> .subform-tools > .subform-insert:is(:hover, :focus-visible)) > .subform-fields > .brando-input {
+    border-top-color: #254e3f;
+  }
+
+  .subform-table-row > .subform-row-end,
+  :is(.subform-entry, .table-row) > .subform-row-end {
+    width: 1%;
+    padding-left: 0;
+    padding-right: 8px;
+  }
+
+  .subform-delete {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #707c73;
+    opacity: 0;
+    transition: opacity 120ms ease;
+    cursor: pointer;
+
+    [data-icon] {
+      width: 15px;
+      height: 15px;
+      color: currentColor;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: #eef3ed;
+      color: var(--table-ink);
+      opacity: 1;
+
+      [data-icon] {
+        color: currentColor;
+      }
+    }
+  }
+
+  :is(.subform-entry, .table-row):hover .subform-delete {
+    opacity: 1;
+  }
+
+  @media (pointer: coarse) {
+    .subform-delete,
+    .subform-insert {
+      opacity: 1;
+    }
+  }
+
+  /* Columns that only ever hold a small control take no more than it needs */
+  :is(.subform-table-row, .subform-fields) > .brando-input:is(
+      [data-component="status"],
+      [data-component="toggle"],
+      [data-component="checkbox"],
+      [data-component="radios"],
+      [data-component="number"],
+      [data-component="date"],
+      [data-component="datetime"],
+      [data-component="color"],
+      [data-component="disclosed_text"]
+    ) {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  /* A cell: its label is the column heading, and an error goes under the
+     control, so the row grows rather than the control moving */
+  .subform-fields > .brando-input {
+    .field-wrapper {
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    .label-wrapper {
+      order: 2;
+      height: auto;
+      margin: 0;
+      overflow: visible;
+    }
+
+    .label-wrapper > .control-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .field-errors:not(:empty) {
+      padding: 3px 9px 0;
+    }
+
+    .field-error {
+      color: #b4403b;
+      font-size: 11px;
+      line-height: 15px;
+      white-space: normal;
+    }
+
+    :is(.meta, .help-text, .field-wrapper-header) {
+      display: none;
+    }
+  }
+
+  /* Text controls */
+  .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"]),
+  .subform-fields textarea.text {
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--table-ink);
+    font: 13px/20px "Main", sans-serif;
+    transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .subform-fields :is(input, textarea).monospace {
+    font-family: "Mono", monospace;
+    font-size: 12.5px;
+    letter-spacing: -.01em;
+  }
+
+  /* One line until there is more to say */
+  .subform-fields textarea.text {
+    display: block;
+    padding-block: 5px;
+    resize: none;
+    field-sizing: content;
+    max-height: 120px;
+  }
+
+  .subform-entry:hover .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text) {
+    border-color: var(--table-line);
+    background: #fff;
+  }
+
+  .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text):focus {
+    border-color: var(--table-focus);
+    background: #fff;
+    box-shadow: 0 0 0 2px #254e3f14;
+    outline: none;
+  }
+
+  .subform-fields .brando-input:has(.field-error) :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], textarea.text) {
+    border-color: #e5a29f;
+    background: #fff;
+  }
+
+  /* Minimum widths, so a busy row scrolls rather than crushing its fields */
+  .subform-fields > .brando-input:is([data-component="text"], [data-component="slug"], [data-component="email"], [data-component="phone"], [data-component="password"]) :is(input, textarea) {
+    min-width: 150px;
+  }
+
+  .subform-fields > .brando-input[data-component="textarea"] textarea {
+    min-width: 200px;
+  }
+
+  .subform-fields > .brando-input[data-component="number"] input {
+    width: 90px;
+  }
+
+  /* String list: its rows side by side */
+  .subform-fields .string-list {
+    display: flex;
+    gap: 4px;
+    min-width: 150px;
+
+    input {
+      font-size: 13px;
+    }
+
+    input::placeholder {
+      color: var(--table-faint);
+      font-size: 13px;
+    }
+  }
+
+  /* Status: the dot alone, centred in its column and the control height */
+  .subform-fields .radios-wrapper.status.compact {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    margin: 0 auto;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .subform-entry:hover .subform-fields .radios-wrapper.status.compact {
+    border-color: var(--table-line);
+    background: #fff;
+  }
+
+  /* Link: one line, the title and then its destination, like a block
+     variable's link */
+  .subform-fields .link-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 220px;
+    max-width: none;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 8px 0 4px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+
+    .icon {
+      width: 22px;
+      height: 22px;
+      border: 1px solid var(--table-line);
+      background: transparent;
+      color: var(--table-muted);
+
+      [data-icon] {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    .info {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+      font: 13px/20px "Main", sans-serif;
+      text-transform: none;
+      white-space: nowrap;
+    }
+
+    .link-text {
+      flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      font-size: 13px;
+      text-overflow: ellipsis;
+      text-transform: none;
+    }
+
+    dl {
+      min-width: 0;
+      margin: 0;
+      overflow: hidden;
+      color: var(--table-muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+    }
+
+    dl:has(dd) dt {
+      display: none;
+    }
+
+    dd {
+      display: inline;
+      margin: 0;
+      padding: 0;
+    }
+
+    .link-text + dl dd::before {
+      content: "→ ";
+    }
+  }
+
+  .subform-entry:hover .subform-fields .link-preview {
+    border-color: var(--table-line);
+    background: #fff;
+  }
+
+  /* A menu item's key: its quiet "Key: …" summary, opening into a field */
+  .subform-fields .disclosed-text-summary {
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .subform-fields .disclosed-text-field input {
+    min-width: 150px;
+  }
+
+  /* Radios: options in a row */
+  .subform-fields > .brando-input[data-component="radios"] .radios-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 2px 12px;
+    min-height: 32px;
+    margin: 0;
+    padding: 0 8px;
+
+    .form-check {
+      margin: 0;
+    }
+
+    .form-check-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+    }
+  }
+
+  /* Toggle and checkbox: the control alone, centred */
+  .subform-fields > .brando-input:is([data-component="toggle"], [data-component="checkbox"]) .field-base {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 8px;
+  }
+
+  .subform-fields .switch {
+    margin: 0;
+  }
+
+  /* The circle is drawn by the label, which otherwise holds nothing here */
+  .subform-fields .check-wrapper {
+    --checkbox-size: 18px;
+    --checkmark-width: 14px;
+    --padding-size: 18px;
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0;
+  }
+
+  /* Select: the value with a chevron, like a block variable's select */
+  .subform-fields .multiselect {
+    position: relative;
+    width: 100%;
+    min-width: 130px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 26px 0 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23626b66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center / 10px;
+    box-shadow: none;
+
+    .select-label {
+      overflow: hidden;
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    > .button-edit {
+      position: absolute;
+      inset: 0;
+      min-height: 0;
+      opacity: 0;
+    }
+  }
+
+  .subform-entry:hover .subform-fields .multiselect {
+    border-color: var(--table-line);
+    background-color: #fff;
+  }
+
+  /* Colour: the swatch and its hex */
+  .subform-fields > .brando-input[data-component="color"] {
+    .picker-target {
+      display: flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 8px;
+    }
+
+    .circle-and-hex {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0;
+    }
+
+    .circle {
+      width: 18px;
+      height: 18px;
+      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
+    }
+
+    .color-hex,
+    .circle.tiny + .color-hex {
+      margin: 0;
+      font: 12px/20px "Mono", monospace;
+      text-transform: uppercase;
+    }
+
+
+
+    .clear-color {
+      opacity: 0;
+    }
+
+    &:hover .clear-color,
+    &:focus-within .clear-color {
+      opacity: .5;
+    }
+  }
+
+  /* Dates: the box shrinks to its value; Clear shows on hover */
+  .subform-fields .field-base > .datetime-wrapper > div {
+    height: 32px;
+    min-height: 32px;
+    gap: 6px;
+    padding-right: 6px;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+
+    input.flatpickr {
+      min-width: 110px;
+      height: 30px;
+      padding: 0 8px;
+      border: 0;
+      background: transparent;
+      font-size: 13px;
+      field-sizing: content;
+    }
+
+    .timezone {
+      display: none;
+    }
+
+    .clear-datetime {
+      order: 2;
+      min-height: 0;
+      padding: 1px 6px;
+      border: 0;
+      background: transparent;
+      color: var(--table-muted);
+      font-size: 11px;
+      opacity: 0;
+    }
+  }
+
+  .subform-entry:hover .subform-fields .field-base > .datetime-wrapper > div {
+    border-color: var(--table-line);
+    background: #fff;
+
+    .clear-datetime {
+      opacity: 1;
+    }
+  }
+
+  /* Media: one line — a small preview, the name, and one menu */
+  .subform-fields .media-field--line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 180px;
+    min-height: 32px;
+    margin: 0;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+
+    .media-field-content {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .media-field-preview {
+      display: grid;
+      place-items: center;
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
+      overflow: hidden;
+      border-radius: 4px;
+      background: #f0f3ee;
+      color: #79917b;
+
+      img,
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      [data-icon] {
+        width: 15px;
+        height: 15px;
+      }
+    }
+
+    .media-field-copy {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .media-field-name {
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 18px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .media-field-meta,
+    .media-field-alt,
+    .media-field-processing {
+      display: none;
+    }
+
+    &.media-field--empty .media-field-name {
+      color: var(--table-faint);
+    }
+
+    /* Its one menu, quiet until the row is hovered */
+    .media-action-menu > .media-button {
+      min-height: 26px;
+      padding: 2px 6px 2px 9px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--table-muted);
+      font-size: 12px;
+    }
+  }
+
+  .subform-entry:hover .subform-fields .media-field--line .media-action-menu > .media-button {
+    border-color: var(--table-line);
+    background: #fff;
+    color: var(--table-ink);
+  }
+
+  /* Rich text: its preview as one line of text, boxed only on row hover, with
+     a small edit button. Opened, the editor keeps its own size. */
+  .subform-table-body > :is(.subform-entry, .table-row) .field-base > .tiptap-wrapper {
+    border-color: transparent;
+    background: transparent;
+
+    &::after {
+      border-color: transparent;
+    }
+
+    .tiptap-preview {
+      align-items: center;
+      gap: 12px;
+      min-height: 32px;
+      padding: 0 4px 0 8px;
+      background: transparent;
+    }
+
+    .tiptap-preview-content {
+      min-height: 0;
+      overflow: hidden;
+
+      > * {
+        margin: 0;
+        overflow: hidden;
+        font-size: 13px;
+        line-height: 20px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      > :not(:first-child) {
+        display: none;
+      }
+
+      a {
+        color: inherit;
+        text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+      }
+    }
+
+    .tiptap-activate {
+      min-height: 24px;
+      padding: 2px 8px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--table-muted);
+      font-size: 11px;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+  }
+
+  .subform-table-body > :is(.subform-entry, .table-row):is(:hover, :focus-within) .field-base > .tiptap-wrapper {
+    border-color: var(--table-line);
+    background: #fff;
+
+    &::after {
+      border-color: var(--table-line);
+    }
+
+    .tiptap-activate {
+      border-color: var(--table-line);
+      background: #fff;
+      opacity: 1;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .subform-table-body .field-base > .tiptap-wrapper .tiptap-activate {
+      opacity: 1;
+    }
+  }
+
+  /* Footer: add an entry, and the count */
+  .subform-table-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--table-line);
+    background: var(--table-head);
+
+    /* Outranks the settings workspace's own add button */
+    & .add-entry-button.add-entry-button {
+      margin: 0;
+      min-height: 30px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+  }
+
+  .subform-table-count {
+    color: var(--table-muted);
+    font-size: 12px;
+  }
+
+  .subform-empty {
+    padding: 14px 12px;
+    color: var(--table-muted);
+    font-size: 13px;
+  }
+}

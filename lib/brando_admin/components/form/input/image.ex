@@ -190,6 +190,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             <MediaField.field
               id={"#{@field.id}-media"}
               type={:image}
+              presentation={@opts[:presentation] || :field}
               asset={@image}
               kind="entry_field"
               field={@field.field}
