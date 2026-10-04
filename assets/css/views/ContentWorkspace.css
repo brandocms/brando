@@ -41,7 +41,7 @@
   .listing-home [data-icon] { display: block; width: 16px; height: 16px; }
   .content-list .list-row :is(.listing-title, div:has(> .entry-link)) { flex: 1 1 240px; min-width: 0; }
   :is(.listing-title, div:has(> .entry-link)) > br { display: none; }
-  :is(.listing-title, div:has(> .entry-link)) > small, :is(.listing-title, div:has(> .entry-link)) > .badge { display: block; margin-top: 4px; padding: 0; line-height: 1.5; color: var(--workspace-muted); font-size: 12px; font-family: inherit; }
+  :is(.listing-title, div:has(> .entry-link)) > small, :is(.listing-title, div:has(> .entry-link)) > .badge { display: block; margin-top: 4px; padding: 0; border: 0; background: none; line-height: 1.5; color: var(--workspace-muted); font-size: 12px; font-family: inherit; }
   :is(.listing-title, div:has(> .entry-link)) .badge a { color: var(--workspace-muted); font-size: 12px; overflow-wrap: anywhere; }
   :is(.listing-title, div:has(> .entry-link)) .badge [data-icon] { width: 12px; height: 12px; margin-right: 6px; }
   .listing-page-icon .badge { padding: 0; border: 0; background: none; }

@@ -82,9 +82,20 @@ defmodule BrandoAdmin.Chrome do
 
     ~H"""
     <div class="user-presence-item" id={@id}>
-      <div class={["status", @presence.status]}>●</div>
       <div class="info">
-        <div class="name">{@presence.name}</div>
+        <span class={["name", "status-label", @presence.status]}>
+          <svg
+            class="status-dot"
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            aria-hidden="true"
+          >
+            <circle r="6" cy="6" cx="6" />
+          </svg>
+          {@presence.name}
+        </span>
         <div class="last-active">
           {@last_active}
         </div>
@@ -112,7 +123,7 @@ defmodule BrandoAdmin.Chrome do
     ~H"""
     <div id={@id} class="user-presence" data-user-id={@presence.id} data-user-status={@presence.status}>
       <div class="avatar">
-        <Content.image image={@presence.avatar} size={:thumb} />
+        <Content.user_avatar user={@presence} />
       </div>
     </div>
     """

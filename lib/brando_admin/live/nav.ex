@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Nav do
             <div :if={@current_user} id="current-user" class="current-user" tabindex="0" data-testid="current-user">
               <section class="button">
                 <div class="avatar">
-                  <Content.image image={@current_user.avatar} size={:thumb} />
+                  <Content.user_avatar user={@current_user} />
                 </div>
                 <div class="info">
                   <div class="name">

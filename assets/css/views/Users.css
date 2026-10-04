@@ -20,6 +20,10 @@
   .content-list .list-row:first-child { border-top: 1px solid var(--workspace-line); }
   .content-list .list-row:hover { background: #f8faf6; }
   .content-list .list-row.selected { background: #edf3ed; }
+  /* Tiny badges (dates, categories) are white by default, which disappears on
+     a white row: give them a green wash, and white where the row turns green */
+  .content-list .list-row .badge.tiny { background: #eff4ec; }
+  .content-list .list-row:is(:hover, .selected) .badge.tiny { background: #fff; }
   .content-list .list-row .main-content > div:first-of-type { padding-left: 0; }
   .content-list .list-row .entry-link { color: var(--workspace-ink); font-size: 15px; line-height: 22px; font-weight: 500; overflow-wrap: anywhere; }
   .content-list .list-row .entry-link:hover, .content-list .list-row .entry-link:focus-visible { text-decoration: none; }
@@ -37,7 +41,8 @@
   @media (max-width: 600px) { .content-list .list-tools .filters { width: 100%; } }
 }
 .users-workspace {
-  --user-columns: 36px minmax(190px, 1fr) 108px 140px 140px 72px 30px;
+  /* The status column fits its longest badge, "Never logged in" */
+  --user-columns: 36px minmax(190px, 1fr) 108px 140px 140px 112px 30px;
   .user-directory-columns, .list-row .main-content { display: grid; grid-template-columns: var(--user-columns); align-items: center; gap: 16px; padding: 12px 16px; margin: 0; width: 100%; }
   .user-directory-columns { font-size: 12px; color: var(--workspace-muted); padding-block: 10px; border-top: 1px solid var(--workspace-line); background: #fafbf8; }
   .user-directory-columns > span:first-child { grid-column: 1 / 3; }
@@ -47,7 +52,9 @@
   .user-avatar img { width: 36px; height: 36px; object-fit: cover; }
   .list-row .main-content > .user-initials { display: flex; align-items: center; justify-content: center; flex: none; background: #edf0e9; color: #566153; font-size: 13px; line-height: 1; }
   .user-initials > span { display: block; line-height: 1; }
-  .user-account .user-identity { width: 100%; margin: 0; padding: 0; }
+  /* `update_link` adds `col-4`, whose flex basis and max-width would hold the
+     name to a quarter of the account column and wrap it */
+  .user-account .user-identity { flex: none; width: 100%; max-width: none; margin: 0; padding: 0; }
   .user-email { display: block; color: var(--workspace-muted); overflow-wrap: anywhere; font-size: 12px; margin-top: 3px; }
   .user-role .workspace-badge { text-transform: capitalize; }
   .user-activity { font-size: 12px; font-variant-numeric: tabular-nums; }

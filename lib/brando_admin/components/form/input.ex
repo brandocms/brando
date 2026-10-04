@@ -188,9 +188,13 @@ defmodule BrandoAdmin.Components.Form.Input do
           <button type="button" class="clear-datetime">
             {gettext("Clear")}
           </button>
-          <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
-          <div class="timezone">
-            <span class="timezone-prefix">&mdash; {gettext("Your timezone is")}:</span> <span data-timezone>Unknown</span>
+          <%!-- The date and the zone share a row that wraps, so a field too
+               narrow for both drops the zone instead of cutting the date --%>
+          <div class="datetime-value">
+            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
+            <div class="timezone">
+              <span class="timezone-prefix">&mdash; {gettext("Your timezone is")}:</span> <span data-timezone>Unknown</span>
+            </div>
           </div>
         </div>
       </div>

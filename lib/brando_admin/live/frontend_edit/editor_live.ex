@@ -365,8 +365,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
           data-testid="frontend-edit-presence"
         >
           <div class="frontend-editor-avatar">
-            <Content.image :if={user.avatar} image={user.avatar} size={:thumb} />
-            <.icon :if={!user.avatar} name="hero-user" />
+            <Content.user_avatar user={user} />
           </div>
           <p :if={user[:frontend?]}>
             {gettext("%{name} is also editing this page on the website", name: user.name)}

@@ -107,6 +107,15 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 .selected-labels {
   @space margin-bottom 5px;
 
+  /* Stands in for the labels when nothing is selected, at a label's height,
+     so an empty field lines up with its neighbours */
+  .empty-label {
+    padding: 3px 0;
+    margin-bottom: 2px;
+    font-size: 12px;
+    opacity: 0.55;
+  }
+
   &[data-sequenced] {
     .selected-label {
       cursor: grab;

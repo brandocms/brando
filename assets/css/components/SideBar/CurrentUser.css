@@ -43,6 +43,10 @@
       height: 36px;
     }
 
+    .user-initial {
+      font-size: 15px;
+    }
+
     img {
       user-select: none;
       border-radius: 50%;

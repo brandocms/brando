@@ -49,7 +49,7 @@
     transition: all 0.25s ease;
 
     &:hover {
-      background-color: var(--brando-color-dark); 
+      background-color: var(--brando-color-dark);
       color: var(--brando-color-input);
     }
   }
@@ -59,5 +59,113 @@
     font-size: 12px;
     margin-top: 3px;
     right: 0;
+  }
+}
+
+/* A form's date field is one admin input box: flatpickr's visible input,
+   the timezone and Clear sit in a row inside the shared border, like a
+   custom select's label and button. Block variables lay it out themselves. */
+.field-base > .datetime-wrapper > div:not(.variable *) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  height: var(--admin-field-height, 44px);
+  padding-right: 8px;
+  border: 1px solid var(--brando-input-border);
+  border-radius: var(--brando-input-radius);
+  background-color: transparent;
+  box-shadow: var(--brando-input-shadow);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus-within {
+    border-color: var(--brando-color-blue);
+    box-shadow: var(--brando-input-focus-shadow);
+  }
+
+  input:not([type="hidden"]) {
+    flex: 1 1 0;
+    order: 1;
+    width: auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0 0 0 14px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: var(--admin-field-font-size, 14px)/20px "Main", sans-serif;
+    text-overflow: ellipsis;
+    outline: none;
+  }
+
+  /* The date, then the zone if there is room for it: a zone that does not
+     fit wraps onto a second line the fixed height clips away, rather than
+     both shrinking to ellipses */
+  .datetime-value {
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: flex-start;
+    order: 1;
+    min-width: 0;
+    height: 100%;
+    column-gap: 8px;
+    overflow: hidden;
+
+    input:not([type="hidden"]) {
+      flex: 1 0 auto;
+      width: calc(20ch + 14px);
+      max-width: 100%;
+    }
+  }
+
+  .timezone {
+    position: static;
+    order: 2;
+    flex: 0 0 auto;
+    margin: 0;
+    font-size: 12px;
+    line-height: 20px;
+    opacity: 0.55;
+    white-space: nowrap;
+
+    /* The zone alone reads clearly beside the time; keep the sentence for
+       screen readers. */
+    .timezone-prefix {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  .clear-datetime {
+    position: static;
+    order: 3;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 3px 9px;
+    border: 1px solid var(--brando-input-border);
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    color: inherit;
+    font: 12px/20px "Main", sans-serif;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+      color: inherit;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-color-blue);
+      outline-offset: 2px;
+    }
   }
 }

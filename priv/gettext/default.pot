@@ -1365,6 +1365,16 @@ msgstr ""
 msgid "None selected"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/multi_select.ex:128
+#, elixir-autogen, elixir-format
+msgid "Create %{singular}"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/multi_select.ex:847
+#, elixir-autogen, elixir-format
+msgid "Nothing selected — use Select to add"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex:5729
 #, elixir-autogen, elixir-format
 msgid "Open preview in new window"
