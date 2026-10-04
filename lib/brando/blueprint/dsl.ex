@@ -82,6 +82,7 @@ defmodule Brando.Blueprint.Dsl do
       generated_preload_metadata(),
       generated_traits(),
       generated_blueprint_metadata(),
+      generated_identity(),
       generated_admin_routes(),
       generated_modules(),
       generated_asset_fields(),
@@ -208,7 +209,12 @@ defmodule Brando.Blueprint.Dsl do
       def __castable_assets__ do
         @castable_assets
       end
+    end
+  end
 
+  # What the blueprint is called and how the admin shows it.
+  defp generated_identity do
+    quote location: :keep, unquote: false do
       def __table_name__ do
         @table_name
       end
