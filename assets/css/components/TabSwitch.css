@@ -1,0 +1,72 @@
+/* Tab views (docs/admin-ui-design.md, "Tab views"): a sage track, muted tabs
+   with an icon and a label, and the selected tab as a white pill. The track is
+   `.tab-switch`, or the radios inside the link pickers' `.link-picker-modes`,
+   which `Input.radios` renders without a class of our own. */
+:is(.tab-switch, .link-picker-modes :is(.radios-wrapper, .form-tab-customs)) {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid #dce5d8;
+  border-radius: 5px;
+  background: #f1f5ef;
+
+  .form-check {
+    margin: 0;
+  }
+
+  :is(label, button) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    margin: 0;
+    padding: 6px 14px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: #626b66;
+    font: 13px/18px "Main", sans-serif;
+    cursor: pointer;
+
+    > [data-icon] {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      color: #272b2a;
+    }
+  }
+
+  :is(label:has(input:checked), button.active, button[aria-current="page"]) {
+    background: white;
+    border-color: #d6e2d0;
+    color: #254e3f;
+  }
+
+  /* Radio tabs: the native input covers its label so the whole pill clicks */
+  label:has(input[type="radio"]) {
+    position: relative;
+  }
+
+  input[type="radio"] {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  label:has(input:focus-visible),
+  button:focus-visible {
+    outline: 2px solid #758f75;
+    outline-offset: 2px;
+  }
+}

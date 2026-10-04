@@ -228,38 +228,12 @@
 
 /* Content SEO tab (Configuration → SEO) */
 .admin-workspace.seo-workspace {
+  /* The shared `.tab-switch` track; only the spacing below it is local */
   .seo-tabs {
     display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 9px 10px;
-    border-radius: var(--brando-tabbar-radius);
-    background: var(--brando-color-white);
-    box-shadow: 0 2px 6px rgba(5, 39, 82, .025), 0 0 0 1px rgba(5, 39, 82, .065);
+    width: fit-content;
     margin-bottom: 28px;
   }
-  .seo-tabs button {
-    --seo-tab-bg: #eef7f3;
-    --seo-tab-hover: #dfefe7;
-    --seo-tab-ink: #426f5b;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 34px;
-    padding: var(--brando-chip-padding);
-    border: 0;
-    border-radius: var(--brando-chip-radius);
-    background: var(--seo-tab-bg);
-    color: var(--seo-tab-ink);
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .seo-tabs [phx-value-tab="content"] { --seo-tab-bg: #f0f6fd; --seo-tab-hover: #e5effa; --seo-tab-ink: #46688f; }
-  .seo-tabs button:hover { background: var(--seo-tab-hover); }
-  .seo-tabs [aria-current="page"] { background: var(--seo-tab-hover); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--seo-tab-ink) 30%, transparent); }
-  .seo-tabs button:focus-visible { outline-color: var(--brando-chip-active-fg); }
 
   .seo-score-badge {
     display: inline-flex;
