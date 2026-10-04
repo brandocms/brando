@@ -48,7 +48,9 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
     end
 
     relations do
-      relation :gallery_object_overrides, :embeds_many, module: Brando.Villain.Blocks.GalleryObjectOverride
+      relation :gallery_object_overrides, :embeds_many,
+        module: Brando.Villain.Blocks.GalleryObjectOverride,
+        with: &Brando.Villain.Blocks.GalleryObjectOverride.cast_override/2
     end
   end
 

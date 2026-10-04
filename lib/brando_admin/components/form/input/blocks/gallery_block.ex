@@ -9,6 +9,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object
+  alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
+  alias BrandoAdmin.Components.Form.Input.Gallery.Tile
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
@@ -34,7 +36,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # data has_images?, :boolean
   # data image, :any
   # data selected_images_paths, :list
-  # data display, :atom
+  # data display, :atom — the block's saved `display`, which the site's templates may read
+  # data view, :atom — what the admin shows, :grid or :list. Starts at `display`
+  #   and follows the view switch; never written to the block.
+  # data text_editor, :map — the open caption/alt popover, `%{type, id, kind}`
   # data show_only_selected?, :boolean
   # data upload_formats, :string
 
@@ -43,7 +48,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      assign(socket,
        available_images: [],
        show_only_selected?: false,
-       form_id: nil
+       form_id: nil,
+       view: nil,
+       text_editor: nil
      )}
   end
 
@@ -175,6 +182,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
      |> assign(:upload_formats, upload_formats)
      |> assign(:display, Changeset.get_field(block_data_cs, :display))
+     |> assign(:view, socket.assigns[:view] || initial_view(Changeset.get_field(block_data_cs, :display)))
+     |> assign(:sheet_counts, sheet_counts(gallery_objects, updated_block_data_cs))
      |> assign(:selected_ids, selected_ids)
      |> assign(:has_objects?, !Enum.empty?(gallery_objects))
      |> assign(:block, updated_block)
@@ -192,6 +201,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:allowed_types, Changeset.get_field(block_data_cs, :allowed_types) || [:image, :video])
      |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
   end
+
+  defp initial_view(:list), do: :list
+  defp initial_view(_display), do: :grid
 
   defp compatible_gallery_target(nil, _type), do: "default"
   defp compatible_gallery_target("default", _type), do: "default"
@@ -249,26 +261,35 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               multiple
             />
 
-            <div class="gallery-buttons segmented-buttons">
-              <button type="button" class="media-button primary upload-trigger">
-                {gettext("Upload media")}
-              </button>
-              <button
-                :if={:image in @allowed_types}
-                type="button"
-                class="media-button"
-                phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-              >
-                {gettext("Browse images")}
-              </button>
-              <button
-                :if={:video in @allowed_types}
-                type="button"
-                class="media-button"
-                phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-              >
-                {gettext("Browse videos")}
-              </button>
+            <div class="gallery-toolbar-row">
+              <div class="gallery-buttons segmented-buttons">
+                <button type="button" class="media-button primary upload-trigger">
+                  {gettext("Upload media")}
+                </button>
+                <button
+                  :if={:image in @allowed_types}
+                  type="button"
+                  class="media-button"
+                  phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+                >
+                  {gettext("Browse images")}
+                </button>
+                <button
+                  :if={:video in @allowed_types}
+                  type="button"
+                  class="media-button"
+                  phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+                >
+                  {gettext("Browse videos")}
+                </button>
+              </div>
+              <Tile.view_switch
+                :if={@has_objects?}
+                id={"block-#{@uid}-gallery-view"}
+                view={@view}
+                target={@myself}
+                storage_key={"brando:gallery-view:block-#{@uid}"}
+              />
             </div>
 
             <%= if @gallery do %>
@@ -279,7 +300,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   id={"sortable-#{block_data.id}-gallery-objects"}
                   class={[
                     "images",
-                    (@display == :grid && "images-grid") || "images-list"
+                    (@view == :grid && "images-grid gallery-sheet") || "images-list"
                   ]}
                   phx-hook="Brando.SortableAssocs"
                   data-target={@myself}
@@ -296,7 +317,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     <Object.render
                       gallery_object_form={gallery_object_form}
                       gallery_objects={@gallery_objects}
-                      display={@display}
+                      display={@view}
+                      text_editor={@text_editor}
                       myself={@myself}
                       uid={@uid}
                       gallery_form={gallery_form}
@@ -308,6 +330,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 </div>
                 <input type="hidden" name={"#{gallery_form.name}[drop_gallery_object_ids][]"} />
               </.inputs_for>
+              <Tile.legend
+                :if={@view == :grid && @has_objects?}
+                images={@sheet_counts.images}
+                missing_alt={@sheet_counts.missing_alt}
+              />
             <% end %>
 
             <div :if={!@has_objects?} class="media-gallery-empty">
@@ -374,6 +401,66 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def handle_event("focus", _, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("set_gallery_view", %{"view" => view}, socket) do
+    case Tile.parse_view(view) do
+      nil -> {:noreply, socket}
+      view -> {:noreply, assign(socket, view: view, text_editor: nil)}
+    end
+  end
+
+  def handle_event("open_text_editor", %{"type" => type, "id" => id, "kind" => kind}, socket)
+      when type in ["image", "video"] and kind in ["caption", "alt"] and is_binary(id) do
+    type = String.to_existing_atom(type)
+    kind = String.to_existing_atom(kind)
+
+    if Map.has_key?(socket.assigns.override_data, {type, id}) and not (type == :video and kind == :alt) do
+      {:noreply, assign(socket, :text_editor, %{type: type, id: id, kind: kind})}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_text_editor", _, socket) do
+    {:noreply, assign(socket, :text_editor, nil)}
+  end
+
+  # Writes the override the object's settings dialog edits (`OverrideForm`),
+  # with its `use_default_*` flag, through the block's ref data. An image's
+  # caption is `title`, a video's is `caption`; alt text stays plain.
+  def handle_event("save_object_text", %{"type" => type, "id" => id, "kind" => kind, "value" => value}, socket)
+      when type in ["image", "video"] and kind in ["caption", "alt"] and is_binary(id) and is_binary(value) do
+    type = String.to_existing_atom(type)
+
+    field =
+      case {type, kind} do
+        {:image, "caption"} -> :title
+        {:video, "caption"} -> :caption
+        {:image, "alt"} -> :alt
+        {:video, "alt"} -> nil
+      end
+
+    if field && Map.has_key?(socket.assigns.override_data, {type, id}) do
+      text = if kind == "caption", do: Brando.Captions.normalize(value), else: trimmed(value)
+
+      socket
+      |> Block.commit_ref_data(ref_data: put_override_text(socket.assigns.block, type, id, field, text))
+      |> assign(:text_editor, nil)
+      |> then(&{:noreply, &1})
+    else
+      {:noreply, assign(socket, :text_editor, nil)}
+    end
+  end
+
+  def handle_event("tiptap_link_dialog", params, socket) do
+    TipTapLinkDialog.open(params, Brando.config(:default_language))
+    {:noreply, socket}
+  end
+
+  def handle_event("tiptap_link_result", params, socket) do
+    TipTapLinkDialog.receive_result(params)
     {:noreply, socket}
   end
 
@@ -476,6 +563,53 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   ## Private functions
+
+  defp trimmed(value) do
+    case String.trim(value) do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp put_override_text(block, type, id, field, text) do
+    data = Block.current_block_data_map(block)
+    overrides = data.gallery_object_overrides || []
+    changes = %{field => text, :"use_default_#{field}" => is_nil(text)}
+
+    {updated, found?} =
+      Enum.map_reduce(overrides, false, fn override, found? ->
+        if GalleryObjectOverride.for_media?(override, type, id),
+          do: {override |> Map.merge(changes) |> Map.put(:object_type, type), true},
+          else: {override, found?}
+      end)
+
+    updated =
+      if found?,
+        do: updated,
+        else: updated ++ [Map.merge(%GalleryObjectOverride{object_id: id, object_type: type}, changes)]
+
+    Map.put(data, :gallery_object_overrides, updated)
+  end
+
+  # Images and how many have no alt text, neither for this block nor in the
+  # library. Videos have no alt text and are not counted.
+  defp sheet_counts(gallery_objects, block_data_cs) do
+    overrides =
+      block_data_cs
+      |> Changeset.get_field(:gallery_object_overrides, [])
+      |> GalleryObjectOverride.index()
+
+    images = Enum.filter(gallery_objects, &loaded_assoc?(&1, :image))
+
+    missing =
+      Enum.count(images, fn %{image: image} ->
+        override = GalleryObjectOverride.lookup(overrides, :image, image.id)
+        alt = if override && Map.get(override, :use_default_alt) != true, do: Map.get(override, :alt)
+        not Tile.alt_state(alt, Brando.Images.text(image, :alt, nil)).set?
+      end)
+
+    %{images: length(images), missing_alt: missing}
+  end
 
   defp update_block_with_overrides(block_form, initialized_overrides) do
     changeset = block_form.source

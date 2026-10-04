@@ -12,6 +12,15 @@
     gap: 5px;
   }
 
+  /* `.images` owns the gap below */
+  .media-gallery > .gallery-toolbar-row {
+    margin-bottom: 0;
+
+    > .gallery-buttons {
+      margin-bottom: 0;
+    }
+  }
+
   .file-input {
     display: none;
   }
@@ -24,130 +33,9 @@
     @space margin-top 15px;
   }
 
-  .images-grid {
-    @display flex/row/wrap;
-    @space gap 1;
-
-    .preview {
-      @column 4/12 desktop_md;
-      @column 3/12 desktop_lg;
-      @column 2/10 desktop_xl;
-      box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px;
-      background-color: white;
-      border-radius: 8px;
-      overflow: clip;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      cursor: move;
-      position: relative;
-
-      .img-placeholder {
-        aspect-ratio: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--brando-color-input);
-      }
-
-      .video-placeholder {
-        aspect-ratio: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        background-color: var(--brando-color-input);
-
-        [data-icon] {
-          width: 2rem;
-          height: 2rem;
-          opacity: 0.3;
-        }
-
-        span {
-          font-family: "Mono";
-          font-size: 10px;
-          text-transform: uppercase;
-          opacity: 0.5;
-          text-align: center;
-          padding: 0 8px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          max-width: 100%;
-        }
-      }
-
-      figcaption {
-        @display flex/column/nowrap;
-        @space gap 8px;
-        margin-top: 0;
-        padding: 8px;
-      }
-
-      .media-type-badge {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        z-index: 1;
-        background-color: white;
-        border: none;
-        box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
-
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-
-        span {
-          width: 14px;
-          height: 14px;
-        }
-      }
-
-      /* Edit and delete as one group in the corner. */
-      .gallery-object-actions {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        z-index: 1;
-        display: flex;
-        overflow: hidden;
-        border-radius: 13px;
-        background-color: white;
-        box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
-
-        button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 28px;
-          height: 25px;
-          padding: 0;
-          border: none;
-          background-color: white;
-          cursor: pointer;
-
-          span {
-            width: 14px;
-            height: 14px;
-            background-color: var(--brando-color-dark);
-          }
-
-          &:hover {
-            background-color: var(--brando-color-dark);
-
-            span { background-color: white; }
-          }
-        }
-
-        button + button { border-left: 1px solid #e6ebe3; }
-      }
-    }
+  /* Grid display: the contact sheet in `Gallery.css` (`.gallery-sheet`). */
+  .images-grid > .gallery-object {
+    cursor: move;
   }
 
   .caption-editor {
@@ -165,122 +53,183 @@
     }
   }
 
+  /* List display: one joined list, like the gallery field's list layout and
+     `.identifier-list` — a single border and radius around the whole, rows
+     split by hairlines. The first and last rows round their own corners
+     instead of the list clipping them, so a row's caption modal and other
+     overlays are not cut off. Each object renders its hidden inputs inside
+     itself, so the objects are the list's only `div` children. */
   .images-list {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #dce2dc;
+    border-radius: 6px;
+    background: #fff;
 
-    .preview {
-      margin-bottom: 10px;
+    .gallery-object {
+      margin: 0;
+      cursor: move;
+
+      & ~ .gallery-object .gallery-block-list-row {
+        border-top: 1px solid #dce2dc;
+      }
+
+      &:first-of-type .gallery-block-list-row {
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+      }
+
+      &:last-of-type .gallery-block-list-row {
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+      }
+    }
+
+    .gallery-block-list-row {
       display: flex;
-      flex-wrap: nowrap;
-      padding: 6px;
       align-items: center;
-      border: 1px dashed var(--brando-color-dark);
-      border-radius: 10px;
-      position: relative;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      transition: background-color 150ms ease;
 
-      .media-type-badge {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        z-index: 1;
-        background-color: white;
+      &:hover {
+        background: #f5f8f3;
+      }
+    }
+
+    .gallery-block-list-thumb {
+      flex: 0 0 56px;
+      width: 56px;
+      height: 56px;
+
+      .image-content,
+      .img-placeholder {
+        width: 56px;
+        height: 56px;
+        border-radius: 4px;
+        overflow: hidden;
+        background: #f0f3ee;
+      }
+
+      .image-content img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
 
       .img-placeholder {
-        @column 3/12 desktop_xl;
-        @column 3/12 desktop_lg;
-        @column 3/12 desktop_md;
-        @order 0;
-        aspect-ratio: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--brando-color-input);
-        border-radius: 4px;
-      }
+        display: grid;
+        place-items: center;
+        color: #79917b;
 
-      .video-placeholder {
-        @column 3/12 desktop_xl;
-        @column 3/12 desktop_lg;
-        @column 3/12 desktop_md;
-        @order 0;
-        aspect-ratio: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        background-color: var(--brando-color-input);
-        border-radius: 4px;
+        svg {
+          width: 20px;
+          height: 20px;
+          fill: currentColor;
+        }
 
         [data-icon] {
-          width: 1.5rem;
-          height: 1.5rem;
-          opacity: 0.3;
-        }
-
-        span {
-          font-family: "Mono";
-          font-size: 10px;
-          opacity: 0.5;
+          width: 20px;
+          height: 20px;
+          background-color: currentColor;
         }
       }
+    }
 
-      .image-content {
-        @column 3/12 desktop_xl;
-        @column 3/12 desktop_lg;
-        @column 3/12 desktop_md;
-        @order 0;
+    .gallery-block-list-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1 1 auto;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .gallery-block-list-title {
+      color: #272b2a;
+      font: 500 14px/19px "Main", sans-serif;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gallery-block-list-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 6px;
+      color: #626b66;
+      font: 12px/18px "Main", sans-serif;
+      min-width: 0;
+
+      > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      figcaption {
-        @order 1;
-        @column 6/12;
-        @fontsize sm;
-        padding-left: 15px;
-        margin-left: 15px;
-        align-self: flex-start;
-        display: flex;
-        row-gap: 2em;
-
-        div {
-          @space margin-bottom 8px;
-          max-width: 40ch;
-          display: block;
-          text-align: left;
-          font-size: 14px;
-
-          span {
-            @font mono;
-            font-size: 10px;
-            font-weight: normal;
-            text-transform: uppercase;
-          }
-        }
+      > span + span::before {
+        content: "·";
+        margin-right: 6px;
+        color: #a6afa8;
       }
+    }
+
+    .gallery-block-list-alt {
+      overflow: hidden;
+      color: #626b66;
+      font: 12px/18px "Main", sans-serif;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+
+      &.is-missing {
+        color: #87662d;
+      }
+    }
+
+    .gallery-block-list-alt-label {
+      margin-right: 2px;
+      padding: 0 5px;
+      border: 1px solid #dce2dc;
+      border-radius: 3px;
+      font-size: 10px;
+      line-height: 15px;
+      letter-spacing: 0.02em;
+    }
+
+    .gallery-object-actions {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 2px;
 
       button {
-        @order 2;
-        margin-left: auto;
-        align-self: flex-start;
-        @font mono;
-        border-radius: 5px;
-        border: 1px solid var(--brando-color-dark);
-        color: var(--brando-color-dark);
-        font-size: 11px;
-        display: inline-block;
-        text-transform: uppercase;
-        padding: 4px 7px;
-        transition:
-          background-color 0.35s ease,
-          color 0.35s ease;
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 0.5em;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+        cursor: pointer;
+        transition:
+          background-color 140ms ease,
+          color 140ms ease;
 
         [data-icon] {
-          width: 1rem;
-          height: 1rem;
+          width: 0.95rem;
+          height: 0.95rem;
+          background-color: currentColor;
+        }
+
+        &:hover {
+          background: color-mix(in srgb, var(--brando-color-peach) 30%, white);
+          color: var(--brando-color-dark);
         }
       }
     }

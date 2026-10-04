@@ -268,7 +268,7 @@
 }
 .media-gallery .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.video-block .modal--editor {
+.video-block .modal--editor, .modal .gallery-object-config {
   .override-toggle-group { box-shadow: none; margin: 0; padding: 0; border-radius: 0; }
   .override-toggle-group legend { padding: 0 0 12px; gap: 8px; font: 13px/20px "Main", sans-serif; color: #626b66; }
   .override-toggle-row { min-height: 44px; gap: 12px; border-bottom: 1px solid #e8ece7; padding: 10px 0; }

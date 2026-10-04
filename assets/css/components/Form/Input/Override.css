@@ -27,6 +27,13 @@ button.override-reset-button:hover {
   border-color: var(--brando-color-dark);
 }
 
+/* A rich-text field's top-right corner is its toolbar's expand button, so the
+   reset sits in the editor's bottom-right corner instead */
+.tiptap-wrapper > .override-reset-button {
+  top: auto;
+  bottom: 8px;
+}
+
 /* Coexist with AI button */
 .has-ai-action + .override-reset-button,
 .has-ai-action ~ .override-reset-button {

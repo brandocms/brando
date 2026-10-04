@@ -19,9 +19,13 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
     attribute :title, :string
     attribute :credits, :string
     attribute :alt, :string
+    # A video's caption for this placement (rich text). An image's caption is
+    # its `title`; a video's `title` stays plain, it names the player.
+    attribute :caption, :string
     attribute :use_default_title, :boolean, default: true
     attribute :use_default_credits, :boolean, default: true
     attribute :use_default_alt, :boolean, default: true
+    attribute :use_default_caption, :boolean, default: true
 
     # Video playback config overrides
     attribute :autoplay, :boolean
@@ -40,6 +44,39 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   # numbered by separate sequences — image 45 and video 45 can sit in the same
   # gallery. An override therefore only identifies its media together with
   # `object_type`. An override stored without a type matches on the id alone.
+
+  @text_fields ~w(title credits alt caption)
+
+  @doc """
+  Casts an override from editor params.
+
+  The editor submits only the texts; an empty text inherits the media's own.
+  Each `use_default_*` flag is derived from its text when the params carry the
+  text but not the flag, so the flag the renderer reads always agrees with what
+  the editor shows. Params that set a flag explicitly keep it.
+  """
+  def cast_override(override, params) do
+    override
+    |> changeset(params)
+    |> derive_use_default(params)
+  end
+
+  defp derive_use_default(changeset, params) when is_map(params) do
+    Enum.reduce(@text_fields, changeset, fn field, acc ->
+      flag = "use_default_" <> field
+
+      if param?(params, field) and not param?(params, flag) do
+        Ecto.Changeset.put_change(acc, String.to_existing_atom(flag), not Brando.Captions.present?(param(params, field)))
+      else
+        acc
+      end
+    end)
+  end
+
+  defp derive_use_default(changeset, _params), do: changeset
+
+  defp param?(params, key), do: Map.has_key?(params, key) or Map.has_key?(params, String.to_existing_atom(key))
+  defp param(params, key), do: Map.get(params, key, Map.get(params, String.to_existing_atom(key)))
 
   @doc """
   Returns `{object_type, object_id}` for an override given as a struct, a plain

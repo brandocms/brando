@@ -343,3 +343,21 @@ button.link-preview { text-align: left; }
   .select-modal-wrapper .select-modal { border-right: 0; border-bottom: 1px solid #dce2dc; padding: 0 0 16px; }
   .select-modal-wrapper .selected-labels { padding: 0; }
 }
+
+/* Gallery object configuration. The form renders inside the modal body, so its
+   footer cancels the body padding and sticks to the bottom edge itself. */
+.modal .gallery-object-config { display: flex; flex-direction: column; }
+.modal .gallery-object-config-media { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--modal-line); border-radius: 7px; background: #f8faf5; }
+.modal .gallery-object-config-thumb { display: grid; place-items: center; flex: 0 0 64px; width: 64px; height: 64px; margin: 0; overflow: hidden; border-radius: 5px; background: #eef2ec; color: var(--modal-muted); }
+.modal .gallery-object-config-thumb :is(.image-content, .img-placeholder, .video-placeholder) { display: grid; place-items: center; width: 100%; height: 100%; min-width: 0; margin: 0; border-radius: 0; background: transparent; }
+.modal .gallery-object-config-thumb img { display: block; width: 100%; height: 100%; min-width: 0; object-fit: cover; border-radius: 0; }
+.modal .gallery-object-config-thumb :is(svg, [data-icon]) { width: 22px; height: 22px; }
+.modal .gallery-object-config-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.modal .gallery-object-config-name { color: var(--modal-ink); font: 500 13px/18px "Main", sans-serif; overflow-wrap: anywhere; }
+.modal .gallery-object-config-meta { color: var(--modal-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
+.modal .gallery-object-config-note { padding-top: 16px; }
+.modal .gallery-object-config-fields { padding-top: 20px; }
+.modal .modal-content .gallery-object-config-footer { position: sticky; bottom: -24px; z-index: 1; margin: 24px -28px -24px; }
+@media (max-width: 720px) {
+  .modal .modal-content .gallery-object-config-footer { bottom: -20px; margin: 24px -18px -20px; }
+}

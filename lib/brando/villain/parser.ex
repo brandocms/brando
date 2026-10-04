@@ -787,10 +787,10 @@ defmodule Brando.Villain.Parser do
   # had — so every gallery ref fell through to the catch-all and rendered
   # nothing at all. The `images` shape is kept for direct callers.
   def gallery(%{gallery: %Brando.Galleries.Gallery{} = gallery} = data, opts),
-    do: render_gallery(gallery_media(gallery), data, opts)
+    do: render_gallery(gallery_render_media(gallery), data, opts)
 
   def gallery(%{images: images} = data, opts) when is_list(images),
-    do: render_gallery(Enum.map(images, &{:image, &1}), data, opts)
+    do: render_gallery(Enum.map(images, &{:image, &1, %{}}), data, opts)
 
   # empty gallery
   def gallery(_data, _), do: ""
@@ -814,6 +814,30 @@ defmodule Brando.Villain.Parser do
   end
 
   def gallery_media(_gallery), do: []
+
+  # `gallery_media/1`, keeping each object's overrides alongside its media: a
+  # caption written for the placement is rich text and renders as markup, the
+  # record's own title is plain text and is escaped.
+  defp gallery_render_media(%{gallery_objects: gallery_objects}) when is_list(gallery_objects) do
+    Enum.flat_map(gallery_objects, fn
+      %{image: %Brando.Images.Image{} = image} = object ->
+        [{:image, apply_object_config(image, object), present_overrides(object)}]
+
+      %{video: %Brando.Videos.Video{} = video} = object ->
+        [{:video, apply_object_config(video, object), present_overrides(object)}]
+
+      _ ->
+        []
+    end)
+  end
+
+  defp gallery_render_media(_gallery), do: []
+
+  defp present_overrides(object) do
+    object
+    |> object_config()
+    |> Map.filter(fn {_key, value} -> value not in [nil, ""] end)
+  end
 
   # A gallery object may override the record's own metadata for this one
   # placement — the same image can appear in two galleries, or twice in one, with
@@ -897,8 +921,16 @@ defmodule Brando.Villain.Parser do
 
     media
     |> Enum.map(fn
-      {:image, img} -> gallery_item({:image, Brando.Images.resolve_texts(img, language)}, data, parser, wrapper)
-      item -> gallery_item(item, data, parser, wrapper)
+      {:image, img, overrides} ->
+        gallery_item(
+          {:image, img |> Brando.Images.resolve_texts(language) |> caption_markup(overrides)},
+          data,
+          parser,
+          wrapper
+        )
+
+      {:video, video, overrides} ->
+        gallery_item({:video, video, video_caption(video, overrides)}, data, parser, wrapper)
     end)
     |> Enum.intersperse("\n")
   end
@@ -947,12 +979,12 @@ defmodule Brando.Villain.Parser do
   # block, but is handed the record rather than a bare URL — so the playback
   # settings the editor put on the video, and any per-object override merged
   # onto it, resolve through `setting/4` as usual.
-  defp gallery_item({:video, video}, _data, parser, wrapper) do
+  defp gallery_item({:video, video, caption}, _data, parser, wrapper) do
     orientation = gallery_video_orientation(video)
 
     assigns = %{
       video: video,
-      opts: parser.video_file_options(video),
+      opts: video |> parser.video_file_options() |> Keyword.put(:caption, caption || false),
       cover_image: nil,
       orientation: orientation
     }
@@ -961,6 +993,26 @@ defmodule Brando.Villain.Parser do
     |> gallery_video_tag(wrapper)
     |> Phoenix.LiveViewTest.rendered_to_string()
   end
+
+  # The caption and credits as markup: what the placement overrode is rich
+  # text (credits are plain either way), what comes from the image is escaped.
+  defp caption_markup(img, overrides) do
+    title = Map.get(img, :title)
+    title = if Map.has_key?(overrides, "title"), do: rich_caption(title), else: Brando.Captions.library_html(title)
+
+    img
+    |> Map.put(:title, title)
+    |> Map.put(:credits, Brando.Captions.library_html(Map.get(img, :credits)))
+  end
+
+  # A video's figcaption is its caption for this placement, else its title.
+  defp video_caption(video, overrides) do
+    if Map.has_key?(overrides, "caption") and Brando.Captions.present?(video.caption),
+      do: video.caption,
+      else: Brando.Captions.library_html(video.title)
+  end
+
+  defp rich_caption(text), do: if(Brando.Captions.present?(text), do: text)
 
   defp gallery_image_tag(assigns, :panner), do: Brando.Villain.Parser.panner_item(assigns)
   defp gallery_image_tag(assigns, :plain), do: Brando.Villain.Parser.picture_tag(assigns)
@@ -1860,14 +1912,17 @@ defmodule Brando.Villain.Parser do
         cond do
           image && object_override ->
             %{gallery_object | image: apply_caption_overrides(image, object_override)}
+            |> record_text_overrides(object_override, ~w(title credits alt)a)
 
           video && object_override ->
             updated_video =
               video
               |> apply_caption_overrides(object_override)
+              |> apply_video_caption_override(object_override)
               |> apply_playback_overrides(object_override)
 
             %{gallery_object | video: updated_video}
+            |> record_text_overrides(object_override, ~w(title credits caption)a)
 
           true ->
             gallery_object
@@ -1953,6 +2008,49 @@ defmodule Brando.Villain.Parser do
     |> maybe_apply_override(:credits, override.credits, override.use_default_credits)
     |> maybe_apply_override(:alt, override.alt, override.use_default_alt)
   end
+
+  # A video's caption for this placement. Images have no `caption` field: an
+  # image's caption is its title.
+  defp apply_video_caption_override(video, %Changeset{} = override) do
+    maybe_apply_override(
+      video,
+      :caption,
+      Changeset.get_field(override, :caption),
+      Changeset.get_field(override, :use_default_caption)
+    )
+  end
+
+  defp apply_video_caption_override(video, override) do
+    maybe_apply_override(video, :caption, Map.get(override, :caption), Map.get(override, :use_default_caption, true))
+  end
+
+  # The texts the override replaced are also put in the object's `config`, the
+  # way a gallery field stores its own overrides, so the gallery renderer can
+  # tell a placement's caption (rich text) from the record's title (plain).
+  # In memory only; nothing here is saved.
+  defp record_text_overrides(gallery_object, override, fields) do
+    overridden =
+      for field <- fields,
+          {value, use_default} = override_text(override, field),
+          override_applies?(value, use_default),
+          into: %{},
+          do: {to_string(field), value}
+
+    if overridden == %{} do
+      gallery_object
+    else
+      config = Map.get(gallery_object, :config) || %{}
+      Map.put(gallery_object, :config, Map.merge(config, overridden))
+    end
+  end
+
+  defp override_text(%Changeset{} = override, field),
+    do: {Changeset.get_field(override, field), Changeset.get_field(override, :"use_default_#{field}")}
+
+  defp override_text(override, field),
+    do: {Map.get(override, field), Map.get(override, :"use_default_#{field}", true)}
+
+  defp override_applies?(value, use_default), do: use_default != true and is_binary(value)
 
   defp maybe_apply_override(media_object, field, value, use_default) do
     cond do

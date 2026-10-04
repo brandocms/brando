@@ -294,6 +294,31 @@ defmodule Brando.Villain.ParserTest do
       assert Brando.Villain.Parser.gallery_media(%{}) == []
     end
 
+    # A placement caption is rich text and renders as markup; the image's own
+    # title is plain text and is escaped.
+    test "a placement caption renders as markup, the library title escaped" do
+      html =
+        gallery(%{type: :slideshow, gallery: gallery_with(%{"title" => "<p><strong>Placement</strong> caption</p>"})}, [])
+
+      assert html =~ "<figcaption><p><strong>Placement</strong> caption</p>"
+
+      image = Brando.Factory.build(:image, title: "Fish & chips <script>x</script>", alt: "a", credits: nil)
+      plain = %Brando.Galleries.Gallery{gallery_objects: [%Brando.Galleries.GalleryObject{sequence: 0, image: image}]}
+      html = gallery(%{type: :slideshow, gallery: plain}, [])
+
+      assert html =~ "Fish &amp; chips &lt;script&gt;x&lt;/script&gt;"
+      refute html =~ "<script>x</script>"
+    end
+
+    test "a library title that already holds markup is sanitized, not escaped" do
+      image = Brando.Factory.build(:image, title: "<p>Legacy <em>rich</em></p><script>x</script>", alt: "a", credits: nil)
+      gallery = %Brando.Galleries.Gallery{gallery_objects: [%Brando.Galleries.GalleryObject{sequence: 0, image: image}]}
+      html = gallery(%{type: :slideshow, gallery: gallery}, [])
+
+      assert html =~ "<p>Legacy <em>rich</em></p>"
+      refute html =~ "<script>"
+    end
+
     test "the same image can carry different metadata in two placements" do
       image = Brando.Factory.build(:image, title: nil, alt: "shared", credits: nil)
 

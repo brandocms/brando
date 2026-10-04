@@ -362,6 +362,11 @@ defmodule BrandoAdmin.Components.Form.Input do
   `default_value` too and the inherited text is shown below the editor, since a
   rich text editor has no placeholder to advertise it with. Both are opt-in —
   most call sites are plain rich text fields with nothing to fall back to.
+
+  `input_form` sets the hidden input's `form` attribute. An editor that is not
+  part of the form around it (a popover inside an entry form) points it at an
+  id no form has, so its value is neither submitted nor validated with that
+  form; whoever renders it reads the value itself.
   """
   def rich_text(assigns) do
     extensions = process_extensions(assigns)
@@ -379,6 +384,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_new(:target, fn -> nil end)
       |> assign_new(:reset, fn -> false end)
       |> assign_new(:default_value, fn -> nil end)
+      |> assign_new(:input_form, fn -> nil end)
       |> prepare_input_component()
       |> prepare_ai_support()
 
@@ -427,7 +433,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <div id={"#{@field.id}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">
             <div id={"#{@field.id}-rich-text-target"} class="tiptap-target"></div>
           </div>
-          <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={300} />
+          <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={300} form={@input_form} />
           <span id={"#{@field.id}-tiptap-help"} class="tiptap-sr-only">{@instructions}</span>
         </div>
         <.live_component
@@ -579,7 +585,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :rest, :global,
     include:
-      ~w(class placeholder phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-slug-prefix data-autosize autocorrect spellcheck readonly)
+      ~w(class placeholder phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-slug-prefix data-autosize autocorrect spellcheck readonly form)
 
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 

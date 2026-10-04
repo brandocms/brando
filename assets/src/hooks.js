@@ -12,6 +12,7 @@ import CodeEditorHook from './hooks/CodeEditor'
 import ColorPickerHook from './hooks/ColorPicker'
 import ConfirmClickHook from './hooks/ConfirmClick'
 import DatePickerHook from './hooks/DatePicker'
+import DetachedFormHook from './hooks/DetachedForm'
 import DateTimePickerHook from './hooks/DateTimePicker'
 import FieldBaseHook from './hooks/FieldBase'
 import FloatingDropdownHook from './hooks/FloatingDropdown'
@@ -19,6 +20,8 @@ import FocalPointHook from './hooks/FocalPoint'
 import ImageEditorHook from './hooks/ImageEditor'
 import ImagePickerGridHook from './hooks/ImagePickerGrid'
 import FormHook from './hooks/Form'
+import GalleryTextEditorHook from './hooks/GalleryTextEditor'
+import GalleryViewHook from './hooks/GalleryView'
 import FrontendEditBridgeHook from './hooks/FrontendEditBridge'
 import ListingHook from './hooks/Listing'
 import LivePreviewHook from './hooks/LivePreview'
@@ -73,11 +76,14 @@ export default (app) => {
     'Brando.ColorPicker': ColorPickerHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),
     'Brando.DatePicker': DatePickerHook(app),
+    'Brando.DetachedForm': DetachedFormHook(app),
     'Brando.DateTimePicker': DateTimePickerHook(app),
     'Brando.FieldBase': FieldBaseHook(app),
     'Brando.FloatingDropdown': FloatingDropdownHook(app),
     'Brando.FocalPoint': FocalPointHook(app),
     'Brando.Form': FormHook(app),
+    'Brando.GalleryTextEditor': GalleryTextEditorHook(app),
+    'Brando.GalleryView': GalleryViewHook(app),
     'Brando.ImageEditor': ImageEditorHook(app),
     'Brando.ImagePickerGrid': ImagePickerGridHook(app),
     'Brando.Listing': ListingHook(app),

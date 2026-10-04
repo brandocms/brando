@@ -14981,3 +14981,31 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr ""
+
+#: lib/brando_admin/components/form/input/gallery/video_config.ex
+#, elixir-autogen, elixir-format
+msgid "Customize this use of the video. Empty text overrides use the library values."
+msgstr ""
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:80
+#: lib/brando_admin/components/form/input/gallery/tile.ex:100
+#, elixir-autogen, elixir-format
+msgid "Click to edit"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:171
+#, elixir-autogen, elixir-format
+msgid "Saved for this gallery only. Empty uses the image library's text."
+msgstr ""
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:194
+#, elixir-autogen, elixir-format
+msgid "Alt text set"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:198
+#, elixir-autogen, elixir-format
+msgid "No alt text — %{missing} of %{count} image"
+msgid_plural "No alt text — %{missing} of %{count} images"
+msgstr[0] ""
+msgstr[1] ""

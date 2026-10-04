@@ -108,6 +108,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
               gallery_object_form={gallery_object_form}
               gallery_objects={@gallery_objects}
               display={@display}
+              text_editor={assigns[:text_editor]}
               myself={@myself}
               uid={@uid}
               gallery_form={gallery_form}
@@ -137,6 +138,129 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       assert html =~ "Video caption"
       assert length(Regex.scan(~r/name="[^"]*\[object_type\]"[^>]*value="image"/, html)) == 1
       assert length(Regex.scan(~r/name="[^"]*\[object_type\]"[^>]*value="video"/, html)) == 1
+    end
+
+    test "list display renders joined rows, grid renders the contact sheet", ctx do
+      socket = update_gallery_block(ctx.gallery, ctx.overrides)
+      assigns = Map.put(socket.assigns, :myself, %Phoenix.LiveComponent.CID{cid: 1})
+
+      list_html = render_component(&render_objects/1, Map.put(assigns, :display, :list))
+
+      assert list_html =~ ~s(class="gallery-block-list-title">Image caption<)
+      assert list_html =~ ~s(class="gallery-block-list-title">Video caption<)
+      assert list_html =~ "No alt text"
+      refute list_html =~ "<figcaption"
+      refute list_html =~ "media-type-badge"
+      assert length(Regex.scan(~r/class="gallery-object-actions"/, list_html)) == 2
+
+      grid_html = render_component(&render_objects/1, Map.put(assigns, :display, :grid))
+
+      refute grid_html =~ "<figcaption"
+      refute grid_html =~ "media-type-badge"
+      refute grid_html =~ "No caption"
+      assert length(Regex.scan(~r/class="gallery-tile"/, grid_html)) == 2
+      refute grid_html =~ "gallery-block-list-row"
+    end
+  end
+
+  describe "GalleryBlock grid" do
+    defp block_socket_for(ctx) do
+      ctx.gallery
+      |> update_gallery_block(ctx.overrides)
+      |> Phoenix.Component.assign(:target_ref, {Block, "block-galleryblk"})
+      |> Phoenix.Component.assign(:ref_name, "gallery")
+    end
+
+    defp committed_overrides do
+      assert_receive {:phoenix, :send_update, {{Block, "block-galleryblk"}, %{event: "update_ref_data", ref_data: data}}}
+      Map.new(data.gallery_object_overrides, &{media_key(&1), &1})
+    end
+
+    test "squares show each object's caption and alt state, and the open popover", ctx do
+      socket = block_socket_for(ctx)
+      id = to_string(ctx.shared_id)
+
+      assigns =
+        socket.assigns
+        |> Map.put(:myself, %Phoenix.LiveComponent.CID{cid: 1})
+        |> Map.put(:display, :grid)
+        |> Map.put(:text_editor, %{type: :image, id: id, kind: :alt})
+
+      html = render_component(&render_objects/1, assigns)
+      doc = Floki.parse_fragment!(html)
+
+      assert doc |> Floki.find(".gallery-tile-number") |> Enum.map(&Floki.text/1) == ["1", "2"]
+      # Both captions are overridden; only the image has alt text to miss.
+      assert length(Floki.find(doc, ".gallery-tile-icon.is-set[aria-label=Caption]")) == 2
+      assert [_] = Floki.find(doc, ".gallery-tile-icon.is-missing")
+      assert [_] = Floki.find(doc, ".gallery-text-editor--alt")
+      assert html =~ "Image caption"
+      assert length(Floki.find(doc, "button.delete-x")) == 2
+      assert [_] = Floki.find(doc, "button.edit-image-btn")
+    end
+
+    test "saving a caption writes the override the settings dialog edits", ctx do
+      socket = block_socket_for(ctx)
+      id = to_string(ctx.shared_id)
+
+      {:noreply, socket} =
+        GalleryBlock.handle_event(
+          "save_object_text",
+          %{"type" => "image", "id" => id, "kind" => "caption", "value" => "<p><em>Rich</em></p>"},
+          socket
+        )
+
+      assert socket.assigns.text_editor == nil
+      image = committed_overrides()[{:image, id}]
+      assert image.title == "<p><em>Rich</em></p>"
+      assert image.use_default_title == false
+
+      # A video's caption is its own field, so its title keeps naming the player.
+      GalleryBlock.handle_event(
+        "save_object_text",
+        %{"type" => "video", "id" => id, "kind" => "caption", "value" => "<p>Film</p>"},
+        socket
+      )
+
+      video = committed_overrides()[{:video, id}]
+      assert video.caption == "<p>Film</p>"
+      assert video.use_default_caption == false
+      assert video.title == "Video caption"
+    end
+
+    test "an empty alt text falls back to the library, a video has none", ctx do
+      socket = block_socket_for(ctx)
+      id = to_string(ctx.shared_id)
+
+      GalleryBlock.handle_event(
+        "save_object_text",
+        %{"type" => "image", "id" => id, "kind" => "alt", "value" => " "},
+        socket
+      )
+
+      image = committed_overrides()[{:image, id}]
+      assert image.alt == nil
+      assert image.use_default_alt == true
+
+      assert {:noreply, _} =
+               GalleryBlock.handle_event(
+                 "save_object_text",
+                 %{"type" => "video", "id" => id, "kind" => "alt", "value" => "x"},
+                 socket
+               )
+
+      refute_receive {:phoenix, :send_update, _}
+    end
+
+    test "the view switch leaves the block's saved display alone", ctx do
+      socket = block_socket_for(ctx)
+      assert socket.assigns.view == :grid
+
+      {:noreply, socket} = GalleryBlock.handle_event("set_gallery_view", %{"view" => "list"}, socket)
+
+      assert socket.assigns.view == :list
+      assert socket.assigns.display == :grid
+      refute_receive {:phoenix, :send_update, _}
     end
   end
 

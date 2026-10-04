@@ -14,7 +14,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Gallery.ImageConfig
   alias BrandoAdmin.Components.Form.Input.Gallery.Media
+  alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.Input.Gallery.Thumb
+  alias BrandoAdmin.Components.Form.Input.Gallery.Tile
   alias BrandoAdmin.Components.Form.Input.Gallery.VideoConfig
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.ImagePicker
@@ -35,38 +37,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   # data compact, :boolean
 
   # data gallery, :any
-  # data preview_layout, :atom
+  # data preview_layout, :atom — the view the admin shows, :grid or :list. Starts
+  #   at the blueprint's `layout:` and follows the view switch; never saved.
+  # data text_editor, :map — the open caption/alt popover, `%{index, kind}`
   # data selected_images, :list
 
   def update(%{event: "update_object_config", gallery_object_index: index, config: config}, socket) do
-    %{field: field, gallery_objects: gallery_objects} = socket.assigns
-
-    changeset = field.form.source
-    gallery = get_field(changeset, field.field)
-
-    slimmed_objects =
-      gallery.gallery_objects
-      |> Enum.with_index()
-      |> Enum.map(fn {obj, i} ->
-        obj_map = Brando.Galleries.slim_gallery_object(obj)
-        if i == index, do: Map.put(obj_map, :config, config), else: obj_map
-      end)
-
-    new_gallery = %{config_target: gallery.config_target, gallery_objects: slimmed_objects}
-
-    updated_gallery_objects =
-      gallery_objects
-      |> Enum.with_index()
-      |> Enum.map(fn {obj, i} ->
-        if i == index, do: Map.put(obj, :config, config), else: obj
-      end)
-
-    update_form_changeset(socket, new_gallery)
-
-    {:ok,
-     socket
-     |> assign(:gallery_objects, updated_gallery_objects)
-     |> assign(:config_modal, nil)}
+    {:ok, put_object_config(socket, index, config)}
   end
 
   def update(%{event: "close_config_modal"}, socket) do
@@ -128,7 +105,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign(:preview_layout, assigns.opts[:layout] || :grid)
+     |> assign_new(:preview_layout, fn -> initial_layout(assigns.opts[:layout]) end)
+     |> assign_new(:text_editor, fn -> nil end)
+     |> assign_new(:current_user, fn -> nil end)
      |> assign(:schema, schema)
      |> assign(:path, path)
      |> assign(:config_target, config_target)
@@ -138,6 +117,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> assign(:video_upload_enabled?, Uploads.video_upload_available?(video_config))
      |> assign_value()}
   end
+
+  defp initial_layout(:list), do: :list
+  defp initial_layout(_layout), do: :grid
 
   defp get_gallery_objects(%{gallery_objects: nil}), do: []
   defp get_gallery_objects(%{gallery_objects: []}), do: []
@@ -163,6 +145,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def render(assigns) do
+    assigns = assign(assigns, :sheet_counts, sheet_counts(assigns.gallery_objects))
+
     ~H"""
     <div>
       <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
@@ -207,14 +191,19 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 </span>
               </div>
             <% end %>
-            <.gallery_actions
-              field={@field}
-              id={@id}
-              path={@path}
-              config_target={@config_target}
-              video_upload_enabled?={@video_upload_enabled?}
-              myself={@myself}
-            />
+            <%= if @gallery_objects == [] do %>
+              <.gallery_actions myself={@myself} />
+            <% else %>
+              <div class="gallery-toolbar-row">
+                <.gallery_actions myself={@myself} />
+                <Tile.view_switch
+                  id={"#{@field.id}-gallery-view"}
+                  view={@preview_layout}
+                  target={@myself}
+                  storage_key={"brando:gallery-view:#{@field.id}"}
+                />
+              </div>
+            <% end %>
 
             <%= if @gallery_objects != [] do %>
               <div
@@ -226,7 +215,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 data-sortable-selector=".gallery-object"
                 data-sortable-push-event="true"
                 data-sortable-order-key="index"
-                class={"gallery-objects gallery-objects--#{@preview_layout}"}
+                class={[
+                  "gallery-objects gallery-objects--#{@preview_layout}",
+                  @preview_layout == :grid && "gallery-sheet"
+                ]}
               >
                 <.inputs_for :let={gallery_form} field={@field}>
                   <Input.input type={:hidden} field={gallery_form[:config_target]} />
@@ -243,6 +235,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                         gallery_object_field={gallery_object}
                         parent_form_name={gallery_form.name}
                         preview_layout={@preview_layout}
+                        text_editor={@text_editor}
                         myself={@myself}
                       />
 
@@ -259,6 +252,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   </.inputs_for>
                 </.inputs_for>
               </div>
+              <Tile.legend
+                :if={@preview_layout == :grid}
+                images={@sheet_counts.images}
+                missing_alt={@sheet_counts.missing_alt}
+              />
             <% end %>
 
             <div
@@ -296,6 +294,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     gallery_object_index={@config_modal.index}
                     gallery_component={__MODULE__}
                     gallery_component_id={@id}
+                    current_user={@current_user}
                   />
                 <% :video -> %>
                   <.live_component
@@ -306,6 +305,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     gallery_object_index={@config_modal.index}
                     gallery_component={__MODULE__}
                     gallery_component_id={@id}
+                    current_user={@current_user}
                   />
               <% end %>
             <% end %>
@@ -316,11 +316,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     """
   end
 
-  attr :field, :any, required: true
-  attr :id, :any, required: true
-  attr :path, :any, required: true
-  attr :config_target, :any, required: true
-  attr :video_upload_enabled?, :boolean, required: true
   attr :myself, :any, required: true
 
   defp gallery_actions(assigns) do
@@ -381,26 +376,29 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           </div>
         <% end %>
       </div>
-      <div class="gallery-object-list-info">
-        <div class="gallery-object-list-name">
-          <div class="gallery-object-list-filename">{@display_filename}</div>
-          <div :if={@display_dir} class="gallery-object-list-dir">{@display_dir}</div>
+      <div class="gallery-object-list-copy">
+        <div class="gallery-object-list-filename">{@display_filename}</div>
+        <div :if={@display_title} class="gallery-object-list-title">{@display_title}</div>
+        <div class="gallery-object-list-details">
+          <span :if={@display_dir}>{@display_dir}</span>
+          <span :if={@display_dimensions not in [nil, ""]}>{@display_dimensions}</span>
+          <span :if={@display_formats not in [nil, ""]}>{@display_formats}</span>
         </div>
-        <div class="gallery-object-list-detail">
-          <span :if={@display_title} class="gallery-object-list-title">{@display_title}</span>
-          <%= if @display_alt do %>
-            <span class="gallery-object-list-alt" title={@display_alt}>
-              <.icon name="hero-chat-bubble-bottom-center-text-mini" /> {truncate_text(@display_alt, 40)}
-            </span>
-          <% else %>
-            <span :if={@media_type == :image} class="gallery-object-list-alt missing">
-              <.icon name="hero-chat-bubble-bottom-center-text-mini" /> {gettext("No alt text")}
-            </span>
-          <% end %>
-        </div>
-        <div class="gallery-object-list-meta">{@display_dimensions}</div>
-        <div class="gallery-object-list-meta">{@display_formats}</div>
-        <div class={"gallery-object-list-status gallery-object-list-status--#{@display_status_key}"}>{@display_status}</div>
+        <%= cond do %>
+          <% @display_alt -> %>
+            <div class="gallery-object-list-alt" title={@display_alt}>
+              <span class="gallery-object-list-alt-label">{gettext("Alt")}</span>
+              {truncate_text(@display_alt, 80)}
+            </div>
+          <% @media_type == :image -> %>
+            <div class="gallery-object-list-alt is-missing">{gettext("No alt text")}</div>
+          <% true -> %>
+        <% end %>
+      </div>
+      <div class="gallery-object-list-side">
+        <span class={"gallery-object-list-status gallery-object-list-status--#{@display_status_key}"}>
+          <i aria-hidden="true"></i>{@display_status}
+        </span>
         <div class="gallery-object-list-actions" data-sortable-filter>
           <button
             type="button"
@@ -458,21 +456,170 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     """
   end
 
-  # Grid layout — the shared thumbnail, which the Gallery blueprint's own
-  # editor renders too (`Gallery.Thumb`). The list layout above is this
-  # component's alone, so it stays here.
+  # Grid layout — the contact sheet shared with the gallery block (`Gallery.Tile`).
   def gallery_object(assigns) do
     gallery_object = Thumb.find(assigns)
-    assigns = assign(assigns, :remove, gallery_object && remove_object(gallery_object, assigns.myself))
+    index = assigns.gallery_object_field.index
+
+    editing =
+      case assigns[:text_editor] do
+        %{index: ^index, kind: kind} -> kind
+        _ -> nil
+      end
+
+    assigns =
+      assigns
+      |> assign(:gallery_object, gallery_object)
+      |> assign(:index, index)
+      |> assign(:editing, editing)
+      |> assign(:tile_id, "#{assigns.id}-tile-#{index}")
+      |> assign(:remove, gallery_object && remove_object(gallery_object, assigns.myself))
+      |> assign(:tile, gallery_object && tile_data(gallery_object))
 
     ~H"""
-    <Thumb.thumb
-      gallery_objects={@gallery_objects}
-      gallery_object_field={@gallery_object_field}
-      form_name={@parent_form_name}
-      remove={@remove}
-    />
+    <Tile.tile
+      :if={@tile}
+      id={@tile_id}
+      number={@index + 1}
+      media_type={@tile.media_type}
+      thumb_url={@tile.thumb_url}
+      processing={@tile.processing}
+      caption={@tile.caption}
+      alt={@tile.alt}
+      editing={@editing}
+      open_caption={open_text_editor(@index, :caption, @myself)}
+      open_alt={open_text_editor(@index, :alt, @myself)}
+    >
+      <:actions>
+        <button
+          :if={@tile.media_type == :image}
+          type="button"
+          class="edit-image-btn"
+          aria-label={gettext("Edit image")}
+          title={gettext("Edit image")}
+          phx-click={
+            JS.push("open_image_editor", target: @myself, value: %{image_id: @gallery_object.image_id})
+            |> open_image_editor_drawer()
+          }
+        >
+          <.icon name="hero-pencil-square" />
+        </button>
+        <button
+          type="button"
+          class="configure-object"
+          aria-label={gettext("Configure")}
+          title={gettext("Configure")}
+          phx-click={
+            JS.push("open_config_modal", target: @myself, value: %{index: @index})
+            |> show_modal("##{@id}-object-config-modal")
+          }
+        >
+          <.icon name="hero-cog-6-tooth" />
+        </button>
+        <button
+          type="button"
+          class="delete-object"
+          aria-label={gettext("Remove from gallery")}
+          title={gettext("Remove from gallery")}
+          phx-click={@remove}
+        >
+          <.icon name="hero-x-mark" />
+        </button>
+      </:actions>
+      <:editor :if={@editing}>
+        <Tile.text_editor
+          id={"#{@tile_id}-#{@editing}-editor"}
+          kind={@editing}
+          filename={@tile.filename}
+          value={if @editing == :caption, do: @tile.caption_override, else: @tile.alt_override}
+          placeholder={@tile.alt_library}
+          target={@myself}
+          save_event="save_object_text"
+          close_event="close_text_editor"
+          params={%{index: @index, kind: @editing}}
+        />
+      </:editor>
+    </Tile.tile>
     """
+  end
+
+  defp open_text_editor(index, kind, myself),
+    do: JS.push("open_text_editor", target: myself, value: %{index: index, kind: kind})
+
+  # Per-object overrides live in the object's `config`: an image's caption is
+  # `"title"`, a video's is `"caption"` (its `"title"` names the player), and
+  # only images have `"alt"`.
+  defp tile_data(object) do
+    config = object_config(object)
+
+    cond do
+      Map.get(object, :image_id) && loaded_assoc?(object, :image) ->
+        image = object.image
+        alt_library = Brando.Images.text(image, :alt, nil)
+
+        %{
+          media_type: :image,
+          thumb_url: thumb_url_for_image(image),
+          processing: image.status != :processed,
+          filename: image.path && Path.basename(image.path),
+          caption: Tile.caption_state(config["title"], Brando.Images.text(image, :title, nil)),
+          caption_override: config["title"],
+          alt: Tile.alt_state(config["alt"], alt_library),
+          alt_override: config["alt"],
+          alt_library: alt_library
+        }
+
+      Map.get(object, :video_id) && loaded_assoc?(object, :video) ->
+        video = object.video
+
+        %{
+          media_type: :video,
+          thumb_url: Brando.Videos.Helpers.thumbnail_url(video),
+          processing: false,
+          filename: video.title || video.remote_id,
+          caption: Tile.caption_state(config["caption"], video.title),
+          caption_override: config["caption"],
+          alt: nil,
+          alt_override: nil,
+          alt_library: nil
+        }
+
+      true ->
+        media_type = if Map.get(object, :image_id), do: :image, else: :video
+
+        %{
+          media_type: media_type,
+          thumb_url: nil,
+          processing: false,
+          filename: nil,
+          caption: %{set?: false, html: nil},
+          caption_override: nil,
+          alt: if(media_type == :image, do: %{set?: false, text: nil}),
+          alt_override: nil,
+          alt_library: nil
+        }
+    end
+  end
+
+  defp object_config(object) do
+    case Map.get(object, :config) do
+      config when is_map(config) -> Map.new(config, fn {key, value} -> {to_string(key), value} end)
+      _ -> %{}
+    end
+  end
+
+  # Images and how many of them have no alt text, neither for this gallery nor
+  # in the library. Videos have no alt text and are not counted.
+  defp sheet_counts(gallery_objects) do
+    images =
+      Enum.filter(gallery_objects, &(Map.get(&1, :image_id) && loaded_assoc?(&1, :image)))
+
+    missing =
+      Enum.count(images, fn object ->
+        not Tile.alt_state(object_config(object)["alt"], Brando.Images.text(object.image, :alt, nil)).set?
+      end)
+
+    %{images: length(images), missing_alt: missing}
   end
 
   # Removal is a server event rather than the gallery's drop param: the entry
@@ -500,8 +647,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       |> assign(:thumb_url, thumb_url_for_image(image))
       |> assign(:display_filename, Path.basename(image.path))
       |> assign(:display_dir, Path.dirname(image.path))
-      |> assign(:display_title, Brando.Images.text(image, :title, nil))
-      |> assign(:display_alt, Brando.Images.text(image, :alt, nil))
+      |> assign(:display_title, list_caption(obj, "title", Brando.Images.text(image, :title, nil)))
+      |> assign(:display_alt, Tile.alt_state(object_config(obj)["alt"], Brando.Images.text(image, :alt, nil)).text)
       |> assign(:display_dimensions, "#{image.width}\u00d7#{image.height}")
       |> assign(:display_formats, format_image_formats(image.formats))
       |> assign(:display_status, format_status(image.status))
@@ -520,7 +667,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       |> assign(:thumb_url, Brando.Videos.Helpers.thumbnail_url(video))
       |> assign(:display_filename, video.title || video.remote_id || "-")
       |> assign(:display_dir, video.source_url)
-      |> assign(:display_title, nil)
+      |> assign(:display_title, list_caption(obj, "caption", nil))
       |> assign(:display_alt, nil)
       |> assign(:display_dimensions, gettext("Video"))
       |> assign(:display_formats, "")
@@ -529,6 +676,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     else
       assign_list_object_defaults(assigns, :video)
     end
+  end
+
+  # The list shows one line of plain text: the placement caption with its
+  # markup stripped, else the library text.
+  defp list_caption(object, key, library_text) do
+    Brando.Captions.plain(object_config(object)[key]) || Brando.Captions.plain(library_text)
   end
 
   defp assign_list_object_defaults(assigns, type) do
@@ -606,6 +759,65 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:noreply, assign(socket, :config_modal, nil)}
   end
 
+  def handle_event("set_gallery_view", %{"view" => view}, socket) do
+    case Tile.parse_view(view) do
+      nil -> {:noreply, socket}
+      view -> {:noreply, assign(socket, preview_layout: view, text_editor: nil)}
+    end
+  end
+
+  def handle_event("open_text_editor", %{"index" => index, "kind" => kind}, socket) when kind in ["caption", "alt"] do
+    index = parse_index(index)
+    object = index && Enum.at(socket.assigns.gallery_objects, index)
+    kind = String.to_existing_atom(kind)
+
+    cond do
+      is_nil(object) -> {:noreply, socket}
+      kind == :alt and is_nil(Map.get(object, :image_id)) -> {:noreply, socket}
+      true -> {:noreply, assign(socket, :text_editor, %{index: index, kind: kind})}
+    end
+  end
+
+  def handle_event("close_text_editor", _, socket) do
+    {:noreply, assign(socket, :text_editor, nil)}
+  end
+
+  # Writes the same `config` the image/video configuration modal writes, so
+  # the two stay in step. The caption is rich text; alt text stays plain.
+  def handle_event("save_object_text", %{"index" => index, "kind" => kind, "value" => value}, socket)
+      when kind in ["caption", "alt"] and is_binary(value) do
+    index = parse_index(index)
+    object = index && Enum.at(socket.assigns.gallery_objects, index)
+
+    case object && text_config_key(object, kind) do
+      nil ->
+        {:noreply, assign(socket, :text_editor, nil)}
+
+      key ->
+        text = if kind == "caption", do: Brando.Captions.normalize(value), else: plain_text(value)
+
+        config =
+          if text,
+            do: Map.put(object_config(object), key, text),
+            else: Map.delete(object_config(object), key)
+
+        {:noreply, socket |> put_object_config(index, config) |> assign(:text_editor, nil)}
+    end
+  end
+
+  # The caption editor's rich text pushes these to its target.
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+
+  def handle_event("tiptap_link_dialog", params, socket) do
+    TipTapLinkDialog.open(params, content_language(socket))
+    {:noreply, socket}
+  end
+
+  def handle_event("tiptap_link_result", params, socket) do
+    TipTapLinkDialog.receive_result(params)
+    {:noreply, socket}
+  end
+
   def handle_event("open_image_editor", %{"image_id" => image_id}, socket) do
     {:ok, image} = Brando.Images.get_image(image_id)
 
@@ -645,7 +857,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         gallery_objects: Media.slim(reordered)
       })
 
-      {:noreply, assign(socket, :gallery_objects, reordered)}
+      {:noreply, assign(socket, gallery_objects: reordered, text_editor: nil)}
     else
       {:noreply, socket}
     end
@@ -720,6 +932,53 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:noreply, socket}
   end
 
+  defp content_language(%{assigns: %{current_user: %{config: %{content_language: language}}}}), do: language
+  defp content_language(_socket), do: Brando.config(:default_language)
+
+  defp text_config_key(object, "caption") do
+    cond do
+      Map.get(object, :image_id) -> "title"
+      Map.get(object, :video_id) -> "caption"
+      true -> nil
+    end
+  end
+
+  defp text_config_key(object, "alt"), do: if(Map.get(object, :image_id), do: "alt")
+
+  defp plain_text(value) do
+    case String.trim(value) do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp put_object_config(socket, index, config) do
+    %{field: field, gallery_objects: gallery_objects} = socket.assigns
+
+    gallery = get_field(field.form.source, field.field)
+
+    slimmed_objects =
+      gallery.gallery_objects
+      |> Enum.with_index()
+      |> Enum.map(fn {obj, i} ->
+        obj_map = Brando.Galleries.slim_gallery_object(obj)
+        if i == index, do: Map.put(obj_map, :config, config), else: obj_map
+      end)
+
+    update_form_changeset(socket, %{config_target: gallery.config_target, gallery_objects: slimmed_objects})
+
+    updated_gallery_objects =
+      gallery_objects
+      |> Enum.with_index()
+      |> Enum.map(fn {obj, i} ->
+        if i == index, do: Map.put(obj, :config, config), else: obj
+      end)
+
+    socket
+    |> assign(:gallery_objects, updated_gallery_objects)
+    |> assign(:config_modal, nil)
+  end
+
   defp add_gallery_media(socket, media_type, media_id, opts \\ []) do
     %{gallery_objects: gallery_objects, current_user: current_user} = socket.assigns
 
@@ -754,6 +1013,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     assign(socket, [
       {:gallery_objects, gallery_objects},
+      {:text_editor, nil},
       {Media.selection_key(media_type), selected_ids}
     ])
   end
