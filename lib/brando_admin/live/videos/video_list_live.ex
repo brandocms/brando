@@ -200,7 +200,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list media-workspace videos-workspace">
-      <Workspace.header title={gettext("Videos")}>
+      <Workspace.header icon={@page_icon} title={gettext("Videos")}>
         <button
           :if={@missing_metadata_count > 0}
           type="button"
@@ -219,7 +219,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
         :if={@playing}
         id="video-player-modal"
         title={Brando.Videos.display_title(@playing) || gettext("Untitled")}
-        icon="hero-film"
+        icon="film"
         show
         wide
         close={JS.push("close_video")}

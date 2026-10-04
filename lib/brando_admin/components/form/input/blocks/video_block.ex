@@ -180,7 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           config_layout="editor"
           config_title={gettext("Configure video")}
           config_subtitle={@ref_description || gettext("Settings for this use of the video")}
-          config_icon="hero-film"
+          config_icon="film"
         >
           <:description>
             <%= case @type do %>
@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           </:description>
           <:config>
             <Content.modal_sections id={"video-#{@uid}-config-sections"}>
-              <:section id="video" label={gettext("Video")} icon="hero-film">
+              <:section id="video" label={gettext("Video")} icon="film">
                 <div class="media-section-heading">
                   <h3 class="modal-section-title">{gettext("Selected video")}</h3>
                   <p class="modal-muted">{gettext("Replace the video while keeping this reference’s settings.")}</p>
@@ -240,7 +240,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   />
                 </div>
               </:section>
-              <:section id="playback" label={gettext("Playback")} icon="hero-play">
+              <:section id="playback" label={gettext("Playback")} icon="play">
                 <div class="media-section-heading">
                   <h3 class="modal-section-title">{gettext("Playback")}</h3>
                   <p class="modal-muted">{gettext("Use the video’s defaults or customize playback for this reference.")}</p>
@@ -261,7 +261,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   <Input.toggle tiny field={block_data[:progress]} label={gettext("Progress bar")} />
                 </div>
               </:section>
-              <:section id="display" label={gettext("Display")} icon="hero-adjustments-horizontal">
+              <:section id="display" label={gettext("Display")} icon="sliders-horizontal">
                 <div class="media-section-heading">
                   <h3 class="modal-section-title">{gettext("Display")}</h3>
                 </div>

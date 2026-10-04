@@ -27,15 +27,15 @@ defmodule BrandoAdmin.Components.Content.List.Checklist do
     ~H"""
     <%!-- Both icons: the chip style shows the circled one, a `grid` list the plain one. --%>
     <div :if={@cond} class="checklist-item true">
-      <.icon name="hero-check-circle" class="chip-icon" />
-      <span class="grid-icon"><.icon name="hero-check" /></span>
+      <.icon name="circle-check" class="chip-icon" />
+      <span class="grid-icon"><.icon name="check" /></span>
       <span class="content">
         {render_slot(@inner_block)}
       </span>
     </div>
     <div :if={!@cond} class="checklist-item false">
-      <.icon name="hero-x-circle" class="chip-icon" />
-      <span class="grid-icon"><.icon name="hero-x-mark" /></span>
+      <.icon name="circle-x" class="chip-icon" />
+      <span class="grid-icon"><.icon name="x" /></span>
       <span class="content">{render_slot(@inner_block)}</span>
     </div>
     """

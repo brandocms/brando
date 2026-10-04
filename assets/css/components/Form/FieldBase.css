@@ -31,10 +31,10 @@
     z-index: 2;
     transition: background-color 0.2s ease;
 
-    span[class^="hero-"] {
+    [data-icon] {
       width: 14px;
       height: 14px;
-      background-color: var(--brando-color-dark);
+      color: var(--brando-color-dark);
       transition: background-color 0.2s ease;
     }
 
@@ -44,8 +44,8 @@
 
     &:hover {
       background-color: var(--brando-color-dark);
-      span[class^="hero-"] {
-        background-color: #f2f2f4;
+      [data-icon] {
+        color: #f2f2f4;
       }
     }
   }
@@ -58,9 +58,6 @@
 
     &:hover {
       color: var(--brando-color-dark);
-      svg path.s {
-        fill: var(--brando-color-peach);
-      }
     }
 
     input {
@@ -71,7 +68,7 @@
       width: 0;
     }
 
-    svg {
+    :is(svg, [data-icon]) {
       pointer-events: none;
     }
   }

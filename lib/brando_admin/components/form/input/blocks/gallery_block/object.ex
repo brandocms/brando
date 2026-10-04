@@ -62,9 +62,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
       <!-- Media type badge -->
       <div class="badge mini media-type-badge">
         <%= if @gallery_object_form[:image_id].value do %>
-          <.icon name="hero-photo" />
+          <.icon name="image" />
         <% else %>
-          <.icon name="hero-video-camera" />
+          <.icon name="video" />
         <% end %>
       </div>
 
@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
           <Content.image image={@obj.video.thumbnail} size={(@display == :grid && :thumb) || :smallest} />
         <% else %>
           <div class="video-placeholder">
-            <.icon name="hero-video-camera" />
+            <.icon name="video" />
             <%= if @obj && loaded_assoc?(@obj, :video) do %>
               <span>{@obj.video.title || "Video"}</span>
             <% end %>
@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
           }
           data-sortable-filter
         >
-          <.icon name="hero-pencil-square" />
+          <.icon name="square-pen" />
         </button>
         <button
           class="delete-x"
@@ -114,7 +114,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
           phx-click={JS.dispatch("change")}
           data-sortable-filter
         >
-          <.icon name="hero-x-mark" />
+          <.icon name="x" />
         </button>
       </div>
 
@@ -141,7 +141,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
                   <Content.image image={@obj.video.thumbnail} size={:smallest} />
                 <% else %>
                   <div class="video-placeholder">
-                    <.icon name="hero-video-camera" />
+                    <.icon name="video" />
                   </div>
                 <% end %>
               <% end %>

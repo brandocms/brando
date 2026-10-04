@@ -1,4 +1,10 @@
 #navigation {
+  /* Trimmed to cap height, a label centres on the same line as its icon.
+     Browsers without `text-box` sit the text a pixel or two high. */
+  .nav-label {
+    text-box: trim-both cap alphabetic;
+  }
+
   dl {
     /* Rows are inset by their own padding, so a hover or the current page's
        surface reaches a little past the text on both sides. */
@@ -20,8 +26,10 @@
       [data-nav-expand] {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 4px 10px;
+        justify-content: flex-start;
+        gap: 10px;
+        block-size: 32px;
+        padding: 0 10px;
         border-radius: 8px;
         font-weight: 400;
         transition: background-color 200ms ease;
@@ -36,9 +44,16 @@
         box-shadow: var(--brando-nav-surface-shadow);
       }
 
+      .nav-icon {
+        width: 20px;
+        height: 20px;
+        opacity: 0.8;
+      }
+
       /* Closed points right, open points down. */
       [data-nav-expand] {
         .nav-chevron {
+          margin-left: auto;
           margin-right: 4px;
           transform: rotate(-45deg);
         }
@@ -54,16 +69,18 @@
       }
     }
 
-    /* Sub-items start at the main items' left edge, each led by a dash. */
+    /* Sub-item icons share the main items' icon column: the smaller glyph is
+       centred in the same 20px, so every label starts on one line. */
     dd {
       display: none;
       padding: 2px 0 6px;
 
       ul li a {
         display: flex;
-        align-items: baseline;
-        gap: 8px;
-        padding: 5px 10px;
+        align-items: center;
+        gap: 10px;
+        block-size: 30px;
+        padding: 0 10px;
         border-radius: 6px;
         font-size: 14px;
         line-height: 20px;
@@ -71,10 +88,11 @@
         color: var(--brando-nav-muted);
         transition: background-color 200ms ease, color 200ms ease;
 
-        /* Empty alt text: the dash is decoration, not part of the link's name. */
-        &:before {
-          content: "\2014" / "";
-          opacity: 0.45;
+        .nav-icon {
+          width: 16px;
+          height: 16px;
+          margin-inline: 2px;
+          opacity: 0.75;
         }
 
         &:hover {

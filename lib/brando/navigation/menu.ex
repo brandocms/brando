@@ -21,6 +21,8 @@ defmodule Brando.Navigation.Menu do
   alias Brando.Content.Var
   alias Brando.Navigation.Item
 
+  content_icon "list-tree"
+
   trait :creator
   trait :sequenced
   trait :timestamped

@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
     ~H"""
     <div class="admin-workspace content-workspace workspace-list global-sets-workspace">
       <Workspace.header
+        icon={@page_icon}
         title={gettext("Global fields (setup)")}
         subtitle={gettext("Which global fields exist and where. Their values are edited under Globals.")}
       >

@@ -33,15 +33,30 @@ defmodule BrandoAdmin.MenuTest do
     end
   end
 
+  defmodule MenuItemIcons do
+    @moduledoc false
+    use BrandoAdmin.Menu
+
+    menus do
+      menu_item Brando.Pages.Page, icon: "house"
+      menu_item "Custom item", "https://customurl.com", icon: "globe"
+
+      menu_item "Projects", icon: "folder" do
+        menu_subitem "Index", "/admin/projects", icon: "list"
+        menu_subitem Brando.Pages.Page
+      end
+    end
+  end
+
   test "menu_item blueprint" do
     assert __MODULE__.MenuItemBlueprint.__menus__() == [
-             %{name: "Projects", url: "/admin/projects/projects?status=published"}
+             %{name: "Projects", url: "/admin/projects/projects?status=published", icon: "file"}
            ]
   end
 
   test "menu_item custom" do
     assert __MODULE__.MenuItemCustom.__menus__() == [
-             %{name: "Custom item", url: "https://customurl.com"}
+             %{name: "Custom item", url: "https://customurl.com", icon: "dot"}
            ]
   end
 
@@ -50,12 +65,60 @@ defmodule BrandoAdmin.MenuTest do
              %{
                name: "Projects",
                items: [
-                 %{name: "Index", url: "/admin/projects"},
-                 %{name: "Create", url: "/admin/projects/new"}
+                 %{name: "Index", url: "/admin/projects", icon: "dot"},
+                 %{name: "Create", url: "/admin/projects/new", icon: "dot"}
                ],
-               url: nil
+               url: nil,
+               icon: "dot"
              }
            ]
+  end
+
+  test "menu items take an icon option, and blueprint items default to the blueprint's" do
+    [page, custom, projects] = __MODULE__.MenuItemIcons.__menus__()
+
+    assert page.icon == "house"
+    assert custom.icon == "globe"
+    assert projects.icon == "folder"
+    assert [%{icon: "list"}, %{icon: "file-text"}] = projects.items
+  end
+
+  test "unknown menu icons fail at compile time" do
+    assert_raise ArgumentError, ~r/unknown menu icon "nope", see https:\/\/lucide.dev\/icons/, fn ->
+      Code.compile_quoted(
+        quote do
+          defmodule BrandoAdmin.MenuTest.BadIcon do
+            use BrandoAdmin.Menu
+
+            menus do
+              menu_item "Bad", "/admin/bad", icon: "nope"
+            end
+          end
+        end
+      )
+    end
+
+    assert_raise ArgumentError, ~r/use "house"/, fn ->
+      Code.compile_quoted(
+        quote do
+          defmodule BrandoAdmin.MenuTest.AliasIcon do
+            use BrandoAdmin.Menu
+
+            menus do
+              menu_item "Old", "/admin/old", icon: "home"
+            end
+          end
+        end
+      )
+    end
+  end
+
+  test "every system menu item has an icon" do
+    menu = BrandoAdmin.Menu.get_menu(%Brando.Users.User{role: :superuser})
+
+    for section <- menu, item <- section.items, entry <- [item | Map.get(item, :items) || []] do
+      assert Brando.Icons.exists?(entry[:icon]), "#{inspect(entry.name)} has no valid icon"
+    end
   end
 
   test "publishing is only present for the selected static site" do

@@ -30,6 +30,8 @@ defmodule Brando.Forms.Form do
   alias Brando.Forms.Field
   alias Brando.Forms.Recipient
 
+  content_icon "text-cursor-input"
+
   trait :creator
   trait :timestamped
   trait :status

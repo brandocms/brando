@@ -265,7 +265,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
               <% @frontend_status[:dirty?] -> %>
                 <span class="frontend-edit-status-dot is-dirty" aria-hidden="true"></span>{gettext("Unsaved changes")}
               <% @frontend_status[:saved?] -> %>
-                <.icon name="hero-check-circle-mini" />{gettext("Saved")}
+                <.icon name="circle-check" />{gettext("Saved")}
               <% true -> %>
                 {gettext("Changes show on the page as you type")}
             <% end %>
@@ -275,7 +275,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             form_id={@id}
             label={gettext("Save")}
             shortcut={%{key: "S"}}
-            icon="hero-check"
+            icon="check"
             class="primary submit-button"
           />
         </footer>

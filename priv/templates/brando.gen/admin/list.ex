@@ -7,7 +7,7 @@ defmodule <%= admin_module %>.<%= domain %>.<%= camel_singular %>ListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace">
-      <Workspace.header title={gettext("<%= String.capitalize(plural) %>")}>
+      <Workspace.header icon={@page_icon} title={gettext("<%= String.capitalize(plural) %>")}>
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate={@admin_create_url}

@@ -210,6 +210,10 @@ defmodule Brando.Blueprint.Dsl do
         @table_name
       end
 
+      def __content_icon__ do
+        @content_icon
+      end
+
       def __naming__ do
         %{
           application: @application,

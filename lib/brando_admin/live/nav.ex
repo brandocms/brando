@@ -171,7 +171,7 @@ defmodule BrandoAdmin.Nav do
                 <span class="tenant-switcher__current">
                   {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
                 </span>
-                <.icon name="hero-chevron-down" />
+                <.icon name="chevron-down" />
               </summary>
 
               <div id="tenant-switcher-options" class="tenant-switcher__sheet">
@@ -249,17 +249,21 @@ defmodule BrandoAdmin.Nav do
                   <dl :for={item <- section.items}>
                     <dt>
                       <.link :if={item.url} navigate={item.url} class={Brando.HTML.active(@current_url, item.url)}>
-                        {item.name}
+                        <.icon name={item[:icon] || "dot"} class="nav-icon" />
+                        <span class="nav-label">{item.name}</span>
                       </.link>
                       <span :if={item[:items]} data-nav-expand data-nav-key={item.name}>
-                        {item.name} <span class="nav-chevron" aria-hidden="true"></span>
+                        <.icon name={item[:icon] || "dot"} class="nav-icon" />
+                        <span class="nav-label">{item.name}</span>
+                        <span class="nav-chevron" aria-hidden="true"></span>
                       </span>
                     </dt>
                     <dd :if={item[:items]}>
                       <ul>
                         <li :for={sub_item <- item.items}>
                           <.link navigate={sub_item.url}>
-                            {sub_item.name}
+                            <.icon name={sub_item[:icon] || "dot"} class="nav-icon" />
+                            <span class="nav-label">{sub_item.name}</span>
                           </.link>
                         </li>
                       </ul>

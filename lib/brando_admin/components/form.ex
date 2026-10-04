@@ -2537,7 +2537,7 @@ defmodule BrandoAdmin.Components.Form do
                 aria-label="Meta"
                 title="Meta"
               >
-                <.icon name="hero-tag" class="s" />
+                <.icon name="tag" class="s" />
                 <span class="tab-text">Meta</span>
               </button>
               <button
@@ -2551,7 +2551,7 @@ defmodule BrandoAdmin.Components.Form do
                 aria-label={gettext("History")}
                 title={gettext("History")}
               >
-                <.icon name="hero-clock" class="s" />
+                <.icon name="clock" class="s" />
                 <span class="tab-text">{gettext("History")}</span>
               </button>
               <button
@@ -2562,7 +2562,7 @@ defmodule BrandoAdmin.Components.Form do
                 aria-label={gettext("Scheduled publishing")}
                 title={gettext("Scheduled publishing")}
               >
-                <.icon name="hero-calendar-days" class="s" />
+                <.icon name="calendar-days" class="s" />
                 <span class="tab-text">{gettext("Scheduled publishing")}</span>
               </button>
               <button
@@ -2573,7 +2573,7 @@ defmodule BrandoAdmin.Components.Form do
                 aria-label={gettext("Languages")}
                 title={gettext("Languages")}
               >
-                <.icon name="hero-language" class="s" />
+                <.icon name="languages" class="s" />
               </button>
               <button
                 :if={@has_live_preview? && length(@live_preview_targets) == 1}
@@ -2584,7 +2584,7 @@ defmodule BrandoAdmin.Components.Form do
                 aria-pressed={to_string(@live_preview_active?)}
                 title={gettext("Live preview")}
               >
-                <.icon name="hero-eye" class="s" />
+                <.icon name="eye" class="s" />
               </button>
               <div
                 :if={length(@live_preview_targets) > 1}
@@ -2603,7 +2603,7 @@ defmodule BrandoAdmin.Components.Form do
                   aria-controls={"#{@id}-preview-choices"}
                   title={gettext("Choose preview")}
                 >
-                  <.icon name="hero-eye" class="s" />
+                  <.icon name="eye" class="s" />
                   <span
                     :for={preview <- @live_preview_targets}
                     :if={
@@ -2611,7 +2611,7 @@ defmodule BrandoAdmin.Components.Form do
                     }
                     class="preview-current-view"
                   >{preview.label}</span>
-                  <.icon name="hero-chevron-down" class="preview-chooser-chevron dropdown-chevron" />
+                  <.icon name="chevron-down" class="preview-chooser-chevron dropdown-chevron" />
                 </button>
                 <div
                   :if={@live_preview_menu_open?}
@@ -2646,7 +2646,7 @@ defmodule BrandoAdmin.Components.Form do
                       <span class="preview-choice-label">{preview.label}</span>
                       <span :if={preview.description} class="preview-choice-description">{preview.description}</span>
                     </span>
-                    <.icon name="hero-check" class="preview-choice-check" />
+                    <.icon name="check" class="preview-choice-check" />
                   </button>
                   <button
                     :if={@live_preview_active?}
@@ -2654,7 +2654,7 @@ defmodule BrandoAdmin.Components.Form do
                     class="preview-choice-close"
                     phx-click={JS.push("open_live_preview", target: @myself) |> JS.focus(to: "##{@id}-preview-trigger")}
                   >
-                    <.icon name="hero-x-mark" class="s" />
+                    <.icon name="x" class="s" />
                     {gettext("Close preview")}
                   </button>
                 </div>
@@ -2672,7 +2672,7 @@ defmodule BrandoAdmin.Components.Form do
                 <%!-- Spins from the click until the link is ready, which
                       takes a moment while the blocks are gathered. --%>
                 <span class="form-tool-share-spinner" aria-hidden="true"></span>
-                <.icon name="hero-arrow-top-right-on-square" class="s" />
+                <.icon name="external-link" class="s" />
               </button>
               <div class="split-dropdown form-tool-save">
                 <%!-- Saves and closes, like the bottom button and ⇧⌘S; the menu
@@ -2683,7 +2683,7 @@ defmodule BrandoAdmin.Components.Form do
                   class="form-tool-save-button"
                   title={gettext("Save and close")}
                 >
-                  <.icon name="hero-check" class="s" />
+                  <.icon name="check" class="s" />
                   <span>{gettext("Save and close")}</span>
                 </button>
                 <SplitDropdown.render id="save-dropdown" label={gettext("Save options")}>
@@ -2858,7 +2858,7 @@ defmodule BrandoAdmin.Components.Form do
             form_id={@id}
             label={gettext("Save and close")}
             shortcut={%{key: "S", shift: true}}
-            icon="hero-check"
+            icon="check"
             class="primary submit-button"
           />
 
@@ -2949,10 +2949,10 @@ defmodule BrandoAdmin.Components.Form do
           <%= if user.avatar do %>
             <Content.image image={user.avatar} size={:thumb} />
           <% else %>
-            <.icon name="hero-user" class="avatar-placeholder" />
+            <.icon name="user" class="avatar-placeholder" />
           <% end %>
           <span :if={user[:frontend?]} class="user-presence-website" aria-hidden="true">
-            <.icon name="hero-globe-alt" />
+            <.icon name="globe" />
           </span>
         </div>
       </div>
@@ -2996,7 +2996,7 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <.alert :for={alert <- @alerts} :if={alert_shown?(alert, @form)} type={alert.type}>
       <:icon>
-        <.icon name="hero-exclamation-triangle" />
+        <.icon name="triangle-alert" />
       </:icon>
       <%= if is_binary(alert.content) do %>
         {g(@form.source.data.__struct__, alert.content)}
@@ -3018,7 +3018,7 @@ defmodule BrandoAdmin.Components.Form do
       <%= if fieldset.__struct__ == Brando.Blueprint.Forms.Alert do %>
         <.alert :if={alert_shown?(fieldset, @form)} type={fieldset.type}>
           <:icon>
-            <.icon name="hero-exclamation-triangle" />
+            <.icon name="triangle-alert" />
           </:icon>
           <%= if is_binary(fieldset.content) do %>
             {g(@form.source.data.__struct__, fieldset.content)}
@@ -6001,7 +6001,7 @@ defmodule BrandoAdmin.Components.Form do
               phx-target={@target}
               title={gettext("Refresh")}
             >
-              <.icon name="hero-arrow-path" />
+              <.icon name="refresh-cw" />
               <span>{gettext("Refresh")}</span>
             </button>
             <button
@@ -6014,21 +6014,15 @@ defmodule BrandoAdmin.Components.Form do
             </button>
             <div class="live-preview-targets-buttons">
               <button type="button" data-live-preview-target="desktop">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                  <path fill="none" d="M0 0h24v24H0z" /><path d="M4 5v11h16V5H4zm-2-.993C2 3.451 2.455 3 2.992 3h18.016c.548 0 .992.449.992 1.007V18H2V4.007zM1 19h22v2H1v-2z" />
-                </svg>
+                <.icon name="monitor" />
                 <span>1440px</span>
               </button>
               <button type="button" data-live-preview-target="tablet">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                  <path fill="none" d="M0 0h24v24H0z" /><path d="M6 4v16h12V4H6zM5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm7 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-                </svg>
+                <.icon name="tablet" />
                 <span>768px</span>
               </button>
               <button type="button" data-live-preview-target="mobile">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                  <path fill="none" d="M0 0h24v24H0z" /><path d="M7 4v16h10V4H7zM6 2h12a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm6 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-                </svg>
+                <.icon name="smartphone" />
                 <span>375px</span>
               </button>
             </div>

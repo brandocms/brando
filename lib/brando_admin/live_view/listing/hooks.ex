@@ -27,6 +27,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       |> assign_schema(schema)
       |> assign_create_url(schema)
       |> assign_title()
+      |> assign_page_icon()
       |> attach_hooks(schema)
 
     {:cont, socket}
@@ -497,6 +498,12 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     page_title = String.capitalize(translated_plural)
     assign(socket, :page_title, page_title)
   end
+
+  # The blueprint's icon, for the listing header (`icon={@page_icon}`).
+  defp assign_page_icon(%{assigns: %{schema: nil}} = socket), do: assign(socket, :page_icon, nil)
+
+  defp assign_page_icon(%{assigns: %{schema: schema}} = socket),
+    do: assign(socket, :page_icon, Brando.Blueprint.get_icon(schema))
 
   defp assign_create_url(socket, schema) do
     assign_new(socket, :admin_create_url, fn ->

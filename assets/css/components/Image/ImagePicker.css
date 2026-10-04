@@ -391,7 +391,7 @@
     line-height: 34px;
     padding: 0 0.62rem 0 0.31rem;
 
-    .hero-plus-small {
+    .lucide-plus {
       width: 0.95rem;
       height: 0.95rem;
     }
@@ -435,7 +435,7 @@
       border-color 160ms ease,
       color 160ms ease;
 
-    .hero-folder {
+    .lucide-folder {
       width: 0.8rem;
       height: 0.8rem;
       opacity: 0.8;

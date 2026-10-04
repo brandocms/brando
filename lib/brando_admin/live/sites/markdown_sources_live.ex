@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
       />
       <div :if={@notice} role="status" class="markdown-source-notice">{@notice}</div>
       <section :if={@connections == []} class="markdown-connection-notice">
-        <Brando.HTML.Icon.icon name="hero-code-bracket" />
+        <Brando.HTML.Icon.icon name="code" />
         <div>
           <h2>{gettext("A developer needs to connect your repository")}</h2>
           <p>
@@ -62,7 +62,7 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
       <div class="markdown-sources-workspace">
         <section class="markdown-source-panel markdown-source-setup">
           <div class="markdown-panel-heading">
-            <Brando.HTML.Icon.icon name="hero-document-plus" /><h2>
+            <Brando.HTML.Icon.icon name="file-plus" /><h2>
               {if @source.id, do: gettext("Edit source"), else: gettext("Add a source")}
             </h2>
           </div>
@@ -190,12 +190,12 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
         </section>
         <section class="markdown-source-panel markdown-documents">
           <div class="markdown-panel-heading">
-            <Brando.HTML.Icon.icon name="hero-document-text" /><h2>{gettext("Connected documents")}</h2><span class="workspace-badge">{length(
+            <Brando.HTML.Icon.icon name="file-text" /><h2>{gettext("Connected documents")}</h2><span class="workspace-badge">{length(
               @sources
             )}</span>
           </div>
           <div :if={@sources == []} class="workspace-empty">
-            <Brando.HTML.Icon.icon name="hero-document-text" /><h3>{gettext("No documents connected yet")}</h3>
+            <Brando.HTML.Icon.icon name="file-text" /><h3>{gettext("No documents connected yet")}</h3>
             <p>{gettext("Add a file or choose a folder. Each document becomes a source you can use in a content block.")}</p>
           </div>
           <article :for={source <- @sources} id={"markdown-source-#{source.id}"} class="markdown-source-row">

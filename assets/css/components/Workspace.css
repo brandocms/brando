@@ -21,6 +21,8 @@
   :is(button, input, select, textarea, a, summary, [tabindex]):focus-visible { outline: 2px solid var(--workspace-accent); outline-offset: 3px; }
   .workspace-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--workspace-line); }
   .workspace-heading > div:first-child { min-width: 0; }
+  /* The blueprint's icon leads the listing title, a step quieter than the text. */
+  :is(.workspace-heading-icon, .content-header-icon) { width: .8em; height: .8em; margin-right: .3em; vertical-align: -.08em; color: var(--workspace-muted); }
   .workspace-heading p { margin-top: 8px; font-size: 13px; color: var(--workspace-muted); }
   .workspace-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
   > #content-header {

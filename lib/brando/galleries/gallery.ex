@@ -17,6 +17,8 @@ defmodule Brando.Galleries.Gallery do
   alias BrandoAdmin.Components.Image
   import Ecto.Query, only: [from: 2]
 
+  content_icon "gallery-horizontal-end"
+
   trait :timestamped
   trait :soft_delete
 

@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.ImageFocal do
           class="media-button image-focal-edit"
           phx-click={JS.push("open_own_image_editor", target: @form_cid) |> open_image_editor_drawer()}
         >
-          <.icon name="hero-scissors" />{gettext("Edit/Crop")}
+          <.icon name="scissors" />{gettext("Edit/Crop")}
         </button>
       </Primitives.field_base>
     </fieldset>

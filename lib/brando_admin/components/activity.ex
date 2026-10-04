@@ -310,17 +310,17 @@ defmodule BrandoAdmin.Components.Activity do
   defp avatar_tone(_), do: nil
 
   defp source(%{source: :scheduler} = event),
-    do: %{icon: "hero-clock", label: gettext("Scheduled publishing"), caption: by(event, :scheduler)}
+    do: %{icon: "clock", label: gettext("Scheduled publishing"), caption: by(event, :scheduler)}
 
   defp source(%{source: :assistant} = event),
-    do: %{icon: "hero-sparkles", label: gettext("Assistant"), caption: by(event, :assistant)}
+    do: %{icon: "sparkles", label: gettext("Assistant"), caption: by(event, :assistant)}
 
   defp source(%{source: :import} = event),
-    do: %{icon: "hero-arrow-down-tray", label: gettext("Content transfer"), caption: by(event, :import)}
+    do: %{icon: "download", label: gettext("Content transfer"), caption: by(event, :import)}
 
-  defp source(%{source: :system, user: nil}), do: %{icon: "hero-cog-6-tooth", label: gettext("System"), caption: nil}
+  defp source(%{source: :system, user: nil}), do: %{icon: "settings", label: gettext("System"), caption: nil}
   # Made by hand by a user whose account has since been removed.
-  defp source(%{user: nil}), do: %{icon: "hero-user", label: gettext("Deleted user"), caption: nil}
+  defp source(%{user: nil}), do: %{icon: "user", label: gettext("Deleted user"), caption: nil}
   defp source(_), do: nil
 
   defp by(%{user: nil}, _), do: nil

@@ -631,8 +631,8 @@ defmodule BrandoAdmin.Users.GroupsLive do
       phx-value-resource={@resource}
     >
       <span class="authorization-row-check" aria-hidden="true">
-        <svg :if={@state == "true"} viewBox="0 0 16 16"><path d="m3 8 3 3 7-7" /></svg>
-        <svg :if={@state == "mixed"} viewBox="0 0 16 16"><path d="M3 8h10" /></svg>
+        <.icon :if={@state == "true"} name="check" />
+        <.icon :if={@state == "mixed"} name="minus" />
       </span><span>{@label}</span>
     </button>
     """

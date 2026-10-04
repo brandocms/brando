@@ -153,7 +153,7 @@ defmodule BrandoAdmin.Forms.SubmissionsLive do
         id="submission-detail"
         title={gettext("Submission")}
         subtitle={received(@selected)}
-        icon="hero-inbox"
+        icon="inbox"
         show
         close={JS.push("close")}
         medium

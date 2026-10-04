@@ -211,12 +211,17 @@ figcaption.tiny {
       font-size: 15px;
     }
 
-    svg {
+    :is(svg, [data-icon]) {
       margin-left: auto;
       margin-right: auto;
       user-select: none;
       pointer-events: none;
       width: 200px;
+
+      &.icon-add-image,
+      &.icon-add-file {
+        height: 200px;
+      }
 
       path:nth-of-type(2),
       .plus,
@@ -697,10 +702,10 @@ figcaption.tiny {
     color: azure;
   }
 
-  .img-placeholder .placeholder-wrapper .hero-video-camera {
+  .img-placeholder .placeholder-wrapper .lucide-video {
     width: 75px;
     height: 75px;
-    background-color: azure;
+    color: azure;
   }
 
   .switch .slider {

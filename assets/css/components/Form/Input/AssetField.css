@@ -82,7 +82,7 @@
     }
 
     /* Matches the 24px inline SVGs the image and file fields use. */
-    span[class^="hero-"] {
+    [data-icon] {
       width: 24px;
       height: 24px;
       opacity: 0.7;

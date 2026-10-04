@@ -328,7 +328,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         wide
         light
         workspace
-        icon="hero-photo"
+        icon="image"
         subtitle={
           if @picker_mode == :block_upload,
             do: gettext("Choose where to store these images."),
@@ -431,7 +431,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   {@upload_target}
                 >
                   <button type="button" class="folder-action upload-trigger">
-                    <.icon name="hero-arrow-up-tray" />{gettext("Upload here")}
+                    <.icon name="upload" />{gettext("Upload here")}
                   </button>
                   <input type="file" class="file-input" multiple accept="image/*" aria-label={gettext("Upload images")} />
                 </div>
@@ -450,7 +450,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
           >
             <%= if @image_count == 0 do %>
               <div class="image-picker-empty">
-                <.icon name="hero-photo" />
+                <.icon name="image" />
                 <h4>{gettext("No images in this folder")}</h4>
                 <p>{gettext("Choose another folder to find an image")}</p>
               </div>
@@ -462,7 +462,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
               draggable="true"
               title={gettext("Drag to a folder")}
             >
-              <.icon name="hero-arrows-pointing-out" />
+              <.icon name="maximize-2" />
               <span>
                 {ngettext(
                   "%{count} image selected for organizing",
@@ -621,7 +621,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
       phx-value-id={@image.id}
     >
       <span class="image-picker__selected-indicator" aria-hidden="true">
-        <.icon name="hero-check-mini" />
+        <.icon name="check" />
       </span>
       <Content.image image={@image} size={:smallest} />
       <div class="image-picker__info">
@@ -640,7 +640,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
             phx-click={toggle_dropdown("##{@menu_id}")}
             phx-click-away={hide_dropdown("##{@menu_id}")}
           >
-            <.icon name="hero-ellipsis-horizontal-circle" />
+            <.icon name="circle-ellipsis" />
           </button>
           <ul id={@menu_id} class="image-picker-action-dropdown hidden">
             <li>
@@ -653,7 +653,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   |> open_image_editor_drawer()
                 }
               >
-                <.icon name="hero-pencil-square" />
+                <.icon name="square-pen" />
                 {gettext("Edit image")}
               </button>
             </li>
@@ -667,7 +667,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   |> hide_dropdown("##{@menu_id}")
                 }
               >
-                <.icon name="hero-trash" />
+                <.icon name="trash" />
                 {gettext("Delete image")}
               </button>
             </li>

@@ -139,16 +139,16 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         label={if @asset, do: gettext("Change"), else: gettext("Add")}
       >
         <button :if={@upload_enabled?} type="button" class="upload-trigger">
-          <.icon name="hero-arrow-up-tray" />{if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
+          <.icon name="upload" />{if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
         </button>
-        <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{@browse_label}</button>
-        <button :if={@link} type="button" phx-click={@link}><.icon name="hero-link" />{gettext("Add from URL")}</button>
+        <button :if={@browse} type="button" phx-click={@browse}><.icon name="folder" />{@browse_label}</button>
+        <button :if={@link} type="button" phx-click={@link}><.icon name="link" />{gettext("Add from URL")}</button>
         <button :if={@configure && (@asset || !@upload_enabled?)} type="button" phx-click={@configure}>
-          <.icon name="hero-adjustments-horizontal" />{gettext("Configure")}
+          <.icon name="sliders-horizontal" />{gettext("Configure")}
         </button>
         {render_slot(@actions)}
         <button :if={@asset && @remove} type="button" class="destructive" phx-click={@remove}>
-          <.icon name="hero-trash" />{gettext("Remove")}
+          <.icon name="trash" />{gettext("Remove")}
         </button>
         <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
       </.action_menu>
@@ -157,13 +157,13 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
               the same as the asset's own actions do once it has been filled. --%>
         <div :if={!@asset && (@upload_enabled? || @browse || @link)} class="media-field-split">
           <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
-            <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+            <.icon name="upload" />{gettext("Upload")}
           </button>
           <button :if={@browse} type="button" class="media-button" phx-click={@browse}>
-            <.icon name="hero-folder" />{@browse_label}
+            <.icon name="folder" />{@browse_label}
           </button>
           <button :if={@link} type="button" class="media-button" phx-click={@link}>
-            <.icon name="hero-link" />{gettext("Add from URL")}
+            <.icon name="link" />{gettext("Add from URL")}
           </button>
         </div>
         <%!-- A filled field's own actions are one segmented control too. The
@@ -184,7 +184,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
             {gettext("Upload replacement")}
           </button>
           <button :if={@asset && @browse} type="button" class="media-button" phx-click={@browse}>
-            <.icon name="hero-folder" />{@browse_label}
+            <.icon name="folder" />{@browse_label}
           </button>
         </div>
         <%!-- On a block the asset's own controls — configure, whatever the caller
@@ -208,14 +208,14 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
             data-placement={if @type == :image && @actions != [], do: "bottom-end", else: "bottom-start"}
           >
             <button type="button" class="media-button" popovertarget={"#{@id}-replace-menu"} aria-expanded="false">
-              {gettext("Replace")}<.icon name="hero-chevron-down-mini" />
+              {gettext("Replace")}<.icon name="chevron-down" />
             </button>
             <div id={"#{@id}-replace-menu"} class="media-field-menu" popover="auto">
-              <button :if={@upload_enabled?} type="button" class="upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext(
+              <button :if={@upload_enabled?} type="button" class="upload-trigger"><.icon name="upload" />{gettext(
                 "Upload replacement"
               )}</button>
-              <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{@browse_label}</button>
-              <button :if={@link} type="button" phx-click={@link}><.icon name="hero-link" />{gettext("Add from URL")}</button>
+              <button :if={@browse} type="button" phx-click={@browse}><.icon name="folder" />{@browse_label}</button>
+              <button :if={@link} type="button" phx-click={@link}><.icon name="link" />{gettext("Add from URL")}</button>
               <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
             </div>
           </div>
@@ -235,14 +235,14 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         :if={@choose_folder? && (@presentation == :field || (@presentation == :block && !@asset))}
         class="media-field-destination"
       >
-        <.icon name="hero-folder" />
+        <.icon name="folder" />
         <span>{gettext("Saved in")}</span>
         <span data-media-destination>{@folder}</span>
         <.change_folder_button />
       </div>
       <div id={"#{@id}-progress"} class="media-field-progress" phx-update="ignore" role="status" aria-live="polite"></div>
       <div class="media-field-drop" aria-hidden="true">
-        <.icon name="hero-arrow-up-tray" />
+        <.icon name="upload" />
         <div>
           <span>{@drop_label}</span>
           <span :if={@upload_enabled?} class="media-field-drop-destination" data-media-destination>
@@ -261,7 +261,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp folder_note(assigns) do
     ~H"""
     <p class="media-field-menu-note">
-      <.icon name="hero-folder" />
+      <.icon name="folder" />
       <span data-media-destination>{@folder}</span>
       <.change_folder_button :if={@choose_folder?} />
     </p>
@@ -291,7 +291,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
     ~H"""
     <div id={@id} class="media-field-replace media-action-menu" phx-hook="Brando.FloatingDropdown" data-placement={@placement}>
       <button type="button" class="media-button" popovertarget={"#{@id}-menu"} aria-expanded="false">
-        {@label}<.icon name="hero-chevron-down-mini" />
+        {@label}<.icon name="chevron-down" />
       </button>
       <div id={"#{@id}-menu"} class="media-field-menu" popover="auto">
         {render_slot(@inner_block)}
@@ -408,9 +408,9 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp browse_label(:video), do: gettext("Select video")
   defp browse_label(_file), do: gettext("Select file")
 
-  defp media_icon(:image), do: "hero-photo"
-  defp media_icon(:file), do: "hero-document"
-  defp media_icon(:video), do: "hero-film"
+  defp media_icon(:image), do: "image"
+  defp media_icon(:file), do: "file"
+  defp media_icon(:video), do: "film"
 
   # What the image says to someone who can't see it: its alt text in the
   # default language (or the first it has), and the content languages that

@@ -79,7 +79,7 @@
         color: #2e7d32;
         flex-shrink: 0;
 
-        [class^='hero-'] {
+        [data-icon] {
           width: 16px;
           height: 16px;
         }
@@ -100,7 +100,7 @@
           opacity: 1;
         }
 
-        [class^='hero-'] {
+        [data-icon] {
           width: 16px;
           height: 16px;
         }

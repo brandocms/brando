@@ -155,7 +155,7 @@
   .authorization-row-check {
     display: inline-flex; align-items: center; justify-content: center; flex: 0 0 15px;
     width: 15px; height: 15px; border: 1px solid #8b968e; border-radius: 3px; background: #fff;
-    svg { display: block; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    [data-icon] { display: block; width: 13px; height: 13px; }
   }
   .authorization-row-toggle[aria-checked='true'] .authorization-row-check { border-color: var(--access-accent); background: var(--access-accent); color: #fff; }
   .authorization-row-toggle[aria-checked='mixed'] .authorization-row-check { border-color: var(--access-accent); background: var(--access-selected); color: var(--access-accent); }

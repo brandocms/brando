@@ -14,6 +14,15 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
 
+- **Admin icons are Lucide.** Heroicons and `assets/css/heroicons.css` are
+  gone. `<.icon name="…" />` now renders `<span data-icon class="lucide-name">`,
+  masked by a stylesheet Brando generates from the vendored Lucide set.
+  `admin_routes` serves it at `/__brando/icons` and the admin layouts link it,
+  so routers need no change. Old `hero-*` names still render through a legacy
+  map (`Brando.Icons.resolve/1`), but use Lucide names in new code. App CSS
+  that targets `[class^="hero-"]` or `.hero-*` must target `[data-icon]` or
+  `.lucide-name` instead; colour icons with `color`.
+
 - **Image configs with a mistyped size key or a `srcset` naming a missing
   size no longer compile.** Brando used to ignore unknown keys in a size such
   as `"crp" => true`, and a `srcset` naming a size `sizes` doesn't have only
@@ -466,6 +475,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   Not yet done: associating a field's `help-text` instructions with its control.
 
 #### Features
+
+- **Blueprints and sidebar items have icons.** A blueprint sets one with
+  `content_icon "folder-kanban"` (a Lucide name, checked at compile time).
+  The sidebar, dashboard shortcuts, link picker, entry identifiers and listing
+  headers (`<Workspace.header icon={@page_icon}>`) show it. Every sidebar row
+  now leads with an icon; `menu_item` and `menu_subitem` take `icon:` for
+  items that aren't blueprints, and items without one show a dot.
 
 - **Image sizes are checked when a Blueprint compiles, can start from a
   preset, and only changed images need recreating** (#1322). A size entry with

@@ -15,6 +15,8 @@ defmodule E2eProject.Projects.Client do
 
   alias E2eProject.Projects
 
+  content_icon "handshake"
+
   trait Brando.Trait.Creator
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped

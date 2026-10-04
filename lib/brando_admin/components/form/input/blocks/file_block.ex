@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
           config_layout="editor"
           config_title={gettext("Configure file")}
           config_subtitle={@ref_description || gettext("Settings for this use of the file")}
-          config_icon="hero-document"
+          config_icon="file"
         >
           <:description>
             {@ref_description || (@file && (@block_data.label || @block_data.title || @file.title || @file.filename)) ||
@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
 
           <:config>
             <Content.modal_sections id={"file-#{@uid}-config-sections"}>
-              <:section id="settings" label={gettext("Link & behavior")} icon="hero-link">
+              <:section id="settings" label={gettext("Link & behavior")} icon="link">
                 <div class="media-section-heading">
                   <h3 class="modal-section-title">{gettext("Link & behavior")}</h3>
                   <p class="modal-muted">{gettext("These settings apply to this use of the file.")}</p>
@@ -113,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
                 <Input.toggle field={block_data[:download]} label={gettext("Download instead of open")} />
                 <Input.input type={:hidden} field={block_data[:config_target]} />
               </:section>
-              <:section id="file" label={gettext("File")} icon="hero-document">
+              <:section id="file" label={gettext("File")} icon="file">
                 <div class="media-section-heading">
                   <h3 class="modal-section-title">{gettext("Selected file")}</h3>
                 </div>

@@ -190,7 +190,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                     )
                   }
                 >
-                  <.icon name={if entry_open?(sub_form, @open_entries), do: "hero-chevron-up", else: "hero-pencil-square"} />
+                  <.icon name={if entry_open?(sub_form, @open_entries), do: "chevron-up", else: "square-pen"} />
                   {if entry_open?(sub_form, @open_entries), do: gettext("Done"), else: gettext("Edit")}
                 </button>
               </div>
@@ -223,12 +223,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   def subentry_add(assigns) do
     ~H"""
     <button type="button" class="add-entry-button" phx-click={@on_click}>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-        <path fill="none" d="M0 0h24v24H0z" /><path
-          d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z"
-          fill="rgba(252,245,243,1)"
-        />
-      </svg>
+      <.icon name="list-plus" />
       {gettext("Add entry")}
     </button>
     """
@@ -237,21 +232,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   def sort_by_filename(assigns) do
     ~H"""
     <button type="button" class="add-entry-button" phx-click={@on_click}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        width="16"
-        height="16"
-        stroke-width="1.5"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"
-        />
-      </svg>
+      <.icon name="arrow-down-a-z" />
       {gettext("Sort by filename")}
     </button>
     """
@@ -260,7 +241,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   def subentry_sequence(assigns) do
     ~H"""
     <button type="button" class="subform-handle" aria-label={gettext("Reorder entry")}>
-      <.icon name="hero-arrows-up-down" />
+      <.icon name="arrow-up-down" />
     </button>
     """
   end
@@ -273,38 +254,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
       phx-click={@on_click}
       aria-label={if @open, do: gettext("Close entry"), else: gettext("Edit entry")}
     >
-      <svg
-        :if={!@open}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        width="16"
-        height="16"
-        stroke-width="1.5"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-        />
-      </svg>
-      <svg
-        :if={@open}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        width="16"
-        height="16"
-        stroke-width="1.5"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <.icon :if={!@open} name="square-pen" />
+      <.icon :if={@open} name="circle-x" />
     </button>
     """
   end
@@ -322,7 +273,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       class="subform-delete"
       aria-label={gettext("Remove entry")}
     >
-      <.icon name="hero-x-mark" />
+      <.icon name="x" />
     </button>
     """
   end

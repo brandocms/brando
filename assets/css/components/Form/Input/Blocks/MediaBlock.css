@@ -25,14 +25,9 @@
     figure {
       @space margin-bottom 35px;
 
-      svg {
+      :is(svg, [data-icon]) {
         width: 200px;
-
-        path:nth-of-type(2),
-        .plus,
-        circle {
-          fill: var(--brando-color-dark);
-        }
+        height: 200px;
       }
     }
 

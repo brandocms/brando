@@ -4,7 +4,7 @@ defmodule E2eProjectAdmin.SyncTest.ArticleListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title="Articles" subtitle="Synchronized translations" />
+    <Content.header icon={@page_icon} title="Articles" subtitle="Synchronized translations" />
 
     <.live_component
       module={Content.List}

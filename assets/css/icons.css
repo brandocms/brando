@@ -1,0 +1,25 @@
+/*
+ * Lucide icons, rendered by `Brando.HTML.Icon.icon/1` (and `Icon.svelte`) as
+ * `<span data-icon class="lucide-name">`. The stylesheet `Brando.Icons`
+ * generates (linked by the admin layouts) masks each one and sizes it at
+ * zero specificity, so any component rule wins.
+ *
+ * Size with width/height and colour with `color`.
+ */
+[data-icon] {
+  &.xs {
+    width: 12px;
+    height: 12px;
+  }
+  &.s {
+    width: 16px;
+    height: 16px;
+  }
+  &.m {
+    width: 18px;
+    height: 18px;
+  }
+  &.mr {
+    margin-right: 5px;
+  }
+}

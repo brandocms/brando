@@ -49,7 +49,7 @@
   .brando-form .subform-entry.inline:not(:first-of-type) .label-wrapper { margin-bottom: 0; }
   .brando-form .subform-tools button { min-height: 26px; padding: 5px; background: #edf3e9; color: #3d5c48; }
   .brando-form .subform-tools button:hover { background: #e2ecdd; }
-  .brando-form .subform-tools button [data-icon] { background-color: currentColor; }
+  .brando-form .subform-tools button [data-icon] { }
   /* A button in a media group takes the group's size and corners. */
   .brando-form button.primary:not(.media-button), .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
   .brando-form button.primary:not(.media-button, .submit-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
@@ -73,7 +73,7 @@
   .seo-not-found td:first-child { overflow-wrap: anywhere; }
   .seo-not-found-action { width: 1%; text-align: right; white-space: nowrap; }
   .seo-not-found-action .seo-row-action { display: inline-flex; align-items: center; gap: 4px; color: var(--workspace-ink); }
-  .seo-not-found-action [class^="hero-"] { width: 14px; height: 14px; }
+  .seo-not-found-action [data-icon] { width: 14px; height: 14px; }
   .seo-not-found-added { display: inline-flex; align-items: center; gap: 4px; color: #48613f; font-size: 12px; }
   .seo-not-found-probes { border-top: 1px solid var(--workspace-line); }
   .seo-not-found-probes > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 14px 16px; cursor: pointer; list-style: none; color: var(--workspace-ink); font-size: 14px; line-height: 20px; }

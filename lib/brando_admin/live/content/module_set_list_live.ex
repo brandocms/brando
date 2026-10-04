@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Content.ModuleSetListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Block module sets")} subtitle={gettext("Overview")}>
+    <Content.header icon={@page_icon} title={gettext("Block module sets")} subtitle={gettext("Overview")}>
       <.link :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} navigate={@admin_create_url} class="primary">
         {gettext("Create new")}
       </.link>

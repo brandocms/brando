@@ -436,7 +436,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   defp video_placeholder(assigns) do
     ~H"""
     <div class="video-placeholder">
-      <.icon name="hero-video-camera" />
+      <.icon name="video" />
     </div>
     """
   end

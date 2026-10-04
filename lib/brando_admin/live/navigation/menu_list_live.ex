@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace navigation-workspace">
-      <Workspace.header title={gettext("Navigation")}>
+      <Workspace.header icon={@page_icon} title={gettext("Navigation")}>
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate="/admin/config/navigation/menus/create"

@@ -360,7 +360,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           </div>
           <div class="block-slot-content">
             <div :if={@block_list == []} class="block-slot-empty">
-              <.icon name="hero-squares-2x2" />
+              <.icon name="layout-grid" />
               <h3>{gettext("Make room for more")}</h3>
               <p>{gettext("Add text, a source or supporting media from this collection’s module set.")}</p>
             </div>
@@ -377,7 +377,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <.plus click={JS.push("insert_slot_block", target: @myself)} modal={@module_picker_id} />
           </div>
           <footer class="block-slot-footer">
-            <.icon name="hero-document-check" /><span>{gettext("Changes are saved with this entry.")}</span>
+            <.icon name="file-check" /><span>{gettext("Changes are saved with this entry.")}</span>
           </footer>
         </div>
       </section>
@@ -641,7 +641,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 <div class="block-fragment-wrapper">
                   <div class="fragment-info" phx-click="show_fragment_instructions" phx-target={@target}>
                     <div class="icon">
-                      <span class="hero-puzzle-piece"></span>
+                      <.icon name="puzzle" />
                     </div>
                     <div class="info">
                       <span class="fragment-label">
@@ -1277,7 +1277,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       :if={@open}
       title={gettext("Configure block")}
       subtitle={@block_form[:description].value}
-      icon="hero-squares-2x2"
+      icon="layout-grid"
       layout="editor"
       id={"block-#{@uid}_config"}
       show={true}
@@ -1285,7 +1285,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       wide={true}
     >
       <Content.modal_sections id={"block-#{@uid}-config-sections"}>
-        <:section id="settings" label={gettext("Settings")} icon="hero-adjustments-horizontal">
+        <:section id="settings" label={gettext("Settings")} icon="sliders-horizontal">
           <h3 class="modal-section-title">{gettext("Block settings")}</h3>
           <Input.text
             field={@block_form[:description]}
@@ -1306,7 +1306,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             UID: <span class="text-mono">{@uid}</span>
           </div>
         </:section>
-        <:section id="variables" label={gettext("Variables")} icon="hero-code-bracket">
+        <:section id="variables" label={gettext("Variables")} icon="code">
           <h3 class="modal-section-title">{gettext("Variables")}</h3>
           <div class="modal-maintenance-list">
             <.inputs_for :let={var} field={@block_form[:vars]}>
@@ -1334,7 +1334,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </.inputs_for>
           </div>
         </:section>
-        <:section id="references" label={gettext("References")} icon="hero-squares-2x2">
+        <:section id="references" label={gettext("References")} icon="layout-grid">
           <h3 class="modal-section-title">{gettext("References")}</h3>
           <div class="modal-maintenance-list">
             <.inputs_for :let={ref} field={@block_form[:refs]}>
@@ -1352,7 +1352,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </.inputs_for>
           </div>
         </:section>
-        <:section id="advanced" label={gettext("Advanced")} icon="hero-cog-6-tooth">
+        <:section id="advanced" label={gettext("Advanced")} icon="settings">
           <h3 class="modal-section-title">{gettext("Advanced")}</h3>
           <div class="button-group-vertical">
             <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @target)}>
@@ -1657,7 +1657,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   def handle(assigns) do
     ~H"""
     <div class="sort-handle block-action" data-sortable-group={1} data-popover={gettext("Reposition block (click&drag)")}>
-      <.icon name="hero-arrows-up-down" />
+      <.icon name="arrow-up-down" />
     </div>
     """
   end
@@ -1769,7 +1769,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :config_layout, :string, default: nil
   attr :config_title, :string, default: nil
   attr :config_subtitle, :string, default: nil
-  attr :config_icon, :string, default: "hero-adjustments-horizontal"
+  attr :config_icon, :string, default: "sliders-horizontal"
   attr :type, :any
   attr :block_type, :any
   attr :is_datasource?, :boolean, default: false
@@ -2169,12 +2169,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         phx-target={@target}
         phx-value-ref_name={@ref_name}
       >
-        <span class="block-region-icon" aria-hidden="true"><.icon name="hero-rectangle-group" /></span>
+        <span class="block-region-icon" aria-hidden="true"><.icon name="group" /></span>
         <span class="block-region-copy">
           <span class="block-region-label">{@ref_description || @ref_name}</span>
           <span class="block-region-hint">{gettext("Edit blocks")} · {data[:module_set].value}</span>
         </span>
-        <span class="block-region-arrow" aria-hidden="true"><.icon name="hero-arrow-up-right" /></span>
+        <span class="block-region-arrow" aria-hidden="true"><.icon name="arrow-up-right" /></span>
       </button>
     </.inputs_for>
     """
@@ -2355,7 +2355,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         data-ui-modal-show={@modal}
         aria-label={gettext("Add block")}
       >
-        <.icon name="hero-plus" />
+        <.icon name="plus" />
       </button>
       <button
         :if={@paste_ctx}
@@ -2367,7 +2367,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         aria-label={gettext("Paste block here")}
         data-popover={gettext("Paste block here")}
       >
-        <.icon name="hero-clipboard-document-check" />
+        <.icon name="clipboard-check" />
       </button>
     </div>
     """
@@ -2457,7 +2457,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div :if={@rows != [] or @hidden_forms != []} class="block-vars-wrapper">
       <div :if={@rows != []} class="vars-info" phx-click="show_vars_instructions" phx-target={@target}>
         <div class="icon">
-          <span class="hero-variable-mini"></span>
+          <.icon name="variable" />
         </div>
         <div class="info">
           <span class="vars-label">
@@ -2745,7 +2745,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           role="button"
           aria-label={gettext("Show instructions")}
         >
-          <.icon name="hero-question-mark-circle" />
+          <.icon name="circle-question-mark" />
         </div>
         <button
           :if={@is_ref? && @config}
@@ -2757,7 +2757,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           data-popover={gettext("Configure block")}
           aria-label={gettext("Configure block")}
         >
-          <.icon name="hero-cog-8-tooth" />
+          <.icon name="cog" />
         </button>
         <Primitives.label
           field={@collapsed_field}
@@ -2769,8 +2769,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 click shows at once instead of after the validate round trip.
                 `uiCommands.js` flips the block's `collapsed` class the same way. --%>
           <Input.input type={:checkbox} field={@collapsed_field} />
-          <.icon name="hero-eye-slash" class="when-collapsed" />
-          <.icon name="hero-eye" class="when-expanded" />
+          <.icon name="eye-off" class="when-collapsed" />
+          <.icon name="eye" class="when-expanded" />
         </Primitives.label>
 
         <div
@@ -2814,34 +2814,34 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         data-popover={gettext("More actions")}
         aria-label={gettext("More actions")}
       >
-        <.icon name="hero-ellipsis-horizontal-circle" />
+        <.icon name="circle-ellipsis" />
       </button>
       <ul class="block-action-dropdown-content hidden" id={@dropdown_id}>
         <li :if={@instructions}>
           <button type="button" phx-click="toggle_help" phx-target={@target}>
-            <.icon name="hero-question-mark-circle" /> {gettext("Instructions")}
+            <.icon name="circle-question-mark" /> {gettext("Instructions")}
           </button>
         </li>
         <li :if={@config}>
           <button type="button" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
-            <.icon name="hero-cog-8-tooth" /> {gettext("Configure")}
+            <.icon name="cog" /> {gettext("Configure")}
           </button>
         </li>
         <li>
           <%!-- `handle_block_event/3` reads the uid off the component's own assigns, so
                the old `value: %{block_uid: @uid}` never reached anything. --%>
           <button type="button" phx-click="duplicate_block" phx-target={@target}>
-            <.icon name="hero-document-duplicate" /> {gettext("Duplicate here")}
+            <.icon name="copy" /> {gettext("Duplicate here")}
           </button>
         </li>
         <li>
           <button type="button" phx-click="copy_block" phx-target={@target}>
-            <.icon name="hero-clipboard-document" /> {gettext("Copy to clipboard")}
+            <.icon name="clipboard" /> {gettext("Copy to clipboard")}
           </button>
         </li>
         <li>
           <button type="button" phx-click="delete_block" phx-target={@target}>
-            <.icon name="hero-trash" /> {gettext("Delete")}
+            <.icon name="trash" /> {gettext("Delete")}
           </button>
         </li>
       </ul>
@@ -2868,7 +2868,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div class="table-block-wrapper">
       <div class="table-info" phx-click="show_table_instructions" phx-target={@target}>
         <div class="icon">
-          <span class="hero-table-cells"></span>
+          <.icon name="table" />
         </div>
         <div class="info">
           <span class="table-label">
@@ -2912,7 +2912,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 <input type="hidden" name={"#{@block_data.name}[sort_table_row_ids][]"} value={table_row.index} />
                 <div class="subform-tools">
                   <button type="button" class="sort-handle">
-                    <.icon name="hero-arrows-up-down" />
+                    <.icon name="arrow-up-down" />
                   </button>
                   <button
                     type="button"
@@ -2921,7 +2921,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                     value={table_row.index}
                     phx-click={JS.dispatch("change")}
                   >
-                    <.icon name="hero-x-mark" />
+                    <.icon name="x" />
                   </button>
                 </div>
 
@@ -2985,7 +2985,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         title={"#{@module_datasource_type} · #{@module_datasource_query}"}
       >
         <div class="icon">
-          <.icon name="hero-circle-stack" />
+          <.icon name="database" />
         </div>
         <div class="info">
           <strong class="datasource-title">{datasource_title(@module_datasource_type, @module_datasource_module_label)}</strong>
@@ -3048,7 +3048,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                     aria-label={gettext("Remove")}
                     data-sortable-filter
                   >
-                    <.icon name="hero-x-mark" />
+                    <.icon name="x" />
                   </button>
                 </:delete>
                 <:meta :let={identifier} :if={@datasource_meta not in [nil, []]}>
@@ -3176,7 +3176,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             |> JS.focus_first(to: "##{@dom_prefix}-#{field.key}")
           }
         >
-          <.icon name="hero-plus" /> {field.label}
+          <.icon name="plus" /> {field.label}
         </button>
       </div>
     </div>

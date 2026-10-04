@@ -8,7 +8,11 @@ defmodule BrandoAdmin.Galleries.GalleryListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace content-workspace workspace-list media-workspace galleries-workspace">
-      <Workspace.header title={gettext("Galleries")} subtitle={gettext("Image and video collections used in your content.")} />
+      <Workspace.header
+        icon={@page_icon}
+        title={gettext("Galleries")}
+        subtitle={gettext("Image and video collections used in your content.")}
+      />
 
       <.live_component
         module={Content.List}

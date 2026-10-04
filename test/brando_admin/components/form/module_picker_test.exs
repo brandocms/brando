@@ -47,11 +47,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePickerTest do
   end
 
   test "icons follow what a module holds" do
-    assert ModulePicker.module_icon(module(1, "a", [ref("header"), ref("text")])) == "hero-bars-3-bottom-left"
-    assert ModulePicker.module_icon(module(1, "a", [ref("gallery")])) == "hero-squares-2x2"
-    assert ModulePicker.module_icon(module(1, "a", [ref("picture"), ref("text")])) == "hero-photo"
-    assert ModulePicker.module_icon(%{module(1, "a") | datasource: true}) == "hero-queue-list"
-    assert ModulePicker.module_icon(%{module(1, "a") | multi: true}) == "hero-rectangle-stack"
-    assert ModulePicker.module_icon(%{id: 1, refs: %Ecto.Association.NotLoaded{}}) == "hero-cube"
+    assert ModulePicker.module_icon(module(1, "a", [ref("header"), ref("text")])) == "text-align-start"
+    assert ModulePicker.module_icon(module(1, "a", [ref("gallery")])) == "layout-grid"
+    assert ModulePicker.module_icon(module(1, "a", [ref("picture"), ref("text")])) == "image"
+    assert ModulePicker.module_icon(%{module(1, "a") | datasource: true}) == "list"
+    assert ModulePicker.module_icon(%{module(1, "a") | multi: true}) == "layers"
+    assert ModulePicker.module_icon(%{id: 1, refs: %Ecto.Association.NotLoaded{}}) == "box"
   end
 end

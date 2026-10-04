@@ -51,12 +51,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Thumb do
           <img width="25" height="25" src={@thumb_url} />
         <% else %>
           <div class="img-placeholder">
-            <.icon name="hero-video-camera" />
+            <.icon name="video" />
           </div>
         <% end %>
       <% end %>
       <button :if={@remove} type="button" class="delete-object" data-sortable-filter phx-click={@remove}>
-        <.icon name="hero-x-mark" />
+        <.icon name="x" />
       </button>
       <button
         :if={!@remove}
@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Thumb do
         data-sortable-filter
         phx-click={JS.dispatch("change")}
       >
-        <.icon name="hero-x-mark" />
+        <.icon name="x" />
       </button>
     </div>
     """

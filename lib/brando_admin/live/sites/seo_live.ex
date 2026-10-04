@@ -151,10 +151,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
             <td class="workspace-mono">{item.url}</td><td>{item.hits}</td><td>{item.last_hit_at}</td>
             <td :if={@redirectable} class="seo-not-found-action">
               <%= if MapSet.member?(@redirect_drafts, item.url) do %>
-                <span class="seo-not-found-added"><.icon name="hero-check-mini" />{gettext("Added above")}</span>
+                <span class="seo-not-found-added"><.icon name="check" />{gettext("Added above")}</span>
               <% else %>
                 <button type="button" class="seo-row-action" phx-click="redirect_404" phx-value-url={item.url}>
-                  <.icon name="hero-arrow-uturn-right-mini" />{gettext("Redirect")}
+                  <.icon name="redo-2" />{gettext("Redirect")}
                 </button>
               <% end %>
             </td>
@@ -756,7 +756,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   # fields does.
   defp ai_icon(assigns) do
     ~H"""
-    <Brando.HTML.Icon.icon name="hero-sparkles" class="ai-icon" />
+    <Brando.HTML.Icon.icon name="sparkles" class="ai-icon" />
     """
   end
 

@@ -57,7 +57,9 @@ test.describe('HEEx blocks', () => {
     await expect(published.locator('h3')).toHaveCount(0)
     await expect(published.locator('.heex-route')).toHaveText('/about/team')
     await expect(published.locator('.heex-translation')).toHaveText('Translated')
-    await expect(published.getByRole('region', { name: 'Video Player' })).toBeVisible()
+    // The element, not Chrome's accessibility role for <video controls>: that
+    // mapping changes between Chrome versions.
+    await expect(published.locator('video[controls]')).toBeVisible()
 
     await headline.fill('Live HEEx update')
     await waitForPreviewUpdate(page)

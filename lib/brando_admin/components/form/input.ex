@@ -107,7 +107,7 @@ defmodule BrandoAdmin.Components.Form.Input do
               <span class="circle tiny"></span>
               <span class="color-hex"></span>
               <button type="button" class="clear-color">
-                <.icon name="hero-x-circle-mini" />
+                <.icon name="circle-x" />
               </button>
             </div>
           </div>
@@ -448,7 +448,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-click={Phoenix.LiveView.JS.dispatch("brando:tiptap:clear", to: "##{@field.id}-rich-text")}
           title={gettext("Reset to default")}
         >
-          <.icon name="hero-arrow-uturn-left-mini" />
+          <.icon name="undo-2" />
         </button>
       </div>
       <%!-- The default is rich text itself, so it is rendered as markup rather
@@ -521,7 +521,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       <%= if @url do %>
         <div class="badge no-case no-border">
           <a href={@url} target="_blank">
-            <.icon name="hero-globe-alt" />
+            <.icon name="globe" />
           </a>
           {@url}
         </div>
@@ -1019,7 +1019,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           |> JS.focus(to: "##{@field.id}")
         }
       >
-        {@label}: <code>{@field.value}</code> <.icon name="hero-pencil-square" />
+        {@label}: <code>{@field.value}</code> <.icon name="square-pen" />
       </button>
       <div class="disclosed-text-field">
         <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
@@ -1082,7 +1082,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           title={@ai_label}
           aria-label={@ai_label}
         >
-          <.icon name="hero-sparkles" class="icon-default" />
+          <.icon name="sparkles" class="icon-default" />
           <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
             <path
               fill="none"
@@ -1133,7 +1133,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           }
           title={gettext("Reset to default")}
         >
-          <.icon name="hero-arrow-uturn-left-mini" />
+          <.icon name="undo-2" />
         </button>
       </div>
     </Primitives.field_base>
@@ -1183,7 +1183,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-target={@target}
           phx-value-fields={Enum.map_join(@rows, ",", fn {f, _, _, _} -> f.field end)}
         >
-          <.icon name="hero-arrow-uturn-left-mini" />
+          <.icon name="undo-2" />
         </button>
       </legend>
       <div :for={{field, label, default_val, value} <- @rows} class="override-toggle-row">
@@ -1212,7 +1212,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-target={@target}
           phx-value-field={field.field}
         >
-          <.icon name="hero-arrow-uturn-left-mini" />
+          <.icon name="undo-2" />
         </button>
       </div>
     </fieldset>
@@ -1268,7 +1268,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           title={@ai_label}
           aria-label={@ai_label}
         >
-          <.icon name="hero-sparkles" class="icon-default" />
+          <.icon name="sparkles" class="icon-default" />
           <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
             <path
               fill="none"
@@ -1401,7 +1401,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             phx-click={@suggest_event}
             phx-target={@suggest_target}
           >
-            <.icon name="hero-sparkles" /> {gettext("Suggest alt text")}
+            <.icon name="sparkles" /> {gettext("Suggest alt text")}
           </button>
         </div>
         <div

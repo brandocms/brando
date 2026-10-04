@@ -1987,7 +1987,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             phx-target={@myself}
             aria-label={gettext("Dismiss")}
           >
-            <.icon name="hero-x-mark" />
+            <.icon name="x" />
           </button>
         </div>
       </div>
@@ -2026,10 +2026,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             class="block-field-assistant-button"
             data-testid="build-with-ai"
           >
-            <.icon name="hero-sparkles" />{gettext("Build with AI")}
+            <.icon name="sparkles" />{gettext("Build with AI")}
           </.link>
           <button :if={!@entry.id} type="button" class="block-field-assistant-button" disabled>
-            <.icon name="hero-sparkles" />{gettext("Build with AI")}
+            <.icon name="sparkles" />{gettext("Build with AI")}
           </button>
         </div>
       </div>
@@ -2045,7 +2045,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               class="block-field-dropdown-toggle"
               data-ui-dropdown-toggle={"block-field-#{@block_field}-actions-dropdown"}
             >
-              <.icon name="hero-ellipsis-horizontal-circle" />
+              <.icon name="circle-ellipsis" />
             </button>
             <ul
               class="block-field-dropdown-content hidden"
@@ -2060,7 +2060,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                       |> toggle_drawer("#block-field-#{@block_field}-outline")
                     }
                   >
-                    <.icon name="hero-bars-3-bottom-left" /> {gettext("Block outline")}
+                    <.icon name="text-align-start" /> {gettext("Block outline")}
                   </button>
                 </li>
                 <li class="dropdown-separator"></li>
@@ -2070,7 +2070,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                     phx-click="collapse_root_blocks"
                     phx-target={@myself}
                   >
-                    <.icon name="hero-eye-slash" /> {gettext("Collapse root blocks")}
+                    <.icon name="eye-off" /> {gettext("Collapse root blocks")}
                   </button>
                 </li>
                 <li>
@@ -2079,7 +2079,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                     phx-click="expand_root_blocks"
                     phx-target={@myself}
                   >
-                    <.icon name="hero-eye" /> {gettext("Expand root blocks")}
+                    <.icon name="eye" /> {gettext("Expand root blocks")}
                   </button>
                 </li>
                 <li>
@@ -2088,7 +2088,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                     phx-click="collapse_multi_children"
                     phx-target={@myself}
                   >
-                    <.icon name="hero-eye-slash" /> {gettext("Collapse multi blocks")}
+                    <.icon name="eye-off" /> {gettext("Collapse multi blocks")}
                   </button>
                 </li>
                 <li>
@@ -2097,7 +2097,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                     phx-click="expand_multi_children"
                     phx-target={@myself}
                   >
-                    <.icon name="hero-eye" /> {gettext("Expand multi blocks")}
+                    <.icon name="eye" /> {gettext("Expand multi blocks")}
                   </button>
                 </li>
               <% end %>
@@ -2110,7 +2110,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   phx-target={@myself}
                   data-testid="clear-clipboard"
                 >
-                  <.icon name="hero-clipboard-document-check" />
+                  <.icon name="clipboard-check" />
                   {gettext("Clear clipboard")}
                   <span :if={@clipboard_meta.label} class="block-field-clipboard-label">
                     {@clipboard_meta.label}
@@ -2229,7 +2229,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             phx-target={@myself}
             aria-label={gettext("Dismiss")}
           >
-            <.icon name="hero-x-mark" />
+            <.icon name="x" />
           </button>
         </div>
       </div>

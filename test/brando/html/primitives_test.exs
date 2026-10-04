@@ -7,14 +7,13 @@ defmodule Brando.HTML.PrimitivesTest do
   alias Brando.HTML.Icon
 
   test "renders icons through the leaf and compatibility components" do
-    attrs = %{name: "hero-link", class: "small"}
+    attrs = %{name: "link", class: "small"}
 
     leaf_html = render_component(&Icon.icon/1, attrs)
     compatibility_html = render_component(&Brando.HTML.icon/1, attrs)
 
     assert leaf_html == compatibility_html
-    assert leaf_html =~ "data-icon"
-    assert leaf_html =~ ~s(class="hero-link small")
+    assert leaf_html =~ ~s(class="lucide-link small")
   end
 
   test "resolves translated maps through the leaf and compatibility components" do

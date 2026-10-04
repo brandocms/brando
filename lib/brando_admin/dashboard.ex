@@ -95,21 +95,19 @@ defmodule BrandoAdmin.Dashboard do
     site =
       user
       |> BrandoAdmin.Menu.site_menu_items()
-      |> Enum.map(&%{label: &1.name, path: &1.url, icon: "hero-squares-2x2"})
+      |> Enum.map(&%{label: &1.name, path: &1.url, icon: &1.icon})
 
     general =
       [
         %{
           label: gettext("Pages"),
           path: "/admin/pages",
-          icon: "hero-document-text",
           action: :read,
           schema: Brando.Pages.Page
         },
         %{
           label: gettext("Images"),
           path: "/admin/assets/images",
-          icon: "hero-photo",
           action: :read,
           schema: Brando.Images.Image
         },
@@ -117,7 +115,6 @@ defmodule BrandoAdmin.Dashboard do
           %{
             label: gettext("Navigation"),
             path: "/admin/config/navigation/menus",
-            icon: "hero-bars-3",
             action: :read,
             schema: Brando.Navigation.Menu
           },
@@ -125,14 +122,13 @@ defmodule BrandoAdmin.Dashboard do
           %{
             label: gettext("Globals"),
             path: "/admin/globals",
-            icon: "hero-adjustments-horizontal",
             action: :update,
             schema: Brando.Sites.GlobalSet
           }
       ]
       |> Enum.filter(& &1)
       |> Enum.filter(&allowed?(user, &1.action, struct(&1.schema)))
-      |> Enum.map(&Map.take(&1, [:label, :path, :icon]))
+      |> Enum.map(&%{label: &1.label, path: &1.path, icon: Brando.Blueprint.get_icon(&1.schema)})
 
     Enum.uniq_by(site ++ general, &URI.parse(&1.path).path)
   end

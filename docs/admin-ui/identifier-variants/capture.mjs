@@ -8,13 +8,10 @@ const local = path => new URL(path, import.meta.url)
 const read = path => readFile(local(path), 'utf8')
 const embed = async (path, type) => `data:${type};base64,${(await readFile(local(path))).toString('base64')}`
 
-// A portable copy keeps the actual consumer fonts and repository Heroicons.
+// A portable copy keeps the actual consumer fonts. Icons are inline in preview.js.
 let html = await read('index.html')
 let css = await read('styles.css')
 let js = await read('preview.js')
-const icons = await read('../../../assets/css/heroicons.css')
-const iconNames = ['link', 'document-text', 'x-mark', 'check', 'magnifying-glass']
-const iconCSS = iconNames.map(name => icons.match(new RegExp(`\\.hero-${name} \\{[\\s\\S]*?\\n\\}`))[0]).join('\n')
 for (const weight of ['Regular', 'Medium']) {
   const path = `../../../e2e/assets/backend/public/fonts/Main-${weight}.woff2`
   css = css.replace(path, await embed(path, 'font/woff2'))
@@ -23,7 +20,6 @@ for (const photo of ['architecture', 'room']) {
   const path = `../content-agent-concepts/media/${photo}.jpg`
   js = js.replace(path, await embed(path, 'image/jpeg'))
 }
-html = html.replace('<link rel="stylesheet" href="../../../assets/css/heroicons.css">', `<style>${iconCSS}</style>`)
 html = html.replace('<link rel="stylesheet" href="styles.css">', `<style>${css}</style>`)
 html = html.replace('<script src="preview.js"></script>', `<script>${js}</script>`)
 await writeFile(local('standalone.html'), html)

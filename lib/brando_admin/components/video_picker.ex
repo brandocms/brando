@@ -777,7 +777,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
         wide
         light
         workspace
-        icon="hero-film"
+        icon="film"
         subtitle={gettext("Select a video from your library.")}
       >
         <:info>
@@ -848,7 +848,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     class="video-picker-add-btn"
                     phx-click={JS.push("toggle_url_input", target: @myself)}
                   >
-                    <.icon name="hero-link" />
+                    <.icon name="link" />
                     <%= if @show_url_input do %>
                       {gettext("Hide URL input")}
                     <% else %>
@@ -864,7 +864,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     aria-controls={"#{@id}-library"}
                     phx-click={JS.push("open_library", value: %{strategy: provider.strategy}, target: @myself)}
                   >
-                    <.icon name="hero-cloud-arrow-down" />
+                    <.icon name="cloud-download" />
                     {gettext("Add from %{provider}", provider: provider.label)}
                   </button>
 
@@ -883,7 +883,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                       type="button"
                       class="video-picker-add-btn upload-trigger"
                     >
-                      <.icon name="hero-arrow-up-tray" />
+                      <.icon name="upload" />
                       {gettext("Upload file")}
                     </button>
                     <input type="file" accept="video/*" class="video-picker-file-input" />
@@ -900,7 +900,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                       class="video-picker-add-btn"
                       onclick="this.closest('[phx-hook]').querySelector('.video-picker-file-input').click()"
                     >
-                      <.icon name="hero-arrow-up-tray" />
+                      <.icon name="upload" />
                       {gettext("Upload file")}
                     </button>
                     <input type="file" accept="video/*" class="video-picker-file-input" />
@@ -962,7 +962,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   phx-click="close_library"
                   phx-target={@myself}
                 >
-                  <.icon name="hero-x-mark" />
+                  <.icon name="x" />
                 </button>
               </div>
 
@@ -990,7 +990,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 <li :for={item <- @library.items} class="video-picker-library-item" data-remote-id={item.remote_id}>
                   <div class="video-picker-library-thumb">
                     <img :if={item.thumbnail_url} src={item.thumbnail_url} alt="" loading="lazy" />
-                    <.icon :if={!item.thumbnail_url} name="hero-film" />
+                    <.icon :if={!item.thumbnail_url} name="film" />
                   </div>
                   <div class="video-picker-library-info">
                     <span class="video-picker-library-title">{item.title || gettext("Untitled video")}</span>
@@ -1068,7 +1068,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
           >
             <%= if @video_count == 0 do %>
               <div class="image-picker-empty">
-                <.icon name="hero-film" />
+                <.icon name="film" />
                 <h4>{gettext("No videos in this folder")}</h4>
                 <p>{gettext("Create a video from URL or choose another folder")}</p>
               </div>
@@ -1078,7 +1078,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
               :if={@organize_selected != []}
               class="video-picker-organize-bar"
             >
-              <.icon name="hero-arrows-pointing-out" />
+              <.icon name="maximize-2" />
               <span>
                 {ngettext(
                   "%{count} video selected for organizing",
@@ -1194,7 +1194,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
       phx-value-id={@video.id}
     >
       <span class="video-picker__selected-indicator" aria-hidden="true">
-        <.icon name="hero-check-mini" />
+        <.icon name="check" />
       </span>
       <.video_preview video={@video} myself={@myself} />
       <div class="video-picker__info">
@@ -1238,7 +1238,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
             phx-click={toggle_dropdown("#video-picker-menu-#{@video.id}")}
             phx-click-away={hide_dropdown("#video-picker-menu-#{@video.id}")}
           >
-            <.icon name="hero-ellipsis-horizontal-circle" />
+            <.icon name="circle-ellipsis" />
           </button>
           <ul id={"video-picker-menu-#{@video.id}"} class="video-picker-action-dropdown hidden">
             <li>
@@ -1250,7 +1250,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 }
                 phx-value-video-id={@video.id}
               >
-                <.icon name="hero-pencil-square" />
+                <.icon name="square-pen" />
                 {gettext("Rename")}
               </button>
             </li>
@@ -1266,7 +1266,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 phx-value-source-url={@video.source_url}
                 phx-value-type={@video.type}
               >
-                <.icon name="hero-play" />
+                <.icon name="play" />
                 {gettext("Preview")}
               </button>
             </li>
@@ -1283,7 +1283,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   |> hide_dropdown("#video-picker-menu-#{@video.id}")
                 }
               >
-                <.icon name="hero-trash" />
+                <.icon name="trash" />
                 {gettext("Delete video")}
               </button>
             </li>
@@ -1316,7 +1316,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
       phx-value-source-url={@video.source_url}
       phx-value-type={@video.type}
     >
-      <.icon name="hero-film" />
+      <.icon name="film" />
       <%= cond do %>
         <% @video.thumbnail -> %>
           <Content.image image={@video.thumbnail} size={:smallest} />
@@ -1336,9 +1336,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_placeholder(assigns) do
     ~H"""
     <div class="img-placeholder">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100">
-        <path fill="none" d="M0 0h24v24H0z" /><path d="M3 3.993C3 3.445 3.445 3 3.993 3h16.014c.548 0 .993.445.993.993v16.014a.994.994 0 0 1-.993.993H3.993A.994.994 0 0 1 3 20.007V3.993zM5 5v14h14V5H5zm5.622 3.415l4.879 3.252a.4.4 0 0 1 0 .666l-4.88 3.252a.4.4 0 0 1-.621-.332V8.747a.4.4 0 0 1 .622-.332z" />
-      </svg>
+      <.icon name="square-play" />
     </div>
     """
   end

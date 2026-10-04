@@ -3,14 +3,20 @@ defmodule BrandoAdmin.Menu do
       import MyAppAdmin.Gettext
 
       menus do
-        menu_item t("Projects") do
-          menu_subitem t("Projects"), "/admin/projects/projects"
-          menu_subitem t("Categories"), "/admin/projects/categories"
+        menu_item t("Projects"), icon: "folder" do
+          menu_subitem t("Projects"), "/admin/projects/projects", icon: "briefcase"
+          menu_subitem t("Categories"), "/admin/projects/categories", icon: "tags"
           menu_subitem MyApp.Project.Something
         end
 
         menu_item MyApp.Team.Member
       end
+
+  Every item shows a [Lucide](https://lucide.dev/icons) icon in the sidebar.
+  Items built from a blueprint use its `content_icon` (see
+  `Brando.Blueprint.get_icon/1`); others take an `icon:` option. Names are
+  checked at compile time. An item without one shows a dot, so the icon column
+  stays aligned.
   """
 
   use Gettext, backend: Brando.Gettext
@@ -74,29 +80,70 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
+  @fallback_icon "dot"
+
+  @doc "The icon shown for menu items that set none."
+  def fallback_icon, do: @fallback_icon
+
+  @doc """
+  Raises unless `icon` is nil or a current Lucide icon name. Called at compile
+  time by the menu macros.
+  """
+  def validate_icon!(nil), do: nil
+
+  def validate_icon!(icon) do
+    if Brando.Icons.exists?(icon) do
+      icon
+    else
+      hint =
+        case Brando.Icons.resolve(icon) do
+          {:ok, current} -> "use #{inspect(current)}"
+          :error -> "see https://lucide.dev/icons"
+        end
+
+      raise ArgumentError, "unknown menu icon #{inspect(icon)}, #{hint}"
+    end
+  end
+
   @doc """
   Generate a menu item from blueprint schema
   """
   defmacro menu_item(schema) do
-    do_menu_item(:schema, schema, nil)
+    do_menu_item(:schema, schema, nil, [])
   end
 
   defmacro menu_item(name, do: block) do
-    do_menu_item(:block, name, do: block)
+    do_menu_item(:block, name, [], do: block)
   end
 
   defmacro menu_item(name, url) when is_binary(url) do
-    do_menu_item(:url, name, url)
+    do_menu_item(:url, name, url, [])
+  end
+
+  defmacro menu_item(schema, opts) when is_list(opts) do
+    do_menu_item(:schema, schema, nil, opts)
   end
 
   defmacro menu_item(name, schema) do
-    do_menu_item(:schema, schema, name)
+    do_menu_item(:schema, schema, name, [])
   end
 
-  defp do_menu_item(:schema, schema, name) do
+  defmacro menu_item(name, opts, do: block) when is_list(opts) do
+    do_menu_item(:block, name, opts, do: block)
+  end
+
+  defmacro menu_item(name, url, opts) when is_binary(url) do
+    do_menu_item(:url, name, url, opts)
+  end
+
+  defmacro menu_item(name, schema, opts) do
+    do_menu_item(:schema, schema, name, opts)
+  end
+
+  defp do_menu_item(:schema, schema, name, opts) do
     quote location: :keep,
           generated: true,
-          bind_quoted: [schema: schema, name: name] do
+          bind_quoted: [schema: schema, name: name, opts: opts] do
       domain = schema.__naming__().domain
       snake_domain = Macro.underscore(domain)
       schema_name = schema.__naming__().schema
@@ -110,14 +157,7 @@ defmodule BrandoAdmin.Menu do
           message: "Missing default listing for menu_item `#{inspect(schema)}`"
       end
 
-      query_params =
-        default_listing.query
-        |> BrandoAdmin.Menu.strip_preloads()
-        |> BrandoAdmin.Menu.encode_advanced_order()
-        |> Plug.Conn.Query.encode()
-        |> String.replace("%3A", ":")
-        |> String.replace("%5B", "[")
-        |> String.replace("%5D", "]")
+      query_params = BrandoAdmin.Menu.encode_listing_query(default_listing.query)
 
       name =
         if name do
@@ -129,15 +169,17 @@ defmodule BrandoAdmin.Menu do
         end
 
       url = Enum.join([url_base, query_params], "?")
+      icon = BrandoAdmin.Menu.validate_icon!(opts[:icon]) || Brando.Blueprint.get_icon(schema)
 
       Module.put_attribute(__MODULE__, :menus, %{
         name: name,
-        url: url
+        url: url,
+        icon: icon
       })
     end
   end
 
-  defp do_menu_item(:block, name, do: block) do
+  defp do_menu_item(:block, name, opts, do: block) do
     quote location: :keep,
           generated: true do
       var!(b_menu_subitems) = []
@@ -146,17 +188,30 @@ defmodule BrandoAdmin.Menu do
       Module.put_attribute(__MODULE__, :menus, %{
         name: unquote(name),
         items: Enum.reverse(subitems),
-        url: nil
+        url: nil,
+        icon: BrandoAdmin.Menu.validate_icon!(unquote(opts)[:icon]) || BrandoAdmin.Menu.fallback_icon()
       })
     end
   end
 
-  defp do_menu_item(:url, name, url) do
+  defp do_menu_item(:url, name, url, opts) do
     quote location: :keep,
           generated: true,
-          bind_quoted: [name: name, url: url] do
-      Module.put_attribute(__MODULE__, :menus, %{name: name, url: url})
+          bind_quoted: [name: name, url: url, opts: opts] do
+      icon = BrandoAdmin.Menu.validate_icon!(opts[:icon]) || BrandoAdmin.Menu.fallback_icon()
+      Module.put_attribute(__MODULE__, :menus, %{name: name, url: url, icon: icon})
     end
+  end
+
+  @doc "Encodes a listing query as the query string of a menu item's URL."
+  def encode_listing_query(query) do
+    query
+    |> strip_preloads()
+    |> encode_advanced_order()
+    |> Plug.Conn.Query.encode()
+    |> String.replace("%3A", ":")
+    |> String.replace("%5B", "[")
+    |> String.replace("%5D", "]")
   end
 
   def strip_preloads(query) do
@@ -189,17 +244,25 @@ defmodule BrandoAdmin.Menu do
   end
 
   defmacro menu_subitem(schema) do
-    do_menu_subitem(schema)
+    do_menu_subitem(schema, [])
+  end
+
+  defmacro menu_subitem(schema, opts) when is_list(opts) do
+    do_menu_subitem(schema, opts)
   end
 
   defmacro menu_subitem(name, url) do
-    do_menu_subitem(name, url)
+    do_menu_subitem(name, url, [])
   end
 
-  defp do_menu_subitem(schema) do
+  defmacro menu_subitem(name, url, opts) do
+    do_menu_subitem(name, url, opts)
+  end
+
+  defp do_menu_subitem(schema, opts) do
     quote location: :keep,
           generated: true,
-          bind_quoted: [schema: schema] do
+          bind_quoted: [schema: schema, opts: opts] do
       domain = schema.__naming__().domain
       snake_domain = Macro.underscore(domain)
       schema_name = schema.__naming__().schema
@@ -214,28 +277,23 @@ defmodule BrandoAdmin.Menu do
           message: "Missing default listing for menu_subitem `#{inspect(schema)}`"
       end
 
-      query_params =
-        default_listing.query
-        |> BrandoAdmin.Menu.strip_preloads()
-        |> BrandoAdmin.Menu.encode_advanced_order()
-        |> Plug.Conn.Query.encode()
-        |> String.replace("%3A", ":")
-        |> String.replace("%5B", "[")
-        |> String.replace("%5D", "]")
+      query_params = BrandoAdmin.Menu.encode_listing_query(default_listing.query)
 
       url = Enum.join([url_base, query_params], "?")
       gettext_domain = String.downcase("#{domain}_#{schema_name}")
+      icon = BrandoAdmin.Menu.validate_icon!(opts[:icon]) || Brando.Blueprint.get_icon(schema)
 
       var!(b_menu_subitems) = [
-        %{name: {:translate, gettext_domain, msgid}, url: url} | var!(b_menu_subitems)
+        %{name: {:translate, gettext_domain, msgid}, url: url, icon: icon} | var!(b_menu_subitems)
       ]
     end
   end
 
-  defp do_menu_subitem(name, url) do
+  defp do_menu_subitem(name, url, opts) do
     quote location: :keep,
           generated: true do
-      var!(b_menu_subitems) = [%{name: unquote(name), url: unquote(url)} | var!(b_menu_subitems)]
+      icon = BrandoAdmin.Menu.validate_icon!(unquote(opts)[:icon]) || BrandoAdmin.Menu.fallback_icon()
+      var!(b_menu_subitems) = [%{name: unquote(name), url: unquote(url), icon: icon} | var!(b_menu_subitems)]
     end
   end
 
@@ -248,13 +306,13 @@ defmodule BrandoAdmin.Menu do
   # Shown when a model is configured and the user may use the assistant.
   defp assistant_menu_item(current_user) do
     if current_user && Brando.AI.Agent.available?() && Brando.AI.Agent.allowed?(current_user),
-      do: %{name: gettext("Assistant"), url: "/admin/assistant"}
+      do: %{name: gettext("Assistant"), url: "/admin/assistant", icon: "sparkles"}
   end
 
   # Shown to users who may configure the assistant; superusers by default.
   defp assistant_guidance_menu_item(current_user) do
     if current_user && Brando.AI.Agent.Guidance.configurable?(current_user),
-      do: %{name: gettext("Assistant guidance"), url: "/admin/config/assistant"}
+      do: %{name: gettext("Assistant guidance"), url: "/admin/config/assistant", icon: "message-square-text"}
   end
 
   def get_menu(current_user \\ nil, current_site \\ nil) do
@@ -267,78 +325,93 @@ defmodule BrandoAdmin.Menu do
           [
             %{
               name: gettext("Dashboard"),
+              icon: "layout-dashboard",
               url: "/admin"
             },
             assistant_menu_item(current_user),
             sites_menu_item(current_user),
             %{
               name: gettext("Configuration"),
+              icon: "settings",
               url: nil,
               items:
                 [
                   %{
                     name: gettext("Navigation"),
+                    icon: "list-tree",
                     url: "/admin/config/navigation/menus"
                   },
                   %{
                     name: gettext("Forms"),
+                    icon: "text-cursor-input",
                     url: "/admin/config/forms"
                   },
                   %{
                     name: gettext("Identity"),
+                    icon: "building-complex",
                     url: "/admin/config/identity"
                   },
                   %{
                     name: gettext("SEO"),
+                    icon: "search",
                     url: "/admin/config/seo"
                   },
                   %{
                     name: gettext("Scheduled publishing"),
+                    icon: "calendar-clock",
                     url: "/admin/config/scheduled_publishing"
                   },
                   activity_menu_item(current_user),
                   if(Brando.Authorization.enabled?() or match?(%{role: :superuser}, current_user),
-                    do: %{name: gettext("Permissions"), url: "/admin/groups"}
+                    do: %{name: gettext("Permissions"), url: "/admin/groups", icon: "shield-check"}
                   ),
                   environments_menu_item(),
                   publishing_menu_item(current_site),
                   developer_items(current_user, [
-                    %{name: gettext("Global fields (setup)"), url: "/admin/config/global_sets"},
-                    %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources"},
+                    %{name: gettext("Global fields (setup)"), url: "/admin/config/global_sets", icon: "globe"},
+                    %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources", icon: "file-code"},
                     frontend_assets_menu_item(current_user),
-                    %{name: gettext("Content transfer"), url: "/admin/config/import-export"},
+                    %{name: gettext("Content transfer"), url: "/admin/config/import-export", icon: "arrow-left-right"},
                     %{
                       name: gettext("Cache"),
+                      icon: "database-zap",
                       url: "/admin/config/cache"
                     },
                     %{
                       name: gettext("Utilities"),
+                      icon: "wrench",
                       url: "/admin/config/utils"
                     },
                     assistant_guidance_menu_item(current_user),
                     %{
                       name: gettext("Block modules"),
+                      icon: "blocks",
                       url: "/admin/config/content/modules"
                     },
                     shared_library_menu_item(current_user),
                     %{
                       name: gettext("Block module sets"),
+                      icon: "boxes",
                       url: "/admin/config/content/module_sets"
                     },
                     %{
                       name: gettext("Containers"),
+                      icon: "square-dashed",
                       url: "/admin/config/content/containers"
                     },
                     %{
                       name: gettext("Table Templates"),
+                      icon: "table",
                       url: "/admin/config/content/table_templates"
                     },
                     %{
                       name: gettext("Templates"),
+                      icon: "layout-template",
                       url: "/admin/config/content/templates"
                     },
                     %{
                       name: gettext("Palettes"),
+                      icon: "palette",
                       url: "/admin/config/content/palettes"
                     }
                   ])
@@ -348,28 +421,34 @@ defmodule BrandoAdmin.Menu do
             },
             %{
               name: gettext("Assets"),
+              icon: "images",
               url: nil,
               items: [
                 %{
                   name: gettext("Images"),
+                  icon: "image",
                   url: "/admin/assets/images"
                 },
                 %{
                   name: gettext("Files"),
+                  icon: "file",
                   url: "/admin/assets/files"
                 },
                 %{
                   name: gettext("Videos"),
+                  icon: "film",
                   url: "/admin/assets/videos"
                 },
                 %{
                   name: gettext("Galleries"),
+                  icon: "gallery-horizontal-end",
                   url: "/admin/assets/galleries"
                 }
               ]
             },
             %{
               name: gettext("Users"),
+              icon: "users",
               url: "/admin/users"
             }
           ]
@@ -381,6 +460,7 @@ defmodule BrandoAdmin.Menu do
           [
             %{
               name: gettext("Pages & Sections"),
+              icon: "file-text",
               url: "/admin/pages"
             },
             forms_menu_item(),
@@ -398,7 +478,7 @@ defmodule BrandoAdmin.Menu do
   # under Configuration. With tenants the item stays, as for Globals.
   defp forms_menu_item do
     if Tenant.mode() != :none or Brando.Repo.aggregate(Brando.Forms.Form, :count) > 0,
-      do: %{name: gettext("Forms"), url: "/admin/forms"}
+      do: %{name: gettext("Forms"), url: "/admin/forms", icon: "inbox"}
   end
 
   # Globals is empty until a developer adds a global set; a menu item leading
@@ -406,12 +486,12 @@ defmodule BrandoAdmin.Menu do
   # item stays: platform pages have no site whose global sets to count.
   defp globals_menu_item do
     if Tenant.mode() != :none or Brando.Repo.aggregate(Brando.Sites.GlobalSet, :count) > 0,
-      do: %{name: gettext("Globals"), url: "/admin/globals"}
+      do: %{name: gettext("Globals"), url: "/admin/globals", icon: "earth"}
   end
 
   @doc """
   The site's own menu entries (the app's `Menus` module), as links the user
-  may open: `[%{name: "Projects", url: "/admin/works/projects"}, …]`, sub
+  may open: `[%{name: "Projects", url: "/admin/works/projects", icon: "briefcase"}, …]`, sub
   items flattened. The dashboard offers these as shortcuts.
   """
   def site_menu_items(current_user) do
@@ -423,7 +503,7 @@ defmodule BrandoAdmin.Menu do
   defp flatten_links(items) do
     Enum.flat_map(items, fn
       %{items: [_ | _] = children} -> flatten_links(children)
-      %{url: url, name: name} when is_binary(url) -> [%{name: name, url: url}]
+      %{url: url, name: name} = item when is_binary(url) -> [%{name: name, url: url, icon: item[:icon] || @fallback_icon}]
       _ -> []
     end)
   end
@@ -436,14 +516,14 @@ defmodule BrandoAdmin.Menu do
   end
 
   defp publishing_menu_item(%{delivery_mode: :static}) do
-    %{name: gettext("Publishing"), url: "/admin/config/publishing"}
+    %{name: gettext("Publishing"), url: "/admin/config/publishing", icon: "send"}
   end
 
   defp publishing_menu_item(_site), do: nil
 
   defp sites_menu_item(user) do
     if Brando.Authorization.enabled?() or (user && user.role == :superuser) do
-      if Tenant.mode() == :multi, do: %{name: gettext("Sites"), url: "/admin/sites"}
+      if Tenant.mode() == :multi, do: %{name: gettext("Sites"), url: "/admin/sites", icon: "panels-top-left"}
     end
   end
 
@@ -451,22 +531,22 @@ defmodule BrandoAdmin.Menu do
   # `brando.activity.read` permission decides (`filter_authorized/2`).
   defp activity_menu_item(user) do
     if Brando.Authorization.enabled?() or match?(%{role: role} when role in [:admin, :superuser], user),
-      do: %{name: gettext("Activity"), url: "/admin/config/activity"}
+      do: %{name: gettext("Activity"), url: "/admin/config/activity", icon: "activity"}
   end
 
   defp environments_menu_item do
-    if Tenant.enabled?(), do: %{name: gettext("Environments"), url: "/admin/config/environments"}
+    if Tenant.enabled?(), do: %{name: gettext("Environments"), url: "/admin/config/environments", icon: "server"}
   end
 
   defp frontend_assets_menu_item(user) do
     if Brando.Authorization.enabled?() or (user && user.role == :superuser),
-      do: %{name: gettext("Frontend assets"), url: "/admin/config/assets"}
+      do: %{name: gettext("Frontend assets"), url: "/admin/config/assets", icon: "package"}
   end
 
   defp shared_library_menu_item(%{role: role}) do
     if Tenant.mode() == :multi do
       name = if role == :superuser, do: gettext("Shared content library"), else: gettext("Site content library")
-      %{name: name, url: "/admin/config/content/shared_library"}
+      %{name: name, url: "/admin/config/content/shared_library", icon: "library"}
     end
   end
 

@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
     <section id={@id} class="draft-recovery" aria-label={gettext("Recovery copies")} data-testid="draft-recovery">
       <div class="draft-recovery-status">
         <div class="draft-storage-status" role="status">
-          <.recovery_icon name="history" />
+          <Brando.HTML.Icon.icon name="rotate-ccw-clock" class="draft-icon" />
           <span class="draft-online-status" data-testid="draft-status">{status(@state)}</span>
           <span class="draft-offline-status">{gettext("Offline — recent edits have not reached recovery storage")}</span>
         </div>
@@ -32,7 +32,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           aria-expanded={to_string(@state.open?)}
         >
           {history_label(@state.candidates)}
-          <.recovery_icon name="chevron" />
+          <Brando.HTML.Icon.icon name="chevron-right" class="draft-icon" />
         </button>
       </div>
 
@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
         data-testid="draft-notice"
       >
         <div class="draft-notice-content">
-          <span class="draft-heading-icon"><.recovery_icon name="history" /></span>
+          <span class="draft-heading-icon"><Brando.HTML.Icon.icon name="rotate-ccw-clock" class="draft-icon" /></span>
           <div>
             <h2>{gettext("Pick up where you left off")}</h2>
             <p>{gettext("You have an unsaved recovery copy for this entry.")}</p>
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
 
       <div :if={@state && @state.open?} class="draft-recovery-panel" data-testid="draft-panel">
         <header class="draft-panel-header">
-          <span class="draft-heading-icon"><.recovery_icon name="history" /></span>
+          <span class="draft-heading-icon"><Brando.HTML.Icon.icon name="rotate-ccw-clock" class="draft-icon" /></span>
           <div class="draft-heading">
             <h2>{gettext("Recover unsaved changes")}</h2>
             <p>
@@ -77,7 +77,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
             aria-label={gettext("Close recovery panel")}
             title={gettext("Close recovery panel")}
           >
-            <.recovery_icon name="close" />
+            <Brando.HTML.Icon.icon name="x" class="draft-icon" />
           </button>
         </header>
 
@@ -108,7 +108,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
                         phx-value-id={copy.id}
                         phx-target={@target}
                       >
-                        <span class="draft-copy-indicator"><.recovery_icon name="check" /></span>
+                        <span class="draft-copy-indicator"><Brando.HTML.Icon.icon name="check" class="draft-icon" /></span>
                         <span class="draft-copy-title">{copy_title(copy)}</span>
                       </button>
                       <span :if={copy.attempted_at} class="draft-copy-reviewed">{gettext("Previously reviewed")}</span>
@@ -124,7 +124,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           </div>
 
           <div :if={@state.error} class="draft-error" role="alert">
-            <.recovery_icon name="warning" />
+            <Brando.HTML.Icon.icon name="triangle-alert" class="draft-icon" />
             <div>
               <h3>{gettext("This copy needs attention")}</h3>
               <p>{@state.error}</p>
@@ -148,7 +148,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
                   download="entry-recovery.json"
                   href={"data:application/json;base64," <> Base.encode64(Jason.encode!(@state.selected.payload, pretty: true))}
                 >
-                  <.recovery_icon name="download" />{gettext("Download JSON")}
+                  <Brando.HTML.Icon.icon name="download" class="draft-icon" />{gettext("Download JSON")}
                 </a>
               </div>
             </div>
@@ -158,7 +158,9 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
               class="draft-inspector draft-raw-content"
               phx-mounted={JS.ignore_attributes("open")}
             >
-              <summary><.recovery_icon name="chevron" />{gettext("View full recovery data (JSON)")}</summary>
+              <summary>
+                <Brando.HTML.Icon.icon name="chevron-right" class="draft-icon" />{gettext("View full recovery data (JSON)")}
+              </summary>
               <div class="draft-raw-toolbar">
                 <p>{gettext("Includes all stored values and technical details.")}</p>
                 <.copy_button
@@ -171,20 +173,22 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
             </details>
 
             <article :for={{issue, index} <- Enum.with_index(@state.issues)} class="draft-block-issue">
-              <h3><.recovery_icon name="warning" />{gettext("Block needs review")}</h3>
+              <h3><Brando.HTML.Icon.icon name="triangle-alert" class="draft-icon" />{gettext("Block needs review")}</h3>
               <p :for={reason <- issue.reasons}>{reason}</p>
               <details
                 id={"#{@id}-issue-#{@state.selected.id}-#{index}"}
                 class="draft-inspector"
                 phx-mounted={JS.ignore_attributes("open")}
               >
-                <summary><.recovery_icon name="chevron" />{gettext("Recover this block’s content")}</summary>
+                <summary>
+                  <Brando.HTML.Icon.icon name="chevron-right" class="draft-icon" />{gettext("Recover this block’s content")}
+                </summary>
                 <pre class="draft-payload" tabindex="0">{Jason.encode!(issue.content, pretty: true)}</pre>
               </details>
             </article>
 
             <p class="draft-retention-note">
-              <.recovery_icon name="shield" />
+              <Brando.HTML.Icon.icon name="shield-check" class="draft-icon" />
               {gettext("Your original recovery copy stays available if restoring fails or you start fresh.")}
             </p>
           </div>
@@ -241,7 +245,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   defp copy_button(assigns) do
     ~H"""
     <button id={@id} type="button" class="draft-button draft-copy-content" data-draft-copy={@source} aria-label={@label}>
-      <.recovery_icon name="copy" />
+      <Brando.HTML.Icon.icon name="copy" class="draft-icon" />
       <span class="draft-copy-label">{@label}</span>
       <span class="draft-copy-success" role="status">{gettext("Copied")}</span>
       <span class="draft-copy-failure" role="status">{gettext("Select and copy manually")}</span>
@@ -320,7 +324,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           <div class="draft-order-item">
             <img :if={move.thumbnail} src={move.thumbnail} alt="" loading="lazy" />
             <span :if={!move.thumbnail} class="draft-order-icon" aria-hidden="true">
-              <Brando.HTML.Icon.icon name="hero-arrows-up-down" />
+              <Brando.HTML.Icon.icon name="arrow-up-down" />
             </span>
             <span>{move.title}</span>
           </div>
@@ -351,42 +355,6 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
       end
 
     if count == 0, do: gettext("Entry fields"), else: ngettext("%{count} block", "%{count} blocks", count)
-  end
-
-  attr :name, :string, required: true
-
-  defp recovery_icon(assigns) do
-    path =
-      case assigns.name do
-        "copy" -> "M9 9h11v11H9z M15 9V4H4v11h5"
-        "history" -> "M3 4v5h5 M3.5 9a9 9 0 1 1 1 9 M12 7v5l3 2"
-        "check" -> "m5 12 4 4L19 6"
-        "chevron" -> "m9 5 7 7-7 7"
-        "close" -> "m6 6 12 12 M6 18 18 6"
-        "download" -> "M12 3v12 m-5-5 5 5 5-5 M5 16v4h14v-4"
-        "warning" -> "m12 3 10 18H2L12 3Z M12 9v4 m0 3v.5"
-        "shield" -> "M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z m-4 9 3 3 5-6"
-      end
-
-    assigns = assign(assigns, :path, path)
-
-    ~H"""
-    <svg
-      class="draft-icon"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.6"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d={@path} />
-    </svg>
-    """
   end
 
   defp actionable(candidates), do: Enum.filter(candidates, &is_nil(&1.dismissed_at))

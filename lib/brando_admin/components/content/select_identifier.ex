@@ -273,7 +273,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         phx-click={JS.push("select_schema", target: @myself)}
         phx-value-schema="all"
       >
-        <.icon name="hero-squares-2x2" />
+        <.icon name="layout-grid" />
         <span class="identifier-scope-label">{gettext("All content")}</span>
         <span class="identifier-scope-count">{Enum.sum(Map.values(@schema_counts))}</span>
       </button>
@@ -286,7 +286,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         phx-click={JS.push("select_schema", target: @myself)}
         phx-value-schema={schema}
       >
-        <.icon :if={@workspace} name={if schema == Brando.Pages.Page, do: "hero-document-text", else: "hero-folder"} />
+        <.icon :if={@workspace} name={Brando.Blueprint.get_icon(schema)} />
         <span class={@workspace && "identifier-scope-label"}>{label}</span>
         <span :if={@workspace} class="identifier-scope-count">{Map.get(@schema_counts, schema, 0)}</span>
       </button>
@@ -316,10 +316,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
           </div>
           <div class="field-base">
             <div class="filter-input-wrapper">
-              <svg class="filter-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" />
-                <line x1="10.75" y1="10.75" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.5" />
-              </svg>
+              <.icon name="search" class="filter-icon" />
               <input
                 class="text"
                 id={"#{@id}-identifier-filter"}
@@ -332,10 +329,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
                 autocomplete="off"
               />
               <button type="button" class="filter-clear" aria-label={gettext("Clear filter")} tabindex="-1">
-                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" />
-                  <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="1.5" />
-                </svg>
+                <.icon name="x" />
               </button>
             </div>
           </div>

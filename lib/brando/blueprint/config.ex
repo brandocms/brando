@@ -9,6 +9,7 @@ defmodule Brando.Blueprint.Config do
   """
 
   alias Brando.Exception.BlueprintError
+  alias Brando.Icons
 
   @required_use_options [:application, :domain, :schema, :singular, :plural]
   @optional_use_options [:extensions, :gettext_module, :router_scope]
@@ -120,6 +121,7 @@ defmodule Brando.Blueprint.Config do
     do: validate_snake_identifier(name, value)
 
   defp validate_compiled_option(:router_scope, value), do: validate_router_scope(value)
+  defp validate_compiled_option(:content_icon, value), do: validate_icon(value)
   defp validate_compiled_option(:gettext_module, value), do: validate_optional_module(:gettext_module, value)
 
   defp validate_compiled_option(:data_layer, value) when value in [:database, :embedded], do: :ok
@@ -182,6 +184,21 @@ defmodule Brando.Blueprint.Config do
 
   defp validate_router_scope(value),
     do: {:error, "`:router_scope` must be nil, an atom, or a snake_case string, got: #{inspect(value)}"}
+
+  defp validate_icon(nil), do: :ok
+
+  defp validate_icon(value) do
+    case {Icons.exists?(value), Icons.resolve(value)} do
+      {true, _} ->
+        :ok
+
+      {false, {:ok, current}} ->
+        {:error, "`content_icon` #{inspect(value)} is an old icon name, use #{inspect(current)}"}
+
+      {false, :error} ->
+        {:error, "`content_icon` must be a Lucide icon name (https://lucide.dev/icons), got: #{inspect(value)}"}
+    end
+  end
 
   defp validate_optional_module(_name, nil), do: :ok
 

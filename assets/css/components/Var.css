@@ -200,7 +200,7 @@
     color: var(--brando-color-dark);
     border-radius: 50%;
 
-    span {
+    [data-icon] {
       width: 15px;
       height: 15px;
     }

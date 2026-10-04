@@ -17,6 +17,7 @@ defmodule BrandoAdmin.Components.Content.Identifier do
     assigns =
       assigns
       |> assign(:type, Brando.Blueprint.get_singular(identifier.schema))
+      |> assign(:icon, Brando.Blueprint.get_icon(identifier.schema))
       |> assign(:cover, Map.get(identifier, :cover))
       |> assign(:language, Map.get(identifier, :language))
       |> assign(:status, Map.get(identifier, :status))
@@ -30,7 +31,7 @@ defmodule BrandoAdmin.Components.Content.Identifier do
       <%= if is_binary(@cover) && @cover != "" do %>
         <img src={@cover} alt="" loading="lazy" draggable="false" />
       <% else %>
-        <.icon name="hero-document-text" />
+        <.icon name={@icon} />
       <% end %>
     </span>
     <span class="identifier-copy">
@@ -50,7 +51,7 @@ defmodule BrandoAdmin.Components.Content.Identifier do
       </span>
     </span>
     <span :if={@selectable} class="identifier-check" aria-hidden="true">
-      <.icon :if={@selected} name="hero-check" />
+      <.icon :if={@selected} name="check" />
     </span>
     <span :if={@delete != []} class="identifier-remove remove">{render_slot(@delete)}</span>
     """

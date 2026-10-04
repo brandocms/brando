@@ -513,13 +513,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               </span>
               <.value_summary var={@var} />
               <span class={["variable-chevron", @visible && "is-open"]} aria-hidden="true">
-                <.icon name="hero-chevron-down" />
+                <.icon name="chevron-down" />
               </span>
             </button>
 
             <div id={"#{@var.id}-variable-content"} class={["variable-content", !@visible && "hidden"]}>
               <Content.modal_sections id={"#{@var.id}-editor-sections"} enabled={@modal_editor}>
-                <:section id="definition" label={gettext("Definition")} icon="hero-code-bracket">
+                <:section id="definition" label={gettext("Definition")} icon="code">
                   <section class="variable-section">
                     <h3>{gettext("Naming")}</h3>
                     <div class="variable-grid">
@@ -602,7 +602,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     </p>
                   </section>
                 </:section>
-                <:section id="default" label={gettext("Default value")} icon="hero-pencil-square">
+                <:section id="default" label={gettext("Default value")} icon="square-pen">
                   <section class="variable-section">
                     <h3>{gettext("Default value")}</h3>
 
@@ -644,7 +644,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   :if={@type in [:color, :link, :select]}
                   id="behavior"
                   label={type_settings_heading(@type)}
-                  icon="hero-adjustments-horizontal"
+                  icon="sliders-horizontal"
                 >
                   <section class="variable-section">
                     <h3>{type_settings_heading(@type)}</h3>
@@ -705,7 +705,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                                   title={gettext("Delete")}
                                   phx-click={JS.dispatch("change")}
                                 >
-                                  <.icon name="hero-x-mark" />
+                                  <.icon name="x" />
                                 </button>
                               </div>
                             </.inputs_for>
@@ -715,7 +715,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                               class="module-add-button"
                               phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}
                             >
-                              <.icon name="hero-plus" />
+                              <.icon name="plus" />
                               {gettext("Add option")}
                             </button>
                           </Primitives.field_base>
@@ -863,7 +863,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <div class="slider round"></div>
           </Primitives.label>
           <span :if={@instructions} class="boolean-instructions" title={@instructions}>
-            <.icon name="hero-information-circle" />
+            <.icon name="info" />
           </span>
         </div>
       </Primitives.field_base>
@@ -1114,9 +1114,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             id={"#{@var.id}-gallery-actions"}
             label={if @gallery_objects == [], do: gettext("Add"), else: gettext("Change")}
           >
-            <button type="button" class="upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext("Upload media")}</button>
+            <button type="button" class="upload-trigger"><.icon name="upload" />{gettext("Upload media")}</button>
             <button type="button" phx-click={show_modal("#var-#{@var.id}-gallery-config")}>
-              <.icon name="hero-adjustments-horizontal" />{gettext("Configure")}
+              <.icon name="sliders-horizontal" />{gettext("Configure")}
             </button>
           </MediaField.action_menu>
           <div
@@ -1197,10 +1197,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ~H"""
     <button type="button" class={["link-preview", @empty? && "link-preview--empty"]} phx-click={@click}>
       <div class="icon">
-        <.icon :if={@empty?} name="hero-plus" />
-        <.icon :if={@link_type == :url && !@external? && !@empty?} name="hero-link" />
-        <.icon :if={@link_type == :url && @external?} name="hero-globe-alt" />
-        <.icon :if={@link_type == :identifier} name="hero-link" />
+        <.icon :if={@empty?} name="plus" />
+        <.icon :if={@link_type == :url && !@external? && !@empty?} name="link" />
+        <.icon :if={@link_type == :url && @external?} name="globe" />
+        <.icon :if={@link_type == :identifier} name="link" />
       </div>
       <div class="info">
         <%= if @link_type == :url do %>
@@ -1298,7 +1298,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <Content.modal
       title={gettext("Edit link")}
       subtitle={I18nString.localized(@field[:label].value)}
-      icon="hero-link"
+      icon="link"
       layout="picker"
       id={"var-#{@field.id}-link-config"}
     >
@@ -1309,8 +1309,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             label={gettext("Type")}
             opts={[
               options: [
-                %{label: gettext("URL"), value: :url, icon: "hero-globe-alt"},
-                %{label: gettext("Content"), value: :identifier, icon: "hero-document-text"}
+                %{label: gettext("URL"), value: :url, icon: "globe"},
+                %{label: gettext("Content"), value: :identifier, icon: "file-text"}
               ]
             ]}
           />
@@ -1347,7 +1347,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       </div>
       <:footer>
         <span :if={@link_type == :identifier && @identifier} class="modal-footer-selection">
-          <.icon name="hero-link" />
+          <.icon name="link" />
           <span>{@identifier.title}</span>
           <small :if={@identifier.language}>{String.upcase(to_string(@identifier.language))}</small>
         </span>
@@ -1409,7 +1409,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def video_modal(assigns) do
     ~H"""
-    <Content.modal title={gettext("Video")} icon="hero-film" id={"var-#{@field.id}-video-config"}>
+    <Content.modal title={gettext("Video")} icon="film" id={"var-#{@field.id}-video-config"}>
       <MediaField.field
         id={"#{@field.id}-var-uploader"}
         type={:video}
@@ -1440,7 +1440,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ~H"""
     <Content.modal
       title={gettext("Gallery")}
-      icon="hero-squares-2x2"
+      icon="layout-grid"
       subtitle={I18nString.localized(@field[:label].value)}
       id={"var-#{@field.id}-gallery-config"}
       wide
@@ -1498,7 +1498,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           </div>
         </div>
         <div :if={@objects == []} class="gallery-workspace-empty">
-          <.icon name="hero-photo" />
+          <.icon name="image" />
           <h3>{gettext("Build your gallery")}</h3>
           <p>{gettext("Upload media or choose from your library.")}</p>
         </div>
@@ -1516,7 +1516,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   <% match?(%Brando.Images.Image{}, object.video.thumbnail) -> %>
                     <Content.image image={object.video.thumbnail} size={:smallest} />
                   <% match?(%Brando.Files.File{}, object.video.file) -> %>
-                    <.icon name="hero-film" />
+                    <.icon name="film" />
                     <video
                       class="gallery-video-preview"
                       muted
@@ -1525,7 +1525,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       aria-label={gettext("Video preview")}
                     />
                   <% true -> %>
-                    <.icon name="hero-film" />
+                    <.icon name="film" />
                 <% end %>
               <% end %>
             </div>
@@ -1551,7 +1551,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               }
               phx-click={JS.push("remove_gallery_object", target: @target, value: %{id: object.id})}
             >
-              <.icon name="hero-x-mark" /><span>{gettext("Remove")}</span>
+              <.icon name="x" /><span>{gettext("Remove")}</span>
             </button>
           </div>
         </div>

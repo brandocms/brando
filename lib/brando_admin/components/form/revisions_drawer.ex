@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Entry history")} close={@close} icon="hero-clock" workspace editor>
+      <Content.drawer id={@id} title={gettext("Entry history")} close={@close} icon="clock" workspace editor>
         <:info>
           <div class="activity-tabs" role="tablist" aria-label={gettext("Entry history")}>
             <button
@@ -200,10 +200,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                           {if revision.active, do: gettext("Active"), else: gettext("Inactive")}
                         </span>
                         <span :if={revision.scheduled} class="revision-status is-scheduled">
-                          <.icon name="hero-calendar-days" />{gettext("Scheduled")}
+                          <.icon name="calendar-days" />{gettext("Scheduled")}
                         </span>
                         <span :if={revision.protected} class="revision-protection">
-                          <.icon name="hero-lock-closed" />{gettext("Protected")}
+                          <.icon name="lock" />{gettext("Protected")}
                         </span>
                       </div>
                     </td>

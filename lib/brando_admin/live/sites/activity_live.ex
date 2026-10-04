@@ -180,7 +180,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       <form id="activity-filters" class="activity-toolbar" role="search" phx-change="filter" phx-submit="filter">
         <label class="activity-search">
           <span class="sr-only">{gettext("Search entries")}</span>
-          <.icon name="hero-magnifying-glass" />
+          <.icon name="search" />
           <input
             type="search"
             name="q"
@@ -251,7 +251,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
         id="activity-compare-modal"
         title={gettext("Compare revisions")}
         subtitle={@comparison.event.title}
-        icon="hero-arrows-right-left"
+        icon="arrow-left-right"
         show
         wide
         close={JS.push("close_compare")}

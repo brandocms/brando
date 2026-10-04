@@ -31,7 +31,7 @@ defmodule Brando.Blueprint.Listings.Components.Core do
       @offset && "offset-#{@offset}"
     ]}>
       <a :if={@status == :published} href={@href} target="_blank">
-        <Icon.icon name="hero-link" />
+        <Icon.icon name="link" />
       </a>
     </div>
     """

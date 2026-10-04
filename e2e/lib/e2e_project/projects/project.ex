@@ -16,6 +16,8 @@ defmodule E2eProject.Projects.Project do
 
   alias E2eProject.Projects
 
+  content_icon "folder-kanban"
+
   trait Brando.Trait.Creator
   trait Brando.Trait.Meta
   trait Brando.Trait.Revisioned

@@ -344,7 +344,7 @@ test('file refs keep their settings through replacement and gallery vars accept 
   await expect(galleryModal.locator('.gallery-object')).toHaveCount(2, { timeout: 20000 })
   await expect(galleryModal.locator('img')).toBeVisible({ timeout: 20000 })
   await expect(page.locator('#image-picker + .media-drawer-backdrop')).not.toBeVisible()
-  await expect(galleryModal.locator('.gallery-item-preview .hero-film')).toBeVisible()
+  await expect(galleryModal.locator('.gallery-item-preview .lucide-film')).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('gallery-variable-desktop.png') })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(galleryModal.getByRole('button', { name: 'Done', exact: true })).toBeInViewport()

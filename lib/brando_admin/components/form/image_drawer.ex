@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
       narrow
       light
       workspace
-      icon="hero-photo"
+      icon="image"
       subtitle={gettext("Edit the shared library image.")}
     >
       <.form
@@ -141,18 +141,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
             <div class="img-placeholder upload-trigger">
               <div class="placeholder-wrapper">
                 <div class="svg-wrapper">
-                  <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
-                    <polygon
-                      class="plus"
-                      points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
-                    />
-                    <path
-                      d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
-                      transform="translate(0 0)"
-                    />
-                    <circle cx="8" cy="9" r="2" />
-                  </svg>
+                  <.icon name="image-plus" class="icon-add-image" />
                 </div>
               </div>
             </div>
@@ -166,19 +155,19 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
             type="button"
             phx-click={open_image_editor(@edit_image, @myself)}
           >
-            <.icon name="hero-scissors" />{gettext("Edit/Crop")}
+            <.icon name="scissors" />{gettext("Edit/Crop")}
           </button>
           <div id="image-drawer-replace" class="media-action-menu" phx-hook="Brando.FloatingDropdown">
             <button type="button" class="workspace-button" popovertarget="image-drawer-replace-menu" aria-expanded="false">
-              <.icon name="hero-arrow-path" />{gettext("Replace")}<.icon name="hero-chevron-down-mini" />
+              <.icon name="refresh-cw" />{gettext("Replace")}<.icon name="chevron-down" />
             </button>
             <div id="image-drawer-replace-menu" class="media-action-options" popover="auto">
               <button
                 id={"image-drawer-upload-#{@upload_dom_id}"}
                 type="button"
                 phx-click={JS.dispatch("click", to: "#image-drawer-upload-input")}
-              ><.icon name="hero-arrow-up-tray" />{gettext("Upload")}</button>
-              <button type="button" phx-click={JS.push("reopen", target: "#image-picker") |> toggle_drawer("#image-picker")}><.icon name="hero-folder" />{gettext(
+              ><.icon name="upload" />{gettext("Upload")}</button>
+              <button type="button" phx-click={JS.push("reopen", target: "#image-picker") |> toggle_drawer("#image-picker")}><.icon name="folder" />{gettext(
                 "Select image"
               )}</button>
             </div>
@@ -197,13 +186,13 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
               popovertarget="image-drawer-more-menu"
               aria-expanded="false"
             >
-              <.icon name="hero-ellipsis-horizontal" />
+              <.icon name="ellipsis" />
             </button>
             <div id="image-drawer-more-menu" class="media-action-options" popover="auto">
-              <button type="button" phx-click={duplicate_image(@edit_image, @myself)}><.icon name="hero-document-duplicate" />{gettext(
+              <button type="button" phx-click={duplicate_image(@edit_image, @myself)}><.icon name="copy" />{gettext(
                 "Duplicate"
               )}</button>
-              <button type="button" class="destructive" phx-click={reset_image_field(@myself)}><.icon name="hero-trash" />{gettext(
+              <button type="button" class="destructive" phx-click={reset_image_field(@myself)}><.icon name="trash" />{gettext(
                 "Remove"
               )}</button>
             </div>
@@ -243,7 +232,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
       wide
       light
       workspace
-      icon="hero-scissors"
+      icon="scissors"
       subtitle={gettext("Adjust the crop and focal point.")}
     >
       <div
@@ -278,7 +267,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 </p>
               </div>
               <p class="image-editor-hint">
-                <.icon name="hero-cursor-arrow-rays" />
+                <.icon name="mouse-pointer-click" />
                 <span>{gettext("Drag the frame to move the crop. Drag a corner to resize it.")}</span>
               </p>
             </section>
@@ -287,7 +276,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 <div class="image-editor-section-heading">
                   <h3>{gettext("Crop settings")}</h3>
                   <button type="button" id="image-editor-reset" class="workspace-button quiet">
-                    <.icon name="hero-arrow-path" />{gettext("Reset")}
+                    <.icon name="refresh-cw" />{gettext("Reset")}
                   </button>
                 </div>
                 <div class="zoom-header">
@@ -307,7 +296,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
               {gettext("Save changes")}
             </button>
             <button type="button" class="workspace-button primary" id="image-editor-save-new">
-              <.icon name="hero-document-duplicate" />
+              <.icon name="copy" />
               {gettext("Save as new copy")}
             </button>
           </div>

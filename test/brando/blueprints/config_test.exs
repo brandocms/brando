@@ -29,6 +29,14 @@ defmodule Brando.Blueprint.ConfigTest do
     assert module.__factory__(%{status: :draft}) == %{status: :draft, title: "Factory title"}
   end
 
+  test "takes an optional Lucide content icon, defaulting to file" do
+    module = compile_blueprint(@valid_options, quote(do: content_icon("folder-kanban")))
+
+    assert Brando.Blueprint.get_icon(module) == "folder-kanban"
+    assert Brando.Blueprint.get_icon(Brando.Pages.Page) == "file-text"
+    assert Brando.Blueprint.get_icon(Brando.Content.Var) == "file"
+  end
+
   test "rejects missing, unknown, and duplicate use options contextually" do
     assert_raise BlueprintError, ~r/missing required options: \[:plural\]/, fn ->
       compile_blueprint(Keyword.delete(@valid_options, :plural))
@@ -70,7 +78,9 @@ defmodule Brando.Blueprint.ConfigTest do
       {quote(do: factory(title: "invalid")), ~r/`:factory` must be a plain map/},
       {quote(do: factory(%URI{})), ~r/`:factory` must be a plain map/},
       {quote(do: @allow_mark_as_deleted(:sometimes)), ~r/`:allow_mark_as_deleted` must be a boolean/},
-      {quote(do: singular("Invalid")), ~r/`:singular` must be a snake_case identifier/}
+      {quote(do: singular("Invalid")), ~r/`:singular` must be a snake_case identifier/},
+      {quote(do: content_icon("nope")), ~r/`content_icon` must be a Lucide icon name/},
+      {quote(do: content_icon("home")), ~r/`content_icon` "home" is an old icon name, use "house"/}
     ]
 
     Enum.each(invalid_settings, fn {body, message} ->

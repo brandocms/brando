@@ -401,24 +401,44 @@ shared subform components and other nested/repeated editors.
   across subform usages. Check 1440px first, then 390px, including long link titles
   and URLs. Capture fresh screenshots and run the relevant local E2E workflows.
 
-## Pending blueprint content-type icons
+## Icons
 
-Requested on 8 September 2026; proposal recorded for later implementation.
-Allow an optional top-level blueprint declaration using the existing icon names:
+The admin uses [Lucide](https://lucide.dev/icons) at stroke width 1.5,
+rendered with `<.icon name="…" />` (`Brando.HTML.Icon`) or `Icon.svelte` as
+`<span data-icon class="lucide-name">`, masked by one cached stylesheet that
+`Brando.Icons` generates. Use current Lucide names only;
+`test/brando/icons_test.exs` fails on a literal name Lucide doesn't have. Size
+icons with `width`/`height` and colour them with `color`. Target one icon with
+`.lucide-name`. To change the vendored set, run
+`mix brando.lucide.update VERSION`.
+
+Keep icons as masked spans. An SVG sprite (`<svg><use href>`) was measured on
+the 115-block e2e entry: one extra node and four dynamics per icon cost 13% on
+mount and broke the bench's payload budget. The span adds nothing over the
+Heroicons it replaced.
+
+### Blueprint content-type icons
+
+A blueprint declares its icon in its body:
 
 ```elixir
-icon "hero-folder"
+content_icon "folder-kanban"
 ```
 
-Resolve the icon automatically in the link picker's “Content types” navigation
-and corresponding entry icons. Use one shared blueprint accessor so other admin
-content-type displays can reuse the same metadata. Preserve a sensible fallback
-for blueprints without an icon; this remains optional and requires no per-picker
-configuration. No blueprint-level icon declaration was found in the current DSL.
+`Brando.Blueprint.get_icon/1` resolves it, falling back to `file`. The sidebar,
+dashboard shortcuts, the link picker's “Content types”, entry identifiers and
+listing headers all use it, so a content type looks the same everywhere.
 
-When implemented, document the supported declaration in `guides/blueprints.md`
-and verify configured icons, unset fallbacks, and their alignment at 1440px and
-390px. This proposal is not yet a supported DSL feature.
+### Sidebar rows
+
+Every sidebar row has an icon; items without one show `dot`, so the column
+stays aligned. Top-level and sub-item icons share one 20px column (sub-item
+glyphs are 16px, centred in it), so every label starts on the same line.
+Labels are trimmed with `text-box: trim-both cap alphabetic`, so the text
+centres on the icon's centre line: aim for under 0.5px between icon centre and
+cap centre. Rows are 32px (top level) and 30px (sub-items) with no block
+padding. Browsers without `text-box` sit the label a pixel or two high, which
+is acceptable.
 
 ## Approved modal direction
 

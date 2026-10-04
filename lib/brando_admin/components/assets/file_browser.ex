@@ -98,7 +98,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               title={gettext("Up")}
               aria-label={gettext("Up")}
             >
-              <.icon name="hero-arrow-up-mini" />
+              <.icon name="arrow-up" />
             </button>
             <button
               type="button"
@@ -118,7 +118,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
           phx-click={@show_new_folder_event}
           phx-target={@target}
         >
-          <.icon name="hero-plus" />
+          <.icon name="plus" />
           <span>{gettext("New folder")}</span>
         </button>
 
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               title={gettext("Create folder")}
               aria-label={gettext("Create folder")}
             >
-              <.icon name="hero-check-circle" />
+              <.icon name="circle-check" />
             </button>
             <button
               type="button"
@@ -154,7 +154,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               phx-click={@cancel_new_folder_event}
               phx-target={@target}
             >
-              <.icon name="hero-x-mark" />
+              <.icon name="x" />
             </button>
           </div>
         </form>
@@ -175,7 +175,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               data-drop-folder={folder}
               data-drop-target={@target}
             >
-              <.icon name="hero-folder" />
+              <.icon name="folder" />
               <span class="folder-name">{folder_label(folder, @current_folder)}</span>
             </button>
           <% end %>

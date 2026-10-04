@@ -37,8 +37,8 @@
 
       &:hover {
         background-color: var(--brando-color-dark);
-        span[data-icon] {
-          background-color: white;
+        [data-icon] {
+          color: white;
         }
       }
     }
@@ -110,6 +110,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
+
+        [data-icon] {
+          width: 24px;
+          height: 24px;
+        }
       }
 
       .live-preview-refresh {
@@ -1076,7 +1081,7 @@ html.not-mac .shortcut-other { display: inline; }
   cursor: pointer;
 
   code { font-size: 12px; }
-  [class^="hero-"] { width: 13px; height: 13px; }
+  [data-icon] { width: 13px; height: 13px; }
   &:hover { color: #254e3f; }
 }
 

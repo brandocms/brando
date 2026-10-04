@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace settings-workspace globals-workspace">
-      <Workspace.header title={gettext("Globals")} />
+      <Workspace.header icon={@page_icon} title={gettext("Globals")} />
 
       <.live_component module={GlobalTabs} id="global_tabs" active_tab={@active_tab} current_user={@current_user}>
       </.live_component>

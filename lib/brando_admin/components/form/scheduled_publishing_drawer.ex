@@ -17,7 +17,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
       id={@id}
       title={gettext("Scheduled publishing")}
       close={@close}
-      icon="hero-calendar-days"
+      icon="calendar-days"
       workspace
       editor
       narrow

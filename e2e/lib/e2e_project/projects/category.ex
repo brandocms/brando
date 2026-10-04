@@ -13,6 +13,8 @@ defmodule E2eProject.Projects.Category do
   use Gettext, backend: E2eProjectAdmin.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "tag"
+
   trait Brando.Trait.Creator
   trait :permalink
   trait Brando.Trait.Sequenced

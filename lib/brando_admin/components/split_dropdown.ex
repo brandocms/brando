@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.SplitDropdown do
 
   def dd_icon(assigns) do
     ~H"""
-    <.icon name="hero-chevron-down" class="dropdown-chevron" />
+    <.icon name="chevron-down" class="dropdown-chevron" />
     """
   end
 end

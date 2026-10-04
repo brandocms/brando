@@ -101,7 +101,7 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
 
     save(view)
     assert_push_event(view, "b:frontend-edit", %{type: "saved"}, 3_000)
-    assert has_element?(view, ".frontend-edit-status .hero-check-circle-mini")
+    assert has_element?(view, ~s(.frontend-edit-status .lucide-circle-check))
     refute has_element?(view, "[data-testid=frontend-edit-stale]")
 
     # Saving went through the entry, rendering its stored HTML

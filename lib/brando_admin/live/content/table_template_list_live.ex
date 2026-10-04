@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Content.TableTemplateListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Table Templates")} subtitle={gettext("Overview")}>
+    <Content.header icon={@page_icon} title={gettext("Table Templates")} subtitle={gettext("Overview")}>
       <.link
         :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
         navigate="/admin/config/content/table_templates/create"

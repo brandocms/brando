@@ -609,7 +609,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
                 phx-click={JS.dispatch("change")}
                 class="subform-delete"
               >
-                <.icon name="hero-x-mark" />
+                <.icon name="x" />
               </button>
             </div>
             <div class="subform-fields">

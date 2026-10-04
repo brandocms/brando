@@ -9,25 +9,20 @@ button.delete.tiny {
   width: 18px;
   height: 18px;
   border-radius: 50%;
+  color: #333333;
   background-color: var(--brando-color-peach);
-  transition: background-color 0.08s ease;
+  transition:
+    background-color 0.08s ease,
+    color 0.08s ease;
 
   &:hover {
-    svg {
-      line {
-        stroke: var(--brando-color-peach);
-      }
-    }
+    color: var(--brando-color-peach);
   }
 
-  svg {
+  :is(svg, [data-icon]) {
     width: 6px;
     height: 6px;
     margin-left: -1px;
-
-    line {
-      transition: stroke 0.08s ease;
-    }
   }
 }
 
@@ -274,7 +269,7 @@ a.tiny {
       }
     }
   }
-  span[class^="hero-"] {
+  [data-icon] {
     width: 12px;
     height: 12px;
   }
@@ -357,7 +352,7 @@ button.primary.submit-button {
   font-weight: 500;
   line-height: 20px;
 
-  > [class^="hero-"] { width: 16px; height: 16px; }
+  > [data-icon] { width: 16px; height: 16px; }
   .shortcut { margin-left: 4px; }
   .processing svg { fill: currentColor; }
 
@@ -383,14 +378,10 @@ button.primary.submit-button {
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 
-  svg {
+  :is(svg, [data-icon]) {
     width: 15px;
     height: 15px;
     flex-shrink: 0;
-
-    path:nth-of-type(2) {
-      fill: currentColor;
-    }
   }
 
   &:hover {
@@ -409,7 +400,7 @@ button.primary.submit-button {
    buttons, and every new button with an icon came out oversized until a rule
    sized it. :where keeps this at the icon's own specificity, so any rule that
    sizes an icon on purpose still wins. */
-:where(button, a.workspace-button, .folder-action, .media-button) > span[data-icon] {
+:where(button, a.workspace-button, .folder-action, .media-button) > [data-icon] {
   width: 1.3em;
   height: 1.3em;
 }

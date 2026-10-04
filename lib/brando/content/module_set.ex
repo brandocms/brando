@@ -16,6 +16,8 @@ defmodule Brando.Content.ModuleSet do
 
   alias Brando.Content
 
+  content_icon "boxes"
+
   @type t :: %__MODULE__{}
 
   # ++ Traits

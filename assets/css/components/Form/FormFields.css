@@ -115,7 +115,6 @@
   [data-icon] {
     width: 12px;
     height: 12px;
-    background-color: currentColor;
   }
 }
 
@@ -149,7 +148,6 @@
     [data-icon] {
       width: 13px;
       height: 13px;
-      background-color: currentColor;
       opacity: 0.6;
     }
   }
@@ -269,7 +267,7 @@
   [data-icon] {
     width: 13px;
     height: 13px;
-    background-color: var(--brando-color-dark);
+    color: var(--brando-color-dark);
   }
 }
 

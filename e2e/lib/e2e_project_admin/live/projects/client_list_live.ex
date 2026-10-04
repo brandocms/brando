@@ -5,7 +5,7 @@ defmodule E2eProjectAdmin.Projects.ClientListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
+    <Content.header icon={@page_icon}
       title={gettext("Clients")}
       subtitle={gettext("Overview")}>
       <.link navigate={@admin_create_url} class="primary">

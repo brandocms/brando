@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
                 <Content.image image={@video.thumbnail} size={:smallest} />
               <% else %>
                 <div class="video-placeholder">
-                  <.icon name="hero-video-camera" />
+                  <.icon name="video" />
                 </div>
               <% end %>
             </figure>

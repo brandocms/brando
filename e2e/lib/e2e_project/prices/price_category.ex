@@ -15,6 +15,8 @@ defmodule E2eProject.Prices.PriceCategory do
 
   alias E2eProject.Prices
 
+  content_icon "circle-dollar-sign"
+
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Status

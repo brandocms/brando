@@ -64,8 +64,8 @@
 }
 
 /* Small icon button for row-level actions — reference rows, select options.
-   `.icon` renders a mask <span>, not an <svg>, and paints itself with
-   `currentColor`, so `color` is what makes the glyph visible. It has to be set
+   `.icon` strokes with `currentColor`, so `color` is what makes the glyph
+   visible. It has to be set
    explicitly on hover: a generic button hover rule elsewhere (`button.tiny`)
    otherwise recolours the icon to the background and the control vanishes. */
 .module-item-action {
@@ -99,7 +99,6 @@
   [data-icon] {
     width: 17px;
     height: 17px;
-    background-color: currentColor;
   }
 }
 
@@ -156,7 +155,7 @@
   }
 }
 
-/* The dot-grid grab affordance — no heroicon reads as "drag me". */
+/* The dot-grid grab affordance — no icon reads as "drag me". */
 .drag-grip {
   display: block;
   width: 10px;
@@ -196,7 +195,6 @@
   [data-icon] {
     width: 15px;
     height: 15px;
-    background-color: currentColor;
   }
 }
 
@@ -222,7 +220,6 @@
       width: 24px;
       height: 24px;
       margin-bottom: 8px;
-      background-color: currentColor;
       opacity: 0.45;
     }
 
@@ -650,7 +647,6 @@
       opacity: 0.58;
     }
 
-    /* `.icon` is a mask <span>, never an <svg> — see `.module-item-action`. */
     [data-icon] {
       position: absolute;
       top: 50%;
@@ -658,7 +654,6 @@
       width: 16px;
       height: 16px;
       transform: translateY(-50%);
-      background-color: currentColor;
       opacity: 0.42;
     }
   }

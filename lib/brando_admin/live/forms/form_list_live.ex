@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Forms.FormListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace forms-workspace">
-      <Workspace.header title={gettext("Forms")} subtitle={gettext("Forms visitors fill in on the site")}>
+      <Workspace.header icon={@page_icon} title={gettext("Forms")} subtitle={gettext("Forms visitors fill in on the site")}>
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:update, Brando.Forms.Messages)}
           navigate="/admin/config/forms/messages"

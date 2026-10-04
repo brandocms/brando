@@ -311,7 +311,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             <% end %>
 
             <div :if={!@has_objects?} class="media-gallery-empty">
-              <.icon name="hero-photo" />
+              <.icon name="image" />
               <span>{gettext("Drop media here to build your gallery")}</span>
               <span class="media-field-meta">{gettext("You can reorder and configure each item afterwards.")}</span>
             </div>
@@ -324,7 +324,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             >
             </div>
             <div class="media-field-drop" aria-hidden="true">
-              <.icon name="hero-arrow-up-tray" /><span>{gettext("Add to gallery")}</span>
+              <.icon name="upload" /><span>{gettext("Add to gallery")}</span>
             </div>
           </div>
 

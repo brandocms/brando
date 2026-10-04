@@ -80,6 +80,7 @@ defmodule Brando.Blueprint.Verifier do
       singular: Module.get_attribute(module, :singular),
       plural: Module.get_attribute(module, :plural),
       router_scope: Module.get_attribute(module, :router_scope),
+      content_icon: Module.get_attribute(module, :content_icon),
       gettext_module: Module.get_attribute(module, :gettext_module),
       data_layer: Module.get_attribute(module, :data_layer),
       table_name: Module.get_attribute(module, :table_name),

@@ -59,7 +59,7 @@ defmodule BrandoAdmin.AI.GuidanceLive do
           <h1>{gettext("Assistant guidance")}</h1>
           <p>{gettext("The conventions the content assistant follows when it builds content for editors.")}</p>
         </div>
-        <span class="guidance-scope"><.icon name="hero-globe-alt" />{@scope_label}</span>
+        <span class="guidance-scope"><.icon name="globe" />{@scope_label}</span>
       </header>
 
       <section class="guidance-card" aria-labelledby="guidance-editor-title">

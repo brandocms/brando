@@ -95,7 +95,7 @@ defmodule Brando.Villain.Blocks.TextBlock do
           element: "p",
           class: "lede",
           label: "Lede",
-          icon: "hero-circle-stack"
+          icon: "database"
         }
       ]
     end
@@ -125,12 +125,24 @@ defmodule Brando.Villain.Blocks.TextBlock do
     defp to_style_map(%Style{} = style) do
       %{"element" => style.element, "class" => style.class}
       |> maybe_put("label", style.label)
-      |> maybe_put("icon", style.icon)
+      |> maybe_put("icon", resolve_icon(style.icon))
     end
 
     defp to_style_map(style) when is_map(style) do
-      Map.new(style, fn {key, value} -> {to_string(key), value} end)
-      |> Map.take(~w(element class label icon))
+      style = Map.new(style, fn {key, value} -> {to_string(key), value} end)
+
+      style
+      |> Map.take(~w(element class label))
+      |> maybe_put("icon", resolve_icon(style["icon"]))
+    end
+
+    # Stored styles may carry legacy `hero-*` names or Lucide aliases. The
+    # editor renders `lucide-<name>` classes, so it only gets current names.
+    defp resolve_icon(icon) do
+      case Brando.Icons.resolve(icon) do
+        {:ok, name} -> name
+        :error -> nil
+      end
     end
 
     defp maybe_put(map, _key, nil), do: map

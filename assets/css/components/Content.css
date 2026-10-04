@@ -56,3 +56,10 @@ main {
     }
   }
 }
+
+/* Content.image's empty well. Kept at element specificity so the contexts
+   that size their own placeholder icon still win. */
+.img-placeholder-icon {
+  width: 24px;
+  height: 24px;
+}

@@ -158,22 +158,16 @@ defmodule Brando.HTML do
   def get_menu_item_target_blank(_), do: false
 
   @doc """
-  Renders a [Heroicon](https://heroicons.com).
-
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
+  Renders a [Lucide](https://lucide.dev/icons) icon. See `Brando.HTML.Icon.icon/1`.
 
   ## Examples
 
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+      <.icon name="x" />
+      <.icon name="refresh-cw" class="animate-spin" />
   """
   attr :name, :string, required: true
   attr :class, :any, default: nil
+  attr :rest, :global
 
   def icon(assigns), do: Brando.HTML.Icon.icon(assigns)
 

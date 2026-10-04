@@ -277,11 +277,11 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
           <h1>{gettext("Edit block")}</h1>
         </div>
         <button type="button" class="frontend-editor-close" data-frontend-edit-close aria-label={gettext("Close editor")}>
-          <.icon name="hero-x-mark" />
+          <.icon name="x" />
         </button>
       </header>
       <div class="frontend-editor-unavailable" role="alert">
-        <.icon name="hero-no-symbol" />
+        <.icon name="ban" />
         <p>
           <%= case @unavailable do %>
             <% :forbidden -> %>
@@ -321,16 +321,16 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
           title={gettext("Open in the full editor")}
           aria-label={gettext("Open in the full editor")}
         >
-          <.icon name="hero-arrow-top-right-on-square" />
+          <.icon name="external-link" />
         </.link>
         <button type="button" class="frontend-editor-close" data-frontend-edit-close aria-label={gettext("Close editor")}>
-          <.icon name="hero-x-mark" />
+          <.icon name="x" />
         </button>
       </header>
 
       <div class="frontend-editor-notices">
         <div :if={@stale} class="frontend-editor-notice is-error" role="alert" data-testid="frontend-edit-stale">
-          <.icon name="hero-exclamation-triangle" />
+          <.icon name="triangle-alert" />
           <div>
             <p :if={!@stale.deleted?}>
               {gettext("%{name} saved this page after you opened it. Reload to get their changes before you save.",
@@ -350,7 +350,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
           role="alert"
           data-testid="frontend-edit-invalid"
         >
-          <.icon name="hero-exclamation-triangle" />
+          <.icon name="triangle-alert" />
           <div>
             <p>{gettext("Not saved: the entry has errors in fields not shown here.")}</p>
             <.link href={@admin_url} target="_blank" class="frontend-editor-notice-action">
@@ -366,7 +366,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
         >
           <div class="frontend-editor-avatar">
             <Content.image :if={user.avatar} image={user.avatar} size={:thumb} />
-            <.icon :if={!user.avatar} name="hero-user" />
+            <.icon :if={!user.avatar} name="user" />
           </div>
           <p :if={user[:frontend?]}>
             {gettext("%{name} is also editing this page on the website", name: user.name)}
@@ -377,7 +377,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
         </div>
 
         <div :if={@shared?} class="frontend-editor-notice is-shared" data-testid="frontend-edit-shared">
-          <.icon name="hero-link" />
+          <.icon name="link" />
           <p>
             <strong>{gettext("Shared fragment.")}</strong>
             <%= if @usage > 0 do %>
@@ -393,7 +393,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
         </div>
 
         <div :if={@scheduled?} class="frontend-editor-notice is-warning" data-testid="frontend-edit-scheduled">
-          <.icon name="hero-calendar-days" />
+          <.icon name="calendar-days" />
           <p>{gettext("A version of this page is scheduled to be published. It will replace changes made here.")}</p>
         </div>
       </div>

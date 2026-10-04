@@ -46,7 +46,7 @@
         cursor: pointer;
       }
       
-      svg {
+      :is(svg, [data-icon]) {
         margin-right: 10px;
       }
       
@@ -373,7 +373,7 @@
         cursor: pointer;
         transition: background-color 0.15s ease, color 0.15s ease;
 
-        svg {
+        :is(svg, [data-icon]) {
           width: 15px;
           height: 15px;
           stroke: currentColor;
@@ -404,8 +404,8 @@
           /* An entry with no asset, or one still processing, fills the same
              square as a thumbnail would — otherwise the card collapses to a
              stray icon in the corner. The icon needs an explicit size because
-             heroicons are masks, and because the actions-row rule above sizes
-             every [data-icon] in this component down to 15px. */
+             the actions-row rule above sizes every [data-icon] in this
+             component down to 15px. */
           .img-placeholder {
             display: grid;
             place-items: center;
@@ -433,15 +433,12 @@
     }
   }
 
-  /* Heroicon spans are CSS masks: without an explicit size and a
-     background-color they render as nothing. The neighbouring .add-entry-button
-     uses inline <svg>, so both have to be normalised here or the row is a
-     mixture of icon sizes and missing glyphs. */
+  /* Matches the neighbouring .add-entry-button, or the row is a mixture of
+     icon sizes. */
   [data-icon] {
     width: 15px;
     height: 15px;
     flex-shrink: 0;
-    background-color: currentColor;
   }
 
   .actions {
@@ -471,7 +468,7 @@
       cursor: pointer;
       transition: background-color 0.15s ease, border-color 0.15s ease;
 
-      svg {
+      :is(svg, [data-icon]) {
         width: 15px;
         height: 15px;
         margin-right: 0;
@@ -767,7 +764,7 @@
     cursor: pointer;
     background: white;
 
-    [data-icon] { width: 15px; height: 15px; background: currentColor; }
+    [data-icon] { width: 15px; height: 15px; }
     &:hover { background: var(--brando-color-input); }
     &:focus-visible { outline: 2px solid var(--brando-color-dark); outline-offset: 3px; }
   }

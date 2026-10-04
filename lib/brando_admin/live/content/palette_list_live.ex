@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Content.PaletteListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Content Palettes")} subtitle={gettext("Overview")}>
+    <Content.header icon={@page_icon} title={gettext("Content Palettes")} subtitle={gettext("Overview")}>
       <.link
         :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
         navigate="/admin/config/content/palettes/create"

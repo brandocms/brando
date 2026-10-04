@@ -11,13 +11,14 @@ defmodule BrandoAdmin.Components.Content do
       assigns
       |> assign_new(:inner_block, fn -> nil end)
       |> assign_new(:subtitle, fn -> nil end)
+      |> assign_new(:icon, fn -> nil end)
 
     ~H"""
     <header id="content-header">
       <div class="content">
         <section class="main">
           <h1>
-            {@title}
+            <.icon :if={@icon} name={@icon} class="content-header-icon" />{@title}
           </h1>
           <h3 :if={@subtitle}>
             {@subtitle}
@@ -45,7 +46,7 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:left, fn -> false end)
       |> assign_new(:workspace, fn -> false end)
       |> assign_new(:editor, fn -> false end)
-      |> assign_new(:icon, fn -> "hero-photo" end)
+      |> assign_new(:icon, fn -> "image" end)
       |> assign_new(:subtitle, fn -> nil end)
       |> assign_new(:footer, fn -> nil end)
       |> assign_new(:hidden, fn -> true end)
@@ -82,7 +83,7 @@ defmodule BrandoAdmin.Components.Content do
           </div>
           <h2 :if={!@workspace}>{@title}</h2>
           <button phx-click={@close} type="button" class="drawer-close-button" aria-label={gettext("Close")}>
-            <.icon :if={@workspace} name="hero-x-mark" />
+            <.icon :if={@workspace} name="x" />
             <span :if={!@workspace}>{gettext("Close")}</span>
           </button>
         </div>
@@ -117,7 +118,7 @@ defmodule BrandoAdmin.Components.Content do
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :subtitle, :string, default: nil
-  attr :icon, :string, default: "hero-adjustments-horizontal"
+  attr :icon, :string, default: "sliders-horizontal"
   attr :layout, :string, default: nil
   attr :show, :boolean, default: false
   attr :center_header, :boolean, default: false
@@ -184,7 +185,7 @@ defmodule BrandoAdmin.Components.Content do
                 {render_slot(@header)}
               <% end %>
               <button type="button" class="modal-close" aria-label={gettext("Close dialog")} phx-click={@close}>
-                <.icon name="hero-x-mark" />
+                <.icon name="x" />
               </button>
             </div>
           </header>

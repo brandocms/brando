@@ -143,10 +143,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   </div>
                   <div class="field-base">
                     <div class="filter-input-wrapper">
-                      <svg class="filter-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" />
-                        <line x1="10.75" y1="10.75" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.5" />
-                      </svg>
+                      <.icon name="search" class="filter-icon" />
                       <input
                         class="text"
                         id={"#{@field.id}-select-modal-search"}
@@ -157,10 +154,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                         autocomplete="off"
                       />
                       <button type="button" class="filter-clear" aria-label={gettext("Clear filter")} tabindex="-1">
-                        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" />
-                          <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="1.5" />
-                        </svg>
+                        <.icon name="x" />
                       </button>
                     </div>
                   </div>
@@ -948,10 +942,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         value={@opt.value}
         phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
       >
-        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
-          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
-        </svg>
+        <.icon name="x" />
       </button>
     <% end %>
     """
@@ -992,10 +983,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         value={@entry_id}
         phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
       >
-        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
-          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
-        </svg>
+        <.icon name="x" />
       </button>
     <% end %>
     """
@@ -1021,10 +1009,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         value={@entry_id}
         phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
       >
-        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
-          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
-        </svg>
+        <.icon name="x" />
       </button>
     <% end %>
     """

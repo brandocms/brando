@@ -153,7 +153,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <div class="identifier-field-copy">
             <%= if !@has_entries do %>
               <div class="identifier-empty">
-                <span class="identifier-empty-icon" aria-hidden="true"><.icon name="hero-link" /></span>
+                <span class="identifier-empty-icon" aria-hidden="true"><.icon name="link" /></span>
                 <span>{gettext("No selected entries")}</span>
                 <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
               </div>
@@ -186,7 +186,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
                         aria-label={gettext("Remove")}
                         phx-click={JS.dispatch("change")}
                       >
-                        <.icon name="hero-x-mark" />
+                        <.icon name="x" />
                       </button>
                     </:delete>
                   </.assoc_identifier>
@@ -251,7 +251,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           </div>
           <%!-- This query is client-owned and must survive selection patches. --%>
           <div id={"#{@id}-search-control"} class="field-base filter-input-wrapper" phx-update="ignore">
-            <.icon name="hero-magnifying-glass" class="filter-icon" />
+            <.icon name="search" class="filter-icon" />
             <input
               id={"#{@id}-search"}
               type="search"
@@ -260,7 +260,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
               autocomplete="off"
             />
             <button type="button" class="filter-clear" aria-label={gettext("Clear filter")}>
-              <.icon name="hero-x-mark" />
+              <.icon name="x" />
             </button>
           </div>
         </div>

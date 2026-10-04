@@ -278,6 +278,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
     ~H"""
     <div class="admin-workspace media-workspace images-workspace workspace-list">
       <Workspace.header
+        icon={@page_icon}
         title={gettext("Images")}
         subtitle={gettext("Browse folders, upload images, and manage your library.")}
       >
@@ -340,20 +341,17 @@ defmodule BrandoAdmin.Images.ImageListLive do
                 data-click-mode="trigger"
                 class="library-upload-trigger"
               >
-                <button type="button" class="folder-action upload-trigger"><.icon name="hero-arrow-up-tray" />{if @current_folder ==
-                                                                                                                    "",
-                                                                                                                  do:
-                                                                                                                    gettext(
-                                                                                                                      "Upload to %{folder}",
-                                                                                                                      folder:
-                                                                                                                        upload_folder_label(
-                                                                                                                          @effective_upload_folder
-                                                                                                                        )
-                                                                                                                    ),
-                                                                                                                  else:
-                                                                                                                    gettext(
-                                                                                                                      "Upload"
-                                                                                                                    )}</button>
+                <button type="button" class="folder-action upload-trigger"><.icon name="upload" />{if @current_folder ==
+                                                                                                        "",
+                                                                                                      do:
+                                                                                                        gettext(
+                                                                                                          "Upload to %{folder}",
+                                                                                                          folder:
+                                                                                                            upload_folder_label(
+                                                                                                              @effective_upload_folder
+                                                                                                            )
+                                                                                                        ),
+                                                                                                      else: gettext("Upload")}</button>
                 <input type="file" class="file-input" multiple aria-label={gettext("Upload images")} />
               </div>
               <button
@@ -363,7 +361,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
                 phx-click="sweep_open"
                 title={gettext("Sort this folder's images into folders for the entries that use them")}
               >
-                <.icon name="hero-folder-arrow-down" />{gettext("Sort by use")}
+                <.icon name="folder-down" />{gettext("Sort by use")}
               </button>
               <button
                 :if={unused_filter?(@params) and @unused_count > 0}
@@ -380,7 +378,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
                   )
                 }
               >
-                <.icon name="hero-trash" />{ngettext(
+                <.icon name="trash" />{ngettext(
                   "Delete %{count} unused",
                   "Delete all %{count} unused",
                   @unused_count,
@@ -408,7 +406,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
         </:main_header>
 
         <div :if={@sweep_result} class="image-sweep-result" role="status">
-          <.icon name="hero-check-circle" />
+          <.icon name="circle-check" />
           <span>
             {gettext("Sorted %{images} into %{folders}.",
               images: ngettext("%{count} image", "%{count} images", @sweep_result.moved, count: @sweep_result.moved),
@@ -417,7 +415,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
           </span>
           <button type="button" class="image-sweep-undo" phx-click="sweep_undo">{gettext("Undo")}</button>
           <button type="button" class="image-sweep-dismiss" phx-click="sweep_dismiss" aria-label={gettext("Dismiss")}>
-            <.icon name="hero-x-mark" />
+            <.icon name="x" />
           </button>
         </div>
 
@@ -455,7 +453,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       id="image-sweep"
       title={gettext("Sort by use")}
       subtitle={String.replace(@plan.folder, "/", " › ")}
-      icon="hero-folder-arrow-down"
+      icon="folder-down"
       show
       wide
       close={JS.push("sweep_close")}

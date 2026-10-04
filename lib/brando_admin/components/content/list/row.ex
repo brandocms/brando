@@ -171,9 +171,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <% :url -> %>
         <.column class={@class} columns={1} offset={@offset}>
           <a href={@schema.__absolute_url__(@entry)} target="_blank">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
-              <path fill="none" d="M0 0h24v24H0z" /><path d="M18.364 15.536L16.95 14.12l1.414-1.414a5 5 0 1 0-7.071-7.071L9.879 7.05 8.464 5.636 9.88 4.222a7 7 0 0 1 9.9 9.9l-1.415 1.414zm-2.828 2.828l-1.415 1.414a7 7 0 0 1-9.9-9.9l1.415-1.414L7.05 9.88l-1.414 1.414a5 5 0 1 0 7.071 7.071l1.414-1.414 1.415 1.414zm-.708-10.607l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z" />
-            </svg>
+            <.icon name="link" class="m" />
           </a>
         </.column>
     <% end %>
@@ -338,7 +336,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           event="translate_entry_to_language"
           extra_attrs={[class: "ai-translate-action"]}
         >
-          {gettext("Translate to")} [{String.upcase(lang)}] <.icon name="hero-sparkles" />
+          {gettext("Translate to")} [{String.upcase(lang)}] <.icon name="sparkles" />
         </.action_button>
         <.action_button
           :for={lang <- @translation_langs}
@@ -400,7 +398,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <div :if={@by_sequence?} class="col-1 seq">
       <div class="center sequence-handle">
-        <.icon name="brando-move" />
+        <.icon name="grip-vertical" />
       </div>
     </div>
     """
@@ -618,7 +616,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         disabled={!@alternate_entries?}
         phx-click={show_modal("#entry-#{@entry.id}-alternates")}
       >
-        <.icon name="hero-language" class="m" />
+        <.icon name="languages" class="m" />
       </button>
       <Content.modal title={gettext("Alternates")} narrow id={"entry-#{@entry.id}-alternates"}>
         <div class="identifier-list">
@@ -644,7 +642,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
                   )
                 }
               >
-                <.icon name="hero-x-mark" />
+                <.icon name="x" />
               </button>
             </:delete>
           </Entries.dumb_identifier>

@@ -20,7 +20,7 @@ defmodule BrandoAdmin.Users.UserListLive do
 
     ~H"""
     <div class="admin-workspace users-workspace workspace-list" data-groups={to_string(Brando.Authorization.enabled?())}>
-      <Workspace.header title={gettext("Users")} subtitle={gettext("Manage accounts and access.")}>
+      <Workspace.header icon={@page_icon} title={gettext("Users")} subtitle={gettext("Manage accounts and access.")}>
         <.link
           :if={Brando.Authorization.Administration.can?(Brando.Authorization.Scope.current(@current_user), :read, :groups)}
           navigate="/admin/groups"
@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Users.UserListLive do
       id="transfer-content-modal"
       title={gettext("Transfer content & delete user")}
       subtitle={@deleting_user && @deleting_user.name}
-      icon="hero-user"
+      icon="user"
       layout="transfer"
       show={@deleting_user != nil}
       close={hide_modal("#transfer-content-modal") |> JS.push("cancel_delete")}
@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Users.UserListLive do
               <% else %>
                 <span class="transfer-user-placeholder">{gettext("Select user...")}</span>
               <% end %>
-              <.icon name="hero-chevron-down" />
+              <.icon name="chevron-down" />
             </button>
             <div :if={@user_select_open} class="transfer-user-options">
               <button
@@ -105,12 +105,12 @@ defmodule BrandoAdmin.Users.UserListLive do
             </div>
           </div>
           <div class="modal-notice">
-            <.icon name="hero-information-circle" /><p>
+            <.icon name="info" /><p>
               {gettext("Content will remain in the CMS. Ownership will transfer to the selected user.")}
             </p>
           </div>
           <div class="modal-notice modal-notice--danger">
-            <.icon name="hero-exclamation-triangle" /><p>
+            <.icon name="triangle-alert" /><p>
               {gettext("%{name}’s account will be deleted after the transfer.", name: @deleting_user.name)}
             </p>
           </div>
