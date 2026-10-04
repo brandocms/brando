@@ -4,19 +4,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   use Gettext, backend: Brando.Gettext
 
   import Brando.Utils, only: [loaded_assoc?: 2]
-  import Phoenix.HTML, only: [raw: 1]
 
   alias Brando.Images
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm
+  alias BrandoAdmin.Components.Form.Input.Gallery.Tile
   alias Ecto.Changeset
   alias Phoenix.LiveView.JS
 
   # prop gallery_object_form, :any, required: true
   # prop gallery_objects, :list, required: true
-  # prop display, :atom, required: true
+  # prop display, :atom, required: true — the admin's view (:grid/:list), not the block's saved `display`
+  # prop text_editor, :map — the open caption/alt popover, `%{type, id, kind}`
   # prop myself, :any, required: true
   # prop uid, :string, required: true
   # prop gallery_form, :any, required: true
@@ -32,11 +33,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     current_override = get_current_override_from_form(assigns.block_data, media_key(obj))
 
     # Determine the actual display values (considering current form overrides)
-    display_values = compute_display_values_from_form(obj, current_override)
+    display_values =
+      obj
+      |> compute_display_values_from_form(current_override)
+      |> Map.put(:caption, override_value(current_override, :caption))
 
     assigns = assign(assigns, :obj, obj)
     assigns = assign(assigns, :object_modal_id, object_modal_id)
     assigns = assign(assigns, :display_values, display_values)
+    assigns = assign(assigns, :list_row, list_row(obj, assigns.gallery_object_form, display_values))
+    assigns = assign_tile(assigns, obj, current_override)
 
     ~H"""
     <div
@@ -59,75 +65,77 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         value={@gallery_object_form.index}
       />
 
-      <!-- Media type badge -->
-      <div class="badge mini media-type-badge">
-        <%= if @gallery_object_form[:image_id].value do %>
-          <.icon name="hero-photo" />
-        <% else %>
-          <.icon name="hero-video-camera" />
-        <% end %>
-      </div>
-
-      <%= if @gallery_object_form[:image_id].value do %>
-        <%!-- Display image if available --%>
-        <%= if @obj && loaded_assoc?(@obj, :image) do %>
-          <Content.image image={@obj.image} size={(@display == :grid && :thumb) || :smallest} />
-        <% end %>
-      <% else %>
-        <%!-- Display video thumbnail or placeholder --%>
-        <%= if @obj && loaded_assoc?(@obj, :video) && @obj.video.thumbnail do %>
-          <Content.image image={@obj.video.thumbnail} size={(@display == :grid && :thumb) || :smallest} />
-        <% else %>
-          <div class="video-placeholder">
-            <.icon name="hero-video-camera" />
-            <%= if @obj && loaded_assoc?(@obj, :video) do %>
-              <span>{@obj.video.title || "Video"}</span>
-            <% end %>
+      <div :if={@display != :grid} class="gallery-block-list-row">
+        <div class="gallery-block-list-thumb">
+          <%= cond do %>
+            <% @obj && loaded_assoc?(@obj, :image) -> %>
+              <Content.image image={@obj.image} size={:thumb} />
+            <% @obj && loaded_assoc?(@obj, :video) && @obj.video.thumbnail -> %>
+              <Content.image image={@obj.video.thumbnail} size={:thumb} />
+            <% true -> %>
+              <div class="img-placeholder">
+                <.icon name={if @list_row.media_type == :video, do: "hero-video-camera", else: "hero-photo"} />
+              </div>
+          <% end %>
+        </div>
+        <div
+          class="gallery-block-list-copy"
+          phx-click={show_modal("##{@object_modal_id}")}
+          data-sortable-filter
+        >
+          <div class="gallery-block-list-title">{@list_row.title}</div>
+          <div :if={@list_row.details != []} class="gallery-block-list-details">
+            <span :for={detail <- @list_row.details}>{detail}</span>
           </div>
-        <% end %>
-      <% end %>
-
-      <%!-- One group in the corner: edit, then delete. --%>
-      <div class="gallery-object-actions" data-sortable-filter>
-        <button
-          :if={@gallery_object_form[:image_id].value}
-          class="edit-image-btn"
-          type="button"
-          aria-label={gettext("Edit image")}
-          phx-click={
-            JS.push("open_image_editor",
-              target: @myself,
-              value: %{image_id: @gallery_object_form[:image_id].value}
-            )
-            |> open_image_editor_drawer()
-          }
-          data-sortable-filter
-        >
-          <.icon name="hero-pencil-square" />
-        </button>
-        <button
-          class="delete-x"
-          type="button"
-          aria-label={gettext("Delete")}
-          name={"#{@gallery_form.name}[drop_gallery_object_ids][]"}
-          value={@gallery_object_form.index}
-          phx-click={JS.dispatch("change")}
-          data-sortable-filter
-        >
-          <.icon name="hero-x-mark" />
-        </button>
+          <%= cond do %>
+            <% @display_values.alt -> %>
+              <div class="gallery-block-list-alt" title={@display_values.alt}>
+                <span class="gallery-block-list-alt-label">{gettext("Alt")}</span>
+                {@display_values.alt}
+              </div>
+            <% @list_row.media_type == :image -> %>
+              <div class="gallery-block-list-alt is-missing">{gettext("No alt text")}</div>
+            <% true -> %>
+          <% end %>
+        </div>
+        <.object_actions gallery_object_form={@gallery_object_form} gallery_form={@gallery_form} myself={@myself} />
       </div>
 
-      <figcaption phx-click={show_modal("##{@object_modal_id}")} data-sortable-filter>
-        <div>
-          <span>{gettext("Caption")}</span>
-          {raw(@display_values.title || "{ #{gettext("No caption")} }")}
-        </div>
-        <div>
-          <span>{gettext("Alt. text")}</span>
-          {@display_values.alt || "{ #{gettext("No alt text")} }"}
-        </div>
-      </figcaption>
+      <Tile.tile
+        :if={@display == :grid}
+        id={"gallery-tile-#{@uid}-#{@gallery_object_form.index}"}
+        number={@gallery_object_form.index + 1}
+        media_type={@tile.media_type}
+        thumb_url={@tile.thumb_url}
+        processing={@tile.processing}
+        caption={@tile.caption}
+        alt={@tile.alt}
+        editing={@tile.editing}
+        open_caption={open_text_editor(@tile, :caption, @myself)}
+        open_alt={open_text_editor(@tile, :alt, @myself)}
+      >
+        <:actions>
+          <.object_actions
+            gallery_object_form={@gallery_object_form}
+            gallery_form={@gallery_form}
+            myself={@myself}
+            configure={show_modal("##{@object_modal_id}")}
+          />
+        </:actions>
+        <:editor :if={@tile.editing}>
+          <Tile.text_editor
+            id={"gallery-tile-#{@uid}-#{@gallery_object_form.index}-#{@tile.editing}-editor"}
+            kind={@tile.editing}
+            filename={@tile.filename}
+            value={if @tile.editing == :caption, do: @tile.caption_override, else: @tile.alt_override}
+            placeholder={@tile.alt_library}
+            target={@myself}
+            save_event="save_object_text"
+            close_event="close_text_editor"
+            params={%{type: @tile.object_type, id: @tile.object_id, kind: @tile.editing}}
+          />
+        </:editor>
+      </Tile.tile>
 
       <!-- Individual modal for this gallery object (inside the div) -->
       <Content.modal title={gettext("Edit captions")} id={@object_modal_id} data-sortable-filter>
@@ -162,6 +170,96 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   end
 
   ## Private functions
+
+  defp open_text_editor(%{object_type: nil}, _kind, _myself), do: nil
+
+  defp open_text_editor(tile, kind, myself),
+    do: JS.push("open_text_editor", target: myself, value: %{type: tile.object_type, id: tile.object_id, kind: kind})
+
+  # What the grid square shows. A caption or alt text applies when its
+  # `use_default_*` flag is off, as on the site (`Brando.Villain.Parser`). An
+  # image's caption is the override's `title`; a video's is its `caption`.
+  defp assign_tile(%{display: :grid} = assigns, obj, override) do
+    {object_type, object_id} = media_key(obj) || {nil, nil}
+    caption_field = if object_type == :video, do: :caption, else: :title
+    caption_override = override_value(override, caption_field)
+    alt_override = override_value(override, :alt)
+
+    editing =
+      case assigns[:text_editor] do
+        %{type: ^object_type, id: ^object_id, kind: kind} when not is_nil(object_type) -> kind
+        _ -> nil
+      end
+
+    tile =
+      cond do
+        object_type == :image ->
+          image = obj.image
+          alt_library = Images.text(image, :alt, nil)
+
+          %{
+            media_type: :image,
+            thumb_url:
+              image.status == :processed && Brando.Utils.img_url(image, :thumb, prefix: Brando.Utils.media_url()),
+            processing: image.status != :processed,
+            filename: image.path && Path.basename(image.path),
+            caption: Tile.caption_state(caption_override, Images.text(image, :title, nil)),
+            alt: Tile.alt_state(alt_override, alt_library),
+            alt_library: alt_library
+          }
+
+        object_type == :video ->
+          video = obj.video
+
+          %{
+            media_type: :video,
+            thumb_url: Brando.Videos.Helpers.thumbnail_url(video),
+            processing: false,
+            filename: video.title || video.remote_id,
+            caption: Tile.caption_state(caption_override, video.title),
+            alt: nil,
+            alt_library: nil
+          }
+
+        true ->
+          media_type = if assigns.gallery_object_form[:image_id].value, do: :image, else: :video
+
+          %{
+            media_type: media_type,
+            thumb_url: nil,
+            processing: false,
+            filename: nil,
+            caption: %{set?: false, html: nil},
+            alt: if(media_type == :image, do: %{set?: false, text: nil}),
+            alt_library: nil
+          }
+      end
+
+    tile =
+      Map.merge(tile, %{
+        object_type: object_type,
+        object_id: object_id,
+        editing: editing,
+        caption_override: caption_override,
+        alt_override: alt_override
+      })
+
+    assign(assigns, :tile, tile)
+  end
+
+  defp assign_tile(assigns, _obj, _override), do: assign(assigns, :tile, nil)
+
+  defp override_value(nil, _field), do: nil
+
+  defp override_value(override, field) do
+    {value, use_default} =
+      case override do
+        %Changeset{} -> {Changeset.get_field(override, field), Changeset.get_field(override, :"use_default_#{field}")}
+        %{} -> {Map.get(override, field), Map.get(override, :"use_default_#{field}", true)}
+      end
+
+    if use_default != true and is_binary(value) and String.trim(value) != "", do: value
+  end
 
   defp get_current_override_from_form(_block_data_form, nil), do: nil
 
@@ -250,7 +348,126 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     }
   end
 
+  # The list row's title and details line. The title is the caption when there
+  # is one (captions may hold markup, the row shows plain text), else the
+  # image's filename; with a caption the filename moves to the details line.
+  # A video's caption falls back to its own title.
+  defp list_row(obj, gallery_object_form, display_values) do
+    caption = plain_text(display_values[:caption]) || plain_text(display_values.title)
+
+    cond do
+      obj && loaded_assoc?(obj, :image) ->
+        image = obj.image
+        filename = image.path && Path.basename(image.path)
+
+        %{
+          media_type: :image,
+          title: caption || filename || "-",
+          details:
+            present([
+              caption && filename,
+              image.width && image.height && "#{image.width}\u00d7#{image.height}",
+              image_formats(image.formats)
+            ])
+        }
+
+      obj && loaded_assoc?(obj, :video) ->
+        video = obj.video
+
+        %{
+          media_type: :video,
+          title: caption || video.remote_id || gettext("Video"),
+          details:
+            present([
+              video_source(video.type),
+              video.width && video.height && "#{video.width}\u00d7#{video.height}"
+            ])
+        }
+
+      true ->
+        media_type = if gallery_object_form[:image_id].value, do: :image, else: :video
+        %{media_type: media_type, title: "-", details: []}
+    end
+  end
+
+  defp plain_text(nil), do: nil
+
+  defp plain_text(text) do
+    case text |> HtmlSanitizeEx.strip_tags() |> String.trim() do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp present(values), do: Enum.filter(values, &(is_binary(&1) and &1 != ""))
+
+  defp image_formats(formats) when is_list(formats) do
+    formats
+    |> Enum.reject(&(&1 == :original))
+    |> Enum.map_join(", ", &to_string/1)
+  end
+
+  defp image_formats(_), do: nil
+
+  defp video_source(type) when type in [:vimeo, :vimeo_account], do: "Vimeo"
+  defp video_source(:youtube), do: "YouTube"
+  defp video_source(:mux), do: "Mux"
+  defp video_source(:bunny), do: "Bunny"
+  defp video_source(:cloudflare), do: "Cloudflare"
+  defp video_source(_), do: gettext("Video")
+
   ## Function components
+
+  attr :gallery_object_form, :any, required: true
+  attr :gallery_form, :any, required: true
+  attr :myself, :any, required: true
+  attr :configure, :any, default: nil, doc: "Opens the object's settings; the grid has no row to click"
+
+  # Edit, then delete. A corner group in the grid, the row's right edge in the list.
+  defp object_actions(assigns) do
+    ~H"""
+    <div class="gallery-object-actions" data-sortable-filter>
+      <button
+        :if={@gallery_object_form[:image_id].value}
+        class="edit-image-btn"
+        type="button"
+        aria-label={gettext("Edit image")}
+        phx-click={
+          JS.push("open_image_editor",
+            target: @myself,
+            value: %{image_id: @gallery_object_form[:image_id].value}
+          )
+          |> open_image_editor_drawer()
+        }
+        data-sortable-filter
+      >
+        <.icon name="hero-pencil-square" />
+      </button>
+      <button
+        :if={@configure}
+        class="configure-object"
+        type="button"
+        aria-label={gettext("Configure")}
+        title={gettext("Configure")}
+        phx-click={@configure}
+        data-sortable-filter
+      >
+        <.icon name="hero-cog-6-tooth" />
+      </button>
+      <button
+        class="delete-x"
+        type="button"
+        aria-label={gettext("Delete")}
+        name={"#{@gallery_form.name}[drop_gallery_object_ids][]"}
+        value={@gallery_object_form.index}
+        phx-click={JS.dispatch("change")}
+        data-sortable-filter
+      >
+        <.icon name="hero-x-mark" />
+      </button>
+    </div>
+    """
+  end
 
   attr :obj, :map, required: true
   attr :uid, :string, required: true

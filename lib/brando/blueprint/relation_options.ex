@@ -298,6 +298,13 @@ defmodule Brando.Blueprint.RelationOptions do
   defp validate_many_to_many_unique(_type, _value), do: :ok
 
   defp validate_with(_type, nil), do: :ok
+
+  # `{Module, :function}`, called with the changeset and params. Unlike a
+  # capture, it adds no compile-time dependency on `Module`.
+  defp validate_with(type, {module, function})
+       when type in [:belongs_to | @embed_types] and is_atom(module) and is_atom(function),
+       do: :ok
+
   defp validate_with(:belongs_to, callback) when is_function(callback, 2), do: :ok
   defp validate_with(:embeds_one, callback) when is_function(callback, 2), do: :ok
   defp validate_with(:embeds_many, callback) when is_function(callback, 2) or is_function(callback, 3), do: :ok

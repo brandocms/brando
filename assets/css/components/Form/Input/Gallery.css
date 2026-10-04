@@ -57,168 +57,178 @@
     }
   }
 
-  /* Grid layout (default) */
-  &.gallery-objects--grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: 1fr;
-    grid-column-gap: 8px;
-    grid-row-gap: 8px;
-  }
+  /* Grid layout (default): the contact sheet, `.gallery-sheet` below */
 
-  /* List layout — mirrors .image-picker.list styles */
+  /* List layout: one joined list, like `.identifier-list` — a single border
+     and radius around the whole, rows split by hairlines. The first and last
+     rows round their own corners instead of the list clipping them, so a row's
+     action menu can still overflow the list. Row text follows the image field
+     (`MediaField.css`): filename, then path · size · format, then the alt. */
   &.gallery-objects--list {
     display: flex;
     flex-direction: column;
     gap: 0;
+    border: 1px solid #dce2dc;
+    border-radius: 6px;
+    background: #fff;
 
     .gallery-object {
-      margin-bottom: 4px;
+      margin: 0;
+
+      /* Hidden inputs sit between the figures, so siblings are matched with
+         `~` and the ends by type: the figures are the list's only figures */
+      & ~ .gallery-object .gallery-object-list-row {
+        border-top: 1px solid #dce2dc;
+      }
+
+      &:first-of-type .gallery-object-list-row {
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+      }
+
+      &:last-of-type .gallery-object-list-row {
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+      }
 
       .gallery-object-list-row {
-        display: grid;
-        grid-template-columns: 72px minmax(0, 1fr);
-        column-gap: 0.78rem;
+        display: flex;
         align-items: center;
-        border: 1px solid color-mix(in srgb, var(--brando-color-dark) 17%, transparent);
-        border-radius: 10px;
-        padding: 0.45rem 0.55rem;
-        background: color-mix(in srgb, white 78%, transparent);
-        transition:
-          border-color 150ms ease,
-          background-color 150ms ease;
+        gap: 12px;
+        padding: 10px 12px;
+        background: #fff;
+        transition: background-color 150ms ease;
 
         &:hover {
-          border-color: color-mix(in srgb, var(--brando-color-dark) 34%, transparent);
-          background: color-mix(in srgb, var(--brando-color-peach) 15%, white);
+          background: #f5f8f3;
         }
       }
 
       .gallery-object-list-thumb {
+        flex: 0 0 56px;
+
         img {
-          width: 72px;
-          max-width: 72px;
-          border-radius: 6px;
           display: block;
+          width: 56px;
+          height: 56px;
+          object-fit: cover;
+          border-radius: 4px;
+          background: #f0f3ee;
         }
 
         .img-placeholder {
-          width: 72px;
-          height: 72px;
-          aspect-ratio: 1;
+          display: grid;
+          place-items: center;
+          width: 56px;
+          height: 56px;
+          border-radius: 4px;
+          background: #f0f3ee;
+          color: #79917b;
         }
       }
 
-      .gallery-object-list-info {
-        display: grid;
-        grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) 85px 70px 90px 34px;
-        align-items: center;
-        gap: 0.75rem;
-        min-width: 0;
-        width: 100%;
-      }
-
-      .gallery-object-list-name {
+      .gallery-object-list-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1 1 auto;
         min-width: 0;
       }
 
       .gallery-object-list-filename {
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--brando-color-dark);
+        color: #272b2a;
+        font: 500 14px/19px "Main", sans-serif;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-
-      .gallery-object-list-dir,
-      .gallery-object-list-meta {
-        font-family: "Mono";
-        font-size: 11px;
-        color: color-mix(in srgb, var(--brando-color-dark) 72%, white);
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-      }
-
-      .gallery-object-list-dir {
-        margin-top: 3px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .gallery-object-list-detail {
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
       }
 
       .gallery-object-list-title {
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--brando-color-dark);
+        color: #272b2a;
+        font: 12px/18px "Main", sans-serif;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .gallery-object-list-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 6px;
+        color: #626b66;
+        font: 12px/18px "Main", sans-serif;
+        min-width: 0;
+
+        > span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        > span + span::before {
+          content: "·";
+          margin-right: 6px;
+          color: #a6afa8;
+        }
       }
 
       .gallery-object-list-alt {
-        font-family: "Mono";
-        font-size: 11px;
-        color: color-mix(in srgb, var(--brando-color-dark) 64%, white);
         overflow: hidden;
-        text-overflow: ellipsis;
+        color: #626b66;
+        font: 12px/18px "Main", sans-serif;
         white-space: nowrap;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
+        text-overflow: ellipsis;
 
-        [data-icon] {
-          width: 0.75rem;
-          height: 0.75rem;
-          flex-shrink: 0;
-          opacity: 0.6;
-        }
-
-        &.missing {
-          color: color-mix(in srgb, #a71f34 72%, white);
-          font-style: italic;
-
-          [data-icon] {
-            opacity: 0.8;
-          }
+        &.is-missing {
+          color: #87662d;
         }
       }
 
-      .gallery-object-list-status {
-        font-family: "Mono";
+      .gallery-object-list-alt-label {
+        margin-right: 2px;
+        padding: 0 5px;
+        border: 1px solid #dce2dc;
+        border-radius: 3px;
         font-size: 10px;
-        text-transform: uppercase;
+        line-height: 15px;
         letter-spacing: 0.02em;
-        border: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
-        border-radius: 999px;
-        padding: 0.2rem 0.45rem;
-        background: color-mix(in srgb, white 88%, transparent);
-        text-align: center;
-        color: color-mix(in srgb, var(--brando-color-dark) 72%, white);
+      }
 
-        &.gallery-object-list-status--processed {
-          color: #1a7a42;
-          border-color: color-mix(in srgb, #1a7a42 25%, transparent);
-          background: color-mix(in srgb, #1a7a42 8%, white);
+      .gallery-object-list-side {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 12px;
+      }
+
+      /* A status dot and its word, quiet unless something needs doing */
+      .gallery-object-list-status {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 5px;
+        color: #626b66;
+        font: 12px/18px "Main", sans-serif;
+        white-space: nowrap;
+
+        > i {
+          display: inline-block;
+          width: 1cap;
+          height: 1cap;
+          border-radius: 50%;
+          background: #89968c;
         }
 
-        &.gallery-object-list-status--ready {
-          color: #1a7a42;
-          border-color: color-mix(in srgb, #1a7a42 25%, transparent);
-          background: color-mix(in srgb, #1a7a42 8%, white);
+        &.gallery-object-list-status--processed > i,
+        &.gallery-object-list-status--ready > i {
+          background: #43a976;
         }
 
         &.gallery-object-list-status--unprocessed {
-          color: #b5850a;
-          border-color: color-mix(in srgb, #b5850a 25%, transparent);
-          background: color-mix(in srgb, #b5850a 8%, white);
+          color: #87662d;
+
+          > i {
+            background: #edaa00;
+          }
         }
       }
 
@@ -322,6 +332,9 @@
 
 .gallery-input {
   width: 100%;
+  /* A gallery is usually given a full-width fieldset, and on a large screen
+     its list rows otherwise spread a filename and its details 1500px apart */
+  max-width: 1100px;
 
   .alert {
     background-color: #f9ff84;
@@ -451,4 +464,490 @@
     text-align: center;
   }
 
+}
+
+
+/* Contact sheet — the grid view of the gallery field and the gallery block
+   (`Gallery.Tile`). Square thumbnails joined into one block: an outer border
+   and radius, hairlines between cells drawn as each cell's outline over a 1px
+   gap. The grid's own background is white, so the empty cells of a short last
+   row stay white. Five across, six when the sheet is wider than about 905px:
+   a column is never narrower than a sixth of the row, nor wider than a fifth,
+   and is 150px when both allow it. (EuropaCSS reserves `@container`.) */
+.gallery-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  > .actions,
+  > .gallery-buttons {
+    margin: 0;
+  }
+}
+
+.media-gallery > .gallery-toolbar-row {
+  margin-bottom: 12px;
+}
+
+/* In the field `.gallery-objects` owns the gap below */
+.gallery-input .media-gallery--field > .gallery-toolbar-row {
+  margin-bottom: 0;
+}
+
+.gallery-view-switch {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  overflow: hidden;
+  border: 1px solid #dce2dc;
+  border-radius: 6px;
+  background: #fff;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 26px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    color: #626b66;
+    cursor: pointer;
+
+    &:hover:not(.is-selected) {
+      background: #f5f8f3;
+      color: #272b2a;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #254e3f;
+      outline-offset: -2px;
+    }
+
+    &.is-selected {
+      background: #eef3ea;
+      color: #254e3f;
+    }
+
+    + button {
+      border-left: 1px solid #dce2dc;
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+.gallery-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(min(150px, (100% - 4px) / 5), (100% - 5px) / 6), 1fr));
+  gap: 1px;
+  border: 1px solid #dce2dc;
+  border-radius: 6px;
+  background: #fff;
+
+  > .gallery-object {
+    position: relative;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    outline: 1px solid #dce2dc;
+    cursor: move;
+
+    &:first-of-type .gallery-tile-square > :is(img, .gallery-tile-placeholder) {
+      border-top-left-radius: 5px;
+    }
+  }
+}
+
+.gallery-tile-square {
+  position: relative;
+  aspect-ratio: 1;
+  background: #f0f3ee;
+
+  > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.gallery-tile-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #79917b;
+
+  [data-icon] {
+    width: 22px;
+    height: 22px;
+    background-color: currentColor;
+  }
+
+  svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+  }
+}
+
+.gallery-sheet .gallery-object:is(:hover, :focus-within) .gallery-tile-square {
+  outline: 2px solid #c3d5c5;
+  outline-offset: -2px;
+}
+
+.gallery-tile-number {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #272b2a;
+  font: 11px/20px "Main", sans-serif;
+  text-align: center;
+}
+
+.gallery-tile-video {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font: 10px/16px "Main", sans-serif;
+  white-space: nowrap;
+}
+
+/* Hover actions replace the video badge in the same corner */
+.gallery-sheet .gallery-object .gallery-tile-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+
+  .gallery-object-actions {
+    display: contents;
+  }
+
+  button {
+    position: static;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #dce2dc;
+    border-radius: 50%;
+    background: #fff;
+    color: #626b66;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    opacity: 1;
+    cursor: pointer;
+
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+      background-color: currentColor;
+    }
+
+    svg {
+      stroke: none;
+    }
+
+    &:hover {
+      color: #272b2a;
+      border-color: #c3d5c5;
+    }
+
+    &.delete-object:hover,
+    &.delete-x:hover {
+      color: #983e30;
+    }
+  }
+}
+
+.gallery-sheet .gallery-object:is(:hover, :focus-within) {
+  .gallery-tile-actions {
+    opacity: 1;
+  }
+
+  .gallery-tile-video {
+    opacity: 0;
+  }
+}
+
+/* The caption and alt text icons, bottom-left on the image. Set is a white
+   chip; an empty caption is faded (captions are optional); missing alt text
+   is amber. */
+.gallery-tile-meta {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  display: flex;
+  gap: 3px;
+}
+
+.gallery-tile-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  height: 20px;
+  min-width: 22px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  font: 500 9px/1 "Main", sans-serif;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &.is-set {
+    background: #fff;
+    color: #272b2a;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  }
+
+  &.is-empty {
+    background: rgba(255, 255, 255, 0.7);
+    color: #9aa39c;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
+  &.is-missing {
+    background: #fbefda;
+    color: #87662d;
+    box-shadow: 0 0 0 1px #ecd9b4;
+  }
+
+  &.is-active {
+    box-shadow: 0 0 0 2px #254e3f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #254e3f;
+    outline-offset: 1px;
+  }
+}
+
+/* Hovering an icon shows its text */
+.gallery-tile-peek {
+  position: absolute;
+  z-index: 25;
+  left: 0;
+  top: calc(100% + 6px);
+  display: none;
+  width: 220px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #272b2a;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  font: 400 12px/16px "Main", sans-serif;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+
+  b {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.65;
+  }
+
+  .gallery-tile-peek-text {
+    display: block;
+    overflow-wrap: anywhere;
+
+    p {
+      margin: 0 !important;
+    }
+
+    p + p {
+      margin-top: 4px !important;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+    }
+  }
+
+  .gallery-tile-peek-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    opacity: 0.6;
+  }
+}
+
+.gallery-tile-icon:is(:hover, :focus-visible):not(.is-active) .gallery-tile-peek {
+  display: block;
+}
+
+/* Clicking an icon edits its text in a popover under the square */
+.gallery-text-editor {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  top: calc(100% + 6px);
+  width: 280px;
+  padding: 12px;
+  border: 1px solid #dce2dc;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  color: #272b2a;
+  font: 13px/18px "Main", sans-serif;
+  text-align: left;
+  cursor: default;
+
+  &[data-align="end"] {
+    left: auto;
+    right: 0;
+  }
+
+  &.gallery-text-editor--caption {
+    width: 320px;
+  }
+
+  .gallery-text-editor-label {
+    margin-bottom: 6px;
+    font-size: 12px;
+    line-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gallery-text-editor-file {
+    color: #626b66;
+  }
+
+  .gallery-text-editor-input {
+    display: block;
+    width: 100%;
+    height: 58px;
+    margin: 0;
+    padding: 7px 9px;
+    border: 1px solid #dce2dc;
+    border-radius: 6px;
+    background: #fff;
+    color: #272b2a;
+    font: 13px/18px "Main", sans-serif;
+    resize: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+
+    &:focus {
+      outline: 2.5px solid rgba(0, 71, 255, 0.12);
+      border-color: #bacabd;
+    }
+  }
+
+  /* The rich text field without its form chrome */
+  .field-wrapper {
+    margin: 0;
+  }
+
+  .field-wrapper > .label-wrapper {
+    display: none;
+  }
+
+  .gallery-text-editor-note {
+    margin: 6px 0 0 !important;
+    color: #626b66;
+    font-size: 11px;
+    line-height: 15px;
+  }
+
+  .gallery-text-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 10px;
+
+    button {
+      width: auto;
+      min-width: 0;
+      height: auto;
+      min-height: 0;
+      margin: 0;
+      padding: 5px 10px;
+      border: 1px solid #dce2dc;
+      border-radius: 5px;
+      background: #fff;
+      color: #272b2a;
+      font: 12px/18px "Main", sans-serif;
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+
+      &:hover {
+        background: #f1f5ef;
+      }
+
+      &.primary {
+        border-color: #254e3f;
+        background: #254e3f;
+        color: #fff;
+
+        &:hover {
+          background: #1d3f33;
+        }
+      }
+    }
+  }
+}
+
+/* The icon key under the grid */
+.gallery-sheet-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 10px;
+  color: #626b66;
+  font: 12px/18px "Main", sans-serif;
+
+  .gallery-sheet-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .gallery-sheet-legend-item.is-missing {
+    color: #87662d;
+  }
+
+  .gallery-tile-icon {
+    cursor: default;
+  }
 }

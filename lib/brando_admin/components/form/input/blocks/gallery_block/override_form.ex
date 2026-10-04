@@ -3,7 +3,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
   LiveComponent for gallery object override forms.
 
   Uses the unified override convention: nil = use default from media record.
-  Shows reset icons when values differ from defaults.
+  Shows reset icons when values differ from defaults. The `use_default_*` flags
+  are not inputs: `GalleryObjectOverride.cast_override/2` derives each from its
+  text. An image's caption is its `title`; a video's is its `caption`, and its
+  `title` (plain) names the player. Captions are rich text.
 
   Text field resets use client-side JS (clearing the input and dispatching a
   change event). Toggle fields are standard toggles — users toggle them directly.
@@ -13,8 +16,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
 
   alias BrandoAdmin.Components.Form.Input
 
+  @caption_opts [extensions: ~w(p bold italic link)]
+
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns)}
+    {:ok, socket |> assign(assigns) |> assign(:caption_opts, @caption_opts)}
   end
 
   def render(%{variant: :modal} = assigns) do
@@ -23,11 +28,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <Input.input type={:hidden} field={@form[:object_id]} />
       <Input.input type={:hidden} field={@form[:object_type]} />
 
-      <Input.override_text
-        field={@form[:title]}
-        label={gettext("Title")}
-        default_value={@override_info.default_title}
-      />
+      <%= if @override_info.object_type == :image do %>
+        <Input.rich_text
+          field={@form[:title]}
+          label={gettext("Caption")}
+          default_value={Brando.Captions.library_html(@override_info.default_title)}
+          reset
+          opts={@caption_opts}
+        />
+      <% else %>
+        <Input.override_text
+          field={@form[:title]}
+          label={gettext("Title")}
+          default_value={@override_info.default_title}
+        />
+        <Input.rich_text
+          field={@form[:caption]}
+          label={gettext("Caption")}
+          default_value={Brando.Captions.library_html(@override_info.default_title)}
+          reset
+          opts={@caption_opts}
+        />
+      <% end %>
 
       <Input.override_text
         field={@form[:credits]}
@@ -63,11 +85,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <Input.input type={:hidden} field={@form[:object_id]} />
       <Input.input type={:hidden} field={@form[:object_type]} />
 
-      <Input.override_text
-        field={@form[:title]}
-        label={gettext("Title")}
-        default_value={@override_info.default_title}
-      />
+      <%= if @override_info.object_type == :image do %>
+        <Input.rich_text
+          field={@form[:title]}
+          label={gettext("Caption")}
+          default_value={Brando.Captions.library_html(@override_info.default_title)}
+          reset
+          opts={@caption_opts}
+        />
+      <% else %>
+        <Input.override_text
+          field={@form[:title]}
+          label={gettext("Title")}
+          default_value={@override_info.default_title}
+        />
+        <Input.rich_text
+          field={@form[:caption]}
+          label={gettext("Caption")}
+          default_value={Brando.Captions.library_html(@override_info.default_title)}
+          reset
+          opts={@caption_opts}
+        />
+      <% end %>
 
       <Input.override_text
         field={@form[:credits]}

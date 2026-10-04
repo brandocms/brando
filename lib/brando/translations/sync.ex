@@ -397,7 +397,7 @@ defmodule Brando.Translations.Sync do
       for override <- data.gallery_object_overrides || [],
           key = Brando.Villain.Blocks.GalleryObjectOverride.media_key(override),
           key != nil,
-          field <- [:title, :credits, :alt] do
+          field <- [:title, :credits, :alt, :caption] do
         {"#{prefix}/gallery/#{media_key_string(key)}/#{field}", :text, Map.get(override, field)}
       end
 

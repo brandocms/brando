@@ -14976,3 +14976,31 @@ msgstr "Det du sendte"
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Varsel"
+
+#: lib/brando_admin/components/form/input/gallery/video_config.ex
+#, elixir-autogen, elixir-format
+msgid "Customize this use of the video. Empty text overrides use the library values."
+msgstr "Tilpass denne bruken av videoen. Tomme tekstfelt bruker verdiene fra biblioteket."
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:80
+#: lib/brando_admin/components/form/input/gallery/tile.ex:100
+#, elixir-autogen, elixir-format
+msgid "Click to edit"
+msgstr "Klikk for å redigere"
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:171
+#, elixir-autogen, elixir-format
+msgid "Saved for this gallery only. Empty uses the image library's text."
+msgstr "Lagres bare for dette galleriet. Tom bruker teksten fra bildebiblioteket."
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:194
+#, elixir-autogen, elixir-format
+msgid "Alt text set"
+msgstr "Alt. tekst satt"
+
+#: lib/brando_admin/components/form/input/gallery/tile.ex:198
+#, elixir-autogen, elixir-format
+msgid "No alt text — %{missing} of %{count} image"
+msgid_plural "No alt text — %{missing} of %{count} images"
+msgstr[0] "Ingen alt. tekst — %{missing} av %{count} bilde"
+msgstr[1] "Ingen alt. tekst — %{missing} av %{count} bilder"

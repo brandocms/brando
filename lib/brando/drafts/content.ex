@@ -1,7 +1,7 @@
 defmodule Brando.Drafts.Content do
   @moduledoc "Comparison of recovery content without changing the stored restore payload."
 
-  @override_fields ~w(title credits alt autoplay loop muted controls preload)
+  @override_fields ~w(title credits alt caption autoplay loop muted controls preload)
   @override_keys ["object_id", "object_type"] ++ @override_fields ++ Enum.map(@override_fields, &("use_default_" <> &1))
 
   def checksum(payload), do: payload |> normalize_payload() |> Brando.Drafts.checksum()

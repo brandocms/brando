@@ -48,7 +48,11 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
     end
 
     relations do
-      relation :gallery_object_overrides, :embeds_many, module: Brando.Villain.Blocks.GalleryObjectOverride
+      relation :gallery_object_overrides, :embeds_many,
+        module: Brando.Villain.Blocks.GalleryObjectOverride,
+        # A tuple, not a capture: a capture is a compile-time dependency, and
+        # that closes a compile-connected cycle through the override module
+        with: {Brando.Villain.Blocks.GalleryObjectOverride, :cast_override}
     end
   end
 
