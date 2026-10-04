@@ -303,6 +303,35 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     refute config =~ "Swoosh.ApiClient.Req"
   end
 
+  test "starts the endpoint last, so it drains its sockets before presence stops" do
+    application = """
+    defmodule LegacyApp.Application do
+      use Application
+
+      def start(_type, _args) do
+        children = [
+          LegacyApp.Repo,
+          # Start the endpoint
+          LegacyAppWeb.Endpoint,
+          {Phoenix.PubSub, name: LegacyApp.PubSub},
+          LegacyApp.Presence,
+          Brando
+        ]
+
+        Supervisor.start_link(children, strategy: :one_for_one)
+      end
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{"lib/legacy_app/application.ex" => application})
+    upgraded = source(igniter, "lib/legacy_app/application.ex")
+
+    assert [_, after_brando] = String.split(upgraded, ~r/^\s*Brando,?$/m, parts: 2)
+    assert after_brando =~ "# Start the endpoint\n"
+    assert after_brando =~ "LegacyAppWeb.Endpoint"
+    assert upgraded =~ ~r/LegacyApp\.Repo,\s+\{Phoenix\.PubSub/
+  end
+
   test "points Brando at the application's mailer" do
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer})

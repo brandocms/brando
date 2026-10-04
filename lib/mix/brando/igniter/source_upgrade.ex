@@ -938,6 +938,111 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
+    Moves the endpoint to the end of the application's `children`.
+
+    Started last, it stops first: shutting down, it drains its sockets with
+    close code 1012 and clients reconnect. Stopped after presence and Brando,
+    the admin socket is closed with 1000 instead, and phoenix.js does not
+    reconnect after a normal close, so editors drop out of presence until they
+    reload. (`add_new_child`'s `after:` cannot place a child just before the
+    last one, so the endpoint moves instead.)
+    """
+    def start_endpoint_last(igniter, application \\ nil, endpoint \\ nil) do
+      application =
+        application || Igniter.Project.Application.app_module(igniter) ||
+          Igniter.Project.Module.module_name(igniter, "Application")
+
+      endpoint = endpoint || Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
+
+      case Igniter.Project.Module.module_exists(igniter, application) do
+        {true, igniter} ->
+          Igniter.Project.Module.find_and_update_module!(igniter, application, &endpoint_last(&1, endpoint))
+
+        {false, igniter} ->
+          igniter
+      end
+    end
+
+    defp endpoint_last(zipper, endpoint) do
+      case Zipper.find(zipper, &children_assignment?/1) do
+        nil ->
+          {:ok, zipper}
+
+        found ->
+          {:ok, Zipper.update(found, fn {:=, meta, [lhs, rhs]} -> {:=, meta, [lhs, move_last(rhs, endpoint)]} end)}
+      end
+    end
+
+    defp children_assignment?({:=, _, [{:children, _, context}, _]}) when is_atom(context), do: true
+    defp children_assignment?(_), do: false
+
+    defp move_last({:__block__, meta, [items]}, endpoint) when is_list(items),
+      do: {:__block__, meta, [move_last(items, endpoint)]}
+
+    defp move_last(items, endpoint) when is_list(items) do
+      case Enum.split_with(items, &(child_module(&1) == endpoint)) do
+        {[], _rest} ->
+          items
+
+        {endpoints, rest} ->
+          # Comments are printed by line, so the moved child takes lines
+          # after the last one, its comments with it
+          last_line = rest |> Enum.map(&last_line/1) |> Enum.max(fn -> 0 end)
+          rest ++ Enum.map(endpoints, &renumber(&1, last_line + 1))
+      end
+    end
+
+    defp move_last(other, _endpoint), do: other
+
+    defp last_line(quoted) do
+      {_, line} =
+        Macro.prewalk(quoted, 0, fn
+          {_, meta, _} = node, line when is_list(meta) -> {node, max(line, meta[:line] || 0)}
+          node, line -> {node, line}
+        end)
+
+      line
+    end
+
+    defp renumber(quoted, first_line) do
+      shift = first_line - first_line(quoted)
+
+      Macro.prewalk(quoted, fn
+        {form, meta, args} when is_list(meta) -> {form, shift_meta(meta, shift), args}
+        node -> node
+      end)
+    end
+
+    defp first_line({_, meta, _} = quoted) when is_list(meta) do
+      comment_lines = meta |> Keyword.get(:leading_comments, []) |> Enum.map(& &1.line)
+      Enum.min([last_line(quoted) | comment_lines])
+    end
+
+    defp first_line(quoted), do: last_line(quoted)
+
+    defp shift_meta(meta, shift) do
+      Enum.map(meta, fn
+        {key, line} when key in [:line] and is_integer(line) ->
+          {key, line + shift}
+
+        {key, position} when key in [:closing, :end_of_expression, :end, :do] and is_list(position) ->
+          {key, Keyword.update(position, :line, nil, &(&1 + shift))}
+
+        {key, comments} when key in [:leading_comments, :trailing_comments] ->
+          {key, Enum.map(comments, &%{&1 | line: &1.line + shift})}
+
+        other ->
+          other
+      end)
+    end
+
+    defp child_module({:__aliases__, _, parts}) when is_list(parts), do: Module.concat(parts)
+    defp child_module({:__block__, _, [{first, _}]}), do: child_module(first)
+    defp child_module({:{}, _, [first | _]}), do: child_module(first)
+    defp child_module({first, _}), do: child_module(first)
+    defp child_module(_), do: nil
+
+    @doc """
     Points Brando at the application's Swoosh mailer, `MyApp.Mailer` or
     `mailer` when given, so Brando can send email through it. Writes to
     `config/brando.exs` when the application has one, and leaves an existing

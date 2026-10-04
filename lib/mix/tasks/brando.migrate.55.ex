@@ -40,6 +40,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.create_florist_config()
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.warn_image_text_reads()
+      |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
       |> add_warnings()

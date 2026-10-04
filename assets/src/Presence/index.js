@@ -6,9 +6,8 @@ export default class Presence {
   }
 
   trackIdle() {
-    /**
-     * Add idle checker
-     */
+    // Called on every lobby join, rejoins included; one checker is enough
+    if (this.idle) return
 
     this.idle = new IdleJs({
       idle: 30000, // idle time in ms
