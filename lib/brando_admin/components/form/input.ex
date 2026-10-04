@@ -43,12 +43,15 @@ defmodule BrandoAdmin.Components.Form.Input do
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["check-wrapper", @compact && "small"]}>
         <.input type={:checkbox} field={@field} />
+        <%!-- Draws the box. Presence shows on the field's own label, whose
+              slot has the same id, as the toggle's switch label does. --%>
         <Primitives.label
           field={@field}
           class={[
             "control-label",
             @compact && "small"
           ]}
+          skip_presence
         >
           {@text}
         </Primitives.label>

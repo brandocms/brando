@@ -64,6 +64,16 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     end
   end
 
+  describe "checkbox/1" do
+    test "has one presence slot, the field label's, so its id is unique" do
+      form = %TestEntry{} |> cast(%{}, [:title]) |> to_form(as: :entry)
+
+      html = render_component(&Input.checkbox/1, field: form[:title], label: "Confirmed", opts: [])
+
+      assert length(Regex.scan(~r/id="entry_title-field-presence"/, html)) == 1
+    end
+  end
+
   describe "input/1 with type :string_list" do
     defp markets_form(params) do
       %TestMarkets{}
