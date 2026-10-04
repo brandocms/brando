@@ -172,6 +172,7 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> ProjectApplication.add_new_child(Module.concat(project.app_module, Presence), after: fn _ -> true end)
       |> ProjectApplication.add_new_child(Brando, after: fn _ -> true end)
+      |> Mix.Brando.Igniter.SourceUpgrade.start_endpoint_last(project.application_module, project.endpoint)
       |> ProjectModule.find_and_update_module!(project.application_module, &initialize/1)
       |> require_supervision()
     end
