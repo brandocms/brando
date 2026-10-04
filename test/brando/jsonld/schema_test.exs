@@ -188,4 +188,25 @@ defmodule Brando.JSONLDSchemaTest do
 
     assert last == %{"@type" => "ListItem", "position" => 2, "name" => "Current page"}
   end
+
+  test "nested entities are read in the document's context" do
+    event = %Brando.JSONLD.Schema.Event{
+      name: "Opening",
+      location:
+        Brando.JSONLD.Schema.Place.build(%{
+          name: "Studio",
+          address: "Street 1",
+          address2: nil,
+          address3: nil,
+          zipcode: "0558",
+          city: "Oslo",
+          country: "NO"
+        })
+    }
+
+    assert %{"@graph" => [graph_event]} = event |> List.wrap() |> Brando.JSONLD.to_graph_json() |> Jason.decode!()
+    assert %{"@type" => "Place", "name" => "Studio"} = location = graph_event["location"]
+    refute Map.has_key?(location, "@context")
+    assert %{"@context" => "https://schema.org"} = event |> Brando.JSONLD.to_json() |> Jason.decode!()
+  end
 end

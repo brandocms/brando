@@ -284,6 +284,34 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :largest) == "images/xlarge/file.jpg"
   end
 
+  defmodule BlurBlueprint do
+    def __blueprint__, do: true
+
+    # A low-quality placeholder cut at the full width, sorting before it
+    def blur_cfg do
+      %{
+        sizes: %{
+          "blur" => %{"size" => "3000x2000", "quality" => 1, "crop" => true},
+          "wide" => %{"size" => "3000x2000", "quality" => 75, "crop" => true}
+        }
+      }
+    end
+  end
+
+  test "img_url with :largest prefers the better quality when widths tie" do
+    img = %{
+      path: "images/file.jpg",
+      cdn: false,
+      config_target: "image:#{inspect(BlurBlueprint)}:function:blur_cfg",
+      sizes: %{
+        "blur" => "images/blur/file.jpg",
+        "wide" => "images/wide/file.jpg"
+      }
+    }
+
+    assert img_url(img, :largest) == "images/wide/file.jpg"
+  end
+
   test "img_url with :largest uses default config when config_target is nil" do
     # Default config has: micro=25, thumb=400x400, small=700, medium=1100, large=1700, xlarge=2100
     img = %{

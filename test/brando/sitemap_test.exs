@@ -30,6 +30,17 @@ defmodule Brando.SitemapTest do
   alias Brando.Sitemap
   alias Sitemapper.URL
 
+  test "url/1 percent-encodes loc once" do
+    assert Sitemap.url(%{loc: "http://localhost/news/Some post"}).loc ==
+             "http://localhost/news/Some%20post"
+
+    assert Sitemap.url(%{loc: "http://localhost/news/Some%20post"}).loc ==
+             "http://localhost/news/Some%20post"
+
+    assert Sitemap.url(%{loc: "http://localhost/illustrators/eno-_janelle?x=1"}).loc ==
+             "http://localhost/illustrators/eno-_janelle?x=1"
+  end
+
   test "check_lastmod/1" do
     url = %URL{lastmod: ~N[2023-12-20 14:00:00], loc: "/"}
     checked_url = Sitemap.check_lastmod(url)
