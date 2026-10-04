@@ -46,8 +46,18 @@ defmodule Brando.Sitemap do
 
   @doc """
   Convert map to Sitemapper.URL
+
+  `loc` is percent-encoded: a sitemap URL must be, and a slug saved with a
+  space in it (`"/news/Some post"`) otherwise makes the whole file invalid.
+  An escape already in it (`%20`) is left as it is.
   """
-  def url(map), do: Sitemapper.URL |> struct!(map) |> check_lastmod()
+  def url(map), do: Sitemapper.URL |> struct!(map) |> encode_loc() |> check_lastmod()
+
+  defp encode_loc(%Sitemapper.URL{loc: loc} = url) when is_binary(loc) do
+    %{url | loc: URI.encode(loc, &(URI.char_unescaped?(&1) or &1 == ?%))}
+  end
+
+  defp encode_loc(url), do: url
 
   @doc """
   Validate that the lastmod has a timezone, or else Google might

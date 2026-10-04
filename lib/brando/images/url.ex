@@ -22,9 +22,13 @@ defmodule Brando.Images.URL do
   def url(image, :largest, opts) do
     {:ok, config} = ConfigResolver.get(image)
 
+    # A tie on width goes to the better quality: a "blur" placeholder is often
+    # cut at the full width, and map order would otherwise pick it
     size =
       config.sizes
-      |> Enum.map(fn {key, %{"size" => dimensions}} -> {key, dimension(dimensions)} end)
+      |> Enum.map(fn {key, %{"size" => dimensions} = size_cfg} ->
+        {key, {dimension(dimensions), Map.get(size_cfg, "quality", 100)}}
+      end)
       |> Enum.max_by(&elem(&1, 1))
       |> elem(0)
 
