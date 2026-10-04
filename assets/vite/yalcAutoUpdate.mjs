@@ -85,8 +85,17 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
         return store.length > 0 && !store.includes(pulled())
       }
 
+      // yalc points node_modules at its own copy of the package, which carries
+      // no node_modules of its own. npm and yarn hoist the package's
+      // dependencies to the project root, so they still resolve from there;
+      // pnpm keeps them out of the root, so after a pull nothing the package
+      // imports resolves until pnpm links them again.
+      const root = server.config.root
+      const relinks = fs.existsSync(path.join(root, 'pnpm-lock.yaml'))
+      const relinkArgs = ['install', '--prefer-offline']
+
       const failed = (error) => {
-        const hint = error.code === 'ENOENT' ? 'yalc is not on PATH' : error.message
+        const hint = error.code === 'ENOENT' ? `${error.path} is not on PATH` : error.message
         server.config.logger.warn(`[yalc] could not update ${packageName}: ${hint}`)
       }
 
@@ -95,7 +104,8 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
       // a copy we already know is stale must not be one of the answers.
       if (behind()) {
         try {
-          execFileSync('yalc', ['update', packageName], { cwd: server.config.root, stdio: 'pipe' })
+          execFileSync('yalc', ['update', packageName], { cwd: root, stdio: 'pipe' })
+          if (relinks) execFileSync('pnpm', relinkArgs, { cwd: root, stdio: 'pipe' })
 
           // Said by hanging it off the banner, not off `listening`: Vite clears
           // the screen as it prints that banner, and anything logged before it
@@ -116,7 +126,13 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
         if (updating || !behind()) return
         updating = true
 
-        execFile('yalc', ['update', packageName], { cwd: server.config.root }, (error) => {
+        const update = (done) =>
+          execFile('yalc', ['update', packageName], { cwd: root }, (error) => {
+            if (error || !relinks) return done(error)
+            execFile('pnpm', relinkArgs, { cwd: root }, done)
+          })
+
+        update((error) => {
           updating = false
           if (error) return failed(error)
 
