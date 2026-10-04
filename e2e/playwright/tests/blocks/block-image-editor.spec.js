@@ -334,7 +334,7 @@ test.describe('Image Editor from Blocks', () => {
     })
 
     // Capture the original image src before editing
-    const imgLocator = page.locator('.gallery-block .gallery-object .image-content img').first()
+    const imgLocator = page.locator('.gallery-block .gallery-object .gallery-tile-square img').first()
     await expect(imgLocator).toBeVisible({ timeout: 10000 })
     const srcBefore = await imgLocator.getAttribute('src')
 
@@ -424,7 +424,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Verify the gallery object shows a processed image (not a spinner)
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1)
-    await expect(page.locator('.gallery-block .gallery-object .image-content img').first()).toBeVisible({
+    await expect(page.locator('.gallery-block .gallery-object .gallery-tile-square img').first()).toBeVisible({
       timeout: 15000,
     })
 
@@ -450,7 +450,7 @@ test.describe('Image Editor from Blocks', () => {
     })
 
     // Both gallery objects should show processed images (not spinners)
-    await expect(page.locator('.gallery-block .gallery-object .img-placeholder')).toHaveCount(0, {
+    await expect(page.locator('.gallery-block .gallery-object .gallery-tile-placeholder')).toHaveCount(0, {
       timeout: 15000,
     })
   })
@@ -692,7 +692,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Wait for the image to finish reprocessing
     await expect(
-      page.locator('.gallery-block .gallery-object .image-content img').first()
+      page.locator('.gallery-block .gallery-object .gallery-tile-square img').first()
     ).toBeVisible({ timeout: 20000 })
   })
 
