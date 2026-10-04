@@ -336,10 +336,6 @@
      its list rows otherwise spread a filename and its details 1500px apart */
   max-width: 1100px;
 
-  .alert {
-    background-color: #f9ff84;
-  }
-
   .gallery-upload-wrapper {
     &.dragging {
       background-color: #cde7ec;

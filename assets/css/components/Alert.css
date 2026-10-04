@@ -1,27 +1,92 @@
+/* Notices read as guidance rather than technical output, so they use the main
+   face at body size, with fixed spacing and a readable line length. The tint
+   mixes into --brando-color-white, which keeps it soft in dark mode too. */
 .alert {
-  @display flex;
-  background-color: #e3fbff;
-  margin-bottom: 2vw;
-  padding: 1.2vw;
-  gap: 1.2vw;
-  align-items: baseline;
-  border-radius: 0.9vw;
-
-  &.danger {
-    background-color: #ffedeb;
-  }
+  @font main;
+  --alert-accent: var(--brando-color-blue);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 20px;
+  padding: 13px 16px;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--alert-accent) 8%, var(--brando-color-white));
+  color: var(--brando-color-dark);
+  font-size: 13px;
+  line-height: 1.5;
 
   &.warning {
-    background-color: #fff6de;
+    --alert-accent: #e2a300;
+    background-color: color-mix(in srgb, var(--alert-accent) 14%, var(--brando-color-white));
   }
 
+  &.danger {
+    --alert-accent: #e5484d;
+    background-color: color-mix(in srgb, var(--alert-accent) 11%, var(--brando-color-white));
+  }
+
+  /* Sits in the form's 16-column grid on a line of its own, but sized to its
+     text so a short notice is not a bar across the whole screen. */
   .form-tab .row & {
-    width: 100%;
-    flex-basis: 100%;
-    grid-column: 1/span 16;
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
-  svg {
+  > [data-icon],
+  .icon [data-icon] {
     flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    color: color-mix(in srgb, var(--alert-accent) 70%, var(--brando-color-dark));
+  }
+
+  .icon,
+  .close {
+    flex-shrink: 0;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .icon {
+    display: flex;
+  }
+
+  .content {
+    min-width: 0;
+    max-width: 75ch;
+  }
+
+  strong {
+    text-decoration: underline;
+    text-decoration-style: wavy;
+  }
+
+  .close {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+
+    button {
+      border: none;
+      background-color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background-color: var(--brando-color-dark);
+
+        [data-icon] {
+          color: white;
+        }
+      }
+    }
   }
 }
