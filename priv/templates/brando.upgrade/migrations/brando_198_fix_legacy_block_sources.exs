@@ -1,4 +1,4 @@
-defmodule Brando.Repo.Migrations.Brando197FixLegacyBlockSources do
+defmodule Brando.Repo.Migrations.Brando198FixLegacyBlockSources do
   use Ecto.Migration
 
   @moduledoc """

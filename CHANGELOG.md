@@ -494,7 +494,7 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   instead of copying the list. Each processed image stores a fingerprint of the
   sizes and formats it was made with, and Utilities counts the images whose
   config has changed and offers **Recreate changed images** next to
-  **Recreate image sizes**. Run `mix brando.gen.migrations` for `brando_196`.
+  **Recreate image sizes**. Run `mix brando.gen.migrations` for `brando_197`.
   Images processed before it have no fingerprint and count as changed once.
 
 - **Frontend edit mode.** Signed-in admins can edit blocks on the published
