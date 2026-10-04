@@ -9,15 +9,16 @@ export default (app) => ({
     }
   },
 
+  // Field presence is tracked by the brando-form component, so focus and blur
+  // go there, even from inputs inside a nested LiveComponent (subform, block,
+  // etc.). Outside a form there is nothing to tell: the dialogs that render into
+  // a portal on <body>, like a multi-select's "Create client", have no form
+  // around them, and pushing to the LiveView instead crashed any view without
+  // its own focus/blur handlers, discarding everything unsaved on the page.
   handleFocus() {
-    const fName = this.field.getAttribute('name')
-    // Push to the brando-form component for field presence tracking,
-    // even when the input is inside a nested LiveComponent (subform, block, etc.)
     const formEl = this.el.closest('.brando-form')
     if (formEl) {
-      this.pushEventTo(formEl, 'focus', { field: fName })
-    } else {
-      this.pushEvent('focus', { field: fName })
+      this.pushEventTo(formEl, 'focus', { field: this.field.getAttribute('name') })
     }
   },
 
@@ -25,8 +26,6 @@ export default (app) => ({
     const formEl = this.el.closest('.brando-form')
     if (formEl) {
       this.pushEventTo(formEl, 'blur', {})
-    } else {
-      this.pushEvent('blur', {})
     }
   },
 

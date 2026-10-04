@@ -159,15 +159,18 @@ defmodule Brando.Blueprint.Dsl do
   defp generated_traits do
     quote location: :keep, unquote: false do
       @all_traits Enum.reverse(@traits)
-      {traits_before_validate_required, traits_after_validate_required} =
-        Brando.Trait.split_traits_by_changeset_phase(@all_traits)
-
-      @traits_before_validate_required traits_before_validate_required
-      @traits_after_validate_required traits_after_validate_required
 
       def __traits__, do: @all_traits
-      def __traits_before_validate_required__, do: @traits_before_validate_required
-      def __traits_after_validate_required__, do: @traits_after_validate_required
+
+      # Split when the changeset runs, not when the blueprint compiles: a
+      # trait's phase is read through a dynamic call Mix does not count as a
+      # compile-time dependency, so a blueprint compiled before a trait moved
+      # phase would keep the old split until forced to recompile.
+      def __traits_before_validate_required__,
+        do: @all_traits |> Brando.Trait.split_traits_by_changeset_phase() |> elem(0)
+
+      def __traits_after_validate_required__,
+        do: @all_traits |> Brando.Trait.split_traits_by_changeset_phase() |> elem(1)
 
       for {trait, _trait_opts} <- @all_traits do
         def has_trait(unquote(trait)), do: true
@@ -475,8 +478,8 @@ defmodule Brando.Blueprint.Dsl do
           params: params,
           sequence: sequence,
           user: user,
-          traits_before_validate_required: @traits_before_validate_required,
-          traits_after_validate_required: @traits_after_validate_required,
+          traits_before_validate_required: __traits_before_validate_required__(),
+          traits_after_validate_required: __traits_after_validate_required__(),
           attributes: @attrs,
           relations: @relations,
           assets: @assets,

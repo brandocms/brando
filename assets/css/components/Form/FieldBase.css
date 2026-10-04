@@ -1,14 +1,22 @@
+/* A group of fields set apart, drawn like the inputs it sits beside: their
+   border and radius, a faint surface, no card shadow */
 .shaded {
-  background-color: var(--brando-color-shaded);
+  background-color: var(--brando-shaded-surface);
   padding: 16px;
-  border-radius: var(--brando-card-radius);
+  border: 1px solid var(--brando-input-border);
+  border-radius: var(--brando-input-radius);
   margin-bottom: 25px;
-  box-shadow: var(--brando-card-shadow);
+  box-shadow: none;
 
   input.text,
   textarea.text {
     background-color: transparent;
   }
+}
+
+/* The form's own `fieldset { border: none }` outranks the class alone */
+.brando-form fieldset.shaded {
+  border: 1px solid var(--brando-input-border);
 }
 
 .subform-tools {
@@ -125,6 +133,12 @@
     display: flex;
     justify-content: space-between;
     margin-top: 4px;
+
+    /* Empty but for the hidden help-text slot: no gap, so a field ends where
+       its input does and side-by-side columns line up */
+    &:not(:has(> :not([hidden]))) {
+      margin-top: 0;
+    }
 
     .shaded & {
       position: relative;

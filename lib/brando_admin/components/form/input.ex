@@ -188,9 +188,13 @@ defmodule BrandoAdmin.Components.Form.Input do
           <button type="button" class="clear-datetime">
             {gettext("Clear")}
           </button>
-          <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
-          <div class="timezone">
-            <span class="timezone-prefix">&mdash; {gettext("Your timezone is")}:</span> <span data-timezone>Unknown</span>
+          <%!-- The date and the zone share a row that wraps, so a field too
+               narrow for both drops the zone instead of cutting the date --%>
+          <div class="datetime-value">
+            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
+            <div class="timezone">
+              <span class="timezone-prefix">&mdash; {gettext("Your timezone is")}:</span> <span data-timezone>Unknown</span>
+            </div>
           </div>
         </div>
       </div>
@@ -237,11 +241,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  # The field's value is the stored password hash, so it is never rendered:
+  # only what was typed into this form goes back into the inputs, which keeps
+  # it across re-renders mid-edit. A field left untouched submits blank, and
+  # `Brando.Trait.Password` reads that as "keep the current password".
   def password(assigns) do
-    value = assigns.field.value
-    confirmation_field_atom = :"#{assigns.field.field}_confirmation"
-    confirmation_field = assigns.field.form[confirmation_field_atom]
-    confirmation_value = confirmation_field.value || value
+    confirmation_field = assigns.field.form[:"#{assigns.field.field}_confirmation"]
+    value = typed_value(assigns.field)
+    confirmation_value = typed_value(confirmation_field)
 
     assigns =
       assigns
@@ -256,6 +263,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       <.input
         type={:password}
         field={@field}
+        value={@value}
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
@@ -273,6 +281,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         <.input
           type={:password}
           field={@confirmation_field}
+          value={@confirmation_value}
           placeholder={@placeholder}
           disabled={@disabled}
           phx-debounce={@debounce}
@@ -282,6 +291,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     <% end %>
     """
   end
+
+  defp typed_value(%FormField{form: %{params: params}, field: field}) when is_map(params),
+    do: Map.get(params, to_string(field))
+
+  defp typed_value(_field), do: nil
 
   def phone(assigns) do
     assigns = prepare_input_component(assigns)
@@ -362,6 +376,11 @@ defmodule BrandoAdmin.Components.Form.Input do
   `default_value` too and the inherited text is shown below the editor, since a
   rich text editor has no placeholder to advertise it with. Both are opt-in —
   most call sites are plain rich text fields with nothing to fall back to.
+
+  `input_form` sets the hidden input's `form` attribute. An editor that is not
+  part of the form around it (a popover inside an entry form) points it at an
+  id no form has, so its value is neither submitted nor validated with that
+  form; whoever renders it reads the value itself.
   """
   def rich_text(assigns) do
     extensions = process_extensions(assigns)
@@ -379,6 +398,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_new(:target, fn -> nil end)
       |> assign_new(:reset, fn -> false end)
       |> assign_new(:default_value, fn -> nil end)
+      |> assign_new(:input_form, fn -> nil end)
       |> prepare_input_component()
       |> prepare_ai_support()
 
@@ -427,7 +447,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <div id={"#{@field.id}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">
             <div id={"#{@field.id}-rich-text-target"} class="tiptap-target"></div>
           </div>
-          <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={300} />
+          <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={300} form={@input_form} />
           <span id={"#{@field.id}-tiptap-help"} class="tiptap-sr-only">{@instructions}</span>
         </div>
         <.live_component
@@ -579,7 +599,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :rest, :global,
     include:
-      ~w(class placeholder phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-slug-prefix data-autosize autocorrect spellcheck readonly)
+      ~w(class placeholder phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-slug-prefix data-autosize autocorrect spellcheck readonly form)
 
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 

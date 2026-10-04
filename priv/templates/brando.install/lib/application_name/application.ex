@@ -11,14 +11,15 @@ defmodule <%= application_module %>.Application do
       <%= application_module %>Web.Telemetry,
       # Start the PubSub system
       {Phoenix.PubSub, name: <%= application_module %>.PubSub},
-      # Start the Endpoint (http/https)
-      <%= application_module %>Web.Endpoint,
       # Start the Presence system
       <%= application_module %>.Presence,
       # Start the Brando supervisor
-      Brando
+      Brando,
       # Start a worker by calling: <%= application_module %>.Worker.start_link(arg)
       # {<%= application_module %>.Worker, arg},
+      # Start the Endpoint (http/https) last, so it stops first and drains its
+      # sockets while presence still runs; clients then reconnect
+      <%= application_module %>Web.Endpoint
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

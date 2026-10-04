@@ -1205,6 +1205,58 @@ defmodule Brando.Villain.RefRenderingTest do
       assert html =~ "[video:Video caption]"
     end
 
+    # Gallery block captions are rich text: an image's is its override `title`,
+    # a video's its override `caption`. Both render as markup.
+    test "render rich-text caption overrides as markup", %{user: user} do
+      image = Factory.insert(:image, creator: user, title: "Image <default>")
+      gallery = gallery_with([{:image, image}])
+
+      overrides = [
+        %Brando.Villain.Blocks.GalleryObjectOverride{
+          object_id: to_string(image.id),
+          object_type: :image,
+          title: "<p><em>Rich</em> caption</p>",
+          use_default_title: false
+        }
+      ]
+
+      html =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          gallery_object_overrides: overrides
+        })
+
+      assert html =~ "<figcaption><p><em>Rich</em> caption</p>"
+
+      html = render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :gallery})
+      assert html =~ "<figcaption>Image &lt;default&gt;"
+    end
+
+    test "render a video's caption override, else its escaped title", %{user: user} do
+      video = Factory.insert(:upload_video, creator: user, title: "Film & co")
+      gallery = gallery_with([{:video, video}])
+
+      html = render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :gallery})
+      assert html =~ "Film &amp; co</figcaption>"
+
+      overrides = [
+        %Brando.Villain.Blocks.GalleryObjectOverride{
+          object_id: to_string(video.id),
+          object_type: :video,
+          caption: "<p><strong>Tour</strong> film</p>",
+          use_default_caption: false
+        }
+      ]
+
+      html =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          gallery_object_overrides: overrides
+        })
+
+      assert html =~ "<p><strong>Tour</strong> film</p></figcaption>"
+    end
+
     test "apply an override stored without a type by id alone", %{user: user} do
       image = Factory.insert(:image, creator: user, title: "Image default")
       gallery = gallery_with([{:image, image}])

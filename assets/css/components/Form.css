@@ -187,17 +187,20 @@
       margin-bottom: 20px;
     }
 
+    /* Inputs side by side, equal widths, the 16px the design doc gives
+       related fields */
     &.inline {
       display: flex;
       flex-wrap: nowrap;
+      gap: 16px;
       width: 100%;
       margin-bottom: 10px;
       padding-left: 0;
       border-left: none;
 
       .brando-input {
-        flex-grow: 1;
-        margin-right: 5px;
+        flex: 1 1 0;
+        min-width: 0;
       }
     }
   }
@@ -266,6 +269,28 @@
       }
     }
 
+    /* Halves alternate left, right: a third starts the next row on the left
+       instead of stacking under the second */
+    .half + .half + .half {
+      grid-column: 1 / span 8;
+      @responsive $mobile {
+        grid-column: 1 / span 16;
+      }
+    }
+
+    .half + .half + .half + .half {
+      grid-column: 9 / span 8;
+      @responsive $mobile {
+        grid-column: 1 / span 16;
+      }
+    }
+
+    /* Browsers give fieldsets `min-width: min-content`, so a wide input row
+       pushed its column past the grid instead of shrinking into it */
+    > fieldset {
+      min-width: 0;
+    }
+
     .third {
       grid-column: 1 / span 5;
       @responsive $mobile {
@@ -320,7 +345,7 @@
 
   &.toggled {
     .slider {
-      background-color: #66bb6a;
+      background-color: #9cc79f;
     }
 
     .slider:before {
@@ -329,7 +354,7 @@
 
     .slider:after {
       transform: translateX(20px);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='rgba(102,187,106,1)'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='rgba(106,159,111,1)'/%3E%3C/svg%3E");
     }
 
     &.small {
@@ -384,7 +409,7 @@
     }
 
     input[type="checkbox"]:checked + .slider {
-      background-color: #66bb6a;
+      background-color: #9cc79f;
     }
   }
 
@@ -440,7 +465,7 @@
   }
 
   input[type="checkbox"]:checked + .slider {
-    background-color: #66bb6a;
+    background-color: #9cc79f;
   }
 
   input[type="checkbox"]:checked + .slider:before {
@@ -449,7 +474,7 @@
 
   input[type="checkbox"]:checked + .slider:after {
     transform: translateX(20px);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='rgba(102,187,106,1)'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='rgba(106,159,111,1)'/%3E%3C/svg%3E");
   }
 }
 

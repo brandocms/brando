@@ -49,6 +49,11 @@ defmodule Mix.Brando.Igniter.InstallTest do
 
     application = IgniterCase.source(igniter, "lib/studio/application.ex")
     assert application =~ "Studio.Presence"
+
+    # The endpoint stops first, draining its sockets while presence still runs
+    [before_endpoint, _] = String.split(application, "StudioWeb.Endpoint", parts: 2)
+    assert before_endpoint =~ "Studio.Presence"
+    assert before_endpoint =~ ~r/^\s*Brando,?$/m
     assert application =~ "Brando.System.initialize()"
     assert application =~ "case Supervisor.start_link"
     assert application =~ "error ->"

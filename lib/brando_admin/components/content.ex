@@ -115,6 +115,19 @@ defmodule BrandoAdmin.Components.Content do
   @doc "Renders an image or its processing/empty placeholder."
   def image(assigns), do: Image.image(assigns)
 
+  attr :user, :map, required: true, doc: "anything with `name` and `avatar`"
+
+  @doc """
+  A user's avatar, or the first letter of their name on a green disc when they
+  have none, as the listings show creators. Fills its container.
+  """
+  def user_avatar(assigns) do
+    ~H"""
+    <.image :if={@user.avatar} image={@user.avatar} size={:thumb} />
+    <span :if={!@user.avatar} class="user-initial">{String.first(@user.name || "?")}</span>
+    """
+  end
+
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :subtitle, :string, default: nil

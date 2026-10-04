@@ -214,16 +214,28 @@ export default (hooks, enableDebug = false) => {
   }
 
   if (app.userToken) {
+    // The Chrome LiveView sends fresh tokens on every mount and every few
+    // hours, so a long-open tab can still reconnect after a server restart
+    window.addEventListener('phx:brando:socket_tokens', ({ detail }) => {
+      app.userToken = detail.user_token
+      const metaScope = Dom.find('meta[name="realtime_scope"]')
+      if (metaScope) metaScope.setAttribute('content', detail.realtime_scope)
+    })
+
+    // A function, read on every connect attempt, so a reconnect uses the
+    // newest token rather than the one the page was loaded with
     app.userSocket = new Socket('/admin/socket', {
-      params: { token: app.userToken },
+      params: () => ({ token: app.userToken }),
     })
     app.userSocket.connect()
 
     app.userChannel = app.userSocket.channel(`user:${app.userId}`, {})
-    app.lobbyChannel = app.userSocket.channel('lobby', {
+    // A function, so a rejoin after a server restart reports the page the
+    // user is on now rather than the one the tab was first loaded at
+    app.lobbyChannel = app.userSocket.channel('lobby', () => ({
       url: window.location.pathname,
       scope_token: document.querySelector('meta[name="realtime_scope"]')?.content,
-    })
+    }))
 
     app.lobbyChannel.on('toast', (data) => {
       app.toast.mutation(data.level, data.payload)

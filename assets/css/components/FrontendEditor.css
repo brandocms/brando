@@ -240,6 +240,10 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
     object-fit: cover;
   }
 
+  .user-initial {
+    font-size: 11px;
+  }
+
   [data-icon] {
     width: 14px;
     height: 14px;

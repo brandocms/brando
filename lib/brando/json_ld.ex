@@ -165,7 +165,9 @@ defmodule Brando.JSONLD do
       |> Enum.reject(&String.starts_with?(to_string(&1), ["@context", "@type"]))
       |> Enum.count()
 
-    if key_count > 0, do: to_slim_map(map)
+    # A nested entity is read in its document's context; a Place or
+    # PostalAddress built for the top level repeats it otherwise
+    if key_count > 0, do: map |> to_slim_map() |> Map.delete(:"@context")
   end
 
   defp slim_map(list) when is_list(list) do

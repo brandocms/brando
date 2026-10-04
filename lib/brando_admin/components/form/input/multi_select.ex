@@ -120,11 +120,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <:header>
               <%= if @select_form do %>
                 <button
-                  class="header-button"
+                  class="header-button secondary"
                   type="button"
                   phx-click={JS.push("show_form", target: @myself) |> show_modal("##{@create_modal_id}")}
                 >
-                  Create {@singular}
+                  <.icon name="plus" />
+                  {gettext("Create %{singular}", singular: @singular_label)}
                 </button>
               <% end %>
             </:header>
@@ -218,17 +219,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
         <.portal :if={@select_form} id={"create-#{@field.id}-portal"} target="body">
           <Content.modal
-            title={"Create #{@singular}"}
+            title={gettext("Create %{singular}", singular: @singular_label)}
             id={@create_modal_id}
             narrow={true}
             close={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
           >
             <.form
               :let={entry_form}
+              id={"#{@create_modal_id}-form"}
               for={@select_changeset}
               as={@create_form_key}
               phx-change="validate_new_entry"
               phx-target={@myself}
+              data-js-hide={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
             >
               <div
                 :for={tab <- @select_form.tabs}
@@ -253,19 +256,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <div class="button-group">
                 <button
                   type="button"
-                  class="primary small"
-                  phx-click={JS.push("save_new_entry", target: @myself)}
-                  phx-target={@myself}
-                >
-                  {gettext("Save")}
-                </button>
-                <button
-                  type="button"
                   class="secondary small"
                   phx-click={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
                   phx-target={@myself}
                 >
                   {gettext("Cancel")}
+                </button>
+                <button
+                  type="button"
+                  class="primary small"
+                  phx-click={JS.push("save_new_entry", target: @myself)}
+                  phx-target={@myself}
+                >
+                  {gettext("Save")}
                 </button>
               </div>
             </:footer>
@@ -741,6 +744,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     socket
     |> assign(:select_changeset, nil)
     |> assign(:singular, nil)
+    |> assign(:singular_label, nil)
     |> assign(:module, nil)
   end
 
@@ -753,6 +757,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     socket
     |> assign(:select_changeset, select_changeset)
     |> assign(:singular, singular)
+    |> assign(:singular_label, translated_singular(module))
     |> assign(:module, module)
   end
 
@@ -760,7 +765,16 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     socket
     |> assign(:select_changeset, nil)
     |> assign(:singular, nil)
+    |> assign(:singular_label, nil)
     |> assign(:module, nil)
+  end
+
+  # The singular in the editor's language, looked up as the listing's toasts do.
+  defp translated_singular(module) do
+    naming = module.__naming__()
+    msgid = Brando.Utils.humanize(naming.singular, :downcase)
+    domain = String.downcase("#{naming.domain}_#{naming.singular}")
+    Gettext.dgettext(module.__modules__(:gettext), domain, msgid)
   end
 
   def selected_options(%{relation_type: relation_type} = assigns)
@@ -768,6 +782,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
       <Input.input type={:hidden} field={@field} id={"#{@field.id}-empty"} name={@field.name} value="" />
+      <div class="selected-labels">
+        <.empty_hint />
+      </div>
     <% else %>
       <div
         id={"#{@field.id}-selected-options"}
@@ -823,10 +840,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         input_options={@input_options}
         relation_type={@relation_type}
         relation_key={@relation_key}
+        under_field
       >
         <.get_label opt={opt} />
       </.labels>
     </div>
+    """
+  end
+
+  # Takes the place of the selected labels under an empty field, so the field
+  # lines up with its neighbours and says how to fill it.
+  defp empty_hint(assigns) do
+    ~H"""
+    <div class="empty-label">{gettext("Nothing selected — use Select to add")}</div>
     """
   end
 
@@ -870,7 +896,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       when relation_type in [:has_many, {:subform, :has_many}] do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
-      <div class="empty-label">{gettext("None selected")}</div>
+      <%= if assigns[:under_field] do %>
+        <.empty_hint />
+      <% else %>
+        <div class="empty-label">{gettext("None selected")}</div>
+      <% end %>
     <% else %>
       <div
         :for={opt <- @selected_options}
@@ -888,7 +918,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def labels(%{relation_type: {:array, _}} = assigns) do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
-      <div class="empty-label">{gettext("None selected")}</div>
+      <%= if assigns[:under_field] do %>
+        <.empty_hint />
+      <% else %>
+        <div class="empty-label">{gettext("None selected")}</div>
+      <% end %>
     <% else %>
       <div :for={opt <- @selected_options} class="selected-label">
         <div class="selected-label-text">
@@ -1118,14 +1152,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     select_changeset = Map.put(select_changeset, :action, :create)
 
     case apply(context, :"create_#{singular}", [select_changeset, current_user]) do
-      {:ok, _entry} ->
-        send(self(), {:toast, "#{String.capitalize(singular)} created"})
+      {:ok, entry} ->
+        send(self(), {:toast, "#{String.capitalize(socket.assigns.singular_label)} created"})
 
-        {:noreply,
-         socket
-         |> assign(:creating, false)
-         |> update_input_options()
-         |> maybe_assign_select_changeset()}
+        # Close the create dialog (its form carries the command) and select
+        # what was just made: creating it from this field means wanting it here.
+        socket =
+          socket
+          |> assign(:creating, false)
+          |> update_input_options()
+          |> maybe_assign_select_changeset()
+          |> push_event("js-exec", %{to: "##{socket.assigns.create_modal_id}-form", attr: "data-js-hide"})
+
+        handle_event("select_option", %{"value" => to_string(entry.id)}, socket)
 
       {:error, %Changeset{} = select_changeset} ->
         {:noreply, assign(socket, select_changeset: select_changeset)}

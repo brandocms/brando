@@ -22,10 +22,18 @@ defmodule BrandoAdmin.Chrome do
   on_mount {Brando.Tenant.LiveView, :default}
   on_mount {BrandoAdmin.Authorization, :default}
 
+  # Socket tokens are verified with a 24h max_age; refreshed well inside it
+  @socket_tokens_interval :timer.hours(6)
+
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
-      {:ok, socket |> assign(:socket_connected, true) |> refresh_authorization()}
+
+      {:ok,
+       socket
+       |> assign(:socket_connected, true)
+       |> refresh_authorization()
+       |> push_socket_tokens()}
     else
       {:ok,
        socket
@@ -82,9 +90,20 @@ defmodule BrandoAdmin.Chrome do
 
     ~H"""
     <div class="user-presence-item" id={@id}>
-      <div class={["status", @presence.status]}>●</div>
       <div class="info">
-        <div class="name">{@presence.name}</div>
+        <span class={["name", "status-label", @presence.status]}>
+          <svg
+            class="status-dot"
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            aria-hidden="true"
+          >
+            <circle r="6" cy="6" cx="6" />
+          </svg>
+          {@presence.name}
+        </span>
         <div class="last-active">
           {@last_active}
         </div>
@@ -112,13 +131,30 @@ defmodule BrandoAdmin.Chrome do
     ~H"""
     <div id={@id} class="user-presence" data-user-id={@presence.id} data-user-status={@presence.status}>
       <div class="avatar">
-        <Content.image image={@presence.avatar} size={:thumb} />
+        <Content.user_avatar user={@presence} />
       </div>
     </div>
     """
   end
 
   def handle_info({_, {:presence, _}}, socket), do: {:noreply, refresh_authorization(socket)}
+  def handle_info(:push_socket_tokens, socket), do: {:noreply, push_socket_tokens(socket)}
+
+  # The admin socket (presence, toasts, progress) authenticates with tokens
+  # rendered into the page's meta tags at load. A tab open longer than their
+  # max_age could not reconnect after a server restart, and dropped out of
+  # presence until reloaded. This view authenticates with the session instead,
+  # and remounts after a restart, so it hands the page fresh tokens: on every
+  # mount, and every few hours while it stays up.
+  defp push_socket_tokens(socket) do
+    Process.send_after(self(), :push_socket_tokens, @socket_tokens_interval)
+    user = socket.assigns.current_user
+
+    push_event(socket, "brando:socket_tokens", %{
+      user_token: Brando.Users.build_token(user.id),
+      realtime_scope: Brando.Authorization.Realtime.token(user)
+    })
+  end
 
   def refresh_authorization(socket) do
     scope = socket.assigns[:authorization_scope] || Scope.current(socket.assigns.current_user)

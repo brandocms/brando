@@ -120,14 +120,6 @@
 
   .header-wrap {
     margin-right: 50px;
-
-    button.header-button {
-      border: 1px solid;
-      font-size: 13px;
-      padding: 7px 14px;
-      border-radius: 8px;
-      margin-top: -3px;
-    }
   }
 
   &.centered {
