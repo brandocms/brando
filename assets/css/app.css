@@ -34,6 +34,7 @@
 @import "./components/Form/FieldBase.css";
 @import "./components/Form/Loader.css";
 @import "./components/Form/Subform.css";
+@import "./components/Form/SubformTable.css";
 @import "./components/Form/VarLayout.css";
 @import "./components/Form/FormFields.css";
 @import "./components/Form/Input/AssetField.css";
@@ -87,6 +88,7 @@
 
 @import "./components/Form/Controls.css";
 @import "./components/Workspace.css";
+@import "./components/TabSwitch.css";
 @import "./components/ModalWorkspace.css";
 @import "./views/Users.css";
 @import "./views/ContentWorkspace.css";

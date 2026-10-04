@@ -200,28 +200,11 @@
     color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
   }
 
+  /* A quieter variant of the shared .alert for the panel's helper lines. */
   .environment-hint {
-    /* Softer and tighter than the default .alert, which is sized in vw for
-       full-width form contexts. It also sets mono, which reads as technical
-       output rather than guidance at this size. */
-    @font main;
-    align-items: flex-start;
     margin: 0;
-    padding: 13px 15px;
-    border-radius: 10px;
     background: color-mix(in srgb, var(--brando-color-blue) 6%, var(--brando-color-white));
     color: color-mix(in srgb, var(--brando-color-dark) 72%, transparent);
-    font-size: 13px;
-    line-height: 1.5;
-    gap: 10px;
-
-    [data-icon] {
-      flex-shrink: 0;
-      width: 17px;
-      height: 17px;
-      margin-top: 1px;
-      color: color-mix(in srgb, var(--brando-color-blue) 62%, var(--brando-color-dark));
-    }
 
     span {
       max-width: 62ch;

@@ -48,58 +48,13 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign(assigns)
       |> prepare_subform_component()
       |> assign_new(:open_entries, fn -> %{} end)
-      |> assign_new(:sequenced?, fn ->
-        # can we sequence the subform? we can if it
-        #   - is an embed
-        #   - has a :sequenced trait
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{type: :has_many, opts: %{module: rel_module}} ->
-            rel_module.has_trait(Brando.Trait.Sequenced)
-
-          %Relations.Relation{type: :embeds_many} ->
-            true
-
-          _ ->
-            false
-        end
-      end)
-      |> assign_new(:embeds?, fn ->
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{type: :embeds_many} -> true
-          _ -> false
-        end
-      end)
-      |> assign_new(:sort_param, fn ->
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{opts: opts} ->
-            Map.get(opts, :sort_param, :"sort_#{assigns.subform.name}_ids")
-
-          _ ->
-            :"sort_#{assigns.subform.name}_ids"
-        end
-      end)
-      |> assign_new(:drop_param, fn ->
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{opts: opts} ->
-            Map.get(opts, :drop_param, :"drop_#{assigns.subform.name}_ids")
-
-          _ ->
-            :"drop_#{assigns.subform.name}_ids"
-        end
-      end)
+      |> assign_relation()
       |> assign(
         :empty_subform_fields,
         SubformHelpers.current_entries(assigns.field.form.source, assigns.subform.name) == []
       )
       |> assign(:path, List.wrap(assigns.subform.name))
+      |> assign_table()
       |> assign_new(:parent_form_id, fn ->
         parent_schema = assigns.field.form.data.__struct__
         "#{parent_schema.__naming__().singular}_form"
@@ -147,74 +102,124 @@ defmodule BrandoAdmin.Components.Form.Subform do
         field={@field}
         label={@label}
         instructions={@instructions}
-        class="subform"
+        class={["subform", @table? && "subform--table"]}
         meta_top
       >
+        <%!-- An inline subform is a table: one line per entry under one row of
+              column headings, so every row reads the same. The headings are a
+              header group beside the sortable rows, which keeps them out of
+              the rows' sibling order. --%>
         <div
-          id={"#{@field.id}-sortable"}
-          data-embeds={@embeds?}
-          phx-hook="Brando.SortableEmbeds"
-          data-sortable-handle=".subform-handle"
-          data-sortable-id={"#{@field.name}-sortable"}
-          data-sortable-selector=".subform-entry"
+          id={@table? && "#{@field.id}-table"}
+          class={@table? && "subform-table-frame"}
+          phx-hook={@table? && "Brando.TableRows"}
         >
-          <.empty_subform :if={@empty_subform_fields} field={@field} />
-          <.inputs_for :let={sub_form} field={@field}>
-            <div
-              id={"#{sub_form.id}-entry"}
-              class={["subform-entry", @subform.style == :inline && "inline", @subform.style == :listing && "summary-entry"]}
-            >
-              <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
-              <div class="subform-tools">
-                <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
-              </div>
-
-              <div :if={@subform.style == :listing} class="subform-summary">
-                <div class="subform-summary-content">
-                  {Phoenix.LiveView.TagEngine.component(
-                    @subform.listing,
-                    [entry: Changeset.apply_changes(sub_form.source)],
-                    {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-                  )}
+          <div class={@table? && "subform-table-scroll"}>
+            <div class={@table? && "subform-table"}>
+              <div :if={@table? && !@empty_subform_fields} class="subform-table-head" aria-hidden="true">
+                <div class="subform-table-row">
+                  <span class="subform-tools"></span>
+                  <span :for={column <- @columns} class="brando-input" data-component={column.component}>
+                    {column.label}
+                  </span>
+                  <span class="subform-row-end"></span>
                 </div>
-                <button
-                  type="button"
-                  class="subform-summary-edit"
-                  aria-expanded={to_string(entry_open?(sub_form, @open_entries))}
-                  aria-controls={"#{sub_form.id}-fields"}
-                  phx-click={
-                    JS.push("edit_subentry",
-                      value: %{index: sub_form[:_persistent_id].value, open: !entry_open?(sub_form, @open_entries)},
-                      target: @myself
-                    )
-                  }
-                >
-                  <.icon name={if entry_open?(sub_form, @open_entries), do: "chevron-up", else: "square-pen"} />
-                  {if entry_open?(sub_form, @open_entries), do: gettext("Done"), else: gettext("Edit")}
-                </button>
               </div>
               <div
-                id={"#{sub_form.id}-fields"}
-                class="subform-fields"
-                hidden={@subform.style == :listing && !entry_open?(sub_form, @open_entries)}
+                id={"#{@field.id}-sortable"}
+                class={@table? && "subform-table-body"}
+                data-embeds={@embeds?}
+                phx-hook="Brando.SortableEmbeds"
+                data-sortable-handle=".subform-handle"
+                data-sortable-id={"#{@field.name}-sortable"}
+                data-sortable-selector=".subform-entry"
               >
-                <Subform.Field.render
-                  :for={input <- @subform.sub_fields}
-                  cardinality={:many}
-                  sub_form={sub_form}
-                  input={input}
-                  path={@path ++ [sub_form.index]}
-                  parent_form_id={@parent_form_id}
-                  subform_id={@id}
-                  current_user={@current_user}
-                />
+                <.empty_subform :if={@empty_subform_fields} field={@field} />
+                <.inputs_for :let={sub_form} field={@field}>
+                  <div
+                    id={"#{sub_form.id}-entry"}
+                    class={[
+                      "subform-entry",
+                      @subform.style == :inline && "inline",
+                      @subform.style == :listing && "summary-entry"
+                    ]}
+                  >
+                    <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
+                    <div class="subform-tools">
+                      <.subentry_insert
+                        :if={@table? && @subform.add_entry}
+                        on_click={JS.push("insert_subentry", value: %{index: sub_form.index}, target: @myself)}
+                      />
+                      <.subentry_sequence :if={@sequenced?} />
+                      <.subentry_remove
+                        :if={!@table?}
+                        name={"#{@field.form.name}[#{@drop_param}][]"}
+                        index={sub_form.index}
+                      />
+                    </div>
+
+                    <div :if={@subform.style == :listing} class="subform-summary">
+                      <div class="subform-summary-content">
+                        {Phoenix.LiveView.TagEngine.component(
+                          @subform.listing,
+                          [entry: Changeset.apply_changes(sub_form.source)],
+                          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        class="subform-summary-edit"
+                        aria-expanded={to_string(entry_open?(sub_form, @open_entries))}
+                        aria-controls={"#{sub_form.id}-fields"}
+                        phx-click={
+                          JS.push("edit_subentry",
+                            value: %{index: sub_form[:_persistent_id].value, open: !entry_open?(sub_form, @open_entries)},
+                            target: @myself
+                          )
+                        }
+                      >
+                        <.icon name={if entry_open?(sub_form, @open_entries), do: "chevron-up", else: "square-pen"} />
+                        {if entry_open?(sub_form, @open_entries), do: gettext("Done"), else: gettext("Edit")}
+                      </button>
+                    </div>
+                    <div
+                      id={"#{sub_form.id}-fields"}
+                      class="subform-fields"
+                      hidden={@subform.style == :listing && !entry_open?(sub_form, @open_entries)}
+                    >
+                      <Subform.Field.render
+                        :for={input <- @subform.sub_fields}
+                        cardinality={:many}
+                        table={@table?}
+                        sub_form={sub_form}
+                        input={input}
+                        path={@path ++ [sub_form.index]}
+                        parent_form_id={@parent_form_id}
+                        subform_id={@id}
+                        current_user={@current_user}
+                      />
+                    </div>
+                    <div :if={@table?} class="subform-row-end">
+                      <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
+                    </div>
+                  </div>
+                </.inputs_for>
+                <input type="hidden" name={"#{@field.form.name}[#{@drop_param}][]"} />
               </div>
             </div>
-          </.inputs_for>
-          <input type="hidden" name={"#{@field.form.name}[#{@drop_param}][]"} />
+          </div>
+          <div :if={@table?} class="subform-table-foot">
+            <.subentry_add :if={@subform.add_entry} on_click={JS.push("add_subentry", target: @myself)} />
+            <span :if={!@empty_subform_fields} class="subform-table-count">
+              {ngettext(
+                "1 entry",
+                "%{count} entries",
+                length(SubformHelpers.current_entries(@field.form.source, @subform.name))
+              )}
+            </span>
+          </div>
         </div>
-        <.subentry_add :if={@subform.add_entry} on_click={JS.push("add_subentry", target: @myself)} />
+        <.subentry_add :if={!@table? && @subform.add_entry} on_click={JS.push("add_subentry", target: @myself)} />
       </Primitives.field_base>
     </fieldset>
     """
@@ -225,6 +230,15 @@ defmodule BrandoAdmin.Components.Form.Subform do
     <button type="button" class="add-entry-button" phx-click={@on_click}>
       <.icon name="list-plus" />
       {gettext("Add entry")}
+    </button>
+    """
+  end
+
+  # Sits on the line above its row, and adds an entry there
+  def subentry_insert(assigns) do
+    ~H"""
+    <button type="button" class="subform-insert" phx-click={@on_click} aria-label={gettext("Insert entry")}>
+      <.icon name="plus" />
     </button>
     """
   end
@@ -305,13 +319,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.field.form.source
-    entry = Changeset.apply_changes(changeset)
-
-    default =
-      case socket.assigns.subform.default do
-        fun when is_function(fun) -> fun.(entry, nil)
-        struct -> struct
-      end
 
     # nilify all unloaded assocs
     field_name = socket.assigns.subform.name
@@ -321,7 +328,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     updated_field =
       changeset
       |> SubformHelpers.current_entries(field_name)
-      |> Kernel.++([default])
+      |> Kernel.++([new_entry(socket)])
 
     updated_changeset = SubformHelpers.put_entries(changeset, field_name, updated_field)
 
@@ -329,6 +336,26 @@ defmodule BrandoAdmin.Components.Form.Subform do
       id: form_id,
       action: :update_changeset,
       changeset: updated_changeset,
+      force_validation: true
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("insert_subentry", %{"index" => index}, socket) do
+    changeset = socket.assigns.field.form.source
+    field_name = socket.assigns.subform.name
+    module = changeset.data.__struct__
+
+    related_entries =
+      changeset
+      |> SubformHelpers.current_entries(field_name)
+      |> List.insert_at(index, new_entry(socket))
+
+    send_update(BrandoAdmin.Components.Form,
+      id: "#{module.__naming__().singular}_form",
+      action: :update_changeset,
+      changeset: SubformHelpers.put_entries(changeset, field_name, related_entries),
       force_validation: true
     )
 
@@ -397,6 +424,67 @@ defmodule BrandoAdmin.Components.Form.Subform do
     )
 
     {:noreply, socket}
+  end
+
+  # How the relation is sequenced, whether it embeds, and the names of its
+  # sort and drop params
+  defp assign_relation(%{assigns: %{subform: %{name: name}, field: field}} = socket) do
+    relation = fn -> Relations.__relation__(field.form.data.__struct__, name) end
+
+    socket
+    |> assign_new(:sequenced?, fn -> sequenced?(relation.()) end)
+    |> assign_new(:embeds?, fn -> match?(%Relations.Relation{type: :embeds_many}, relation.()) end)
+    |> assign_new(:sort_param, fn -> relation_param(relation.(), :sort_param, :"sort_#{name}_ids") end)
+    |> assign_new(:drop_param, fn -> relation_param(relation.(), :drop_param, :"drop_#{name}_ids") end)
+  end
+
+  # Entries can be reordered when they are embedded, or when the related
+  # schema has the :sequenced trait
+  defp sequenced?(%Relations.Relation{type: :has_many, opts: %{module: module}}),
+    do: module.has_trait(Brando.Trait.Sequenced)
+
+  defp sequenced?(%Relations.Relation{type: :embeds_many}), do: true
+  defp sequenced?(_relation), do: false
+
+  defp relation_param(%Relations.Relation{opts: opts}, key, default), do: Map.get(opts, key, default)
+  defp relation_param(_relation, _key, default), do: default
+
+  defp assign_table(%{assigns: %{subform: subform, field: field}} = socket) do
+    socket
+    |> assign_new(:table?, fn -> subform.style == :inline and subform.cardinality == :many end)
+    |> assign_new(:columns, fn -> table_columns(subform, field) end)
+  end
+
+  defp new_entry(socket) do
+    entry = Changeset.apply_changes(socket.assigns.field.form.source)
+
+    case socket.assigns.subform.default do
+      fun when is_function(fun) -> fun.(entry, nil)
+      struct -> struct
+    end
+  end
+
+  # One heading per visible column, labelled as its cells' own labels are
+  defp table_columns(%{style: :inline, cardinality: :many} = subform, field) do
+    schema = related_schema(field.form.data.__struct__, subform.name)
+
+    subform.sub_fields
+    |> Enum.reject(&(&1.type == :hidden))
+    |> Enum.map(fn input ->
+      %{
+        component: Primitives.data_component(input.type),
+        label: BrandoAdmin.Utils.g(schema, input.opts[:label]) || Brando.Utils.humanize(to_string(input.name))
+      }
+    end)
+  end
+
+  defp table_columns(_subform, _field), do: []
+
+  defp related_schema(parent_schema, name) do
+    case Relations.__relation__(parent_schema, name) do
+      %Relations.Relation{opts: %{module: module}} when is_atom(module) -> module
+      _ -> parent_schema
+    end
   end
 
   # LiveView's persistent form key follows the row through reordering. DOM IDs

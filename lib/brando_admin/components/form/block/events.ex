@@ -910,7 +910,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   end
 
   ## Table row events
-  def handle_block_event("add_table_row", _, socket) do
+  def handle_block_event("add_table_row", params, socket) do
     uid = socket.assigns.uid
     belongs_to = socket.assigns.belongs_to
     table_template = socket.assigns.table_template
@@ -964,8 +964,15 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       |> Ecto.Changeset.put_assoc(:vars, vars)
       |> Map.put(:action, :insert)
 
-    updated_block_changeset =
-      Ecto.Changeset.put_assoc(block_changeset, :table_rows, current_rows ++ [new_row_changeset])
+    # Insert sends the index of the row it sits above; Add row has none and
+    # appends. `sequence` follows the rows' order when the block is cast.
+    table_rows =
+      case Integer.parse(to_string(params["index"])) do
+        {index, ""} -> List.insert_at(current_rows, index, new_row_changeset)
+        _ -> current_rows ++ [new_row_changeset]
+      end
+
+    updated_block_changeset = Ecto.Changeset.put_assoc(block_changeset, :table_rows, table_rows)
 
     updated_form =
       if belongs_to == :root do

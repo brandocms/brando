@@ -15,7 +15,6 @@ defmodule BrandoAdmin.UserLoginLive do
       <div class="brando-versioning">
         <svg
           version="1.1"
-          id="Layer_1"
           xmlns="http://www.w3.org/2000/svg"
           x="0"
           y="0"
@@ -47,7 +46,6 @@ defmodule BrandoAdmin.UserLoginLive do
               <% else %>
                 <svg
                   version="1.1"
-                  id="Layer_1"
                   xmlns="http://www.w3.org/2000/svg"
                   x="0"
                   y="0"

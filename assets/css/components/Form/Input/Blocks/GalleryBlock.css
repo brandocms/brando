@@ -269,21 +269,6 @@
     }
   }
 
-  .upload-canvas {
-    &.dragging {
-      background-color: #cde7ec !important;
-      cursor: cell;
-
-      .alert {
-        background-color: #cde7ec !important;
-      }
-
-      svg .plus {
-        backface-visibility: hidden;
-      }
-    }
-  }
-
   .image-picker-images {
     display: grid;
     grid-gap: 1vw;

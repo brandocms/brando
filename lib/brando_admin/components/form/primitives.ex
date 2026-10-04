@@ -189,35 +189,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
       |> assign_new(:form_id, fn -> nil end)
       |> assign_new(:compact, fn -> Keyword.get(assigns.opts, :compact, false) end)
       |> assign_new(:size, fn -> Keyword.get(assigns.opts, :size, "full") end)
-      |> assign_new(:component_target, fn ->
-        case assigns.type do
-          {:component, _module} ->
-            raise """
-
-            {:component, module} is deprecated. Use {:live_component, module} instead.
-            If you want to pass a function component, pass it as a function capture instead:
-
-            &Components.my_component/1
-
-            """
-
-          {:live_component, module} ->
-            module
-
-          fun when is_function(fun, 1) ->
-            fun
-
-          type ->
-            type_module = type |> to_string() |> Macro.camelize()
-            input_module = Module.concat([Input, type_module])
-
-            # if module exists, it's a live component. if not, function component
-            case Code.ensure_compiled(input_module) do
-              {:module, _} -> input_module
-              _ -> Function.capture(BrandoAdmin.Components.Form.Input, type, 1)
-            end
-        end
-      end)
+      |> assign_new(:component_target, fn -> input_target(assigns.type) end)
 
     ~H"""
     <%= if is_function(@component_target) do %>
@@ -270,6 +242,44 @@ defmodule BrandoAdmin.Components.Form.Primitives do
       </div>
     <% end %>
     """
+  end
+
+  @doc """
+  A type with a module under `Input` is a live component; any other type falls
+  back to the function component of that name in `Input`. Shared with the
+  inline subform's headings, which must name each column as its cells do.
+  """
+  def input_target({:component, _module}) do
+    raise """
+
+    {:component, module} is deprecated. Use {:live_component, module} instead.
+    If you want to pass a function component, pass it as a function capture instead:
+
+    &Components.my_component/1
+
+    """
+  end
+
+  def input_target({:live_component, module}), do: module
+  def input_target(fun) when is_function(fun, 1), do: fun
+
+  def input_target(type) do
+    type_module = type |> to_string() |> Macro.camelize()
+    input_module = Module.concat([Input, type_module])
+
+    # if module exists, it's a live component. if not, function component
+    case Code.ensure_compiled(input_module) do
+      {:module, _} -> input_module
+      _ -> Function.capture(BrandoAdmin.Components.Form.Input, type, 1)
+    end
+  end
+
+  @doc """
+  Styles key on an input's `data-component`, so an inline subform's column
+  heading carries the same value as the cells under it, and is sized with them.
+  """
+  def data_component(type) do
+    if is_function(input_target(type)), do: component_name(type), else: inspect(type)
   end
 
   # A function component input type (`&Components.my_input/1`) has no name to

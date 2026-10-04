@@ -58,6 +58,20 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     end
   end
 
+  test "framework migration templates have one number each" do
+    # A fresh install times each template by its number, so two sharing one
+    # are copied with the same version, which Ecto refuses to run.
+    numbers =
+      [:code.priv_dir(:brando), "templates/brando.upgrade/migrations/brando_*.exs"]
+      |> Path.join()
+      |> Path.wildcard()
+      |> Enum.map(fn path ->
+        path |> Path.basename() |> then(&Regex.run(~r/^brando_(\d+)_/, &1, capture: :all_but_first))
+      end)
+
+    assert numbers -- Enum.uniq(numbers) == []
+  end
+
   test "framework migration command preserves historical files and does not recreate baseline tables" do
     historical = "priv/repo/migrations/20100101000000_brando_01_set_image_as_jsonb.exs"
     content = "# Historical customized migration\n"

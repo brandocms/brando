@@ -118,6 +118,7 @@
 [data-source-structure] {
   .subform-delete,
   .subform-handle,
+  .subform-insert,
   .add-entry-button {
     display: none;
   }

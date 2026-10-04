@@ -161,6 +161,10 @@ defmodule BrandoAdmin.Chrome do
     presences = build_presences(scope)
     {active, inactive} = Enum.split_with(presences, &(&1.status in ["online", "idle"]))
 
+    # Your own avatar always leads the strip; everyone else keeps their order.
+    current_user_id = socket.assigns.current_user.id
+    active = Enum.sort_by(active, &(&1.id != current_user_id))
+
     # Realtime.users/1 answers "who may be seen", not "in what order", so it has
     # no order_by and Repo.all hands back heap order. Reversing that just gave a
     # different arbitrary order. Sort on the value actually rendered instead.

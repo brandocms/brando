@@ -1,109 +1,59 @@
-.table-block {
-  .block-content {
-    .table-content {
-    }
+/* A table block's rows: the shared table (SubformTable.css) with block
+   variables in its cells. The variables keep their compact controls from
+   `.block .block-vars`, which Block.css extends to this table; here they lose what a table replaces —
+   the label beside each value, which is the column heading, and the sheet's
+   own border, background and cell dividers. */
+.block .table-block {
+  --vars-line: color-mix(in srgb, var(--brando-color-dark) 9%, transparent);
+  --vars-muted: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+  --vars-faint: color-mix(in srgb, var(--brando-color-dark) 40%, transparent);
+
+  .subform-table {
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
 
-  .table-instructions {
-    background-color: var(--brando-color-peach);
-    padding: 1vw;
-    margin-bottom: 2vw;
-    font-size: 1.2vw;
+  .subform-table-body > .table-row > .variable {
+    min-height: 0;
+    padding: 4px 8px;
+    color: var(--brando-color-foreground);
   }
 
-  .table-row {
-    @space margin-bottom 8px;
-    @space padding-top 8px;
-    @space padding-right 8px;
-
-    display: flex;
-
-    &:nth-of-type(even) {
-      background-color: var(--brando-color-peach);
-      border-radius: 12px;
-
-      .field-wrapper {
-        .text {
-          @color bg white;
-        }
-      }
-    }
-
-    .variable[data-size="full"] {
-      width: 100%;
-    }
-
-    .subform-tools {
-      justify-content: flex-start;
-    }
-
-    > .variable .brando-input > .field-wrapper > .label-wrapper {
-      height: 0;
-      overflow: hidden;
-    }
-
-    .help-text {
-      display: none;
-    }
-
-    &:first-of-type {
-      > .variable .brando-input > .field-wrapper > .label-wrapper {
-        @space margin-bottom 5px;
-        height: auto;
-        overflow: visible;
-        border-bottom: 1px solid #eee;
-      }
-
-      .help-text {
-        display: block;
-      }
-
-      .subform-tools {
-        padding-top: 20px;
-      }
-    }
-
-    .variable {
-      @space padding-right 1vw;
-
-      &:last-of-type {
-        @space padding-right 0;
-      }
-
-      &.boolean {
-        flex-grow: 0;
-      }
-
-      &.string, &.text {
-        flex-grow: 1;
-      }
-
-      .label-wrapper {
-        label span {
-          font-size: 12px;
-          text-transform: uppercase;
-          font-family: 'Mono';
-        }
-      }
-    }
+  .subform-table-body > .table-row > .variable + .variable {
+    border-left: 0;
   }
 
-  .add-row {
-    @space margin-top 15px;
+  /* Over the value's text: the cell's 8px, then the input's own inset */
+  .subform-table-row > .subform-table-heading {
+    padding-inline: 8px;
   }
 
-  .insert-row {
-    display: flex;
+  /* Rich text lines up with its heading, as a string's input does: its box
+     reaches out by its border and padding */
+  .subform-table-body > .table-row > .variable.html .field-base > .tiptap-wrapper {
+    margin-left: -9px;
+  }
+
+  /* Yes/no columns take no more than the switch */
+  :is(.subform-table-row > .subform-table-heading[data-type="boolean"], .subform-table-body > .table-row > .variable.boolean) {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  /* The label is the column heading; only the field's errors stay */
+  .subform-table-body > .table-row > .variable > div > .brando-input > :is(.field-wrapper, div > .field-wrapper) > .label-wrapper {
     position: absolute;
-    margin-top: -22px;
-    justify-content: center;
-    width: 100%;
-    opacity: 0;
-    transition: opacity 350ms ease;
+    width: 1px;
+    max-width: none;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 
-    &:hover {
-      opacity: 1;
-      transition: opacity 250ms ease;
-    }
+  .subform-table-body > .table-row > .variable > div > .brando-input > :is(.field-wrapper, div > .field-wrapper) > .field-base {
+    flex-basis: 100%;
   }
 }

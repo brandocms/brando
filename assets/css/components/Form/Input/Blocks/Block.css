@@ -667,7 +667,9 @@ button.btn-palette {
     }
   }
 
-  .block-vars {
+  /* A table block's rows take the same compact controls (TableBlock.css);
+     `:where` keeps these rules' specificity what it was for `.block-vars` */
+  :is(.block-vars, :where(.table-block .subform-table)) {
     /* One size for every value on a line: text, choices, names, dates */
     --vars-value-size: 13px;
 

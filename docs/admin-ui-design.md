@@ -398,8 +398,39 @@ shared subform components and other nested/repeated editors.
   blue such as `#f5f9fd`; the exact shade still needs visual review. Retain white
   rows and input surfaces, readable labels/icons, and clear hover/focus states.
 - Audit nested levels, row rhythm, label/control alignment, and action placement
-  across subform usages. Check 1440px first, then 390px, including long link titles
+  across subform usages. Inline subforms, menu items among them, are now tables
+  (see [Inline subform tables](#inline-subform-tables)); re-check the items above
+  against them. Check 1440px first, then 390px, including long link titles
   and URLs. Capture fresh screenshots and run the relevant local E2E workflows.
+
+## Inline subform tables
+
+Approved on 4 October 2026 (`design/drafts/redirects-subform.html`). An inline
+subform (`inputs_for … style :inline, cardinality :many`) and a table block's
+rows are both a table, built like `.identifier-list`: one `#dce2dc` border with a
+6px radius around the whole, hairlines between rows, white rows tinted
+`#f5f8f3` on hover.
+
+- Column headings appear once, in a `#fbfcfa` header row, from each input's own
+  label. A cell's label is visually hidden; its error shows under the control.
+- Every row is one line. Controls take the block variables' compact look: 32px,
+  13px, borderless until the row is hovered or the control focused. Media fields
+  use `MediaField`'s `:line` presentation. A row wider than the form scrolls
+  sideways inside the table rather than wrapping.
+- Small controls (status, toggle, checkbox, radios, number, dates, colour)
+  shrink their column to fit; text columns share the rest.
+- The grip sits at the left and a ghost × at the right, shown on row hover. An
+  insert button sits on the line above each row; "Add entry" and the count sit
+  in a `#fbfcfa` footer. A row added either way fades in, tinted for a moment.
+- A field hidden by `show_if` leaves an empty cell, so later columns stay under
+  their headings.
+
+`subform.ex` renders the subform's table; `block/render.ex` `table/1` renders a
+table block's. `SubformTable.css` styles both, `TableBlock.css` adapts block
+variables to it, and the `Brando.TableRows` hook animates added rows. The E2E
+client form's "Inline fields" tab holds one of every input that fits on a line
+(`E2eProject.Projects.InlineRow`); check changes there and in
+`tests/projects/inline-subform.spec.js`.
 
 ## Icons
 

@@ -43,12 +43,15 @@ defmodule BrandoAdmin.Components.Form.Input do
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["check-wrapper", @compact && "small"]}>
         <.input type={:checkbox} field={@field} />
+        <%!-- Draws the box. Presence shows on the field's own label, whose
+              slot has the same id, as the toggle's switch label does. --%>
         <Primitives.label
           field={@field}
           class={[
             "control-label",
             @compact && "small"
           ]}
+          skip_presence
         >
           {@text}
         </Primitives.label>
@@ -322,9 +325,12 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :field, FormField
 
   def radios(assigns) do
+    # A function is called with the form, as a select's is. It was otherwise
+    # taken for the list: a 2-arity function is enumerable, as a reducer.
     input_options =
       case assigns.opts |> Keyword.get(:options) |> Options.expand() do
         nil -> []
+        options_fun when is_function(options_fun, 2) -> options_fun.(assigns.field.form, assigns.opts)
         options -> options
       end
 

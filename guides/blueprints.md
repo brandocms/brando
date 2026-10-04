@@ -1086,6 +1086,10 @@ input :parent_id, :select,
 
 Unrelated field edits do not rerun these providers.
 
+Radios take a provider too, called the same way with the form and the input's
+options. Radios have no cache, so their provider runs whenever the field
+renders: keep it to a constant list or one built from config, not a query.
+
 Custom `inputs_for` renderers accept component modules as before. For Brando's
 built-in renderers, prefer symbolic tokens so schema compilation stays independent
 of the admin component tree:

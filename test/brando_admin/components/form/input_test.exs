@@ -47,6 +47,33 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     end
   end
 
+  describe "radios/1" do
+    test "options may come from a function given the form, as a select's can" do
+      form = %TestEntry{} |> cast(%{"title" => "m"}, [:title]) |> to_form(as: :entry)
+
+      options = fn %Phoenix.HTML.Form{} = given, opts ->
+        assert given.name == "entry"
+        assert Keyword.has_key?(opts, :options)
+        [%{label: "Small", value: "s"}, %{label: "Medium", value: "m"}]
+      end
+
+      html = render_component(&Input.radios/1, field: form[:title], label: "Size", opts: [options: options])
+
+      assert html =~ "Small"
+      assert html =~ ~r/value="m"[^>]*checked/
+    end
+  end
+
+  describe "checkbox/1" do
+    test "has one presence slot, the field label's, so its id is unique" do
+      form = %TestEntry{} |> cast(%{}, [:title]) |> to_form(as: :entry)
+
+      html = render_component(&Input.checkbox/1, field: form[:title], label: "Confirmed", opts: [])
+
+      assert length(Regex.scan(~r/id="entry_title-field-presence"/, html)) == 1
+    end
+  end
+
   describe "input/1 with type :string_list" do
     defp markets_form(params) do
       %TestMarkets{}
