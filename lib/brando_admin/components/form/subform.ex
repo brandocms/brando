@@ -48,53 +48,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign(assigns)
       |> prepare_subform_component()
       |> assign_new(:open_entries, fn -> %{} end)
-      |> assign_new(:sequenced?, fn ->
-        # can we sequence the subform? we can if it
-        #   - is an embed
-        #   - has a :sequenced trait
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{type: :has_many, opts: %{module: rel_module}} ->
-            rel_module.has_trait(Brando.Trait.Sequenced)
-
-          %Relations.Relation{type: :embeds_many} ->
-            true
-
-          _ ->
-            false
-        end
-      end)
-      |> assign_new(:embeds?, fn ->
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{type: :embeds_many} -> true
-          _ -> false
-        end
-      end)
-      |> assign_new(:sort_param, fn ->
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{opts: opts} ->
-            Map.get(opts, :sort_param, :"sort_#{assigns.subform.name}_ids")
-
-          _ ->
-            :"sort_#{assigns.subform.name}_ids"
-        end
-      end)
-      |> assign_new(:drop_param, fn ->
-        parent_schema = assigns.field.form.data.__struct__
-
-        case Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Relations.Relation{opts: opts} ->
-            Map.get(opts, :drop_param, :"drop_#{assigns.subform.name}_ids")
-
-          _ ->
-            :"drop_#{assigns.subform.name}_ids"
-        end
-      end)
+      |> assign_relation()
       |> assign(
         :empty_subform_fields,
         SubformHelpers.current_entries(assigns.field.form.source, assigns.subform.name) == []
@@ -471,6 +425,29 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     {:noreply, socket}
   end
+
+  # How the relation is sequenced, whether it embeds, and the names of its
+  # sort and drop params
+  defp assign_relation(%{assigns: %{subform: %{name: name}, field: field}} = socket) do
+    relation = fn -> Relations.__relation__(field.form.data.__struct__, name) end
+
+    socket
+    |> assign_new(:sequenced?, fn -> sequenced?(relation.()) end)
+    |> assign_new(:embeds?, fn -> match?(%Relations.Relation{type: :embeds_many}, relation.()) end)
+    |> assign_new(:sort_param, fn -> relation_param(relation.(), :sort_param, :"sort_#{name}_ids") end)
+    |> assign_new(:drop_param, fn -> relation_param(relation.(), :drop_param, :"drop_#{name}_ids") end)
+  end
+
+  # Entries can be reordered when they are embedded, or when the related
+  # schema has the :sequenced trait
+  defp sequenced?(%Relations.Relation{type: :has_many, opts: %{module: module}}),
+    do: module.has_trait(Brando.Trait.Sequenced)
+
+  defp sequenced?(%Relations.Relation{type: :embeds_many}), do: true
+  defp sequenced?(_relation), do: false
+
+  defp relation_param(%Relations.Relation{opts: opts}, key, default), do: Map.get(opts, key, default)
+  defp relation_param(_relation, _key, default), do: default
 
   defp assign_table(%{assigns: %{subform: subform, field: field}} = socket) do
     socket
