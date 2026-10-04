@@ -237,11 +237,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  # The field's value is the stored password hash, so it is never rendered:
+  # only what was typed into this form goes back into the inputs, which keeps
+  # it across re-renders mid-edit. A field left untouched submits blank, and
+  # `Brando.Trait.Password` reads that as "keep the current password".
   def password(assigns) do
-    value = assigns.field.value
-    confirmation_field_atom = :"#{assigns.field.field}_confirmation"
-    confirmation_field = assigns.field.form[confirmation_field_atom]
-    confirmation_value = confirmation_field.value || value
+    confirmation_field = assigns.field.form[:"#{assigns.field.field}_confirmation"]
+    value = typed_value(assigns.field)
+    confirmation_value = typed_value(confirmation_field)
 
     assigns =
       assigns
@@ -256,6 +259,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       <.input
         type={:password}
         field={@field}
+        value={@value}
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
@@ -273,6 +277,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         <.input
           type={:password}
           field={@confirmation_field}
+          value={@confirmation_value}
           placeholder={@placeholder}
           disabled={@disabled}
           phx-debounce={@debounce}
@@ -282,6 +287,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     <% end %>
     """
   end
+
+  defp typed_value(%FormField{form: %{params: params}, field: field}) when is_map(params),
+    do: Map.get(params, to_string(field))
+
+  defp typed_value(_field), do: nil
 
   def phone(assigns) do
     assigns = prepare_input_component(assigns)
