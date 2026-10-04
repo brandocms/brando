@@ -781,6 +781,7 @@ section.alert.danger {
   [phx-click="copy_block"],
   [phx-click="delete_block"],
   [phx-click="add_table_row"],
+  button[name$="[drop_table_row_ids][]"],
   [phx-click="assign_available_identifiers"],
   .module-datasource-selected button[name$="[drop_block_identifier_ids][]"],
   .module-datasource-selected .identifier-grip,

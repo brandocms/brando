@@ -15016,3 +15016,25 @@ msgid "1 entry"
 msgid_plural "%{count} entries"
 msgstr[0] "1 rad"
 msgstr[1] "%{count} rader"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Insert row"
+msgstr "Sett inn rad"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Reorder row"
+msgstr "Flytt rad"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Remove row"
+msgstr "Fjern rad"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "1 row"
+msgid_plural "%{count} rows"
+msgstr[0] "1 rad"
+msgstr[1] "%{count} rader"

@@ -193,7 +193,7 @@ test.describe('Block Table Rows', () => {
     await page
       .locator('.table-rows .table-row')
       .nth(1)
-      .locator('button.delete-image')
+      .getByRole('button', { name: 'Remove row' })
       .evaluate(btn => btn.click())
     await syncLV(page)
 
@@ -278,7 +278,7 @@ test.describe('Block Table Rows', () => {
     await page
       .locator('.table-rows .table-row')
       .nth(0)
-      .locator('button.delete-image')
+      .getByRole('button', { name: 'Remove row' })
       .evaluate(btn => {
         btn.click()
       })
@@ -315,5 +315,49 @@ test.describe('Block Table Rows', () => {
     await expect(rows).toHaveCount(2)
     await expect(rows.nth(0).getByRole('textbox', { name: 'Name' })).toHaveValue('Second')
     await expect(rows.nth(1).getByRole('textbox', { name: 'Name' })).toHaveValue('Third')
+  })
+
+  test('a row inserted between two others keeps its place after saving', async ({ page }) => {
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    await page.getByLabel('Title', { exact: true }).fill('Insert Row Test Page')
+    await page.getByLabel('URI').fill('insert-row-test')
+    await page.getByRole('button', { name: 'Add block' }).click()
+    await page.getByRole('button', { name: 'TABLES' }).click()
+    await page.getByRole('button', { name: 'Person List' }).click()
+    await syncLV(page)
+
+    const rows = page.locator('.table-rows .table-row')
+    const nameOf = row => row.getByRole('textbox', { name: 'Name' })
+
+    await page.getByTestId('add-table-row').evaluate(btn => btn.click())
+    await syncLV(page)
+    await nameOf(rows.nth(0)).fill('Alice')
+    await page.getByTestId('add-table-row').evaluate(btn => btn.click())
+    await syncLV(page)
+    await nameOf(rows.nth(1)).fill('Charlie')
+    await syncLV(page)
+
+    // Insert sits on the line above its row
+    await rows.nth(1).hover()
+    await rows.nth(1).getByRole('button', { name: 'Insert row' }).click()
+    await syncLV(page)
+    await expect(rows).toHaveCount(3)
+    await expect(nameOf(rows.nth(0))).toHaveValue('Alice')
+    await expect(nameOf(rows.nth(1))).toHaveValue('')
+    await expect(nameOf(rows.nth(2))).toHaveValue('Charlie')
+    await nameOf(rows.nth(1)).fill('Bob')
+    await syncLV(page)
+
+    await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/admin\/pages$/)
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Insert Row Test Page' }).click()
+    await syncLV(page)
+
+    await expect(rows).toHaveCount(3)
+    await expect(nameOf(rows.nth(0))).toHaveValue('Alice')
+    await expect(nameOf(rows.nth(1))).toHaveValue('Bob')
+    await expect(nameOf(rows.nth(2))).toHaveValue('Charlie')
   })
 })

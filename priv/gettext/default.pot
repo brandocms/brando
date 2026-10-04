@@ -15031,3 +15031,25 @@ msgid "1 entry"
 msgid_plural "%{count} entries"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Insert row"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Reorder row"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Remove row"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "1 row"
+msgid_plural "%{count} rows"
+msgstr[0] ""
+msgstr[1] ""

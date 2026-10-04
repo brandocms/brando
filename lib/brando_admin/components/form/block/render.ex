@@ -2868,7 +2868,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       table_rows_value not in [[], "", nil] &&
         !is_struct(table_rows_value, Ecto.Association.NotLoaded)
 
-    assigns = assign(assigns, :valid?, valid?)
+    assigns =
+      assign_derived(assigns, [:block_data],
+        valid?: valid?,
+        columns: if(valid?, do: table_columns(table_rows_value), else: []),
+        row_count: if(valid?, do: length(table_rows_value), else: 0)
+      )
 
     ~H"""
     <div class="table-block-wrapper">
@@ -2900,77 +2905,121 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </button>
           </div>
         <% else %>
-          <div
-            id={"sortable-#{@uid}-table-rows"}
-            class="table-rows"
-            phx-hook="Brando.SortableAssocs"
-            data-target={@target}
-            data-sortable-id={"sortable-#{@uid}-table-rows"}
-            data-sortable-handle=".sort-handle"
-            data-sortable-binary-keys="true"
-            data-sortable-selector=".table-row"
-            data-sortable-dispatch-event="true"
-          >
-            <.inputs_for :let={table_row} field={@block_data[:table_rows]} skip_hidden>
-              <div class="table-row draggable" data-id={table_row.index}>
-                <input type="hidden" name={table_row[:id].name} value={table_row[:id].value} />
-                <input type="hidden" name={table_row[:_persistent_id].name} value={table_row.index} />
-                <input type="hidden" name={"#{@block_data.name}[sort_table_row_ids][]"} value={table_row.index} />
-                <div class="subform-tools">
-                  <button type="button" class="sort-handle">
-                    <.icon name="arrow-up-down" />
-                  </button>
-                  <button
-                    type="button"
-                    class="delete-image"
-                    name={"#{@block_data.name}[drop_table_row_ids][]"}
-                    value={table_row.index}
-                    phx-click={JS.dispatch("change")}
-                  >
-                    <.icon name="x" />
-                  </button>
+          <%!-- The rows are a table like an inline subform's (SubformTable.css):
+                one line per row under one row of headings, the variables'
+                compact controls in the cells --%>
+          <div id={"block-#{@uid}-table-frame"} class="subform-table-frame" phx-hook="Brando.TableRows">
+            <div class="subform-table-scroll">
+              <div class="subform-table">
+                <div class="subform-table-head" aria-hidden="true">
+                  <div class="subform-table-row">
+                    <span class="subform-tools"></span>
+                    <span :for={column <- @columns} class="subform-table-heading" data-type={column.type}>
+                      {column.label}
+                    </span>
+                    <span class="subform-row-end"></span>
+                  </div>
                 </div>
-
-                <.inputs_for :let={var} field={table_row[:vars]}>
-                  <.live_component
-                    module={RenderVar}
-                    id={"block-#{@uid}-table-row-#{var.id}"}
-                    var={var}
-                    render={:all}
-                    form_id={@form_id}
-                    publish
-                  />
-                </.inputs_for>
-              </div>
-              <div class="insert-row">
-                <button
-                  type="button"
-                  class="tiny add-table-row"
-                  phx-click="add_table_row"
-                  phx-target={@target}
+                <div
+                  id={"sortable-#{@uid}-table-rows"}
+                  class="subform-table-body table-rows"
+                  phx-hook="Brando.SortableAssocs"
+                  data-target={@target}
+                  data-sortable-id={"sortable-#{@uid}-table-rows"}
+                  data-sortable-handle=".sort-handle"
+                  data-sortable-binary-keys="true"
+                  data-sortable-selector=".table-row"
+                  data-sortable-dispatch-event="true"
                 >
-                  {gettext("Add row")}
-                </button>
+                  <.inputs_for :let={table_row} field={@block_data[:table_rows]} skip_hidden>
+                    <div class="table-row draggable" data-id={table_row.index}>
+                      <input type="hidden" name={table_row[:id].name} value={table_row[:id].value} />
+                      <input type="hidden" name={table_row[:_persistent_id].name} value={table_row.index} />
+                      <input type="hidden" name={"#{@block_data.name}[sort_table_row_ids][]"} value={table_row.index} />
+                      <div class="subform-tools">
+                        <button
+                          type="button"
+                          class="subform-insert"
+                          phx-click="add_table_row"
+                          phx-value-index={table_row.index}
+                          phx-target={@target}
+                          aria-label={gettext("Insert row")}
+                        >
+                          <.icon name="plus" />
+                        </button>
+                        <button type="button" class="sort-handle" aria-label={gettext("Reorder row")}>
+                          <.icon name="arrow-up-down" />
+                        </button>
+                      </div>
+
+                      <.inputs_for :let={var} field={table_row[:vars]}>
+                        <.live_component
+                          module={RenderVar}
+                          id={"block-#{@uid}-table-row-#{var.id}"}
+                          var={var}
+                          render={:all}
+                          form_id={@form_id}
+                          publish
+                        />
+                      </.inputs_for>
+                      <div class="subform-row-end">
+                        <button
+                          type="button"
+                          class="subform-delete"
+                          name={"#{@block_data.name}[drop_table_row_ids][]"}
+                          value={table_row.index}
+                          phx-click={JS.dispatch("change")}
+                          aria-label={gettext("Remove row")}
+                        >
+                          <.icon name="x" />
+                        </button>
+                      </div>
+                    </div>
+                  </.inputs_for>
+                  <input type="hidden" name={"#{@block_data.name}[drop_table_row_ids][]"} />
+                </div>
               </div>
-            </.inputs_for>
-            <div class="add-row">
+            </div>
+            <div class="subform-table-foot">
               <button
                 type="button"
-                class="tiny add-table-row"
+                class="add-entry-button add-table-row"
                 phx-click="add_table_row"
                 phx-target={@target}
                 data-testid="add-table-row"
               >
+                <.icon name="list-plus" />
                 {gettext("Add row")}
               </button>
+              <span class="subform-table-count">
+                {ngettext("1 row", "%{count} rows", @row_count)}
+              </span>
             </div>
-            <input type="hidden" name={"#{@block_data.name}[drop_table_row_ids][]"} />
           </div>
         <% end %>
       </div>
     </div>
     """
   end
+
+  # A table's headings are its first row's variables, which every row repeats
+  defp table_columns([first_row | _]) do
+    first_row
+    |> table_row_vars()
+    |> Enum.map(fn var ->
+      %{
+        label: Brando.Type.I18nString.localized(field_value(var, :label)) || field_value(var, :key),
+        type: to_string(field_value(var, :type))
+      }
+    end)
+  end
+
+  defp table_row_vars(%Ecto.Changeset{} = row), do: row |> Ecto.Changeset.get_assoc(:vars, :struct) |> List.wrap()
+  defp table_row_vars(%{vars: vars}) when is_list(vars), do: vars
+  defp table_row_vars(_row), do: []
+
+  defp field_value(%Ecto.Changeset{} = changeset, key), do: Ecto.Changeset.get_field(changeset, key)
+  defp field_value(%{} = var, key), do: Map.get(var, key)
 
   attr :block_data, :any, required: true
   attr :module_datasource_module_label, :string, required: true
