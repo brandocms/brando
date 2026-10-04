@@ -110,6 +110,13 @@ defmodule Brando.Blueprint.Utils do
     opts
     |> Map.take(@changeset_opts)
     |> Map.to_list()
+    |> Enum.map(fn
+      {:with, {module, function}} when is_atom(module) and is_atom(function) ->
+        {:with, fn struct_or_changeset, params -> apply(module, function, [struct_or_changeset, params]) end}
+
+      opt ->
+        opt
+    end)
   end
 
   def to_changeset_opts(_type, opts), do: Map.to_list(opts)

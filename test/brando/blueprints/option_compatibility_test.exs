@@ -140,6 +140,12 @@ defmodule Brando.Blueprint.OptionCompatibilityTest do
     assert routed_options == MapSet.new(AttributeOptions.known_options(:language))
   end
 
+  test "a {Module, :function} with: callback reaches Ecto as a two-arity function" do
+    assert [with: callback] = Utils.to_changeset_opts(:embeds_many, %{with: {Ecto.Changeset, :change}})
+    assert is_function(callback, 2)
+    assert %Ecto.Changeset{changes: %{title: "x"}} = callback.(%Brando.Images.Image{}, %{title: "x"})
+  end
+
   test "attribute options reach Ecto, changeset, and migration boundaries without leaking" do
     schema = MigrationSchema.build(AttributeMatrix)
     columns = Map.new(schema.columns, &{&1.name, &1})
