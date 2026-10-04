@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
             </div>
           <% true -> %>
             <div class="gallery-tile-placeholder">
-              <.icon name={if @media_type == :video, do: "hero-video-camera", else: "hero-photo"} />
+              <.icon name={if @media_type == :video, do: "video", else: "image"} />
             </div>
         <% end %>
 
@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
             aria-expanded={to_string(@editing == :caption)}
             phx-click={@open_caption}
           >
-            <.caption_icon />
+            <.icon name="message-square-text" />
             <span :if={@caption.set?} id={"#{@id}-caption-peek"} class="gallery-tile-peek" role="tooltip">
               <b>{gettext("Caption")}</b>
               <span class="gallery-tile-peek-text">{@caption.html}</span>
@@ -186,7 +186,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
     ~H"""
     <div class="gallery-sheet-legend">
       <span class="gallery-sheet-legend-item">
-        <span class="gallery-tile-icon is-set" aria-hidden="true"><.caption_icon /></span>
+        <span class="gallery-tile-icon is-set" aria-hidden="true"><.icon name="message-square-text" /></span>
         {gettext("Caption")}
       </span>
       <span :if={@images > 0} class="gallery-sheet-legend-item">
@@ -232,9 +232,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
         data-gallery-view="grid"
         phx-click={JS.push("set_gallery_view", value: %{view: "grid"}, target: @target)}
       >
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z" />
-        </svg>
+        <.icon name="layout-grid" />
       </button>
       <button
         type="button"
@@ -245,19 +243,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
         data-gallery-view="list"
         phx-click={JS.push("set_gallery_view", value: %{view: "list"}, target: @target)}
       >
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path d="M3 4h3v3H3zM8 4.75h9v1.5H8zM3 8.5h3v3H3zM8 9.25h9v1.5H8zM3 13h3v3H3zM8 13.75h9v1.5H8z" />
-        </svg>
+        <.icon name="list" />
       </button>
     </div>
-    """
-  end
-
-  defp caption_icon(assigns) do
-    ~H"""
-    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path d="M3 4.75A1.75 1.75 0 0 1 4.75 3h10.5A1.75 1.75 0 0 1 17 4.75v7.5A1.75 1.75 0 0 1 15.25 14H8.5l-3.6 2.7A.56.56 0 0 1 4 16.25V14h.75A1.75 1.75 0 0 1 3 12.25v-7.5ZM6 6.5h8V8H6V6.5Zm0 3h5V11H6V9.5Z" />
-    </svg>
     """
   end
 

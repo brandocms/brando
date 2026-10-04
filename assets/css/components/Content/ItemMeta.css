@@ -20,7 +20,7 @@
         object-fit: cover;
       }
 
-      .img-placeholder svg {
+      .img-placeholder :is(svg, [data-icon]) {
         width: 18px;
         height: 18px;
       }

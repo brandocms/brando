@@ -32,7 +32,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
         id={@id}
         title={gettext("Alternates")}
         close={@on_close}
-        icon="hero-language"
+        icon="languages"
         workspace
         editor
         narrow
@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
                     )
                   }
                 >
-                  <.icon name="hero-x-mark" />
+                  <.icon name="x" />
                 </button>
               </:delete>
             </Entries.identifier>
@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
             type="button"
             phx-click={JS.push("get_entries_identifiers", target: @myself)}
           >
-            <.icon name="hero-link" />{gettext("Select entries to link")}
+            <.icon name="link" />{gettext("Select entries to link")}
           </button>
         </section>
 

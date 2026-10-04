@@ -186,7 +186,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 class="secondary module-icon-button"
                 type="button"
               >
-                <.icon name="hero-photo" />
+                <.icon name="image" />
                 {gettext("Edit module icon")}
               </button>
             </section>
@@ -233,7 +233,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               </header>
 
               <div :if={Enum.empty?(@form[:refs].value || [])} class="module-empty-state">
-                <.icon name="hero-cube-transparent" />
+                <.icon name="box" />
                 <p>{gettext("No references yet")}</p>
                 <span>{gettext("Add one, then insert it in the template with the ref tag.")}</span>
               </div>
@@ -258,7 +258,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       aria-label={gettext("Reorder reference")}
                       title={gettext("Drag to reorder")}
                     >
-                      <%!-- Dot grid rather than a heroicon: none of them read as
+                      <%!-- Dot grid rather than an icon: none of them read as
                             "grab me", and this matches the layout canvas's chips. --%>
                       <span class="drag-grip" aria-hidden="true"></span>
                     </button>
@@ -286,7 +286,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           aria-label={gettext("Duplicate reference %{name}", name: ref[:name].value)}
                           title={gettext("Duplicate")}
                         >
-                          <.icon name="hero-document-duplicate" />
+                          <.icon name="copy" />
                         </button>
                         <button
                           class="module-item-action module-danger"
@@ -298,7 +298,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           aria-label={gettext("Delete reference %{name}", name: ref[:name].value)}
                           title={gettext("Delete")}
                         >
-                          <.icon name="hero-x-mark" />
+                          <.icon name="x" />
                         </button>
                       </div>
                     </Primitives.inputs_for_block>
@@ -372,7 +372,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   class="module-add-button"
                   aria-label={gettext("Add reference")}
                 >
-                  <.icon name="hero-plus" />
+                  <.icon name="plus" />
                   {gettext("Add reference")}
                 </button>
               </div>
@@ -402,7 +402,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <Content.modal
               title={gettext("Edit variable")}
               subtitle={Brando.Type.I18nString.localized(var[:label].value) || var[:key].value}
-              icon="hero-code-bracket"
+              icon="code"
               layout="editor"
               id={"#{@form.id}-#{@key}-var-#{var.index}"}
               show={@open_item_modal == :var && var.index == 0}
@@ -438,7 +438,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         </div>
 
         <div :if={Enum.empty?(@form[:vars].value || [])} class="module-empty-state">
-          <.icon name="hero-variable" />
+          <.icon name="variable" />
           <p>{gettext("No variables yet")}</p>
           <span>{gettext("Add one, then reference its key in the template.")}</span>
           <button
@@ -447,7 +447,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             class="module-add-button"
             aria-label={gettext("Add variable")}
           >
-            <.icon name="hero-plus" />
+            <.icon name="plus" />
             {gettext("Add variable")}
           </button>
         </div>
@@ -531,7 +531,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           phx-click="generate_sketch"
           disabled={@sketch.status == :loading}
         >
-          <.icon name="hero-sparkles" />
+          <.icon name="sparkles" />
           <%= cond do %>
             <% @sketch.status == :loading -> %>
               {gettext("Drawing…")}
@@ -660,7 +660,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
       >
         <span>{type.label}</span>
         <small>{type.description}</small>
-        <.icon name="hero-arrow-right" />
+        <.icon name="arrow-right" />
       </button>
     </div>
     """

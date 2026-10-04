@@ -255,7 +255,7 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
               )
             }
           >
-            <.icon name="hero-trash" />{gettext("Remove selected")}
+            <.icon name="trash" />{gettext("Remove selected")}
           </button>
         </div>
 

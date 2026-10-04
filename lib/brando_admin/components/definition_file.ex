@@ -43,8 +43,8 @@ defmodule BrandoAdmin.Components.DefinitionFile do
     """
   end
 
-  defp icon_name(:in_sync), do: "hero-document-text"
-  defp icon_name(_), do: "hero-exclamation-triangle"
+  defp icon_name(:in_sync), do: "file-text"
+  defp icon_name(_), do: "triangle-alert"
 
   defp headline(:pending), do: gettext("File not imported")
   defp headline(:changed_in_admin), do: gettext("Changed here since the file")

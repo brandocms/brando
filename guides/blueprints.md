@@ -142,6 +142,19 @@ use Brando.Blueprint,
 missing required names, malformed values, and non-module extensions fail with a
 contextual Blueprint error before Gettext, Spark, or Ecto setup begins.
 
+### Content icon
+
+`content_icon "folder-kanban"` in the blueprint body sets the content type's
+[Lucide](https://lucide.dev/icons) icon. The admin shows it in the sidebar
+(`menu_item MyApp.Projects.Project`), dashboard shortcuts, the link picker's
+content types, entry identifiers and the listing header
+(`icon={@page_icon}`). A name Lucide doesn't have fails to compile; a renamed
+one names its replacement. Blueprints without one show `file`.
+`Brando.Blueprint.get_icon/1` returns the resolved icon.
+
+`use Brando.Blueprint` imports `content_icon/1`, not `icon/1`, so a blueprint
+can still import an `icon/1` component for its listing templates.
+
 The module registry derives conventional context, schema, and admin targets from
 these names; Brando's resource generator relies on that target convention. The
 actual module that calls `use Brando.Blueprint` remains the Ecto owner. Generated

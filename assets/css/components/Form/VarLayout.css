@@ -162,7 +162,6 @@
   [data-icon] {
     width: 12px;
     height: 12px;
-    background-color: currentColor;
   }
 }
 
@@ -205,7 +204,6 @@
     [data-icon] {
       width: 11px;
       height: 11px;
-      background-color: currentColor;
     }
   }
 }
@@ -386,14 +384,14 @@
     [data-icon] {
       width: 13px;
       height: 13px;
-      background-color: var(--brando-color-dark);
+      color: var(--brando-color-dark);
     }
 
     &.var-chip-danger:hover {
       background-color: #f6dcd8;
 
       [data-icon] {
-        background-color: #8c2b1c;
+        color: #8c2b1c;
       }
     }
   }
@@ -483,7 +481,6 @@
     [data-icon] {
       width: 14px;
       height: 14px;
-      background-color: currentColor;
     }
   }
 }
@@ -653,7 +650,7 @@
     [data-icon] {
       width: 15px;
       height: 15px;
-      background-color: var(--brando-color-dark);
+      color: var(--brando-color-dark);
     }
   }
 }

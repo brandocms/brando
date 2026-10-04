@@ -220,7 +220,7 @@
       width: 17px;
       height: 17px;
       margin-top: 1px;
-      background-color: color-mix(in srgb, var(--brando-color-blue) 62%, var(--brando-color-dark));
+      color: color-mix(in srgb, var(--brando-color-blue) 62%, var(--brando-color-dark));
     }
 
     span {
@@ -493,7 +493,7 @@
     [data-icon] {
       width: 20px;
       height: 20px;
-      background-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+      color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
     }
   }
 

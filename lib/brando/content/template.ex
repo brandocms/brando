@@ -14,6 +14,8 @@ defmodule Brando.Content.Template do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "layout-template"
+
   @type t :: %__MODULE__{}
 
   identifier false

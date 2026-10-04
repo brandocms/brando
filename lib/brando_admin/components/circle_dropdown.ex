@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Components.CircleDropdown do
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >
-        <.icon name="brando-dropdown" />
+        <.icon name="chevron-down" />
       </button>
       <div data-testid="circle-dropdown-content" class="dropdown-content hidden" id={@id}>
         {render_slot(@inner_block, @id)}

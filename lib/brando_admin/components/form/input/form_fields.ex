@@ -185,7 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
                       title={gettext("Drag to reorder this row")}
                       aria-label={gettext("Reorder row %{number}", number: index + 1)}
                     >
-                      <.icon name="hero-bars-2" />
+                      <.icon name="equal" />
                     </button>
                     <span :if={!section_row?(row)} class="var-row-meter">
                       <b class={Layout.free_units(row) == 0 && "full"}>{Layout.used_units(row)}</b>
@@ -215,7 +215,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
 
             <div :if={!@locked} class="var-layout-foot">
               <button type="button" class="module-add-button" phx-click={show_modal("##{@id}-add")}>
-                <.icon name="hero-plus" />
+                <.icon name="plus" />
                 {gettext("Add field")}
               </button>
               <div class="form-fields-quick-add">
@@ -258,7 +258,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
                   class="form-fields-tray-add"
                   phx-click={JS.push("add_field", value: %{type: :hidden}, target: @myself)}
                 >
-                  <.icon name="hero-plus" />
+                  <.icon name="plus" />
                   {gettext("Hidden field")}
                 </button>
               </div>
@@ -414,7 +414,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
         aria-label={gettext("Duplicate field %{key}", key: @entry.key)}
         phx-click={JS.push("duplicate_field", value: %{uid: @entry.uid}, target: @target)}
       >
-        <.icon name="hero-document-duplicate" />
+        <.icon name="copy" />
       </button>
       <button
         type="button"
@@ -425,7 +425,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
         value={@entry.index}
         phx-click={JS.dispatch("change")}
       >
-        <.icon name="hero-trash" />
+        <.icon name="trash" />
       </button>
     </div>
     """
@@ -447,7 +447,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
     <Content.modal
       title={gettext("Edit field")}
       subtitle={"#{@entry.key} · #{type_label(@entry.type)}"}
-      icon="hero-queue-list"
+      icon="list"
       id={@id}
       show={@show}
       close={JS.push("close_field", target: @target) |> hide_modal("##{@id}")}
@@ -455,7 +455,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
     >
       <div class={["form-field-editor", @locked && "is-translation"]}>
         <aside :if={@locked} class="form-field-locked">
-          <h3><.icon name="hero-lock-closed" />{gettext("Set by the source form")}</h3>
+          <h3><.icon name="lock" />{gettext("Set by the source form")}</h3>
           <p>{gettext("Change these on the source, so every language submits the same fields.")}</p>
           <dl>
             <dt>{gettext("Key")}</dt>
@@ -632,7 +632,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
                 aria-label={gettext("Remove option %{value}", value: value)}
                 phx-click={JS.push("remove_option", value: %{uid: @entry.uid, index: index}, target: @target)}
               >
-                <.icon name="hero-x-mark" />
+                <.icon name="x" />
               </button>
             </td>
           </tr>
@@ -644,7 +644,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
         class="module-add-button"
         phx-click={JS.push("add_option", value: %{uid: @entry.uid}, target: @target)}
       >
-        <.icon name="hero-plus" />
+        <.icon name="plus" />
         {gettext("Add option")}
       </button>
     </div>

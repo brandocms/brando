@@ -11,19 +11,27 @@ const variants = [
   { id: 'd', title: 'Joined cover rows', description: 'One shared outline, thin dividers and a cover for each entry. Actions sit in the footer.' },
 ]
 let selected = [1, 2]
-const icon = name => `<span class="hero-${name}" aria-hidden="true"></span>`
+// Lucide paths, inlined so the study stays a standalone file.
+const iconPaths = {
+  'check': '<path d="M20 6 9 17l-5-5"/>',
+  'file-text': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  'link': '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  'search': '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
+  'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
+}
+const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`
 const grip = '<span class="grip" aria-hidden="true">' + '<i></i>'.repeat(6) + '</span>'
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;')
 const entryMarkup = (entry, picker = false) => {
   const active = selected.includes(entry.id)
-  const content = `${picker ? '' : grip}<span class="cover">${entry.cover ? `<img src="${entry.cover}" alt="">` : icon('document-text')}</span>
+  const content = `${picker ? '' : grip}<span class="cover">${entry.cover ? `<img src="${entry.cover}" alt="">` : icon('file-text')}</span>
     <span class="identifier-copy"><span class="identifier-title">${escape(entry.title)}</span><span class="identifier-meta">
       <span>${entry.type}</span><span class="separator">·</span><span>${entry.language}</span><span class="separator">·</span>
       <span class="identifier-status"><i class="dot ${entry.status === 'Draft' ? 'draft' : ''}"></i>${entry.status}</span>
     </span></span>`
   return picker
     ? `<button class="identifier ${active ? 'selected' : ''}" aria-pressed="${active}" data-toggle="${entry.id}">${content}<span class="selection">${active ? icon('check') : ''}</span></button>`
-    : `<div class="identifier" draggable="true" data-entry="${entry.id}">${content}<button class="row-action" data-remove="${entry.id}" aria-label="Remove ${escape(entry.title)}">${icon('x-mark')}</button></div>`
+    : `<div class="identifier" draggable="true" data-entry="${entry.id}">${content}<button class="row-action" data-remove="${entry.id}" aria-label="Remove ${escape(entry.title)}">${icon('x')}</button></div>`
 }
 function render() {
   for (const variant of document.querySelectorAll('.variant')) {
@@ -47,7 +55,7 @@ document.querySelector('#comparison').innerHTML = variants.map(v => `
     </div>
     <div class="example-label">In a picker · selected and available items</div>
     <div class="surface picker"><div class="field-label">Select entries <span class="count-label">3 available</span></div>
-      <label class="search">${icon('magnifying-glass')}<input type="search" placeholder="Filter entries…" aria-label="Filter entries in variant ${v.id.toUpperCase()}"></label>
+      <label class="search">${icon('search')}<input type="search" placeholder="Filter entries…" aria-label="Filter entries in variant ${v.id.toUpperCase()}"></label>
       <div class="identifier-list"></div>
     </div>
   </section>`).join('')

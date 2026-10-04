@@ -248,7 +248,7 @@ defmodule BrandoAdmin.UserLoginLive do
   def error(assigns) do
     ~H"""
     <p>
-      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
+      <.icon name="circle-alert" class="mt-0.5 h-5 w-5 flex-none" />
       {render_slot(@inner_block)}
     </p>
     """

@@ -387,7 +387,7 @@
     .draft-order-item { display: flex; align-items: center; gap: 12px; min-width: 0; overflow-wrap: anywhere; }
     img { display: block; width: 64px; min-width: 0; max-width: 64px; height: auto; flex: 0 0 64px; border-radius: 4px; }
     .draft-order-icon { display: grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; border-radius: 4px; background: #f1f5ef; color: #49634f; }
-    .draft-order-icon > [class^="hero-"], .draft-order-icon svg { width: 14px; height: 14px; }
+    .draft-order-icon > [data-icon], .draft-order-icon svg { width: 14px; height: 14px; }
     .draft-order-positions { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; font-variant-numeric: tabular-nums; color: #626b66; }
     .draft-order-positions > span:last-child { background: #edf2f6; border-radius: 4px; padding: 3px 8px; color: #35566c; }
     @media (max-width: 600px) {

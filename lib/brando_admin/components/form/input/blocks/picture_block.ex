@@ -190,7 +190,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             config_layout="editor"
             config_title={gettext("Configure image")}
             config_subtitle={@ref_description || gettext("Settings for this use of the image")}
-            config_icon="hero-photo"
+            config_icon="image"
           >
             <:description>
               <%= if @ref_description not in ["", nil] do %>
@@ -219,14 +219,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   type="button"
                   phx-click={JS.push("open_image_editor", target: @myself) |> open_image_editor_drawer()}
                 >
-                  <.icon name="hero-scissors" />{gettext("Edit/Crop")}
+                  <.icon name="scissors" />{gettext("Edit/Crop")}
                 </button>
               </:actions>
             </MediaField.field>
 
             <:config>
               <Content.modal_sections id={"image-#{@uid}-config-sections"}>
-                <:section id="content" label={gettext("Text & link")} icon="hero-document-text">
+                <:section id="content" label={gettext("Text & link")} icon="file-text">
                   <div class="media-section-heading">
                     <h3 class="modal-section-title">{gettext("Text & link")}</h3>
                     <p class="modal-muted">
@@ -257,7 +257,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       phx-target={@myself}
                       disabled={@alt_suggesting}
                     >
-                      <.icon name="hero-sparkles" /> {gettext("Suggest alt text")}
+                      <.icon name="sparkles" /> {gettext("Suggest alt text")}
                     </button>
                   </div>
                   <Input.override_text
@@ -268,7 +268,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   />
                   <Input.text field={block_data[:link]} label={gettext("Link")} />
                 </:section>
-                <:section id="image" label={gettext("Image")} icon="hero-photo">
+                <:section id="image" label={gettext("Image")} icon="image">
                   <div class="media-section-heading">
                     <h3 class="modal-section-title">{gettext("Selected image")}</h3>
                     <p class="modal-muted">{gettext("Replace the image while keeping this reference’s settings.")}</p>
@@ -295,12 +295,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                           |> open_image_editor_drawer()
                         }
                       >
-                        <.icon name="hero-scissors" />{gettext("Edit/Crop")}
+                        <.icon name="scissors" />{gettext("Edit/Crop")}
                       </button>
                     </:actions>
                   </MediaField.field>
                 </:section>
-                <:section id="display" label={gettext("Display")} icon="hero-adjustments-horizontal">
+                <:section id="display" label={gettext("Display")} icon="sliders-horizontal">
                   <div class="media-section-heading">
                     <h3 class="modal-section-title">{gettext("Display")}</h3>
                     <p class="modal-muted">{gettext("Control how the image loads in this reference.")}</p>

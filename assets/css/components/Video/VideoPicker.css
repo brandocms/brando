@@ -443,10 +443,11 @@
           align-items: center;
           justify-content: center;
 
-          svg {
+          :is(svg, [data-icon]) {
             width: 40px;
             height: 40px;
             fill: #999;
+            color: #999;
           }
         }
       }
@@ -556,10 +557,11 @@
           align-items: center;
           justify-content: center;
 
-          svg {
+          :is(svg, [data-icon]) {
             width: 40px;
             height: 40px;
             fill: #999;
+            color: #999;
           }
         }
 
@@ -572,8 +574,9 @@
           .img-placeholder {
             background-color: #ddd;
 
-            svg {
+            :is(svg, [data-icon]) {
               fill: #888;
+              color: #888;
             }
           }
         }

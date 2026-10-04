@@ -126,7 +126,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
             form_id="module_form"
             label={gettext("Save")}
             shortcut={%{key: "S", shift: true}}
-            icon="hero-check"
+            icon="check"
             class="primary submit-button"
           />
         </div>

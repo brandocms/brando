@@ -17,6 +17,8 @@ defmodule Brando.Images.Image do
   alias Brando.Images.AltText
   alias Brando.Images.Focal
 
+  content_icon "image"
+
   trait :creator, derived: [:sizes, :formats, :status, :cdn, :dominant_color, :config_fingerprint]
   trait :timestamped
   trait :soft_delete

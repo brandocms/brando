@@ -121,10 +121,10 @@ defmodule BrandoAdmin.Components.TextDiff do
 
   defp line_content(assigns), do: ~H"{@row.text}"
 
-  defp reference_icon(:image), do: "hero-photo"
-  defp reference_icon(:video), do: "hero-film"
-  defp reference_icon(:file), do: "hero-document"
-  defp reference_icon(:entry), do: "hero-document-text"
+  defp reference_icon(:image), do: "image"
+  defp reference_icon(:video), do: "film"
+  defp reference_icon(:file), do: "file"
+  defp reference_icon(:entry), do: "file-text"
 
   # A changes-only view still needs the field label, even when unchanged
   # paragraphs separate that label from its first changed line.

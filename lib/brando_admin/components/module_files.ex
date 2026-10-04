@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
         id="module-files-modal"
         title={gettext("Import / export module files")}
         subtitle={@scope_label}
-        icon="hero-arrow-path"
+        icon="refresh-cw"
         wide
       >
         <div class="module-files">

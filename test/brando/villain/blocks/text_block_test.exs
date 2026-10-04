@@ -66,18 +66,30 @@ defmodule Brando.Villain.Blocks.TextBlockTest do
     assert style.element == "p"
     assert style.class == "lede"
     assert style.label == "Lede"
-    assert style.icon == "hero-circle-stack"
+    assert style.icon == "database"
   end
 
   describe "Data.normalize_styles/1" do
-    test "converts Style structs to maps for JSON encoding" do
+    test "converts Style structs to maps for JSON encoding, resolving legacy icon names" do
       styles = [
         %Style{element: "p", class: "lede", label: "Lede", icon: "hero-circle-stack"},
         %Style{element: "h2", class: "display"}
       ]
 
       assert Data.normalize_styles(styles) == [
-               %{"element" => "p", "class" => "lede", "label" => "Lede", "icon" => "hero-circle-stack"},
+               %{"element" => "p", "class" => "lede", "label" => "Lede", "icon" => "database"},
+               %{"element" => "h2", "class" => "display"}
+             ]
+    end
+
+    test "resolves icon names in map styles and drops unknown ones" do
+      styles = [
+        %{"element" => "p", "class" => "lede", "icon" => "hero-photo"},
+        %{element: "h2", class: "display", icon: "not-an-icon"}
+      ]
+
+      assert Data.normalize_styles(styles) == [
+               %{"element" => "p", "class" => "lede", "icon" => "image"},
                %{"element" => "h2", "class" => "display"}
              ]
     end

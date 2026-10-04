@@ -14,6 +14,8 @@ defmodule Brando.Files.File do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "file"
+
   trait :creator, derived: [:cdn]
   trait :soft_delete
   trait :timestamped
@@ -54,7 +56,7 @@ defmodule Brando.Files.File do
   def listing_row(assigns) do
     ~H"""
     <.field columns={1} class="library-thumbnail library-file-icon">
-      <Brando.HTML.Icon.icon name="hero-document" />
+      <Brando.HTML.Icon.icon name="file" />
     </.field>
     <.field columns={7} class="library-image-info">
       <a class="entry-link" href={Brando.Utils.media_url(@entry)} target="_blank" rel="noopener">{URI.decode(@entry.filename)}</a>

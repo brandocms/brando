@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
               <input type="hidden" name={"#{@field.form.name}[sort_var_ids][]"} value={var.index} />
               <div class="subform-tools">
                 <button type="button" class="subform-handle" aria-label={gettext("Reorder variable")}>
-                  <.icon name="hero-arrows-up-down" />
+                  <.icon name="arrow-up-down" />
                 </button>
                 <button
                   type="button"
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
                   value={var.index}
                   phx-click={JS.dispatch("change")}
                 >
-                  <.icon name="hero-x-mark" />
+                  <.icon name="x" />
                 </button>
               </div>
 
@@ -84,7 +84,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
           phx-click="add_subentry"
           phx-target={@myself}
         >
-          <.icon name="hero-squares-plus" />
+          <.icon name="grid-2x2-plus" />
           {gettext("Add entry")}
         </button>
       </Primitives.field_base>

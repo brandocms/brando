@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace pages-workspace">
-      <Workspace.header title={gettext("Pages & Sections")}>
+      <Workspace.header icon={@page_icon} title={gettext("Pages & Sections")}>
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate="/admin/pages/create"

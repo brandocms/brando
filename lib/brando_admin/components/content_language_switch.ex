@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
           phx-value-id={language[:value]}
         >
           {language[:text]}
-          <.icon :if={to_string(language[:value]) == to_string(@content_language)} name="hero-check" />
+          <.icon :if={to_string(language[:value]) == to_string(@content_language)} name="check" />
         </button>
       </div>
       <button
@@ -58,9 +58,9 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
         title={gettext("Choose the content language you wish to edit entries in")}
         phx-click={JS.push("show_language_picker", target: @myself)}
       >
-        <.icon name="hero-globe-alt" />
+        <.icon name="globe" />
         <span class="label">{content_in(@language_long)}</span>
-        <.icon name="hero-chevron-up-down" class="toggle" />
+        <.icon name="chevrons-up-down" class="toggle" />
       </button>
     </div>
     """

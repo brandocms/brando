@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
               <Content.image image={@obj.video.thumbnail} size={:thumb} />
             <% true -> %>
               <div class="img-placeholder">
-                <.icon name={if @list_row.media_type == :video, do: "hero-video-camera", else: "hero-photo"} />
+                <.icon name={if @list_row.media_type == :video, do: "video", else: "image"} />
               </div>
           <% end %>
         </div>
@@ -149,7 +149,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
                   <Content.image image={@obj.video.thumbnail} size={:smallest} />
                 <% else %>
                   <div class="video-placeholder">
-                    <.icon name="hero-video-camera" />
+                    <.icon name="video" />
                   </div>
                 <% end %>
               <% end %>
@@ -441,7 +441,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         }
         data-sortable-filter
       >
-        <.icon name="hero-pencil-square" />
+        <.icon name="square-pen" />
       </button>
       <button
         :if={@configure}
@@ -452,7 +452,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         phx-click={@configure}
         data-sortable-filter
       >
-        <.icon name="hero-cog-6-tooth" />
+        <.icon name="settings" />
       </button>
       <button
         class="delete-x"
@@ -463,7 +463,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         phx-click={JS.dispatch("change")}
         data-sortable-filter
       >
-        <.icon name="hero-x-mark" />
+        <.icon name="x" />
       </button>
     </div>
     """

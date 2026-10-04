@@ -21,6 +21,8 @@ defmodule Brando.Pages.Fragment do
   use Gettext, backend: Brando.Gettext
   alias Brando.Pages
 
+  content_icon "puzzle"
+
   trait :creator
   trait :revisioned
   trait :scheduled_publishing

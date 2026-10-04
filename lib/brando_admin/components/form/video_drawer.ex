@@ -113,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
       narrow
       light
       workspace
-      icon="hero-film"
+      icon="film"
       subtitle={gettext("Edit the shared library video.")}
     >
       <.form
@@ -181,7 +181,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
               <Content.image image={thumbnail(@video)} size={:medium} />
             <% true -> %>
               <div class={["video-drawer-placeholder", !@video && @upload_input && "upload-trigger"]}>
-                <.icon name="hero-film" />
+                <.icon name="film" />
                 <span :if={!@video}>{gettext("No video selected")}</span>
               </div>
           <% end %>
@@ -193,7 +193,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
           <p :if={@video} class="video-detail-source">
             {source_label(@video)}
             <a :if={source_link(@video)} href={source_link(@video)} target="_blank" rel="noopener">
-              {gettext("Open source")}<.icon name="hero-arrow-top-right-on-square-mini" />
+              {gettext("Open source")}<.icon name="external-link" />
             </a>
           </p>
         </div>
@@ -207,17 +207,17 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                 popovertarget="video-drawer-replace-menu"
                 aria-expanded="false"
               >
-                <.icon name="hero-arrow-path" />{gettext("Replace")}<.icon name="hero-chevron-down-mini" />
+                <.icon name="refresh-cw" />{gettext("Replace")}<.icon name="chevron-down" />
               </button>
               <div id="video-drawer-replace-menu" class="media-action-options" popover="auto">
                 <button :if={@upload_input} type="button" phx-click={JS.dispatch("click", to: @upload_input)}>
-                  <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+                  <.icon name="upload" />{gettext("Upload")}
                 </button>
                 <button type="button" phx-click={open_picker(false)}>
-                  <.icon name="hero-folder" />{gettext("Select video")}
+                  <.icon name="folder" />{gettext("Select video")}
                 </button>
                 <button :if={@url_allowed?} type="button" phx-click={open_picker(true)}>
-                  <.icon name="hero-link" />{gettext("Add from URL")}
+                  <.icon name="link" />{gettext("Add from URL")}
                 </button>
               </div>
             </div>
@@ -234,11 +234,11 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                 popovertarget="video-drawer-more-menu"
                 aria-expanded="false"
               >
-                <.icon name="hero-ellipsis-horizontal" />
+                <.icon name="ellipsis" />
               </button>
               <div id="video-drawer-more-menu" class="media-action-options" popover="auto">
                 <button type="button" class="destructive" phx-click={reset_video_field(@myself)}>
-                  <.icon name="hero-trash" />{gettext("Remove")}
+                  <.icon name="trash" />{gettext("Remove")}
                 </button>
               </div>
             </div>
@@ -249,13 +249,13 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
               class="workspace-button primary"
               phx-click={JS.dispatch("click", to: @upload_input)}
             >
-              <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+              <.icon name="upload" />{gettext("Upload")}
             </button>
             <button type="button" class="workspace-button" phx-click={open_picker(false)}>
-              <.icon name="hero-folder" />{gettext("Select video")}
+              <.icon name="folder" />{gettext("Select video")}
             </button>
             <button :if={@url_allowed?} type="button" class="workspace-button" phx-click={open_picker(true)}>
-              <.icon name="hero-link" />{gettext("Add from URL")}
+              <.icon name="link" />{gettext("Add from URL")}
             </button>
           <% end %>
         </div>
@@ -316,7 +316,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
               <%= if thumbnail(@video) do %>
                 <Content.image image={thumbnail(@video)} size={:thumb} />
               <% else %>
-                <div class="video-detail-thumbnail-empty"><.icon name="hero-photo" /></div>
+                <div class="video-detail-thumbnail-empty"><.icon name="image" /></div>
               <% end %>
               <div class="video-detail-thumbnail-actions">
                 <button

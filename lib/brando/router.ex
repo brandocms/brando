@@ -100,6 +100,10 @@ defmodule Brando.Router do
         plug :put_root_layout, {BrandoAdmin.Layouts, :root}
       end
 
+      # The icon stylesheet (`Brando.Icons.stylesheet_path/0`). Outside the admin path
+      # and its pipelines: the login page and front-end edit mode use icons too.
+      forward "/__brando/icons", Brando.Plug.Icons
+
       scope unquote(path), as: :admin do
         scope "/", BrandoAdmin do
           pipe_through [:admin, :redirect_if_user_is_authenticated]

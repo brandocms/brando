@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
       id={@id}
       title={gettext("Meta properties")}
       close={@close}
-      icon="hero-document-magnifying-glass"
+      icon="file-search"
       workspace
       editor
       narrow

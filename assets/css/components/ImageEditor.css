@@ -82,7 +82,7 @@
   .image-editor-hint {
     display: flex; align-items: flex-start; gap: 8px;
     color: var(--workspace-muted); font: 12px/18px "Main", sans-serif;
-    > [class^="hero-"] { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; }
+    > [data-icon] { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; }
   }
   .image-editor-sidebar {
     min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;

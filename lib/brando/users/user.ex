@@ -12,6 +12,8 @@ defmodule Brando.Users.User do
     plural: "users",
     gettext_module: Brando.Gettext
 
+  content_icon "user"
+
   @schema_prefix "public"
 
   use Gettext, backend: Brando.Gettext

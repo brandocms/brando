@@ -65,7 +65,7 @@ test('related entries can be cleared, saved and selected again without losing ot
   const thumbnail = selected.first().locator('.identifier-cover img')
   await expect(thumbnail).toBeVisible()
   await expect.poll(() => thumbnail.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true)
-  await expect(selected.nth(1).locator('.identifier-cover .hero-document-text')).toBeVisible()
+  await expect(selected.nth(1).locator('.identifier-cover [data-icon]')).toBeVisible()
   await expect(input).toHaveValue(introduction)
 
   for (const width of [1440, 390]) {

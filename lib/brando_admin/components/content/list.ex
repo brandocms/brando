@@ -657,7 +657,7 @@ defmodule BrandoAdmin.Components.Content.List do
     <div class="active-filters">
       {gettext("Active filters")} &rarr;
       <button :for={{name, value} <- @active_filters} :key={name} class="filter" phx-click={@delete} phx-value-filter={name}>
-        <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
+        <div class="icon-wrapper"><.icon name="circle-x" /></div>
         {filter_chip(@schema, @filters, name, value)}
       </button>
     </div>
@@ -790,7 +790,7 @@ defmodule BrandoAdmin.Components.Content.List do
           phx-click={@change_page}
           phx-value-page={@current_page - 2}
         >
-          <.icon name="hero-chevron-left" />
+          <.icon name="chevron-left" />
         </button>
         <%= for {page_number, index} <- Enum.with_index(@page_numbers) do %>
           <span :if={page_number == :gap} :key={"gap-#{index}"} class="pagination-gap" aria-hidden="true">…</span>
@@ -810,7 +810,7 @@ defmodule BrandoAdmin.Components.Content.List do
           phx-click={@change_page}
           phx-value-page={@current_page}
         >
-          <.icon name="hero-chevron-right" />
+          <.icon name="chevron-right" />
         </button>
       </nav>
     </div>
@@ -1200,7 +1200,7 @@ defmodule BrandoAdmin.Components.Content.List do
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >
-        <span>{@label}</span><.icon name="hero-chevron-down" class="dropdown-chevron" />
+        <span>{@label}</span><.icon name="chevron-down" class="dropdown-chevron" />
       </button>
       <ul data-testid="simple-dropdown-content" class="simple-dropdown-content hidden" id={@id}>
         {render_slot(@options, @id)}
@@ -1331,7 +1331,7 @@ defmodule BrandoAdmin.Components.Content.List do
             phx-click-away={hide_dropdown("#selected-actions-dropdown-content")}
             type="button"
           >
-            {gettext("Actions")}<.icon name="hero-chevron-up" />
+            {gettext("Actions")}<.icon name="chevron-up" />
           </button>
           <ul
             data-testid="circle-dropdown-content"
@@ -1416,7 +1416,7 @@ defmodule BrandoAdmin.Components.Content.List do
     <div class="translation-dialog-backdrop">
       <div class="translation-dialog">
         <header class="translation-dialog-header">
-          <.icon name="hero-sparkles" />
+          <.icon name="sparkles" />
           <%= if @complete? do %>
             {gettext("Translation complete!")}
           <% else %>
@@ -1428,11 +1428,11 @@ defmodule BrandoAdmin.Components.Content.List do
             <span class="translation-step-icon">
               <%= case status do %>
                 <% :done -> %>
-                  <.icon name="hero-check-circle" />
+                  <.icon name="circle-check" />
                 <% :active -> %>
                   <span class="spinner" />
                 <% :error -> %>
-                  <.icon name="hero-x-circle" />
+                  <.icon name="circle-x" />
                 <% :pending -> %>
                   <span class="pending-dot" />
               <% end %>

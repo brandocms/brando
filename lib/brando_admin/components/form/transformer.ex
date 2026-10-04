@@ -375,7 +375,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                     aria-label={gettext("Remove entry")}
                     phx-click={JS.push("remove_entry", value: %{dom_id: dom_id}, target: @myself)}
                   >
-                    <.icon name="hero-x-mark" />
+                    <.icon name="x" />
                   </button>
                 </div>
                 <.item_listing
@@ -408,7 +408,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                 invisible as an affordance unless something says so before the
                 drag starts. Clicking it opens the combined picker. --%>
           <div class="transformer-dropzone" data-pick="files">
-            <.icon name="hero-arrow-up-tray" />
+            <.icon name="upload" />
             <span>{dropzone_label(@image_field, @video_field, @video_upload_available?)}</span>
           </div>
           <div class="actions">
@@ -468,7 +468,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     ~H"""
     <div class="transformer-upload-errors">
       <div :for={error <- @errors} class="transformer-upload-error">
-        <.icon name="hero-exclamation-triangle" />
+        <.icon name="triangle-alert" />
         <span class="filename">{error.filename}</span>
         <span class="reason">{error.reason}</span>
       </div>
@@ -497,9 +497,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     """
   end
 
-  defp upload_button_icon("images"), do: "hero-photo"
-  defp upload_button_icon("videos"), do: "hero-video-camera"
-  defp upload_button_icon(_kind), do: "hero-arrow-up-tray"
+  defp upload_button_icon("images"), do: "image"
+  defp upload_button_icon("videos"), do: "video"
+  defp upload_button_icon(_kind), do: "upload"
 
   defp dropzone_label(_image_field, video_field, video_available?)
        when not is_nil(video_field) and video_available? do
@@ -538,7 +538,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     <div :if={@pending} class="subform-listing pending-listing">
       <div class="img-sq">
         <div class="img-placeholder">
-          <.icon name={if @pending.kind == :video, do: "hero-video-camera", else: "hero-photo"} />
+          <.icon name={if @pending.kind == :video, do: "video", else: "image"} />
         </div>
       </div>
       <div class="subform-listing-row">
@@ -559,7 +559,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
             <%= if @image.status != :unprocessed do %>
               <img src={Brando.Utils.img_url(@image, :thumb, prefix: Brando.Utils.media_url())} />
             <% else %>
-              <div class="img-placeholder"><.icon name="hero-arrow-path" /></div>
+              <div class="img-placeholder"><.icon name="refresh-cw" /></div>
             <% end %>
           </div>
         <% @video -> %>
@@ -567,12 +567,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
             <%= if @video.status == :ready && video_thumbnail_url(@video) do %>
               <img src={video_thumbnail_url(@video)} />
             <% else %>
-              <div class="img-placeholder"><.icon name="hero-arrow-path" /></div>
+              <div class="img-placeholder"><.icon name="refresh-cw" /></div>
             <% end %>
           </div>
         <% true -> %>
           <div class="img-sq">
-            <div class="img-placeholder"><.icon name="hero-photo" /></div>
+            <div class="img-placeholder"><.icon name="image" /></div>
           </div>
       <% end %>
       <%!-- A file dropped on the card is on its way in. The card keeps its

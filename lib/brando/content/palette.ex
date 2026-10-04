@@ -18,6 +18,8 @@ defmodule Brando.Content.Palette do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "palette"
+
   identifier "[{{ entry.namespace }}] {{ entry.name }}"
 
   trait :creator

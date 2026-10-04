@@ -219,7 +219,7 @@
   }
   .utils-button.block-audit-remove { color: #b3261e; border-color: #e6c4c0; }
   .utils-button.block-audit-remove:hover:not(:disabled) { background: #fdf1ef; border-color: #d99a93; }
-  .utils-button.block-audit-remove > span[data-icon] { width: 14px; height: 14px; color: inherit; }
+  .utils-button.block-audit-remove > [data-icon] { width: 14px; height: 14px; color: inherit; }
 
   .block-audit-group { margin-bottom: 26px; }
   .block-audit-group h3 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; font-size: 15px; }

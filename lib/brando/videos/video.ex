@@ -13,6 +13,8 @@ defmodule Brando.Videos.Video do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "film"
+
   trait :creator, derived: [:status, :remote_id, :meta, :width, :height, :aspect_ratio, :duration]
   trait :timestamped
   trait :soft_delete
@@ -178,8 +180,8 @@ defmodule Brando.Videos.Video do
           alt=""
           src={Brando.Utils.img_url(@entry.thumbnail, :smallest, prefix: Brando.Utils.media_url())}
         />
-        <Brando.HTML.Icon.icon :if={!@entry.thumbnail} name="hero-film" />
-        <span class="library-video-play-icon" aria-hidden="true"><Brando.HTML.Icon.icon name="hero-play-solid" /></span>
+        <Brando.HTML.Icon.icon :if={!@entry.thumbnail} name="film" />
+        <span class="library-video-play-icon" aria-hidden="true"><Brando.HTML.Icon.icon name="play" /></span>
       </button>
     </.field>
     <.update_link entry={@entry} columns={8} class="library-image-info library-video-info" skip_style>

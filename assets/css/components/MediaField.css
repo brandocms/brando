@@ -14,7 +14,7 @@
   .media-field-preview {
     display: grid; place-items: center; flex: 0 0 76px; width: 76px; height: 68px;
     overflow: hidden; border-radius: 5px; background: #f1f5ef; color: #69806c;
-    > [class^="hero-"] { width: 25px; height: 25px; }
+    > [data-icon] { width: 25px; height: 25px; }
     .image-content { width: 100%; height: 100%; }
     img, picture { width: 100%; height: 100%; min-width: 0; max-width: 100%; object-fit: cover; }
   }
@@ -29,13 +29,13 @@
   .media-field-processing { display: inline-flex; align-items: center; gap: 6px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; }
   .media-field-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
   .media-field-destination { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
-  .media-field-destination > [class^="hero-"] { width: 14px; height: 14px; flex: 0 0 14px; }
+  .media-field-destination > [data-icon] { width: 14px; height: 14px; flex: 0 0 14px; }
   .media-field-progress:empty { display: none; }
   .media-field-progress { margin-top: 12px; font: 12px/18px "Main", sans-serif; color: var(--media-accent); }
   .media-field-progress[data-state="error"] { color: #983e30; }
   .media-field-progress progress { display: block; width: 100%; height: 4px; margin-top: 8px; accent-color: var(--media-accent); }
   .media-field-drop { display: none; position: absolute; inset: -1px; z-index: 5; border: 2px solid var(--media-accent); border-radius: 8px; background: #f1f6eff5; color: var(--media-accent); pointer-events: none; align-items: center; justify-content: center; gap: 12px; font: 500 14px/20px "Main", sans-serif; }
-  .media-field-drop > [class^="hero-"] { width: 24px; height: 24px; }
+  .media-field-drop > [data-icon] { width: 24px; height: 24px; }
   &.dragging > .media-field-drop { display: flex; }
 }
 /* The image's own status remains visible through processing and page reloads.
@@ -54,7 +54,7 @@
   width: auto; min-width: 0; height: auto; min-height: 32px; margin: 0; padding: 5px 11px; border: 1px solid #dce2dc;
   border-radius: 5px; background: #fff; color: #272b2a; font: 12px/20px "Main", sans-serif;
   text-transform: none; letter-spacing: 0; box-shadow: none; cursor: pointer; list-style: none;
-  > [class^="hero-"] { width: 15px; height: 15px; flex: 0 0 15px; }
+  > [data-icon] { width: 15px; height: 15px; flex: 0 0 15px; }
   &:hover { background: #f1f5ef; border-color: #bacabd; }
   /* A light accent: uploading leads the row without shouting over it. */
   &.primary { background: #edf3e9; border-color: #cfdcce; color: #254e3f; }
@@ -81,7 +81,7 @@
 .media-field-replace .media-field-menu button.destructive { color: #983e30; }
 .media-field-replace .media-field-menu button.destructive:hover { background: #fcf3f0; }
 .media-field-replace .media-field-menu .media-field-menu-note { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; padding: 8px 10px 4px; border-top: 1px solid #edf0ed; color: #626b66; font: 11px/16px "Main", sans-serif; overflow-wrap: anywhere; }
-.media-field-replace .media-field-menu .media-field-menu-note [class^="hero-"] { width: 13px; height: 13px; flex-shrink: 0; }
+.media-field-replace .media-field-menu .media-field-menu-note [data-icon] { width: 13px; height: 13px; flex-shrink: 0; }
 /* "Change" beside the upload folder: a text link, in the line under an empty
    field and at the end of a menu's note. Selectors out-specify the menu's
    own `button` rules. */
@@ -98,7 +98,7 @@
   .media-field-menu { position: fixed; inset: auto; margin: 0; min-width: min(190px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; padding: 5px; background: #fff; border: 1px solid #dce2dc; border-radius: 7px; box-shadow: 0 8px 24px #13251c18; }
   .media-field-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 4px; padding: 9px 10px; margin: 0; background: #fff; color: #272b2a; font: 12px/18px "Main", sans-serif; text-align: left; }
   .media-field-menu button:hover { background: #f1f5ef; }
-  .media-field-menu [class^="hero-"] { width: 16px; height: 16px; flex-shrink: 0; }
+  .media-field-menu [data-icon] { width: 16px; height: 16px; flex-shrink: 0; }
 }
 .media-field--block {
   /* A ref is a thumbnail, a name and a row of buttons — stretching it across a

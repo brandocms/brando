@@ -16,6 +16,8 @@ defmodule Brando.Content.Container do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "square-dashed"
+
   @type t :: %__MODULE__{}
 
   identifier "[{{ entry.namespace }}] {{ entry.name}}"

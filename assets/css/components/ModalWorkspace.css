@@ -303,10 +303,10 @@ button.link-preview { text-align: left; }
 
 /* C's navigation and rows retain the proportions from the approved study. */
 .modal--picker .link-picker-modes :is(label, button) { gap: 7px; padding: 6px 13px; font-size: 12px; }
-.modal--picker .link-picker-modes :is(label, button) > [class^="hero-"] { width: 16px; height: 16px; flex-shrink: 0; }
+.modal--picker .link-picker-modes :is(label, button) > [data-icon] { width: 16px; height: 16px; flex-shrink: 0; }
 .modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { display: flex; align-items: center; gap: 8px; padding: 10px 8px; font-size: 12px; line-height: 18px; color: #687862; }
 .modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary.selected { background: #e3edde; color: #355b3e; }
-.identifier-picker-nav button > [class^="hero-"] { width: 16px; height: 16px; flex: 0 0 16px; }
+.identifier-picker-nav button > [data-icon] { width: 16px; height: 16px; flex: 0 0 16px; }
 .identifier-scope-label { min-width: 0; overflow-wrap: anywhere; text-box: trim-both cap alphabetic; }
 .identifier-scope-count { margin-left: auto; flex-shrink: 0; color: #7c8b73; font-size: 11px; text-box: trim-both cap alphabetic; }
 .identifier-picker-nav { width: 176px; flex-basis: 176px; }
@@ -315,7 +315,7 @@ button.link-preview { text-align: left; }
 .identifier-results-count { display: flex; gap: 4px; }
 @media (max-width: 720px) {
   .identifier-picker-nav { width: 100%; }
-  .identifier-picker-nav button > [class^="hero-"] { display: none; }
+  .identifier-picker-nav button > [data-icon] { display: none; }
   .identifier-scope-count { font-size: 10px; }
   .modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { padding: 8px 9px; font-size: 11px; }
 }

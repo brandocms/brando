@@ -66,7 +66,7 @@
   .revision-status.is-active { background: #e1ecd9; border-color: #cadcbe; color: #254e3f; }
   .revision-status.is-scheduled { background: #fbf4e5; border-color: #e9d9b5; color: #795b27; }
   .revision-protection { display: inline-flex; align-items: center; gap: 4px; color: var(--workspace-muted); font-size: 12px; white-space: nowrap; }
-  .revision-statuses [class^="hero-"] { width: 13px; height: 13px; flex-shrink: 0; }
+  .revision-statuses [data-icon] { width: 13px; height: 13px; flex-shrink: 0; }
   .revisions-table .revisions-line svg path:nth-of-type(2) { fill: currentColor; }
   .revisions-table .revisions-line .circle-dropdown {
     width: 24px; margin: 0;

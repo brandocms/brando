@@ -60,7 +60,7 @@
     &:hover { background: #f5f7f3; color: inherit; }
     &:focus-visible { outline: 2px solid #254e3f; outline-offset: -2px; }
     &:disabled { opacity: .45; cursor: default; }
-    > [class^="hero-"] { width: 14px; height: 14px; flex-shrink: 0; }
+    > [data-icon] { width: 14px; height: 14px; flex-shrink: 0; }
   }
   @media (pointer: coarse) { button, a { min-height: 40px; } }
 }

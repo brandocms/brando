@@ -82,7 +82,7 @@ test('an admin edits a block in place and saves it', async ({ page }) => {
   await shot(page, '04-live')
 
   await editor.getByTestId('submit').click()
-  await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+  await expect(editor.locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
   await shot(page, '05-saved')
 
   await page.reload()
@@ -103,7 +103,7 @@ test('a block in a container opens alone, and other blocks of the entry open in 
   await headlineInput(editor).fill('Section, edited')
   await expect(headline(page, 'Section, edited')).toBeVisible({ timeout: 10000 })
   await editor.getByTestId('submit').click()
-  await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+  await expect(editor.locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
 
   // Saved, so another block of the page opens at once
   await headline(page, 'Welcome to the page').click()
@@ -233,7 +233,7 @@ test('an image chosen in the sidebar shows on the page and is saved', async ({ p
   await shot(page, '12-image')
 
   await editor.getByTestId('submit').click()
-  await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+  await expect(editor.locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
   await page.reload()
   await expect(page.locator('figure[b-tpl="single-image"] img').first()).toBeAttached()
 })
@@ -300,14 +300,17 @@ test.describe('entry fields', () => {
     await expect(page.locator('p.fe-block-title')).toHaveText('On Edited title', { timeout: 10000 })
 
     await editor.getByTestId('submit').click()
-    await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+    await expect(editor.locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
 
     await page.reload()
     await expect(titleField(page)).toHaveText('Edited title')
     await expect(page.locator('p.fe-block-title')).toHaveText('On Edited title')
 
     // The Liquid tag opens the same field. The paragraph is full width, and
-    // only its text is the field; the rest of it opens the block.
+    // only its text is the field; the rest of it opens the block. The page is
+    // too short to scroll, and at the foot of the viewport the fixed toolbar
+    // covers the paragraph, so give it room.
+    await page.setViewportSize({ width: page.viewportSize().width, height: 1200 })
     await page.locator('p.fe-block-title').click({ position: { x: 50, y: 8 } })
     await expect(titleInput(sidebar(page))).toHaveValue('Edited title', { timeout: 15000 })
   })
@@ -345,7 +348,7 @@ test.describe('entry fields', () => {
     await expect(field).not.toHaveAttribute('data-asset-id', previousId || '', { timeout: 30000 })
 
     await editor.getByTestId('submit').click()
-    await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+    await expect(editor.locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
     await expect.poll(() => page.locator('.project-header picture').first().innerHTML(), { timeout: 10000 }).not.toBe(before)
   })
 
@@ -384,7 +387,7 @@ test('a listing of selected entries gets a new selection', async ({ page }) => {
   await shot(page, '19-selection')
 
   await editor.getByTestId('submit').click()
-  await expect(editor.locator('.frontend-edit-status .hero-check-circle-mini')).toBeVisible({ timeout: 15000 })
+  await expect(editor.locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
   await page.reload()
   await expect(listing.locator('.project')).toHaveText(['Test Project Alpha', 'Test Project Beta'])
 })

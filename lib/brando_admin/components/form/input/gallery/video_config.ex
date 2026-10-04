@@ -54,7 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
           <figure class="gallery-object-config-thumb">
             <Content.image :if={@thumbnail} image={@thumbnail} size={:smallest} />
             <div :if={!@thumbnail} class="video-placeholder">
-              <.icon name="hero-video-camera" />
+              <.icon name="video" />
             </div>
           </figure>
           <div class="gallery-object-config-copy">

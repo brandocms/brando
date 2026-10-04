@@ -68,7 +68,7 @@ defmodule BrandoAdmin.Components.Usage do
       class={["usage-status", @usage.status && "status-#{@usage.status}"]}
       title={@usage.status && to_string(@usage.status)}
     ></span>
-    <.icon name="hero-arrow-right" class={!@usage.url && "hidden"} />
+    <.icon name="arrow-right" class={!@usage.url && "hidden"} />
     """
   end
 end

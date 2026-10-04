@@ -16,6 +16,8 @@ defmodule Brando.Sites.GlobalSet do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "earth"
+
   trait :creator
   trait :cast_polymorphic_embeds
   trait :timestamped
@@ -76,7 +78,7 @@ defmodule Brando.Sites.GlobalSet do
   def listing_row(assigns) do
     ~H"""
     <.update_link entry={@entry} columns={8}>
-      <span class="global-set-title"><span class="global-set-icon"><Brando.HTML.Icon.icon name="hero-globe-alt" /></span><span class="global-set-text"><span class="global-set-name">{@entry.label}</span><small class="global-set-key monospace">{@entry.key}</small></span></span>
+      <span class="global-set-title"><span class="global-set-icon"><Brando.HTML.Icon.icon name="globe" /></span><span class="global-set-text"><span class="global-set-name">{@entry.label}</span><small class="global-set-key monospace">{@entry.key}</small></span></span>
     </.update_link>
     <.field columns={3}>
       <span class="workspace-badge">{ngettext("%{count} variable", "%{count} variables", Enum.count(@entry.vars))}</span>

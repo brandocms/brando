@@ -7,7 +7,7 @@
 @import "./fonts.css";
 @import "./transitions.css";
 @import "./auth.css";
-@import "./heroicons.css";
+@import "./icons.css";
 @import "./components/Alert.css";
 @import "./components/Button.css";
 @import "./components/ChildrenButton.css";
@@ -784,7 +784,6 @@ h3 {
     [data-icon] {
       width: 14px;
       height: 14px;
-      background-color: currentColor;
       opacity: 0.5;
     }
 
@@ -1335,7 +1334,7 @@ h3 {
     }
   }
 
-  span[class^="hero-"] {
+  [data-icon] {
     width: 12px;
     height: 12px;
     margin-bottom: 1px;
@@ -1345,24 +1344,6 @@ h3 {
     margin-right: 5px;
     margin-top: -1px;
     transition: fill 250ms ease;
-  }
-}
-
-span[data-icon] {
-  &.xs {
-    width: 12px;
-    height: 12px;
-  }
-  &.s {
-    width: 16px;
-    height: 16px;
-  }
-  &.m {
-    width: 18px;
-    height: 18px;
-  }
-  &.mr {
-    margin-right: 5px;
   }
 }
 

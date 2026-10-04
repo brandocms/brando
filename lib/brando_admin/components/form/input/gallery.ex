@@ -175,7 +175,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
             <%= if @gallery_objects == [] do %>
               <div class="media-field-preview" aria-hidden="true">
-                <.icon name="hero-rectangle-stack" />
+                <.icon name="layers" />
               </div>
               <div class="gallery-info">
                 <span class="media-field-name">{gettext("Drop media here to build your gallery")}</span>
@@ -268,7 +268,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             >
             </div>
             <div class="media-field-drop" aria-hidden="true">
-              <.icon name="hero-arrow-up-tray" /><span>{gettext("Add to gallery")}</span>
+              <.icon name="upload" /><span>{gettext("Add to gallery")}</span>
             </div>
           </div>
 
@@ -322,7 +322,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     ~H"""
     <div class="actions segmented-buttons">
       <button type="button" class="media-button upload-trigger">
-        <.icon name="hero-arrow-up-tray" />
+        <.icon name="upload" />
         {gettext("Upload media")}
       </button>
       <button
@@ -372,7 +372,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           <img src={@thumb_url} />
         <% else %>
           <div class="img-placeholder">
-            <.icon name={if @media_type == :video, do: "hero-video-camera", else: "hero-photo"} />
+            <.icon name={if @media_type == :video, do: "video", else: "image"} />
           </div>
         <% end %>
       </div>
@@ -407,7 +407,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             phx-click={toggle_dropdown("##{@menu_id}")}
             phx-click-away={hide_dropdown("##{@menu_id}")}
           >
-            <.icon name="hero-ellipsis-horizontal-circle" />
+            <.icon name="circle-ellipsis" />
           </button>
           <ul id={@menu_id} class="gallery-object-action-dropdown hidden">
             <li :if={@media_type == :image}>
@@ -419,7 +419,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   |> open_image_editor_drawer()
                 }
               >
-                <.icon name="hero-pencil-square" />
+                <.icon name="square-pen" />
                 {gettext("Edit image")}
               </button>
             </li>
@@ -435,7 +435,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   |> show_modal("##{@id}-object-config-modal")
                 }
               >
-                <.icon name="hero-cog-6-tooth" />
+                <.icon name="settings" />
                 {gettext("Configure")}
               </button>
             </li>
@@ -445,7 +445,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 class="delete-action"
                 phx-click={remove_object(@gallery_object, @myself) |> hide_dropdown("##{@menu_id}")}
               >
-                <.icon name="hero-trash" />
+                <.icon name="trash" />
                 {gettext("Remove from gallery")}
               </button>
             </li>
@@ -502,7 +502,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             |> open_image_editor_drawer()
           }
         >
-          <.icon name="hero-pencil-square" />
+          <.icon name="square-pen" />
         </button>
         <button
           type="button"
@@ -514,7 +514,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             |> show_modal("##{@id}-object-config-modal")
           }
         >
-          <.icon name="hero-cog-6-tooth" />
+          <.icon name="settings" />
         </button>
         <button
           type="button"
@@ -523,7 +523,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           title={gettext("Remove from gallery")}
           phx-click={@remove}
         >
-          <.icon name="hero-x-mark" />
+          <.icon name="x" />
         </button>
       </:actions>
       <:editor :if={@editing}>

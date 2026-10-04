@@ -12,6 +12,8 @@ defmodule E2eProject.Prices.Price do
 
   use Gettext, backend: E2eProjectAdmin.Gettext
 
+  content_icon "banknote"
+
   identifier "{{ entry.title }}"
   persist_identifier false
   data_layer :embedded

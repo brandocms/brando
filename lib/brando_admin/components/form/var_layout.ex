@@ -182,7 +182,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
               class="module-add-button"
               phx-click={show_modal("##{@form.id}-#{@form_key}-create-var")}
             >
-              <.icon name="hero-plus" />
+              <.icon name="plus" />
               {gettext("Add variable")}
             </button>
             <span :if={@unplaced > 0} class="var-layout-note">
@@ -233,7 +233,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
 
             <div class="block-vars-wrapper">
               <div class="vars-info">
-                <div class="icon"><span class="hero-variable-mini"></span></div>
+                <div class="icon"><.icon name="variable" /></div>
                 <div class="info">
                   <span class="vars-label">{gettext("Block")}<br />{gettext("Variables")}</span>
                 </div>
@@ -285,14 +285,14 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
           title={gettext("Drag to reorder this row")}
           aria-label={gettext("Reorder row %{number}", number: index + 1)}
         >
-          <.icon name="hero-bars-2" />
+          <.icon name="equal" />
         </button>
         <span class="var-row-meter" title={row_meter_title(row)}>
           <b class={Layout.free_units(row) == 0 && "full"}>{Layout.used_units(row)}</b>
           <i class="rule"></i>
           <span>{Layout.row_units()}</span>
           <span :if={Enum.any?(row, &Layout.flex?(&1.width))} class="flex-mark">
-            <.icon name="hero-arrows-right-left" />
+            <.icon name="arrow-left-right" />
           </span>
         </span>
       </div>
@@ -383,7 +383,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
             phx-click={JS.push("move_var", target: @target)}
             phx-value-key={@entry.key}
           >
-            <.icon name={(@surface == :content && "hero-arrow-right") || "hero-arrow-left"} />
+            <.icon name={(@surface == :content && "arrow-right") || "arrow-left"} />
           </button>
           <button
             type="button"
@@ -392,7 +392,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
             phx-click={JS.push("hide_var", target: @target)}
             phx-value-key={@entry.key}
           >
-            <.icon name="hero-eye-slash" />
+            <.icon name="eye-off" />
           </button>
           <button
             type="button"
@@ -401,7 +401,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
             phx-click={JS.push("duplicate_var")}
             phx-value-index={@entry.index}
           >
-            <.icon name="hero-document-duplicate" />
+            <.icon name="copy" />
           </button>
           <%!-- Ecto's `drop_param`: the button's own name/value is what removes the
               var, so this has to be a submit-time param rather than an event. --%>
@@ -415,7 +415,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
             name={"#{@form.name}[drop_var_ids][]"}
             value={@entry.index}
           >
-            <.icon name="hero-x-mark" />
+            <.icon name="x" />
           </button>
         </div>
       </div>

@@ -558,7 +558,7 @@ button.btn-palette {
       color: var(--brando-color-dark);
       border-radius: 50%;
 
-      span {
+      [data-icon] {
         width: 15px;
         height: 15px;
       }
@@ -592,7 +592,7 @@ button.btn-palette {
       color: var(--brando-color-dark);
       border-radius: 50%;
 
-      span {
+      [data-icon] {
         width: 15px;
         height: 15px;
       }
@@ -631,7 +631,7 @@ button.btn-palette {
       color: var(--brando-color-dark);
       border-radius: 50%;
 
-      span {
+      [data-icon] {
         width: 15px;
         height: 15px;
       }
@@ -957,7 +957,7 @@ button.btn-palette {
         background-color: transparent;
         border: 1px solid var(--vars-line);
 
-        span {
+        [data-icon] {
           width: 12px;
           height: 12px;
         }
@@ -1012,7 +1012,7 @@ button.btn-palette {
         border-radius: 0;
         color: var(--vars-muted);
 
-        span {
+        [data-icon] {
           width: 14px;
           height: 14px;
         }
@@ -1072,7 +1072,7 @@ button.btn-palette {
         height: 24px;
         border-radius: 4px;
 
-        > [class^="hero-"] {
+        > [data-icon] {
           width: 14px;
           height: 14px;
         }
@@ -1136,7 +1136,7 @@ button.btn-palette {
       gap: 2px;
       white-space: nowrap;
 
-      > [class^="hero-"] {
+      > [data-icon] {
         position: relative;
         top: -1px;
       }
@@ -1535,7 +1535,7 @@ button.btn-palette {
         justify-content: center;
         border-radius: 50%;
 
-        span {
+        [data-icon] {
           width: 15px;
           height: 15px;
         }
@@ -2620,7 +2620,7 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
     margin-right: 7px;
     flex-shrink: 0;
     background-color: var(--presence-color, rgba(77, 144, 254, 0.6));
-    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clip-rule="evenodd"/></svg>');
+    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>');
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;

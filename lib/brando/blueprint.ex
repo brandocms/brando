@@ -168,6 +168,7 @@ defmodule Brando.Blueprint do
     Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
     Module.register_attribute(__CALLER__.module, :router_scope, accumulate: false)
     Module.put_attribute(__CALLER__.module, :router_scope, Keyword.get(opts, :router_scope))
+    Module.register_attribute(__CALLER__.module, :content_icon, accumulate: false)
 
     gettext_module =
       case Keyword.get(opts, :gettext_module) do
@@ -623,6 +624,19 @@ defmodule Brando.Blueprint do
     end
   end
 
+  @doc """
+  Sets the content type's [Lucide](https://lucide.dev/icons) icon, shown in
+  the admin sidebar, dashboard shortcuts, link picker, entry identifiers and
+  listing headers. Checked at compile time.
+
+      content_icon "folder-kanban"
+  """
+  defmacro content_icon(name) do
+    quote do
+      @content_icon unquote(name)
+    end
+  end
+
   defmacro table(table_name) do
     quote do
       @table_name unquote(table_name)
@@ -741,6 +755,16 @@ defmodule Brando.Blueprint do
     plural = get_translation(module.__translations__(), [:naming, :plural])
     String.capitalize(plural || module.__naming__().plural)
   end
+
+  @default_icon "file"
+
+  @doc """
+  The blueprint's Lucide icon (`content_icon "..."`), or
+  `"file"` when it sets none. Shown in the admin menu, dashboard, link picker
+  and listing headers.
+  """
+  @spec get_icon(module()) :: String.t()
+  def get_icon(module), do: module.__content_icon__() || @default_icon
 
   defp get_translation(translations, path) do
     Enum.reduce(path, translations, fn

@@ -60,7 +60,7 @@
     flex-shrink: 0;
     width: 12px;
     height: 12px;
-    background-color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
     transition: transform 150ms ease;
   }
 

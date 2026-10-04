@@ -25,11 +25,11 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace modules-workspace">
-      <Workspace.header title={gettext("Block modules")}>
+      <Workspace.header icon={@page_icon} title={gettext("Block modules")}>
         <%!-- One way in to both: modules as files (DSL), and pasted module copies. --%>
         <details id="module-transfer-menu" class="workspace-menu">
           <summary class="workspace-button">
-            {gettext("Import / export")} <.icon name="hero-chevron-down" />
+            {gettext("Import / export")} <.icon name="chevron-down" />
           </summary>
           <div class="workspace-menu-items">
             <button
@@ -58,7 +58,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           class="workspace-button"
           phx-click={JS.push("open_sketches") |> show_modal("#module-sketches-modal")}
         >
-          <.icon name="hero-sparkles" /> {gettext("Sketches with AI")}
+          <.icon name="sparkles" /> {gettext("Sketches with AI")}
         </button>
         <button
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
@@ -383,11 +383,11 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           <span class="state">
             <%= cond do %>
               <% Map.has_key?(@sketches.drawn, module.id) -> %>
-                <.icon name="hero-check" />
+                <.icon name="check" />
               <% Map.has_key?(@failed, module.id) -> %>
-                <.icon name="hero-x-mark" />
+                <.icon name="x" />
               <% module.id == @sketches.current -> %>
-                <.icon name="hero-arrow-path" />
+                <.icon name="refresh-cw" />
               <% true -> %>
                 <span class="pending"></span>
             <% end %>

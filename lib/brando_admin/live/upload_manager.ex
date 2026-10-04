@@ -833,7 +833,7 @@ defmodule BrandoAdmin.UploadManager do
             <div class="meta">
               <span class="filename" title={target_label(item.target)}>{item.filename}</span>
               <span :if={item.status == :processing} class="processing-label">{gettext("Processing…")}</span>
-              <span :if={item.status == :done} class="done-label"><span class="hero-check-mini"></span></span>
+              <span :if={item.status == :done} class="done-label"><Brando.HTML.Icon.icon name="check" /></span>
               <button
                 :if={item.status in [:queued, :uploading] and item.transport != :external}
                 type="button"
@@ -842,7 +842,7 @@ defmodule BrandoAdmin.UploadManager do
                 phx-value-ref={ref}
                 title={gettext("Cancel")}
               >
-                <span class="hero-x-mark-mini"></span>
+                <Brando.HTML.Icon.icon name="x" />
               </button>
               <button
                 :if={item.status in [:error, :processing]}
@@ -852,7 +852,7 @@ defmodule BrandoAdmin.UploadManager do
                 phx-value-ref={ref}
                 title={gettext("Dismiss")}
               >
-                <span class="hero-x-mark-mini"></span>
+                <Brando.HTML.Icon.icon name="x" />
               </button>
             </div>
             <progress :if={item.status in [:queued, :uploading]} value={item.progress} max="100">

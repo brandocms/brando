@@ -136,7 +136,7 @@
     position: relative;
     display: contents;
 
-    svg {
+    :is(svg, [data-icon]) {
       pointer-events: none;
       user-select: none;
     }

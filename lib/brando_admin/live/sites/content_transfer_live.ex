@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         subtitle={dgettext("content_transfer", "Move entries and their content between sites and environments.")}
       >
         <div class="transfer-scope">
-          <Brando.HTML.Icon.icon name="hero-globe-alt" /><div>
+          <Brando.HTML.Icon.icon name="globe" /><div>
             <span>{dgettext("content_transfer", "Current workspace")}</span><strong>{@scope_label}</strong>
           </div>
         </div>
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           aria-current={@tab == "export" && "page"}
           disabled={@busy != nil}
         >
-          <Brando.HTML.Icon.icon name="hero-arrow-up-tray" />
+          <Brando.HTML.Icon.icon name="upload" />
           <span class="transfer-control-label">{dgettext("content_transfer", "Export")}</span>
         </button>
         <button
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           aria-current={@tab == "import" && "page"}
           disabled={@busy != nil}
         >
-          <Brando.HTML.Icon.icon name="hero-arrow-down-tray" />
+          <Brando.HTML.Icon.icon name="download" />
           <span class="transfer-control-label">{dgettext("content_transfer", "Import")}</span>
         </button>
         <button
@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           aria-current={@tab == "history" && "page"}
           disabled={@busy != nil}
         >
-          <Brando.HTML.Icon.icon name="hero-clock" />
+          <Brando.HTML.Icon.icon name="clock" />
           <span class="transfer-control-label">{dgettext("content_transfer", "Recent imports")}</span>
         </button>
       </nav>
@@ -146,7 +146,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             </form>
           </details>
           <form id="transfer-search" phx-change="search" phx-submit="search" class="transfer-search">
-            <Brando.HTML.Icon.icon name="hero-magnifying-glass" /><label class="sr-only" for="transfer-query">{dgettext(
+            <Brando.HTML.Icon.icon name="search" /><label class="sr-only" for="transfer-query">{dgettext(
               "content_transfer",
               "Search saved content"
             )}</label>
@@ -181,7 +181,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 phx-value-schema={type.schema}
                 aria-pressed={to_string(type.schema in @selected_types)}
               >
-                <span class="transfer-type-check" aria-hidden="true"><Brando.HTML.Icon.icon name="hero-check" /></span>
+                <span class="transfer-type-check" aria-hidden="true"><Brando.HTML.Icon.icon name="check" /></span>
                 <span>{type.label}</span>
               </button>
             </div>
@@ -193,7 +193,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           </a>
           <div class="transfer-entry-list" id="transfer-entry-list">
             <div :if={@results == []} class="transfer-empty">
-              <Brando.HTML.Icon.icon name="hero-document-magnifying-glass" /><h3>
+              <Brando.HTML.Icon.icon name="file-search" /><h3>
                 {dgettext("content_transfer", "No matching content")}
               </h3><p>
                 {dgettext("content_transfer", "Try another title or change the export scope.")}
@@ -207,7 +207,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               <div class="transfer-entry-heading">
                 <div class={["transfer-entry-icon", entry.schema == "Elixir.Brando.Pages.Fragment" && "is-fragment"]}>
                   <Brando.HTML.Icon.icon name={
-                    if entry.schema == "Elixir.Brando.Pages.Fragment", do: "hero-puzzle-piece", else: "hero-document-text"
+                    if entry.schema == "Elixir.Brando.Pages.Fragment", do: "puzzle", else: "file-text"
                   } />
                 </div>
                 <div class="transfer-entry-content">
@@ -247,20 +247,20 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                     phx-value-entry={entry.key}
                     aria-pressed={to_string(Map.has_key?(@selected, entry.key))}
                     aria-label={dgettext("content_transfer", "Select %{title}", title: entry.title)}
-                  ><span class="transfer-field-check" aria-hidden="true"><Brando.HTML.Icon.icon name="hero-check" /></span><span class="transfer-control-label">{if Map.has_key?(
-                                                                                                                                                                      @selected,
-                                                                                                                                                                      entry.key
-                                                                                                                                                                    ),
-                                                                                                                                                                    do:
-                                                                                                                                                                      dgettext(
-                                                                                                                                                                        "content_transfer",
-                                                                                                                                                                        "Entry selected"
-                                                                                                                                                                      ),
-                                                                                                                                                                    else:
-                                                                                                                                                                      dgettext(
-                                                                                                                                                                        "content_transfer",
-                                                                                                                                                                        "Select entry"
-                                                                                                                                                                      )}</span></button>
+                  ><span class="transfer-field-check" aria-hidden="true"><Brando.HTML.Icon.icon name="check" /></span><span class="transfer-control-label">{if Map.has_key?(
+                                                                                                                                                                 @selected,
+                                                                                                                                                                 entry.key
+                                                                                                                                                               ),
+                                                                                                                                                               do:
+                                                                                                                                                                 dgettext(
+                                                                                                                                                                   "content_transfer",
+                                                                                                                                                                   "Entry selected"
+                                                                                                                                                                 ),
+                                                                                                                                                               else:
+                                                                                                                                                                 dgettext(
+                                                                                                                                                                   "content_transfer",
+                                                                                                                                                                   "Select entry"
+                                                                                                                                                                 )}</span></button>
                   <button
                     :for={field <- if(@export_scope == "fields", do: entry.fields, else: [])}
                     id={"transfer-field-#{entry.key}-#{field.name}"}
@@ -270,7 +270,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                     phx-value-field={field.name}
                     aria-pressed={to_string(selected?(@selected, entry.key, field.name))}
                   >
-                    <span class="transfer-field-check" aria-hidden="true"><Brando.HTML.Icon.icon name="hero-check" /></span>
+                    <span class="transfer-field-check" aria-hidden="true"><Brando.HTML.Icon.icon name="check" /></span>
                     <span class="transfer-control-label">{field.label}</span>
                   </button>
                 </div>
@@ -337,7 +337,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             disabled={selected_count(@selected) == 0 || @busy != nil}
           ><span class="transfer-control-label">{dgettext("content_transfer", "Prepare export")}</span></button>
           <div class="transfer-note">
-            <Brando.HTML.Icon.icon name="hero-information-circle" /><p>
+            <Brando.HTML.Icon.icon name="info" /><p>
               {if @export_scope == "entries",
                 do:
                   dgettext(
@@ -422,7 +422,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               </div>
               <ul class="transfer-reference-paths">
                 <li :for={usage <- dependency_usages(@exported.bundle, dep)}>
-                  <Brando.HTML.Icon.icon name="hero-link" />
+                  <Brando.HTML.Icon.icon name="link" />
                   <span>{dgettext("content_transfer", "Used by")} <strong>{usage.title}</strong>
                   <span class="transfer-reference-type">{usage.type}</span> · {usage.path}</span>
                 </li>
@@ -461,7 +461,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           </div>
         </details>
         <div class="transfer-note">
-          <Brando.HTML.Icon.icon name="hero-information-circle" /><p>
+          <Brando.HTML.Icon.icon name="info" /><p>
             {dgettext(
               "content_transfer",
               "Application code, CSS, JavaScript and service credentials use your normal deployment."
@@ -496,7 +496,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               phx-drop-target={@uploads.content_bundle.ref}
             >
               <div :if={@uploads.content_bundle.entries == []} class="transfer-upload-icon">
-                <Brando.HTML.Icon.icon name="hero-arrow-down-tray" />
+                <Brando.HTML.Icon.icon name="download" />
               </div>
               <label for={@uploads.content_bundle.ref} class={@uploads.content_bundle.entries != [] && "sr-only"}>
                 {dgettext("content_transfer", "Choose a content bundle")}
@@ -509,9 +509,9 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 <div class="transfer-upload-icon">
                   <Brando.HTML.Icon.icon name={
                     cond do
-                      upload_errors(@uploads.content_bundle, entry) != [] -> "hero-exclamation-triangle"
-                      entry.done? -> "hero-document-check"
-                      true -> "hero-arrow-down-tray"
+                      upload_errors(@uploads.content_bundle, entry) != [] -> "triangle-alert"
+                      entry.done? -> "file-check"
+                      true -> "download"
                     end
                   } />
                 </div>
@@ -538,7 +538,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   phx-value-ref={entry.ref}
                   aria-label={dgettext("content_transfer", "Remove file")}
                 >
-                  <Brando.HTML.Icon.icon name="hero-x-mark" />
+                  <Brando.HTML.Icon.icon name="x" />
                 </button>
               </div>
             </div>
@@ -561,7 +561,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 aria-describedby="transfer-review-help"
                 disabled={!upload_ready?(@uploads.content_bundle) || @busy != nil}
               >
-                <Brando.HTML.Icon.icon name="hero-document-magnifying-glass" />
+                <Brando.HTML.Icon.icon name="file-search" />
                 <span class="transfer-control-label">{dgettext("content_transfer", "Review bundle")}</span>
               </button>
             </div>
@@ -632,7 +632,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           phx-submit="destination_search"
           class="transfer-search"
         >
-          <Brando.HTML.Icon.icon name="hero-magnifying-glass" /><label class="sr-only" for="destination-query">{dgettext(
+          <Brando.HTML.Icon.icon name="search" /><label class="sr-only" for="destination-query">{dgettext(
             "content_transfer",
             "Find destination entries"
           )}</label><input
@@ -967,7 +967,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             phx-submit="dependency_search"
             class="transfer-search"
           >
-            <Brando.HTML.Icon.icon name="hero-magnifying-glass" />
+            <Brando.HTML.Icon.icon name="search" />
             <label class="sr-only" for="dependency-query">{dgettext("content_transfer", "Find destination dependencies")}</label>
             <input
               id="dependency-query"
@@ -1043,7 +1043,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             </article>
           </form>
           <div :if={@archive.bundle["definitions"]} class="transfer-note">
-            <Brando.HTML.Icon.icon name="hero-cube" /><div>
+            <Brando.HTML.Icon.icon name="box" /><div>
               <p>
                 {dgettext(
                   "content_transfer",
@@ -1129,7 +1129,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       </section>
 
       <section :if={@tab == "import" && @result} id="transfer-result" class="transfer-result" role="status">
-        <span class="transfer-result-icon"><Brando.HTML.Icon.icon name="hero-check" /></span><span class="transfer-eyebrow">{@scope_label}</span><h2>
+        <span class="transfer-result-icon"><Brando.HTML.Icon.icon name="check" /></span><span class="transfer-eyebrow">{@scope_label}</span><h2>
           {dgettext("content_transfer", "Content imported")}
         </h2><p>
           {if @result.mappings["version"] == 2,
@@ -1176,7 +1176,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             </p>
           </div>
         </div><div :if={@history == []} class="transfer-empty">
-          <Brando.HTML.Icon.icon name="hero-clock" /><h3>{dgettext("content_transfer", "No imports yet")}</h3><p>
+          <Brando.HTML.Icon.icon name="clock" /><h3>{dgettext("content_transfer", "No imports yet")}</h3><p>
             {dgettext("content_transfer", "Completed imports and their recovery snapshots will appear here.")}
           </p>
         </div><article :for={receipt <- @history} class="transfer-history-row">
@@ -1781,10 +1781,10 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     |> Enum.sort_by(&elem(&1, 0))
   end
 
-  defp dependency_icon(kind) when kind in ~w(image gallery gallery_object), do: "hero-photo"
-  defp dependency_icon("video"), do: "hero-film"
-  defp dependency_icon(kind) when kind in ~w(module module_set table_template container palette), do: "hero-cube"
-  defp dependency_icon(_), do: "hero-document-text"
+  defp dependency_icon(kind) when kind in ~w(image gallery gallery_object), do: "image"
+  defp dependency_icon("video"), do: "film"
+  defp dependency_icon(kind) when kind in ~w(module module_set table_template container palette), do: "box"
+  defp dependency_icon(_), do: "file-text"
 
   defp export_dependency_status(bundle, dep) do
     cond do

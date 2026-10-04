@@ -16,6 +16,8 @@ defmodule Brando.Content.TableTemplate do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
+  content_icon "table"
+
   @type t :: %__MODULE__{}
 
   trait :creator

@@ -187,6 +187,9 @@ defmodule E2EFixtureController do
         vars: [%Brando.Content.Var{key: "headline", label: %{"en" => "Headline", "no" => "Overskrift"}, type: :string}]
       })
 
+    # Inserted past the context, so drop the module list an earlier test cached.
+    Brando.Cache.Query.evict_schema(Brando.Content.Module)
+
     block = fn source, headline, parent ->
       params = %{
         "uid" => Brando.Utils.generate_uid(),

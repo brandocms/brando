@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             <span class="environment-eyebrow">{gettext("Provision")}</span>
             <h2>{gettext("Create environment")}</h2>
             <div class="alert environment-hint">
-              <.icon name="hero-information-circle" />
+              <.icon name="info" />
               <span>{gettext("Creates an empty schema and runs all application tenant migrations.")}</span>
             </div>
             <form id="create-environment-form" phx-submit="create_environment">
@@ -197,7 +197,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             <span class="environment-eyebrow">{gettext("Replace content")}</span>
             <h2>{gettext("Copy now")}</h2>
             <div class="alert environment-hint">
-              <.icon name="hero-information-circle" />
+              <.icon name="info" />
               <span>{gettext("Archives the target, then replaces all of its database content from the source.")}</span>
             </div>
             <form id="copy-environment-form" phx-submit="queue_copy">
@@ -267,7 +267,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           <span class="environment-eyebrow">{gettext("Queue")}</span>
           <h2>{gettext("Pending operations")}</h2>
           <div :if={@jobs == []} class="environment-empty">
-            <span class="environment-empty__icon"><.icon name="hero-clock" /></span>
+            <span class="environment-empty__icon"><.icon name="clock" /></span>
             <p>{gettext("No copy or live-switch operations are pending.")}</p>
           </div>
           <div :if={@jobs != []} class="environment-table-wrap">
@@ -307,14 +307,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           <span class="environment-eyebrow">{gettext("History")}</span>
           <h2>{gettext("Operation log")}</h2>
           <div class="alert environment-hint">
-            <.icon name="hero-information-circle" />
+            <.icon name="info" />
             <span>
               {gettext("Immutable record of every lifecycle operation. Notes added when scheduling are recorded here.")}
             </span>
           </div>
 
           <div :if={@operation_logs == []} class="environment-empty">
-            <span class="environment-empty__icon"><.icon name="hero-list-bullet" /></span>
+            <span class="environment-empty__icon"><.icon name="list" /></span>
             <p>{gettext("No operations have been recorded for this site.")}</p>
           </div>
 
@@ -368,7 +368,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             <div>
               <h2>{gettext("Recovery archives")}</h2>
               <div class="alert environment-hint">
-                <.icon name="hero-information-circle" />
+                <.icon name="info" />
                 <span>{gettext("Archives live in the same database and do not replace external backups.")}</span>
               </div>
             </div>
@@ -397,7 +397,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             </div>
           </header>
           <div :if={@archives == []} class="environment-empty">
-            <span class="environment-empty__icon"><.icon name="hero-archive-box" /></span>
+            <span class="environment-empty__icon"><.icon name="archive" /></span>
             <p>{gettext("No recovery archives exist for this site.")}</p>
           </div>
           <ul :if={@archives != []} class="environment-archives">

@@ -5,7 +5,7 @@ defmodule E2eProjectAdmin.Prices.PriceCategoryListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
+    <Content.header icon={@page_icon}
       title={gettext("Price categories")}
       subtitle={gettext("Overview")}>
       <.link navigate={@admin_create_url} class="primary">

@@ -131,7 +131,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
       <Content.modal
         title={gettext("Edit link")}
         subtitle={if @draft["text"] == "", do: gettext("Choose a destination and link text"), else: @draft["text"]}
-        icon="hero-link"
+        icon="link"
         layout="picker"
         id="tiptap-link-dialog"
         show={@show}
@@ -154,7 +154,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
                 phx-click="set_link_type"
                 phx-value-type="url"
                 phx-target={@myself}
-              ><.icon name="hero-globe-alt" /><span>{gettext("URL")}</span></button>
+              ><.icon name="globe" /><span>{gettext("URL")}</span></button>
               <button
                 type="button"
                 class={@link_type == :identifier && "active"}
@@ -162,7 +162,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
                 phx-click="set_link_type"
                 phx-value-type="identifier"
                 phx-target={@myself}
-              ><.icon name="hero-document-text" /><span>{gettext("Content")}</span></button>
+              ><.icon name="file-text" /><span>{gettext("Content")}</span></button>
               <button
                 type="button"
                 class={@link_type == :anchor && "active"}
@@ -170,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
                 phx-click="set_link_type"
                 phx-value-type="anchor"
                 phx-target={@myself}
-              ><.icon name="hero-hashtag" /><span>{gettext("Page anchor")}</span></button>
+              ><.icon name="hash" /><span>{gettext("Page anchor")}</span></button>
             </div>
           </div>
           <p :if={@unavailable_destination} class="tiptap-link-warning" role="status">

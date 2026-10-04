@@ -4,13 +4,14 @@ defmodule BrandoAdmin.Components.Workspace do
 
   attr :title, :string, required: true
   attr :subtitle, :string, default: nil
+  attr :icon, :string, default: nil, doc: "a Lucide icon name, usually the blueprint's (`@page_icon`)"
   slot :inner_block
 
   def header(assigns) do
     ~H"""
     <header class="workspace-heading">
       <div>
-        <h1>{@title}</h1>
+        <h1><.icon :if={@icon} name={@icon} class="workspace-heading-icon" />{@title}</h1>
         <p :if={@subtitle}>{@subtitle}</p>
       </div>
       <div :if={@inner_block != []} class="workspace-heading-actions">

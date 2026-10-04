@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Content.ContainerListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Containers")} subtitle={gettext("Overview")}>
+    <Content.header icon={@page_icon} title={gettext("Containers")} subtitle={gettext("Overview")}>
       <.link
         :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
         navigate="/admin/config/content/containers/create"

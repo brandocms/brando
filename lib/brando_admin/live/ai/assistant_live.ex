@@ -158,7 +158,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <div class="assistant-workspace is-shared" id="assistant">
       <header class="assistant-header">
         <div class="assistant-heading">
-          <span class="assistant-mark" aria-hidden="true"><.icon name="hero-eye" /></span>
+          <span class="assistant-mark" aria-hidden="true"><.icon name="eye" /></span>
           <div>
             <h1>{gettext("Proposal for review")}</h1>
             <p>
@@ -193,7 +193,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <div class="assistant-workspace" id="assistant">
       <header class="assistant-header">
         <div class="assistant-heading">
-          <span class="assistant-mark" aria-hidden="true"><.icon name="hero-sparkles" /></span>
+          <span class="assistant-mark" aria-hidden="true"><.icon name="sparkles" /></span>
           <div>
             <h1>{gettext("Assistant")}</h1>
             <p>{gettext("Create and edit content across entries. Nothing changes until you apply it.")}</p>
@@ -201,7 +201,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </div>
         <div class="assistant-header-actions">
           <span class="assistant-scope">
-            <.icon name="hero-globe-alt" />{@scope_label}<span aria-hidden="true">·</span>{language_label(
+            <.icon name="globe" />{@scope_label}<span aria-hidden="true">·</span>{language_label(
               @conversation || (@target && @target["language"])
             )}
           </span>
@@ -213,7 +213,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
               aria-expanded={to_string(@show_history)}
               aria-controls="assistant-history-list"
             >
-              <.icon name="hero-clock" />{gettext("Recent conversations")}
+              <.icon name="clock" />{gettext("Recent conversations")}
             </button>
             <ul :if={@show_history} id="assistant-history-list" class="assistant-history-list">
               <li :if={@conversations == []} class="assistant-history-empty">{gettext("No conversations yet")}</li>
@@ -229,14 +229,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
             </ul>
           </div>
           <.link patch="/admin/assistant" class="assistant-button">
-            <.icon name="hero-plus" />{gettext("New conversation")}
+            <.icon name="plus" />{gettext("New conversation")}
           </.link>
         </div>
       </header>
 
       <details :if={@guidance != [] or @configurable?} class="assistant-guidance" id="assistant-guidance">
         <summary>
-          <.icon name="hero-book-open" />
+          <.icon name="book-open" />
           <span :if={@guidance != []}>{gettext("Site guidance in use")}</span>
           <span :if={@guidance == []}>{gettext("No site guidance")}</span>
         </summary>
@@ -330,7 +330,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                   disabled={!@available?}
                   title={gettext("Upload images or videos")}
                 >
-                  <.icon name="hero-arrow-up-tray" /><span class="visually-hidden">{gettext("Upload")}</span>
+                  <.icon name="upload" /><span class="visually-hidden">{gettext("Upload")}</span>
                 </button>
                 <input
                   type="file"
@@ -347,7 +347,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 disabled={!@available?}
                 title={gettext("Attach images from the media library")}
               >
-                <.icon name="hero-photo" /><span class="visually-hidden">{gettext("Images")}</span>
+                <.icon name="image" /><span class="visually-hidden">{gettext("Images")}</span>
               </button>
               <button
                 type="button"
@@ -356,7 +356,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 disabled={!@available?}
                 title={gettext("Attach videos from the media library")}
               >
-                <.icon name="hero-film" /><span class="visually-hidden">{gettext("Videos")}</span>
+                <.icon name="film" /><span class="visually-hidden">{gettext("Videos")}</span>
               </button>
               <span :if={attached_count(@conversation) > 0} class="assistant-attached-count">
                 {ngettext("%{count} attached", "%{count} attached", attached_count(@conversation))}
@@ -367,7 +367,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 disabled={!@available? or running?(@run)}
                 aria-label={gettext("Send")}
               >
-                <.icon name="hero-arrow-up" />
+                <.icon name="arrow-up" />
               </button>
             </div>
           </form>
@@ -413,7 +413,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     ~H"""
     <section class={["assistant-request", @item.open? && "is-open"]} aria-label={gettext("The assistant asks for media")}>
       <header>
-        <.icon name={if @item.kind == "video", do: "hero-film", else: "hero-photo"} />
+        <.icon name={if @item.kind == "video", do: "film", else: "image"} />
         <span>
           {if @item.kind == "video",
             do: gettext("The assistant asks for videos"),
@@ -449,7 +449,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         {if attached(@aliases, @item.kind) == 0,
           do: gettext("Pick some above, or choose another way"),
           else: ngettext("Use the %{count} I attached", "Use the %{count} I attached", attached(@aliases, @item.kind))}
-        <.icon :if={attached(@aliases, @item.kind) > 0} name="hero-arrow-right" />
+        <.icon :if={attached(@aliases, @item.kind) > 0} name="arrow-right" />
       </button>
       <div :if={@item.open?} class="assistant-request-other">
         <span>{gettext("Or")}</span>
@@ -458,14 +458,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
           phx-click={JS.push("browse_library", value: %{kind: @item.kind}) |> toggle_drawer("##{@item.kind}-picker")}
           disabled={!@available?}
         >
-          <.icon name="hero-rectangle-stack" />{gettext("Browse the library")}
+          <.icon name="layers" />{gettext("Browse the library")}
         </button>
         <button
           type="button"
           phx-click={JS.dispatch("click", to: "#assistant-upload .upload-trigger")}
           disabled={!@available?}
         >
-          <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+          <.icon name="upload" />{gettext("Upload")}
         </button>
         <button
           type="button"
@@ -473,7 +473,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           phx-value-message={gettext("Choose suitable ones from the library yourself.")}
           disabled={!@available?}
         >
-          <.icon name="hero-sparkles" />{gettext("Let the assistant choose")}
+          <.icon name="sparkles" />{gettext("Let the assistant choose")}
         </button>
       </div>
     </section>
@@ -493,7 +493,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     ~H"""
     <ul class="assistant-steps">
       <li :for={step <- @item.steps}>
-        <.icon name="hero-check" />
+        <.icon name="check" />
         <span><.step_part :for={part <- step} part={part} /></span>
       </li>
     </ul>
@@ -503,7 +503,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp message(assigns) do
     ~H"""
     <div class="assistant-message is-assistant">
-      <span class="assistant-author"><.icon name="hero-sparkles" />{gettext("Assistant")}</span>
+      <span class="assistant-author"><.icon name="sparkles" />{gettext("Assistant")}</span>
       <div class="assistant-text">{markdown(@item.content)}</div>
     </div>
     """
@@ -588,7 +588,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         >
           <.thumb media={@media} kind={item["kind"]} id={item["id"]} label={item["label"]} />
           <span :if={@used && used?(@used, item)} class="assistant-used" title={gettext("Used in the proposal")}>
-            <.icon name="hero-check" />
+            <.icon name="check" />
           </span>
           <span class="assistant-alias">{item["alias"]}</span>
           <span :if={!item["id"]} class="assistant-attachment-status">{gettext("Uploading…")}</span>
@@ -599,7 +599,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             phx-value-alias={item["alias"]}
             aria-label={gettext("Remove %{alias}", alias: item["alias"])}
           >
-            <.icon name="hero-x-mark" />
+            <.icon name="x" />
           </button>
         </li>
       </ul>
@@ -622,7 +622,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <span class={["assistant-thumb", "is-#{@kind}"]}>
       <img :if={@asset && @asset.url} src={@asset.url} alt={@label || ""} loading="lazy" />
       <.icon :if={!(@asset && @asset.url)} name={thumb_icon(@kind)} />
-      <span :if={to_string(@kind) == "video"} class="assistant-play" aria-hidden="true"><.icon name="hero-play" /></span>
+      <span :if={to_string(@kind) == "video"} class="assistant-play" aria-hidden="true"><.icon name="play" /></span>
     </span>
     """
   end
@@ -645,7 +645,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp review(%{proposal: nil} = assigns) do
     ~H"""
     <div class="assistant-empty">
-      <span class="assistant-empty-mark" aria-hidden="true"><.icon name="hero-document-magnifying-glass" /></span>
+      <span class="assistant-empty-mark" aria-hidden="true"><.icon name="file-search" /></span>
       <h2>{gettext("No proposal yet")}</h2>
       <p>
         {gettext(
@@ -686,7 +686,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </p>
         <div :if={!@shared and !@preview and @under_review?} class="assistant-share">
           <button :if={!@review_link and !@share_choice} type="button" class="assistant-button" phx-click="share_review">
-            <.icon name="hero-user-plus" />{gettext("Share for review")}
+            <.icon name="user-plus" />{gettext("Share for review")}
           </button>
           <form :if={@share_choice} class="assistant-share-choice" phx-submit="share_review">
             <fieldset>
@@ -699,7 +699,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             </fieldset>
             <div>
               <button type="submit" class="assistant-button">
-                <.icon name="hero-link" />{gettext("Create link")}
+                <.icon name="link" />{gettext("Create link")}
               </button>
               <button type="button" class="assistant-quiet-button" phx-click="cancel_share">{gettext("Cancel")}</button>
             </div>
@@ -739,7 +739,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           phx-click="undo"
           data-confirm={gettext("Undo the proposal? Each entry goes back to how it was before, and new entries are deleted.")}
         >
-          <.icon name="hero-arrow-uturn-left" />{gettext("Undo")}
+          <.icon name="undo-2" />{gettext("Undo")}
         </button>
         <p :if={@proposal.status == "undone"}>{gettext("Undone: the entries are back to how they were.")}</p>
       </div>
@@ -785,12 +785,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
               phx-click="preview"
               phx-value-key={entry.key}
             >
-              <.icon name="hero-eye" />{gettext("Preview page")}
+              <.icon name="eye" />{gettext("Preview page")}
             </button>
 
             <div :if={entry.placeholders != []} class="assistant-placeholders">
               <strong>
-                <.icon name="hero-pencil-square" />
+                <.icon name="square-pen" />
                 {ngettext(
                   "%{count} place needs your input",
                   "%{count} places need your input",
@@ -820,13 +820,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
                   phx-value-subject={change_subject(change)}
                   title={gettext("Leave this change out of the proposal")}
                 >
-                  <.icon name="hero-x-mark" /><span>{gettext("Leave out")}</span>
+                  <.icon name="x" /><span>{gettext("Leave out")}</span>
                 </button>
               </li>
             </ul>
 
             <ul :if={entry.problems != []} class="assistant-problems">
-              <li :for={problem <- entry.problems}><.icon name="hero-exclamation-triangle" />{problem.message}</li>
+              <li :for={problem <- entry.problems}><.icon name="triangle-alert" />{problem.message}</li>
             </ul>
 
             <div :if={(entry[:languages] || []) != []} class="assistant-languages">
@@ -852,8 +852,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
           </div>
 
           <footer>
-            <span :if={entry.live?} class="assistant-live"><.icon name="hero-globe-alt" />{gettext("Live page")}</span>
-            <span :if={entry.action == :create} class="assistant-draft"><.icon name="hero-lock-closed" />{gettext("New draft")}</span>
+            <span :if={entry.live?} class="assistant-live"><.icon name="globe" />{gettext("Live page")}</span>
+            <span :if={entry.action == :create} class="assistant-draft"><.icon name="lock" />{gettext("New draft")}</span>
             <span :if={entry.action == :update and !entry.live?} class="assistant-draft">{gettext("Not published")}</span>
           </footer>
         </article>
@@ -880,7 +880,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             disabled={@problems? or @applying}
             phx-disable-with={gettext("Applying…")}
           >
-            {apply_label(@entry_changes, @live)}<.icon name="hero-arrow-right" />
+            {apply_label(@entry_changes, @live)}<.icon name="arrow-right" />
           </button>
         </div>
       </div>
@@ -901,7 +901,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <section class="assistant-preview" aria-labelledby="assistant-preview-title">
       <div class="assistant-preview-head">
         <button type="button" class="assistant-link-button assistant-back" phx-click="close_preview">
-          <.icon name="hero-arrow-left" />{gettext("All changes")}
+          <.icon name="arrow-left" />{gettext("All changes")}
         </button>
         <h3 id="assistant-preview-title">{gettext("Page preview")}</h3>
         <p>{gettext("The proposed content in the site's own templates. Nothing is saved.")}</p>
@@ -956,8 +956,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <button
               :for={
                 {value, label, icon} <- [
-                  {"desktop", gettext("Desktop"), "hero-computer-desktop"},
-                  {"mobile", gettext("Mobile"), "hero-device-phone-mobile"}
+                  {"desktop", gettext("Desktop"), "monitor"},
+                  {"mobile", gettext("Mobile"), "smartphone"}
                 ]
               }
               type="button"
@@ -984,7 +984,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <div class="assistant-frame-bar">
           <span class="assistant-frame-dots" aria-hidden="true"><i></i><i></i><i></i></span>
           <span class="assistant-frame-url">
-            <.icon name="hero-lock-closed" />{frame_url(@entry)}
+            <.icon name="lock" />{frame_url(@entry)}
           </span>
           <span class={["assistant-frame-version", @preview.version == "proposed" && "is-proposed"]}>
             {if @preview.version == "before", do: gettext("Saved version"), else: gettext("Proposed")}
@@ -996,7 +996,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             target="_blank"
             rel="noopener"
           >
-            <.icon name="hero-arrow-top-right-on-square" />{gettext("Open in a new tab")}
+            <.icon name="external-link" />{gettext("Open in a new tab")}
           </a>
           <button
             :if={@preview.version == "proposed" and match?({:ok, _}, @preview.frame)}
@@ -1004,7 +1004,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             class="assistant-frame-action"
             phx-click="share_page"
           >
-            <.icon name="hero-link" />{gettext("Share a link")}
+            <.icon name="link" />{gettext("Share a link")}
           </button>
         </div>
         <div :if={@share_url} class="assistant-share-link">
@@ -1023,7 +1023,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
       <ul :if={@entry} class="assistant-preview-summary">
         <li :for={change <- @entry.changes}>
-          <.icon name="hero-check" />
+          <.icon name="check" />
           <div><.change change={change} aliases={@aliases} /></div>
         </li>
       </ul>
@@ -1059,7 +1059,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp frame(%{preview: %{frame: :not_created}} = assigns) do
     ~H"""
     <div class="assistant-frame-state">
-      <.icon name="hero-document-plus" />
+      <.icon name="file-plus" />
       <p>{gettext("This page has not been created yet. Switch to Proposed to see it.")}</p>
     </div>
     """
@@ -1068,7 +1068,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp frame(%{preview: %{frame: :no_preview_target}} = assigns) do
     ~H"""
     <div class="assistant-frame-state">
-      <.icon name="hero-eye-slash" />
+      <.icon name="eye-off" />
       <p>{gettext("Page preview is not configured for this content type. Review the changes in the entry card.")}</p>
     </div>
     """
@@ -1079,7 +1079,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     ~H"""
     <div class="assistant-frame-state is-error" role="alert">
-      <.icon name="hero-exclamation-triangle" />
+      <.icon name="triangle-alert" />
       <p>{gettext("The page could not be rendered: %{message}", message: @message)}</p>
       <button type="button" class="assistant-button" phx-click="preview" phx-value-key={@preview.key}>
         {gettext("Try again")}
@@ -1701,9 +1701,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp thumb_icon(kind) do
     case to_string(kind) do
-      "video" -> "hero-film"
-      "file" -> "hero-document"
-      _ -> "hero-photo"
+      "video" -> "film"
+      "file" -> "file"
+      _ -> "image"
     end
   end
 

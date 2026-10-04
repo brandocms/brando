@@ -7,7 +7,7 @@ Each style entry has:
 - `element` (required): HTML element to target (`p`, `h1`-`h6`, `span`)
 - `class` (required): CSS class to apply
 - `label` (optional): UI label in the editor toolbar
-- `icon` (optional): icon class for toolbar button rendering
+- `icon` (optional): a [Lucide](https://lucide.dev/icons) icon name shown next to the style in the toolbar menu. Legacy `hero-*` names are translated (see `Brando.Icons.resolve/1`); unknown names are dropped.
 
 Styles are configured per-ref in the Module form under the text block's "Styles" section.
 
@@ -28,7 +28,7 @@ Styles are configured per-ref in the Module form under the text block's "Styles"
 When creating new text refs in Module Form, Brando initializes `styles` with:
 
 ```elixir
-[%Style{element: "p", class: "lede", label: "Lede", icon: "hero-circle-stack"}]
+[%Style{element: "p", class: "lede", label: "Lede", icon: "database"}]
 ```
 
 This gives editors a sensible default variant without making `"paragraph"` a classed style.

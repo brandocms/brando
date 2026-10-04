@@ -175,7 +175,7 @@ defmodule BrandoAdmin.Components.FilePicker do
         wide
         light
         workspace
-        icon="hero-document"
+        icon="file"
         subtitle={gettext("Select a file from your library.")}
       >
         <:info>
@@ -221,7 +221,7 @@ defmodule BrandoAdmin.Components.FilePicker do
 
           <div class="file-picker list" id={"file-picker-drawer-#{@id}"}>
             <div :if={@file_count == 0} class="image-picker-empty">
-              <.icon name="hero-document" />
+              <.icon name="file" />
               <h4>{gettext("No files in this folder")}</h4>
               <p>{gettext("Choose another folder or upload a file from its context")}</p>
             </div>
@@ -264,10 +264,10 @@ defmodule BrandoAdmin.Components.FilePicker do
       phx-value-selected={to_string(@selected)}
     >
       <span class="file-picker__selected-indicator" aria-hidden="true">
-        <.icon name="hero-check-mini" />
+        <.icon name="check" />
       </span>
       <span class="file-picker__icon" aria-hidden="true">
-        <.icon name="hero-document" />
+        <.icon name="file" />
       </span>
       <div class="file-picker__info">
         <div class="file-picker__name">

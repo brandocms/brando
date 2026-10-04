@@ -10,6 +10,7 @@
   import { isButtonLink } from './extensions/Link'
   import { defaultFootnoteLabels, renumberFootnotes } from './extensions/Footnote'
   import HTMLInputParser from './extensions/PasteCleaner/HTMLInputParser'
+  import Icon from '../Icon/Icon.svelte'
   import { captureRange, mapRange } from './selection'
   import { proposalExtension, proposalKey } from './aiProposal'
 
@@ -205,32 +206,32 @@
   {#if expanded}
     <div class="tiptap-expanded-header">
       <div class="tiptap-expanded-heading">
-        <span class="tiptap-expanded-icon" aria-hidden="true"><span class="hero-document-text"></span></span>
+        <span class="tiptap-expanded-icon" aria-hidden="true"><Icon name="file-text" /></span>
         <div class="tiptap-expanded-heading-copy"><h2>{accessibility['aria-label'] || labels.toolbar}</h2><p>{labels.expandedEditing}</p></div>
       </div>
-      <button type="button" class="tiptap-expanded-done" onclick={toggleExpanded}><span class="hero-arrows-pointing-in" aria-hidden="true"></span>{labels.collapse}</button>
+      <button type="button" class="tiptap-expanded-done" onclick={toggleExpanded}><Icon name="minimize-2" />{labels.collapse}</button>
     </div>
   {/if}
   {#if editor}
     <div bind:this={toolbar} class="tiptap-menu" role="toolbar" tabindex="-1" aria-label={labels.toolbar} onkeydown={toolbarKeys} onfocusin={toolbarFocus} onpointerdowncapture={() => { pressedMenu = currentMenu }} onclick={() => { pressedMenu = '' }}>
-      <button type="button" class="menu-item tiptap-type-control" class:tiptap-type-pilcrow={typeLabel === '¶'} aria-label={labels.styles} title={labels.styles} aria-expanded={currentMenu === 'type'} aria-controls={`${id}-types`} disabled={!active.editable} onclick={event => showMenu(typeMenu, event.currentTarget, 'type')}><span>{typeLabel}</span><span class="hero-chevron-down-mini" aria-hidden="true"></span></button>
-      {#if has('bold')}<button type="button" class="menu-item" aria-label={labels.bold} title={`${labels.bold} · ⌘/Ctrl B`} aria-pressed={active.bold} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleBold')}><span class="tiptap-bold" aria-hidden="true"></span></button>{/if}
-      {#if has('italic')}<button type="button" class="menu-item" aria-label={labels.italic} title={`${labels.italic} · ⌘/Ctrl I`} aria-pressed={active.italic} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleItalic')}><span class="tiptap-italic" aria-hidden="true"></span></button>{/if}
+      <button type="button" class="menu-item tiptap-type-control" class:tiptap-type-pilcrow={typeLabel === '¶'} aria-label={labels.styles} title={labels.styles} aria-expanded={currentMenu === 'type'} aria-controls={`${id}-types`} disabled={!active.editable} onclick={event => showMenu(typeMenu, event.currentTarget, 'type')}><span>{typeLabel}</span><Icon name="chevron-down" /></button>
+      {#if has('bold')}<button type="button" class="menu-item" aria-label={labels.bold} title={`${labels.bold} · ⌘/Ctrl B`} aria-pressed={active.bold} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleBold')}><Icon name="bold" /></button>{/if}
+      {#if has('italic')}<button type="button" class="menu-item" aria-label={labels.italic} title={`${labels.italic} · ⌘/Ctrl I`} aria-pressed={active.italic} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleItalic')}><Icon name="italic" /></button>{/if}
       {#if has('list') || has('orderedList')}
         <div class="menu-item-group">
-          <button type="button" class="menu-item" aria-label={active.orderedList || !has('list') ? labels.orderedList : labels.list} aria-pressed={active.bulletList || active.orderedList} disabled={!active.editable} tabindex="-1" onclick={() => command(active.orderedList || !has('list') ? 'toggleOrderedList' : 'toggleBulletList')}><span aria-hidden="true" class={active.orderedList ? 'tiptap-list-number' : 'hero-list-bullet'}>{active.orderedList ? '1.' : ''}</span></button>
-          <button type="button" class="menu-item tiptap-disclosure" aria-label={labels.listTypes} title={labels.listTypes} aria-expanded={currentMenu === 'list'} aria-controls={`${id}-lists`} tabindex="-1" disabled={!active.editable} onclick={event => showMenu(listMenu, event.currentTarget, 'list')}><span class="hero-chevron-down-mini" aria-hidden="true"></span></button>
+          <button type="button" class="menu-item" aria-label={active.orderedList || !has('list') ? labels.orderedList : labels.list} aria-pressed={active.bulletList || active.orderedList} disabled={!active.editable} tabindex="-1" onclick={() => command(active.orderedList || !has('list') ? 'toggleOrderedList' : 'toggleBulletList')}>{#if active.orderedList}<span aria-hidden="true" class="tiptap-list-number">1.</span>{:else}<Icon name="list" />{/if}</button>
+          <button type="button" class="menu-item tiptap-disclosure" aria-label={labels.listTypes} title={labels.listTypes} aria-expanded={currentMenu === 'list'} aria-controls={`${id}-lists`} tabindex="-1" disabled={!active.editable} onclick={event => showMenu(listMenu, event.currentTarget, 'list')}><Icon name="chevron-down" /></button>
         </div>
       {/if}
-      {#if has('link')}<button type="button" class="menu-item" aria-label={labels.link} title={labels.link} aria-pressed={active.link && !isButtonLink(active.linkAttrs)} disabled={!active.editable} tabindex="-1" onclick={() => openLink()}><span class="hero-link" aria-hidden="true"></span></button>{/if}
-      {#if has('button')}<button type="button" class="menu-item" aria-label={labels.button} title={labels.button} aria-pressed={isButtonLink(active.linkAttrs)} disabled={!active.editable} tabindex="-1" onclick={() => openLink(true)}><span class="hero-squares-plus" aria-hidden="true"></span></button>{/if}
+      {#if has('link')}<button type="button" class="menu-item" aria-label={labels.link} title={labels.link} aria-pressed={active.link && !isButtonLink(active.linkAttrs)} disabled={!active.editable} tabindex="-1" onclick={() => openLink()}><Icon name="link" /></button>{/if}
+      {#if has('button')}<button type="button" class="menu-item" aria-label={labels.button} title={labels.button} aria-pressed={isButtonLink(active.linkAttrs)} disabled={!active.editable} tabindex="-1" onclick={() => openLink(true)}><Icon name="grid-2x2-plus" /></button>{/if}
       {#if footnotes}<button type="button" class="menu-item tiptap-add-footnote" aria-label={footnoteLabels.add} title={footnoteLabels.add} disabled={!active.editable} tabindex="-1" onclick={() => onOpenFootnote?.(null)}><span aria-hidden="true">a¹</span></button>{/if}
-      {#if has('jumpAnchor')}<button type="button" class="menu-item" aria-label={labels.anchor} title={labels.anchor} aria-pressed={active.jumpAnchor} disabled={!active.editable} tabindex="-1" onclick={openAnchor}><span class="tiptap-anchor" aria-hidden="true"></span></button>{/if}
-      {#if more.length || ['horizontalRule', 'align', 'color', 'unsetMarks'].some(has)}<button type="button" class="menu-item" aria-label={labels.more} title={labels.more} aria-expanded={currentMenu === 'more'} aria-controls={`${id}-more`} disabled={!active.editable} tabindex="-1" onclick={event => showMenu(moreMenu, event.currentTarget, 'more')}><span class="hero-ellipsis-horizontal" aria-hidden="true"></span></button>{/if}
-      <button type="button" class="menu-item tiptap-undo" aria-label={labels.undo} title={`${labels.undo} · ⌘/Ctrl Z`} disabled={!active.editable || !active.canUndo} tabindex="-1" onclick={() => command('undo')}><span class="hero-arrow-uturn-left" aria-hidden="true"></span></button>
-      <button type="button" class="menu-item" aria-label={labels.redo} title={`${labels.redo} · ⌘/Ctrl ⇧ Z`} disabled={!active.editable || !active.canRedo} tabindex="-1" onclick={() => command('redo')}><span class="hero-arrow-uturn-right" aria-hidden="true"></span></button>
-      {#if aiEnabled}<button type="button" class="menu-item tiptap-ai-trigger" data-ai-trigger aria-label={labels.ai} title={labels.ai} disabled={!active.editable} tabindex="-1" onclick={openAi}><span class="hero-sparkles" aria-hidden="true"></span></button>{/if}
-      {#if !expanded}<button type="button" class="menu-item" aria-label={labels.expand} title={labels.expand} tabindex={active.editable ? -1 : 0} onclick={toggleExpanded}><span class="hero-arrows-pointing-out" aria-hidden="true"></span></button>{/if}
+      {#if has('jumpAnchor')}<button type="button" class="menu-item" aria-label={labels.anchor} title={labels.anchor} aria-pressed={active.jumpAnchor} disabled={!active.editable} tabindex="-1" onclick={openAnchor}><Icon name="anchor" /></button>{/if}
+      {#if more.length || ['horizontalRule', 'align', 'color', 'unsetMarks'].some(has)}<button type="button" class="menu-item" aria-label={labels.more} title={labels.more} aria-expanded={currentMenu === 'more'} aria-controls={`${id}-more`} disabled={!active.editable} tabindex="-1" onclick={event => showMenu(moreMenu, event.currentTarget, 'more')}><Icon name="ellipsis" /></button>{/if}
+      <button type="button" class="menu-item tiptap-undo" aria-label={labels.undo} title={`${labels.undo} · ⌘/Ctrl Z`} disabled={!active.editable || !active.canUndo} tabindex="-1" onclick={() => command('undo')}><Icon name="undo-2" /></button>
+      <button type="button" class="menu-item" aria-label={labels.redo} title={`${labels.redo} · ⌘/Ctrl ⇧ Z`} disabled={!active.editable || !active.canRedo} tabindex="-1" onclick={() => command('redo')}><Icon name="redo-2" /></button>
+      {#if aiEnabled}<button type="button" class="menu-item tiptap-ai-trigger" data-ai-trigger aria-label={labels.ai} title={labels.ai} disabled={!active.editable} tabindex="-1" onclick={openAi}><Icon name="sparkles" /></button>{/if}
+      {#if !expanded}<button type="button" class="menu-item" aria-label={labels.expand} title={labels.expand} tabindex={active.editable ? -1 : 0} onclick={toggleExpanded}><Icon name="maximize-2" /></button>{/if}
     </div>
   {/if}
   <div class="tiptap-writing-area"><div bind:this={element} class="tiptap-document"></div></div>
@@ -242,7 +243,7 @@
   <div bind:this={typeMenu} id={`${id}-types`} popover="auto" class="tiptap-popover style-dropdown" role="menu" tabindex="-1" aria-label={labels.styles} onkeydown={menuKeys}>
     <button type="button" role="menuitem" onclick={() => setParagraph()}>{labels.paragraph}</button>
     {#each [1, 2, 3, 4, 5, 6].filter(level => has(`h${level}`)) as level}<button type="button" role="menuitem" class:active={active.level === level} onclick={() => setParagraph(level)}>{labels.heading.replace('%{level}', level)}</button>{/each}
-    {#each parsedStyles as style (style.key)}<button type="button" role="menuitemcheckbox" aria-checked={!!active.styles?.[style.key]} class:active={active.styles?.[style.key]} onclick={() => applyStyle(style)}>{#if style.icon}<span class={style.icon} aria-hidden="true"></span>{/if}{style.label}</button>{/each}
+    {#each parsedStyles as style (style.key)}<button type="button" role="menuitemcheckbox" aria-checked={!!active.styles?.[style.key]} class:active={active.styles?.[style.key]} onclick={() => applyStyle(style)}>{#if style.icon}<Icon name={style.icon} />{/if}{style.label}</button>{/each}
     {#if parsedStyles.length}<hr /><button type="button" role="menuitem" onclick={resetStyle}>{labels.resetStyle}</button>{/if}
   </div>
   <div bind:this={listMenu} id={`${id}-lists`} popover="auto" class="tiptap-popover" role="menu" tabindex="-1" aria-label={labels.listTypes} onkeydown={menuKeys}>

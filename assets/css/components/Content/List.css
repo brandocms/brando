@@ -46,11 +46,11 @@
     }
 
     &.true [data-icon] {
-      background-color: #475b4f;
+      color: #475b4f;
     }
 
     &.false [data-icon] {
-      background-color: #863f3f;
+      color: #863f3f;
     }
 
     .grid-icon {
@@ -108,7 +108,6 @@
         height: 11px;
         padding: 0;
         border-radius: 0;
-        background-color: currentColor;
       }
 
       &.true .grid-icon {
@@ -151,6 +150,11 @@
     figure {
       @space margin-bottom 1;
       opacity: 0.2;
+
+      [data-icon] {
+        width: 100px;
+        height: 100px;
+      }
     }
   }
 
@@ -787,7 +791,7 @@
         background-color: var(--brando-color-dark);
       }
       [data-icon] {
-        background-color: white;
+        color: white;
       }
     }
   }
@@ -915,7 +919,7 @@
   gap: 8px;
   color: #6d4de3;
 
-  .hero-sparkles {
+  .lucide-sparkles {
     width: 1.2rem;
     height: 1.2rem;
   }
@@ -963,8 +967,8 @@
   justify-content: center;
   flex-shrink: 0;
 
-  .hero-check-circle,
-  .hero-x-circle {
+  .lucide-circle-check,
+  .lucide-circle-x {
     width: 18px;
     height: 18px;
   }
@@ -1045,4 +1049,9 @@
       color: var(--brando-color-peach);
     }
   }
+}
+
+/* Module listings mark modules that draw from a datasource. */
+.listing-datasource-icon {
+  color: blue;
 }

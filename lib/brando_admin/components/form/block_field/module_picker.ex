@@ -61,7 +61,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       >
         <div :if={@show} class="module-picker">
           <div class="module-picker-search">
-            <.icon name="hero-magnifying-glass" />
+            <.icon name="search" />
             <input
               type="text"
               name="q"
@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               phx-target={@myself}
               aria-label={gettext("Clear search")}
             >
-              <.icon name="hero-x-mark" />
+              <.icon name="x" />
             </button>
             <button
               type="button"
@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               phx-click={JS.push("close_modal", target: @myself) |> hide_modal("##{@id}")}
               aria-label={gettext("Close")}
             >
-              <.icon name="hero-x-mark" />
+              <.icon name="x" />
             </button>
           </div>
 
@@ -140,7 +140,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                   phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
                   data-popover={gettext("A section holds other blocks, with its own background and spacing.")}
                 >
-                  <.icon name="hero-window" />
+                  <.icon name="app-window" />
                   {gettext("Container")}
                 </button>
                 <button
@@ -151,7 +151,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                     gettext("A fragment is shared content, edited in one place and shown the same wherever it is inserted.")
                   }
                 >
-                  <.icon name="hero-puzzle-piece" />
+                  <.icon name="puzzle" />
                   {gettext("Fragment")}
                 </button>
               </div>
@@ -462,24 +462,24 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   @doc """
   Returns the hero icon name for a module without its own sketch, chosen
   from what it holds as read from its refs. Namespaces are free text, so
-  they cannot pick one. Falls back to `"hero-cube"`.
+  they cannot pick one. Falls back to `"box"`.
   """
-  def module_icon(%{datasource: true}), do: "hero-queue-list"
-  def module_icon(%{multi: true}), do: "hero-rectangle-stack"
+  def module_icon(%{datasource: true}), do: "list"
+  def module_icon(%{multi: true}), do: "layers"
 
   def module_icon(%{refs: refs}) when is_list(refs) do
     types = Enum.map(refs, &ref_type/1)
 
     cond do
-      "gallery" in types -> "hero-squares-2x2"
-      Enum.any?(types, &(&1 in ~w(picture video media))) -> "hero-photo"
-      "blocks" in types -> "hero-rectangle-group"
-      Enum.any?(types, &(&1 in ~w(text header))) -> "hero-bars-3-bottom-left"
-      true -> "hero-cube"
+      "gallery" in types -> "layout-grid"
+      Enum.any?(types, &(&1 in ~w(picture video media))) -> "image"
+      "blocks" in types -> "group"
+      Enum.any?(types, &(&1 in ~w(text header))) -> "text-align-start"
+      true -> "box"
     end
   end
 
-  def module_icon(_module), do: "hero-cube"
+  def module_icon(_module), do: "box"
 
   defp ref_type(%{data: %{type: type}}) when not is_nil(type), do: to_string(type)
   defp ref_type(_ref), do: nil

@@ -18,6 +18,8 @@ defmodule Brando.Pages.Page do
   alias Brando.JSONLD
   alias Brando.Pages
 
+  content_icon "file-text"
+
   @type t :: %__MODULE__{}
 
   @fragment_module Module.concat(["Brando", "Pages", "Fragment"])
@@ -191,14 +193,14 @@ defmodule Brando.Pages.Page do
       {@entry.title}
       <:before>
         <span :if={@entry.is_homepage} class="listing-home" title={gettext("This page is marked as the homepage.")}>
-          <Brando.HTML.Icon.icon name="hero-home-mini" />
+          <Brando.HTML.Icon.icon name="house" />
         </span>
       </:before>
       <:outside>
         <br />
         <div :if={@entry.has_url} class="badge lowercase no-border">
           <a class="flex-h" href={@url} target="_blank">
-            <Brando.HTML.Icon.icon name="hero-globe-alt" class="s mr-1" />
+            <Brando.HTML.Icon.icon name="globe" class="s mr-1" />
             {@url}
           </a>
         </div>
@@ -215,7 +217,7 @@ defmodule Brando.Pages.Page do
       <:outside>
         <br />
         <div class="badge no-border">
-          <Brando.HTML.Icon.icon name="hero-key" class="mr-1" /> {@entry.parent_key}/{@entry.key}
+          <Brando.HTML.Icon.icon name="key" class="mr-1" /> {@entry.parent_key}/{@entry.key}
         </div>
       </:outside>
     </.update_link>
@@ -239,7 +241,7 @@ defmodule Brando.Pages.Page do
 
         <div class="badge no-border lowercase">
           <a class="flex-h" href={@url} target="_blank">
-            <Brando.HTML.Icon.icon name="hero-globe-alt" class="s mr-1" />
+            <Brando.HTML.Icon.icon name="globe" class="s mr-1" />
             {@url}
           </a>
         </div>

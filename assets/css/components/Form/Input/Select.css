@@ -91,8 +91,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
         color: #626b66;
         display: grid;
         place-items: center;
-        svg { width: 14px; height: 14px; margin: 0; }
-        svg line { stroke: currentColor; }
+        :is(svg, [data-icon]) { width: 14px; height: 14px; margin: 0; }
         &:hover { background: #dce2dc; color: #272b2a; }
         &:focus-visible { outline: 2px solid #254e3f; outline-offset: 2px; }
       }
@@ -422,7 +421,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       margin-bottom: 15px;
       font-weight: 500;
 
-      svg {
+      :is(svg, [data-icon]) {
         margin-right: 15px;
       }
     }
@@ -540,7 +539,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
         display: flex;
       }
 
-      svg {
+      :is(svg, [data-icon]) {
         width: 100%;
         height: 100%;
       }
