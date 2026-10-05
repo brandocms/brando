@@ -166,7 +166,7 @@ defmodule Brando.CDN do
       Brando.Tenant.Job.attach(%{
         file_id: file.id,
         config_target: file.config_target,
-        user_id: user.id,
+        user_id: Brando.Users.job_user_id(user),
         field_full_path: field_full_path
       })
 
@@ -189,7 +189,7 @@ defmodule Brando.CDN do
       dest_key: dest_key,
       image_id: image.id,
       config_target: image.config_target,
-      user_id: user.id,
+      user_id: Brando.Users.job_user_id(user),
       field_full_path: field_full_path
     }
 
@@ -205,7 +205,7 @@ defmodule Brando.CDN do
         dest_key: dest_key,
         image_id: image.id,
         config_target: image.config_target,
-        user_id: user.id,
+        user_id: Brando.Users.job_user_id(user),
         field_full_path: field_full_path
       }
 
@@ -482,6 +482,20 @@ defmodule Brando.CDN do
     bucket = cdn_config.bucket
 
     Brando.CDN.Client.impl().head_object(bucket, object_key, s3_config)
+  end
+
+  @doc """
+  Download an object from the field's bucket, as `{:ok, binary}`.
+  """
+  def get_object(object_key, field_cfg) do
+    s3_config = get_s3_config(field_cfg, as: :keyword_list)
+    bucket = Map.get(field_cfg, :cdn).bucket
+
+    case Brando.CDN.Client.impl().get_object(bucket, object_key, s3_config) do
+      {:ok, %{body: body}} when is_binary(body) -> {:ok, body}
+      {:ok, other} -> {:error, {:unexpected_response, other}}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc """

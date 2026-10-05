@@ -15,7 +15,7 @@ defmodule Brando.Videos.Video do
 
   content_icon "film"
 
-  trait :creator, derived: [:status, :remote_id, :meta, :width, :height, :aspect_ratio, :duration]
+  trait :creator, required: false, derived: [:status, :remote_id, :meta, :width, :height, :aspect_ratio, :duration]
   trait :timestamped
   trait :soft_delete
 

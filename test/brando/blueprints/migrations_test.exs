@@ -706,6 +706,27 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert upgraded.attributes == nil
   end
 
+  test "Brando 0.51 snapshots, written before Blueprints had assets, still decode" do
+    module = Brando.MigrationTest.Project
+
+    # 0.51's snapshot struct had no :assets, :schema or :format_version keys
+    # at all; decoding gives a struct-tagged map without them.
+    legacy = %{
+      __struct__: Snapshot,
+      version: 1,
+      updated_at: DateTime.utc_now(),
+      attributes: Brando.Blueprint.Attributes.__attributes__(module),
+      relations: Brando.Blueprint.Relations.__relations__(module),
+      traits: module.__traits__()
+    }
+
+    write_snapshot(module, 1, legacy)
+    File.mkdir_p!(@test_opts[:migration_path])
+
+    assert %Snapshot{format_version: 3, migrated_from_format: 1, version: 1} =
+             Snapshot.get_latest_snapshot(module, @test_opts)
+  end
+
   test "source-controlled legacy snapshots with retired declaration atoms remain readable" do
     assert %Snapshot{
              format_version: 3,

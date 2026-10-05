@@ -87,6 +87,16 @@ defmodule Brando.Images do
 
       {:status, status}, query ->
         from t in query, where: t.status == ^status
+
+      # Leave out images in hidden folders (`hidden_folder` configs)
+      {:library, true}, query ->
+        from t in query,
+          left_join: f in Brando.Media.Folder,
+          on: f.id == t.folder_id,
+          where: is_nil(f.id) or f.library
+
+      {:library, _}, query ->
+        query
     end
   end
 

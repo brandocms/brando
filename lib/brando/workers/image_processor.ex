@@ -35,7 +35,7 @@ defmodule Brando.Worker.ImageProcessor do
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, _} <- broadcast_status(image, field_full_path, :processing),
          {:ok, _} <- Images.Utils.delete_sized_images(image),
-         {:ok, user} <- Users.get_user(user_id),
+         {:ok, user} <- Users.get_job_user(user_id),
          {:ok, config} <- Images.get_config_for(config_target),
          {:ok, operations} <- Images.Operations.create(image, config, user),
          {:ok, process_map} <- Images.Operations.perform(operations, user, silent: silent?) do

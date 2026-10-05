@@ -6,13 +6,15 @@ defmodule Brando.Uploads do
 
   - `:server` — bytes travel through the `BrandoAdmin.UploadManager` sticky
     LiveView's own `allow_upload` and are stored via
-    `Brando.Upload.handle_upload/4`. Images always; files/video on local
+    `Brando.Upload.handle_upload/4`. Files, videos and images on local
     storage or when the CDN config doesn't opt into direct uploads.
-  - `:direct` (files/videos → S3-compatible storage) — the browser PUTs the bytes
+  - `:direct` (files/videos/images → S3-compatible storage) — the browser PUTs the bytes
     straight to the bucket via a short-lived presigned URL; the server only
     presigns at intake and creates a `File` row (`cdn: true`) — plus its
     wrapping `Video` for video uploads — at finalize, after verifying the
-    object's size and content type. Opt-in per config:
+    object's size and content type. A direct image's original is then fetched
+    back, stored as an `Image` row and processed into its sizes, which are
+    delivered to the bucket like any other image's. Opt-in per config:
     `cdn: %Brando.CDN.Config{enabled: true, direct: true}`. Configs with
     `content_disposition` set stay on `:server` transport (the header can't
     ride an unsigned presigned PUT). Note: direct uploads never produce a
@@ -67,12 +69,16 @@ defmodule Brando.Uploads do
     end
   end
 
-  def initiate(:image, config_target, %{name: name, size: size}, user) do
-    {cfg, _} = resolve_image_config(config_target)
+  def initiate(:image, config_target, %{name: name, size: size} = file_meta, user) do
+    {cfg, resolved_target} = resolve_image_config(config_target)
 
     with :ok <- Brando.Authorization.Media.authorize(user, :image),
          :ok <- validate_intake(:image, name, size, size_limit(cfg)) do
-      {:ok, :server}
+      if direct_image_transport?(cfg) do
+        initiate_direct_asset(with_image_cdn(cfg), resolved_target, file_meta)
+      else
+        {:ok, :server}
+      end
     end
   end
 
@@ -252,9 +258,18 @@ defmodule Brando.Uploads do
     end
   end
 
-  # `:image` is the only other asset type, and images always take the server
-  # transport — so this is the reaper being told about an intent that should
-  # never have been written. Report rather than crash the nightly sweep.
+  defp direct_cdn_config(:image, resolved_target) do
+    {cfg, _} = resolve_image_config(resolved_target)
+
+    case image_cdn_config(cfg) do
+      nil -> {:error, "no image CDN config for #{resolved_target}"}
+      cdn_config -> {:ok, cdn_config}
+    end
+  end
+
+  # Every asset type is handled above, so this is the reaper being told about
+  # an intent that should never have been written. Report rather than crash
+  # the nightly sweep.
   defp direct_cdn_config(asset_type, _resolved_target),
     do: {:error, "#{asset_type} has no client-direct transport"}
 
@@ -314,6 +329,82 @@ defmodule Brando.Uploads do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  def finalize_direct(:image, %{key: key, resolved_target: resolved_target} = params, user) do
+    {cfg, _} = resolve_image_config(resolved_target)
+    cfg = with_image_cdn(cfg)
+    field_cfg = %{cdn: cfg.cdn}
+
+    with true <- direct_image_transport?(cfg),
+         {:ok, object} <- Brando.CDN.head_object(key, field_cfg),
+         :ok <- validate_direct_object(object, params[:filesize], params[:mime_type]),
+         {:ok, body} <- Brando.CDN.get_object(key, field_cfg),
+         {:ok, media_path} <- write_direct_original(key, body),
+         {:ok, image} <- create_direct_image(cfg, media_path, resolved_target, params, user),
+         {:ok, _job} <- Brando.Images.Processing.queue_processing(image, user, [], silent: true) do
+      {:ok, image}
+    else
+      false -> {:error, "Image CDN is not configured for direct uploads"}
+      {:error, :not_found} -> {:error, "Uploaded object not found in bucket (#{key})"}
+      {:error, {:handle_upload_type, message}} -> {:error, message}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # The original lands where a server upload would have put it, so processing
+  # (which reads local files) and delivery (which uploads the original and its
+  # sizes to the same keys) run unchanged. `keep_local_copy: false` removes the
+  # local files again once delivered.
+  defp write_direct_original("media/" <> media_path, body) do
+    path = Path.join(Brando.Tenant.Storage.current_media_root(), media_path)
+
+    with :ok <- File.mkdir_p(Path.dirname(path)),
+         :ok <- File.write(path, body) do
+      {:ok, media_path}
+    end
+  end
+
+  defp write_direct_original(key, _body), do: {:error, "Unexpected object key #{inspect(key)}"}
+
+  defp create_direct_image(cfg, media_path, resolved_target, params, user) do
+    upload = %{
+      cfg: cfg,
+      meta: %{media_path: media_path, config_target: resolved_target, folder_id: params[:folder_id]},
+      upload_entry: %{
+        client_name: params[:title],
+        client_type: params[:mime_type],
+        client_size: params[:filesize]
+      }
+    }
+
+    Brando.Upload.handle_upload_type(upload, user)
+  end
+
+  @doc """
+  True when images for this config upload straight to the bucket: the field's
+  (or the global) image CDN is enabled with direct uploads.
+  """
+  def direct_image_transport?(cfg) do
+    case image_cdn_config(cfg) do
+      %Brando.CDN.Config{enabled: true, direct: true, bucket: bucket}
+      when is_binary(bucket) and bucket != "" ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  defp image_cdn_config(cfg) do
+    case Map.get(cfg, :cdn) do
+      nil -> Brando.CDN.config(Brando.Images) |> normalize_cdn_config()
+      other -> normalize_cdn_config(other)
+    end
+  end
+
+  # Presigning reads `cfg.cdn`; an image config relying on the global image
+  # CDN config gets it filled in, so it is not taken for the files one.
+  defp with_image_cdn(cfg), do: Map.put(cfg, :cdn, image_cdn_config(cfg))
 
   @doc """
   Checks the HEAD response for a directly uploaded object against the size and

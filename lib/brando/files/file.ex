@@ -16,7 +16,7 @@ defmodule Brando.Files.File do
 
   content_icon "file"
 
-  trait :creator, derived: [:cdn]
+  trait :creator, required: false, derived: [:cdn]
   trait :soft_delete
   trait :timestamped
 

@@ -116,10 +116,14 @@ defmodule Brando.Images.AltText do
 
     targets = entry_alt_targets()
 
+    # Images in hidden folders (visitors' uploads) are not the site's to describe
     from i in Image,
+      left_join: f in Brando.Media.Folder,
+      on: f.id == i.folder_id,
       where: ^missing_any,
       where: is_nil(i.deleted_at) and i.status == :processed and not ilike(i.path, "%.svg"),
-      where: is_nil(i.config_target) or i.config_target not in ^targets
+      where: is_nil(i.config_target) or i.config_target not in ^targets,
+      where: is_nil(f.id) or f.library
   end
 
   @doc """

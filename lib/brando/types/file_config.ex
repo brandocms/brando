@@ -69,7 +69,8 @@ defmodule Brando.Type.FileConfig do
           random_filename: boolean(),
           size_limit: pos_integer(),
           slugify_filename: boolean(),
-          upload_path: String.t()
+          upload_path: String.t(),
+          hidden_folder: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -82,7 +83,8 @@ defmodule Brando.Type.FileConfig do
             overwrite: false,
             size_limit: 10_240_000,
             completed_callback: nil,
-            content_disposition: nil
+            content_disposition: nil,
+            hidden_folder: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

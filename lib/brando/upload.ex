@@ -101,7 +101,7 @@ defmodule Brando.Upload do
                status: :ready,
                title: upload.upload_entry.client_name,
                file_id: file.id,
-               folder_id: upload.meta[:folder_id],
+               folder_id: upload_folder_id(upload),
                config_target: upload.meta.config_target
              },
              user
@@ -128,7 +128,7 @@ defmodule Brando.Upload do
       focal: %{x: 50, y: 50},
       sizes: %{},
       status: :processed,
-      folder_id: upload.meta[:folder_id]
+      folder_id: upload_folder_id(upload)
     }
 
     image_params
@@ -164,7 +164,7 @@ defmodule Brando.Upload do
     end
   end
 
-  def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: _cfg}, user) do
+  def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: cfg}, user) do
     media_path = meta.media_path
 
     case media_path |> Images.Utils.media_path() |> Image.open() do
@@ -183,7 +183,7 @@ defmodule Brando.Upload do
           focal: %{x: 50, y: 50},
           sizes: %{},
           status: :unprocessed,
-          folder_id: meta[:folder_id]
+          folder_id: Brando.Media.Folders.upload_folder_id(meta[:folder_id], cfg)
         }
 
         Images.create_image(image_params, user)
@@ -358,7 +358,7 @@ defmodule Brando.Upload do
       filename: extract_filename_from_key(upload.meta.key),
       config_target: upload.meta.config_target,
       cdn: true,
-      folder_id: upload.meta[:folder_id]
+      folder_id: upload_folder_id(upload)
     }
   end
 
@@ -376,11 +376,15 @@ defmodule Brando.Upload do
         filename: upload.meta.filename,
         config_target: upload.meta.config_target,
         cdn: false,
-        folder_id: upload.meta[:folder_id]
+        folder_id: upload_folder_id(upload)
       },
       user
     )
   end
+
+  # The uploader's chosen folder, else the field's hidden folder
+  defp upload_folder_id(%{meta: meta, cfg: cfg}),
+    do: Brando.Media.Folders.upload_folder_id(meta[:folder_id], cfg)
 
   defp run_completed_callback({:ok, asset}, config, user) do
     CompletedCallback.run(config, asset, user)
