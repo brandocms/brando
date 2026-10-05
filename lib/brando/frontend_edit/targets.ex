@@ -124,6 +124,10 @@ defmodule Brando.FrontendEdit.Targets do
       clicked
   end
 
+  @doc "The top-level block of `chain`, the one without a parent."
+  @spec root([chain_block()]) :: chain_block() | nil
+  def root(chain), do: Enum.find(chain, &is_nil(&1.parent_id))
+
   @doc """
   The uids from the root down to `target`, excluding it, in `chain`.
   """
@@ -152,7 +156,7 @@ defmodule Brando.FrontendEdit.Targets do
           | {:error, :not_found}
   def resolve(uid) when is_binary(uid) do
     with [_ | _] = chain <- Map.get(chains([uid]), uid),
-         root = List.last(chain),
+         root = root(chain),
          {:ok, owner} <- owner(root) do
       target = target(chain)
       {:ok, %{clicked: hd(chain), target: target, root: root, path: ancestors(chain, target), owner: owner}}
@@ -191,7 +195,7 @@ defmodule Brando.FrontendEdit.Targets do
     |> Brando.Repo.all()
     |> chains()
     |> Enum.flat_map(fn {_uid, chain} ->
-      case owner(List.last(chain)) do
+      case owner(root(chain)) do
         {:ok, {schema, entry_id, _field}} -> [{schema, entry_id}]
         :error -> []
       end

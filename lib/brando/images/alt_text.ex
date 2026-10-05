@@ -286,6 +286,14 @@ defmodule Brando.Images.AltText do
     end
   end
 
+  # The narrowest size that is wide enough, else the widest there is.
+  defp preferred_width(widths) do
+    case Enum.split_with(widths, fn {_key, width} -> width >= @target_width end) do
+      {[], narrower} -> Enum.max_by(narrower, &elem(&1, 1), fn -> nil end)
+      {wide_enough, _narrower} -> Enum.min_by(wide_enough, &elem(&1, 1))
+    end
+  end
+
   # The size key sent, or :original when no size will do.
   defp rendition_key(image) do
     sizes = Map.get(image, :sizes) || %{}
@@ -293,10 +301,7 @@ defmodule Brando.Images.AltText do
     key =
       configured_widths(image)
       |> Enum.filter(fn {key, _width} -> Map.has_key?(sizes, key) end)
-      |> Enum.sort_by(&elem(&1, 1))
-      |> then(fn widths ->
-        Enum.find(widths, fn {_key, width} -> width >= @target_width end) || List.last(widths)
-      end)
+      |> preferred_width()
       |> case do
         {key, _width} -> key
         nil -> Enum.find(@fallback_sizes, &Map.has_key?(sizes, &1))

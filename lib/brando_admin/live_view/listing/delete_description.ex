@@ -132,7 +132,11 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   end
 
   defp to_sentence([one]), do: one
-  defp to_sentence(items), do: Enum.join(Enum.drop(items, -1), ", ") <> " " <> gettext("and") <> " " <> List.last(items)
+
+  defp to_sentence(items) do
+    {rest, [last]} = Enum.split(items, -1)
+    Enum.join(rest, ", ") <> " " <> gettext("and") <> " " <> last
+  end
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 end

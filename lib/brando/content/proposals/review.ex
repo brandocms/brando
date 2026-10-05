@@ -632,7 +632,7 @@ defmodule Brando.Content.Proposals.Review do
   defp placement(:append, parent, entry, field, proposal) when is_binary(parent) do
     anchor =
       case saved_block(entry, field, parent) do
-        %{children: [_ | _] = children} -> block_anchor(List.last(children))
+        %{children: [_ | _] = children} -> block_anchor(Enum.max_by(children, & &1.sequence))
         _ -> nil
       end
 
@@ -646,7 +646,7 @@ defmodule Brando.Content.Proposals.Review do
   defp placement(:append, nil, entry, field, _proposal) do
     anchor =
       case entry && Map.get(entry, :"entry_#{field}", []) do
-        [_ | _] = joins -> block_anchor(List.last(joins).block)
+        [_ | _] = joins -> block_anchor(Enum.max_by(joins, & &1.block.sequence).block)
         _ -> nil
       end
 
