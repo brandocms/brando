@@ -104,15 +104,16 @@ defmodule Brando.SEO.Analytics.SearchConsole do
       key = {:seo_search_console_token, credentials["client_email"]}
 
       case Brando.Cache.get(key) do
-        token when is_binary(token) ->
-          {:ok, token}
-
-        _ ->
-          with {:ok, token, expires_in} <- request_token(credentials) do
-            Brando.Cache.put(key, token, :timer.seconds(max(expires_in - 300, 60)))
-            {:ok, token}
-          end
+        token when is_binary(token) -> {:ok, token}
+        _ -> fetch_and_cache_token(credentials, key)
       end
+    end
+  end
+
+  defp fetch_and_cache_token(credentials, key) do
+    with {:ok, token, expires_in} <- request_token(credentials) do
+      Brando.Cache.put(key, token, :timer.seconds(max(expires_in - 300, 60)))
+      {:ok, token}
     end
   end
 
