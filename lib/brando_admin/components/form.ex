@@ -5451,18 +5451,7 @@ defmodule BrandoAdmin.Components.Form do
   defp flatten_nested_errors(errors, prefix \\ []) do
     Enum.flat_map(errors, fn
       {field, messages} when is_list(messages) ->
-        path = prefix ++ [field]
-
-        if Enum.all?(messages, &is_binary/1) do
-          # Only include if this is a nested path (not top-level, those are handled separately)
-          if prefix == [], do: [], else: [{Enum.join(path, " → "), messages}]
-        else
-          # messages contains nested maps (from associations)
-          Enum.flat_map(messages, fn
-            nested when is_map(nested) -> flatten_nested_errors(nested, path)
-            _ -> []
-          end)
-        end
+        flatten_error_messages(messages, prefix, prefix ++ [field])
 
       {field, nested} when is_map(nested) ->
         flatten_nested_errors(nested, prefix ++ [field])
@@ -5470,6 +5459,19 @@ defmodule BrandoAdmin.Components.Form do
       _ ->
         []
     end)
+  end
+
+  defp flatten_error_messages(messages, prefix, path) do
+    if Enum.all?(messages, &is_binary/1) do
+      # Only include if this is a nested path (not top-level, those are handled separately)
+      if prefix == [], do: [], else: [{Enum.join(path, " → "), messages}]
+    else
+      # messages contains nested maps (from associations)
+      Enum.flat_map(messages, fn
+        nested when is_map(nested) -> flatten_nested_errors(nested, path)
+        _ -> []
+      end)
+    end
   end
 
   @doc """
@@ -5480,71 +5482,87 @@ defmodule BrandoAdmin.Components.Form do
   """
   def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
     if entry.done? do
-      current_user = socket.assigns.current_user
-      edit_image = socket.assigns.edit_image
-      config_target = Map.get(socket.assigns, :image_editor_config_target, "default")
-      focal = Map.get(socket.assigns, :image_editor_focal, %{x: 50, y: 50})
-
-      {cfg, resolved_target} = resolve_block_image_config(config_target)
-
-      case consume_uploaded_entry(socket, entry, fn meta ->
-             safe_handle_upload(
-               Map.put(meta, :config_target, resolved_target),
-               entry,
-               cfg,
-               current_user
-             )
-           end) do
-        {:upload_error, reason} ->
-          upload_error_noreply(socket, :image, reason)
-
-        new_image ->
-          # Apply focal and mark for reprocessing
-          changeset =
-            new_image
-            |> Images.Image.changeset(
-              %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
-              current_user
-            )
-            |> Map.put(:action, :update)
-
-          case Images.update_image(changeset, current_user) do
-            {:ok, updated_image} ->
-              Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
-
-              if block_target = Map.get(edit_image, :block_target) do
-                send(self(), {:register_pending_block_image, updated_image.id, block_target})
-              end
-
-              Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
-
-              if block_target = Map.get(edit_image, :block_target) do
-                {module, id} = block_target
-
-                send_update(module,
-                  id: id,
-                  event: "image_editor_new_copy",
-                  new_image: updated_image,
-                  old_image_id: Map.get(edit_image, :old_image_id)
-                )
-
-                send(self(), {:toast, gettext("New image created.")})
-                {:noreply, socket}
-              else
-                own_or_field_copy(socket, edit_image, updated_image)
-              end
-
-            {:error, reason} ->
-              {:noreply,
-               push_event(socket, "b:alert", %{
-                 title: gettext("Error creating image"),
-                 type: "error",
-                 message: inspect(reason)
-               })}
-          end
-      end
+      consume_image_editor_upload(entry, socket)
     else
       {:noreply, socket}
+    end
+  end
+
+  defp consume_image_editor_upload(entry, socket) do
+    current_user = socket.assigns.current_user
+    config_target = Map.get(socket.assigns, :image_editor_config_target, "default")
+
+    {cfg, resolved_target} = resolve_block_image_config(config_target)
+
+    case consume_uploaded_entry(socket, entry, fn meta ->
+           safe_handle_upload(
+             Map.put(meta, :config_target, resolved_target),
+             entry,
+             cfg,
+             current_user
+           )
+         end) do
+      {:upload_error, reason} ->
+        upload_error_noreply(socket, :image, reason)
+
+      new_image ->
+        refocus_image_editor_copy(socket, new_image)
+    end
+  end
+
+  defp refocus_image_editor_copy(socket, new_image) do
+    current_user = socket.assigns.current_user
+    focal = Map.get(socket.assigns, :image_editor_focal, %{x: 50, y: 50})
+
+    # Apply focal and mark for reprocessing
+    changeset =
+      new_image
+      |> Images.Image.changeset(
+        %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
+        current_user
+      )
+      |> Map.put(:action, :update)
+
+    case Images.update_image(changeset, current_user) do
+      {:ok, updated_image} ->
+        image_editor_copy_created(socket, updated_image)
+
+      {:error, reason} ->
+        {:noreply,
+         push_event(socket, "b:alert", %{
+           title: gettext("Error creating image"),
+           type: "error",
+           message: inspect(reason)
+         })}
+    end
+  end
+
+  defp image_editor_copy_created(socket, updated_image) do
+    current_user = socket.assigns.current_user
+    edit_image = socket.assigns.edit_image
+
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
+
+    if block_target = Map.get(edit_image, :block_target) do
+      send(self(), {:register_pending_block_image, updated_image.id, block_target})
+    end
+
+    Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
+
+    if block_target = Map.get(edit_image, :block_target) do
+      {module, id} = block_target
+
+      send_update(module,
+        id: id,
+        event: "image_editor_new_copy",
+        new_image: updated_image,
+        old_image_id: Map.get(edit_image, :old_image_id)
+      )
+
+      send(self(), {:toast, gettext("New image created.")})
+      {:noreply, socket}
+    else
+      own_or_field_copy(socket, edit_image, updated_image)
     end
   end
 
