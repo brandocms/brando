@@ -1,4 +1,6 @@
-NOTE: Upgrade notes are in the CHANGELOG now.
+NOTE: Upgrade notes are in the CHANGELOG now. Coming from 0.51 (`legacy`)?
+Read [guides/migrating_from_051.md](guides/migrating_from_051.md) first; the
+0.52.0 notes below are older and incomplete.
 
 ## 0.52.0
 
