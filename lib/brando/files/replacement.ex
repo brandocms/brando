@@ -122,30 +122,34 @@ defmodule Brando.Files.Replacement do
     cdn = cfg.cdn || CDN.config(Files)
 
     if cdn.enabled do
-      key = Path.join(["media", cfg.upload_path, file.filename])
-      opts = [content_type: file.mime_type] ++ CDN.build_content_disposition_opts(cfg, file.filename)
-      opts = if cdn.direct_acl, do: Keyword.put(opts, :acl, cdn.direct_acl), else: opts
-      s3_config = CDN.get_s3_config(%{cdn: cdn}, as: :keyword_list)
-
-      case CDN.Client.impl().replace_file(cdn.bucket, key, source, opts, s3_config) do
-        {:ok, _} ->
-          # A CDN URL remains a CDN URL. Refresh a retained local copy only
-          # after the object store has accepted the complete replacement.
-          if cdn.keep_local_copy && store_local(source, destination) != :ok do
-            Logger.warning("Replaced CDN file ##{file.id}, but could not refresh its local copy")
-          end
-
-          :ok
-
-        {:error, _} ->
-          {:error, "Could not replace the file on the CDN"}
-      end
+      store_on_cdn(file, cfg, cdn, source, destination)
     else
       {:error, "The file's CDN configuration is unavailable"}
     end
   end
 
   defp store_contents(_file, _cfg, source, destination), do: store_local(source, destination)
+
+  defp store_on_cdn(file, cfg, cdn, source, destination) do
+    key = Path.join(["media", cfg.upload_path, file.filename])
+    opts = [content_type: file.mime_type] ++ CDN.build_content_disposition_opts(cfg, file.filename)
+    opts = if cdn.direct_acl, do: Keyword.put(opts, :acl, cdn.direct_acl), else: opts
+    s3_config = CDN.get_s3_config(%{cdn: cdn}, as: :keyword_list)
+
+    case CDN.Client.impl().replace_file(cdn.bucket, key, source, opts, s3_config) do
+      {:ok, _} ->
+        # A CDN URL remains a CDN URL. Refresh a retained local copy only
+        # after the object store has accepted the complete replacement.
+        if cdn.keep_local_copy && store_local(source, destination) != :ok do
+          Logger.warning("Replaced CDN file ##{file.id}, but could not refresh its local copy")
+        end
+
+        :ok
+
+      {:error, _} ->
+        {:error, "Could not replace the file on the CDN"}
+    end
+  end
 
   defp store_local(source, destination) do
     staged = destination <> ".replacement-" <> Ecto.UUID.generate()
