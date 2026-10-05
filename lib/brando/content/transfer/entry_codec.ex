@@ -111,28 +111,7 @@ defmodule Brando.Content.Transfer.EntryCodec do
   def owned(schema) do
     declarations = if function_exported?(schema, :__naming__, 0), do: Relations.__relations__(schema), else: []
 
-    declared =
-      Enum.flat_map(declarations, fn rel ->
-        cond do
-          rel.opts[:module] == :blocks ->
-            []
-
-          rel.type in [:embeds_one, :embeds_many] ->
-            embed = schema.__schema__(:embed, rel.name)
-            [{rel.name, embed.related, nil}]
-
-          rel.type == :entries || (rel.type in [:has_many, :has_one] && rel.opts[:cast]) ->
-            assoc = schema.__schema__(:association, rel.name)
-            [{rel.name, assoc.related, assoc.related_key}]
-
-          rel.type == :belongs_to && rel.opts[:cast] && !Map.has_key?(@media, rel.opts[:module]) ->
-            assoc = schema.__schema__(:association, rel.name)
-            [{rel.name, assoc.related, nil}]
-
-          true ->
-            []
-        end
-      end)
+    declared = Enum.flat_map(declarations, &owned_declaration(schema, &1))
 
     # Plain embedded schemas still have an Ecto-owned embed contract.
     embeds =
@@ -142,6 +121,33 @@ defmodule Brando.Content.Transfer.EntryCodec do
 
     declared ++ embeds
   end
+
+  defp owned_declaration(schema, rel) do
+    cond do
+      rel.opts[:module] == :blocks ->
+        []
+
+      rel.type in [:embeds_one, :embeds_many] ->
+        embed = schema.__schema__(:embed, rel.name)
+        [{rel.name, embed.related, nil}]
+
+      owned_children?(rel) ->
+        assoc = schema.__schema__(:association, rel.name)
+        [{rel.name, assoc.related, assoc.related_key}]
+
+      owned_parent?(rel) ->
+        assoc = schema.__schema__(:association, rel.name)
+        [{rel.name, assoc.related, nil}]
+
+      true ->
+        []
+    end
+  end
+
+  defp owned_children?(rel), do: rel.type == :entries || (rel.type in [:has_many, :has_one] && rel.opts[:cast])
+
+  defp owned_parent?(rel),
+    do: rel.type == :belongs_to && rel.opts[:cast] && !Map.has_key?(@media, rel.opts[:module])
 
   def references(schema, owner_key \\ nil) do
     owned_names = Enum.map(owned(schema), &elem(&1, 0))
@@ -177,19 +183,7 @@ defmodule Brando.Content.Transfer.EntryCodec do
     {attrs, state} =
       entry |> Map.take(attributes(schema, owner_key)) |> Params.snapshot() |> authored(&Portable.encode_values/2, state)
 
-    {refs, state} =
-      Enum.map_reduce(references(schema, owner_key), state, fn {name, related, key, cardinality}, acc ->
-        values = if cardinality == :many, do: Repo.preload(entry, name) |> Map.fetch!(name), else: Map.get(entry, key)
-
-        {tokens, acc} =
-          if cardinality == :many do
-            Enum.map_reduce(values, acc, fn record, acc -> reference(related, record.id, acc) end)
-          else
-            reference(related, values, acc)
-          end
-
-        {{to_string(name), tokens}, acc}
-      end)
+    {refs, state} = Enum.map_reduce(references(schema, owner_key), state, &encode_reference(entry, &1, &2))
 
     {children, state} =
       Enum.map_reduce(owned(schema), state, fn {name, _, parent_key}, acc ->
@@ -214,6 +208,21 @@ defmodule Brando.Content.Transfer.EntryCodec do
      state}
   end
 
+  defp encode_reference(entry, {name, related, _key, :many}, acc) do
+    {tokens, acc} =
+      entry
+      |> Repo.preload(name)
+      |> Map.fetch!(name)
+      |> Enum.map_reduce(acc, fn record, acc -> reference(related, record.id, acc) end)
+
+    {{to_string(name), tokens}, acc}
+  end
+
+  defp encode_reference(entry, {name, related, key, _cardinality}, acc) do
+    {tokens, acc} = reference(related, Map.get(entry, key), acc)
+    {{to_string(name), tokens}, acc}
+  end
+
   defp reference(_, nil, state), do: {nil, state}
 
   defp reference(schema, id, state) do
@@ -231,47 +240,14 @@ defmodule Brando.Content.Transfer.EntryCodec do
     refs = references(schema, owner_key)
     Value.keys!(node["references"], Enum.map(refs, &to_string(elem(&1, 0))), "entry relationships")
 
-    Enum.each(refs, fn {name, related, _, cardinality} ->
-      value = node["references"][to_string(name)]
-
-      unless is_nil(value) || (cardinality == :many && is_list(value)) || (cardinality == :one && is_binary(value)),
-        do: Error.fail!(dgettext("content_transfer", "Invalid entry relationship %{value1}.", value1: name))
-
-      Enum.each(List.wrap(value), fn token ->
-        dep =
-          dependencies[token] ||
-            Error.fail!(dgettext("content_transfer", "An entry relationship is missing from the bundle."))
-
-        expected = @media[related] || "entry"
-
-        unless dep["kind"] == expected && (expected != "entry" || dep["schema"] == to_string(related)),
-          do:
-            Error.fail!(
-              dgettext("content_transfer", "The relationship %{value1} has an incompatible content type.", value1: name)
-            )
-      end)
-    end)
+    Enum.each(refs, &validate_reference!(node, dependencies, &1))
 
     owned = owned(schema)
     Value.keys!(node["owned"], Enum.map(owned, &to_string(elem(&1, 0))), "owned entry content")
-
-    Enum.each(owned, fn {name, related, parent_key} ->
-      contract = schema.__schema__(:association, name) || schema.__schema__(:embed, name)
-      value = node["owned"][to_string(name)]
-
-      unless (contract.cardinality == :many && is_list(value)) ||
-               (contract.cardinality == :one && (is_nil(value) || is_map(value))),
-             do: Error.fail!(dgettext("content_transfer", "Invalid owned collection %{value1}.", value1: name))
-
-      Enum.each(List.wrap(node["owned"][to_string(name)]), &validate!(&1, related, dependencies, parent_key, depth + 1))
-    end)
+    Enum.each(owned, &validate_owned!(node, schema, dependencies, depth, &1))
 
     Value.keys!(node["blocks"], Enum.map(Catalog.fields(schema), & &1.name), "entry block fields")
-
-    Enum.each(node["blocks"], fn {_, blocks} ->
-      unless is_list(blocks), do: Error.fail!(dgettext("content_transfer", "Invalid entry block field."))
-      Portable.validate_blocks!(blocks, dependencies)
-    end)
+    Enum.each(node["blocks"], &validate_block_field!(&1, dependencies))
 
     authored(
       node["attributes"],
@@ -283,19 +259,62 @@ defmodule Brando.Content.Transfer.EntryCodec do
     )
 
     # Authored fields are complete snapshots. Never silently accept a truncated entry.
-    unless Enum.sort(Map.keys(node["attributes"])) == Enum.sort(Enum.map(attributes(schema, owner_key), &to_string/1)) &&
-             Enum.sort(Map.keys(node["references"])) == Enum.sort(Enum.map(refs, &to_string(elem(&1, 0)))) &&
-             Enum.sort(Map.keys(node["owned"])) == Enum.sort(Enum.map(owned, &to_string(elem(&1, 0)))) &&
-             Enum.sort(Map.keys(node["blocks"])) == Enum.sort(Enum.map(Catalog.fields(schema), & &1.name)),
-           do:
-             Error.fail!(
-               dgettext(
-                 "content_transfer",
-                 "The entry fields differ from the destination Blueprint. Deploy the matching schema before importing."
-               )
-             )
+    unless complete_entry?(node, schema, owner_key, refs, owned),
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "The entry fields differ from the destination Blueprint. Deploy the matching schema before importing."
+          )
+        )
 
     :ok
+  end
+
+  defp validate_reference!(node, dependencies, {name, related, _, cardinality}) do
+    value = node["references"][to_string(name)]
+
+    unless is_nil(value) || (cardinality == :many && is_list(value)) || (cardinality == :one && is_binary(value)),
+      do: Error.fail!(dgettext("content_transfer", "Invalid entry relationship %{value1}.", value1: name))
+
+    Enum.each(List.wrap(value), &validate_reference_token!(dependencies, related, name, &1))
+  end
+
+  defp validate_reference_token!(dependencies, related, name, token) do
+    dep =
+      dependencies[token] ||
+        Error.fail!(dgettext("content_transfer", "An entry relationship is missing from the bundle."))
+
+    expected = @media[related] || "entry"
+
+    unless dep["kind"] == expected && (expected != "entry" || dep["schema"] == to_string(related)),
+      do:
+        Error.fail!(
+          dgettext("content_transfer", "The relationship %{value1} has an incompatible content type.", value1: name)
+        )
+  end
+
+  defp validate_owned!(node, schema, dependencies, depth, {name, related, parent_key}) do
+    contract = schema.__schema__(:association, name) || schema.__schema__(:embed, name)
+    value = node["owned"][to_string(name)]
+
+    unless (contract.cardinality == :many && is_list(value)) ||
+             (contract.cardinality == :one && (is_nil(value) || is_map(value))),
+           do: Error.fail!(dgettext("content_transfer", "Invalid owned collection %{value1}.", value1: name))
+
+    Enum.each(List.wrap(node["owned"][to_string(name)]), &validate!(&1, related, dependencies, parent_key, depth + 1))
+  end
+
+  defp validate_block_field!({_, blocks}, dependencies) do
+    unless is_list(blocks), do: Error.fail!(dgettext("content_transfer", "Invalid entry block field."))
+    Portable.validate_blocks!(blocks, dependencies)
+  end
+
+  defp complete_entry?(node, schema, owner_key, refs, owned) do
+    Enum.sort(Map.keys(node["attributes"])) == Enum.sort(Enum.map(attributes(schema, owner_key), &to_string/1)) &&
+      Enum.sort(Map.keys(node["references"])) == Enum.sort(Enum.map(refs, &to_string(elem(&1, 0)))) &&
+      Enum.sort(Map.keys(node["owned"])) == Enum.sort(Enum.map(owned, &to_string(elem(&1, 0)))) &&
+      Enum.sort(Map.keys(node["blocks"])) == Enum.sort(Enum.map(Catalog.fields(schema), & &1.name))
   end
 
   def block_fields(node) do
@@ -317,75 +336,74 @@ defmodule Brando.Content.Transfer.EntryCodec do
       authored(node["attributes"], fn value, acc -> {Portable.decode_values(value, bindings, uids), acc} end, nil)
 
     attrs =
-      Enum.reduce(references(schema, opts[:owner_key]), attrs, fn {name, _related, key, cardinality}, params ->
-        value = node["references"][to_string(name)]
-
-        decoded =
-          if cardinality == :many,
-            do: Enum.map(value || [], &resolve!(bindings, &1).id),
-            else: if(value, do: resolve!(bindings, value).id)
-
-        if gallery_asset?(schema, name) do
-          # Gallery asset changesets accept nested data, while other assets cast FKs.
-          if value do
-            gallery = resolve!(bindings, value)
-
-            objects =
-              if gallery.id && gallery.id > 0, do: Repo.preload(gallery, :gallery_objects).gallery_objects, else: []
-
-            Map.put(params, to_string(name), %{
-              "config_target" => gallery.config_target,
-              "gallery_objects" =>
-                Enum.map(objects, &(Params.snapshot(&1) |> Map.take(~w(image_id video_id config sequence))))
-            })
-          else
-            Map.put(params, to_string(name), "")
-          end
-        else
-          Map.put(params, to_string(key || name), decoded)
-        end
-      end)
+      Enum.reduce(references(schema, opts[:owner_key]), attrs, &decode_reference(&2, node, schema, bindings, &1))
 
     attrs =
       Enum.reduce(owned(schema), attrs, fn {name, related, parent_key}, params ->
-        value = node["owned"][to_string(name)]
-
-        decoded =
-          case value do
-            nil ->
-              nil
-
-            list when is_list(list) ->
-              Enum.map(
-                list,
-                &decode(&1, related, bindings, actor, Keyword.merge(opts, uids: uids, owner_key: parent_key))
-              )
-
-            child ->
-              decode(child, related, bindings, actor, Keyword.merge(opts, uids: uids, owner_key: parent_key))
-          end
-
+        child_opts = Keyword.merge(opts, uids: uids, owner_key: parent_key)
+        decoded = decode_owned(node["owned"][to_string(name)], related, bindings, actor, child_opts)
         Map.put(params, to_string(name), decoded)
       end)
 
     if opts[:without_blocks] do
       attrs
     else
-      Enum.reduce(Catalog.fields(schema), attrs, fn field, params ->
-        joins =
-          Portable.decode(
-            node["blocks"][field.name],
-            bindings,
-            schema.__schema__(:association, field.association).related,
-            actor.id,
-            uids
-          )
-          |> Enum.map(&Brando.Content.Transfer.adapt(&1, bindings))
-          |> Enum.with_index(fn block, n -> %{"block" => block, "sequence" => n} end)
-
-        Map.put(params, to_string(field.association), joins)
-      end)
+      Enum.reduce(Catalog.fields(schema), attrs, &decode_block_field(&2, &1, node, schema, bindings, {actor, uids}))
     end
+  end
+
+  defp decode_reference(params, node, schema, bindings, {name, _related, key, cardinality}) do
+    value = node["references"][to_string(name)]
+    decoded = decode_reference_value(bindings, value, cardinality)
+
+    if gallery_asset?(schema, name) do
+      # Gallery asset changesets accept nested data, while other assets cast FKs.
+      Map.put(params, to_string(name), gallery_params(bindings, value))
+    else
+      Map.put(params, to_string(key || name), decoded)
+    end
+  end
+
+  defp decode_reference_value(bindings, value, :many), do: Enum.map(value || [], &resolve!(bindings, &1).id)
+
+  defp decode_reference_value(bindings, value, _cardinality) do
+    if value, do: resolve!(bindings, value).id
+  end
+
+  defp gallery_params(bindings, value) do
+    if value do
+      gallery = resolve!(bindings, value)
+      objects = if gallery.id && gallery.id > 0, do: Repo.preload(gallery, :gallery_objects).gallery_objects, else: []
+
+      %{
+        "config_target" => gallery.config_target,
+        "gallery_objects" => Enum.map(objects, &(Params.snapshot(&1) |> Map.take(~w(image_id video_id config sequence))))
+      }
+    else
+      ""
+    end
+  end
+
+  defp decode_owned(nil, _related, _bindings, _actor, _opts), do: nil
+
+  defp decode_owned(list, related, bindings, actor, opts) when is_list(list),
+    do: Enum.map(list, &decode(&1, related, bindings, actor, opts))
+
+  defp decode_owned(child, related, bindings, actor, opts), do: decode(child, related, bindings, actor, opts)
+
+  defp decode_block_field(params, field, node, schema, bindings, {actor, uids}) do
+    joins =
+      Portable.decode(
+        node["blocks"][field.name],
+        bindings,
+        schema.__schema__(:association, field.association).related,
+        actor.id,
+        uids
+      )
+      |> Enum.map(&Brando.Content.Transfer.adapt(&1, bindings))
+      |> Enum.with_index(fn block, n -> %{"block" => block, "sequence" => n} end)
+
+    Map.put(params, to_string(field.association), joins)
   end
 
   defp resolve!(bindings, token),
