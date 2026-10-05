@@ -388,17 +388,24 @@ defmodule Brando.Content.SharedLibrary do
       is_nil(scope) and actor == :system ->
         :ok
 
-      scope && scope.kind == :site && (scope.site_id != site.id or scope.prefix != prefix) ->
+      other_site_scope?(scope, site, prefix) ->
         {:error, :forbidden}
 
       true ->
-        actor = if scope, do: %{id: scope.user_id}, else: actor
-        target_scope = Tenant.with_prefix(prefix, fn -> Brando.Authorization.Scope.current(actor) end)
-
-        if target_scope.site_id == site.id,
-          do: Boundary.authorize(target_scope, :update, definition(kind).schema),
-          else: {:error, :forbidden}
+        authorize_target_site(kind, site, prefix, scope, actor)
     end
+  end
+
+  defp other_site_scope?(scope, site, prefix),
+    do: scope && scope.kind == :site && (scope.site_id != site.id or scope.prefix != prefix)
+
+  defp authorize_target_site(kind, site, prefix, scope, actor) do
+    actor = if scope, do: %{id: scope.user_id}, else: actor
+    target_scope = Tenant.with_prefix(prefix, fn -> Brando.Authorization.Scope.current(actor) end)
+
+    if target_scope.site_id == site.id,
+      do: Boundary.authorize(target_scope, :update, definition(kind).schema),
+      else: {:error, :forbidden}
   end
 
   def reference(value) when is_binary(value) do
