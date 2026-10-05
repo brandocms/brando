@@ -110,26 +110,27 @@ defmodule Brando.Content.Usage do
 
     titles = titles(Enum.reject(entries, &Map.has_key?(identifiers, &1)))
 
-    Map.new(entries, fn {schema, id} = entry ->
-      identifier = Map.get(identifiers, entry)
-      type = singular(schema)
+    Map.new(entries, fn entry -> {entry, usage(entry, Map.get(identifiers, entry), Map.get(titles, entry))} end)
+  end
 
-      label =
-        case identifier || Map.get(titles, entry) do
-          %{title: title} when is_binary(title) and title != "" -> title
-          title when is_binary(title) and title != "" -> URI.decode(title)
-          _ -> "#{type} ##{id}"
-        end
+  defp usage({schema, id}, identifier, title) do
+    type = singular(schema)
 
-      {entry,
-       %{
-         label: label,
-         url: admin_url(schema, id),
-         type: type,
-         cover: identifier && identifier.cover,
-         status: identifier && identifier.status
-       }}
-    end)
+    %{
+      label: usage_label(identifier || title, type, id),
+      url: admin_url(schema, id),
+      type: type,
+      cover: identifier && identifier.cover,
+      status: identifier && identifier.status
+    }
+  end
+
+  defp usage_label(source, type, id) do
+    case source do
+      %{title: title} when is_binary(title) and title != "" -> title
+      title when is_binary(title) and title != "" -> URI.decode(title)
+      _ -> "#{type} ##{id}"
+    end
   end
 
   # {asset_id, {schema, entry_id}} for every place the assets are used.
