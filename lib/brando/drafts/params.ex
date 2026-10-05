@@ -54,17 +54,20 @@ defmodule Brando.Drafts.Params do
 
     Enum.reduce(cs.changes, %{}, fn {key, value}, params ->
       assoc = if schema && key in schema.__schema__(:associations), do: schema.__schema__(:association, key)
-
-      case assoc do
-        %Ecto.Association.BelongsTo{related: related, owner_key: fk}
-        when related in [Brando.Images.Image, Brando.Videos.Video, Brando.Files.File] ->
-          asset = if match?(%Changeset{}, value), do: Changeset.apply_changes(value), else: value
-          Map.put(params, to_string(fk), asset && Map.get(asset, :id))
-
-        _ ->
-          Map.put(params, to_string(key), snapshot(value))
-      end
+      put_change_param(params, assoc, key, value)
     end)
+  end
+
+  defp put_change_param(params, assoc, key, value) do
+    case assoc do
+      %Ecto.Association.BelongsTo{related: related, owner_key: fk}
+      when related in [Brando.Images.Image, Brando.Videos.Video, Brando.Files.File] ->
+        asset = if match?(%Changeset{}, value), do: Changeset.apply_changes(value), else: value
+        Map.put(params, to_string(fk), asset && Map.get(asset, :id))
+
+      _ ->
+        Map.put(params, to_string(key), snapshot(value))
+    end
   end
 
   # Only invalid fields overlay the cast result. Replaying every raw param
@@ -83,22 +86,23 @@ defmodule Brando.Drafts.Params do
 
       {field, children}, acc when is_list(children) ->
         children = Enum.reject(children, &match?(%Changeset{action: action} when action in [:delete, :replace], &1))
-
-        Map.update(acc, to_string(field), [], fn values ->
-          values
-          |> Enum.with_index()
-          |> Enum.map(fn {value, idx} ->
-            case Enum.at(children, idx) do
-              %Changeset{} = child -> preserve_invalid_tree(value, child)
-              _ -> value
-            end
-          end)
-        end)
+        Map.update(acc, to_string(field), [], &preserve_invalid_children(&1, children))
 
       _, acc ->
         acc
     end)
     |> preserve_invalid(cs)
+  end
+
+  defp preserve_invalid_children(values, children) do
+    values
+    |> Enum.with_index()
+    |> Enum.map(fn {value, idx} ->
+      case Enum.at(children, idx) do
+        %Changeset{} = child -> preserve_invalid_tree(value, child)
+        _ -> value
+      end
+    end)
   end
 
   def clean(params) do
