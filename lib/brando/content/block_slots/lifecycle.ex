@@ -146,23 +146,23 @@ defmodule Brando.Content.BlockSlots.Lifecycle do
       owner = Changeset.apply_changes(owner_cs)
       definitions = definitions(owner)
 
-      valid? =
-        Enum.all?(remapped, fn cs ->
-          with {:ok, claim} <- remap_claim(cs),
-               true <- claim.owner_uid == owner.uid,
-               true <-
-                 !Enum.any?(definitions, &match?(%{name: name, data: %{type: "blocks"}} when name == claim.from, &1)),
-               true <-
-                 Enum.count(BlockSlots.children(owner), &(&1.slot_kind == :region && &1.slot_name == claim.name)) == 1,
-               true <- BlockSlots.allowed_for_refs?(Changeset.apply_changes(cs), definitions) do
-            allowed = BlockSlots.modules(claim.set)
-            Enum.all?(BlockSlots.children(cs), &BlockSlots.allowed_child?(&1, allowed))
-          else
-            _ -> false
-          end
-        end)
-
+      valid? = Enum.all?(remapped, &valid_remap?(&1, owner, definitions))
       if valid?, do: owner_cs, else: Changeset.add_error(owner_cs, :children, "the region remap is no longer available")
+    end
+  end
+
+  defp valid_remap?(cs, owner, definitions) do
+    with {:ok, claim} <- remap_claim(cs),
+         true <- claim.owner_uid == owner.uid,
+         true <-
+           !Enum.any?(definitions, &match?(%{name: name, data: %{type: "blocks"}} when name == claim.from, &1)),
+         true <-
+           Enum.count(BlockSlots.children(owner), &(&1.slot_kind == :region && &1.slot_name == claim.name)) == 1,
+         true <- BlockSlots.allowed_for_refs?(Changeset.apply_changes(cs), definitions) do
+      allowed = BlockSlots.modules(claim.set)
+      Enum.all?(BlockSlots.children(cs), &BlockSlots.allowed_child?(&1, allowed))
+    else
+      _ -> false
     end
   end
 end
