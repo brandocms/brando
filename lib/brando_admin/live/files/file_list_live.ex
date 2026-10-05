@@ -457,23 +457,29 @@ defmodule BrandoAdmin.Files.FileListLive do
         nil
 
       true ->
-        files
-        |> Enum.map(&normalize_config_target(&1.config_target))
-        |> Enum.reject(&is_nil/1)
-        |> Enum.uniq()
-        |> Enum.map(fn config_target ->
-          {config_target, upload_path_for_config_target(config_target)}
-        end)
-        |> Enum.filter(fn {_config_target, upload_path} ->
-          is_binary(upload_path) and
-            (folder_abs == upload_path || String.starts_with?(folder_abs, upload_path <> "/"))
-        end)
-        |> Enum.sort_by(fn {_config_target, upload_path} -> String.length(upload_path) end, :desc)
-        |> case do
-          [{config_target, _upload_path} | _] -> config_target
-          _ -> nil
-        end
+        deepest_config_target_for_folder(files, folder_abs)
     end
+  end
+
+  defp deepest_config_target_for_folder(files, folder_abs) do
+    files
+    |> Enum.map(&normalize_config_target(&1.config_target))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.map(fn config_target ->
+      {config_target, upload_path_for_config_target(config_target)}
+    end)
+    |> Enum.filter(fn {_config_target, upload_path} -> folder_within_upload_path?(folder_abs, upload_path) end)
+    |> Enum.sort_by(fn {_config_target, upload_path} -> String.length(upload_path) end, :desc)
+    |> case do
+      [{config_target, _upload_path} | _] -> config_target
+      _ -> nil
+    end
+  end
+
+  defp folder_within_upload_path?(folder_abs, upload_path) do
+    is_binary(upload_path) and
+      (folder_abs == upload_path || String.starts_with?(folder_abs, upload_path <> "/"))
   end
 
   defp upload_path_for_config_target(config_target) do
