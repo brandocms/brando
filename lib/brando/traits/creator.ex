@@ -17,6 +17,10 @@ defmodule Brando.Trait.Creator do
       and `rendered_*` columns, is not an edit:
 
           trait :creator, derived: [:sizes, :formats, :status]
+
+    * `:required` - whether every entry needs a creator (default `true`). The
+      media schemas set it to `false`: what a site's visitors upload through
+      `Brando.Uploads.Direct` is created as `:system`, by no admin user.
   """
   use Brando.Trait
 

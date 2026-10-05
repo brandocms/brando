@@ -9,6 +9,11 @@ defmodule Brando.Media.Folder do
     field :name, :string
     field :path, :string
 
+    # false for folders that hold media the site did not choose itself — see
+    # `hidden_folder` on image and file configs. The media library, the
+    # alt-text page and the pickers leave them out.
+    field :library, :boolean, default: true
+
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
 
@@ -16,7 +21,7 @@ defmodule Brando.Media.Folder do
   end
 
   @required_fields [:scope, :name, :path]
-  @optional_fields [:parent_id]
+  @optional_fields [:parent_id, :library]
 
   def changeset(folder, attrs) do
     folder

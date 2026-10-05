@@ -46,6 +46,17 @@ defmodule Brando.Users do
   mutation :delete, User
 
   @doc """
+  The user id a background job records for `user`: `nil` for `:system`,
+  which work started outside the admin (a site's own upload form) runs as.
+  """
+  def job_user_id(:system), do: nil
+  def job_user_id(%{id: id}), do: id
+
+  @doc "The user a job was queued for, back from `job_user_id/1`."
+  def get_job_user(nil), do: {:ok, :system}
+  def get_job_user(user_id), do: get_user(user_id)
+
+  @doc """
   Bumps `user`'s `last_login` to current time.
 
   Called once, from the login controller. It used to double as "last seen",

@@ -145,7 +145,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # `config_target: :all` browses the whole library from the images root, for
   # pickers that are not choosing for a field (the AI assistant's attachments).
   defp list_images(config_target) do
-    filter = if config_target == :all, do: %{}, else: %{config_target: config_target}
+    # Browsing everything still leaves out hidden folders: media the site's
+    # visitors sent is not the site's to pick from.
+    filter = if config_target == :all, do: %{library: true}, else: %{config_target: config_target}
 
     {:ok, images} =
       Brando.Images.list_images(%{

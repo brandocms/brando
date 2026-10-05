@@ -10,6 +10,10 @@ defmodule Brando.Type.ImageConfig do
       this off stores the client's filename verbatim, so spaces and commas end
       up in image urls — which is a problem for `srcset`, where both characters
       are structural.
+    * hidden_folder - name of a folder kept out of the media library (the
+      image list, the alt-text page and the pickers). Uploads to the field
+      are filed there. For media that is not the site's own, such as files a
+      form's visitors send.
     * completed_callback - arity-2 function or `{module, function, extra_args}`
       called after image processing. Receives `(image, user)` before configured
       MFA arguments. Completion work may retry, so side effects should be
@@ -37,7 +41,8 @@ defmodule Brando.Type.ImageConfig do
           cdn: cdn_config | nil,
           formats: [atom()],
           overwrite: boolean(),
-          upload_path: String.t()
+          upload_path: String.t(),
+          hidden_folder: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -59,6 +64,7 @@ defmodule Brando.Type.ImageConfig do
             formats: [:original],
             overwrite: false,
             upload_path: Path.join("images", "default"),
+            hidden_folder: nil,
             completed_callback: nil
 
   @doc """

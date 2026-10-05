@@ -43,7 +43,16 @@ defmodule Brando.Blueprint.AssetConfigValidator do
     Enum.each(@boolean_fields, &validate_boolean!(asset, type, config, &1))
     validate_force_filename!(asset, type, config)
     validate_completed_callback!(asset, type, config)
+    validate_hidden_folder!(asset, type, config)
     validate_type_specific!(asset, type, config)
+  end
+
+  defp validate_hidden_folder!(asset, type, config) do
+    case Map.get(config, :hidden_folder) do
+      nil -> :ok
+      name when is_binary(name) and name != "" -> :ok
+      value -> invalid!(asset, type, :hidden_folder, "expected nil or a folder name, got: #{inspect(value)}")
+    end
   end
 
   defp validate_type_specific!(asset, :image, config) do

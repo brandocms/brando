@@ -20,6 +20,55 @@ defmodule Brando.Media.Folders do
   @max_matches 20
   @max_page 100
 
+  # Hidden folders live under their own scope, outside every library root
+  @hidden_scope "hidden"
+
+  @doc """
+  The id of the hidden folder `name`, created on first use.
+
+  A hidden folder holds media the site did not choose itself, such as files
+  a form's visitors upload (`hidden_folder` on the field's config). It has
+  `library: false`, and the media library, alt-text page and pickers leave
+  it out.
+  """
+  @spec hidden_folder_id(String.t()) :: integer()
+  def hidden_folder_id(name) when is_binary(name) and name != "" do
+    case Repo.get_by(Folder, scope: @hidden_scope, path: name) do
+      %Folder{id: id} ->
+        id
+
+      nil ->
+        %Folder{}
+        |> Folder.changeset(%{scope: @hidden_scope, name: name, path: name, library: false})
+        |> Repo.insert(on_conflict: :nothing, conflict_target: [:scope, :path])
+        |> case do
+          {:ok, %Folder{id: id}} when not is_nil(id) -> id
+          # Lost a race with another upload creating the same folder
+          _ -> Repo.get_by!(Folder, scope: @hidden_scope, path: name).id
+        end
+    end
+  end
+
+  @doc "Ids of every hidden (non-library) folder."
+  @spec hidden_folder_ids() :: [integer()]
+  def hidden_folder_ids do
+    Repo.all(from(f in Folder, where: not f.library, select: f.id))
+  end
+
+  @doc """
+  The folder an upload to a field with `cfg` goes in: the one the uploader
+  chose, else the field's hidden folder, else none.
+  """
+  @spec upload_folder_id(integer() | nil, map()) :: integer() | nil
+  def upload_folder_id(folder_id, _cfg) when not is_nil(folder_id), do: folder_id
+
+  def upload_folder_id(nil, cfg) do
+    case Map.get(cfg, :hidden_folder) do
+      name when is_binary(name) and name != "" -> hidden_folder_id(name)
+      _ -> nil
+    end
+  end
+
   @doc """
   Folders whose name or path is `name`, or whose path ends with it, ignoring
   case; when none is, those whose path contains it. Each has its number of `kind` assets (`items`),
@@ -34,7 +83,7 @@ defmodule Brando.Media.Folders do
     needle = name |> to_string() |> String.trim() |> String.trim("/") |> String.downcase()
     if needle == "", do: Error.fail!("Name the folder to look for.")
 
-    folders = Repo.all(from(f in Folder, order_by: [asc: f.scope, asc: f.path, asc: f.id]))
+    folders = Repo.all(from(f in Folder, where: f.library, order_by: [asc: f.scope, asc: f.path, asc: f.id]))
     exact = Enum.filter(folders, &exact?(&1, needle))
 
     matches =

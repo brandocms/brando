@@ -19,7 +19,7 @@ defmodule Brando.Images.Image do
 
   content_icon "image"
 
-  trait :creator, derived: [:sizes, :formats, :status, :cdn, :dominant_color, :config_fingerprint]
+  trait :creator, required: false, derived: [:sizes, :formats, :status, :cdn, :dominant_color, :config_fingerprint]
   trait :timestamped
   trait :soft_delete
   trait :focal

@@ -95,7 +95,7 @@ defmodule Brando.Images.Operations do
         operations
       end
 
-    if !silent?, do: Progress.show(user.id)
+    if !silent?, do: Progress.show(progress_target(user))
     start_msec = :os.system_time(:millisecond)
 
     operation_results =
@@ -119,10 +119,13 @@ defmodule Brando.Images.Operations do
 
     Logger.debug("==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..")
 
-    if !silent?, do: Progress.hide(user.id)
+    if !silent?, do: Progress.hide(progress_target(user))
 
     {:ok, operation_results}
   end
+
+  defp progress_target(%{id: id}), do: id
+  defp progress_target(_system), do: :system
 
   # assemble all `%TransformResult{}`s for each id
   defp compile_transform_results(transform_results, operations) do

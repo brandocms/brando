@@ -20,7 +20,7 @@ defmodule Brando.Worker.ImageUploader do
            "field_full_path" => field_full_path
          }
        }) do
-    BrandoAdmin.Progress.show(user_id)
+    BrandoAdmin.Progress.show(user_id || :system)
 
     field_full_path =
       Enum.map(field_full_path, fn
@@ -29,7 +29,7 @@ defmodule Brando.Worker.ImageUploader do
       end)
 
     with {:ok, config} <- Images.get_config_for(config_target),
-         {:ok, s3_key} <- CDN.upload_image(src_key, dest_key, config, user_id) do
+         {:ok, s3_key} <- CDN.upload_image(src_key, dest_key, config, user_id || :system) do
       if any_remaining_jobs?(image_id, job_id) do
         {:ok, s3_key}
       else
@@ -45,10 +45,11 @@ defmodule Brando.Worker.ImageUploader do
   def timeout(_job), do: :timer.seconds(180)
 
   defp finalize_image_upload(image_id, user_id, field_full_path) do
-    BrandoAdmin.Progress.hide(user_id)
+    BrandoAdmin.Progress.hide(user_id || :system)
     {:ok, image} = Images.get_image(image_id)
+    user = if user_id, do: %{id: user_id}, else: :system
 
-    case Images.update_image(image, %{cdn: true}, %{id: user_id}) do
+    case Images.update_image(image, %{cdn: true}, user) do
       {:ok, image} -> broadcast_status(image, field_full_path, :updated)
       err -> err
     end

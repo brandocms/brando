@@ -57,6 +57,14 @@ defmodule Brando.CDN.Client do
   @callback head_object(bucket :: binary, key :: binary, s3_config) ::
               {:ok, map} | {:error, term}
 
+  @doc """
+  Download an object. `{:ok, %{body: binary}}`, or `{:error, :not_found}` when
+  the key is absent. Used to fetch the original of a client-direct image so it
+  can be processed into its sizes.
+  """
+  @callback get_object(bucket :: binary, key :: binary, s3_config) ::
+              {:ok, map} | {:error, term}
+
   @doc "Delete an object. S3 DELETE is idempotent, so a missing key succeeds."
   @callback delete_object(bucket :: binary, key :: binary, s3_config) ::
               {:ok, map} | {:error, term}
@@ -100,6 +108,17 @@ defmodule Brando.CDN.Client.ExAws do
   def head_object(bucket, key, s3_config) do
     bucket
     |> ExAws.S3.head_object(key)
+    |> ExAws.request(s3_config)
+    |> case do
+      {:error, {:http_error, 404, _}} -> {:error, :not_found}
+      other -> other
+    end
+  end
+
+  @impl true
+  def get_object(bucket, key, s3_config) do
+    bucket
+    |> ExAws.S3.get_object(key)
     |> ExAws.request(s3_config)
     |> case do
       {:error, {:http_error, 404, _}} -> {:error, :not_found}
