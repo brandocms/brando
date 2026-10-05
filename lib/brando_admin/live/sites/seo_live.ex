@@ -924,12 +924,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
     if available? and row do
       fields = Map.get(socket.assigns.ai_context_fields, row.schema)
-
-      run = fn ->
-        with {:ok, generated} <- Generate.generate(row.schema, row.id, field, user, context_fields: fields) do
-          {:ok, Map.put(generated, :field, field)}
-        end
-      end
+      run = fn -> generate_field(row, field, user, fields) end
 
       {:noreply,
        socket
@@ -949,15 +944,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
       # The searches a page is found by say more about what its description
       # should promise than anything on the page itself.
-      run = fn ->
-        queries =
-          case search_console? && Analytics.top_queries(row.traffic || row.url) do
-            {:ok, queries} -> queries
-            _ -> []
-          end
-
-        Analyze.critique(row.schema, row.id, queries: queries)
-      end
+      run = fn -> Analyze.critique(row.schema, row.id, queries: critique_queries(row, search_console?)) end
 
       {:noreply,
        socket
@@ -1197,6 +1184,19 @@ defmodule BrandoAdmin.Sites.SEOLive do
       |> start_async({:queries, key}, in_captured_context(socket, fn -> Analytics.top_queries(page) end))
     else
       socket
+    end
+  end
+
+  defp generate_field(row, field, user, context_fields) do
+    with {:ok, generated} <- Generate.generate(row.schema, row.id, field, user, context_fields: context_fields) do
+      {:ok, Map.put(generated, :field, field)}
+    end
+  end
+
+  defp critique_queries(row, search_console?) do
+    case search_console? && Analytics.top_queries(row.traffic || row.url) do
+      {:ok, queries} -> queries
+      _ -> []
     end
   end
 
