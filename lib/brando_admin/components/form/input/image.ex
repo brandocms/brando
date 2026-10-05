@@ -83,12 +83,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   # image in assigns, and the image association from the changeset. Returns
   # {updated_socket, image_or_nil}.
   defp resolve_image(socket, image_id, image_from_changeset, full_path_fk) do
-    %{image: image, image_id: prev_image_id, focal: focal} = socket.assigns
+    %{image: image, focal: focal} = socket.assigns
 
     cond do
       # Nested form edge case: image struct has no ID and FK is nil.
       # Try resolving via the nested changeset path.
-      not is_nil(image) and is_nil(image.id) and is_nil(image_id) ->
+      unsaved_image_without_fk?(image, image_id) ->
         fetch_image_by_path(socket, full_path_fk)
 
       # FK cleared — discard the currently loaded image
@@ -100,9 +100,18 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         fetch_image(socket, image_id)
 
       # Cached image's focal diverged from tracked focal — refetch latest from DB
-      not is_nil(image) and focal != {nil, nil} and focal != {image.focal.x, image.focal.y} ->
+      focal_diverged?(image, focal) ->
         fetch_image(socket, image_id)
 
+      true ->
+        refresh_cached_image(socket, image_id, image_from_changeset)
+    end
+  end
+
+  defp refresh_cached_image(socket, image_id, image_from_changeset) do
+    %{image: image, image_id: prev_image_id, focal: focal} = socket.assigns
+
+    cond do
       # Changeset carries a fresher version of the image's display attributes
       not is_nil(image) and not is_nil(image_from_changeset) and
           image_display_changed?(image, image_from_changeset, focal) ->
@@ -122,6 +131,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         {socket, image}
     end
   end
+
+  defp unsaved_image_without_fk?(image, image_id),
+    do: not is_nil(image) and is_nil(image.id) and is_nil(image_id)
+
+  defp focal_diverged?(image, focal),
+    do: not is_nil(image) and focal != {nil, nil} and focal != {image.focal.x, image.focal.y}
 
   defp image_id_needs_fetch?(nil, image_id), do: not is_nil(image_id)
 
