@@ -111,14 +111,8 @@ defmodule Brando.SEO.Analytics do
       key = {:seo_analytics_queries, days, url}
 
       case !opts[:refresh] && Brando.Cache.get(key) do
-        queries when is_list(queries) ->
-          {:ok, queries}
-
-        _ ->
-          with {:ok, queries} <- SearchConsole.top_queries(absolute(url), days, Keyword.get(opts, :limit, 10)) do
-            Brando.Cache.put(key, queries, @ttl)
-            {:ok, queries}
-          end
+        queries when is_list(queries) -> {:ok, queries}
+        _ -> fetch_top_queries(key, url, days, opts)
       end
     else
       :not_configured
@@ -126,6 +120,13 @@ defmodule Brando.SEO.Analytics do
   end
 
   def top_queries(_page, _opts), do: :not_configured
+
+  defp fetch_top_queries(key, url, days, opts) do
+    with {:ok, queries} <- SearchConsole.top_queries(absolute(url), days, Keyword.get(opts, :limit, 10)) do
+      Brando.Cache.put(key, queries, @ttl)
+      {:ok, queries}
+    end
+  end
 
   @doc """
   The path figures are keyed by: no host, no query string, and no trailing
