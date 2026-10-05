@@ -189,13 +189,8 @@ defmodule Brando.Authorization.Configuration do
 
     Enum.reduce_while(entries, {:ok, []}, fn entry, {:ok, validated} ->
       case validate_entry(entry, catalog) do
-        {:ok, entry} ->
-          if Enum.any?(validated, &(&1["key"] == entry["key"])),
-            do: {:halt, invalid("The file contains duplicate group key: #{entry["key"]}.")},
-            else: {:cont, {:ok, [entry | validated]}}
-
-        error ->
-          {:halt, error}
+        {:ok, entry} -> add_unique_entry(entry, validated)
+        error -> {:halt, error}
       end
     end)
     |> case do
@@ -204,8 +199,23 @@ defmodule Brando.Authorization.Configuration do
     end
   end
 
+  defp add_unique_entry(entry, validated) do
+    if Enum.any?(validated, &(&1["key"] == entry["key"])),
+      do: {:halt, invalid("The file contains duplicate group key: #{entry["key"]}.")},
+      else: {:cont, {:ok, [entry | validated]}}
+  end
+
   defp validate_entry(%{"key" => key, "name" => name, "permissions" => permissions} = entry, catalog)
        when is_binary(key) and is_binary(name) and is_list(permissions) do
+    case entry_error(entry, catalog) do
+      nil -> build_entry(entry)
+      error -> error
+    end
+  end
+
+  defp validate_entry(_, _), do: invalid("Every group needs a key, name and list of permission keys.")
+
+  defp entry_error(%{"key" => key, "name" => name, "permissions" => permissions} = entry, catalog) do
     cond do
       Map.keys(entry) -- ["key", "name", "description", "preset", "permissions"] != [] ->
         invalid("Group #{name} contains unsupported fields. Memberships and database IDs cannot be imported.")
@@ -223,24 +233,27 @@ defmodule Brando.Authorization.Configuration do
         invalid("Group #{name} contains unknown permissions or permissions unavailable in this scope.")
 
       true ->
-        case %Group{} |> Group.changeset(Map.take(entry, ["name", "description"])) |> Changeset.apply_action(:insert) do
-          {:ok, group} ->
-            {:ok,
-             %{
-               "key" => key,
-               "name" => group.name,
-               "description" => group.description,
-               "preset" => entry["preset"],
-               "permissions" => Enum.sort(Enum.uniq(permissions))
-             }}
-
-          {:error, _} ->
-            invalid("Group #{name} needs a name of 1–100 characters and a description of at most 500 characters.")
-        end
+        nil
     end
   end
 
-  defp validate_entry(_, _), do: invalid("Every group needs a key, name and list of permission keys.")
+  defp build_entry(%{"key" => key, "name" => name, "permissions" => permissions} = entry) do
+    case %Group{} |> Group.changeset(Map.take(entry, ["name", "description"])) |> Changeset.apply_action(:insert) do
+      {:ok, group} ->
+        {:ok,
+         %{
+           "key" => key,
+           "name" => group.name,
+           "description" => group.description,
+           "preset" => entry["preset"],
+           "permissions" => Enum.sort(Enum.uniq(permissions))
+         }}
+
+      {:error, _} ->
+        invalid("Group #{name} needs a name of 1–100 characters and a description of at most 500 characters.")
+    end
+  end
+
   defp valid_preset?(key, nil), do: key not in ["user", "editor", "admin", "superuser"]
   defp valid_preset?(key, preset), do: preset in ["user", "editor", "admin"] and key == preset
   defp preset("user"), do: :user
