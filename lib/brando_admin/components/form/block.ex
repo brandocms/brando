@@ -2817,46 +2817,52 @@ defmodule BrandoAdmin.Components.Form.Block do
         ""
 
       var_cs ->
-        image_id = Changeset.get_field(var_cs, :image_id)
-        image = Changeset.get_field(var_cs, :image)
+        var_image_src(var_cs)
+    end
+  end
 
-        cond do
-          image_id == nil ->
-            ""
+  defp var_image_src(var_cs) do
+    image_id = Changeset.get_field(var_cs, :image_id)
+    image = Changeset.get_field(var_cs, :image)
 
-          image == %Ecto.Association.NotLoaded{} ->
-            image_id = Changeset.get_field(var_cs, :image_id)
+    cond do
+      image_id == nil ->
+        ""
 
-            case Cache.get("var_image_#{image_id}") do
-              nil ->
-                image = Brando.Images.get_image!(image_id)
-                media_path = Brando.Utils.media_url(image.path)
-                Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-                media_path
+      image == %Ecto.Association.NotLoaded{} ->
+        cached_var_image_src(image_id)
 
-              media_path ->
-                media_path
-            end
+      is_struct(image, Brando.Images.Image) ->
+        path = image.path
+        media_path = Brando.Utils.media_url(path)
+        Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+        media_path
 
-          is_struct(image, Brando.Images.Image) ->
-            path = image.path
-            media_path = Brando.Utils.media_url(path)
-            Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-            media_path
+      true ->
+        require Logger
 
-          true ->
-            require Logger
+        Logger.error("""
 
-            Logger.error("""
+        other:
+        #{inspect(image_id, pretty: true)}
+        #{inspect(image, pretty: true)}
 
-            other:
-            #{inspect(image_id, pretty: true)}
-            #{inspect(image, pretty: true)}
+        """)
 
-            """)
+        ""
+    end
+  end
 
-            ""
-        end
+  defp cached_var_image_src(image_id) do
+    case Cache.get("var_image_#{image_id}") do
+      nil ->
+        image = Brando.Images.get_image!(image_id)
+        media_path = Brando.Utils.media_url(image.path)
+        Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+        media_path
+
+      media_path ->
+        media_path
     end
   end
 
@@ -3230,7 +3236,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp replace_media_in_gallery_ref(ref_changeset, media_type, old_media_id, new_media, current_user) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
     id_field = media_id_field(media_type)
-    new_media_id = new_media.id
 
     case current_gallery do
       nil ->
@@ -3240,14 +3245,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         existing_objects = gallery.gallery_objects || []
 
         updated_objects =
-          Enum.map(existing_objects, fn obj ->
-            if Map.get(obj, id_field) == old_media_id do
-              %{creator_id: current_user.id}
-              |> put_media_fields(media_type, new_media_id, new_media)
-            else
-              preserve_gallery_object(obj)
-            end
-          end)
+          Enum.map(
+            existing_objects,
+            &replace_gallery_object(&1, media_type, id_field, old_media_id, new_media, current_user)
+          )
 
         updated_gallery = %{
           id: Map.get(gallery, :id),
@@ -3259,6 +3260,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
+  defp replace_gallery_object(obj, media_type, id_field, old_media_id, new_media, current_user) do
+    if Map.get(obj, id_field) == old_media_id do
+      %{creator_id: current_user.id}
+      |> put_media_fields(media_type, new_media.id, new_media)
+    else
+      preserve_gallery_object(obj)
+    end
+  end
+
   defp replace_gallery_media_override(block_changeset, media_type, old_media_id, new_media_id) do
     current_data = Changeset.get_field(block_changeset, :data)
     {current_overrides, data_map} = extract_gallery_data(current_data)
@@ -3266,23 +3276,23 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     updated_overrides =
       Enum.map(current_overrides, fn override ->
-        if GalleryObjectOverride.for_media?(override, media_type, old_media_id) do
-          case override do
-            %Changeset{} ->
-              override
-              |> Changeset.put_change(:object_id, new_id_str)
-              |> Changeset.put_change(:object_type, media_type)
-
-            %{} ->
-              Map.merge(override, %{object_id: new_id_str, object_type: media_type})
-          end
-        else
-          override
-        end
+        if GalleryObjectOverride.for_media?(override, media_type, old_media_id),
+          do: retarget_gallery_override(override, media_type, new_id_str),
+          else: override
       end)
 
     updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
     Changeset.put_change(block_changeset, :data, updated_data_map)
+  end
+
+  defp retarget_gallery_override(%Changeset{} = override, media_type, new_id_str) do
+    override
+    |> Changeset.put_change(:object_id, new_id_str)
+    |> Changeset.put_change(:object_type, media_type)
+  end
+
+  defp retarget_gallery_override(%{} = override, media_type, new_id_str) do
+    Map.merge(override, %{object_id: new_id_str, object_type: media_type})
   end
 
   # Note: Removed create_gallery_with_image and add_image_to_existing_gallery
@@ -3313,22 +3323,22 @@ defmodule BrandoAdmin.Components.Form.Block do
     case Map.get(obj, :video) do
       %Ecto.Association.NotLoaded{} ->
         # Re-fetch if we have the ID
-        case Map.get(obj, :video_id) do
-          nil ->
-            base_fields
-
-          id ->
-            case Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail]}) do
-              {:ok, video} -> Map.put(base_fields, :video, video)
-              _ -> base_fields
-            end
-        end
+        refetch_video_association(base_fields, Map.get(obj, :video_id))
 
       nil ->
         base_fields
 
       video ->
         Map.put(base_fields, :video, video)
+    end
+  end
+
+  defp refetch_video_association(base_fields, nil), do: base_fields
+
+  defp refetch_video_association(base_fields, id) do
+    case Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail]}) do
+      {:ok, video} -> Map.put(base_fields, :video, video)
+      _ -> base_fields
     end
   end
 
