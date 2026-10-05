@@ -446,61 +446,7 @@ defmodule Brando.Content.Transfer do
           if existing = receipt(plan.id, actor) do
             existing
           else
-            # Lock owning rows in deterministic order; children and dependencies
-            # are fingerprinted again after these locks are held.
-            plan.fields
-            |> Enum.sort_by(& &1.destination.key)
-            |> Enum.each(&Catalog.load!(&1.destination.schema, &1.destination.id, actor, :update, lock: true))
-
-            lock_records!(plan)
-
-            current = preview!(plan.archive, plan.targets, actor, dependencies: plan.supplied, operation_id: plan.id)
-
-            unless current.fingerprint == plan.fingerprint && applicable?(current),
-              do: Repo.rollback("The destination changed after preview. Review the import again.")
-
-            before = snapshot_fields(current.fields)
-            bindings = persist_dependencies!(current, stage, actor)
-            label = plan.archive.bundle["source"]["label"]
-
-            Activity.with_source(:import, fn ->
-              Activity.with_batch(plan.id, fn -> persist_fields!(current.fields, bindings, actor, label) end)
-            end)
-
-            after_fields =
-              Enum.map(current.fields, fn field ->
-                %{field | entry: Catalog.load!(field.destination.schema, field.destination.id, actor, :update)}
-              end)
-
-            receipt = %Receipt{
-              id: plan.id,
-              package_id: plan.archive.bundle["id"],
-              fingerprint: plan.fingerprint,
-              scope: scope(),
-              actor_id: actor_id!(actor),
-              before: before,
-              after: snapshot_fields(after_fields),
-              mappings: %{
-                "source" => plan.archive.bundle["source"]["scope"],
-                "transferred_media" =>
-                  for(
-                    %{action: :create, token: token, dependency: %{"kind" => kind} = dep} <- plan.dependencies,
-                    kind in ~w(image file),
-                    do: %{"kind" => kind, "id" => bindings[token].id, "sha256" => dep["original"]["sha256"]}
-                  ),
-                "targets" => plan.targets,
-                "dependencies" => Map.new(bindings, fn {token, record} -> {token, record.id} end),
-                "requirements" =>
-                  Map.new(plan.archive.bundle["dependencies"], fn {token, dep} -> {token, Value.digest(dep)} end),
-                "created_images" =>
-                  for(
-                    %{action: :create, token: token, dependency: %{"kind" => "image"}} <- plan.dependencies,
-                    do: bindings[token].id
-                  )
-              }
-            }
-
-            Repo.insert!(receipt)
+            apply_plan!(plan, stage, actor)
           end
         end)
       rescue
@@ -515,6 +461,65 @@ defmodule Brando.Content.Transfer do
       {:ok, receipt} -> {:ok, refresh_receipt(receipt, actor)}
       error -> error
     end
+  end
+
+  defp apply_plan!(plan, stage, actor) do
+    # Lock owning rows in deterministic order; children and dependencies
+    # are fingerprinted again after these locks are held.
+    plan.fields
+    |> Enum.sort_by(& &1.destination.key)
+    |> Enum.each(&Catalog.load!(&1.destination.schema, &1.destination.id, actor, :update, lock: true))
+
+    lock_records!(plan)
+
+    current = preview!(plan.archive, plan.targets, actor, dependencies: plan.supplied, operation_id: plan.id)
+
+    unless current.fingerprint == plan.fingerprint && applicable?(current),
+      do: Repo.rollback("The destination changed after preview. Review the import again.")
+
+    before = snapshot_fields(current.fields)
+    bindings = persist_dependencies!(current, stage, actor)
+    label = plan.archive.bundle["source"]["label"]
+
+    Activity.with_source(:import, fn ->
+      Activity.with_batch(plan.id, fn -> persist_fields!(current.fields, bindings, actor, label) end)
+    end)
+
+    after_fields =
+      Enum.map(current.fields, fn field ->
+        %{field | entry: Catalog.load!(field.destination.schema, field.destination.id, actor, :update)}
+      end)
+
+    Repo.insert!(plan_receipt(plan, before, after_fields, bindings, actor))
+  end
+
+  defp plan_receipt(plan, before, after_fields, bindings, actor) do
+    %Receipt{
+      id: plan.id,
+      package_id: plan.archive.bundle["id"],
+      fingerprint: plan.fingerprint,
+      scope: scope(),
+      actor_id: actor_id!(actor),
+      before: before,
+      after: snapshot_fields(after_fields),
+      mappings: %{
+        "source" => plan.archive.bundle["source"]["scope"],
+        "transferred_media" =>
+          for(
+            %{action: :create, token: token, dependency: %{"kind" => kind} = dep} <- plan.dependencies,
+            kind in ~w(image file),
+            do: %{"kind" => kind, "id" => bindings[token].id, "sha256" => dep["original"]["sha256"]}
+          ),
+        "targets" => plan.targets,
+        "dependencies" => Map.new(bindings, fn {token, record} -> {token, record.id} end),
+        "requirements" => Map.new(plan.archive.bundle["dependencies"], fn {token, dep} -> {token, Value.digest(dep)} end),
+        "created_images" =>
+          for(
+            %{action: :create, token: token, dependency: %{"kind" => "image"}} <- plan.dependencies,
+            do: bindings[token].id
+          )
+      }
+    }
   end
 
   @doc """
