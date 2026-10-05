@@ -392,7 +392,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   defp references(json) do
     case Jason.decode(json) do
       {:ok, map} when is_map(map) ->
-        if Enum.all?(map, fn {token, id} -> is_binary(token) && is_integer(id) && id > 0 end),
+        if Enum.all?(map, &valid_reference?/1),
           do: {:ok, map},
           else: {:error, gettext("Reference mappings must map tokens to positive record IDs.")}
 
@@ -400,6 +400,8 @@ defmodule BrandoAdmin.Components.ModuleFiles do
         {:error, gettext("Reference mappings must be a JSON object.")}
     end
   end
+
+  defp valid_reference?({token, id}), do: is_binary(token) && is_integer(id) && id > 0
 
   defp error(socket, :forbidden), do: error(socket, gettext("You do not have permission for this action."))
 
