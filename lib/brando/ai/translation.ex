@@ -55,51 +55,7 @@ defmodule Brando.AI.Translation do
       entry ->
         progress_fn.(:collecting)
         items = collect_translatable_content(entry, schema, %{source: source_lang, target: target_lang})
-
-        if items == [] do
-          progress_fn.(:complete)
-          {:ok, entry_id}
-        else
-          batches = build_batches(items, source_lang, target_lang)
-          total_batches = length(batches)
-
-          translated_items =
-            batches
-            |> Enum.with_index(1)
-            |> Enum.reduce_while([], fn {batch, idx}, acc ->
-              progress_fn.({:translating, idx, total_batches})
-
-              case translate_batch(batch, source_lang, target_lang) do
-                {:ok, translations} ->
-                  {:cont, acc ++ translations}
-
-                {:error, reason} ->
-                  {:halt, {:error, reason}}
-              end
-            end)
-
-          case translated_items do
-            {:error, reason} ->
-              {:error, reason}
-
-            translations when is_list(translations) ->
-              progress_fn.(:applying)
-              apply_translations(translations, entry, schema)
-              update_slugs(entry, schema)
-
-              progress_fn.(:rendering)
-
-              if schema.has_trait(Brando.Trait.Blocks) do
-                case Brando.Content.Blocks.render_entry(schema, entry_id) do
-                  {:ok, _} -> :ok
-                  {:error, reason} -> Logger.warning("Re-render after translation failed: #{inspect(reason)}")
-                end
-              end
-
-              progress_fn.(:complete)
-              {:ok, entry_id}
-          end
-        end
+        translate_items(items, entry, schema, entry_id, {source_lang, target_lang}, progress_fn)
     end
   rescue
     e ->
@@ -108,6 +64,58 @@ defmodule Brando.AI.Translation do
   end
 
   defp default_progress(_step), do: :ok
+
+  defp translate_items([], _entry, _schema, entry_id, _langs, progress_fn) do
+    progress_fn.(:complete)
+    {:ok, entry_id}
+  end
+
+  defp translate_items(items, entry, schema, entry_id, {source_lang, target_lang}, progress_fn) do
+    batches = build_batches(items, source_lang, target_lang)
+
+    case translate_batches(batches, source_lang, target_lang, progress_fn) do
+      {:error, reason} ->
+        {:error, reason}
+
+      translations when is_list(translations) ->
+        progress_fn.(:applying)
+        apply_translations(translations, entry, schema)
+        update_slugs(entry, schema)
+
+        progress_fn.(:rendering)
+        maybe_render_entry(schema, entry_id)
+
+        progress_fn.(:complete)
+        {:ok, entry_id}
+    end
+  end
+
+  defp translate_batches(batches, source_lang, target_lang, progress_fn) do
+    total_batches = length(batches)
+
+    batches
+    |> Enum.with_index(1)
+    |> Enum.reduce_while([], fn {batch, idx}, acc ->
+      progress_fn.({:translating, idx, total_batches})
+
+      case translate_batch(batch, source_lang, target_lang) do
+        {:ok, translations} ->
+          {:cont, acc ++ translations}
+
+        {:error, reason} ->
+          {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp maybe_render_entry(schema, entry_id) do
+    if schema.has_trait(Brando.Trait.Blocks) do
+      case Brando.Content.Blocks.render_entry(schema, entry_id) do
+        {:ok, _} -> :ok
+        {:error, reason} -> Logger.warning("Re-render after translation failed: #{inspect(reason)}")
+      end
+    end
+  end
 
   # --- Content Collection ---
 
@@ -190,22 +198,20 @@ defmodule Brando.AI.Translation do
     if schema.has_trait(Brando.Trait.Blocks) do
       schema.__blocks_fields__()
       |> Enum.flat_map(fn %{name: assoc_name} ->
-        entry_assoc_name = :"entry_#{assoc_name}"
-
-        case Map.get(entry, entry_assoc_name) do
-          entry_blocks when is_list(entry_blocks) ->
-            Enum.flat_map(entry_blocks, fn entry_block ->
-              collect_from_block(entry_block.block, langs)
-            end)
-
-          _ ->
-            []
-        end
+        collect_from_entry_blocks(Map.get(entry, :"entry_#{assoc_name}"), langs)
       end)
     else
       []
     end
   end
+
+  defp collect_from_entry_blocks(entry_blocks, langs) when is_list(entry_blocks) do
+    Enum.flat_map(entry_blocks, fn entry_block ->
+      collect_from_block(entry_block.block, langs)
+    end)
+  end
+
+  defp collect_from_entry_blocks(_entry_blocks, _langs), do: []
 
   defp collect_from_block(nil, _langs), do: []
 
@@ -238,13 +244,7 @@ defmodule Brando.AI.Translation do
       # PolymorphicEmbed resolves to wrapper struct (e.g. %TextBlock{data: %TextBlock.Data{text: ...}})
       case ref.data do
         %wrapper{data: inner_data} when wrapper in @text_ref_wrapper_types ->
-          text = Map.get(inner_data, :text)
-
-          if is_binary(text) and text != "" do
-            [{:ref, ref.id, text}]
-          else
-            []
-          end
+          collect_ref_text(ref.id, Map.get(inner_data, :text))
 
         %PictureBlock{data: inner_data} ->
           collect_picture_overrides(ref, inner_data, langs)
@@ -259,6 +259,14 @@ defmodule Brando.AI.Translation do
           []
       end
     end)
+  end
+
+  defp collect_ref_text(ref_id, text) do
+    if is_binary(text) and text != "" do
+      [{:ref, ref_id, text}]
+    else
+      []
+    end
   end
 
   defp collect_picture_overrides(ref, data, langs) do
@@ -385,33 +393,39 @@ defmodule Brando.AI.Translation do
   defp has_text?(_values, _language), do: false
 
   defp collect_from_table_rows(table_rows) do
-    Enum.flat_map(table_rows, fn row ->
-      Enum.reduce(row.vars || [], [], fn var, acc ->
-        if var.type in @translatable_var_types and is_binary(var.value) and var.value != "" do
-          [{:table_var, var.id, var.value} | acc]
-        else
-          acc
-        end
-      end)
-      |> Enum.reverse()
+    Enum.flat_map(table_rows, &collect_from_table_row/1)
+  end
+
+  defp collect_from_table_row(row) do
+    Enum.reduce(row.vars || [], [], fn var, acc ->
+      if var.type in @translatable_var_types and is_binary(var.value) and var.value != "" do
+        [{:table_var, var.id, var.value} | acc]
+      else
+        acc
+      end
     end)
+    |> Enum.reverse()
   end
 
   defp collect_from_identifier_metas(%{identifier_metas: metas, id: block_id})
        when is_map(metas) and map_size(metas) > 0 do
     Enum.flat_map(metas, fn {identifier_key, meta_map} ->
-      Enum.reduce(meta_map, [], fn {field, value}, acc ->
-        if is_binary(value) and value != "" do
-          [{:identifier_meta, block_id, identifier_key, field, value} | acc]
-        else
-          acc
-        end
-      end)
-      |> Enum.reverse()
+      collect_identifier_meta(block_id, identifier_key, meta_map)
     end)
   end
 
   defp collect_from_identifier_metas(_), do: []
+
+  defp collect_identifier_meta(block_id, identifier_key, meta_map) do
+    Enum.reduce(meta_map, [], fn {field, value}, acc ->
+      if is_binary(value) and value != "" do
+        [{:identifier_meta, block_id, identifier_key, field, value} | acc]
+      else
+        acc
+      end
+    end)
+    |> Enum.reverse()
+  end
 
   # --- Prompt Building & Batching ---
 
@@ -560,31 +574,7 @@ defmodule Brando.AI.Translation do
     if slug_fields != [] do
       # Re-read entry to get translated field values
       fresh_entry = Repo.get(schema, entry.id)
-
-      changes =
-        Enum.reduce(slug_fields, %{}, fn slug_field, acc ->
-          source = get_slug_source(schema, slug_field.name)
-
-          slug_value =
-            case source do
-              nil ->
-                nil
-
-              fields when is_list(fields) ->
-                fields
-                |> Enum.map_join("-", &to_string(Map.get(fresh_entry, &1, "")))
-                |> Brando.Utils.slugify()
-
-              field when is_atom(field) ->
-                fresh_entry |> Map.get(field, "") |> to_string() |> Brando.Utils.slugify()
-            end
-
-          if slug_value && slug_value != "" do
-            Map.put(acc, slug_field.name, slug_value)
-          else
-            acc
-          end
-        end)
+      changes = slug_changes(slug_fields, fresh_entry, schema)
 
       if changes != %{} do
         fresh_entry
@@ -594,20 +584,51 @@ defmodule Brando.AI.Translation do
     end
   end
 
+  defp slug_changes(slug_fields, fresh_entry, schema) do
+    Enum.reduce(slug_fields, %{}, fn slug_field, acc ->
+      source = get_slug_source(schema, slug_field.name)
+      slug_value = slug_value(source, fresh_entry)
+
+      if slug_value && slug_value != "" do
+        Map.put(acc, slug_field.name, slug_value)
+      else
+        acc
+      end
+    end)
+  end
+
+  defp slug_value(source, fresh_entry) do
+    case source do
+      nil ->
+        nil
+
+      fields when is_list(fields) ->
+        fields
+        |> Enum.map_join("-", &to_string(Map.get(fresh_entry, &1, "")))
+        |> Brando.Utils.slugify()
+
+      field when is_atom(field) ->
+        fresh_entry |> Map.get(field, "") |> to_string() |> Brando.Utils.slugify()
+    end
+  end
+
   defp get_slug_source(schema, slug_field_name) do
     case schema.__form__() do
       %{tabs: tabs} ->
-        Enum.find_value(tabs, fn tab ->
-          Enum.find_value(tab.fields, fn fieldset ->
-            Enum.find_value(fieldset.fields, fn
-              %Brando.Blueprint.Forms.Input{name: ^slug_field_name, type: :slug, opts: opts} ->
-                Keyword.get(opts, :source)
+        tabs
+        |> Enum.flat_map(& &1.fields)
+        |> Enum.flat_map(& &1.fields)
+        |> Enum.find_value(&slug_source(&1, slug_field_name))
 
-              _ ->
-                nil
-            end)
-          end)
-        end)
+      _ ->
+        nil
+    end
+  end
+
+  defp slug_source(field, slug_field_name) do
+    case field do
+      %Brando.Blueprint.Forms.Input{name: ^slug_field_name, type: :slug, opts: opts} ->
+        Keyword.get(opts, :source)
 
       _ ->
         nil
