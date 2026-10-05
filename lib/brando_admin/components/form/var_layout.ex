@@ -533,28 +533,30 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
   end
 
   defp update_var(socket, key, attrs) do
-    apply_vars(socket, fn vars ->
-      Enum.map(vars, fn var ->
-        if Changeset.get_field(var, :key) == key, do: Changeset.change(var, attrs), else: var
-      end)
-    end)
+    apply_vars(socket, fn vars -> Enum.map(vars, &change_var_with_key(&1, key, attrs)) end)
+  end
+
+  defp change_var_with_key(var, key, attrs) do
+    if Changeset.get_field(var, :key) == key, do: Changeset.change(var, attrs), else: var
   end
 
   defp apply_layout(socket, layout_attrs) do
     apply_vars(socket, fn vars ->
       vars
-      |> Enum.map(fn var ->
-        case Map.get(layout_attrs, Changeset.get_field(var, :key)) do
-          nil -> var
-          attrs -> Changeset.change(var, attrs)
-        end
-      end)
+      |> Enum.map(&change_var_layout(&1, layout_attrs))
       # The association's *order* is what survives a save, not the `sequence` we
       # just wrote: `<.inputs_for>` renders `sort_var_ids` in list order and
       # Ecto's `sort_param` rewrites `sequence` from that on submit. Reorder the
       # list to agree with the layout, or the drop is undone on save.
       |> Enum.sort_by(&(Changeset.get_field(&1, :sequence) || 0))
     end)
+  end
+
+  defp change_var_layout(var, layout_attrs) do
+    case Map.get(layout_attrs, Changeset.get_field(var, :key)) do
+      nil -> var
+      attrs -> Changeset.change(var, attrs)
+    end
   end
 
   # The parent LiveView owns the module changeset, so hand the new one back and
