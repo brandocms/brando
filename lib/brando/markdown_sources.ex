@@ -82,8 +82,9 @@ defmodule Brando.MarkdownSources do
     Ecto.StaleEntryError -> {:error, :stale_source}
   end
 
-  def add_documents(connection, ref, paths, actor) when is_list(paths) and length(paths) in 1..200 do
-    with :ok <- authorize(actor, :create),
+  def add_documents(connection, ref, [_ | _] = paths, actor) do
+    with true <- length(paths) <= 200 || {:error, :invalid_selection},
+         :ok <- authorize(actor, :create),
          {:ok, _} <- Connection.current(connection) do
       Brando.MarkdownSources.Publication.with_source_lock("new", fn ->
         Repo.transaction(fn ->

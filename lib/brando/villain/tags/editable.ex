@@ -47,7 +47,7 @@ defmodule Brando.Villain.Tags.Editable do
   entry and `"title"`, since the field is the last key of the path and the entry
   everything before it. Returns `{nil, nil, context}` for any other argument.
   """
-  def resolve({:field, accesses}, context) when length(accesses) > 1 do
+  def resolve({:field, [_, _ | _] = accesses}, context) do
     case Enum.split(accesses, -1) do
       {parent, [{:key, name}]} ->
         {entry, context} = Liquex.Argument.eval({:field, parent}, context)

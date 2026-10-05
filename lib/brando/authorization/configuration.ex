@@ -157,8 +157,11 @@ defmodule Brando.Authorization.Configuration do
   defp decode(scope, json) when is_binary(json) and byte_size(json) <= @max_bytes do
     case Jason.decode(json) do
       {:ok, %{"format" => @format, "version" => 1, "scope" => kind, "groups" => entries} = document}
-      when is_list(entries) and length(entries) <= @max_groups ->
+      when is_list(entries) ->
         cond do
+          length(entries) > @max_groups ->
+            unsupported_export()
+
           Map.keys(document) -- ["format", "version", "scope", "groups"] != [] ->
             invalid("The file contains unsupported configuration fields.")
 
@@ -173,11 +176,13 @@ defmodule Brando.Authorization.Configuration do
         invalid("This file is not valid JSON. Choose a Brando group configuration export.")
 
       _ ->
-        invalid("Expected a version 1 Brando authorization export with at most 500 groups.")
+        unsupported_export()
     end
   end
 
   defp decode(_, _), do: invalid("Choose a JSON configuration file smaller than 1 MB.")
+
+  defp unsupported_export, do: invalid("Expected a version 1 Brando authorization export with at most 500 groups.")
 
   defp validate_entries(scope, entries) do
     catalog = Catalog.all() |> Enum.filter(&(scope.kind in &1.scopes)) |> MapSet.new(& &1.key)

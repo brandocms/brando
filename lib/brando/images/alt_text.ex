@@ -252,8 +252,8 @@ defmodule Brando.Images.AltText do
   def parse(text, languages) do
     json = text |> String.trim() |> String.replace(~r/^```(?:json)?\s*|\s*```$/, "")
 
-    case Jason.decode(json) do
-      {:ok, %{} = map} ->
+    case {Jason.decode(json), languages} do
+      {{:ok, %{} = map}, _} ->
         values =
           for language <- languages,
               value = Map.get(map, language),
@@ -263,10 +263,10 @@ defmodule Brando.Images.AltText do
 
         if values == %{}, do: {:error, :empty_response}, else: {:ok, values}
 
-      _ when length(languages) == 1 ->
+      {_, [language]} ->
         case clean(text) do
           "" -> {:error, :empty_response}
-          value -> {:ok, %{hd(languages) => value}}
+          value -> {:ok, %{language => value}}
         end
 
       _ ->

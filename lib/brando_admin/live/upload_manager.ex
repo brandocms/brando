@@ -66,13 +66,15 @@ defmodule BrandoAdmin.UploadManager do
   end
 
   def handle_event("intake", %{"files" => files, "target" => target}, socket) do
+    single_file? = match?([_], files)
+
     case AssetIntent.normalize(target) do
-      {:ok, %{"kind" => "file_replace"} = target} when length(files) != 1 ->
+      {:ok, %{"kind" => "file_replace"} = target} when not single_file? ->
         reject_intake(files, target, gettext("Choose one replacement file at a time"), socket)
 
       {:ok, %{"kind" => kind} = target}
       when kind in ["entry_field", "block_var", "entry_var", "block_ref_picture", "block_ref_file", "block_ref_video"] and
-             length(files) != 1 ->
+             not single_file? ->
         reject_intake(files, target, gettext("Choose one file for this field"), socket)
 
       {:ok, target} ->

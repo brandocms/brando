@@ -186,18 +186,18 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def handle_event("export_module_files", %{"ids" => encoded}, socket) do
     ids =
-      case if(is_binary(encoded), do: Jason.decode(encoded), else: :error) do
-        {:ok, ids} when is_list(ids) and length(ids) <= 500 ->
-          Enum.flat_map(ids, fn id ->
-            case if(is_integer(id) or is_binary(id), do: Integer.parse(to_string(id)), else: :error) do
-              {id, ""} when id > 0 -> [id]
-              _ -> []
-            end
-          end)
-          |> Enum.uniq()
-
-        _ ->
-          []
+      with true <- is_binary(encoded),
+           {:ok, ids} when is_list(ids) <- Jason.decode(encoded),
+           true <- length(ids) <= 500 do
+        Enum.flat_map(ids, fn id ->
+          case if(is_integer(id) or is_binary(id), do: Integer.parse(to_string(id)), else: :error) do
+            {id, ""} when id > 0 -> [id]
+            _ -> []
+          end
+        end)
+        |> Enum.uniq()
+      else
+        _ -> []
       end
 
     send_update(BrandoAdmin.Components.ModuleFiles, id: "module-files", selected_ids: ids)
