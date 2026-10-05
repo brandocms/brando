@@ -16,6 +16,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Config
+    alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Rewrite.Source
     alias Sourceror.Zipper
@@ -44,7 +45,7 @@ if Code.ensure_loaded?(Igniter) do
       {igniter, modules} = find_blueprints(igniter)
 
       Enum.reduce(modules, igniter, fn module, igniter ->
-        Igniter.Project.Module.find_and_update_module!(igniter, module, fun)
+        ProjectModule.find_and_update_module!(igniter, module, fun)
       end)
     end
 
@@ -702,7 +703,7 @@ if Code.ensure_loaded?(Igniter) do
     defp keyword_entries(entries) when is_list(entries), do: entries
 
     defp find_blueprints(igniter) do
-      Igniter.Project.Module.find_all_matching_modules(igniter, fn _module, zipper ->
+      ProjectModule.find_all_matching_modules(igniter, fn _module, zipper ->
         case Igniter.Code.Module.move_to_use(zipper, Brando.Blueprint) do
           {:ok, _zipper} -> true
           _ -> false
@@ -950,13 +951,13 @@ if Code.ensure_loaded?(Igniter) do
     def start_endpoint_last(igniter, application \\ nil, endpoint \\ nil) do
       application =
         application || Igniter.Project.Application.app_module(igniter) ||
-          Igniter.Project.Module.module_name(igniter, "Application")
+          ProjectModule.module_name(igniter, "Application")
 
       endpoint = endpoint || Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
 
-      case Igniter.Project.Module.module_exists(igniter, application) do
+      case ProjectModule.module_exists(igniter, application) do
         {true, igniter} ->
-          Igniter.Project.Module.find_and_update_module!(igniter, application, &endpoint_last(&1, endpoint))
+          ProjectModule.find_and_update_module!(igniter, application, &endpoint_last(&1, endpoint))
 
         {false, igniter} ->
           igniter
@@ -1049,11 +1050,11 @@ if Code.ensure_loaded?(Igniter) do
     setting alone. Without the mailer module it does nothing.
     """
     def configure_brando_mailer(igniter, mailer \\ nil) do
-      mailer = mailer || Igniter.Project.Module.module_name(igniter, "Mailer")
+      mailer = mailer || ProjectModule.module_name(igniter, "Mailer")
 
       configured? = Enum.any?(~w(config.exs brando.exs), &Config.configures_key?(igniter, &1, :brando, :mailer))
 
-      case Igniter.Project.Module.module_exists(igniter, mailer) do
+      case ProjectModule.module_exists(igniter, mailer) do
         {true, igniter} when not configured? ->
           file = if Igniter.exists?(igniter, "config/brando.exs"), do: "brando.exs", else: "config.exs"
           Config.configure_new(igniter, file, :brando, [:mailer], mailer)
@@ -1200,7 +1201,7 @@ if Code.ensure_loaded?(Igniter) do
     def rewrite_preview_targets(igniter) do
       rewriting_module = Igniter.Libs.Phoenix.web_module_name(igniter, LivePreview)
 
-      case Igniter.Project.Module.find_and_update_module(igniter, rewriting_module, &rewrite_preview_module/1) do
+      case ProjectModule.find_and_update_module(igniter, rewriting_module, &rewrite_preview_module/1) do
         {:ok, igniter} -> igniter
         {:error, igniter} -> igniter
       end
