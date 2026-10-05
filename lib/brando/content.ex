@@ -763,21 +763,9 @@ defmodule Brando.Content do
         url: new_identifier.url
       }
 
-      changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
-
-      url_changed? = Ecto.Changeset.get_change(changeset, :url)
-
-      with {:ok, updated_identifier} <- Brando.Repo.update(changeset) do
-        Brando.Cache.Query.evict({:ok, updated_identifier})
-
-        if url_changed? do
-          new_url = updated_identifier.url || "#"
-          Brando.Content.Blocks.update_identifier_links_in_refs(updated_identifier.id, new_url)
-          Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(updated_identifier.id, new_url)
-        end
-
-        {:ok, updated_identifier}
-      end
+      identifier
+      |> Ecto.Changeset.change(updated_identifier_data)
+      |> save_identifier_changes()
     else
       {:error, {:identifier, :not_found}} ->
         create_identifier(module, entry)
@@ -785,6 +773,26 @@ defmodule Brando.Content do
       _err ->
         {:ok, false}
     end
+  end
+
+  defp save_identifier_changes(changeset) do
+    url_changed? = Ecto.Changeset.get_change(changeset, :url)
+
+    with {:ok, updated_identifier} <- Brando.Repo.update(changeset) do
+      Brando.Cache.Query.evict({:ok, updated_identifier})
+
+      if url_changed? do
+        update_identifier_links(updated_identifier)
+      end
+
+      {:ok, updated_identifier}
+    end
+  end
+
+  defp update_identifier_links(updated_identifier) do
+    new_url = updated_identifier.url || "#"
+    Brando.Content.Blocks.update_identifier_links_in_refs(updated_identifier.id, new_url)
+    Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(updated_identifier.id, new_url)
   end
 
   def get_identifier(id) do
