@@ -297,10 +297,13 @@ defmodule Brando.Blueprint.Snapshot do
     end
   end
 
+  # Snapshots written before Blueprints had assets (Brando 0.51 and older)
+  # carry no `:assets` key at all; read that as no assets.
   defp validate_legacy_snapshot!(snapshot) do
     invalid_field =
-      Enum.find([:attributes, :assets, :relations, :traits], fn field ->
-        not is_list(Map.get(snapshot, field))
+      Enum.find([:attributes, :assets, :relations, :traits], fn
+        :assets -> not is_list(Map.get(snapshot, :assets, []))
+        field -> not is_list(Map.get(snapshot, field))
       end)
 
     if invalid_field do

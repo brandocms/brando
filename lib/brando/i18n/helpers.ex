@@ -44,6 +44,11 @@ defmodule Brando.I18n.Helpers do
 
     arity = length(args)
 
+    # `function_exported?/3` does not load the module. In interactive mode
+    # (dev) the helpers may not be loaded yet, which made every localized
+    # path fall through to the placeholder below.
+    Code.ensure_loaded(helpers_module)
+
     cond do
       function_exported?(helpers_module, function_name, arity) ->
         apply(helpers_module, function_name, args)

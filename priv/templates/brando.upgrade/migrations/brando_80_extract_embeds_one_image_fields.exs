@@ -23,8 +23,12 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
       Brando.Blueprint.list_blueprints() ++
         [Brando.Pages.Page, Brando.Users.User, Brando.Sites.Identity, Brando.Sites.SEO]
 
+    # Only Blueprints whose table still holds the legacy embedded image
+    # column. A Blueprint added after this migration was written has no
+    # table yet when an old database replays the chain.
     for blueprint <- blueprints,
-        %{type: :image, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint) do
+        %{type: :image, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint),
+        column_exists?(blueprint.__schema__(:source), to_string(field_name)) do
       image_field_query =
         from t in blueprint.__schema__(:source),
           select: %{
@@ -135,6 +139,19 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
           prefix: "information_schema",
           select: [:table_name],
           where: [table_schema: "public", table_name: ^table_name]
+        )
+      )
+
+    result != []
+  end
+
+  defp column_exists?(table_name, column_name) do
+    result =
+      Brando.repo().all(
+        from(c in "columns",
+          prefix: "information_schema",
+          select: [:column_name],
+          where: [table_schema: "public", table_name: ^table_name, column_name: ^column_name]
         )
       )
 
