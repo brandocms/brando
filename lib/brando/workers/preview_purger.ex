@@ -27,14 +27,16 @@ defmodule Brando.Worker.PreviewPurger do
         now = DateTime.utc_now()
         remaining = DateTime.diff(preview.expires_at, now, :second)
 
-        if DateTime.compare(preview.expires_at, now) == :gt do
-          {:snooze, max(remaining, 1)}
-        else
-          case Sites.delete_preview(id, :system) do
-            {:ok, _} -> release_asset_set(preview.asset_set_id)
-            {:error, _} -> :ok
-          end
-        end
+        if DateTime.compare(preview.expires_at, now) == :gt,
+          do: {:snooze, max(remaining, 1)},
+          else: purge(preview, id)
+    end
+  end
+
+  defp purge(preview, id) do
+    case Sites.delete_preview(id, :system) do
+      {:ok, _} -> release_asset_set(preview.asset_set_id)
+      {:error, _} -> :ok
     end
   end
 
