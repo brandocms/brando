@@ -29,22 +29,27 @@ defmodule Brando.Drafts.Modules do
   end
 
   defp check_blocks(blocks, captured) do
-    Enum.reduce(blocks, {[], []}, fn entry_block, {safe, issues} ->
-      block = entry_block["block"] || entry_block
-      current = if block["module_id"], do: fetch(block)
-      old = Map.get(captured, key(block))
-      reasons = reasons(block, old, current)
+    Enum.reduce(blocks, {[], []}, &check_block(&1, &2, captured))
+  end
 
-      if reasons == [] do
-        {children, child_issues} = check_blocks(block["children"] || [], captured)
-        adapted = block |> Map.put("children", children) |> add_defaults(current)
-        adapted = if entry_block["block"], do: Map.put(entry_block, "block", adapted), else: adapted
-        {safe ++ [adapted], issues ++ child_issues}
-      else
-        issue = %{uid: block["uid"], module_id: block["module_id"], reasons: reasons, content: entry_block}
-        {safe, issues ++ [issue]}
-      end
-    end)
+  defp check_block(entry_block, {safe, issues}, captured) do
+    block = entry_block["block"] || entry_block
+    current = if block["module_id"], do: fetch(block)
+    old = Map.get(captured, key(block))
+    reasons = reasons(block, old, current)
+
+    if reasons == [] do
+      {children, child_issues} = check_blocks(block["children"] || [], captured)
+      adapted = block |> Map.put("children", children) |> add_defaults(current)
+      {safe ++ [put_adapted(entry_block, adapted)], issues ++ child_issues}
+    else
+      issue = %{uid: block["uid"], module_id: block["module_id"], reasons: reasons, content: entry_block}
+      {safe, issues ++ [issue]}
+    end
+  end
+
+  defp put_adapted(entry_block, adapted) do
+    if entry_block["block"], do: Map.put(entry_block, "block", adapted), else: adapted
   end
 
   defp reasons(%{"module_id" => id}, _old, nil) when not is_nil(id), do: ["The module is missing or unavailable."]
@@ -58,19 +63,23 @@ defmodule Brando.Drafts.Modules do
     latest = definition(current)
     contract = Enum.filter(@contract_fields, &(old[to_string(&1)] != latest[to_string(&1)]))
 
-    identity = if old["uid"] != latest["uid"], do: ["The original module was replaced."], else: []
-    tables = if old["table"] != latest["table"], do: ["The table definition changed."], else: []
-
-    fields =
-      compare_fields("Reference", old["refs"] || %{}, latest["refs"] || %{}) ++
-        compare_fields("Variable", old["vars"] || %{}, latest["vars"] || %{})
+    identity = changed_reason(old, latest, "uid", "The original module was replaced.")
+    tables = changed_reason(old, latest, "table", "The table definition changed.")
+    fields = compare_definition_fields(old["refs"], old["vars"], latest)
 
     # A block may already have been stale when the copy was made.
-    instance =
-      compare_fields("Reference", ref_types(block["refs"] || []), latest["refs"] || %{}) ++
-        compare_fields("Variable", var_types(block["vars"] || []), latest["vars"] || %{})
+    instance = compare_definition_fields(ref_types(block["refs"] || []), var_types(block["vars"] || []), latest)
 
     Enum.uniq(identity ++ tables ++ fields ++ instance ++ Enum.map(contract, &"Module setting #{&1} changed."))
+  end
+
+  defp changed_reason(old, latest, key, reason) do
+    if old[key] != latest[key], do: [reason], else: []
+  end
+
+  defp compare_definition_fields(refs, vars, latest) do
+    compare_fields("Reference", refs || %{}, latest["refs"] || %{}) ++
+      compare_fields("Variable", vars || %{}, latest["vars"] || %{})
   end
 
   defp compare_fields(label, old, current) do
