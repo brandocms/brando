@@ -700,34 +700,38 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
       if update_relation do
         {relation_field, _} = update_relation
-        %{opts: %{module: rel_module}} = Brando.Blueprint.Relations.__relation__(module, relation_field)
-
-        if !rel_module do
-          raise BlueprintError,
-            message: """
-            Missing relation module for multi select
-
-            The target module in a select with an `:update_relation` option
-            must have a `module: MySchema` defined for the associated schema.
-
-            For instance, for this multi select:
-
-                input :category_id, :select,
-                  options: &__MODULE__.get_categories/2,
-                  update_relation: {:category, &__MODULE__.get_category/1},
-                  resetable: true,
-                  label: t("Category")
-
-            we need the relation to have the `module` defined:
-
-                relations do
-                  relation :category, :belongs_to, module: Cases.Category
-
-            """
-        end
-
-        rel_module
+        relation_module!(module, relation_field)
       end
     end)
+  end
+
+  defp relation_module!(module, relation_field) do
+    %{opts: %{module: rel_module}} = Brando.Blueprint.Relations.__relation__(module, relation_field)
+
+    if !rel_module do
+      raise BlueprintError,
+        message: """
+        Missing relation module for multi select
+
+        The target module in a select with an `:update_relation` option
+        must have a `module: MySchema` defined for the associated schema.
+
+        For instance, for this multi select:
+
+            input :category_id, :select,
+              options: &__MODULE__.get_categories/2,
+              update_relation: {:category, &__MODULE__.get_category/1},
+              resetable: true,
+              label: t("Category")
+
+        we need the relation to have the `module` defined:
+
+            relations do
+              relation :category, :belongs_to, module: Cases.Category
+
+        """
+    end
+
+    rel_module
   end
 end

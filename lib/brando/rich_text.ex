@@ -31,10 +31,12 @@ defmodule Brando.RichText do
   def normalize_url(_), do: {:error, :invalid_url}
 
   def validate_fields(changeset, fields) do
-    Enum.reduce(fields, changeset, fn field, cs ->
-      Changeset.validate_change(cs, field, fn _, html ->
-        if safe_html?(html), do: [], else: [{field, "contains unsafe rich text or a link with an unsupported address"}]
-      end)
+    Enum.reduce(fields, changeset, &validate_safe_html(&2, &1))
+  end
+
+  defp validate_safe_html(changeset, field) do
+    Changeset.validate_change(changeset, field, fn _, html ->
+      if safe_html?(html), do: [], else: [{field, "contains unsafe rich text or a link with an unsupported address"}]
     end)
   end
 
@@ -97,33 +99,34 @@ defmodule Brando.RichText do
 
   def update_identifier_url(html, identifier_id, url) when is_binary(html) and is_integer(identifier_id) do
     with true <- allowed_uri?(url), {:ok, nodes} <- Floki.parse_fragment(html) do
-      id = to_string(identifier_id)
-      matching = Floki.find(nodes, "a[data-identifier-id=\"#{id}\"]")
-
-      if Enum.any?(matching, fn {_, attrs, _} -> List.keyfind(attrs, "href", 0) != {"href", url} end) do
-        updated =
-          Floki.traverse_and_update(nodes, fn
-            {"a", attrs, children} ->
-              if List.keyfind(attrs, "data-identifier-id", 0) == {"data-identifier-id", id} do
-                {"a", List.keystore(attrs, "href", 0, {"href", url}), children}
-              else
-                {"a", attrs, children}
-              end
-
-            node ->
-              node
-          end)
-
-        {:updated, Floki.raw_html(updated)}
-      else
-        :unchanged
-      end
+      relink_identifier(nodes, to_string(identifier_id), url)
     else
       _ -> :unchanged
     end
   end
 
   def update_identifier_url(_, _, _), do: :unchanged
+
+  defp relink_identifier(nodes, id, url) do
+    matching = Floki.find(nodes, "a[data-identifier-id=\"#{id}\"]")
+
+    if Enum.any?(matching, fn {_, attrs, _} -> List.keyfind(attrs, "href", 0) != {"href", url} end) do
+      updated = Floki.traverse_and_update(nodes, &relink_anchor(&1, id, url))
+      {:updated, Floki.raw_html(updated)}
+    else
+      :unchanged
+    end
+  end
+
+  defp relink_anchor({"a", attrs, children}, id, url) do
+    if List.keyfind(attrs, "data-identifier-id", 0) == {"data-identifier-id", id} do
+      {"a", List.keystore(attrs, "href", 0, {"href", url}), children}
+    else
+      {"a", attrs, children}
+    end
+  end
+
+  defp relink_anchor(node, _id, _url), do: node
 
   def contains_identifier?(html, identifier_id) when is_binary(html) and is_integer(identifier_id) do
     case Floki.parse_fragment(html) do

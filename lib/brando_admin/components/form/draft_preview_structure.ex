@@ -84,19 +84,7 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.Structure do
     old = if is_map(before), do: before, else: %{}
     new = if is_map(after_value), do: after_value, else: %{}
 
-    Enum.reduce(keys(old, new), {%{}, %{}, []}, fn key, {a, b, orders} ->
-      nested_path = if key in ~w(block data refs vars gallery), do: path, else: path ++ [label(key)]
-
-      {left, right, nested} =
-        if key in ~w(gallery_objects gallery_object_overrides) && is_list(old[key] || []) && is_list(new[key] || []) do
-          gallery(old[key] || [], new[key] || [], path, key)
-        else
-          align(old[key], new[key], nested_path)
-        end
-
-      {if(Map.has_key?(old, key), do: Map.put(a, key, left), else: a),
-       if(Map.has_key?(new, key), do: Map.put(b, key, right), else: b), orders ++ nested}
-    end)
+    Enum.reduce(keys(old, new), {%{}, %{}, []}, &align_map_key(&1, &2, old, new, path))
   end
 
   defp align(before, after_value, path)
@@ -105,21 +93,49 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.Structure do
     old = indexed(before || [], &named_key/2)
     new = indexed(after_value || [], &named_key/2)
 
-    {left, right, orders} =
-      Enum.reduce(union(old, new), {[], [], []}, fn key, {a, b, orders} ->
-        x = find(old, key)
-        y = find(new, key)
-        item = y || x
-        name = if is_map(item.value), do: item.value["name"] || item.value["key"]
-        nested_path = path ++ [if(name, do: label(name), else: to_string(item.position))]
-        {l, r, nested} = align(x && x.value, y && y.value, nested_path)
-        {if(x, do: a ++ [l], else: a), if(y, do: b ++ [r], else: b), orders ++ nested}
-      end)
+    {left, right, orders} = Enum.reduce(union(old, new), {[], [], []}, &align_list_key(&1, &2, old, new, path))
 
     {left, right, orders}
   end
 
   defp align(before, after_value, _), do: {before, after_value, []}
+
+  defp align_map_key(key, {a, b, orders}, old, new, path) do
+    nested_path = if key in ~w(block data refs vars gallery), do: path, else: path ++ [label(key)]
+
+    {left, right, nested} =
+      if gallery_lists?(old, new, key) do
+        gallery(old[key] || [], new[key] || [], path, key)
+      else
+        align(old[key], new[key], nested_path)
+      end
+
+    {put_present(a, old, key, left), put_present(b, new, key, right), orders ++ nested}
+  end
+
+  defp gallery_lists?(old, new, key),
+    do: key in ~w(gallery_objects gallery_object_overrides) && is_list(old[key] || []) && is_list(new[key] || [])
+
+  defp put_present(acc, source, key, value) do
+    if Map.has_key?(source, key), do: Map.put(acc, key, value), else: acc
+  end
+
+  defp align_list_key(key, {a, b, orders}, old, new, path) do
+    x = find(old, key)
+    y = find(new, key)
+    nested_path = path ++ [item_label(y || x)]
+    {l, r, nested} = align(x && x.value, y && y.value, nested_path)
+    {append_present(a, x, l), append_present(b, y, r), orders ++ nested}
+  end
+
+  defp item_label(item) do
+    name = if is_map(item.value), do: item.value["name"] || item.value["key"]
+    if name, do: label(name), else: to_string(item.position)
+  end
+
+  defp append_present(acc, present, value) do
+    if present, do: acc ++ [value], else: acc
+  end
 
   defp named_key(value, index) when is_map(value), do: value["name"] || value["key"] || {:position, index}
   defp named_key(_, index), do: {:position, index}
@@ -185,37 +201,35 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.Structure do
     reordered? =
       Enum.filter(before_keys, &MapSet.member?(common, &1)) != Enum.filter(after_keys, &MapSet.member?(common, &1))
 
-    moves =
-      if reordered? do
-        Enum.flat_map(after_rows, fn item ->
-          old = find(before, item.key)
-
-          if old && old.position != item.position do
-            reference = reference(item.value)
-
-            name =
-              if kind == :block,
-                do: block_label(unwrap(item.value), old.position),
-                else: (reference && reference.title) || gettext("Item %{number}", number: old.position)
-
-            [
-              %{
-                key: item.key,
-                title: name,
-                thumbnail: reference && reference.thumbnail,
-                from: old.position,
-                to: item.position
-              }
-            ]
-          else
-            []
-          end
-        end)
-      else
-        []
-      end
+    moves = if reordered?, do: Enum.flat_map(after_rows, &move(before, &1, kind)), else: []
 
     if moves == [], do: [], else: [%{kind: :order, title: title, moves: moves, before: [], after: []}]
+  end
+
+  defp move(before, item, kind) do
+    old = find(before, item.key)
+
+    if old && old.position != item.position do
+      reference = reference(item.value)
+
+      [
+        %{
+          key: item.key,
+          title: move_title(item, old, reference, kind),
+          thumbnail: reference && reference.thumbnail,
+          from: old.position,
+          to: item.position
+        }
+      ]
+    else
+      []
+    end
+  end
+
+  defp move_title(item, old, reference, kind) do
+    if kind == :block,
+      do: block_label(unwrap(item.value), old.position),
+      else: (reference && reference.title) || gettext("Item %{number}", number: old.position)
   end
 
   defp block_label(block, position) do

@@ -48,33 +48,38 @@ defmodule Brando.MarkdownSources.Renderer do
     uri = URI.parse(value)
 
     cond do
-      Regex.match?(~r/[\x00-\x20\x7f\\]/, value) ->
-        nil
-
-      uri.scheme in ["https", "http"] and is_binary(uri.host) and is_nil(uri.userinfo) ->
-        value
-
-      tag == "a" and uri.scheme == "mailto" ->
-        value
-
-      is_nil(uri.scheme) and is_nil(uri.host) and String.starts_with?(value, "#") ->
-        value
-
-      is_nil(uri.scheme) and is_nil(uri.host) and not Regex.match?(~r/%(?:2e|2f|5c)/i, value) ->
-        base = if tag == "img", do: "https://raw.githubusercontent.com/", else: "https://github.com/"
-        middle = if tag == "img", do: "/", else: "/blob/"
-        path = document.path |> String.split("/") |> Enum.map_join("/", &URI.encode/1)
-        url = base <> document.repository <> middle <> document.commit <> "/" <> path
-        result = URI.merge(url, value)
-        # A relative path cannot escape the selected repository/commit root.
-        root = "/" <> document.repository <> middle <> document.commit <> "/"
-        if String.starts_with?(result.path || "", root), do: URI.to_string(result)
-
-      true ->
-        nil
+      Regex.match?(~r/[\x00-\x20\x7f\\]/, value) -> nil
+      absolute_url_allowed?(uri, tag) -> value
+      is_nil(uri.scheme) and is_nil(uri.host) -> relative_url(value, document, tag)
+      true -> nil
     end
   rescue
     _ -> nil
+  end
+
+  defp absolute_url_allowed?(uri, tag) do
+    (uri.scheme in ["https", "http"] and is_binary(uri.host) and is_nil(uri.userinfo)) or
+      (tag == "a" and uri.scheme == "mailto")
+  end
+
+  defp relative_url("#" <> _ = value, _document, _tag), do: value
+
+  defp relative_url(value, document, tag) do
+    unless Regex.match?(~r/%(?:2e|2f|5c)/i, value), do: repository_url(value, document, tag)
+  end
+
+  defp repository_url(value, document, tag) do
+    {base, middle} =
+      if tag == "img",
+        do: {"https://raw.githubusercontent.com/", "/"},
+        else: {"https://github.com/", "/blob/"}
+
+    path = document.path |> String.split("/") |> Enum.map_join("/", &URI.encode/1)
+    url = base <> document.repository <> middle <> document.commit <> "/" <> path
+    result = URI.merge(url, value)
+    # A relative path cannot escape the selected repository/commit root.
+    root = "/" <> document.repository <> middle <> document.commit <> "/"
+    if String.starts_with?(result.path || "", root), do: URI.to_string(result)
   end
 
   defp heading(tag, attrs, children, counts) when tag in ~w(h1 h2 h3 h4 h5 h6) do

@@ -213,15 +213,17 @@ defmodule Brando.Translations do
          :ok <- ensure_no_linked_version(schema, source_id, language) do
       # One transaction, enrolment included: a failed copy leaves no group
       # with a source and no translation behind.
-      Repo.transaction(fn ->
-        with {:ok, source_member} <- source_member(schema, source_id, actor),
-             :ok <- ensure_language_free(source_member, language),
-             {:ok, target} <- insert_target(schema, source_member, source_id, language, actor) do
-          target
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+      Repo.transaction(fn -> enrol_target(schema, source_id, language, actor) end)
+    end
+  end
+
+  defp enrol_target(schema, source_id, language, actor) do
+    with {:ok, source_member} <- source_member(schema, source_id, actor),
+         :ok <- ensure_language_free(source_member, language),
+         {:ok, target} <- insert_target(schema, source_member, source_id, language, actor) do
+      target
+    else
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 

@@ -208,11 +208,15 @@ defmodule Brando.Content.Definition.Watcher do
           {:blocked, Enum.reject(changes, &(&1.action in [:create, :update]))}
 
         true ->
-          with {:ok, result} <- Definitions.apply(plan, user),
-               {:ok, :ok} <- Definitions.write_baseline(path, result) do
-            {:ok, changes}
-          end
+          apply_changes(plan, path, user, changes)
       end
+    end
+  end
+
+  defp apply_changes(plan, path, user, changes) do
+    with {:ok, result} <- Definitions.apply(plan, user),
+         {:ok, :ok} <- Definitions.write_baseline(path, result) do
+      {:ok, changes}
     end
   end
 

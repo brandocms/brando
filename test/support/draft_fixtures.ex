@@ -30,26 +30,8 @@ defmodule Brando.DraftFixtures do
   end
 
   def initialized(payload) do
-    initialize = fn recurse, value ->
-      cond do
-        is_list(value) ->
-          value
-          |> Enum.with_index()
-          |> Enum.map(fn {row, index} ->
-            row = if is_map(row) && Map.has_key?(row, "sequence"), do: Map.put(row, "sequence", index), else: row
-            recurse.(recurse, row)
-          end)
-
-        is_map(value) ->
-          value = if Map.has_key?(value, "creator_id"), do: Map.put(value, "creator_id", 7), else: value
-          Map.new(value, fn {key, child} -> {key, recurse.(recurse, child)} end)
-
-        true ->
-          value
-      end
-    end
-
-    initialize.(initialize, payload)
+    payload
+    |> initialize()
     |> put_in(
       ["blocks", "blocks", Access.at(0), "block", "refs", Access.at(1), "data", "data", "gallery_object_overrides"],
       [
@@ -58,4 +40,20 @@ defmodule Brando.DraftFixtures do
       ]
     )
   end
+
+  defp initialize(value) when is_list(value) do
+    value
+    |> Enum.with_index()
+    |> Enum.map(fn {row, index} ->
+      row = if is_map(row) && Map.has_key?(row, "sequence"), do: Map.put(row, "sequence", index), else: row
+      initialize(row)
+    end)
+  end
+
+  defp initialize(value) when is_map(value) do
+    value = if Map.has_key?(value, "creator_id"), do: Map.put(value, "creator_id", 7), else: value
+    Map.new(value, fn {key, child} -> {key, initialize(child)} end)
+  end
+
+  defp initialize(value), do: value
 end

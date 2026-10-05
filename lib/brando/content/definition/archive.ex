@@ -28,16 +28,18 @@ defmodule Brando.Content.Definition.Archive do
   @doc "Reads a bounded ZIP without extracting archive paths directly to disk."
   def read(binary) when is_binary(binary) do
     with {:ok, files} <- Definitions.protect(fn -> unpack!(binary) end) do
-      with_directory(fn root ->
-        Enum.each(files, fn {name, body} ->
-          path = Path.join(root, name)
-          File.mkdir_p!(Path.dirname(path))
-          File.write!(path, body, [:exclusive])
-        end)
-
-        with {:ok, bundle} <- Definitions.read(root), do: {:ok, %{bundle: bundle, files: files}}
-      end)
+      with_directory(&read_files(&1, files))
     end
+  end
+
+  defp read_files(root, files) do
+    Enum.each(files, fn {name, body} ->
+      path = Path.join(root, name)
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, body, [:exclusive])
+    end)
+
+    with {:ok, bundle} <- Definitions.read(root), do: {:ok, %{bundle: bundle, files: files}}
   end
 
   @doc "Updates only the archive's baseline; authored source and comments remain intact."
@@ -63,32 +65,47 @@ defmodule Brando.Content.Definition.Archive do
   defp unpack!(binary) do
     if byte_size(binary) > @max_bytes, do: Error.raise!("ZIP", "file exceeds 5 MB")
 
-    table =
-      case :zip.table(binary) do
-        {:ok, table} -> table
-        {:error, _} -> Error.raise!("ZIP", "expected a valid ZIP archive")
-      end
-
-    entries = for zip_file() = entry <- table, do: entry
+    entries = for zip_file() = entry <- zip_table!(binary), do: entry
     if length(entries) > @max_files, do: Error.raise!("ZIP", "bundle exceeds 500 entries")
 
-    files =
-      Enum.flat_map(entries, fn zip_file(name: name, info: info, offset: offset) = entry ->
-        name = List.to_string(name)
-        validate_local_name!(binary, offset, name)
-        validate_path!(String.trim_trailing(name, "/"))
-
-        cond do
-          file_info(info, :type) == :directory -> []
-          file_info(info, :type) != :regular -> Error.raise!("ZIP", "only regular files are supported")
-          ArchivePaths.ignored?(name) -> []
-          true -> [{name, entry}]
-        end
-      end)
+    files = Enum.flat_map(entries, &regular_file!(binary, &1))
 
     Value.unique!(Enum.map(files, &elem(&1, 0)), "ZIP filenames")
     validate_sizes!(Enum.map(files, fn {_, entry} -> file_info(zip_file(entry, :info), :size) end))
     Enum.each(files, fn {_, entry} -> validate_expansion!(binary, entry) end)
+
+    files = binary |> extract!(files) |> ArchivePaths.unwrap_directory()
+    Enum.each(files, fn {name, _} -> validate_file_name!(name) end)
+
+    # Files are written by us, never by ZIP extraction. Prefix collisions are
+    # rejected before any write, including a file used as another file's parent.
+    filenames = MapSet.new(Enum.map(files, &elem(&1, 0)))
+    Enum.each(filenames, &validate_no_overlap!(&1, filenames))
+
+    Map.new(files)
+  end
+
+  defp zip_table!(binary) do
+    case :zip.table(binary) do
+      {:ok, table} -> table
+      {:error, _} -> Error.raise!("ZIP", "expected a valid ZIP archive")
+    end
+  end
+
+  defp regular_file!(binary, zip_file(name: name, info: info, offset: offset) = entry) do
+    name = List.to_string(name)
+    validate_local_name!(binary, offset, name)
+    validate_path!(String.trim_trailing(name, "/"))
+
+    cond do
+      file_info(info, :type) == :directory -> []
+      file_info(info, :type) != :regular -> Error.raise!("ZIP", "only regular files are supported")
+      ArchivePaths.ignored?(name) -> []
+      true -> [{name, entry}]
+    end
+  end
+
+  defp extract!(binary, files) do
     names = Enum.map(files, fn {name, _} -> String.to_charlist(name) end)
 
     extracted =
@@ -99,30 +116,24 @@ defmodule Brando.Content.Definition.Archive do
 
     files = Enum.map(extracted, fn {name, body} -> {List.to_string(name), body} end)
     validate_sizes!(Enum.map(files, fn {_name, body} -> byte_size(body) end))
-    files = ArchivePaths.unwrap_directory(files)
+    files
+  end
 
-    Enum.each(files, fn {name, _} ->
-      validate_path!(name)
+  defp validate_file_name!(name) do
+    validate_path!(name)
 
-      unless Path.extname(name) in ~w(.exs .heex .liquid) or name == "modules.lock.json",
-        do: Error.raise!(name, "bundle may contain only DSL, HEEx, Liquid and modules.lock.json files")
+    unless Path.extname(name) in ~w(.exs .heex .liquid) or name == "modules.lock.json",
+      do: Error.raise!(name, "bundle may contain only DSL, HEEx, Liquid and modules.lock.json files")
+  end
+
+  defp validate_no_overlap!(name, filenames) do
+    name
+    |> Path.split()
+    |> Enum.drop(-1)
+    |> Enum.scan(&Path.join(&2, &1))
+    |> Enum.each(fn parent ->
+      if MapSet.member?(filenames, parent), do: Error.raise!(name, "file and directory paths overlap")
     end)
-
-    # Files are written by us, never by ZIP extraction. Prefix collisions are
-    # rejected before any write, including a file used as another file's parent.
-    filenames = MapSet.new(Enum.map(files, &elem(&1, 0)))
-
-    Enum.each(filenames, fn name ->
-      name
-      |> Path.split()
-      |> Enum.drop(-1)
-      |> Enum.scan(&Path.join(&2, &1))
-      |> Enum.each(fn parent ->
-        if MapSet.member?(filenames, parent), do: Error.raise!(name, "file and directory paths overlap")
-      end)
-    end)
-
-    Map.new(files)
   end
 
   defp validate_path!(name) do
@@ -163,20 +174,24 @@ defmodule Brando.Content.Definition.Archive do
              (descriptor? or (local_compressed == compressed and local_expanded == expanded)),
            do: Error.raise!("ZIP", "unsupported compression or inconsistent file sizes")
 
-    if method == 0 do
-      if compressed != expanded, do: Error.raise!("ZIP", "inconsistent file sizes")
-    else
-      stream = :zlib.open()
+    validate_inflation!(method, binary_part(binary, start, compressed), compressed, expanded)
+  end
 
-      try do
-        :ok = :zlib.inflateInit(stream, -15)
-        validate_chunks!(stream, binary_part(binary, start, compressed), expanded)
-        :ok = :zlib.inflateEnd(stream)
-      rescue
-        _ in [ErlangError, ArgumentError] -> Error.raise!("ZIP", "invalid compressed content")
-      after
-        :zlib.close(stream)
-      end
+  defp validate_inflation!(0, _input, compressed, expanded) do
+    if compressed != expanded, do: Error.raise!("ZIP", "inconsistent file sizes")
+  end
+
+  defp validate_inflation!(_method, input, _compressed, expanded) do
+    stream = :zlib.open()
+
+    try do
+      :ok = :zlib.inflateInit(stream, -15)
+      validate_chunks!(stream, input, expanded)
+      :ok = :zlib.inflateEnd(stream)
+    rescue
+      _ in [ErlangError, ArgumentError] -> Error.raise!("ZIP", "invalid compressed content")
+    after
+      :zlib.close(stream)
     end
   end
 

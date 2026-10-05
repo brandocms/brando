@@ -29,18 +29,18 @@ defmodule Brando.Content.Definitions do
       lock_path = Path.join(root, "modules.lock.json")
       if paths == [] and not File.exists?(lock_path), do: Error.raise!(root, "no .exs definitions found")
       bundle = paths |> Enum.map(&Reader.read!/1) |> Model.from_specs!(root)
-
-      lock =
-        if File.exists?(lock_path) do
-          lock = lock_path |> Reader.regular_file!() |> Jason.decode!()
-          if lock["format_version"] != 1, do: Error.raise!(lock_path, "unsupported format_version")
-          Map.take(lock, ~w(source baseline references))
-        else
-          %{}
-        end
-
-      Map.merge(bundle, lock)
+      Map.merge(bundle, read_lock!(lock_path))
     end)
+  end
+
+  defp read_lock!(lock_path) do
+    if File.exists?(lock_path) do
+      lock = lock_path |> Reader.regular_file!() |> Jason.decode!()
+      if lock["format_version"] != 1, do: Error.raise!(lock_path, "unsupported format_version")
+      Map.take(lock, ~w(source baseline references))
+    else
+      %{}
+    end
   end
 
   @doc "Builds a portable bundle from already compiled Spark definition modules."
@@ -57,23 +57,24 @@ defmodule Brando.Content.Definitions do
         validate_actor!(actor)
         {bundle, records} = Snapshot.take!(opts)
 
-        Enum.each(bundle["modules"] ++ bundle["table_templates"], fn definition ->
-          schema = if definition["kind"] == "module", do: Brando.Content.Module, else: Brando.Content.TableTemplate
-
-          record =
-            if definition["kind"] == "module",
-              do: records.modules[definition["uid"]],
-              else: records.tables[definition["uid"]]
-
-          if Boundary.authorize_record(actor, :export, schema, record.id) != :ok,
-            do: Error.raise!("authorization", "forbidden")
-        end)
-
+        Enum.each(bundle["modules"] ++ bundle["table_templates"], &authorize_export!(&1, records, actor))
         Brando.Content.Definition.References.bind!(bundle, %{}, actor)
         files = Writer.write!(bundle, Path.expand(directory))
         %{bundle: bundle, files: files, directory: Path.expand(directory)}
       end)
     end
+  end
+
+  defp authorize_export!(definition, records, actor) do
+    schema = if definition["kind"] == "module", do: Brando.Content.Module, else: Brando.Content.TableTemplate
+
+    record =
+      if definition["kind"] == "module",
+        do: records.modules[definition["uid"]],
+        else: records.tables[definition["uid"]]
+
+    if Boundary.authorize_record(actor, :export, schema, record.id) != :ok,
+      do: Error.raise!("authorization", "forbidden")
   end
 
   @doc "Builds a change plan in the current tenant. `:references` maps external tokens to destination IDs."

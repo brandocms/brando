@@ -16,19 +16,8 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
-    global_manager? =
-      if Brando.Authorization.enabled?(),
-        do:
-          Brando.Authorization.can?(
-            Brando.Authorization.Scope.installation(socket.assigns.current_user),
-            :read,
-            :shared_library
-          ),
-        else: socket.assigns.current_user.role == :superuser
-
-    site_access? =
-      not is_nil(socket.assigns.current_site) and
-        Access.can_access?(socket.assigns.current_user, socket.assigns.current_site)
+    global_manager? = global_manager?(socket.assigns.current_user)
+    site_access? = site_access?(socket.assigns.current_user, socket.assigns.current_site)
 
     cond do
       Tenant.mode() != :multi or (not global_manager? and not site_access?) ->
@@ -53,6 +42,14 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
          |> assign(:global_manager?, global_manager?)}
     end
   end
+
+  defp global_manager?(user) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.installation(user), :read, :shared_library),
+      else: user.role == :superuser
+  end
+
+  defp site_access?(user, site), do: not is_nil(site) and Access.can_access?(user, site)
 
   @impl Phoenix.LiveView
   def render(%{socket_connected: false} = assigns) do

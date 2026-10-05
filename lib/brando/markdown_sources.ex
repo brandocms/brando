@@ -12,20 +12,26 @@ defmodule Brando.MarkdownSources do
     if Brando.Authorization.Engine.enabled?() do
       Brando.Authorization.Engine.authorize(Brando.Authorization.Scope.current(actor), action, :markdown_sources)
     else
-      id = if is_map(actor), do: Map.get(actor, :id)
-      user = id && Repo.get(Brando.Users.User, id)
-      roles = if action in [:read, :publish], do: [:editor, :admin, :superuser], else: [:admin, :superuser]
+      authorize_by_role(actor, action)
+    end
+  end
 
-      role =
-        if user && Brando.Tenant.enabled?() do
-          scope = Brando.Authorization.Scope.current(user)
-          site = scope.site_id && Brando.Tenant.Registry.get_site(scope.site_id)
-          if site, do: Brando.Tenant.Access.role_for(user, site)
-        else
-          user && user.role
-        end
+  defp authorize_by_role(actor, action) do
+    id = if is_map(actor), do: Map.get(actor, :id)
+    user = id && Repo.get(Brando.Users.User, id)
+    roles = if action in [:read, :publish], do: [:editor, :admin, :superuser], else: [:admin, :superuser]
+    role = user && user_role(user)
 
-      if user && user.active && is_nil(user.deleted_at) && role in roles, do: :ok, else: {:error, :forbidden}
+    if user && user.active && is_nil(user.deleted_at) && role in roles, do: :ok, else: {:error, :forbidden}
+  end
+
+  defp user_role(user) do
+    if Brando.Tenant.enabled?() do
+      scope = Brando.Authorization.Scope.current(user)
+      site = scope.site_id && Brando.Tenant.Registry.get_site(scope.site_id)
+      if site, do: Brando.Tenant.Access.role_for(user, site)
+    else
+      user.role
     end
   end
 
@@ -48,74 +54,93 @@ defmodule Brando.MarkdownSources do
 
   def save_source(source, attrs, actor) do
     with :ok <- authorize(actor, if(source.id, do: :update, else: :create)) do
-      changeset = Source.changeset(source, attrs)
-      key = Changeset.get_field(changeset, :connection)
-
       changeset =
-        if not Changeset.get_field(changeset, :enabled) or match?({:ok, _}, Connection.current(key)),
-          do: changeset,
-          else: Changeset.add_error(changeset, :connection, "is not enabled for this environment")
+        source
+        |> Source.changeset(attrs)
+        |> validate_connection_enabled()
+        |> validate_identity_unchanged(source)
 
-      # Changing a document identity would also reinterpret old pins. Require a
-      # new source once imported; names and enabled state can still be edited.
-      changeset =
-        if source.latest_version_id && Enum.any?([:connection, :ref, :path], &Changeset.changed?(changeset, &1)),
-          do: Changeset.add_error(changeset, :path, "create a new source to change an imported document's identity"),
-          else: changeset
-
-      Brando.MarkdownSources.Publication.with_source_lock(source.id || "new", fn ->
-        Repo.transaction(fn ->
-          result = if source.id, do: Repo.update(changeset), else: Repo.insert(changeset)
-
-          case result do
-            {:ok, source} ->
-              audit(source, "source.saved", actor)
-              source
-
-            {:error, reason} ->
-              Repo.rollback(reason)
-          end
-        end)
-      end)
+      persist_source(source, changeset, actor)
     end
   rescue
     Ecto.StaleEntryError -> {:error, :stale_source}
+  end
+
+  defp validate_connection_enabled(changeset) do
+    key = Changeset.get_field(changeset, :connection)
+
+    if not Changeset.get_field(changeset, :enabled) or match?({:ok, _}, Connection.current(key)),
+      do: changeset,
+      else: Changeset.add_error(changeset, :connection, "is not enabled for this environment")
+  end
+
+  # Changing a document identity would also reinterpret old pins. Require a
+  # new source once imported; names and enabled state can still be edited.
+  defp validate_identity_unchanged(changeset, source) do
+    if source.latest_version_id && Enum.any?([:connection, :ref, :path], &Changeset.changed?(changeset, &1)),
+      do: Changeset.add_error(changeset, :path, "create a new source to change an imported document's identity"),
+      else: changeset
+  end
+
+  defp persist_source(source, changeset, actor) do
+    Brando.MarkdownSources.Publication.with_source_lock(source.id || "new", fn ->
+      Repo.transaction(fn -> insert_or_update_source(source, changeset, actor) end)
+    end)
+  end
+
+  defp insert_or_update_source(source, changeset, actor) do
+    result = if source.id, do: Repo.update(changeset), else: Repo.insert(changeset)
+
+    case result do
+      {:ok, source} ->
+        audit(source, "source.saved", actor)
+        source
+
+      {:error, reason} ->
+        Repo.rollback(reason)
+    end
   end
 
   def add_documents(connection, ref, [_ | _] = paths, actor) do
     with true <- length(paths) <= 200 || {:error, :invalid_selection},
          :ok <- authorize(actor, :create),
          {:ok, _} <- Connection.current(connection) do
-      Brando.MarkdownSources.Publication.with_source_lock("new", fn ->
-        Repo.transaction(fn ->
-          Enum.reduce(Enum.uniq(paths), 0, fn path, count ->
-            if Repo.get_by(Source, connection: connection, ref: ref, path: path) do
-              count
-            else
-              attrs = %{
-                name: Path.basename(path, Path.extname(path)) |> String.replace(["-", "_"], " "),
-                connection: connection,
-                ref: ref,
-                path: path,
-                enabled: true
-              }
-
-              case Repo.insert(Source.changeset(%Source{}, attrs)) do
-                {:ok, source} ->
-                  audit(source, "source.saved", actor)
-                  count + 1
-
-                {:error, reason} ->
-                  Repo.rollback(reason)
-              end
-            end
-          end)
-        end)
-      end)
+      insert_documents(connection, ref, paths, actor)
     end
   end
 
   def add_documents(_, _, _, _), do: {:error, :invalid_selection}
+
+  defp insert_documents(connection, ref, paths, actor) do
+    Brando.MarkdownSources.Publication.with_source_lock("new", fn ->
+      Repo.transaction(fn ->
+        Enum.reduce(Enum.uniq(paths), 0, &add_document(connection, ref, &1, actor, &2))
+      end)
+    end)
+  end
+
+  defp add_document(connection, ref, path, actor, count) do
+    if Repo.get_by(Source, connection: connection, ref: ref, path: path) do
+      count
+    else
+      attrs = %{
+        name: Path.basename(path, Path.extname(path)) |> String.replace(["-", "_"], " "),
+        connection: connection,
+        ref: ref,
+        path: path,
+        enabled: true
+      }
+
+      case Repo.insert(Source.changeset(%Source{}, attrs)) do
+        {:ok, source} ->
+          audit(source, "source.saved", actor)
+          count + 1
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end
+  end
 
   def refresh(source_id, actor) do
     with :ok <- authorize(actor, :sync),
@@ -125,15 +150,18 @@ defmodule Brando.MarkdownSources do
 
       Repo.transaction(fn ->
         audit(source, "source.refresh_requested", actor)
-
-        case args |> Brando.Tenant.Job.attach() |> Brando.Worker.MarkdownSourceSync.new() |> Oban.insert() do
-          {:ok, job} -> job
-          {:error, reason} -> Repo.rollback(reason)
-        end
+        insert_sync_job(args)
       end)
     else
       {:error, reason} -> {:error, reason}
       _ -> {:error, :source_unavailable}
+    end
+  end
+
+  defp insert_sync_job(args) do
+    case args |> Brando.Tenant.Job.attach() |> Brando.Worker.MarkdownSourceSync.new() |> Oban.insert() do
+      {:ok, job} -> job
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
@@ -201,20 +229,24 @@ defmodule Brando.MarkdownSources do
         changeset
 
       true ->
-        with %Source{} = source <- get_source(data.source_id),
-             {:ok, _} <- Connection.current(source.connection),
-             true <- is_nil(data.version_id) or not is_nil(get_version(source.id, data.version_id)),
-             true <- data.policy == :follow or not is_nil(data.version_id) do
-          changeset
-        else
-          _ ->
-            Changeset.add_error(
-              changeset,
-              :data,
-              "Choose an available source and an exact version for review or pinning",
-              validation: :markdown_source
-            )
-        end
+        validate_source_selection(changeset, data)
+    end
+  end
+
+  defp validate_source_selection(changeset, data) do
+    with %Source{} = source <- get_source(data.source_id),
+         {:ok, _} <- Connection.current(source.connection),
+         true <- is_nil(data.version_id) or not is_nil(get_version(source.id, data.version_id)),
+         true <- data.policy == :follow or not is_nil(data.version_id) do
+      changeset
+    else
+      _ ->
+        Changeset.add_error(
+          changeset,
+          :data,
+          "Choose an available source and an exact version for review or pinning",
+          validation: :markdown_source
+        )
     end
   end
 

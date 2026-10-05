@@ -12,14 +12,15 @@ defmodule Brando.Content.ArchivePaths do
   """
   def unwrap_directory(files) do
     case files |> Enum.map(fn {name, _} -> hd(Path.split(name)) end) |> Enum.uniq() do
-      [directory] ->
-        if Enum.all?(files, fn {name, _} -> String.starts_with?(name, directory <> "/") end),
-          do: Enum.map(files, fn {name, body} -> {String.replace_prefix(name, directory <> "/", ""), body} end),
-          else: files
-
-      _ ->
-        files
+      [directory] -> strip_directory(files, directory <> "/")
+      _ -> files
     end
+  end
+
+  defp strip_directory(files, prefix) do
+    if Enum.all?(files, fn {name, _} -> String.starts_with?(name, prefix) end),
+      do: Enum.map(files, fn {name, body} -> {String.replace_prefix(name, prefix, ""), body} end),
+      else: files
   end
 
   @doc "True for the metadata entries macOS adds when it creates an archive."

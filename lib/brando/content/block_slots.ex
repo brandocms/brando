@@ -77,23 +77,25 @@ defmodule Brando.Content.BlockSlots do
 
   def validate(%Changeset{} = changeset, opts \\ []) do
     if changeset.data.type == :slot || Changeset.get_field(changeset, :type) == :slot do
-      changeset =
-        changeset
-        |> keep_slot_identity()
-        |> Changeset.validate_required([:slot_kind, :slot_name, :slot_module_set])
-
-      allowed = modules(Changeset.get_field(changeset, :slot_module_set))
-      retained = children(changeset.data)
-
-      if Enum.all?(children(changeset), fn child ->
-           allowed_child?(child, allowed) || Enum.any?(retained, &same_module?(&1, child))
-         end) do
-        changeset
-      else
-        Changeset.add_error(changeset, :children, "contains a module that is not allowed in this collection")
-      end
+      changeset
+      |> keep_slot_identity()
+      |> Changeset.validate_required([:slot_kind, :slot_name, :slot_module_set])
+      |> validate_slot_children()
     else
       changeset |> validate_owned_slots(opts) |> Lifecycle.validate_remaps()
+    end
+  end
+
+  defp validate_slot_children(changeset) do
+    allowed = modules(Changeset.get_field(changeset, :slot_module_set))
+    retained = children(changeset.data)
+
+    if Enum.all?(children(changeset), fn child ->
+         allowed_child?(child, allowed) || Enum.any?(retained, &same_module?(&1, child))
+       end) do
+      changeset
+    else
+      Changeset.add_error(changeset, :children, "contains a module that is not allowed in this collection")
     end
   end
 
@@ -191,27 +193,32 @@ defmodule Brando.Content.BlockSlots do
 
     note_owner? = Enum.any?(configured, fn {_name, config} -> config.blocks == field end)
 
+    if block,
+      do: validate_entry_slot_block(changeset, block, field, configured, note_owner?),
+      else: changeset
+  end
+
+  defp validate_entry_slot_block(changeset, block, field, configured, note_owner?) do
     cond do
-      block && block.slot_remap not in [nil, ""] ->
+      block.slot_remap not in [nil, ""] ->
         Changeset.add_error(changeset, :block, "only module-owned regions can be remapped")
 
-      block && note_owner? && block.type != :slot ->
+      note_owner? && block.type != :slot ->
         Changeset.add_error(changeset, :block, "this field only stores its configured footnotes")
 
-      block && block.type == :slot && is_nil(block.id) ->
-        allowed =
-          Enum.any?(configured, fn {name, config} ->
-            config.enabled && config.blocks == field && to_string(name) == block.slot_name &&
-              config.module_set == block.slot_module_set && block.slot_kind == :footnote
-          end)
-
-        if allowed,
+      block.type == :slot && is_nil(block.id) ->
+        if Enum.any?(configured, &footnote_config_allows?(&1, block, field)),
           do: changeset,
           else: Changeset.add_error(changeset, :block, "footnotes are not enabled for this field")
 
       true ->
         changeset
     end
+  end
+
+  defp footnote_config_allows?({name, config}, block, field) do
+    config.enabled && config.blocks == field && to_string(name) == block.slot_name &&
+      config.module_set == block.slot_module_set && block.slot_kind == :footnote
   end
 
   def uid_mapping(block) do
@@ -225,17 +232,8 @@ defmodule Brando.Content.BlockSlots do
       html
       |> Floki.parse_fragment!()
       |> Floki.traverse_and_update(fn
-        {tag, attrs, children} ->
-          attrs =
-            Enum.map(attrs, fn
-              {"data-footnote-uid", uid} -> {"data-footnote-uid", Map.get(mapping, uid, uid)}
-              other -> other
-            end)
-
-          {tag, attrs, children}
-
-        node ->
-          node
+        {tag, attrs, children} -> {tag, Enum.map(attrs, &remap_marker_attr(&1, mapping)), children}
+        node -> node
       end)
       |> Floki.raw_html()
     else
@@ -244,4 +242,7 @@ defmodule Brando.Content.BlockSlots do
   end
 
   def remap_markers(value, _mapping), do: value
+
+  defp remap_marker_attr({"data-footnote-uid", uid}, mapping), do: {"data-footnote-uid", Map.get(mapping, uid, uid)}
+  defp remap_marker_attr(other, _mapping), do: other
 end

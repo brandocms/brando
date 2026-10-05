@@ -69,32 +69,40 @@ defmodule Brando.Trait.Sequenced do
     if Brando.Authorization.enabled?() do
       actor = actor || Boundary.current_scope()
 
-      Boundary.run(actor, :reorder, module, fn user ->
-        composites = Map.get(params, "composite_keys")
-        keys = Map.get(params, "ids") || if(is_list(composites), do: Enum.map(composites, &Map.get(&1, "id")))
-        if not is_list(keys) or length(keys) > 1000, do: Repo.rollback(:forbidden)
-        entries = Repo.all(from(e in module, where: e.id in ^keys, lock: "FOR UPDATE"))
-        if length(entries) != length(Enum.uniq(keys)), do: Repo.rollback(:forbidden)
-
-        if composites && not Enum.all?(composites, &composite_matches?(module, entries, &1)),
-          do: Repo.rollback(:forbidden)
-
-        Enum.each(entries, fn entry ->
-          changeset = Ecto.Changeset.change(entry, sequence: -1)
-
-          unless Brando.Authorization.Engine.authorize_change(
-                   Boundary.actor_scope(user),
-                   :reorder,
-                   changeset
-                 ) == :ok,
-                 do: Repo.rollback(:forbidden)
-        end)
-
-        legacy_sequence(module, params)
-      end)
+      Boundary.run(actor, :reorder, module, &authorized_sequence(module, params, &1))
     else
       legacy_sequence(module, params)
     end
+  end
+
+  defp authorized_sequence(module, params, user) do
+    composites = Map.get(params, "composite_keys")
+    keys = Map.get(params, "ids") || composite_ids(composites)
+    if not is_list(keys) or length(keys) > 1000, do: Repo.rollback(:forbidden)
+    entries = Repo.all(from(e in module, where: e.id in ^keys, lock: "FOR UPDATE"))
+    if length(entries) != length(Enum.uniq(keys)), do: Repo.rollback(:forbidden)
+
+    if composites && not Enum.all?(composites, &composite_matches?(module, entries, &1)),
+      do: Repo.rollback(:forbidden)
+
+    Enum.each(entries, &authorize_reorder!(user, &1))
+
+    legacy_sequence(module, params)
+  end
+
+  defp composite_ids(composites) do
+    if is_list(composites), do: Enum.map(composites, &Map.get(&1, "id"))
+  end
+
+  defp authorize_reorder!(user, entry) do
+    changeset = Ecto.Changeset.change(entry, sequence: -1)
+
+    unless Brando.Authorization.Engine.authorize_change(
+             Boundary.actor_scope(user),
+             :reorder,
+             changeset
+           ) == :ok,
+           do: Repo.rollback(:forbidden)
   end
 
   # Every key of a composite must name a schema field holding that value on a
@@ -113,19 +121,20 @@ defmodule Brando.Trait.Sequenced do
     end
   end
 
+  defp composite_sequence_query(table, keys, idx) do
+    q = from t in table, update: [set: [sequence: ^idx]]
+
+    Enum.reduce(keys, q, fn {k, v}, nq ->
+      from t in nq, where: field(t, ^String.to_existing_atom(k)) == ^v
+    end)
+  end
+
   defp legacy_sequence(module, %{"composite_keys" => composite_keys}) do
     table = module.__schema__(:source)
 
     Repo.transaction(fn ->
       for {o, idx} <- Enum.with_index(composite_keys) do
-        q = from t in table, update: [set: [sequence: ^idx]]
-
-        q =
-          Enum.reduce(o, q, fn {k, v}, nq ->
-            from t in nq, where: field(t, ^String.to_existing_atom(k)) == ^v
-          end)
-
-        Repo.update_all(q, [])
+        Repo.update_all(composite_sequence_query(table, o, idx), [])
       end
     end)
 

@@ -71,30 +71,42 @@ defmodule Brando.Authorization.Engine do
     permission =
       if own_profile?(snapshot, action, subject), do: Catalog.get(action, :profile), else: Catalog.get(action, subject)
 
-    reason =
-      cond do
-        snapshot.reason -> snapshot.reason
-        is_nil(permission) -> :unknown_permission
-        snapshot.scope.kind not in permission.scopes -> :wrong_scope
-        not subject_scope?(snapshot.scope, subject) -> :wrong_scope
-        not has_backend_access?(snapshot) -> :backend_access_required
-        not granted?(snapshot, permission.key) -> :missing_grant
-        not protected_subject?(snapshot, action, subject) -> :protected_account
-        not policy_allows?(snapshot.scope, action, subject) -> :policy_denied
-        true -> nil
-      end
+    reason = denial_reason(snapshot, permission, action, subject)
 
     %{
       allowed?: is_nil(reason),
       reason: reason,
       permission: permission && permission.key,
-      groups: if(permission, do: Map.get(snapshot.grants, permission.key, []), else: []),
+      groups: permission_groups(snapshot, permission),
       superuser?: snapshot.superuser?,
       scope: snapshot.scope
     }
   end
 
   def explain(actor, action, subject), do: actor |> snapshot() |> explain(action, subject)
+
+  defp denial_reason(snapshot, permission, action, subject) do
+    cond do
+      snapshot.reason -> snapshot.reason
+      is_nil(permission) -> :unknown_permission
+      snapshot.scope.kind not in permission.scopes -> :wrong_scope
+      not subject_scope?(snapshot.scope, subject) -> :wrong_scope
+      true -> access_denial_reason(snapshot, permission, action, subject)
+    end
+  end
+
+  defp access_denial_reason(snapshot, permission, action, subject) do
+    cond do
+      not has_backend_access?(snapshot) -> :backend_access_required
+      not granted?(snapshot, permission.key) -> :missing_grant
+      not protected_subject?(snapshot, action, subject) -> :protected_account
+      not policy_allows?(snapshot.scope, action, subject) -> :policy_denied
+      true -> nil
+    end
+  end
+
+  defp permission_groups(_snapshot, nil), do: []
+  defp permission_groups(snapshot, permission), do: Map.get(snapshot.grants, permission.key, [])
 
   def scope(actor, action, schema) do
     scope_query(actor, action, Ecto.Queryable.to_query(schema), schema)
@@ -115,18 +127,18 @@ defmodule Brando.Authorization.Engine do
     if can?(snapshot, action, schema) and query_scope?(snapshot.scope, schema) do
       query = put_query_prefix(query, query_prefix(snapshot.scope, schema))
 
-      case policy(schema) do
-        nil ->
-          query
-
-        module ->
-          if function_exported?(module, :scope, 3),
-            do: module.scope(snapshot.scope, action, query),
-            else: where(query, [entry], false)
-      end
+      policy_scope_query(policy(schema), snapshot.scope, action, query)
     else
       where(query, [entry], false)
     end
+  end
+
+  defp policy_scope_query(nil, _scope, _action, query), do: query
+
+  defp policy_scope_query(module, scope, action, query) do
+    if function_exported?(module, :scope, 3),
+      do: module.scope(scope, action, query),
+      else: where(query, [entry], false)
   end
 
   def authorize_change(actor, action, %Ecto.Changeset{} = changeset) do

@@ -4,8 +4,6 @@ defmodule Brando.Trait.Translatable.Compiler do
   @doc false
   def generate_code(parent_module, config) do
     quote generated: true do
-      parent_module = unquote(parent_module)
-      parent_table_name = @table_name
       @translatable_alternates Keyword.get(unquote(config), :alternates, true)
 
       @translatable_config Brando.Trait.Translatable.config(unquote(config))
@@ -26,6 +24,15 @@ defmodule Brando.Trait.Translatable.Compiler do
       attributes do
         attribute :language, :language, required: true
       end
+
+      unquote(generate_alternates(parent_module))
+    end
+  end
+
+  defp generate_alternates(parent_module) do
+    quote generated: true do
+      parent_module = unquote(parent_module)
+      parent_table_name = @table_name
 
       if @translatable_alternates do
         relations do

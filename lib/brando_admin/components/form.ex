@@ -218,33 +218,7 @@ defmodule BrandoAdmin.Components.Form do
     # Build a set of image/video/file FK fields so we can load associations
     asset_fk_map = build_asset_fk_map(schema)
 
-    updated_changeset =
-      Enum.reduce(changes, changeset, fn %{field: field, value: value, assoc?: assoc?}, cs ->
-        cs =
-          if assoc? do
-            Changeset.put_assoc(cs, field, value)
-          else
-            Changeset.put_change(cs, field, value)
-          end
-
-        # If this is an asset FK (e.g. :cover_id), load the record
-        # and put it directly on the changeset data (not via put_assoc,
-        # which can fail with :on_replace => :update)
-        case Map.get(asset_fk_map, field) do
-          nil ->
-            cs
-
-          {assoc_field, asset_schema} ->
-            case Brando.Repo.get(asset_schema, value) do
-              nil ->
-                cs
-
-              record ->
-                updated_data = Map.put(cs.data, assoc_field, record)
-                %{cs | data: updated_data}
-            end
-        end
-      end)
+    updated_changeset = Enum.reduce(changes, changeset, &apply_field_change(&2, &1, asset_fk_map))
 
     {:ok,
      socket
@@ -1980,6 +1954,34 @@ defmodule BrandoAdmin.Components.Form do
 
   # Maps FK fields (e.g. :cover_id) to {assoc_field, schema_module}
   # for loading associated records when receiving remote field changes.
+  defp apply_field_change(cs, %{field: field, value: value, assoc?: assoc?}, asset_fk_map) do
+    cs =
+      if assoc? do
+        Changeset.put_assoc(cs, field, value)
+      else
+        Changeset.put_change(cs, field, value)
+      end
+
+    # If this is an asset FK (e.g. :cover_id), load the record
+    # and put it directly on the changeset data (not via put_assoc,
+    # which can fail with :on_replace => :update)
+    case Map.get(asset_fk_map, field) do
+      nil -> cs
+      {assoc_field, asset_schema} -> put_loaded_asset(cs, assoc_field, asset_schema, value)
+    end
+  end
+
+  defp put_loaded_asset(cs, assoc_field, asset_schema, value) do
+    case Brando.Repo.get(asset_schema, value) do
+      nil ->
+        cs
+
+      record ->
+        updated_data = Map.put(cs.data, assoc_field, record)
+        %{cs | data: updated_data}
+    end
+  end
+
   defp build_asset_fk_map(schema) do
     image_fields =
       if function_exported?(schema, :__image_fields__, 0),
@@ -2113,10 +2115,8 @@ defmodule BrandoAdmin.Components.Form do
       |> push_event("b:submit", %{})
     else
       socket
-      |> then(fn s -> if blocks_ready?, do: assign(s, :all_blocks_received?, true), else: s end)
-      |> then(fn s ->
-        if transformers_ready?, do: assign(s, :all_transformers_received?, true), else: s
-      end)
+      |> assign_received(:all_blocks_received?, blocks_ready?)
+      |> assign_received(:all_transformers_received?, transformers_ready?)
     end
   end
 
@@ -2252,35 +2252,7 @@ defmodule BrandoAdmin.Components.Form do
       changeset = assoc_all_block_fields(block_changesets, changeset)
 
       if changeset.errors == [] do
-        # fetch all blocks' rendered_html
-        case LivePreview.initialize(
-               schema,
-               changeset,
-               updated_entry_assocs,
-               socket.assigns.live_preview_schema_target
-             ) do
-          {:ok, cache_key} ->
-            socket
-            |> assign(:live_preview_active?, true)
-            |> assign(:live_preview_cache_key, cache_key)
-            |> clear_blocks_root_changesets()
-            |> assign_entry_fields_demanding_live_preview_rerender(schema)
-            |> assign_entry_fields_demanding_live_preview_reassign(schema)
-            |> push_event("b:live_preview", %{cache_key: cache_key})
-
-          {:error, err} ->
-            require Logger
-
-            Logger.error("""
-            => Live Preview error: #{inspect(err)}
-            """)
-
-            push_event(socket, "b:alert", %{
-              title: "Live Preview error",
-              message: err,
-              type: "error"
-            })
-        end
+        initialize_block_live_preview(socket, schema, changeset, updated_entry_assocs)
       else
         socket
         |> clear_blocks_root_changesets()
@@ -2360,29 +2332,7 @@ defmodule BrandoAdmin.Components.Form do
       socket = socket |> clear_blocks_root_changesets() |> assign(:pending_live_preview_target, nil)
 
       if changeset.errors == [] do
-        case LivePreview.switch_target(
-               schema,
-               changeset,
-               socket.assigns.live_preview_cache_key,
-               target,
-               socket.assigns.updated_entry_assocs
-             ) do
-          {:ok, _key} ->
-            socket
-            |> assign(:live_preview_schema_target, target)
-            |> assign_entry_fields_demanding_live_preview_rerender(schema)
-            |> assign_entry_fields_demanding_live_preview_reassign(schema)
-
-          {:error, _reason} ->
-            push_event(socket, "b:alert", %{
-              title: gettext("Could not switch preview"),
-              message:
-                gettext(
-                  "The previous preview is still open. Check the target configuration and your access, then try again."
-                ),
-              type: "error"
-            })
-        end
+        switch_live_preview_target(socket, schema, changeset, target)
       else
         push_errors(socket, changeset, socket.assigns.form_blueprint, schema)
       end
@@ -2397,6 +2347,63 @@ defmodule BrandoAdmin.Components.Form do
       message: "Tag received: #{inspect(tag)}",
       type: "info"
     })
+  end
+
+  defp assign_received(socket, key, true), do: assign(socket, key, true)
+  defp assign_received(socket, _key, false), do: socket
+
+  defp initialize_block_live_preview(socket, schema, changeset, updated_entry_assocs) do
+    # fetch all blocks' rendered_html
+    case LivePreview.initialize(
+           schema,
+           changeset,
+           updated_entry_assocs,
+           socket.assigns.live_preview_schema_target
+         ) do
+      {:ok, cache_key} ->
+        socket
+        |> assign(:live_preview_active?, true)
+        |> assign(:live_preview_cache_key, cache_key)
+        |> clear_blocks_root_changesets()
+        |> assign_entry_fields_demanding_live_preview_rerender(schema)
+        |> assign_entry_fields_demanding_live_preview_reassign(schema)
+        |> push_event("b:live_preview", %{cache_key: cache_key})
+
+      {:error, err} ->
+        Logger.error("""
+        => Live Preview error: #{inspect(err)}
+        """)
+
+        push_event(socket, "b:alert", %{
+          title: "Live Preview error",
+          message: err,
+          type: "error"
+        })
+    end
+  end
+
+  defp switch_live_preview_target(socket, schema, changeset, target) do
+    case LivePreview.switch_target(
+           schema,
+           changeset,
+           socket.assigns.live_preview_cache_key,
+           target,
+           socket.assigns.updated_entry_assocs
+         ) do
+      {:ok, _key} ->
+        socket
+        |> assign(:live_preview_schema_target, target)
+        |> assign_entry_fields_demanding_live_preview_rerender(schema)
+        |> assign_entry_fields_demanding_live_preview_reassign(schema)
+
+      {:error, _reason} ->
+        push_event(socket, "b:alert", %{
+          title: gettext("Could not switch preview"),
+          message:
+            gettext("The previous preview is still open. Check the target configuration and your access, then try again."),
+          type: "error"
+        })
+    end
   end
 
   def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
@@ -3228,20 +3235,7 @@ defmodule BrandoAdmin.Components.Form do
         _ -> []
       end
 
-    file_count =
-      case params["file_count"] do
-        count when is_integer(count) ->
-          count
-
-        count when is_binary(count) ->
-          case Integer.parse(count) do
-            {parsed, _} -> parsed
-            _ -> 0
-          end
-
-        _ ->
-          0
-      end
+    file_count = upload_file_count(params["file_count"])
 
     {video_config, _} = Brando.Uploads.resolve_video_config(params["video_config_target"] || "default")
 
@@ -3459,22 +3453,8 @@ defmodule BrandoAdmin.Components.Form do
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
 
     singular = schema.__naming__().singular
-    translated_singular = Brando.Blueprint.get_singular(schema)
     context = schema.__modules__().context
     mutation_type = (get_field(changeset, :id) && :update) || :create
-
-    # if redirect_on_save is set in form, use this
-    redirect_fn =
-      form_blueprint.redirect_on_save ||
-        fn socket, _entry, _mutation_type ->
-          generated_list_view = schema.__modules__().admin_list_view
-          Brando.routes().admin_live_path(socket, generated_list_view)
-        end
-
-    # redirect to "create new"
-    redirect_new_fn = fn _socket, _entry, _mutation_type ->
-      schema.__admin_route__(:create, [])
-    end
 
     send(self(), {:progress_popup, "Associating block fields..."})
 
@@ -3503,107 +3483,20 @@ defmodule BrandoAdmin.Components.Form do
     socket = Translation.put_acknowledged(socket, params)
     if FrontendEditor.frontend?(socket), do: FrontendEditor.saving(socket)
 
+    save = %{
+      schema: schema,
+      current_user: current_user,
+      form_blueprint: form_blueprint,
+      save_redirect_target: save_redirect_target,
+      mutation_type: mutation_type,
+      entry_or_default: entry_or_default,
+      changeset: rendered_changeset
+    }
+
     case save_entry(socket, context, mutation_type, singular, rendered_changeset) do
-      {:ok, entry} ->
-        send(self(), {:progress_popup, "Entry saved."})
-        if FrontendEditor.frontend?(socket), do: FrontendEditor.saved(socket, entry)
-
-        Brando.Blueprint.AfterSave.run(
-          schema,
-          entry,
-          rendered_changeset,
-          current_user,
-          minor: Map.get(socket.assigns, :minor_save?, false)
-        )
-
-        {socket, stale?} = after_translation_save(socket, schema, entry)
-
-        maybe_run_form_after_save(form_blueprint, entry, current_user)
-
-        mutation_message =
-          Brando.Gettext
-          |> Gettext.dgettext("mutations", "#{mutation_type}", singular: translated_singular)
-          |> String.capitalize()
-
-        send(self(), {:toast, mutation_message})
-
-        {:noreply,
-         maybe_offer_permalink_redirect(Drafts.saved(socket, entry), entry_or_default, entry, fn socket ->
-           maybe_redirected_socket =
-             case save_redirect_target do
-               :self ->
-                 update_url = schema.__admin_route__(:update, [entry.id])
-
-                 if mutation_type == :create do
-                   socket
-                   |> assign(:processing, false)
-                   |> assign(:all_blocks_received?, false)
-                   |> reset_transformer_changesets()
-                   |> assign(:entry_id, entry.id)
-                   |> assign_refreshed_entry()
-                   |> assign_refreshed_form()
-                   |> clear_blocks_root_changesets()
-                   |> assign_block_map()
-                   |> assign_entry_for_blocks()
-                   |> reload_all_blocks(:changed)
-                   |> refresh_translation(stale?)
-                   |> push_patch(to: update_url)
-                 else
-                   if schema.has_trait(Brando.Trait.Revisioned) do
-                     id = "#{socket.assigns.id}-revisions-drawer"
-                     send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
-                   end
-
-                   # update entry!
-                   socket
-                   |> assign(:processing, false)
-                   |> assign(:all_blocks_received?, false)
-                   |> reset_transformer_changesets()
-                   |> assign(:entry_id, entry.id)
-                   |> assign_refreshed_entry()
-                   |> assign_refreshed_form()
-                   |> clear_blocks_root_changesets()
-                   |> assign_block_map()
-                   |> assign_entry_for_blocks()
-                   |> reload_all_blocks(:changed)
-                   |> refresh_translation(stale?)
-                 end
-
-               :listing ->
-                 push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
-
-               :new ->
-                 push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
-             end
-
-           assign(maybe_redirected_socket, :save_redirect_target, FrontendEditor.save_target(socket))
-         end)}
-
-      {:error, {:source_controlled, paths}} ->
-        if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :source_controlled)
-
-        {:noreply,
-         socket
-         |> assign(:processing, false)
-         |> assign(:all_blocks_received?, false)
-         |> clear_blocks_root_changesets()
-         |> reset_transformer_changesets()
-         |> source_controlled_error(paths)}
-
-      {:error, %Changeset{} = changeset} ->
-        require Logger
-        Logger.error(inspect(changeset, pretty: true))
-        send(self(), {:progress_popup, "Saving entry failed..."})
-
-        if FrontendEditor.frontend?(socket),
-          do: FrontendEditor.save_failed(socket, {:invalid, changeset |> traverse_errors(& &1) |> Map.keys()})
-
-        {:noreply,
-         socket
-         |> assign(:processing, false)
-         |> assign(:minor_save?, false)
-         |> put_form(to_form(changeset, []))
-         |> push_errors(changeset, form_blueprint, schema)}
+      {:ok, entry} -> saved_entry_with_blocks(socket, entry, save)
+      {:error, {:source_controlled, paths}} -> source_controlled_save_with_blocks(socket, paths)
+      {:error, %Changeset{} = changeset} -> failed_save_with_blocks(socket, changeset, save)
     end
   end
 
@@ -3667,69 +3560,21 @@ defmodule BrandoAdmin.Components.Form do
 
     mutation_type = (get_field(changeset, :id) && :update) || :create
 
-    # if redirect_on_save is set in form, use this
-    redirect_fn =
-      form_blueprint.redirect_on_save ||
-        fn _socket, _entry, _mutation_type ->
-          schema.__admin_route__(:list, [schema.__modules__().admin_list_view])
-        end
-
-    # redirect to "create new"
-    redirect_new_fn = fn _socket, _entry, _mutation_type ->
-      schema.__admin_route__(:create, [])
-    end
-
     socket = Translation.put_acknowledged(socket, params)
+
+    save = %{
+      schema: schema,
+      current_user: current_user,
+      form_blueprint: form_blueprint,
+      save_redirect_target: save_redirect_target,
+      mutation_type: mutation_type,
+      entry_or_default: entry_or_default,
+      changeset: changeset
+    }
 
     case save_entry(socket, context, mutation_type, singular, changeset) do
       {:ok, entry} ->
-        Brando.Blueprint.AfterSave.run(schema, entry, changeset, current_user,
-          minor: Map.get(socket.assigns, :minor_save?, false)
-        )
-
-        {socket, _stale?} = after_translation_save(socket, schema, entry)
-        maybe_run_form_after_save(form_blueprint, entry, current_user)
-        send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
-
-        {:noreply,
-         maybe_offer_permalink_redirect(Drafts.saved(socket, entry), entry_or_default, entry, fn socket ->
-           maybe_redirected_socket =
-             case save_redirect_target do
-               :self ->
-                 if mutation_type == :create do
-                   generated_route = schema.__admin_route__(:update, [entry.id])
-
-                   push_navigate(socket, to: generated_route)
-                 else
-                   if schema.has_trait(Brando.Trait.Revisioned) do
-                     id = "#{socket.assigns.id}-revisions-drawer"
-                     send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
-                   end
-
-                   # update entry!
-                   socket
-                   |> assign(:entry_id, entry.id)
-                   |> assign_refreshed_entry()
-                   |> assign_refreshed_form()
-                 end
-
-               :listing ->
-                 push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
-
-               :new ->
-                 push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
-             end
-
-           # `:processing` is cleared here rather than per-branch: `:listing` and
-           # `:new` navigate away, so only `:self` ever renders the button again —
-           # and it was the one branch that forgot. The button is `disabled` while
-           # the flag is set, so a stuck flag does not just look wrong, it locks
-           # the form until the page is reloaded. Its sibling clause above sets
-           # the flag in each `:self` sub-branch; one place is harder to forget.
-           maybe_redirected_socket
-           |> assign(:save_redirect_target, :listing)
-           |> assign(:processing, false)
-         end)}
+        saved_entry(socket, entry, save)
 
       {:error, %Changeset{} = changeset} ->
         require Logger
@@ -3809,36 +3654,9 @@ defmodule BrandoAdmin.Components.Form do
 
     updated_image =
       if params["crop_applied"] do
-        # Crop was already applied via the HTTP replace_crop endpoint.
-        # The controller's Crop.save_replace already queued processing.
-        image_id = params["image_id"] || edit_image.image.id
-        {:ok, img} = Images.get_image(image_id)
-        img
+        cropped_editor_image(params, edit_image)
       else
-        # No crop — just update focal point and reprocess from the original file.
-        image =
-          case edit_image do
-            %{image: image} when not is_nil(image) ->
-              image
-
-            _ ->
-              {:ok, img} = Images.get_image(params["image_id"])
-              img
-          end
-
-        x = params["focal_x"]
-        y = params["focal_y"]
-
-        changeset =
-          image
-          |> Images.Image.changeset(
-            %{focal: %{x: x, y: y}, status: :unprocessed},
-            current_user
-          )
-          |> Map.put(:action, :update)
-
-        {:ok, img} = Images.update_image(changeset, current_user)
-        img
+        refocused_editor_image(params, edit_image, current_user)
       end
 
     # Subscribe to PubSub BEFORE queuing processing so inline Oban
@@ -3882,34 +3700,7 @@ defmodule BrandoAdmin.Components.Form do
 
       {:noreply, socket}
     else
-      if Map.get(edit_image, :own) do
-        # The image's own form: the entry is the image; show it as saved.
-        {:noreply,
-         socket
-         |> assign(:entry, updated_image)
-         |> assign(:edit_image, Map.merge(edit_image, %{image: updated_image}))
-         |> assign(:image_changeset, change(updated_image))
-         |> assign_refreshed_form()}
-      else
-        # Non-block path: update entry with the image so the Image input
-        # detects the change when the form re-validates (same pattern as new_copy).
-        schema = socket.assigns.schema
-        field_atom = String.to_existing_atom("#{edit_image.field}")
-        entry = socket.assigns.entry || struct(schema)
-        field_path = edit_image.path ++ [field_atom]
-        access_path = Brando.Utils.build_access_path(field_path)
-        updated_entry = put_in(entry, access_path, updated_image)
-
-        image_changeset = change(updated_image)
-        updated_edit_image = Map.merge(edit_image, %{image: updated_image})
-
-        {:noreply,
-         socket
-         |> assign(:entry, updated_entry)
-         |> assign(:edit_image, updated_edit_image)
-         |> assign(:image_changeset, image_changeset)
-         |> push_event("b:validate", %{})}
-      end
+      {:noreply, show_saved_editor_image(socket, edit_image, updated_image)}
     end
   end
 
@@ -4875,6 +4666,278 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :save_redirect_target, :self)}
   end
 
+  defp upload_file_count(count) when is_integer(count), do: count
+
+  defp upload_file_count(count) when is_binary(count) do
+    case Integer.parse(count) do
+      {parsed, _} -> parsed
+      _ -> 0
+    end
+  end
+
+  defp upload_file_count(_count), do: 0
+
+  defp saved_entry_with_blocks(socket, entry, save) do
+    %{schema: schema, current_user: current_user, mutation_type: mutation_type} = save
+    translated_singular = Brando.Blueprint.get_singular(schema)
+
+    send(self(), {:progress_popup, "Entry saved."})
+    if FrontendEditor.frontend?(socket), do: FrontendEditor.saved(socket, entry)
+
+    Brando.Blueprint.AfterSave.run(
+      schema,
+      entry,
+      save.changeset,
+      current_user,
+      minor: Map.get(socket.assigns, :minor_save?, false)
+    )
+
+    {socket, stale?} = after_translation_save(socket, schema, entry)
+
+    maybe_run_form_after_save(save.form_blueprint, entry, current_user)
+
+    mutation_message =
+      Brando.Gettext
+      |> Gettext.dgettext("mutations", "#{mutation_type}", singular: translated_singular)
+      |> String.capitalize()
+
+    send(self(), {:toast, mutation_message})
+
+    {:noreply,
+     maybe_offer_permalink_redirect(Drafts.saved(socket, entry), save.entry_or_default, entry, fn socket ->
+       redirect_after_save_with_blocks(socket, entry, stale?, save)
+     end)}
+  end
+
+  defp redirect_after_save_with_blocks(socket, entry, stale?, save) do
+    %{schema: schema, mutation_type: mutation_type} = save
+
+    maybe_redirected_socket =
+      case save.save_redirect_target do
+        :self ->
+          refresh_saved_entry_with_blocks(socket, entry, stale?, save)
+
+        :listing ->
+          # if redirect_on_save is set in form, use this
+          redirect_fn =
+            save.form_blueprint.redirect_on_save ||
+              fn socket, _entry, _mutation_type ->
+                generated_list_view = schema.__modules__().admin_list_view
+                Brando.routes().admin_live_path(socket, generated_list_view)
+              end
+
+          push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
+
+        :new ->
+          # redirect to "create new"
+          push_navigate(socket, to: schema.__admin_route__(:create, []))
+      end
+
+    assign(maybe_redirected_socket, :save_redirect_target, FrontendEditor.save_target(socket))
+  end
+
+  defp refresh_saved_entry_with_blocks(socket, entry, stale?, %{schema: schema, mutation_type: :create}) do
+    update_url = schema.__admin_route__(:update, [entry.id])
+
+    socket
+    |> assign(:processing, false)
+    |> assign(:all_blocks_received?, false)
+    |> reset_transformer_changesets()
+    |> assign(:entry_id, entry.id)
+    |> assign_refreshed_entry()
+    |> assign_refreshed_form()
+    |> clear_blocks_root_changesets()
+    |> assign_block_map()
+    |> assign_entry_for_blocks()
+    |> reload_all_blocks(:changed)
+    |> refresh_translation(stale?)
+    |> push_patch(to: update_url)
+  end
+
+  defp refresh_saved_entry_with_blocks(socket, entry, stale?, %{schema: schema}) do
+    maybe_refresh_revisions(socket, schema)
+
+    # update entry!
+    socket
+    |> assign(:processing, false)
+    |> assign(:all_blocks_received?, false)
+    |> reset_transformer_changesets()
+    |> assign(:entry_id, entry.id)
+    |> assign_refreshed_entry()
+    |> assign_refreshed_form()
+    |> clear_blocks_root_changesets()
+    |> assign_block_map()
+    |> assign_entry_for_blocks()
+    |> reload_all_blocks(:changed)
+    |> refresh_translation(stale?)
+  end
+
+  defp maybe_refresh_revisions(socket, schema) do
+    if schema.has_trait(Brando.Trait.Revisioned) do
+      id = "#{socket.assigns.id}-revisions-drawer"
+      send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+    end
+  end
+
+  defp source_controlled_save_with_blocks(socket, paths) do
+    if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :source_controlled)
+
+    {:noreply,
+     socket
+     |> assign(:processing, false)
+     |> assign(:all_blocks_received?, false)
+     |> clear_blocks_root_changesets()
+     |> reset_transformer_changesets()
+     |> source_controlled_error(paths)}
+  end
+
+  defp failed_save_with_blocks(socket, changeset, save) do
+    Logger.error(inspect(changeset, pretty: true))
+    send(self(), {:progress_popup, "Saving entry failed..."})
+
+    if FrontendEditor.frontend?(socket),
+      do: FrontendEditor.save_failed(socket, {:invalid, changeset |> traverse_errors(& &1) |> Map.keys()})
+
+    {:noreply,
+     socket
+     |> assign(:processing, false)
+     |> assign(:minor_save?, false)
+     |> put_form(to_form(changeset, []))
+     |> push_errors(changeset, save.form_blueprint, save.schema)}
+  end
+
+  defp saved_entry(socket, entry, save) do
+    %{schema: schema, current_user: current_user, mutation_type: mutation_type} = save
+    singular = schema.__naming__().singular
+
+    Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user,
+      minor: Map.get(socket.assigns, :minor_save?, false)
+    )
+
+    {socket, _stale?} = after_translation_save(socket, schema, entry)
+    maybe_run_form_after_save(save.form_blueprint, entry, current_user)
+    send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
+
+    {:noreply,
+     maybe_offer_permalink_redirect(Drafts.saved(socket, entry), save.entry_or_default, entry, fn socket ->
+       redirect_after_save(socket, entry, save)
+     end)}
+  end
+
+  defp redirect_after_save(socket, entry, save) do
+    %{schema: schema, mutation_type: mutation_type} = save
+
+    maybe_redirected_socket =
+      case save.save_redirect_target do
+        :self ->
+          refresh_saved_entry(socket, entry, save)
+
+        :listing ->
+          # if redirect_on_save is set in form, use this
+          redirect_fn =
+            save.form_blueprint.redirect_on_save ||
+              fn _socket, _entry, _mutation_type ->
+                schema.__admin_route__(:list, [schema.__modules__().admin_list_view])
+              end
+
+          push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
+
+        :new ->
+          # redirect to "create new"
+          push_navigate(socket, to: schema.__admin_route__(:create, []))
+      end
+
+    # `:processing` is cleared here rather than per-branch: `:listing` and
+    # `:new` navigate away, so only `:self` ever renders the button again —
+    # and it was the one branch that forgot. The button is `disabled` while
+    # the flag is set, so a stuck flag does not just look wrong, it locks
+    # the form until the page is reloaded. Its sibling clause above sets
+    # the flag in each `:self` sub-branch; one place is harder to forget.
+    maybe_redirected_socket
+    |> assign(:save_redirect_target, :listing)
+    |> assign(:processing, false)
+  end
+
+  defp refresh_saved_entry(socket, entry, %{schema: schema, mutation_type: :create}) do
+    generated_route = schema.__admin_route__(:update, [entry.id])
+
+    push_navigate(socket, to: generated_route)
+  end
+
+  defp refresh_saved_entry(socket, entry, %{schema: schema}) do
+    maybe_refresh_revisions(socket, schema)
+
+    # update entry!
+    socket
+    |> assign(:entry_id, entry.id)
+    |> assign_refreshed_entry()
+    |> assign_refreshed_form()
+  end
+
+  # Crop was already applied via the HTTP replace_crop endpoint.
+  # The controller's Crop.save_replace already queued processing.
+  defp cropped_editor_image(params, edit_image) do
+    image_id = params["image_id"] || edit_image.image.id
+    {:ok, img} = Images.get_image(image_id)
+    img
+  end
+
+  # No crop — just update focal point and reprocess from the original file.
+  defp refocused_editor_image(params, edit_image, current_user) do
+    image =
+      case edit_image do
+        %{image: image} when not is_nil(image) ->
+          image
+
+        _ ->
+          {:ok, img} = Images.get_image(params["image_id"])
+          img
+      end
+
+    x = params["focal_x"]
+    y = params["focal_y"]
+
+    changeset =
+      image
+      |> Images.Image.changeset(
+        %{focal: %{x: x, y: y}, status: :unprocessed},
+        current_user
+      )
+      |> Map.put(:action, :update)
+
+    {:ok, img} = Images.update_image(changeset, current_user)
+    img
+  end
+
+  # The image's own form: the entry is the image; show it as saved.
+  defp show_saved_editor_image(socket, %{own: own} = edit_image, updated_image) when own not in [nil, false] do
+    socket
+    |> assign(:entry, updated_image)
+    |> assign(:edit_image, Map.merge(edit_image, %{image: updated_image}))
+    |> assign(:image_changeset, change(updated_image))
+    |> assign_refreshed_form()
+  end
+
+  # Non-block path: update entry with the image so the Image input
+  # detects the change when the form re-validates (same pattern as new_copy).
+  defp show_saved_editor_image(socket, edit_image, updated_image) do
+    schema = socket.assigns.schema
+    field_atom = String.to_existing_atom("#{edit_image.field}")
+    entry = socket.assigns.entry || struct(schema)
+    field_path = edit_image.path ++ [field_atom]
+    access_path = Brando.Utils.build_access_path(field_path)
+    updated_entry = put_in(entry, access_path, updated_image)
+
+    image_changeset = change(updated_image)
+    updated_edit_image = Map.merge(edit_image, %{image: updated_image})
+
+    socket
+    |> assign(:entry, updated_entry)
+    |> assign(:edit_image, updated_edit_image)
+    |> assign(:image_changeset, image_changeset)
+    |> push_event("b:validate", %{})
+  end
+
   defp external_video_params?(%{"type" => type}) when type in ["external_file", "vimeo", "youtube"], do: true
   defp external_video_params?(%{type: type}) when type in [:external_file, :vimeo, :youtube], do: true
   defp external_video_params?(_params), do: false
@@ -5388,18 +5451,7 @@ defmodule BrandoAdmin.Components.Form do
   defp flatten_nested_errors(errors, prefix \\ []) do
     Enum.flat_map(errors, fn
       {field, messages} when is_list(messages) ->
-        path = prefix ++ [field]
-
-        if Enum.all?(messages, &is_binary/1) do
-          # Only include if this is a nested path (not top-level, those are handled separately)
-          if prefix == [], do: [], else: [{Enum.join(path, " → "), messages}]
-        else
-          # messages contains nested maps (from associations)
-          Enum.flat_map(messages, fn
-            nested when is_map(nested) -> flatten_nested_errors(nested, path)
-            _ -> []
-          end)
-        end
+        flatten_error_messages(messages, prefix, prefix ++ [field])
 
       {field, nested} when is_map(nested) ->
         flatten_nested_errors(nested, prefix ++ [field])
@@ -5407,6 +5459,19 @@ defmodule BrandoAdmin.Components.Form do
       _ ->
         []
     end)
+  end
+
+  defp flatten_error_messages(messages, prefix, path) do
+    if Enum.all?(messages, &is_binary/1) do
+      # Only include if this is a nested path (not top-level, those are handled separately)
+      if prefix == [], do: [], else: [{Enum.join(path, " → "), messages}]
+    else
+      # messages contains nested maps (from associations)
+      Enum.flat_map(messages, fn
+        nested when is_map(nested) -> flatten_nested_errors(nested, path)
+        _ -> []
+      end)
+    end
   end
 
   @doc """
@@ -5417,71 +5482,87 @@ defmodule BrandoAdmin.Components.Form do
   """
   def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
     if entry.done? do
-      current_user = socket.assigns.current_user
-      edit_image = socket.assigns.edit_image
-      config_target = Map.get(socket.assigns, :image_editor_config_target, "default")
-      focal = Map.get(socket.assigns, :image_editor_focal, %{x: 50, y: 50})
-
-      {cfg, resolved_target} = resolve_block_image_config(config_target)
-
-      case consume_uploaded_entry(socket, entry, fn meta ->
-             safe_handle_upload(
-               Map.put(meta, :config_target, resolved_target),
-               entry,
-               cfg,
-               current_user
-             )
-           end) do
-        {:upload_error, reason} ->
-          upload_error_noreply(socket, :image, reason)
-
-        new_image ->
-          # Apply focal and mark for reprocessing
-          changeset =
-            new_image
-            |> Images.Image.changeset(
-              %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
-              current_user
-            )
-            |> Map.put(:action, :update)
-
-          case Images.update_image(changeset, current_user) do
-            {:ok, updated_image} ->
-              Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
-
-              if block_target = Map.get(edit_image, :block_target) do
-                send(self(), {:register_pending_block_image, updated_image.id, block_target})
-              end
-
-              Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
-
-              if block_target = Map.get(edit_image, :block_target) do
-                {module, id} = block_target
-
-                send_update(module,
-                  id: id,
-                  event: "image_editor_new_copy",
-                  new_image: updated_image,
-                  old_image_id: Map.get(edit_image, :old_image_id)
-                )
-
-                send(self(), {:toast, gettext("New image created.")})
-                {:noreply, socket}
-              else
-                own_or_field_copy(socket, edit_image, updated_image)
-              end
-
-            {:error, reason} ->
-              {:noreply,
-               push_event(socket, "b:alert", %{
-                 title: gettext("Error creating image"),
-                 type: "error",
-                 message: inspect(reason)
-               })}
-          end
-      end
+      consume_image_editor_upload(entry, socket)
     else
       {:noreply, socket}
+    end
+  end
+
+  defp consume_image_editor_upload(entry, socket) do
+    current_user = socket.assigns.current_user
+    config_target = Map.get(socket.assigns, :image_editor_config_target, "default")
+
+    {cfg, resolved_target} = resolve_block_image_config(config_target)
+
+    case consume_uploaded_entry(socket, entry, fn meta ->
+           safe_handle_upload(
+             Map.put(meta, :config_target, resolved_target),
+             entry,
+             cfg,
+             current_user
+           )
+         end) do
+      {:upload_error, reason} ->
+        upload_error_noreply(socket, :image, reason)
+
+      new_image ->
+        refocus_image_editor_copy(socket, new_image)
+    end
+  end
+
+  defp refocus_image_editor_copy(socket, new_image) do
+    current_user = socket.assigns.current_user
+    focal = Map.get(socket.assigns, :image_editor_focal, %{x: 50, y: 50})
+
+    # Apply focal and mark for reprocessing
+    changeset =
+      new_image
+      |> Images.Image.changeset(
+        %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
+        current_user
+      )
+      |> Map.put(:action, :update)
+
+    case Images.update_image(changeset, current_user) do
+      {:ok, updated_image} ->
+        image_editor_copy_created(socket, updated_image)
+
+      {:error, reason} ->
+        {:noreply,
+         push_event(socket, "b:alert", %{
+           title: gettext("Error creating image"),
+           type: "error",
+           message: inspect(reason)
+         })}
+    end
+  end
+
+  defp image_editor_copy_created(socket, updated_image) do
+    current_user = socket.assigns.current_user
+    edit_image = socket.assigns.edit_image
+
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
+
+    if block_target = Map.get(edit_image, :block_target) do
+      send(self(), {:register_pending_block_image, updated_image.id, block_target})
+    end
+
+    Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
+
+    if block_target = Map.get(edit_image, :block_target) do
+      {module, id} = block_target
+
+      send_update(module,
+        id: id,
+        event: "image_editor_new_copy",
+        new_image: updated_image,
+        old_image_id: Map.get(edit_image, :old_image_id)
+      )
+
+      send(self(), {:toast, gettext("New image created.")})
+      {:noreply, socket}
+    else
+      own_or_field_copy(socket, edit_image, updated_image)
     end
   end
 
@@ -5730,19 +5811,21 @@ defmodule BrandoAdmin.Components.Form do
         fetch_fallback_ai_opts(schema, field_atom, :missing_field)
 
       %{opts: opts} ->
-        opts = opts || []
+        field_ai_opts(opts || [], schema, field_atom)
+    end
+  end
 
-        if Keyword.has_key?(opts, :ai) do
-          ai_opts = Brando.AI.normalize_ai_opts(Keyword.get(opts, :ai))
+  defp field_ai_opts(opts, schema, field_atom) do
+    if Keyword.has_key?(opts, :ai) do
+      ai_opts = Brando.AI.normalize_ai_opts(Keyword.get(opts, :ai))
 
-          if ai_opts == [] do
-            {:error, :missing_ai_config}
-          else
-            {:ok, ai_opts}
-          end
-        else
-          fetch_fallback_ai_opts(schema, field_atom, :missing_ai_config)
-        end
+      if ai_opts == [] do
+        {:error, :missing_ai_config}
+      else
+        {:ok, ai_opts}
+      end
+    else
+      fetch_fallback_ai_opts(schema, field_atom, :missing_ai_config)
     end
   end
 
@@ -6178,34 +6261,8 @@ defmodule BrandoAdmin.Components.Form do
                size: size,
                type: mime_type
              }) do
-          {:ok, %{upload_url: url, video: video} = result} ->
-            # Subscribe to video updates
-            Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
-
-            # Update edit_video with the created video
-            edit_video = Map.put(edit_video, :video, video)
-            video_changeset = change(video)
-
-            # Build event payload - include tus_auth for Bunny uploads
-            event_payload = %{
-              upload_url: url,
-              video_id: video.id,
-              filename: filename,
-              request_ref: request_ref
-            }
-
-            event_payload =
-              case Map.get(result, :tus_auth) do
-                nil -> event_payload
-                tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
-              end
-
-            # Push event to JavaScript hook with upload URL
-            {:ok,
-             socket
-             |> assign(:edit_video, edit_video)
-             |> assign(:video_changeset, video_changeset)
-             |> push_event("video_upload_url_ready", event_payload)}
+          {:ok, %{upload_url: _url, video: _video} = result} ->
+            provider_video_upload_ready(socket, edit_video, result, filename, request_ref)
 
           {:error, reason} ->
             Logger.error("Failed to get video upload URL: #{inspect(reason)}")
@@ -6232,6 +6289,36 @@ defmodule BrandoAdmin.Components.Form do
            request_ref: request_ref
          })}
     end
+  end
+
+  defp provider_video_upload_ready(socket, edit_video, %{upload_url: url, video: video} = result, filename, request_ref) do
+    # Subscribe to video updates
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
+
+    # Update edit_video with the created video
+    edit_video = Map.put(edit_video, :video, video)
+    video_changeset = change(video)
+
+    # Build event payload - include tus_auth for Bunny uploads
+    event_payload = %{
+      upload_url: url,
+      video_id: video.id,
+      filename: filename,
+      request_ref: request_ref
+    }
+
+    event_payload =
+      case Map.get(result, :tus_auth) do
+        nil -> event_payload
+        tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
+      end
+
+    # Push event to JavaScript hook with upload URL
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:video_changeset, video_changeset)
+     |> push_event("video_upload_url_ready", event_payload)}
   end
 
   defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key),
@@ -6368,31 +6455,7 @@ defmodule BrandoAdmin.Components.Form do
   defp decode_drawer_changes(_json), do: %{}
 
   defp assign_drawer_recovery_state(socket) do
-    %{
-      editing_image?: editing_image?,
-      editing_video?: editing_video?,
-      editing_file?: editing_file?,
-      edit_image: edit_image,
-      edit_video: edit_video,
-      edit_file: edit_file
-    } = socket.assigns
-
-    {type, resource_id, field, path, schema, changeset} =
-      cond do
-        editing_image? and edit_image[:id] ->
-          {"image", edit_image.id, edit_image[:field], edit_image[:path], edit_image[:schema],
-           socket.assigns[:image_changeset]}
-
-        editing_video? and edit_video[:id] ->
-          {"video", edit_video.id, edit_video[:field], edit_video[:path], edit_video[:schema],
-           socket.assigns[:video_changeset]}
-
-        editing_file? and edit_file[:id] ->
-          {"file", edit_file.id, edit_file[:field], edit_file[:path], edit_file[:schema], socket.assigns[:file_changeset]}
-
-        true ->
-          {nil, nil, nil, [], nil, nil}
-      end
+    {type, resource_id, field, path, schema, changeset} = editing_drawer(socket.assigns)
 
     socket
     |> assign(:editing_drawer_type, type)
@@ -6401,6 +6464,31 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:editing_path, path || [])
     |> assign(:editing_schema, schema && to_string(schema))
     |> assign(:editing_drawer_changes, encode_drawer_changes(type, changeset))
+  end
+
+  defp editing_drawer(assigns) do
+    %{
+      editing_image?: editing_image?,
+      editing_video?: editing_video?,
+      editing_file?: editing_file?,
+      edit_image: edit_image,
+      edit_video: edit_video,
+      edit_file: edit_file
+    } = assigns
+
+    cond do
+      editing_image? and edit_image[:id] ->
+        {"image", edit_image.id, edit_image[:field], edit_image[:path], edit_image[:schema], assigns[:image_changeset]}
+
+      editing_video? and edit_video[:id] ->
+        {"video", edit_video.id, edit_video[:field], edit_video[:path], edit_video[:schema], assigns[:video_changeset]}
+
+      editing_file? and edit_file[:id] ->
+        {"file", edit_file.id, edit_file[:field], edit_file[:path], edit_file[:schema], assigns[:file_changeset]}
+
+      true ->
+        {nil, nil, nil, [], nil, nil}
+    end
   end
 
   # Only what the user actually changed, and only the text fields — everything
@@ -6556,14 +6644,17 @@ defmodule BrandoAdmin.Components.Form do
     if schema.has_trait(Brando.Trait.Translatable) and length(languages) > 1 and
          not language_input?(blueprint) do
       code = user.config.content_language
-
-      Enum.find_value(languages, code, fn language ->
-        if to_string(language[:value]) == to_string(code), do: language[:text]
-      end)
+      language_text(languages, code)
     end
   end
 
   defp creating_language_label(_assigns), do: nil
+
+  defp language_text(languages, code) do
+    Enum.find_value(languages, code, fn language ->
+      if to_string(language[:value]) == to_string(code), do: language[:text]
+    end)
+  end
 
   defp language_input?(%{tabs: tabs}), do: Enum.any?(tabs, &has_language_input?/1)
   defp language_input?(_blueprint), do: false

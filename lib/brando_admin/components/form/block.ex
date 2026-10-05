@@ -395,35 +395,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = socket.assigns.form.source
     changesets = socket.assigns.changesets
     updated_changesets = update_child_changeset(changesets, uid, child_changeset)
-    this_uid = socket.assigns.uid
-    parent_ref = socket.assigns.parent_ref
 
     if !Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
 
       updated_changeset = put_children(changeset, updated_changesets_list)
 
-      if root_uid == this_uid do
-        # Terminal: send populated changeset to parent for duplication or copy
-        event_name = if action == :copy, do: "copy_block", else: "duplicate_block"
-
-        send_to_ref(parent_ref, %{
-          event: event_name,
-          uid: root_uid,
-          changeset: updated_changeset,
-          populated: true
-        })
-      else
-        send_to_ref(parent_ref, %{
-          event: "provide_changeset_for_duplication",
-          changeset: updated_changeset,
-          uid: this_uid,
-          parent_uid: parent_uid,
-          root_uid: root_uid,
-          parent_sequence: parent_sequence,
-          action: action
-        })
-      end
+      send_populated_changeset(socket.assigns, updated_changeset, root_uid, parent_uid, parent_sequence, action)
     end
 
     {:ok, assign(socket, :changesets, updated_changesets)}
@@ -672,127 +650,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_changeset = get_block_changeset(changeset, belongs_to)
     refs = Changeset.get_assoc(block_changeset, :refs)
 
-    new_refs =
-      Enum.reduce(refs, [], fn
-        %Changeset{action: :replace}, acc ->
-          acc
-
-        ref, acc ->
-          if Changeset.get_field(ref, :name) == ref_name do
-            block =
-              ref
-              |> Changeset.get_field(:data)
-              |> Changeset.change()
-
-            {updated_block, updated_ref} =
-              if ref_data do
-                updated_block = Changeset.put_embed(block, :data, ref_data)
-                updated_ref = Changeset.force_change(ref, :data, updated_block)
-                {updated_block, updated_ref}
-              else
-                {block, ref}
-              end
-
-            # Handle video_data if provided (creates/updates video association)
-            updated_ref =
-              if Map.has_key?(params, :video_data) do
-                video_data = params.video_data
-                current_user_id = socket.assigns.current_user_id
-
-                case Brando.Videos.create_video(video_data, current_user_id) do
-                  {:ok, video} ->
-                    updated_ref
-                    |> Changeset.put_change(:video_id, video.id)
-                    |> Map.put(:data, Map.put(updated_ref.data, :video, nil))
-
-                  {:error, _} ->
-                    updated_ref
-                end
-              else
-                updated_ref
-              end
-
-            # Also update media associations if provided (including nil values)
-            updated_ref =
-              updated_ref
-              |> put_change_if_key_exists(:image_id, params)
-              |> put_change_if_key_exists(:video_id, params)
-              |> put_change_if_key_exists(:gallery_id, params)
-              |> put_change_if_key_exists(:file_id, params)
-              |> clear_preloaded_associations(params)
-
-            # Handle adding media (image or video) to gallery association
-            {updated_ref, updated_block} =
-              cond do
-                Map.has_key?(params, :add_gallery_image_id) ->
-                  current_user = %{id: socket.assigns.current_user_id}
-                  id = params.add_gallery_image_id
-                  updated_ref = add_media_to_gallery_ref(updated_ref, :image, id, current_user)
-                  updated_block = add_gallery_media_override(updated_block, id, :image)
-                  {updated_ref, updated_block}
-
-                Map.has_key?(params, :add_gallery_video_id) ->
-                  current_user = %{id: socket.assigns.current_user_id}
-                  id = params.add_gallery_video_id
-                  updated_ref = add_media_to_gallery_ref(updated_ref, :video, id, current_user)
-                  updated_block = add_gallery_media_override(updated_block, id, :video)
-                  {updated_ref, updated_block}
-
-                true ->
-                  {updated_ref, updated_block}
-              end
-
-            # Handle removing media (image or video) from gallery association
-            {updated_ref, updated_block} =
-              cond do
-                Map.has_key?(params, :remove_gallery_image_id) ->
-                  id = params.remove_gallery_image_id
-                  updated_ref = remove_media_from_gallery_ref(updated_ref, :image, id)
-                  updated_block = remove_gallery_object_override(updated_block, :image, id)
-                  {updated_ref, updated_block}
-
-                Map.has_key?(params, :remove_gallery_video_id) ->
-                  id = params.remove_gallery_video_id
-                  updated_ref = remove_media_from_gallery_ref(updated_ref, :video, id)
-                  updated_block = remove_gallery_object_override(updated_block, :video, id)
-                  {updated_ref, updated_block}
-
-                true ->
-                  {updated_ref, updated_block}
-              end
-
-            # Handle replacing a gallery image (remove old, add new in same position)
-            {updated_ref, updated_block} =
-              cond do
-                Map.has_key?(params, :replace_gallery_image) ->
-                  {old_image_id, new_image} = params.replace_gallery_image
-                  current_user = %{id: socket.assigns.current_user_id}
-                  updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
-                  updated_block = replace_gallery_media_override(updated_block, :image, old_image_id, new_image.id)
-                  {updated_ref, updated_block}
-
-                Map.has_key?(params, :replace_gallery_image_id) ->
-                  {old_image_id, new_image_id} = params.replace_gallery_image_id
-                  current_user = %{id: socket.assigns.current_user_id}
-                  {:ok, new_image} = fetch_media(:image, new_image_id)
-                  updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
-                  updated_block = replace_gallery_media_override(updated_block, :image, old_image_id, new_image_id)
-                  {updated_ref, updated_block}
-
-                true ->
-                  {updated_ref, updated_block}
-              end
-
-            updated_ref =
-              updated_ref
-              |> Changeset.force_change(:data, updated_block)
-              |> Brando.MarkdownSources.revalidate_placement(socket.assigns.current_user_id)
-
-            acc ++ List.wrap(updated_ref)
-          else
-            acc ++ List.wrap(ref)
-          end
-      end)
+    new_refs = Enum.reduce(refs, [], &collect_ref_data_update(&1, &2, ref_name, ref_data, params, socket.assigns))
 
     render_html? = render_live_preview_block?(socket) && !media_ref?
 
@@ -860,12 +718,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     # blocks that do read entry are exactly the ones that registered for it in
     # `maybe_register_block_wanting_entry/1`, and they keep receiving it
     # through the targeted `send_update` fan-out that registration exists for.
-    assigns =
-      if socket.assigns[:block_initialized] do
-        Map.drop(assigns, drop_on_reentry(socket))
-      else
-        assigns
-      end
+    assigns = reentry_assigns(assigns, socket)
 
     form = assigns[:form] || socket.assigns.form
     changeset = form.source
@@ -886,25 +739,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:slot_name, fn -> Changeset.get_field(block_cs, :slot_name) end)
     |> assign_new(:slot_module_set, fn -> Changeset.get_field(block_cs, :slot_module_set) end)
     |> assign_new(:multi, fn -> Changeset.get_field(block_cs, :multi) end)
-    |> assign_new(:has_vars?, fn ->
-      try do
-        Changeset.get_assoc(block_cs, :vars) != []
-      rescue
-        _ -> false
-      end
-    end)
-    |> assign_new(:has_table_rows?, fn ->
-      try do
-        case Changeset.get_assoc(block_cs, :table_rows) do
-          %Ecto.Association.NotLoaded{} -> false
-          nil -> false
-          [] -> false
-          _rows -> true
-        end
-      rescue
-        _ -> false
-      end
-    end)
+    |> assign_new(:has_vars?, fn -> block_has_vars?(block_cs) end)
+    |> assign_new(:has_table_rows?, fn -> block_has_table_rows?(block_cs) end)
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
     |> assign_new(:parent_module_origin, fn -> nil end)
@@ -922,26 +758,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     #     `:module` or `:fragment` block never reaches either template.
     #
     # Anything else was carrying a list it had no template for.
-    |> assign_new(:containers, fn %{type: type} ->
-      if type == :container do
-        library_entries(:container, %{
-          order: "desc namespace, asc sequence",
-          cache: {:ttl, :infinite}
-        })
-      else
-        []
-      end
-    end)
-    |> assign_new(:fragments, fn %{type: type} ->
-      if type == :fragment do
-        Brando.Pages.list_fragments!(%{
-          order: "asc language, asc title",
-          cache: {:ttl, :infinite}
-        })
-      else
-        []
-      end
-    end)
+    |> assign_new(:containers, &block_containers/1)
+    |> assign_new(:fragments, &block_fragments/1)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
     |> assign_new(:module_id, fn -> Changeset.get_field(block_cs, :module_id) end)
     |> assign_new(:module_origin, fn -> Changeset.get_field(block_cs, :module_origin) || :local end)
@@ -951,14 +769,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:fragment_id, fn -> Changeset.get_field(block_cs, :fragment_id) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
-    |> assign_new(:original_block_identifiers, fn ->
-      # Store original block_identifiers from database for restoring IDs when re-adding
-      case block_cs.data.block_identifiers do
-        %Ecto.Association.NotLoaded{} -> []
-        nil -> []
-        identifiers -> identifiers
-      end
-    end)
+    # Store original block_identifiers from database for restoring IDs when re-adding
+    |> assign_new(:original_block_identifiers, fn -> loaded_block_identifiers(block_cs.data.block_identifiers) end)
     # Bare id, not a selector — it is handed to `data-ui-modal-show`, which the
     # delegated handler in `assets/src/uiCommands.js` resolves.
     |> assign_new(:module_picker_id, fn ->
@@ -981,6 +793,206 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_initialized, true)
     |> assign_unused_collections()
     |> then(&{:ok, &1})
+  end
+
+  defp reentry_assigns(assigns, socket) do
+    if socket.assigns[:block_initialized] do
+      Map.drop(assigns, drop_on_reentry(socket))
+    else
+      assigns
+    end
+  end
+
+  defp block_has_vars?(block_cs) do
+    Changeset.get_assoc(block_cs, :vars) != []
+  rescue
+    _ -> false
+  end
+
+  defp block_has_table_rows?(block_cs) do
+    case Changeset.get_assoc(block_cs, :table_rows) do
+      %Ecto.Association.NotLoaded{} -> false
+      nil -> false
+      [] -> false
+      _rows -> true
+    end
+  rescue
+    _ -> false
+  end
+
+  defp block_containers(%{type: :container}) do
+    library_entries(:container, %{
+      order: "desc namespace, asc sequence",
+      cache: {:ttl, :infinite}
+    })
+  end
+
+  defp block_containers(_assigns), do: []
+
+  defp block_fragments(%{type: :fragment}) do
+    Brando.Pages.list_fragments!(%{
+      order: "asc language, asc title",
+      cache: {:ttl, :infinite}
+    })
+  end
+
+  defp block_fragments(_assigns), do: []
+
+  defp loaded_block_identifiers(%Ecto.Association.NotLoaded{}), do: []
+  defp loaded_block_identifiers(nil), do: []
+  defp loaded_block_identifiers(identifiers), do: identifiers
+
+  defp collect_ref_data_update(%Changeset{action: :replace}, acc, _ref_name, _ref_data, _params, _assigns), do: acc
+
+  defp collect_ref_data_update(ref, acc, ref_name, ref_data, params, assigns) do
+    if Changeset.get_field(ref, :name) == ref_name do
+      acc ++ List.wrap(apply_ref_data_update(ref, ref_data, params, assigns))
+    else
+      acc ++ List.wrap(ref)
+    end
+  end
+
+  defp apply_ref_data_update(ref, ref_data, params, assigns) do
+    block =
+      ref
+      |> Changeset.get_field(:data)
+      |> Changeset.change()
+
+    {updated_block, updated_ref} = put_ref_block_data(block, ref, ref_data)
+
+    updated_ref =
+      updated_ref
+      |> maybe_put_ref_video(params, assigns)
+      # Also update media associations if provided (including nil values)
+      |> put_change_if_key_exists(:image_id, params)
+      |> put_change_if_key_exists(:video_id, params)
+      |> put_change_if_key_exists(:gallery_id, params)
+      |> put_change_if_key_exists(:file_id, params)
+      |> clear_preloaded_associations(params)
+
+    {updated_ref, updated_block} =
+      {updated_ref, updated_block}
+      |> add_gallery_ref_media(params, assigns)
+      |> remove_gallery_ref_media(params)
+      |> replace_gallery_ref_image(params, assigns)
+
+    updated_ref
+    |> Changeset.force_change(:data, updated_block)
+    |> Brando.MarkdownSources.revalidate_placement(assigns.current_user_id)
+  end
+
+  defp put_ref_block_data(block, ref, ref_data) do
+    if ref_data do
+      updated_block = Changeset.put_embed(block, :data, ref_data)
+      updated_ref = Changeset.force_change(ref, :data, updated_block)
+      {updated_block, updated_ref}
+    else
+      {block, ref}
+    end
+  end
+
+  # Handle video_data if provided (creates/updates video association)
+  defp maybe_put_ref_video(updated_ref, %{video_data: video_data}, assigns) do
+    case Brando.Videos.create_video(video_data, assigns.current_user_id) do
+      {:ok, video} ->
+        updated_ref
+        |> Changeset.put_change(:video_id, video.id)
+        |> Map.put(:data, Map.put(updated_ref.data, :video, nil))
+
+      {:error, _} ->
+        updated_ref
+    end
+  end
+
+  defp maybe_put_ref_video(updated_ref, _params, _assigns), do: updated_ref
+
+  # Handle adding media (image or video) to gallery association
+  defp add_gallery_ref_media({updated_ref, updated_block}, params, assigns) do
+    cond do
+      Map.has_key?(params, :add_gallery_image_id) ->
+        current_user = %{id: assigns.current_user_id}
+        id = params.add_gallery_image_id
+        updated_ref = add_media_to_gallery_ref(updated_ref, :image, id, current_user)
+        updated_block = add_gallery_media_override(updated_block, id, :image)
+        {updated_ref, updated_block}
+
+      Map.has_key?(params, :add_gallery_video_id) ->
+        current_user = %{id: assigns.current_user_id}
+        id = params.add_gallery_video_id
+        updated_ref = add_media_to_gallery_ref(updated_ref, :video, id, current_user)
+        updated_block = add_gallery_media_override(updated_block, id, :video)
+        {updated_ref, updated_block}
+
+      true ->
+        {updated_ref, updated_block}
+    end
+  end
+
+  # Handle removing media (image or video) from gallery association
+  defp remove_gallery_ref_media({updated_ref, updated_block}, params) do
+    cond do
+      Map.has_key?(params, :remove_gallery_image_id) ->
+        id = params.remove_gallery_image_id
+        updated_ref = remove_media_from_gallery_ref(updated_ref, :image, id)
+        updated_block = remove_gallery_object_override(updated_block, :image, id)
+        {updated_ref, updated_block}
+
+      Map.has_key?(params, :remove_gallery_video_id) ->
+        id = params.remove_gallery_video_id
+        updated_ref = remove_media_from_gallery_ref(updated_ref, :video, id)
+        updated_block = remove_gallery_object_override(updated_block, :video, id)
+        {updated_ref, updated_block}
+
+      true ->
+        {updated_ref, updated_block}
+    end
+  end
+
+  # Handle replacing a gallery image (remove old, add new in same position)
+  defp replace_gallery_ref_image({updated_ref, updated_block}, params, assigns) do
+    cond do
+      Map.has_key?(params, :replace_gallery_image) ->
+        {old_image_id, new_image} = params.replace_gallery_image
+        current_user = %{id: assigns.current_user_id}
+        updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
+        updated_block = replace_gallery_media_override(updated_block, :image, old_image_id, new_image.id)
+        {updated_ref, updated_block}
+
+      Map.has_key?(params, :replace_gallery_image_id) ->
+        {old_image_id, new_image_id} = params.replace_gallery_image_id
+        current_user = %{id: assigns.current_user_id}
+        {:ok, new_image} = fetch_media(:image, new_image_id)
+        updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
+        updated_block = replace_gallery_media_override(updated_block, :image, old_image_id, new_image_id)
+        {updated_ref, updated_block}
+
+      true ->
+        {updated_ref, updated_block}
+    end
+  end
+
+  defp send_populated_changeset(assigns, changeset, root_uid, parent_uid, parent_sequence, action) do
+    if root_uid == assigns.uid do
+      # Terminal: send populated changeset to parent for duplication or copy
+      event_name = if action == :copy, do: "copy_block", else: "duplicate_block"
+
+      send_to_ref(assigns.parent_ref, %{
+        event: event_name,
+        uid: root_uid,
+        changeset: changeset,
+        populated: true
+      })
+    else
+      send_to_ref(assigns.parent_ref, %{
+        event: "provide_changeset_for_duplication",
+        changeset: changeset,
+        uid: assigns.uid,
+        parent_uid: parent_uid,
+        root_uid: root_uid,
+        parent_sequence: parent_sequence,
+        action: action
+      })
+    end
   end
 
   # Frontend edit mode narrows the tree to one block: its ancestors render
@@ -1349,11 +1361,13 @@ defmodule BrandoAdmin.Components.Form.Block do
       container ->
         socket
         |> assign_new(:container, fn -> container end)
-        |> assign_new(:palette_options, fn assigns ->
-          if container.allow_custom_palette do
-            palette_options_for(assigns, fn -> palette_query_opts(container) end)
-          end
-        end)
+        |> assign_new(:palette_options, &container_palette_options(&1, container))
+    end
+  end
+
+  defp container_palette_options(assigns, container) do
+    if container.allow_custom_palette do
+      palette_options_for(assigns, fn -> palette_query_opts(container) end)
     end
   end
 
@@ -1514,21 +1528,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         assign(socket, :module_not_found, true)
 
       module ->
-        module_datasource_module =
-          if module.datasource and module.datasource_module do
-            module = Module.concat(List.wrap(module.datasource_module))
-            domain = module.__naming__().domain
-            schema = module.__naming__().schema
-
-            gettext_module = module.__modules__().gettext
-            gettext_domain = String.downcase("#{domain}_#{schema}")
-            # Plural: the block's header says what it shows, e.g. "Selected cases"
-            msgid = Brando.Utils.humanize(module.__naming__().plural, :downcase)
-
-            Gettext.dgettext(gettext_module, gettext_domain, msgid)
-          else
-            ""
-          end
+        module_datasource_module = datasource_module_label(module)
 
         socket
         |> assign_new(:module_name, fn -> module.name end)
@@ -1539,26 +1539,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:module_color, fn -> module.color end)
         |> assign_new(:is_datasource?, fn -> module.datasource end)
         |> assign_new(:has_table_template?, fn -> (module.table_template_id && true) || false end)
-        |> assign_new(:table_template, fn ->
-          table_template_id = module.table_template_id
-
-          if table_template_id do
-            var_preloads = Brando.Content.Var.preloads()
-
-            {:ok, table_template} =
-              Brando.Content.get_table_template(%{
-                matches: %{id: table_template_id},
-                preload: [vars: var_preloads]
-              })
-
-            table_template
-          end
-        end)
-        |> assign_new(:table_template_name, fn %{table_template: table_template} ->
-          if table_template do
-            table_template.name
-          end
-        end)
+        |> assign_new(:table_template, fn -> module_table_template(module.table_template_id) end)
+        |> assign_new(:table_template_name, &table_template_name/1)
         |> assign_new(:module_datasource_module, fn -> module.datasource_module end)
         |> assign_new(:module_datasource_module_label, fn -> module_datasource_module end)
         |> assign_new(:module_datasource_type, fn -> module.datasource_type end)
@@ -1566,6 +1548,43 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:entry_template, fn -> module.entry_template end)
         |> maybe_register_block_wanting_entry()
     end
+  end
+
+  defp datasource_module_label(module) do
+    if module.datasource and module.datasource_module do
+      module = Module.concat(List.wrap(module.datasource_module))
+      domain = module.__naming__().domain
+      schema = module.__naming__().schema
+
+      gettext_module = module.__modules__().gettext
+      gettext_domain = String.downcase("#{domain}_#{schema}")
+      # Plural: the block's header says what it shows, e.g. "Selected cases"
+      msgid = Brando.Utils.humanize(module.__naming__().plural, :downcase)
+
+      Gettext.dgettext(gettext_module, gettext_domain, msgid)
+    else
+      ""
+    end
+  end
+
+  defp table_template_name(%{table_template: table_template}) do
+    if table_template do
+      table_template.name
+    end
+  end
+
+  defp module_table_template(nil), do: nil
+
+  defp module_table_template(table_template_id) do
+    var_preloads = Brando.Content.Var.preloads()
+
+    {:ok, table_template} =
+      Brando.Content.get_table_template(%{
+        matches: %{id: table_template_id},
+        preload: [vars: var_preloads]
+      })
+
+    table_template
   end
 
   def maybe_register_block_wanting_entry(%{assigns: %{block_initialized: false, is_datasource?: true}} = socket) do
@@ -1673,59 +1692,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset = socket.assigns.form.source
       entry = socket.assigns.entry
       changeset = maybe_preload_changeset_data(changeset, :vars, belongs_to)
-
-      vars =
-        if belongs_to == :root do
-          changeset
-          |> Changeset.get_field(:block)
-          |> Changeset.change()
-          |> Changeset.get_assoc(:vars)
-        else
-          Changeset.get_assoc(changeset, :vars)
-        end
-
-      splits =
-        case LiquidPreview.strip_logic(module_code) do
-          {:ok, module_code} ->
-            module_code = strip_datasources(module_code)
-
-            ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
-            |> Regex.split(module_code, include_captures: true)
-            |> Enum.map(fn chunk ->
-              case Regex.run(
-                     ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/,
-                     chunk,
-                     capture: :all_names
-                   ) do
-                nil ->
-                  chunk
-
-                ["content", "", ""] ->
-                  {:content, "content"}
-
-                ["content | renderless", "", ""] ->
-                  {:content, "content"}
-
-                ["entry." <> variable, "", ""] ->
-                  {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
-
-                [module_variable, "", ""] ->
-                  {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
-
-                ["", "entry." <> pic = pic_var, ""] ->
-                  {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, socket.assigns)}
-
-                ["", pic, ""] ->
-                  {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
-
-                ["", "", ref] ->
-                  {:ref, ref}
-              end
-            end)
-
-          {:error, reason} ->
-            [{:liquid_error, reason}]
-        end
+      vars = liquid_block_vars(changeset, belongs_to)
+      splits = liquid_splits(module_code, vars, entry, socket.assigns)
 
       socket
       |> assign(:liquid_splits, drop_empty_preview(splits))
@@ -1764,6 +1732,63 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # Only markup left, e.g. a module that is its datasource and nothing else:
   # no preview, rather than an empty strip under the block's header.
+  defp liquid_block_vars(changeset, belongs_to) do
+    if belongs_to == :root do
+      changeset
+      |> Changeset.get_field(:block)
+      |> Changeset.change()
+      |> Changeset.get_assoc(:vars)
+    else
+      Changeset.get_assoc(changeset, :vars)
+    end
+  end
+
+  defp liquid_splits(module_code, vars, entry, assigns) do
+    case LiquidPreview.strip_logic(module_code) do
+      {:ok, module_code} ->
+        module_code = strip_datasources(module_code)
+
+        ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
+        |> Regex.split(module_code, include_captures: true)
+        |> Enum.map(&liquid_split(&1, vars, entry, assigns))
+
+      {:error, reason} ->
+        [{:liquid_error, reason}]
+    end
+  end
+
+  defp liquid_split(chunk, vars, entry, assigns) do
+    case Regex.run(
+           ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/,
+           chunk,
+           capture: :all_names
+         ) do
+      nil ->
+        chunk
+
+      ["content", "", ""] ->
+        {:content, "content"}
+
+      ["content | renderless", "", ""] ->
+        {:content, "content"}
+
+      ["entry." <> variable, "", ""] ->
+        {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
+
+      [module_variable, "", ""] ->
+        {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
+
+      ["", "entry." <> pic = pic_var, ""] ->
+        {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, assigns)}
+
+      ["", pic, ""] ->
+        {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
+
+      ["", "", ref] ->
+        {:ref, ref}
+    end
+  end
+
   defp drop_empty_preview(splits) do
     if Enum.all?(splits, &is_binary/1) and
          splits |> Enum.join() |> String.replace(~r/<[^>]*>/, "") |> String.trim() == "",
@@ -1951,36 +1976,44 @@ defmodule BrandoAdmin.Components.Form.Block do
         socket
 
       slot ->
-        case action do
-          "open_unused_collection" ->
-            assign(socket, open_slot_uid: uid, slot_title: slot.name)
-
-          "delete_unused_collection" ->
-            {:ok, socket} = update(%{event: "delete_block", uid: uid, dom_id: nil}, socket)
-            assign(socket, open_slot_uid: nil)
-
-          "restore_note_reference" when slot.restore? ->
-            case instance_ref(socket, slot.name) do
-              %{uid: ref_uid} ->
-                push_event(socket, "b:tiptap:insert_footnote:block-#{ref_uid}-rich-text", %{uid: uid, restore: true})
-
-              _ ->
-                socket
-            end
-
-          "choose_region_remap" when slot.kind == :region ->
-            request_region_remap(socket, "region_remap_targets", uid, %{})
-
-          "remap_region" when slot.kind == :region ->
-            request_region_remap(socket, "remap_region", uid, %{name: params["name"]})
-
-          _ ->
-            socket
-        end
+        apply_unused_collection_action(socket, action, slot, uid, params)
     end
   end
 
   def unused_collection_action(socket, _, _), do: socket
+
+  defp apply_unused_collection_action(socket, action, slot, uid, params) do
+    case action do
+      "open_unused_collection" ->
+        assign(socket, open_slot_uid: uid, slot_title: slot.name)
+
+      "delete_unused_collection" ->
+        {:ok, socket} = update(%{event: "delete_block", uid: uid, dom_id: nil}, socket)
+        assign(socket, open_slot_uid: nil)
+
+      "restore_note_reference" when slot.restore? ->
+        restore_note_reference(socket, slot, uid)
+
+      "choose_region_remap" when slot.kind == :region ->
+        request_region_remap(socket, "region_remap_targets", uid, %{})
+
+      "remap_region" when slot.kind == :region ->
+        request_region_remap(socket, "remap_region", uid, %{name: params["name"]})
+
+      _ ->
+        socket
+    end
+  end
+
+  defp restore_note_reference(socket, slot, uid) do
+    case instance_ref(socket, slot.name) do
+      %{uid: ref_uid} ->
+        push_event(socket, "b:tiptap:insert_footnote:block-#{ref_uid}-rich-text", %{uid: uid, restore: true})
+
+      _ ->
+        socket
+    end
+  end
 
   defp request_region_remap(socket, event, uid, extra) do
     send_update(
@@ -2002,22 +2035,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       {%{data: %{type: "text", data: %{footnotes: true} = data}}, %{uid: ref_uid}}
       when tiptap_id == "block-" <> ref_uid <> "-rich-text" ->
         modules = BlockSlots.modules(data.footnote_module_set)
-
-        case modules do
-          [] ->
-            put_flash(
-              socket,
-              :error,
-              gettext("Add a Text module to the %{set} module set before creating a note.", set: data.footnote_module_set)
-            )
-
-          [module | _] ->
-            uid = Brando.Utils.generate_uid()
-
-            socket
-            |> ensure_collection(:footnote, name, data.footnote_module_set, {uid, module.id}, gettext("Footnote"))
-            |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
-        end
+        insert_footnote(socket, modules, name, data, tiptap_id)
 
       _ ->
         socket
@@ -2025,6 +2043,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def create_footnote(socket, _params), do: socket
+
+  defp insert_footnote(socket, [], _name, data, _tiptap_id) do
+    put_flash(
+      socket,
+      :error,
+      gettext("Add a Text module to the %{set} module set before creating a note.", set: data.footnote_module_set)
+    )
+  end
+
+  defp insert_footnote(socket, [module | _], name, data, tiptap_id) do
+    uid = Brando.Utils.generate_uid()
+
+    socket
+    |> ensure_collection(:footnote, name, data.footnote_module_set, {uid, module.id}, gettext("Footnote"))
+    |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
+  end
 
   def generate_rich_text(socket, %{"ref_name" => name, "tiptap_id" => id} = params) do
     opts = Brando.AI.field_ai_opts(:block_text)
@@ -2051,13 +2085,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       %{source: source} ->
         if Changeset.get_field(source, :slot_kind) == :footnote &&
              Changeset.get_field(source, :slot_name) == params["ref_name"] do
-          number =
-            case Integer.parse(to_string(params["number"] || "")) do
-              {n, ""} when n > 0 -> " #{n}"
-              _ -> ""
-            end
-
-          assign(socket, open_slot_uid: uid, slot_title: gettext("Footnote") <> number)
+          assign(socket, open_slot_uid: uid, slot_title: gettext("Footnote") <> footnote_number(params))
         else
           socket
         end
@@ -2068,6 +2096,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           :error,
           gettext("This footnote could not be found. Its marker may have been pasted without its content.")
         )
+    end
+  end
+
+  defp footnote_number(params) do
+    case Integer.parse(to_string(params["number"] || "")) do
+      {n, ""} when n > 0 -> " #{n}"
+      _ -> ""
     end
   end
 
@@ -2088,47 +2123,57 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp ensure_collection(socket, kind, name, module_set, initial, title) do
-    existing =
-      if kind == :region do
-        Enum.find_value(socket.assigns.children_forms, fn {uid, form} ->
-          if form[:slot_kind].value == kind && form[:slot_name].value == name, do: uid
-        end)
-      end
+    existing = if kind == :region, do: existing_region_uid(socket, name)
 
     if existing do
       assign(socket, open_slot_uid: existing, slot_title: title)
     else
-      uid = if initial, do: elem(initial, 0), else: Brando.Utils.generate_uid()
-      slot = BlockSlots.build(kind, name, module_set, socket.assigns.block_module, socket.assigns.current_user_id, uid)
+      add_collection(socket, kind, name, module_set, initial, title)
+    end
+  end
 
-      slot =
-        if initial do
-          child =
-            BlockField.build_block(
-              elem(initial, 1),
-              socket.assigns.current_user_id,
-              nil,
-              socket.assigns.block_module,
-              :module
-            )
+  defp existing_region_uid(socket, name) do
+    Enum.find_value(socket.assigns.children_forms, fn {uid, form} ->
+      if form[:slot_kind].value == :region && form[:slot_name].value == name, do: uid
+    end)
+  end
 
-          Changeset.put_assoc(slot, :children, [child])
-        else
-          slot
-        end
+  defp add_collection(socket, kind, name, module_set, initial, title) do
+    uid = if initial, do: elem(initial, 0), else: Brando.Utils.generate_uid()
 
-      sequence = length(socket.assigns.block_list)
-      form = to_change_form(slot, %{}, socket.assigns.current_user_id)
+    slot =
+      kind
+      |> BlockSlots.build(name, module_set, socket.assigns.block_module, socket.assigns.current_user_id, uid)
+      |> put_initial_collection_child(initial, socket.assigns)
 
-      socket
-      |> put_child_seed_form(uid, form)
-      |> assign(:has_children?, true)
-      |> assign(:block_list, socket.assigns.block_list ++ [uid])
-      |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
-      |> assign(:open_slot_uid, uid)
-      |> assign(:slot_title, title)
-      |> assign_unused_collections()
-      |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(slot)})
+    sequence = length(socket.assigns.block_list)
+    form = to_change_form(slot, %{}, socket.assigns.current_user_id)
+
+    socket
+    |> put_child_seed_form(uid, form)
+    |> assign(:has_children?, true)
+    |> assign(:block_list, socket.assigns.block_list ++ [uid])
+    |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
+    |> assign(:open_slot_uid, uid)
+    |> assign(:slot_title, title)
+    |> assign_unused_collections()
+    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(slot)})
+  end
+
+  defp put_initial_collection_child(slot, initial, assigns) do
+    if initial do
+      child =
+        BlockField.build_block(
+          elem(initial, 1),
+          assigns.current_user_id,
+          nil,
+          assigns.block_module,
+          :module
+        )
+
+      Changeset.put_assoc(slot, :children, [child])
+    else
+      slot
     end
   end
 
@@ -2772,46 +2817,52 @@ defmodule BrandoAdmin.Components.Form.Block do
         ""
 
       var_cs ->
-        image_id = Changeset.get_field(var_cs, :image_id)
-        image = Changeset.get_field(var_cs, :image)
+        var_image_src(var_cs)
+    end
+  end
 
-        cond do
-          image_id == nil ->
-            ""
+  defp var_image_src(var_cs) do
+    image_id = Changeset.get_field(var_cs, :image_id)
+    image = Changeset.get_field(var_cs, :image)
 
-          image == %Ecto.Association.NotLoaded{} ->
-            image_id = Changeset.get_field(var_cs, :image_id)
+    cond do
+      image_id == nil ->
+        ""
 
-            case Cache.get("var_image_#{image_id}") do
-              nil ->
-                image = Brando.Images.get_image!(image_id)
-                media_path = Brando.Utils.media_url(image.path)
-                Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-                media_path
+      image == %Ecto.Association.NotLoaded{} ->
+        cached_var_image_src(image_id)
 
-              media_path ->
-                media_path
-            end
+      is_struct(image, Brando.Images.Image) ->
+        path = image.path
+        media_path = Brando.Utils.media_url(path)
+        Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+        media_path
 
-          is_struct(image, Brando.Images.Image) ->
-            path = image.path
-            media_path = Brando.Utils.media_url(path)
-            Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-            media_path
+      true ->
+        require Logger
 
-          true ->
-            require Logger
+        Logger.error("""
 
-            Logger.error("""
+        other:
+        #{inspect(image_id, pretty: true)}
+        #{inspect(image, pretty: true)}
 
-            other:
-            #{inspect(image_id, pretty: true)}
-            #{inspect(image, pretty: true)}
+        """)
 
-            """)
+        ""
+    end
+  end
 
-            ""
-        end
+  defp cached_var_image_src(image_id) do
+    case Cache.get("var_image_#{image_id}") do
+      nil ->
+        image = Brando.Images.get_image!(image_id)
+        media_path = Brando.Utils.media_url(image.path)
+        Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+        media_path
+
+      media_path ->
+        media_path
     end
   end
 
@@ -3185,7 +3236,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp replace_media_in_gallery_ref(ref_changeset, media_type, old_media_id, new_media, current_user) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
     id_field = media_id_field(media_type)
-    new_media_id = new_media.id
 
     case current_gallery do
       nil ->
@@ -3195,14 +3245,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         existing_objects = gallery.gallery_objects || []
 
         updated_objects =
-          Enum.map(existing_objects, fn obj ->
-            if Map.get(obj, id_field) == old_media_id do
-              %{creator_id: current_user.id}
-              |> put_media_fields(media_type, new_media_id, new_media)
-            else
-              preserve_gallery_object(obj)
-            end
-          end)
+          Enum.map(
+            existing_objects,
+            &replace_gallery_object(&1, media_type, id_field, old_media_id, new_media, current_user)
+          )
 
         updated_gallery = %{
           id: Map.get(gallery, :id),
@@ -3214,6 +3260,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
+  defp replace_gallery_object(obj, media_type, id_field, old_media_id, new_media, current_user) do
+    if Map.get(obj, id_field) == old_media_id do
+      %{creator_id: current_user.id}
+      |> put_media_fields(media_type, new_media.id, new_media)
+    else
+      preserve_gallery_object(obj)
+    end
+  end
+
   defp replace_gallery_media_override(block_changeset, media_type, old_media_id, new_media_id) do
     current_data = Changeset.get_field(block_changeset, :data)
     {current_overrides, data_map} = extract_gallery_data(current_data)
@@ -3221,23 +3276,23 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     updated_overrides =
       Enum.map(current_overrides, fn override ->
-        if GalleryObjectOverride.for_media?(override, media_type, old_media_id) do
-          case override do
-            %Changeset{} ->
-              override
-              |> Changeset.put_change(:object_id, new_id_str)
-              |> Changeset.put_change(:object_type, media_type)
-
-            %{} ->
-              Map.merge(override, %{object_id: new_id_str, object_type: media_type})
-          end
-        else
-          override
-        end
+        if GalleryObjectOverride.for_media?(override, media_type, old_media_id),
+          do: retarget_gallery_override(override, media_type, new_id_str),
+          else: override
       end)
 
     updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
     Changeset.put_change(block_changeset, :data, updated_data_map)
+  end
+
+  defp retarget_gallery_override(%Changeset{} = override, media_type, new_id_str) do
+    override
+    |> Changeset.put_change(:object_id, new_id_str)
+    |> Changeset.put_change(:object_type, media_type)
+  end
+
+  defp retarget_gallery_override(%{} = override, media_type, new_id_str) do
+    Map.merge(override, %{object_id: new_id_str, object_type: media_type})
   end
 
   # Note: Removed create_gallery_with_image and add_image_to_existing_gallery
@@ -3268,22 +3323,22 @@ defmodule BrandoAdmin.Components.Form.Block do
     case Map.get(obj, :video) do
       %Ecto.Association.NotLoaded{} ->
         # Re-fetch if we have the ID
-        case Map.get(obj, :video_id) do
-          nil ->
-            base_fields
-
-          id ->
-            case Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail]}) do
-              {:ok, video} -> Map.put(base_fields, :video, video)
-              _ -> base_fields
-            end
-        end
+        refetch_video_association(base_fields, Map.get(obj, :video_id))
 
       nil ->
         base_fields
 
       video ->
         Map.put(base_fields, :video, video)
+    end
+  end
+
+  defp refetch_video_association(base_fields, nil), do: base_fields
+
+  defp refetch_video_association(base_fields, id) do
+    case Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail]}) do
+      {:ok, video} -> Map.put(base_fields, :video, video)
+      _ -> base_fields
     end
   end
 

@@ -275,25 +275,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
         image = Map.put(image, :status, :unprocessed)
 
-        case full_path do
-          [:transformer, relation_key | _] ->
-            update_transformer_image(socket, singular, relation_key, image)
-
-          _ ->
-            if valid_struct_path?(full_path) do
-              send_update(BrandoAdmin.Components.Form,
-                id: target_id,
-                event: "update_entry_relation",
-                updated_relation: image,
-                path: full_path,
-                force_validation: true
-              )
-
-              {:halt, socket}
-            else
-              {:cont, socket}
-            end
-        end
+        route_image_update(socket, singular, target_id, full_path, image, :cont)
 
       ["gallery", _schema, field_name] ->
         update_gallery_image(socket, field_name, image)
@@ -335,29 +317,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
           image_id: image.id
         )
 
-        # Route transformer image updates to the Transformer component
-        case full_path do
-          [:transformer, relation_key | _] ->
-            update_transformer_image(socket, singular, relation_key, image)
-
-          _ ->
-            # Only send update_entry_relation if the path is a valid struct field path.
-            if valid_struct_path?(full_path) do
-              send_update(BrandoAdmin.Components.Form,
-                id: target_id,
-                event: "update_entry_relation",
-                updated_relation: image,
-                path: full_path,
-                force_validation: true
-              )
-
-              {:halt, socket}
-            else
-              # A manager upload carries no struct path — its destination lives
-              # in the pending registry instead.
-              deliver_pending_image(socket, image)
-            end
-        end
+        route_image_update(socket, singular, target_id, full_path, image, :deliver_pending)
 
       ["gallery", _schema, field_name] ->
         update_gallery_image(socket, field_name, image)
@@ -391,6 +351,36 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
+
+  # Route transformer image updates to the Transformer component
+  defp route_image_update(socket, singular, target_id, full_path, image, on_invalid_path) do
+    case full_path do
+      [:transformer, relation_key | _] ->
+        update_transformer_image(socket, singular, relation_key, image)
+
+      _ ->
+        # Only send update_entry_relation if the path is a valid struct field path.
+        if valid_struct_path?(full_path) do
+          send_update(BrandoAdmin.Components.Form,
+            id: target_id,
+            event: "update_entry_relation",
+            updated_relation: image,
+            path: full_path,
+            force_validation: true
+          )
+
+          {:halt, socket}
+        else
+          invalid_path_image_update(on_invalid_path, socket, image)
+        end
+    end
+  end
+
+  defp invalid_path_image_update(:cont, socket, _image), do: {:cont, socket}
+
+  # A manager upload carries no struct path — its destination lives
+  # in the pending registry instead.
+  defp invalid_path_image_update(:deliver_pending, socket, image), do: deliver_pending_image(socket, image)
 
   # Currently unreachable: no producer emits a path headed by
   # `:transformer`. `field_full_path` comes from `queue_processing/4`,
@@ -550,21 +540,17 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       )
   end
 
+  defguardp is_var_asset(asset)
+            when is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File) or
+                   is_struct(asset, Brando.Videos.Video)
+
   # Scalar vars hold image/file/video FKs — classify by struct (the target's
   # "asset_type" string can lie for e.g. self-hosted video), and refuse
   # anything else rather than writing a foreign id into file_id.
   defp deliver_asset(%{"kind" => kind, "component_id" => component_id} = target, asset, _socket)
        when kind in ["block_var", "entry_var", "block_var_gallery", "entry_var_gallery"] and
-              is_binary(component_id) and
-              (is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File) or
-                 is_struct(asset, Brando.Videos.Video)) do
-    asset_type =
-      case asset do
-        %Brando.Images.Image{} -> :image
-        %Brando.Files.File{} -> :file
-        %Brando.Videos.Video{} -> :video
-      end
-
+              is_binary(component_id) and is_var_asset(asset) do
+    asset_type = var_asset_type(asset)
     asset = refresh_processed_image(asset)
 
     if asset_type == :image do
@@ -851,6 +837,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     )
   end
 
+  defp var_asset_type(%Brando.Images.Image{}), do: :image
+  defp var_asset_type(%Brando.Files.File{}), do: :file
+  defp var_asset_type(%Brando.Videos.Video{}), do: :video
+
   defp target_path(target) do
     (target["path"] || [])
     |> Enum.map(fn
@@ -961,14 +951,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         if video_schema != schema do
           # Video belongs to a relation module — route to all Transformer components.
           # Each component checks internally if it owns this video.
-          for transformer_id <- transformer_ids_for(schema, video_schema) do
-            send_update(BrandoAdmin.Components.Form.Transformer,
-              id: transformer_id,
-              event: "video_updated",
-              video: video
-            )
-          end
-
+          send_transformer_video_updates(schema, video_schema, video)
           {:halt, socket}
         else
           {:cont, socket}
@@ -980,6 +963,16 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_video_info(_, socket), do: {:cont, socket}
+
+  defp send_transformer_video_updates(schema, video_schema, video) do
+    for transformer_id <- transformer_ids_for(schema, video_schema) do
+      send_update(BrandoAdmin.Components.Form.Transformer,
+        id: transformer_id,
+        event: "video_updated",
+        video: video
+      )
+    end
+  end
 
   # Port exit hooks - catch normal exits from image processing ports (ImageMagick, etc.)
   defp handle_hooks_port_exits({:EXIT, _port, :normal}, socket), do: {:halt, socket}

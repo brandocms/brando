@@ -65,13 +65,14 @@ defmodule Brando.AnalyticsStub do
           Test.json(conn, %{"rows" => Enum.map(queries, &row(&1.query, &1))})
 
         true ->
-          rows = for {path, %{impressions: _} = page} <- pages, do: row("https://stub.test" <> path, page)
-          Test.json(conn, %{"rows" => rows})
+          Test.json(conn, %{"rows" => page_rows(pages)})
       end
     end)
 
     :ok
   end
+
+  defp page_rows(pages), do: for({path, %{impressions: _} = page} <- pages, do: row("https://stub.test" <> path, page))
 
   defp row(key, page) do
     %{

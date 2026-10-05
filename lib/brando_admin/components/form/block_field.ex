@@ -805,38 +805,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
       ops.order
       |> Enum.with_index()
-      |> Enum.each(fn {uid, index} ->
-        with :inserted <- ops.statuses[uid],
-             module_id when not is_nil(module_id) <- get_in(ops.diffs, [uid, "block", "module_id"]) do
-          module_origin = get_in(ops.diffs, [uid, "block", "module_origin"]) || "local"
+      |> Enum.each(&broadcast_inserted_root(&1, ops, topic, user_id))
 
-          PubSub.broadcast(
-            Brando.pubsub(),
-            topic,
-            {:block_added,
-             %{
-               uid: uid,
-               module_id: module_id,
-               module_origin: module_origin,
-               sequence: index,
-               user_id: user_id
-             }}
-          )
-        end
-      end)
-
-      socket =
-        Enum.reduce(ops.order, socket, fn uid, acc ->
-          snapshot = Ops.subtree_snapshot(ops, uid)
-
-          if snapshot_dirty?(snapshot) do
-            acc
-            |> broadcast_snapshot(uid, snapshot)
-            |> record_synced_snapshot(uid, snapshot)
-          else
-            acc
-          end
-        end)
+      socket = Enum.reduce(ops.order, socket, &sync_dirty_snapshot(&2, ops, &1))
 
       Enum.each(ops.deleted_roots, fn uid ->
         PubSub.broadcast(Brando.pubsub(), topic, {:block_deleted, %{uid: uid, user_id: user_id}})
@@ -1271,6 +1242,38 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  defp broadcast_inserted_root({uid, index}, ops, topic, user_id) do
+    with :inserted <- ops.statuses[uid],
+         module_id when not is_nil(module_id) <- get_in(ops.diffs, [uid, "block", "module_id"]) do
+      module_origin = get_in(ops.diffs, [uid, "block", "module_origin"]) || "local"
+
+      PubSub.broadcast(
+        Brando.pubsub(),
+        topic,
+        {:block_added,
+         %{
+           uid: uid,
+           module_id: module_id,
+           module_origin: module_origin,
+           sequence: index,
+           user_id: user_id
+         }}
+      )
+    end
+  end
+
+  defp sync_dirty_snapshot(socket, ops, uid) do
+    snapshot = Ops.subtree_snapshot(ops, uid)
+
+    if snapshot_dirty?(snapshot) do
+      socket
+      |> broadcast_snapshot(uid, snapshot)
+      |> record_synced_snapshot(uid, snapshot)
+    else
+      socket
+    end
+  end
+
   # A subtree with no diffs and no tombstones matches persisted data — an
   # untouched block has nothing worth broadcasting.
   defp snapshot_dirty?(snapshot) do
@@ -1386,6 +1389,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         end
 
       {:ok, refresh_live_preview(socket)}
+    end
+  end
+
+  defp broadcast_block_restored(socket, snapshot) do
+    if topic = socket.assigns[:blocks_topic] do
+      PubSub.broadcast(
+        Brando.pubsub(),
+        topic,
+        {:block_restored,
+         %{
+           snapshot: snapshot,
+           block_field: socket.assigns.block_field,
+           user_id: socket.assigns.current_user.id
+         }}
+      )
     end
   end
 
@@ -1505,19 +1523,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
         case restore_from_snapshot(socket, snapshot) do
           {:ok, socket} ->
-            if topic = socket.assigns[:blocks_topic] do
-              PubSub.broadcast(
-                Brando.pubsub(),
-                topic,
-                {:block_restored,
-                 %{
-                   snapshot: snapshot,
-                   block_field: socket.assigns.block_field,
-                   user_id: socket.assigns.current_user.id
-                 }}
-              )
-            end
-
+            broadcast_block_restored(socket, snapshot)
             uid = hd(snapshot.uids)
             {:noreply, push_event(socket, "b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})}
 
@@ -1687,61 +1693,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       # the normal changeset pipeline — this preserves all form field values
       recovered_forms =
         for uid <- missing_uids, reduce: %{} do
-          acc ->
-            form_id = "entry_block_form-#{uid}"
-            form_data = forms[form_id]
-
-            if form_data do
-              entry_block_params =
-                form_data
-                |> Map.get("entry_block", %{})
-                |> sanitize_recovered_params(uid, block_module, user_id)
-
-              # Create base struct with an empty block so cast_assoc has
-              # a loaded association to work with (not NotLoaded). Nested
-              # children are built by Ecto from the params below, exactly as
-              # on the save path (`materialize_base_struct/2`).
-              base_block = %Brando.Content.Block{
-                vars: [],
-                refs: [],
-                table_rows: [],
-                children: [],
-                block_identifiers: []
-              }
-
-              base_struct = block_module |> struct(%{}) |> Map.put(:block, base_block)
-
-              # Include entry_id in params (no hidden field for it in the form)
-              params_with_entry =
-                entry_block_params
-                |> Map.put("entry_id", to_string(entry_id))
-                |> put_recovered_children(uid, forms, child_order, %{
-                  block_module: block_module,
-                  user_id: user_id
-                })
-
-              # `recursive?: true` is load-bearing — the non-recursive block
-              # cast has no `cast_assoc(:children)` and drops the subtree
-              # assembled just above without a word.
-              entry_block_cs =
-                base_struct
-                |> block_module.changeset(params_with_entry, user_id, true)
-                |> Map.put(:action, :insert)
-
-              # Keyed by the uid the server vetted, never by one read back out of
-              # the client's params — otherwise a payload whose `missingUids`
-              # and whose form body disagree could land under a uid that was
-              # never checked, clobbering a live block's seed form.
-              entry_block_form =
-                to_form(entry_block_cs,
-                  as: "entry_block",
-                  id: "entry_block_form-#{uid}"
-                )
-
-              Map.put(acc, uid, entry_block_form)
-            else
-              acc
-            end
+          acc -> put_recovered_form(acc, uid, forms, child_order, block_module, user_id, entry_id)
         end
 
       if recovered_forms == %{} do
@@ -1762,6 +1714,63 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> refresh_live_preview()
         |> then(&{:reply, %{recovered: Map.keys(recovered_forms)}, &1})
       end
+    end
+  end
+
+  defp put_recovered_form(acc, uid, forms, child_order, block_module, user_id, entry_id) do
+    form_id = "entry_block_form-#{uid}"
+    form_data = forms[form_id]
+
+    if form_data do
+      entry_block_params =
+        form_data
+        |> Map.get("entry_block", %{})
+        |> sanitize_recovered_params(uid, block_module, user_id)
+
+      # Create base struct with an empty block so cast_assoc has
+      # a loaded association to work with (not NotLoaded). Nested
+      # children are built by Ecto from the params below, exactly as
+      # on the save path (`materialize_base_struct/2`).
+      base_block = %Brando.Content.Block{
+        vars: [],
+        refs: [],
+        table_rows: [],
+        children: [],
+        block_identifiers: []
+      }
+
+      base_struct = block_module |> struct(%{}) |> Map.put(:block, base_block)
+
+      # Include entry_id in params (no hidden field for it in the form)
+      params_with_entry =
+        entry_block_params
+        |> Map.put("entry_id", to_string(entry_id))
+        |> put_recovered_children(uid, forms, child_order, %{
+          block_module: block_module,
+          user_id: user_id
+        })
+
+      # `recursive?: true` is load-bearing — the non-recursive block
+      # cast has no `cast_assoc(:children)` and drops the subtree
+      # assembled just above without a word.
+      entry_block_cs =
+        base_struct
+        |> block_module.changeset(params_with_entry, user_id, true)
+        |> Map.put(:action, :insert)
+
+      # Keyed by the uid the server vetted, never by one read back out of
+      # the client's params — otherwise a payload whose `missingUids`
+      # and whose form body disagree could land under a uid that was
+      # never checked, clobbering a live block's seed form.
+      entry_block_form =
+        to_form(entry_block_cs,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+
+      Map.put(acc, uid, entry_block_form)
+    else
+      acc
     end
   end
 
@@ -2330,26 +2339,30 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp set_multi_children_collapsed(socket, collapsed) do
     for {block_uid, form} <- socket.assigns.seed_forms do
-      block_cs = Changeset.get_assoc(form.source, :block)
-      module_id = Changeset.get_field(block_cs, :module_id)
-      module_origin = Changeset.get_field(block_cs, :module_origin) || :local
-
-      if module_id do
-        case Brando.Content.fetch_module(module_id, module_origin) do
-          %{multi: true} ->
-            send_update(Block,
-              id: "block-#{block_uid}",
-              event: "set_children_collapsed",
-              collapsed: collapsed
-            )
-
-          _ ->
-            :ok
-        end
-      end
+      collapse_multi_children(block_uid, form, collapsed)
     end
 
     socket
+  end
+
+  defp collapse_multi_children(block_uid, form, collapsed) do
+    block_cs = Changeset.get_assoc(form.source, :block)
+    module_id = Changeset.get_field(block_cs, :module_id)
+    module_origin = Changeset.get_field(block_cs, :module_origin) || :local
+
+    if module_id do
+      case Brando.Content.fetch_module(module_id, module_origin) do
+        %{multi: true} ->
+          send_update(Block,
+            id: "block-#{block_uid}",
+            event: "set_children_collapsed",
+            collapsed: collapsed
+          )
+
+        _ ->
+          :ok
+      end
+    end
   end
 
   defp get_module(module_id, origin \\ :local), do: Brando.Content.fetch_module(module_id, origin)

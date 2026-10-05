@@ -154,13 +154,7 @@ defmodule Brando.FrontendEdit do
     stored = Map.get(entry, :"rendered_#{field}")
 
     if active?() and blocks_schema?(schema) and block_field?(schema, field) do
-      key = field_key(schema, id, field)
-
-      if key in Process.get(@stack_key, []) do
-        stored
-      else
-        memo(key, fn -> render_annotated(schema, id, field, stored) end)
-      end
+      memo_rendered_html(schema, id, field, stored)
     else
       stored
     end
@@ -169,25 +163,37 @@ defmodule Brando.FrontendEdit do
   def rendered_html(entry, field) when is_map(entry), do: Map.get(entry, :"rendered_#{field}")
   def rendered_html(_, _), do: nil
 
+  defp memo_rendered_html(schema, id, field, stored) do
+    key = field_key(schema, id, field)
+
+    if key in Process.get(@stack_key, []) do
+      stored
+    else
+      memo(key, fn -> render_annotated(schema, id, field, stored) end)
+    end
+  end
+
   @doc """
   Replaces every stored block field on `entry` with its edit-mode rendering.
   Called on single-entry query results; a no-op outside edit mode.
   """
   def annotate_entry(%{__struct__: schema} = entry) do
     if active?() and not loading?() and blocks_schema?(schema) and Map.get(entry, :id) do
-      Enum.reduce(schema.__blocks_fields__(), entry, fn %{name: name}, acc ->
-        rendered_field = :"rendered_#{name}"
-
-        if Map.has_key?(acc, rendered_field),
-          do: Map.put(acc, rendered_field, rendered_html(acc, name)),
-          else: acc
-      end)
+      Enum.reduce(schema.__blocks_fields__(), entry, fn %{name: name}, acc -> annotate_field(acc, name) end)
     else
       entry
     end
   end
 
   def annotate_entry(entry), do: entry
+
+  defp annotate_field(entry, name) do
+    rendered_field = :"rendered_#{name}"
+
+    if Map.has_key?(entry, rendered_field),
+      do: Map.put(entry, rendered_field, rendered_html(entry, name)),
+      else: entry
+  end
 
   @doc """
   Annotates the entry in a single-entry query result, passing other results through.

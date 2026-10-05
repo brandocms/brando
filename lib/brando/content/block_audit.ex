@@ -248,24 +248,28 @@ defmodule Brando.Content.BlockAudit do
           Repo.rollback(:not_found)
 
         archive ->
-          for table <- @owned do
-            records = Map.get(archive.data, table, [])
-
-            if records != [] do
-              case sql(
-                     ~s|INSERT INTO "#{table}" SELECT * FROM jsonb_populate_recordset(null::"#{table}", $1::jsonb)|,
-                     [records]
-                   ) do
-                {:ok, _} -> :ok
-                {:error, error} -> Repo.rollback(Exception.message(error))
-              end
-            end
-          end
-
-          Repo.delete!(archive)
-          archive.root_block_id
+          restore_archive(archive)
       end
     end)
+  end
+
+  defp restore_archive(archive) do
+    for table <- @owned, do: restore_table(table, Map.get(archive.data, table, []))
+
+    Repo.delete!(archive)
+    archive.root_block_id
+  end
+
+  defp restore_table(_table, []), do: nil
+
+  defp restore_table(table, records) do
+    case sql(
+           ~s|INSERT INTO "#{table}" SELECT * FROM jsonb_populate_recordset(null::"#{table}", $1::jsonb)|,
+           [records]
+         ) do
+      {:ok, _} -> :ok
+      {:error, error} -> Repo.rollback(Exception.message(error))
+    end
   end
 
   # The rows of a tree, per table, as the database has them. Blocks first:

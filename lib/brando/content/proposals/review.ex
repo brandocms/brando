@@ -774,15 +774,8 @@ defmodule Brando.Content.Proposals.Review do
 
   defp option(%{type: :select, options: options}, value) when is_binary(value) do
     case Enum.find(options || [], &(&1.value == value)) do
-      %{label: label} ->
-        case I18nString.localized(label) do
-          nil -> value
-          # "40%" says what "40" means; "Half (50)" needs the value beside it.
-          text -> if String.contains?(text, value), do: text, else: "#{text} (#{value})"
-        end
-
-      _ ->
-        value
+      %{label: label} -> option_label(I18nString.localized(label), value)
+      _ -> value
     end
   end
 
@@ -800,6 +793,13 @@ defmodule Brando.Content.Proposals.Review do
     do: dngettext("content_proposals", "%{count} item", "%{count} items", length(items))
 
   defp option(_var, value), do: shorten(value)
+
+  defp option_label(nil, value), do: value
+
+  # "40%" says what "40" means; "Half (50)" needs the value beside it.
+  defp option_label(text, value) do
+    if String.contains?(text, value), do: text, else: "#{text} (#{value})"
+  end
 
   defp descendants(nil), do: 0
   defp descendants(block), do: Enum.reduce(block.children || [], 0, &(&2 + 1 + descendants(&1)))

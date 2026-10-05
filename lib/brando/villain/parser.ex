@@ -440,14 +440,16 @@ defmodule Brando.Villain.Parser do
         slot
         |> BlockSlots.children()
         |> Enum.reject(&(Map.get(&1, :active) == false || Map.get(&1, :marked_as_deleted) == true))
-        |> Enum.map(fn child ->
-          type = if child.type == :module_entry, do: :module, else: child.type
-          apply(parser_module(opts), type, [child, opts])
-        end)
+        |> Enum.map(&render_slot_child(&1, opts))
         |> IO.iodata_to_binary()
       end
 
     if opts[:annotate_blocks], do: html |> annotate_children(slot.uid) |> IO.iodata_to_binary(), else: html
+  end
+
+  defp render_slot_child(child, opts) do
+    type = if child.type == :module_entry, do: :module, else: child.type
+    apply(parser_module(opts), type, [child, opts])
   end
 
   def text(%{text: text}, _) when text in [nil, ""], do: ""
@@ -860,19 +862,21 @@ defmodule Brando.Villain.Parser do
   defp merge_overrides(record, config, _keys) when map_size(config) == 0, do: record
 
   defp merge_overrides(record, config, keys) do
-    Enum.reduce(keys, record, fn key, acc ->
-      field = String.to_existing_atom(key)
+    Enum.reduce(keys, record, &merge_override(&2, config, &1))
+  end
 
-      case Map.fetch(config, key) do
-        # `false` is a real override for the video booleans, so only nil and the
-        # empty string fall through to the record.
-        {:ok, value} when value not in [nil, ""] ->
-          if Map.has_key?(acc, field), do: Map.put(acc, field, value), else: acc
+  defp merge_override(record, config, key) do
+    field = String.to_existing_atom(key)
 
-        _ ->
-          acc
-      end
-    end)
+    case Map.fetch(config, key) do
+      # `false` is a real override for the video booleans, so only nil and the
+      # empty string fall through to the record.
+      {:ok, value} when value not in [nil, ""] ->
+        if Map.has_key?(record, field), do: Map.put(record, field, value), else: record
+
+      _ ->
+        record
+    end
   end
 
   defp render_gallery(media, %{type: :slider} = data, opts) do
@@ -1671,23 +1675,9 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "file"}} = ref) do
-    file_id = normalize_ref_id(Map.get(ref, :file_id))
-
-    file =
-      case resolve_ref_assoc(Map.get(ref, :file), file_id) do
-        nil -> if is_integer(file_id), do: Brando.Repo.get(Brando.Files.File, file_id)
-        file -> file
-      end
-
+    file = resolve_ref_file(ref)
     data = Map.from_struct(ref.data.data || %Brando.Villain.Blocks.FileBlock.Data{})
-
-    merged_data =
-      data
-      |> Map.put(:file, file)
-      |> Map.put(:title, data.title || (file && file.title))
-      |> Map.put(:filename, file && file.filename)
-      |> Map.put(:filesize, file && file.filesize)
-      |> Map.put(:mime_type, file && file.mime_type)
+    merged_data = merge_file_data(data, file)
 
     %{
       data: %{data: merged_data, type: "file"},
@@ -1886,6 +1876,24 @@ defmodule Brando.Villain.Parser do
     end
   end
 
+  defp resolve_ref_file(ref) do
+    file_id = normalize_ref_id(Map.get(ref, :file_id))
+
+    case resolve_ref_assoc(Map.get(ref, :file), file_id) do
+      nil -> if is_integer(file_id), do: Brando.Repo.get(Brando.Files.File, file_id)
+      file -> file
+    end
+  end
+
+  defp merge_file_data(data, file) do
+    data
+    |> Map.put(:file, file)
+    |> Map.put(:title, data.title || (file && file.title))
+    |> Map.put(:filename, file && file.filename)
+    |> Map.put(:filesize, file && file.filesize)
+    |> Map.put(:mime_type, file && file.mime_type)
+  end
+
   defp apply_gallery_caption_overrides(gallery, override_data) do
     overrides_index =
       override_data
@@ -1893,43 +1901,47 @@ defmodule Brando.Villain.Parser do
       |> GalleryObjectOverride.index()
 
     updated_gallery_objects =
-      Enum.map(gallery.gallery_objects || [], fn gallery_object ->
-        image = get_loaded_assoc(gallery_object, :image)
-        video = get_loaded_assoc(gallery_object, :video)
-
-        object_override =
-          cond do
-            image -> GalleryObjectOverride.lookup(overrides_index, :image, image.id)
-            video -> GalleryObjectOverride.lookup(overrides_index, :video, video.id)
-            true -> nil
-          end
-
-        gallery_object =
-          gallery_object
-          |> maybe_put_loaded_assoc(:image, image)
-          |> maybe_put_loaded_assoc(:video, video)
-
-        cond do
-          image && object_override ->
-            %{gallery_object | image: apply_caption_overrides(image, object_override)}
-            |> record_text_overrides(object_override, ~w(title credits alt)a)
-
-          video && object_override ->
-            updated_video =
-              video
-              |> apply_caption_overrides(object_override)
-              |> apply_video_caption_override(object_override)
-              |> apply_playback_overrides(object_override)
-
-            %{gallery_object | video: updated_video}
-            |> record_text_overrides(object_override, ~w(title credits caption)a)
-
-          true ->
-            gallery_object
-        end
-      end)
+      Enum.map(gallery.gallery_objects || [], &apply_gallery_object_overrides(&1, overrides_index))
 
     %{gallery | gallery_objects: updated_gallery_objects}
+  end
+
+  defp apply_gallery_object_overrides(gallery_object, overrides_index) do
+    image = get_loaded_assoc(gallery_object, :image)
+    video = get_loaded_assoc(gallery_object, :video)
+    object_override = gallery_object_override(overrides_index, image, video)
+
+    gallery_object =
+      gallery_object
+      |> maybe_put_loaded_assoc(:image, image)
+      |> maybe_put_loaded_assoc(:video, video)
+
+    cond do
+      image && object_override ->
+        %{gallery_object | image: apply_caption_overrides(image, object_override)}
+        |> record_text_overrides(object_override, ~w(title credits alt)a)
+
+      video && object_override ->
+        updated_video =
+          video
+          |> apply_caption_overrides(object_override)
+          |> apply_video_caption_override(object_override)
+          |> apply_playback_overrides(object_override)
+
+        %{gallery_object | video: updated_video}
+        |> record_text_overrides(object_override, ~w(title credits caption)a)
+
+      true ->
+        gallery_object
+    end
+  end
+
+  defp gallery_object_override(overrides_index, image, video) do
+    cond do
+      image -> GalleryObjectOverride.lookup(overrides_index, :image, image.id)
+      video -> GalleryObjectOverride.lookup(overrides_index, :video, video.id)
+      true -> nil
+    end
   end
 
   defp get_loaded_assoc(gallery_object, :image) do

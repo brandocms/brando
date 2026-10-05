@@ -498,13 +498,15 @@ defmodule Brando.Content.Blocks do
     for ref <- refs,
         match?(%{data: %{text: text}} when is_binary(text), ref.data),
         RichText.contains_identifier?(ref.data.data.text, identifier_id) do
-      Repo.transaction(fn ->
-        # Re-read under a row lock so a URL refresh cannot replace newer wording.
-        case Repo.one(from r in Ref, where: r.id == ^ref.id, lock: "FOR UPDATE") do
-          nil -> :ok
-          current -> update_ref_identifier_link(current, identifier_id, new_url)
-        end
-      end)
+      Repo.transaction(fn -> update_locked_ref_identifier_link(ref.id, identifier_id, new_url) end)
+    end
+  end
+
+  defp update_locked_ref_identifier_link(ref_id, identifier_id, new_url) do
+    # Re-read under a row lock so a URL refresh cannot replace newer wording.
+    case Repo.one(from r in Ref, where: r.id == ^ref_id, lock: "FOR UPDATE") do
+      nil -> :ok
+      current -> update_ref_identifier_link(current, identifier_id, new_url)
     end
   end
 
@@ -542,30 +544,38 @@ defmodule Brando.Content.Blocks do
     if RichText.allowed_uri?(new_url) do
       for module <- Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando),
           rich_field <- rich_text_fields_for(module) do
-        query =
-          from entry in module,
-            where: ilike(field(entry, ^rich_field), "%data-identifier-id%"),
-            select: {entry.id, field(entry, ^rich_field)}
+        update_identifier_links_in_rich_text_field(module, rich_field, identifier_id, new_url)
+      end
+    end
+  end
 
-        for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id) do
-          Repo.transaction(fn ->
-            # Lock only the matching owner while rewriting. A concurrent author
-            # must never lose new wording to a stale read/replace operation.
-            entry = Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE")
+  defp update_identifier_links_in_rich_text_field(module, rich_field, identifier_id, new_url) do
+    query =
+      from entry in module,
+        where: ilike(field(entry, ^rich_field), "%data-identifier-id%"),
+        select: {entry.id, field(entry, ^rich_field)}
 
-            if entry do
-              case RichText.update_identifier_url(Map.get(entry, rich_field), identifier_id, new_url) do
-                {:updated, html} ->
-                  updated = entry |> Changeset.change([{rich_field, html}]) |> Repo.update!()
-                  Brando.Cache.Query.evict({:ok, updated})
-                  enqueue_entry_for_render(%{schema: module, entry_id: id})
+    for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id) do
+      Repo.transaction(fn ->
+        update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
+      end)
+    end
+  end
 
-                :unchanged ->
-                  :ok
-              end
-            end
-          end)
-        end
+  defp update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url) do
+    # Lock only the matching owner while rewriting. A concurrent author
+    # must never lose new wording to a stale read/replace operation.
+    entry = Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE")
+
+    if entry do
+      case RichText.update_identifier_url(Map.get(entry, rich_field), identifier_id, new_url) do
+        {:updated, html} ->
+          updated = entry |> Changeset.change([{rich_field, html}]) |> Repo.update!()
+          Brando.Cache.Query.evict({:ok, updated})
+          enqueue_entry_for_render(%{schema: module, entry_id: id})
+
+        :unchanged ->
+          :ok
       end
     end
   end
@@ -1365,28 +1375,28 @@ defmodule Brando.Content.Blocks do
 
   defp remap_footnote_markers(changeset, mapping) do
     changeset
-    |> Changeset.update_change(:refs, fn refs ->
-      Enum.map(refs, fn ref ->
-        case Changeset.get_field(ref, :data) do
-          %{type: "text", data: data} = block ->
-            text = Brando.Content.BlockSlots.remap_markers(data.text, mapping)
-            Changeset.put_change(ref, :data, %{block | data: %{data | text: text}})
+    |> Changeset.update_change(:refs, fn refs -> Enum.map(refs, &remap_ref_footnote_markers(&1, mapping)) end)
+    |> Changeset.update_change(:vars, fn vars -> Enum.map(vars, &remap_var_footnote_markers(&1, mapping)) end)
+  end
 
-          _ ->
-            ref
-        end
-      end)
-    end)
-    |> Changeset.update_change(:vars, fn vars ->
-      Enum.map(vars, fn var ->
-        if Changeset.get_field(var, :type) == :html do
-          value = Brando.Content.BlockSlots.remap_markers(Changeset.get_field(var, :value), mapping)
-          Changeset.put_change(var, :value, value)
-        else
-          var
-        end
-      end)
-    end)
+  defp remap_ref_footnote_markers(ref, mapping) do
+    case Changeset.get_field(ref, :data) do
+      %{type: "text", data: data} = block ->
+        text = Brando.Content.BlockSlots.remap_markers(data.text, mapping)
+        Changeset.put_change(ref, :data, %{block | data: %{data | text: text}})
+
+      _ ->
+        ref
+    end
+  end
+
+  defp remap_var_footnote_markers(var, mapping) do
+    if Changeset.get_field(var, :type) == :html do
+      value = Brando.Content.BlockSlots.remap_markers(Changeset.get_field(var, :value), mapping)
+      Changeset.put_change(var, :value, value)
+    else
+      var
+    end
   end
 
   @doc """

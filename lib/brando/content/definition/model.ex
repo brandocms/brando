@@ -260,26 +260,7 @@ defmodule Brando.Content.Definition.Model do
     table_uids = Enum.map(tables, & &1["uid"])
     Value.unique!(uids ++ table_uids, "bundle UIDs")
 
-    Enum.each(modules ++ tables, fn definition ->
-      uid = Value.nonempty!(definition["uid"], "uid")
-      Value.unique!(Enum.map(definition["vars"], & &1["key"]), uid <> ".var keys")
-
-      if definition["kind"] == "module" do
-        Value.unique!(Enum.map(definition["refs"], & &1["name"]), uid <> ".ref names")
-        Value.unique!(Enum.map(definition["refs"], & &1["uid"]), uid <> ".ref UIDs")
-        Value.unique!(definition["children"], uid <> ".children")
-
-        if definition["children"] != [] and definition["multi"] != true,
-          do: Error.raise!(uid, "children require multi true")
-
-        Enum.each(definition["children"], fn child ->
-          unless child in uids, do: Error.raise!(uid, "unresolved child #{child}")
-        end)
-
-        if definition["table_template"] && definition["table_template"] not in table_uids,
-          do: Error.raise!(uid, "unresolved table template")
-      end
-    end)
+    Enum.each(modules ++ tables, &validate_definition!(&1, uids, table_uids))
 
     children = Enum.flat_map(modules, & &1["children"])
     Value.unique!(Enum.flat_map(modules, fn module -> Enum.map(module["refs"], & &1["uid"]) end), "bundle ref UIDs")
@@ -290,6 +271,29 @@ defmodule Brando.Content.Definition.Model do
   end
 
   def validate_graph!(_), do: Error.raise!("bundle", "unsupported format_version or invalid envelope")
+
+  defp validate_definition!(definition, uids, table_uids) do
+    uid = Value.nonempty!(definition["uid"], "uid")
+    Value.unique!(Enum.map(definition["vars"], & &1["key"]), uid <> ".var keys")
+
+    if definition["kind"] == "module", do: validate_module!(definition, uid, uids, table_uids)
+  end
+
+  defp validate_module!(definition, uid, uids, table_uids) do
+    Value.unique!(Enum.map(definition["refs"], & &1["name"]), uid <> ".ref names")
+    Value.unique!(Enum.map(definition["refs"], & &1["uid"]), uid <> ".ref UIDs")
+    Value.unique!(definition["children"], uid <> ".children")
+
+    if definition["children"] != [] and definition["multi"] != true,
+      do: Error.raise!(uid, "children require multi true")
+
+    Enum.each(definition["children"], fn child ->
+      unless child in uids, do: Error.raise!(uid, "unresolved child #{child}")
+    end)
+
+    if definition["table_template"] && definition["table_template"] not in table_uids,
+      do: Error.raise!(uid, "unresolved table template")
+  end
 
   defp validate_kind!(definition, kind) when is_map(definition) do
     unless definition["kind"] == kind and is_list(definition["vars"]), do: Error.raise!(kind, "invalid definition")

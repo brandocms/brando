@@ -128,12 +128,14 @@ defmodule Brando.FrontendEdit.Fields do
       rich_text?(schema, field) and is_binary(value) -> value
       is_binary(value) -> Phoenix.HTML.html_escape(value) |> Phoenix.HTML.safe_to_string()
       is_number(value) or is_atom(value) -> value |> to_string() |> escape()
-      String.Chars.impl_for(value) && not is_struct(value, Ecto.Association.NotLoaded) -> value |> to_string() |> escape()
+      printable?(value) -> value |> to_string() |> escape()
       true -> ""
     end
   end
 
   def render_value(entry, field) when is_map(entry), do: entry |> Map.get(field) |> to_string_or_empty() |> escape()
+
+  defp printable?(value), do: String.Chars.impl_for(value) && not is_struct(value, Ecto.Association.NotLoaded)
 
   defp to_string_or_empty(nil), do: ""
   defp to_string_or_empty(value) when is_binary(value), do: value

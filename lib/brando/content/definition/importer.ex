@@ -14,16 +14,16 @@ defmodule Brando.Content.Definition.Importer do
       Snapshot.ensure_scope!()
       ensure_actor_scope!(actor)
 
-      changes =
-        Enum.map(uids, fn uid ->
-          record = Repo.get_by(Module, uid: uid) || Error.raise!(uid, "unknown module")
-          authorize!(actor, :update, Module, record)
-          if record.deleted_at || record.source_module_id, do: Error.raise!(uid, "expected a local active definition")
-          %{uid: uid, id: record.id, kind: "module", action: :update}
-        end)
-
+      changes = Enum.map(uids, &refresh_change!(&1, actor))
       refresh(changes)
     end)
+  end
+
+  defp refresh_change!(uid, actor) do
+    record = Repo.get_by(Module, uid: uid) || Error.raise!(uid, "unknown module")
+    authorize!(actor, :update, Module, record)
+    if record.deleted_at || record.source_module_id, do: Error.raise!(uid, "expected a local active definition")
+    %{uid: uid, id: record.id, kind: "module", action: :update}
   end
 
   def plan(bundle, actor, opts) do
@@ -91,79 +91,20 @@ defmodule Brando.Content.Definition.Importer do
         else: bindings
 
     {snapshot, records} = Snapshot.take!(bindings: snapshot_bindings, all_tables: true)
-    parents = parents(bundle["modules"])
-    current_parents = parents(snapshot["modules"])
-    table_ids = Map.new(records.tables, fn {uid, table} -> {uid, table.id} end)
-    snapshots = Map.new(snapshot["modules"] ++ snapshot["table_templates"], &{&1["uid"], &1})
 
-    items =
-      Enum.map(bundle["table_templates"] ++ bundle["modules"], fn definition ->
-        uid = definition["uid"]
-        kind = definition["kind"]
-        schema = if kind == "module", do: Module, else: TableTemplate
-        record = if kind == "module", do: records.modules[uid], else: records.tables[uid]
-        old = snapshots[uid]
-        action = if record, do: :update, else: :create
-        authorize!(actor, action, schema, record)
-        if record && Map.get(record, :source_module_id), do: Error.raise!(uid, "shared-library overrides are unsupported")
-        if record && kind == "module" && is_nil(old), do: Error.raise!(uid, "shared-library descendants are unsupported")
+    ctx = %{
+      bundle: bundle,
+      actor: actor,
+      creator: creator,
+      bindings: bindings,
+      records: records,
+      parents: parents(bundle["modules"]),
+      current_parents: parents(snapshot["modules"]),
+      table_ids: Map.new(records.tables, fn {uid, table} -> {uid, table.id} end),
+      snapshots: Map.new(snapshot["modules"] ++ snapshot["table_templates"], &{&1["uid"], &1})
+    }
 
-        if is_nil(record) and Repo.get_by(schema, uid: uid),
-          do: Error.raise!(uid, "UID belongs to a deleted or unavailable definition")
-
-        parent_id =
-          with parent when not is_nil(parent) <- parents[uid],
-               record when not is_nil(record) <- records.modules[parent],
-               do: record.id
-
-        changeset = Params.changeset(definition, record, bindings, creator, table_ids, parent_id)
-        Model.apply_valid!(changeset, uid)
-
-        if kind == "module" do
-          Enum.each(Changeset.get_assoc(changeset, :refs), fn ref ->
-            ref |> Brando.MarkdownSources.validate_placement(actor) |> Model.apply_valid!(uid <> ".refs")
-          end)
-        end
-
-        validate_ref_uids!(definition, record)
-        validate_template!(definition)
-        digest = Value.digest(definition)
-        old_digest = if old, do: Value.digest(old)
-        baseline_kind = if kind == "module", do: "modules", else: "table_templates"
-        baseline = get_in(bundle, ["baseline", baseline_kind, uid])
-        baseline = if is_nil(record) and bundle["source"] != References.scope(), do: nil, else: baseline
-        # The baseline is recorded in its own digest version; one that matches
-        # the target stands for the target's exact digest from here on.
-        baseline = if old && baseline && baseline == Snapshot.baseline_digest(bundle, old), do: old_digest, else: baseline
-        block_ids = if record && kind == "module", do: Blocks.list_block_ids_using_module(record.id), else: []
-
-        {action, reason} =
-          classify(
-            definition,
-            old,
-            record,
-            changeset,
-            {baseline, digest, old_digest},
-            {parents[uid], current_parents[uid]}
-          )
-
-        %{
-          kind: kind,
-          uid: uid,
-          action: action,
-          reason: reason,
-          before: old_digest,
-          after: digest,
-          fields: changed_fields(old, definition),
-          diff:
-            Enum.map(changed_fields(old, definition), fn field ->
-              %{field: field, before: old && old[field], after: definition[field]}
-            end),
-          block_count: length(block_ids),
-          entry_count: entry_count(block_ids)
-        }
-      end)
-
+    items = Enum.map(bundle["table_templates"] ++ bundle["modules"], &plan_item!(&1, ctx))
     scope = References.scope()
 
     fingerprint =
@@ -183,19 +124,106 @@ defmodule Brando.Content.Definition.Importer do
      }, records}
   end
 
+  defp plan_item!(definition, ctx) do
+    uid = definition["uid"]
+    kind = definition["kind"]
+    schema = if kind == "module", do: Module, else: TableTemplate
+    record = if kind == "module", do: ctx.records.modules[uid], else: ctx.records.tables[uid]
+    old = ctx.snapshots[uid]
+    action = if record, do: :update, else: :create
+    authorize!(ctx.actor, action, schema, record)
+    validate_plan_target!(uid, kind, schema, record, old)
+    parent_id = parent_record_id(ctx.parents[uid], ctx.records)
+    changeset = Params.changeset(definition, record, ctx.bindings, ctx.creator, ctx.table_ids, parent_id)
+    Model.apply_valid!(changeset, uid)
+    validate_ref_placements!(kind, changeset, uid, ctx.actor)
+    validate_ref_uids!(definition, record)
+    validate_template!(definition)
+    digest = Value.digest(definition)
+    old_digest = if old, do: Value.digest(old)
+    baseline = plan_baseline(ctx.bundle, kind, uid, record, old, old_digest)
+    block_ids = module_block_ids(kind, record)
+
+    {action, reason} =
+      classify(
+        definition,
+        old,
+        record,
+        changeset,
+        {baseline, digest, old_digest},
+        {ctx.parents[uid], ctx.current_parents[uid]}
+      )
+
+    %{
+      kind: kind,
+      uid: uid,
+      action: action,
+      reason: reason,
+      before: old_digest,
+      after: digest,
+      fields: changed_fields(old, definition),
+      diff: field_diff(old, definition),
+      block_count: length(block_ids),
+      entry_count: entry_count(block_ids)
+    }
+  end
+
+  defp validate_plan_target!(uid, kind, schema, record, old) do
+    if record && Map.get(record, :source_module_id), do: Error.raise!(uid, "shared-library overrides are unsupported")
+    if record && kind == "module" && is_nil(old), do: Error.raise!(uid, "shared-library descendants are unsupported")
+
+    if is_nil(record) and Repo.get_by(schema, uid: uid),
+      do: Error.raise!(uid, "UID belongs to a deleted or unavailable definition")
+  end
+
+  defp parent_record_id(parent, records) do
+    with parent when not is_nil(parent) <- parent,
+         record when not is_nil(record) <- records.modules[parent],
+         do: record.id
+  end
+
+  defp validate_ref_placements!(kind, changeset, uid, actor) do
+    if kind == "module" do
+      Enum.each(Changeset.get_assoc(changeset, :refs), fn ref ->
+        ref |> Brando.MarkdownSources.validate_placement(actor) |> Model.apply_valid!(uid <> ".refs")
+      end)
+    end
+  end
+
+  defp plan_baseline(bundle, kind, uid, record, old, old_digest) do
+    baseline_kind = if kind == "module", do: "modules", else: "table_templates"
+    baseline = get_in(bundle, ["baseline", baseline_kind, uid])
+    baseline = if is_nil(record) and bundle["source"] != References.scope(), do: nil, else: baseline
+    # The baseline is recorded in its own digest version; one that matches
+    # the target stands for the target's exact digest from here on.
+    if old && baseline && baseline == Snapshot.baseline_digest(bundle, old), do: old_digest, else: baseline
+  end
+
+  defp module_block_ids(kind, record) do
+    if record && kind == "module", do: Blocks.list_block_ids_using_module(record.id), else: []
+  end
+
+  defp field_diff(old, definition) do
+    Enum.map(changed_fields(old, definition), fn field ->
+      %{field: field, before: old && old[field], after: definition[field]}
+    end)
+  end
+
   defp validate_ref_uids!(%{"kind" => "table_template"}, _record), do: :ok
 
   defp validate_ref_uids!(definition, record) do
-    Enum.each(definition["refs"], fn ref ->
-      case Repo.get_by(Brando.Content.Ref, uid: ref["uid"]) do
-        nil ->
-          :ok
+    Enum.each(definition["refs"], &validate_ref_uid!(&1, record))
+  end
 
-        existing ->
-          unless record && existing.module_id == record.id,
-            do: Error.raise!(ref["uid"], "ref UID belongs to another definition or block")
-      end
-    end)
+  defp validate_ref_uid!(ref, record) do
+    case Repo.get_by(Brando.Content.Ref, uid: ref["uid"]) do
+      nil ->
+        :ok
+
+      existing ->
+        unless record && existing.module_id == record.id,
+          do: Error.raise!(ref["uid"], "ref UID belongs to another definition or block")
+    end
   end
 
   # `digests` is `{baseline, digest, old_digest}` and `parents` is
@@ -222,19 +250,29 @@ defmodule Brando.Content.Definition.Importer do
       new["kind"] == "table_template" and new["vars"] != old["vars"] ->
         {:migration_required, "table column changes require a migration"}
 
-      new["kind"] == "module" and old["children"] -- new["children"] != [] ->
+      new["kind"] == "module" ->
+        classify_module_update(new, old, record, cs)
+
+      true ->
+        {:update, nil}
+    end
+  end
+
+  defp classify_module_update(new, old, record, cs) do
+    cond do
+      old["children"] -- new["children"] != [] ->
         {:migration_required, "removing child definitions requires a migration"}
 
-      new["kind"] == "module" and changed_ref_identity?(old, new) ->
+      changed_ref_identity?(old, new) ->
         {:migration_required, "changing a reference identity requires a migration"}
 
-      new["kind"] == "module" and changed_ref_type?(old, new) ->
+      changed_ref_type?(old, new) ->
         {:migration_required, "changing a reference type requires a migration"}
 
-      new["kind"] == "module" and new["table_template"] != old["table_template"] ->
+      new["table_template"] != old["table_template"] ->
         {:migration_required, "changing the table template requires a migration"}
 
-      new["kind"] == "module" and ModuleDiff.destructive?(ModuleDiff.diff(record, cs)) ->
+      ModuleDiff.destructive?(ModuleDiff.diff(record, cs)) ->
         {:migration_required, Enum.join(ModuleDiff.summary(ModuleDiff.diff(record, cs)), "; ")}
 
       true ->
@@ -262,38 +300,40 @@ defmodule Brando.Content.Definition.Importer do
       end)
 
     initial = %{modules: records.modules, tables: records.tables, changes: []}
+    ctx = %{definitions: definitions, parents: parents, references: plan.references, actor: actor, creator: creator}
 
     Enum.reduce(ordered, initial, fn item, state ->
-      if item.action == :noop do
-        state
-      else
-        definition = definitions[item.uid]
-        kind = if item.kind == "module", do: :modules, else: :tables
-        schema = if kind == :modules, do: Module, else: TableTemplate
-        record = state[kind][item.uid]
-        parent_id = if parent = parents[item.uid], do: state.modules[parent].id
-        tables = Map.new(state.tables, fn {uid, table} -> {uid, table.id} end)
-        cs = Params.changeset(definition, record, plan.references, creator, tables, parent_id)
-        cs = ensure_revision(cs, kind, record)
-
-        result =
-          if item.action == :create do
-            Mutations.create_with_changeset(schema, cs, actor, &{:ok, &1}, notify?: false, pubsub?: false)
-          else
-            Mutations.update_with_changeset(schema, cs, actor, nil, &{:ok, &1}, show_notification: false, pubsub: false)
-          end
-
-        case result do
-          {:ok, saved} ->
-            saved = Repo.preload(saved, if(kind == :modules, do: [:refs, :vars], else: [:vars]))
-            change = %{kind: item.kind, uid: item.uid, id: saved.id, action: item.action}
-            state |> put_in([kind, item.uid], saved) |> Map.update!(:changes, &(&1 ++ [change]))
-
-          {:error, reason} ->
-            Repo.rollback(%{uid: item.uid, error: reason})
-        end
-      end
+      if item.action == :noop, do: state, else: persist_item!(item, state, ctx)
     end).changes
+  end
+
+  defp persist_item!(item, state, ctx) do
+    definition = ctx.definitions[item.uid]
+    kind = if item.kind == "module", do: :modules, else: :tables
+    schema = if kind == :modules, do: Module, else: TableTemplate
+    record = state[kind][item.uid]
+    parent_id = if parent = ctx.parents[item.uid], do: state.modules[parent].id
+    tables = Map.new(state.tables, fn {uid, table} -> {uid, table.id} end)
+    cs = Params.changeset(definition, record, ctx.references, ctx.creator, tables, parent_id)
+    cs = ensure_revision(cs, kind, record)
+
+    case save_definition(item.action, schema, cs, ctx.actor) do
+      {:ok, saved} ->
+        saved = Repo.preload(saved, if(kind == :modules, do: [:refs, :vars], else: [:vars]))
+        change = %{kind: item.kind, uid: item.uid, id: saved.id, action: item.action}
+        state |> put_in([kind, item.uid], saved) |> Map.update!(:changes, &(&1 ++ [change]))
+
+      {:error, reason} ->
+        Repo.rollback(%{uid: item.uid, error: reason})
+    end
+  end
+
+  defp save_definition(action, schema, cs, actor) do
+    if action == :create do
+      Mutations.create_with_changeset(schema, cs, actor, &{:ok, &1}, notify?: false, pubsub?: false)
+    else
+      Mutations.update_with_changeset(schema, cs, actor, nil, &{:ok, &1}, show_notification: false, pubsub: false)
+    end
   end
 
   defp ensure_revision(cs, :modules, record) when not is_nil(record) do

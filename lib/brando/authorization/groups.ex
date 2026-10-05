@@ -291,31 +291,36 @@ defmodule Brando.Authorization.Groups do
   defp validate_permissions!(scope, permissions) when is_list(permissions) do
     catalog = Map.new(Catalog.all(), &{&1.key, &1})
 
-    if Enum.all?(permissions, fn key ->
-         case Map.get(catalog, key) do
-           nil -> false
-           permission -> scope.kind in permission.scopes
-         end
-       end),
-       do: Enum.uniq(permissions),
-       else: Repo.rollback(:invalid_permissions)
+    if Enum.all?(permissions, &available_in_scope?(catalog, &1, scope)),
+      do: Enum.uniq(permissions),
+      else: Repo.rollback(:invalid_permissions)
   end
 
   defp validate_permissions!(_, _), do: Repo.rollback(:invalid_permissions)
 
+  defp available_in_scope?(catalog, key, scope) do
+    case Map.get(catalog, key) do
+      nil -> false
+      permission -> scope.kind in permission.scopes
+    end
+  end
+
   defp check_delegation!(scope, permissions) do
     snapshot = Administration.snapshot(scope)
 
-    unless snapshot.superuser? do
-      catalog = Map.new(Catalog.all(), &{&1.key, &1})
+    unless snapshot.superuser? or all_delegable?(snapshot, permissions),
+      do: Repo.rollback(:not_delegable)
+  end
 
-      unless Enum.all?(permissions, fn key ->
-               case Map.get(catalog, key) do
-                 %{delegable: true} -> Map.has_key?(snapshot.grants, key)
-                 _ -> false
-               end
-             end),
-             do: Repo.rollback(:not_delegable)
+  defp all_delegable?(snapshot, permissions) do
+    catalog = Map.new(Catalog.all(), &{&1.key, &1})
+    Enum.all?(permissions, &delegable?(catalog, snapshot, &1))
+  end
+
+  defp delegable?(catalog, snapshot, key) do
+    case Map.get(catalog, key) do
+      %{delegable: true} -> Map.has_key?(snapshot.grants, key)
+      _ -> false
     end
   end
 

@@ -75,102 +75,102 @@ defmodule Brando.Content.Transfer.Catalog do
 
   def search(actor, query \\ "", opts \\ []) do
     action = Keyword.get(opts, :action, :export)
-
-    selected =
-      if opts[:schema],
-        do: [
-          if(opts[:entries], do: Brando.Content.Transfer.EntryCodec.schema!(opts[:schema]), else: schema!(opts[:schema]))
-        ],
-        else:
-          (cond do
-             opts[:entries] -> entry_schemas()
-             opts[:editable] -> editable_schemas()
-             true -> schemas()
-           end)
-
     pattern = "%" <> escape_like(String.slice(query, 0, 150)) <> "%"
 
-    selected
-    |> Enum.filter(fn schema ->
-      (is_nil(opts[:schemas]) || to_string(schema) in opts[:schemas]) &&
-        Boundary.authorize(actor, action, schema) == :ok
-    end)
-    |> Enum.flat_map(fn schema ->
-      # Fragments intentionally do not persist identifiers. They have their own
-      # provider, including parent/key/language matching hints.
-      cond do
-        schema == Brando.Pages.Fragment ->
-          from(e in schema,
-            where: is_nil(e.deleted_at) and (ilike(e.title, ^pattern) or ilike(e.key, ^pattern)),
-            order_by: e.id,
-            limit: 30
-          )
-          |> scoped_query(schema, actor, action)
-          |> Repo.all()
-          |> Enum.filter(&(Boundary.authorize(actor, action, &1) == :ok))
-          |> Enum.map(&describe/1)
-
-        not schema.__persist_identifier__() ->
-          label_field = Enum.find([:title, :name, :key, :slug], &(&1 in schema.__schema__(:fields))) || :id
-
-          query =
-            from(e in schema,
-              where: ilike(fragment("CAST(? AS text)", field(e, ^label_field)), ^pattern),
-              order_by: e.id,
-              limit: 60
-            )
-
-          query =
-            if :deleted_at in schema.__schema__(:fields), do: from(e in query, where: is_nil(e.deleted_at)), else: query
-
-          query
-          |> scoped_query(schema, actor, action)
-          |> Repo.all()
-          |> Enum.filter(&(Boundary.authorize(actor, action, &1) == :ok))
-          |> Enum.map(&describe/1)
-
-        true ->
-          allowed = from(e in schema, select: e.id) |> scoped_query(schema, actor, action)
-
-          from(i in Identifier,
-            where: i.schema == ^schema and ilike(i.title, ^pattern) and i.entry_id in subquery(allowed),
-            order_by: [asc: i.title, asc: i.id],
-            limit: 60
-          )
-          |> Repo.all()
-          |> Enum.flat_map(fn identifier ->
-            case Repo.get(schema, identifier.entry_id) do
-              %{deleted_at: deleted} when not is_nil(deleted) -> []
-              nil -> []
-              entry -> if Boundary.authorize(actor, action, entry) == :ok, do: [describe(entry, identifier)], else: []
-            end
-          end)
-      end
-    end)
+    opts
+    |> search_schemas()
+    |> Enum.filter(&searchable_schema?(&1, opts, actor, action))
+    |> Enum.flat_map(&search_schema(&1, pattern, actor, action))
     |> Enum.sort_by(&{&1.title, &1.schema, &1.id})
     |> Enum.take(60)
     |> with_authors()
+  end
+
+  defp search_schemas(opts) do
+    cond do
+      opts[:schema] && opts[:entries] -> [Brando.Content.Transfer.EntryCodec.schema!(opts[:schema])]
+      opts[:schema] -> [schema!(opts[:schema])]
+      opts[:entries] -> entry_schemas()
+      opts[:editable] -> editable_schemas()
+      true -> schemas()
+    end
+  end
+
+  defp searchable_schema?(schema, opts, actor, action) do
+    (is_nil(opts[:schemas]) || to_string(schema) in opts[:schemas]) &&
+      Boundary.authorize(actor, action, schema) == :ok
+  end
+
+  # Fragments intentionally do not persist identifiers. They have their own
+  # provider, including parent/key/language matching hints.
+  defp search_schema(Brando.Pages.Fragment = schema, pattern, actor, action) do
+    from(e in schema,
+      where: is_nil(e.deleted_at) and (ilike(e.title, ^pattern) or ilike(e.key, ^pattern)),
+      order_by: e.id,
+      limit: 30
+    )
+    |> scoped_query(schema, actor, action)
+    |> Repo.all()
+    |> Enum.filter(&(Boundary.authorize(actor, action, &1) == :ok))
+    |> Enum.map(&describe/1)
+  end
+
+  defp search_schema(schema, pattern, actor, action) do
+    if schema.__persist_identifier__(),
+      do: search_identifiers(schema, pattern, actor, action),
+      else: search_entries(schema, pattern, actor, action)
+  end
+
+  defp search_entries(schema, pattern, actor, action) do
+    label_field = Enum.find([:title, :name, :key, :slug], &(&1 in schema.__schema__(:fields))) || :id
+
+    query =
+      from(e in schema,
+        where: ilike(fragment("CAST(? AS text)", field(e, ^label_field)), ^pattern),
+        order_by: e.id,
+        limit: 60
+      )
+
+    query =
+      if :deleted_at in schema.__schema__(:fields), do: from(e in query, where: is_nil(e.deleted_at)), else: query
+
+    query
+    |> scoped_query(schema, actor, action)
+    |> Repo.all()
+    |> Enum.filter(&(Boundary.authorize(actor, action, &1) == :ok))
+    |> Enum.map(&describe/1)
+  end
+
+  defp search_identifiers(schema, pattern, actor, action) do
+    allowed = from(e in schema, select: e.id) |> scoped_query(schema, actor, action)
+
+    from(i in Identifier,
+      where: i.schema == ^schema and ilike(i.title, ^pattern) and i.entry_id in subquery(allowed),
+      order_by: [asc: i.title, asc: i.id],
+      limit: 60
+    )
+    |> Repo.all()
+    |> Enum.flat_map(&describe_identified(schema, &1, actor, action))
+  end
+
+  defp describe_identified(schema, identifier, actor, action) do
+    case Repo.get(schema, identifier.entry_id) do
+      %{deleted_at: deleted} when not is_nil(deleted) -> []
+      nil -> []
+      entry -> if Boundary.authorize(actor, action, entry) == :ok, do: [describe(entry, identifier)], else: []
+    end
   end
 
   def describe(entry, identifier \\ nil) do
     schema = entry.__struct__
     identifier = identifier || Repo.get_by(Identifier, schema: schema, entry_id: entry.id)
 
-    title =
-      (identifier && identifier.title) || Map.get(entry, :title) || Map.get(entry, :name) ||
-        "#{Brando.Blueprint.get_singular(schema)} ##{entry.id}"
-
-    title =
-      if is_map(title),
-        do: title[to_string(Map.get(entry, :language) || "en")] || List.first(Map.values(title)) || "Untitled",
-        else: to_string(title)
-
     %{
       id: entry.id,
       key: "#{schema}:#{entry.id}",
       schema: to_string(schema),
       type: Brando.Content.Transfer.Labels.schema(schema),
-      title: title,
+      title: describe_title(entry, identifier),
       language: to_string(Map.get(entry, :language) || ""),
       status: to_string(Map.get(entry, :status) || ""),
       creator_id: Map.get(entry, :creator_id),
@@ -179,6 +179,16 @@ defmodule Brando.Content.Transfer.Catalog do
       hints: hints(entry),
       fields: fields(schema)
     }
+  end
+
+  defp describe_title(entry, identifier) do
+    title =
+      (identifier && identifier.title) || Map.get(entry, :title) || Map.get(entry, :name) ||
+        "#{Brando.Blueprint.get_singular(entry.__struct__)} ##{entry.id}"
+
+    if is_map(title),
+      do: title[to_string(Map.get(entry, :language) || "en")] || List.first(Map.values(title)) || "Untitled",
+      else: to_string(title)
   end
 
   defp with_authors(entries) do

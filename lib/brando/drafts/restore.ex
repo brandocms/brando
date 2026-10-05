@@ -17,37 +17,41 @@ defmodule Brando.Drafts.Restore do
           {:review, :modules_changed, issues}
 
         true ->
-          block_fields = Map.keys(blocks)
-          params = draft.payload["main"] || %{}
-          params = Map.merge(params, draft.payload["transformers"] || %{})
-          params = reconcile(params, entry) |> Map.drop(["id", "creator_id", "deleted_at"])
-          changeset = schema.changeset(entry, params, user)
-
-          changeset =
-            Enum.reduce(block_fields, changeset, fn field, cs ->
-              assoc =
-                Enum.find(schema.__schema__(:associations), &(to_string(&1) == "entry_#{field}")) ||
-                  raise "Unknown block field"
-
-              join_schema = schema.__schema__(:association, assoc).queryable
-              existing = Map.get(entry, assoc) || []
-
-              rows =
-                Enum.map(blocks[field], fn row ->
-                  base = Enum.find(existing, &(to_string(&1.id) == to_string(row["id"]))) || struct(join_schema)
-                  row = reconcile(row, base)
-                  row = Map.put(row, "block", put_source(row["block"], join_schema))
-                  join_schema.changeset(base, row, user.id, true)
-                end)
-
-              Changeset.put_assoc(cs, assoc, rows)
-            end)
-
-          {:ok, changeset, issues}
+          {:ok, build_changeset(draft, entry, schema, user, blocks), issues}
       end
     end
   rescue
     _ -> {:error, "This recovery copy could not be applied. Its contents are still available below."}
+  end
+
+  defp build_changeset(draft, entry, schema, user, blocks) do
+    params = draft.payload["main"] || %{}
+    params = Map.merge(params, draft.payload["transformers"] || %{})
+    params = reconcile(params, entry) |> Map.drop(["id", "creator_id", "deleted_at"])
+    changeset = schema.changeset(entry, params, user)
+
+    blocks
+    |> Map.keys()
+    |> Enum.reduce(changeset, &put_block_field(&2, &1, blocks[&1], entry, schema, user))
+  end
+
+  defp put_block_field(changeset, field, block_rows, entry, schema, user) do
+    assoc =
+      Enum.find(schema.__schema__(:associations), &(to_string(&1) == "entry_#{field}")) ||
+        raise "Unknown block field"
+
+    join_schema = schema.__schema__(:association, assoc).queryable
+    existing = Map.get(entry, assoc) || []
+    rows = Enum.map(block_rows, &block_row_changeset(&1, existing, join_schema, user))
+
+    Changeset.put_assoc(changeset, assoc, rows)
+  end
+
+  defp block_row_changeset(row, existing, join_schema, user) do
+    base = Enum.find(existing, &(to_string(&1.id) == to_string(row["id"]))) || struct(join_schema)
+    row = reconcile(row, base)
+    row = Map.put(row, "block", put_source(row["block"], join_schema))
+    join_schema.changeset(base, row, user.id, true)
   end
 
   defp format(%{format_version: 1, payload: %{"main" => main, "blocks" => blocks}}) when is_map(main) and is_map(blocks),

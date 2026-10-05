@@ -53,7 +53,7 @@ defmodule Brando.MarkdownSources.GitHub do
       paths =
         nodes
         |> Enum.filter(&(&1["type"] == "blob" && &1["mode"] in ["100644", "100755"]))
-        |> Enum.map(fn node -> if folder == "", do: node["path"], else: folder <> "/" <> node["path"] end)
+        |> Enum.map(&folder_path(folder, &1["path"]))
         |> Enum.filter(&Brando.MarkdownSources.Source.valid_path?/1)
         |> Enum.uniq()
         |> Enum.sort()
@@ -65,6 +65,9 @@ defmodule Brando.MarkdownSources.GitHub do
       _ -> {:error, :invalid_folder}
     end
   end
+
+  defp folder_path("", path), do: path
+  defp folder_path(folder, path), do: folder <> "/" <> path
 
   defp valid_folder?(""), do: true
 

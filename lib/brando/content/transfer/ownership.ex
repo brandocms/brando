@@ -19,10 +19,7 @@ defmodule Brando.Content.Transfer.Ownership do
 
       objects = Enum.map(original["gallery_objects"], &Map.take(&1, ~w(image_id video_id config sequence)))
 
-      Enum.each(objects, fn object ->
-        if object["image_id"], do: Dependencies.load!("image", object["image_id"], actor)
-        if object["video_id"], do: Dependencies.load!("video", object["video_id"], actor)
-      end)
+      Enum.each(objects, &load_object_media!(&1, actor))
 
       Brando.Content.Transfer.Catalog.authorize!(actor, :create, Brando.Galleries.Gallery)
 
@@ -52,6 +49,11 @@ defmodule Brando.Content.Transfer.Ownership do
 
   defp copy(value, actor, seen) when is_list(value), do: Enum.map_reduce(value, seen, &copy(&1, actor, &2))
   defp copy(value, _, seen), do: {value, seen}
+
+  defp load_object_media!(object, actor) do
+    if object["image_id"], do: Dependencies.load!("image", object["image_id"], actor)
+    if object["video_id"], do: Dependencies.load!("video", object["video_id"], actor)
+  end
 
   def retained_slots(%{"type" => "slot", "uid" => uid} = params),
     do: [uid | retained_slots(Map.delete(params, "type"))]

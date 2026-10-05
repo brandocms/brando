@@ -692,18 +692,19 @@ defmodule Brando.Content.Proposals.Tools do
       by_name =
         Enum.flat_map(words, fn word -> kind |> to_string() |> Dependencies.options(actor, word) |> Enum.map(& &1.id) end)
 
-      in_folders =
-        Enum.flat_map(words, fn word ->
-          for folder <- Enum.take(Folders.find(kind, word, actor).folders, 2),
-              id <- Folders.assets(kind, folder.id, actor, subfolders: true, limit: 12).ids,
-              do: id
-        end)
+      in_folders = Enum.flat_map(words, &folder_asset_ids(kind, &1, actor))
 
       (by_name ++ in_folders)
       |> Enum.frequencies()
       |> Enum.sort_by(fn {id, count} -> {-count, id} end)
       |> Enum.map(&elem(&1, 0))
     end
+  end
+
+  defp folder_asset_ids(kind, word, actor) do
+    for folder <- Enum.take(Folders.find(kind, word, actor).folders, 2),
+        id <- Folders.assets(kind, folder.id, actor, subfolders: true, limit: 12).ids,
+        do: id
   end
 
   defp titles(:file, ids),

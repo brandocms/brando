@@ -61,8 +61,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       source: nil,
       members: [],
       missing_languages: languages_except(schema, taken),
-      can_create?:
-        Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok,
+      can_create?: can_create?(schema, user),
       pending: nil,
       payload: nil,
       items: [],
@@ -87,8 +86,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       source: source && Map.put(source, :url, admin_url(schema, source.id)),
       members: members(schema, member.group_id),
       missing_languages: missing_languages(schema, member.group_id, source),
-      can_create?:
-        Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok,
+      can_create?: can_create?(schema, user),
       pending: pending,
       payload: payload,
       items: items(schema, pending, payload, member.language),
@@ -99,6 +97,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
       acknowledged: (previous && previous.entry_id == entry_id && previous.acknowledged) || [],
       stale?: false
     }
+  end
+
+  defp can_create?(schema, user) do
+    Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok
   end
 
   defp members(schema, group_id) do

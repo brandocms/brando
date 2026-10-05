@@ -261,25 +261,26 @@ defmodule Brando.AI.Agent do
           {:ok, %{attached: [map()], unavailable: [map()]}} | {:error, String.t()}
   def attach_many(conversation_id, refs, actor) do
     Error.protect(fn ->
-      {:ok, result} =
-        Repo.transaction(fn ->
-          conversation = conversation!(conversation_id, actor, lock: true)
-
-          {results, attachments} =
-            Enum.map_reduce(refs, conversation.attachments, &attach_one(&1, &2, actor))
-
-          if attachments != conversation.attachments,
-            do: conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
-
-          %{
-            attached: for({:attached, item} <- results, do: item),
-            unavailable: for({:unavailable, item} <- results, do: item)
-          }
-        end)
+      {:ok, result} = Repo.transaction(fn -> attach_all!(conversation_id, refs, actor) end)
 
       if result.attached != [], do: broadcast(conversation_id, {:attachments, Enum.map(result.attached, & &1.alias)})
       result
     end)
+  end
+
+  defp attach_all!(conversation_id, refs, actor) do
+    conversation = conversation!(conversation_id, actor, lock: true)
+
+    {results, attachments} =
+      Enum.map_reduce(refs, conversation.attachments, &attach_one(&1, &2, actor))
+
+    if attachments != conversation.attachments,
+      do: conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
+
+    %{
+      attached: for({:attached, item} <- results, do: item),
+      unavailable: for({:unavailable, item} <- results, do: item)
+    }
   end
 
   defp attach_one({kind, id}, attachments, actor) do
@@ -318,21 +319,7 @@ defmodule Brando.AI.Agent do
         Repo.transaction(fn ->
           conversation = conversation!(conversation_id, actor, lock: true)
 
-          {entries, attachments} =
-            Enum.map_reduce(uploads, conversation.attachments, fn upload, attachments ->
-              kind = if to_string(upload[:asset_type]) == "video", do: "video", else: "image"
-              n = Enum.count(attachments, &(&1["kind"] == kind)) + 1
-
-              entry = %{
-                "alias" => next_alias(attachments, kind, n),
-                "kind" => kind,
-                "id" => nil,
-                "upload_ref" => to_string(upload[:ref]),
-                "label" => to_string(upload[:filename])
-              }
-
-              {entry, attachments ++ [entry]}
-            end)
+          {entries, attachments} = Enum.map_reduce(uploads, conversation.attachments, &reserve_one/2)
 
           conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
           Enum.map(entries, & &1["alias"])
@@ -343,36 +330,53 @@ defmodule Brando.AI.Agent do
     end)
   end
 
+  defp reserve_one(upload, attachments) do
+    kind = if to_string(upload[:asset_type]) == "video", do: "video", else: "image"
+    n = Enum.count(attachments, &(&1["kind"] == kind)) + 1
+
+    entry = %{
+      "alias" => next_alias(attachments, kind, n),
+      "kind" => kind,
+      "id" => nil,
+      "upload_ref" => to_string(upload[:ref]),
+      "label" => to_string(upload[:filename])
+    }
+
+    {entry, attachments ++ [entry]}
+  end
+
   @doc "Fill the alias reserved for upload `upload_ref` with the uploaded asset."
   @spec fulfil(Ecto.UUID.t(), String.t(), struct(), term()) :: {:ok, String.t()} | {:error, String.t()}
   def fulfil(conversation_id, upload_ref, %{id: id} = asset, actor) do
     kind = if match?(%Brando.Videos.Video{}, asset), do: "video", else: "image"
 
     Error.protect(fn ->
-      {:ok, alias} =
-        Repo.transaction(fn ->
-          conversation = conversation!(conversation_id, actor, lock: true)
-          asset = Dependencies.load!(kind, id, actor)
-
-          case Enum.find(conversation.attachments, &(&1["upload_ref"] == upload_ref and &1["kind"] == kind)) do
-            nil ->
-              Error.fail!(dgettext("ai_agent", "This upload was not reserved in the conversation."))
-
-            reserved ->
-              attachments =
-                Enum.map(conversation.attachments, fn
-                  ^reserved -> %{reserved | "id" => asset.id, "label" => title(asset) || reserved["label"]}
-                  other -> other
-                end)
-
-              conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
-              reserved["alias"]
-          end
-        end)
+      {:ok, alias} = Repo.transaction(fn -> fulfil_reservation!(conversation_id, upload_ref, kind, id, actor) end)
 
       broadcast(conversation_id, {:attachments, alias})
       alias
     end)
+  end
+
+  defp fulfil_reservation!(conversation_id, upload_ref, kind, id, actor) do
+    conversation = conversation!(conversation_id, actor, lock: true)
+    asset = Dependencies.load!(kind, id, actor)
+
+    case Enum.find(conversation.attachments, &(&1["upload_ref"] == upload_ref and &1["kind"] == kind)) do
+      nil -> Error.fail!(dgettext("ai_agent", "This upload was not reserved in the conversation."))
+      reserved -> fill_reservation!(conversation, reserved, asset)
+    end
+  end
+
+  defp fill_reservation!(conversation, reserved, asset) do
+    attachments =
+      Enum.map(conversation.attachments, fn
+        ^reserved -> %{reserved | "id" => asset.id, "label" => title(asset) || reserved["label"]}
+        other -> other
+      end)
+
+    conversation |> Changeset.change(attachments: attachments) |> Repo.update!()
+    reserved["alias"]
   end
 
   @doc "Remove an attachment. Other aliases keep their names."

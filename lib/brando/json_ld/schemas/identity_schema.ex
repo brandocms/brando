@@ -9,6 +9,9 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   alias Brando.JSONLD.Schema
   alias Brando.Sites
 
+  @employer_types ~w(organization educational_organization government_organization ngo)
+  @storefront_types ~w(local_business art_gallery employment_agency)
+
   @doc """
   Builds a map of shared identity fields from cached Identity and SEO data.
   """
@@ -42,102 +45,7 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   end
 
   defp merge_type_config(base, %{type: type, type_config: %{} = config}) do
-    type_fields =
-      case type do
-        "organization" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees
-          }
-
-        "corporation" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees,
-            tickerSymbol: config.ticker_symbol
-          }
-
-        "professional_service" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            openingHoursSpecification: build_opening_hours(config),
-            priceRange: config.price_range,
-            geo: build_geo(config)
-          }
-
-        "local_business" ->
-          %{
-            openingHoursSpecification: build_opening_hours(config),
-            priceRange: config.price_range,
-            geo: build_geo(config)
-          }
-
-        "restaurant" ->
-          %{
-            openingHoursSpecification: build_opening_hours(config),
-            priceRange: config.price_range,
-            servesCuisine: config.serves_cuisine,
-            hasMenu: config.has_menu,
-            geo: build_geo(config)
-          }
-
-        "educational_organization" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees
-          }
-
-        "government_organization" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees
-          }
-
-        "ngo" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees
-          }
-
-        "medical_organization" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees,
-            medicalSpecialty: config.medical_specialty
-          }
-
-        "sports_organization" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees,
-            sport: config.sport
-          }
-
-        "art_gallery" ->
-          %{
-            openingHoursSpecification: build_opening_hours(config),
-            priceRange: config.price_range,
-            geo: build_geo(config)
-          }
-
-        "architect" ->
-          %{
-            foundingDate: format_date(config.founding_date),
-            openingHoursSpecification: build_opening_hours(config),
-            priceRange: config.price_range,
-            geo: build_geo(config)
-          }
-
-        "employment_agency" ->
-          %{
-            openingHoursSpecification: build_opening_hours(config),
-            priceRange: config.price_range,
-            geo: build_geo(config)
-          }
-
-        _ ->
-          %{}
-      end
+    type_fields = type_fields(type, config)
 
     # areaServed and knowsAbout are Organization properties, so every identity
     # type descends from something that can carry them. Applying them here
@@ -156,6 +64,75 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   end
 
   defp merge_type_config(base, _), do: base
+
+  defp type_fields(type, config) when type in @employer_types do
+    %{
+      foundingDate: format_date(config.founding_date),
+      numberOfEmployees: config.number_of_employees
+    }
+  end
+
+  defp type_fields("corporation", config) do
+    %{
+      foundingDate: format_date(config.founding_date),
+      numberOfEmployees: config.number_of_employees,
+      tickerSymbol: config.ticker_symbol
+    }
+  end
+
+  defp type_fields("professional_service", config) do
+    %{
+      foundingDate: format_date(config.founding_date),
+      openingHoursSpecification: build_opening_hours(config),
+      priceRange: config.price_range,
+      geo: build_geo(config)
+    }
+  end
+
+  defp type_fields(type, config) when type in @storefront_types do
+    %{
+      openingHoursSpecification: build_opening_hours(config),
+      priceRange: config.price_range,
+      geo: build_geo(config)
+    }
+  end
+
+  defp type_fields("restaurant", config) do
+    %{
+      openingHoursSpecification: build_opening_hours(config),
+      priceRange: config.price_range,
+      servesCuisine: config.serves_cuisine,
+      hasMenu: config.has_menu,
+      geo: build_geo(config)
+    }
+  end
+
+  defp type_fields("medical_organization", config) do
+    %{
+      foundingDate: format_date(config.founding_date),
+      numberOfEmployees: config.number_of_employees,
+      medicalSpecialty: config.medical_specialty
+    }
+  end
+
+  defp type_fields("sports_organization", config) do
+    %{
+      foundingDate: format_date(config.founding_date),
+      numberOfEmployees: config.number_of_employees,
+      sport: config.sport
+    }
+  end
+
+  defp type_fields("architect", config) do
+    %{
+      foundingDate: format_date(config.founding_date),
+      openingHoursSpecification: build_opening_hours(config),
+      priceRange: config.price_range,
+      geo: build_geo(config)
+    }
+  end
+
+  defp type_fields(_type, _config), do: %{}
 
   defp occupation(name) when is_binary(name) and name != "", do: %{"@type": "Occupation", name: name}
   defp occupation(_), do: nil

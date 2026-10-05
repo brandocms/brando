@@ -394,93 +394,99 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp assign_relation_fields(socket, field) do
     assign_new(socket, :relation_fields, fn ->
-      module = field.form.data.__struct__
-      relation_type = socket.assigns.relation_type
-
-      if relation_type in [:has_many, {:subform, :has_many}] do
-        %{opts: %{module: rel_module}} =
-          Brando.Blueprint.Relations.__relation__(module, field.field)
-
-        # the rel module must have `@allow_mark_as_deleted true`
-        if not rel_module.__allow_mark_as_deleted__() do
-          raise BlueprintError,
-            message: """
-            Missing @allow_mark_as_deleted
-
-            A multi select for a :has_many must have @allow_mark_as_deleted true set on the #{inspect(rel_module)}.
-            You can set `@allow_mark_as_deleted true` on the #{inspect(rel_module)} module
-            """
-        end
-
-        fields =
-          Enum.map(Brando.Blueprint.Relations.__relations__(rel_module), &:"#{&1.name}_id") ++
-            Enum.map(Brando.Blueprint.Assets.__assets__(rel_module), &:"#{&1.name}_id") ++
-            Enum.map(Brando.Blueprint.Attributes.__attributes__(rel_module), & &1.name)
-
-        Enum.reject(fields, &(&1 == :sequence))
-      else
-        []
-      end
+      relation_fields(field.form.data.__struct__, field.field, socket.assigns.relation_type)
     end)
+  end
+
+  defp relation_fields(module, field_name, relation_type) do
+    if relation_type in [:has_many, {:subform, :has_many}] do
+      %{opts: %{module: rel_module}} =
+        Brando.Blueprint.Relations.__relation__(module, field_name)
+
+      # the rel module must have `@allow_mark_as_deleted true`
+      if not rel_module.__allow_mark_as_deleted__() do
+        raise BlueprintError,
+          message: """
+          Missing @allow_mark_as_deleted
+
+          A multi select for a :has_many must have @allow_mark_as_deleted true set on the #{inspect(rel_module)}.
+          You can set `@allow_mark_as_deleted true` on the #{inspect(rel_module)} module
+          """
+      end
+
+      fields =
+        Enum.map(Brando.Blueprint.Relations.__relations__(rel_module), &:"#{&1.name}_id") ++
+          Enum.map(Brando.Blueprint.Assets.__assets__(rel_module), &:"#{&1.name}_id") ++
+          Enum.map(Brando.Blueprint.Attributes.__attributes__(rel_module), & &1.name)
+
+      Enum.reject(fields, &(&1 == :sequence))
+    else
+      []
+    end
   end
 
   defp assign_relation_schema(socket, field) do
     assign_new(socket, :relation_schema, fn ->
-      module = field.form.data.__struct__
-      relation_type = socket.assigns.relation_type
-      relation = socket.assigns.relation
-
-      if relation_type in [:has_many, {:subform, :has_many}] do
-        %{opts: %{module: join_module}} =
-          Brando.Blueprint.Relations.__relation__(module, field.field)
-
-        %{opts: %{module: rel_module}} =
-          Brando.Blueprint.Relations.__relation__(join_module, relation)
-
-        if !rel_module do
-          raise BlueprintError,
-            message: """
-            Missing relation module for multi select
-
-            The target module in a select or multi select that targets a :has_many relation
-            must have a `module: MySchema` defined for the join schema relation.
-
-            For instance, for this multi select:
-
-                input :case_categories, :multi_select,
-                  options: &__MODULE__.get_categories/2,
-                  relation_key: :category_id,
-                  relation: :category,
-                  resetable: true,
-                  wrapped_labels: true,
-                  label: t("Categories")
-
-            we need the relation to have the `module` defined:
-
-                relations do
-                  relation :case_categories, :has_many,
-                    module: Cases.CaseCategory,
-                    preload_order: [{:asc, :sequence}],
-                    drop_param: :drop_category_ids,
-                    sort_param: :sort_category_ids,
-                    on_replace: :delete_if_exists,
-                    cast: true
-                    # ...
-                end
-
-            and inside the CaseCategory's (join schema) blueprint:
-
-                relations do
-                  relation :category, :belongs_to, module: Cases.Category
-                  # ...
-                end
-
-            """
-        end
-
-        rel_module
-      end
+      relation_schema(
+        field.form.data.__struct__,
+        field.field,
+        socket.assigns.relation_type,
+        socket.assigns.relation
+      )
     end)
+  end
+
+  defp relation_schema(module, field_name, relation_type, relation) do
+    if relation_type in [:has_many, {:subform, :has_many}] do
+      %{opts: %{module: join_module}} =
+        Brando.Blueprint.Relations.__relation__(module, field_name)
+
+      %{opts: %{module: rel_module}} =
+        Brando.Blueprint.Relations.__relation__(join_module, relation)
+
+      if !rel_module do
+        raise BlueprintError,
+          message: """
+          Missing relation module for multi select
+
+          The target module in a select or multi select that targets a :has_many relation
+          must have a `module: MySchema` defined for the join schema relation.
+
+          For instance, for this multi select:
+
+              input :case_categories, :multi_select,
+                options: &__MODULE__.get_categories/2,
+                relation_key: :category_id,
+                relation: :category,
+                resetable: true,
+                wrapped_labels: true,
+                label: t("Categories")
+
+          we need the relation to have the `module` defined:
+
+              relations do
+                relation :case_categories, :has_many,
+                  module: Cases.CaseCategory,
+                  preload_order: [{:asc, :sequence}],
+                  drop_param: :drop_category_ids,
+                  sort_param: :sort_category_ids,
+                  on_replace: :delete_if_exists,
+                  cast: true
+                  # ...
+              end
+
+          and inside the CaseCategory's (join schema) blueprint:
+
+              relations do
+                relation :category, :belongs_to, module: Cases.Category
+                # ...
+              end
+
+          """
+      end
+
+      rel_module
+    end
   end
 
   defp assign_sequenced?(socket, field) do

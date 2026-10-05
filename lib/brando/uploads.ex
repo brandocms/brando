@@ -97,11 +97,7 @@ defmodule Brando.Uploads do
           {:error, "Video uploads are not set up for this field"}
 
         :s3 ->
-          if direct_video_transport?(cfg) do
-            initiate_direct_asset(cfg, resolved_target, file_meta)
-          else
-            {:error, "S3 video uploads require an enabled direct CDN configuration"}
-          end
+          initiate_s3_video(cfg, resolved_target, file_meta)
 
         strategy ->
           {:error, "Video upload strategy #{inspect(strategy)} does not use the upload manager"}
@@ -493,6 +489,14 @@ defmodule Brando.Uploads do
   defp normalize_cdn_config(list) when is_list(list), do: struct(Brando.CDN.Config, list)
   defp normalize_cdn_config(%{} = map), do: struct(Brando.CDN.Config, Map.to_list(map))
   defp normalize_cdn_config(_), do: %Brando.CDN.Config{}
+
+  defp initiate_s3_video(cfg, resolved_target, file_meta) do
+    if direct_video_transport?(cfg) do
+      initiate_direct_asset(cfg, resolved_target, file_meta)
+    else
+      {:error, "S3 video uploads require an enabled direct CDN configuration"}
+    end
+  end
 
   defp initiate_direct_file(cfg, resolved_target, file_meta) do
     initiate_direct_asset(cfg, resolved_target, file_meta)

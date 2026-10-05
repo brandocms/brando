@@ -367,37 +367,35 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     child_order = Map.get(snapshot, :child_order, %{})
     tombstones = Map.get(snapshot, :deleted, [])
 
-    uids
-    |> Enum.reduce_while({:ok, state}, fn u, {:ok, state} ->
-      diff = Map.get(diffs, u, %{})
+    with {:ok, state} <- apply_snapshot_uids(state, uids, diffs, parents),
+         {:ok, state} <- apply_snapshot_child_order(state, child_order) do
+      {:ok, apply_child_tombstones(state, tombstones)}
+    end
+  end
 
-      result =
-        cond do
-          known?(state, u) -> apply_op(state, {:update, u, diff})
-          parents[u] && known?(state, parents[u]) -> apply_op(state, {:insert_child, parents[u], u, :end, diff})
-          true -> {:error, {:unknown_uid, u}}
-        end
-
-      case result do
+  defp apply_snapshot_uids(state, uids, diffs, parents) do
+    Enum.reduce_while(uids, {:ok, state}, fn u, {:ok, state} ->
+      case apply_snapshot_uid(state, u, Map.get(diffs, u, %{}), parents) do
         {:ok, state} -> {:cont, {:ok, state}}
         {:error, _} = error -> {:halt, error}
       end
     end)
-    |> case do
-      {:ok, state} ->
-        child_order
-        |> Enum.filter(fn {parent_uid, _} -> known?(state, parent_uid) end)
-        |> Enum.reduce({:ok, state}, fn {parent_uid, order}, {:ok, state} ->
-          apply_op(state, {:reorder_children, parent_uid, order})
-        end)
+  end
 
-      error ->
-        error
+  defp apply_snapshot_uid(state, u, diff, parents) do
+    cond do
+      known?(state, u) -> apply_op(state, {:update, u, diff})
+      parents[u] && known?(state, parents[u]) -> apply_op(state, {:insert_child, parents[u], u, :end, diff})
+      true -> {:error, {:unknown_uid, u}}
     end
-    |> case do
-      {:ok, state} -> {:ok, apply_child_tombstones(state, tombstones)}
-      error -> error
-    end
+  end
+
+  defp apply_snapshot_child_order(state, child_order) do
+    child_order
+    |> Enum.filter(fn {parent_uid, _} -> known?(state, parent_uid) end)
+    |> Enum.reduce({:ok, state}, fn {parent_uid, order}, {:ok, state} ->
+      apply_op(state, {:reorder_children, parent_uid, order})
+    end)
   end
 
   defp apply_child_tombstones(state, tombstones) do
@@ -876,21 +874,23 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp register_children_params(state, _parent_uid, []), do: state
 
   defp register_children_params(state, parent_uid, children_params) do
-    Enum.reduce(children_params, state, fn child_params, state ->
-      case Map.get(child_params, "uid") do
-        uid when is_binary(uid) ->
-          if known?(state, uid) do
-            # subtree re-registration (e.g. a re-propagated insert) — keep
-            # existing structure, refresh the diff
-            register_params(state, uid, child_params, :block)
-          else
-            attach_child(state, parent_uid, uid, :end, child_params)
-          end
+    Enum.reduce(children_params, state, &register_child_params(&2, parent_uid, &1))
+  end
 
-        _ ->
-          state
-      end
-    end)
+  defp register_child_params(state, parent_uid, child_params) do
+    case Map.get(child_params, "uid") do
+      uid when is_binary(uid) ->
+        if known?(state, uid) do
+          # subtree re-registration (e.g. a re-propagated insert) — keep
+          # existing structure, refresh the diff
+          register_params(state, uid, child_params, :block)
+        else
+          attach_child(state, parent_uid, uid, :end, child_params)
+        end
+
+      _ ->
+        state
+    end
   end
 
   defp change_value(%Changeset{action: action}) when action in [:replace, :delete], do: :drop
@@ -924,16 +924,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp put_data_pk(params, %Changeset{data: %schema{} = data}) do
     if function_exported?(schema, :__schema__, 1) do
       schema.__schema__(:primary_key)
-      |> Enum.reduce(params, fn pk_field, acc ->
-        case Map.get(data, pk_field) do
-          nil -> acc
-          value -> Map.put_new(acc, to_string(pk_field), value)
-        end
-      end)
+      |> Enum.reduce(params, &put_pk_value(&2, &1, Map.get(data, &1)))
     else
       params
     end
   end
 
   defp put_data_pk(params, _), do: params
+
+  defp put_pk_value(params, _pk_field, nil), do: params
+  defp put_pk_value(params, pk_field, value), do: Map.put_new(params, to_string(pk_field), value)
 end

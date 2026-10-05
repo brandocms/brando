@@ -66,36 +66,41 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     socket = assign(socket, :available_schemas, schema_options(wanted_schemas))
 
     if socket.assigns.layout == :workspace do
-      import Ecto.Query, only: [from: 2]
       schemas = Enum.map(socket.assigns.available_schemas, &elem(&1, 1))
 
       query =
         identifier_query(schemas, socket.assigns.language, socket.assigns.statuses, socket.assigns.require_url)
         |> Ecto.Query.exclude(:order_by)
 
-      counts =
-        if socket.assigns.require_url do
-          # Use the same URI policy as selection and application, including for
-          # counts. Fetch only the fields needed to validate destinations.
-          Brando.Repo.all(from identifier in query, select: %{schema: identifier.schema, url: identifier.url})
-          |> filter_urls(true)
-          |> Enum.frequencies_by(& &1.schema)
-        else
-          Brando.Repo.all(
-            from identifier in query, group_by: identifier.schema, select: {identifier.schema, count(identifier.id)}
-          )
-          |> Map.new()
-        end
-
-      available_schemas =
-        if socket.assigns.require_url,
-          do: Enum.filter(socket.assigns.available_schemas, fn {_, schema} -> Map.get(counts, schema, 0) > 0 end),
-          else: socket.assigns.available_schemas
-
+      counts = schema_counts(query, socket.assigns.require_url)
+      available_schemas = counted_schemas(socket.assigns.available_schemas, counts, socket.assigns.require_url)
       assign(socket, schema_counts: counts, available_schemas: available_schemas)
     else
       socket
     end
+  end
+
+  defp schema_counts(query, require_url) do
+    import Ecto.Query, only: [from: 2]
+
+    if require_url do
+      # Use the same URI policy as selection and application, including for
+      # counts. Fetch only the fields needed to validate destinations.
+      Brando.Repo.all(from identifier in query, select: %{schema: identifier.schema, url: identifier.url})
+      |> filter_urls(true)
+      |> Enum.frequencies_by(& &1.schema)
+    else
+      Brando.Repo.all(
+        from identifier in query, group_by: identifier.schema, select: {identifier.schema, count(identifier.id)}
+      )
+      |> Map.new()
+    end
+  end
+
+  defp counted_schemas(available_schemas, counts, require_url) do
+    if require_url,
+      do: Enum.filter(available_schemas, fn {_, schema} -> Map.get(counts, schema, 0) > 0 end),
+      else: available_schemas
   end
 
   defp schema_options([]) do
@@ -121,36 +126,50 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     selected = socket.assigns[:selected_schema]
 
     schema =
-      cond do
-        selected == :all and layout == :workspace -> :all
-        selected in schemas -> selected
-        (layout == :workspace and current) && current.schema in schemas -> current.schema
-        layout == :workspace and socket.assigns[:initial_schema] == :all -> :all
-        layout == :workspace or length(schemas) == 1 -> List.first(schemas)
-        true -> nil
-      end
-
-    identifiers =
-      if schema do
-        query_schemas = if schema == :all, do: schemas, else: schema
-
-        {:ok, identifiers} =
-          list_identifiers_for_schema(
-            query_schemas,
-            socket.assigns.language,
-            socket.assigns.statuses,
-            socket.assigns.require_url
-          )
-
-        identifiers
-      else
-        []
-      end
+      if layout == :workspace,
+        do: workspace_schema(selected, schemas, current, socket.assigns[:initial_schema]),
+        else: inline_schema(selected, schemas)
 
     socket
     |> assign(:selected_schema, schema)
     |> assign(:selected_schema_raw, schema && to_string(schema))
-    |> assign(:identifiers, identifiers)
+    |> assign(:identifiers, selected_identifiers(socket, schema, schemas))
+  end
+
+  defp workspace_schema(selected, schemas, current, initial_schema) do
+    cond do
+      selected == :all -> :all
+      selected in schemas -> selected
+      current && current.schema in schemas -> current.schema
+      initial_schema == :all -> :all
+      true -> List.first(schemas)
+    end
+  end
+
+  defp inline_schema(selected, schemas) do
+    cond do
+      selected in schemas -> selected
+      length(schemas) == 1 -> List.first(schemas)
+      true -> nil
+    end
+  end
+
+  defp selected_identifiers(socket, schema, schemas) do
+    if schema do
+      query_schemas = if schema == :all, do: schemas, else: schema
+
+      {:ok, identifiers} =
+        list_identifiers_for_schema(
+          query_schemas,
+          socket.assigns.language,
+          socket.assigns.statuses,
+          socket.assigns.require_url
+        )
+
+      identifiers
+    else
+      []
+    end
   end
 
   def render(assigns) do

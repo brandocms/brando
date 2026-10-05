@@ -62,29 +62,30 @@ defmodule Brando.Content.Definition.Params do
       end)
 
     Enum.reduce(schema.__schema__(:fields), params, fn field, attrs ->
-      value = Map.get(record, field)
-      key = to_string(field)
-
-      case {Map.get(attrs, key), value} do
-        {input, %{__struct__: nested}} when is_map(input) ->
-          if function_exported?(nested, :__schema__, 1),
-            do: Map.put(attrs, key, attach_embed_ids(input, value)),
-            else: attrs
-
-        {inputs, records} when is_list(inputs) and is_list(records) ->
-          Map.put(
-            attrs,
-            key,
-            inputs
-            |> Enum.with_index()
-            |> Enum.map(fn {input, index} -> attach_embed_ids(input, Enum.at(records, index)) end)
-          )
-
-        _ ->
-          attrs
-      end
+      attach_field_embed_ids(attrs, to_string(field), Map.get(record, field))
     end)
   end
 
   defp attach_embed_ids(params, _), do: params
+
+  defp attach_field_embed_ids(attrs, key, value) do
+    case {Map.get(attrs, key), value} do
+      {input, %{__struct__: nested}} when is_map(input) ->
+        if function_exported?(nested, :__schema__, 1),
+          do: Map.put(attrs, key, attach_embed_ids(input, value)),
+          else: attrs
+
+      {inputs, records} when is_list(inputs) and is_list(records) ->
+        Map.put(
+          attrs,
+          key,
+          inputs
+          |> Enum.with_index()
+          |> Enum.map(fn {input, index} -> attach_embed_ids(input, Enum.at(records, index)) end)
+        )
+
+      _ ->
+        attrs
+    end
+  end
 end

@@ -144,6 +144,11 @@ defmodule Brando.Trait.Translatable do
         message: "#{inspect(module)}: trait :translatable language_controlled_fields requires mode: :synchronized"
     end
 
+    validate_language_controlled_targets!(module, fields)
+    validate_single_control!(module, fields, Keyword.get(opts, :source_controlled_fields, []))
+  end
+
+  defp validate_language_controlled_targets!(module, fields) do
     assets =
       for %{type: type, name: name} <- Assets.__assets__(module), type in [:image, :file, :video, :gallery], do: name
 
@@ -163,8 +168,10 @@ defmodule Brando.Trait.Translatable do
               "image, file, video or gallery assets, or relations to the schema itself; other fields are " <>
               "already each language's own"
     end
+  end
 
-    case fields -- (fields -- Keyword.get(opts, :source_controlled_fields, [])) do
+  defp validate_single_control!(module, fields, source_controlled_fields) do
+    case fields -- (fields -- source_controlled_fields) do
       [] ->
         :ok
 

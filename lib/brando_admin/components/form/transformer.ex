@@ -1093,43 +1093,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
          ) do
       {:ok, %{upload_url: url, video: video} = result} ->
         Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
-
-        subform = socket.assigns.subform
-        entry_data = resolve_parent_entry(socket)
-
-        video_id_key = :"#{video_field}_id"
-
-        # The Video row exists now, but the transfer is what takes time — the
-        # placeholder keeps its progress bar until the browser reports success.
-        socket =
-          case find_upload(socket.assigns.items, request_ref) do
-            {index, :replacing} ->
-              socket
-              |> do_put_item_asset(index, video_field, video)
-              |> clear_other_asset(index, video_field)
-              |> update_item(index, &%{&1 | replacing: %{&1.replacing | status: :uploading}})
-
-            nil ->
-              default_map =
-                subform
-                |> build_default(relation_module, entry_data, nil)
-                |> Map.put(video_id_key, video.id)
-
-              item = new_item(new_item_dom_id(), default_map)
-
-              socket
-              |> update(:items, &(&1 ++ [item]))
-              |> stream_insert(:transformer_items, stream_entry(item))
-
-            {index, :pending} ->
-              update_item(socket, index, fn item ->
-                %{
-                  item
-                  | source: Map.put(item.source, video_id_key, video.id),
-                    pending: %{item.pending | status: :uploading}
-                }
-              end)
-          end
+        socket = place_video_upload(socket, request_ref, video)
 
         event_payload =
           %{
@@ -1390,6 +1354,46 @@ defmodule BrandoAdmin.Components.Form.Transformer do
           assets: Map.put(item.assets, field, asset)
       }
     end)
+  end
+
+  # The Video row exists now, but the transfer is what takes time — the
+  # placeholder keeps its progress bar until the browser reports success.
+  defp place_video_upload(socket, request_ref, video) do
+    video_field = socket.assigns.video_field
+    relation_module = socket.assigns.relation_module
+    subform = socket.assigns.subform
+    entry_data = resolve_parent_entry(socket)
+
+    video_id_key = :"#{video_field}_id"
+
+    case find_upload(socket.assigns.items, request_ref) do
+      {index, :replacing} ->
+        socket
+        |> do_put_item_asset(index, video_field, video)
+        |> clear_other_asset(index, video_field)
+        |> update_item(index, &%{&1 | replacing: %{&1.replacing | status: :uploading}})
+
+      nil ->
+        default_map =
+          subform
+          |> build_default(relation_module, entry_data, nil)
+          |> Map.put(video_id_key, video.id)
+
+        item = new_item(new_item_dom_id(), default_map)
+
+        socket
+        |> update(:items, &(&1 ++ [item]))
+        |> stream_insert(:transformer_items, stream_entry(item))
+
+      {index, :pending} ->
+        update_item(socket, index, fn item ->
+          %{
+            item
+            | source: Map.put(item.source, video_id_key, video.id),
+              pending: %{item.pending | status: :uploading}
+          }
+        end)
+    end
   end
 
   # Where an upload's ref is waited on: a placeholder of its own, or an existing

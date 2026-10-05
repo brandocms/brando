@@ -67,17 +67,7 @@ defmodule Brando.Content.Transfer.Media do
   def validate!(dependency, files, actor) do
     kind = dependency["kind"]
     data = dependency["data"]
-
-    original =
-      dependency["original"] ||
-        Error.fail!(dgettext("content_transfer", "Map an existing destination asset; its original is not included."))
-
-    body =
-      files[original["path"]] ||
-        Error.fail!(dgettext("content_transfer", "The media original is missing from the archive."))
-
-    unless Archive.checksum(body) == original["sha256"] && byte_size(body) == original["bytes"],
-      do: Error.fail!(dgettext("content_transfer", "Media integrity check failed."))
+    body = original_body!(dependency, files)
 
     cfg = config!(kind, data, actor)
     name = Path.basename(data["path"] || data["filename"] || "")
@@ -89,25 +79,44 @@ defmodule Brando.Content.Transfer.Media do
     end
 
     mime = MIME.from_path(name)
+    validate_mimetype!(cfg, mime, name)
+    if kind == "image", do: validate_image!(body, name)
 
+    %{body: body, cfg: cfg, name: name, mime: mime}
+  end
+
+  defp original_body!(dependency, files) do
+    original =
+      dependency["original"] ||
+        Error.fail!(dgettext("content_transfer", "Map an existing destination asset; its original is not included."))
+
+    body =
+      files[original["path"]] ||
+        Error.fail!(dgettext("content_transfer", "The media original is missing from the archive."))
+
+    unless Archive.checksum(body) == original["sha256"] && byte_size(body) == original["bytes"],
+      do: Error.fail!(dgettext("content_transfer", "Media integrity check failed."))
+
+    body
+  end
+
+  defp validate_mimetype!(cfg, mime, name) do
     unless "*" in cfg.allowed_mimetypes || mime in cfg.allowed_mimetypes,
       do:
         Error.fail!(
           dgettext("content_transfer", "%{value1} is not allowed by the destination media configuration.", value1: name)
         )
+  end
 
-    if kind == "image" do
-      case Image.from_binary(body) do
-        {:ok, image} ->
-          if Image.width(image) * Image.height(image) > 100_000_000,
-            do: Error.fail!(dgettext("content_transfer", "The image exceeds the 100 megapixel import limit."))
+  defp validate_image!(body, name) do
+    case Image.from_binary(body) do
+      {:ok, image} ->
+        if Image.width(image) * Image.height(image) > 100_000_000,
+          do: Error.fail!(dgettext("content_transfer", "The image exceeds the 100 megapixel import limit."))
 
-        _ ->
-          Error.fail!(dgettext("content_transfer", "%{value1} is not a valid image original.", value1: name))
-      end
+      _ ->
+        Error.fail!(dgettext("content_transfer", "%{value1} is not a valid image original.", value1: name))
     end
-
-    %{body: body, cfg: cfg, name: name, mime: mime}
   end
 
   def stage!(items, files, actor, operation_id) do

@@ -55,46 +55,50 @@ defmodule Brando.Authorization.Boundary do
 
   def run(actor, action, schema, fun) do
     if Engine.enabled?() do
-      scope = actor_scope(actor)
-
-      result =
-        Repo.transaction(fn ->
-          if schema == Brando.Users.User, do: Groups.lock!()
-
-          with_scope(scope, fn ->
-            snapshot = Engine.snapshot(scope)
-
-            allowed? =
-              Engine.can?(snapshot, action, schema) or
-                (schema == Brando.Users.User and action == :update and Engine.can?(snapshot, :update, :profile))
-
-            unless allowed?, do: Repo.rollback(:forbidden)
-
-            if scope.kind == :site and schema.__schema__(:prefix) != "public" and not is_binary(scope.prefix),
-              do: Repo.rollback(:forbidden)
-
-            result = Brando.Tenant.with_prefix(scope.prefix, fn -> fun.(snapshot.user) end)
-
-            case result do
-              {:error, reason} -> Repo.rollback(reason)
-              value -> value
-            end
-          end)
-        end)
-
-      case result do
-        {:ok, value} ->
-          if schema == Brando.Users.User,
-            do: Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:authorization", {:authorization_changed, :all})
-
-          value
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      run_authorized(actor_scope(actor), action, schema, fun)
     else
       fun.(actor)
     end
+  end
+
+  defp run_authorized(scope, action, schema, fun) do
+    result =
+      Repo.transaction(fn ->
+        if schema == Brando.Users.User, do: Groups.lock!()
+        with_scope(scope, fn -> run_in_scope(scope, action, schema, fun) end)
+      end)
+
+    case result do
+      {:ok, value} ->
+        if schema == Brando.Users.User,
+          do: Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:authorization", {:authorization_changed, :all})
+
+        value
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp run_in_scope(scope, action, schema, fun) do
+    snapshot = Engine.snapshot(scope)
+
+    unless run_allowed?(snapshot, action, schema), do: Repo.rollback(:forbidden)
+
+    if scope.kind == :site and schema.__schema__(:prefix) != "public" and not is_binary(scope.prefix),
+      do: Repo.rollback(:forbidden)
+
+    result = Brando.Tenant.with_prefix(scope.prefix, fn -> fun.(snapshot.user) end)
+
+    case result do
+      {:error, reason} -> Repo.rollback(reason)
+      value -> value
+    end
+  end
+
+  defp run_allowed?(snapshot, action, schema) do
+    Engine.can?(snapshot, action, schema) or
+      (schema == Brando.Users.User and action == :update and Engine.can?(snapshot, :update, :profile))
   end
 
   def authorize(:system, _, _), do: :ok

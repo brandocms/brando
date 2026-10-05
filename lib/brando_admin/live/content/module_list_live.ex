@@ -161,18 +161,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
     socket
     |> update(:sketches, &%{&1 | running?: true, drawn: %{}, failed: []})
-    |> start_async(:sketches, fn ->
-      Enum.each(modules, fn module ->
-        send(lv, {:sketch_started, module.id})
-
-        result =
-          with {:ok, svg} <- Brando.Content.ModuleSketch.generate(module),
-               {:ok, _} <- Brando.Content.ModuleSketch.save(module, svg),
-               do: {:ok, svg}
-
-        send(lv, {:sketch_done, module.id, result})
-      end)
-    end)
+    |> start_async(:sketches, fn -> Enum.each(modules, &draw_sketch(lv, &1)) end)
     |> then(&{:noreply, &1})
   end
 
@@ -189,13 +178,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       with true <- is_binary(encoded),
            {:ok, ids} when is_list(ids) <- Jason.decode(encoded),
            true <- length(ids) <= 500 do
-        Enum.flat_map(ids, fn id ->
-          case if(is_integer(id) or is_binary(id), do: Integer.parse(to_string(id)), else: :error) do
-            {id, ""} when id > 0 -> [id]
-            _ -> []
-          end
-        end)
-        |> Enum.uniq()
+        ids |> Enum.flat_map(&module_id/1) |> Enum.uniq()
       else
         _ -> []
       end
@@ -293,6 +276,24 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       {%{name: site}, %{name: environment}} -> "#{site} · #{environment}"
       {%{name: site}, %{key: environment}} -> "#{site} · #{environment}"
       _ -> gettext("Current workspace")
+    end
+  end
+
+  defp draw_sketch(lv, module) do
+    send(lv, {:sketch_started, module.id})
+
+    result =
+      with {:ok, svg} <- Brando.Content.ModuleSketch.generate(module),
+           {:ok, _} <- Brando.Content.ModuleSketch.save(module, svg),
+           do: {:ok, svg}
+
+    send(lv, {:sketch_done, module.id, result})
+  end
+
+  defp module_id(id) do
+    case if(is_integer(id) or is_binary(id), do: Integer.parse(to_string(id)), else: :error) do
+      {id, ""} when id > 0 -> [id]
+      _ -> []
     end
   end
 

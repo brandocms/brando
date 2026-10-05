@@ -231,22 +231,24 @@ defmodule Brando.Plug.HTML do
         hreflangs =
           alternate_entries
           |> Enum.filter(&(Map.get(&1, :status, :published) == :published and URL.has_url?(&1)))
-          |> Enum.flat_map(fn alt ->
-            case URL.resolve(alt) do
-              url when url in [nil, ""] ->
-                log_no_valid_hreflang(alt)
-                []
-
-              url ->
-                [{alt.language, Brando.Utils.hostname(url)}]
-            end
-          end)
+          |> Enum.flat_map(&alternate_hreflang/1)
 
         put_private(conn, :brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
     end
   end
 
   def put_hreflang(conn, _), do: conn
+
+  defp alternate_hreflang(alt) do
+    case URL.resolve(alt) do
+      url when url in [nil, ""] ->
+        log_no_valid_hreflang(alt)
+        []
+
+      url ->
+        [{alt.language, Brando.Utils.hostname(url)}]
+    end
+  end
 
   defp log_no_valid_hreflang(alt) do
     Logger.error("""

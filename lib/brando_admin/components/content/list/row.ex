@@ -578,16 +578,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     shared = Map.get(counts, :shared_update, 0)
     relinked = Map.get(counts, :relinked, 0)
 
-    parts =
-      Enum.reject(
-        [
-          text > 0 && ngettext("%{count} to translate", "%{count} to translate", text),
-          review > 0 && ngettext("%{count} to review", "%{count} to review", review),
-          waiting > 0 && ngettext("%{count} link waiting", "%{count} links waiting", waiting),
-          length == :full && shared > 0 && text + review == 0 && gettext("Updated from the source")
-        ],
-        &(&1 in [false, nil])
-      )
+    parts = translation_summary_parts(text, review, waiting, shared, length)
 
     cond do
       parts != [] -> Enum.join(parts, " · ")
@@ -597,6 +588,18 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   defp translation_summary(_version, _), do: gettext("Up to date")
+
+  defp translation_summary_parts(text, review, waiting, shared, length) do
+    Enum.reject(
+      [
+        text > 0 && ngettext("%{count} to translate", "%{count} to translate", text),
+        review > 0 && ngettext("%{count} to review", "%{count} to review", review),
+        waiting > 0 && ngettext("%{count} link waiting", "%{count} links waiting", waiting),
+        length == :full && shared > 0 && text + review == 0 && gettext("Updated from the source")
+      ],
+      &(&1 in [false, nil])
+    )
+  end
 
   def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns), do: ~H""
 

@@ -28,17 +28,17 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Media do
   @doc "Load uncached gallery previews after recovery, without changing the gallery's media IDs."
   def load_missing(gallery_objects) do
     gallery_objects
-    |> Enum.map(fn object ->
-      Enum.reduce([:image, :video], object, fn field, object ->
-        media_id = Map.get(object, id_field(field))
-
-        case Map.get(object, field) do
-          %{id: ^media_id} -> object
-          _ -> Ecto.reset_fields(object, [field])
-        end
-      end)
-    end)
+    |> Enum.map(fn object -> Enum.reduce([:image, :video], object, &reset_stale_media/2) end)
     |> Brando.Repo.preload([:image, video: :thumbnail])
+  end
+
+  defp reset_stale_media(field, object) do
+    media_id = Map.get(object, id_field(field))
+
+    case Map.get(object, field) do
+      %{id: ^media_id} -> object
+      _ -> Ecto.reset_fields(object, [field])
+    end
   end
 
   @doc """

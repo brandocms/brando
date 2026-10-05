@@ -181,25 +181,25 @@ defmodule Brando.FrontendEdit.Manifest do
     fragment_ids = for %{type: :fragment, fragment_id: id} <- blocks, id, uniq: true, do: id
 
     # Through the render source cache, which also resolves shared-library modules.
-    modules =
-      Map.new(module_refs, fn {id, origin} = ref ->
-        {ref, with(%{name: name} <- Brando.Content.fetch_module(id, origin), do: I18nString.localized(name))}
-      end)
+    modules = Map.new(module_refs, &{&1, module_label(&1)})
 
     containers = names(Brando.Content.Container, container_ids, & &1.name)
     fragments = names(Brando.Pages.Fragment, fragment_ids, &(&1.title || &1.key))
 
-    Map.new(blocks, fn block ->
-      label =
-        case block.type do
-          :module -> Map.get(modules, {block.module_id, block.module_origin || :local})
-          :container -> Map.get(containers, block.container_id)
-          :fragment -> Map.get(fragments, block.fragment_id)
-          _ -> nil
-        end
+    Map.new(blocks, &{&1.uid, block_label(&1, modules, containers, fragments)})
+  end
 
-      {block.uid, label}
-    end)
+  defp module_label({id, origin}) do
+    with %{name: name} <- Brando.Content.fetch_module(id, origin), do: I18nString.localized(name)
+  end
+
+  defp block_label(block, modules, containers, fragments) do
+    case block.type do
+      :module -> Map.get(modules, {block.module_id, block.module_origin || :local})
+      :container -> Map.get(containers, block.container_id)
+      :fragment -> Map.get(fragments, block.fragment_id)
+      _ -> nil
+    end
   end
 
   defp names(_schema, [], _fun), do: %{}

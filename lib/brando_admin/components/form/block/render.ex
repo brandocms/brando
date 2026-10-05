@@ -1642,21 +1642,28 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     refs = Changeset.get_assoc(block_cs, :refs, :struct)
 
     if Enum.any?(refs, &match?(%{data: %{type: "text"}}, &1)) do
-      module =
-        Brando.Content.fetch_module(
-          Changeset.get_field(block_cs, :module_id),
-          Changeset.get_field(block_cs, :module_origin) || :local
-        )
-
-      case module do
-        %{refs: definitions} when is_list(definitions) ->
-          for %{name: name, data: %{data: %{footnotes: true}}} <- definitions, do: name
-
-        _ ->
-          []
-      end
+      block_cs
+      |> fetch_block_module()
+      |> module_footnote_ref_names()
     else
       []
+    end
+  end
+
+  defp fetch_block_module(block_cs) do
+    Brando.Content.fetch_module(
+      Changeset.get_field(block_cs, :module_id),
+      Changeset.get_field(block_cs, :module_origin) || :local
+    )
+  end
+
+  defp module_footnote_ref_names(module) do
+    case module do
+      %{refs: definitions} when is_list(definitions) ->
+        for %{name: name, data: %{data: %{footnotes: true}}} <- definitions, do: name
+
+      _ ->
+        []
     end
   end
 

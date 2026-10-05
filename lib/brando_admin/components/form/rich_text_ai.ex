@@ -3,6 +3,12 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [start_async: 3, cancel_async: 2, push_event: 3]
 
+  @actions %{
+    "rewrite" => "Rewrite the passage.",
+    "shorten" => "Shorten the passage while retaining its meaning.",
+    "continue" => "Continue after the passage. Return only the continuation."
+  }
+
   def start(socket, params, prompt, opts, generate \\ &Brando.AI.generate_text/2) do
     id = params["tiptap_id"]
     request = params["request_id"]
@@ -54,19 +60,10 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
     mode = params["mode"]
     selection = params["selection"] || ""
     instruction = params["instruction"] || ""
-    request = params["request_id"]
-    id = params["tiptap_id"]
 
-    if mode in ["rewrite", "shorten", "continue"] and is_binary(selection) and byte_size(selection) <= 100_000 and
-         is_binary(instruction) and byte_size(instruction) <= 4_000 and is_binary(request) and
-         byte_size(request) in 1..100 and
-         is_binary(id) and byte_size(id) in 1..500 do
-      action =
-        case mode do
-          "rewrite" -> "Rewrite the passage."
-          "shorten" -> "Shorten the passage while retaining its meaning."
-          "continue" -> "Continue after the passage. Return only the continuation."
-        end
+    if Map.has_key?(@actions, mode) and bounded?(selection, 0..100_000) and bounded?(instruction, 0..4_000) and
+         bounded?(params["request_id"], 1..100) and bounded?(params["tiptap_id"], 1..500) do
+      action = Map.fetch!(@actions, mode)
 
       {:ok,
        Enum.join(
@@ -83,6 +80,9 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
       {:error, :invalid_request}
     end
   end
+
+  defp bounded?(value, range) when is_binary(value), do: byte_size(value) in range
+  defp bounded?(_value, _range), do: false
 
   defp context(socket) do
     entry = socket.assigns[:entry]

@@ -191,29 +191,7 @@ defmodule Brando.Content.Transfer.Portable do
 
   def encode_values(value, state) when is_map(value) do
     Enum.reduce(value, {%{}, state}, fn {key, nested}, {map, acc} ->
-      whole = value
-      value = nested
-
-      {encoded, acc} =
-        cond do
-          Map.has_key?(@asset_fields, key) ->
-            Dependencies.add(@asset_fields[key], value, acc)
-
-          key == "identifier_metas" ->
-            encode_metas(value, acc)
-
-          key in ~w(slot_module_set module_set footnote_module_set) and value not in [nil, "", "all"] and
-              (key != "footnote_module_set" or whole["footnotes"] == true) ->
-            Dependencies.add_set(value, acc)
-
-          key in ~w(source_id version_id) and not is_nil(value) ->
-            kind = if key == "source_id", do: "markdown_source", else: "markdown_version"
-            Dependencies.add(kind, value, acc)
-
-          true ->
-            encode_values(value, acc)
-        end
-
+      {encoded, acc} = encode_value(key, nested, value, acc)
       {Map.put(map, key, encoded), acc}
     end)
   end
@@ -232,6 +210,26 @@ defmodule Brando.Content.Transfer.Portable do
 
   def encode_values(value, state), do: {value, state}
 
+  defp encode_value(key, value, whole, acc) do
+    cond do
+      Map.has_key?(@asset_fields, key) -> Dependencies.add(@asset_fields[key], value, acc)
+      key == "identifier_metas" -> encode_metas(value, acc)
+      module_set_reference?(key, value, whole) -> Dependencies.add_set(value, acc)
+      markdown_reference?(key, value) -> Dependencies.add(markdown_kind(key), value, acc)
+      true -> encode_values(value, acc)
+    end
+  end
+
+  defp module_set_reference?(key, value, whole) do
+    key in ~w(slot_module_set module_set footnote_module_set) and value not in [nil, "", "all"] and
+      (key != "footnote_module_set" or whole["footnotes"] == true)
+  end
+
+  defp markdown_reference?(key, value), do: key in ~w(source_id version_id) and not is_nil(value)
+
+  defp markdown_kind("source_id"), do: "markdown_source"
+  defp markdown_kind(_), do: "markdown_version"
+
   defp encode_metas(nil, state), do: {%{}, state}
 
   defp encode_metas(metas, state) do
@@ -243,6 +241,15 @@ defmodule Brando.Content.Transfer.Portable do
   end
 
   def validate!(bundle) do
+    validate_envelope!(bundle)
+    Value.unique!(Enum.map(bundle["fields"], & &1["key"]), "field keys")
+    Enum.each(bundle["fields"], &validate_field!(&1, bundle["dependencies"]))
+    Enum.each(bundle["dependencies"], &validate_dependency!(&1, bundle["dependencies"]))
+    validate_entries!(bundle)
+    bundle
+  end
+
+  defp validate_envelope!(bundle) do
     Value.keys!(bundle, ~w(format version id created_at source fields entries dependencies definitions), "content bundle")
 
     unless bundle["format"] == "brando-content" && bundle["version"] in [1, 2],
@@ -260,64 +267,61 @@ defmodule Brando.Content.Transfer.Portable do
 
     unless is_map(bundle["dependencies"]) && map_size(bundle["dependencies"]) <= 2_000,
       do: Error.fail!(dgettext("content_transfer", "The dependency manifest is invalid or too large."))
+  end
 
-    Value.unique!(Enum.map(bundle["fields"], & &1["key"]), "field keys")
+  defp validate_field!(field, deps) do
+    Value.keys!(field, ~w(key entry_key schema field title language hints blocks fingerprint), "content field")
+    Value.nonempty!(field["key"], "source field key")
+    Value.nonempty!(field["schema"], "source schema")
+    Value.nonempty!(field["field"], "source field")
+    Value.nonempty!(field["title"], "source title")
 
-    Enum.each(bundle["fields"], fn field ->
-      Value.keys!(field, ~w(key entry_key schema field title language hints blocks fingerprint), "content field")
-      Value.nonempty!(field["key"], "source field key")
-      Value.nonempty!(field["schema"], "source schema")
-      Value.nonempty!(field["field"], "source field")
-      Value.nonempty!(field["title"], "source title")
+    unless is_map(field["hints"]) && is_binary(field["language"]),
+      do: Error.fail!(dgettext("content_transfer", "Invalid content matching hints."))
 
-      unless is_map(field["hints"]) && is_binary(field["language"]),
-        do: Error.fail!(dgettext("content_transfer", "Invalid content matching hints."))
+    unless is_list(field["blocks"]),
+      do: Error.fail!(dgettext("content_transfer", "A field must contain an ordered block list."))
 
-      unless is_list(field["blocks"]),
-        do: Error.fail!(dgettext("content_transfer", "A field must contain an ordered block list."))
+    Enum.each(field["blocks"], &validate_block!(&1, deps, 0))
+    uids = walk(field["blocks"], & &1["uid"])
+    Value.unique!(uids, "block instance UIDs")
+    if length(uids) > 5_000, do: Error.fail!(dgettext("content_transfer", "A field exceeds 5,000 blocks."))
+  end
 
-      Enum.each(field["blocks"], &validate_block!(&1, bundle["dependencies"], 0))
-      uids = walk(field["blocks"], & &1["uid"])
-      Value.unique!(uids, "block instance UIDs")
-      if length(uids) > 5_000, do: Error.fail!(dgettext("content_transfer", "A field exceeds 5,000 blocks."))
-    end)
+  defp validate_dependency!({token, dep}, deps) do
+    unless is_map(dep) && dep["kind"] in Dependencies.kinds() && String.starts_with?(token, dep["kind"] <> ":"),
+      do: Error.fail!(dgettext("content_transfer", "An unknown dependency type was found."))
 
-    Enum.each(bundle["dependencies"], fn {token, dep} ->
-      unless is_map(dep) && dep["kind"] in Dependencies.kinds() && String.starts_with?(token, dep["kind"] <> ":"),
-        do: Error.fail!(dgettext("content_transfer", "An unknown dependency type was found."))
+    unless Regex.match?(~r/^[a-z_]+:[A-Za-z0-9_-]+$/, token),
+      do: Error.fail!(dgettext("content_transfer", "Invalid dependency token."))
 
-      unless Regex.match?(~r/^[a-z_]+:[A-Za-z0-9_-]+$/, token),
-        do: Error.fail!(dgettext("content_transfer", "Invalid dependency token."))
+    Dependencies.validate!(dep)
+    validate_dependency_links!(dep["kind"], dep, deps)
 
-      Dependencies.validate!(dep)
+    if dep["data"], do: validate_references!(dep["data"], deps)
+    if dep["objects"], do: validate_references!(dep["objects"], deps)
+  end
 
-      case dep["kind"] do
-        "module" ->
-          if dep["parent"], do: reference!(dep["parent"], "module", bundle["dependencies"])
-          if dep["table_template"], do: reference!(dep["table_template"], "table_template", bundle["dependencies"])
+  defp validate_dependency_links!("module", dep, deps) do
+    if dep["parent"], do: reference!(dep["parent"], "module", deps)
+    if dep["table_template"], do: reference!(dep["table_template"], "table_template", deps)
+  end
 
-        "container" ->
-          if dep["palette"], do: reference!(dep["palette"], "palette", bundle["dependencies"])
+  defp validate_dependency_links!("container", dep, deps) do
+    if dep["palette"], do: reference!(dep["palette"], "palette", deps)
+  end
 
-        "module_set" ->
-          unless is_list(dep["members"]), do: Error.fail!(dgettext("content_transfer", "Invalid module set membership."))
-          Enum.each(dep["members"], &reference!(&1, "module", bundle["dependencies"]))
+  defp validate_dependency_links!("module_set", dep, deps) do
+    unless is_list(dep["members"]), do: Error.fail!(dgettext("content_transfer", "Invalid module set membership."))
+    Enum.each(dep["members"], &reference!(&1, "module", deps))
+  end
 
-        _ ->
-          :ok
-      end
+  defp validate_dependency_links!(_kind, _dep, _deps), do: :ok
 
-      if dep["data"], do: validate_references!(dep["data"], bundle["dependencies"])
-      if dep["objects"], do: validate_references!(dep["objects"], bundle["dependencies"])
-    end)
+  defp validate_entries!(%{"version" => 2} = bundle), do: Brando.Content.Transfer.Entries.validate!(bundle)
 
-    if bundle["version"] == 2 do
-      Brando.Content.Transfer.Entries.validate!(bundle)
-    else
-      if bundle["entries"], do: Error.fail!(dgettext("content_transfer", "Entry content requires bundle version 2."))
-    end
-
-    bundle
+  defp validate_entries!(bundle) do
+    if bundle["entries"], do: Error.fail!(dgettext("content_transfer", "Entry content requires bundle version 2."))
   end
 
   def validate_blocks!(blocks, deps), do: Enum.each(blocks, &validate_block!(&1, deps, 0))
@@ -359,28 +363,7 @@ defmodule Brando.Content.Transfer.Portable do
     do: Error.fail!(dgettext("content_transfer", "The block tree is malformed or exceeds 40 nesting levels."))
 
   defp validate_references!(map, deps) when is_map(map) do
-    Enum.each(map, fn {key, value} ->
-      cond do
-        Map.has_key?(@asset_fields, key) and not is_nil(value) ->
-          reference!(value, @asset_fields[key], deps)
-
-        key == "identifier_metas" and is_map(value) ->
-          Enum.each(Map.keys(value), &reference!(&1, "identifier", deps))
-
-        key in ~w(slot_module_set module_set footnote_module_set) and value not in [nil, "", "all"] and
-            (key != "footnote_module_set" or map["footnotes"] == true) ->
-          reference!(value, "module_set", deps)
-
-        key in ~w(source_id version_id) and not is_nil(value) ->
-          reference!(value, if(key == "source_id", do: "markdown_source", else: "markdown_version"), deps)
-
-        key == "object_id" and value not in [nil, ""] ->
-          reference!(value, to_string(map["object_type"]), deps)
-
-        true ->
-          validate_references!(value, deps)
-      end
-    end)
+    Enum.each(map, fn {key, value} -> validate_reference!(key, value, map, deps) end)
   end
 
   defp validate_references!(values, deps) when is_list(values), do: Enum.each(values, &validate_references!(&1, deps))
@@ -391,6 +374,20 @@ defmodule Brando.Content.Transfer.Portable do
   end
 
   defp validate_references!(_, _), do: :ok
+
+  defp validate_reference!(key, value, map, deps) do
+    cond do
+      asset_reference?(key, value) -> reference!(value, @asset_fields[key], deps)
+      key == "identifier_metas" and is_map(value) -> Enum.each(Map.keys(value), &reference!(&1, "identifier", deps))
+      module_set_reference?(key, value, map) -> reference!(value, "module_set", deps)
+      markdown_reference?(key, value) -> reference!(value, markdown_kind(key), deps)
+      object_reference?(key, value) -> reference!(value, to_string(map["object_type"]), deps)
+      true -> validate_references!(value, deps)
+    end
+  end
+
+  defp asset_reference?(key, value), do: Map.has_key?(@asset_fields, key) and not is_nil(value)
+  defp object_reference?(key, value), do: key == "object_id" and value not in [nil, ""]
 
   defp reference!(token, kind, deps) do
     unless is_binary(token) && match?(%{"kind" => ^kind}, deps[token]),
@@ -433,72 +430,20 @@ defmodule Brando.Content.Transfer.Portable do
   def decode_values(value, bindings, uids \\ %{})
 
   def decode_values(value, bindings, uids) when is_map(value) do
-    Map.new(value, fn {key, nested} ->
-      whole = value
-      value = nested
-
-      decoded =
-        cond do
-          Map.has_key?(@asset_fields, key) and not is_nil(value) ->
-            resolve!(bindings, value).id
-
-          key == "object_id" and value not in [nil, ""] ->
-            to_string(resolve!(bindings, value).id)
-
-          key == "identifier_metas" ->
-            Map.new(value || %{}, fn {token, meta} ->
-              identifier = resolve!(bindings, token)
-              {"#{inspect(identifier.schema)}_#{identifier.entry_id}", meta}
-            end)
-
-          key in ~w(slot_module_set module_set footnote_module_set) and value not in [nil, "", "all"] and
-              (key != "footnote_module_set" or whole["footnotes"] == true) ->
-            resolve!(bindings, value).title
-
-          key in ~w(source_id version_id) and not is_nil(value) ->
-            resolve!(bindings, value).id
-
-          true ->
-            decode_values(value, bindings, uids)
-        end
-
-      {key, decoded}
-    end)
+    Map.new(value, fn {key, nested} -> {key, decode_value(key, nested, value, bindings, uids)} end)
   end
 
   def decode_values(value, bindings, uids) when is_list(value), do: Enum.map(value, &decode_values(&1, bindings, uids))
 
   def decode_values(value, bindings, uids) when is_binary(value) do
     value = normalize_attributes(value)
-
-    value =
-      Regex.replace(@footnote_attribute, value, fn _, prefix, quote, uid ->
-        fresh =
-          Map.get(uids, uid) || Error.fail!(dgettext("content_transfer", "A footnote points outside its owned field."))
-
-        prefix <> quote <> fresh <> quote
-      end)
+    value = Regex.replace(@footnote_attribute, value, &fresh_footnote(&1, &2, &3, &4, uids))
 
     if Regex.match?(@identifier_attribute, value) do
       {:ok, nodes} = Floki.parse_fragment(value)
 
       nodes
-      |> Floki.traverse_and_update(fn
-        {tag, attrs, children} ->
-          case List.keyfind(attrs, "data-identifier-id", 0) do
-            {_, token} ->
-              identifier = resolve!(bindings, token)
-              attrs = List.keystore(attrs, "data-identifier-id", 0, {"data-identifier-id", to_string(identifier.id)})
-              attrs = if tag == "a", do: List.keystore(attrs, "href", 0, {"href", identifier.url || ""}), else: attrs
-              {tag, attrs, children}
-
-            _ ->
-              {tag, attrs, children}
-          end
-
-        node ->
-          node
-      end)
+      |> Floki.traverse_and_update(&decode_identifier_node(&1, bindings))
       |> Floki.raw_html()
     else
       value
@@ -506,6 +451,45 @@ defmodule Brando.Content.Transfer.Portable do
   end
 
   def decode_values(value, _, _), do: value
+
+  defp decode_value(key, value, whole, bindings, uids) do
+    cond do
+      asset_reference?(key, value) -> resolve!(bindings, value).id
+      object_reference?(key, value) -> to_string(resolve!(bindings, value).id)
+      key == "identifier_metas" -> decode_identifier_metas(value, bindings)
+      module_set_reference?(key, value, whole) -> resolve!(bindings, value).title
+      markdown_reference?(key, value) -> resolve!(bindings, value).id
+      true -> decode_values(value, bindings, uids)
+    end
+  end
+
+  defp decode_identifier_metas(metas, bindings) do
+    Map.new(metas || %{}, fn {token, meta} ->
+      identifier = resolve!(bindings, token)
+      {"#{inspect(identifier.schema)}_#{identifier.entry_id}", meta}
+    end)
+  end
+
+  defp fresh_footnote(_, prefix, quote, uid, uids) do
+    fresh =
+      Map.get(uids, uid) || Error.fail!(dgettext("content_transfer", "A footnote points outside its owned field."))
+
+    prefix <> quote <> fresh <> quote
+  end
+
+  defp decode_identifier_node({tag, attrs, children}, bindings) do
+    case List.keyfind(attrs, "data-identifier-id", 0) do
+      {_, token} -> {tag, identifier_attrs(tag, attrs, resolve!(bindings, token)), children}
+      _ -> {tag, attrs, children}
+    end
+  end
+
+  defp decode_identifier_node(node, _bindings), do: node
+
+  defp identifier_attrs(tag, attrs, identifier) do
+    attrs = List.keystore(attrs, "data-identifier-id", 0, {"data-identifier-id", to_string(identifier.id)})
+    if tag == "a", do: List.keystore(attrs, "href", 0, {"href", identifier.url || ""}), else: attrs
+  end
 
   def resolve!(bindings, token),
     do:

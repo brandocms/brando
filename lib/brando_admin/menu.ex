@@ -553,21 +553,23 @@ defmodule BrandoAdmin.Menu do
   defp shared_library_menu_item(_user), do: nil
 
   defp filter_authorized(items, user) do
-    Enum.flat_map(items, fn item ->
-      case item do
-        %{items: children} when is_list(children) and children != [] ->
-          case filter_authorized(children, user) do
-            [] -> []
-            children -> [%{item | items: children}]
-          end
+    Enum.flat_map(items, &authorized_item(&1, user))
+  end
 
-        %{url: url} when is_binary(url) ->
-          if allowed_url?(user, url), do: [item], else: []
+  defp authorized_item(item, user) do
+    case item do
+      %{items: children} when is_list(children) and children != [] ->
+        case filter_authorized(children, user) do
+          [] -> []
+          children -> [%{item | items: children}]
+        end
 
-        _ ->
-          []
-      end
-    end)
+      %{url: url} when is_binary(url) ->
+        if allowed_url?(user, url), do: [item], else: []
+
+      _ ->
+        []
+    end
   end
 
   defp allowed_url?(user, url) do

@@ -7,42 +7,47 @@ defmodule Brando.MarkdownSources.Publication do
 
   def entry_saved(%{__struct__: schema, id: id}, actor) do
     if function_exported?(schema, :__blocks_fields__, 0) and schema.__blocks_fields__() != [] do
-      Enum.each(MarkdownSources.list_sources(), fn source ->
-        if id in Map.get(MarkdownSources.consumer_entries(source.id, ["follow", "review", "pinned"]), schema, []) do
-          MarkdownSources.audit(source, "placement.saved", actor, %{message: "#{inspect(schema)} ##{id}"})
-
-          with {:ok,
-                %{auto_deploy: true, destination: %{site: %{delivery_mode: :static}, environment: %{live: true}}} =
-                  connection} <- Connection.current(source.connection),
-               true <- source.enabled and not is_nil(source.latest_version_id) do
-            args = %{
-              source_id: source.id,
-              version_id: source.latest_version_id,
-              source_revision: source.publication_sequence,
-              connection: source.connection,
-              generation: Connection.generation(connection),
-              entry_schema: Atom.to_string(schema),
-              entry_id: id,
-              entry_revision: persisted_entry_revision(schema, id)
-            }
-
-            case args |> Brando.Tenant.Job.attach() |> Brando.Worker.MarkdownSourcePublish.new() |> Oban.insert() do
-              {:ok, _} ->
-                :ok
-
-              _ ->
-                MarkdownSources.audit(source, "publication.failed", actor, %{
-                  message: "Could not queue publication; use Publishing to request a build"
-                })
-            end
-          else
-            _ -> :ok
-          end
-        end
-      end)
+      Enum.each(MarkdownSources.list_sources(), &source_entry_saved(&1, schema, id, actor))
     end
 
     :ok
+  end
+
+  defp source_entry_saved(source, schema, id, actor) do
+    if id in Map.get(MarkdownSources.consumer_entries(source.id, ["follow", "review", "pinned"]), schema, []) do
+      MarkdownSources.audit(source, "placement.saved", actor, %{message: "#{inspect(schema)} ##{id}"})
+      queue_entry_publication(source, schema, id, actor)
+    end
+  end
+
+  defp queue_entry_publication(source, schema, id, actor) do
+    with {:ok,
+          %{auto_deploy: true, destination: %{site: %{delivery_mode: :static}, environment: %{live: true}}} =
+            connection} <- Connection.current(source.connection),
+         true <- source.enabled and not is_nil(source.latest_version_id) do
+      args = %{
+        source_id: source.id,
+        version_id: source.latest_version_id,
+        source_revision: source.publication_sequence,
+        connection: source.connection,
+        generation: Connection.generation(connection),
+        entry_schema: Atom.to_string(schema),
+        entry_id: id,
+        entry_revision: persisted_entry_revision(schema, id)
+      }
+
+      case args |> Brando.Tenant.Job.attach() |> Brando.Worker.MarkdownSourcePublish.new() |> Oban.insert() do
+        {:ok, _} ->
+          :ok
+
+        _ ->
+          MarkdownSources.audit(source, "publication.failed", actor, %{
+            message: "Could not queue publication; use Publishing to request a build"
+          })
+      end
+    else
+      _ -> :ok
+    end
   end
 
   def render_consumers!(entries) do
@@ -59,11 +64,7 @@ defmodule Brando.MarkdownSources.Publication do
 
       case Brando.Content.Blocks.render_entry(schema, id) do
         {:ok, %Brando.Pages.Fragment{}} ->
-          Brando.Content.Blocks.list_block_ids_using_fragment(id)
-          |> Brando.Content.BlockReferences.reject_blocks_belonging_to_entry(nil)
-          |> Enum.reduce(visited, fn {parent_schema, ids}, acc ->
-            Enum.reduce(ids, acc, &render_entry!({parent_schema, &1}, &2))
-          end)
+          render_fragment_consumers!(id, visited)
 
         {:ok, _} ->
           visited
@@ -72,6 +73,14 @@ defmodule Brando.MarkdownSources.Publication do
           Repo.rollback(:render_failed)
       end
     end
+  end
+
+  defp render_fragment_consumers!(id, visited) do
+    Brando.Content.Blocks.list_block_ids_using_fragment(id)
+    |> Brando.Content.BlockReferences.reject_blocks_belonging_to_entry(nil)
+    |> Enum.reduce(visited, fn {parent_schema, ids}, acc ->
+      Enum.reduce(ids, acc, &render_entry!({parent_schema, &1}, &2))
+    end)
   end
 
   def enqueue(source, %{destination: %{site: %{delivery_mode: :static}, environment: %{live: true}}} = connection) do
@@ -130,23 +139,27 @@ defmodule Brando.MarkdownSources.Publication do
       if existing && existing.markdown_context == args do
         existing
       else
-        case Brando.SSG.Builds.request_build(site, environment,
-               creator: publisher,
-               creator_id: publisher.id,
-               auto_deploy: true,
-               note: "Markdown source: #{source.name}",
-               markdown_context: args
-             ) do
-          {:ok, build} ->
-            source |> Ecto.Changeset.change(build_id: build.id, publication_status: "Build queued") |> Repo.update!()
-            MarkdownSources.audit(source, "publication.queued", publisher, %{version_id: source.latest_version_id})
-            build
-
-          {:error, reason} ->
-            Repo.rollback(reason)
-        end
+        request_build!(source, site, environment, publisher, args)
       end
     end)
+  end
+
+  defp request_build!(source, site, environment, publisher, args) do
+    case Brando.SSG.Builds.request_build(site, environment,
+           creator: publisher,
+           creator_id: publisher.id,
+           auto_deploy: true,
+           note: "Markdown source: #{source.name}",
+           markdown_context: args
+         ) do
+      {:ok, build} ->
+        source |> Ecto.Changeset.change(build_id: build.id, publication_status: "Build queued") |> Repo.update!()
+        MarkdownSources.audit(source, "publication.queued", publisher, %{version_id: source.latest_version_id})
+        build
+
+      {:error, reason} ->
+        Repo.rollback(reason)
+    end
   end
 
   # Called under the existing per-site deploy lock immediately before external
@@ -203,18 +216,20 @@ defmodule Brando.MarkdownSources.Publication do
 
   def guard_deploy(%{markdown_context: context} = build, fun) when map_size(context) > 0 do
     Brando.Tenant.Job.run(context, fn ->
-      with_source_lock(context["source_id"], fn ->
-        newest =
-          Repo.one(from(b in Brando.SSG.Build, where: b.site_id == ^build.site_id, select: max(b.build_number)),
-            prefix: "public"
-          )
-
-        if newest == build.build_number and current?(build), do: fun.(), else: {:error, :markdown_publication_superseded}
-      end)
+      with_source_lock(context["source_id"], fn -> deploy_if_newest(build, fun) end)
     end)
   end
 
   def guard_deploy(_, fun), do: fun.()
+
+  defp deploy_if_newest(build, fun) do
+    newest =
+      Repo.one(from(b in Brando.SSG.Build, where: b.site_id == ^build.site_id, select: max(b.build_number)),
+        prefix: "public"
+      )
+
+    if newest == build.build_number and current?(build), do: fun.(), else: {:error, :markdown_publication_superseded}
+  end
 
   defp same_content?(source, version_id) do
     old = MarkdownSources.get_version(source.id, version_id)
@@ -238,12 +253,7 @@ defmodule Brando.MarkdownSources.Publication do
       source_id
       |> MarkdownSources.consumer_entries(["follow", "review", "pinned"])
       |> Enum.flat_map(fn {schema, ids} ->
-        Enum.map(ids, fn id ->
-          case Brando.Blueprint.EntryQuery.get(schema, id) do
-            {:ok, entry} -> {schema, id, entry_revision(entry)}
-            _ -> {schema, id, nil}
-          end
-        end)
+        Enum.map(ids, &{schema, &1, persisted_entry_revision(schema, &1)})
       end)
       |> Enum.sort()
 

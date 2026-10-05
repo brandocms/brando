@@ -69,33 +69,36 @@ defmodule Mix.Brando do
       target_file_path =
         String.replace(target_file_path, "application_name", to_string(otp_app()))
 
-      source =
-        Enum.find_value(roots, fn root ->
-          source = Path.join(root, source_file_path)
-          if File.exists?(source), do: source
-        end) || raise "could not find #{source_file_path} in any of the sources"
-
+      source = find_source!(roots, source_file_path)
       target = Path.join(target_dir, target_file_path)
 
-      case format do
-        :keep ->
-          Mix.Generator.create_directory(target)
-
-        :copy ->
-          File.mkdir_p!(Path.dirname(target))
-          File.copy!(source, target)
-
-        _ ->
-          contents =
-            case format do
-              :text -> File.read!(source)
-              :eex -> EEx.eval_file(source, binding)
-              :eex_trim -> EEx.eval_file(source, binding, trim: true)
-            end
-
-          Mix.Generator.create_file(target, contents, force: true)
-      end
+      copy_file(format, source, target, binding)
     end
+  end
+
+  defp find_source!(roots, source_file_path) do
+    Enum.find_value(roots, fn root ->
+      source = Path.join(root, source_file_path)
+      if File.exists?(source), do: source
+    end) || raise "could not find #{source_file_path} in any of the sources"
+  end
+
+  defp copy_file(:keep, _source, target, _binding), do: Mix.Generator.create_directory(target)
+
+  defp copy_file(:copy, source, target, _binding) do
+    File.mkdir_p!(Path.dirname(target))
+    File.copy!(source, target)
+  end
+
+  defp copy_file(format, source, target, binding) do
+    contents =
+      case format do
+        :text -> File.read!(source)
+        :eex -> EEx.eval_file(source, binding)
+        :eex_trim -> EEx.eval_file(source, binding, trim: true)
+      end
+
+    Mix.Generator.create_file(target, contents, force: true)
   end
 
   defp to_app_source(path, source_dir) when is_binary(path),

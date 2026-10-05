@@ -181,68 +181,72 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   def timeout(socket, _), do: socket
 
   defp finish(%{assigns: %{draft: %{capture: capture} = draft}} = socket) do
-    if Enum.all?(capture.expected, &Map.has_key?(capture.parts, &1)) do
-      blocks = Map.new(capture.parts, fn {{kind, field}, value} -> {{kind, field}, value} end) |> parts(:block)
-      manifest = Modules.manifest(blocks)
-      modules = Map.merge(manifest, Map.take(draft.modules, Map.keys(manifest)))
-
-      payload = %{
-        "main" => capture.main,
-        "blocks" => blocks,
-        "transformers" => parts(capture.parts, :transformer),
-        "modules" => modules
-      }
-
-      checksum = Content.checksum(payload)
-      generation = max(capture.generation, draft.persisted + if(checksum != draft.checksum, do: 1, else: 0))
-
-      {draft, result} =
-        cond do
-          checksum == draft.checksum ->
-            {draft, {:ok, nil}}
-
-          checksum == draft.baseline ->
-            {draft, Drafts.resolve(draft.identity, draft.id, generation)}
-
-          true ->
-            write_capture(socket, draft, generation, payload)
-        end
-
-      case result do
-        {:ok, _} ->
-          state = %{
-            draft
-            | capture: nil,
-              modules: modules,
-              generation: max(draft.generation, generation),
-              persisted: generation,
-              checksum: checksum,
-              status: :saved,
-              saved_at: DateTime.utc_now()
-          }
-
-          state =
-            if checksum == draft.baseline && checksum != draft.checksum,
-              do: %{state | id: Ecto.UUID.generate()},
-              else: state
-
-          socket
-          |> put_draft(state)
-          |> push_event("b:draft-saved", %{
-            id: socket.assigns.id,
-            generation: capture.client_generation,
-            request_id: capture.request_id,
-            draft_id: state.id
-          })
-
-        _ ->
-          fail_capture(socket)
-      end
-    else
-      socket
-    end
+    if Enum.all?(capture.expected, &Map.has_key?(capture.parts, &1)),
+      do: save_capture(socket, draft, capture),
+      else: socket
   rescue
     _ -> fail_capture(socket)
+  end
+
+  defp save_capture(socket, draft, capture) do
+    blocks = Map.new(capture.parts, fn {{kind, field}, value} -> {{kind, field}, value} end) |> parts(:block)
+    manifest = Modules.manifest(blocks)
+    modules = Map.merge(manifest, Map.take(draft.modules, Map.keys(manifest)))
+
+    payload = %{
+      "main" => capture.main,
+      "blocks" => blocks,
+      "transformers" => parts(capture.parts, :transformer),
+      "modules" => modules
+    }
+
+    checksum = Content.checksum(payload)
+    generation = max(capture.generation, draft.persisted + if(checksum != draft.checksum, do: 1, else: 0))
+
+    case persist_capture(socket, draft, checksum, generation, payload) do
+      {draft, {:ok, _}} -> mark_capture_saved(socket, draft, capture, modules, checksum, generation)
+      _ -> fail_capture(socket)
+    end
+  end
+
+  defp persist_capture(socket, draft, checksum, generation, payload) do
+    cond do
+      checksum == draft.checksum ->
+        {draft, {:ok, nil}}
+
+      checksum == draft.baseline ->
+        {draft, Drafts.resolve(draft.identity, draft.id, generation)}
+
+      true ->
+        write_capture(socket, draft, generation, payload)
+    end
+  end
+
+  defp mark_capture_saved(socket, draft, capture, modules, checksum, generation) do
+    state = %{
+      draft
+      | capture: nil,
+        modules: modules,
+        generation: max(draft.generation, generation),
+        persisted: generation,
+        checksum: checksum,
+        status: :saved,
+        saved_at: DateTime.utc_now()
+    }
+
+    state =
+      if checksum == draft.baseline && checksum != draft.checksum,
+        do: %{state | id: Ecto.UUID.generate()},
+        else: state
+
+    socket
+    |> put_draft(state)
+    |> push_event("b:draft-saved", %{
+      id: socket.assigns.id,
+      generation: capture.client_generation,
+      request_id: capture.request_id,
+      draft_id: state.id
+    })
   end
 
   defp write_capture(socket, draft, generation, payload) do
@@ -472,13 +476,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
            }), cs}
 
         {:review, reason, issues} ->
-          message =
-            if reason == :entry_changed,
-              do: "The saved entry changed after this recovery copy was made. Review it before restoring.",
-              else:
-                "Some blocks use modules that have changed. You can recover compatible content and keep the original copy."
-
-          {:error, put_draft(socket, %{state | error: message, issues: issues, compatible?: true})}
+          {:error, put_draft(socket, %{state | error: review_message(reason), issues: issues, compatible?: true})}
 
         {:error, message} ->
           {:error, put_draft(socket, %{state | error: message})}
@@ -494,6 +492,12 @@ defmodule BrandoAdmin.Components.Form.Drafts do
          | error: "This recovery copy could not be applied. You can continue with the saved entry.",
            open?: true
        })}
+  end
+
+  defp review_message(reason) do
+    if reason == :entry_changed,
+      do: "The saved entry changed after this recovery copy was made. Review it before restoring.",
+      else: "Some blocks use modules that have changed. You can recover compatible content and keep the original copy."
   end
 
   def main_params(socket, changeset), do: main_params(socket.assigns.schema, socket.assigns.form_blueprint, changeset)

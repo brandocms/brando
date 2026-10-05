@@ -52,19 +52,21 @@ defmodule Brando.Sites.Redirects do
           seo ->
             redirect = struct(Brando.Sites.Redirect, from: source, to: to, code: 301)
 
-            redirects =
-              (seo.redirects || [])
-              |> Enum.reject(&(&1.from in [source, destination_source]))
-              |> Enum.map(fn
-                %{to: ^from_path} = existing -> %{existing | to: to}
-                existing -> existing
-              end)
-
+            redirects = retarget_redirects(seo.redirects || [], [source, destination_source], from_path, to)
             store_redirects(seo, [redirect | redirects], user)
         end
       end)
 
     Brando.Cache.SEO.update(result)
+  end
+
+  defp retarget_redirects(redirects, sources, from_path, to) do
+    redirects
+    |> Enum.reject(&(&1.from in sources))
+    |> Enum.map(fn
+      %{to: ^from_path} = existing -> %{existing | to: to}
+      existing -> existing
+    end)
   end
 
   defp store_redirects(%{redirects: redirects} = seo, redirects, _user), do: seo

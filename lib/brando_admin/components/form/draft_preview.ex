@@ -82,13 +82,13 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
 
   defp translate_fields(sections, labels) do
     Enum.map(sections, fn section ->
-      Map.update!(section, :rows, fn rows ->
-        Enum.map(rows, fn row ->
-          Map.update!(row, :field, fn field ->
-            field |> String.split(" › ") |> Enum.map_join(" › ", &Map.get(labels, &1, &1))
-          end)
-        end)
-      end)
+      Map.update!(section, :rows, fn rows -> Enum.map(rows, &translate_row(&1, labels)) end)
+    end)
+  end
+
+  defp translate_row(row, labels) do
+    Map.update!(row, :field, fn field ->
+      field |> String.split(" › ") |> Enum.map_join(" › ", &Map.get(labels, &1, &1))
     end)
   end
 
@@ -102,14 +102,7 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
         rows
         |> List.wrap()
         |> Enum.with_index(1)
-        |> Enum.map(fn {row, index} ->
-          title =
-            if field == "blocks",
-              do: gettext("Block %{number}", number: index),
-              else: gettext("%{field} · Block %{number}", field: label(field), number: index)
-
-          section(title, row)
-        end)
+        |> Enum.map(fn {row, index} -> section(block_title(field, index), row) end)
       end)
 
     related =
@@ -119,6 +112,11 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
 
     Enum.reject(blocks ++ [entry] ++ related, &(&1.rows == []))
   end
+
+  defp block_title("blocks", index), do: gettext("Block %{number}", number: index)
+
+  defp block_title(field, index),
+    do: gettext("%{field} · Block %{number}", field: label(field), number: index)
 
   defp groups(payload, key) do
     case payload[key] do
@@ -199,22 +197,21 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
     value
     |> Map.drop(@metadata)
     |> Enum.sort_by(fn {key, _} -> {key not in ~w(title text value refs vars), key} end)
-    |> Enum.flat_map(fn {key, value} ->
-      # These are serialization wrappers, not field names an editor recognizes.
-      next =
-        cond do
-          key in ["block", "data", "refs", "vars"] ->
-            path
+    |> Enum.flat_map(fn {key, value} -> rows(value, content_path(key, value, path)) end)
+  end
 
-          key == "identifier" && match?(%References{kind: :entry}, value) ->
-            if path == [], do: [gettext("Related entry")], else: path
+  # These are serialization wrappers, not field names an editor recognizes.
+  defp content_path(key, value, path) do
+    cond do
+      key in ["block", "data", "refs", "vars"] ->
+        path
 
-          true ->
-            path ++ [label(key)]
-        end
+      key == "identifier" && match?(%References{kind: :entry}, value) ->
+        if path == [], do: [gettext("Related entry")], else: path
 
-      rows(value, next)
-    end)
+      true ->
+        path ++ [label(key)]
+    end
   end
 
   # Keep recovery text selectable without executing stored markup.

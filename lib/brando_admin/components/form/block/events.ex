@@ -184,14 +184,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
           Block.insert_identifier(block_identifiers, identifier_id, original_identifiers)
 
         %{action: :replace} = replaced_changeset ->
-          Enum.map(block_identifiers, fn block_identifier ->
-            if Changeset.get_field(block_identifier, :identifier_id) == identifier_id do
-              action = (Changeset.get_field(block_identifier, :id) == nil && :insert) || nil
-              Map.put(replaced_changeset, :action, action)
-            else
-              block_identifier
-            end
-          end)
+          restore_replaced_identifier(block_identifiers, identifier_id, replaced_changeset)
 
         _ ->
           Block.remove_identifier(block_identifiers, identifier_id)
@@ -1113,6 +1106,17 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   end
 
   defp restore_ref_media_params(ref_params, _applied_by_id), do: ref_params
+
+  defp restore_replaced_identifier(block_identifiers, identifier_id, replaced_changeset) do
+    Enum.map(block_identifiers, fn block_identifier ->
+      if Changeset.get_field(block_identifier, :identifier_id) == identifier_id do
+        action = (Changeset.get_field(block_identifier, :id) == nil && :insert) || nil
+        Map.put(replaced_changeset, :action, action)
+      else
+        block_identifier
+      end
+    end)
+  end
 
   defp get_assoc_list(changeset, field) do
     case Ecto.Changeset.get_assoc(changeset, field) do

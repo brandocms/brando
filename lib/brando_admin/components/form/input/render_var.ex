@@ -39,26 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {processed_events, assigns_sockets} =
       Enum.split_with(assigns_sockets, fn {assigns, _} -> assigns[:event] == "image_processed" end)
 
-    processed_results =
-      Enum.map(processed_events, fn {%{image: image}, socket} ->
-        cond do
-          socket.assigns[:image_id] == image.id ->
-            assign(socket, :image, image)
-
-          socket.assigns[:type] == :gallery && socket.assigns[:gallery] ->
-            gallery = socket.assigns.gallery
-
-            objects =
-              Enum.map(gallery_objects(gallery), fn object ->
-                if object.image_id == image.id, do: %{object | image: image}, else: object
-              end)
-
-            assign(socket, :gallery, %{gallery | gallery_objects: objects})
-
-          true ->
-            socket
-        end
-      end)
+    processed_results = Enum.map(processed_events, &apply_image_processed/1)
 
     {upload_events, rest} =
       Enum.split_with(assigns_sockets, fn {assigns, _socket} ->
@@ -83,58 +64,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         on_change(socket, assigns.data)
       end)
 
-    video_created_results =
-      Enum.map(video_created_events, fn {assigns, socket} ->
-        {:ok, video} =
-          Brando.Videos.get_video(%{
-            matches: %{id: assigns.video_data.id},
-            preload: [:thumbnail, :file]
-          })
-
-        socket
-        |> assign(:video, video)
-        |> assign(:video_id, video.id)
-        |> on_change(%{video: video, video_id: video.id})
-      end)
+    video_created_results = Enum.map(video_created_events, &apply_video_created/1)
 
     # Handle upload_complete events directly (no DB lookups needed)
-    upload_results =
-      Enum.map(upload_events, fn {assigns, socket} ->
-        current_id = socket.assigns[assigns.asset_type] && socket.assigns[assigns.asset_type].id
-
-        if Brando.Uploads.AssetIntent.current_selection?(assigns[:expected_asset_id], current_id) do
-          case {socket.assigns.type, assigns.asset_type} do
-            {:gallery, media_type} ->
-              id_field = if media_type == :image, do: :image_id, else: :video_id
-              objects = gallery_objects(socket.assigns.gallery)
-
-              persist_gallery(
-                socket,
-                objects ++ [%{id_field => assigns.asset.id, creator_id: socket.assigns.current_user_id}]
-              )
-
-            {_, :image} ->
-              socket
-              |> assign(:image, assigns.asset)
-              |> assign(:image_id, assigns.asset.id)
-              |> on_change(%{image: assigns.asset, image_id: assigns.asset.id})
-
-            {_, :file} ->
-              socket
-              |> assign(:file, assigns.asset)
-              |> assign(:file_id, assigns.asset.id)
-              |> on_change(%{file: assigns.asset, file_id: assigns.asset.id})
-
-            {_, :video} ->
-              socket
-              |> assign(:video, assigns.asset)
-              |> assign(:video_id, assigns.asset.id)
-              |> on_change(%{video: assigns.asset, video_id: assigns.asset.id})
-          end
-        else
-          socket
-        end
-      end)
+    upload_results = Enum.map(upload_events, &apply_upload_complete/1)
 
     # Handle normal var updates with batched DB lookups
     var_results =
@@ -153,6 +86,84 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       )
 
     Enum.map(original_assigns_sockets, fn {assigns, socket} -> Map.fetch!(results, assigns[:id] || socket.assigns.id) end)
+  end
+
+  defp apply_image_processed({%{image: image}, socket}) do
+    cond do
+      socket.assigns[:image_id] == image.id ->
+        assign(socket, :image, image)
+
+      socket.assigns[:type] == :gallery && socket.assigns[:gallery] ->
+        replace_gallery_image(socket, image)
+
+      true ->
+        socket
+    end
+  end
+
+  defp replace_gallery_image(socket, image) do
+    gallery = socket.assigns.gallery
+
+    objects =
+      Enum.map(gallery_objects(gallery), fn object ->
+        if object.image_id == image.id, do: %{object | image: image}, else: object
+      end)
+
+    assign(socket, :gallery, %{gallery | gallery_objects: objects})
+  end
+
+  defp apply_video_created({assigns, socket}) do
+    {:ok, video} =
+      Brando.Videos.get_video(%{
+        matches: %{id: assigns.video_data.id},
+        preload: [:thumbnail, :file]
+      })
+
+    socket
+    |> assign(:video, video)
+    |> assign(:video_id, video.id)
+    |> on_change(%{video: video, video_id: video.id})
+  end
+
+  defp apply_upload_complete({assigns, socket}) do
+    current_id = socket.assigns[assigns.asset_type] && socket.assigns[assigns.asset_type].id
+
+    if Brando.Uploads.AssetIntent.current_selection?(assigns[:expected_asset_id], current_id) do
+      assign_uploaded_asset(socket, assigns)
+    else
+      socket
+    end
+  end
+
+  defp assign_uploaded_asset(socket, assigns) do
+    case {socket.assigns.type, assigns.asset_type} do
+      {:gallery, media_type} ->
+        id_field = if media_type == :image, do: :image_id, else: :video_id
+        objects = gallery_objects(socket.assigns.gallery)
+
+        persist_gallery(
+          socket,
+          objects ++ [%{id_field => assigns.asset.id, creator_id: socket.assigns.current_user_id}]
+        )
+
+      {_, :image} ->
+        socket
+        |> assign(:image, assigns.asset)
+        |> assign(:image_id, assigns.asset.id)
+        |> on_change(%{image: assigns.asset, image_id: assigns.asset.id})
+
+      {_, :file} ->
+        socket
+        |> assign(:file, assigns.asset)
+        |> assign(:file_id, assigns.asset.id)
+        |> on_change(%{file: assigns.asset, file_id: assigns.asset.id})
+
+      {_, :video} ->
+        socket
+        |> assign(:video, assigns.asset)
+        |> assign(:video_id, assigns.asset.id)
+        |> on_change(%{video: assigns.asset, video_id: assigns.asset.id})
+    end
   end
 
   defp collect_asset_ids(assigns_sockets) do

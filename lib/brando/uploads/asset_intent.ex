@@ -57,6 +57,24 @@ defmodule Brando.Uploads.AssetIntent do
   # kept to a conservative charset since it does reach the DOM as an id.
   @ref_format ~r/^[A-Za-z0-9_-]{1,64}$/
 
+  # Upload targets that only accept some asset types. Kinds not listed accept any.
+  @compatible_asset_types %{
+    "block_ref_picture" => ["image"],
+    "block_ref_file" => ["file"],
+    "file_replace" => ["file"],
+    "block_ref_video" => ["video"],
+    "transformer_image" => ["image"],
+    "image_picker" => ["image"],
+    "transformer_video" => ["video"],
+    "video_picker" => ["video"],
+    "ai_conversation" => ["image", "video"],
+    "block_ref_gallery" => ["image", "video"],
+    "block_var_gallery" => ["image", "video"],
+    "entry_var_gallery" => ["image", "video"],
+    "entry_field_gallery" => ["image", "video"],
+    "resource_gallery" => ["image", "video"]
+  }
+
   @doc """
   Normalize a client target into the canonical string-keyed wire map.
   """
@@ -121,37 +139,9 @@ defmodule Brando.Uploads.AssetIntent do
 
   defp validate_compatibility(kind, asset_type) do
     compatible? =
-      case kind do
-        "block_ref_picture" ->
-          asset_type == "image"
-
-        kind when kind in ["block_ref_file", "file_replace"] ->
-          asset_type == "file"
-
-        "block_ref_video" ->
-          asset_type == "video"
-
-        kind when kind in ["transformer_image", "image_picker"] ->
-          asset_type == "image"
-
-        kind when kind in ["transformer_video", "video_picker"] ->
-          asset_type == "video"
-
-        "ai_conversation" ->
-          asset_type in ["image", "video"]
-
-        kind
-        when kind in [
-               "block_ref_gallery",
-               "block_var_gallery",
-               "entry_var_gallery",
-               "entry_field_gallery",
-               "resource_gallery"
-             ] ->
-          asset_type in ["image", "video"]
-
-        _ ->
-          true
+      case Map.fetch(@compatible_asset_types, kind) do
+        {:ok, asset_types} -> asset_type in asset_types
+        :error -> true
       end
 
     if compatible?, do: :ok, else: {:error, "Asset type is not valid for this upload target"}

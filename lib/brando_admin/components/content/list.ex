@@ -370,42 +370,43 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp assign_sort(%{assigns: %{listing: %{sorts: sorts}, params: params}} = socket) do
     assign_new(socket, :active_sort, fn ->
-      default_sort = List.first(sorts)
-      param_order = get_in(params, ["order"])
-
-      cond do
-        # no param order, use default
-        is_nil(param_order) ->
-          default_sort
-
-        # param order is a string
-        is_binary(param_order) ->
-          # find matching sort
-
-          Enum.find(sorts, default_sort, fn sort ->
-            Query.order_string_to_list(sort.order) ==
-              Query.order_string_to_list(param_order)
-          end)
-
-        # param order is a keyword list
-        is_list(param_order) ->
-          # find matching sort
-          Enum.find(sorts, default_sort, fn sort ->
-            Query.order_string_to_list(sort.order) == param_order
-          end)
-
-        is_map(param_order) ->
-          # find matching sort
-          parsed_order =
-            Map.new(param_order, fn {k, v} ->
-              {String.to_existing_atom(k), String.to_existing_atom(v)}
-            end)
-
-          Enum.find(sorts, default_sort, fn sort ->
-            Query.order_string_to_list(sort.order) == Map.to_list(parsed_order)
-          end)
-      end
+      find_active_sort(sorts, List.first(sorts), get_in(params, ["order"]))
     end)
+  end
+
+  defp find_active_sort(sorts, default_sort, param_order) do
+    cond do
+      # no param order, use default
+      is_nil(param_order) ->
+        default_sort
+
+      # param order is a string
+      is_binary(param_order) ->
+        # find matching sort
+
+        Enum.find(sorts, default_sort, fn sort ->
+          Query.order_string_to_list(sort.order) ==
+            Query.order_string_to_list(param_order)
+        end)
+
+      # param order is a keyword list
+      is_list(param_order) ->
+        # find matching sort
+        Enum.find(sorts, default_sort, fn sort ->
+          Query.order_string_to_list(sort.order) == param_order
+        end)
+
+      is_map(param_order) ->
+        # find matching sort
+        parsed_order =
+          Map.new(param_order, fn {k, v} ->
+            {String.to_existing_atom(k), String.to_existing_atom(v)}
+          end)
+
+        Enum.find(sorts, default_sort, fn sort ->
+          Query.order_string_to_list(sort.order) == Map.to_list(parsed_order)
+        end)
+    end
   end
 
   defp assign_sort(socket, sort) do
@@ -1376,33 +1377,9 @@ defmodule BrandoAdmin.Components.Content.List do
     entry_url = assigns.dialog.entry_url
     language = Map.get(assigns.dialog, :language)
 
-    error =
-      case current_step do
-        {:error, reason} -> reason
-        _ -> nil
-      end
-
-    step_atom =
-      case current_step do
-        {:translating, _, _} -> :translating
-        {:error, _} -> :error
-        atom -> atom
-      end
-
-    steps =
-      Enum.map(@translation_steps, fn step ->
-        status =
-          cond do
-            error && step_reached?(step, step_atom) -> :done
-            error && step == step_atom -> :error
-            step == step_atom && step == :complete -> :done
-            step == step_atom -> :active
-            step_reached?(step, step_atom) -> :done
-            true -> :pending
-          end
-
-        {step, status}
-      end)
+    error = translation_error(current_step)
+    step_atom = translation_step_atom(current_step)
+    steps = Enum.map(@translation_steps, &{&1, translation_step_status(&1, step_atom, error)})
 
     assigns =
       assigns
@@ -1463,6 +1440,34 @@ defmodule BrandoAdmin.Components.Content.List do
   defp step_label(:applying), do: gettext("Applying translations...")
   defp step_label(:rendering), do: gettext("Re-rendering entry...")
   defp step_label(:complete), do: gettext("Complete!")
+
+  defp translation_error({:error, reason}), do: reason
+  defp translation_error(_step), do: nil
+
+  defp translation_step_atom(current_step) do
+    case current_step do
+      {:translating, _, _} -> :translating
+      {:error, _} -> :error
+      atom -> atom
+    end
+  end
+
+  defp translation_step_status(step, step_atom, error) when error in [nil, false] do
+    cond do
+      step == step_atom && step == :complete -> :done
+      step == step_atom -> :active
+      step_reached?(step, step_atom) -> :done
+      true -> :pending
+    end
+  end
+
+  defp translation_step_status(step, step_atom, _error) do
+    cond do
+      step_reached?(step, step_atom) -> :done
+      step == step_atom -> :error
+      true -> :pending
+    end
+  end
 
   defp step_reached?(step, current) do
     step_idx = Enum.find_index(@translation_steps, &(&1 == step))

@@ -70,21 +70,25 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
     if remaining <= 0 do
       {:error, :incomplete_body, conn}
     else
-      case read_body(conn,
-             length: min(64_000, @max_body - size + 1),
-             read_length: 64_000,
-             read_timeout: min(remaining, 5_000)
-           ) do
-        {status, bytes, conn} when status in [:ok, :more] ->
-          cond do
-            size + byte_size(bytes) > @max_body -> {:error, :too_large, conn}
-            status == :more -> body(conn, [bytes | chunks], size + byte_size(bytes), deadline)
-            true -> {:ok, IO.iodata_to_binary(Enum.reverse([bytes | chunks])), conn}
-          end
+      read_chunk(conn, chunks, size, deadline, remaining)
+    end
+  end
 
-        _ ->
-          {:error, :incomplete_body, conn}
-      end
+  defp read_chunk(conn, chunks, size, deadline, remaining) do
+    case read_body(conn,
+           length: min(64_000, @max_body - size + 1),
+           read_length: 64_000,
+           read_timeout: min(remaining, 5_000)
+         ) do
+      {status, bytes, conn} when status in [:ok, :more] ->
+        cond do
+          size + byte_size(bytes) > @max_body -> {:error, :too_large, conn}
+          status == :more -> body(conn, [bytes | chunks], size + byte_size(bytes), deadline)
+          true -> {:ok, IO.iodata_to_binary(Enum.reverse([bytes | chunks])), conn}
+        end
+
+      _ ->
+        {:error, :incomplete_body, conn}
     end
   end
 
@@ -118,28 +122,7 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
           :duplicate
 
         {:ok, receipt} ->
-          job_ids =
-            Enum.flat_map(connection.destinations, fn prefix ->
-              case Connection.destination(connection, prefix) do
-                {:ok, _} ->
-                  Brando.Tenant.with_prefix(prefix, fn ->
-                    args = %{
-                      connection: connection.key,
-                      ref: payload["ref"],
-                      generation: Connection.generation(connection)
-                    }
-
-                    case args |> Brando.Tenant.Job.attach() |> Brando.Worker.MarkdownSourceSync.new() |> Oban.insert() do
-                      {:ok, job} -> if(job.id, do: [job.id], else: [])
-                      _ -> Repo.rollback(:persistence_failed)
-                    end
-                  end)
-
-                _ ->
-                  []
-              end
-            end)
-
+          job_ids = Enum.flat_map(connection.destinations, &enqueue_sync(connection, payload, &1))
           receipt |> Ecto.Changeset.change(job_ids: job_ids) |> Repo.update!()
           :accepted
 
@@ -149,6 +132,26 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
     end)
   rescue
     _ -> {:error, :persistence_failed}
+  end
+
+  defp enqueue_sync(connection, payload, prefix) do
+    case Connection.destination(connection, prefix) do
+      {:ok, _} -> Brando.Tenant.with_prefix(prefix, fn -> insert_sync_job(connection, payload) end)
+      _ -> []
+    end
+  end
+
+  defp insert_sync_job(connection, payload) do
+    args = %{
+      connection: connection.key,
+      ref: payload["ref"],
+      generation: Connection.generation(connection)
+    }
+
+    case args |> Brando.Tenant.Job.attach() |> Brando.Worker.MarkdownSourceSync.new() |> Oban.insert() do
+      {:ok, job} -> if(job.id, do: [job.id], else: [])
+      _ -> Repo.rollback(:persistence_failed)
+    end
   end
 
   defp respond(conn, status, message),

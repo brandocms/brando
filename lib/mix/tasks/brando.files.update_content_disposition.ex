@@ -36,11 +36,7 @@ defmodule Mix.Tasks.Brando.Files.UpdateContentDisposition do
         aliases: [d: :disposition, n: :dry_run]
       )
 
-    config_target =
-      case rest do
-        [target] -> target
-        _ -> Mix.raise("Usage: mix brando.files.update_content_disposition \"file:MyApp.Schema:field\"")
-      end
+    config_target = config_target!(rest)
 
     Application.put_env(:logger, :level, :error)
 
@@ -48,23 +44,7 @@ defmodule Mix.Tasks.Brando.Files.UpdateContentDisposition do
 
     {:ok, config} = Brando.Files.get_config_for(config_target)
 
-    disposition =
-      case opts[:disposition] do
-        nil -> Map.get(config, :content_disposition)
-        "inline" -> :inline
-        "attachment" -> :attachment
-        other -> Mix.raise("Invalid disposition: #{other}. Use 'inline' or 'attachment'")
-      end
-
-    if is_nil(disposition) do
-      Mix.raise("""
-      No content_disposition configured for #{config_target} and none specified via --disposition.
-
-      Either add `content_disposition: :inline` to your FileConfig, or use:
-        mix brando.files.update_content_disposition "#{config_target}" --disposition inline
-      """)
-    end
-
+    disposition = disposition!(opts[:disposition], config, config_target)
     dry_run? = opts[:dry_run] == true
 
     Mix.shell().info("""
@@ -85,14 +65,7 @@ defmodule Mix.Tasks.Brando.Files.UpdateContentDisposition do
 
     bucket = Brando.CDN.config(Brando.Files, :bucket)
 
-    import Ecto.Query
-
-    files =
-      from(f in Brando.Files.File,
-        where: f.config_target == ^config_target and f.cdn == true,
-        select: f
-      )
-      |> Brando.Repo.all()
+    files = cdn_files(config_target)
 
     Mix.shell().info("Found #{length(files)} files to update\n")
 
@@ -102,6 +75,42 @@ defmodule Mix.Tasks.Brando.Files.UpdateContentDisposition do
       Enum.each(files, &update_file(&1, config, bucket, disposition, dry_run?, s3_config))
       Mix.shell().info("\nDone!")
     end
+  end
+
+  defp config_target!([target]), do: target
+
+  defp config_target!(_),
+    do: Mix.raise("Usage: mix brando.files.update_content_disposition \"file:MyApp.Schema:field\"")
+
+  defp disposition!(option, config, config_target) do
+    disposition =
+      case option do
+        nil -> Map.get(config, :content_disposition)
+        "inline" -> :inline
+        "attachment" -> :attachment
+        other -> Mix.raise("Invalid disposition: #{other}. Use 'inline' or 'attachment'")
+      end
+
+    if is_nil(disposition) do
+      Mix.raise("""
+      No content_disposition configured for #{config_target} and none specified via --disposition.
+
+      Either add `content_disposition: :inline` to your FileConfig, or use:
+        mix brando.files.update_content_disposition "#{config_target}" --disposition inline
+      """)
+    end
+
+    disposition
+  end
+
+  defp cdn_files(config_target) do
+    import Ecto.Query
+
+    from(f in Brando.Files.File,
+      where: f.config_target == ^config_target and f.cdn == true,
+      select: f
+    )
+    |> Brando.Repo.all()
   end
 
   defp update_file(file, config, bucket, disposition, dry_run?, s3_config) do

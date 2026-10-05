@@ -67,10 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     gallery_objects = socket.assigns[:gallery_objects] || []
 
     if Enum.any?(gallery_objects, &(&1.image_id == image.id)) do
-      gallery_objects =
-        Enum.map(gallery_objects, fn obj ->
-          if obj.image_id == image.id, do: Map.put(obj, :image, image), else: obj
-        end)
+      gallery_objects = Enum.map(gallery_objects, &put_processed_image(&1, image))
 
       {:ok,
        socket
@@ -101,13 +98,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     updated_gallery_objects =
       if old_image_id do
-        Enum.map(gallery_objects, fn obj ->
-          if obj.image_id == old_image_id do
-            obj |> Map.put(:image_id, new_image.id) |> Map.put(:image, new_image)
-          else
-            obj
-          end
-        end)
+        Enum.map(gallery_objects, &replace_object_image(&1, old_image_id, new_image))
       else
         # Adding new image — append a temporary gallery object
         new_obj = %{image_id: new_image.id, image: new_image, video_id: nil, video: nil}
@@ -144,22 +135,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     selected_ids =
       gallery_objects
-      |> Enum.map(fn obj ->
-        cond do
-          obj.image_id -> {:image, obj.image_id}
-          obj.video_id -> {:video, obj.video_id}
-          true -> nil
-        end
-      end)
+      |> Enum.map(&selected_id/1)
       |> Enum.filter(& &1)
 
     block_data_cs = Block.get_block_data_changeset(assigns.block)
-
-    upload_formats =
-      case Changeset.get_field(block_data_cs, :formats) do
-        nil -> ""
-        formats -> Enum.join(formats, ",")
-      end
+    upload_formats = upload_formats(Changeset.get_field(block_data_cs, :formats))
 
     # Recompute overrides from current gallery objects + current form state.
     # This keeps overrides in sync when objects are added/removed after mount.
@@ -201,6 +181,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:allowed_types, Changeset.get_field(block_data_cs, :allowed_types) || [:image, :video])
      |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
   end
+
+  defp put_processed_image(obj, image) do
+    if obj.image_id == image.id, do: Map.put(obj, :image, image), else: obj
+  end
+
+  defp replace_object_image(obj, old_image_id, new_image) do
+    if obj.image_id == old_image_id do
+      obj |> Map.put(:image_id, new_image.id) |> Map.put(:image, new_image)
+    else
+      obj
+    end
+  end
+
+  defp selected_id(obj) do
+    cond do
+      obj.image_id -> {:image, obj.image_id}
+      obj.video_id -> {:video, obj.video_id}
+      true -> nil
+    end
+  end
+
+  defp upload_formats(nil), do: ""
+  defp upload_formats(formats), do: Enum.join(formats, ",")
 
   defp initial_view(:list), do: :list
   defp initial_view(_display), do: :grid
@@ -433,17 +436,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   def handle_event("save_object_text", %{"type" => type, "id" => id, "kind" => kind, "value" => value}, socket)
       when type in ["image", "video"] and kind in ["caption", "alt"] and is_binary(id) and is_binary(value) do
     type = String.to_existing_atom(type)
-
-    field =
-      case {type, kind} do
-        {:image, "caption"} -> :title
-        {:video, "caption"} -> :caption
-        {:image, "alt"} -> :alt
-        {:video, "alt"} -> nil
-      end
+    field = override_text_field(type, kind)
 
     if field && Map.has_key?(socket.assigns.override_data, {type, id}) do
-      text = if kind == "caption", do: Brando.Captions.normalize(value), else: trimmed(value)
+      text = override_text(kind, value)
 
       socket
       |> Block.commit_ref_data(ref_data: put_override_text(socket.assigns.block, type, id, field, text))
@@ -563,6 +559,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   ## Private functions
+
+  defp override_text_field(:image, "caption"), do: :title
+  defp override_text_field(:video, "caption"), do: :caption
+  defp override_text_field(:image, "alt"), do: :alt
+  defp override_text_field(:video, "alt"), do: nil
+
+  defp override_text("caption", value), do: Brando.Captions.normalize(value)
+  defp override_text(_kind, value), do: trimmed(value)
 
   defp trimmed(value) do
     case String.trim(value) do
@@ -817,13 +821,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         Map.put(obj, assoc_field, Map.get(media_map, media_id))
 
       # Re-fetch unprocessed images from DB (they may have been processed since)
-      assoc_field == :image && Map.get(assoc, :status) != :processed && Map.has_key?(media_map, media_id) ->
+      refetch_image?(assoc_field, assoc, media_map, media_id) ->
         Map.put(obj, assoc_field, Map.get(media_map, media_id))
 
       true ->
         obj
     end
   end
+
+  defp refetch_image?(assoc_field, assoc, media_map, media_id),
+    do: assoc_field == :image && Map.get(assoc, :status) != :processed && Map.has_key?(media_map, media_id)
 
   # Keyed by `{object_type, object_id}`: an image and a video may share an id.
   defp precompute_override_data(gallery_objects, block_data_cs) do
@@ -858,58 +865,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     default_title = media_object.title || ""
     default_credits = Map.get(media_object, :credits) || ""
     default_alt = if object_type == :image, do: media_object.alt || "", else: ""
-
-    # Video playback defaults
-    video_defaults =
-      if object_type == :video do
-        %{
-          default_autoplay: Map.get(media_object, :autoplay) || false,
-          default_loop: Map.get(media_object, :loop) || false,
-          default_muted: Map.get(media_object, :muted) || false,
-          default_controls: Map.get(media_object, :controls) || false,
-          default_preload: Map.get(media_object, :preload) || false
-        }
-      else
-        %{}
-      end
+    defaults = {default_title, default_credits, default_alt}
 
     {use_default_title, use_default_credits, use_default_alt, current_title, current_credits, current_alt} =
       if object_override do
-        case object_override do
-          %Changeset{} ->
-            use_default_title = Changeset.get_field(object_override, :use_default_title)
-            use_default_credits = Changeset.get_field(object_override, :use_default_credits)
-            use_default_alt = Changeset.get_field(object_override, :use_default_alt)
-            title = Changeset.get_field(object_override, :title)
-            credits = Changeset.get_field(object_override, :credits)
-            alt = Changeset.get_field(object_override, :alt)
-
-            {
-              use_default_title,
-              use_default_credits,
-              use_default_alt,
-              if(use_default_title, do: default_title, else: title || ""),
-              if(use_default_credits, do: default_credits, else: credits || ""),
-              if(use_default_alt, do: default_alt, else: alt || "")
-            }
-
-          _ ->
-            use_default_title = Map.get(object_override, :use_default_title, true)
-            use_default_credits = Map.get(object_override, :use_default_credits, true)
-            use_default_alt = Map.get(object_override, :use_default_alt, true)
-            title = Map.get(object_override, :title)
-            credits = Map.get(object_override, :credits)
-            alt = Map.get(object_override, :alt)
-
-            {
-              use_default_title,
-              use_default_credits,
-              use_default_alt,
-              if(use_default_title, do: default_title, else: title || ""),
-              if(use_default_credits, do: default_credits, else: credits || ""),
-              if(use_default_alt, do: default_alt, else: alt || "")
-            }
-        end
+        object_override |> override_values() |> current_texts(defaults)
       else
         {true, true, true, default_title, default_credits, default_alt}
       end
@@ -929,6 +889,58 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       override_exists: object_override != nil
     }
 
-    Map.merge(base, video_defaults)
+    Map.merge(base, video_defaults(object_type, media_object))
   end
+
+  # Video playback defaults
+  defp video_defaults(object_type, media_object) do
+    if object_type == :video do
+      %{
+        default_autoplay: Map.get(media_object, :autoplay) || false,
+        default_loop: Map.get(media_object, :loop) || false,
+        default_muted: Map.get(media_object, :muted) || false,
+        default_controls: Map.get(media_object, :controls) || false,
+        default_preload: Map.get(media_object, :preload) || false
+      }
+    else
+      %{}
+    end
+  end
+
+  defp override_values(object_override) do
+    case object_override do
+      %Changeset{} ->
+        %{
+          use_default_title: Changeset.get_field(object_override, :use_default_title),
+          use_default_credits: Changeset.get_field(object_override, :use_default_credits),
+          use_default_alt: Changeset.get_field(object_override, :use_default_alt),
+          title: Changeset.get_field(object_override, :title),
+          credits: Changeset.get_field(object_override, :credits),
+          alt: Changeset.get_field(object_override, :alt)
+        }
+
+      _ ->
+        %{
+          use_default_title: Map.get(object_override, :use_default_title, true),
+          use_default_credits: Map.get(object_override, :use_default_credits, true),
+          use_default_alt: Map.get(object_override, :use_default_alt, true),
+          title: Map.get(object_override, :title),
+          credits: Map.get(object_override, :credits),
+          alt: Map.get(object_override, :alt)
+        }
+    end
+  end
+
+  defp current_texts(values, {default_title, default_credits, default_alt}) do
+    {
+      values.use_default_title,
+      values.use_default_credits,
+      values.use_default_alt,
+      current_text(values.use_default_title, default_title, values.title),
+      current_text(values.use_default_credits, default_credits, values.credits),
+      current_text(values.use_default_alt, default_alt, values.alt)
+    }
+  end
+
+  defp current_text(use_default, default, value), do: if(use_default, do: default, else: value || "")
 end

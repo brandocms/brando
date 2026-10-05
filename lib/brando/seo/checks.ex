@@ -401,31 +401,47 @@ defmodule Brando.SEO.Checks do
     other = alternate.stats
 
     [
-      other && row.word_count && other.words >= @parity_min_words &&
-        row.word_count < other.words * @parity_word_ratio &&
-        gettext("Much shorter than the %{language} version (%{words} against %{other} words).",
-          language: language,
-          words: row.word_count,
-          other: other.words
-        ),
-      other && row.image_alts && length(row.image_alts) < length(other.image_alts) &&
-        gettext("%{count} fewer images than the %{language} version.",
-          count: length(other.image_alts) - length(row.image_alts),
-          language: language
-        ),
-      other && row.headings && abs(length(row.headings) - length(other.headings)) > 1 &&
-        gettext("%{count} headings, against %{other} in the %{language} version.",
-          count: length(row.headings),
-          other: length(other.headings),
-          language: language
-        ),
-      stale_days(row.edited_at, alternate.edited_at) > @parity_stale_days &&
-        gettext("The %{language} version was edited %{days} days after this one.",
-          language: language,
-          days: stale_days(row.edited_at, alternate.edited_at)
-        )
+      word_parity_issue(row, other, language),
+      image_parity_issue(row, other, language),
+      heading_parity_issue(row, other, language),
+      stale_parity_issue(row, alternate, language)
     ]
     |> Enum.filter(&is_binary/1)
+  end
+
+  defp word_parity_issue(row, other, language) do
+    other && row.word_count && other.words >= @parity_min_words &&
+      row.word_count < other.words * @parity_word_ratio &&
+      gettext("Much shorter than the %{language} version (%{words} against %{other} words).",
+        language: language,
+        words: row.word_count,
+        other: other.words
+      )
+  end
+
+  defp image_parity_issue(row, other, language) do
+    other && row.image_alts && length(row.image_alts) < length(other.image_alts) &&
+      gettext("%{count} fewer images than the %{language} version.",
+        count: length(other.image_alts) - length(row.image_alts),
+        language: language
+      )
+  end
+
+  defp heading_parity_issue(row, other, language) do
+    other && row.headings && abs(length(row.headings) - length(other.headings)) > 1 &&
+      gettext("%{count} headings, against %{other} in the %{language} version.",
+        count: length(row.headings),
+        other: length(other.headings),
+        language: language
+      )
+  end
+
+  defp stale_parity_issue(row, alternate, language) do
+    stale_days(row.edited_at, alternate.edited_at) > @parity_stale_days &&
+      gettext("The %{language} version was edited %{days} days after this one.",
+        language: language,
+        days: stale_days(row.edited_at, alternate.edited_at)
+      )
   end
 
   defp stale_days(%_{} = own, %_{} = other) do

@@ -60,12 +60,12 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
           # we have a video in the changeset, but no loaded video
           fetch_video(socket, video_id)
 
-        video && to_string(video.id) != to_string(video_id) && video_id != nil ->
+        other_video?(video, video_id) ->
           # we have a loaded video, but it does not match the changeset video
           # load the changeset video
           fetch_video(socket, video_id)
 
-        video && video.id == nil && video_id == nil ->
+        unsaved_video?(video, video_id) ->
           # no loaded video, no video_id in changeset
           # try to fetch by path?
 
@@ -82,28 +82,8 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
           |> assign(:video_id, nil)
           |> assign(:video, nil)
 
-        video_id != socket.assigns.video_id ->
-          socket
-          |> assign(:video_id, video_id)
-          |> maybe_subscribe(video_id)
-
-        # we have a video, and a video from the changeset, but the title or caption has changed
-        video && video_from_changeset &&
-            (video.title != video_from_changeset.title ||
-               video.caption != video_from_changeset.caption) ->
-          assign(socket, :video, video_from_changeset)
-
         true ->
-          if video && video.status != :ready do
-            # if the video is not ready, we can try to reload and see if it's done.
-            # A failed reload keeps the video we already have — it is only a refresh.
-            case Brando.Videos.get_video(video_id) do
-              {:ok, reloaded_video} -> assign(socket, :video, reloaded_video)
-              {:error, _} -> socket
-            end
-          else
-            socket
-          end
+          refresh_video(socket, video, video_id, video_from_changeset)
       end
 
     {:ok,
@@ -111,6 +91,46 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      |> prepare_input_component()
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
      |> assign_new(:relation_field, fn -> relation_field end)}
+  end
+
+  defp other_video?(video, video_id),
+    do: video && to_string(video.id) != to_string(video_id) && video_id != nil
+
+  defp unsaved_video?(video, video_id), do: video && video.id == nil && video_id == nil
+
+  defp refresh_video(socket, video, video_id, video_from_changeset) do
+    cond do
+      video_id != socket.assigns.video_id ->
+        socket
+        |> assign(:video_id, video_id)
+        |> maybe_subscribe(video_id)
+
+      # we have a video, and a video from the changeset, but the title or caption has changed
+      text_changed?(video, video_from_changeset) ->
+        assign(socket, :video, video_from_changeset)
+
+      true ->
+        maybe_reload_video(socket, video, video_id)
+    end
+  end
+
+  defp text_changed?(video, video_from_changeset) do
+    video && video_from_changeset &&
+      (video.title != video_from_changeset.title ||
+         video.caption != video_from_changeset.caption)
+  end
+
+  defp maybe_reload_video(socket, video, video_id) do
+    if video && video.status != :ready do
+      # if the video is not ready, we can try to reload and see if it's done.
+      # A failed reload keeps the video we already have — it is only a refresh.
+      case Brando.Videos.get_video(video_id) do
+        {:ok, reloaded_video} -> assign(socket, :video, reloaded_video)
+        {:error, _} -> socket
+      end
+    else
+      socket
+    end
   end
 
   # Field-level defaults for a *new* video, from the form input:
