@@ -664,22 +664,26 @@ defmodule BrandoAdmin.Images.ImageListLive do
         nil
 
       true ->
-        images
-        |> Enum.map(&normalize_config_target(&1.config_target))
-        |> Enum.reject(&is_nil/1)
-        |> Enum.uniq()
-        |> Enum.map(fn config_target ->
-          {config_target, upload_path_for_config_target(config_target)}
-        end)
-        |> Enum.filter(fn {_config_target, upload_path} ->
-          is_binary(upload_path) and
-            (folder_abs == upload_path || String.starts_with?(folder_abs, upload_path <> "/"))
-        end)
-        |> Enum.sort_by(fn {_config_target, upload_path} -> String.length(upload_path) end, :desc)
-        |> case do
-          [{config_target, _upload_path} | _] -> config_target
-          _ -> nil
-        end
+        deepest_config_target_for_folder(images, folder_abs)
+    end
+  end
+
+  defp deepest_config_target_for_folder(images, folder_abs) do
+    images
+    |> Enum.map(&normalize_config_target(&1.config_target))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.map(fn config_target ->
+      {config_target, upload_path_for_config_target(config_target)}
+    end)
+    |> Enum.filter(fn {_config_target, upload_path} ->
+      is_binary(upload_path) and
+        (folder_abs == upload_path || String.starts_with?(folder_abs, upload_path <> "/"))
+    end)
+    |> Enum.sort_by(fn {_config_target, upload_path} -> String.length(upload_path) end, :desc)
+    |> case do
+      [{config_target, _upload_path} | _] -> config_target
+      _ -> nil
     end
   end
 
@@ -707,18 +711,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
     else
       timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
-      Enum.each(updates, fn {folder, ids} ->
-        relative = FolderBrowser.relative_folder(folder, upload_root)
-
-        if relative not in [nil, ""] do
-          folder_id = FolderBrowser.folder_id_for(relative, upload_root)
-
-          if folder_id do
-            from(i in Image, where: i.id in ^ids and is_nil(i.folder_id))
-            |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
-          end
-        end
-      end)
+      Enum.each(updates, &assign_image_folder_id(&1, upload_root, timestamp))
 
       {:ok, refreshed} =
         Images.list_images(%{select: [:id, :path, :folder_id, :config_target], order: "desc id"})
@@ -727,44 +720,63 @@ defmodule BrandoAdmin.Images.ImageListLive do
     end
   end
 
+  defp assign_image_folder_id({folder, ids}, upload_root, timestamp) do
+    relative = FolderBrowser.relative_folder(folder, upload_root)
+
+    if relative not in [nil, ""] do
+      folder_id = FolderBrowser.folder_id_for(relative, upload_root)
+
+      if folder_id do
+        from(i in Image, where: i.id in ^ids and is_nil(i.folder_id))
+        |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
+      end
+    end
+  end
+
   defp pending_image_folder_updates(images, upload_root) do
     root = FolderBrowser.normalize_folder(upload_root)
 
     images
-    |> Enum.reduce(%{}, fn image, acc ->
-      cond do
-        not is_nil(image.folder_id) ->
-          acc
-
-        not is_integer(Map.get(image, :id)) ->
-          acc
-
-        not is_binary(image.path) or image.path == "" ->
-          acc
-
-        true ->
-          folder =
-            image.path
-            |> Path.dirname()
-            |> FolderBrowser.absolute_folder(root)
-            |> FolderBrowser.normalize_folder()
-
-          cond do
-            is_nil(folder) or is_nil(root) ->
-              acc
-
-            folder == root ->
-              acc
-
-            String.starts_with?(folder, root <> "/") ->
-              id = Map.fetch!(image, :id)
-              Map.update(acc, folder, [id], &[id | &1])
-
-            true ->
-              acc
-          end
-      end
-    end)
+    |> Enum.reduce(%{}, &collect_image_folder_update(&1, &2, root))
     |> Enum.map(fn {folder, ids} -> {folder, Enum.uniq(ids)} end)
+  end
+
+  defp collect_image_folder_update(image, acc, root) do
+    cond do
+      not is_nil(image.folder_id) ->
+        acc
+
+      not is_integer(Map.get(image, :id)) ->
+        acc
+
+      not is_binary(image.path) or image.path == "" ->
+        acc
+
+      true ->
+        put_image_folder_update(acc, image, root)
+    end
+  end
+
+  defp put_image_folder_update(acc, image, root) do
+    folder =
+      image.path
+      |> Path.dirname()
+      |> FolderBrowser.absolute_folder(root)
+      |> FolderBrowser.normalize_folder()
+
+    cond do
+      is_nil(folder) or is_nil(root) ->
+        acc
+
+      folder == root ->
+        acc
+
+      String.starts_with?(folder, root <> "/") ->
+        id = Map.fetch!(image, :id)
+        Map.update(acc, folder, [id], &[id | &1])
+
+      true ->
+        acc
+    end
   end
 end
