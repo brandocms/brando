@@ -80,10 +80,10 @@ defmodule Brando.Content.Transfer.Entries do
     Value.unique!(Enum.map(entries, & &1["key"]), "entries")
 
     Enum.each(bundle["dependencies"], fn {_, dep} ->
-      if entry = Enum.find(entries, &(&1["key"] == dep["entry_key"])) do
-        unless dep["kind"] in ~w(entry identifier fragment) && dep["schema"] == entry["schema"],
-          do: Error.fail!(dgettext("content_transfer", "An included relationship points to an incompatible entry type."))
-      end
+      entry = Enum.find(entries, &(&1["key"] == dep["entry_key"]))
+
+      if entry && not (dep["kind"] in ~w(entry identifier fragment) && dep["schema"] == entry["schema"]),
+        do: Error.fail!(dgettext("content_transfer", "An included relationship points to an incompatible entry type."))
     end)
 
     unless fields(entries) == bundle["fields"],

@@ -78,10 +78,7 @@ defmodule Brando.Authorization.Configuration do
     existing = groups(scope)
     by_key = Map.new(existing, &{&1.key, &1})
 
-    if Enum.any?(entries, fn entry ->
-         current = by_key[entry["key"]]
-         current && serialize(current)["preset"] != entry["preset"]
-       end) do
+    if Enum.any?(entries, &preset_changed?(by_key[&1["key"]], &1)) do
       invalid("A group key already exists with a different preset. Export a fresh configuration before importing.")
     else
       changes = Enum.map(entries, &diff(by_key[&1["key"]], &1))
@@ -103,6 +100,9 @@ defmodule Brando.Authorization.Configuration do
        }}
     end
   end
+
+  defp preset_changed?(nil, _entry), do: false
+  defp preset_changed?(current, entry), do: serialize(current)["preset"] != entry["preset"]
 
   defp diff(current, entry) do
     before = if current, do: serialize(current)
