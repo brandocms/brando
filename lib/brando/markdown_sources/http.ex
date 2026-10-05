@@ -23,17 +23,18 @@ defmodule Brando.MarkdownSources.HTTP do
     end
   end
 
-  def public_address?({a, b, c, _d}) do
-    a in 1..223 and a not in [10, 127] and
-      not (a == 100 and b in 64..127) and
-      not (a == 169 and b == 254) and
-      not (a == 172 and b in 16..31) and
-      not (a == 192 and (b == 168 or (b == 0 and c in [0, 2]))) and
-      not (a == 198 and (b in [18, 19] or (b == 51 and c == 100))) and
-      not (a == 203 and b == 0 and c == 113)
-  end
-
+  def public_address?({a, b, c, _d}), do: a in 1..223 and a not in [10, 127] and not reserved?(a, b, c)
   def public_address?(_), do: false
+
+  defp reserved?(100, b, _c) when b in 64..127, do: true
+  defp reserved?(169, 254, _c), do: true
+  defp reserved?(172, b, _c) when b in 16..31, do: true
+  defp reserved?(192, 168, _c), do: true
+  defp reserved?(192, 0, c) when c in [0, 2], do: true
+  defp reserved?(198, b, _c) when b in [18, 19], do: true
+  defp reserved?(198, 51, 100), do: true
+  defp reserved?(203, 0, 113), do: true
+  defp reserved?(_a, _b, _c), do: false
 
   defp request(conn, path) do
     headers = [
@@ -71,16 +72,17 @@ defmodule Brando.MarkdownSources.HTTP do
       {:halt, conn, {:error, :github_timeout}}
     else
       case Mint.HTTP.recv(conn, 0, min(remaining, 5_000)) do
-        {:ok, conn, responses} ->
-          case consume(responses, ref, state) do
-            {:more, state} -> {:more, conn, state}
-            {:done, state} -> {:halt, conn, decode(state)}
-            {:error, reason} -> {:halt, conn, {:error, reason}}
-          end
-
-        {:error, conn, _, _} ->
-          {:halt, conn, {:error, :github_unavailable}}
+        {:ok, conn, responses} -> consume_responses(conn, responses, ref, state)
+        {:error, conn, _, _} -> {:halt, conn, {:error, :github_unavailable}}
       end
+    end
+  end
+
+  defp consume_responses(conn, responses, ref, state) do
+    case consume(responses, ref, state) do
+      {:more, state} -> {:more, conn, state}
+      {:done, state} -> {:halt, conn, decode(state)}
+      {:error, reason} -> {:halt, conn, {:error, reason}}
     end
   end
 

@@ -10,10 +10,7 @@ defmodule Brando.MarkdownSources.Connection do
       %{repository: repo, repository_id: id, secret: secret, destinations: destinations} = connection
       when is_binary(repo) and is_integer(id) and id > 0 and is_binary(secret) and
              byte_size(secret) >= 32 and is_list(destinations) ->
-        if Map.get(connection, :enabled, true) and length(destinations) in 1..16 and
-             Regex.match?(~r/\A[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/, repo),
-           do: {:ok, Map.put(connection, :key, key)},
-           else: {:error, :connection_disabled}
+        enabled(connection, key)
 
       _ ->
         {:error, :connection_disabled}
@@ -21,6 +18,13 @@ defmodule Brando.MarkdownSources.Connection do
   end
 
   def get(_), do: {:error, :connection_disabled}
+
+  defp enabled(%{repository: repo, destinations: destinations} = connection, key) do
+    if Map.get(connection, :enabled, true) and length(destinations) in 1..16 and
+         Regex.match?(~r/\A[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/, repo),
+       do: {:ok, Map.put(connection, :key, key)},
+       else: {:error, :connection_disabled}
+  end
 
   def available do
     all()
