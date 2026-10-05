@@ -64,32 +64,34 @@ defmodule Brando.Content.Transfer.Entries do
     unless is_list(entries) && length(entries) in 1..100,
       do: Error.fail!(dgettext("content_transfer", "An entry bundle must contain 1–100 entries."))
 
-    Enum.each(entries, fn entry ->
-      Value.keys!(entry, ~w(key schema title language hints data), "entry")
-      Enum.each(~w(key schema title), &Value.nonempty!(entry[&1], "entry #{&1}"))
-
-      unless is_map(entry["hints"]) && is_binary(entry["language"]),
-        do: Error.fail!(dgettext("content_transfer", "Invalid entry matching hints."))
-
-      EntryCodec.validate!(entry["data"], EntryCodec.schema!(entry["schema"]), bundle["dependencies"])
-      uids = entry["data"] |> EntryCodec.block_fields() |> List.flatten() |> Portable.walk(& &1["uid"])
-      Value.unique!(uids, "entry block UIDs")
-      if length(uids) > 5_000, do: Error.fail!(dgettext("content_transfer", "An entry exceeds 5,000 blocks."))
-    end)
-
+    Enum.each(entries, &validate_entry!(&1, bundle["dependencies"]))
     Value.unique!(Enum.map(entries, & &1["key"]), "entries")
-
-    Enum.each(bundle["dependencies"], fn {_, dep} ->
-      entry = Enum.find(entries, &(&1["key"] == dep["entry_key"]))
-
-      if entry && not (dep["kind"] in ~w(entry identifier fragment) && dep["schema"] == entry["schema"]),
-        do: Error.fail!(dgettext("content_transfer", "An included relationship points to an incompatible entry type."))
-    end)
+    Enum.each(bundle["dependencies"], fn {_, dep} -> validate_dependency_entry!(entries, dep) end)
 
     unless fields(entries) == bundle["fields"],
       do: Error.fail!(dgettext("content_transfer", "The entry and field manifests disagree."))
 
     :ok
+  end
+
+  defp validate_entry!(entry, dependencies) do
+    Value.keys!(entry, ~w(key schema title language hints data), "entry")
+    Enum.each(~w(key schema title), &Value.nonempty!(entry[&1], "entry #{&1}"))
+
+    unless is_map(entry["hints"]) && is_binary(entry["language"]),
+      do: Error.fail!(dgettext("content_transfer", "Invalid entry matching hints."))
+
+    EntryCodec.validate!(entry["data"], EntryCodec.schema!(entry["schema"]), dependencies)
+    uids = entry["data"] |> EntryCodec.block_fields() |> List.flatten() |> Portable.walk(& &1["uid"])
+    Value.unique!(uids, "entry block UIDs")
+    if length(uids) > 5_000, do: Error.fail!(dgettext("content_transfer", "An entry exceeds 5,000 blocks."))
+  end
+
+  defp validate_dependency_entry!(entries, dep) do
+    entry = Enum.find(entries, &(&1["key"] == dep["entry_key"]))
+
+    if entry && not (dep["kind"] in ~w(entry identifier fragment) && dep["schema"] == entry["schema"]),
+      do: Error.fail!(dgettext("content_transfer", "An included relationship points to an incompatible entry type."))
   end
 
   def preview!(archive, targets, actor, opts) do
@@ -104,123 +106,7 @@ defmodule Brando.Content.Transfer.Entries do
 
     entries =
       Enum.with_index(bundle["entries"], 1)
-      |> Enum.map(fn {source, n} ->
-        candidates =
-          case Error.protect(fn -> Catalog.candidates(source, actor) end) do
-            {:ok, candidates} -> candidates
-            _ -> []
-          end
-
-        base = %{
-          source: source,
-          candidates: candidates,
-          issue: nil,
-          destination: nil,
-          before: nil,
-          mode: get_in(targets, [source["key"], "mode"]) || "create",
-          entry: nil,
-          params: nil,
-          changes: [],
-          status: nil,
-          unique_keys: [],
-          incoming_count: source["data"] |> EntryCodec.block_fields() |> List.flatten() |> Portable.count()
-        }
-
-        case Error.protect(fn ->
-               schema = EntryCodec.schema!(source["schema"])
-               target = targets[source["key"]] || %{}
-               mode = target["mode"] || "create"
-
-               unless mode in ~w(create update reuse),
-                 do:
-                   Error.fail!(
-                     dgettext("content_transfer", "Choose Create new, Update existing or Use existing unchanged.")
-                   )
-
-               if mode == "reuse" do
-                 entry = EntryCodec.load!(schema, target["id"], actor, :read)
-
-                 Map.merge(base, %{
-                   mode: mode,
-                   entry: entry,
-                   data: source["data"],
-                   stub: entry,
-                   destination: Catalog.describe(entry),
-                   before: EntryCodec.fingerprint(entry),
-                   status: Map.get(entry, :status)
-                 })
-               else
-                 entry =
-                   if mode == "update",
-                     do: EntryCodec.load!(schema, target["id"], actor, :update),
-                     else: EntryCodec.blank(schema)
-
-                 Catalog.authorize!(
-                   actor,
-                   if(mode == "create", do: :create, else: :update),
-                   if(mode == "create", do: schema, else: entry)
-                 )
-
-                 overrides = target["attributes"] || %{}
-                 Value.keys!(overrides, editable(source), "entry overrides")
-                 data = put_in(source["data"]["attributes"], Map.merge(source["data"]["attributes"], overrides))["data"]
-                 publication = target["publication"] || if(mode == "create", do: "draft", else: "preserve")
-
-                 unless publication in ~w(draft preserve source),
-                   do: Error.fail!(dgettext("content_transfer", "Choose how to publish this entry."))
-
-                 data =
-                   if Map.has_key?(data["attributes"], "status") do
-                     status =
-                       case publication do
-                         "draft" -> "draft"
-                         "preserve" -> to_string(Map.get(entry, :status) || :draft)
-                         "source" -> source["data"]["attributes"]["status"]
-                       end
-
-                     put_in(data["attributes"]["status"], status)
-                   else
-                     data
-                   end
-
-                 data =
-                   if Map.has_key?(data["attributes"], "publish_at") do
-                     date =
-                       case publication do
-                         "draft" -> nil
-                         "preserve" -> Params.snapshot(Map.get(entry, :publish_at))
-                         "source" -> data["attributes"]["publish_at"]
-                       end
-
-                     put_in(data["attributes"]["publish_at"], date)
-                   else
-                     data
-                   end
-
-                 stub =
-                   Enum.reduce(data["attributes"], %{entry | id: entry.id || -n}, fn {key, value}, acc ->
-                     field = Enum.find(EntryCodec.attributes(schema), &(to_string(&1) == key))
-
-                     case Ecto.Type.cast(schema.__schema__(:type, field), value) do
-                       {:ok, cast} -> Map.put(acc, field, cast)
-                       _ -> acc
-                     end
-                   end)
-
-                 Map.merge(base, %{
-                   mode: mode,
-                   entry: entry,
-                   data: data,
-                   stub: stub,
-                   destination: Catalog.describe(stub),
-                   before: if(mode == "update", do: EntryCodec.fingerprint(entry))
-                 })
-               end
-             end) do
-          {:ok, item} -> item
-          {:error, message} -> %{base | issue: message}
-        end
-      end)
+      |> Enum.map(fn {source, n} -> preview_entry(source, n, targets, actor) end)
 
     bundled = bundled_bindings(bundle, entries, supplied, :preview)
     # Reused entries only provide an identity. Their incoming fields and media
@@ -229,34 +115,192 @@ defmodule Brando.Content.Transfer.Entries do
     content_bundle = Map.merge(bundle, %{"entries" => incoming, "fields" => fields(incoming)})
     {dependencies, bindings} = Transfer.resolve_dependencies(content_bundle, supplied, archive.files, actor, bundled)
     preview_bindings = Transfer.preview_bindings(bundle, bindings)
+    entries = Enum.map(entries, &check_preview_entry(&1, bundle, bindings, preview_bindings, actor))
+    issues = preview_issues(entries, dependencies, bundle, supplied)
 
-    entries =
-      Enum.map(entries, fn
-        %{mode: "reuse"} = item ->
-          item
+    fingerprint =
+      Value.digest(%{
+        "scope" => Transfer.scope(),
+        "bundle" => bundle,
+        "targets" => targets,
+        "supplied" => supplied,
+        "entries" => Enum.map(entries, &Map.take(&1, [:mode, :before, :issue, :status])),
+        "dependencies" => Enum.map(dependencies, &Map.take(&1, [:token, :id, :fingerprint, :action, :issue]))
+      })
 
-        %{issue: nil} = item ->
-          case Error.protect(fn ->
-                 validate_contracts!(item.data, bundle, bindings)
-                 params = EntryCodec.decode(item.data, item.entry.__struct__, preview_bindings, actor)
-                 cs = changeset!(item, params, actor)
+    %{
+      id: operation_id,
+      actor_id: actor_id(actor),
+      scope: Transfer.scope(),
+      archive: archive,
+      targets: targets,
+      supplied: supplied,
+      entries: entries,
+      fields: [],
+      dependencies: dependencies,
+      bindings: bindings,
+      problems: Enum.uniq(issues),
+      fingerprint: fingerprint
+    }
+  end
 
-                 %{
-                   item
-                   | params: params,
-                     changes: changes(item, cs),
-                     status: Changeset.get_field(cs, :status),
-                     unique_keys: unique_keys(cs)
-                 }
-               end) do
-            {:ok, checked} -> checked
-            {:error, message} -> %{item | issue: message}
-          end
+  defp preview_entry(source, n, targets, actor) do
+    candidates =
+      case Error.protect(fn -> Catalog.candidates(source, actor) end) do
+        {:ok, candidates} -> candidates
+        _ -> []
+      end
 
-        item ->
-          item
-      end)
+    base = %{
+      source: source,
+      candidates: candidates,
+      issue: nil,
+      destination: nil,
+      before: nil,
+      mode: get_in(targets, [source["key"], "mode"]) || "create",
+      entry: nil,
+      params: nil,
+      changes: [],
+      status: nil,
+      unique_keys: [],
+      incoming_count: source["data"] |> EntryCodec.block_fields() |> List.flatten() |> Portable.count()
+    }
 
+    case Error.protect(fn -> target_entry!(base, source, n, targets[source["key"]] || %{}, actor) end) do
+      {:ok, item} -> item
+      {:error, message} -> %{base | issue: message}
+    end
+  end
+
+  defp target_entry!(base, source, n, target, actor) do
+    schema = EntryCodec.schema!(source["schema"])
+    mode = target["mode"] || "create"
+
+    unless mode in ~w(create update reuse),
+      do: Error.fail!(dgettext("content_transfer", "Choose Create new, Update existing or Use existing unchanged."))
+
+    if mode == "reuse" do
+      entry = EntryCodec.load!(schema, target["id"], actor, :read)
+
+      Map.merge(base, %{
+        mode: mode,
+        entry: entry,
+        data: source["data"],
+        stub: entry,
+        destination: Catalog.describe(entry),
+        before: EntryCodec.fingerprint(entry),
+        status: Map.get(entry, :status)
+      })
+    else
+      write_entry!(base, source, n, schema, target, mode, actor)
+    end
+  end
+
+  defp write_entry!(base, source, n, schema, target, mode, actor) do
+    entry = load_target_entry!(schema, target, mode, actor)
+    overrides = target["attributes"] || %{}
+    Value.keys!(overrides, editable(source), "entry overrides")
+    data = put_in(source["data"]["attributes"], Map.merge(source["data"]["attributes"], overrides))["data"]
+    publication = target["publication"] || if(mode == "create", do: "draft", else: "preserve")
+
+    unless publication in ~w(draft preserve source),
+      do: Error.fail!(dgettext("content_transfer", "Choose how to publish this entry."))
+
+    data =
+      data
+      |> put_publication_status(publication, entry, source)
+      |> put_publication_date(publication, entry)
+
+    stub = Enum.reduce(data["attributes"], %{entry | id: entry.id || -n}, &put_cast_attribute(&2, schema, &1))
+
+    Map.merge(base, %{
+      mode: mode,
+      entry: entry,
+      data: data,
+      stub: stub,
+      destination: Catalog.describe(stub),
+      before: if(mode == "update", do: EntryCodec.fingerprint(entry))
+    })
+  end
+
+  defp load_target_entry!(schema, target, mode, actor) do
+    entry =
+      if mode == "update",
+        do: EntryCodec.load!(schema, target["id"], actor, :update),
+        else: EntryCodec.blank(schema)
+
+    Catalog.authorize!(
+      actor,
+      if(mode == "create", do: :create, else: :update),
+      if(mode == "create", do: schema, else: entry)
+    )
+
+    entry
+  end
+
+  defp put_publication_status(data, publication, entry, source) do
+    if Map.has_key?(data["attributes"], "status") do
+      status =
+        case publication do
+          "draft" -> "draft"
+          "preserve" -> to_string(Map.get(entry, :status) || :draft)
+          "source" -> source["data"]["attributes"]["status"]
+        end
+
+      put_in(data["attributes"]["status"], status)
+    else
+      data
+    end
+  end
+
+  defp put_publication_date(data, publication, entry) do
+    if Map.has_key?(data["attributes"], "publish_at") do
+      date =
+        case publication do
+          "draft" -> nil
+          "preserve" -> Params.snapshot(Map.get(entry, :publish_at))
+          "source" -> data["attributes"]["publish_at"]
+        end
+
+      put_in(data["attributes"]["publish_at"], date)
+    else
+      data
+    end
+  end
+
+  defp put_cast_attribute(stub, schema, {key, value}) do
+    field = Enum.find(EntryCodec.attributes(schema), &(to_string(&1) == key))
+
+    case Ecto.Type.cast(schema.__schema__(:type, field), value) do
+      {:ok, cast} -> Map.put(stub, field, cast)
+      _ -> stub
+    end
+  end
+
+  defp check_preview_entry(%{mode: "reuse"} = item, _bundle, _bindings, _preview_bindings, _actor), do: item
+
+  defp check_preview_entry(%{issue: nil} = item, bundle, bindings, preview_bindings, actor) do
+    case Error.protect(fn ->
+           validate_contracts!(item.data, bundle, bindings)
+           params = EntryCodec.decode(item.data, item.entry.__struct__, preview_bindings, actor)
+           cs = changeset!(item, params, actor)
+
+           %{
+             item
+             | params: params,
+               changes: changes(item, cs),
+               status: Changeset.get_field(cs, :status),
+               unique_keys: unique_keys(cs)
+           }
+         end) do
+      {:ok, checked} -> checked
+      {:error, message} -> %{item | issue: message}
+    end
+  end
+
+  defp check_preview_entry(item, _bundle, _bindings, _preview_bindings, _actor), do: item
+
+  defp preview_issues(entries, dependencies, bundle, supplied) do
     destination_groups =
       entries
       |> Enum.filter(&(&1.mode in ~w(update reuse) && &1.destination))
@@ -289,36 +333,10 @@ defmodule Brando.Content.Transfer.Entries do
         ],
         else: issues
 
-    issues =
-      case Error.protect(fn -> ordered(entries, bundle, supplied) end) do
-        {:error, message} -> [message | issues]
-        _ -> issues
-      end
-
-    fingerprint =
-      Value.digest(%{
-        "scope" => Transfer.scope(),
-        "bundle" => bundle,
-        "targets" => targets,
-        "supplied" => supplied,
-        "entries" => Enum.map(entries, &Map.take(&1, [:mode, :before, :issue, :status])),
-        "dependencies" => Enum.map(dependencies, &Map.take(&1, [:token, :id, :fingerprint, :action, :issue]))
-      })
-
-    %{
-      id: operation_id,
-      actor_id: actor_id(actor),
-      scope: Transfer.scope(),
-      archive: archive,
-      targets: targets,
-      supplied: supplied,
-      entries: entries,
-      fields: [],
-      dependencies: dependencies,
-      bindings: bindings,
-      problems: Enum.uniq(issues),
-      fingerprint: fingerprint
-    }
+    case Error.protect(fn -> ordered(entries, bundle, supplied) end) do
+      {:error, message} -> [message | issues]
+      _ -> issues
+    end
   end
 
   def editable(source),
