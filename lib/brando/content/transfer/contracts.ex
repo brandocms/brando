@@ -118,19 +118,21 @@ defmodule Brando.Content.Transfer.Contracts do
         |> Enum.reject(fn definition ->
           Enum.any?(existing, &(&1[key] == Map.get(definition, String.to_existing_atom(key))))
         end)
-        |> Enum.map(fn definition ->
-          definition
-          |> Params.snapshot()
-          |> Map.take(
-            if(field == "vars",
-              do: Brando.Content.Transfer.Portable.var_fields(),
-              else: ~w(name description active collapsed sequence data image_id video_id file_id gallery_id)
-            )
-          )
-          |> then(fn value -> if field == "refs", do: Map.put(value, "uid", Brando.Utils.generate_uid()), else: value end)
-        end)
+        |> Enum.map(&definition_defaults(&1, field))
 
       Map.put(acc, field, existing ++ additions)
     end)
+  end
+
+  defp definition_defaults(definition, field) do
+    definition
+    |> Params.snapshot()
+    |> Map.take(
+      if(field == "vars",
+        do: Brando.Content.Transfer.Portable.var_fields(),
+        else: ~w(name description active collapsed sequence data image_id video_id file_id gallery_id)
+      )
+    )
+    |> then(fn value -> if field == "refs", do: Map.put(value, "uid", Brando.Utils.generate_uid()), else: value end)
   end
 end
