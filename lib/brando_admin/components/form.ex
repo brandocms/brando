@@ -218,33 +218,7 @@ defmodule BrandoAdmin.Components.Form do
     # Build a set of image/video/file FK fields so we can load associations
     asset_fk_map = build_asset_fk_map(schema)
 
-    updated_changeset =
-      Enum.reduce(changes, changeset, fn %{field: field, value: value, assoc?: assoc?}, cs ->
-        cs =
-          if assoc? do
-            Changeset.put_assoc(cs, field, value)
-          else
-            Changeset.put_change(cs, field, value)
-          end
-
-        # If this is an asset FK (e.g. :cover_id), load the record
-        # and put it directly on the changeset data (not via put_assoc,
-        # which can fail with :on_replace => :update)
-        case Map.get(asset_fk_map, field) do
-          nil ->
-            cs
-
-          {assoc_field, asset_schema} ->
-            case Brando.Repo.get(asset_schema, value) do
-              nil ->
-                cs
-
-              record ->
-                updated_data = Map.put(cs.data, assoc_field, record)
-                %{cs | data: updated_data}
-            end
-        end
-      end)
+    updated_changeset = Enum.reduce(changes, changeset, &apply_field_change(&2, &1, asset_fk_map))
 
     {:ok,
      socket
@@ -1980,6 +1954,34 @@ defmodule BrandoAdmin.Components.Form do
 
   # Maps FK fields (e.g. :cover_id) to {assoc_field, schema_module}
   # for loading associated records when receiving remote field changes.
+  defp apply_field_change(cs, %{field: field, value: value, assoc?: assoc?}, asset_fk_map) do
+    cs =
+      if assoc? do
+        Changeset.put_assoc(cs, field, value)
+      else
+        Changeset.put_change(cs, field, value)
+      end
+
+    # If this is an asset FK (e.g. :cover_id), load the record
+    # and put it directly on the changeset data (not via put_assoc,
+    # which can fail with :on_replace => :update)
+    case Map.get(asset_fk_map, field) do
+      nil -> cs
+      {assoc_field, asset_schema} -> put_loaded_asset(cs, assoc_field, asset_schema, value)
+    end
+  end
+
+  defp put_loaded_asset(cs, assoc_field, asset_schema, value) do
+    case Brando.Repo.get(asset_schema, value) do
+      nil ->
+        cs
+
+      record ->
+        updated_data = Map.put(cs.data, assoc_field, record)
+        %{cs | data: updated_data}
+    end
+  end
+
   defp build_asset_fk_map(schema) do
     image_fields =
       if function_exported?(schema, :__image_fields__, 0),
@@ -2113,10 +2115,8 @@ defmodule BrandoAdmin.Components.Form do
       |> push_event("b:submit", %{})
     else
       socket
-      |> then(fn s -> if blocks_ready?, do: assign(s, :all_blocks_received?, true), else: s end)
-      |> then(fn s ->
-        if transformers_ready?, do: assign(s, :all_transformers_received?, true), else: s
-      end)
+      |> assign_received(:all_blocks_received?, blocks_ready?)
+      |> assign_received(:all_transformers_received?, transformers_ready?)
     end
   end
 
@@ -2252,35 +2252,7 @@ defmodule BrandoAdmin.Components.Form do
       changeset = assoc_all_block_fields(block_changesets, changeset)
 
       if changeset.errors == [] do
-        # fetch all blocks' rendered_html
-        case LivePreview.initialize(
-               schema,
-               changeset,
-               updated_entry_assocs,
-               socket.assigns.live_preview_schema_target
-             ) do
-          {:ok, cache_key} ->
-            socket
-            |> assign(:live_preview_active?, true)
-            |> assign(:live_preview_cache_key, cache_key)
-            |> clear_blocks_root_changesets()
-            |> assign_entry_fields_demanding_live_preview_rerender(schema)
-            |> assign_entry_fields_demanding_live_preview_reassign(schema)
-            |> push_event("b:live_preview", %{cache_key: cache_key})
-
-          {:error, err} ->
-            require Logger
-
-            Logger.error("""
-            => Live Preview error: #{inspect(err)}
-            """)
-
-            push_event(socket, "b:alert", %{
-              title: "Live Preview error",
-              message: err,
-              type: "error"
-            })
-        end
+        initialize_block_live_preview(socket, schema, changeset, updated_entry_assocs)
       else
         socket
         |> clear_blocks_root_changesets()
@@ -2360,29 +2332,7 @@ defmodule BrandoAdmin.Components.Form do
       socket = socket |> clear_blocks_root_changesets() |> assign(:pending_live_preview_target, nil)
 
       if changeset.errors == [] do
-        case LivePreview.switch_target(
-               schema,
-               changeset,
-               socket.assigns.live_preview_cache_key,
-               target,
-               socket.assigns.updated_entry_assocs
-             ) do
-          {:ok, _key} ->
-            socket
-            |> assign(:live_preview_schema_target, target)
-            |> assign_entry_fields_demanding_live_preview_rerender(schema)
-            |> assign_entry_fields_demanding_live_preview_reassign(schema)
-
-          {:error, _reason} ->
-            push_event(socket, "b:alert", %{
-              title: gettext("Could not switch preview"),
-              message:
-                gettext(
-                  "The previous preview is still open. Check the target configuration and your access, then try again."
-                ),
-              type: "error"
-            })
-        end
+        switch_live_preview_target(socket, schema, changeset, target)
       else
         push_errors(socket, changeset, socket.assigns.form_blueprint, schema)
       end
@@ -2397,6 +2347,63 @@ defmodule BrandoAdmin.Components.Form do
       message: "Tag received: #{inspect(tag)}",
       type: "info"
     })
+  end
+
+  defp assign_received(socket, key, true), do: assign(socket, key, true)
+  defp assign_received(socket, _key, false), do: socket
+
+  defp initialize_block_live_preview(socket, schema, changeset, updated_entry_assocs) do
+    # fetch all blocks' rendered_html
+    case LivePreview.initialize(
+           schema,
+           changeset,
+           updated_entry_assocs,
+           socket.assigns.live_preview_schema_target
+         ) do
+      {:ok, cache_key} ->
+        socket
+        |> assign(:live_preview_active?, true)
+        |> assign(:live_preview_cache_key, cache_key)
+        |> clear_blocks_root_changesets()
+        |> assign_entry_fields_demanding_live_preview_rerender(schema)
+        |> assign_entry_fields_demanding_live_preview_reassign(schema)
+        |> push_event("b:live_preview", %{cache_key: cache_key})
+
+      {:error, err} ->
+        Logger.error("""
+        => Live Preview error: #{inspect(err)}
+        """)
+
+        push_event(socket, "b:alert", %{
+          title: "Live Preview error",
+          message: err,
+          type: "error"
+        })
+    end
+  end
+
+  defp switch_live_preview_target(socket, schema, changeset, target) do
+    case LivePreview.switch_target(
+           schema,
+           changeset,
+           socket.assigns.live_preview_cache_key,
+           target,
+           socket.assigns.updated_entry_assocs
+         ) do
+      {:ok, _key} ->
+        socket
+        |> assign(:live_preview_schema_target, target)
+        |> assign_entry_fields_demanding_live_preview_rerender(schema)
+        |> assign_entry_fields_demanding_live_preview_reassign(schema)
+
+      {:error, _reason} ->
+        push_event(socket, "b:alert", %{
+          title: gettext("Could not switch preview"),
+          message:
+            gettext("The previous preview is still open. Check the target configuration and your access, then try again."),
+          type: "error"
+        })
+    end
   end
 
   def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
