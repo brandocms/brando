@@ -185,54 +185,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     caption_override = override_value(override, caption_field)
     alt_override = override_value(override, :alt)
 
-    editing =
-      case assigns[:text_editor] do
-        %{type: ^object_type, id: ^object_id, kind: kind} when not is_nil(object_type) -> kind
-        _ -> nil
-      end
+    editing = text_editor_kind(assigns[:text_editor], object_type, object_id)
 
     tile =
-      cond do
-        object_type == :image ->
-          image = obj.image
-          alt_library = Images.text(image, :alt, nil)
-
-          %{
-            media_type: :image,
-            thumb_url:
-              image.status == :processed && Brando.Utils.img_url(image, :thumb, prefix: Brando.Utils.media_url()),
-            processing: image.status != :processed,
-            filename: image.path && Path.basename(image.path),
-            caption: Tile.caption_state(caption_override, Images.text(image, :title, nil)),
-            alt: Tile.alt_state(alt_override, alt_library),
-            alt_library: alt_library
-          }
-
-        object_type == :video ->
-          video = obj.video
-
-          %{
-            media_type: :video,
-            thumb_url: Brando.Videos.Helpers.thumbnail_url(video),
-            processing: false,
-            filename: video.title || video.remote_id,
-            caption: Tile.caption_state(caption_override, video.title),
-            alt: nil,
-            alt_library: nil
-          }
-
-        true ->
-          media_type = if assigns.gallery_object_form[:image_id].value, do: :image, else: :video
-
-          %{
-            media_type: media_type,
-            thumb_url: nil,
-            processing: false,
-            filename: nil,
-            caption: %{set?: false, html: nil},
-            alt: if(media_type == :image, do: %{set?: false, text: nil}),
-            alt_library: nil
-          }
+      case object_type do
+        :image -> image_tile(obj.image, caption_override, alt_override)
+        :video -> video_tile(obj.video, caption_override)
+        _ -> empty_tile(assigns.gallery_object_form)
       end
 
     tile =
@@ -248,6 +207,53 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   end
 
   defp assign_tile(assigns, _obj, _override), do: assign(assigns, :tile, nil)
+
+  defp text_editor_kind(text_editor, object_type, object_id) do
+    case text_editor do
+      %{type: ^object_type, id: ^object_id, kind: kind} when not is_nil(object_type) -> kind
+      _ -> nil
+    end
+  end
+
+  defp image_tile(image, caption_override, alt_override) do
+    alt_library = Images.text(image, :alt, nil)
+
+    %{
+      media_type: :image,
+      thumb_url: image.status == :processed && Brando.Utils.img_url(image, :thumb, prefix: Brando.Utils.media_url()),
+      processing: image.status != :processed,
+      filename: image.path && Path.basename(image.path),
+      caption: Tile.caption_state(caption_override, Images.text(image, :title, nil)),
+      alt: Tile.alt_state(alt_override, alt_library),
+      alt_library: alt_library
+    }
+  end
+
+  defp video_tile(video, caption_override) do
+    %{
+      media_type: :video,
+      thumb_url: Brando.Videos.Helpers.thumbnail_url(video),
+      processing: false,
+      filename: video.title || video.remote_id,
+      caption: Tile.caption_state(caption_override, video.title),
+      alt: nil,
+      alt_library: nil
+    }
+  end
+
+  defp empty_tile(gallery_object_form) do
+    media_type = if gallery_object_form[:image_id].value, do: :image, else: :video
+
+    %{
+      media_type: media_type,
+      thumb_url: nil,
+      processing: false,
+      filename: nil,
+      caption: %{set?: false, html: nil},
+      alt: if(media_type == :image, do: %{set?: false, text: nil}),
+      alt_library: nil
+    }
+  end
 
   defp override_value(nil, _field), do: nil
 
@@ -301,51 +307,46 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   defp compute_display_values_from_form(obj, override) do
     base_values = base_display_values(obj)
 
-    # Extract override values whether it's a changeset or struct
-    {use_default_title, use_default_credits, use_default_alt, title, credits, alt} =
-      case override do
-        %Changeset{} ->
-          {
-            Changeset.get_field(override, :use_default_title),
-            Changeset.get_field(override, :use_default_credits),
-            Changeset.get_field(override, :use_default_alt),
-            Changeset.get_field(override, :title),
-            Changeset.get_field(override, :credits),
-            Changeset.get_field(override, :alt)
-          }
-
-        %{} ->
-          {
-            Map.get(override, :use_default_title, true),
-            Map.get(override, :use_default_credits, true),
-            Map.get(override, :use_default_alt, true),
-            Map.get(override, :title),
-            Map.get(override, :credits),
-            Map.get(override, :alt)
-          }
-
-        _ ->
-          {true, true, true, nil, nil, nil}
-      end
+    {use_default_title, use_default_credits, use_default_alt, title, credits, alt} = override_fields(override)
 
     # Apply overrides from the current values
     %{
-      title:
-        if(use_default_title,
-          do: base_values.title,
-          else: title || base_values.title
-        ),
-      alt:
-        if(use_default_alt,
-          do: base_values.alt,
-          else: alt || base_values.alt
-        ),
-      credits:
-        if(use_default_credits,
-          do: base_values.credits,
-          else: credits || base_values.credits
-        )
+      title: override_or_default(use_default_title, title, base_values.title),
+      alt: override_or_default(use_default_alt, alt, base_values.alt),
+      credits: override_or_default(use_default_credits, credits, base_values.credits)
     }
+  end
+
+  # Extract override values whether it's a changeset or struct
+  defp override_fields(override) do
+    case override do
+      %Changeset{} ->
+        {
+          Changeset.get_field(override, :use_default_title),
+          Changeset.get_field(override, :use_default_credits),
+          Changeset.get_field(override, :use_default_alt),
+          Changeset.get_field(override, :title),
+          Changeset.get_field(override, :credits),
+          Changeset.get_field(override, :alt)
+        }
+
+      %{} ->
+        {
+          Map.get(override, :use_default_title, true),
+          Map.get(override, :use_default_credits, true),
+          Map.get(override, :use_default_alt, true),
+          Map.get(override, :title),
+          Map.get(override, :credits),
+          Map.get(override, :alt)
+        }
+
+      _ ->
+        {true, true, true, nil, nil, nil}
+    end
+  end
+
+  defp override_or_default(use_default, value, base_value) do
+    if use_default, do: base_value, else: value || base_value
   end
 
   # The list row's title and details line. The title is the caption when there
@@ -357,38 +358,36 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
     cond do
       obj && loaded_assoc?(obj, :image) ->
-        image = obj.image
-        filename = image.path && Path.basename(image.path)
-
-        %{
-          media_type: :image,
-          title: caption || filename || "-",
-          details:
-            present([
-              caption && filename,
-              image.width && image.height && "#{image.width}\u00d7#{image.height}",
-              image_formats(image.formats)
-            ])
-        }
+        image_list_row(obj.image, caption)
 
       obj && loaded_assoc?(obj, :video) ->
-        video = obj.video
-
-        %{
-          media_type: :video,
-          title: caption || video.remote_id || gettext("Video"),
-          details:
-            present([
-              video_source(video.type),
-              video.width && video.height && "#{video.width}\u00d7#{video.height}"
-            ])
-        }
+        video_list_row(obj.video, caption)
 
       true ->
         media_type = if gallery_object_form[:image_id].value, do: :image, else: :video
         %{media_type: media_type, title: "-", details: []}
     end
   end
+
+  defp image_list_row(image, caption) do
+    filename = image.path && Path.basename(image.path)
+
+    %{
+      media_type: :image,
+      title: caption || filename || "-",
+      details: present([caption && filename, dimensions(image), image_formats(image.formats)])
+    }
+  end
+
+  defp video_list_row(video, caption) do
+    %{
+      media_type: :video,
+      title: caption || video.remote_id || gettext("Video"),
+      details: present([video_source(video.type), dimensions(video)])
+    }
+  end
+
+  defp dimensions(media), do: media.width && media.height && "#{media.width}\u00d7#{media.height}"
 
   defp plain_text(nil), do: nil
 
