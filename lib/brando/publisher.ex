@@ -67,11 +67,15 @@ defmodule Brando.Publisher do
       schema = schema_module(schema)
 
       Boundary.run(user, :schedule, schema, fn user ->
-        with :ok <- Boundary.authorize_record(user, :publish, schema, id),
-             :ok <- Boundary.authorize_record(user, :schedule, schema, id),
-             do: schedule_valid_revision(schema, id, revision_number, publish_at, user)
+        schedule_authorized_revision(schema, id, revision_number, publish_at, user)
       end)
     end
+  end
+
+  defp schedule_authorized_revision(schema, id, revision_number, publish_at, user) do
+    with :ok <- Boundary.authorize_record(user, :publish, schema, id),
+         :ok <- Boundary.authorize_record(user, :schedule, schema, id),
+         do: schedule_valid_revision(schema, id, revision_number, publish_at, user)
   end
 
   defp schedule_valid_revision(schema, id, revision_number, publish_at, user) do
