@@ -367,29 +367,30 @@ defmodule Brando.Translations.Sync do
 
     data_rows =
       case ref.data do
-        %wrapper{data: data} ->
-          cond do
-            wrapper in Translation.text_ref_wrapper_types() ->
-              [{prefix <> "/text", :text, Map.get(data, :text)}]
-
-            wrapper == PictureBlock ->
-              for field <- [:title, :credits, :alt], do: {"#{prefix}/#{field}", :text, Map.get(data, field)}
-
-            wrapper == VideoBlock ->
-              [{prefix <> "/title", :text, Map.get(data, :title)}]
-
-            wrapper == GalleryBlock ->
-              flatten_gallery(ref, data, prefix)
-
-            true ->
-              [{prefix <> "/data", :local, data}]
-          end
-
-        _ ->
-          []
+        %wrapper{data: data} -> flatten_ref_data(wrapper, ref, data, prefix)
+        _ -> []
       end
 
     [media | data_rows]
+  end
+
+  defp flatten_ref_data(wrapper, ref, data, prefix) do
+    cond do
+      wrapper in Translation.text_ref_wrapper_types() ->
+        [{prefix <> "/text", :text, Map.get(data, :text)}]
+
+      wrapper == PictureBlock ->
+        for field <- [:title, :credits, :alt], do: {"#{prefix}/#{field}", :text, Map.get(data, field)}
+
+      wrapper == VideoBlock ->
+        [{prefix <> "/title", :text, Map.get(data, :title)}]
+
+      wrapper == GalleryBlock ->
+        flatten_gallery(ref, data, prefix)
+
+      true ->
+        [{prefix <> "/data", :local, data}]
+    end
   end
 
   defp flatten_gallery(ref, data, prefix) do
@@ -705,20 +706,25 @@ defmodule Brando.Translations.Sync do
     rows =
       Enum.map(loaded(Map.get(source, name)), fn source_row ->
         case target_by_key[Map.get(source_row, key)] do
-          nil ->
-            row = clone(source_row)
-            if related_key, do: Map.put(row, related_key, target.id), else: row
-
-          target_row ->
-            target_row = Map.merge(target_row, Map.take(source_row, subform.shared))
-
-            if Map.has_key?(source_row, :sequence),
-              do: %{target_row | sequence: source_row.sequence},
-              else: target_row
+          nil -> new_subform_row(source_row, related_key, target)
+          target_row -> merge_subform_row(target_row, source_row, subform.shared)
         end
       end)
 
     {:ok, rows}
+  end
+
+  defp new_subform_row(source_row, related_key, target) do
+    row = clone(source_row)
+    if related_key, do: Map.put(row, related_key, target.id), else: row
+  end
+
+  defp merge_subform_row(target_row, source_row, shared) do
+    target_row = Map.merge(target_row, Map.take(source_row, shared))
+
+    if Map.has_key?(source_row, :sequence),
+      do: %{target_row | sequence: source_row.sequence},
+      else: target_row
   end
 
   defp new_block_identifier(block_identifier) do
@@ -755,20 +761,24 @@ defmodule Brando.Translations.Sync do
 
   defp resolve_tree(payload, target, spec, map, awaiting) do
     Enum.reduce(spec.tree, {payload, awaiting}, fn name, {acc, awaiting} ->
-      field = :"#{name}_id"
-
-      case Map.get(acc, field) do
-        nil ->
-          {acc, awaiting}
-
-        source_id ->
-          case Map.get(map, source_id) do
-            # The path names the awaited entry, so only its translation re-syncs this
-            nil -> {Map.put(acc, field, Map.get(target, field)), [awaiting_item("#{name}/#{source_id}") | awaiting]}
-            id -> {Map.put(acc, field, id), awaiting}
-          end
-      end
+      resolve_tree_field(name, acc, awaiting, target, map)
     end)
+  end
+
+  defp resolve_tree_field(name, acc, awaiting, target, map) do
+    field = :"#{name}_id"
+
+    case Map.get(acc, field) do
+      nil ->
+        {acc, awaiting}
+
+      source_id ->
+        case Map.get(map, source_id) do
+          # The path names the awaited entry, so only its translation re-syncs this
+          nil -> {Map.put(acc, field, Map.get(target, field)), [awaiting_item("#{name}/#{source_id}") | awaiting]}
+          id -> {Map.put(acc, field, id), awaiting}
+        end
+    end
   end
 
   # --- Identifiers ------------------------------------------------------------
