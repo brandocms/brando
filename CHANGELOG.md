@@ -476,6 +476,16 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- **Transformer cards can act on their entry and see their neighbours.** A
+  transformer's `listing:` component now also gets `@dom_id` and `@target`,
+  and `BrandoAdmin.Components.Form.Transformer.set_field/4` builds a click
+  that changes one of the entry's fields in place (a size switch on a card),
+  saved like an edit in the entry's own fields. `listing_context true` on the
+  `inputs_for` adds `@index` and `@entries`, every entry in order, and
+  re-renders every card when one changes — for position numbers, or cards that
+  show which entries share a row. The grid layout's hover tools are white
+  chips, as in the gallery grid, instead of dark ones on a peach hover.
+
 - **Blueprints and sidebar items have icons.** A blueprint sets one with
   `content_icon "folder-kanban"` (a Lucide name, checked at compile time).
   The sidebar, dashboard shortcuts, link picker, entry identifiers and listing

@@ -343,6 +343,8 @@
       overflow: hidden;
       border-radius: 10px;
 
+      /* Separate white chips over the media, as in the gallery grid
+         (docs/admin-ui-design.md, "Gallery grid"). */
       .subform-tools {
         position: absolute;
         top: 6px;
@@ -352,28 +354,24 @@
         column-gap: 4px;
         opacity: 0;
         transition: opacity 0.15s ease;
-        background-color: rgba(255, 255, 255, 0.9);
-        border-radius: 6px;
-        padding: 2px;
       }
 
       &:hover .subform-tools,
+      &:focus-within .subform-tools,
       &.pending .subform-tools {
         opacity: 1;
       }
 
-      /* The tool icons are inline <svg stroke="currentColor">, so the hover
-         state has to move `color` — setting only a background leaves a dark
-         icon on a dark chip. */
       .subform-tools button {
         display: grid;
         place-items: center;
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         border: none;
-        border-radius: 5px;
-        background: none;
-        color: var(--brando-color-dark);
+        border-radius: 6px;
+        background: rgb(255 255 255 / 95%);
+        box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+        color: #272b2a;
         cursor: pointer;
         transition: background-color 0.15s ease, color 0.15s ease;
 
@@ -384,8 +382,25 @@
         }
 
         &:hover {
-          background-color: var(--brando-color-dark);
-          color: var(--brando-color-peach);
+          background-color: #eef3ea;
+          color: #254e3f;
+        }
+
+        &.subform-delete:hover {
+          background-color: #fbeaea;
+          color: #a3352d;
+        }
+
+        &:focus-visible {
+          outline: 2px solid #254e3f;
+          outline-offset: 1px;
+        }
+      }
+
+      /* Hover tools need a touch screen to show them some other way. */
+      @media (hover: none) {
+        .subform-tools {
+          opacity: 1;
         }
       }
 

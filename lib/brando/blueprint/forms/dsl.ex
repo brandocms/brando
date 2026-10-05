@@ -147,6 +147,12 @@ defmodule Brando.Blueprint.Forms.Dsl do
         default: true,
         doc: "Render the \"Add entry\" button. Set false when every entry must carry an asset"
       ],
+      listing_context: [
+        type: :boolean,
+        required: false,
+        default: false,
+        doc: "Give a transformer's listing its @index and every @entries, and re-render every entry when one changes"
+      ],
       instructions: [
         type: :string,
         required: false,
