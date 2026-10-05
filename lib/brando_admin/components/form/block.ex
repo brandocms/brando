@@ -1361,11 +1361,13 @@ defmodule BrandoAdmin.Components.Form.Block do
       container ->
         socket
         |> assign_new(:container, fn -> container end)
-        |> assign_new(:palette_options, fn assigns ->
-          if container.allow_custom_palette do
-            palette_options_for(assigns, fn -> palette_query_opts(container) end)
-          end
-        end)
+        |> assign_new(:palette_options, &container_palette_options(&1, container))
+    end
+  end
+
+  defp container_palette_options(assigns, container) do
+    if container.allow_custom_palette do
+      palette_options_for(assigns, fn -> palette_query_opts(container) end)
     end
   end
 
@@ -1526,21 +1528,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         assign(socket, :module_not_found, true)
 
       module ->
-        module_datasource_module =
-          if module.datasource and module.datasource_module do
-            module = Module.concat(List.wrap(module.datasource_module))
-            domain = module.__naming__().domain
-            schema = module.__naming__().schema
-
-            gettext_module = module.__modules__().gettext
-            gettext_domain = String.downcase("#{domain}_#{schema}")
-            # Plural: the block's header says what it shows, e.g. "Selected cases"
-            msgid = Brando.Utils.humanize(module.__naming__().plural, :downcase)
-
-            Gettext.dgettext(gettext_module, gettext_domain, msgid)
-          else
-            ""
-          end
+        module_datasource_module = datasource_module_label(module)
 
         socket
         |> assign_new(:module_name, fn -> module.name end)
@@ -1551,26 +1539,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:module_color, fn -> module.color end)
         |> assign_new(:is_datasource?, fn -> module.datasource end)
         |> assign_new(:has_table_template?, fn -> (module.table_template_id && true) || false end)
-        |> assign_new(:table_template, fn ->
-          table_template_id = module.table_template_id
-
-          if table_template_id do
-            var_preloads = Brando.Content.Var.preloads()
-
-            {:ok, table_template} =
-              Brando.Content.get_table_template(%{
-                matches: %{id: table_template_id},
-                preload: [vars: var_preloads]
-              })
-
-            table_template
-          end
-        end)
-        |> assign_new(:table_template_name, fn %{table_template: table_template} ->
-          if table_template do
-            table_template.name
-          end
-        end)
+        |> assign_new(:table_template, fn -> module_table_template(module.table_template_id) end)
+        |> assign_new(:table_template_name, &table_template_name/1)
         |> assign_new(:module_datasource_module, fn -> module.datasource_module end)
         |> assign_new(:module_datasource_module_label, fn -> module_datasource_module end)
         |> assign_new(:module_datasource_type, fn -> module.datasource_type end)
@@ -1578,6 +1548,43 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:entry_template, fn -> module.entry_template end)
         |> maybe_register_block_wanting_entry()
     end
+  end
+
+  defp datasource_module_label(module) do
+    if module.datasource and module.datasource_module do
+      module = Module.concat(List.wrap(module.datasource_module))
+      domain = module.__naming__().domain
+      schema = module.__naming__().schema
+
+      gettext_module = module.__modules__().gettext
+      gettext_domain = String.downcase("#{domain}_#{schema}")
+      # Plural: the block's header says what it shows, e.g. "Selected cases"
+      msgid = Brando.Utils.humanize(module.__naming__().plural, :downcase)
+
+      Gettext.dgettext(gettext_module, gettext_domain, msgid)
+    else
+      ""
+    end
+  end
+
+  defp table_template_name(%{table_template: table_template}) do
+    if table_template do
+      table_template.name
+    end
+  end
+
+  defp module_table_template(nil), do: nil
+
+  defp module_table_template(table_template_id) do
+    var_preloads = Brando.Content.Var.preloads()
+
+    {:ok, table_template} =
+      Brando.Content.get_table_template(%{
+        matches: %{id: table_template_id},
+        preload: [vars: var_preloads]
+      })
+
+    table_template
   end
 
   def maybe_register_block_wanting_entry(%{assigns: %{block_initialized: false, is_datasource?: true}} = socket) do
@@ -1685,59 +1692,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset = socket.assigns.form.source
       entry = socket.assigns.entry
       changeset = maybe_preload_changeset_data(changeset, :vars, belongs_to)
-
-      vars =
-        if belongs_to == :root do
-          changeset
-          |> Changeset.get_field(:block)
-          |> Changeset.change()
-          |> Changeset.get_assoc(:vars)
-        else
-          Changeset.get_assoc(changeset, :vars)
-        end
-
-      splits =
-        case LiquidPreview.strip_logic(module_code) do
-          {:ok, module_code} ->
-            module_code = strip_datasources(module_code)
-
-            ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
-            |> Regex.split(module_code, include_captures: true)
-            |> Enum.map(fn chunk ->
-              case Regex.run(
-                     ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/,
-                     chunk,
-                     capture: :all_names
-                   ) do
-                nil ->
-                  chunk
-
-                ["content", "", ""] ->
-                  {:content, "content"}
-
-                ["content | renderless", "", ""] ->
-                  {:content, "content"}
-
-                ["entry." <> variable, "", ""] ->
-                  {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
-
-                [module_variable, "", ""] ->
-                  {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
-
-                ["", "entry." <> pic = pic_var, ""] ->
-                  {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, socket.assigns)}
-
-                ["", pic, ""] ->
-                  {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
-
-                ["", "", ref] ->
-                  {:ref, ref}
-              end
-            end)
-
-          {:error, reason} ->
-            [{:liquid_error, reason}]
-        end
+      vars = liquid_block_vars(changeset, belongs_to)
+      splits = liquid_splits(module_code, vars, entry, socket.assigns)
 
       socket
       |> assign(:liquid_splits, drop_empty_preview(splits))
@@ -1776,6 +1732,63 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # Only markup left, e.g. a module that is its datasource and nothing else:
   # no preview, rather than an empty strip under the block's header.
+  defp liquid_block_vars(changeset, belongs_to) do
+    if belongs_to == :root do
+      changeset
+      |> Changeset.get_field(:block)
+      |> Changeset.change()
+      |> Changeset.get_assoc(:vars)
+    else
+      Changeset.get_assoc(changeset, :vars)
+    end
+  end
+
+  defp liquid_splits(module_code, vars, entry, assigns) do
+    case LiquidPreview.strip_logic(module_code) do
+      {:ok, module_code} ->
+        module_code = strip_datasources(module_code)
+
+        ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
+        |> Regex.split(module_code, include_captures: true)
+        |> Enum.map(&liquid_split(&1, vars, entry, assigns))
+
+      {:error, reason} ->
+        [{:liquid_error, reason}]
+    end
+  end
+
+  defp liquid_split(chunk, vars, entry, assigns) do
+    case Regex.run(
+           ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/,
+           chunk,
+           capture: :all_names
+         ) do
+      nil ->
+        chunk
+
+      ["content", "", ""] ->
+        {:content, "content"}
+
+      ["content | renderless", "", ""] ->
+        {:content, "content"}
+
+      ["entry." <> variable, "", ""] ->
+        {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
+
+      [module_variable, "", ""] ->
+        {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
+
+      ["", "entry." <> pic = pic_var, ""] ->
+        {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, assigns)}
+
+      ["", pic, ""] ->
+        {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
+
+      ["", "", ref] ->
+        {:ref, ref}
+    end
+  end
+
   defp drop_empty_preview(splits) do
     if Enum.all?(splits, &is_binary/1) and
          splits |> Enum.join() |> String.replace(~r/<[^>]*>/, "") |> String.trim() == "",
