@@ -138,7 +138,14 @@ defmodule Brando.Content.Definition.Importer do
         block_ids = if record && kind == "module", do: Blocks.list_block_ids_using_module(record.id), else: []
 
         {action, reason} =
-          classify(definition, old, record, changeset, baseline, digest, old_digest, parents[uid], current_parents[uid])
+          classify(
+            definition,
+            old,
+            record,
+            changeset,
+            {baseline, digest, old_digest},
+            {parents[uid], current_parents[uid]}
+          )
 
         %{
           kind: kind,
@@ -191,21 +198,23 @@ defmodule Brando.Content.Definition.Importer do
     end)
   end
 
-  defp classify(_new, nil, nil, _cs, nil, _digest, nil, _parent, _old_parent), do: {:create, nil}
+  # `digests` is `{baseline, digest, old_digest}` and `parents` is
+  # `{parent, old_parent}`, the definition's parent in the bundle and on the target.
+  defp classify(_new, nil, nil, _cs, {nil, _digest, nil}, _parents), do: {:create, nil}
 
-  defp classify(_new, nil, nil, _cs, _baseline, _digest, nil, _parent, _old_parent),
+  defp classify(_new, nil, nil, _cs, {_baseline, _digest, nil}, _parents),
     do: {:conflict, "the exported definition was deleted from the target"}
 
-  defp classify(_new, _old, _record, _cs, _baseline, same, same, parent, parent), do: {:noop, nil}
+  defp classify(_new, _old, _record, _cs, {_baseline, same, same}, {parent, parent}), do: {:noop, nil}
 
-  defp classify(_new, _old, _record, _cs, nil, _digest, _old_digest, _parent, _old_parent),
+  defp classify(_new, _old, _record, _cs, {nil, _digest, _old_digest}, _parents),
     do: {:conflict, "missing baseline; export the target before editing it"}
 
-  defp classify(_new, _old, _record, _cs, baseline, _digest, old_digest, _parent, _old_parent)
+  defp classify(_new, _old, _record, _cs, {baseline, _digest, old_digest}, _parents)
        when baseline != old_digest,
        do: {:conflict, "target changed since export"}
 
-  defp classify(new, old, record, cs, _baseline, _digest, _old_digest, parent, old_parent) do
+  defp classify(new, old, record, cs, _digests, {parent, old_parent}) do
     cond do
       parent != old_parent ->
         {:migration_required, "moving an existing child requires a migration"}
