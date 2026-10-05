@@ -24,17 +24,24 @@ defmodule Brando.Content.Transfer.Requirements do
             dgettext("content_transfer", "The dependency manifest has an undeclared relationship.")
           )
 
-      nested =
-        case dependency["kind"] do
-          "module" -> Enum.reject([dependency["parent"], dependency["table_template"]], &is_nil/1)
-          "gallery" -> references(dependency["objects"], dependencies)
-          "video" -> if mappings[token] in [nil, "create"], do: references(dependency["data"], dependencies), else: []
-          _ -> []
-        end
-
+      nested = nested_tokens(dependency, token, dependencies, mappings)
       expand(nested ++ remaining, dependencies, mappings, MapSet.put(visited, token))
     end
   end
+
+  defp nested_tokens(dependency, token, dependencies, mappings) do
+    case dependency["kind"] do
+      "module" -> Enum.reject([dependency["parent"], dependency["table_template"]], &is_nil/1)
+      "gallery" -> references(dependency["objects"], dependencies)
+      "video" -> video_tokens(dependency, mappings[token], dependencies)
+      _ -> []
+    end
+  end
+
+  defp video_tokens(dependency, mapping, dependencies) when mapping in [nil, "create"],
+    do: references(dependency["data"], dependencies)
+
+  defp video_tokens(_dependency, _mapping, _dependencies), do: []
 
   def references(value, dependencies) when is_map(value),
     do: Enum.flat_map(value, fn {key, value} -> references(key, dependencies) ++ references(value, dependencies) end)
