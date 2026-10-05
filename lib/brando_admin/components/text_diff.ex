@@ -151,12 +151,7 @@ defmodule BrandoAdmin.Components.TextDiff do
       before_lines
       |> List.myers_difference(after_lines)
       |> Enum.map_reduce({1, 1}, fn {kind, lines}, position ->
-        Enum.map_reduce(lines, position, fn line, {old, new} ->
-          row = %{kind: kind, text: line.text, before: if(kind != :ins, do: old), after: if(kind != :del, do: new)}
-          row = if line.type, do: Map.put(row, :type, line.type), else: row
-          row = if line[:preview], do: Map.put(row, :preview, line.preview), else: row
-          {row, {old + if(kind == :ins, do: 0, else: 1), new + if(kind == :del, do: 0, else: 1)}}
-        end)
+        Enum.map_reduce(lines, position, &diff_row(kind, &1, &2))
       end)
 
     rows = List.flatten(groups)
@@ -167,6 +162,13 @@ defmodule BrandoAdmin.Components.TextDiff do
       removed: Enum.count(rows, &(&1.kind == :del)),
       truncated?: before_truncated? || after_truncated?
     }
+  end
+
+  defp diff_row(kind, line, {old, new}) do
+    row = %{kind: kind, text: line.text, before: if(kind != :ins, do: old), after: if(kind != :del, do: new)}
+    row = if line.type, do: Map.put(row, :type, line.type), else: row
+    row = if line[:preview], do: Map.put(row, :preview, line.preview), else: row
+    {row, {old + if(kind == :ins, do: 0, else: 1), new + if(kind == :del, do: 0, else: 1)}}
   end
 
   defp lines(""), do: {[], false}
@@ -183,16 +185,20 @@ defmodule BrandoAdmin.Components.TextDiff do
         if index >= @max_lines || used >= @max_characters do
           {:halt, {acc, used, true}}
         else
-          text = String.slice(line.text, 0, @max_characters - used)
-          type = if line[:type] in [:heading, :media, :detail], do: line.type
-          normalized = %{text: text, key: line[:key], type: type}
-          normalized = if line[:preview], do: Map.put(normalized, :preview, line.preview), else: normalized
-          next = {[normalized | acc], used + String.length(text) + 1, text != line.text}
-          if text != line.text, do: {:halt, next}, else: {:cont, next}
+          take_line(line, acc, used)
         end
       end)
 
     {Enum.reverse(preview), truncated?}
+  end
+
+  defp take_line(line, acc, used) do
+    text = String.slice(line.text, 0, @max_characters - used)
+    type = if line[:type] in [:heading, :media, :detail], do: line.type
+    normalized = %{text: text, key: line[:key], type: type}
+    normalized = if line[:preview], do: Map.put(normalized, :preview, line.preview), else: normalized
+    next = {[normalized | acc], used + String.length(text) + 1, text != line.text}
+    if text != line.text, do: {:halt, next}, else: {:cont, next}
   end
 
   defp marker(:ins), do: "+"
