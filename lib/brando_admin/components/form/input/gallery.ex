@@ -553,52 +553,56 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     config = object_config(object)
 
     cond do
-      Map.get(object, :image_id) && loaded_assoc?(object, :image) ->
-        image = object.image
-        alt_library = Brando.Images.text(image, :alt, nil)
-
-        %{
-          media_type: :image,
-          thumb_url: thumb_url_for_image(image),
-          processing: image.status != :processed,
-          filename: image.path && Path.basename(image.path),
-          caption: Tile.caption_state(config["title"], Brando.Images.text(image, :title, nil)),
-          caption_override: config["title"],
-          alt: Tile.alt_state(config["alt"], alt_library),
-          alt_override: config["alt"],
-          alt_library: alt_library
-        }
-
-      Map.get(object, :video_id) && loaded_assoc?(object, :video) ->
-        video = object.video
-
-        %{
-          media_type: :video,
-          thumb_url: Brando.Videos.Helpers.thumbnail_url(video),
-          processing: false,
-          filename: video.title || video.remote_id,
-          caption: Tile.caption_state(config["caption"], video.title),
-          caption_override: config["caption"],
-          alt: nil,
-          alt_override: nil,
-          alt_library: nil
-        }
-
-      true ->
-        media_type = if Map.get(object, :image_id), do: :image, else: :video
-
-        %{
-          media_type: media_type,
-          thumb_url: nil,
-          processing: false,
-          filename: nil,
-          caption: %{set?: false, html: nil},
-          caption_override: nil,
-          alt: if(media_type == :image, do: %{set?: false, text: nil}),
-          alt_override: nil,
-          alt_library: nil
-        }
+      Map.get(object, :image_id) && loaded_assoc?(object, :image) -> image_tile_data(object.image, config)
+      Map.get(object, :video_id) && loaded_assoc?(object, :video) -> video_tile_data(object.video, config)
+      true -> unloaded_tile_data(object)
     end
+  end
+
+  defp image_tile_data(image, config) do
+    alt_library = Brando.Images.text(image, :alt, nil)
+
+    %{
+      media_type: :image,
+      thumb_url: thumb_url_for_image(image),
+      processing: image.status != :processed,
+      filename: image.path && Path.basename(image.path),
+      caption: Tile.caption_state(config["title"], Brando.Images.text(image, :title, nil)),
+      caption_override: config["title"],
+      alt: Tile.alt_state(config["alt"], alt_library),
+      alt_override: config["alt"],
+      alt_library: alt_library
+    }
+  end
+
+  defp video_tile_data(video, config) do
+    %{
+      media_type: :video,
+      thumb_url: Brando.Videos.Helpers.thumbnail_url(video),
+      processing: false,
+      filename: video.title || video.remote_id,
+      caption: Tile.caption_state(config["caption"], video.title),
+      caption_override: config["caption"],
+      alt: nil,
+      alt_override: nil,
+      alt_library: nil
+    }
+  end
+
+  defp unloaded_tile_data(object) do
+    media_type = if Map.get(object, :image_id), do: :image, else: :video
+
+    %{
+      media_type: media_type,
+      thumb_url: nil,
+      processing: false,
+      filename: nil,
+      caption: %{set?: false, html: nil},
+      caption_override: nil,
+      alt: if(media_type == :image, do: %{set?: false, text: nil}),
+      alt_override: nil,
+      alt_library: nil
+    }
   end
 
   defp object_config(object) do
@@ -729,6 +733,22 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   defp truncate_text(text, _max_length), do: text
 
+  defp config_modal(obj, index) do
+    cond do
+      is_nil(obj) ->
+        nil
+
+      Map.get(obj, :image_id) && loaded_assoc?(obj, :image) ->
+        %{type: :image, media: obj.image, config: Map.get(obj, :config) || %{}, index: index}
+
+      Map.get(obj, :video_id) && loaded_assoc?(obj, :video) ->
+        %{type: :video, media: obj.video, config: Map.get(obj, :config) || %{}, index: index}
+
+      true ->
+        nil
+    end
+  end
+
   defp build_crop_groups_for(image) do
     case Brando.Images.get_config_for(image) do
       {:ok, config} -> Form.build_crop_groups(config.sizes)
@@ -740,19 +760,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     gallery_objects = socket.assigns.gallery_objects
     obj = Enum.at(gallery_objects, index)
 
-    config_modal =
-      cond do
-        obj && Map.get(obj, :image_id) && loaded_assoc?(obj, :image) ->
-          %{type: :image, media: obj.image, config: Map.get(obj, :config) || %{}, index: index}
-
-        obj && Map.get(obj, :video_id) && loaded_assoc?(obj, :video) ->
-          %{type: :video, media: obj.video, config: Map.get(obj, :config) || %{}, index: index}
-
-        true ->
-          nil
-      end
-
-    {:noreply, assign(socket, :config_modal, config_modal)}
+    {:noreply, assign(socket, :config_modal, config_modal(obj, index))}
   end
 
   def handle_event("close_config_modal", _, socket) do
