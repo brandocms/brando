@@ -24,57 +24,52 @@ defmodule Brando.Content.Transfer.Dependencies do
     "markdown_source" => Brando.MarkdownSources.Source,
     "markdown_version" => Brando.MarkdownSources.Version
   }
+  @allowed_data %{
+    "image" => ~w(title credits alt focal width height config_target path fetchpriority),
+    "file" => ~w(title mime_type filesize filename config_target),
+    "video" =>
+      ~w(type title caption aspect_ratio width height duration autoplay preload loop controls muted source_url remote_id config_target file_id thumbnail_id),
+    "markdown_source" => ~w(name title key provider source_key version sha256),
+    "markdown_version" => ~w(name title key provider source_key version sha256)
+  }
+
   def kinds, do: ["entry" | Map.keys(@schemas)]
 
   def validate!(%{"kind" => kind} = dep) do
-    if kind == "entry" do
-      Value.nonempty!(dep["schema"], "referenced entry schema")
-      Value.nonempty!(dep["entry_key"], "referenced entry identity")
-    end
-
-    if kind in ~w(module table_template), do: Value.nonempty!(dep["uid"], "definition UID")
-    if kind == "form", do: Value.nonempty!(dep["key"], "form key")
-
-    if kind == "module" do
-      contract = dep["contract"]
-
-      unless is_map(contract) && is_map(contract["refs"]) && is_map(contract["vars"]) &&
-               (is_nil(contract["table"]) || is_map(contract["table"])),
-             do: Error.fail!(dgettext("content_transfer", "Invalid module compatibility contract."))
-    end
-
-    allowed =
-      case kind do
-        "image" ->
-          ~w(title credits alt focal width height config_target path fetchpriority)
-
-        "file" ->
-          ~w(title mime_type filesize filename config_target)
-
-        "video" ->
-          ~w(type title caption aspect_ratio width height duration autoplay preload loop controls muted source_url remote_id config_target file_id thumbnail_id)
-
-        "markdown_source" ->
-          ~w(name title key provider source_key version sha256)
-
-        "markdown_version" ->
-          ~w(name title key provider source_key version sha256)
-
-        _ ->
-          nil
-      end
-
-    if allowed, do: Value.keys!(dep["data"], allowed, "#{kind} metadata")
-
-    if kind == "gallery" do
-      unless is_list(dep["objects"]) && length(dep["objects"]) <= 5_000,
-        do: Error.fail!(dgettext("content_transfer", "Invalid gallery object list."))
-
-      Value.unique!(Enum.map(dep["objects"], & &1["key"]), "gallery objects")
-      Enum.each(dep["objects"], &Value.keys!(&1, ~w(key image_id video_id config sequence), "gallery object"))
-    end
-
+    validate_kind!(kind, dep)
     :ok
+  end
+
+  defp validate_kind!("entry", dep) do
+    Value.nonempty!(dep["schema"], "referenced entry schema")
+    Value.nonempty!(dep["entry_key"], "referenced entry identity")
+  end
+
+  defp validate_kind!("module", dep) do
+    Value.nonempty!(dep["uid"], "definition UID")
+    contract = dep["contract"]
+
+    unless is_map(contract) && is_map(contract["refs"]) && is_map(contract["vars"]) &&
+             (is_nil(contract["table"]) || is_map(contract["table"])),
+           do: Error.fail!(dgettext("content_transfer", "Invalid module compatibility contract."))
+  end
+
+  defp validate_kind!("table_template", dep), do: Value.nonempty!(dep["uid"], "definition UID")
+  defp validate_kind!("form", dep), do: Value.nonempty!(dep["key"], "form key")
+
+  defp validate_kind!("gallery", dep) do
+    unless is_list(dep["objects"]) && length(dep["objects"]) <= 5_000,
+      do: Error.fail!(dgettext("content_transfer", "Invalid gallery object list."))
+
+    Value.unique!(Enum.map(dep["objects"], & &1["key"]), "gallery objects")
+    Enum.each(dep["objects"], &Value.keys!(&1, ~w(key image_id video_id config sequence), "gallery object"))
+  end
+
+  defp validate_kind!(kind, dep) do
+    case @allowed_data[kind] do
+      nil -> :ok
+      allowed -> Value.keys!(dep["data"], allowed, "#{kind} metadata")
+    end
   end
 
   def schema!(kind),
@@ -340,75 +335,95 @@ defmodule Brando.Content.Transfer.Dependencies do
 
     cond do
       kind in ~w(image file) && dependency["original"] ->
-        Brando.Content.Transfer.history(actor)
-        |> Enum.flat_map(&(&1.mappings["transferred_media"] || []))
-        |> Enum.filter(&(&1["kind"] == kind && &1["sha256"] == dependency["original"]["sha256"]))
-        |> Enum.uniq_by(& &1["id"])
-        |> Enum.flat_map(fn saved ->
-          case Error.protect(fn ->
-                 record = load!(kind, saved["id"], actor)
-
-                 if Archive.checksum(Media.read_original!(kind, record)) == saved["sha256"],
-                   do: [%{id: record.id, label: label(record), match: :checksum}],
-                   else: []
-               end) do
-            {:ok, suggestions} -> suggestions
-            _ -> []
-          end
-        end)
+        media_suggestions(kind, dependency, actor)
 
       kind in ~w(identifier fragment entry) ->
-        try do
-          Catalog.candidates(dependency, actor, :read)
-          |> Enum.flat_map(fn entry ->
-            if kind == "identifier" do
-              case Repo.get_by(Brando.Content.Identifier,
-                     schema: Brando.Authorization.Catalog.schema(entry.schema),
-                     entry_id: entry.id
-                   ) do
-                nil -> []
-                identifier -> [%{id: identifier.id, label: entry.title, match: :suggestion}]
-              end
-            else
-              [%{id: entry.id, label: entry.title, match: :suggestion}]
-            end
-          end)
-        rescue
-          _ in Error -> []
-        end
+        entry_suggestions(kind, dependency, actor)
 
       kind == "form" ->
-        from(f in Brando.Forms.Form, where: f.key == ^to_string(dependency["key"]))
-        |> Catalog.scoped_query(Brando.Forms.Form, actor, :read)
-        |> Repo.all()
-        |> Enum.filter(&(Boundary.authorize(actor, :read, &1) == :ok))
-        |> Enum.sort_by(&{to_string(&1.language) != dependency["language"], &1.id})
-        |> Enum.take(1)
-        |> Enum.map(&%{id: &1.id, label: label(&1), match: :uid})
+        form_suggestions(dependency, actor)
 
       kind in ~w(module table_template) ->
-        schema = schema!(kind)
-
-        query =
-          if kind == "module",
-            do: from(r in schema, where: is_nil(r.deleted_at), preload: [:refs, :vars]),
-            else: from(r in schema, preload: [:vars])
-
-        query = Catalog.scoped_query(query, schema, actor, :read)
-        exact = Repo.one(from(r in query, where: r.uid == ^dependency["uid"]))
-        candidates = if exact, do: [exact], else: if(kind == "module", do: Repo.all(query), else: [])
-
-        candidates
-        |> Enum.filter(fn record ->
-          Boundary.authorize(actor, :read, record) == :ok &&
-            (record.uid == dependency["uid"] ||
-               (kind == "module" && Contracts.normalized(record) == dependency["definition"]))
-        end)
-        |> Enum.map(&%{id: &1.id, label: label(&1), match: if(&1.uid == dependency["uid"], do: :uid, else: :suggestion)})
+        definition_suggestions(kind, dependency, actor)
 
       true ->
         []
     end
+  end
+
+  defp media_suggestions(kind, dependency, actor) do
+    Brando.Content.Transfer.history(actor)
+    |> Enum.flat_map(&(&1.mappings["transferred_media"] || []))
+    |> Enum.filter(&(&1["kind"] == kind && &1["sha256"] == dependency["original"]["sha256"]))
+    |> Enum.uniq_by(& &1["id"])
+    |> Enum.flat_map(&checksum_suggestion(kind, &1, actor))
+  end
+
+  defp checksum_suggestion(kind, saved, actor) do
+    case Error.protect(fn -> checksum_match!(kind, saved, actor) end) do
+      {:ok, suggestions} -> suggestions
+      _ -> []
+    end
+  end
+
+  defp checksum_match!(kind, saved, actor) do
+    record = load!(kind, saved["id"], actor)
+
+    if Archive.checksum(Media.read_original!(kind, record)) == saved["sha256"],
+      do: [%{id: record.id, label: label(record), match: :checksum}],
+      else: []
+  end
+
+  defp entry_suggestions(kind, dependency, actor) do
+    Catalog.candidates(dependency, actor, :read)
+    |> Enum.flat_map(&entry_suggestion(kind, &1))
+  rescue
+    _ in Error -> []
+  end
+
+  defp entry_suggestion("identifier", entry) do
+    case Repo.get_by(Brando.Content.Identifier,
+           schema: Brando.Authorization.Catalog.schema(entry.schema),
+           entry_id: entry.id
+         ) do
+      nil -> []
+      identifier -> [%{id: identifier.id, label: entry.title, match: :suggestion}]
+    end
+  end
+
+  defp entry_suggestion(_kind, entry), do: [%{id: entry.id, label: entry.title, match: :suggestion}]
+
+  defp form_suggestions(dependency, actor) do
+    from(f in Brando.Forms.Form, where: f.key == ^to_string(dependency["key"]))
+    |> Catalog.scoped_query(Brando.Forms.Form, actor, :read)
+    |> Repo.all()
+    |> Enum.filter(&(Boundary.authorize(actor, :read, &1) == :ok))
+    |> Enum.sort_by(&{to_string(&1.language) != dependency["language"], &1.id})
+    |> Enum.take(1)
+    |> Enum.map(&%{id: &1.id, label: label(&1), match: :uid})
+  end
+
+  defp definition_suggestions(kind, dependency, actor) do
+    schema = schema!(kind)
+
+    query =
+      if kind == "module",
+        do: from(r in schema, where: is_nil(r.deleted_at), preload: [:refs, :vars]),
+        else: from(r in schema, preload: [:vars])
+
+    query = Catalog.scoped_query(query, schema, actor, :read)
+    exact = Repo.one(from(r in query, where: r.uid == ^dependency["uid"]))
+    candidates = if exact, do: [exact], else: if(kind == "module", do: Repo.all(query), else: [])
+
+    candidates
+    |> Enum.filter(&definition_match?(&1, kind, dependency, actor))
+    |> Enum.map(&%{id: &1.id, label: label(&1), match: if(&1.uid == dependency["uid"], do: :uid, else: :suggestion)})
+  end
+
+  defp definition_match?(record, kind, dependency, actor) do
+    Boundary.authorize(actor, :read, record) == :ok &&
+      (record.uid == dependency["uid"] ||
+         (kind == "module" && Contracts.normalized(record) == dependency["definition"]))
   end
 
   def options(kind, actor, query \\ "")
@@ -454,19 +469,19 @@ defmodule Brando.Content.Transfer.Dependencies do
     )
     |> scope_options(kind, schema, actor)
     |> Repo.all()
-    |> Enum.filter(fn
-      %{deleted_at: deleted_at} when not is_nil(deleted_at) ->
-        false
-
-      record ->
-        case Error.protect(fn -> authorize!(kind, record, actor, :read) end) do
-          {:ok, _} -> String.contains?(String.downcase(label(record)), String.downcase(query))
-          _ -> false
-        end
-    end)
+    |> Enum.filter(&option_visible?(&1, kind, actor, query))
     |> Enum.sort_by(&label/1)
     |> Enum.take(100)
     |> Enum.map(&%{id: &1.id, label: label(&1)})
+  end
+
+  defp option_visible?(%{deleted_at: deleted_at}, _kind, _actor, _query) when not is_nil(deleted_at), do: false
+
+  defp option_visible?(record, kind, actor, query) do
+    case Error.protect(fn -> authorize!(kind, record, actor, :read) end) do
+      {:ok, _} -> String.contains?(String.downcase(label(record)), String.downcase(query))
+      _ -> false
+    end
   end
 
   def fingerprint(record), do: record |> Params.snapshot() |> Value.digest()
