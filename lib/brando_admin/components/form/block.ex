@@ -1976,36 +1976,44 @@ defmodule BrandoAdmin.Components.Form.Block do
         socket
 
       slot ->
-        case action do
-          "open_unused_collection" ->
-            assign(socket, open_slot_uid: uid, slot_title: slot.name)
-
-          "delete_unused_collection" ->
-            {:ok, socket} = update(%{event: "delete_block", uid: uid, dom_id: nil}, socket)
-            assign(socket, open_slot_uid: nil)
-
-          "restore_note_reference" when slot.restore? ->
-            case instance_ref(socket, slot.name) do
-              %{uid: ref_uid} ->
-                push_event(socket, "b:tiptap:insert_footnote:block-#{ref_uid}-rich-text", %{uid: uid, restore: true})
-
-              _ ->
-                socket
-            end
-
-          "choose_region_remap" when slot.kind == :region ->
-            request_region_remap(socket, "region_remap_targets", uid, %{})
-
-          "remap_region" when slot.kind == :region ->
-            request_region_remap(socket, "remap_region", uid, %{name: params["name"]})
-
-          _ ->
-            socket
-        end
+        apply_unused_collection_action(socket, action, slot, uid, params)
     end
   end
 
   def unused_collection_action(socket, _, _), do: socket
+
+  defp apply_unused_collection_action(socket, action, slot, uid, params) do
+    case action do
+      "open_unused_collection" ->
+        assign(socket, open_slot_uid: uid, slot_title: slot.name)
+
+      "delete_unused_collection" ->
+        {:ok, socket} = update(%{event: "delete_block", uid: uid, dom_id: nil}, socket)
+        assign(socket, open_slot_uid: nil)
+
+      "restore_note_reference" when slot.restore? ->
+        restore_note_reference(socket, slot, uid)
+
+      "choose_region_remap" when slot.kind == :region ->
+        request_region_remap(socket, "region_remap_targets", uid, %{})
+
+      "remap_region" when slot.kind == :region ->
+        request_region_remap(socket, "remap_region", uid, %{name: params["name"]})
+
+      _ ->
+        socket
+    end
+  end
+
+  defp restore_note_reference(socket, slot, uid) do
+    case instance_ref(socket, slot.name) do
+      %{uid: ref_uid} ->
+        push_event(socket, "b:tiptap:insert_footnote:block-#{ref_uid}-rich-text", %{uid: uid, restore: true})
+
+      _ ->
+        socket
+    end
+  end
 
   defp request_region_remap(socket, event, uid, extra) do
     send_update(
@@ -2027,22 +2035,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       {%{data: %{type: "text", data: %{footnotes: true} = data}}, %{uid: ref_uid}}
       when tiptap_id == "block-" <> ref_uid <> "-rich-text" ->
         modules = BlockSlots.modules(data.footnote_module_set)
-
-        case modules do
-          [] ->
-            put_flash(
-              socket,
-              :error,
-              gettext("Add a Text module to the %{set} module set before creating a note.", set: data.footnote_module_set)
-            )
-
-          [module | _] ->
-            uid = Brando.Utils.generate_uid()
-
-            socket
-            |> ensure_collection(:footnote, name, data.footnote_module_set, {uid, module.id}, gettext("Footnote"))
-            |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
-        end
+        insert_footnote(socket, modules, name, data, tiptap_id)
 
       _ ->
         socket
@@ -2050,6 +2043,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def create_footnote(socket, _params), do: socket
+
+  defp insert_footnote(socket, [], _name, data, _tiptap_id) do
+    put_flash(
+      socket,
+      :error,
+      gettext("Add a Text module to the %{set} module set before creating a note.", set: data.footnote_module_set)
+    )
+  end
+
+  defp insert_footnote(socket, [module | _], name, data, tiptap_id) do
+    uid = Brando.Utils.generate_uid()
+
+    socket
+    |> ensure_collection(:footnote, name, data.footnote_module_set, {uid, module.id}, gettext("Footnote"))
+    |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
+  end
 
   def generate_rich_text(socket, %{"ref_name" => name, "tiptap_id" => id} = params) do
     opts = Brando.AI.field_ai_opts(:block_text)
@@ -2076,13 +2085,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       %{source: source} ->
         if Changeset.get_field(source, :slot_kind) == :footnote &&
              Changeset.get_field(source, :slot_name) == params["ref_name"] do
-          number =
-            case Integer.parse(to_string(params["number"] || "")) do
-              {n, ""} when n > 0 -> " #{n}"
-              _ -> ""
-            end
-
-          assign(socket, open_slot_uid: uid, slot_title: gettext("Footnote") <> number)
+          assign(socket, open_slot_uid: uid, slot_title: gettext("Footnote") <> footnote_number(params))
         else
           socket
         end
@@ -2093,6 +2096,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           :error,
           gettext("This footnote could not be found. Its marker may have been pasted without its content.")
         )
+    end
+  end
+
+  defp footnote_number(params) do
+    case Integer.parse(to_string(params["number"] || "")) do
+      {n, ""} when n > 0 -> " #{n}"
+      _ -> ""
     end
   end
 
@@ -2113,47 +2123,57 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp ensure_collection(socket, kind, name, module_set, initial, title) do
-    existing =
-      if kind == :region do
-        Enum.find_value(socket.assigns.children_forms, fn {uid, form} ->
-          if form[:slot_kind].value == kind && form[:slot_name].value == name, do: uid
-        end)
-      end
+    existing = if kind == :region, do: existing_region_uid(socket, name)
 
     if existing do
       assign(socket, open_slot_uid: existing, slot_title: title)
     else
-      uid = if initial, do: elem(initial, 0), else: Brando.Utils.generate_uid()
-      slot = BlockSlots.build(kind, name, module_set, socket.assigns.block_module, socket.assigns.current_user_id, uid)
+      add_collection(socket, kind, name, module_set, initial, title)
+    end
+  end
 
-      slot =
-        if initial do
-          child =
-            BlockField.build_block(
-              elem(initial, 1),
-              socket.assigns.current_user_id,
-              nil,
-              socket.assigns.block_module,
-              :module
-            )
+  defp existing_region_uid(socket, name) do
+    Enum.find_value(socket.assigns.children_forms, fn {uid, form} ->
+      if form[:slot_kind].value == :region && form[:slot_name].value == name, do: uid
+    end)
+  end
 
-          Changeset.put_assoc(slot, :children, [child])
-        else
-          slot
-        end
+  defp add_collection(socket, kind, name, module_set, initial, title) do
+    uid = if initial, do: elem(initial, 0), else: Brando.Utils.generate_uid()
 
-      sequence = length(socket.assigns.block_list)
-      form = to_change_form(slot, %{}, socket.assigns.current_user_id)
+    slot =
+      kind
+      |> BlockSlots.build(name, module_set, socket.assigns.block_module, socket.assigns.current_user_id, uid)
+      |> put_initial_collection_child(initial, socket.assigns)
 
-      socket
-      |> put_child_seed_form(uid, form)
-      |> assign(:has_children?, true)
-      |> assign(:block_list, socket.assigns.block_list ++ [uid])
-      |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
-      |> assign(:open_slot_uid, uid)
-      |> assign(:slot_title, title)
-      |> assign_unused_collections()
-      |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(slot)})
+    sequence = length(socket.assigns.block_list)
+    form = to_change_form(slot, %{}, socket.assigns.current_user_id)
+
+    socket
+    |> put_child_seed_form(uid, form)
+    |> assign(:has_children?, true)
+    |> assign(:block_list, socket.assigns.block_list ++ [uid])
+    |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
+    |> assign(:open_slot_uid, uid)
+    |> assign(:slot_title, title)
+    |> assign_unused_collections()
+    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(slot)})
+  end
+
+  defp put_initial_collection_child(slot, initial, assigns) do
+    if initial do
+      child =
+        BlockField.build_block(
+          elem(initial, 1),
+          assigns.current_user_id,
+          nil,
+          assigns.block_module,
+          :module
+        )
+
+      Changeset.put_assoc(slot, :children, [child])
+    else
+      slot
     end
   end
 
