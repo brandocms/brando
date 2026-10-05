@@ -55,10 +55,8 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
     end
 
     if force? or Mix.shell().yes?("\n\nProceed?") do
-      for blueprint <- blueprints do
-        if blueprint.__has_identifier__() do
-          resave_entries(blueprint)
-        end
+      for blueprint <- blueprints, blueprint.__has_identifier__() do
+        resave_entries(blueprint)
       end
 
       Mix.shell().info([:green, "\n==> Done.\n"])
