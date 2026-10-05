@@ -24,9 +24,10 @@ defmodule BrandoAdmin.Components.PickerHelpers do
 
   defmacro __using__(_opts) do
     quote do
+      import BrandoAdmin.Components.PickerFolders, only: [folder_under_root?: 2]
+
       import BrandoAdmin.Components.PickerHelpers,
         only: [
-          folder_under_root?: 2,
           organize_select_toggle: 2,
           organize_select_range: 2,
           normalize_item_id: 1,
@@ -147,17 +148,9 @@ defmodule BrandoAdmin.Components.PickerHelpers do
     end
   end
 
-  # Helpers that need no picker callbacks, imported into each picker.
-
-  def folder_under_root?(folder, nil), do: not is_nil(FolderBrowser.normalize_folder(folder))
-
-  def folder_under_root?(folder, root) do
-    normalized_folder = FolderBrowser.normalize_folder(folder)
-    normalized_root = FolderBrowser.normalize_folder(root)
-
-    normalized_folder == normalized_root ||
-      String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
-  end
+  # Helpers that need no picker callbacks, imported into each picker. Nothing
+  # here may call into Brando at runtime: every picker depends on this module at
+  # compile time, so such a call would close a compile cycle.
 
   # -- Organize selection helpers --
 
