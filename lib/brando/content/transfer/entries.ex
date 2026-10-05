@@ -398,37 +398,36 @@ defmodule Brando.Content.Transfer.Entries do
 
     Enum.each(Brando.Blueprint.Attributes.__attributes__(schema), fn attribute ->
       unique = attribute.opts[:unique]
-
-      if unique && Changeset.get_field(cs, attribute.name) do
-        scope =
-          if unique == true,
-            do: [],
-            else: Brando.Blueprint.UniqueFields.scope(unique, Keyword.get(unique, :prevent_collision))
-
-        fields = [attribute.name | scope]
-
-        query =
-          Enum.reduce(fields, schema, fn field, query ->
-            value = Changeset.get_field(cs, field)
-
-            if is_nil(value),
-              do: from(e in query, where: false),
-              else: from(e in query, where: field(e, ^field) == ^value)
-          end)
-
-        query = if cs.data.id, do: from(e in query, where: e.id != ^cs.data.id), else: query
-
-        if Repo.one(from(e in query, select: e.id, limit: 1)),
-          do:
-            Error.fail!(
-              dgettext(
-                "content_transfer",
-                "%{value1} is already in use. Update the matching entry or choose another value.",
-                value1: Brando.Content.Transfer.Labels.field(attribute.name)
-              )
-            )
-      end
+      if unique && Changeset.get_field(cs, attribute.name), do: check_unique!(cs, schema, attribute, unique)
     end)
+  end
+
+  defp check_unique!(cs, schema, attribute, unique) do
+    scope =
+      if unique == true,
+        do: [],
+        else: Brando.Blueprint.UniqueFields.scope(unique, Keyword.get(unique, :prevent_collision))
+
+    query = Enum.reduce([attribute.name | scope], schema, &unique_field_condition(&2, cs, &1))
+    query = if cs.data.id, do: from(e in query, where: e.id != ^cs.data.id), else: query
+
+    if Repo.one(from(e in query, select: e.id, limit: 1)),
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "%{value1} is already in use. Update the matching entry or choose another value.",
+            value1: Brando.Content.Transfer.Labels.field(attribute.name)
+          )
+        )
+  end
+
+  defp unique_field_condition(query, cs, field) do
+    value = Changeset.get_field(cs, field)
+
+    if is_nil(value),
+      do: from(e in query, where: false),
+      else: from(e in query, where: field(e, ^field) == ^value)
   end
 
   defp unique_keys(cs) do
@@ -447,22 +446,24 @@ defmodule Brando.Content.Transfer.Entries do
     |> EntryCodec.block_fields()
     |> List.flatten()
     |> Portable.walk(fn block ->
-      if token = block["module_id"] do
-        module =
-          bindings[token] ||
-            Error.fail!(dgettext("content_transfer", "Resolve the required modules before reviewing content."))
-
-        dep = bundle["dependencies"][token]
-        Contracts.check!(block, dep["contract"], module)
-
-        if dep["parent"] && bindings[dep["parent"]] && module.parent_id != bindings[dep["parent"]].id,
-          do: Error.fail!(dgettext("content_transfer", "The child module belongs to a different destination parent."))
-
-        if dep["table_template"] && bindings[dep["table_template"]] &&
-             module.table_template_id != bindings[dep["table_template"]].id,
-           do: Error.fail!(dgettext("content_transfer", "Map the table template used by the destination module."))
-      end
+      if token = block["module_id"], do: validate_module_contract!(block, token, bundle, bindings)
     end)
+  end
+
+  defp validate_module_contract!(block, token, bundle, bindings) do
+    module =
+      bindings[token] ||
+        Error.fail!(dgettext("content_transfer", "Resolve the required modules before reviewing content."))
+
+    dep = bundle["dependencies"][token]
+    Contracts.check!(block, dep["contract"], module)
+
+    if dep["parent"] && bindings[dep["parent"]] && module.parent_id != bindings[dep["parent"]].id,
+      do: Error.fail!(dgettext("content_transfer", "The child module belongs to a different destination parent."))
+
+    if dep["table_template"] && bindings[dep["table_template"]] &&
+         module.table_template_id != bindings[dep["table_template"]].id,
+       do: Error.fail!(dgettext("content_transfer", "Map the table template used by the destination module."))
   end
 
   defp bundled_bindings(bundle, entries, supplied, phase) do
@@ -471,50 +472,53 @@ defmodule Brando.Content.Transfer.Entries do
     Enum.reduce(bundle["dependencies"], %{}, fn {token, dep}, acc ->
       item = by_key[dep["entry_key"]]
 
-      if item && supplied[token] in [nil, "bundle"] do
-        entry = if phase in [:preview, :reserve], do: item.stub, else: item.entry
-
-        record =
-          if dep["kind"] == "identifier" do
-            if phase == :preview do
-              identifier = entry.__struct__.__identifier__(entry)
-
-              existing =
-                if entry.id > 0, do: Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)
-
-              if item.mode == "reuse" && is_nil(existing),
-                do:
-                  Error.fail!(
-                    dgettext(
-                      "content_transfer",
-                      "The existing entry has no saved link identifier. Run Sync identifiers in Utilities, then review the import again."
-                    )
-                  )
-
-              %{identifier | id: if(existing, do: existing.id, else: entry.id)}
-            else
-              generated = entry.__struct__.__identifier__(entry)
-              existing = Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)
-
-              result =
-                if existing,
-                  do: {:ok, %{generated | id: existing.id}},
-                  else: Brando.Content.create_identifier(entry.__struct__, entry)
-
-              case result do
-                {:ok, %Brando.Content.Identifier{} = identifier} -> identifier
-                _ -> Error.fail!(dgettext("content_transfer", "The included entry does not support content links."))
-              end
-            end
-          else
-            entry
-          end
-
-        Map.put(acc, token, record)
-      else
-        acc
-      end
+      if item && supplied[token] in [nil, "bundle"],
+        do: Map.put(acc, token, bundled_record(item, dep, phase)),
+        else: acc
     end)
+  end
+
+  defp bundled_record(item, dep, phase) do
+    entry = if phase in [:preview, :reserve], do: item.stub, else: item.entry
+
+    cond do
+      dep["kind"] != "identifier" -> entry
+      phase == :preview -> preview_identifier!(item, entry)
+      true -> persisted_identifier!(entry)
+    end
+  end
+
+  defp preview_identifier!(item, entry) do
+    identifier = entry.__struct__.__identifier__(entry)
+
+    existing =
+      if entry.id > 0, do: Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)
+
+    if item.mode == "reuse" && is_nil(existing),
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "The existing entry has no saved link identifier. Run Sync identifiers in Utilities, then review the import again."
+          )
+        )
+
+    %{identifier | id: if(existing, do: existing.id, else: entry.id)}
+  end
+
+  defp persisted_identifier!(entry) do
+    generated = entry.__struct__.__identifier__(entry)
+    existing = Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)
+
+    result =
+      if existing,
+        do: {:ok, %{generated | id: existing.id}},
+        else: Brando.Content.create_identifier(entry.__struct__, entry)
+
+    case result do
+      {:ok, %Brando.Content.Identifier{} = identifier} -> identifier
+      _ -> Error.fail!(dgettext("content_transfer", "The included entry does not support content links."))
+    end
   end
 
   defp ordered(entries, bundle, supplied) do
