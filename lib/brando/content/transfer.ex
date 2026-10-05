@@ -50,48 +50,24 @@ defmodule Brando.Content.Transfer do
       if entries do
         {Brando.Content.Transfer.Entries.fields(entries), state}
       else
-        Enum.flat_map_reduce(selectors, state, fn selector, state ->
-          entry = Catalog.load!(selector.schema, selector.id, actor, :export)
-          description = Catalog.describe(entry)
-
-          Enum.map_reduce(selector.fields, state, fn name, acc ->
-            field = Catalog.field!(entry.__struct__, name)
-            joins = Map.fetch!(entry, field.association)
-            {blocks, acc} = Enum.map_reduce(joins, acc, &Portable.encode(&1.block, &2))
-
-            {%{
-               "key" => description.key <> ":" <> field.name,
-               "schema" => description.schema,
-               "field" => field.name,
-               "title" => description.title,
-               "language" => description.language,
-               "hints" => description.hints,
-               "blocks" => blocks,
-               "fingerprint" => Value.digest(blocks)
-             }, acc}
-          end)
-        end)
+        Enum.flat_map_reduce(selectors, state, &export_selector_fields(&1, &2, actor))
       end
 
     uids = for {_, %{"kind" => "module", "uid" => uid}} <- state.dependencies, do: uid
 
     {definitions, state} =
       if Keyword.get(opts, :definitions, true) && uids != [] do
-        {definitions, records} = Snapshot.take!(uids: uids)
-        Enum.each(definitions["modules"], &Catalog.authorize!(actor, :export, records.modules[&1["uid"]]))
-        Enum.each(definitions["table_templates"], &Catalog.authorize!(actor, :export, records.tables[&1["uid"]]))
-
-        state =
-          Enum.reduce(definitions["references"], state, fn {_, ref}, acc ->
-            {_token, acc} = Dependencies.add(ref["kind"], ref["id"], acc)
-            acc
-          end)
-
-        {definitions, state}
+        export_definitions!(uids, state, actor)
       else
         {nil, state}
       end
 
+    bundle = export_bundle(entries, fields, state.dependencies, definitions, opts)
+    Portable.validate!(bundle)
+    %{bundle: bundle, files: state.files}
+  end
+
+  defp export_bundle(entries, fields, dependencies, definitions, opts) do
     bundle = %{
       "format" => "brando-content",
       "version" => if(entries, do: 2, else: 1),
@@ -103,13 +79,48 @@ defmodule Brando.Content.Transfer do
         "brando_version" => Brando.version()
       },
       "fields" => fields,
-      "dependencies" => state.dependencies,
+      "dependencies" => dependencies,
       "definitions" => definitions
     }
 
-    bundle = if entries, do: Map.put(bundle, "entries", entries), else: bundle
-    Portable.validate!(bundle)
-    %{bundle: bundle, files: state.files}
+    if entries, do: Map.put(bundle, "entries", entries), else: bundle
+  end
+
+  defp export_selector_fields(selector, state, actor) do
+    entry = Catalog.load!(selector.schema, selector.id, actor, :export)
+    description = Catalog.describe(entry)
+    Enum.map_reduce(selector.fields, state, &export_field(entry, description, &1, &2))
+  end
+
+  defp export_field(entry, description, name, acc) do
+    field = Catalog.field!(entry.__struct__, name)
+    joins = Map.fetch!(entry, field.association)
+    {blocks, acc} = Enum.map_reduce(joins, acc, &Portable.encode(&1.block, &2))
+
+    {%{
+       "key" => description.key <> ":" <> field.name,
+       "schema" => description.schema,
+       "field" => field.name,
+       "title" => description.title,
+       "language" => description.language,
+       "hints" => description.hints,
+       "blocks" => blocks,
+       "fingerprint" => Value.digest(blocks)
+     }, acc}
+  end
+
+  defp export_definitions!(uids, state, actor) do
+    {definitions, records} = Snapshot.take!(uids: uids)
+    Enum.each(definitions["modules"], &Catalog.authorize!(actor, :export, records.modules[&1["uid"]]))
+    Enum.each(definitions["table_templates"], &Catalog.authorize!(actor, :export, records.tables[&1["uid"]]))
+
+    state =
+      Enum.reduce(definitions["references"], state, fn {_, ref}, acc ->
+        {_token, acc} = Dependencies.add(ref["kind"], ref["id"], acc)
+        acc
+      end)
+
+    {definitions, state}
   end
 
   def preview(archive, targets, actor, opts \\ []) do
