@@ -6,35 +6,7 @@ defmodule BrandoAdmin.ContentTransferDownloadController do
   def show(conn, %{"token" => token}) do
     user = conn.assigns.current_user
 
-    result =
-      Error.protect(fn ->
-        Brando.Content.Definitions.validate_actor!(user)
-
-        case Brando.Cache.get({:content_transfer_download, user.id, token}) do
-          %{scope: scope, exported: exported} when is_binary(scope) ->
-            unless scope == Transfer.scope(), do: Error.fail!("Wrong workspace.")
-
-            Enum.each(exported.bundle["entries"] || [], fn entry ->
-              id = entry["key"] |> String.split(":") |> List.last() |> Catalog.id!()
-              EntryCodec.load!(entry["schema"], id, user, :export)
-            end)
-
-            Enum.each(exported.bundle["fields"], fn field ->
-              # Source IDs are scoped selector metadata, never import bindings.
-              id = field["key"] |> String.split(":") |> Enum.at(-2) |> Catalog.id!()
-              Catalog.load!(field["schema"], id, user, :export)
-            end)
-
-            Enum.each(exported.bundle["dependencies"], fn {_, dep} ->
-              Dependencies.load!(dep, dep["source_id"], user, :export)
-            end)
-
-            exported.binary
-
-          _ ->
-            Error.fail!("This download has expired. Prepare the export again.")
-        end
-      end)
+    result = Error.protect(fn -> export_binary!(user, token) end)
 
     case result do
       {:ok, binary} ->
@@ -47,5 +19,36 @@ defmodule BrandoAdmin.ContentTransferDownloadController do
         |> put_resp_content_type("text/plain")
         |> send_resp(404, "This download is unavailable. Prepare the export again.")
     end
+  end
+
+  defp export_binary!(user, token) do
+    Brando.Content.Definitions.validate_actor!(user)
+
+    case Brando.Cache.get({:content_transfer_download, user.id, token}) do
+      %{scope: scope, exported: exported} when is_binary(scope) ->
+        unless scope == Transfer.scope(), do: Error.fail!("Wrong workspace.")
+        authorize_export!(exported.bundle, user)
+        exported.binary
+
+      _ ->
+        Error.fail!("This download has expired. Prepare the export again.")
+    end
+  end
+
+  defp authorize_export!(bundle, user) do
+    Enum.each(bundle["entries"] || [], fn entry ->
+      id = entry["key"] |> String.split(":") |> List.last() |> Catalog.id!()
+      EntryCodec.load!(entry["schema"], id, user, :export)
+    end)
+
+    Enum.each(bundle["fields"], fn field ->
+      # Source IDs are scoped selector metadata, never import bindings.
+      id = field["key"] |> String.split(":") |> Enum.at(-2) |> Catalog.id!()
+      Catalog.load!(field["schema"], id, user, :export)
+    end)
+
+    Enum.each(bundle["dependencies"], fn {_, dep} ->
+      Dependencies.load!(dep, dep["source_id"], user, :export)
+    end)
   end
 end
