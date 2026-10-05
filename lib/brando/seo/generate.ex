@@ -56,14 +56,18 @@ defmodule Brando.SEO.Generate do
          {:ok, prompt, ai_opts} <- prompt_for(schema, entry, field, opts),
          {:ok, %{text: text, model: model}} <- AI.generate_text(prompt, ai_opts) do
       text = trim_to_length(text, field)
+      result = %{text: text, entry: entry, model: model}
+      maybe_persist(result, schema, id, field, user, Keyword.get(opts, :persist, true))
+    end
+  end
 
-      if Keyword.get(opts, :persist, true) do
-        with {:ok, entry} <- write(schema, id, field, text, user) do
-          {:ok, %{text: text, entry: entry, model: model}}
-        end
-      else
-        {:ok, %{text: text, entry: entry, model: model}}
+  defp maybe_persist(result, schema, id, field, user, persist?) do
+    if persist? do
+      with {:ok, entry} <- write(schema, id, field, result.text, user) do
+        {:ok, %{result | entry: entry}}
       end
+    else
+      {:ok, result}
     end
   end
 
