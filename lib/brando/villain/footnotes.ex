@@ -110,13 +110,6 @@ defmodule Brando.Villain.Footnotes do
   def outlet(notes, title) do
     items =
       Enum.map(notes, fn note ->
-        backlinks =
-          Enum.with_index(note.reference_ids, 1)
-          |> Enum.map(fn {id, index} ->
-            label = "Return to reference #{note.number}" <> if(length(note.reference_ids) > 1, do: ".#{index}", else: "")
-            ["<a class=\"footnote-backlink\" role=\"doc-backlink\" href=\"#", id, "\" aria-label=\"", label, "\">↩</a>"]
-          end)
-
         [
           "<li id=\"",
           note.id,
@@ -127,7 +120,7 @@ defmodule Brando.Villain.Footnotes do
           "\"><div data-footnote-body>",
           note.html,
           "</div><nav aria-label=\"Back to text\">",
-          backlinks,
+          backlinks(note),
           "</nav></li>"
         ]
       end)
@@ -141,6 +134,19 @@ defmodule Brando.Villain.Footnotes do
     ]
   end
 
+  defp backlinks(note) do
+    note.reference_ids
+    |> Enum.with_index(1)
+    |> Enum.map(fn {id, index} ->
+      label = "Return to reference #{note.number}" <> backlink_suffix(note.reference_ids, index)
+      ["<a class=\"footnote-backlink\" role=\"doc-backlink\" href=\"#", id, "\" aria-label=\"", label, "\">↩</a>"]
+    end)
+  end
+
+  defp backlink_suffix(reference_ids, index) do
+    if length(reference_ids) > 1, do: ".#{index}", else: ""
+  end
+
   defp extract(nodes, definitions) do
     Enum.reduce(nodes, {[], definitions}, fn
       {"template", attrs, children} = node, {acc, defs} ->
@@ -152,13 +158,7 @@ defmodule Brando.Villain.Footnotes do
 
       {tag, attrs, children}, {acc, defs} ->
         if attr(attrs, "data-brando-footnotes") != nil do
-          defs =
-            Enum.reduce(Floki.find(children, "[data-brando-note]"), defs, fn {_, note_attrs, body}, defs ->
-              content = Floki.find(body, "[data-footnote-body]") |> Enum.flat_map(fn {_, _, content} -> content end)
-              Map.put_new(defs, attr(note_attrs, "data-brando-note"), Floki.raw_html(content))
-            end)
-
-          {acc, defs}
+          {acc, outlet_definitions(children, defs)}
         else
           {children, defs} = extract(children, defs)
           {[{tag, attrs, children} | acc], defs}
@@ -168,6 +168,13 @@ defmodule Brando.Villain.Footnotes do
         {[node | acc], defs}
     end)
     |> then(fn {nodes, defs} -> {Enum.reverse(nodes), defs} end)
+  end
+
+  defp outlet_definitions(children, defs) do
+    Enum.reduce(Floki.find(children, "[data-brando-note]"), defs, fn {_, note_attrs, body}, defs ->
+      content = Floki.find(body, "[data-footnote-body]") |> Enum.flat_map(fn {_, _, content} -> content end)
+      Map.put_new(defs, attr(note_attrs, "data-brando-note"), Floki.raw_html(content))
+    end)
   end
 
   defp walk(nodes, state) do
