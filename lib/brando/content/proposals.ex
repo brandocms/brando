@@ -752,13 +752,17 @@ defmodule Brando.Content.Proposals do
           )
         ]
 
-      "published" in [new, old] and new != old and
-          Brando.Authorization.Boundary.authorize(actor, :publish, schema) != :ok ->
+      publish_forbidden?(new, old, schema, actor) ->
         [problem(:forbidden, dgettext("content_proposals", "You cannot publish or unpublish this content type."))]
 
       true ->
         []
     end
+  end
+
+  defp publish_forbidden?(new, old, schema, actor) do
+    "published" in [new, old] and new != old and
+      Brando.Authorization.Boundary.authorize(actor, :publish, schema) != :ok
   end
 
   defp draft_dependencies(values, proposal) do
@@ -1877,12 +1881,20 @@ defmodule Brando.Content.Proposals do
   def leave_out(id, version, indices, actor) do
     with {:ok, record} <- Error.protect(fn -> under_review!(id, version, actor) end),
          {:ok, operations} <- Codec.decode_all(record.operations) do
-      case for {op, index} <- Enum.with_index(operations), index not in indices, do: op do
-        [] -> {:error, dgettext("content_proposals", "Nothing would be left. Discard the proposal instead.")}
-        rest -> propose(rest, actor, supersedes: id, summary: record.summary)
-      end
+      operations
+      |> remaining_operations(indices)
+      |> propose_remaining(record, id, actor)
     end
   end
+
+  defp remaining_operations(operations, indices) do
+    for {op, index} <- Enum.with_index(operations), index not in indices, do: op
+  end
+
+  defp propose_remaining([], _record, _id, _actor),
+    do: {:error, dgettext("content_proposals", "Nothing would be left. Discard the proposal instead.")}
+
+  defp propose_remaining(rest, record, id, actor), do: propose(rest, actor, supersedes: id, summary: record.summary)
 
   defp under_review!(id, version, actor) do
     record = record!(id, actor)
@@ -1910,63 +1922,78 @@ defmodule Brando.Content.Proposals do
       user = user!(actor)
       receipt = receipt(id, actor)
 
-      cond do
-        record.status == "undone" ->
-          Error.fail!(dgettext("content_proposals", "This proposal has already been undone."))
+      ensure_undoable!(record, receipt)
+      saved = saved_entries(receipt)
+      ensure_unchanged_since_apply!(saved, actor)
+      ensure_revisions!(saved, receipt)
 
-        record.status != "applied" or is_nil(receipt) ->
-          Error.fail!(dgettext("content_proposals", "Only an applied proposal can be undone."))
-
-        true ->
-          :ok
-      end
-
-      saved =
-        for {key, %{"schema" => name, "id" => entry_id, "fingerprint" => fingerprint}} <- receipt.after do
-          {:ok, schema} = Codec.schema(name)
-          {key, schema, entry_id, fingerprint}
-        end
-
-      changed =
-        for {_key, schema, entry_id, fingerprint} <- saved,
-            entry = load!({schema, entry_id}, actor),
-            Transfer.entry_fingerprint(entry) != fingerprint,
-            do: Catalog.describe(entry).title
-
-      if changed != [],
-        do:
-          Error.fail!(
-            dgettext("content_proposals", "%{entries} changed after the proposal was applied. Undo would overwrite that.",
-              entries: Enum.join(changed, ", ")
-            )
-          )
-
-      without_revision =
-        for {key, _schema, _id, _} <- saved,
-            !String.starts_with?(key, "new:"),
-            is_nil(receipt.before[key]["revision"]),
-            do: key
-
-      if without_revision != [],
-        do: Error.fail!(dgettext("content_proposals", "An entry has no earlier revision to go back to."))
-
-      {:ok, receipt} =
-        Repo.transaction(fn ->
-          Enum.each(saved, fn {key, schema, entry_id, _} ->
-            if String.starts_with?(key, "new:"),
-              do: delete_entry!(schema, entry_id, user),
-              else: restore!(schema, entry_id, receipt.before[key]["revision"], user)
-          end)
-
-          record |> Changeset.change(status: "undone") |> Repo.update!()
-
-          receipt
-          |> Changeset.change(mappings: Map.put(receipt.mappings, "undone_at", DateTime.to_iso8601(DateTime.utc_now())))
-          |> Repo.update!()
-        end)
+      {:ok, receipt} = Repo.transaction(fn -> undo_saved!(saved, record, receipt, user) end)
 
       receipt
     end)
+  end
+
+  defp ensure_undoable!(record, receipt) do
+    cond do
+      record.status == "undone" ->
+        Error.fail!(dgettext("content_proposals", "This proposal has already been undone."))
+
+      record.status != "applied" or is_nil(receipt) ->
+        Error.fail!(dgettext("content_proposals", "Only an applied proposal can be undone."))
+
+      true ->
+        :ok
+    end
+  end
+
+  defp saved_entries(receipt) do
+    for {key, %{"schema" => name, "id" => entry_id, "fingerprint" => fingerprint}} <- receipt.after do
+      {:ok, schema} = Codec.schema(name)
+      {key, schema, entry_id, fingerprint}
+    end
+  end
+
+  defp ensure_unchanged_since_apply!(saved, actor) do
+    changed =
+      for {_key, schema, entry_id, fingerprint} <- saved,
+          entry = load!({schema, entry_id}, actor),
+          Transfer.entry_fingerprint(entry) != fingerprint,
+          do: Catalog.describe(entry).title
+
+    if changed != [],
+      do:
+        Error.fail!(
+          dgettext("content_proposals", "%{entries} changed after the proposal was applied. Undo would overwrite that.",
+            entries: Enum.join(changed, ", ")
+          )
+        )
+  end
+
+  defp ensure_revisions!(saved, receipt) do
+    without_revision =
+      for {key, _schema, _id, _} <- saved,
+          !String.starts_with?(key, "new:"),
+          is_nil(receipt.before[key]["revision"]),
+          do: key
+
+    if without_revision != [],
+      do: Error.fail!(dgettext("content_proposals", "An entry has no earlier revision to go back to."))
+  end
+
+  defp undo_saved!(saved, record, receipt, user) do
+    Enum.each(saved, &undo_entry!(&1, receipt, user))
+
+    record |> Changeset.change(status: "undone") |> Repo.update!()
+
+    receipt
+    |> Changeset.change(mappings: Map.put(receipt.mappings, "undone_at", DateTime.to_iso8601(DateTime.utc_now())))
+    |> Repo.update!()
+  end
+
+  defp undo_entry!({key, schema, entry_id, _}, receipt, user) do
+    if String.starts_with?(key, "new:"),
+      do: delete_entry!(schema, entry_id, user),
+      else: restore!(schema, entry_id, receipt.before[key]["revision"], user)
   end
 
   defp restore!(schema, id, revision, user) do
