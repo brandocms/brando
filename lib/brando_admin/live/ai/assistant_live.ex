@@ -660,15 +660,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
     assigns =
       assign(assigns,
         live: length(assigns.proposal.effects[:live] || []),
-        entry_changes: (assigns.proposal.effects[:creates] || 0) + (assigns.proposal.effects[:updates] || 0),
+        entry_changes: entry_change_count(assigns.proposal.effects),
         problems?: assigns.proposal.problems != [],
         general_problems: Enum.filter(assigns.proposal.problems, &(is_nil(&1[:operation]) and is_nil(&1[:target]))),
         entry_problems: for(entry <- assigns.review, problem <- entry.problems, do: {entry, problem}),
-        # A change can be left out while the proposal is under review, and
-        # while something else would remain.
-        can_leave_out?:
-          !assigns.shared and is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved) and
-            length(assigns.proposal.operations) > 1 and !running?(assigns.run),
+        can_leave_out?: can_leave_out?(assigns),
         under_review?: is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved)
       )
 
@@ -1810,18 +1806,19 @@ defmodule BrandoAdmin.AI.AssistantLive do
     Enum.map(review, fn entry ->
       case receipt.after[entry.key] do
         %{"schema" => schema, "id" => id} ->
-          url =
-            case Brando.Content.Proposals.Codec.schema(schema) do
-              {:ok, module} -> admin_url(module, id)
-              :error -> nil
-            end
-
-          Map.put(entry, :saved_url, url)
+          Map.put(entry, :saved_url, saved_url(schema, id))
 
         _ ->
           entry
       end
     end)
+  end
+
+  defp saved_url(schema, id) do
+    case Brando.Content.Proposals.Codec.schema(schema) do
+      {:ok, module} -> admin_url(module, id)
+      :error -> nil
+    end
   end
 
   defp admin_url(schema, id) do
@@ -2213,18 +2210,36 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp counts(effects) do
+    creates = effect_count(effects, :creates)
+    updates = effect_count(effects, :updates)
+    inserted_blocks = effect_count(effects, :inserted_blocks)
+    updated_blocks = effect_count(effects, :updated_blocks)
+    moved_blocks = effect_count(effects, :moved_blocks)
+    deletions = effect_count(effects, :deletions)
+
     [
-      {effects[:creates] || 0, ngettext("new entry", "new entries", effects[:creates] || 0)},
-      {effects[:updates] || 0, ngettext("updated entry", "updated entries", effects[:updates] || 0)},
-      {effects[:inserted_blocks] || 0, ngettext("new block", "new blocks", effects[:inserted_blocks] || 0)},
-      {effects[:updated_blocks] || 0, ngettext("changed block", "changed blocks", effects[:updated_blocks] || 0)},
-      {effects[:moved_blocks] || 0, ngettext("moved block", "moved blocks", effects[:moved_blocks] || 0)},
-      {effects[:deletions] || 0, ngettext("deletion", "deletions", effects[:deletions] || 0)}
+      {creates, ngettext("new entry", "new entries", creates)},
+      {updates, ngettext("updated entry", "updated entries", updates)},
+      {inserted_blocks, ngettext("new block", "new blocks", inserted_blocks)},
+      {updated_blocks, ngettext("changed block", "changed blocks", updated_blocks)},
+      {moved_blocks, ngettext("moved block", "moved blocks", moved_blocks)},
+      {deletions, ngettext("deletion", "deletions", deletions)}
     ]
     # Deletions are always shown: "0 deletions" is a fact worth stating.
     |> Enum.with_index()
     |> Enum.filter(fn {{count, _}, index} -> count > 0 or index == 5 end)
     |> Enum.map(&elem(&1, 0))
+  end
+
+  defp effect_count(effects, key), do: effects[key] || 0
+
+  defp entry_change_count(effects), do: effect_count(effects, :creates) + effect_count(effects, :updates)
+
+  # A change can be left out while the proposal is under review, and
+  # while something else would remain.
+  defp can_leave_out?(assigns) do
+    !assigns.shared and is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved) and
+      length(assigns.proposal.operations) > 1 and !running?(assigns.run)
   end
 
   defp entry_summary(effects) do
