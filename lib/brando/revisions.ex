@@ -492,19 +492,20 @@ defmodule Brando.Revisions do
     |> Enum.reduce({%{}, 0}, fn revision, {held, undecodable} ->
       case decode_for_audit(revision.encoded_entry) do
         {:ok, entry} ->
-          holder = Map.take(revision, [:entry_type, :entry_id, :revision])
-
-          held =
-            entry
-            |> collect_block_ids(MapSet.new())
-            |> Enum.reduce(held, fn id, acc -> Map.update(acc, id, [holder], &[holder | &1]) end)
-
-          {held, undecodable}
+          {hold_block_ids(held, entry, revision), undecodable}
 
         {:error, _} ->
           {held, undecodable + 1}
       end
     end)
+  end
+
+  defp hold_block_ids(held, entry, revision) do
+    holder = Map.take(revision, [:entry_type, :entry_id, :revision])
+
+    entry
+    |> collect_block_ids(MapSet.new())
+    |> Enum.reduce(held, fn id, acc -> Map.update(acc, id, [holder], &[holder | &1]) end)
   end
 
   defp decode_for_audit(encoded_entry) do
