@@ -250,96 +250,94 @@ defmodule Brando.Content.Transfer do
     remembered = remembered_mappings(bundle, actor)
 
     required = Brando.Content.Transfer.Requirements.content(bundle, Map.merge(remembered, supplied))
+    context = %{supplied: supplied, remembered: remembered, bundled: bundled, files: files, actor: actor}
 
     Enum.map_reduce(Enum.sort(required), %{}, fn {token, dep}, bindings ->
-      suggestions = Dependencies.suggestions(dep, actor)
-      uid_match = Enum.find(suggestions, &(&1.match == :uid))
-      selected = supplied[token] || (uid_match && uid_match.id) || remembered[token]
+      resolve_dependency(token, dep, bindings, context)
+    end)
+  end
 
-      auto_create? =
-        dep["kind"] == "gallery" || (dep["kind"] in ~w(image file) && dep["original"]) ||
-          (dep["kind"] == "video" && dep["data"]["type"] in ~w(upload external_file vimeo youtube))
+  defp resolve_dependency(token, dep, bindings, context) do
+    suggestions = Dependencies.suggestions(dep, context.actor)
+    selected = selected_dependency(token, suggestions, context)
+    auto_create? = auto_create?(dep)
+    action = dependency_action(token, selected, auto_create?, context)
 
-      from_bundle = bundled[token] && supplied[token] in [nil, "bundle"]
+    item = %{token: token, dependency: dep, suggestions: suggestions, action: action, can_create?: auto_create?}
 
-      action =
-        if from_bundle,
-          do: :bundle,
-          else: if(selected && selected != "create", do: :reuse, else: if(auto_create?, do: :create, else: :unresolved))
-
-      result =
-        Error.protect(fn ->
-          case action do
-            :bundle ->
-              {bundled[token], Value.digest(dep)}
-
-            :reuse ->
-              if dep["kind"] == "gallery",
-                do:
-                  Error.fail!(
-                    dgettext(
-                      "content_transfer",
-                      "Map the gallery's media assets; its owned gallery is recreated from the bundle."
-                    )
-                  )
-
-              record = Dependencies.load!(dep, Catalog.id!(selected), actor)
-
-              record =
-                if dep["kind"] in ~w(module table_template),
-                  do: Repo.preload(record, [:vars] ++ if(dep["kind"] == "module", do: [:refs], else: [])),
-                  else: record
-
-              record = if dep["kind"] == "module_set", do: Repo.preload(record, :module_set_modules), else: record
-
-              {record, Dependencies.fingerprint(record)}
-
-            :create ->
-              Catalog.authorize!(actor, :create, Dependencies.schema!(dep["kind"]))
-              if dep["kind"] in ~w(image file), do: Media.validate!(dep, files, actor)
-              {nil, Value.digest(dep)}
-
-            :unresolved ->
-              Error.fail!(
-                dgettext("content_transfer", "Resolve %{value1} “%{value2}” on the destination.",
-                  value1: dep["kind"],
-                  value2: dep["label"]
-                )
-              )
-          end
-        end)
-
-      case result do
-        {:ok, {record, fingerprint}} ->
-          item = %{
-            token: token,
-            dependency: dep,
-            suggestions: suggestions,
-            action: action,
-            can_create?: auto_create?,
+    case Error.protect(fn -> resolve_action!(action, token, dep, selected, context) end) do
+      {:ok, {record, fingerprint}} ->
+        item =
+          Map.merge(item, %{
             id: record && record.id,
             fingerprint: fingerprint,
             differences: Contracts.differences(dep, record),
             issue: nil
-          }
+          })
 
-          {item, if(record, do: Map.put(bindings, token, record), else: bindings)}
+        {item, if(record, do: Map.put(bindings, token, record), else: bindings)}
 
-        {:error, message} ->
-          {%{
-             token: token,
-             dependency: dep,
-             suggestions: suggestions,
-             action: action,
-             can_create?: auto_create?,
-             id: nil,
-             fingerprint: nil,
-             differences: [],
-             issue: message
-           }, bindings}
-      end
-    end)
+      {:error, message} ->
+        {Map.merge(item, %{id: nil, fingerprint: nil, differences: [], issue: message}), bindings}
+    end
   end
+
+  defp dependency_action(token, selected, auto_create?, %{supplied: supplied, bundled: bundled}) do
+    from_bundle = bundled[token] && supplied[token] in [nil, "bundle"]
+
+    cond do
+      from_bundle -> :bundle
+      selected && selected != "create" -> :reuse
+      auto_create? -> :create
+      true -> :unresolved
+    end
+  end
+
+  defp selected_dependency(token, suggestions, %{supplied: supplied, remembered: remembered}) do
+    uid_match = Enum.find(suggestions, &(&1.match == :uid))
+    supplied[token] || (uid_match && uid_match.id) || remembered[token]
+  end
+
+  defp auto_create?(dep) do
+    dep["kind"] == "gallery" || (dep["kind"] in ~w(image file) && dep["original"]) ||
+      (dep["kind"] == "video" && dep["data"]["type"] in ~w(upload external_file vimeo youtube))
+  end
+
+  defp resolve_action!(:bundle, token, dep, _selected, context), do: {context.bundled[token], Value.digest(dep)}
+
+  defp resolve_action!(:reuse, _token, dep, selected, %{actor: actor}) do
+    if dep["kind"] == "gallery",
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "Map the gallery's media assets; its owned gallery is recreated from the bundle."
+          )
+        )
+
+    record = Dependencies.load!(dep, Catalog.id!(selected), actor) |> preload_dependency(dep["kind"])
+    {record, Dependencies.fingerprint(record)}
+  end
+
+  defp resolve_action!(:create, _token, dep, _selected, %{files: files, actor: actor}) do
+    Catalog.authorize!(actor, :create, Dependencies.schema!(dep["kind"]))
+    if dep["kind"] in ~w(image file), do: Media.validate!(dep, files, actor)
+    {nil, Value.digest(dep)}
+  end
+
+  defp resolve_action!(:unresolved, _token, dep, _selected, _context) do
+    Error.fail!(
+      dgettext("content_transfer", "Resolve %{value1} “%{value2}” on the destination.",
+        value1: dep["kind"],
+        value2: dep["label"]
+      )
+    )
+  end
+
+  defp preload_dependency(record, "module"), do: Repo.preload(record, [:vars, :refs])
+  defp preload_dependency(record, "table_template"), do: Repo.preload(record, [:vars])
+  defp preload_dependency(record, "module_set"), do: Repo.preload(record, :module_set_modules)
+  defp preload_dependency(record, _kind), do: record
 
   defp validate_fields(fields, bundle, bindings, actor) do
     contracts =
