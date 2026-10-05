@@ -14,26 +14,31 @@ defmodule Brando.Worker.MarkdownSourceSync do
     Brando.Tenant.Job.run(job, fn ->
       with {:ok, connection} <- Connection.current(args["connection"]),
            true <- args["generation"] == Connection.generation(connection) do
-        sources =
-          if args["source_id"],
-            do: List.wrap(MarkdownSources.get_source(args["source_id"])),
-            else:
-              Repo.all(
-                from(s in Source,
-                  where: s.connection == ^args["connection"] and s.ref == ^args["ref"] and s.enabled,
-                  order_by: s.id
-                )
-              )
-
-        Enum.reduce(sources, :ok, fn source, result ->
-          case sync(source.id, connection) do
-            :ok -> result
-            {:cancel, _} -> result
-            error -> error
-          end
-        end)
+        args |> sources() |> sync_all(connection)
       else
         _ -> {:cancel, :connection_changed}
+      end
+    end)
+  end
+
+  defp sources(args) do
+    if args["source_id"],
+      do: List.wrap(MarkdownSources.get_source(args["source_id"])),
+      else:
+        Repo.all(
+          from(s in Source,
+            where: s.connection == ^args["connection"] and s.ref == ^args["ref"] and s.enabled,
+            order_by: s.id
+          )
+        )
+  end
+
+  defp sync_all(sources, connection) do
+    Enum.reduce(sources, :ok, fn source, result ->
+      case sync(source.id, connection) do
+        :ok -> result
+        {:cancel, _} -> result
+        error -> error
       end
     end)
   end
@@ -72,24 +77,8 @@ defmodule Brando.Worker.MarkdownSourceSync do
   defp import_document(source, connection, document, html) do
     Repo.transaction(fn ->
       current = Repo.one!(from(s in Source, where: s.id == ^source.id, lock: "FOR UPDATE"))
-
-      unless current.lock_version == source.lock_version and current.enabled and
-               Connection.same_generation?(current.connection, Connection.generation(connection)),
-             do: Repo.rollback(:source_changed)
-
-      version =
-        Repo.get_by(Version, source_id: source.id, commit: document.commit) ||
-          Repo.insert!(
-            struct(
-              Version,
-              Map.merge(document, %{
-                source_id: source.id,
-                html: html,
-                content_hash: :crypto.hash(:sha256, html) |> Base.encode16(case: :lower)
-              })
-            )
-          )
-
+      ensure_unchanged!(current, source, connection)
+      version = version!(source, document, html)
       previous = MarkdownSources.get_version(source.id, current.latest_version_id)
       changed? = is_nil(previous) or previous.content_hash != version.content_hash
 
@@ -104,18 +93,40 @@ defmodule Brando.Worker.MarkdownSourceSync do
         })
         |> Repo.update!()
 
-      if changed? do
-        source.id |> MarkdownSources.consumer_entries() |> Brando.MarkdownSources.Publication.render_consumers!()
-        MarkdownSources.audit(source, "source.imported", :system, %{version_id: version.id})
-
-        case Brando.MarkdownSources.Publication.enqueue(updated, connection) do
-          {:ok, _} -> :ok
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end
+      if changed?, do: publish!(source, updated, version, connection)
 
       updated
     end)
+  end
+
+  defp ensure_unchanged!(current, source, connection) do
+    unless current.lock_version == source.lock_version and current.enabled and
+             Connection.same_generation?(current.connection, Connection.generation(connection)),
+           do: Repo.rollback(:source_changed)
+  end
+
+  defp version!(source, document, html) do
+    Repo.get_by(Version, source_id: source.id, commit: document.commit) ||
+      Repo.insert!(
+        struct(
+          Version,
+          Map.merge(document, %{
+            source_id: source.id,
+            html: html,
+            content_hash: :crypto.hash(:sha256, html) |> Base.encode16(case: :lower)
+          })
+        )
+      )
+  end
+
+  defp publish!(source, updated, version, connection) do
+    source.id |> MarkdownSources.consumer_entries() |> Brando.MarkdownSources.Publication.render_consumers!()
+    MarkdownSources.audit(source, "source.imported", :system, %{version_id: version.id})
+
+    case Brando.MarkdownSources.Publication.enqueue(updated, connection) do
+      {:ok, _} -> :ok
+      {:error, reason} -> Repo.rollback(reason)
+    end
   end
 
   defp fail(source, reason) do
