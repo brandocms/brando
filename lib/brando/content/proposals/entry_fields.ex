@@ -167,14 +167,8 @@ defmodule Brando.Content.Proposals.EntryFields do
 
       {:entries, _join} ->
         Enum.map_join(value, ", ", fn
-          {:entry, schema, id} ->
-            case Content.get_identifier(schema, %{id: id}) do
-              {:ok, %{title: title}} -> title
-              _ -> "##{id}"
-            end
-
-          other ->
-            inspect(other)
+          {:entry, schema, id} -> entry_title(schema, id)
+          other -> inspect(other)
         end)
 
       nil ->
@@ -185,6 +179,13 @@ defmodule Brando.Content.Proposals.EntryFields do
   end
 
   def display(_schema, _name, _value), do: nil
+
+  defp entry_title(schema, id) do
+    case Content.get_identifier(schema, %{id: id}) do
+      {:ok, %{title: title}} -> title
+      _ -> "##{id}"
+    end
+  end
 
   @doc "A saved list, as the reviewer reads it."
   @spec current(struct(), String.t()) :: String.t() | nil
