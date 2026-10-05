@@ -507,20 +507,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
       "url" => url
     } = params
 
-    video_type =
-      case source do
-        "vimeo" -> :vimeo
-        "youtube" -> :youtube
-        "file" -> :external_file
-        _ -> :external_file
-      end
-
-    {title, description, _thumbnail_url} =
-      case video_type do
-        :youtube -> fetch_oembed_metadata("youtube", url)
-        :vimeo -> fetch_oembed_metadata("vimeo", url)
-        _ -> {extract_title_from_url(url), nil, nil}
-      end
+    video_type = url_video_type(source)
+    {title, description, _thumbnail_url} = url_video_metadata(video_type, url)
 
     video_params = %{
       type: video_type,
@@ -1397,6 +1385,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   defp get_aspect_ratio(_), do: "56.25%"
 
+  defp url_video_type("vimeo"), do: :vimeo
+  defp url_video_type("youtube"), do: :youtube
+  defp url_video_type(_source), do: :external_file
+
+  defp url_video_metadata(:youtube, url), do: fetch_oembed_metadata("youtube", url)
+  defp url_video_metadata(:vimeo, url), do: fetch_oembed_metadata("vimeo", url)
+  defp url_video_metadata(_video_type, url), do: {extract_title_from_url(url), nil, nil}
+
   defp fetch_oembed_metadata(provider, url) do
     case Brando.OEmbed.get(provider, url) do
       {:ok, data} ->
@@ -1423,18 +1419,15 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
+  @named_aspect_ratios [{16 / 9, "16:9"}, {4 / 3, "4:3"}, {21 / 9, "21:9"}, {1, "1:1"}, {9 / 16, "9:16"}]
+
   defp calculate_aspect_ratio(width, height)
        when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
     ratio = width / height
 
-    cond do
-      abs(ratio - 16 / 9) < 0.01 -> "16:9"
-      abs(ratio - 4 / 3) < 0.01 -> "4:3"
-      abs(ratio - 21 / 9) < 0.01 -> "21:9"
-      abs(ratio - 1) < 0.01 -> "1:1"
-      abs(ratio - 9 / 16) < 0.01 -> "9:16"
-      true -> "#{width}:#{height}"
-    end
+    Enum.find_value(@named_aspect_ratios, "#{width}:#{height}", fn {named_ratio, label} ->
+      if abs(ratio - named_ratio) < 0.01, do: label
+    end)
   end
 
   defp calculate_aspect_ratio(_, _), do: "16:9"
