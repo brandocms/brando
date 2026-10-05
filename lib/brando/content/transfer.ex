@@ -544,29 +544,30 @@ defmodule Brando.Content.Transfer do
       end)
 
     Enum.reduce(plan.dependencies, bindings, fn
-      %{token: token, dependency: %{"kind" => "gallery"} = dep} = item, bindings ->
-        # A mapped gallery is also copied: gallery ownership is per placement.
-        objects =
-          if item.action == :reuse do
-            Repo.preload(bindings[token], :gallery_objects).gallery_objects
-            |> Enum.map(fn object -> object |> Params.snapshot() |> Map.take(~w(image_id video_id sequence config)) end)
-          else
-            Enum.map(dep["objects"], &(Map.delete(&1, "key") |> Portable.decode_values(bindings)))
-          end
-
-        gallery =
-          %Brando.Galleries.Gallery{}
-          |> Brando.Galleries.Gallery.changeset(
-            %{"config_target" => dep["config_target"], "gallery_objects" => objects},
-            actor
-          )
-          |> Repo.insert!()
-
-        Map.put(bindings, token, gallery)
-
-      _, bindings ->
-        bindings
+      %{dependency: %{"kind" => "gallery"}} = item, bindings -> persist_gallery!(item, bindings, actor)
+      _, bindings -> bindings
     end)
+  end
+
+  defp persist_gallery!(%{token: token, dependency: dep} = item, bindings, actor) do
+    # A mapped gallery is also copied: gallery ownership is per placement.
+    objects =
+      if item.action == :reuse do
+        Repo.preload(bindings[token], :gallery_objects).gallery_objects
+        |> Enum.map(fn object -> object |> Params.snapshot() |> Map.take(~w(image_id video_id sequence config)) end)
+      else
+        Enum.map(dep["objects"], &(Map.delete(&1, "key") |> Portable.decode_values(bindings)))
+      end
+
+    gallery =
+      %Brando.Galleries.Gallery{}
+      |> Brando.Galleries.Gallery.changeset(
+        %{"config_target" => dep["config_target"], "gallery_objects" => objects},
+        actor
+      )
+      |> Repo.insert!()
+
+    Map.put(bindings, token, gallery)
   end
 
   defp persist_fields!(fields, bindings, actor, label) do
@@ -650,11 +651,14 @@ defmodule Brando.Content.Transfer do
       if Map.has_key?(acc, token) || dep["kind"] not in ~w(image file video gallery) do
         acc
       else
-        record = struct(Dependencies.schema!(dep["kind"]), id: -n)
-        record = if dep["kind"] == "gallery", do: %{record | config_target: dep["config_target"]}, else: record
-        Map.put(acc, token, record)
+        Map.put(acc, token, placeholder_record(dep, n))
       end
     end)
+  end
+
+  defp placeholder_record(dep, n) do
+    record = struct(Dependencies.schema!(dep["kind"]), id: -n)
+    if dep["kind"] == "gallery", do: %{record | config_target: dep["config_target"]}, else: record
   end
 
   @doc """
@@ -662,9 +666,11 @@ defmodule Brando.Content.Transfer do
   current contract.
   """
   def adapt(block, bindings) do
+    module_id = block["module_id"]
+
     module =
       Enum.find_value(bindings, fn
-        {_, %Brando.Content.Module{id: id} = module} -> if id == block["module_id"], do: module
+        {_, %Brando.Content.Module{id: id} = module} when id == module_id -> module
         _ -> nil
       end)
 
@@ -679,12 +685,7 @@ defmodule Brando.Content.Transfer do
   def stamp_versions(%Changeset{} = cs, bindings) do
     cs =
       if cs.data.__struct__ == Block && is_nil(cs.data.id) do
-        id = Changeset.get_field(cs, :module_id)
-
-        module =
-          Enum.find_value(bindings, fn {_, record} -> if match?(%Brando.Content.Module{id: ^id}, record), do: record end)
-
-        if module, do: Changeset.put_change(cs, :module_version, module.version), else: cs
+        stamp_module_version(cs, bindings)
       else
         cs
       end
@@ -694,6 +695,15 @@ defmodule Brando.Content.Transfer do
 
   def stamp_versions(list, bindings) when is_list(list), do: Enum.map(list, &stamp_versions(&1, bindings))
   def stamp_versions(value, _), do: value
+
+  defp stamp_module_version(cs, bindings) do
+    id = Changeset.get_field(cs, :module_id)
+
+    module =
+      Enum.find_value(bindings, fn {_, record} -> if match?(%Brando.Content.Module{id: ^id}, record), do: record end)
+
+    if module, do: Changeset.put_change(cs, :module_version, module.version), else: cs
+  end
 
   defp snapshot_fields(fields) do
     Map.new(fields, fn field ->
