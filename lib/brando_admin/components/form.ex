@@ -6455,31 +6455,7 @@ defmodule BrandoAdmin.Components.Form do
   defp decode_drawer_changes(_json), do: %{}
 
   defp assign_drawer_recovery_state(socket) do
-    %{
-      editing_image?: editing_image?,
-      editing_video?: editing_video?,
-      editing_file?: editing_file?,
-      edit_image: edit_image,
-      edit_video: edit_video,
-      edit_file: edit_file
-    } = socket.assigns
-
-    {type, resource_id, field, path, schema, changeset} =
-      cond do
-        editing_image? and edit_image[:id] ->
-          {"image", edit_image.id, edit_image[:field], edit_image[:path], edit_image[:schema],
-           socket.assigns[:image_changeset]}
-
-        editing_video? and edit_video[:id] ->
-          {"video", edit_video.id, edit_video[:field], edit_video[:path], edit_video[:schema],
-           socket.assigns[:video_changeset]}
-
-        editing_file? and edit_file[:id] ->
-          {"file", edit_file.id, edit_file[:field], edit_file[:path], edit_file[:schema], socket.assigns[:file_changeset]}
-
-        true ->
-          {nil, nil, nil, [], nil, nil}
-      end
+    {type, resource_id, field, path, schema, changeset} = editing_drawer(socket.assigns)
 
     socket
     |> assign(:editing_drawer_type, type)
@@ -6488,6 +6464,31 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:editing_path, path || [])
     |> assign(:editing_schema, schema && to_string(schema))
     |> assign(:editing_drawer_changes, encode_drawer_changes(type, changeset))
+  end
+
+  defp editing_drawer(assigns) do
+    %{
+      editing_image?: editing_image?,
+      editing_video?: editing_video?,
+      editing_file?: editing_file?,
+      edit_image: edit_image,
+      edit_video: edit_video,
+      edit_file: edit_file
+    } = assigns
+
+    cond do
+      editing_image? and edit_image[:id] ->
+        {"image", edit_image.id, edit_image[:field], edit_image[:path], edit_image[:schema], assigns[:image_changeset]}
+
+      editing_video? and edit_video[:id] ->
+        {"video", edit_video.id, edit_video[:field], edit_video[:path], edit_video[:schema], assigns[:video_changeset]}
+
+      editing_file? and edit_file[:id] ->
+        {"file", edit_file.id, edit_file[:field], edit_file[:path], edit_file[:schema], assigns[:file_changeset]}
+
+      true ->
+        {nil, nil, nil, [], nil, nil}
+    end
   end
 
   # Only what the user actually changed, and only the text fields — everything
@@ -6643,14 +6644,17 @@ defmodule BrandoAdmin.Components.Form do
     if schema.has_trait(Brando.Trait.Translatable) and length(languages) > 1 and
          not language_input?(blueprint) do
       code = user.config.content_language
-
-      Enum.find_value(languages, code, fn language ->
-        if to_string(language[:value]) == to_string(code), do: language[:text]
-      end)
+      language_text(languages, code)
     end
   end
 
   defp creating_language_label(_assigns), do: nil
+
+  defp language_text(languages, code) do
+    Enum.find_value(languages, code, fn language ->
+      if to_string(language[:value]) == to_string(code), do: language[:text]
+    end)
+  end
 
   defp language_input?(%{tabs: tabs}), do: Enum.any?(tabs, &has_language_input?/1)
   defp language_input?(_blueprint), do: false
