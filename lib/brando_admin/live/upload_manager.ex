@@ -377,64 +377,66 @@ defmodule BrandoAdmin.UploadManager do
     user = socket.assigns.current_user
 
     {decisions, socket} =
-      Enum.map_reduce(files, socket, fn file, socket ->
-        name = Map.get(file, "name", "")
-        size = Map.get(file, "size", 0)
-        mime_type = Map.get(file, "type", "")
-        index = Map.get(file, "index", 0)
-
-        file_meta = %{name: name, size: size, type: mime_type}
-
-        case Brando.Authorization.Media.with_intent(target, user, fn ->
-               initiate_upload(asset_type, target, file_meta, user)
-             end) do
-          {:ok, :server} ->
-            {item, socket} =
-              put_intake_item(socket, name, size, asset_type, target, transport: :server)
-
-            {%{index: index, ref: item.ref, transport: "server"}, socket}
-
-          {:ok, {:direct, %{upload_url: upload_url} = direct}} ->
-            # key/resolved_target stay server-side on the item — finalize never
-            # trusts client-provided keys.
-            {item, socket} =
-              put_intake_item(socket, name, size, asset_type, target,
-                transport: :direct,
-                direct: %{
-                  key: direct.key,
-                  resolved_target: direct.resolved_target,
-                  mime_type: mime_type
-                }
-              )
-
-            # ...and are also written down, because this process may not be here
-            # when the browser reports back (see `Uploads.PendingIntent`).
-            record_pending_intent(item, direct, mime_type, user)
-
-            {%{
-               index: index,
-               ref: item.ref,
-               transport: "direct",
-               upload_url: upload_url,
-               upload_headers: direct.upload_headers
-             }, socket}
-
-          {:error, message} ->
-            # Keep a visible :error item — a silently dropped file looks like
-            # a broken drop zone to the user.
-            {item, socket} =
-              put_intake_item(socket, name, size, asset_type, target,
-                transport: :server,
-                status: :error,
-                error: message
-              )
-
-            {%{index: index, ref: item.ref, error: message}, socket}
-        end
-      end)
+      Enum.map_reduce(files, socket, &intake_decision(&1, &2, asset_type, target, user))
 
     announce_reservations(target, decisions, files)
     {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
+  end
+
+  defp intake_decision(file, socket, asset_type, target, user) do
+    name = Map.get(file, "name", "")
+    size = Map.get(file, "size", 0)
+    mime_type = Map.get(file, "type", "")
+    index = Map.get(file, "index", 0)
+
+    file_meta = %{name: name, size: size, type: mime_type}
+
+    case Brando.Authorization.Media.with_intent(target, user, fn ->
+           initiate_upload(asset_type, target, file_meta, user)
+         end) do
+      {:ok, :server} ->
+        {item, socket} =
+          put_intake_item(socket, name, size, asset_type, target, transport: :server)
+
+        {%{index: index, ref: item.ref, transport: "server"}, socket}
+
+      {:ok, {:direct, %{upload_url: upload_url} = direct}} ->
+        # key/resolved_target stay server-side on the item — finalize never
+        # trusts client-provided keys.
+        {item, socket} =
+          put_intake_item(socket, name, size, asset_type, target,
+            transport: :direct,
+            direct: %{
+              key: direct.key,
+              resolved_target: direct.resolved_target,
+              mime_type: mime_type
+            }
+          )
+
+        # ...and are also written down, because this process may not be here
+        # when the browser reports back (see `Uploads.PendingIntent`).
+        record_pending_intent(item, direct, mime_type, user)
+
+        {%{
+           index: index,
+           ref: item.ref,
+           transport: "direct",
+           upload_url: upload_url,
+           upload_headers: direct.upload_headers
+         }, socket}
+
+      {:error, message} ->
+        # Keep a visible :error item — a silently dropped file looks like
+        # a broken drop zone to the user.
+        {item, socket} =
+          put_intake_item(socket, name, size, asset_type, target,
+            transport: :server,
+            status: :error,
+            error: message
+          )
+
+        {%{index: index, ref: item.ref, error: message}, socket}
+    end
   end
 
   # A conversation names its attachments in the order the user chose them.
@@ -560,30 +562,30 @@ defmodule BrandoAdmin.UploadManager do
         # ImageProcessor runs synchronously right here, and the form must have
         # the :asset_ready message (to subscribe + register pending) first.
         deliver(item, asset)
-
-        socket =
-          if item.asset_type == :image do
-            Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
-
-            Brando.Images.Processing.queue_processing(asset, user, image_field_path(item.target), silent: true)
-
-            duplicate = duplicate_of(asset)
-
-            socket
-            |> update_item(item.ref, %{status: :processing, progress: 100, asset_id: asset.id, duplicate: duplicate})
-            # The choice must be seen, not wait in a closed drawer
-            |> then(&if(duplicate, do: assign(&1, :open?, true), else: &1))
-          else
-            # Parity with save_file: server-transport files on CDN-enabled
-            # sites must still be pushed to the CDN (images push from the
-            # processing worker; direct transport is already in the bucket).
-            if item.target["kind"] != "file_replace", do: maybe_queue_cdn_upload(asset, user)
-            Process.send_after(self(), {:auto_dismiss_item, item.ref}, @auto_dismiss_ms)
-            update_item(socket, item.ref, %{status: :done, progress: 100, asset_id: asset.id})
-          end
-
-        {:noreply, socket}
+        {:noreply, track_stored_asset(socket, item, asset, user)}
     end
+  end
+
+  defp track_stored_asset(socket, %{asset_type: :image} = item, asset, user) do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+
+    Brando.Images.Processing.queue_processing(asset, user, image_field_path(item.target), silent: true)
+
+    duplicate = duplicate_of(asset)
+
+    socket
+    |> update_item(item.ref, %{status: :processing, progress: 100, asset_id: asset.id, duplicate: duplicate})
+    # The choice must be seen, not wait in a closed drawer
+    |> then(&if(duplicate, do: assign(&1, :open?, true), else: &1))
+  end
+
+  defp track_stored_asset(socket, item, asset, user) do
+    # Parity with save_file: server-transport files on CDN-enabled
+    # sites must still be pushed to the CDN (images push from the
+    # processing worker; direct transport is already in the bucket).
+    if item.target["kind"] != "file_replace", do: maybe_queue_cdn_upload(asset, user)
+    Process.send_after(self(), {:auto_dismiss_item, item.ref}, @auto_dismiss_ms)
+    update_item(socket, item.ref, %{status: :done, progress: 100, asset_id: asset.id})
   end
 
   defp store_upload(%{"kind" => "file_replace", "file_id" => file_id}, meta, entry, _cfg, user),
@@ -980,15 +982,7 @@ defmodule BrandoAdmin.UploadManager do
 
     socket =
       if singular? && item.status != :error do
-        update(socket, :items, fn items ->
-          Map.new(items, fn {ref, previous} ->
-            if destination_key(previous.target) == destination do
-              {ref, Map.put(previous, :superseded, true)}
-            else
-              {ref, previous}
-            end
-          end)
-        end)
+        update(socket, :items, &supersede_destination(&1, destination))
       else
         socket
       end
@@ -999,6 +993,16 @@ defmodule BrandoAdmin.UploadManager do
       |> update(:order, &(&1 ++ [ref]))
 
     {item, socket}
+  end
+
+  defp supersede_destination(items, destination) do
+    Map.new(items, fn {ref, previous} ->
+      if destination_key(previous.target) == destination do
+        {ref, Map.put(previous, :superseded, true)}
+      else
+        {ref, previous}
+      end
+    end)
   end
 
   defp destination_key(target) do
