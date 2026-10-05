@@ -244,12 +244,15 @@ defmodule Brando.Users do
     Brando.Authorization.Boundary.run(current_user, :delete, User, fn actor ->
       with {:ok, user} <- get_user(user_id),
            :ok <- Brando.Authorization.Boundary.authorize(actor, :delete, user),
-           :ok <-
-             if(Brando.Authorization.enabled?(), do: Brando.Authorization.Groups.protect_account!(user.id), else: :ok),
+           :ok <- protect_account(user),
            {:ok, _counts} <- transfer_user_content(user_id, transfer_to_user_id) do
         delete_user(user_id, actor)
       end
     end)
+  end
+
+  defp protect_account(user) do
+    if Brando.Authorization.enabled?(), do: Brando.Authorization.Groups.protect_account!(user.id), else: :ok
   end
 
   def get_users_map do
