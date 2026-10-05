@@ -13,7 +13,9 @@
       }
     }
 
-    .meta {
+    /* The subform's own instructions; a field inside keeps its usual gap,
+       or its hint is pulled up over its input */
+    > .meta {
       position: static;
       padding-bottom: 12px;
       margin-top: -9px;

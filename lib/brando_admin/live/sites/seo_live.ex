@@ -43,13 +43,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace settings-workspace seo-workspace">
-      <nav class="tab-switch seo-tabs" aria-label={gettext("SEO sections")}>
+      <nav class="pill-tabs seo-tabs" aria-label={gettext("SEO sections")}>
         <button type="button" phx-click="tab" phx-value-tab="settings" aria-current={@tab == "settings" && "page"}>
-          <.icon name="sliders-horizontal" />
           {gettext("Settings")}
         </button>
         <button type="button" phx-click="tab" phx-value-tab="content" aria-current={@tab == "content" && "page"}>
-          <.icon name="file-search" />
           {gettext("Content SEO")}
           <.score_badge :if={@audit} score={@audit.score} />
         </button>

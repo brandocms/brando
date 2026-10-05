@@ -2513,7 +2513,7 @@ defmodule BrandoAdmin.Components.Form do
           />
 
           <div class="form-tabs">
-            <div class="form-tab-customs">
+            <div class="form-tab-customs pill-tabs">
               <button
                 :for={tab <- @tabs}
                 :key={tab}

@@ -228,17 +228,17 @@ defmodule BrandoAdmin.Users.GroupsLive do
                 >{gettext("Review changes")}</button>
               </header>
               <div :if={@error} class="authorization-notice error" role="alert">{@error}</div>
-              <div class="authorization-tabs" role="group" aria-label={gettext("Group sections")}>
+              <div class="pill-tabs authorization-tabs" role="group" aria-label={gettext("Group sections")}>
                 <button
                   :for={{key, label} <- @tabs}
                   type="button"
                   phx-click="tab"
                   phx-value-tab={key}
                   class={["authorization-tab", @tab == key && "is-active"]}
-                  aria-pressed={@tab == key}
+                  aria-pressed={to_string(@tab == key)}
                   disabled={!@selected.id && key != "permissions"}
                 >{label}
-                <.count_badge :if={key == "members"} tone="mint">{length(@members)}</.count_badge></button>
+                <span :if={key == "members"} class="pill-tabs-count">{length(@members)}</span></button>
               </div>
               <div hidden={@tab != "permissions"}>
                 <%= if @selected.preset == :superuser do %>

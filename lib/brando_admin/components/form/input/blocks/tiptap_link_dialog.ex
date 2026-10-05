@@ -146,11 +146,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
           phx-target={@myself}
         >
           <div class="link-picker-modes tiptap-link-tabs">
-            <div class="form-tab-customs" role="group" aria-label={gettext("Link destination")}>
+            <div class="form-tab-customs pill-tabs" role="group" aria-label={gettext("Link destination")}>
               <button
                 type="button"
                 class={@link_type == :url && "active"}
-                aria-pressed={@link_type == :url}
+                aria-pressed={to_string(@link_type == :url)}
                 phx-click="set_link_type"
                 phx-value-type="url"
                 phx-target={@myself}
@@ -158,7 +158,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
               <button
                 type="button"
                 class={@link_type == :identifier && "active"}
-                aria-pressed={@link_type == :identifier}
+                aria-pressed={to_string(@link_type == :identifier)}
                 phx-click="set_link_type"
                 phx-value-type="identifier"
                 phx-target={@myself}
@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
               <button
                 type="button"
                 class={@link_type == :anchor && "active"}
-                aria-pressed={@link_type == :anchor}
+                aria-pressed={to_string(@link_type == :anchor)}
                 phx-click="set_link_type"
                 phx-value-type="anchor"
                 phx-target={@myself}

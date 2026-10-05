@@ -128,7 +128,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
               {gettext("Each row holds 12 units, up to 4 variables.")}
             </p>
           </div>
-          <div class="var-layout-surfaces" role="tablist">
+          <div class="pill-tabs" role="tablist">
             <button
               :for={surface <- @surfaces}
               type="button"

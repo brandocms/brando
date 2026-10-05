@@ -85,6 +85,15 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
     update_form(socket, changeset, field_name, entries ++ List.wrap(new_entries))
   end
 
+  @doc "Inserts an entry at the given index, keeping pending sibling input."
+  def insert_subentry(socket, index, new_entry) do
+    field_name = socket.assigns.subform.name
+    changeset = socket.assigns.field.form.source
+    entries = current_entries(changeset, field_name)
+
+    update_form(socket, changeset, field_name, List.insert_at(entries, index, new_entry))
+  end
+
   defp update_form(socket, changeset, field_name, entries) do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"

@@ -98,7 +98,7 @@ defmodule Brando.Sites.SEO do
                   "Canonical links and the sitemap use the server's own URL"
               )
 
-          input :robots, :textarea, monospace: true, label: t("Robots"), placeholder: t("Robots")
+          input :robots, :textarea, monospace: true, rows: 8, label: t("Robots"), placeholder: t("Robots")
         end
 
         fieldset do

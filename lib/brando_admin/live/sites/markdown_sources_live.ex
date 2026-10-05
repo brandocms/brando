@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
               {if @source.id, do: gettext("Edit source"), else: gettext("Add a source")}
             </h2>
           </div>
-          <div :if={!@source.id} class="markdown-source-modes" role="group" aria-label={gettext("Add documents")}>
+          <div :if={!@source.id} class="pill-tabs markdown-source-modes" role="group" aria-label={gettext("Add documents")}>
             <button
               type="button"
               phx-click="source_mode"

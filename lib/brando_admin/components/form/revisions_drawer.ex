@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     <div>
       <Content.drawer id={@id} title={gettext("Entry history")} close={@close} icon="clock" workspace editor>
         <:info>
-          <div class="activity-tabs" role="tablist" aria-label={gettext("Entry history")}>
+          <div class="pill-tabs pill-tabs--small activity-tabs" role="tablist" aria-label={gettext("Entry history")}>
             <button
               type="button"
               role="tab"
@@ -57,7 +57,8 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               aria-selected={to_string(@tab == :revisions)}
               phx-click={JS.push("tab", value: %{tab: "revisions"}, target: @myself)}
             >
-              {gettext("Revisions")} <span :if={revision_count(@revision_data)}>{revision_count(@revision_data)}</span>
+              {gettext("Revisions")}
+              <span :if={revision_count(@revision_data)} class="pill-tabs-count">{revision_count(@revision_data)}</span>
             </button>
           </div>
           <p :if={@tab == :activity}>

@@ -1,8 +1,14 @@
 defmodule BrandoAdmin.Components.Dashboard do
-  @moduledoc "A reusable, scope-aware starting point for the admin."
+  @moduledoc """
+  A reusable, scope-aware starting point for the admin: recently updated
+  entries as cards with their cover, and drafts and scheduled publishing in a
+  side column.
+  """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.Activity
+  alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Workspace
 
   def update(assigns, socket) do
@@ -13,40 +19,45 @@ defmodule BrandoAdmin.Components.Dashboard do
     ~H"""
     <div class="admin-workspace dashboard-workspace">
       <Workspace.header title={gettext("Dashboard")} subtitle={@current_user.name} />
-      <nav :if={@overview.shortcuts != []} class="dashboard-shortcuts" aria-label={gettext("Shortcuts")}>
-        <.link :for={shortcut <- @overview.shortcuts} navigate={shortcut.path} class="dashboard-shortcut">
-          <.icon name={shortcut.icon} /><span>{shortcut.label}</span>
-        </.link>
-      </nav>
-      <div class="dashboard-columns">
-        <section class="workspace-panel dashboard-recent">
-          <header class="workspace-panel-heading">
-            <h2>{gettext("Recently updated")}</h2>
-          </header>
+      <div class="dashboard-layout">
+        <section class="dashboard-recent" aria-labelledby="dashboard-recent-heading">
+          <h2 id="dashboard-recent-heading" class="dashboard-heading">{gettext("Recently updated")}</h2>
           <Workspace.empty
             :if={@overview.recent == []}
             title={gettext("No recent content")}
             description={gettext("Content you have access to will appear here after it is edited.")}
           />
-          <div class="dashboard-entry-list">
-            <.entry :for={entry <- @overview.recent} entry={entry} />
+          <div :if={@overview.recent != []} class="dashboard-cards">
+            <.entry_card :for={entry <- @overview.recent} entry={entry} />
           </div>
         </section>
-        <div class="dashboard-secondary">
-          <section class="workspace-panel">
-            <header class="workspace-panel-heading">
-              <h2>{gettext("Drafts")}</h2>
+
+        <aside class="dashboard-side">
+          <section class="workspace-panel dashboard-panel" aria-labelledby="dashboard-drafts-heading">
+            <header class="dashboard-panel-heading">
+              <h2 id="dashboard-drafts-heading">{gettext("Drafts")}</h2>
+              <span :if={@overview.drafts != []} class="dashboard-count">{length(@overview.drafts)}</span>
             </header>
             <Workspace.empty
               :if={@overview.drafts == []}
               title={gettext("No drafts")}
               description={gettext("Unpublished content you can edit will appear here.")}
             />
-            <div class="dashboard-entry-list"><.entry :for={entry <- @overview.drafts} entry={entry} compact /></div>
+            <div class="dashboard-entry-list">
+              <article :for={entry <- @overview.drafts} class="dashboard-entry">
+                <Activity.avatar :if={entry.editor} user={entry.editor} />
+                <div>
+                  <.entry_title entry={entry} />
+                  <small>{entry.type} · <.when_label at={entry.updated_at} /></small>
+                </div>
+              </article>
+            </div>
           </section>
-          <section class="workspace-panel">
-            <header class="workspace-panel-heading">
-              <h2>{gettext("Scheduled publishing")}</h2>
+
+          <section class="workspace-panel dashboard-panel" aria-labelledby="dashboard-scheduled-heading">
+            <header class="dashboard-panel-heading">
+              <h2 id="dashboard-scheduled-heading">{gettext("Scheduled publishing")}</h2>
+              <span :if={@overview.scheduled != []} class="dashboard-count">{length(@overview.scheduled)}</span>
             </header>
             <Workspace.empty
               :if={@overview.scheduled == []}
@@ -55,37 +66,88 @@ defmodule BrandoAdmin.Components.Dashboard do
             />
             <div class="dashboard-entry-list">
               <article :for={entry <- @overview.scheduled} class="dashboard-entry">
-                <div><.link navigate={entry.path}>{entry.title}</.link><small>{entry.type}</small></div>
-                <BrandoAdmin.Dates.time at={entry.scheduled_at} format={:long} />
+                <.date_tile at={entry.scheduled_at} />
+                <div>
+                  <.link navigate={entry.path}>{entry.title}</.link>
+                  <small>{entry.type} · <BrandoAdmin.Dates.time at={entry.scheduled_at} format={:long} /></small>
+                </div>
               </article>
             </div>
           </section>
-        </div>
+        </aside>
       </div>
     </div>
     """
   end
 
   attr :entry, :map, required: true
-  attr :compact, :boolean, default: false
 
-  def entry(assigns) do
+  # The whole card opens the entry: its title link is stretched over it.
+  def entry_card(assigns) do
     ~H"""
-    <article class="dashboard-entry">
-      <div>
-        <.link :if={@entry.path} navigate={@entry.path}>{@entry.title}</.link>
-        <strong :if={!@entry.path}>{@entry.title}</strong>
-        <small>{@entry.type}<span :if={@entry.language}> · {@entry.language}</span></small>
+    <article class={["dashboard-card", @entry.path && "is-linked"]}>
+      <div class="dashboard-card-cover">
+        <img
+          :if={@entry.cover}
+          src={@entry.cover.src}
+          srcset={@entry.cover.srcset}
+          sizes="(max-width: 600px) 92px, 300px"
+          alt=""
+          loading="lazy"
+        />
+        <.icon :if={!@entry.cover} name={@entry.icon} />
       </div>
-      <div class="dashboard-entry-meta">
-        <span :if={!@compact && @entry.status} class={["workspace-badge", @entry.status == :published && "positive"]}>{status_label(
-          @entry.status
-        )}</span>
-        <BrandoAdmin.Dates.time :if={@entry.updated_at} at={@entry.updated_at} />
+      <div class="dashboard-card-body">
+        <h3><.entry_title entry={@entry} /></h3>
+        <span class="dashboard-card-type">
+          <.icon name={@entry.icon} />{@entry.type}<span :if={@entry.language}>· {@entry.language}</span>
+        </span>
+        <div class="dashboard-card-meta">
+          <span :if={@entry.status} class="dashboard-card-status">
+            <Row.status_circle status={@entry.status} /><span>{Row.status_label(@entry.status)}</span>
+          </span>
+          <.when_label at={@entry.updated_at} />
+          <Activity.avatar :if={@entry.editor} user={@entry.editor} />
+        </div>
       </div>
     </article>
     """
   end
 
-  defp status_label(status), do: BrandoAdmin.Components.Content.List.Row.status_label(status)
+  attr :entry, :map, required: true
+
+  defp entry_title(assigns) do
+    ~H"""
+    <.link :if={@entry.path} navigate={@entry.path}>{@entry.title}</.link>
+    <strong :if={!@entry.path}>{@entry.title}</strong>
+    """
+  end
+
+  attr :at, :any, required: true
+
+  # `Today 14:32`, `Yesterday 09:10` or `01.10.26 17:05`
+  defp when_label(assigns) do
+    ~H"""
+    <time :if={@at} datetime={DateTime.to_iso8601(@at)} title={BrandoAdmin.Dates.full(@at)}>
+      {Activity.when_label(@at)}
+    </time>
+    """
+  end
+
+  attr :at, :any, required: true
+
+  defp date_tile(assigns) do
+    local = DateTime.shift_zone!(assigns.at, Brando.timezone())
+    assigns = assign(assigns, day: local.day, month: month_label(local.month))
+
+    ~H"""
+    <span class="dashboard-date" aria-hidden="true"><b>{@day}</b><small>{@month}</small></span>
+    """
+  end
+
+  defp month_label(month) do
+    month
+    |> Brando.Utils.Datetime.get_month_name(Gettext.get_locale(Brando.Gettext))
+    |> String.slice(0, 3)
+  end
 end

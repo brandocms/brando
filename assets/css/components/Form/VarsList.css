@@ -1,0 +1,119 @@
+/* A variable list (Input.Vars: global sets, page variables, table templates).
+   Framed like an inline subform's table (SubformTable.css, which also styles
+   its grip, insert and remove buttons and its footer): a line per variable,
+   hairlines between them, white rows tinted on hover. A variable opens in
+   place, under its line. Scoped through the field wrapper to outrank the
+   older card rules for `.subform-entry` in Subform.css and SubformTable.css. */
+.field-wrapper.subform--vars .vars-list {
+  border: 1px solid var(--table-line);
+  border-radius: 6px;
+  background: #fff;
+  overflow: clip;
+
+  .vars-list-body > .vars-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    transition: background-color 150ms ease;
+
+    & + .vars-row {
+      border-top: 1px solid var(--table-line);
+    }
+
+    &:hover {
+      background: var(--table-hover);
+    }
+
+    /* An open variable reads as one block, not a hovered line */
+    &:has(> .variable .variable-content:not(.hidden)) {
+      background: #fff;
+    }
+
+    /* The line the new variable would go on */
+    &:has(> .subform-tools > .subform-insert:is(:hover, :focus-visible)) {
+      border-top-color: #254e3f;
+    }
+  }
+
+  .vars-row > .subform-tools {
+    position: relative;
+    display: flex;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: 58px;
+    margin: 0;
+    padding: 0 0 0 8px;
+    background: transparent;
+  }
+
+  .vars-row > .subform-row-end {
+    display: flex;
+    flex: none;
+    align-items: center;
+    width: auto;
+    height: 58px;
+    padding: 0 8px 0 0;
+  }
+
+  .vars-row > .variable {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* The header is the line itself */
+  .vars-row .variable-editor > .variable-header {
+    width: 100%;
+    min-height: 58px;
+    margin: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--table-ink);
+    text-align: left;
+
+    &:hover {
+      background: transparent;
+    }
+
+    .variable-type {
+      min-width: 58px;
+      padding: 4px 6px;
+      background: #eef3ec;
+      color: #4d6150;
+      text-align: center;
+    }
+
+    .variable-key code {
+      font-size: 12.5px;
+    }
+
+    .variable-key span {
+      color: var(--table-muted);
+      font-size: 12px;
+      opacity: 1;
+    }
+
+    .variable-value {
+      color: var(--table-ink);
+      font-size: 13px;
+    }
+  }
+
+  .vars-row .variable-content {
+    padding: 4px 10px 20px;
+  }
+}

@@ -663,6 +663,11 @@ defmodule BrandoAdmin.Components.Form.Input do
   # it adds an entry on the next validate. Clearing a row removes it — the
   # type drops blanks on cast. Row ids are positional, so the row that was the
   # empty one keeps its id (and focus) when it becomes a value.
+  #
+  # Drawn like an inline subform's table: one frame, a line per value, a
+  # ghost × on hover and an insert button on the line above each row. The
+  # `Brando.StringList` hook inserts and removes rows in the DOM, so the next
+  # change sends the list in its new order.
   def input(%{type: :string_list} = assigns) do
     {:ok, values} = Brando.Type.StringList.cast(assigns.field.value)
 
@@ -671,23 +676,48 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:id, assigns.id || assigns.field.id)
       |> assign(:name, assigns.name || assigns.field.name)
       |> assign(:values, values ++ [""])
+      |> assign(:last, length(values))
       |> process_input_id()
       |> assign_a11y()
 
     ~H"""
-    <div class="string-list" id={@id} aria-describedby={@aria_describedby}>
-      <input
+    <div class="string-list" id={@id} phx-hook="Brando.StringList" aria-describedby={@aria_describedby}>
+      <div
         :for={{value, index} <- Enum.with_index(@values)}
-        type="text"
-        name={"#{@name}[]"}
-        id={"#{@id}_#{index}"}
-        value={value}
-        class="text string-list-row"
-        placeholder={index == length(@values) - 1 && gettext("Add another…")}
-        phx-debounce="300"
-        aria-invalid={@aria_invalid}
-        aria-label={"#{@field.field} #{index + 1}"}
-      />
+        class={["string-list-row", index == @last && "string-list-add"]}
+      >
+        <span class="string-list-gutter" aria-hidden="true">
+          <span :if={index < @last}>{index + 1}</span>
+          <.icon :if={index == @last} name="plus" />
+        </span>
+        <button
+          :if={index < @last}
+          type="button"
+          class="string-list-insert"
+          aria-label={gettext("Insert row")}
+        >
+          <.icon name="plus" />
+        </button>
+        <input
+          type="text"
+          name={"#{@name}[]"}
+          id={"#{@id}_#{index}"}
+          value={value}
+          class="text string-list-input"
+          placeholder={index == @last && gettext("Add another…")}
+          phx-debounce="300"
+          aria-invalid={@aria_invalid}
+          aria-label={"#{@field.field} #{index + 1}"}
+        />
+        <button
+          :if={index < @last}
+          type="button"
+          class="string-list-remove"
+          aria-label={gettext("Remove row")}
+        >
+          <.icon name="x" />
+        </button>
+      </div>
     </div>
     """
   end

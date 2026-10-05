@@ -1,58 +1,101 @@
-/* Tab views (docs/admin-ui-design.md, "Tab views"): a sage track, muted tabs
-   with an icon and a label, and the selected tab as a white pill. The track is
-   `.tab-switch`, or the radios inside the link pickers' `.link-picker-modes`,
-   which `Input.radios` renders without a class of our own. */
-:is(.tab-switch, .link-picker-modes :is(.radios-wrapper, .form-tab-customs)) {
+/* Pill tabs (docs/admin-ui-design.md, "Tab views"): the admin's one tab style.
+   A light rounded track, muted labels, and the selected tab as a raised white
+   pill. Use it to switch between views or sections of one screen.
+
+   Markup: `<nav class="pill-tabs">` (or `role="tablist"`) holding buttons or
+   links. Mark the selected one with `.active`, `aria-current="page"`,
+   `aria-selected="true"` or `aria-pressed="true"`. A tab may hold an icon
+   (`<.icon>`) before its label, and a count after it in
+   `<span class="pill-tabs-count">`. `.pill-tabs--small` is the compact size
+   for toolbars inside a panel.
+
+   The link pickers' URL / Content switch is `Input.radios`, which renders
+   without a class of our own; its radios take the same look through
+   `.link-picker-modes .radios-wrapper`. */
+:is(.pill-tabs, :where(.link-picker-modes) .radios-wrapper) {
+  --pill-ink: #272b2a;
+
   display: inline-flex;
+  flex: none;
   flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 3px;
-  margin: 0;
+  /* A row of tabs wider than a phone scrolls inside its track; in a grid or
+     flex parent the track would otherwise widen the page to fit them */
+  min-width: 0;
+  max-width: 100%;
   padding: 3px;
-  border: 1px solid #dce5d8;
-  border-radius: 5px;
-  background: #f1f5ef;
+  border: 1px solid #eceeea;
+  border-radius: 22px;
+  background-color: #f7f8f6;
+  overflow-x: auto;
+  scrollbar-width: none;
 
   .form-check {
     margin: 0;
   }
 
-  :is(label, button) {
-    display: flex;
+  > :is(button, a),
+  > .form-check > label {
+    position: relative;
+    display: inline-flex;
+    flex: none;
     align-items: center;
-    gap: 8px;
-    min-height: 32px;
+    justify-content: center;
+    gap: 7px;
+    min-height: 30px;
     margin: 0;
     padding: 6px 14px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: transparent;
-    color: #626b66;
-    font: 13px/18px "Main", sans-serif;
+    border: 0;
+    border-radius: 22px;
+    background-color: transparent;
+    box-shadow: none;
+    color: var(--pill-ink);
+    font: 400 13px/18px "Main", sans-serif;
+    text-decoration: none;
+    white-space: nowrap;
+    opacity: 0.6;
     cursor: pointer;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 
     > [data-icon] {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
+      display: block;
+      flex: none;
+      width: 15px;
+      height: 15px;
+      color: currentColor;
     }
 
     &:hover {
-      color: #272b2a;
+      background-color: transparent;
+      opacity: 0.9;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #758f75;
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
     }
   }
 
-  :is(label:has(input:checked), button.active, button[aria-current="page"]) {
-    background: white;
-    border-color: #d6e2d0;
-    color: #254e3f;
+  > :is(.active, [aria-current="page"], [aria-selected="true"], [aria-pressed="true"]),
+  > .form-check > label:has(input:checked) {
+    &,
+    &:hover {
+      background-color: #fff;
+      box-shadow: 0 1px 2px rgba(5, 39, 82, 0.08);
+      color: var(--pill-ink);
+      font-weight: 500;
+      opacity: 1;
+    }
   }
 
   /* Radio tabs: the native input covers its label so the whole pill clicks */
-  label:has(input[type="radio"]) {
-    position: relative;
-  }
-
   input[type="radio"] {
     position: absolute;
     inset: 0;
@@ -64,9 +107,53 @@
     cursor: pointer;
   }
 
-  label:has(input:focus-visible),
-  button:focus-visible {
+  > .form-check > label:has(input:focus-visible) {
     outline: 2px solid #758f75;
     outline-offset: 2px;
+  }
+}
+
+/* A count or other small number after a tab's label */
+.pill-tabs-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: rgba(39, 43, 42, 0.07);
+  color: var(--pill-ink, #272b2a);
+  font: 400 10.5px/1 "Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill-tabs--small {
+  > :is(button, a) {
+    gap: 6px;
+    min-height: 26px;
+    padding: 4px 11px;
+    font-size: 12px;
+
+    > [data-icon] {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+/* One section is a caption, not a choice */
+.pill-tabs:has(> :is(button, a):only-child) {
+  border-color: transparent;
+  background-color: transparent;
+
+  > :is(button, a) {
+    &,
+    &:hover {
+      background-color: transparent;
+      box-shadow: none;
+      font-weight: 400;
+      opacity: 1;
+      cursor: default;
+    }
   }
 }

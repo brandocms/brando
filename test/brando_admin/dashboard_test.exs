@@ -22,14 +22,13 @@ defmodule BrandoAdmin.DashboardTest do
       updated_at: DateTime.utc_now(:second)
     })
 
-    %{scope: Scope.standalone(owner), user: user, page: page}
+    %{scope: Scope.standalone(owner), owner: owner, user: user, page: page}
   end
 
-  test "a user without content access sees neither titles nor shortcuts", c do
+  test "a user without content access sees no titles", c do
     overview = BrandoAdmin.Dashboard.load(c.user)
     assert overview.recent == []
     assert overview.drafts == []
-    assert overview.shortcuts == []
     assert Boundary.current_scope() == nil
   end
 
@@ -38,7 +37,15 @@ defmodule BrandoAdmin.DashboardTest do
     overview = BrandoAdmin.Dashboard.load(c.user)
     assert [%{title: "Private draft", path: nil}] = overview.recent
     assert overview.drafts == []
-    assert [%{path: "/admin/pages"}] = overview.shortcuts
+  end
+
+  test "a card names its content type's icon and the entry's last editor", c do
+    grant(c, ~w(brando.admin.access brando.pages.read brando.pages.update))
+    Repo.update!(Ecto.Changeset.change(c.page, updated_by_id: c.owner.id))
+
+    assert [%{icon: icon, editor: editor}] = BrandoAdmin.Dashboard.load(c.user).recent
+    assert icon == Brando.Blueprint.get_icon(Brando.Pages.Page)
+    assert editor.id == c.owner.id
   end
 
   test "drafts require edit access and disappear after permissions are revoked", c do
@@ -54,19 +61,6 @@ defmodule BrandoAdmin.DashboardTest do
     grant(c, ~w(brando.admin.access brando.pages.read brando.pages.update))
     Repo.update!(Ecto.Changeset.change(c.page, deleted_at: DateTime.utc_now(:second)))
     assert BrandoAdmin.Dashboard.load(c.user).recent == []
-  end
-
-  test "the site's own menu entries come first, without repeating the general ones", c do
-    grant(c, ~w(brando.admin.access brando.pages.read brando.images.read))
-    shortcuts = BrandoAdmin.Dashboard.load(c.user).shortcuts
-    paths = Enum.map(shortcuts, &URI.parse(&1.path).path)
-
-    # The integration app's menu has a single entry: Pages.
-    assert hd(paths) == "/admin/pages"
-    assert paths == Enum.uniq(paths)
-    assert "/admin/assets/images" in paths
-    # No global sets, no menus: no shortcuts to empty screens.
-    refute "/admin/globals" in paths
   end
 
   defp grant(c, keys) do

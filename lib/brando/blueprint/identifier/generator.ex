@@ -47,9 +47,7 @@ defmodule Brando.Blueprint.Identifier.Generator do
     status = Map.get(entry, :status, nil)
     language = normalize_language(module, Map.get(entry, :language, nil))
 
-    image_assets = get_ordered_image_assets(module)
-    first_image_asset = List.first(image_assets)
-    cover = if skip_cover, do: nil, else: extract_cover(first_image_asset, entry)
+    cover = if skip_cover, do: nil, else: extract_cover(cover_asset(module), entry)
     updated_at = extract_updated_at(entry)
     url = extract_url(entry)
 
@@ -80,22 +78,31 @@ defmodule Brando.Blueprint.Identifier.Generator do
       nil
   """
   @spec extract_cover(map() | nil, map() | nil) :: String.t() | nil
-  def extract_cover(nil, _), do: nil
-  def extract_cover(_, nil), do: nil
-
-  def extract_cover(%{name: field_name} = field, entry) do
-    case Map.get(entry, field_name) do
-      nil ->
-        nil
-
-      %Ecto.Association.NotLoaded{} ->
-        entry = Brando.Repo.preload(entry, field_name)
-        extract_cover(field, entry)
-
-      cover ->
-        Utils.img_url(cover, :thumb, prefix: Utils.media_url())
+  def extract_cover(field, entry) do
+    case cover_image(field, entry) do
+      nil -> nil
+      cover -> Utils.img_url(cover, :thumb, prefix: Utils.media_url())
     end
   end
+
+  @doc """
+  The image an entry's identifier takes its cover from, preloaded, or `nil`:
+  the first content image asset of `module`, else its meta image. For callers
+  that need a size other than the identifier's stored thumb.
+  """
+  @spec cover_image(module(), map() | nil) :: Brando.Images.Image.t() | nil
+  def cover_image(nil, _), do: nil
+  def cover_image(_, nil), do: nil
+  def cover_image(module, entry) when is_atom(module), do: cover_image(cover_asset(module), entry)
+
+  def cover_image(%{name: field_name} = field, entry) do
+    case Map.get(entry, field_name) do
+      %Ecto.Association.NotLoaded{} -> cover_image(field, Brando.Repo.preload(entry, field_name))
+      cover -> cover
+    end
+  end
+
+  defp cover_asset(module), do: module |> get_ordered_image_assets() |> List.first()
 
   defp normalize_language(_module, nil), do: nil
 

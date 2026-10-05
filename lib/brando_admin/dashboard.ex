@@ -1,11 +1,13 @@
 defmodule BrandoAdmin.Dashboard do
   @moduledoc "Read-only dashboard data, scoped to the current actor and tenant."
   import Ecto.Query, only: [from: 2]
-  use Gettext, backend: Brando.Gettext
 
   alias Brando.Authorization.{Boundary, Scope}
+  alias Brando.Blueprint.Identifier.Generator
   alias Brando.Content.Identifier
+  alias Brando.Images.{ConfigResolver, Image, Size}
   alias Brando.Repo
+  alias Brando.Utils
 
   def load(user) do
     scope = Boundary.actor_scope(user)
@@ -13,10 +15,9 @@ defmodule BrandoAdmin.Dashboard do
     Boundary.with_scope(scope, fn ->
       Brando.Tenant.with_prefix(scope.prefix || Brando.Tenant.current_prefix(), fn ->
         %{
-          recent: entries(user, :recent, 8),
+          recent: entries(user, :recent, 6),
           drafts: entries(user, :drafts, 4),
-          scheduled: scheduled(user),
-          shortcuts: shortcuts(user)
+          scheduled: scheduled(user)
         }
       end)
     end)
@@ -48,9 +49,12 @@ defmodule BrandoAdmin.Dashboard do
         %{
           title: identifier.title,
           type: Brando.Blueprint.get_singular(identifier.schema) |> Brando.Utils.humanize(),
+          icon: Brando.Blueprint.get_icon(identifier.schema),
+          cover: cover(kind, identifier, entry),
           language: identifier.language,
           status: identifier.status,
           updated_at: identifier.updated_at,
+          editor_id: Map.get(entry, :updated_by_id) || Map.get(entry, :creator_id),
           path: if(allowed?(user, :update, entry), do: identifier.schema.__admin_route__(:update, [entry.id]))
         }
       else
@@ -59,6 +63,79 @@ defmodule BrandoAdmin.Dashboard do
     end)
     |> Stream.reject(&is_nil/1)
     |> Enum.take(limit)
+    |> put_editors()
+  end
+
+  # A card's cover in every size the image has, so the browser can take one
+  # that is sharp at the card's width. The identifier's own cover is only a
+  # thumbnail; it stands in when the image has no sizes yet.
+  defp cover(:recent, identifier, entry) do
+    case Generator.cover_image(identifier.schema, entry) do
+      %Image{sizes: sizes} = image when is_map(sizes) and map_size(sizes) > 0 -> sized_cover(image)
+      _ -> thumb_cover(identifier)
+    end
+  end
+
+  defp cover(_kind, identifier, _entry), do: thumb_cover(identifier)
+
+  defp thumb_cover(%{cover: nil}), do: nil
+  defp thumb_cover(%{cover: url}), do: %{src: url, srcset: nil}
+
+  defp sized_cover(image) do
+    {:ok, config} = ConfigResolver.get(image)
+
+    # Low-quality sizes are blur placeholders, not candidates
+    candidates =
+      for {key, %{"size" => geometry} = size_config} <- config.sizes,
+          Map.has_key?(image.sizes, key),
+          Map.get(size_config, "quality", 100) >= 30,
+          {:ok, dimensions} <- [Size.dimensions(geometry)],
+          width = rendered_width(image, dimensions, size_config["crop"]) do
+        {width, Utils.img_url(image, key, prefix: Utils.media_url())}
+      end
+      |> Enum.sort()
+      |> Enum.uniq_by(&elem(&1, 0))
+
+    case candidates do
+      [] ->
+        %{src: Utils.img_url(image, :thumb, prefix: Utils.media_url()), srcset: nil}
+
+      _ ->
+        {_width, src} = Enum.find(candidates, &(elem(&1, 0) >= 600)) || Enum.max(candidates)
+        %{src: src, srcset: Enum.map_join(candidates, ", ", fn {width, url} -> "#{url} #{width}w" end)}
+    end
+  end
+
+  # The width a size is actually saved at, which `srcset` needs: a size fits
+  # the image inside its box unless it crops, and never enlarges it.
+  defp rendered_width(%{width: original, height: height}, box, crop)
+       when is_integer(original) and is_integer(height) and height > 0 do
+    box
+    |> fitted_width(original / height, crop in [true, "true"])
+    |> Kernel.||(original)
+    |> min(original)
+    |> round()
+  end
+
+  defp rendered_width(_image, {box_width, _box_height}, _crop), do: box_width
+
+  defp fitted_width({box_width, _box_height}, _ratio, true), do: box_width
+  defp fitted_width({nil, nil}, _ratio, _crop), do: nil
+  defp fitted_width({nil, box_height}, ratio, _crop), do: box_height * ratio
+  defp fitted_width({box_width, nil}, _ratio, _crop), do: box_width
+  defp fitted_width({box_width, box_height}, ratio, _crop), do: min(box_width, box_height * ratio)
+
+  # Who last edited each entry (its creator until someone edits it), loaded
+  # in one query for the whole list.
+  defp put_editors(entries) do
+    ids = entries |> Enum.map(& &1.editor_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+    users =
+      if ids == [],
+        do: %{},
+        else: Map.new(Repo.all(from(u in Brando.Users.User, where: u.id in ^ids, preload: :avatar)), &{&1.id, &1})
+
+    Enum.map(entries, &Map.put(&1, :editor, Map.get(users, &1.editor_id)))
   end
 
   defp scheduled(user) do
@@ -77,6 +154,7 @@ defmodule BrandoAdmin.Dashboard do
           %{
             title: identifier.title,
             type: Brando.Blueprint.get_singular(schema) |> Brando.Utils.humanize(),
+            icon: Brando.Blueprint.get_icon(schema),
             path: schema.__admin_route__(:update, [entry.id]),
             scheduled_at: job.scheduled_at
           }
@@ -87,53 +165,6 @@ defmodule BrandoAdmin.Dashboard do
     end)
     |> Enum.take(4)
   end
-
-  # The site's own sections first (a site's Works, not Brando's Pages), then
-  # the general ones. Navigation and Globals only once there's something in
-  # them: a shortcut to an empty screen is a dead end.
-  defp shortcuts(user) do
-    site =
-      user
-      |> BrandoAdmin.Menu.site_menu_items()
-      |> Enum.map(&%{label: &1.name, path: &1.url, icon: &1.icon})
-
-    general =
-      [
-        %{
-          label: gettext("Pages"),
-          path: "/admin/pages",
-          action: :read,
-          schema: Brando.Pages.Page
-        },
-        %{
-          label: gettext("Images"),
-          path: "/admin/assets/images",
-          action: :read,
-          schema: Brando.Images.Image
-        },
-        any?(Brando.Navigation.Menu) &&
-          %{
-            label: gettext("Navigation"),
-            path: "/admin/config/navigation/menus",
-            action: :read,
-            schema: Brando.Navigation.Menu
-          },
-        any?(Brando.Sites.GlobalSet) &&
-          %{
-            label: gettext("Globals"),
-            path: "/admin/globals",
-            action: :update,
-            schema: Brando.Sites.GlobalSet
-          }
-      ]
-      |> Enum.filter(& &1)
-      |> Enum.filter(&allowed?(user, &1.action, struct(&1.schema)))
-      |> Enum.map(&%{label: &1.label, path: &1.path, icon: Brando.Blueprint.get_icon(&1.schema)})
-
-    Enum.uniq_by(site ++ general, &URI.parse(&1.path).path)
-  end
-
-  defp any?(schema), do: Repo.aggregate(schema, :count) > 0
 
   defp allowed?(user, action, entry) do
     if Brando.Authorization.enabled?() do

@@ -924,7 +924,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       </nav>
 
       <div class="assistant-preview-controls">
-        <div class="assistant-segmented" role="group" aria-label={gettext("Version")}>
+        <div class="pill-tabs pill-tabs--small assistant-segmented" role="group" aria-label={gettext("Version")}>
           <button
             :for={{value, label} <- [{"before", gettext("Before")}, {"proposed", gettext("Proposed")}]}
             type="button"
@@ -937,7 +937,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </div>
         <div
           :if={@entry && length(@entry.preview_targets) > 1}
-          class="assistant-segmented"
+          class="pill-tabs pill-tabs--small assistant-segmented"
           role="group"
           aria-label={gettext("View")}
         >
@@ -952,7 +952,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           </button>
         </div>
         <div class="assistant-preview-options">
-          <div class="assistant-segmented" role="group" aria-label={gettext("Viewport")}>
+          <div class="pill-tabs pill-tabs--small assistant-segmented" role="group" aria-label={gettext("Viewport")}>
             <button
               :for={
                 {value, label, icon} <- [

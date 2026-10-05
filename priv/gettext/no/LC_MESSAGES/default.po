@@ -15038,3 +15038,15 @@ msgid "1 row"
 msgid_plural "%{count} rows"
 msgstr[0] "1 rad"
 msgstr[1] "%{count} rader"
+
+#: lib/brando_admin/components/form/input/vars.ex
+#, elixir-autogen, elixir-format
+msgid "Insert variable"
+msgstr "Sett inn variabel"
+
+#: lib/brando_admin/components/form/input/vars.ex
+#, elixir-autogen, elixir-format
+msgid "1 variable"
+msgid_plural "%{count} variables"
+msgstr[0] "1 variabel"
+msgstr[1] "%{count} variabler"

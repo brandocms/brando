@@ -478,10 +478,9 @@
 }
 
 /**
- * Entry form tab bar. Shares its chip vocabulary with the module editor's
- * `.module-editor-tabs` (see Form/BlockEditor.css) — both read the
- * `--brando-tabbar-*` / `--brando-chip-*` tokens from app.css. The builtin
- * actions share one neutral tint as a single segmented group.
+ * Entry form tab bar. The sections on the left are pill tabs
+ * (`.pill-tabs`, TabSwitch.css); the builtin actions on the right share one
+ * neutral tint as a single segmented group.
  */
 .form-tabs {
   --form-tool-tint-strength: 100%;
@@ -513,9 +512,7 @@
     }
   }
 
-  /* Shared chip. Applies to the tab buttons on the left and to every builtin
-     on the right. */
-  .form-tab-customs button,
+  /* The builtins' chip */
   .form-tab-builtins > * {
     @font main;
     font-size: 13px;
@@ -550,15 +547,6 @@
     &.active:hover {
       background-color: var(--brando-chip-active-bg);
       color: var(--brando-chip-active-fg);
-    }
-  }
-
-  .form-tab-customs {
-    display: flex;
-    gap: 4px;
-
-    button:not(.active) {
-      color: color-mix(in srgb, var(--brando-color-dark) 65%, var(--brando-color-white));
     }
   }
 
