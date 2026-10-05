@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   slot :actions
 
   def field(assigns) do
-    target = ConfigTarget.serialize(if assigns.config_target in [nil, ""], do: "default", else: assigns.config_target)
+    target = ConfigTarget.serialize(field_config_target(assigns.config_target))
     {config, _resolved_target} = config(assigns.type, target)
     asset = loaded_asset(assigns.asset)
     upload_enabled = assigns.editable && upload_enabled?(assigns.type, config)
@@ -56,7 +56,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:name, asset_name(asset, assigns.type))
       |> assign(:details, asset_details(asset, assigns.type))
       |> assign(:alt, if(assigns.presentation != :line, do: alt_status(asset, assigns.type, assigns.alt_override)))
-      |> assign(:processing_image?, assigns.type == :image && asset != nil && asset.status != :processed)
+      |> assign(:processing_image?, processing_image?(asset, assigns.type))
       |> assign(:preview_ratio, image_ratio(asset, assigns.type))
       |> assign(
         :drop_label,
@@ -253,6 +253,11 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
     </div>
     """
   end
+
+  defp field_config_target(config_target) when config_target in [nil, ""], do: "default"
+  defp field_config_target(config_target), do: config_target
+
+  defp processing_image?(asset, type), do: type == :image && asset != nil && asset.status != :processed
 
   # Where the next upload goes, under a menu's actions
   attr :folder, :string, required: true
