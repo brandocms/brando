@@ -150,7 +150,7 @@ defmodule Brando.Content.ProposalsTest do
 
     naming = load(c.naming, c.user)
     assert Enum.map(Enum.take(naming.entry_blocks, 3), &{&1.id, &1.block.id, &1.block.uid}) == before_naming
-    appended = List.last(naming.entry_blocks).block
+    assert [%{block: appended} | _] = Enum.reverse(naming.entry_blocks)
     assert appended.uid == naming_op.uid
     slot = Enum.find(appended.refs, &(&1.name == "slot"))
     assert slot.data.type == "video"
@@ -436,9 +436,8 @@ defmodule Brando.Content.ProposalsTest do
       assert {:ok, _} = Proposals.approve(second.id, 2, c.user)
       assert {:ok, _} = Proposals.apply(second.id, 2, c.user)
 
-      assert List.last(load(c.naming, c.user).entry_blocks).block.vars
-             |> Enum.find(&(&1.key == "heading"))
-             |> Map.get(:value) == "Refined"
+      assert [%{block: last} | _] = Enum.reverse(load(c.naming, c.user).entry_blocks)
+      assert Enum.find(last.vars, &(&1.key == "heading")).value == "Refined"
 
       assert length(load(c.identity, c.user).entry_blocks) == 3
     end
@@ -495,8 +494,8 @@ defmodule Brando.Content.ProposalsTest do
       assert proposal.effects.updated_blocks == 1
       assert {:ok, _} = approve_and_apply(proposal, c.user)
 
-      assert List.last(load(c.identity, c.user).entry_blocks).block.refs |> hd() |> then(& &1.data.data.text) ==
-               "<p>Written by the agent</p>"
+      assert [%{block: %{refs: [ref | _]}} | _] = Enum.reverse(load(c.identity, c.user).entry_blocks)
+      assert ref.data.data.text == "<p>Written by the agent</p>"
 
       [first | _] = load(c.naming, c.user).entry_blocks
       assert first.block.uid == saved
@@ -953,7 +952,7 @@ defmodule Brando.Content.ProposalsTest do
 
       [card] = Review.entries(proposal)
       assert [%{type: :order, items: items}, %{type: :order, parent: nil}] = card.changes
-      assert %{uid: ^copy, copy?: true, excerpt: "Alpha"} = List.last(items)
+      assert [%{uid: ^copy, copy?: true, excerpt: "Alpha"} | _] = Enum.reverse(items)
 
       # Review, preview and apply build the same tree.
       [%CopyBlock{uid: root_copy} | _] = Enum.reverse(proposal.operations)
@@ -971,7 +970,8 @@ defmodule Brando.Content.ProposalsTest do
 
       assert Enum.map(copied.block.children, & &1.sequence) == [0, 1, 2, 3]
 
-      assert Enum.find(List.last(multi(c).children).refs, &(&1.name == "info")).data.data.text == "<p>Alpha</p>"
+      assert [last_child | _] = Enum.reverse(multi(c).children)
+      assert Enum.find(last_child.refs, &(&1.name == "info")).data.data.text == "<p>Alpha</p>"
     end
 
     test "a block's anchor and description, and its refs' settings", c do
@@ -1114,7 +1114,7 @@ defmodule Brando.Content.ProposalsTest do
       [swap, order] = card.changes
       assert swap.replaces == [%{ref: "clip", kind: :video, id: c.video.id}]
       assert swap.media == [%{ref: "clip", kind: :video, id: other.id}]
-      assert %{uid: ^alpha, media: [%{id: id}]} = List.last(order.items)
+      assert [%{uid: ^alpha, media: [%{id: id}]} | _] = Enum.reverse(order.items)
       assert id == other.id
       assert {:video, c.video.id} in Review.media([card])
     end
@@ -1264,7 +1264,7 @@ defmodule Brando.Content.ProposalsTest do
 
       assert {:ok, _} = approve_and_apply(proposal, c.user)
       [_intro_copy | rest] = load(c.identity, c.user).entry_blocks
-      copied = List.last(rest).block
+      assert [%{block: copied} | _] = Enum.reverse(rest)
       assert copied.uid == copy
       assert copied.source == Page.Blocks
       assert Enum.map(copied.children, & &1.uid) == Enum.map(c.child_uids, &Proposals.BlockTree.copy_uid(copy, &1))

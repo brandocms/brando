@@ -9,10 +9,11 @@ defmodule Brando.MarkdownSources.Connection do
     case Map.get(all(), key) do
       %{repository: repo, repository_id: id, secret: secret, destinations: destinations} = connection
       when is_binary(repo) and is_integer(id) and id > 0 and is_binary(secret) and
-             byte_size(secret) >= 32 and is_list(destinations) and length(destinations) in 1..16 ->
-        if Map.get(connection, :enabled, true) and Regex.match?(~r/\A[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/, repo),
-          do: {:ok, Map.put(connection, :key, key)},
-          else: {:error, :connection_disabled}
+             byte_size(secret) >= 32 and is_list(destinations) ->
+        if Map.get(connection, :enabled, true) and length(destinations) in 1..16 and
+             Regex.match?(~r/\A[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/, repo),
+           do: {:ok, Map.put(connection, :key, key)},
+           else: {:error, :connection_disabled}
 
       _ ->
         {:error, :connection_disabled}

@@ -88,8 +88,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     assert source =~ "Keep this application-specific function"
     assert length(Regex.scan(~r/use Brando.Query/, source)) == 1
     modules = Code.compile_string(source)
-    assert Keyword.has_key?(modules, GeneratorStudio.Catalog)
-    assert apply(GeneratorStudio.Catalog, :custom, []) == :preserved
+    assert {catalog, _binary} = List.keyfind(modules, GeneratorStudio.Catalog, 0)
+    assert catalog.custom() == :preserved
     assert function_exported?(GeneratorStudio.Catalog, :list_products, 1)
     assert function_exported?(GeneratorStudio.Catalog, :get_category, 1)
     assert function_exported?(GeneratorStudio.Catalog, :create_category, 2)

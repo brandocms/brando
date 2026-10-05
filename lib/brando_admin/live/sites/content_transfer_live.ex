@@ -1329,14 +1329,16 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   end
 
   def handle_event("include_entry", %{"key" => key}, socket) do
-    if dep = Enum.find(related_entries(socket.assigns.exported.bundle), &(&1["entry_key"] == key)) do
-      entry =
-        EntryCodec.load!(dep["schema"], referenced_id(dep), socket.assigns.current_user, :export) |> Catalog.describe()
+    case Enum.find(related_entries(socket.assigns.exported.bundle), &(&1["entry_key"] == key)) do
+      nil ->
+        {:noreply, socket}
 
-      socket = assign(socket, selected: Map.put(socket.assigns.selected, key, %{entry: entry, fields: ["entry"]}))
-      handle_event("prepare_export", %{}, socket)
-    else
-      {:noreply, socket}
+      dep ->
+        entry =
+          EntryCodec.load!(dep["schema"], referenced_id(dep), socket.assigns.current_user, :export) |> Catalog.describe()
+
+        socket = assign(socket, selected: Map.put(socket.assigns.selected, key, %{entry: entry, fields: ["entry"]}))
+        handle_event("prepare_export", %{}, socket)
     end
   end
 

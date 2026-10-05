@@ -386,13 +386,10 @@ defmodule Brando.LivePreview do
   # head, navigation and footer were sent for nothing on every entry-field
   # keystroke. The cache keeps the whole document for reloads and rejoins.
   defp update_payload(html) do
-    with [{start, _}] <- Regex.run(~r/<main[\s>]/, html, return: :index),
-         [_ | _] = closes <- :binary.matches(html, "</main>"),
-         {stop, len} = List.last(closes),
-         true <- stop > start do
-      %{html: binary_part(html, start, stop + len - start)}
-    else
-      _ -> %{html: html}
+    # Greedy, so it runs from the first `<main` to the last `</main>`.
+    case Regex.run(~r/<main[\s>].*<\/main>/s, html, return: :index) do
+      [{start, len}] -> %{html: binary_part(html, start, len)}
+      nil -> %{html: html}
     end
   end
 

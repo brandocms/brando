@@ -419,7 +419,7 @@ defmodule Brando.AI.AgentTest do
 
     # Each step reads the repeated prefix from Anthropic's prompt cache: the
     # tools, the system prompt and the conversation up to its latest message.
-    assert %{"cache_control" => %{"type" => "ephemeral"}} = List.last(first["tools"])
+    assert [%{"cache_control" => %{"type" => "ephemeral"}} | _] = Enum.reverse(first["tools"])
     assert [%{"cache_control" => %{"type" => "ephemeral"}} | _] = Enum.reverse(first["system"])
 
     assert %{"cache_control" => %{"type" => "ephemeral"}} =
@@ -432,7 +432,7 @@ defmodule Brando.AI.AgentTest do
                Enum.any?(message["content"], &(&1["type"] == "tool_result" and &1["tool_use_id"] == "toolu_1"))
            end)
 
-    assert List.last(Agent.messages(c.conversation.id, c.user)).content == "Pages have blocks."
+    assert [%{content: "Pages have blocks."} | _] = Enum.reverse(Agent.messages(c.conversation.id, c.user))
   end
 
   test "runs execute in the background and report over PubSub", c do
@@ -442,7 +442,7 @@ defmodule Brando.AI.AgentTest do
 
     assert {:ok, %Run{status: "running", id: id}} = Agent.send_message(c.conversation.id, "Hi", c.user)
     assert_receive {:agent, _, {:run, %Run{id: ^id, status: "completed"}}}, 5_000
-    assert List.last(Agent.messages(c.conversation.id, c.user)).content == "Hello there"
+    assert [%{content: "Hello there"} | _] = Enum.reverse(Agent.messages(c.conversation.id, c.user))
   end
 
   test "reads from before the editor's latest message are marked stale", c do

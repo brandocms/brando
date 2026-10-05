@@ -538,7 +538,7 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert outline.note =~ "block_uid"
       assert length(outline.blocks.blocks) == 203
 
-      last = List.last(outline.blocks.blocks)
+      assert [last | _] = Enum.reverse(outline.blocks.blocks)
       refute Map.has_key?(last, :texts)
 
       part =

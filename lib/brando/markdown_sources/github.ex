@@ -13,7 +13,8 @@ defmodule Brando.MarkdownSources.GitHub do
            client.get(base <> "/git/ref/" <> encode_path(branch)),
          true <- sha?(commit),
          {:ok, %{"tree" => %{"sha" => tree}}} <- client.get(base <> "/git/commits/" <> commit),
-         {:ok, blob} <- find_blob(client, base, tree, String.split(source.path, "/")),
+         {:ok, parts} <- path_parts(source.path, :invalid_path),
+         {:ok, blob} <- find_blob(client, base, tree, parts),
          {:ok, %{"encoding" => "base64", "content" => content, "size" => size}} when size <= 512_000 <-
            client.get(base <> "/git/blobs/" <> blob),
          {:ok, markdown} <- Base.decode64(content, ignore: :whitespace),
@@ -45,7 +46,8 @@ defmodule Brando.MarkdownSources.GitHub do
            client.get(base <> "/git/ref/" <> encode_path(branch)),
          true <- sha?(commit),
          {:ok, %{"tree" => %{"sha" => tree}}} <- client.get(base <> "/git/commits/" <> commit),
-         {:ok, tree} <- folder_tree(client, base, tree, if(folder == "", do: [], else: String.split(folder, "/"))),
+         {:ok, parts} <- path_parts(folder, :invalid_folder),
+         {:ok, tree} <- folder_tree(client, base, tree, parts),
          {:ok, %{"tree" => nodes, "truncated" => false}} when is_list(nodes) <-
            client.get(base <> "/git/trees/" <> tree <> "?recursive=1") do
       paths =
@@ -69,11 +71,17 @@ defmodule Brando.MarkdownSources.GitHub do
   defp valid_folder?(folder),
     do: byte_size(folder) <= 480 && Brando.MarkdownSources.Source.valid_path?(folder <> "/file.md")
 
+  # Trees are walked one request per level, so the depth is capped up front.
+  defp path_parts("", _error), do: {:ok, []}
+
+  defp path_parts(path, error) do
+    parts = String.split(path, "/")
+    if length(parts) > 32, do: {:error, error}, else: {:ok, parts}
+  end
+
   defp folder_tree(_, _, tree, []) do
     if sha?(tree), do: {:ok, tree}, else: {:error, :invalid_folder}
   end
-
-  defp folder_tree(_, _, _, parts) when length(parts) > 32, do: {:error, :invalid_folder}
 
   defp folder_tree(client, base, tree, [part | rest]) do
     with true <- sha?(tree),
@@ -85,8 +93,6 @@ defmodule Brando.MarkdownSources.GitHub do
       _ -> {:error, :invalid_folder}
     end
   end
-
-  defp find_blob(_, _, _, parts) when length(parts) > 32, do: {:error, :invalid_path}
 
   defp find_blob(client, base, tree, [part | rest]) do
     with true <- sha?(tree),

@@ -55,7 +55,7 @@ defmodule Brando.FrontendEdit.Manifest do
 
     blocks =
       Enum.flat_map(chains, fn {uid, chain} ->
-        root = List.last(chain)
+        root = Targets.root(chain)
 
         case Map.fetch(roots, root.id) do
           {:ok, key} -> [{uid, %{target: Targets.target(chain).uid, owner: key}}]

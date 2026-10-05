@@ -76,18 +76,8 @@ defmodule Brando.Trait.Sequenced do
         entries = Repo.all(from(e in module, where: e.id in ^keys, lock: "FOR UPDATE"))
         if length(entries) != length(Enum.uniq(keys)), do: Repo.rollback(:forbidden)
 
-        if composites do
-          unless Enum.all?(composites, fn keys ->
-                   entry = Enum.find(entries, &(to_string(&1.id) == to_string(keys["id"])))
-
-                   entry &&
-                     Enum.all?(keys, fn {field, value} ->
-                       schema_field = Enum.find(module.__schema__(:fields), &(to_string(&1) == field))
-                       schema_field && to_string(Map.get(entry, schema_field)) == to_string(value)
-                     end)
-                 end),
-                 do: Repo.rollback(:forbidden)
-        end
+        if composites && not Enum.all?(composites, &composite_matches?(module, entries, &1)),
+          do: Repo.rollback(:forbidden)
 
         Enum.each(entries, fn entry ->
           changeset = Ecto.Changeset.change(entry, sequence: -1)
@@ -104,6 +94,22 @@ defmodule Brando.Trait.Sequenced do
       end)
     else
       legacy_sequence(module, params)
+    end
+  end
+
+  # Every key of a composite must name a schema field holding that value on a
+  # locked entry.
+  defp composite_matches?(module, entries, keys) do
+    case Enum.find(entries, &(to_string(&1.id) == to_string(keys["id"]))) do
+      nil -> false
+      entry -> Enum.all?(keys, &field_matches?(module, entry, &1))
+    end
+  end
+
+  defp field_matches?(module, entry, {field, value}) do
+    case Enum.find(module.__schema__(:fields), &(to_string(&1) == field)) do
+      nil -> false
+      schema_field -> to_string(Map.get(entry, schema_field)) == to_string(value)
     end
   end
 

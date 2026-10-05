@@ -84,10 +84,18 @@ defmodule Brando.Worker.ImageMaintenance do
     end
   end
 
-  # A full batch may have more after it; a short one was the last.
-  defp continue(images, batch_size, args) when length(images) == batch_size do
+  # A full batch may have more after it; a short one was the last. Only a full
+  # batch has its last slot filled.
+  defp continue(images, batch_size, args) do
+    case Enum.at(images, batch_size - 1) do
+      nil -> :ok
+      last -> enqueue_after(last.id, args)
+    end
+  end
+
+  defp enqueue_after(id, args) do
     args
-    |> Map.put("after_id", List.last(images).id)
+    |> Map.put("after_id", id)
     |> new()
     |> Oban.insert()
     |> case do
@@ -95,6 +103,4 @@ defmodule Brando.Worker.ImageMaintenance do
       {:error, reason} -> {:error, reason}
     end
   end
-
-  defp continue(_images, _batch_size, _args), do: :ok
 end

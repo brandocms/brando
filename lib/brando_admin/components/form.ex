@@ -4110,8 +4110,7 @@ defmodule BrandoAdmin.Components.Form do
     with {:ok, field} <- safe_to_existing_atom(params["field_key"]),
          true <- is_binary(params["field_name"]),
          %{type: :rich_text} <- BlueprintForms.get_field(field, socket.assigns.form_blueprint),
-         {:ok, _, _, path} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
-         true <- List.last(path) == to_string(field),
+         {:ok, _path, ^field, _segments} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
          {:ok, opts} <- fetch_field_ai_opts(socket.assigns.form_blueprint, field, socket.assigns.schema),
          {:ok, base} <- build_ai_prompt(socket, opts),
          {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(base, params) do
