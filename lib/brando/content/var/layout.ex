@@ -122,21 +122,19 @@ defmodule Brando.Content.Var.Layout do
   """
   def pack(vars) do
     vars
-    |> Enum.reduce([], fn var, rows ->
-      case rows do
-        [] ->
-          [[var]]
-
-        [current | rest] ->
-          if breaks_row?(var, current) do
-            [[var], current | rest]
-          else
-            [[var | current] | rest]
-          end
-      end
-    end)
+    |> Enum.reduce([], &place_var/2)
     |> Enum.map(&Enum.reverse/1)
     |> Enum.reverse()
+  end
+
+  defp place_var(var, []), do: [[var]]
+
+  defp place_var(var, [current | rest]) do
+    if breaks_row?(var, current) do
+      [[var], current | rest]
+    else
+      [[var | current] | rest]
+    end
   end
 
   defp breaks_row?(var, current_row) do
@@ -176,17 +174,19 @@ defmodule Brando.Content.Var.Layout do
       Enum.reduce([:content, :config, :hidden], {%{}, 0}, fn placement, acc ->
         rows_by_placement
         |> Map.get(placement, [])
-        |> Enum.reduce(acc, fn row, {attrs, sequence} ->
-          row
-          |> Enum.with_index()
-          |> Enum.reduce({attrs, sequence}, fn {key, index}, {attrs, sequence} ->
-            entry = %{sequence: sequence, new_row: index == 0, placement: placement}
-            {Map.put(attrs, key, entry), sequence + 1}
-          end)
-        end)
+        |> Enum.reduce(acc, &flatten_row(&1, &2, placement))
       end)
 
     attrs
+  end
+
+  defp flatten_row(row, acc, placement) do
+    row
+    |> Enum.with_index()
+    |> Enum.reduce(acc, fn {key, index}, {attrs, sequence} ->
+      entry = %{sequence: sequence, new_row: index == 0, placement: placement}
+      {Map.put(attrs, key, entry), sequence + 1}
+    end)
   end
 
   @doc """
