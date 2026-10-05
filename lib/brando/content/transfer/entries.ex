@@ -587,99 +587,7 @@ defmodule Brando.Content.Transfer.Entries do
 
     result =
       try do
-        Repo.transaction(fn ->
-          Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
-            "brando-content-transfer:" <> Transfer.scope()
-          ])
-
-          if receipt = Transfer.receipt(plan.id, actor) do
-            receipt
-          else
-            Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
-            current = preview!(plan.archive, plan.targets, actor, dependencies: plan.supplied, operation_id: plan.id)
-
-            unless current.fingerprint == plan.fingerprint && Transfer.applicable?(current),
-              do:
-                Error.fail!(
-                  dgettext("content_transfer", "The destination changed after preview. Review the import again.")
-                )
-
-            before =
-              current.entries
-              |> Enum.reject(&(&1.mode == "reuse"))
-              |> Enum.map(fn item ->
-                snapshot =
-                  if item.mode == "update" do
-                    {[source], state} = take!([%{schema: item.entry.__struct__, id: item.entry.id}], actor, media: false)
-
-                    %{
-                      "entry" => source,
-                      "dependencies" => state.dependencies,
-                      "id" => item.entry.id,
-                      "schema" => to_string(item.entry.__struct__)
-                    }
-                  else
-                    %{"created" => true}
-                  end
-
-                {item.source["key"], snapshot}
-              end)
-              |> Map.new()
-
-            bindings = Transfer.persist_dependencies!(current, stage, actor)
-            {saved, bindings} = persist!(current, bindings, actor)
-            label = plan.archive.bundle["source"]["label"]
-
-            Activity.with_source(:import, fn ->
-              Activity.with_batch(plan.id, fn ->
-                Enum.each(saved, &Activity.imported(&1.entry, actor, &1.mode, label))
-              end)
-            end)
-
-            after_entries =
-              Map.new(saved, fn item ->
-                entry = EntryCodec.load!(item.entry.__struct__, item.entry.id, actor)
-
-                {item.source["key"],
-                 %{
-                   "schema" => to_string(entry.__struct__),
-                   "id" => entry.id,
-                   "title" => Catalog.describe(entry).title,
-                   "fingerprint" => EntryCodec.fingerprint(entry)
-                 }}
-              end)
-
-            Repo.insert!(%Receipt{
-              id: plan.id,
-              package_id: plan.archive.bundle["id"],
-              fingerprint: plan.fingerprint,
-              scope: Transfer.scope(),
-              actor_id: actor_id(actor),
-              before: before,
-              after: after_entries,
-              mappings: %{
-                "version" => 2,
-                "source" => plan.archive.bundle["source"]["scope"],
-                "targets" => plan.targets,
-                "created_order" => Enum.map(Enum.filter(saved, &(&1.mode == "create")), & &1.source["key"]),
-                "dependencies" => Map.new(bindings, fn {token, record} -> {token, record.id} end),
-                "requirements" =>
-                  Map.new(plan.archive.bundle["dependencies"], fn {token, dep} -> {token, Value.digest(dep)} end),
-                "created_images" =>
-                  for(
-                    %{action: :create, token: token, dependency: %{"kind" => "image"}} <- current.dependencies,
-                    do: bindings[token].id
-                  ),
-                "transferred_media" =>
-                  for(
-                    %{action: :create, token: token, dependency: %{"kind" => kind} = dep} <- current.dependencies,
-                    kind in ~w(image file),
-                    do: %{"kind" => kind, "id" => bindings[token].id, "sha256" => dep["original"]["sha256"]}
-                  )
-              }
-            })
-          end
-        end)
+        Repo.transaction(fn -> apply_locked!(plan, actor, stage) end)
       rescue
         error ->
           Media.cleanup(stage, false)
@@ -694,6 +602,96 @@ defmodule Brando.Content.Transfer.Entries do
     end
   end
 
+  defp apply_locked!(plan, actor, stage) do
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando-content-transfer:" <> Transfer.scope()
+    ])
+
+    if receipt = Transfer.receipt(plan.id, actor) do
+      receipt
+    else
+      import!(plan, actor, stage)
+    end
+  end
+
+  defp import!(plan, actor, stage) do
+    Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
+    current = preview!(plan.archive, plan.targets, actor, dependencies: plan.supplied, operation_id: plan.id)
+
+    unless current.fingerprint == plan.fingerprint && Transfer.applicable?(current),
+      do: Error.fail!(dgettext("content_transfer", "The destination changed after preview. Review the import again."))
+
+    before =
+      current.entries
+      |> Enum.reject(&(&1.mode == "reuse"))
+      |> Map.new(&{&1.source["key"], before_snapshot(&1, actor)})
+
+    bindings = Transfer.persist_dependencies!(current, stage, actor)
+    {saved, bindings} = persist!(current, bindings, actor)
+    label = plan.archive.bundle["source"]["label"]
+
+    Activity.with_source(:import, fn ->
+      Activity.with_batch(plan.id, fn ->
+        Enum.each(saved, &Activity.imported(&1.entry, actor, &1.mode, label))
+      end)
+    end)
+
+    after_entries = Map.new(saved, &{&1.source["key"], after_snapshot(&1, actor)})
+
+    Repo.insert!(%Receipt{
+      id: plan.id,
+      package_id: plan.archive.bundle["id"],
+      fingerprint: plan.fingerprint,
+      scope: Transfer.scope(),
+      actor_id: actor_id(actor),
+      before: before,
+      after: after_entries,
+      mappings: %{
+        "version" => 2,
+        "source" => plan.archive.bundle["source"]["scope"],
+        "targets" => plan.targets,
+        "created_order" => Enum.map(Enum.filter(saved, &(&1.mode == "create")), & &1.source["key"]),
+        "dependencies" => Map.new(bindings, fn {token, record} -> {token, record.id} end),
+        "requirements" => Map.new(plan.archive.bundle["dependencies"], fn {token, dep} -> {token, Value.digest(dep)} end),
+        "created_images" =>
+          for(
+            %{action: :create, token: token, dependency: %{"kind" => "image"}} <- current.dependencies,
+            do: bindings[token].id
+          ),
+        "transferred_media" =>
+          for(
+            %{action: :create, token: token, dependency: %{"kind" => kind} = dep} <- current.dependencies,
+            kind in ~w(image file),
+            do: %{"kind" => kind, "id" => bindings[token].id, "sha256" => dep["original"]["sha256"]}
+          )
+      }
+    })
+  end
+
+  defp before_snapshot(%{mode: "update"} = item, actor) do
+    {[source], state} = take!([%{schema: item.entry.__struct__, id: item.entry.id}], actor, media: false)
+
+    %{
+      "entry" => source,
+      "dependencies" => state.dependencies,
+      "id" => item.entry.id,
+      "schema" => to_string(item.entry.__struct__)
+    }
+  end
+
+  defp before_snapshot(_item, _actor), do: %{"created" => true}
+
+  defp after_snapshot(item, actor) do
+    entry = EntryCodec.load!(item.entry.__struct__, item.entry.id, actor)
+
+    %{
+      "schema" => to_string(entry.__struct__),
+      "id" => entry.id,
+      "title" => Catalog.describe(entry).title,
+      "fingerprint" => EntryCodec.fingerprint(entry)
+    }
+  end
+
   defp persist!(plan, bindings, actor) do
     # Replace preview placeholders for existing bundled destinations first.
     existing = Enum.filter(plan.entries, &(&1.mode in ~w(update reuse)))
@@ -701,23 +699,7 @@ defmodule Brando.Content.Transfer.Entries do
     # Allocate destination identities inside the transaction before creating
     # their polymorphic identifiers. This supports self-links and mutual entry
     # selections without inserting incomplete entry records.
-    reserved =
-      for item <- plan.entries, item.mode == "create" do
-        schema = item.entry.__struct__
-        prefix = schema.__schema__(:prefix) || Brando.Tenant.current_prefix() || "public"
-
-        table =
-          Enum.map_join([prefix, schema.__schema__(:source)], ".", &("\"" <> String.replace(&1, "\"", "\"\"") <> "\""))
-
-        %{rows: [[id]]} =
-          Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT nextval(pg_get_serial_sequence($1, 'id'))", [table])
-
-        unless is_integer(id),
-          do: Error.fail!(dgettext("content_transfer", "This Blueprint needs a generated integer entry ID."))
-
-        %{item | stub: %{item.stub | id: id}}
-      end
-
+    reserved = for item <- plan.entries, item.mode == "create", do: reserve_id!(item)
     reserved_ids = Map.new(reserved, &{&1.source["key"], &1.stub.id})
     bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, reserved, plan.supplied, :reserve))
     available = MapSet.new(for {_, %Brando.Galleries.Gallery{id: id}} <- bindings, do: id)
@@ -726,30 +708,48 @@ defmodule Brando.Content.Transfer.Entries do
       Enum.map_reduce(
         ordered(plan.entries, plan.archive.bundle, plan.supplied) |> Enum.reject(&(&1.mode == "reuse")),
         {bindings, available},
-        fn item, {bindings, available} ->
-          validate_contracts!(item.data, plan.archive.bundle, bindings)
-          params = EntryCodec.decode(item.data, item.entry.__struct__, bindings, actor)
-          {params, available} = Ownership.galleries(params, actor, available)
-          cs = changeset!(item, params, actor) |> Transfer.stamp_versions(bindings)
-          {cs, available} = claim_galleries(cs, item.data, bindings, actor, available)
-          cs = if item.mode == "create", do: Changeset.put_change(cs, :id, reserved_ids[item.source["key"]]), else: cs
-          entry = if item.mode == "create", do: Repo.insert!(cs), else: Repo.update!(cs)
-
-          if is_nil(Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)),
-            do: Brando.Content.create_identifier(entry.__struct__, entry)
-
-          if Map.has_key?(cs.changes, :publish_at) do
-            cancel_status_jobs(entry)
-            {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
-          end
-
-          saved = %{item | entry: EntryCodec.preload(entry)}
-          bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, [saved], plan.supplied, :persist))
-          {saved, {bindings, available}}
-        end
+        &persist_entry!(&1, &2, plan, reserved_ids, actor)
       )
 
     {saved, bindings}
+  end
+
+  defp reserve_id!(item) do
+    schema = item.entry.__struct__
+    prefix = schema.__schema__(:prefix) || Brando.Tenant.current_prefix() || "public"
+
+    table =
+      Enum.map_join([prefix, schema.__schema__(:source)], ".", &("\"" <> String.replace(&1, "\"", "\"\"") <> "\""))
+
+    %{rows: [[id]]} =
+      Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT nextval(pg_get_serial_sequence($1, 'id'))", [table])
+
+    unless is_integer(id),
+      do: Error.fail!(dgettext("content_transfer", "This Blueprint needs a generated integer entry ID."))
+
+    %{item | stub: %{item.stub | id: id}}
+  end
+
+  defp persist_entry!(item, {bindings, available}, plan, reserved_ids, actor) do
+    validate_contracts!(item.data, plan.archive.bundle, bindings)
+    params = EntryCodec.decode(item.data, item.entry.__struct__, bindings, actor)
+    {params, available} = Ownership.galleries(params, actor, available)
+    cs = changeset!(item, params, actor) |> Transfer.stamp_versions(bindings)
+    {cs, available} = claim_galleries(cs, item.data, bindings, actor, available)
+    cs = if item.mode == "create", do: Changeset.put_change(cs, :id, reserved_ids[item.source["key"]]), else: cs
+    entry = if item.mode == "create", do: Repo.insert!(cs), else: Repo.update!(cs)
+
+    if is_nil(Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)),
+      do: Brando.Content.create_identifier(entry.__struct__, entry)
+
+    if Map.has_key?(cs.changes, :publish_at) do
+      cancel_status_jobs(entry)
+      {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
+    end
+
+    saved = %{item | entry: EntryCodec.preload(entry)}
+    bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, [saved], plan.supplied, :persist))
+    {saved, {bindings, available}}
   end
 
   defp claim_galleries(cs, node, bindings, actor, available) do
@@ -757,45 +757,52 @@ defmodule Brando.Content.Transfer.Entries do
 
     {cs, available} =
       Enum.reduce(EntryCodec.references(schema), {cs, available}, fn
-        {name, Brando.Galleries.Gallery, _, _}, {cs, available} ->
-          token = node["references"][to_string(name)]
-
-          if EntryCodec.gallery_asset?(schema, name) && token do
-            gallery = bindings[token]
-            {params, available} = Ownership.galleries(%{"gallery_id" => gallery.id}, actor, available)
-            gallery = Repo.get!(Brando.Galleries.Gallery, params["gallery_id"])
-            {Changeset.put_assoc(cs, name, gallery), available}
-          else
-            {cs, available}
-          end
-
-        _, acc ->
-          acc
+        {name, Brando.Galleries.Gallery, _, _}, acc -> claim_gallery_reference(acc, schema, name, node, bindings, actor)
+        _, acc -> acc
       end)
 
-    Enum.reduce(EntryCodec.owned(schema), {cs, available}, fn {name, _, _}, {cs, available} ->
-      value = Map.get(cs.changes, name)
-      nodes = List.wrap(node["owned"][to_string(name)])
-
-      if value do
-        # Replacement changesets also contain old children marked for deletion.
-        {children, {available, _}} =
-          Enum.map_reduce(List.wrap(value), {available, nodes}, fn child, {available, remaining} ->
-            if child.action in [:replace, :delete] do
-              {child, {available, remaining}}
-            else
-              [node | rest] = remaining
-              {child, available} = claim_galleries(child, node, bindings, actor, available)
-              {child, {available, rest}}
-            end
-          end)
-
-        updated = if is_list(value), do: children, else: List.first(children)
-        {%{cs | changes: Map.put(cs.changes, name, updated)}, available}
-      else
-        {cs, available}
-      end
+    Enum.reduce(EntryCodec.owned(schema), {cs, available}, fn {name, _, _}, acc ->
+      claim_owned_galleries(acc, name, node, bindings, actor)
     end)
+  end
+
+  defp claim_gallery_reference({cs, available}, schema, name, node, bindings, actor) do
+    token = node["references"][to_string(name)]
+
+    if EntryCodec.gallery_asset?(schema, name) && token do
+      gallery = bindings[token]
+      {params, available} = Ownership.galleries(%{"gallery_id" => gallery.id}, actor, available)
+      gallery = Repo.get!(Brando.Galleries.Gallery, params["gallery_id"])
+      {Changeset.put_assoc(cs, name, gallery), available}
+    else
+      {cs, available}
+    end
+  end
+
+  defp claim_owned_galleries({cs, available}, name, node, bindings, actor) do
+    value = Map.get(cs.changes, name)
+    nodes = List.wrap(node["owned"][to_string(name)])
+
+    if value do
+      # Replacement changesets also contain old children marked for deletion.
+      {children, {available, _}} =
+        Enum.map_reduce(List.wrap(value), {available, nodes}, &claim_child_galleries(&1, &2, bindings, actor))
+
+      updated = if is_list(value), do: children, else: List.first(children)
+      {%{cs | changes: Map.put(cs.changes, name, updated)}, available}
+    else
+      {cs, available}
+    end
+  end
+
+  defp claim_child_galleries(child, {available, remaining}, bindings, actor) do
+    if child.action in [:replace, :delete] do
+      {child, {available, remaining}}
+    else
+      [node | rest] = remaining
+      {child, available} = claim_galleries(child, node, bindings, actor, available)
+      {child, {available, rest}}
+    end
   end
 
   def restore!(receipt, actor) do
