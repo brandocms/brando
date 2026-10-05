@@ -39,24 +39,26 @@ defmodule BrandoAdmin.Authorization do
         {:update, :profile}
 
       function_exported?(view, :__authorization_resource__, 0) ->
-        {kind, schema} = view.__authorization_resource__()
-
-        action =
-          if kind == :listing,
-            do: :read,
-            else: if(is_map(params) and Map.has_key?(params, "entry_id"), do: :update, else: :create)
-
-        cond do
-          is_nil(schema) -> {:access, :backend}
-          live_action == :shared_update -> {:update, :shared_library}
-          true -> {action, schema}
-        end
+        resource_requirement(view.__authorization_resource__(), params, live_action)
 
       function_exported?(view, :__authorization__, 0) ->
         view.__authorization__()
 
       true ->
         Map.get(@views, Atom.to_string(view), {:unknown, :backend})
+    end
+  end
+
+  defp resource_requirement({kind, schema}, params, live_action) do
+    action =
+      if kind == :listing,
+        do: :read,
+        else: if(is_map(params) and Map.has_key?(params, "entry_id"), do: :update, else: :create)
+
+    cond do
+      is_nil(schema) -> {:access, :backend}
+      live_action == :shared_update -> {:update, :shared_library}
+      true -> {action, schema}
     end
   end
 
@@ -68,25 +70,25 @@ defmodule BrandoAdmin.Authorization do
       socket = socket |> assign(:authorization_scope, scope) |> assign(:authorization_requirement, requirement)
 
       case check(socket) do
-        {:cont, socket} ->
-          if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:authorization")
-
-          socket =
-            if params == :not_mounted_at_router,
-              do: socket,
-              else: attach_hook(socket, :authorization_params, :handle_params, &params_hook/3)
-
-          {:cont,
-           socket
-           |> attach_hook(:authorization_events, :handle_event, &event_hook/3)
-           |> attach_hook(:authorization_info, :handle_info, &info_hook/2)}
-
-        denied ->
-          denied
+        {:cont, socket} -> {:cont, attach_authorization_hooks(socket, params)}
+        denied -> denied
       end
     else
       {:cont, socket}
     end
+  end
+
+  defp attach_authorization_hooks(socket, params) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:authorization")
+
+    socket =
+      if params == :not_mounted_at_router,
+        do: socket,
+        else: attach_hook(socket, :authorization_params, :handle_params, &params_hook/3)
+
+    socket
+    |> attach_hook(:authorization_events, :handle_event, &event_hook/3)
+    |> attach_hook(:authorization_info, :handle_info, &info_hook/2)
   end
 
   defp scope(socket, {_, resource}, params) do
