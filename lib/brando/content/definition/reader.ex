@@ -7,15 +7,15 @@ defmodule Brando.Content.Definition.Reader do
     directory
     |> File.ls!()
     |> Enum.sort()
-    |> Enum.flat_map(fn name ->
-      path = Path.join(directory, name)
+    |> Enum.flat_map(&path_files!(Path.join(directory, &1)))
+  end
 
-      case File.lstat!(path).type do
-        :directory -> files!(path)
-        :regular -> if Path.extname(path) == ".exs", do: [path], else: []
-        _ -> Error.raise!(path, "symlinks and special files are not supported")
-      end
-    end)
+  defp path_files!(path) do
+    case File.lstat!(path).type do
+      :directory -> files!(path)
+      :regular -> if Path.extname(path) == ".exs", do: [path], else: []
+      _ -> Error.raise!(path, "symlinks and special files are not supported")
+    end
   end
 
   def read!(path) do
@@ -114,17 +114,23 @@ defmodule Brando.Content.Definition.Reader do
     key_field = if name == :ref, do: :name, else: :key
     fields = %{key_field => literal!(key, path), type: literal!(type, path)}
 
-    fields =
-      case rest do
-        [] -> fields
-        [[do: body]] -> Enum.reduce(statements(body), fields, &field!(&1, &2, path))
-        _ -> Error.raise!(path, "use a do block for #{name} settings")
-      end
-
-    validate!(fields, if(name == :ref, do: Dsl.ref_schema(), else: Dsl.var_schema()), path)
+    rest
+    |> entity_settings!(fields, name, path)
+    |> validate!(entity_schema(name), path)
   end
 
   defp entity!(ast, section, path), do: Error.raise!(path, "invalid #{section} entry: #{Macro.to_string(ast)}")
+
+  defp entity_settings!(rest, fields, name, path) do
+    case rest do
+      [] -> fields
+      [[do: body]] -> Enum.reduce(statements(body), fields, &field!(&1, &2, path))
+      _ -> Error.raise!(path, "use a do block for #{name} settings")
+    end
+  end
+
+  defp entity_schema(:ref), do: Dsl.ref_schema()
+  defp entity_schema(:var), do: Dsl.var_schema()
 
   defp field!({name, _, [value]}, fields, path) do
     if Map.has_key?(fields, name), do: Error.raise!(path, "duplicate #{name} setting")
