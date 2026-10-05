@@ -271,6 +271,59 @@ generated `duplicate_*` mutation already does this for the entry's gallery
 assets and for galleries on block refs and vars. Verify that reordering a
 duplicate does not reorder its source.
 
+## Uploads from a site's own forms
+
+A form on the site itself — an application portal where visitors attach
+images and a CV — uses `Brando.Uploads.Direct`, the admin's
+browser-to-bucket transport without an admin user or the UploadManager.
+
+Give the field a direct CDN config, and keep visitors' files out of the media
+library with `hidden_folder`:
+
+```elixir
+asset :image, :image,
+  cfg: %{
+    upload_path: "images/submissions",
+    allowed_mimetypes: ["image/jpeg"],
+    size_limit: 3_000_000,
+    sizes: %{"thumb" => %{"size" => "350x350>", "quality" => 85}},
+    hidden_folder: "submissions",
+    cdn: %Brando.CDN.Config{enabled: true, direct: true, bucket: "my-bucket",
+      media_url: "https://my-bucket.ams3.digitaloceanspaces.com", s3: :default}
+  }
+```
+
+Then, in a controller the site authorizes itself:
+
+```elixir
+# The browser names the file
+{:ok, upload} =
+  Brando.Uploads.Direct.presign(:image, "image:MyApp.Submissions.Photo:image", %{
+    name: "photo.jpg", size: 1_234_567, type: "image/jpeg"
+  })
+
+# Hand upload.upload_url and upload.upload_headers to the browser, which
+# PUTs the file; keep upload.ref, signed (Phoenix.Token), to know which
+# entry the upload belongs to.
+
+# The browser says it is done
+{:ok, image} = Brando.Uploads.Direct.complete(upload.ref)
+```
+
+`presign/4` answers `{:ok, :server}` for a field without a direct CDN; take
+the bytes yourself then and store them with `Brando.Uploads.store_upload/4`
+(processing images with `Brando.Images.Processing.queue_processing/4`).
+
+`complete/2` trusts only what `presign/4` recorded: the key, the field and the
+declared size and type, which the bucket's own metadata must match. Images
+are processed in the background; files and videos are ready at once. An
+upload never completed is reaped with its object. Uploads run as `:system`
+and have no creator. Who may upload to what is the site's to decide.
+
+Media in a hidden folder is not listed in the image, file or video library,
+counted on the alt-text page, or offered by the image picker's browse-all.
+It is still public at its URL, like all media.
+
 ## Tidy a folder that has filled up
 
 Block images all upload to the default config's folder (`images/site/default`

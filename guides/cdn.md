@@ -95,13 +95,16 @@ and `default` queues must run. Keeping local copies is the default and lets you
 reprocess later. Changing `keep_local_copy` requires a deliberate retention plan;
 it does not create a local copy of a direct upload.
 
-Files and S3 videos can opt into browser-to-bucket upload with
+Files, images and S3 videos can opt into browser-to-bucket upload with
 `%Brando.CDN.Config{enabled: true, direct: true, ...}`. The manager obtains a
 presigned destination, transfers bytes, and finalizes the pending intent before
 creating/attaching the asset. The bucket must permit the browser's origin,
 method, and signed request headers through CORS. Leave `direct_acl: nil` unless
-your bucket requires an ACL header. Direct uploads do not pass through image
-processing, and direct S3 video stores an original rather than transcoding it.
+your bucket requires an ACL header. A direct image's original is fetched back
+once it lands, stored like a server upload and processed into its sizes, which
+are delivered to the bucket as usual; set `keep_local_copy: false` to have
+the local copies removed afterwards. Direct S3 video stores an original
+rather than transcoding it.
 Use [Videos](videos.md) for Mux, Bunny Stream, and Cloudflare Stream instead.
 
 A successful browser transfer is not enough: failed finalization must not be

@@ -485,6 +485,23 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   re-renders every card when one changes — for position numbers, or cards that
   show which entries share a row. The grid layout's hover tools are white
   chips, as in the gallery grid, instead of dark ones on a peach hover.
+- **Direct uploads for a site's own forms.** `Brando.Uploads.Direct` gives a
+  site page — an application portal, a submission form — the admin's
+  browser-to-bucket transport without an admin user: `presign/4` checks the
+  file against the field and presigns a PUT, `complete/2` verifies the object
+  and creates the `Image`, `File` or `Video`, and `cancel/1` drops it.
+  Uploads run as `:system`; deciding who may upload stays the site's job.
+  See "Uploads from a site's own forms" in the [media guide](guides/media.md).
+- **Images can upload straight to the bucket too.** An image field whose CDN
+  config sets `direct: true` presigns a PUT like files do; on completion
+  Brando fetches the original back, creates the image and processes it, and
+  the sizes are delivered as usual. Fields without `direct: true` are
+  unchanged. The admin's UploadManager takes the same path for such fields.
+- **`hidden_folder` on image and file configs** files a field's uploads in a
+  folder outside the media library (`media_folders.library = false`). The
+  image, file and video lists, the alt-text page, the image picker's
+  browse-all and the assistant's folder search leave it out. Run
+  `mix brando.gen.migrations` for `brando_199`.
 
 - **Blueprints and sidebar items have icons.** A blueprint sets one with
   `content_icon "folder-kanban"` (a Lucide name, checked at compile time).
@@ -1086,6 +1103,19 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   compilation and raised from the changeset instead.
 
 #### Fixes
+
+- **Replaying the migration chain on a 0.51 database.** `brando_80` no
+  longer queries a Blueprint whose table or embedded image column does not
+  exist yet (a Blueprint added in the same upgrade), and Blueprint
+  snapshots written by 0.51 — before Blueprints had assets — decode again
+  instead of failing with "Invalid legacy Blueprint snapshot field: :assets".
+- **`localized_path/3` in development.** It checked the router helpers with
+  `function_exported?/3` without loading them, so in interactive mode every
+  localized link could come out as `/<url cannot be localized>`.
+- **Background media jobs without an admin user.** Image processing and CDN
+  delivery recorded `user.id` and crashed for `:system`; they now record
+  `nil` and read it back as `:system`. Image, File and Video no longer
+  require a creator.
 
 - **Live preview block updates keep all of a block's markup.** A block whose
   HTML started with `<style>`, `<script>`, `<link>` or `<meta>` lost it on its
