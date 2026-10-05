@@ -94,20 +94,8 @@
   .authorization-feedback { color: #355e43; font-size: 12px; margin-top: 6px; }
   .authorization-group-kind { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; color: var(--access-muted); margin-bottom: 4px; }
   .authorization-unsaved { color: #87662d; }
-  .authorization-tabs {
-    display: flex; align-items: stretch; gap: 24px; margin: 16px 0 24px;
-    border-bottom: 1px solid var(--access-line);
-  }
-  .authorization-tab {
-    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-    width: auto; min-width: 0; min-height: 40px; margin: 0 0 -1px; padding: 8px 0;
-    border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent;
-    color: var(--access-muted); font-size: 13px; font-weight: 400; line-height: 20px;
-    white-space: nowrap; box-shadow: none;
-    &:hover:not(:disabled) { color: var(--access-ink); }
-    &.is-active { color: var(--access-accent); border-bottom-color: var(--access-accent); font-weight: 500; }
-    .access-count-badge { background: var(--access-wash); color: inherit; }
-  }
+  /* Pill tabs (TabSwitch.css) */
+  .authorization-tabs { margin: 16px 0 24px; }
   .authorization-fields { display: grid; grid-template-columns: minmax(160px, .85fr) minmax(0, 1.15fr); gap: 16px; padding: 0; border: 0; margin: 0 0 24px; }
   .authorization-fields label { display: block; font-size: 12px; }
   .authorization-fields label > span { color: var(--access-muted); margin-left: 5px; font-size: 11px; }
@@ -244,7 +232,6 @@
     .authorization-fields { grid-template-columns: 1fr; gap: 16px; }
     .authorization-editor-heading { align-items: start; flex-wrap: wrap; }
     .authorization-editor-heading h2 { font-size: 22px; }
-    .authorization-tabs { gap: 20px; }
     .authorization-diff { grid-template-columns: 1fr; }
     .authorization-editor-footer, .authorization-activity article { flex-wrap: wrap; }
     .authorization-person { flex-wrap: wrap; gap: 8px; }
@@ -265,6 +252,6 @@
   }
   @media (pointer: coarse) {
     .access-button, input:not([type='checkbox']) { min-height: 40px; }
-    .authorization-tab { min-height: 44px; }
+    .authorization-tab { min-height: 40px; }
   }
 }

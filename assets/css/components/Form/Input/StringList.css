@@ -1,17 +1,185 @@
+/* A `:string_list` input: one framed list, like an inline subform's table
+   (SubformTable.css). Each value is a line with its number in the gutter, a
+   ghost × on hover and an insert button on the line above it. The last line
+   is the empty row that adds a value. The `Brando.StringList` hook does the
+   inserting and removing. */
 .string-list {
+  --list-line: #dce2dc;
+  --list-hover: #f5f8f3;
+  --list-ink: #272b2a;
+  --list-muted: #626b66;
+  --list-faint: #99a39b;
+  --list-accent: #254e3f;
+
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  border: 1px solid var(--list-line);
+  border-radius: 6px;
+  background: #fff;
 
   .string-list-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    transition: background-color 150ms ease;
+
+    & + .string-list-row {
+      border-top: 1px solid var(--list-line);
+    }
+
+    &:first-child {
+      border-radius: 5px 5px 0 0;
+    }
+
+    &:last-child {
+      border-radius: 0 0 5px 5px;
+    }
+
+    &:only-child {
+      border-radius: 5px;
+    }
+
+    &:hover {
+      background: var(--list-hover);
+    }
+  }
+
+  .string-list-gutter {
+    display: grid;
+    flex: 0 0 34px;
+    place-items: center;
+    align-self: stretch;
+    color: var(--list-faint);
+    font: 11px/16px "Mono", monospace;
+    font-variant-numeric: tabular-nums;
+
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+      color: currentColor;
+    }
+  }
+
+  /* Wins over the settings form's own text-input look */
+  .string-list-row > input.string-list-input {
+    flex: 1 1 auto;
     width: 100%;
+    min-width: 0;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 8px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--list-ink);
+    font: 14px/20px "Main", sans-serif;
+    outline: none;
+
+    /* Subform.css sizes a placeholder on its own; this one matches the values */
+    &::placeholder {
+      color: var(--list-faint);
+      font: inherit;
+    }
   }
 
-  .string-list-row:last-child {
-    opacity: 0.7;
+  .string-list-row:focus-within {
+    background: #fff;
+    box-shadow: inset 2px 0 0 var(--list-accent);
   }
 
-  .string-list-row:last-child:focus {
+  .string-list-add {
+    background: #fbfcfa;
+
+    .string-list-gutter {
+      color: var(--list-muted);
+    }
+  }
+
+  .string-list-remove {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 24px;
+    height: 28px;
+    margin-right: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #707c73;
+    opacity: 0;
+    transition: opacity 120ms ease;
+    cursor: pointer;
+
+    [data-icon] {
+      width: 15px;
+      height: 15px;
+      color: currentColor;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: #eef3ed;
+      color: var(--list-ink);
+      opacity: 1;
+    }
+  }
+
+  /* Sits on the line above its row, over the number */
+  .string-list-insert {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 8px;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--list-line);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--list-muted);
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity 120ms ease;
+    cursor: pointer;
+
+    [data-icon] {
+      width: 12px;
+      height: 12px;
+      color: currentColor;
+    }
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--list-accent);
+      background: var(--list-accent);
+      color: #fff;
+      opacity: 1;
+    }
+  }
+
+  /* The first row's insert would sit on the frame's edge */
+  .string-list-row:first-child .string-list-insert {
+    top: 2px;
+    transform: none;
+  }
+
+  .string-list-row:hover :is(.string-list-insert, .string-list-remove) {
     opacity: 1;
+  }
+
+  .string-list-row:has(> .string-list-insert:is(:hover, :focus-visible)) {
+    border-top-color: var(--list-accent);
+  }
+
+  @media (pointer: coarse) {
+    .string-list-remove,
+    .string-list-insert {
+      opacity: 1;
+    }
   }
 }

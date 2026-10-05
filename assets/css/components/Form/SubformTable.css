@@ -8,6 +8,13 @@
    Markup: subform.ex, `@table?`, and a table block's rows (block/render.ex
    `table/1`), whose cells are block variables. */
 :is(.field-wrapper.subform--table, .table-block) {
+  --admin-field-height: 32px;
+  --admin-field-font-size: 13px;
+}
+
+/* The variable list (Input.Vars, VarsList.css) shares the frame's colours and
+   its grip, insert and remove buttons; its rows are not table rows. */
+:is(.field-wrapper.subform--table, .table-block, .vars-list) {
   --table-line: #dce2dc;
   --table-head: #fbfcfa;
   --table-hover: #f5f8f3;
@@ -15,8 +22,6 @@
   --table-muted: #626b66;
   --table-faint: #99a39b;
   --table-focus: #a6bba8;
-  --admin-field-height: 32px;
-  --admin-field-font-size: 13px;
 
   .subform-table-frame {
     border: 1px solid var(--table-line);
@@ -369,13 +374,32 @@
     width: 90px;
   }
 
-  /* String list: its rows side by side */
+  /* String list: its values side by side, without the frame and row tools
+     it has outside a table */
   .subform-fields .string-list {
-    display: flex;
+    flex-direction: row;
     gap: 4px;
     min-width: 150px;
+    border: 0;
+    background: transparent;
 
-    input {
+    .string-list-row {
+      min-height: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    :is(.string-list-gutter, .string-list-insert, .string-list-remove) {
+      display: none;
+    }
+
+    .string-list-row > input.string-list-input {
+      height: 32px;
+      min-height: 32px;
+      padding: 0 8px;
+      border: 1px solid transparent;
+      border-radius: 4px;
       font-size: 13px;
     }
 

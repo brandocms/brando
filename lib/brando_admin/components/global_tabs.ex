@@ -26,20 +26,19 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       <% else %>
         <div class="global-tabs">
           <.live_component module={ImagePicker} id="image-picker" />
-          <div class="form-tabs" role="group" aria-label={gettext("Global sets")}>
-            <div :for={{global_set, index} <- @indexed_global_sets} :key={global_set.key} class="form-tab-customs">
-              <button
-                id={"set-#{global_set.key}-#{global_set.language}"}
-                type="button"
-                class={[@active_tab == index && "active"]}
-                aria-pressed={@active_tab == index}
-                aria-controls={"set-#{index}"}
-                phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}
-              >
-                {global_set.label}
-              </button>
-            </div>
-          </div>
+          <nav class="pill-tabs global-set-tabs" aria-label={gettext("Global sets")}>
+            <button
+              :for={{global_set, index} <- @indexed_global_sets}
+              :key={global_set.key}
+              id={"set-#{global_set.key}-#{global_set.language}"}
+              type="button"
+              aria-pressed={to_string(@active_tab == index)}
+              aria-controls={"set-#{index}"}
+              phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}
+            >
+              {global_set.label}
+            </button>
+          </nav>
           <div
             :for={{global_set, index} <- @indexed_global_sets}
             :if={index == @active_tab}

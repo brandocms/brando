@@ -1,11 +1,11 @@
-// The rows of an inline subform or a table block: a row added with Insert or
+// The rows of an inline subform, a table block or a variable list: a row added with Insert or
 // Add fades in, tinted for a moment, so the eye finds it.
 //
 // Rows are keyed by position, so after an insert the server patches the
 // existing row elements with shifted content and adds one at the end. The new
 // row is the one at the clicked position, whichever element now holds it.
 // The Web Animations API leaves no inline style for a patch to strip.
-const ROWS = ':scope .subform-table-body > :is(.subform-entry, .table-row)'
+const ROWS = ':scope :is(.subform-table-body, .vars-list-body) > :is(.subform-entry, .table-row)'
 
 export default () => ({
   mounted() {

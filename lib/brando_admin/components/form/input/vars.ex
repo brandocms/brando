@@ -24,69 +24,94 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   end
 
   def update(assigns, socket) do
-    empty_subform = Enum.empty?(inputs_for_poly(assigns.field.form[assigns.subform.name], []))
+    entries = inputs_for_poly(assigns.field.form[assigns.subform.name], [])
 
     {:ok,
      socket
      |> assign(assigns)
      |> BrandoAdmin.Utils.prepare_subform_component()
-     |> assign(:empty_subform, empty_subform)}
+     |> assign(:empty_subform, entries == [])
+     |> assign(:count, length(entries))}
   end
 
+  # One framed list, like an inline subform's table (SubformTable.css): a
+  # line per variable with the grip and insert at the left and a ghost × at
+  # the right, and Add entry with the count in the footer. A variable opens in
+  # place under its line.
   def render(assigns) do
     ~H"""
     <fieldset>
-      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform">
-        <div
-          id={"#{@field.id}-sortable"}
-          phx-hook="Brando.SortableInputsFor"
-          data-sortable-id={"sortable-#{@field.name}-vars"}
-          data-sortable-handle=".subform-handle"
-          data-sortable-selector=".subform-entry"
-        >
-          <.inputs_for :let={var} field={@field} skip_hidden>
-            <div class="subform-entry flex-row" data-id={var.index}>
-              <input type="hidden" name={var[:id].name} value={var[:id].value} />
-              <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
-              <input type="hidden" name={"#{@field.form.name}[sort_var_ids][]"} value={var.index} />
-              <div class="subform-tools">
-                <button type="button" class="subform-handle" aria-label={gettext("Reorder variable")}>
-                  <.icon name="arrow-up-down" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={gettext("Delete variable")}
-                  name={"#{@field.form.name}[drop_var_ids][]"}
-                  value={var.index}
-                  phx-click={JS.dispatch("change")}
-                >
-                  <.icon name="x" />
-                </button>
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform subform--vars">
+        <div id={"#{@field.id}-list"} class="vars-list" phx-hook="Brando.TableRows">
+          <div
+            id={"#{@field.id}-sortable"}
+            class="vars-list-body"
+            phx-hook="Brando.SortableInputsFor"
+            data-sortable-id={"sortable-#{@field.name}-vars"}
+            data-sortable-handle=".subform-handle"
+            data-sortable-selector=".subform-entry"
+          >
+            <.inputs_for :let={var} field={@field} skip_hidden>
+              <div class="subform-entry vars-row" data-id={var.index}>
+                <input type="hidden" name={var[:id].name} value={var[:id].value} />
+                <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
+                <input type="hidden" name={"#{@field.form.name}[sort_var_ids][]"} value={var.index} />
+                <div class="subform-tools">
+                  <button
+                    type="button"
+                    class="subform-insert"
+                    aria-label={gettext("Insert variable")}
+                    phx-click={JS.push("insert_subentry", value: %{index: var.index}, target: @myself)}
+                  >
+                    <.icon name="plus" />
+                  </button>
+                  <button type="button" class="subform-handle" aria-label={gettext("Reorder variable")}>
+                    <.icon name="arrow-up-down" />
+                  </button>
+                </div>
+
+                <.live_component
+                  module={RenderVar}
+                  id={"#{@field.id}-render-var-#{var.index}"}
+                  var={var}
+                  render={:all}
+                  form_id={@form_id}
+                  edit
+                />
+
+                <div class="subform-row-end">
+                  <button
+                    type="button"
+                    class="subform-delete"
+                    aria-label={gettext("Delete variable")}
+                    name={"#{@field.form.name}[drop_var_ids][]"}
+                    value={var.index}
+                    phx-click={JS.dispatch("change")}
+                  >
+                    <.icon name="x" />
+                  </button>
+                </div>
               </div>
+            </.inputs_for>
+            <input type="hidden" name={"#{@field.form.name}[drop_var_ids][]"} />
+          </div>
 
-              <.live_component
-                module={RenderVar}
-                id={"#{@field.id}-render-var-#{var.index}"}
-                var={var}
-                render={:all}
-                form_id={@form_id}
-                edit
-              />
-            </div>
-          </.inputs_for>
-          <input type="hidden" name={"#{@field.form.name}[drop_var_ids][]"} />
+          <div class="subform-table-foot">
+            <button
+              id={"#{@field.id}-add-entry"}
+              type="button"
+              class="add-entry-button"
+              phx-click="add_subentry"
+              phx-target={@myself}
+            >
+              <.icon name="list-plus" />
+              {gettext("Add entry")}
+            </button>
+            <span :if={!@empty_subform} class="subform-table-count">
+              {ngettext("1 variable", "%{count} variables", @count)}
+            </span>
+          </div>
         </div>
-
-        <button
-          id={"#{@field.id}-add-entry"}
-          type="button"
-          class="add-entry-button"
-          phx-click="add_subentry"
-          phx-target={@myself}
-        >
-          <.icon name="grid-2x2-plus" />
-          {gettext("Add entry")}
-        </button>
       </Primitives.field_base>
     </fieldset>
     """
@@ -97,18 +122,11 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   end
 
   def handle_event("add_subentry", _, socket) do
-    new_entry =
-      %Brando.Content.Var{}
-      |> Ecto.Changeset.change(%{
-        type: :string,
-        label: "Label",
-        key: "key",
-        value: "Value",
-        placement: :content
-      })
-      |> Map.put(:action, :insert)
+    BrandoAdmin.Components.Form.Input.SubformHelpers.append_subentries(socket, new_var())
+  end
 
-    BrandoAdmin.Components.Form.Input.SubformHelpers.append_subentries(socket, new_entry)
+  def handle_event("insert_subentry", %{"index" => index}, socket) do
+    BrandoAdmin.Components.Form.Input.SubformHelpers.insert_subentry(socket, index, new_var())
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
@@ -122,5 +140,17 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
 
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
     BrandoAdmin.Components.Form.Input.SubformHelpers.sequenced_subform(socket, order_indices)
+  end
+
+  defp new_var do
+    %Brando.Content.Var{}
+    |> Ecto.Changeset.change(%{
+      type: :string,
+      label: "Label",
+      key: "key",
+      value: "Value",
+      placement: :content
+    })
+    |> Map.put(:action, :insert)
   end
 end

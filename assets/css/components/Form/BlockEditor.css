@@ -1,66 +1,19 @@
-/* One bar of tabs across the top of the module editor. Each tab shows one
-   panel; the panels themselves all stay in the DOM (their inputs are part of
-   one form) and are hidden here rather than by unmounting them. */
+/* One bar across the top of the module editor, holding its sections as
+   pill tabs (TabSwitch.css). Each tab shows one panel; the panels themselves
+   all stay in the DOM (their inputs are part of one form) and are hidden here
+   rather than by unmounting them. */
 .module-editor-tabs {
   position: sticky;
   top: 5px;
   z-index: 3;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   width: 100%;
   margin-bottom: 25px;
-  padding: 8px 12px;
-  border-radius: var(--brando-tabbar-radius);
-  background-color: var(--brando-tabbar-bg);
-  box-shadow: var(--brando-tabbar-shadow);
-
-  .module-editor-tab {
-    @font main;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-right: 8px;
-    padding: var(--brando-chip-padding);
-    border: 0;
-    border-radius: var(--brando-chip-radius);
-    background-color: var(--brando-color-white);
-    color: var(--brando-color-dark);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
-    cursor: pointer;
-    transition:
-      background-color 0.2s ease,
-      color 0.2s ease;
-
-    &:hover {
-      background-color: var(--brando-chip-hover-bg);
-    }
-
-    &.is-active,
-    &.is-active:hover {
-      background-color: var(--brando-chip-active-bg);
-      color: var(--brando-chip-active-fg);
-    }
-  }
-
-  .module-editor-tab-count {
-    padding: 1px 6px;
-    border-radius: 999px;
-    background-color: var(--brando-chip-hover-bg);
-    @font mono;
-    font-size: 10px;
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
-    opacity: 0.75;
-  }
-
-  .module-editor-tab.is-active .module-editor-tab-count {
-    background-color: rgba(26, 63, 158, 0.1);
-    opacity: 0.85;
-  }
+  padding: 6px;
+  border: 1px solid #e3e7e3;
+  border-radius: 10px;
+  background-color: #fff;
 }
 
 /* Small icon button for row-level actions — reference rows, select options.
@@ -718,14 +671,6 @@
 }
 
 @media (max-width: 680px) {
-  .module-editor-tabs {
-    .module-editor-tab {
-      margin-right: 5px;
-      padding: 7px 10px;
-      font-size: 12.5px;
-    }
-  }
-
   .module-editor-panels {
     .properties .inner .module-item-type {
       display: none;

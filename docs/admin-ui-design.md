@@ -116,16 +116,44 @@ icon-only controls, and understandable loading and disabled states.
 
 ## Tab views
 
-Build tab views like the link modal's URL / Content switch. Tabs sit in a
-sage track: `#f1f5ef` with a 1px `#dce5d8` border, a 5px radius and 3px of
-padding. Each tab has an icon and a label at 13px/18px, is 32px tall, and has
-6px 14px of padding. The selected tab is a white pill with a `#d6e2d0` border
-and accent text. The other tabs are muted, with no border. Do not use
-underlined tabs or button groups.
+Approved on 5 October 2026: every tab view in the admin is **pill tabs**, from
+the module editor's "In the block / Configure modal" switch, shared as
+`.pill-tabs` in `TabSwitch.css`. The track is `#f7f8f6` with a 1px `#eceeea`
+border, a 22px radius and 3px of padding. Tabs are 13px/18px with 6px 14px of
+padding, muted by opacity. The selected tab is a raised white pill
+(`0 1px 2px` shadow, weight 500). Do not use underlined tabs, tinted tabs or
+button groups.
 
-The switch is `Input.radios` with an `icon` on each option. It is styled under
-`.modal--picker .link-picker-modes` in `ModalWorkspace.css`. The first new tab
-view that reuses it should move those rules to a shared class.
+```heex
+<nav class="pill-tabs" aria-label={gettext("Sections")}>
+  <button type="button" aria-current={@tab == "export" && "page"}>
+    <.icon name="upload" />{gettext("Export")}
+  </button>
+  <button type="button" aria-current={@tab == "history" && "page"}>
+    {gettext("Recent imports")} <span class="pill-tabs-count">{@count}</span>
+  </button>
+</nav>
+```
+
+- Mark the selected tab with `.active`, `aria-current="page"`,
+  `aria-selected="true"` or `aria-pressed="true"` (pass a string:
+  `to_string(@tab == key)`; a bare boolean renders no value).
+- An icon goes before the label; a number goes after it in
+  `.pill-tabs-count`. A badge with its own meaning, like the SEO score, keeps
+  its own class.
+- `.pill-tabs--small` is the compact size for toolbars inside a panel (the
+  history drawer, the assistant's preview controls).
+- A track with one tab shows it as a plain caption.
+- The link pickers' `Input.radios` take the same look through
+  `.link-picker-modes .radios-wrapper`.
+- A sticky bar that holds tabs and actions (an entry form's toolbar, the
+  module editor) is a white bar around the track. A tab bar's old class
+  (`.transfer-tabs`, `.activity-tabs`…) stays on it for layout and tests only.
+
+Two things are not tab views and keep their own look: the small mono language
+pills on translatable fields (`.i18n-tabs`), and toggles and filters (Grid /
+List switches, status filters, filter chips). Section rails in modals
+(`Content.modal_sections`) are vertical navigation, not a tab bar.
 
 ## Use typography and color to establish hierarchy
 
@@ -371,9 +399,8 @@ child entries, open menus, and real form values.
   fields. Keep editing and deletion controls distinguishable.
 - Group dashboard shortcuts in one toolbar. Soft sage, blue, lavender and sand
   distinguish destinations while retaining the same proportions and icon family.
-- A settings toolbar with one section and only Save needs less visual emphasis:
-  use a white surface, a plain section label, and one sage action accent. Reserve
-  selected tab pills and multiple action colors for toolbars with actual choices.
+- A settings toolbar is a white bar with one sage action accent. Its sections
+  are pill tabs (see [Tab views](#tab-views)); a single section is a plain label.
 - Use the same chevron asset and rendered dimensions across neighboring dropdowns.
   Preserve visible keyboard focus. Test Enter, Space and Escape against real
   controls; closing an already closed dialog must not toggle it open internally.
@@ -393,10 +420,10 @@ shared subform components and other nested/repeated editors.
 - Increase the status dot **inside the link preview field** to `1em` in both
   dimensions, relative to its accompanying text. This is separate from the row's
   status selector. Align the dot with the visible text and prevent flex shrinking.
-- Replace the violet/lilac treatment of subform surfaces, reorder/delete controls,
-  and link icon badges with a very light pastel blue. Start by trying a near-white
-  blue such as `#f5f9fd`; the exact shade still needs visual review. Retain white
-  rows and input surfaces, readable labels/icons, and clear hover/focus states.
+- Subform surfaces on settings screens are one very light green, `#f8fbf6`
+  with a `#e2e9df` border (approved 5 October 2026, replacing the earlier blue
+  and olive tints). Retain white rows and input surfaces, readable
+  labels/icons, and clear hover/focus states.
 - Audit nested levels, row rhythm, label/control alignment, and action placement
   across subform usages. Inline subforms, menu items among them, are now tables
   (see [Inline subform tables](#inline-subform-tables)); re-check the items above
@@ -424,6 +451,14 @@ rows are both a table, built like `.identifier-list`: one `#dce2dc` border with 
   in a `#fbfcfa` footer. A row added either way fades in, tinted for a moment.
 - A field hidden by `show_if` leaves an empty cell, so later columns stay under
   their headings.
+
+Two other lists share the frame. A `:string_list` input (`Input.input/1`) is
+a framed list with the row number in a gutter, the same insert and remove
+buttons, and its empty "Add another…" line last; the `Brando.StringList` hook
+inserts and removes rows (`StringList.css`). A variable list (`Input.Vars`:
+global sets, page variables, table templates) has a line per variable with
+the grip and insert at the left, × at the right, and opens a variable in
+place (`VarsList.css`).
 
 `subform.ex` renders the subform's table; `block/render.ex` `table/1` renders a
 table block's. `SubformTable.css` styles both, `TableBlock.css` adapts block

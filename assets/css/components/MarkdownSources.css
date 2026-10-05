@@ -101,9 +101,7 @@
   .markdown-source-row h3 { font-size: 15px; line-height: 22px; margin: 0; }
   .markdown-source-panel p { font-size: 13px; line-height: 20px; margin: 0; padding: 0; color: var(--workspace-muted); }
   .markdown-source-panel .markdown-source-path { font-size: 12px; overflow-wrap: anywhere; }
-  .markdown-source-modes { display: flex; gap: 4px; padding: 4px; margin-bottom: 24px; border: 1px solid #dce2dc; border-radius: 6px; background: #eef1e9; }
-  .markdown-source-modes button { flex: 1; min-height: 32px; border: 1px solid transparent; border-radius: 4px; padding: 6px 10px; background: transparent; color: var(--workspace-muted); font-size: 12px; line-height: 18px; }
-  .markdown-source-modes button[aria-pressed="true"] { color: var(--workspace-ink); border-color: #d9dfd2; background: #fff; }
+  .markdown-source-modes { margin-bottom: 24px; }
   .markdown-source-panel form { display: block; }
   .markdown-source-panel fieldset { padding: 0; margin: 0; border: 0; display: grid; gap: 16px; min-width: 0; }
   .markdown-source-field { display: grid; gap: 8px; }
@@ -124,7 +122,6 @@
   .markdown-source-history { padding-left: 20px; }
   @media (max-width: 850px) { .markdown-sources-workspace { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 500px) { .markdown-source-panel, .markdown-connection-notice { padding: 18px; } }
-  @media (pointer: coarse) { .markdown-source-modes button { min-height: 40px; } }
 }
 
 .admin-workspace.markdown-workspace {

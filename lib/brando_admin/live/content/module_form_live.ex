@@ -234,18 +234,20 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       ])
 
     ~H"""
-    <nav class="module-editor-tabs" role="tablist" aria-label={gettext("Module editor sections")}>
-      <button
-        :for={{tab, label, count} <- @tabs}
-        type="button"
-        role="tab"
-        class={["module-editor-tab", @active_tab == tab && "is-active"]}
-        aria-selected={to_string(@active_tab == tab)}
-        phx-click={JS.push("select_tab")}
-        phx-value-tab={tab}
-      >
-        {label}<span :if={count && count > 0} class="module-editor-tab-count">{count}</span>
-      </button>
+    <nav class="module-editor-tabs" aria-label={gettext("Module editor sections")}>
+      <div class="pill-tabs" role="tablist">
+        <button
+          :for={{tab, label, count} <- @tabs}
+          type="button"
+          role="tab"
+          class={["module-editor-tab", @active_tab == tab && "is-active"]}
+          aria-selected={to_string(@active_tab == tab)}
+          phx-click={JS.push("select_tab")}
+          phx-value-tab={tab}
+        >
+          {label}<span :if={count && count > 0} class="pill-tabs-count module-editor-tab-count">{count}</span>
+        </button>
+      </div>
     </nav>
     """
   end

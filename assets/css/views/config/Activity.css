@@ -3,7 +3,6 @@
 
 .activity-workspace,
 .activity-timeline,
-.activity-tabs,
 .activity-compare,
 .activity-drawer-compare {
   --activity-ink: #272b2a;
@@ -308,39 +307,10 @@ button.activity-revision {
   }
 }
 
-/* An entry's history: the tabs in the drawer header, and the timeline. */
+/* An entry's history: the tabs in the drawer header (pill tabs,
+   TabSwitch.css), and the timeline. */
 .activity-tabs {
-  display: inline-flex;
-  gap: 4px;
-  padding: 3px;
   margin-bottom: 16px;
-  border: 1px solid var(--activity-line);
-  border-radius: 8px;
-  background: #fff;
-
-  button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    height: 30px;
-    padding: 0 14px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--activity-muted);
-    cursor: pointer;
-
-    &[aria-selected="true"] { background: #e7efe6; color: var(--activity-green); }
-    &:focus-visible { outline: 2px solid var(--activity-green); outline-offset: 2px; }
-  }
-
-  span {
-    font-family: theme(typography.families.mono);
-    font-size: 10px;
-    color: var(--activity-muted);
-  }
 }
 
 .activity-timeline {

@@ -55,38 +55,6 @@
   padding: 18px 20px 20px;
 }
 
-.var-layout-surfaces {
-  display: flex;
-  flex: none;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid #f1ebe9;
-  border-radius: 22px;
-  background-color: #fcfcfd;
-
-  button {
-    padding: 6px 14px;
-    border: none;
-    border-radius: 22px;
-    background-color: transparent;
-    font-size: 13px;
-    white-space: nowrap;
-    opacity: 0.6;
-    transition: background-color 0.2s ease, opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.9;
-    }
-
-    &.active {
-      background-color: var(--brando-color-white);
-      box-shadow: 0 1px 2px rgba(5, 39, 82, 0.08);
-      font-weight: 500;
-      opacity: 1;
-    }
-  }
-}
-
 /* ── canvas ─────────────────────────────────────────────── */
 
 /* The ruler is the only place the 12-unit grid is drawn. Repeating it behind

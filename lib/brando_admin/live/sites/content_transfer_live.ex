@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         </div>
       </Workspace.header>
 
-      <nav class="transfer-tabs" aria-label={dgettext("content_transfer", "Content transfer workflows")}>
+      <nav class="pill-tabs transfer-tabs" aria-label={dgettext("content_transfer", "Content transfer workflows")}>
         <button
           type="button"
           phx-click="tab"
