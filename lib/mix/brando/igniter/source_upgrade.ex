@@ -288,27 +288,28 @@ if Code.ensure_loaded?(Igniter) do
           |> Enum.reject(fn {module, _opts} -> module_imported?(zipper, module) end)
 
         case import_specs do
-          [] ->
-            {:ok, zipper}
-
-          imports ->
-            code =
-              Enum.map_join(imports, "\n", fn
-                {module, nil} -> "import #{inspect(module)}"
-                {module, opts} -> "import #{inspect(module)}, #{opts}"
-              end)
-
-            with {:ok, module_body} <-
-                   Igniter.Code.Module.move_to_module_using(zipper, Brando.Blueprint),
-                 {:ok, use_zipper} <-
-                   Igniter.Code.Module.move_to_use(module_body, Brando.Blueprint) do
-              {:ok, Common.add_code(use_zipper, code, placement: :after)}
-            else
-              :error -> {:warning, "Could not place explicit listing component imports"}
-            end
+          [] -> {:ok, zipper}
+          imports -> add_listing_imports(zipper, imports)
         end
       else
         {:ok, zipper}
+      end
+    end
+
+    defp add_listing_imports(zipper, imports) do
+      code =
+        Enum.map_join(imports, "\n", fn
+          {module, nil} -> "import #{inspect(module)}"
+          {module, opts} -> "import #{inspect(module)}, #{opts}"
+        end)
+
+      with {:ok, module_body} <-
+             Igniter.Code.Module.move_to_module_using(zipper, Brando.Blueprint),
+           {:ok, use_zipper} <-
+             Igniter.Code.Module.move_to_use(module_body, Brando.Blueprint) do
+        {:ok, Common.add_code(use_zipper, code, placement: :after)}
+      else
+        :error -> {:warning, "Could not place explicit listing component imports"}
       end
     end
 
@@ -412,13 +413,17 @@ if Code.ensure_loaded?(Igniter) do
             {:ok, replace_path_field(zipper, targets, nil, path, mutator)}
 
           [targets, path_or_function] ->
-            if literal_list?(path_or_function) do
-              {:ok, replace_path_field(zipper, targets, nil, path_or_function)}
-            else
-              {:ok, rename_call(zipper, :field)}
-            end
+            {:ok, replace_path_or_rename(zipper, targets, nil, path_or_function)}
         end
       end)
+    end
+
+    defp replace_path_or_rename(zipper, name, type, path_or_function) do
+      if literal_list?(path_or_function) do
+        replace_path_field(zipper, name, type, path_or_function)
+      else
+        rename_call(zipper, :field)
+      end
     end
 
     defp rewrite_json_ld_field(zipper) do
@@ -431,11 +436,7 @@ if Code.ensure_loaded?(Igniter) do
             {:ok, replace_path_field(zipper, name, type, path, mutator)}
 
           [name, type, path_or_function] ->
-            if literal_list?(path_or_function) do
-              {:ok, replace_path_field(zipper, name, type, path_or_function)}
-            else
-              {:ok, rename_call(zipper, :field)}
-            end
+            {:ok, replace_path_or_rename(zipper, name, type, path_or_function)}
         end
       end)
     end
@@ -443,26 +444,24 @@ if Code.ensure_loaded?(Igniter) do
     defp rewrite_json_ld_reference(zipper, name, reference) do
       case reference_target(reference) do
         {:ok, target} ->
-          if literal_atom_value(target) == :identity do
-            replacement =
-              quote do
-                field unquote(name), :identity
-              end
-
-            Common.replace_code(zipper, replacement)
-          else
-            replacement =
-              quote do
-                field unquote(name), :string, fn _entry ->
-                  %{"@id" => "#{Brando.Utils.hostname()}/##{unquote(target)}"}
-                end
-              end
-
-            Common.replace_code(zipper, replacement)
-          end
+          Common.replace_code(zipper, json_ld_reference_field(name, target))
 
         :error ->
           rename_call(zipper, :field)
+      end
+    end
+
+    defp json_ld_reference_field(name, target) do
+      if literal_atom_value(target) == :identity do
+        quote do
+          field unquote(name), :identity
+        end
+      else
+        quote do
+          field unquote(name), :string, fn _entry ->
+            %{"@id" => "#{Brando.Utils.hostname()}/##{unquote(target)}"}
+          end
+        end
       end
     end
 
