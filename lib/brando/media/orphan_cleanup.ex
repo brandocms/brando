@@ -219,12 +219,15 @@ defmodule Brando.Media.OrphanCleanup do
 
   defp orphan_paths(candidates, root, references, grace_seconds) do
     candidates
-    # Dotfiles (`.gitkeep`, `.DS_Store`) are never media Brando wrote.
-    |> Enum.reject(&String.starts_with?(Path.basename(&1), "."))
-    |> Enum.reject(&String.ends_with?(String.downcase(&1), ".svg"))
+    |> Enum.reject(&skipped_file?/1)
     |> Enum.filter(&old_enough?(&1, grace_seconds))
     |> Enum.reject(fn path -> MapSet.member?(references, Path.relative_to(path, root)) end)
     |> Enum.sort()
+  end
+
+  # Dotfiles (`.gitkeep`, `.DS_Store`) are never media Brando wrote.
+  defp skipped_file?(path) do
+    String.starts_with?(Path.basename(path), ".") or String.ends_with?(String.downcase(path), ".svg")
   end
 
   defp old_enough?(path, grace_seconds) do

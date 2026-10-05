@@ -399,10 +399,10 @@ defmodule Brando.Content.Transfer.Dependencies do
         candidates = if exact, do: [exact], else: if(kind == "module", do: Repo.all(query), else: [])
 
         candidates
-        |> Enum.filter(&(Boundary.authorize(actor, :read, &1) == :ok))
         |> Enum.filter(fn record ->
-          record.uid == dependency["uid"] ||
-            (kind == "module" && Contracts.normalized(record) == dependency["definition"])
+          Boundary.authorize(actor, :read, record) == :ok &&
+            (record.uid == dependency["uid"] ||
+               (kind == "module" && Contracts.normalized(record) == dependency["definition"]))
         end)
         |> Enum.map(&%{id: &1.id, label: label(&1), match: if(&1.uid == dependency["uid"], do: :uid, else: :suggestion)})
 
@@ -454,12 +454,15 @@ defmodule Brando.Content.Transfer.Dependencies do
     )
     |> scope_options(kind, schema, actor)
     |> Repo.all()
-    |> Enum.filter(&is_nil(Map.get(&1, :deleted_at)))
-    |> Enum.filter(fn record ->
-      case Error.protect(fn -> authorize!(kind, record, actor, :read) end) do
-        {:ok, _} -> String.contains?(String.downcase(label(record)), String.downcase(query))
-        _ -> false
-      end
+    |> Enum.filter(fn
+      %{deleted_at: deleted_at} when not is_nil(deleted_at) ->
+        false
+
+      record ->
+        case Error.protect(fn -> authorize!(kind, record, actor, :read) end) do
+          {:ok, _} -> String.contains?(String.downcase(label(record)), String.downcase(query))
+          _ -> false
+        end
     end)
     |> Enum.sort_by(&label/1)
     |> Enum.take(100)

@@ -147,11 +147,9 @@ defmodule BrandoAdmin.ContentPreview do
     ]
 
     text =
-      Enum.flat_map(fields, fn {field, label} ->
-        if value = present(text_value(metadata[field])),
-          do: [line("#{label}: #{plain(value)}", {key, field}, :detail)],
-          else: []
-      end)
+      for {field, label} <- fields, value = present(text_value(metadata[field])) do
+        line("#{label}: #{plain(value)}", {key, field}, :detail)
+      end
 
     focal =
       case metadata["focal"] do

@@ -25,12 +25,15 @@ defmodule Brando.Content.Transfer.Catalog do
 
   def entry_schemas do
     Brando.Authorization.Catalog.schemas()
-    |> Enum.filter(&is_binary(&1.__schema__(:source)))
-    |> Enum.filter(
-      &(&1 == Brando.Pages.Fragment ||
-          (function_exported?(&1, :__has_identifier__, 0) && &1.__has_identifier__() && &1.__persist_identifier__()))
-    )
+    |> Enum.filter(&entry_schema?/1)
     |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
+  end
+
+  defp entry_schema?(schema) do
+    is_binary(schema.__schema__(:source)) &&
+      (schema == Brando.Pages.Fragment ||
+         (function_exported?(schema, :__has_identifier__, 0) && schema.__has_identifier__() &&
+            schema.__persist_identifier__()))
   end
 
   def schema!(name) do
@@ -88,8 +91,10 @@ defmodule Brando.Content.Transfer.Catalog do
     pattern = "%" <> escape_like(String.slice(query, 0, 150)) <> "%"
 
     selected
-    |> Enum.filter(&(is_nil(opts[:schemas]) || to_string(&1) in opts[:schemas]))
-    |> Enum.filter(&(Boundary.authorize(actor, action, &1) == :ok))
+    |> Enum.filter(fn schema ->
+      (is_nil(opts[:schemas]) || to_string(schema) in opts[:schemas]) &&
+        Boundary.authorize(actor, action, schema) == :ok
+    end)
     |> Enum.flat_map(fn schema ->
       # Fragments intentionally do not persist identifiers. They have their own
       # provider, including parent/key/language matching hints.

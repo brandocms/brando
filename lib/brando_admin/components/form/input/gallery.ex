@@ -12,9 +12,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.Input.Gallery.ImageConfig
   alias BrandoAdmin.Components.Form.Input.Gallery.Media
-  alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.Input.Gallery.Thumb
   alias BrandoAdmin.Components.Form.Input.Gallery.Tile
   alias BrandoAdmin.Components.Form.Input.Gallery.VideoConfig

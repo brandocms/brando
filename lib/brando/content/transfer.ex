@@ -190,7 +190,7 @@ defmodule Brando.Content.Transfer do
     fields = validate_fields(fields, bundle, bindings, actor)
     destination_keys = for %{issue: nil} = field <- fields, do: {field.destination.key, field.field.name}
     duplicate? = length(destination_keys) != length(Enum.uniq(destination_keys))
-    problems = Enum.flat_map(items ++ fields, fn item -> if item.issue, do: [item.issue], else: [] end)
+    problems = for %{issue: issue} <- items ++ fields, issue, do: issue
 
     problems =
       if duplicate?,

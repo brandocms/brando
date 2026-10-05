@@ -1958,7 +1958,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       %{role: "assistant", tool_calls: [_ | _] = calls} = message, acc ->
         {requests, calls} = Enum.split_with(calls, &(&1["name"] == "request_media"))
         steps = Enum.map(calls, &step_label(&1, results[&1["id"]] || %{}))
-        acc = if message.content not in [nil, ""], do: [%{role: "assistant", content: message.content} | acc], else: acc
+        acc = if message.content in [nil, ""], do: acc, else: [%{role: "assistant", content: message.content} | acc]
 
         acc =
           case {steps, acc} do

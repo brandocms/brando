@@ -130,10 +130,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
     params = %{"entry_id" => to_string(id)}
 
     Enum.reduce_while(Compiler.hooks(), socket, fn hook, socket ->
-      case BrandoAdmin.LiveView.Form.on_mount({hook, schema}, params, session, socket) do
-        {:cont, socket} -> {:cont, socket}
-        {:halt, socket} -> {:halt, socket}
-      end
+      BrandoAdmin.LiveView.Form.on_mount({hook, schema}, params, session, socket)
     end)
   end
 

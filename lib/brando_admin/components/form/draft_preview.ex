@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
       Map.update!(section, :rows, fn rows ->
         Enum.map(rows, fn row ->
           Map.update!(row, :field, fn field ->
-            field |> String.split(" › ") |> Enum.map(&Map.get(labels, &1, &1)) |> Enum.join(" › ")
+            field |> String.split(" › ") |> Enum.map_join(" › ", &Map.get(labels, &1, &1))
           end)
         end)
       end)

@@ -211,7 +211,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
   attr :target, :any, required: true
   attr :storage_key, :string, required: true, doc: "localStorage key for the choice"
 
-  @doc "Grid/list switch. `set_gallery_view` reaches `target` with `%{\"view\" => \"grid\" | \"list\"}`."
+  @doc ~S(Grid/list switch. `set_gallery_view` reaches `target` with `%{"view" => "grid" | "list"}`.)
   def view_switch(assigns) do
     ~H"""
     <div
