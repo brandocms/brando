@@ -779,7 +779,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # are kept between pages, so the rows are loaded again by id, in order.
   defp stream_next_page(%{assigns: %{visible_item_ids: ids, rendered_count: rendered}} = socket)
        when rendered < length(ids) do
-    page_ids = ids |> Enum.drop(rendered) |> Enum.take(@page_size)
+    page_ids = Enum.slice(ids, rendered, @page_size)
     by_id = page_ids |> load_images() |> Map.new(&{&1.id, &1})
     images = for id <- page_ids, image = by_id[id], do: image
 
