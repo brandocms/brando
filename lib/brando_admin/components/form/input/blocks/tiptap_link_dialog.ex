@@ -48,36 +48,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
 
   def update(%{event: :open} = params, socket) do
     href = params[:current_href] || ""
-
-    identifier =
-      case params[:current_identifier_id] && Brando.Content.get_identifier(params.current_identifier_id) do
-        {:ok, entry} -> if RichText.allowed_uri?(entry.url), do: entry
-        _ -> nil
-      end
-
-    type =
-      cond do
-        identifier -> :identifier
-        String.starts_with?(href, "#") -> :anchor
-        true -> :url
-      end
-
+    identifier = open_identifier(params[:current_identifier_id])
     rel = String.split(params[:current_rel] || "")
-
-    draft = %{
-      "url" => href,
-      "text" => params[:link_text] || "",
-      "anchor" => String.trim_leading(href, "#"),
-      "appearance" => params[:mark_type] || "link",
-      "target_blank" => params[:current_target] == "_blank",
-      "nofollow" => "nofollow" in rel
-    }
 
     {:ok,
      assign(socket,
        show: true,
-       draft: draft,
-       link_type: type,
+       draft: open_draft(params, href, rel),
+       link_type: open_link_type(identifier, href),
        tiptap_id: params[:tiptap_id],
        request_id: params[:request_id],
        selected_identifier: identifier,
@@ -108,22 +86,51 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
 
   def update(%{event: :applied, request_id: id, applied: applied}, socket) do
     if id == socket.assigns.request_id do
-      if applied do
-        send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, %{closed: true, request_id: id}})
-        {:ok, assign(socket, applying: false, show: false)}
-      else
-        {:ok,
-         assign(socket,
-           applying: false,
-           error: gettext("The text changed while this dialog was open. Cancel and select the text again.")
-         )}
-      end
+      {:ok, finish_apply(socket, id, applied)}
     else
       {:ok, socket}
     end
   end
 
   def update(assigns, socket), do: {:ok, assign(socket, assigns)}
+
+  defp open_identifier(identifier_id) do
+    case identifier_id && Brando.Content.get_identifier(identifier_id) do
+      {:ok, entry} -> if RichText.allowed_uri?(entry.url), do: entry
+      _ -> nil
+    end
+  end
+
+  defp open_link_type(identifier, href) do
+    cond do
+      identifier -> :identifier
+      String.starts_with?(href, "#") -> :anchor
+      true -> :url
+    end
+  end
+
+  defp open_draft(params, href, rel) do
+    %{
+      "url" => href,
+      "text" => params[:link_text] || "",
+      "anchor" => String.trim_leading(href, "#"),
+      "appearance" => params[:mark_type] || "link",
+      "target_blank" => params[:current_target] == "_blank",
+      "nofollow" => "nofollow" in rel
+    }
+  end
+
+  defp finish_apply(socket, id, applied) do
+    if applied do
+      send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, %{closed: true, request_id: id}})
+      assign(socket, applying: false, show: false)
+    else
+      assign(socket,
+        applying: false,
+        error: gettext("The text changed while this dialog was open. Cancel and select the text again.")
+      )
+    end
+  end
 
   def render(assigns) do
     ~H"""
@@ -361,33 +368,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
   def build_link_data(assigns) do
     draft = assigns.draft
 
-    url =
-      case assigns.link_type do
-        :url ->
-          draft["url"]
-
-        :anchor ->
-          anchor = draft["anchor"] |> String.trim() |> String.trim_leading("#")
-          if anchor != "", do: "#" <> anchor
-
-        :identifier ->
-          assigns.selected_identifier && assigns.selected_identifier.url
-      end
-
-    with {:ok, url} <- RichText.normalize_url(url), true <- draft["appearance"] in assigns.appearances do
-      target =
-        cond do
-          draft["target_blank"] -> "_blank"
-          assigns.target_changed -> nil
-          true -> assigns.original_target
-        end
-
-      rel = Enum.reject(assigns.original_rel || [], &(&1 in ["nofollow", "noopener", "noreferrer"]))
-
-      rel =
-        Enum.uniq(
-          rel ++ if(target, do: ["noopener", "noreferrer"], else: []) ++ if(draft["nofollow"], do: ["nofollow"], else: [])
-        )
+    with {:ok, url} <- RichText.normalize_url(link_url(assigns)), true <- draft["appearance"] in assigns.appearances do
+      target = link_target(draft, assigns)
+      rel = link_rel(assigns.original_rel, target, draft["nofollow"])
 
       {:ok,
        %{
@@ -402,5 +385,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
     else
       _ -> {:error, :invalid_link}
     end
+  end
+
+  defp link_url(%{link_type: :url, draft: draft}), do: draft["url"]
+
+  defp link_url(%{link_type: :anchor, draft: draft}) do
+    anchor = draft["anchor"] |> String.trim() |> String.trim_leading("#")
+    if anchor != "", do: "#" <> anchor
+  end
+
+  defp link_url(%{link_type: :identifier} = assigns), do: assigns.selected_identifier && assigns.selected_identifier.url
+
+  defp link_target(draft, assigns) do
+    cond do
+      draft["target_blank"] -> "_blank"
+      assigns.target_changed -> nil
+      true -> assigns.original_target
+    end
+  end
+
+  defp link_rel(original_rel, target, nofollow) do
+    rel = Enum.reject(original_rel || [], &(&1 in ["nofollow", "noopener", "noreferrer"]))
+    Enum.uniq(rel ++ if(target, do: ["noopener", "noreferrer"], else: []) ++ if(nofollow, do: ["nofollow"], else: []))
   end
 end
