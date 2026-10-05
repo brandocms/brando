@@ -17,10 +17,7 @@ defmodule Brando.Worker.SSGBuild do
         cancel_unbuildable(build, :environment_not_found)
 
       %Build{status: status} = build when status in [:queued, :building] ->
-        case Brando.Authorization.Operations.authorize(%{id: build.creator_id}, :build, :publishing, build.site_id) do
-          :ok -> run_build(build)
-          {:error, reason} -> cancel_unbuildable(build, reason)
-        end
+        authorize_and_run(build)
 
       %Build{status: status} when status in [:ready, :deployed, :archived] ->
         :ok
@@ -38,6 +35,13 @@ defmodule Brando.Worker.SSGBuild do
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(30)
+
+  defp authorize_and_run(build) do
+    case Brando.Authorization.Operations.authorize(%{id: build.creator_id}, :build, :publishing, build.site_id) do
+      :ok -> run_build(build)
+      {:error, reason} -> cancel_unbuildable(build, reason)
+    end
+  end
 
   defp run_build(build) do
     with {:ok, building} <-
