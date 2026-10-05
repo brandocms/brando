@@ -47,21 +47,23 @@ defmodule Brando.Content.Transfer.Archive do
 
       Brando.Content.Transfer.Portable.validate!(bundle)
 
-      Enum.each(bundle["dependencies"], fn {_token, dependency} ->
-        if asset = dependency["original"] do
-          body =
-            files[asset["path"]] || Error.raise!("media", dgettext("content_transfer", "a bundled original is missing"))
-
-          unless byte_size(body) == asset["bytes"] && checksum(body) == asset["sha256"],
-            do: Error.raise!("media", dgettext("content_transfer", "original checksum or size does not match"))
-        end
-      end)
+      Enum.each(bundle["dependencies"], fn {_token, dependency} -> validate_original!(files, dependency["original"]) end)
 
       %{bundle: bundle, files: Map.delete(files, "content.json")}
     end)
   rescue
     _ in [KeyError, BadMapError, FunctionClauseError, Protocol.UndefinedError, ArgumentError, CaseClauseError, MatchError] ->
       {:error, dgettext("content_transfer", "The content manifest is malformed. Export a fresh bundle from the source.")}
+  end
+
+  defp validate_original!(_files, asset) when asset in [nil, false], do: nil
+
+  defp validate_original!(files, asset) do
+    body =
+      files[asset["path"]] || Error.raise!("media", dgettext("content_transfer", "a bundled original is missing"))
+
+    unless byte_size(body) == asset["bytes"] && checksum(body) == asset["sha256"],
+      do: Error.raise!("media", dgettext("content_transfer", "original checksum or size does not match"))
   end
 
   def checksum(binary), do: :crypto.hash(:sha256, binary) |> Base.encode16(case: :lower)
@@ -88,78 +90,86 @@ defmodule Brando.Content.Transfer.Archive do
   defp unpack!(binary) do
     if byte_size(binary) > @max_bytes, do: Error.raise!("ZIP", dgettext("content_transfer", "file exceeds 128 MB"))
 
-    table =
-      case :zip.table(binary) do
-        {:ok, table} -> table
-        {:error, _} -> Error.raise!("ZIP", dgettext("content_transfer", "expected a valid ZIP archive"))
-      end
-
-    entries = for zip_file() = entry <- table, do: entry
+    entries = for zip_file() = entry <- zip_table!(binary), do: entry
     if length(entries) > @max_files, do: Error.raise!("ZIP", dgettext("content_transfer", "bundle exceeds 2,000 entries"))
 
-    files =
-      Enum.flat_map(entries, fn zip_file(name: name, info: info, offset: offset) = entry ->
-        name = List.to_string(name)
-        validate_local_name!(binary, offset, name)
-        validate_path!(String.trim_trailing(name, "/"))
-
-        cond do
-          file_info(info, :type) == :directory ->
-            []
-
-          file_info(info, :type) != :regular ->
-            Error.raise!("ZIP", dgettext("content_transfer", "only regular files are supported"))
-
-          ArchivePaths.ignored?(name) ->
-            []
-
-          true ->
-            [{name, entry}]
-        end
-      end)
+    files = Enum.flat_map(entries, &listed_file!(binary, &1))
 
     Value.unique!(Enum.map(files, &elem(&1, 0)), "ZIP filenames")
     validate_sizes!(Enum.map(files, fn {_, entry} -> file_info(zip_file(entry, :info), :size) end))
     Enum.each(files, fn {_, entry} -> validate_expansion!(binary, entry) end)
-    names = Enum.map(files, fn {name, _} -> String.to_charlist(name) end)
 
+    files = extract!(binary, Enum.map(files, fn {name, _} -> String.to_charlist(name) end))
+    validate_sizes!(Enum.map(files, fn {_name, body} -> byte_size(body) end))
+    files = ArchivePaths.unwrap_directory(files)
+
+    Enum.each(files, fn {name, _} -> validate_bundle_name!(name) end)
+
+    # Files are written by us, never by ZIP extraction. Prefix collisions are
+    # rejected before any write, including a file used as another file's parent.
+    filenames = MapSet.new(Enum.map(files, &elem(&1, 0)))
+    Enum.each(filenames, &validate_no_overlap!(&1, filenames))
+
+    Map.new(files)
+  end
+
+  defp zip_table!(binary) do
+    case :zip.table(binary) do
+      {:ok, table} -> table
+      {:error, _} -> Error.raise!("ZIP", dgettext("content_transfer", "expected a valid ZIP archive"))
+    end
+  end
+
+  defp listed_file!(binary, zip_file(name: name, info: info, offset: offset) = entry) do
+    name = List.to_string(name)
+    validate_local_name!(binary, offset, name)
+    validate_path!(String.trim_trailing(name, "/"))
+
+    cond do
+      file_info(info, :type) == :directory ->
+        []
+
+      file_info(info, :type) != :regular ->
+        Error.raise!("ZIP", dgettext("content_transfer", "only regular files are supported"))
+
+      ArchivePaths.ignored?(name) ->
+        []
+
+      true ->
+        [{name, entry}]
+    end
+  end
+
+  defp extract!(binary, names) do
     extracted =
       case :zip.extract(binary, [:memory, {:file_list, names}]) do
         {:ok, extracted} -> extracted
         {:error, _} -> Error.raise!("ZIP", dgettext("content_transfer", "could not read the archive"))
       end
 
-    files = Enum.map(extracted, fn {name, body} -> {List.to_string(name), body} end)
-    validate_sizes!(Enum.map(files, fn {_name, body} -> byte_size(body) end))
-    files = ArchivePaths.unwrap_directory(files)
+    Enum.map(extracted, fn {name, body} -> {List.to_string(name), body} end)
+  end
 
-    Enum.each(files, fn {name, _} ->
-      validate_path!(name)
+  defp validate_bundle_name!(name) do
+    validate_path!(name)
 
-      unless name == "content.json" or Regex.match?(~r/^media\/[a-f0-9]{64}$/, name),
-        do:
-          Error.raise!(
-            name,
-            dgettext("content_transfer", "bundle may contain only content.json and checksummed media originals")
-          )
+    unless name == "content.json" or Regex.match?(~r/^media\/[a-f0-9]{64}$/, name),
+      do:
+        Error.raise!(
+          name,
+          dgettext("content_transfer", "bundle may contain only content.json and checksummed media originals")
+        )
+  end
+
+  defp validate_no_overlap!(name, filenames) do
+    name
+    |> Path.split()
+    |> Enum.drop(-1)
+    |> Enum.scan(&Path.join(&2, &1))
+    |> Enum.each(fn parent ->
+      if MapSet.member?(filenames, parent),
+        do: Error.raise!(name, dgettext("content_transfer", "file and directory paths overlap"))
     end)
-
-    # Files are written by us, never by ZIP extraction. Prefix collisions are
-    # rejected before any write, including a file used as another file's parent.
-    filenames = MapSet.new(Enum.map(files, &elem(&1, 0)))
-
-    Enum.each(filenames, fn name ->
-      name
-      |> Path.split()
-      |> Enum.drop(-1)
-      |> Enum.scan(&Path.join(&2, &1))
-      |> Enum.each(fn parent ->
-        if MapSet.member?(filenames, parent),
-          do: Error.raise!(name, dgettext("content_transfer", "file and directory paths overlap"))
-      end)
-    end)
-
-    Map.new(files)
   end
 
   defp validate_path!(name) do
@@ -204,18 +214,22 @@ defmodule Brando.Content.Transfer.Archive do
     if method == 0 do
       if compressed != expanded, do: Error.raise!("ZIP", dgettext("content_transfer", "inconsistent file sizes"))
     else
-      stream = :zlib.open()
+      validate_inflated!(binary, start, compressed, expanded)
+    end
+  end
 
-      try do
-        :ok = :zlib.inflateInit(stream, -15)
-        validate_chunks!(stream, binary_part(binary, start, compressed), expanded)
-        :ok = :zlib.inflateEnd(stream)
-      rescue
-        _ in [ErlangError, ArgumentError] ->
-          Error.raise!("ZIP", dgettext("content_transfer", "invalid compressed content"))
-      after
-        :zlib.close(stream)
-      end
+  defp validate_inflated!(binary, start, compressed, expanded) do
+    stream = :zlib.open()
+
+    try do
+      :ok = :zlib.inflateInit(stream, -15)
+      validate_chunks!(stream, binary_part(binary, start, compressed), expanded)
+      :ok = :zlib.inflateEnd(stream)
+    rescue
+      _ in [ErlangError, ArgumentError] ->
+        Error.raise!("ZIP", dgettext("content_transfer", "invalid compressed content"))
+    after
+      :zlib.close(stream)
     end
   end
 
