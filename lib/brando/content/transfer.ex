@@ -141,78 +141,9 @@ defmodule Brando.Content.Transfer do
     supplied = Keyword.get(opts, :dependencies, %{})
     {items, bindings} = resolve_dependencies(bundle, supplied, archive.files, actor)
 
-    fields =
-      Enum.map(bundle["fields"], fn source ->
-        selected = targets[source["key"]]
-
-        candidates =
-          case Error.protect(fn -> Catalog.candidates(source, actor) end) do
-            {:ok, candidates} -> candidates
-            _ -> []
-          end
-
-        result =
-          Error.protect(fn ->
-            unless is_map(selected),
-              do: Error.fail!(dgettext("content_transfer", "Choose a destination entry and block field."))
-
-            mode = selected["mode"] || "replace"
-
-            unless mode in ["replace", "append"],
-              do: Error.fail!(dgettext("content_transfer", "Choose Replace or Append."))
-
-            entry = Catalog.load!(selected["schema"] || source["schema"], selected["id"], actor, :update)
-            field = Catalog.field!(entry.__struct__, selected["field"] || source["field"])
-            current = Map.fetch!(entry, field.association)
-            description = Catalog.describe(entry)
-            # Include owning entry state (status, module-set constraints and custom
-            # validations) as well as the complete saved field in the preview lease.
-            %{
-              entry: entry,
-              field: field,
-              mode: mode,
-              current: current,
-              destination: description,
-              before: entry_fingerprint(entry),
-              current_count: current |> Enum.map(& &1.block) |> Enum.map(&Params.snapshot/1) |> Portable.count()
-            }
-          end)
-
-        case result do
-          {:ok, destination} ->
-            Map.merge(destination, %{
-              source: source,
-              candidates: candidates,
-              issue: nil,
-              incoming_count: Portable.count(source["blocks"])
-            })
-
-          {:error, message} ->
-            %{
-              source: source,
-              candidates: candidates,
-              issue: message,
-              incoming_count: Portable.count(source["blocks"]),
-              destination: nil
-            }
-        end
-      end)
-
+    fields = Enum.map(bundle["fields"], &preview_field(&1, targets[&1["key"]], actor))
     fields = validate_fields(fields, bundle, bindings, actor)
-    destination_keys = for %{issue: nil} = field <- fields, do: {field.destination.key, field.field.name}
-    duplicate? = length(destination_keys) != length(Enum.uniq(destination_keys))
-    problems = for %{issue: issue} <- items ++ fields, issue, do: issue
-
-    problems =
-      if duplicate?,
-        do: [
-          dgettext(
-            "content_transfer",
-            "Two source fields point to the same destination field. Choose distinct destinations."
-          )
-          | problems
-        ],
-        else: problems
+    problems = preview_problems(items, fields)
 
     fingerprint =
       Value.digest(%{
@@ -237,6 +168,75 @@ defmodule Brando.Content.Transfer do
       problems: Enum.uniq(problems),
       fingerprint: fingerprint
     }
+  end
+
+  defp preview_field(source, selected, actor) do
+    candidates =
+      case Error.protect(fn -> Catalog.candidates(source, actor) end) do
+        {:ok, candidates} -> candidates
+        _ -> []
+      end
+
+    case Error.protect(fn -> preview_destination!(source, selected, actor) end) do
+      {:ok, destination} ->
+        Map.merge(destination, %{
+          source: source,
+          candidates: candidates,
+          issue: nil,
+          incoming_count: Portable.count(source["blocks"])
+        })
+
+      {:error, message} ->
+        %{
+          source: source,
+          candidates: candidates,
+          issue: message,
+          incoming_count: Portable.count(source["blocks"]),
+          destination: nil
+        }
+    end
+  end
+
+  defp preview_destination!(source, selected, actor) do
+    unless is_map(selected),
+      do: Error.fail!(dgettext("content_transfer", "Choose a destination entry and block field."))
+
+    mode = selected["mode"] || "replace"
+
+    unless mode in ["replace", "append"],
+      do: Error.fail!(dgettext("content_transfer", "Choose Replace or Append."))
+
+    entry = Catalog.load!(selected["schema"] || source["schema"], selected["id"], actor, :update)
+    field = Catalog.field!(entry.__struct__, selected["field"] || source["field"])
+    current = Map.fetch!(entry, field.association)
+    description = Catalog.describe(entry)
+    # Include owning entry state (status, module-set constraints and custom
+    # validations) as well as the complete saved field in the preview lease.
+    %{
+      entry: entry,
+      field: field,
+      mode: mode,
+      current: current,
+      destination: description,
+      before: entry_fingerprint(entry),
+      current_count: current |> Enum.map(& &1.block) |> Enum.map(&Params.snapshot/1) |> Portable.count()
+    }
+  end
+
+  defp preview_problems(items, fields) do
+    destination_keys = for %{issue: nil} = field <- fields, do: {field.destination.key, field.field.name}
+    duplicate? = length(destination_keys) != length(Enum.uniq(destination_keys))
+    problems = for %{issue: issue} <- items ++ fields, issue, do: issue
+
+    if duplicate?,
+      do: [
+        dgettext(
+          "content_transfer",
+          "Two source fields point to the same destination field. Choose distinct destinations."
+        )
+        | problems
+      ],
+      else: problems
   end
 
   @doc """
