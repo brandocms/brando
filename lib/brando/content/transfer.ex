@@ -897,83 +897,86 @@ defmodule Brando.Content.Transfer do
   defp lockable(_), do: []
 
   def restore(id, actor) do
-    with {:ok, result} <-
-           Error.protect(fn ->
-             ensure_scope!(actor)
-
-             Repo.transaction(fn ->
-               Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
-                 "brando-content-transfer:" <> scope()
-               ])
-
-               receipt =
-                 Repo.one(
-                   from(r in Receipt,
-                     where: r.id == ^id and r.scope == ^scope() and r.actor_id == ^actor_id!(actor),
-                     lock: "FOR UPDATE"
-                   )
-                 ) || Error.fail!(dgettext("content_transfer", "This recovery snapshot is not available."))
-
-               if receipt.restored_at,
-                 do: Error.fail!(dgettext("content_transfer", "This import has already been restored."))
-
-               if receipt.mappings["version"] == 2 do
-                 Brando.Content.Transfer.Entries.restore!(receipt, actor)
-               else
-                 Enum.each(receipt.after, fn {key, expected} ->
-                   entry = Catalog.load!(expected["schema"], expected["id"], actor, :update, lock: true)
-                   lock_records!(%{fields: [%{entry: entry}], bindings: %{}})
-                   entry = Catalog.load!(expected["schema"], expected["id"], actor, :update)
-                   field = Catalog.field!(entry.__struct__, expected["field"])
-                   current = Map.fetch!(entry, field.association) |> Params.snapshot()
-
-                   unless Value.digest(current) == expected["fingerprint"],
-                     do:
-                       Error.fail!(
-                         dgettext(
-                           "content_transfer",
-                           "Content changed after this import. Recovery would overwrite newer edits."
-                         )
-                       )
-
-                   before = receipt.before[key]["blocks"]
-                   # Restore from trusted local snapshots, allocating new owned identities.
-                   blocks = Enum.map(before, & &1["block"]) |> Brando.Content.Transfer.Recovery.copy()
-                   Brando.Content.Transfer.Recovery.validate_dependencies!(blocks, actor)
-                   bindings = recovery_bindings!(blocks, receipt.before[key]["contracts"], actor)
-                   lock_records!(%{fields: [], bindings: bindings})
-                   bindings = recovery_bindings!(blocks, receipt.before[key]["contracts"], actor)
-                   blocks = Enum.map(blocks, &adapt(&1, bindings))
-
-                   params = %{
-                     to_string(field.association) =>
-                       Enum.with_index(blocks, fn block, n -> %{"sequence" => n, "block" => block} end)
-                   }
-
-                   {params, _} = Brando.Content.Transfer.Ownership.galleries(params, actor)
-                   cs = field_changeset(entry, params, actor) |> stamp_versions(bindings)
-
-                   if Boundary.change(actor, :update, cs) != :ok,
-                     do: Error.fail!(dgettext("content_transfer", "Recovery is no longer authorized."))
-
-                   updated = Repo.update!(cs)
-
-                   Activity.with_source(:import, fn ->
-                     Activity.with_batch(receipt.id, fn ->
-                       Activity.import_undone(updated, actor, :update)
-                     end)
-                   end)
-                 end)
-               end
-
-               receipt |> Changeset.change(restored_at: DateTime.utc_now()) |> Repo.update!()
-             end)
-           end) do
+    with {:ok, result} <- Error.protect(fn -> restore_in_transaction(id, actor) end) do
       case result do
         {:ok, receipt} -> {:ok, refresh_receipt(receipt, actor)}
         error -> error
       end
     end
+  end
+
+  defp restore_in_transaction(id, actor) do
+    ensure_scope!(actor)
+    Repo.transaction(fn -> restore_receipt!(id, actor) end)
+  end
+
+  defp restore_receipt!(id, actor) do
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando-content-transfer:" <> scope()
+    ])
+
+    receipt =
+      Repo.one(
+        from(r in Receipt,
+          where: r.id == ^id and r.scope == ^scope() and r.actor_id == ^actor_id!(actor),
+          lock: "FOR UPDATE"
+        )
+      ) || Error.fail!(dgettext("content_transfer", "This recovery snapshot is not available."))
+
+    if receipt.restored_at,
+      do: Error.fail!(dgettext("content_transfer", "This import has already been restored."))
+
+    if receipt.mappings["version"] == 2 do
+      Brando.Content.Transfer.Entries.restore!(receipt, actor)
+    else
+      Enum.each(receipt.after, &restore_field!(&1, receipt, actor))
+    end
+
+    receipt |> Changeset.change(restored_at: DateTime.utc_now()) |> Repo.update!()
+  end
+
+  defp restore_field!({key, expected}, receipt, actor) do
+    entry = Catalog.load!(expected["schema"], expected["id"], actor, :update, lock: true)
+    lock_records!(%{fields: [%{entry: entry}], bindings: %{}})
+    entry = Catalog.load!(expected["schema"], expected["id"], actor, :update)
+    field = Catalog.field!(entry.__struct__, expected["field"])
+    current = Map.fetch!(entry, field.association) |> Params.snapshot()
+
+    unless Value.digest(current) == expected["fingerprint"],
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "Content changed after this import. Recovery would overwrite newer edits."
+          )
+        )
+
+    before = receipt.before[key]["blocks"]
+    # Restore from trusted local snapshots, allocating new owned identities.
+    blocks = Enum.map(before, & &1["block"]) |> Brando.Content.Transfer.Recovery.copy()
+    Brando.Content.Transfer.Recovery.validate_dependencies!(blocks, actor)
+    bindings = recovery_bindings!(blocks, receipt.before[key]["contracts"], actor)
+    lock_records!(%{fields: [], bindings: bindings})
+    bindings = recovery_bindings!(blocks, receipt.before[key]["contracts"], actor)
+    blocks = Enum.map(blocks, &adapt(&1, bindings))
+
+    params = %{
+      to_string(field.association) => Enum.with_index(blocks, fn block, n -> %{"sequence" => n, "block" => block} end)
+    }
+
+    {params, _} = Brando.Content.Transfer.Ownership.galleries(params, actor)
+    cs = field_changeset(entry, params, actor) |> stamp_versions(bindings)
+
+    if Boundary.change(actor, :update, cs) != :ok,
+      do: Error.fail!(dgettext("content_transfer", "Recovery is no longer authorized."))
+
+    updated = Repo.update!(cs)
+
+    Activity.with_source(:import, fn ->
+      Activity.with_batch(receipt.id, fn ->
+        Activity.import_undone(updated, actor, :update)
+      end)
+    end)
   end
 
   def entry_fingerprint(entry), do: entry |> Params.snapshot() |> Value.digest()
