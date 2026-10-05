@@ -83,36 +83,46 @@ defmodule Brando.Drafts do
       unless authorized_identity?(identity), do: Repo.rollback(:forbidden)
       lock(id)
       existing = Repo.one(from d in EntryDraft, where: d.id == ^id, lock: "FOR UPDATE")
+      ensure_writable!(existing, identity)
 
-      cond do
-        existing && not owned?(existing, identity) ->
-          Repo.rollback(:not_found)
+      if existing && existing.generation >= generation do
+        existing
+      else
+        attrs =
+          Map.merge(identity, %{
+            id: id,
+            generation: generation,
+            payload: payload,
+            checksum: checksum,
+            base_fingerprint: base_fingerprint,
+            schema_version: schema_version,
+            expires_at: DateTime.add(now, retention_days() * 86_400, :second)
+          })
 
-        existing && (existing.resolved_at || existing.discarded_at || existing.attempted_at) ->
-          Repo.rollback(:closed)
-
-        existing && existing.generation >= generation ->
-          existing
-
-        true ->
-          attrs =
-            Map.merge(identity, %{
-              id: id,
-              generation: generation,
-              payload: payload,
-              checksum: checksum,
-              base_fingerprint: base_fingerprint,
-              schema_version: schema_version,
-              expires_at: DateTime.add(now, retention_days() * 86_400, :second)
-            })
-
-          if existing && existing.checksum == checksum do
-            update_metadata(existing, Map.take(attrs, [:generation, :expires_at]))
-          else
-            (existing || %EntryDraft{}) |> Changeset.change(attrs) |> Repo.repo().insert_or_update!(prefix: "public")
-          end
+        store_draft(existing, checksum, attrs)
       end
     end)
+  end
+
+  defp ensure_writable!(existing, identity) do
+    cond do
+      existing && not owned?(existing, identity) ->
+        Repo.rollback(:not_found)
+
+      existing && (existing.resolved_at || existing.discarded_at || existing.attempted_at) ->
+        Repo.rollback(:closed)
+
+      true ->
+        :ok
+    end
+  end
+
+  defp store_draft(existing, checksum, attrs) do
+    if existing && existing.checksum == checksum do
+      update_metadata(existing, Map.take(attrs, [:generation, :expires_at]))
+    else
+      (existing || %EntryDraft{}) |> Changeset.change(attrs) |> Repo.repo().insert_or_update!(prefix: "public")
+    end
   end
 
   def dismiss(identity, id), do: mark_equivalent(identity, id, dismissed_at: DateTime.utc_now())
@@ -172,14 +182,18 @@ defmodule Brando.Drafts do
           %EntryDraft{} |> Changeset.change(attrs) |> Repo.insert!()
 
         %{generation: current} = draft when current <= generation ->
-          if owned?(draft, identity),
-            do: update_metadata(draft, resolved_attrs(now, opts)),
-            else: Repo.rollback(:not_found)
+          ensure_owned!(draft, identity)
+          update_metadata(draft, resolved_attrs(now, opts))
 
         draft ->
-          if owned?(draft, identity), do: draft, else: Repo.rollback(:not_found)
+          ensure_owned!(draft, identity)
+          draft
       end
     end)
+  end
+
+  defp ensure_owned!(draft, identity) do
+    unless owned?(draft, identity), do: Repo.rollback(:not_found)
   end
 
   def purge do
@@ -230,23 +244,29 @@ defmodule Brando.Drafts do
 
   defp authorized_identity?(identity) do
     if Brando.Authorization.enabled?() do
-      scope = Brando.Authorization.Boundary.current_scope()
-      schema = Brando.Authorization.Catalog.schema(identity.entry_type)
-      action = if identity.entry_id, do: :update, else: :create
-
-      with %{user_id: user_id} <- scope,
-           true <- user_id == identity.owner_id and (scope.prefix || "public") == identity.scope,
-           true <- not is_nil(schema),
-           subject when not is_nil(subject) <-
-             if(identity.entry_id, do: Repo.get(schema, identity.entry_id), else: schema),
-           :ok <- Brando.Authorization.authorize(scope, action, subject) do
-        true
-      else
-        _ -> false
-      end
+      authorized_owner?(identity, Brando.Authorization.Boundary.current_scope())
     else
       true
     end
+  end
+
+  defp authorized_owner?(identity, scope) do
+    schema = Brando.Authorization.Catalog.schema(identity.entry_type)
+    action = if identity.entry_id, do: :update, else: :create
+
+    with %{user_id: user_id} <- scope,
+         true <- user_id == identity.owner_id and (scope.prefix || "public") == identity.scope,
+         true <- not is_nil(schema),
+         subject when not is_nil(subject) <- draft_subject(schema, identity.entry_id),
+         :ok <- Brando.Authorization.authorize(scope, action, subject) do
+      true
+    else
+      _ -> false
+    end
+  end
+
+  defp draft_subject(schema, entry_id) do
+    if entry_id, do: Repo.get(schema, entry_id), else: schema
   end
 
   defp owned?(draft, identity), do: Enum.all?(identity, fn {key, value} -> Map.get(draft, key) == value end)
