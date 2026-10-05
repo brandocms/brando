@@ -49,6 +49,27 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     end
   end
 
+  # A listing that shows what it was given, so the tests can read it back.
+  defmodule Listing do
+    use Phoenix.Component
+
+    def card(assigns) do
+      assigns = assign_new(assigns, :index, fn -> nil end) |> assign_new(:entries, fn -> nil end)
+
+      ~H"""
+      <div
+        class="test-card"
+        data-dom-id={@dom_id}
+        data-index={@index}
+        data-count={@entries && length(@entries)}
+        data-titles={@entries && Enum.map_join(@entries, ",", & &1.title)}
+      >
+        {@entry.title}
+      </div>
+      """
+    end
+  end
+
   defp recovery_socket(item) do
     %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
     |> Component.assign(:items, [item])
@@ -109,6 +130,100 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
         assert hd(socket.assigns.items).changes == %{}
       end
     end
+  end
+
+  describe "a listing with listing_context" do
+    defp render_listing(listing_context) do
+      field =
+        %Collection{
+          items: [
+            %MediaItem{id: 1, title: "The Reins", size: :small, cover: nil},
+            %MediaItem{id: 2, title: "Horsemen", size: :large, cover: nil}
+          ]
+        }
+        |> Ecto.Changeset.change()
+        |> Component.to_form()
+        |> Access.get(:items)
+
+      subform = %Subform{
+        name: :items,
+        cardinality: :many,
+        style: {:transformer, :cover},
+        layout: :grid,
+        listing: &Listing.card/1,
+        listing_context: listing_context,
+        sub_fields: [input(:title, :text), input(:size, :radios)]
+      }
+
+      Transformer
+      |> Phoenix.LiveViewTest.render_component(
+        id: "collection-items",
+        field: field,
+        subform: subform,
+        form_id: "collection_form",
+        current_user: %Brando.Users.User{language: "en"},
+        label: "Items",
+        instructions: nil
+      )
+      |> Floki.parse_fragment!()
+      |> Floki.find(".test-card")
+    end
+
+    test "gets its position and every entry in order" do
+      assert [first, second] = render_listing(true)
+
+      assert Floki.attribute(first, "data-index") == ["0"]
+      assert Floki.attribute(second, "data-index") == ["1"]
+      assert Floki.attribute(second, "data-count") == ["2"]
+      assert Floki.attribute(second, "data-titles") == ["The Reins,Horsemen"]
+      assert Floki.attribute(second, "data-dom-id") == ["transformer-item-2"]
+    end
+
+    test "without it, gets its entry and DOM id but no neighbours" do
+      assert [first, _second] = render_listing(false)
+
+      assert Floki.attribute(first, "data-dom-id") == ["transformer-item-1"]
+      assert Floki.attribute(first, "data-index") == []
+      assert Floki.attribute(first, "data-count") == []
+    end
+
+    test "re-renders every entry when one changes, since its neighbours read it" do
+      items = [
+        Transformer.new_item("item-1", %MediaItem{id: 1, title: "The Reins", size: :small}, is_new: false),
+        Transformer.new_item("item-2", %MediaItem{id: 2, title: "Horsemen", size: :large}, is_new: false)
+      ]
+
+      socket =
+        items
+        |> hd()
+        |> recovery_socket()
+        |> Component.assign(:items, items)
+        |> Component.update(:subform, fn subform ->
+          %{subform | listing: &Listing.card/1, listing_context: true}
+        end)
+
+      {:noreply, socket} =
+        Transformer.handle_event("update_field", %{"dom_id" => "item-1", "field" => "size", "value" => "single"}, socket)
+
+      stream = socket.assigns.streams.transformer_items
+      assert stream.reset?
+
+      inserted =
+        stream.inserts
+        |> Enum.map(&(&1 |> elem(0) |> String.replace_prefix("transformer_items-", "")))
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      assert inserted == ["item-1", "item-2"]
+    end
+  end
+
+  test "set_field/4 pushes the entry's field change to the transformer" do
+    %Phoenix.LiveView.JS{ops: [["push", push]]} = Transformer.set_field("target", "item-1", :size, :large)
+
+    assert push.event == "update_field"
+    assert push.target == "target"
+    assert push.value == %{dom_id: "item-1", field: "size", value: "large"}
   end
 
   test "upload progress does not dirty recovery, but completed delivery does" do

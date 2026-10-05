@@ -11,5 +11,6 @@ defmodule Brando.Blueprint.Forms.Subform do
             listing: nil,
             layout: :list,
             add_entry: true,
+            listing_context: false,
             component: nil
 end

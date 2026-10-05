@@ -144,6 +144,20 @@ defmodule Brando.Blueprint.Forms do
 
       layout :grid
 
+  The `listing:` component gets `@entry`, plus `@dom_id` and `@target` for
+  buttons that change the entry in place: `Transformer.set_field/4` builds the
+  click, and the change is saved like an edit in the entry's own fields:
+
+      <button phx-click={Transformer.set_field(@target, @dom_id, :size, :large)}>
+
+  A listing that depends on its neighbours — a position number, entries that
+  share a row — sets `listing_context true`. It then also gets `@index` (from
+  0) and `@entries`, every entry in order, and every entry re-renders whenever
+  one changes, so leave it off when the listing only shows its own entry:
+
+      listing &__MODULE__.artwork_listing/1
+      listing_context true
+
   Expanding an entry offers a picker row for each asset field, so an image or
   video can be selected, swapped for an already uploaded one, or removed without
   re-uploading.

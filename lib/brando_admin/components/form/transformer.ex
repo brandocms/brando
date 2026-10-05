@@ -299,11 +299,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   def render(assigns) do
     assigns =
-      assign(
-        assigns,
-        :editing_item,
-        Enum.find(assigns.items, &(&1.dom_id == assigns.editing_dom_id))
-      )
+      assigns
+      |> assign(:editing_item, Enum.find(assigns.items, &(&1.dom_id == assigns.editing_dom_id)))
+      |> assign(:listing_context, listing_context(assigns))
 
     ~H"""
     <fieldset>
@@ -384,6 +382,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                   video_field={@video_field}
                   relation_module={@relation_module}
                   subform={@subform}
+                  context={@listing_context}
                   myself={@myself}
                 />
                 <div
@@ -533,6 +532,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       |> assign(:entry, entry)
       |> assign(:pending, item.pending)
       |> assign(:replacing, Map.get(item, :replacing))
+      |> assign(:listing_assigns, listing_assigns(entry, item.dom_id, assigns.myself, assigns.context))
 
     ~H"""
     <div :if={@pending} class="subform-listing pending-listing">
@@ -597,13 +597,65 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         <%= if @subform.listing do %>
           {Phoenix.LiveView.TagEngine.component(
             @subform.listing,
-            [entry: @entry],
+            @listing_assigns,
             {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
           )}
         <% end %>
       </div>
     </div>
     """
+  end
+
+  # What a transformer's `listing:` component receives. Every listing gets its
+  # entry, its DOM id and this component as `target`, which is what
+  # `set_field/4` needs. With `listing_context`, it also gets its `index` and
+  # every `entries` in order, so it can render what depends on its neighbours
+  # (a position, which entries share a row) — see `listing_context/1`.
+  defp listing_assigns(entry, dom_id, target, nil), do: %{entry: entry, dom_id: dom_id, target: target}
+
+  defp listing_assigns(entry, dom_id, target, %{entries: entries, index: index}) do
+    %{entry: entry, dom_id: dom_id, target: target, index: Map.get(index, dom_id), entries: entries}
+  end
+
+  # The saved-to-be entries in order (placeholders have no asset yet and are
+  # left out, as at save), and each one's position among them. Only built when
+  # the subform asks for it: every entry then re-renders on every change.
+  defp listing_context(%{subform: %{listing: listing, listing_context: true}, items: items} = assigns)
+       when not is_nil(listing) do
+    ready = Enum.reject(items, & &1.pending)
+
+    %{
+      entries: Enum.map(ready, &item_entry(&1, assigns)),
+      index: ready |> Enum.with_index() |> Map.new(fn {item, index} -> {item.dom_id, index} end)
+    }
+  end
+
+  defp listing_context(_assigns), do: nil
+
+  defp item_entry(item, %{relation_module: relation_module, image_field: image_field, video_field: video_field}) do
+    data = resolve_item_data(item)
+
+    listing_entry(data, relation_module, [
+      {image_field, image_field && resolve_asset(item, data, image_field)},
+      {video_field, video_field && resolve_asset(item, data, video_field)}
+    ])
+  end
+
+  @doc """
+  A click that sets one field on one transformer entry, for buttons in a
+  `listing:` component — a size switch on a card, say. `target` and `dom_id`
+  are the listing's `@target` and `@dom_id`; `field` must be one of the
+  subform's inputs, and the value is cast like the entry's own fields are.
+
+      <button phx-click={Transformer.set_field(@target, @dom_id, :size, :large)}>
+        Large
+      </button>
+  """
+  def set_field(target, dom_id, field, value) do
+    JS.push("update_field",
+      value: %{dom_id: dom_id, field: to_string(field), value: to_string(value)},
+      target: target
+    )
   end
 
   defp item_fields(assigns) do
@@ -1484,6 +1536,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # list itself changes (order, membership, fields, assets); not on progress ticks.
   # Recovery also needs this signal: transformer rows live outside the main form.
   defp notify_relation_change(socket) do
+    socket = restream_listing_context(socket)
     form_id = socket.assigns[:form_id]
 
     if form_id do
@@ -1498,6 +1551,15 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
     socket
   end
+
+  # A listing that reads its neighbours (`listing_context`) is stale as soon as
+  # any entry changes, and LiveView only re-renders a stream entry that is
+  # inserted again — so put them all back.
+  defp restream_listing_context(%{assigns: %{subform: %{listing_context: true}, items: items}} = socket) do
+    stream(socket, :transformer_items, Enum.map(items, &stream_entry/1), reset: true)
+  end
+
+  defp restream_listing_context(socket), do: socket
 
   # Placeholders carry no asset yet, so they would render as holes in the
   # preview. They are excluded here for the same reason they are at save time.
