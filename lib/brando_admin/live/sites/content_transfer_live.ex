@@ -1346,14 +1346,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     targets =
       Map.new(targets, fn {key, target} ->
         target = Map.update(target, "attributes", %{}, &Brando.Drafts.Params.clean/1)
-        previous = socket.assigns.targets[key] || %{}
-
-        target =
-          if target["mode"] != (previous["mode"] || "create"),
-            do: Map.put(target, "publication", if(target["mode"] == "create", do: "draft", else: "preserve")),
-            else: target
-
-        {key, target}
+        {key, reset_publication(target, socket.assigns.targets[key] || %{})}
       end)
 
     {:noreply, socket |> assign(targets: targets, error: nil) |> replan() |> assign_options()}
@@ -1439,28 +1432,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
 
   def handle_event("map_content", params, socket) do
     targets =
-      Map.new(params["entries"] || %{}, fn {key, value} ->
-        if value == "" do
-          {key, nil}
-        else
-          [id | schema] = value |> String.split(":") |> Enum.reverse()
-          schema_name = schema |> Enum.reverse() |> Enum.join(":")
-
-          options =
-            Enum.find(Catalog.schemas(), &(to_string(&1) == schema_name))
-            |> then(fn schema -> if schema, do: Catalog.fields(schema), else: [] end)
-
-          chosen = Enum.find(options, &(&1.name == get_in(params, ["fields", key]))) || List.first(options)
-
-          {key,
-           %{
-             "id" => id,
-             "schema" => schema_name,
-             "field" => chosen && chosen.name,
-             "mode" => get_in(params, ["modes", key])
-           }}
-        end
-      end)
+      Map.new(params["entries"] || %{}, fn {key, value} -> {key, content_target(key, value, params)} end)
 
     {:noreply, socket |> assign(targets: targets, error: nil) |> replan()}
   end
@@ -1556,18 +1528,19 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     if socket.assigns.busy do
       {:noreply, socket}
     else
-      scope = Boundary.current_scope()
-      sandbox = socket.assigns.transfer_sandbox
-      locale = Gettext.get_locale(Brando.Gettext)
-
-      work =
-        Brando.Tenant.capture_context(fn ->
-          if sandbox, do: Phoenix.Ecto.SQL.Sandbox.allow(sandbox, Ecto.Adapters.SQL.Sandbox)
-          Gettext.with_locale(Brando.Gettext, locale, fn -> Boundary.with_scope(scope, fun) end)
-        end)
-
+      work = transfer_work(socket.assigns.transfer_sandbox, fun)
       {:noreply, socket |> assign(busy: message, error: nil) |> start_async(name, work)}
     end
+  end
+
+  defp transfer_work(sandbox, fun) do
+    scope = Boundary.current_scope()
+    locale = Gettext.get_locale(Brando.Gettext)
+
+    Brando.Tenant.capture_context(fn ->
+      if sandbox, do: Phoenix.Ecto.SQL.Sandbox.allow(sandbox, Ecto.Adapters.SQL.Sandbox)
+      Gettext.with_locale(Brando.Gettext, locale, fn -> Boundary.with_scope(scope, fun) end)
+    end)
   end
 
   def handle_async(:export, {:ok, {:ok, exported}}, socket) do
@@ -1625,41 +1598,15 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
 
     options =
       Map.new(socket.assigns.plan.dependencies, fn item ->
-        selected = socket.assigns.plan.bindings[item.token]
+        selected = bound_option(socket.assigns.plan.bindings[item.token], item)
+        candidates = dependency_candidates(item, user, socket.assigns.dependency_search, options_by_kind)
 
-        selected =
-          if selected && selected.id > 0 && item.action != :bundle,
-            do: [%{id: selected.id, label: Dependencies.label(selected)}],
-            else: []
-
-        {item.token,
-         (selected ++
-            item.suggestions ++
-            if(item.dependency["kind"] == "gallery",
-              do: [],
-              else:
-                if(item.dependency["kind"] == "entry",
-                  do: Dependencies.options(item.dependency, user, socket.assigns.dependency_search),
-                  else: options_by_kind[item.dependency["kind"]]
-                )
-            ))
-         |> Enum.uniq_by(& &1.id)}
+        {item.token, Enum.uniq_by(selected ++ item.suggestions ++ candidates, & &1.id)}
       end)
 
     definition_options =
       Map.new(references, fn {token, ref} ->
-        selected =
-          case socket.assigns.definition_references[token] do
-            nil ->
-              []
-
-            id ->
-              case Brando.Content.Transfer.Error.protect(fn -> Dependencies.load!(ref["kind"], id, user) end) do
-                {:ok, record} -> [%{id: record.id, label: Dependencies.label(record)}]
-                _ -> []
-              end
-          end
-
+        selected = referenced_option(socket.assigns.definition_references[token], ref, user)
         {token, (selected ++ options_by_kind[ref["kind"]]) |> Enum.uniq_by(& &1.id)}
       end)
 
@@ -1672,6 +1619,55 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           entries: socket.assigns.archive.bundle["version"] == 2
         )
     )
+  end
+
+  defp bound_option(selected, item) do
+    if selected && selected.id > 0 && item.action != :bundle,
+      do: [%{id: selected.id, label: Dependencies.label(selected)}],
+      else: []
+  end
+
+  defp dependency_candidates(item, user, search, options_by_kind) do
+    case item.dependency["kind"] do
+      "gallery" -> []
+      "entry" -> Dependencies.options(item.dependency, user, search)
+      kind -> options_by_kind[kind]
+    end
+  end
+
+  defp referenced_option(nil, _ref, _user), do: []
+
+  defp referenced_option(id, ref, user) do
+    case Brando.Content.Transfer.Error.protect(fn -> Dependencies.load!(ref["kind"], id, user) end) do
+      {:ok, record} -> [%{id: record.id, label: Dependencies.label(record)}]
+      _ -> []
+    end
+  end
+
+  defp reset_publication(target, previous) do
+    if target["mode"] != (previous["mode"] || "create"),
+      do: Map.put(target, "publication", if(target["mode"] == "create", do: "draft", else: "preserve")),
+      else: target
+  end
+
+  defp content_target(_key, "", _params), do: nil
+
+  defp content_target(key, value, params) do
+    [id | schema] = value |> String.split(":") |> Enum.reverse()
+    schema_name = schema |> Enum.reverse() |> Enum.join(":")
+
+    options =
+      Enum.find(Catalog.schemas(), &(to_string(&1) == schema_name))
+      |> then(fn schema -> if schema, do: Catalog.fields(schema), else: [] end)
+
+    chosen = Enum.find(options, &(&1.name == get_in(params, ["fields", key]))) || List.first(options)
+
+    %{
+      "id" => id,
+      "schema" => schema_name,
+      "field" => chosen && chosen.name,
+      "mode" => get_in(params, ["modes", key])
+    }
   end
 
   defp reset_import(socket),
