@@ -831,34 +831,7 @@ defmodule Brando.Content.Transfer.Entries do
       end)
 
     Enum.each(receipt.before, fn {key, snapshot} ->
-      unless snapshot["created"] do
-        source = snapshot["entry"]
-
-        bundle = %{
-          "format" => "brando-content",
-          "version" => 2,
-          "id" => Ecto.UUID.generate(),
-          "created_at" => DateTime.to_iso8601(DateTime.utc_now()),
-          "source" => %{"scope" => Transfer.scope(), "label" => "Recovery"},
-          "entries" => [source],
-          "fields" => fields([source]),
-          "definitions" => nil,
-          "dependencies" => snapshot["dependencies"]
-        }
-
-        mappings =
-          Map.new(bundle["dependencies"], fn {token, dep} ->
-            {token, if(dep["kind"] == "gallery", do: "create", else: dep["source_id"])}
-          end)
-
-        targets = %{source["key"] => %{"mode" => "update", "id" => current[key].id, "publication" => "source"}}
-        plan = preview!(%{bundle: bundle, files: %{}}, targets, actor, dependencies: mappings)
-        unless Transfer.applicable?(plan), do: Error.fail!("Recovery needs attention: " <> Enum.join(plan.problems, " "))
-        Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
-        bindings = Transfer.persist_dependencies!(plan, %{items: %{}}, actor)
-        persist!(plan, bindings, actor)
-        Activity.import_undone(current[key], actor, :update)
-      end
+      unless snapshot["created"], do: restore_updated!(snapshot, current[key], actor)
     end)
 
     created = Enum.map(receipt.mappings["created_order"] || [], &current[&1])
@@ -877,6 +850,35 @@ defmodule Brando.Content.Transfer.Entries do
     # Delete identifiers after all owned selections. Their FK cascades must not
     # remove another created entry's selections before that entry is recovered.
     Enum.each(created, &Brando.Content.delete_identifier(&1.__struct__, &1))
+  end
+
+  defp restore_updated!(snapshot, entry, actor) do
+    source = snapshot["entry"]
+
+    bundle = %{
+      "format" => "brando-content",
+      "version" => 2,
+      "id" => Ecto.UUID.generate(),
+      "created_at" => DateTime.to_iso8601(DateTime.utc_now()),
+      "source" => %{"scope" => Transfer.scope(), "label" => "Recovery"},
+      "entries" => [source],
+      "fields" => fields([source]),
+      "definitions" => nil,
+      "dependencies" => snapshot["dependencies"]
+    }
+
+    mappings =
+      Map.new(bundle["dependencies"], fn {token, dep} ->
+        {token, if(dep["kind"] == "gallery", do: "create", else: dep["source_id"])}
+      end)
+
+    targets = %{source["key"] => %{"mode" => "update", "id" => entry.id, "publication" => "source"}}
+    plan = preview!(%{bundle: bundle, files: %{}}, targets, actor, dependencies: mappings)
+    unless Transfer.applicable?(plan), do: Error.fail!("Recovery needs attention: " <> Enum.join(plan.problems, " "))
+    Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
+    bindings = Transfer.persist_dependencies!(plan, %{items: %{}}, actor)
+    persist!(plan, bindings, actor)
+    Activity.import_undone(entry, actor, :update)
   end
 
   defp delete_owned!(entry) do
@@ -923,63 +925,73 @@ defmodule Brando.Content.Transfer.Entries do
 
     owned = created |> Enum.flat_map(&EntryCodec.records/1) |> Enum.filter(&(Map.get(&1, :id) != nil))
     allowed = Enum.group_by(owned, & &1.__struct__, & &1.id)
-
-    identifiers =
-      Enum.flat_map(created, fn entry ->
-        case Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id) do
-          nil -> []
-          identifier -> [identifier]
-        end
-      end)
-
-    schemas =
-      (Brando.Authorization.Catalog.schemas() ++ Enum.map(owned, & &1.__struct__))
-      |> then(fn schemas ->
-        schemas ++ Enum.flat_map(schemas, fn schema -> Enum.map(EntryCodec.owned(schema), &elem(&1, 1)) end)
-      end)
-      |> Enum.uniq()
-      |> Enum.filter(&(function_exported?(&1, :__schema__, 1) && is_binary(&1.__schema__(:source))))
+    identifiers = Enum.flat_map(created, &entry_identifier/1)
+    schemas = referencing_schemas(owned)
 
     Enum.each(created ++ identifiers, fn target ->
-      Enum.each(schemas, fn schema ->
-        Enum.each(schema.__schema__(:associations), fn name ->
-          case schema.__schema__(:association, name) do
-            %Ecto.Association.BelongsTo{related: related, owner_key: key} when related == target.__struct__ ->
-              ids = allowed[schema] || []
-              query = from(e in schema, where: field(e, ^key) == ^target.id, select: 1, limit: 1)
-              query = if :id in schema.__schema__(:fields), do: from(e in query, where: e.id not in ^ids), else: query
-              if has_column?.(schema, key) && Repo.one(query), do: used!()
-
-            _ ->
-              :ok
-          end
-        end)
-      end)
+      Enum.each(schemas, &ensure_unreferenced!(&1, target, allowed, has_column?))
     end)
 
-    Enum.each(identifiers, fn identifier ->
-      outside_blocks =
-        Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(identifier.id) --
-          (allowed[Brando.Content.Block] || [])
+    Enum.each(identifiers, &ensure_identifier_unused!(&1, allowed, has_column?))
+  end
 
-      if outside_blocks != [], do: used!()
+  defp entry_identifier(entry) do
+    case Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id) do
+      nil -> []
+      identifier -> [identifier]
+    end
+  end
 
-      for schema <- Catalog.entry_schemas(),
-          attribute <- Brando.Blueprint.Attributes.__attributes__(schema),
-          attribute.type in [:text, :string],
-          attribute.name in schema.__schema__(:fields),
-          has_column?.(schema, attribute.name) do
-        ids = allowed[schema] || []
+  defp referencing_schemas(owned) do
+    (Brando.Authorization.Catalog.schemas() ++ Enum.map(owned, & &1.__struct__))
+    |> then(fn schemas ->
+      schemas ++ Enum.flat_map(schemas, fn schema -> Enum.map(EntryCodec.owned(schema), &elem(&1, 1)) end)
+    end)
+    |> Enum.uniq()
+    |> Enum.filter(&(function_exported?(&1, :__schema__, 1) && is_binary(&1.__schema__(:source))))
+  end
 
-        query =
-          from(e in schema,
-            where: e.id not in ^ids and ilike(field(e, ^attribute.name), "%data-identifier-id%"),
-            select: field(e, ^attribute.name)
-          )
+  defp ensure_unreferenced!(schema, target, allowed, has_column?) do
+    Enum.each(schema.__schema__(:associations), fn name ->
+      case schema.__schema__(:association, name) do
+        %Ecto.Association.BelongsTo{related: related, owner_key: key} when related == target.__struct__ ->
+          ensure_not_referenced_by!(schema, key, target, allowed, has_column?)
 
-        if Enum.any?(Repo.all(query), &Brando.RichText.contains_identifier?(&1, identifier.id)), do: used!()
+        _ ->
+          :ok
       end
     end)
+  end
+
+  defp ensure_not_referenced_by!(schema, key, target, allowed, has_column?) do
+    ids = allowed[schema] || []
+    query = from(e in schema, where: field(e, ^key) == ^target.id, select: 1, limit: 1)
+    query = if :id in schema.__schema__(:fields), do: from(e in query, where: e.id not in ^ids), else: query
+    if has_column?.(schema, key) && Repo.one(query), do: used!()
+  end
+
+  defp ensure_identifier_unused!(identifier, allowed, has_column?) do
+    outside_blocks =
+      Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(identifier.id) --
+        (allowed[Brando.Content.Block] || [])
+
+    if outside_blocks != [], do: used!()
+
+    for schema <- Catalog.entry_schemas(),
+        attribute <- Brando.Blueprint.Attributes.__attributes__(schema),
+        attribute.type in [:text, :string],
+        attribute.name in schema.__schema__(:fields),
+        has_column?.(schema, attribute.name) do
+      ids = allowed[schema] || []
+
+      query =
+        from(e in schema,
+          where: e.id not in ^ids and ilike(field(e, ^attribute.name), "%data-identifier-id%"),
+          select: field(e, ^attribute.name)
+        )
+
+      if Enum.any?(Repo.all(query), &Brando.RichText.contains_identifier?(&1, identifier.id)), do: used!()
+    end
   end
 
   defp used!,
