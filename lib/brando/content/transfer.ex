@@ -762,89 +762,106 @@ defmodule Brando.Content.Transfer do
   `"failed"` so the import can be retried with `retry_refresh/2`.
   """
   def refresh_receipt(receipt, actor) do
-    media_results =
-      Enum.map(receipt.mappings["created_images"] || [], fn id ->
-        result =
-          try do
-            image = Dependencies.load!("image", id, actor)
-
-            if image.status == :processed || Brando.Images.Processing.processing_queued?(image) do
-              :ok
-            else
-              case Brando.Images.Processing.queue_processing(image, actor, [], silent: true) do
-                {:ok, _} -> :ok
-                _ -> :error
-              end
-            end
-          rescue
-            # A post-commit refresh records any failure as a step the user can retry,
-            # instead of crashing after the import has already been committed.
-            # credo:disable-for-next-line ExSlop.Check.Warning.BlanketRescue
-            _ -> :error
-          end
-
-        %{"kind" => "image", "id" => id, "status" => if(result == :ok, do: "queued", else: "failed")}
-      end)
+    media_results = Enum.map(receipt.mappings["created_images"] || [], &refresh_image(&1, actor))
 
     results =
       receipt.after
       |> Map.values()
       |> Enum.uniq_by(&{&1["schema"], &1["id"]})
-      |> Enum.map(fn field ->
-        result =
-          try do
-            schema = Brando.Content.Transfer.EntryCodec.schema!(field["schema"])
-            entry = Repo.get(schema, field["id"])
-
-            if receipt.restored_at && (is_nil(entry) || Map.get(entry, :deleted_at)) do
-              :ok
-            else
-              entry = Brando.Content.Transfer.EntryCodec.load!(field["schema"], field["id"], actor, :update)
-
-              rendered =
-                if Catalog.fields(schema) == [],
-                  do: {:ok, entry},
-                  else: Brando.Content.Blocks.render_entry(schema, entry.id)
-
-              with {:ok, entry} <- rendered,
-                   {:ok, identifier} <- Brando.Content.update_identifier(entry.__struct__, entry),
-                   {:ok, _} <-
-                     Brando.Content.Blocks.enqueue_entry_cascade(
-                       entry.__struct__,
-                       entry,
-                       if(is_map(identifier), do: identifier.id)
-                     ),
-                   # Transfer writes past the Blueprint's after-save: a
-                   # synchronized source queues its translations' sync here,
-                   # and a synchronized translation its own recompute
-                   _ <- Brando.Translations.source_saved(entry),
-                   do: :ok
-            end
-          rescue
-            # Rendering can raise from any template or block; see the media rescue above.
-            # credo:disable-for-next-line ExSlop.Check.Warning.BlanketRescue
-            _ -> {:error, :refresh_failed}
-          end
-
-        %{"schema" => field["schema"], "id" => field["id"], "status" => if(result == :ok, do: "complete", else: "failed")}
-      end)
+      |> Enum.map(&refresh_entry(&1, receipt, actor))
 
     receipt |> Changeset.change(refresh: results ++ media_results) |> Repo.update!()
+  end
+
+  defp refresh_image(id, actor) do
+    result =
+      try do
+        queue_image_refresh(id, actor)
+      rescue
+        # A post-commit refresh records any failure as a step the user can retry,
+        # instead of crashing after the import has already been committed.
+        # credo:disable-for-next-line ExSlop.Check.Warning.BlanketRescue
+        _ -> :error
+      end
+
+    %{"kind" => "image", "id" => id, "status" => if(result == :ok, do: "queued", else: "failed")}
+  end
+
+  defp queue_image_refresh(id, actor) do
+    image = Dependencies.load!("image", id, actor)
+
+    if image.status == :processed || Brando.Images.Processing.processing_queued?(image) do
+      :ok
+    else
+      case Brando.Images.Processing.queue_processing(image, actor, [], silent: true) do
+        {:ok, _} -> :ok
+        _ -> :error
+      end
+    end
+  end
+
+  defp refresh_entry(field, receipt, actor) do
+    result =
+      try do
+        rerender_entry(field, receipt, actor)
+      rescue
+        # Rendering can raise from any template or block; see the media rescue above.
+        # credo:disable-for-next-line ExSlop.Check.Warning.BlanketRescue
+        _ -> {:error, :refresh_failed}
+      end
+
+    %{"schema" => field["schema"], "id" => field["id"], "status" => if(result == :ok, do: "complete", else: "failed")}
+  end
+
+  defp rerender_entry(field, receipt, actor) do
+    schema = Brando.Content.Transfer.EntryCodec.schema!(field["schema"])
+    entry = Repo.get(schema, field["id"])
+
+    if receipt.restored_at && (is_nil(entry) || Map.get(entry, :deleted_at)) do
+      :ok
+    else
+      render_and_cascade(schema, field, actor)
+    end
+  end
+
+  defp render_and_cascade(schema, field, actor) do
+    entry = Brando.Content.Transfer.EntryCodec.load!(field["schema"], field["id"], actor, :update)
+
+    rendered =
+      if Catalog.fields(schema) == [],
+        do: {:ok, entry},
+        else: Brando.Content.Blocks.render_entry(schema, entry.id)
+
+    with {:ok, entry} <- rendered,
+         {:ok, identifier} <- Brando.Content.update_identifier(entry.__struct__, entry),
+         {:ok, _} <-
+           Brando.Content.Blocks.enqueue_entry_cascade(
+             entry.__struct__,
+             entry,
+             if(is_map(identifier), do: identifier.id)
+           ),
+         # Transfer writes past the Blueprint's after-save: a
+         # synchronized source queues its translations' sync here,
+         # and a synchronized translation its own recompute
+         _ <- Brando.Translations.source_saved(entry),
+         do: :ok
   end
 
   defp remembered_mappings(bundle, actor) do
     history(actor)
     |> Enum.reduce(%{}, fn receipt, acc ->
       if receipt.mappings["source"] == bundle["source"]["scope"] && !receipt.restored_at do
-        Enum.reduce(bundle["dependencies"], acc, fn {token, dep}, acc ->
-          if dep["kind"] != "gallery" && get_in(receipt.mappings, ["requirements", token]) == Value.digest(dep),
-            do: Map.put_new(acc, token, get_in(receipt.mappings, ["dependencies", token])),
-            else: acc
-        end)
+        Enum.reduce(bundle["dependencies"], acc, &remember_mapping(&1, &2, receipt))
       else
         acc
       end
     end)
+  end
+
+  defp remember_mapping({token, dep}, acc, receipt) do
+    if dep["kind"] != "gallery" && get_in(receipt.mappings, ["requirements", token]) == Value.digest(dep),
+      do: Map.put_new(acc, token, get_in(receipt.mappings, ["dependencies", token])),
+      else: acc
   end
 
   @doc """
