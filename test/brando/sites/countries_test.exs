@@ -9,7 +9,7 @@ defmodule Brando.Sites.CountriesTest do
     Gettext.put_locale("no")
     options = Countries.options(form("NO"), [])
     assert %{value: "NO", label: "Norge"} in options
-    assert List.last(options) == %{value: "AX", label: "Åland"}
+    assert [%{value: "AX", label: "Åland"} | _] = Enum.reverse(options)
 
     Gettext.put_locale("en")
     assert %{value: "NO", label: "Norway"} in Countries.options(form("NO"), [])

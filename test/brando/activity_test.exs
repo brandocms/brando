@@ -124,7 +124,7 @@ defmodule Brando.ActivityTest do
       {:ok, _} = Pages.update_page(page.id, %{title: "Second"}, user)
       {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, 0, user)
 
-      event = List.last(events(page))
+      assert [event | _] = Enum.reverse(events(page))
       assert event.action == :revision_restored
       assert event.revision == 0
       assert event.details == %{"replaced" => 1}
@@ -138,7 +138,7 @@ defmodule Brando.ActivityTest do
         {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, 0, user, publish?: true)
       end)
 
-      event = List.last(events(page))
+      assert [event | _] = Enum.reverse(events(page))
       assert event.action == :published
       assert event.source == :scheduler
       assert event.user_id == user.id
@@ -151,7 +151,7 @@ defmodule Brando.ActivityTest do
       page = create_page(user)
       Brando.Trait.Status.update_status(Page, page.id, "published", user)
 
-      event = List.last(events(page))
+      assert [event | _] = Enum.reverse(events(page))
       assert event.action == :published
       assert event.user_id == user.id
     end

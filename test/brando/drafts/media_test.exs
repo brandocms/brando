@@ -14,7 +14,7 @@ defmodule Brando.Drafts.MediaTest do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
     {:ok, page} = Brando.Blueprint.EntryQuery.get(Page, page.id)
-    images = [Factory.insert(:image), Factory.insert(:image)]
+    [_first_image, second_image] = images = [Factory.insert(:image), Factory.insert(:image)]
     video = Factory.insert(:video)
 
     file =
@@ -68,7 +68,7 @@ defmodule Brando.Drafts.MediaTest do
                   "config" => %{"caption" => "Gallery caption", "focal" => %{"x" => 25, "y" => 70}}
                 },
                 %{"video_id" => video.id, "sequence" => 1, "config" => %{"autoplay" => true}},
-                %{"image_id" => List.last(images).id, "sequence" => 2, "config" => %{}}
+                %{"image_id" => second_image.id, "sequence" => 2, "config" => %{}}
               ]
             })
         end)
@@ -128,10 +128,12 @@ defmodule Brando.Drafts.MediaTest do
     assert vars["download"].file_id == ctx.asset_file.id
     objects = ref(page, "collection").gallery.gallery_objects
 
+    [first_image, second_image] = ctx.images
+
     assert Enum.map(objects, &{&1.image_id, &1.video_id, &1.sequence}) == [
-             {hd(ctx.images).id, nil, 0},
+             {first_image.id, nil, 0},
              {nil, ctx.video.id, 1},
-             {List.last(ctx.images).id, nil, 2}
+             {second_image.id, nil, 2}
            ]
 
     assert hd(objects).config["caption"] == "Gallery caption"
