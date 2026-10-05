@@ -9,6 +9,8 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
   alias Brando.Utils
 
+  require Logger
+
   def hooks(_params, _, socket, schema) do
     if Phoenix.LiveView.connected?(socket) do
       subscribe(schema)
@@ -39,321 +41,366 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
   defp attach_hooks(socket, schema) do
     socket
-    |> attach_hook(:b_listing_events, :handle_event, fn
-      "set_status", %{"id" => id, "status" => status, "schema" => target_schema}, socket ->
-        target_schema = Brando.Authorization.Catalog.schema(target_schema)
-        Brando.Trait.Status.update_status(target_schema, id, status, socket.assigns.current_user)
-        update_list_entries(schema)
+    |> attach_hook(:b_listing_events, :handle_event, &handle_listing_event(&1, &2, &3, schema))
+    |> attach_listing_info_hooks(schema)
+  end
 
-        {:halt, socket}
+  defp handle_listing_event(
+         "set_status",
+         %{"id" => id, "status" => status, "schema" => target_schema},
+         socket,
+         schema
+       ) do
+    target_schema = Brando.Authorization.Catalog.schema(target_schema)
+    Brando.Trait.Status.update_status(target_schema, id, status, socket.assigns.current_user)
+    update_list_entries(schema)
 
-      "edit_entry", %{"id" => id}, socket ->
-        update_url = schema.__admin_route__(:update, [id])
-        {:halt, push_navigate(socket, to: update_url)}
+    {:halt, socket}
+  end
 
-      "undelete_entry", %{"id" => entry_id}, socket ->
-        singular = schema.__naming__().singular
-        domain = schema.__naming__().domain
-        context = schema.__modules__().context
-        msgid = Utils.humanize(singular, :downcase)
+  defp handle_listing_event("edit_entry", %{"id" => id}, socket, schema) do
+    update_url = schema.__admin_route__(:update, [id])
+    {:halt, push_navigate(socket, to: update_url)}
+  end
 
-        gettext_module = schema.__modules__(:gettext)
-        gettext_domain = String.downcase("#{domain}_#{singular}")
+  defp handle_listing_event("undelete_entry", %{"id" => entry_id}, socket, schema) do
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+    translated_singular = translated_singular(schema)
 
-        translated_singular = Gettext.dgettext(gettext_module, gettext_domain, msgid)
+    case apply(context, :"get_#{singular}", [entry_id]) do
+      {:ok, entry} ->
+        Brando.Authorization.Boundary.restore(socket.assigns.current_user, entry)
 
-        case apply(context, :"get_#{singular}", [entry_id]) do
-          {:ok, entry} ->
-            Brando.Authorization.Boundary.restore(socket.assigns.current_user, entry)
-
-            send(
-              self(),
-              {:toast, "#{String.capitalize(translated_singular)} #{gettext("undeleted")}"}
-            )
-
-            update_list_entries(schema)
-
-          {:error, _error} ->
-            send(
-              self(),
-              {:toast, "#{gettext("Error undeleting")} #{String.capitalize(translated_singular)}"}
-            )
-        end
-
-        {:halt, socket}
-
-      # The delete dialog's text, asked for by the ConfirmClick hook before it
-      # opens: the entry by name and what's deleted with it.
-      "describe_delete", %{"id" => entry_id}, socket ->
-        singular = schema.__naming__().singular
-        context = schema.__modules__().context
-
-        reply =
-          case apply(context, :"get_#{singular}", [%{matches: %{id: entry_id}}]) do
-            {:ok, entry} -> BrandoAdmin.LiveView.Listing.DeleteDescription.describe(schema, entry)
-            _ -> %{}
-          end
-
-        {:halt, reply, socket}
-
-      "delete_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
-        if {:before_delete, 3} in schema.__info__(:functions) do
-          schema.before_delete(entry_id, socket, self())
-        end
-
-        singular = schema.__naming__().singular
-        domain = schema.__naming__().domain
-        context = schema.__modules__().context
-        msgid = Utils.humanize(singular, :downcase)
-
-        gettext_module = schema.__modules__(:gettext)
-        gettext_domain = String.downcase("#{domain}_#{singular}")
-
-        translated_singular = Gettext.dgettext(gettext_module, gettext_domain, msgid)
-
-        case apply(context, :"delete_#{singular}", [entry_id, user]) do
-          {:ok, _} ->
-            send(
-              self(),
-              {:toast, "#{String.capitalize(translated_singular)} #{gettext("deleted")}"}
-            )
-
-            update_list_entries(schema)
-
-          {:error, _error} ->
-            send(
-              self(),
-              {:toast, "#{gettext("Error deleting")} #{String.capitalize(translated_singular)}"}
-            )
-        end
-
-        {:halt, socket}
-
-      "delete_selected", %{"ids" => ids}, %{assigns: %{current_user: user, schema: schema}} = socket ->
-        ids = Jason.decode!(ids)
-
-        singular = schema.__naming__().singular
-        context = schema.__modules__().context
-
-        for entry_id <- ids do
-          apply(context, :"delete_#{singular}", [entry_id, user])
-        end
+        send(
+          self(),
+          {:toast, "#{String.capitalize(translated_singular)} #{gettext("undeleted")}"}
+        )
 
         update_list_entries(schema)
 
-        {:halt, socket}
+      {:error, _error} ->
+        send(
+          self(),
+          {:toast, "#{gettext("Error undeleting")} #{String.capitalize(translated_singular)}"}
+        )
+    end
 
-      "duplicate_selected_to_language",
-      %{"ids" => ids, "language" => language},
-      %{assigns: %{current_user: user, schema: schema}} = socket ->
-        ids = Jason.decode!(ids)
+    {:halt, socket}
+  end
 
-        singular = schema.__naming__().singular
-        context = schema.__modules__().context
+  # The delete dialog's text, asked for by the ConfirmClick hook before it
+  # opens: the entry by name and what's deleted with it.
+  defp handle_listing_event("describe_delete", %{"id" => entry_id}, socket, schema) do
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
 
-        for entry_id <- ids do
-          override_opts = [
-            change_fields: [{:language, language}],
-            delete_fields: []
-          ]
+    reply =
+      case apply(context, :"get_#{singular}", [%{matches: %{id: entry_id}}]) do
+        {:ok, entry} -> BrandoAdmin.LiveView.Listing.DeleteDescription.describe(schema, entry)
+        _ -> %{}
+      end
 
-          apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts])
-        end
+    {:halt, reply, socket}
+  end
+
+  defp handle_listing_event(
+         "delete_entry",
+         %{"id" => entry_id},
+         %{assigns: %{current_user: user}} = socket,
+         schema
+       ) do
+    if {:before_delete, 3} in schema.__info__(:functions) do
+      schema.before_delete(entry_id, socket, self())
+    end
+
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+    translated_singular = translated_singular(schema)
+
+    case apply(context, :"delete_#{singular}", [entry_id, user]) do
+      {:ok, _} ->
+        send(
+          self(),
+          {:toast, "#{String.capitalize(translated_singular)} #{gettext("deleted")}"}
+        )
 
         update_list_entries(schema)
 
-        {:halt, socket}
+      {:error, _error} ->
+        send(
+          self(),
+          {:toast, "#{gettext("Error deleting")} #{String.capitalize(translated_singular)}"}
+        )
+    end
 
-      "duplicate_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
-        singular = schema.__naming__().singular
-        context = schema.__modules__().context
+    {:halt, socket}
+  end
 
-        case apply(context, :"duplicate_#{singular}", [entry_id, user]) do
-          {:ok, _} ->
-            send(self(), {:toast, "#{String.capitalize(singular)} duplicated"})
-            update_list_entries(schema)
+  defp handle_listing_event(
+         "delete_selected",
+         %{"ids" => ids},
+         %{assigns: %{current_user: user, schema: schema}} = socket,
+         _listing_schema
+       ) do
+    ids = Jason.decode!(ids)
 
-          {:error, changeset} ->
-            require Logger
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
 
-            Logger.error("""
-            (!) Error duplicating #{String.capitalize(singular)}
+    for entry_id <- ids do
+      apply(context, :"delete_#{singular}", [entry_id, user])
+    end
 
-            Errors:
-            #{inspect(changeset.errors, pretty: true)}
+    update_list_entries(schema)
 
-            Changes with errors:
-            #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
-            """)
+    {:halt, socket}
+  end
 
-            send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
+  defp handle_listing_event(
+         "duplicate_selected_to_language",
+         %{"ids" => ids, "language" => language},
+         %{assigns: %{current_user: user, schema: schema}} = socket,
+         _listing_schema
+       ) do
+    ids = Jason.decode!(ids)
+
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+
+    for entry_id <- ids do
+      override_opts = [
+        change_fields: [{:language, language}],
+        delete_fields: []
+      ]
+
+      apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts])
+    end
+
+    update_list_entries(schema)
+
+    {:halt, socket}
+  end
+
+  defp handle_listing_event(
+         "duplicate_entry",
+         %{"id" => entry_id},
+         %{assigns: %{current_user: user}} = socket,
+         schema
+       ) do
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+
+    case apply(context, :"duplicate_#{singular}", [entry_id, user]) do
+      {:ok, _} ->
+        send(self(), {:toast, "#{String.capitalize(singular)} duplicated"})
+        update_list_entries(schema)
+
+      {:error, changeset} ->
+        log_duplicate_error(singular, changeset)
+        send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_listing_event(
+         "duplicate_entry_to_language",
+         %{"id" => entry_id, "language" => language},
+         %{assigns: %{current_user: user, schema: schema}} = socket,
+         _listing_schema
+       ) do
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+
+    override_opts = [
+      change_fields: [{:language, String.to_existing_atom(language)}]
+    ]
+
+    case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+      {:ok, duped_entry} ->
+        send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
+
+        # the entry is translatable, but might not have alternates setup
+        if schema.has_alternates?() do
+          # link the entries together
+          _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
         end
 
-        {:halt, socket}
-
-      "duplicate_entry_to_language",
-      %{"id" => entry_id, "language" => language},
-      %{assigns: %{current_user: user, schema: schema}} = socket ->
-        singular = schema.__naming__().singular
-        context = schema.__modules__().context
-
-        override_opts = [
-          change_fields: [{:language, String.to_existing_atom(language)}]
-        ]
-
-        case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
-          {:ok, duped_entry} ->
-            send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
-
-            # the entry is translatable, but might not have alternates setup
-            if schema.has_alternates?() do
-              # link the entries together
-              _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
-            end
-
-            update_url = schema.__admin_route__(:update, [duped_entry.id])
-            send(self(), {:set_content_language_and_navigate, language, update_url})
-
-            {:halt, socket}
-
-          {:error, changeset} ->
-            require Logger
-
-            Logger.error("""
-            (!) Error duplicating #{String.capitalize(singular)}
-
-            Errors:
-            #{inspect(changeset.errors, pretty: true)}
-
-            Changes with errors:
-            #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
-            """)
-
-            send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
-            {:halt, socket}
-        end
-
-      "create_entry_translation",
-      %{"id" => source_id, "language" => language},
-      %{assigns: %{current_user: user, schema: schema}} = socket ->
-        with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
-             {:ok, target} <- Brando.Translations.create_target(schema, source_id, language, user) do
-          update_list_entries(schema)
-          update_url = schema.__admin_route__(:update, [target.id])
-          send(self(), {:set_content_language_and_navigate, language, update_url})
-        else
-          error ->
-            require Logger
-            Logger.error("(!) Error creating a translation: #{inspect(error)}")
-            send(self(), {:toast, gettext("Could not create the translation")})
-        end
+        update_url = schema.__admin_route__(:update, [duped_entry.id])
+        send(self(), {:set_content_language_and_navigate, language, update_url})
 
         {:halt, socket}
 
-      "translate_entry_to_language",
-      %{"id" => entry_id, "language" => language},
-      %{assigns: %{current_user: user, schema: schema}} = socket ->
-        singular = schema.__naming__().singular
-        context = schema.__modules__().context
-        list_id = "content_listing_#{schema}_default"
+      {:error, changeset} ->
+        log_duplicate_error(singular, changeset)
+        send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
+        {:halt, socket}
+    end
+  end
 
-        # Open the dialog immediately
+  defp handle_listing_event(
+         "create_entry_translation",
+         %{"id" => source_id, "language" => language},
+         %{assigns: %{current_user: user, schema: schema}} = socket,
+         _listing_schema
+       ) do
+    with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
+         {:ok, target} <- Brando.Translations.create_target(schema, source_id, language, user) do
+      update_list_entries(schema)
+      update_url = schema.__admin_route__(:update, [target.id])
+      send(self(), {:set_content_language_and_navigate, language, update_url})
+    else
+      error ->
+        Logger.error("(!) Error creating a translation: #{inspect(error)}")
+        send(self(), {:toast, gettext("Could not create the translation")})
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_listing_event(
+         "translate_entry_to_language",
+         %{"id" => entry_id, "language" => language},
+         %{assigns: %{current_user: user, schema: schema}} = socket,
+         _listing_schema
+       ) do
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+    list_id = "content_listing_#{schema}_default"
+
+    # Open the dialog immediately
+    send_update(BrandoAdmin.Components.Content.List,
+      id: list_id,
+      action: :translation_progress,
+      translation_dialog: %{step: :duplicating, entry_url: nil}
+    )
+
+    override_opts = [
+      change_fields: [{:language, String.to_existing_atom(language)} | translation_slug_changes(schema, language)]
+    ]
+
+    case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+      {:ok, duped_entry} ->
+        start_entry_translation(schema, entry_id, duped_entry, language, user)
+        {:halt, socket}
+
+      {:error, _changeset} ->
         send_update(BrandoAdmin.Components.Content.List,
           id: list_id,
           action: :translation_progress,
-          translation_dialog: %{step: :duplicating, entry_url: nil}
+          translation_dialog: %{step: {:error, "Duplication failed"}, entry_url: nil}
         )
 
-        # Duplicate entry — change language and suffix slug fields to avoid unique constraint
-        slug_change_fields =
-          schema.__slug_fields__()
-          |> Enum.map(fn slug_field ->
-            {slug_field.name,
-             fn _entry, current_value ->
-               Utils.slugify("#{current_value}-#{language}")
-             end}
-          end)
-
-        override_opts = [
-          change_fields: [{:language, String.to_existing_atom(language)} | slug_change_fields]
-        ]
-
-        case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
-          {:ok, duped_entry} ->
-            if schema.has_alternates?() do
-              _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
-            end
-
-            entry_url = schema.__admin_route__(:update, [duped_entry.id])
-
-            # Get source language from original entry
-            {:ok, original} = apply(context, :"get_#{singular}", [entry_id])
-            source_lang = to_string(original.language)
-
-            # Spawn translation Task
-            lv_pid = self()
-
-            Task.start(
-              Brando.Tenant.capture_context(fn ->
-                progress_fn = fn step ->
-                  send(lv_pid, {:translation_progress, schema, %{step: step, entry_url: entry_url}})
-                end
-
-                case Brando.AI.Translation.translate_entry(
-                       schema,
-                       duped_entry.id,
-                       source_lang,
-                       language,
-                       progress_fn
-                     ) do
-                  {:ok, _} ->
-                    send(
-                      lv_pid,
-                      {:translation_progress, schema, %{step: :complete, entry_url: entry_url, language: language}}
-                    )
-
-                    update_list_entries(schema)
-
-                  {:error, reason} ->
-                    # Roll back: delete the duplicated entry
-                    apply(context, :"delete_#{singular}", [duped_entry.id, user])
-                    update_list_entries(schema)
-
-                    send(
-                      lv_pid,
-                      {:translation_progress, schema, %{step: {:error, inspect(reason)}, entry_url: nil}}
-                    )
-                end
-              end)
-            )
-
-            {:halt, socket}
-
-          {:error, _changeset} ->
-            send_update(BrandoAdmin.Components.Content.List,
-              id: list_id,
-              action: :translation_progress,
-              translation_dialog: %{step: {:error, "Duplication failed"}, entry_url: nil}
-            )
-
-            {:halt, socket}
-        end
-
-      "rerender_entry", %{"id" => entry_id}, socket ->
-        case Brando.Content.Blocks.render_entry(schema, entry_id) do
-          {:ok, _entry} ->
-            send(self(), {:toast, gettext("Entry re-rendered")})
-
-          {:error, _} ->
-            send(self(), {:toast, gettext("Error re-rendering entry")})
-        end
-
         {:halt, socket}
+    end
+  end
 
-      _, _, socket ->
-        {:cont, socket}
+  defp handle_listing_event("rerender_entry", %{"id" => entry_id}, socket, schema) do
+    case Brando.Content.Blocks.render_entry(schema, entry_id) do
+      {:ok, _entry} ->
+        send(self(), {:toast, gettext("Entry re-rendered")})
+
+      {:error, _} ->
+        send(self(), {:toast, gettext("Error re-rendering entry")})
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_listing_event(_event, _params, socket, _schema), do: {:cont, socket}
+
+  defp translated_singular(schema) do
+    singular = schema.__naming__().singular
+    domain = schema.__naming__().domain
+    msgid = Utils.humanize(singular, :downcase)
+
+    gettext_module = schema.__modules__(:gettext)
+    gettext_domain = String.downcase("#{domain}_#{singular}")
+
+    Gettext.dgettext(gettext_module, gettext_domain, msgid)
+  end
+
+  defp log_duplicate_error(singular, changeset) do
+    Logger.error("""
+    (!) Error duplicating #{String.capitalize(singular)}
+
+    Errors:
+    #{inspect(changeset.errors, pretty: true)}
+
+    Changes with errors:
+    #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
+    """)
+  end
+
+  # Duplicate entry — change language and suffix slug fields to avoid unique constraint
+  defp translation_slug_changes(schema, language) do
+    Enum.map(schema.__slug_fields__(), fn slug_field ->
+      {slug_field.name,
+       fn _entry, current_value ->
+         Utils.slugify("#{current_value}-#{language}")
+       end}
     end)
-    |> attach_listing_info_hooks(schema)
+  end
+
+  defp start_entry_translation(schema, entry_id, duped_entry, language, user) do
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+
+    if schema.has_alternates?() do
+      _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+    end
+
+    entry_url = schema.__admin_route__(:update, [duped_entry.id])
+
+    # Get source language from original entry
+    {:ok, original} = apply(context, :"get_#{singular}", [entry_id])
+
+    translation = %{
+      lv_pid: self(),
+      schema: schema,
+      entry_id: duped_entry.id,
+      source_lang: to_string(original.language),
+      language: language,
+      entry_url: entry_url,
+      user: user
+    }
+
+    Task.start(Brando.Tenant.capture_context(fn -> run_entry_translation(translation) end))
+  end
+
+  defp run_entry_translation(%{lv_pid: lv_pid, schema: schema, entry_url: entry_url} = translation) do
+    progress_fn = fn step ->
+      send(lv_pid, {:translation_progress, schema, %{step: step, entry_url: entry_url}})
+    end
+
+    case Brando.AI.Translation.translate_entry(
+           schema,
+           translation.entry_id,
+           translation.source_lang,
+           translation.language,
+           progress_fn
+         ) do
+      {:ok, _} ->
+        send(
+          lv_pid,
+          {:translation_progress, schema, %{step: :complete, entry_url: entry_url, language: translation.language}}
+        )
+
+        update_list_entries(schema)
+
+      {:error, reason} ->
+        # Roll back: delete the duplicated entry
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
+        apply(context, :"delete_#{singular}", [translation.entry_id, translation.user])
+        update_list_entries(schema)
+
+        send(
+          lv_pid,
+          {:translation_progress, schema, %{step: {:error, inspect(reason)}, entry_url: nil}}
+        )
+    end
   end
 
   defp attach_listing_info_hooks(socket, nil) do
