@@ -568,14 +568,18 @@ defmodule Brando.Query.Runtime do
         if stream do
           Repo.stream(query)
         else
-          entries = Repo.all(query)
-
-          if pagination_meta do
-            {:ok, %{entries: entries, pagination_meta: pagination_meta}}
-          else
-            {:ok, entries}
-          end
+          list_entries(query, pagination_meta)
         end
+    end
+  end
+
+  defp list_entries(query, pagination_meta) do
+    entries = Repo.all(query)
+
+    if pagination_meta do
+      {:ok, %{entries: entries, pagination_meta: pagination_meta}}
+    else
+      {:ok, entries}
     end
   end
 
@@ -598,74 +602,55 @@ defmodule Brando.Query.Runtime do
 
     case try_cache(query_key, cache_args) do
       {:miss, cache_key, ttl} ->
-        args_without_cache = Map.delete(args, :cache)
-        includes = Map.get(args_without_cache, :include)
-
-        reduced_query =
-          run_single_query_reducer(
-            context,
-            Map.delete(args_without_cache, :include),
-            module
-          )
-
-        case reduced_query do
-          {:ok, entry} ->
-            Brando.Cache.Query.put(cache_key, entry, ttl, entry.id)
-            {:ok, entry}
-
-          {:error, {:revision, :not_found}} ->
-            {:error, {schema_atom, :not_found}}
-
-          query ->
-            query
-            |> block.()
-            |> with_include(includes)
-            |> limit(1)
-            |> Repo.one()
-            |> case do
-              nil ->
-                {:error, {schema_atom, :not_found}}
-
-              result ->
-                Brando.Cache.Query.put(cache_key, result, ttl, result.id)
-                {:ok, result}
-            end
-        end
+        context
+        |> fetch_single(args, module, block, schema_atom)
+        |> cache_single(cache_key, ttl)
 
       {:hit, result} ->
         {:ok, result}
 
       :no_cache ->
-        args_without_cache = Map.delete(args, :cache)
-        includes = Map.get(args_without_cache, :include)
+        fetch_single(context, args, module, block, schema_atom)
+    end
+  end
 
-        reduced_query =
-          run_single_query_reducer(
-            context,
-            Map.delete(args_without_cache, :include),
-            module
-          )
+  defp fetch_single(context, args, module, block, schema_atom) do
+    args_without_cache = Map.delete(args, :cache)
+    includes = Map.get(args_without_cache, :include)
 
-        case reduced_query do
-          {:ok, entry} ->
-            {:ok, entry}
+    reduced_query =
+      run_single_query_reducer(
+        context,
+        Map.delete(args_without_cache, :include),
+        module
+      )
 
-          {:error, {:revision, :not_found}} ->
-            {:error, {schema_atom, :not_found}}
+    case reduced_query do
+      {:ok, entry} ->
+        {:ok, entry}
 
-          query ->
-            query
-            |> block.()
-            |> with_include(includes)
-            |> limit(1)
-            |> Repo.one()
-            |> case do
-              nil -> {:error, {schema_atom, :not_found}}
-              result -> {:ok, result}
-            end
+      {:error, {:revision, :not_found}} ->
+        {:error, {schema_atom, :not_found}}
+
+      query ->
+        query
+        |> block.()
+        |> with_include(includes)
+        |> limit(1)
+        |> Repo.one()
+        |> case do
+          nil -> {:error, {schema_atom, :not_found}}
+          result -> {:ok, result}
         end
     end
   end
+
+  defp cache_single({:ok, entry} = result, cache_key, ttl) do
+    Brando.Cache.Query.put(cache_key, entry, ttl, entry.id)
+    result
+  end
+
+  defp cache_single(result, _cache_key, _ttl), do: result
 
   def sanitize_ilike_pattern(text) when is_binary(text) do
     text
