@@ -8,17 +8,17 @@ defmodule Brando.Authorization.Media do
   end
 
   def with_intent(target, user, fun) do
-    if Engine.enabled?() do
-      with {:ok, %Scope{user_id: id} = scope} <-
-             Phoenix.Token.verify(Brando.endpoint(), @salt, target["scope_token"], max_age: 86_400),
-           true <- is_map(user) and id == Map.get(user, :id),
-           :ok <- Engine.authorize(scope, :access, :backend) do
-        Boundary.with_scope(scope, fn -> Brando.Tenant.with_prefix(scope.prefix, fun) end)
-      else
-        _ -> {:error, "Your upload access has changed. Reload the page and try again."}
-      end
+    if Engine.enabled?(), do: with_verified_scope(target, user, fun), else: fun.()
+  end
+
+  defp with_verified_scope(target, user, fun) do
+    with {:ok, %Scope{user_id: id} = scope} <-
+           Phoenix.Token.verify(Brando.endpoint(), @salt, target["scope_token"], max_age: 86_400),
+         true <- is_map(user) and id == Map.get(user, :id),
+         :ok <- Engine.authorize(scope, :access, :backend) do
+      Boundary.with_scope(scope, fn -> Brando.Tenant.with_prefix(scope.prefix, fun) end)
     else
-      fun.()
+      _ -> {:error, "Your upload access has changed. Reload the page and try again."}
     end
   end
 
