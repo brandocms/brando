@@ -146,31 +146,27 @@ defmodule Brando.Authorization.Catalog do
 
   def preset_permissions(preset, kind) do
     all()
-    |> Enum.filter(&(kind in &1.scopes))
-    |> Enum.filter(fn permission ->
-      case preset do
-        :admin ->
-          permission.delegable
-
-        :editor ->
-          permission.section in ["Content", "Media"] or permission.subject in [:backend, :profile] or
-            (permission.action == :read and
-               permission.subject in [
-                 Brando.Content.Module,
-                 Brando.Content.Container,
-                 Brando.Content.Palette,
-                 Brando.Content.ModuleSet,
-                 Brando.Content.TableTemplate,
-                 Brando.Content.Template,
-                 Brando.Sites.GlobalSet
-               ])
-
-        _ ->
-          false
-      end
-    end)
+    |> Enum.filter(&(kind in &1.scopes and in_preset?(preset, &1)))
     |> Enum.map(& &1.key)
   end
+
+  defp in_preset?(:admin, permission), do: permission.delegable
+
+  defp in_preset?(:editor, permission) do
+    permission.section in ["Content", "Media"] or permission.subject in [:backend, :profile] or
+      (permission.action == :read and
+         permission.subject in [
+           Brando.Content.Module,
+           Brando.Content.Container,
+           Brando.Content.Palette,
+           Brando.Content.ModuleSet,
+           Brando.Content.TableTemplate,
+           Brando.Content.Template,
+           Brando.Sites.GlobalSet
+         ])
+  end
+
+  defp in_preset?(_preset, _permission), do: false
 
   defp operations do
     Enum.flat_map(@operation_resources, fn {subject, key, label, section, actions, scopes} ->
