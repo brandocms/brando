@@ -124,24 +124,21 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
         {_text, remaining} = :erlang.split_binary(code, offset)
 
         with {:ok, name, token, rest} <- take_token(remaining) do
-          length = length + offset + byte_size(token)
-
-          case name do
-            "endcomment" ->
-              {:ok, length}
-
-            name when name in ["raw", "comment"] ->
-              with {:ok, size} <- opaque_length(rest, name) do
-                {_body, tail} = :erlang.split_binary(rest, size)
-                comment_length(tail, length + size)
-              end
-
-            _ ->
-              comment_length(rest, length)
-          end
+          continue_comment(name, rest, length + offset + byte_size(token))
         end
     end
   end
+
+  defp continue_comment("endcomment", _rest, length), do: {:ok, length}
+
+  defp continue_comment(name, rest, length) when name in ["raw", "comment"] do
+    with {:ok, size} <- opaque_length(rest, name) do
+      {_body, tail} = :erlang.split_binary(rest, size)
+      comment_length(tail, length + size)
+    end
+  end
+
+  defp continue_comment(_name, rest, length), do: comment_length(rest, length)
 
   defp close_region(_name, opening, rest, [opening | stack], acc), do: scan(rest, stack, acc)
   defp close_region(name, _opening, _rest, [], _acc), do: {:error, {:unexpected_end, name}}
