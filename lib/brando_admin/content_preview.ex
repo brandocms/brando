@@ -96,24 +96,7 @@ defmodule BrandoAdmin.ContentPreview do
 
     [line(media_label("gallery", label), location, :media)] ++
       Enum.flat_map(objects, fn object ->
-        # Saved objects hold media ids and bundle objects hold media tokens;
-        # overrides carry the same kind of value in `object_id`.
-        override =
-          cond do
-            id = object["image_id"] -> GalleryObjectOverride.lookup(index, :image, id)
-            id = object["video_id"] -> GalleryObjectOverride.lookup(index, :video, id)
-            true -> nil
-          end || %{}
-
-        defaults = Map.reject(object["config"] || %{}, fn {_, value} -> value in [nil, ""] end)
-
-        config =
-          Enum.reduce(override, defaults, fn {field, value}, acc ->
-            if field in ~w(title alt caption credits) && override["use_default_" <> field] != true && !is_nil(value),
-              do: Map.put(acc, field, value),
-              else: acc
-          end)
-
+        config = gallery_object_config(object, gallery_object_override(index, object))
         media_lines(object, config, nil, assets, location)
       end)
   end
@@ -126,6 +109,26 @@ defmodule BrandoAdmin.ContentPreview do
 
     [line(media_label(kind, label) <> ": " <> filename, key, :media)] ++
       metadata_lines(metadata, key) ++ thumbnail_lines(kind, media, assets, key)
+  end
+
+  # Saved objects hold media ids and bundle objects hold media tokens;
+  # overrides carry the same kind of value in `object_id`.
+  defp gallery_object_override(index, object) do
+    cond do
+      id = object["image_id"] -> GalleryObjectOverride.lookup(index, :image, id)
+      id = object["video_id"] -> GalleryObjectOverride.lookup(index, :video, id)
+      true -> nil
+    end || %{}
+  end
+
+  defp gallery_object_config(object, override) do
+    defaults = Map.reject(object["config"] || %{}, fn {_, value} -> value in [nil, ""] end)
+
+    Enum.reduce(override, defaults, fn {field, value}, acc ->
+      if field in ~w(title alt caption credits) && override["use_default_" <> field] != true && !is_nil(value),
+        do: Map.put(acc, field, value),
+        else: acc
+    end)
   end
 
   defp thumbnail_lines("video", media, assets, key) do
