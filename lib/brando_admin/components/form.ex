@@ -5811,19 +5811,21 @@ defmodule BrandoAdmin.Components.Form do
         fetch_fallback_ai_opts(schema, field_atom, :missing_field)
 
       %{opts: opts} ->
-        opts = opts || []
+        field_ai_opts(opts || [], schema, field_atom)
+    end
+  end
 
-        if Keyword.has_key?(opts, :ai) do
-          ai_opts = Brando.AI.normalize_ai_opts(Keyword.get(opts, :ai))
+  defp field_ai_opts(opts, schema, field_atom) do
+    if Keyword.has_key?(opts, :ai) do
+      ai_opts = Brando.AI.normalize_ai_opts(Keyword.get(opts, :ai))
 
-          if ai_opts == [] do
-            {:error, :missing_ai_config}
-          else
-            {:ok, ai_opts}
-          end
-        else
-          fetch_fallback_ai_opts(schema, field_atom, :missing_ai_config)
-        end
+      if ai_opts == [] do
+        {:error, :missing_ai_config}
+      else
+        {:ok, ai_opts}
+      end
+    else
+      fetch_fallback_ai_opts(schema, field_atom, :missing_ai_config)
     end
   end
 
@@ -6259,34 +6261,8 @@ defmodule BrandoAdmin.Components.Form do
                size: size,
                type: mime_type
              }) do
-          {:ok, %{upload_url: url, video: video} = result} ->
-            # Subscribe to video updates
-            Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
-
-            # Update edit_video with the created video
-            edit_video = Map.put(edit_video, :video, video)
-            video_changeset = change(video)
-
-            # Build event payload - include tus_auth for Bunny uploads
-            event_payload = %{
-              upload_url: url,
-              video_id: video.id,
-              filename: filename,
-              request_ref: request_ref
-            }
-
-            event_payload =
-              case Map.get(result, :tus_auth) do
-                nil -> event_payload
-                tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
-              end
-
-            # Push event to JavaScript hook with upload URL
-            {:ok,
-             socket
-             |> assign(:edit_video, edit_video)
-             |> assign(:video_changeset, video_changeset)
-             |> push_event("video_upload_url_ready", event_payload)}
+          {:ok, %{upload_url: _url, video: _video} = result} ->
+            provider_video_upload_ready(socket, edit_video, result, filename, request_ref)
 
           {:error, reason} ->
             Logger.error("Failed to get video upload URL: #{inspect(reason)}")
@@ -6313,6 +6289,36 @@ defmodule BrandoAdmin.Components.Form do
            request_ref: request_ref
          })}
     end
+  end
+
+  defp provider_video_upload_ready(socket, edit_video, %{upload_url: url, video: video} = result, filename, request_ref) do
+    # Subscribe to video updates
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
+
+    # Update edit_video with the created video
+    edit_video = Map.put(edit_video, :video, video)
+    video_changeset = change(video)
+
+    # Build event payload - include tus_auth for Bunny uploads
+    event_payload = %{
+      upload_url: url,
+      video_id: video.id,
+      filename: filename,
+      request_ref: request_ref
+    }
+
+    event_payload =
+      case Map.get(result, :tus_auth) do
+        nil -> event_payload
+        tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
+      end
+
+    # Push event to JavaScript hook with upload URL
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:video_changeset, video_changeset)
+     |> push_event("video_upload_url_ready", event_payload)}
   end
 
   defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key),
