@@ -35,21 +35,23 @@ defmodule Brando.Authorization.Migration do
     if Keyword.get(opts, :dry_run, false) do
       {:ok, report()}
     else
-      Repo.transaction(fn ->
-        Groups.lock!()
-        installation = Scope.installation(nil)
-        superuser = ensure_preset(installation, :superuser)
-        users = Repo.all(Brando.Users.User)
-
-        Enum.each(users, fn user ->
-          if user.role == :superuser,
-            do: import_once("users", user.id, fn -> insert_membership(user.id, superuser.id) end)
-        end)
-
-        migrate_scopes(users)
-        report()
-      end)
+      Repo.transaction(&backfill/0)
     end
+  end
+
+  defp backfill do
+    Groups.lock!()
+    installation = Scope.installation(nil)
+    superuser = ensure_preset(installation, :superuser)
+    users = Repo.all(Brando.Users.User)
+    Enum.each(users, &import_superuser(&1, superuser))
+    migrate_scopes(users)
+    report()
+  end
+
+  defp import_superuser(user, superuser) do
+    if user.role == :superuser,
+      do: import_once("users", user.id, fn -> insert_membership(user.id, superuser.id) end)
   end
 
   @doc "Seeds an explicitly selected scope. Intended for provisioning and operator setup."
@@ -97,18 +99,22 @@ defmodule Brando.Authorization.Migration do
         migrate_users(users, Scope.site(nil, site))
 
       :multi ->
-        Enum.each(Repo.all(Brando.Sites.Site), fn site ->
-          scope = Scope.site(nil, site)
-          presets = Map.new([:user, :editor, :admin], &{&1, ensure_preset(scope, &1)})
-
-          Repo.all(from(a in Brando.Users.UserSite, where: a.site_id == ^site.id))
-          |> Enum.each(fn assignment ->
-            import_once("user_sites", assignment.id, fn ->
-              insert_membership(assignment.user_id, presets[assignment.role].id)
-            end)
-          end)
-        end)
+        Enum.each(Repo.all(Brando.Sites.Site), &migrate_site/1)
     end
+  end
+
+  defp migrate_site(site) do
+    scope = Scope.site(nil, site)
+    presets = Map.new([:user, :editor, :admin], &{&1, ensure_preset(scope, &1)})
+
+    Repo.all(from(a in Brando.Users.UserSite, where: a.site_id == ^site.id))
+    |> Enum.each(&import_site_assignment(&1, presets))
+  end
+
+  defp import_site_assignment(assignment, presets) do
+    import_once("user_sites", assignment.id, fn ->
+      insert_membership(assignment.user_id, presets[assignment.role].id)
+    end)
   end
 
   defp migrate_users(users, scope) do
