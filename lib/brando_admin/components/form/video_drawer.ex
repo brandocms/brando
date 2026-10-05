@@ -47,50 +47,17 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   @aspect_ratios [{16, 9}, {4, 3}, {1, 1}, {4, 5}, {9, 16}, {21, 9}]
 
   def render(assigns) do
-    cfg =
-      if assigns.edit_video[:schema] && assigns.edit_video[:field] do
-        schema = assigns.edit_video.schema
-        field = assigns.edit_video.field
-        %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field)
-        cfg
-      else
-        Brando.Type.VideoConfig.default_config()
-      end
+    cfg = field_config(assigns.edit_video)
 
     # A field's config already carries the inherited strategy; the default
     # config doesn't, so it gets the site's default here.
     upload_strategy = Map.get(cfg, :upload_strategy) || Brando.default_video_upload_strategy()
     allow_uploads? = Map.get(cfg, :allow_uploads, true)
-
-    video_cfg =
-      if is_struct(cfg, Brando.Type.VideoConfig),
-        do: %{cfg | upload_strategy: upload_strategy},
-        else: struct(Brando.Type.VideoConfig, Map.put(cfg, :upload_strategy, upload_strategy))
-
-    video_upload_available? = Brando.Uploads.video_upload_available?(video_cfg)
-
-    # Mux, Bunny, Cloudflare and Vimeo upload straight to the provider through their
-    # own hook on a file input; local and S3 go through UploadTrigger.
-    video_uploader_hook =
-      case {video_upload_available? && allow_uploads?, upload_strategy} do
-        {true, :mux} -> "Brando.MuxUploader"
-        {true, :bunny} -> "Brando.BunnyUploader"
-        {true, :cloudflare} -> "Brando.CloudflareUploader"
-        {true, :vimeo} -> "Brando.VimeoUploader"
-        _ -> nil
-      end
-
+    video_upload_available? = Brando.Uploads.video_upload_available?(video_config(cfg, upload_strategy))
+    video_uploader_hook = uploader_hook(video_upload_available? && allow_uploads?, upload_strategy)
     upload_trigger? = video_upload_available? && allow_uploads? && is_nil(video_uploader_hook)
-
-    upload_input =
-      cond do
-        video_uploader_hook -> "#video-uploader-#{assigns.edit_video.field}"
-        upload_trigger? -> "#video-drawer-upload-input"
-        true -> nil
-      end
-
-    video = assigns.edit_video[:video]
-    video = if video && video.id, do: video
+    upload_input = upload_input(video_uploader_hook, upload_trigger?, assigns.edit_video)
+    video = persisted_video(assigns.edit_video[:video])
     url_allowed? = Map.get(cfg, :allow_external_urls, true)
     dimensions = stored_dimensions(video) || assigns.edit_video[:preview_dimensions]
 
@@ -364,6 +331,43 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
     </Content.drawer>
     """
   end
+
+  defp field_config(edit_video) do
+    if edit_video[:schema] && edit_video[:field] do
+      %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(edit_video.schema, edit_video.field)
+      cfg
+    else
+      Brando.Type.VideoConfig.default_config()
+    end
+  end
+
+  defp video_config(cfg, upload_strategy) do
+    if is_struct(cfg, Brando.Type.VideoConfig),
+      do: %{cfg | upload_strategy: upload_strategy},
+      else: struct(Brando.Type.VideoConfig, Map.put(cfg, :upload_strategy, upload_strategy))
+  end
+
+  # Mux, Bunny, Cloudflare and Vimeo upload straight to the provider through their
+  # own hook on a file input; local and S3 go through UploadTrigger.
+  defp uploader_hook(uploads?, upload_strategy) do
+    case {uploads?, upload_strategy} do
+      {true, :mux} -> "Brando.MuxUploader"
+      {true, :bunny} -> "Brando.BunnyUploader"
+      {true, :cloudflare} -> "Brando.CloudflareUploader"
+      {true, :vimeo} -> "Brando.VimeoUploader"
+      _ -> nil
+    end
+  end
+
+  defp upload_input(video_uploader_hook, upload_trigger?, edit_video) do
+    cond do
+      video_uploader_hook -> "#video-uploader-#{edit_video.field}"
+      upload_trigger? -> "#video-drawer-upload-input"
+      true -> nil
+    end
+  end
+
+  defp persisted_video(video), do: if(video && video.id, do: video)
 
   attr :label, :string, required: true
   # "Original", under the video's own ratio when that's known
