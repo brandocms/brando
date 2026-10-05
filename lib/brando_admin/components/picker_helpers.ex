@@ -18,10 +18,24 @@ defmodule BrandoAdmin.Components.PickerHelpers do
     * `on_folder_change(socket)` — called after `set_current_folder` for picker-specific post-actions
   """
 
+  import Phoenix.Component, only: [assign: 3]
+
   alias BrandoAdmin.Images.FolderBrowser
 
   defmacro __using__(_opts) do
     quote do
+      import BrandoAdmin.Components.PickerHelpers,
+        only: [
+          folder_under_root?: 2,
+          organize_select_toggle: 2,
+          organize_select_range: 2,
+          normalize_item_id: 1,
+          same_item_id?: 2,
+          parse_item_id: 1,
+          parse_selected_ids: 1,
+          truthy?: 1
+        ]
+
       # -- Folder navigation event handlers --
 
       def handle_event("go_root", _, socket) do
@@ -122,157 +136,6 @@ defmodule BrandoAdmin.Components.PickerHelpers do
         |> assign_folder_state(socket.assigns.current_folder)
       end
 
-      defp folder_label_for_display(folder, upload_root) do
-        case FolderBrowser.relative_folder(folder, upload_root) do
-          relative when relative in [nil, ""] -> root_label(upload_root)
-          relative -> relative
-        end
-      end
-
-      defp root_label(upload_root) do
-        case FolderBrowser.normalize_folder(upload_root) do
-          nil -> "Root"
-          root -> root
-        end
-      end
-
-      # One clause rather than a `nil` head: FilePicker's upload root is always a
-      # binary, so a separate nil clause is dead code there and the compiler says
-      # so. Image and video pickers can still pass nil, hence the branch.
-      defp folder_under_root?(folder, root) do
-        if is_nil(root) do
-          not is_nil(FolderBrowser.normalize_folder(folder))
-        else
-          normalized_folder = FolderBrowser.normalize_folder(folder)
-          normalized_root = FolderBrowser.normalize_folder(root)
-
-          normalized_folder == normalized_root ||
-            String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
-        end
-      end
-
-      # -- Organize selection helpers --
-
-      defp organize_select_toggle(socket, id) do
-        selected = socket.assigns.organize_selected
-
-        updated =
-          if id in selected,
-            do: List.delete(selected, id),
-            else: Enum.uniq([id | selected])
-
-        last_id = if updated == [], do: nil, else: id
-
-        socket
-        |> assign(:organize_selected, updated)
-        |> assign(:last_organize_selected_id, last_id)
-      end
-
-      defp organize_select_range(socket, id) do
-        selected = socket.assigns.organize_selected
-        anchor = socket.assigns.last_organize_selected_id
-        visible_ids = socket.assigns.visible_item_ids
-        range_ids = ids_between(visible_ids, anchor, id)
-
-        updated =
-          if range_ids == [],
-            do: Enum.uniq([id | selected]),
-            else: Enum.uniq(selected ++ range_ids)
-
-        socket
-        |> assign(:organize_selected, updated)
-        |> assign(:last_organize_selected_id, id)
-      end
-
-      defp ids_between(_ids, nil, _to), do: []
-
-      defp ids_between(ids, from, to) do
-        from_idx = Enum.find_index(ids, &(&1 == from))
-        to_idx = Enum.find_index(ids, &(&1 == to))
-
-        if is_integer(from_idx) and is_integer(to_idx) do
-          start_idx = min(from_idx, to_idx)
-          end_idx = max(from_idx, to_idx)
-          Enum.slice(ids, start_idx..end_idx)
-        else
-          []
-        end
-      end
-
-      # -- ID/parse helpers --
-
-      defp normalize_item_id(id) when is_integer(id), do: id
-
-      defp normalize_item_id(id) when is_binary(id) do
-        case Integer.parse(id) do
-          {parsed, ""} -> parsed
-          _ -> id
-        end
-      end
-
-      defp normalize_item_id(%{id: id}), do: normalize_item_id(id)
-      defp normalize_item_id(%{"id" => id}), do: normalize_item_id(id)
-      defp normalize_item_id(id), do: id
-
-      defp same_item_id?(left, right), do: normalize_item_id(left) == normalize_item_id(right)
-
-      defp parse_item_id(id) when is_integer(id), do: {:ok, id}
-
-      defp parse_item_id(id) when is_binary(id) do
-        case Integer.parse(id) do
-          {parsed, ""} -> {:ok, parsed}
-          _ -> :error
-        end
-      end
-
-      defp parse_item_id(_), do: :error
-
-      defp parse_selected_ids(ids) when is_list(ids) do
-        ids
-        |> Enum.map(&parse_int/1)
-        |> Enum.reject(&is_nil/1)
-        |> Enum.uniq()
-      end
-
-      defp parse_selected_ids(ids) when is_binary(ids) do
-        case Jason.decode(ids) do
-          {:ok, parsed} -> parse_selected_ids(parsed)
-          _ -> []
-        end
-      end
-
-      defp parse_selected_ids(_), do: []
-
-      defp parse_int(value) when is_integer(value), do: value
-
-      defp parse_int(value) when is_binary(value) do
-        case Integer.parse(value) do
-          {id, ""} -> id
-          _ -> nil
-        end
-      end
-
-      defp parse_int(_), do: nil
-
-      defp truthy?(value) when value in [true, "true", "1", 1], do: true
-      defp truthy?(_value), do: false
-
-      defp normalize_upload_name(nil), do: nil
-      defp normalize_upload_name(name) when is_atom(name), do: Atom.to_string(name)
-      defp normalize_upload_name(name) when is_binary(name), do: name
-      defp normalize_upload_name(_), do: nil
-
-      defp parse_nonnegative_int(value, _default) when is_integer(value), do: max(value, 0)
-
-      defp parse_nonnegative_int(value, default) when is_binary(value) do
-        case Integer.parse(value) do
-          {parsed, ""} -> max(parsed, 0)
-          _ -> default
-        end
-      end
-
-      defp parse_nonnegative_int(_, default), do: default
-
       # Default callback stubs — each picker MUST override these
       defp assign_folder_state(socket, _requested_folder), do: socket
       defp push_selection_state(socket), do: socket
@@ -283,4 +146,122 @@ defmodule BrandoAdmin.Components.PickerHelpers do
                      on_folder_change: 1
     end
   end
+
+  # Helpers that need no picker callbacks, imported into each picker.
+
+  def folder_under_root?(folder, nil), do: not is_nil(FolderBrowser.normalize_folder(folder))
+
+  def folder_under_root?(folder, root) do
+    normalized_folder = FolderBrowser.normalize_folder(folder)
+    normalized_root = FolderBrowser.normalize_folder(root)
+
+    normalized_folder == normalized_root ||
+      String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
+  end
+
+  # -- Organize selection helpers --
+
+  def organize_select_toggle(socket, id) do
+    selected = socket.assigns.organize_selected
+
+    updated =
+      if id in selected,
+        do: List.delete(selected, id),
+        else: Enum.uniq([id | selected])
+
+    last_id = if updated == [], do: nil, else: id
+
+    socket
+    |> assign(:organize_selected, updated)
+    |> assign(:last_organize_selected_id, last_id)
+  end
+
+  def organize_select_range(socket, id) do
+    selected = socket.assigns.organize_selected
+    anchor = socket.assigns.last_organize_selected_id
+    visible_ids = socket.assigns.visible_item_ids
+    range_ids = ids_between(visible_ids, anchor, id)
+
+    updated =
+      if range_ids == [],
+        do: Enum.uniq([id | selected]),
+        else: Enum.uniq(selected ++ range_ids)
+
+    socket
+    |> assign(:organize_selected, updated)
+    |> assign(:last_organize_selected_id, id)
+  end
+
+  defp ids_between(_ids, nil, _to), do: []
+
+  defp ids_between(ids, from, to) do
+    from_idx = Enum.find_index(ids, &(&1 == from))
+    to_idx = Enum.find_index(ids, &(&1 == to))
+
+    if is_integer(from_idx) and is_integer(to_idx) do
+      start_idx = min(from_idx, to_idx)
+      end_idx = max(from_idx, to_idx)
+      Enum.slice(ids, start_idx..end_idx)
+    else
+      []
+    end
+  end
+
+  # -- ID/parse helpers --
+
+  def normalize_item_id(id) when is_integer(id), do: id
+
+  def normalize_item_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} -> parsed
+      _ -> id
+    end
+  end
+
+  def normalize_item_id(%{id: id}), do: normalize_item_id(id)
+  def normalize_item_id(%{"id" => id}), do: normalize_item_id(id)
+  def normalize_item_id(id), do: id
+
+  def same_item_id?(left, right), do: normalize_item_id(left) == normalize_item_id(right)
+
+  def parse_item_id(id) when is_integer(id), do: {:ok, id}
+
+  def parse_item_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} -> {:ok, parsed}
+      _ -> :error
+    end
+  end
+
+  def parse_item_id(_), do: :error
+
+  def parse_selected_ids(ids) when is_list(ids) do
+    ids
+    |> Enum.map(&parse_int/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  def parse_selected_ids(ids) when is_binary(ids) do
+    case Jason.decode(ids) do
+      {:ok, parsed} -> parse_selected_ids(parsed)
+      _ -> []
+    end
+  end
+
+  def parse_selected_ids(_), do: []
+
+  defp parse_int(value) when is_integer(value), do: value
+
+  defp parse_int(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {id, ""} -> id
+      _ -> nil
+    end
+  end
+
+  defp parse_int(_), do: nil
+
+  def truthy?(value) when value in [true, "true", "1", 1], do: true
+  def truthy?(_value), do: false
 end
