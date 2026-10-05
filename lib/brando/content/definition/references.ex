@@ -30,10 +30,8 @@ defmodule Brando.Content.Definition.References do
   end
 
   def bind!(bundle, supplied, actor) do
-    declared = declared!(bundle)
-
     bindings =
-      Map.new(declared, fn {token, kind} ->
+      Map.new(declared!(bundle), fn {token, kind} ->
         binding = get_in(bundle, ["references", token]) || %{"kind" => kind}
         if binding["kind"] != kind, do: Error.raise!(token, "reference kind does not match its use")
         {token, binding}
@@ -43,23 +41,32 @@ defmodule Brando.Content.Definition.References do
     unknown = Map.keys(supplied) -- Map.keys(bindings)
     if unknown != [], do: Error.raise!("references", "unknown mapping keys #{inspect(unknown)}")
 
-    Map.new(bindings, fn {token, binding} ->
-      schema = Map.get(@schemas, binding["kind"]) || Error.raise!(token, "unknown reference kind")
+    Map.new(bindings, &bind_destination!(&1, supplied, same_scope?, actor))
+  end
 
-      if same_scope? && binding["id"] && supplied[token] && supplied[token] != binding["id"],
-        do: Error.raise!(token, "use a new token when changing an existing destination binding")
+  defp bind_destination!({token, binding}, supplied, same_scope?, actor) do
+    schema = Map.get(@schemas, binding["kind"]) || Error.raise!(token, "unknown reference kind")
+    id = destination_id!(token, binding, supplied, same_scope?)
+    record = Repo.get(schema, id)
 
-      id = Map.get(supplied, token) || (same_scope? && binding["id"])
-      unless id, do: Error.raise!(token, "requires a destination reference mapping")
-      unless is_integer(id) and id > 0, do: Error.raise!(token, "expected a positive destination record ID")
-      record = Repo.get(schema, id)
+    if is_nil(record) or Map.get(record, :deleted_at),
+      do: Error.raise!(token, "destination reference is missing or deleted")
 
-      if is_nil(record) or Map.get(record, :deleted_at),
-        do: Error.raise!(token, "destination reference is missing or deleted")
+    authorize!(actor, binding["kind"], schema, record)
+    {token, %{"kind" => binding["kind"], "id" => record.id}}
+  end
 
-      authorize!(actor, binding["kind"], schema, record)
-      {token, %{"kind" => binding["kind"], "id" => record.id}}
-    end)
+  defp destination_id!(token, binding, supplied, same_scope?) do
+    ensure_unchanged_binding!(token, binding, supplied, same_scope?)
+    id = Map.get(supplied, token) || (same_scope? && binding["id"])
+    unless id, do: Error.raise!(token, "requires a destination reference mapping")
+    unless is_integer(id) and id > 0, do: Error.raise!(token, "expected a positive destination record ID")
+    id
+  end
+
+  defp ensure_unchanged_binding!(token, binding, supplied, same_scope?) do
+    if same_scope? && binding["id"] && supplied[token] && supplied[token] != binding["id"],
+      do: Error.raise!(token, "use a new token when changing an existing destination binding")
   end
 
   @doc """
