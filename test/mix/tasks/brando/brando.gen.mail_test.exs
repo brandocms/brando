@@ -14,21 +14,21 @@ defmodule Mix.Tasks.Brando.Gen.MailTest do
       :code.delete(module)
     end)
 
-    result |> IgniterCase.source("lib/#{Macro.underscore(module)}.ex") |> Code.compile_string()
+    assert [{form, _binary}] =
+             result |> IgniterCase.source("lib/#{Macro.underscore(module)}.ex") |> Code.compile_string()
+
+    assert form == module
 
     valid =
-      apply(module, :changeset, [
-        struct(module),
-        %{
-          name: "Alice",
-          email: "alice@example.test",
-          phone: "123",
-          message: "Hello"
-        }
-      ])
+      form.changeset(struct(form), %{
+        name: "Alice",
+        email: "alice@example.test",
+        phone: "123",
+        message: "Hello"
+      })
 
     assert valid.valid?
-    invalid = apply(module, :changeset, [struct(module), %{}])
+    invalid = form.changeset(struct(form), %{})
     refute invalid.valid?
     assert Enum.sort(Keyword.keys(invalid.errors)) == [:email, :message, :name, :phone]
   end
