@@ -24,6 +24,5 @@ test('updates dashboard content when permissions change without reloading', asyn
   expect((await page.request.post('/e2e/dashboard-access/backend')).ok()).toBeTruthy()
   await expect(dashboard.getByText('Studio notes', { exact: true })).toHaveCount(0)
   await expect(dashboard.getByText('No recent content', { exact: true })).toBeVisible()
-  await expect(dashboard.locator('.dashboard-shortcut')).toHaveCount(0)
   await expect(secondUserPage).toHaveURL('/admin')
 })

@@ -397,8 +397,6 @@ child entries, open menus, and real form values.
 - Give repeated editor rows a quiet tinted parent surface and white fields/rows.
   On mobile, arrange the status and row actions together, followed by labelled
   fields. Keep editing and deletion controls distinguishable.
-- Group dashboard shortcuts in one toolbar. Soft sage, blue, lavender and sand
-  distinguish destinations while retaining the same proportions and icon family.
 - A settings toolbar is a white bar with one sage action accent. Its sections
   are pill tabs (see [Tab views](#tab-views)); a single section is a plain label.
 - Use the same chevron asset and rendered dimensions across neighboring dropdowns.
@@ -410,6 +408,27 @@ inspection, measured alignment checks, and the existing local workflow tests.
 Capture fresh screenshots after the last change. Record limitations honestly;
 visual approval belongs to the person using the interface.
 
+
+## Dashboard
+
+Approved on 5 October 2026 (option E of the card studies). Recently updated
+entries are cards in an auto-fill grid: the identifier's cover (or the content
+type's icon on a grey field) at 16:10, the title, the content type with its
+icon and language, then the status, when it changed and the last editor's
+avatar. The title's link is stretched over the card, so the whole card opens
+the entry. Drafts and scheduled publishing sit in a 300px side column of white
+panels with a count; a scheduled entry shows a small date tile. Under 1240px
+the side column moves below the cards; on phones a card becomes a row with a
+square cover. No content-type shortcuts: the sidebar already lists them.
+
+The cover is the entry's actual image with a `srcset` of every size it has
+(blur placeholders left out, each width as actually saved), so it is sharp on
+retina screens; the identifier's stored thumbnail is too small for a card and
+only stands in until an image has its sizes. The status dot follows
+`.modal-status`: `1cap` square, the label and time trimmed to cap height.
+
+`BrandoAdmin.Dashboard` loads the data (the editors in one query);
+`components/dashboard.ex` renders it, styled in `SettingsWorkspace.css`.
 
 ## Pending subform sweep
 
@@ -492,7 +511,7 @@ content_icon "folder-kanban"
 ```
 
 `Brando.Blueprint.get_icon/1` resolves it, falling back to `file`. The sidebar,
-dashboard shortcuts, the link picker's “Content types”, entry identifiers and
+the link picker's “Content types”, entry identifiers and
 listing headers all use it, so a content type looks the same everywhere.
 
 ### Sidebar rows

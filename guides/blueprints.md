@@ -146,7 +146,7 @@ contextual Blueprint error before Gettext, Spark, or Ecto setup begins.
 
 `content_icon "folder-kanban"` in the blueprint body sets the content type's
 [Lucide](https://lucide.dev/icons) icon. The admin shows it in the sidebar
-(`menu_item MyApp.Projects.Project`), dashboard shortcuts, the link picker's
+(`menu_item MyApp.Projects.Project`), the link picker's
 content types, entry identifiers and the listing header
 (`icon={@page_icon}`). A name Lucide doesn't have fails to compile; a renamed
 one names its replacement. Blueprints without one show `file`.
