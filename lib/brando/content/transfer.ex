@@ -345,58 +345,60 @@ defmodule Brando.Content.Transfer do
         {token, if(match?(%Brando.Content.Module{}, record), do: Contracts.capture(record))}
       end)
 
-    Enum.map(fields, fn
-      %{issue: nil} = field ->
-        case Error.protect(fn ->
-               Portable.walk(field.source["blocks"], fn block ->
-                 if token = block["module_id"] do
-                   module =
-                     bindings[token] ||
-                       Error.fail!(dgettext("content_transfer", "Resolve the required modules before reviewing content."))
+    Enum.map(fields, &validate_field(&1, bundle, bindings, contracts, actor))
+  end
 
-                   Contracts.check!(block, bundle["dependencies"][token]["contract"], module, contracts[token])
-                   parent = bundle["dependencies"][token]["parent"]
+  defp validate_field(%{issue: nil} = field, bundle, bindings, contracts, actor) do
+    case Error.protect(fn -> validate_field!(field, bundle, bindings, contracts, actor) end) do
+      {:ok, _} -> field
+      {:error, message} -> %{field | issue: message}
+    end
+  end
 
-                   if parent && bindings[parent] && module.parent_id != bindings[parent].id,
-                     do:
-                       Error.fail!(
-                         dgettext("content_transfer", "The child module belongs to a different destination parent.")
-                       )
+  defp validate_field(field, _bundle, _bindings, _contracts, _actor), do: field
 
-                   table = bundle["dependencies"][token]["table_template"]
+  defp validate_field!(field, bundle, bindings, contracts, actor) do
+    Portable.walk(field.source["blocks"], &check_block_module!(&1, bundle, bindings, contracts))
 
-                   if table && bindings[table] && module.table_template_id != bindings[table].id,
-                     do:
-                       Error.fail!(
-                         dgettext("content_transfer", "Map the table template used by the selected destination module.")
-                       )
-                 end
-               end)
+    preview_bindings = preview_bindings(bundle, bindings)
+    params = field_params([field], preview_bindings, actor)
+    cs = field_changeset(field.entry, params, actor)
 
-               preview_bindings = preview_bindings(bundle, bindings)
-               params = field_params([field], preview_bindings, actor)
-               cs = field_changeset(field.entry, params, actor)
+    unless cs.valid?,
+      do:
+        Error.fail!(
+          dgettext("content_transfer", "Field validation: %{value1}",
+            value1: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
+          )
+        )
 
-               unless cs.valid?,
-                 do:
-                   Error.fail!(
-                     dgettext("content_transfer", "Field validation: %{value1}",
-                       value1: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
-                     )
-                   )
+    if Boundary.change(actor, :update, cs) != :ok,
+      do: Error.fail!(dgettext("content_transfer", "You do not have permission to change this field."))
 
-               if Boundary.change(actor, :update, cs) != :ok,
-                 do: Error.fail!(dgettext("content_transfer", "You do not have permission to change this field."))
+    Catalog.authorize!(actor, :update, field.entry)
+  end
 
-               Catalog.authorize!(actor, :update, field.entry)
-             end) do
-          {:ok, _} -> field
-          {:error, message} -> %{field | issue: message}
-        end
+  defp check_block_module!(block, bundle, bindings, contracts) do
+    if token = block["module_id"] do
+      module =
+        bindings[token] ||
+          Error.fail!(dgettext("content_transfer", "Resolve the required modules before reviewing content."))
 
-      field ->
-        field
-    end)
+      Contracts.check!(block, bundle["dependencies"][token]["contract"], module, contracts[token])
+      check_module_placement!(module, bundle["dependencies"][token], bindings)
+    end
+  end
+
+  defp check_module_placement!(module, dependency, bindings) do
+    parent = dependency["parent"]
+
+    if parent && bindings[parent] && module.parent_id != bindings[parent].id,
+      do: Error.fail!(dgettext("content_transfer", "The child module belongs to a different destination parent."))
+
+    table = dependency["table_template"]
+
+    if table && bindings[table] && module.table_template_id != bindings[table].id,
+      do: Error.fail!(dgettext("content_transfer", "Map the table template used by the selected destination module."))
   end
 
   def applicable?(plan), do: plan.problems == []
