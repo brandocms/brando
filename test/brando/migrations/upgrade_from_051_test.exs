@@ -79,4 +79,48 @@ defmodule Brando.Migrations.UpgradeFrom051Test do
     end
   end
 
+  describe "brando_146" do
+    test "numbers gallery objects by (sequence, id), so ties keep one order" do
+      {blueprint, field} =
+        Enum.find_value(Brando.Blueprint.list_blueprints(), fn blueprint ->
+          Enum.find_value(Brando.Blueprint.Assets.__assets__(blueprint), fn
+            %{type: :gallery, name: name} -> {blueprint, name}
+            _ -> nil
+          end)
+        end)
+
+      table = blueprint.__schema__(:source)
+
+      # A bare table in the 0.51 shape, with the real one moved aside
+      if table_exists?(table), do: query!(~s[ALTER TABLE "#{table}" RENAME TO "#{table}_saved"])
+      query!(~s[CREATE TABLE "#{table}" (id bigserial PRIMARY KEY, image_series_id bigint)])
+
+      query!("CREATE TABLE _legacy_image_series (id bigint, name text, slug text, cfg jsonb)")
+      query!("CREATE TABLE _legacy_image_series_images (image_id bigint, image_series_id bigint, sequence integer)")
+      query!("CREATE TABLE _legacy_image_series_fks (table_name text, entry_id bigint, image_series_id bigint)")
+
+      images = for _ <- 1..4, do: Brando.Factory.insert(:image)
+      [a, b, c, d] = Enum.map(images, & &1.id)
+
+      # Two ties on 0, a null, and one ahead of them in insertion order
+      for {image_id, sequence} <- [{c, 0}, {a, 0}, {d, nil}, {b, 1}] do
+        query!("INSERT INTO _legacy_image_series_images VALUES ($1, 7, $2)", [image_id, sequence])
+      end
+
+      [[entry_id]] =
+        rows(~s[INSERT INTO "#{table}" (image_series_id) VALUES (7) RETURNING id])
+
+      query!("INSERT INTO _legacy_image_series_fks VALUES ($1, $2, 7)", [table, entry_id])
+
+      run_template("brando_146_migrate_image_series_to_galleries.exs")
+
+      [[gallery_id]] = rows(~s[SELECT "#{field}_id" FROM "#{table}" WHERE id = $1], [entry_id])
+
+      assert rows(
+               "SELECT image_id, sequence FROM galleries_gallery_objects WHERE gallery_id = $1 ORDER BY sequence",
+               [gallery_id]
+             ) == [[a, 0], [c, 1], [d, 2], [b, 3]]
+    end
+  end
+
 end

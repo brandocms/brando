@@ -43,7 +43,7 @@ defmodule Brando.Galleries.Gallery do
     relation :gallery_objects, :has_many,
       module: Brando.Galleries.GalleryObject,
       on_replace: :delete_if_exists,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       sort_param: :sort_gallery_object_ids,
       drop_param: :drop_gallery_object_ids,
       cast: true

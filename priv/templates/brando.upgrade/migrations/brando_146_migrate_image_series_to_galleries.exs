@@ -95,15 +95,22 @@ defmodule Brando.Repo.Migrations.MigrateImageSeriesToGalleries do
                 returning: [:id]
               )
 
-            # Link images to gallery
-            series_images = Map.get(images_by_series, series_id, [])
+            # Link images to gallery. Legacy series often had tied (or null)
+            # sequences, so number them in (sequence, id) order: ties would
+            # come back in a different order from query to query.
+            series_images =
+              images_by_series
+              |> Map.get(series_id, [])
+              |> Enum.sort_by(&{&1.sequence || 0, &1.image_id})
 
             gallery_objects =
-              Enum.map(series_images, fn img ->
+              series_images
+              |> Enum.with_index()
+              |> Enum.map(fn {img, sequence} ->
                 %{
                   gallery_id: gallery_id,
                   image_id: img.image_id,
-                  sequence: img.sequence || 0,
+                  sequence: sequence,
                   inserted_at: now,
                   updated_at: now
                 }
