@@ -51,6 +51,8 @@ defmodule Brando.Blueprint.Migrations.Renderer do
 
         #{render_alter(:up, current.table, diff)}
 
+        #{render_backfills(current, diff)}
+
         #{render_indexes(:create, diff.add_indexes)}
 
         #{render_auxiliary_tables(:create, diff.add_auxiliary_tables)}
@@ -104,6 +106,21 @@ defmodule Brando.Blueprint.Migrations.Renderer do
       #{join_lines(lines)}
     end
     """
+  end
+
+  # Rows that predate `edited_at` (the Creator trait) take `updated_at` as an
+  # upper bound, as brando_175 does for Brando's own tables. Without it every
+  # existing entry shows as never edited.
+  defp render_backfills(current, diff) do
+    if current.timestamps and diff.timestamps != :add and Enum.any?(diff.add_columns, &(&1.name == :edited_at)) do
+      """
+      flush()
+
+      execute "UPDATE #{current.table} SET edited_at = updated_at WHERE edited_at IS NULL"
+      """
+    else
+      ""
+    end
   end
 
   defp render_alter(direction, table, diff) do

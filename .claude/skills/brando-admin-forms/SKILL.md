@@ -9,7 +9,7 @@ user-invocable: true
 Paths are repository-relative. The parent changeset lives in
 `lib/brando_admin/components/form.ex`; the public
 `lib/brando_admin/live_view/form.ex` facade installs hooks through its compiler.
-For form declarations, use `guides/blueprints.md` instead.
+For form declarations, use `guides/blueprint_forms.md` instead.
 
 ## Find the state owner before changing delivery
 

@@ -12,12 +12,13 @@ if Code.ensure_loaded?(Igniter) do
     # The tasks own the composition, notices, and warnings; this module owns
     # the rewrites.
 
-    alias Brando.Migration.FloristConfig
+    alias Expo.PluralForms
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Config
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
+    alias Mix.Brando.Igniter.FloristConfig
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -31,6 +32,8 @@ if Code.ensure_loaded?(Igniter) do
     @listing_core_components ~w(<.field <.i18n <.update_link <.url)
 
     @gettext_script_path "scripts/sync_gettext.sh"
+    # The value of a .po header line: "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+    @plural_forms_header ~r/^"Plural-Forms:[ \t]*((?:[^"\\]|\\[^n])*?)[ \t]*(?:\\n)?"$/m
 
     ## Blueprint composition
 
@@ -927,6 +930,319 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    Removes `processor_module: Brando.Images.Processor.Sharp` from
+    `config :brando, Brando.Images` in `config/*.exs`. The Sharp processor is
+    gone and Brando refuses to boot with it; the default is
+    `Brando.Images.Processor.Vix`. Other processors are left alone.
+    """
+    def remove_sharp_processor(igniter) do
+      igniter = Igniter.include_glob(igniter, "config/*.exs")
+
+      # Only files that name the processor are touched: updating a file
+      # reformats it.
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.filter(
+        &(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs" and
+            Source.get(&1, :content) =~ "Brando.Images.Processor.Sharp")
+      )
+      |> Enum.map(&Source.get(&1, :path))
+      |> Enum.reduce(igniter, fn path, igniter ->
+        Igniter.update_elixir_file(igniter, path, fn zipper ->
+          Common.update_all_matches(zipper, &sharp_processor_config?/1, &drop_processor_module/1)
+        end)
+      end)
+    end
+
+    defp sharp_processor_config?(zipper) do
+      with true <- CodeFunction.function_call?(zipper, :config, 3),
+           true <- CodeFunction.argument_equals?(zipper, 0, :brando),
+           true <- CodeFunction.argument_equals?(zipper, 1, Brando.Images),
+           {:ok, options} <- CodeFunction.move_to_nth_argument(zipper, 2),
+           {:ok, processor} <- Igniter.Code.Keyword.get_key(options, :processor_module) do
+        Common.nodes_equal?(processor, Brando.Images.Processor.Sharp)
+      else
+        _ -> false
+      end
+    end
+
+    defp drop_processor_module(zipper) do
+      with {:ok, options} <- CodeFunction.move_to_nth_argument(zipper, 2),
+           {:ok, options} <- Igniter.Code.Keyword.remove_keyword_key(options, :processor_module) do
+        case Zipper.node(options) do
+          # It was the only option: the whole call goes.
+          {:__block__, _, [[]]} -> {:ok, options |> Zipper.up() |> Zipper.remove()}
+          [] -> {:ok, options |> Zipper.up() |> Zipper.remove()}
+          _ -> {:ok, Zipper.up(options)}
+        end
+      else
+        _ -> {:ok, zipper}
+      end
+    end
+
+    # What the 0.53 `use Brando.Villain.Parser` brought into the module, beyond
+    # the callbacks. `use Phoenix.Component` and the imports are added when the
+    # parser uses them; an alias when the parser names it without its own.
+    @parser_imports [Brando.HTML, Phoenix.HTML]
+    @parser_aliases [Brando.Cache, Brando.Content, Brando.Datasource, Brando.Utils, Brando.Villain, Liquex.Context]
+
+    @doc """
+    Updates application modules that `use Brando.Villain.Parser`.
+
+    The parser's `__using__` used to `use Phoenix.Component`, import
+    `Brando.HTML` and `Phoenix.HTML`, and alias `Brando.Cache`, `Content`,
+    `Datasource`, `Utils`, `Villain` and `Liquex.Context`; it no longer does.
+    A parser gets back the ones it uses: `use Phoenix.Component` when it
+    renders `~H`, an import when it calls one of the module's functions (or
+    renders one of `Brando.HTML`'s components, such as `<.picture>`), and an
+    alias when it names one without defining that alias itself. Nothing it
+    does not use is added, so no unused import warnings.
+
+    Public overrides of a block Brando no longer has (for example
+    `slideshow/2`, which became `gallery` in `brando_77`) are never called;
+    each is reported.
+    """
+    def update_villain_parsers(igniter) do
+      {igniter, parsers} =
+        ProjectModule.find_all_matching_modules(igniter, fn _module, zipper ->
+          match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, Brando.Villain.Parser))
+        end)
+
+      Enum.reduce(parsers, igniter, &update_villain_parser(&2, &1))
+    end
+
+    defp update_villain_parser(igniter, parser) do
+      {:ok, {igniter, _source, defmodule}} = ProjectModule.find_module(igniter, parser)
+      {:ok, zipper} = Common.move_to_do_block(defmodule)
+      igniter = warn_dead_parser_overrides(igniter, parser, zipper)
+
+      case missing_parser_code(zipper) do
+        [] -> igniter
+        lines -> ProjectModule.find_and_update_module!(igniter, parser, &add_after_parser_use(&1, lines))
+      end
+    end
+
+    defp missing_parser_code(zipper) do
+      ast = Zipper.node(zipper)
+      calls = parser_calls(ast)
+      defined = defined_functions(ast, [:def, :defp, :defmacro, :defmacrop])
+
+      component =
+        if renders_heex?(zipper) and not uses_or_imports?(zipper, Phoenix.Component),
+          do: ["use Phoenix.Component"],
+          else: []
+
+      imports =
+        for module <- @parser_imports,
+            not uses_or_imports?(zipper, module),
+            calls_function_of?(calls, defined, module),
+            do: "import #{inspect(module)}"
+
+      aliases =
+        for module <- @parser_aliases,
+            short = module |> Module.split() |> List.last() |> String.to_atom(),
+            names_alias?(ast, short),
+            not defines_alias?(ast, short),
+            do: "alias #{inspect(module)}"
+
+      component ++ imports ++ aliases
+    end
+
+    defp add_after_parser_use(zipper, lines) do
+      with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Brando.Villain.Parser) do
+        {:ok, Common.add_code(zipper, Enum.join(lines, "\n"), placement: :after)}
+      end
+    end
+
+    defp renders_heex?(zipper), do: Zipper.find(zipper, &match?({:sigil_H, _, _}, &1)) != nil
+
+    defp uses_or_imports?(zipper, module) do
+      match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, module)) or
+        match?(
+          {:ok, _},
+          Common.move_to(zipper, fn zipper ->
+            CodeFunction.function_call?(zipper, :import) and CodeFunction.argument_equals?(zipper, 0, module)
+          end)
+        )
+    end
+
+    # Unqualified calls as `{name, arity}`, and calls inside `~H` templates
+    # (components and `{expressions}`) as `{name, :any}`.
+    defp parser_calls(ast) do
+      {_ast, calls} =
+        Macro.prewalk(ast, [], fn
+          {:|>, _, [_left, {name, _, args}]} = node, acc when is_atom(name) and is_list(args) ->
+            {node, [{name, length(args) + 1} | acc]}
+
+          {:&, _, [{:/, _, [{name, _, context}, arity]}]} = node, acc when is_atom(name) and is_atom(context) ->
+            {node, [{name, unwrap_literal(arity)} | acc]}
+
+          {:sigil_H, _, [{:<<>>, _, parts} | _]} = node, acc ->
+            template = parts |> Enum.filter(&is_binary/1) |> Enum.join()
+            {node, heex_calls(template) ++ acc}
+
+          {name, _, args} = node, acc when is_atom(name) and is_list(args) ->
+            {node, [{name, length(args)} | acc]}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      Enum.uniq(calls)
+    end
+
+    defp heex_calls(template) do
+      components = for [_, name] <- Regex.scan(~r/<\.([a-z_]\w*[?!]?)/, template), do: {String.to_atom(name), 1}
+
+      expressions =
+        for [_, name] <- Regex.scan(~r/(?<![\w.])([a-z_]\w*[?!]?)\(/, template), do: {String.to_atom(name), :any}
+
+      components ++ expressions
+    end
+
+    defp unwrap_literal({:__block__, _, [value]}), do: value
+    defp unwrap_literal(value), do: value
+
+    defp calls_function_of?(calls, defined, module) do
+      exports = if Code.ensure_loaded?(module), do: module.__info__(:functions), else: []
+      export_names = MapSet.new(exports, &elem(&1, 0))
+      defined_names = MapSet.new(defined, &elem(&1, 0))
+
+      Enum.any?(calls, fn
+        {name, :any} -> name in export_names and name not in defined_names
+        call -> call in exports and call not in defined
+      end)
+    end
+
+    defp names_alias?(ast, short) do
+      ast
+      |> Macro.prewalk(false, fn
+        {:__aliases__, _, [^short | _]} = node, _found -> {node, true}
+        node, found -> {node, found}
+      end)
+      |> elem(1)
+    end
+
+    # `alias Foo.Short`, `alias Foo.{Short, ...}` or `alias Foo, as: Short`
+    defp defines_alias?(ast, short) do
+      ast
+      |> Macro.prewalk(false, fn
+        {:alias, _, [_target, opts]} = node, found when is_list(opts) ->
+          {node, found or alias_as?(opts, short)}
+
+        {:alias, _, [{{:., _, [_base, :{}]}, _, children}]} = node, found ->
+          {node, found or Enum.any?(children, &match?({:__aliases__, _, [^short]}, &1))}
+
+        {:alias, _, [{:__aliases__, _, parts}]} = node, found ->
+          {node, found or Enum.join(parts, ".") =~ ~r/(^|\.)#{short}$/}
+
+        node, found ->
+          {node, found}
+      end)
+      |> elem(1)
+    end
+
+    defp alias_as?(opts, short) do
+      Enum.any?(opts, fn
+        {{:__block__, _, [:as]}, {:__aliases__, _, [^short]}} -> true
+        {:as, {:__aliases__, _, [^short]}} -> true
+        _option -> false
+      end)
+    end
+
+    defp warn_dead_parser_overrides(igniter, parser, zipper) do
+      callbacks = Brando.Villain.Parser.overridable_callbacks()
+
+      zipper
+      |> Zipper.node()
+      |> defined_functions([:def])
+      |> Enum.reject(&(&1 in callbacks))
+      |> Enum.filter(fn {_name, arity} -> arity == 2 end)
+      |> Enum.reduce(igniter, fn {name, arity}, igniter ->
+        Igniter.add_warning(igniter, """
+        #{inspect(parser)}.#{name}/#{arity} overrides no block Brando renders, so it is never called.
+        Delete it, or move its markup to a module or to the `gallery`/`media` override that replaced it.
+        """)
+      end)
+    end
+
+    defp defined_functions(ast, kinds) do
+      {_ast, functions} =
+        Macro.prewalk(ast, [], fn
+          {kind, _, [{:when, _, [head | _]} | _]} = node, acc ->
+            if kind in kinds, do: {node, [function_head(head) | acc]}, else: {node, acc}
+
+          {kind, _, [head | _]} = node, acc when is_atom(kind) ->
+            if kind in kinds, do: {node, [function_head(head) | acc]}, else: {node, acc}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      functions |> Enum.reject(&is_nil/1) |> Enum.uniq()
+    end
+
+    defp function_head({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
+    defp function_head(_head), do: nil
+
+    @doc """
+    Completes `Plural-Forms` headers in `priv/gettext/**/*.po`.
+
+    Gettext 1.0 warns, once per catalog per compile, on a header it cannot
+    parse: `nplurals=2;` without the rule, or a rule without its trailing `;`.
+    An incomplete header for a locale Expo knows is replaced with the full
+    one; other locales are reported.
+    """
+    def complete_plural_forms_headers(igniter) do
+      igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&Source.get(&1, :path))
+      |> Enum.filter(&(String.starts_with?(&1, "priv/gettext/") and Path.extname(&1) == ".po"))
+      |> Enum.sort()
+      |> Enum.reduce(igniter, fn path, igniter ->
+        content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
+
+        case Regex.run(@plural_forms_header, content, capture: :all_but_first) do
+          [header] -> complete_plural_forms_header(igniter, path, header)
+          nil -> igniter
+        end
+      end)
+    end
+
+    defp complete_plural_forms_header(igniter, path, header) do
+      with {:error, _} <- PluralForms.parse(header),
+           {:ok, plural_forms} <- path |> catalog_locale() |> PluralForms.plural_form() do
+        complete = PluralForms.to_string(plural_forms)
+        Igniter.update_file(igniter, path, &Source.update(&1, :content, replace_plural_forms(&1, header, complete)))
+      else
+        {:ok, %PluralForms{}} ->
+          igniter
+
+        :error ->
+          Igniter.add_warning(igniter, """
+          #{path} has an incomplete Plural-Forms header (#{header}) for a locale Gettext does not know.
+          Complete it, for example `nplurals=2; plural=(n != 1);`, or remove the header.
+          """)
+      end
+    end
+
+    defp replace_plural_forms(source, header, complete) do
+      Regex.replace(@plural_forms_header, Source.get(source, :content), fn line, _header ->
+        String.replace(line, header, complete, global: false)
+      end)
+    end
+
+    # priv/gettext/<locale>/LC_MESSAGES/x.po or priv/gettext/<backend>/<locale>/LC_MESSAGES/x.po
+    defp catalog_locale(path) do
+      path
+      |> Path.split()
+      |> Enum.take_while(&(&1 != "LC_MESSAGES"))
+      |> List.last()
+    end
+
     def configure_swoosh_client(igniter) do
       Config.configure_new(
         igniter,
@@ -1371,11 +1687,13 @@ if Code.ensure_loaded?(Igniter) do
 
       deployment_config = source_content(igniter, "deployment.cfg")
       fabfile = source_content(igniter, "fabfile.py")
+      {igniter, legacy_files} = legacy_deployment_files(igniter)
 
-      case FloristConfig.generate(deployment_config, fabfile) do
+      case FloristConfig.generate(deployment_config, fabfile, legacy_files) do
         {:ok, content, warnings} ->
           igniter
           |> Igniter.create_new_file("florist.config.exs", content, on_exists: :skip)
+          |> add_health_plug()
           |> add_florist_warnings(warnings)
           |> Igniter.add_notice(
             "Created `florist.config.exs` from the legacy Fabric files. Review it before use; the source files were retained."
@@ -1384,6 +1702,79 @@ if Code.ensure_loaded?(Igniter) do
         {:error, reason} ->
           Igniter.add_warning(igniter, "Could not create `florist.config.exs`: #{reason}")
       end
+    end
+
+    @doc """
+    Adds `plug Brando.Plug.Health` to the endpoint, before the router.
+
+    Florist's deploy and its nginx templates check `/health`; without the plug
+    the request falls through to the router and the check never passes.
+    """
+    def add_health_plug(igniter, endpoint \\ nil) do
+      endpoint = endpoint || Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
+      missing = "add `plug Brando.Plug.Health` to #{inspect(endpoint)}, before the router. Florist checks /health."
+
+      # Updating a module reformats its file, so an endpoint that already has
+      # the plug is only read.
+      with {:ok, {igniter, _source, defmodule}} <- ProjectModule.find_module(igniter, endpoint),
+           {:ok, body} <- Common.move_to_do_block(defmodule),
+           :error <- move_to_plug(body, &Common.nodes_equal?(&1, Brando.Plug.Health)) do
+        case ProjectModule.find_and_update_module(igniter, endpoint, &health_plug_before_router(&1, missing)) do
+          {:ok, igniter} -> igniter
+          {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
+        end
+      else
+        {:ok, _health_plug} -> igniter
+        {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
+        :error -> Igniter.add_warning(igniter, "Could not read the endpoint; " <> missing)
+      end
+    end
+
+    defp health_plug_before_router(zipper, missing) do
+      case move_to_plug(zipper, &router?/1) do
+        {:ok, router} -> {:ok, Common.add_code(router, "plug Brando.Plug.Health", placement: :before)}
+        :error -> {:warning, "Could not find the router plug; " <> missing}
+      end
+    end
+
+    defp move_to_plug(zipper, predicate) do
+      CodeFunction.move_to_function_call_in_current_scope(zipper, :plug, [1, 2], fn call ->
+        CodeFunction.argument_matches_predicate?(call, 0, predicate)
+      end)
+    end
+
+    defp router?(zipper) do
+      case Zipper.node(zipper) do
+        {:__aliases__, _, parts} -> Enum.join(parts, ".") =~ ~r/(^|\.)Router$/
+        _other -> false
+      end
+    end
+
+    # Fills the domains, ports and process manager deployment.cfg leaves out.
+    # Only BRANDO_URL_HOST/PORT are read from the .envrc files.
+    @legacy_deployment_globs ["etc/nginx/*.conf", "etc/supervisord/*.conf", "etc/systemd/*.service"]
+    @legacy_deployment_file ~r{^(\.envrc\.[^/]+|etc/(nginx|supervisord)/[^/]+\.conf|etc/systemd/[^/]+\.service)$}
+
+    defp legacy_deployment_files(igniter) do
+      igniter = Enum.reduce(@legacy_deployment_globs, igniter, &Igniter.include_glob(&2, &1))
+      igniter = Enum.reduce(envrc_paths(igniter), igniter, &Igniter.include_existing_file(&2, &1))
+
+      files =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&Source.get(&1, :path))
+        |> Enum.filter(&Regex.match?(@legacy_deployment_file, &1))
+        |> Map.new(&{&1, source_content(igniter, &1)})
+
+      {igniter, files}
+    end
+
+    # Igniter's globs skip dotfiles.
+    defp envrc_paths(igniter) do
+      if igniter.assigns[:test_mode?],
+        do:
+          igniter.assigns |> Map.get(:test_files, %{}) |> Map.keys() |> Enum.filter(&String.starts_with?(&1, ".envrc.")),
+        else: Path.wildcard(".envrc.*", match_dot: true)
     end
 
     defp source_content(igniter, path) do
@@ -1397,14 +1788,64 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
-    Creates the Gettext recovery helper, keeping an identical existing copy.
+    Moves `use Gettext, otp_app: ...` backends to `use Gettext.Backend` and
+    their importers to `use Gettext, backend: ...`, as Igniter's
+    `igniter.update_gettext` does.
 
-    A differing copy is a blocking issue so that a customized script is never
-    replaced silently. Use `refresh_gettext_script/1` when the copy is known to
-    be Brando-owned.
+    It is composed here rather than scheduled as a separate task: that task
+    compiles the application first, and it pins `gettext ~> 0.26` in
+    `mix.exs`. The application must already require Gettext 1.0 to fetch the
+    new Brando, so the requirement is left as it was.
+    """
+    def update_gettext_backends(igniter) do
+      igniter = Igniter.include_existing_file(igniter, "mix.exs")
+      mix_exs = igniter.rewrite |> Rewrite.source!("mix.exs") |> Source.get(:content)
+
+      igniter
+      |> Mix.Tasks.Igniter.UpdateGettext.igniter()
+      |> Igniter.update_file("mix.exs", &Source.update(&1, :content, mix_exs))
+    end
+
+    @doc """
+    Creates the Gettext recovery helper.
+
+    An existing copy of the current helper is kept, and a copy of a helper an
+    earlier Brando shipped is replaced. A copy that matches neither was edited
+    by the application: it is left alone with a warning rather than aborting
+    the whole source upgrade.
     """
     def copy_gettext_script(igniter) do
-      Mix.Brando.Igniter.Files.create(igniter, @gettext_script_path, gettext_script())
+      contents = gettext_script()
+
+      if Igniter.exists?(igniter, @gettext_script_path) do
+        igniter = Igniter.include_existing_file(igniter, @gettext_script_path)
+        current = igniter.rewrite |> Rewrite.source!(@gettext_script_path) |> Source.get(:content)
+
+        cond do
+          same_script?(current, contents) ->
+            igniter
+
+          Enum.any?(legacy_gettext_scripts(), &same_script?(current, &1)) ->
+            Igniter.update_file(igniter, @gettext_script_path, &Source.update(&1, :content, contents))
+
+          true ->
+            Igniter.add_warning(igniter, """
+            #{@gettext_script_path} differs from every version Brando shipped, so it was left unchanged.
+            Compare it with priv/templates/brando.migrate/sync_gettext.sh in Brando before using it.
+            """)
+        end
+      else
+        Igniter.create_new_file(igniter, @gettext_script_path, contents)
+      end
+    end
+
+    defp same_script?(left, right), do: String.trim_trailing(left) == String.trim_trailing(right)
+
+    defp legacy_gettext_scripts do
+      :brando
+      |> Application.app_dir(["priv", "templates", "brando.migrate", "legacy_sync_gettext", "*.sh"])
+      |> Path.wildcard()
+      |> Enum.map(&File.read!/1)
     end
 
     @doc """

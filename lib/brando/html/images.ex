@@ -20,6 +20,8 @@ defmodule Brando.HTML.Images do
   @doc """
   Outputs a `picture` tag with source, img and a noscript fallback
 
+  `src` is an image, an image var or a gallery object (its image is rendered).
+
   The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
   image type's `sizes` map.
 
@@ -89,6 +91,12 @@ defmodule Brando.HTML.Images do
 
   def picture(%{src: %Brando.Content.Var{type: :image} = var} = assigns) do
     assigns = assign(assigns, src: var.image)
+    picture(assigns)
+  end
+
+  # A gallery loop yields gallery objects; render the object's image.
+  def picture(%{src: %Brando.Galleries.GalleryObject{image: image}} = assigns) do
+    assigns = assign(assigns, src: image)
     picture(assigns)
   end
 

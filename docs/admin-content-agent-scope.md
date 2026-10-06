@@ -755,9 +755,10 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
 - **Publishing.** New entries are drafts, and a proposal still cannot set a
   status. The reviewer chooses "Publish when applied" per new entry or draft;
   `apply/4` takes `publish: [keys]` and needs the publish permission.
-- **Editor's after-save work.** Apply now runs `Blueprint.AfterSave.run/5` for
-  each saved entry, as the admin form does — trait callbacks and the sync of
-  synchronized translations — which plain context updates skip.
+- **Editor's after-save work.** Apply now runs `Blueprint.AfterSave.run/4` for
+  each saved entry, as the admin form does: the traits' after-save callbacks,
+  which plain context updates skip. The sync of synchronized translations is
+  queued by the context mutation that saves the entry.
 - **Language versions.** `entry_outline` lists an entry's other language
   versions and whether they follow it by sync; each review card says whether
   they change here, follow on apply (with text to translate), or stay as they

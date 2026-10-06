@@ -429,7 +429,7 @@ defmodule Brando.Setup.Seeds do
     {"Upgrade",
      [
        {"brando.upgrade", "Apply versioned source upgrades", true},
-       {"brando.migrate.55", "Move application source from 0.54 to 0.55", true}
+       {"brando.migrate55", "Move application source from 0.54 to 0.55", true}
      ]}
   ]
 

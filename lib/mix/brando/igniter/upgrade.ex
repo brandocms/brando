@@ -5,13 +5,12 @@ if Code.ensure_loaded?(Igniter) do
 
     @moduledoc false
 
-    alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Migrations
     alias Mix.Brando.Igniter.Project
 
-    @legacy_module Mix.Tasks.Brando.Upgrade
+    @legacy_definition ~r/^\s*defmodule\s+Mix\.Tasks\.Brando\.Upgrade\s+do\b/m
     @archive "priv/brando/legacy_tasks/brando.upgrade.ex.disabled"
     @legacy_templates "priv/templates/brando.migrate/legacy_upgrade_tasks"
     @minimum "0.54.0-dev"
@@ -26,16 +25,37 @@ if Code.ensure_loaded?(Igniter) do
     # can resolve the library-owned brando.upgrade task. Never replace a loaded
     # task module or silently discard a consumer's customized upgrade logic.
     def prepare(igniter) do
-      case ProjectModule.find_module(igniter, @legacy_module) do
+      case find_consumer_task(igniter) do
         {:error, igniter} ->
           Igniter.add_notice(
             igniter,
             "No consumer-owned brando.upgrade task was found. Use mix brando.gen.migrations to plan framework migrations."
           )
 
-        {:ok, {igniter, source, _}} ->
+        {:ok, {igniter, source}} ->
           retire(igniter, source)
       end
+    end
+
+    # The consumer's task is found by content under lib/. Looking the module up
+    # (Igniter's find_module) resolves to Brando's own brando.upgrade task when
+    # the application is not compiled, and sites kept the file in different
+    # places (lib/mix/brando.upgrade.ex, lib/mix/tasks/...).
+    defp find_consumer_task(igniter) do
+      igniter = Igniter.include_glob(igniter, "lib/**/*.ex")
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.sort_by(& &1.path)
+      |> Enum.find(&(String.starts_with?(&1.path, "lib/") and defines_legacy_task?(&1)))
+      |> case do
+        nil -> {:error, igniter}
+        source -> {:ok, {igniter, source}}
+      end
+    end
+
+    defp defines_legacy_task?(source) do
+      Regex.match?(@legacy_definition, Rewrite.Source.get(source, :content))
     end
 
     defp retire(igniter, source) do
@@ -107,8 +127,8 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, from_version} <- version(from),
            {:ok, to_version} <- version(to),
            :ok <- supported(from_version, to_version) do
-        case ProjectModule.find_module(igniter, @legacy_module) do
-          {:ok, {igniter, source, _}} ->
+        case find_consumer_task(igniter) do
+          {:ok, {igniter, source}} ->
             Igniter.add_issue(
               igniter,
               "#{source.path} still owns brando.upgrade. Run mix brando.upgrade.prepare and compile before upgrading."

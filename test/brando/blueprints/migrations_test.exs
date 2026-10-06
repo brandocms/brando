@@ -493,6 +493,32 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert {:noop, _} = Migrations.create_migration(Brando.MigrationTest.StorageV2, @test_opts)
   end
 
+  test "adding the Creator trait backfills edited_at from updated_at" do
+    assert {:ok, _} = Migrations.create_migration(Brando.MigrationTest.StorageTimestamped, @test_opts)
+    assert {:ok, update} = Migrations.create_migration(Brando.MigrationTest.StorageCreator, @test_opts)
+
+    source = File.read!(update.migration)
+    [up, down] = String.split(source, "def down")
+
+    assert up =~ "add :edited_at, :utc_datetime"
+
+    assert appears_before?(up, "add :edited_at", "flush()")
+
+    assert appears_before?(
+             up,
+             "flush()",
+             ~s(execute "UPDATE storage_storage_records SET edited_at = updated_at WHERE edited_at IS NULL")
+           )
+
+    refute down =~ "UPDATE"
+
+    # A new table has no rows to backfill.
+    File.rm_rf!("tmp/test_snapshots")
+    File.rm_rf!("tmp/test_migrations")
+    assert {:ok, created} = Migrations.create_migration(Brando.MigrationTest.StorageCreator, @test_opts)
+    refute File.read!(created.migration) =~ "UPDATE"
+  end
+
   test "join table foreign keys use deterministic delete behavior and names" do
     assert {:ok, _} = Migrations.create_migration(Brando.MigrationTest.Tag, @test_opts)
     assert {:ok, generated} = Migrations.create_migration(Brando.MigrationTest.ProjectTag, @test_opts)

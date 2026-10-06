@@ -1,0 +1,63 @@
+defmodule LegacyApp.Villain.Parser do
+  @moduledoc """
+  Default parser for Villain.
+
+  All blocks can be overridden by defining functions in this module
+  """
+  use Brando.Villain.Parser
+
+  defp pretty_index(idx) do
+    (idx + 1)
+    |> Integer.to_string()
+    |> String.pad_leading(2, "0")
+  end
+
+  @doc """
+  Slideshow
+  """
+  def slideshow(%{"images" => images} = data, _) do
+    default_srcset = Brando.config(Brando.Images)[:default_srcset]
+    indexed_images = Enum.with_index(images)
+
+    assigns = %{indexed_images: indexed_images, data: data, default_srcset: default_srcset}
+
+    comp = ~H"""
+    <div data-panner-container>
+      <div class="inner">
+        <section class="items" data-panner data-panner-loop>
+          <figure
+            :for={{img, idx} <- @indexed_images}
+            data-panner-item
+            data-orientation={Brando.Images.get_image_orientation(img)}
+          >
+            <.picture
+              src={img}
+              opts={[
+                key: :xlarge,
+                alt: img["title"] || "Ill.",
+                width: true,
+                height: true,
+                placeholder: :svg,
+                sizes: "auto",
+                srcset: @default_srcset,
+                lazyload: true,
+                lightbox: @data["lightbox"] || false
+              ]}
+            />
+            <figcaption>
+              <div class="idx">
+                <%= pretty_index(idx) %>
+              </div>
+              <div class="caption">
+                <%= img["title"] %>
+              </div>
+            </figcaption>
+          </figure>
+        </section>
+      </div>
+    </div>
+    """
+
+    Phoenix.LiveViewTest.rendered_to_string(comp)
+  end
+end

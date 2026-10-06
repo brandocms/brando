@@ -40,5 +40,5 @@ export default defineConfig({
     },
   },
 
-  plugins: [svelte()],
+  plugins: [svelte({ configFile: false })],
 })

@@ -4684,13 +4684,7 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:progress_popup, "Entry saved."})
     if FrontendEditor.frontend?(socket), do: FrontendEditor.saved(socket, entry)
 
-    Brando.Blueprint.AfterSave.run(
-      schema,
-      entry,
-      save.changeset,
-      current_user,
-      minor: Map.get(socket.assigns, :minor_save?, false)
-    )
+    Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user)
 
     {socket, stale?} = after_translation_save(socket, schema, entry)
 
@@ -4810,9 +4804,7 @@ defmodule BrandoAdmin.Components.Form do
     %{schema: schema, current_user: current_user, mutation_type: mutation_type} = save
     singular = schema.__naming__().singular
 
-    Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user,
-      minor: Map.get(socket.assigns, :minor_save?, false)
-    )
+    Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user)
 
     {socket, _stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
@@ -5202,9 +5194,25 @@ defmodule BrandoAdmin.Components.Form do
         else: {:ok, changeset}
 
     case check do
-      {:ok, changeset} -> apply(context, :"#{mutation_type}_#{singular}", [changeset, user])
+      {:ok, changeset} -> apply(context, :"#{mutation_type}_#{singular}", [changeset, user | mutation_opts(socket)])
       error -> error
     end
+  end
+
+  # Options for the translation sync the mutation queues. A minor save (Save
+  # minor text corrections) of a synchronized source raises no review work. A
+  # synchronized translation is recomputed by `after_translation_save/3`, so
+  # the mutation queues no recompute of its own. Other saves keep the
+  # two-argument call, which hand-written contexts define.
+  defp mutation_opts(socket) do
+    opts =
+      [
+        minor: Map.get(socket.assigns, :minor_save?, false),
+        editor_review: Translation.locked?(socket.assigns[:translation])
+      ]
+      |> Enum.filter(&elem(&1, 1))
+
+    if opts == [], do: [], else: [opts]
   end
 
   defp after_translation_save(socket, schema, entry) do

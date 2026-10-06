@@ -2,6 +2,26 @@ NOTE: Upgrade notes are in the CHANGELOG now. Coming from 0.51 (`legacy`)?
 Read [guides/migrating_from_051.md](guides/migrating_from_051.md) first; the
 0.52.0 notes below are older and incomplete.
 
+## How long source migrations ship
+
+`mix brando.migrateNN` rewrites application source from 0.(NN-1) to 0.NN.
+Each task ships in 0.NN and the minor release after it, then 0.(NN+2) deletes
+the task together with the deprecated syntax it rewrites:
+
+| Task | Last shipped in | Removed in |
+| --- | --- | --- |
+| `mix brando.migrate54` | 0.55 | 0.56 |
+| `mix brando.migrate55` | 0.56 | 0.57 |
+
+A site more than one minor behind upgrades one step at a time: pin the last
+release that still ships the next task, run it, commit, then bump again. For
+example, a 0.53 site on Brando 0.57 first pins 0.55, runs
+`mix brando.migrate54` and `mix brando.migrate55`, then pins 0.56 for the
+next task.
+
+Database migrations follow a different rule. The `brando_NNN` templates are the
+schema history for every site, including fresh installs, and are never pruned.
+
 ## 0.52.0
 
 * Pull in new `mix.exs` and rename to your application's names

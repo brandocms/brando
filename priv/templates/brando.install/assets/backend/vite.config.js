@@ -60,8 +60,11 @@ export default defineConfig({
     },
   },
 
+  // The admin's Svelte components need no preprocessing. `configFile: false`
+  // stops vite-plugin-svelte looking for (and logging about) svelte.config.js.
+  //
   // `yalc publish` in brando/assets only writes to the yalc store. This pulls
   // it from there into this project as it lands, so the admin never runs new
   // templates against the JS from a previous publish.
-  plugins: [svelte(), yalcAutoUpdate()],
+  plugins: [svelte({ configFile: false }), yalcAutoUpdate()],
 })

@@ -111,6 +111,29 @@ defmodule Brando.Villain.LiquexTest do
     assert Enum.join(result) == "the route is /project/the-uri/500"
   end
 
+  test "picture tag renders the image of a gallery object" do
+    image = %Brando.Images.Image{
+      path: "images/gallery/boat.jpg",
+      sizes: %{"small" => "images/gallery/small/boat.jpg"},
+      width: 300,
+      height: 200,
+      alt: %{"en" => "A boat"},
+      config_target: "default"
+    }
+
+    tpl = "{% for image in images %}{% picture image { key: 'small', language: 'en' } %}{% endfor %}"
+    {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+
+    context =
+      %{}
+      |> Brando.Villain.get_base_context()
+      |> Liquex.Context.assign("images", [%Brando.Galleries.GalleryObject{image: image}])
+
+    {result, _} = Liquex.Render.render!([], parsed_tpl, context)
+
+    assert Enum.join(result) =~ ~s(alt="A boat")
+  end
+
   test "picture tag" do
     tpl =
       """

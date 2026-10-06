@@ -6,6 +6,8 @@ Brando 0.55 continues the `next` line that diverged from the 0.54 release in
 February 2026. Projects on the `0.54` branch run `mix brando.migrate55`;
 projects still on 0.53 run `mix brando.migrate54` followed by
 `mix brando.migrate55`. Both tasks rewrite source only and are safe to rerun.
+`mix brando.migrate54` and the deprecated Blueprint syntax it rewrites are
+removed in 0.56; see "How long source migrations ship" in `UPGRADE.md`.
 Then copy the Brando migrations added since `brando_130` with
 `mix brando.gen.migrations`, review them, run `mix ecto.migrate`, and finish
 with `mix brando.entries.resave` and `mix brando.identifiers.sync`. The full
@@ -408,8 +410,41 @@ production dump.
   list query, for orders columns cannot express (a total over an association);
   the listing keeps it in the URL as `?sort=<key>`. A `selection_action` takes
   `confirm:` (the question to ask first) and `visible:` (a function of the user).
-  The guide's row-action example now uses a `confirm` message: `confirm: true`
-  never compiled.
+  Select and boolean filter values reach the context unescaped, so a select
+  value such as `"in_progress"` no longer arrives as `"in\_progress"`.
+
+- **Upgrading a 0.53/0.54 site takes fewer manual steps** (from the smartwatt
+  upgrade). See [Migrating from 0.53 or 0.54](guides/migrating_from_053.md),
+  which now also covers the dependency, Node, legacy-snapshot and test-database
+  steps.
+  - `mix brando.migrate54` and `migrate55` no longer compile the application
+    first, so they run on the source they are meant to fix. Gettext backends
+    are rewritten in the same plan rather than by a separate
+    `igniter.update_gettext`, which compiled the application and pinned
+    `gettext ~> 0.26`. The consumer-owned `brando.upgrade` task is found by
+    content anywhere under `lib/`.
+  - `migrate54` replaces a copy of the 0.54 `scripts/sync_gettext.sh` instead of
+    aborting, and both tasks remove `processor_module:
+    Brando.Images.Processor.Sharp` from config.
+  - `migrate55` gives Villain parsers back the `use Phoenix.Component`,
+    `Brando.HTML`/`Phoenix.HTML` imports and aliases they used from the old
+    `use Brando.Villain.Parser`, and reports overrides of blocks Brando no
+    longer renders; completes
+    `Plural-Forms` headers Gettext 1.0 warns about; takes Florist domains and
+    ports from `.envrc.<flavor>`, `etc/nginx` and `etc/supervisord`/`etc/systemd`
+    instead of defaults, reporting placeholder URLs and the process manager;
+    and adds `plug Brando.Plug.Health` when it creates `florist.config.exs`.
+  - `mix brando.gen.backend --upgrade` brings an existing `assets/backend` and
+    the Dockerfile's `assets_backend` stage to the current pnpm template, and
+    `mix brando.assets.setup --backend-only` installs and builds the admin
+    alone.
+  - `mix brando.gen.blueprint_migration` backfills `edited_at` from
+    `updated_at` when it adds the Creator trait to an existing table, and
+    warns when a plan adds a table or column the database already has or
+    drops legacy Villain columns. `mix brando.gen.migrations` copies tenant
+    migrations only when tenancy is on.
+  - The backend template drops `svelte.config.cjs`, which vite-plugin-svelte
+    7 ignores (it logged "no Svelte config found"), and `svelte-preprocess`.
 
 - **`mix brando.migrations.check` finds outdated migration copies.**
   `mix brando.gen.migrations` matches copies by name and never updates one,
@@ -1127,6 +1162,45 @@ production dump.
 
 #### Fixes
 
+- **Listings with two or more alternates render again.** The alternates
+  column keyed its rows on identifiers built in memory, whose `id` is nil, and
+  LiveView 1.2 raised "found duplicate key nil in comprehension".
+- **`{% picture %}` renders a gallery object's image.** Since `brando_136`, a
+  loop over a gallery ref yields `GalleryObject`s; passing one to `picture`
+  raised `FunctionClauseError`. `brando_200` also rewrites stored module code
+  that loops over a variable assigned from a gallery ref
+  (`{% assign images = refs.slider.gallery.gallery_objects %}`), which
+  `brando_141` missed, so `image.alt` and friends read `image.image.alt`. Run
+  `mix brando.gen.migrations` for `brando_200`. `brando_141` is now a no-op:
+  it also rewrote HTML that named the loop variable (`class="image"`) and lost
+  the loop at a nested `{% endfor %}`, and `brando_200` repairs the loops it
+  handled. Sites that already ran it are unaffected; a copy that has not run
+  yet shows up in `mix brando.migrations.check`.
+- **Passwords saved through the context are hashed.** `trait :password`
+  hashed only in the admin form's save, so `Brando.Users.create_user/2` and
+  `update_user/3` stored a plain-text password as given, although the users
+  guide says they hash it. The trait now hashes a changed password when the
+  entry is written, from any save. Code that passed a pre-hashed password to
+  the context (`Bcrypt.hash_pwd_salt/1` before `create_user`) must pass the
+  plain text instead, or its users cannot sign in; inserting a struct with
+  `Repo.insert` is unchanged. Brando's own account creation (the admin form,
+  `mix brando.setup`, `mix brando.gen.admin`) always hashed; only application
+  code that set passwords through the context was affected. Such rows are not
+  Bcrypt hashes: `SELECT id, email FROM users WHERE password NOT LIKE '$2%'`
+  lists them, and their passwords should be reset.
+- **Context saves set `publish_at` and sync translations.**
+  `trait :scheduled_publishing` gives an entry published without a
+  `publish_at` the time it was saved from any save, not only the admin form's.
+  Context `create_*` and `update_*` calls now queue the sync of synchronized
+  translations (`Brando.Translations.source_saved/2`) themselves, as the admin
+  form, revisions, proposals and content transfer already did, so translations
+  of a source saved from code no longer go stale. Drop any
+  `source_saved/2` call made after a context save: a second call queues a
+  second sync. `minor: true` is now a mutation option. An editor's save of a
+  synchronized translation no longer also queues a background recompute,
+  which could run before the save's own recompute and replace the version
+  the editor had just reviewed. `Brando.Blueprint.AfterSave.run/4` now runs only the traits'
+  `after_save/3` and takes no options.
 - **Replaying the migration chain on a 0.51 database.** `brando_80` no
   longer queries a Blueprint whose table or embedded image column does not
   exist yet (a Blueprint added in the same upgrade), and Blueprint
@@ -1886,7 +1960,7 @@ production dump.
   work may retry, so callbacks with external side effects should be idempotent.
   This changes no database storage: no Ecto migration or Igniter upgrade script
   is required. Compile after upgrading, correct reported configs, and see
-  [Blueprints](guides/blueprints.md) and [Uploader](docs/UPLOADER.md).
+  [Asset configuration](guides/blueprint_fields.md#asset-configuration) and [Uploader](docs/UPLOADER.md).
 
 - **Reliable Blueprint form runtime contracts**: Static form query maps now work
   as declared, retain the URL entry ID in `:matches`, and are checked for invalid
@@ -1895,7 +1969,7 @@ production dump.
   with documented form context assigns instead of passing callback tuples to the
   translation layer. This is a runtime and DSL correction only: no Ecto migration
   or Igniter upgrade script is required. Compile after upgrading, fix any static
-  query whose `:matches` is not a map, and see [Blueprints](guides/blueprints.md).
+  query whose `:matches` is not a map, and see [Blueprint forms](guides/blueprint_forms.md).
 
 - **Validated secondary Blueprint DSL contracts**: Datasources now require the
   callbacks their type consumes, execute the function-or-MFA forms advertised by
@@ -1909,7 +1983,7 @@ production dump.
   longer silently overwrite duplicate contexts or keys. These are DSL/runtime
   corrections only: no Ecto migration or Igniter upgrade script is required.
   Compile after upgrading, fix reported declarations, and review configured listing
-  defaults because they now take effect. See [Blueprints](guides/blueprints.md).
+  defaults because they now take effect. See [Blueprint listings](guides/blueprint_listings.md).
 
 - **Correct generated Blueprint join owners**: Generated `:blocks` and
   `:entries` join schemas now use the actual Blueprint owner module for their
@@ -1947,7 +2021,7 @@ production dump.
   If fixing a reported declaration changes a column, foreign key, or unique
   index, generate and review a Blueprint migration; see
   [Blueprint migrations](guides/blueprint_migrations.md) and the relation notes
-  in [Blueprints](guides/blueprints.md).
+  in [Attributes, relations, and assets](guides/blueprint_fields.md#relations).
 
 - **Safer Blueprint identifier and URL templates**: Invalid Liquid syntax in
   `identifier` and `absolute_url` declarations now raises a contextual

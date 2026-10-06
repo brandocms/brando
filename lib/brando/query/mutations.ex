@@ -51,6 +51,7 @@ defmodule Brando.Query.Mutations do
         revisioned? = module.__trait__(Trait.Revisioned)
         {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
         Activity.saved(changeset, entry, user, revision_number(revision))
+        sync_translations(entry, opts)
         maybe_notify(entry, "created", user, notify?)
         maybe_broadcast(module, entry, :created, pubsub?)
 
@@ -89,11 +90,26 @@ defmodule Brando.Query.Mutations do
       revisioned? = module.__trait__(Trait.Revisioned)
       {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
       Activity.saved(changeset, entry, user, revision_number(revision))
+      sync_translations(entry, opts)
       maybe_notify(entry, "created", user, notify?)
       maybe_broadcast(module, entry, :created, pubsub?)
 
       callback_block.(entry)
     end
+  end
+
+  # A saved source of synchronized translations queues their sync; a saved
+  # synchronized translation queues the recompute of its pending version.
+  # `minor: true` marks a save of minor text corrections, which raises no new
+  # review work. `editor_review: true` comes from the admin form, which
+  # recomputes a reviewed translation itself (`Brando.Translations.target_saved/3`)
+  # right after the save; a queued recompute could run first and replace the
+  # version the editor reviewed.
+  defp sync_translations(entry, opts) do
+    Brando.Translations.source_saved(entry,
+      minor: Keyword.get(opts, :minor, false),
+      resync: not Keyword.get(opts, :editor_review, false)
+    )
   end
 
   defp maybe_preload(entry, nil), do: {:ok, entry}
@@ -137,6 +153,7 @@ defmodule Brando.Query.Mutations do
         revisioned? = module.__trait__(Trait.Revisioned)
         {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
         Activity.saved(changeset, entry, user, revision_number(revision))
+        sync_translations(entry, opts)
         maybe_notify(entry, "updated", user, notify?)
 
         callback.(entry)
@@ -179,6 +196,7 @@ defmodule Brando.Query.Mutations do
         revisioned? = module.__trait__(Trait.Revisioned)
         {:ok, revision} = maybe_create_revision(entry, user, revisioned?)
         Activity.saved(changeset, entry, user, revision_number(revision))
+        sync_translations(entry, opts)
         maybe_notify(entry, "updated", user, notify?)
         maybe_broadcast(module, entry, :updated, pubsub?)
 

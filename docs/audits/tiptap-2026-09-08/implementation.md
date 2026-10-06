@@ -150,4 +150,4 @@ actual CMS save/reload flow and the consumer build passed.
   new reference index is introduced by this change.
 
 Configuration examples and AI migration guidance are in
-[the Blueprint guide](../../../guides/blueprints.md).
+[the Blueprint forms guide](../../../guides/blueprint_forms.md#rich-text).

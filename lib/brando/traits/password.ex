@@ -1,6 +1,12 @@
 defmodule Brando.Trait.Password do
   @moduledoc """
-  Hashes pw on changes
+  Hashes a changed password with Bcrypt when the entry is written.
+
+  Pass the password in plain text, through the admin form or a context call
+  such as `Brando.Users.create_user/2`: the schema's validations (length,
+  confirmation) check the plain text, and the hash replaces it in
+  `prepare_changes/2`, just before the write. Code that inserts a struct
+  directly, without a changeset, hashes the password itself.
   """
   use Brando.Trait
 
@@ -26,16 +32,14 @@ defmodule Brando.Trait.Password do
     delete_change(changeset, :password)
   end
 
-  def changeset_mutator(_module, _cfg, changeset, _user, _opts), do: changeset
+  def changeset_mutator(_module, _cfg, changeset, _user, _opts), do: prepare_changes(changeset, &hash_password/1)
 
   @doc """
-  Hash and salt password if changed.
+  Hashes and salts the password if it changed.
   """
-  def before_save(%{changes: %{password: password}} = changeset, _user) do
+  def hash_password(%{changes: %{password: password}} = changeset) when is_binary(password) do
     put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
   end
 
-  def before_save(changeset, _user) do
-    changeset
-  end
+  def hash_password(changeset), do: changeset
 end
