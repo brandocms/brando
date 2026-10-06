@@ -188,10 +188,39 @@ defmodule Brando.Query.Compiler do
     end
   end
 
+  # The clauses' arity is known here, so the reducer is called the one way
+  defp reduce_filter({:fn, _, [{:->, _, [args, _body]} | _]} = block) do
+    # A guard is the last element of a `when`'s arguments
+    arity =
+      case args do
+        [{:when, _, params_and_guard}] -> length(params_and_guard) - 1
+        params -> length(params)
+      end
+
+    if arity == 3,
+      do: reduce_with_context(block),
+      else: quote(do: Enum.reduce(filter, query, unquote(block)))
+  end
+
+  defp reduce_filter(block), do: quote(do: Enum.reduce(filter, query, unquote(block)))
+
+  defp reduce_with_context(block) do
+    quote do
+      reducer = unquote(block)
+      Enum.reduce(filter, query, fn pair, query -> reducer.(pair, query, filter_context) end)
+    end
+  end
+
+  # A filter clause is `fn {key, value}, query -> … end`, or takes a third
+  # argument, `%{current_user: user}`, for filters whose meaning depends on who
+  # is asking (an admin listing passes the signed-in user).
   defp filter_query(module, block) do
     quote do
-      def with_filter(query, unquote(module), filter) do
-        Enum.reduce(filter, query, unquote(block))
+      def with_filter(query, unquote(module), filter),
+        do: with_filter(query, unquote(module), filter, %{current_user: nil})
+
+      def with_filter(query, unquote(module), filter, filter_context) do
+        unquote(reduce_filter(block))
       rescue
         _e in FunctionClauseError ->
           reraise Brando.Exception.QueryFilterClauseError,

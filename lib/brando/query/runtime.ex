@@ -169,6 +169,10 @@ defmodule Brando.Query.Runtime do
     end)
   end
 
+  # A sort that needs more than columns (a sum over an association, say)
+  # orders the query itself
+  def with_order(query, order) when is_function(order, 1), do: order.(query)
+
   def with_order(query, order_string) when is_binary(order_string) do
     order_list = order_string_to_list(order_string)
     with_order(query, order_list)
@@ -187,6 +191,9 @@ defmodule Brando.Query.Runtime do
   def order_string_to_list(order_list) when is_list(order_list) do
     order_list
   end
+
+  # A function order has no columns to compare
+  def order_string_to_list(order) when is_function(order, 1), do: []
 
   defp parse_order_segment(val) do
     case String.split(val, ".") do
@@ -317,7 +324,8 @@ defmodule Brando.Query.Runtime do
         {:preload, preload}, q -> with_preload(q, preload)
         {:language, language}, q -> with_language(q, language)
         {:exclude_language, language}, q -> with_exclude_language(q, language)
-        {:filter, filter}, q -> context.with_filter(q, module, filter)
+        {:filter, filter}, q -> context.with_filter(q, module, filter, filter_context(prepared_args))
+        {:current_user, _}, q -> q
         {:paginate, true}, q -> q
         {:with_deleted, true}, q -> q
         {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
@@ -352,6 +360,8 @@ defmodule Brando.Query.Runtime do
 
     maybe_with_include(query, includes)
   end
+
+  defp filter_context(args), do: %{current_user: Map.get(args, :current_user)}
 
   defp maybe_with_include(query, nil), do: query
   defp maybe_with_include({status, _result} = result, _includes) when status in [:ok, :error], do: result

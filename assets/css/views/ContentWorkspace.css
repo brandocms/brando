@@ -122,7 +122,8 @@
   .content-list .sorts .simple-dropdown-content { font-size: 12px; background: #fff; border-color: var(--workspace-line); }
   .advanced-filters-bar { gap: 12px; }
   .boolean-filter .tiny-toggle-label, .list-filter-select .filter-label { font-family: inherit; font-size: 12px; text-transform: none; }
-  .list-filter-select select { min-height: 38px; padding: 0 28px 0 10px; border-color: var(--workspace-line); color: var(--workspace-ink); font-family: inherit; font-size: 12px; }
+  /* The sort button's box and chevron (Lucide chevron-down in --workspace-muted) */
+  .list-filter-select select { min-height: 38px; padding: 0 32px 0 12px; border-color: var(--workspace-line); border-radius: 5px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23626b66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px 14px; color: var(--workspace-ink); font-family: inherit; font-size: 12px; }
   .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: 12px; text-transform: none; color: var(--workspace-muted); }
   .reset-filters-btn:hover { background: var(--workspace-wash); color: var(--workspace-accent); }
   .sorts .dropdown-chevron { display: block; width: 14px; height: 14px; }

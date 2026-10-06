@@ -53,6 +53,27 @@ defmodule Brando.SyncTest.Article do
     listing do
       query %{order: [{:asc, :id}]}
     end
+
+    # What a listing may know about the signed-in user (ListingUserContextTest)
+    listing :user_context do
+      decorate &Brando.SyncTest.ArticleListing.put_viewer/2
+      component &Brando.SyncTest.ArticleListing.row/1
+      filter label: "Mine", key: "mine", type: :boolean
+
+      filter do
+        label "Kind"
+        key("kind")
+        type :select
+        option("All", nil)
+        option("Featured only", "featured_only")
+      end
+
+      sort :longest, label: "Longest title", order: &Brando.SyncTest.ArticleListing.longest_title_first/1
+      sort :oldest, label: "Oldest", order: [{:asc, :id}]
+      selection_action label: "Feature", event: "feature_selected", confirm: "Feature the selected articles?"
+      selection_action label: "Never", event: "never_selected", visible: &Brando.SyncTest.ArticleListing.never/1
+      selection_action label: "Named", event: "named_selected", visible: &Brando.SyncTest.ArticleListing.named?/1
+    end
   end
 
   forms do

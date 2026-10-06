@@ -186,6 +186,8 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
     end
   end
 
+  defp verify_order(_dsl_state, _path, %{order: order}) when is_function(order, 1), do: :ok
+
   defp verify_order(dsl_state, path, %{order: order} = sort) when is_binary(order) do
     order_parts = String.split(order, ",", trim: true)
 
@@ -211,7 +213,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
       dsl_state,
       path,
       sort,
-      "sort order must be a non-empty order string or list of `{direction, field}` tuples"
+      "sort order must be a non-empty order string, a list of `{direction, field}` tuples, or a function of the query"
     )
   end
 

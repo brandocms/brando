@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <%= if @listing.component do %>
           {Phoenix.LiveView.TagEngine.component(
             @listing.component,
-            [entry: @entry],
+            [entry: @entry, current_user: @current_user],
             {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
           )}
         <% else %>

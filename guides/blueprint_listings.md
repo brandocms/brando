@@ -266,8 +266,9 @@ A listing accepts these options:
   It only has an effect with `trait :sequenced`.
 * `default_actions`: whether rows get Brando's built-in actions (edit,
   delete, duplicate and the translation actions). Default `true`.
-* `decorate`: a one-arity function that receives the loaded page of entries
-  and returns it. See [Decorating entries](#decorating-entries).
+* `decorate`: a function that receives the loaded page of entries (and,
+  with two arguments, the signed-in user) and returns it. See
+  [Decorating entries](#decorating-entries).
 
 It also contains `filter`, `sort`, `action`, `selection_action`, `export` and
 `child_listing` declarations, described below.
@@ -275,7 +276,7 @@ It also contains `filter`, `sort`, `action`, `selection_action`, `export` and
 ## Rows
 
 `component` names the function component that renders each row. It receives
-`@entry` and nothing else:
+`@entry` and `@current_user`, the signed-in user:
 
 ```elixir
 listing do
@@ -418,6 +419,20 @@ Rows then read `@entry.usage`. Prefer a local capture, as above: the listing
 keeps the function at compile time, and a remote capture makes the Blueprint
 compile against the module it calls.
 
+When the extra data depends on who is looking (a reviewer sees only their own
+scores, say), give `decorate` a two-arity function; it also receives the
+signed-in user:
+
+```elixir
+listing do
+  decorate &__MODULE__.put_scores/2
+  component &__MODULE__.listing_row/1
+end
+
+@doc false
+def put_scores(entries, user), do: MyApp.Reviewing.put_visible_scores(entries, user)
+```
+
 `decorate` runs for the listing's own rows. Child rows and exports do not go
 through it.
 
@@ -464,12 +479,38 @@ always strings:
 * a `:boolean` filter sends `"true"`, or `"false"` with `off: false`;
 * a `:select` filter sends the chosen option's value.
 
-Before the query runs, every string value is escaped for `LIKE`: `%`, `_`
-and `\` get a backslash. Text filters can therefore go straight into an
-`ilike` pattern, as in the example at the top. Compare select values with
-care: a value containing `_`, such as `"in_progress"`, reaches the context as
-`"in\_progress"`. Use option values without underscores, or unescape them in
-the clause.
+Before the query runs, text filter values are escaped for `LIKE`: `%`, `_`
+and `\` get a backslash, so they can go straight into an `ilike` pattern, as
+in the example at the top. Select and boolean values are ones the listing
+declared and reach the context as they are: `"in_progress"` stays
+`"in_progress"`.
+
+### Filters that depend on the user
+
+A filter's meaning may depend on the signed-in user ("hide what I have
+reviewed"). The listing passes the user to the context, and a `filters`
+function whose clauses take a third argument receives it as
+`%{current_user: user}` (see `Brando.Query.filters/2`). Every clause of that
+function then takes the third argument:
+
+```elixir
+# The Blueprint
+filter label: t("Hide what I have reviewed"), key: "hide_reviewed", type: :boolean
+
+# The context
+filters Application do
+  fn
+    {:hide_reviewed, "true"}, query, %{current_user: user} ->
+      from(a in query, where: a.id not in subquery(reviewed_by(user)))
+
+    {:hide_reviewed, _}, query, _ ->
+      query
+  end
+end
+```
+
+Called outside a listing, the user is whatever `current_user:` the `list_*`
+call passes, or `nil`.
 
 ### Text filters
 
@@ -572,6 +613,27 @@ as `"asc title, desc inserted_at"`. Directions are `asc` and `desc`, and
 their `_nulls_first` and `_nulls_last` variants. A field may be one
 association step away: `{:asc, {:category, :name}}` or `"asc category.name"`.
 
+For an order columns cannot express, `order` may be a function that takes the
+list query and returns it ordered. The listing keeps such a sort in the URL by
+its key (`?sort=score`), so the menu limits below do not apply to it. The
+function should keep one row per entry (join a grouped subquery rather than
+grouping the query itself), so pagination still counts entries:
+
+```elixir
+sort :score, label: t("Highest score"), order: &__MODULE__.order_by_score/1
+
+@doc false
+def order_by_score(query) do
+  scores = from(r in Review, group_by: r.application_id, select: %{id: r.application_id, total: sum(r.score)})
+
+  from(a in query,
+    left_join: s in subquery(scores),
+    on: s.id == a.id,
+    order_by: [desc_nulls_last: s.total, asc: a.id]
+  )
+end
+```
+
 When a listing declares sorts, they appear in a menu in the tools bar, and
 the **first sort is the listing's initial order**: it replaces `query.order`.
 Put the order the listing should open with first.
@@ -665,11 +727,23 @@ are selected, a bar offers **Clear selection** and an **Actions** menu.
 
 ```elixir
 selection_action label: t("Feature selected"), event: "feature_selected"
+
+selection_action label: t("Reject selected"),
+                 event: "reject_selected",
+                 confirm: t("Reject the selected applications?"),
+                 visible: &__MODULE__.superuser?/1
 ```
 
-`selection_action` takes a `label` and an `event` (a name or a `JS`
-command), both required, and nothing else; it has no `confirm`. The event goes
-to the listing LiveView with `"ids"`, a JSON-encoded list of the selected
+`selection_action` takes:
+
+* `label` and `event` (a name or a `JS` command), both required;
+* `confirm`: `false` (the default), or a question shown in a confirmation
+  dialog before the event is sent;
+* `visible`: a function of the signed-in user that decides whether to offer
+  the action. It only hides the menu item: the LiveView handling the event
+  must still check the user itself.
+
+The event goes to the listing LiveView with `"ids"`, a JSON-encoded list of the selected
 IDs, so decode it with `Jason.decode!/1`. The Blueprint's selection actions
 come after Brando's own: **Delete selected** (when the user may delete
 entries) and, for translatable schemas with `duplicate_<singular>/2`,

@@ -402,6 +402,17 @@ production dump.
 
 #### Improvements
 
+- **Listings that depend on who is looking.** A listing passes the signed-in
+  user to its context, and a `filters` function whose clauses take a third
+  argument receives `%{current_user: user}`, for filters like "hide what I have
+  reviewed". `decorate` may take the user as a second argument, and a row
+  component gets `@current_user`. A sort's `order` may be a function of the
+  list query, for orders columns cannot express (a total over an association);
+  the listing keeps it in the URL as `?sort=<key>`. A `selection_action` takes
+  `confirm:` (the question to ask first) and `visible:` (a function of the user).
+  Select and boolean filter values reach the context unescaped, so a select
+  value such as `"in_progress"` no longer arrives as `"in\_progress"`.
+
 - **Upgrading a 0.53/0.54 site takes fewer manual steps** (from the smartwatt
   upgrade). See [Migrating from 0.53 or 0.54](guides/migrating_from_053.md),
   which now also covers the dependency, Node, legacy-snapshot and test-database
