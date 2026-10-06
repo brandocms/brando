@@ -100,4 +100,9 @@ defmodule BrandoAdmin.ListingUserContextTest do
     assert {:ok, [first | _]} = SyncTest.list_articles(%{order: &Brando.SyncTest.ArticleListing.longest_title_first/1})
     assert first.title == "A much longer title"
   end
+
+  test "parameters the listing does not know are ignored", %{conn: conn} do
+    {:ok, view, _html} = live(conn, @path <> "?hide_incomplete=0&page=1")
+    assert rows(await_selector(view, ".user-context-row")) == ["A much longer title", "Short"]
+  end
 end

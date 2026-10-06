@@ -587,6 +587,11 @@ defmodule BrandoAdmin.Components.Content.List do
       {"filter:" <> filter_key, value}, new_list_opts ->
         filter_atom = String.to_existing_atom(filter_key)
         Map.put(new_list_opts, :filter, %{filter_atom => value})
+
+      # Anything else in the URL (an old bookmark, a parameter the page uses
+      # itself) is not the listing's
+      _, new_list_opts ->
+        new_list_opts
     end)
   end
 
