@@ -23,9 +23,6 @@ export default defineConfig({
       ignored: ['!**/node_modules/@brandocms/brandojs/**'],
     },
   },
-  optimizeDeps: {
-    include: ['vex-js', 'vex-dialog'],
-  },
   build: {
     manifest: 'admin_manifest.json',
     emptyOutDir: false,
