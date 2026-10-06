@@ -34,8 +34,11 @@ menus that follow the active language.
 
 ## Build a content model
 
-[Blueprints](blueprints.md) explains attributes, relations, assets, traits,
-identifiers, URLs, forms, listings, and validation. [Blueprint migrations](blueprint_migrations.md)
+[Blueprints](blueprints.md) explains the declaration, identifiers, URLs and
+validation, and links to the guides for
+[attributes, relations, and assets](blueprint_fields.md),
+[traits](blueprint_traits.md), [listings](blueprint_listings.md) and
+[forms](blueprint_forms.md). [Blueprint migrations](blueprint_migrations.md)
 covers generated storage and snapshots. [Querying](querying.md) covers context
 queries and mutations, filtering, ordering, pagination, preloads, and caching.
 

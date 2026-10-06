@@ -162,7 +162,7 @@ rejects unknown/unauthorized IDs; it also caps the request at 1,000 keys.
 
 Nested form rows use their relation's `sort_param` and `drop_param` instead. Let
 the form submit those positions and save the parent, especially for unsaved rows
-without IDs. See [Blueprint subforms](blueprints.md) for relation declarations.
+without IDs. See [Subforms](blueprint_forms.md#subforms) for relation declarations.
 Do not use the persisted-entry sequence helper to reorder a browser-only row.
 
 Reload the listing and parent form after a drag. Check the public list and any

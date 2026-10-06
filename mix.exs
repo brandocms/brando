@@ -42,6 +42,10 @@ defmodule Brando.Mixfile do
           "guides/migrating_from_051.md",
           "guides/tenancy_and_environments.md",
           "guides/blueprints.md",
+          "guides/blueprint_fields.md",
+          "guides/blueprint_traits.md",
+          "guides/blueprint_listings.md",
+          "guides/blueprint_forms.md",
           "guides/blueprint_migrations.md",
           "guides/generators.md",
           "guides/block_editor.md",
@@ -84,6 +88,10 @@ defmodule Brando.Mixfile do
           ],
           "Blueprint system": [
             "guides/blueprints.md",
+            "guides/blueprint_fields.md",
+            "guides/blueprint_traits.md",
+            "guides/blueprint_listings.md",
+            "guides/blueprint_forms.md",
             "guides/blueprint_migrations.md",
             "guides/generators.md"
           ],

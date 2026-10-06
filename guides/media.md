@@ -6,7 +6,7 @@ the settings for that particular use. Upload completion and saving the content
 entry are separate steps.
 
 This walkthrough adds a cover, PDF, and mixed gallery to an existing
-`MyApp.Catalog.Product` Blueprint. It assumes working [Blueprint forms](blueprints.md),
+`MyApp.Catalog.Product` Blueprint. It assumes working [Blueprint forms](blueprint_forms.md),
 a writable media directory, a running image-processing queue, and the consumer's
 compiled admin assets. Run a [Blueprint migration](blueprint_migrations.md) after
 adding the asset fields.
@@ -223,6 +223,10 @@ asset :gallery, :gallery,
     }
   }
 ```
+
+Unlike an image field, a gallery's `sizes` are merged into the default sizes
+rather than replacing them: the gallery above keeps the default sizes and
+changes `"large"`.
 
 Add `input :gallery, :gallery, label: t("Gallery")`. Insert an image and a video,
 change their order, edit their per-use metadata, and save/reopen the product.
