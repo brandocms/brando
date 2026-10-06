@@ -14,9 +14,7 @@ whole thing is rehearsed on a copy of production until a fresh dump replays
 cleanly with `mix ecto.migrate` alone.
 
 Brando migrations up to `brando_55` belong to 0.51, so a 0.51 database starts
-the chain at `brando_56`. Problems in the chain that are still open upstream are
-tracked in [brandocms/brando#2969](https://github.com/brandocms/brando/issues/2969).
-Each one is described below where it bites, with the workaround.
+the chain at `brando_56`. Each trap is described below where it bites.
 
 ## 1. Before you start
 
@@ -164,14 +162,14 @@ Copy Brando's migrations with `mix brando.gen.migrations`. If the site already
 copied them in an earlier attempt, read the next paragraph first.
 
 **`gen.migrations` copies missing files only; it never updates a copy.** A
-template fixed upstream after you copied it stays broken in your tree. Before a
-rehearsal, diff every *unapplied* `brando_*` copy against
-`priv/templates/brando.upgrade/migrations` in your Brando version, and replace
-the ones that changed. Add `priv/repo/migrations/.formatter.exs` with
+template fixed upstream after you copied it stays as it was in your tree. Run
+`mix brando.migrations.check` against the restored production dump before each
+rehearsal. It lists the copies that database has not run yet whose code differs
+from the current template, and copies of templates that were renumbered since;
+`--update` replaces the outdated ones. Copies that have already run are history
+and are left out. Add `priv/repo/migrations/.formatter.exs` with
 `import_deps: [:ecto_sql]`, or `mix format` adds parentheses to every copied
-file and real drift drowns in formatting drift (diff with `-w`). When a template
-is renumbered upstream, the next copy arrives under the new name beside your
-old one; reconcile the two by hand.
+file.
 
 ### Site migrations interleave with the chain
 
@@ -183,13 +181,8 @@ workarounds this needs:
   like an asset you declare now. For example, a Waffle `embeds_one :cv_file`
   (`{"file": "cv.pdf"}`) would be "extracted" by `brando_92` into a bogus
   `files` row if the Blueprint declares `asset :cv_file, :file`.
-- **Before `brando_80`:** drop foreign keys that point at `images_series`,
-  from `images` and from your own tables (`posts_image_series_id_fkey`, …).
-  `brando_80` drops the table and only removes its own category key (#2969).
-  `brando_80` preserves the series data before the drop, and `brando_146` turns
-  it into galleries.
 - **Before `brando_95`:** rename a site table called `videos`. `brando_95`
-  creates Brando's `videos` table unconditionally (#2969). Move the site's
+  creates Brando's `videos` table, and stops if one exists. Move the site's
   video data into `Brando.Videos.Video` in a later migration. The legacy
   `remote` type becomes `youtube`/`vimeo` by URL. No dimensions come over, so
   non-16:9 embeds are letterboxed until you backfill `width`/`height`;
@@ -200,24 +193,14 @@ workarounds this needs:
   upgrade. A Blueprint added now has no table while an old database replays,
   and migrations that walk the Blueprints have to skip it.
 
-### Language defaults
+### Languages
 
 `brando_69`, `brando_75` and `brando_76` add `language` to global sets,
-identity and SEO with a default of `"en"` (#2969). On a site whose default
-language is something else, the site identity, SEO and every global set end
-up `en`, so `Brando.Sites.global("no", …)` finds nothing and page titles lose
-their prefix. Add a data migration after the chain that copies identity and
-SEO to every configured language and moves single-instance global sets to the
-default language. See [Identity and SEO](identity_and_seo.md) for how the
-records are used per language.
-
-### Gallery order
-
-`brando_146` turns image series into galleries and copies the legacy
-`sequence` values as they are, ties included (#2969). Galleries preload with
-`order_by: sequence` only, so tied images come back in a different order from
-one request to the next. Renumber `galleries_gallery_objects` by
-`(sequence, id)` per gallery in a migration after `brando_146`.
+identity and SEO. The existing records get the configured
+`:default_language`, and identity and SEO are copied to every other language
+in `:languages`. Set both in `config/brando.exs` before the first rehearsal.
+See [Identity and SEO](identity_and_seo.md) for how the records are used per
+language.
 
 ### Permissions on the server
 
@@ -268,20 +251,21 @@ Repeat until it is boring:
 1. Restore the production dump into a scratch database with
    `pg_restore --no-owner --no-acl` (or `psql` for a plain dump), keeping the
    restore errors in a log.
-2. `mix ecto.migrate`. On a 0.51 dump the chain logs every row it rewrites,
+2. `mix brando.migrations.check`, so that no outdated copy replays (section 4).
+3. `mix ecto.migrate`. On a 0.51 dump the chain logs every row it rewrites,
    so the output looks as if it stopped halfway; check the result with
    `mix ecto.migrations`, not the scrollback.
-3. `mix brando.entries.resave` (it prompts; `yes Y |` in a script) and
+4. `mix brando.entries.resave` (it prompts; `yes Y |` in a script) and
    `mix brando.identifiers.sync`. Run them only after the site's own Blueprint
-   migrations, because resave fails on columns that don't exist yet.
-   One entry whose `absolute_url` raises aborts the whole sync (#2969), so fix
-   that entry and run it again. The preload `absolute_url` needs is extracted
-   from the template's source, so the association must appear literally in it
-   (`@entry.artists`).
-4. Restart the server. Menus, globals and other caches are read at startup,
+   migrations, because resave fails on columns that don't exist yet. The sync
+   skips an entry whose `absolute_url` raises, lists it at the end and exits
+   with status 1; fix those entries and run it again. The preload
+   `absolute_url` needs is extracted from the template's source, so the
+   association must appear literally in it (`@entry.artists`).
+5. Restart the server. Menus, globals and other caches are read at startup,
    so a page checked against a server that ran during the migration shows
    the old data.
-5. Compare migration counts and per-table row counts with the dump.
+6. Compare migration counts and per-table row counts with the dump.
 
 ## 7. Content after conversion
 
@@ -299,8 +283,8 @@ afterwards:
   villain column, including ones the new Blueprint turns into plain text; those
   blocks stay behind, joined to nothing.
 - **Globals.** `Brando.Globals.get_global_value!/1` is gone; use
-  `Brando.Sites.global/3`. Boolean globals keep their value in `value_boolean`,
-  which `Brando.Sites.render_global/3` does not read yet (#2969).
+  `Brando.Sites.render_global/3` for the value, or `Brando.Sites.global/3` for
+  the var.
 - **Queries.** `status: :published` in the generic query API filters the
   top-level entry, not its preloads. A `has_many … through:` preload ignores the
   preload query's `order_by`, because Ecto returns join-table order.

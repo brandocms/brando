@@ -400,6 +400,14 @@ production dump.
 
 #### Improvements
 
+- **`mix brando.migrations.check` finds outdated migration copies.**
+  `mix brando.gen.migrations` matches copies by name and never updates one,
+  so a copy made before a template was fixed replays the old code. The check
+  lists the `brando_*` copies the database has not run yet whose code differs
+  from the current template (formatting and comments aside), and pending
+  copies of renumbered templates. `--update` replaces the outdated ones.
+  Run it before replaying an upgrade on a copy of production (#2969).
+
 - **The backend assets build with pnpm, like the frontend** (#2814). New
   applications' Dockerfiles install `assets/backend` with pnpm 10.32.1 and
   `--frozen-lockfile`, and the backend template pins the same version in
@@ -1113,6 +1121,24 @@ production dump.
   exist yet (a Blueprint added in the same upgrade), and Blueprint
   snapshots written by 0.51 — before Blueprints had assets — decode again
   instead of failing with "Invalid legacy Blueprint snapshot field: :assets".
+  Fixed for #2969 as well: `brando_80` drops every foreign key that points
+  at `images_series` or `images_categories`, so a site table's
+  `image_series_id` no longer blocks the drop. `brando_95` stops with an
+  explanation when the site already has a `videos` table. `brando_146`
+  numbers each gallery's images in `(sequence, id)` order, since legacy
+  series often had tied sequences, and gallery objects preload with an `id`
+  tiebreak, so tied images no longer reshuffle between requests.
+  `brando_69`, `brando_75` and `brando_76` give the existing global sets,
+  identity and SEO the configured `:default_language` instead of `"en"`, and
+  copy identity and SEO to every other configured language.
+- **Boolean globals render.** `Brando.Sites.render_global/3` read `:value`,
+  which boolean vars never set, so a boolean global always rendered `nil`. It
+  now reads `value_boolean` (#2969).
+- **`mix brando.identifiers.sync` carries on past a failing entry.** One
+  entry whose identifier raised, for example an `absolute_url` reading a
+  missing association, stopped the whole sync. Each entry is now synced on
+  its own; failures are listed at the end and the task exits with status 1
+  (#2969).
 - **`localized_path/3` in development.** It checked the router helpers with
   `function_exported?/3` without loading them, so in interactive mode every
   localized link could come out as `/<url cannot be localized>`.
