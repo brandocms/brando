@@ -12,7 +12,7 @@ if Code.ensure_loaded?(Igniter) do
     # The tasks own the composition, notices, and warnings; this module owns
     # the rewrites.
 
-    alias Brando.Migration.FloristConfig
+    alias Mix.Brando.Igniter.FloristConfig
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Config

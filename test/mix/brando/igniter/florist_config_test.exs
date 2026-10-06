@@ -1,7 +1,7 @@
-defmodule Brando.Migration.FloristConfigTest do
+defmodule Mix.Brando.Igniter.FloristConfigTest do
   use ExUnit.Case, async: true
 
-  alias Brando.Migration.FloristConfig
+  alias Mix.Brando.Igniter.FloristConfig
 
   @deployment_config """
   [DEPLOYMENT]

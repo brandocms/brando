@@ -6,6 +6,8 @@ Brando 0.55 continues the `next` line that diverged from the 0.54 release in
 February 2026. Projects on the `0.54` branch run `mix brando.migrate55`;
 projects still on 0.53 run `mix brando.migrate54` followed by
 `mix brando.migrate55`. Both tasks rewrite source only and are safe to rerun.
+`mix brando.migrate54` and the deprecated Blueprint syntax it rewrites are
+removed in 0.56; see "How long source migrations ship" in `UPGRADE.md`.
 Then copy the Brando migrations added since `brando_130` with
 `mix brando.gen.migrations`, review them, run `mix ecto.migrate`, and finish
 with `mix brando.entries.resave` and `mix brando.identifiers.sync`. The full
