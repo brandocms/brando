@@ -124,6 +124,27 @@ defmodule BrandoAdmin.SyncTest.ArticleListLive do
   end
 end
 
+defmodule BrandoAdmin.SyncTest.ArticleUserContextListLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Listing, schema: Brando.SyncTest.Article
+
+  alias BrandoAdmin.Components.Content
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Content.List}
+      id={"content_listing_#{@schema}_user_context"}
+      schema={@schema}
+      current_user={@current_user}
+      uri={@uri}
+      params={@params}
+      listing={:user_context}
+    />
+    """
+  end
+end
+
 defmodule BrandoAdmin.SyncTest.ArticleFormLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
@@ -185,6 +206,7 @@ defmodule BrandoIntegrationWeb.Router do
   admin_routes do
     live "/projects", BrandoIntegrationWeb.Projects.ProjectListLive
     live "/articles", BrandoAdmin.SyncTest.ArticleListLive
+    live "/articles/user-context", BrandoAdmin.SyncTest.ArticleUserContextListLive
     live "/articles/create", BrandoAdmin.SyncTest.ArticleFormLive, :create
     live "/articles/update/:entry_id", BrandoAdmin.SyncTest.ArticleFormLive, :update
     live "/articles/update/:entry_id/no-blocks", BrandoAdmin.SyncTest.ArticleNoBlocksFormLive, :update

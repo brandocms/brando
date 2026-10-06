@@ -136,6 +136,20 @@ defmodule Brando.Blueprint.Listings.Dsl do
         type: {:or, [:string, {:struct, Phoenix.LiveView.JS}]},
         required: false,
         doc: "Action event"
+      ],
+      confirm: [
+        type: {:or, [{:in, [false]}, :string]},
+        required: false,
+        default: false,
+        doc: "A question to confirm before the action runs, e.g. \"Reject the selected applications?\""
+      ],
+      visible: [
+        type: {:fun, 1},
+        required: false,
+        doc: """
+        Receives the signed-in user and returns whether to offer the action. The
+        LiveView handling the event must still check the user itself.
+        """
       ]
     ]
   }
@@ -181,7 +195,12 @@ defmodule Brando.Blueprint.Listings.Dsl do
       order: [
         type: :any,
         required: true,
-        doc: "Order instructions"
+        doc: """
+        An order string (`"asc title, desc inserted_at"`), a list of
+        `{direction, field}` or `{direction, {association, field}}` tuples, or a
+        function that takes the list query and returns it ordered, for orders
+        columns cannot express.
+        """
       ]
     ]
   }
@@ -209,15 +228,16 @@ defmodule Brando.Blueprint.Listings.Dsl do
       component: [
         type: {:fun, 1},
         required: false,
-        doc: "Listing row component"
+        doc: "Listing row component. Its assigns are `entry` and `current_user`."
       ],
       decorate: [
-        type: {:fun, 1},
+        type: {:or, [{:fun, 1}, {:fun, 2}]},
         required: false,
         doc: """
-        Receives each page of loaded entries and returns them, for rows that show
-        data the listing query cannot load. Runs once per page, so the lookup can
-        be batched instead of made per row.
+        Receives each page of loaded entries (and, with two arguments, the
+        signed-in user) and returns them, for rows that show data the listing
+        query cannot load. Runs once per page, so the lookup can be batched
+        instead of made per row.
         """
       ],
       default_actions: [

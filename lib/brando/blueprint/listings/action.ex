@@ -3,5 +3,6 @@ defmodule Brando.Blueprint.Listings.Action do
   defstruct __spark_metadata__: nil,
             label: nil,
             event: nil,
-            confirm: false
+            confirm: false,
+            visible: nil
 end

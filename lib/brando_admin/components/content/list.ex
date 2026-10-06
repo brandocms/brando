@@ -137,15 +137,21 @@ defmodule BrandoAdmin.Components.Content.List do
     {:noreply, push_query_params(socket, filter_params)}
   end
 
+  # A function order cannot go in the URL, so its sort goes by key
   def handle_event("update_sort", %{"sort_key" => sort_key}, socket) do
     sorts = socket.assigns.listing.sorts
     sort = Enum.find(sorts, &(&1.key == String.to_existing_atom(sort_key)))
-    sort_string = Query.order_string_to_list(sort.order)
+    order_params = ["order[asc]", "order[desc]", "order", "sort"]
+
+    params =
+      if is_function(sort.order, 1),
+        do: %{"sort" => sort_key},
+        else: %{"order" => Query.order_string_to_list(sort.order)}
 
     {:noreply,
      socket
      |> assign_sort(sort)
-     |> push_query_params(%{"order" => sort_string}, ["order[asc]", "order[desc]", "order"])}
+     |> push_query_params(params, order_params)}
   end
 
   def handle_event("update_status", %{"status" => status}, %{assigns: %{list_opts: list_opts}} = socket) do
@@ -370,7 +376,10 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp assign_sort(%{assigns: %{listing: %{sorts: sorts}, params: params}} = socket) do
     assign_new(socket, :active_sort, fn ->
-      find_active_sort(sorts, List.first(sorts), get_in(params, ["order"]))
+      case params["sort"] && Enum.find(sorts, &(to_string(&1.key) == params["sort"])) do
+        nil -> find_active_sort(sorts, List.first(sorts), get_in(params, ["order"]))
+        sort -> sort
+      end
     end)
   end
 
@@ -431,16 +440,17 @@ defmodule BrandoAdmin.Components.Content.List do
     list_opts =
       listing
       |> build_list_opts(schema, content_language)
-      |> params_to_list_opts(params, schema)
+      |> params_to_list_opts(params, listing)
 
     # "off" only overrides a switched-on default; the context never sees it.
     sanitized_list_opts = list_opts |> Listings.drop_switched_off(listing) |> sanitize_list_opts()
 
-    {:ok, entries} = apply(context, :"list_#{plural}", [sanitized_list_opts])
+    # The context's filter clauses may take the user (see `Brando.Query.filters/2`)
+    {:ok, entries} = apply(context, :"list_#{plural}", [Map.put(sanitized_list_opts, :current_user, current_user)])
 
     entries =
       entries
-      |> decorate(listing.decorate)
+      |> decorate(listing.decorate, current_user)
       |> decorate(&put_translation_status(&1, schema, socket.assigns.current_user))
       |> decorate(&put_trashed_by(&1, schema))
 
@@ -471,9 +481,11 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   # A paginated listing wraps the page in a map; decorate only the entries.
-  defp decorate(entries, nil), do: entries
-  defp decorate(%{entries: page} = paginated, decorate), do: %{paginated | entries: decorate.(page)}
-  defp decorate(entries, decorate) when is_list(entries), do: decorate.(entries)
+  defp decorate(entries, decorate, user \\ nil)
+  defp decorate(entries, nil, _user), do: entries
+  defp decorate(%{entries: page} = paginated, decorate, user), do: %{paginated | entries: decorate(page, decorate, user)}
+  defp decorate(entries, decorate, user) when is_function(decorate, 2), do: decorate.(entries, user)
+  defp decorate(entries, decorate, _user) when is_list(entries), do: decorate.(entries)
 
   defp sanitize_list_opts(%{filter: filters} = list_opts) do
     sanitized_filters =
@@ -528,7 +540,7 @@ defmodule BrandoAdmin.Components.Content.List do
     end
   end
 
-  defp params_to_list_opts(list_opts, params, _) do
+  defp params_to_list_opts(list_opts, params, listing) do
     Enum.reduce(params, list_opts, fn
       {"page", page_number}, new_list_opts ->
         page_number =
@@ -545,6 +557,12 @@ defmodule BrandoAdmin.Components.Content.List do
 
       {"limit", limit}, new_list_opts ->
         Map.put(new_list_opts, :limit, String.to_integer(limit))
+
+      {"sort", key}, new_list_opts ->
+        case Enum.find(listing.sorts, &(to_string(&1.key) == key)) do
+          nil -> new_list_opts
+          sort -> Map.put(new_list_opts, :order, sort.order)
+        end
 
       {"order", order}, new_list_opts when is_binary(order) ->
         Map.put(new_list_opts, :order, order)
@@ -818,10 +836,11 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
-  @doc false
-  # The pages to offer: the first and the last, and the current one with two
-  # on each side. A skipped run shows as `:gap`, unless it is a single page,
-  # which is shown instead.
+  @doc """
+  The pages to offer: the first and the last, and the current one with two on
+  each side. A skipped run shows as `:gap`, unless it is a single page, which
+  is shown instead.
+  """
   def page_window(_current, total) when total <= 7, do: Enum.to_list(1..max(total, 1)//1)
 
   def page_window(current, total) do
@@ -1275,11 +1294,56 @@ defmodule BrandoAdmin.Components.Content.List do
     |> Enum.reject(&(&1 == content_language))
   end
 
+  @doc """
+  The selection actions `user` may use: a declared action can be limited with
+  `visible: fn user -> … end`.
+  """
+  def visible_actions(actions, user) do
+    Enum.filter(actions, fn action ->
+      case Map.get(action, :visible) do
+        visible when is_function(visible, 1) -> visible.(user)
+        _ -> true
+      end
+    end)
+  end
+
+  defp confirm_text(schema, confirm) when is_binary(confirm) do
+    {:safe, text} = g(schema, confirm)
+    text
+  end
+
+  defp confirm_text(_schema, _confirm), do: false
+
   # Selection action button component
-  attr :event, :string, required: true
+  attr :id, :string, default: nil
+  attr :event, :any, required: true
   attr :encoded_ids, :string, required: true
   attr :language, :string, default: nil
+  attr :confirm, :any, default: false
   slot :inner_block, required: true
+
+  def selection_action_button(%{confirm: confirm} = assigns) when is_binary(confirm) do
+    # ConfirmClick runs the event after the dialog; the ids go with it
+    assigns =
+      assign(
+        assigns,
+        :confirm_event,
+        if(is_binary(assigns.event), do: JS.push(assigns.event, value: %{ids: assigns.encoded_ids}), else: assigns.event)
+      )
+
+    ~H"""
+    <button
+      id={@id}
+      type="button"
+      phx-hook="Brando.ConfirmClick"
+      phx-confirm-click-message={@confirm}
+      phx-confirm-click={@confirm_event}
+      phx-value-ids={@encoded_ids}
+    >
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
 
   def selection_action_button(assigns) do
     ~H"""
@@ -1355,8 +1419,13 @@ defmodule BrandoAdmin.Components.Content.List do
             >
               {gettext("Delete selected")}
             </.selection_action_button>
-            <%= for %{event: event, label: label} <- @selection_actions do %>
-              <.selection_action_button event={event} encoded_ids={@encoded_selected_rows}>
+            <%= for {%{event: event, label: label} = action, idx} <- Enum.with_index(@selection_actions) do %>
+              <.selection_action_button
+                id={"selection-action-#{idx}"}
+                event={event}
+                confirm={confirm_text(@schema, Map.get(action, :confirm))}
+                encoded_ids={@encoded_selected_rows}
+              >
                 {g(@schema, label)}
               </.selection_action_button>
             <% end %>

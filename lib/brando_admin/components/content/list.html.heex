@@ -78,7 +78,7 @@
     content_language={@content_language}
     schema={@schema}
     selected_rows={@selected_rows}
-    selection_actions={@listing.selection_actions ++ @extra_selection_actions}
+    selection_actions={visible_actions(@listing.selection_actions ++ @extra_selection_actions, @current_user)}
     target={@myself}
   />
 

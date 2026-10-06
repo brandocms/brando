@@ -400,6 +400,17 @@ production dump.
 
 #### Improvements
 
+- **Listings that depend on who is looking.** A listing passes the signed-in
+  user to its context, and a `filters` function whose clauses take a third
+  argument receives `%{current_user: user}`, for filters like "hide what I have
+  reviewed". `decorate` may take the user as a second argument, and a row
+  component gets `@current_user`. A sort's `order` may be a function of the
+  list query, for orders columns cannot express (a total over an association);
+  the listing keeps it in the URL as `?sort=<key>`. A `selection_action` takes
+  `confirm:` (the question to ask first) and `visible:` (a function of the user).
+  The guide's row-action example now uses a `confirm` message: `confirm: true`
+  never compiled.
+
 - **`mix brando.migrations.check` finds outdated migration copies.**
   `mix brando.gen.migrations` matches copies by name and never updates one,
   so a copy made before a template was fixed replays the old code. The check

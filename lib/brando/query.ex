@@ -64,7 +64,32 @@ defmodule Brando.Query do
     Compiler.build_mutation(operation, module, callback, __CALLER__)
   end
 
-  @doc "Defines a context's list-query filter reducer."
+  @doc """
+  Defines a context's list-query filter reducer.
+
+  Each clause takes a `{key, value}` pair from `filter:` and the query:
+
+      filters Post do
+        fn
+          {:title, title}, query -> from(q in query, where: ilike(q.title, ^"%\#{title}%"))
+        end
+      end
+
+  For a filter whose meaning depends on who is asking, write every clause
+  with a third argument, `%{current_user: user}`. An admin listing passes
+  the signed-in user; elsewhere pass `current_user:` to `list_*`, or the
+  user is `nil`:
+
+      filters Application do
+        fn
+          {:hide_reviewed, "true"}, query, %{current_user: user} ->
+            from(a in query, where: a.id not in subquery(reviewed_by(user)))
+
+          {:for, type}, query, _ ->
+            from(a in query, where: a.for == ^type)
+        end
+      end
+  """
   defmacro filters(module, do: block), do: Compiler.build_reducer(:filters, module, block, __CALLER__)
 
   @doc "Defines a context's single-query match reducer."

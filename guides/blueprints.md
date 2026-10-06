@@ -883,6 +883,20 @@ Rows then read `@entry.usage`. Prefer a local capture, as above: the listing
 keeps the function at compile time, and a remote capture would make the
 Blueprint compile against the module it calls.
 
+When the extra data depends on who is looking (a reviewer sees only their own
+scores, say), give `decorate` a two-arity function; it also receives the
+signed-in user. A row component's assigns are `entry` and `current_user`:
+
+```elixir
+listing do
+  decorate &__MODULE__.put_scores/2
+  component &__MODULE__.listing_row/1
+end
+
+@doc false
+def put_scores(entries, user), do: MyApp.Reviewing.put_visible_scores(entries, user)
+```
+
 ### Filters and sorts
 
 Filters require unique string keys and support `:text`, `:boolean`, and
@@ -921,17 +935,73 @@ filter label: t("Not in use"), key: "unused", type: :boolean
 filter label: t("Featured"), key: "featured", type: :boolean, off: false
 ```
 
+A filter's meaning may depend on the signed-in user ("hide what I have
+reviewed"). The listing passes the user to the context, and a `filters`
+function whose clauses take a third argument receives it as
+`%{current_user: user}` (see `Brando.Query.filters/2`). Every clause of that
+function then takes the third argument:
+
+```elixir
+# The Blueprint
+filter label: t("Hide what I have reviewed"), key: "hide_reviewed", type: :boolean
+
+# The context
+filters Application do
+  fn
+    {:hide_reviewed, "true"}, query, %{current_user: user} ->
+      from(a in query, where: a.id not in subquery(reviewed_by(user)))
+
+    {:hide_reviewed, _}, query, _ ->
+      query
+  end
+end
+```
+
+Called outside a listing, the user is whatever `current_user:` the `list_*`
+call passes, or `nil`.
+
+A sort's `order` is an order string, a list of `{direction, field}` or
+`{direction, {association, field}}` tuples, or, for an order columns cannot
+express, a function that takes the list query and returns it ordered. The
+listing keeps a function sort in the URL by its key (`?sort=score`). The
+function should keep one row per entry (join a grouped subquery rather than
+grouping the query itself), so pagination still counts entries:
+
+```elixir
+sort :score, label: t("Highest score"), order: &__MODULE__.order_by_score/1
+
+@doc false
+def order_by_score(query) do
+  scores = from(r in Review, group_by: r.application_id, select: %{id: r.application_id, total: sum(r.score)})
+
+  from(a in query,
+    left_join: s in subquery(scores),
+    on: s.id == a.id,
+    order_by: [desc_nulls_last: s.total, asc: a.id]
+  )
+end
+```
+
 ### Actions and exports
 
 `action` adds a row-level action and `selection_action` adds an action for the
-current selection. Each action needs a label and event; row actions may add a
-boolean or string `confirm`. `default_actions false` removes Brando's built-in
-row actions. CSV exports require a unique name, label, and list of fields and may
-provide a dedicated query and description.
+current selection. Each action needs a label and event. `confirm` takes the
+question to ask before the action runs (`false`, the default, asks nothing). A
+selection action's event goes to the listing LiveView with the selected ids as
+a JSON list in `"ids"`. `visible` takes a function of the signed-in user that
+decides whether to offer a selection action; the LiveView handling the event
+must still check the user itself. `default_actions false` removes Brando's
+built-in row actions. CSV exports require a unique name, label, and list of
+fields and may provide a dedicated query and description.
 
 ```elixir
-action label: t("Duplicate"), event: "duplicate", confirm: true
+action label: t("Duplicate"), event: "duplicate", confirm: t("Duplicate this entry?")
 selection_action label: t("Publish"), event: "publish_selected"
+
+selection_action label: t("Reject selected"),
+                 event: "reject_selected",
+                 confirm: t("Reject the selected applications?"),
+                 visible: &__MODULE__.superuser?/1
 
 export :editorial do
   label t("Editorial export")
