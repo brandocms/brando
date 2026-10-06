@@ -49,6 +49,6 @@ export default defineConfig({
   },
 
   plugins: [
-    svelte()
+    svelte({ configFile: false })
   ]
 })

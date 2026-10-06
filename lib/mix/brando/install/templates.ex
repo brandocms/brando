@@ -165,7 +165,6 @@ defmodule Mix.Brando.Install.Templates do
     {:copy, "assets/backend/package.json", "assets/backend/package.json"},
     {:copy, "assets/backend/postcss.config.cjs", "assets/backend/postcss.config.cjs"},
     {:copy, "assets/backend/README.md", "assets/backend/README.md"},
-    {:copy, "assets/backend/svelte.config.cjs", "assets/backend/svelte.config.cjs"},
     {:copy, "assets/backend/vite.config.js", "assets/backend/vite.config.js"},
 
     # Backend resources
