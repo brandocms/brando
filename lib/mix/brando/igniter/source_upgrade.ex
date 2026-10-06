@@ -1135,7 +1135,7 @@ if Code.ensure_loaded?(Igniter) do
           {node, found or Enum.any?(children, &match?({:__aliases__, _, [^short]}, &1))}
 
         {:alias, _, [{:__aliases__, _, parts}]} = node, found ->
-          {node, found or List.last(parts) == short}
+          {node, found or Enum.join(parts, ".") =~ ~r/(^|\.)#{short}$/}
 
         node, found ->
           {node, found}
