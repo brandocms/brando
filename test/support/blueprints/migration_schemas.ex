@@ -724,3 +724,34 @@ defmodule Brando.MigrationTest.StorageCreator do
     attribute :legacy_title, :string
   end
 end
+
+defmodule Brando.MigrationTest.VillainV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Article",
+    singular: "storage_article",
+    plural: "storage_articles",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :title, :string
+    attribute :data, :map
+    attribute :html, :text
+    attribute :hero_data, :map
+  end
+end
+
+defmodule Brando.MigrationTest.VillainV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Article",
+    singular: "storage_article",
+    plural: "storage_articles",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :title, :string
+  end
+end

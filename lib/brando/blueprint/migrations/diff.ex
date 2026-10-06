@@ -80,6 +80,15 @@ defmodule Brando.Blueprint.Migrations.Diff do
   end
 
   @doc """
+  Tables the migration creates: the Blueprint's own table for a new Blueprint,
+  and every added auxiliary (join, alternates) table.
+  """
+  @spec created_tables(t(), Schema.t()) :: [String.t()]
+  def created_tables(%__MODULE__{} = diff, current) do
+    if(diff.create?, do: [to_string(current.table)], else: []) ++ Enum.map(diff.add_auxiliary_tables, &to_string(&1.name))
+  end
+
+  @doc """
   Returns the destructive operations in a diff for reporting and review.
   """
   @spec destructive_operations(t()) :: [term()]

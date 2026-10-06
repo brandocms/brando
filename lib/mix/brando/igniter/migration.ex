@@ -113,6 +113,73 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.assign(:brando_storage_plan, plan)
       |> Igniter.assign(:quiet_on_no_changes?, true)
       |> Igniter.add_task("brando.blueprint.apply_plan", [request])
+      |> warn_legacy_snapshot(plan)
+    end
+
+    @legacy_snapshot_guide ~s(the "Legacy snapshots" section of guides/migrating_from_053.md)
+
+    # A snapshot older than the database it describes (one written before the
+    # Villain-to-blocks conversion, say) makes the generator propose storage the
+    # Brando migration chain already created, or drop the legacy Villain
+    # columns the conversion still reads.
+    defp warn_legacy_snapshot(igniter, plan) do
+      existing = existing_tables(plan.metadata[:created_tables] || [])
+
+      villain_columns =
+        for {:remove_column, column} <- plan.metadata[:destructive_operations] || [],
+            legacy_villain_column?(column),
+            do: column
+
+      igniter
+      |> then(fn igniter ->
+        if existing == [],
+          do: igniter,
+          else:
+            Igniter.add_warning(igniter, """
+            #{inspect(plan.module)}: the plan creates #{Enum.join(existing, ", ")}, which already exist in the database.
+            The latest snapshot is probably older than the database. Compare `\\d <table>` with the
+            Blueprint and rebaseline instead of creating them; see #{@legacy_snapshot_guide}.
+            """)
+      end)
+      |> then(fn igniter ->
+        if villain_columns == [],
+          do: igniter,
+          else:
+            Igniter.add_warning(igniter, """
+            #{inspect(plan.module)}: the plan drops #{Enum.map_join(villain_columns, ", ", &inspect/1)}, which look like
+            legacy Villain columns. Keep them until the blocks conversion is verified on production data;
+            see #{@legacy_snapshot_guide}.
+            """)
+      end)
+    end
+
+    defp legacy_villain_column?(column) do
+      name = to_string(column)
+      name in ["data", "html"] or String.ends_with?(name, "_data") or String.ends_with?(name, "_html")
+    end
+
+    # Tables that already exist in the configured repo's database. The check is
+    # best effort: without a reachable database the plan is shown unchanged.
+    defp existing_tables([]), do: []
+
+    defp existing_tables(tables) do
+      with repo when is_atom(repo) and not is_nil(repo) <- Brando.repo(),
+           true <- Code.ensure_loaded?(repo),
+           {:ok, existing, _apps} <-
+             Ecto.Migrator.with_repo(repo, fn repo ->
+               %{rows: rows} =
+                 repo.query!("SELECT t FROM unnest($1::text[]) AS t WHERE to_regclass(t) IS NOT NULL", [tables],
+                   log: false
+                 )
+
+               List.flatten(rows)
+             end) do
+        existing
+      else
+        _ -> []
+      end
+    rescue
+      _error in [DBConnection.ConnectionError, Postgrex.Error] -> []
     end
 
     defp preview(plan) do
