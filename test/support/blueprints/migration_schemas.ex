@@ -691,3 +691,36 @@ defmodule Brando.MigrationTest.RelationPrimaryKeyV2 do
       source: :owner_ref
   end
 end
+
+defmodule Brando.MigrationTest.StorageTimestamped do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.StorageCreator do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
