@@ -23,22 +23,45 @@ existing table look new to the generator.
 
 ## 2. Update source with Igniter
 
-This task is built on Igniter, an optional Brando dependency. Add it to the
-application's own deps:
+### Dependencies and toolchain
 
-```elixir
-# mix.exs
-{:igniter, "~> 0.8", only: [:dev, :test]},
-```
+The source tasks run once the new Brando resolves, so fix `mix.exs` by hand
+first:
+
+- `{:gettext, "~> 1.0"}`. Brando requires Gettext 1.0; `~> 0.26` does not
+  resolve.
+- Drop `only: :test` from `floki` (the Phoenix generator default). Brando uses
+  Floki at runtime, and `mix deps.get` stops with "Dependencies have diverged"
+  while the application restricts it to tests.
+- Add Igniter, an optional Brando dependency the tasks are built on:
+
+  ```elixir
+  # mix.exs
+  {:igniter, "~> 0.8", only: [:dev, :test]},
+  ```
+
+A lock from 2024 or early 2025 pins `elixir_make` 0.6, which `vix` and `image`
+cannot use, so they fail to resolve. Run `mix deps.unlock elixir_make`, or start
+from the `mix.lock` of a site already on 0.55, then fetch again.
+
+Pin the toolchain with mise or asdf: a current Elixir and OTP, and Node 22 or
+24. The admin's `engines` (`^20.19 || ^22.12 || >=24`) rejects an odd release
+such as Node 23 in both yarn and pnpm installs. Use the same Node major as the
+Dockerfile's `node:` stages.
+
+### Run the source tasks
 
 Update the Brando dependency and fetch it, then run:
 
 ```shell
 mix deps.get
-mix deps.compile
 mix brando.migrate54
 mix brando.migrate55
 ```
+
+Neither task compiles the application. They load the dependencies and the
+configuration and rewrite source that does not yet compile against the new
+Brando; the application usually compiles only after both have run.
 
 Applications already on Brando 0.54 skip `mix brando.migrate54` and run only
 `mix brando.migrate55`. Both tasks match legacy syntax or missing
@@ -61,8 +84,13 @@ when Igniter becomes available. The dependency remains optional at runtime.
 - replaces `mix phx.digest` in a root Dockerfile, removes `?vsn=d` from font
   URLs in application styles/templates, and adds a missing single-Repo
   `config :brando, repo_module:` setting;
-- updates Gettext source declarations through `igniter.update_gettext` and
-  creates the `scripts/sync_gettext.sh` helper in the application.
+- removes `processor_module: Brando.Images.Processor.Sharp` from config. Brando
+  refuses to boot with it, and Vix is the default;
+- moves Gettext backends to `use Gettext.Backend` and their importers to
+  `use Gettext, backend: ...`, leaving the `gettext` requirement alone;
+- creates the `scripts/sync_gettext.sh` helper in the application, replacing a
+  copy of the 0.54 helper. A copy the application edited is left alone with a
+  warning.
 
 `mix brando.migrate55` covers the 0.54 to 0.55 source changes. It:
 
@@ -73,12 +101,24 @@ when Igniter becomes available. The dependency remains optional at runtime.
 - points Brando at the application's `Mailer` when it has one
   (`config :brando, mailer: MyApp.Mailer`); set the address it sends from
   yourself, as described in [Email](email.md);
+- adds `use Phoenix.Component` to Villain parsers (`use Brando.Villain.Parser`)
+  that render `~H`, which the parser's `__using__` no longer brings in, and
+  warns about overrides of blocks Brando no longer renders, such as
+  `slideshow/2` (slideshows became `gallery` in `brando_77`). Delete those;
+  nothing calls them;
+- removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
+- completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
+  on `nplurals=2;` without a rule and on a rule without its trailing `;`, once
+  per catalog per compile, so `--warnings-as-errors` fails until they read
+  `nplurals=2; plural=(n != 1);`;
 - refreshes `scripts/sync_gettext.sh` and archives the consumer-owned
-  `mix brando.upgrade` task that 0.54 installed, so Brando's own
-  `mix brando.upgrade FROM TO` hook can take over the task name (copying
-  migration files is now `mix brando.gen.migrations`);
+  `mix brando.upgrade` task that 0.54 installed, wherever it lives under `lib/`,
+  so Brando's own `mix brando.upgrade FROM TO` hook can take over the task name
+  (copying migration files is now `mix brando.gen.migrations`);
 - creates `florist.config.exs` when both legacy `deployment.cfg` and
-  `fabfile.py` exist and no Florist configuration is already present.
+  `fabfile.py` exist and no Florist configuration is already present, and adds
+  `plug Brando.Plug.Health` to the endpoint, before the router. Florist's
+  deploy and nginx templates check `/health`.
 
 The Florist conversion reads only deterministic literal settings; it never
 evaluates Python. It carries over the project/module, production and staging
@@ -87,6 +127,19 @@ host/file, domains, and pgbackup intent where they can be inferred. It retains
 the legacy `:single` deployment and nginx topology. Existing
 `florist.config.exs`, `deployment.cfg`, and `fabfile.py` files are never
 overwritten or removed.
+
+Where `deployment.cfg` falls short, the converter reads the other legacy files:
+
+- a target's domain comes from `<TARGET>_URL`, or, when that is missing or still
+  the install template's `http://somesite.com` (which it reports), from
+  `BRANDO_URL_HOST` in `.envrc.<flavor>`, then from the `server_name` of the
+  `etc/nginx/<flavor>.conf` server that proxies to the application (the HTTPS
+  one first);
+- the application port comes from `PORT=` in `etc/supervisord/<flavor>.conf` or
+  `etc/systemd/<flavor>.service`, checked against the nginx upstream. Without
+  either it falls back to the bundled Fabric defaults (`8055` and `8060`) and
+  says so;
+- the warnings name the process manager it found: supervisord or systemd.
 
 Passwords are deliberately omitted. Before loading the generated configuration,
 export `FLORIST_DB_PASSWORD_PROD` and, when generated,
@@ -126,10 +179,12 @@ correct rewrite depends on application semantics:
   declarations with application-specific row components/child schemas, and
   redesigning exports that use the removed `after_export` callback;
 - changing a Vite manifest only when that application actually uses Vite 5+;
-- replacing custom Sharp processing, consolidating custom Create/Update
-  LiveViews, adopting `<.head>`, and updating custom navigation markup;
-- refreshing the package-manager lockfile and rebuilding backend assets after
-  the task pins `phoenix_live_view`; nonstandard frontend manifests still need
+- replacing custom processing that relied on sharp-cli, consolidating custom
+  Create/Update LiveViews, adopting `<.head>`, and updating custom navigation
+  markup;
+- refreshing the frontend's package-manager lockfile and rebuilding it after
+  the task pins `phoenix_live_view` (the admin is covered in
+  [Admin assets](#admin-assets)); nonstandard frontend manifests still need
   manual review. Retain Hackney explicitly if application code uses it;
 - updating callers of `Brando.Videos.Uploader.initiate_upload/3` for its new
   error tuples and provider credential behavior;
@@ -173,6 +228,32 @@ mix test --warnings-as-errors
 
 Rerunning either task is safe; a second run should produce no source diff.
 
+### Admin assets
+
+A 0.54 site's `assets/backend` is usually yarn, Vite 5 and Svelte 4, and the
+source tasks leave it alone. Bring it to the current template:
+
+```shell
+mix brando.gen.backend --upgrade
+```
+
+It takes the template's package versions, `engines` and `packageManager`
+(keeping the application's own packages, scripts and BrandoJS source), replaces
+`vite.config.js`, removes `svelte.config.cjs` and yarn/npm lockfiles, and
+replaces the Dockerfile's `assets_backend` stage with the template's pnpm stage.
+Customized CSS and other existing files are kept. Review the diff, then install
+and build:
+
+```shell
+mix brando.assets.setup --backend-only
+```
+
+`--backend-only` leaves `assets/frontend` alone, for a frontend that still uses
+yarn or its own build; without it the task installs and builds both with pnpm.
+Commit the `assets/backend/pnpm-lock.yaml` it writes: the Docker build installs
+from it. The Docker image ships the admin from the local `assets/backend/.yalc`,
+so rerun the setup after updating BrandoJS.
+
 ### Review a generated Florist configuration
 
 Treat switching deployment tools as its own rehearsed migration. Before the
@@ -180,10 +261,10 @@ first Florist command:
 
 1. Compare every generated target with its `GLUE_SETTINGS` and target function
    in `fabfile.py`, especially domain, base directory, process name, database,
-   Docker host, and Dockerfile. The converter emits the bundled Fabric ports
-   (`8055` for production and `8060` for staging); verify each one against the
-   corresponding `.envrc.<flavor>` `PORT` and legacy nginx upstream. Florist
-   names the single-deployment application port `blue_port`.
+   Docker host, and Dockerfile. Check each domain, SSL mode and port the
+   converter took from the legacy `.envrc`, nginx and process manager files
+   (its warnings name the source), and any it fell back on. Florist names the
+   single-deployment application port `blue_port`.
 2. Keep `deployment type: :single` and `webserver type: :nginx` for the initial
    cutover. Moving to blue/green changes services, ports, proxying, and release
    directories and should be tested separately.
@@ -192,13 +273,19 @@ first Florist command:
    to versioned directories and creates a `current/media` symlink. Verify any
    project-specific media path before cutover, back it up, and confirm the
    symlink points at the existing persistent directory.
-4. Compare the legacy `etc/` systemd, nginx, logrotate, pgbackup, cron, and env
-   files with Florist's generated/bootstrap behavior. Do not run bootstrap over
-   a production service until the resulting paths and units have been reviewed.
-   The generated staging target retains the bundled nginx `noindex` behavior.
-5. Configure rclone manually if the fabfile used it. Its prompted credentials
+4. Compare the legacy `etc/` process manager (systemd units or supervisord
+   programs), nginx, logrotate, pgbackup, cron, and env files with Florist's
+   generated/bootstrap behavior. Florist runs the release as a systemd service:
+   on a supervisord site, stop and disable the supervisord program at cutover so
+   the two do not compete for the port. Do not run bootstrap over a production
+   service until the resulting paths and units have been reviewed. The
+   generated staging target retains the bundled nginx `noindex` behavior.
+5. Confirm `plug Brando.Plug.Health` sits in the endpoint before the router
+   (`mix brando.migrate55` adds it when it creates the configuration). Florist
+   checks `/health` during deploys; without the plug the check never passes.
+6. Configure rclone manually if the fabfile used it. Its prompted credentials
    and deployment-specific bucket paths are intentionally not migrated.
-6. Verify the Docker image contains the standard Mix release tarball at the
+7. Verify the Docker image contains the standard Mix release tarball at the
    path expected by Florist's `release_builder: :elixir`, then rehearse build,
    copy, upload, unpack, migrate, restart, and rollback on staging.
 
@@ -235,6 +322,44 @@ Handle application Blueprints according to their history:
 See [Blueprint migrations](blueprint_migrations.md) for renames, physical Ecto
 sources, relation corrections, type/default conversions, legacy snapshots,
 custom paths, and fail-closed history recovery.
+
+When a migration adds the Creator trait's `edited_at` to an existing table, the
+generator backfills it from `updated_at`, as `brando_175` does for Brando's own
+tables.
+
+### Legacy snapshots
+
+A snapshot written before Brando's blocks conversion describes a table the
+Brando migration chain has changed since. Diffed against it, the generator
+proposes storage that already exists (`create table(:projects_blocks)`,
+`rendered_blocks`) and drops the legacy Villain columns (`data`, `html`,
+`*_data`). It warns when a planned table already exists in the database or a
+planned drop looks like a Villain column. In that case:
+
+- Compare `\d table` in a migrated copy of production with every generated
+  operation.
+- Where they disagree, switch to `create_if_not_exists`/`drop_if_exists` (and
+  `add_if_not_exists`/`remove_if_exists` for columns), and roll back and forward
+  once.
+- Keep `data`, `html` and the other Villain columns until the converted
+  content is verified on production data. They are the only record of what
+  the conversion started from, and repairs may need them.
+
+A trait removed from a Blueprint without a migration (Translatable, for
+example) surfaces in the first generator run as a proposal to drop its columns,
+indexes and tables: `language`, its index, `*_alternates`. That is correct but
+destructive. Decide whether the data can go before accepting it, or put the
+trait back for now.
+
+### Test and development databases
+
+A site that copied Brando migrations years ago may not replay them from an empty
+database: early copies use modules that no longer exist (such as
+`Brando.Sequence.Migration`), and `mix brando.gen.migrations` never refreshes an
+existing copy. Production is unaffected, because it only runs the new
+migrations. Load test and development databases from a `structure.sql` instead:
+migrate a copy of production, run `mix ecto.dump`, and commit the result. Check
+too that `test_paths` in `mix.exs` points at directories that exist.
 
 Before touching a shared database:
 
@@ -274,7 +399,8 @@ mix brando.check.image_texts
 
 ## 5. Reconcile Gettext catalogs
 
-Extract each application's actual locales. For example:
+`mix brando.migrate55` has already completed incomplete `Plural-Forms` headers
+in existing catalogs. Extract each application's actual locales. For example:
 
 ```shell
 mix gettext.extract --merge priv/gettext/backend --locale no \
