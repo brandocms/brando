@@ -4,12 +4,12 @@ defmodule Brando.Repo.Migrations.Brando200FixAssignedGalleryLoops do
   @moduledoc """
   `brando_136` rewrote a gallery ref's legacy `data.data.images` to
   `refs.<ref>.gallery.gallery_objects`, so a loop over it now yields
-  `GalleryObject`s instead of images. `brando_141` repaired loops written
-  directly over the ref:
+  `GalleryObject`s instead of images. This repairs loops written directly over
+  the ref (which `brando_141` used to handle, unreliably):
 
       {% for image in refs.slider.gallery.gallery_objects %}
 
-  but not loops over a variable assigned from it:
+  and loops over a variable assigned from it, which nothing repaired:
 
       {% assign images = refs.slider.gallery.gallery_objects %}
       {% for image in images %}

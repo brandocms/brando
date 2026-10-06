@@ -1158,7 +1158,11 @@ production dump.
   that loops over a variable assigned from a gallery ref
   (`{% assign images = refs.slider.gallery.gallery_objects %}`), which
   `brando_141` missed, so `image.alt` and friends read `image.image.alt`. Run
-  `mix brando.gen.migrations` for `brando_200`.
+  `mix brando.gen.migrations` for `brando_200`. `brando_141` is now a no-op:
+  it also rewrote HTML that named the loop variable (`class="image"`) and lost
+  the loop at a nested `{% endfor %}`, and `brando_200` repairs the loops it
+  handled. Sites that already ran it are unaffected; a copy that has not run
+  yet shows up in `mix brando.migrations.check`.
 - **Passwords saved through the context are hashed.** `trait :password`
   hashed only in the admin form's save, so `Brando.Users.create_user/2` and
   `update_user/3` stored a plain-text password as given, although the users

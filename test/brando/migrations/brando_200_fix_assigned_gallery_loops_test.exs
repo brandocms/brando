@@ -73,6 +73,26 @@ defmodule Brando.Migrations.FixAssignedGalleryLoopsTest do
              """
     end
 
+    test "fixes a direct loop with nested loops and HTML that names the variable", %{migration: migration} do
+      code = """
+      {% for image in refs.slider.gallery.gallery_objects %}
+        <figure class="image">
+          {% for tag in image.tags %}{{ tag }}{% endfor %}
+          {% picture image { srcset: 'default' } %}
+        </figure>
+      {% endfor %}
+      """
+
+      assert migration.rewrite(code) == """
+             {% for image in refs.slider.gallery.gallery_objects %}
+               <figure class="image">
+                 {% for tag in image.image.tags %}{{ tag }}{% endfor %}
+                 {% picture image.image { srcset: 'default' } %}
+               </figure>
+             {% endfor %}
+             """
+    end
+
     test "leaves loops brando_141 already converted alone", %{migration: migration} do
       code = """
       {% assign gallery_objects = refs.photos|gallery %}
