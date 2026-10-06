@@ -1,0 +1,70 @@
+defmodule Brando.Migrations.UpgradeFrom051Test do
+  # Each test rebuilds the 0.51 tables a template expects inside the sandbox
+  # transaction and runs the template. Postgres DDL is transactional, so
+  # everything is rolled back afterwards.
+  use ExUnit.Case
+  use Brando.ConnCase
+
+  alias BrandoIntegration.Repo
+
+  @templates Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations")
+
+  defp run_template(name) do
+    [{module, _bytecode}] = Code.compile_file(Path.join(@templates, name))
+
+    try do
+      Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false, migration_lock: false)
+    after
+      :code.purge(module)
+      :code.delete(module)
+    end
+  end
+
+  defp query!(sql, params \\ []), do: Repo.query!(sql, params)
+
+  defp rows(sql, params \\ []), do: query!(sql, params).rows
+
+  defp table_exists?(table) do
+    rows("SELECT to_regclass($1)::text", [table]) != [[nil]]
+  end
+
+  describe "brando_80" do
+    test "drops app foreign keys to images_series and keeps their ids" do
+      query!("ALTER TABLE images DROP COLUMN config_target")
+      query!("CREATE TABLE images_categories (id bigserial PRIMARY KEY, name text)")
+
+      query!("""
+      CREATE TABLE images_series (
+        id bigserial PRIMARY KEY, name text, slug text, cfg jsonb,
+        image_category_id bigint CONSTRAINT imageseries_image_category_id_fkey REFERENCES images_categories
+      )
+      """)
+
+      query!("ALTER TABLE images ADD COLUMN image_series_id bigint REFERENCES images_series")
+      query!("CREATE TABLE legacy_posts (id bigserial PRIMARY KEY, image_series_id bigint REFERENCES images_series)")
+      # An app table pointing at the categories as well
+      query!(
+        "CREATE TABLE legacy_albums (id bigserial PRIMARY KEY, image_category_id bigint REFERENCES images_categories)"
+      )
+
+      [[category_id]] = rows("INSERT INTO images_categories (name) VALUES ('Posts') RETURNING id")
+
+      [[series_id]] =
+        rows("INSERT INTO images_series (name, slug, image_category_id) VALUES ('A', 'a', $1) RETURNING id", [
+          category_id
+        ])
+
+      [[post_id]] = rows("INSERT INTO legacy_posts (image_series_id) VALUES ($1) RETURNING id", [series_id])
+
+      run_template("brando_80_extract_embeds_one_image_fields.exs")
+
+      refute table_exists?("images_series")
+      refute table_exists?("images_categories")
+      assert rows("SELECT image_series_id FROM legacy_posts") == [[series_id]]
+
+      assert rows("SELECT table_name, entry_id, image_series_id FROM _legacy_image_series_fks") ==
+               [["legacy_posts", post_id, series_id]]
+    end
+  end
+
+end
