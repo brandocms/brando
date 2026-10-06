@@ -15,7 +15,8 @@ if Code.ensure_loaded?(Igniter) do
     dependency. Applications still on 0.53 syntax must run
     `mix brando.migrate54` first.
 
-    The task adds the explicit listing component imports, configures Req as
+    The task adds the explicit listing component imports, adds
+    `use Phoenix.Component` to Villain parsers that render `~H`, configures Req as
     Swoosh's API client, points Brando at the application's mailer, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
@@ -39,6 +40,7 @@ if Code.ensure_loaded?(Igniter) do
     def igniter(igniter) do
       igniter
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
+      |> SourceUpgrade.update_villain_parsers()
       |> SourceUpgrade.configure_swoosh_client()
       |> SourceUpgrade.configure_brando_mailer()
       |> SourceUpgrade.remove_sharp_processor()
@@ -57,7 +59,9 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_notice(igniter, """
       Brando 0.55 source migration prepared.
 
-      Custom listing rows get the narrow component imports they use. The task
+      Custom listing rows get the narrow component imports they use, and
+      Villain parsers that render `~H` get the `use Phoenix.Component` that
+      `use Brando.Villain.Parser` no longer brings in. The task
       adds Req as Swoosh's API client when none is configured, points Brando at
       the application's `Mailer` when it has one, and pins the
       declared `phoenix_live_view` JavaScript dependency under `assets/` to the

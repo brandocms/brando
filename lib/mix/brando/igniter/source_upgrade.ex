@@ -973,6 +973,96 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    Updates application modules that `use Brando.Villain.Parser`.
+
+    The parser's `__using__` no longer brings in `Phoenix.Component`, so a
+    module that renders `~H` gets `use Phoenix.Component`. Public overrides
+    of a block Brando no longer has (for example `slideshow/2`, which
+    became `gallery` in `brando_77`) are never called; each is reported.
+    """
+    def update_villain_parsers(igniter) do
+      {igniter, parsers} =
+        ProjectModule.find_all_matching_modules(igniter, fn _module, zipper ->
+          match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, Brando.Villain.Parser))
+        end)
+
+      Enum.reduce(parsers, igniter, fn parser, igniter ->
+        {:ok, {igniter, _source, defmodule}} = ProjectModule.find_module(igniter, parser)
+        {:ok, zipper} = Common.move_to_do_block(defmodule)
+
+        igniter
+        |> warn_dead_parser_overrides(parser, zipper)
+        |> then(fn igniter ->
+          cond do
+            not renders_heex?(zipper) ->
+              igniter
+
+            uses_phoenix_component?(zipper) ->
+              igniter
+
+            true ->
+              igniter
+              |> ProjectModule.find_and_update_module!(parser, &add_phoenix_component/1)
+              |> Igniter.add_warning("""
+              #{inspect(parser)} renders ~H and now has `use Phoenix.Component`. The 0.53
+              `use Brando.Villain.Parser` also imported Brando.HTML and Phoenix.HTML and aliased
+              Brando.Cache, Content, Datasource, Utils and Villain. Add the ones it still uses.
+              """)
+          end
+        end)
+      end)
+    end
+
+    defp renders_heex?(zipper), do: Zipper.find(zipper, &match?({:sigil_H, _, _}, &1)) != nil
+
+    defp uses_phoenix_component?(zipper) do
+      match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, Phoenix.Component)) or
+        match?(
+          {:ok, _},
+          Common.move_to(zipper, fn zipper ->
+            CodeFunction.function_call?(zipper, :import) and
+              CodeFunction.argument_equals?(zipper, 0, Phoenix.Component)
+          end)
+        )
+    end
+
+    defp add_phoenix_component(zipper) do
+      with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Brando.Villain.Parser) do
+        {:ok, Common.add_code(zipper, "use Phoenix.Component", placement: :after)}
+      end
+    end
+
+    defp warn_dead_parser_overrides(igniter, parser, zipper) do
+      callbacks = Brando.Villain.Parser.overridable_callbacks()
+
+      zipper
+      |> Zipper.node()
+      |> public_functions()
+      |> Enum.reject(&(&1 in callbacks))
+      |> Enum.filter(fn {_name, arity} -> arity == 2 end)
+      |> Enum.reduce(igniter, fn {name, arity}, igniter ->
+        Igniter.add_warning(igniter, """
+        #{inspect(parser)}.#{name}/#{arity} overrides no block Brando renders, so it is never called.
+        Delete it, or move its markup to a module or to the `gallery`/`media` override that replaced it.
+        """)
+      end)
+    end
+
+    defp public_functions(ast) do
+      {_ast, functions} =
+        Macro.prewalk(ast, [], fn
+          {:def, _, [{:when, _, [head | _]} | _]} = node, acc -> {node, [function_head(head) | acc]}
+          {:def, _, [head | _]} = node, acc -> {node, [function_head(head) | acc]}
+          node, acc -> {node, acc}
+        end)
+
+      functions |> Enum.reject(&is_nil/1) |> Enum.uniq()
+    end
+
+    defp function_head({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
+    defp function_head(_head), do: nil
+
     def configure_swoosh_client(igniter) do
       Config.configure_new(
         igniter,

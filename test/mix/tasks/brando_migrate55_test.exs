@@ -393,6 +393,57 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     end
   end
 
+  test "Villain parsers that render ~H get Phoenix.Component, and dead overrides are reported" do
+    parser_path = "lib/legacy_app/villain/parser.ex"
+    plain_path = "lib/legacy_app/villain/plain_parser.ex"
+
+    igniter =
+      migrate(@blueprint_054, %{
+        parser_path => """
+        defmodule LegacyApp.Villain.Parser do
+          use Brando.Villain.Parser
+
+          def slideshow(%{"images" => images}, _) do
+            assigns = %{images: images}
+
+            ~H\"\"\"
+            <div :for={image <- @images}>{image["title"]}</div>
+            \"\"\"
+          end
+
+          def header(data, opts) when is_map(data), do: Brando.Villain.Parser.header(data, opts)
+
+          def helper(a, b), do: {a, b}
+          defp private(a, b), do: {a, b}
+        end
+        """,
+        plain_path => """
+        defmodule LegacyApp.Villain.PlainParser do
+          use Brando.Villain.Parser
+          use Phoenix.Component
+
+          def text(data, _opts) do
+            assigns = %{data: data}
+            ~H"<p>{@data.text}</p>"
+          end
+        end
+        """
+      })
+
+    assert source(igniter, parser_path) =~ ~r/use Brando.Villain.Parser\n\s*use Phoenix.Component\n/
+    assert_unchanged(igniter, plain_path)
+
+    assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.slideshow/2 overrides no block"))
+    assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.helper/2"))
+    assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser renders ~H"))
+    refute Enum.any?(igniter.warnings, &String.contains?(&1, ".header/2"))
+    refute Enum.any?(igniter.warnings, &String.contains?(&1, ".private/2"))
+    refute Enum.any?(igniter.warnings, &String.contains?(&1, "PlainParser"))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, parser_path)
+  end
+
   test "reports only the 0.55 manual workflow" do
     igniter = migrate(@blueprint_054)
 
