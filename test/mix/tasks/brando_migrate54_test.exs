@@ -509,6 +509,23 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert igniter.tasks == []
   end
 
+  test "replaces a Gettext helper an earlier Brando shipped and keeps an edited one" do
+    legacy =
+      File.read!(Application.app_dir(:brando, "priv/templates/brando.migrate/legacy_sync_gettext/sync_gettext.0.54.sh"))
+
+    current = File.read!(Application.app_dir(:brando, "priv/templates/brando.migrate/sync_gettext.sh"))
+
+    igniter = migrate(@legacy_blueprint, nil, %{"scripts/sync_gettext.sh" => legacy})
+    assert igniter.issues == []
+    assert source(igniter, "scripts/sync_gettext.sh") == current
+
+    edited = legacy <> "\necho custom\n"
+    igniter = migrate(@legacy_blueprint, nil, %{"scripts/sync_gettext.sh" => edited})
+    assert igniter.issues == []
+    assert source(igniter, "scripts/sync_gettext.sh") == edited
+    assert_has_warning(igniter, &String.contains?(&1, "differs from every version Brando shipped"))
+  end
+
   test "copied Gettext helper fills single-line translations portably" do
     directory = Path.join(System.tmp_dir!(), "brando-gettext-#{System.unique_integer([:positive])}")
     File.mkdir_p!(directory)

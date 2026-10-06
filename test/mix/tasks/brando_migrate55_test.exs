@@ -429,7 +429,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
         @vite_config_path => @vite_config,
         @deployment_config_path => @deployment_config,
         @fabfile_path => @fabfile,
-        @gettext_script_path => File.read!("test/fixtures/brando_054/sync_gettext.sh"),
+        @gettext_script_path => legacy_gettext_script(),
         @legacy_task_path => legacy_task("0.54")
       }
       |> Map.merge(overrides)
@@ -439,6 +439,10 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     [app_name: :legacy_app, files: files]
     |> test_project()
     |> include_test_files()
+  end
+
+  defp legacy_gettext_script do
+    File.read!(Application.app_dir(:brando, "priv/templates/brando.migrate/legacy_sync_gettext/sync_gettext.0.54.sh"))
   end
 
   defp legacy_task(version) do

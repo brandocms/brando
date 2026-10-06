@@ -1416,14 +1416,45 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
-    Creates the Gettext recovery helper, keeping an identical existing copy.
+    Creates the Gettext recovery helper.
 
-    A differing copy is a blocking issue so that a customized script is never
-    replaced silently. Use `refresh_gettext_script/1` when the copy is known to
-    be Brando-owned.
+    An existing copy of the current helper is kept, and a copy of a helper an
+    earlier Brando shipped is replaced. A copy that matches neither was edited
+    by the application: it is left alone with a warning rather than aborting
+    the whole source upgrade.
     """
     def copy_gettext_script(igniter) do
-      Mix.Brando.Igniter.Files.create(igniter, @gettext_script_path, gettext_script())
+      contents = gettext_script()
+
+      if Igniter.exists?(igniter, @gettext_script_path) do
+        igniter = Igniter.include_existing_file(igniter, @gettext_script_path)
+        current = igniter.rewrite |> Rewrite.source!(@gettext_script_path) |> Source.get(:content)
+
+        cond do
+          same_script?(current, contents) ->
+            igniter
+
+          Enum.any?(legacy_gettext_scripts(), &same_script?(current, &1)) ->
+            Igniter.update_file(igniter, @gettext_script_path, &Source.update(&1, :content, contents))
+
+          true ->
+            Igniter.add_warning(igniter, """
+            #{@gettext_script_path} differs from every version Brando shipped, so it was left unchanged.
+            Compare it with priv/templates/brando.migrate/sync_gettext.sh in Brando before using it.
+            """)
+        end
+      else
+        Igniter.create_new_file(igniter, @gettext_script_path, contents)
+      end
+    end
+
+    defp same_script?(left, right), do: String.trim_trailing(left) == String.trim_trailing(right)
+
+    defp legacy_gettext_scripts do
+      :brando
+      |> Application.app_dir(["priv", "templates", "brando.migrate", "legacy_sync_gettext", "*.sh"])
+      |> Path.wildcard()
+      |> Enum.map(&File.read!/1)
     end
 
     @doc """
