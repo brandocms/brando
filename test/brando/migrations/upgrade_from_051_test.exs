@@ -67,4 +67,16 @@ defmodule Brando.Migrations.UpgradeFrom051Test do
     end
   end
 
+  describe "brando_95" do
+    test "stops with a clear message when the site has its own videos table" do
+      # The test database already has Brando's videos table, standing in for
+      # a 0.51 site's own.
+      assert table_exists?("videos")
+
+      assert_raise RuntimeError, ~r/already has one.*rename table\(:videos\)/s, fn ->
+        run_template("brando_95_extract_videos_embeds_one.exs")
+      end
+    end
+  end
+
 end
