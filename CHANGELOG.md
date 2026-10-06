@@ -1123,8 +1123,11 @@ production dump.
   entry is written, from any save. Code that passed a pre-hashed password to
   the context (`Bcrypt.hash_pwd_salt/1` before `create_user`) must pass the
   plain text instead, or its users cannot sign in; inserting a struct with
-  `Repo.insert` is unchanged. Check existing user rows for plain-text
-  passwords created this way, and reset them.
+  `Repo.insert` is unchanged. Brando's own account creation (the admin form,
+  `mix brando.setup`, `mix brando.gen.admin`) always hashed; only application
+  code that set passwords through the context was affected. Such rows are not
+  Bcrypt hashes: `SELECT id, email FROM users WHERE password NOT LIKE '$2%'`
+  lists them, and their passwords should be reset.
 - **Context saves set `publish_at` and sync translations.**
   `trait :scheduled_publishing` gives an entry published without a
   `publish_at` the time it was saved from any save, not only the admin form's.
@@ -1133,7 +1136,10 @@ production dump.
   form, revisions, proposals and content transfer already did, so translations
   of a source saved from code no longer go stale. Drop any
   `source_saved/2` call made after a context save: a second call queues a
-  second sync. `minor: true` is now a mutation option. `Brando.Blueprint.AfterSave.run/4` now runs only the traits'
+  second sync. `minor: true` is now a mutation option. An editor's save of a
+  synchronized translation no longer also queues a background recompute,
+  which could run before the save's own recompute and replace the version
+  the editor had just reviewed. `Brando.Blueprint.AfterSave.run/4` now runs only the traits'
   `after_save/3` and takes no options.
 - **Replaying the migration chain on a 0.51 database.** `brando_80` no
   longer queries a Blueprint whose table or embedded image column does not

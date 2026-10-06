@@ -69,11 +69,14 @@ defmodule Brando.TranslationsTest do
     end
   end
 
-  # An editor's save of a translation. The mutation queues the translation's
-  # recompute, which in production runs after the editor has reported the save
-  # with `target_saved/3`; Oban's inline test mode would run it first.
+  # An editor's save of a translation, as the admin form makes it: the editor
+  # reports the save with `target_saved/3`, so the mutation queues no
+  # recompute of its own.
   defp editor_save(id, params, user) do
-    Oban.Testing.with_testing_mode(:manual, fn -> SyncTest.update_article(id, params, user) end)
+    id
+    |> load()
+    |> Article.changeset(params, user)
+    |> SyncTest.update_article(user, editor_review: true)
   end
 
   defp load(id) do
@@ -341,6 +344,17 @@ defmodule Brando.TranslationsTest do
       %{pending: fresh} = Translations.editor_state(Article, target.id)
       assert fresh.id != before.id
       assert Translations.decode_payload(fresh).subtitle == "Published revision"
+    end
+
+    test "an editor's save queues no recompute of its own", c do
+      %{target: target, version: version} = reviewed_change(c)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _} = editor_save(target.id, %{subtitle: "Edited"}, c.user)
+        refute_enqueued(worker: Brando.Worker.TranslationSync)
+      end)
+
+      assert pending(target).id == version.id
     end
 
     test "a saved translation is recomputed in the background", c do

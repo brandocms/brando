@@ -101,9 +101,15 @@ defmodule Brando.Query.Mutations do
   # A saved source of synchronized translations queues their sync; a saved
   # synchronized translation queues the recompute of its pending version.
   # `minor: true` marks a save of minor text corrections, which raises no new
-  # review work (see `Brando.Translations.source_saved/2`).
+  # review work. `editor_review: true` comes from the admin form, which
+  # recomputes a reviewed translation itself (`Brando.Translations.target_saved/3`)
+  # right after the save; a queued recompute could run first and replace the
+  # version the editor reviewed.
   defp sync_translations(entry, opts) do
-    Brando.Translations.source_saved(entry, minor: Keyword.get(opts, :minor, false))
+    Brando.Translations.source_saved(entry,
+      minor: Keyword.get(opts, :minor, false),
+      resync: not Keyword.get(opts, :editor_review, false)
+    )
   end
 
   defp maybe_preload(entry, nil), do: {:ok, entry}
