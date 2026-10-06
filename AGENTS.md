@@ -94,7 +94,8 @@ Load only the skill needed for the state boundary being changed:
 - [Live preview](.claude/skills/brando-live-preview/SKILL.md): cached assigns, transport choices, and iframe recovery.
 
 The existing block-state and upload contracts below still apply. DSL usage belongs
-in `guides/blueprints.md`, authorization in `guides/authorization.md`, and tenant
+in `guides/blueprints.md` and the guides it links to (`blueprint_fields.md`,
+`blueprint_traits.md`, `blueprint_listings.md`, `blueprint_forms.md`), authorization in `guides/authorization.md`, and tenant
 job context in `Brando.Tenant.Job`. The [skill necessity audit](docs/agent-skill-audit.md)
 records why the other candidates in #2701 do not need standalone skills.
 

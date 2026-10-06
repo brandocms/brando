@@ -186,7 +186,7 @@ through that fallback rather than a Location redirect.
 
 For permalink changes, the admin can offer a confirmed automatic redirect. That
 flow stores an escaped exact source, removes stale exact rules on the new URL,
-and avoids simple rename-back loops. See [Blueprint permalink redirects](blueprints.md#permalink-redirects).
+and avoids simple rename-back loops. See [Permalink redirects](blueprint_traits.md#permalink-redirects).
 Do not recreate those internal rules by submitting arbitrary regex text.
 
 Verify with both the helper and `curl -I` on the actual old route. Check the

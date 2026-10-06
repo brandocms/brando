@@ -23,7 +23,7 @@ which were not listed separately in that checklist, also have a complete guide.
 | Datasources | [Datasources](../guides/datasources.md) | List/selection/single contracts, ordering, vars, request context, metadata, invalidation |
 | Villain | [Block editor](../guides/block_editor.md), [parser](../guides/villain_parser.md), [text styles](../guides/villain_text_styles.md) | Modules, refs, vars, Liquex/HEEx rendering, rich text |
 | Identity | [Identity and SEO](../guides/identity_and_seo.md) | Translated defaults, contact details, links, frontend access, cache/render refresh |
-| SEO and redirects | [Identity and SEO](../guides/identity_and_seo.md), [permalink redirects](../guides/blueprints.md#permalink-redirects) | Fallbacks, robots, manual patterns/captures, language and fallback-controller behavior |
+| SEO and redirects | [Identity and SEO](../guides/identity_and_seo.md), [permalink redirects](../guides/blueprint_traits.md#permalink-redirects) | Fallbacks, robots, manual patterns/captures, language and fallback-controller behavior |
 | Sitemap | [Sitemaps](../guides/sitemaps.md) | Public filters, struct-preserving URL queries, generation, XML output, schedule and storage |
 | CDN | [CDN](../guides/cdn.md) | Global/field S3 settings, upload transports, media URLs versus object keys, tenant boundaries |
 | Users | [Users and sessions](../guides/users.md) | Creation, restricted accounts, login eligibility, tokens, deactivation, content transfer |

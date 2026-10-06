@@ -1877,7 +1877,7 @@ production dump.
   work may retry, so callbacks with external side effects should be idempotent.
   This changes no database storage: no Ecto migration or Igniter upgrade script
   is required. Compile after upgrading, correct reported configs, and see
-  [Blueprints](guides/blueprints.md) and [Uploader](docs/UPLOADER.md).
+  [Asset configuration](guides/blueprint_fields.md#asset-configuration) and [Uploader](docs/UPLOADER.md).
 
 - **Reliable Blueprint form runtime contracts**: Static form query maps now work
   as declared, retain the URL entry ID in `:matches`, and are checked for invalid
@@ -1886,7 +1886,7 @@ production dump.
   with documented form context assigns instead of passing callback tuples to the
   translation layer. This is a runtime and DSL correction only: no Ecto migration
   or Igniter upgrade script is required. Compile after upgrading, fix any static
-  query whose `:matches` is not a map, and see [Blueprints](guides/blueprints.md).
+  query whose `:matches` is not a map, and see [Blueprint forms](guides/blueprint_forms.md).
 
 - **Validated secondary Blueprint DSL contracts**: Datasources now require the
   callbacks their type consumes, execute the function-or-MFA forms advertised by
@@ -1900,7 +1900,7 @@ production dump.
   longer silently overwrite duplicate contexts or keys. These are DSL/runtime
   corrections only: no Ecto migration or Igniter upgrade script is required.
   Compile after upgrading, fix reported declarations, and review configured listing
-  defaults because they now take effect. See [Blueprints](guides/blueprints.md).
+  defaults because they now take effect. See [Blueprint listings](guides/blueprint_listings.md).
 
 - **Correct generated Blueprint join owners**: Generated `:blocks` and
   `:entries` join schemas now use the actual Blueprint owner module for their
@@ -1938,7 +1938,7 @@ production dump.
   If fixing a reported declaration changes a column, foreign key, or unique
   index, generate and review a Blueprint migration; see
   [Blueprint migrations](guides/blueprint_migrations.md) and the relation notes
-  in [Blueprints](guides/blueprints.md).
+  in [Attributes, relations, and assets](guides/blueprint_fields.md#relations).
 
 - **Safer Blueprint identifier and URL templates**: Invalid Liquid syntax in
   `identifier` and `absolute_url` declarations now raises a contextual
