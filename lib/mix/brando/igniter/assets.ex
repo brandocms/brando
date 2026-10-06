@@ -16,6 +16,166 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.reduce(igniter, &plan_asset(&1, &2, project))
     end
 
+    # Packages earlier backend templates installed that the current one dropped.
+    @retired_backend_packages ~w(svelte-preprocess)
+    # Files earlier backend templates installed that nothing reads any more.
+    # vite-plugin-svelte 7 loads only svelte.config.{js,ts,mjs,mts}.
+    @retired_backend_files ~w(assets/backend/svelte.config.cjs)
+    # Lockfiles of the package managers earlier templates used.
+    @legacy_backend_lockfiles ~w(assets/backend/yarn.lock assets/backend/package-lock.json)
+    @backend_package "assets/backend/package.json"
+    @backend_vite_config "assets/backend/vite.config.js"
+
+    @doc """
+    Brings an existing `assets/backend` up to the current template.
+
+    The template's package versions, `engines` and `packageManager` replace
+    the application's (its own extra packages, scripts and BrandoJS source
+    stay), `vite.config.js` is replaced, files the template retired and
+    yarn/npm lockfiles are removed, and the Dockerfile's `assets_backend`
+    stage becomes the template's pnpm stage. CSS and every other existing
+    file are kept; missing template files are created.
+    """
+    def upgrade(igniter, project) do
+      Templates.manifest()
+      |> Enum.filter(fn {_format, _source, target} -> String.starts_with?(target, "assets/backend/") end)
+      |> Enum.reduce(igniter, &upgrade_asset(&1, &2, project))
+      |> remove_files(@retired_backend_files ++ @legacy_backend_lockfiles)
+      |> upgrade_dockerfile()
+      |> Igniter.add_notice("""
+      Review the assets/backend diff, then install and build the admin with pnpm:
+
+          mix brando.assets.setup --backend-only
+
+      Commit the assets/backend/pnpm-lock.yaml it writes; the Docker build installs from it.
+      """)
+    end
+
+    defp upgrade_asset({_format, _source, target} = file, igniter, project) do
+      cond do
+        not Igniter.exists?(igniter, target) ->
+          plan_asset(file, igniter, project)
+
+        target == @backend_package ->
+          upgrade_package(igniter, file, project)
+
+        target == @backend_vite_config ->
+          replace_file(igniter, target, template_contents(file, project))
+
+        true ->
+          igniter
+      end
+    end
+
+    defp template_contents({format, source, _target}, project) do
+      template = Templates.contents(format, source)
+      if format == :eex, do: EEx.eval_string(template, Install.template_binding(project)), else: template
+    end
+
+    defp replace_file(igniter, path, contents) do
+      Igniter.update_file(igniter, path, &Rewrite.Source.update(&1, :content, contents))
+    end
+
+    defp remove_files(igniter, paths) do
+      Enum.reduce(paths, igniter, fn path, igniter ->
+        if Igniter.exists?(igniter, path), do: Igniter.rm(igniter, path), else: igniter
+      end)
+    end
+
+    defp upgrade_package(igniter, file, project) do
+      template = file |> template_contents(project) |> Jason.decode!()
+      igniter = Igniter.include_existing_file(igniter, @backend_package)
+      contents = igniter.rewrite |> Rewrite.source!(@backend_package) |> Rewrite.Source.get(:content)
+
+      case Jason.decode(contents) do
+        {:ok, current} when is_map(current) ->
+          upgraded = upgrade_package_json(current, template)
+
+          if upgraded == current,
+            do: igniter,
+            else: replace_file(igniter, @backend_package, Jason.encode!(upgraded, pretty: true) <> "\n")
+
+        _ ->
+          Igniter.add_issue(igniter, "#{@backend_package} must be a JSON object.")
+      end
+    end
+
+    defp upgrade_package_json(current, template) do
+      current
+      |> merge_defaults(Map.take(template, ~w(name version type scripts)))
+      |> Map.merge(Map.take(template, ~w(engines packageManager)))
+      |> upgrade_dependencies(template, "dependencies")
+      |> upgrade_dependencies(template, "devDependencies")
+      |> upgrade_built_dependencies(template)
+    end
+
+    # The template's version wins, except for BrandoJS, whose source (a Yalc
+    # copy, a link to a checkout) is the application's choice.
+    defp upgrade_dependencies(package, template, key) do
+      current = Map.drop(package[key] || %{}, @retired_backend_packages)
+      wanted = Map.drop(template[key] || %{}, ["@brandocms/brandojs"])
+      Map.put(package, key, Map.merge(current, wanted))
+    end
+
+    defp upgrade_built_dependencies(package, template) do
+      built =
+        ((get_in(package, ["pnpm", "onlyBuiltDependencies"]) || []) ++
+           get_in(template, ["pnpm", "onlyBuiltDependencies"]))
+        |> Enum.uniq()
+        |> Kernel.--(@retired_backend_packages)
+
+      Map.update(package, "pnpm", %{"onlyBuiltDependencies" => built}, &Map.put(&1, "onlyBuiltDependencies", built))
+    end
+
+    @doc false
+    # The Dockerfile's `assets_backend` stage, from its FROM line up to the
+    # comment block before the next stage.
+    def dockerfile_stage(contents, stage) do
+      lines = String.split(contents, "\n")
+      start = Enum.find_index(lines, &Regex.match?(~r/^FROM\s.*\sAS\s+#{stage}\s*$/i, &1))
+
+      if start do
+        next =
+          Enum.find_index(Enum.drop(lines, start + 1), &String.starts_with?(&1, "FROM ")) || length(lines) - start - 1
+
+        stop = start + 1 + next
+
+        stop =
+          lines
+          |> Enum.slice(start..(stop - 1)//1)
+          |> Enum.reverse()
+          |> Enum.take_while(&(String.trim(&1) == "" or String.starts_with?(String.trim(&1), "#")))
+          |> length()
+          |> then(&(stop - &1))
+
+        {Enum.take(lines, start), Enum.slice(lines, start..(stop - 1)//1), Enum.drop(lines, stop)}
+      end
+    end
+
+    defp upgrade_dockerfile(igniter) do
+      if Igniter.exists?(igniter, "Dockerfile") do
+        igniter = Igniter.include_existing_file(igniter, "Dockerfile")
+        current = igniter.rewrite |> Rewrite.source!("Dockerfile") |> Rewrite.Source.get(:content)
+        {_, stage, _} = dockerfile_stage(Templates.contents(:copy, "Dockerfile"), "assets_backend")
+
+        case dockerfile_stage(current, "assets_backend") do
+          {_before, ^stage, _rest} ->
+            igniter
+
+          {before, _old, rest} ->
+            replace_file(igniter, "Dockerfile", Enum.join(before ++ stage ++ rest, "\n"))
+
+          nil ->
+            Igniter.add_warning(
+              igniter,
+              "The Dockerfile has no assets_backend stage; build the admin with pnpm as Brando's Dockerfile template does."
+            )
+        end
+      else
+        igniter
+      end
+    end
+
     defp plan_asset({format, source, target} = file, igniter, project) do
       cond do
         Path.extname(target) in [".ico", ".woff2"] ->
