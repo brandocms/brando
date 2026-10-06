@@ -8,12 +8,6 @@ export default defineConfig({
     port: 3333
   },
   resolve: {},
-  optimizeDeps: {
-    include: [
-      'vex-js',
-      'vex-dialog'
-    ]
-  },
   build: {
     manifest: 'admin_manifest.json',
     emptyOutDir: false,

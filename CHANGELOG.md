@@ -2358,6 +2358,27 @@ production dump.
   # config/config.exs
   config :swoosh, :api_client, Swoosh.ApiClient.Req
   ```
+- Bumped `req` (0.7.5), `req_llm` (1.26), `spark` (2.7.6), `tz` (0.28.4) and their
+  transitive dependencies.
+- Bumped `mdex` to `~> 0.14.0`. `0.14` moves syntax highlighting to optional
+  per-language Lumis packages and turns it off by default. Brando never highlighted
+  fenced code (it renders `<pre><code class="language-…">`), so the output is unchanged
+  and Lumis is not pulled in.
+- **Admin JS security updates.** `@tiptap/*` to `3.31.4` and the pinned ProseMirror
+  overrides to `prosemirror-view` `1.42.6`, `prosemirror-model` `1.25.12` and
+  `prosemirror-transform` `1.12.2`. The old `1.41.8` pin held `prosemirror-view` below the
+  fix for an XSS in paste handling, and tiptap `3.31` requires `prosemirror-view` `^1.42.3`
+  anyway. `dompurify` moves to `3.4.16` (a dozen advisories, mostly in `IN_PLACE` mode),
+  and CodeMirror and `@floating-ui/dom` take minor updates.
+- **Bump `svelte` to `^5.57.2`, `vite` to `^8.3.3` and `@sveltejs/vite-plugin-svelte` to
+  `7.3.1` in your `assets/backend/package.json`.** Your backend build compiles the admin's
+  Svelte components with your own copies, so Brando's bump does not reach your bundle
+  alone. You can also drop `optimizeDeps: { include: ['vex-js', 'vex-dialog'] }` from
+  `assets/backend/vite.config.js`: brandojs no longer ships either package.
+- Removed unused JS dependencies from brandojs: `vex-js`, `vex-dialog`,
+  `vanilla-click-outside`, `lodash.throttle`, `linkifyjs`, `phoenix_html` and
+  `@fontsource/jetbrains-mono`. `morphdom` stays: it is the source of the vendored
+  `priv/static/js/morphdom-umd.min.js` the live preview inlines.
 
 #### Security
 
