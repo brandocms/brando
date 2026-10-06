@@ -64,8 +64,10 @@
 
 /* A form's date field is one admin input box: flatpickr's visible input,
    the timezone and Clear sit in a row inside the shared border, like a
-   custom select's label and button. Block variables lay it out themselves. */
-.field-base > .datetime-wrapper > div:not(.variable *) {
+   custom select's label and button. Variables in a block, a table block or
+   a variable list lay it out themselves; a variable elsewhere (a global) is
+   a form field. */
+.field-base > .datetime-wrapper > div:not(:is(.block-vars, .table-block, .vars-list) .variable *) {
   display: flex;
   align-items: center;
   gap: 8px;
