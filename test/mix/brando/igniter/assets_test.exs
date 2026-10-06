@@ -116,6 +116,13 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert Enum.take(keys, 6) == ~w(name version type scripts dependencies devDependencies)
       assert Enum.drop(keys, 6) == ~w(pnpm engines packageManager)
 
+      # Nested objects keep their order too.
+      ordered = Jason.decode!(source, objects: :ordered_objects)
+      assert Enum.map(ordered["scripts"].values, &elem(&1, 0)) == ~w(dev build serve)
+
+      assert Enum.map(ordered["dependencies"].values, &elem(&1, 0)) ==
+               ~w(@brandocms/brandojs @brandocms/jupiter site-widget)
+
       assert package["devDependencies"]["vite"] == wanted["devDependencies"]["vite"]
       assert package["devDependencies"]["svelte"] == wanted["devDependencies"]["svelte"]
       assert package["dependencies"]["@brandocms/jupiter"] == wanted["dependencies"]["@brandocms/jupiter"]

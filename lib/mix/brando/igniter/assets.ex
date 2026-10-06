@@ -245,24 +245,37 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # Top-level keys keep the order of the JSON documents they came from
-    # (the application's file first); Jason would sort them.
+    # Keys keep the order of the JSON documents they came from (the
+    # application's file first), at every level; Jason would sort them. Keys in
+    # neither document follow, sorted.
     defp encode_package(package, sources) do
-      order =
-        sources
-        |> Enum.flat_map(fn json -> Jason.decode!(json, objects: :ordered_objects).values end)
-        |> Enum.map(&elem(&1, 0))
-        |> Enum.uniq()
-        |> Enum.filter(&Map.has_key?(package, &1))
-
-      rest = package |> Map.keys() |> Enum.reject(&(&1 in order))
-
-      (order ++ rest)
-      |> Enum.map(&{&1, package[&1]})
-      |> Jason.OrderedObject.new()
+      package
+      |> order_like(Enum.map(sources, &Jason.decode!(&1, objects: :ordered_objects)))
       |> Jason.encode!(pretty: true)
       |> Kernel.<>("\n")
     end
+
+    defp order_like(map, sources) when is_map(map) do
+      known =
+        sources
+        |> Enum.flat_map(fn
+          %Jason.OrderedObject{values: values} -> Enum.map(values, &elem(&1, 0))
+          _other -> []
+        end)
+        |> Enum.uniq()
+        |> Enum.filter(&Map.has_key?(map, &1))
+
+      rest = map |> Map.keys() |> Enum.reject(&(&1 in known)) |> Enum.sort()
+
+      (known ++ rest)
+      |> Enum.map(fn key -> {key, order_like(map[key], Enum.map(sources, &child(&1, key)))} end)
+      |> Jason.OrderedObject.new()
+    end
+
+    defp order_like(value, _sources), do: value
+
+    defp child(%Jason.OrderedObject{} = object, key), do: object[key]
+    defp child(_other, _key), do: nil
 
     defp merge_defaults(current, defaults) do
       Map.merge(defaults, current, fn _key, default, existing ->
