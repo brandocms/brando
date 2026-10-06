@@ -71,7 +71,14 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       <Input.input type={:hidden} field={f[:key]} />
 
       <.inputs_for :let={var} field={f[:vars]}>
-        <.live_component module={RenderVar} id={"set-#{@global_set.id}-#{var.id}-#{@index}"} var={var} render={:all} publish />
+        <.live_component
+          module={RenderVar}
+          id={"set-#{@global_set.id}-#{var.id}-#{@index}"}
+          var={var}
+          render={:all}
+          publish
+          compact={false}
+        />
       </.inputs_for>
 
       <div class="global-save-actions"><button class="workspace-button primary">{gettext("Save")}</button></div>
