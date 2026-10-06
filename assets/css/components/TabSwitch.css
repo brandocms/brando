@@ -141,12 +141,16 @@
   }
 }
 
-/* One section is a caption, not a choice */
+/* One section is a caption, not a choice: no track, and the label lines
+   up with the content below it */
 .pill-tabs:has(> :is(button, a):only-child) {
+  padding: 0;
   border-color: transparent;
   background-color: transparent;
 
   > :is(button, a) {
+    padding-inline: 0;
+
     &,
     &:hover {
       background-color: transparent;

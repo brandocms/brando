@@ -28,6 +28,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data value, :any
   # data visible, :boolean
   # data publish, :boolean
+  # data compact, :boolean (the small switch of a block's dense rows; a
+  #   global set's form passes false)
 
   def mount(socket) do
     {:ok, assign(socket, :publish, false)}
@@ -323,6 +325,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign_new(:galleries, fn -> nil end)
     |> assign_new(:inner_block, fn -> nil end)
     |> assign_new(:identifiers, fn -> nil end)
+    |> assign_new(:compact, fn -> true end)
     |> assign(:value_id, value)
     |> assign(:image_id, if(type == :image, do: value))
     |> assign(:file_id, if(type == :file, do: value))
@@ -786,6 +789,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               instructions={@instructions}
               target={@myself}
               publish={@publish}
+              compact={@compact}
               on_change={@on_change}
               component_id={@id}
               var_key={@key}
@@ -823,6 +827,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr(:instructions, :any)
   attr(:target, :any)
   attr(:publish, :any)
+  attr(:compact, :boolean, default: true)
   attr(:on_change, :any)
   attr(:component_id, :any, default: nil)
   attr(:var_key, :any, default: nil)
@@ -869,7 +874,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <Primitives.field_base field={@var[:value_boolean]} label={@label} left_justify_meta>
         <div class="boolean-control">
-          <Primitives.label field={@var[:value_boolean]} class="switch small" skip_presence>
+          <Primitives.label field={@var[:value_boolean]} class={["switch", @compact && "small"]} skip_presence>
             <Input.input type={:checkbox} field={@var[:value_boolean]} />
             <div class="slider round"></div>
           </Primitives.label>
