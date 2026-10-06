@@ -332,6 +332,23 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert upgraded =~ ~r/LegacyApp\.Repo,\s+\{Phoenix\.PubSub/
   end
 
+  test "the Florist conversion reads the legacy .envrc, nginx and supervisord files" do
+    igniter =
+      migrate(@blueprint_054, %{
+        @deployment_config_path => String.replace(@deployment_config, "https://example.com", "http://somesite.com"),
+        ".envrc.prod" => ~s(export BRANDO_URL_HOST="www.legacy-app.no"\nexport BRANDO_URL_PORT="443"\n),
+        "etc/supervisord/prod.conf" => ~s([program:legacy_app_prod]\nenvironment=PORT="8123"\n)
+      })
+
+    assert_creates(igniter, @florist_config_path, fn config ->
+      assert config =~ ~s(set(:domain, "www.legacy-app.no"\))
+      assert config =~ "set(:blue_port, 8123)"
+    end)
+
+    assert_has_warning(igniter, &String.contains?(&1, "from .envrc.prod (BRANDO_URL_HOST)"))
+    assert_has_warning(igniter, &String.contains?(&1, "runs under supervisord"))
+  end
+
   test "adds the health plug Florist checks to the endpoint, before the router" do
     endpoint_path = "lib/legacy_app_web/endpoint.ex"
 
@@ -351,6 +368,12 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
     assert_unchanged(rerun, endpoint_path)
+
+    # An endpoint that already has the plug is not rewritten (or reformatted).
+    has_plug =
+      "defmodule LegacyAppWeb.Endpoint do\n  use Phoenix.Endpoint, otp_app: :legacy_app\n  plug Brando.Plug.Health\n  plug LegacyAppWeb.Router\nend\n"
+
+    assert_unchanged(migrate(@blueprint_054, %{endpoint_path => has_plug}), endpoint_path)
 
     # Only when the task creates the Florist configuration.
     existing = migrate(@blueprint_054, %{endpoint_path => endpoint, @florist_config_path => "use Florist.DSL\n"})

@@ -938,10 +938,13 @@ if Code.ensure_loaded?(Igniter) do
     def remove_sharp_processor(igniter) do
       igniter = Igniter.include_glob(igniter, "config/*.exs")
 
+      # Only files that name the processor are touched: updating a file
+      # reformats it.
       igniter.rewrite
       |> Rewrite.sources()
+      |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
+      |> Enum.filter(&(Source.get(&1, :content) =~ "Brando.Images.Processor.Sharp"))
       |> Enum.map(&Source.get(&1, :path))
-      |> Enum.filter(&(Path.dirname(&1) == "config" and Path.extname(&1) == ".exs"))
       |> Enum.reduce(igniter, fn path, igniter ->
         Igniter.update_elixir_file(igniter, path, fn zipper ->
           Common.update_all_matches(zipper, &sharp_processor_config?/1, &drop_processor_module/1)
@@ -1594,18 +1597,25 @@ if Code.ensure_loaded?(Igniter) do
       endpoint = endpoint || Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
       missing = "add `plug Brando.Plug.Health` to #{inspect(endpoint)}, before the router. Florist checks /health."
 
-      case ProjectModule.find_and_update_module(igniter, endpoint, &health_plug_before_router(&1, missing)) do
-        {:ok, igniter} -> igniter
+      # Updating a module reformats its file, so an endpoint that already has
+      # the plug is only read.
+      with {:ok, {igniter, _source, defmodule}} <- ProjectModule.find_module(igniter, endpoint),
+           {:ok, body} <- Common.move_to_do_block(defmodule),
+           :error <- move_to_plug(body, &Common.nodes_equal?(&1, Brando.Plug.Health)) do
+        case ProjectModule.find_and_update_module(igniter, endpoint, &health_plug_before_router(&1, missing)) do
+          {:ok, igniter} -> igniter
+          {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
+        end
+      else
+        {:ok, _health_plug} -> igniter
         {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
+        :error -> Igniter.add_warning(igniter, "Could not read the endpoint; " <> missing)
       end
     end
 
     defp health_plug_before_router(zipper, missing) do
-      with :error <- move_to_plug(zipper, &Common.nodes_equal?(&1, Brando.Plug.Health)),
-           {:ok, router} <- move_to_plug(zipper, &router?/1) do
-        {:ok, Common.add_code(router, "plug Brando.Plug.Health", placement: :before)}
-      else
-        {:ok, _health} -> {:ok, zipper}
+      case move_to_plug(zipper, &router?/1) do
+        {:ok, router} -> {:ok, Common.add_code(router, "plug Brando.Plug.Health", placement: :before)}
         :error -> {:warning, "Could not find the router plug; " <> missing}
       end
     end
@@ -1625,11 +1635,12 @@ if Code.ensure_loaded?(Igniter) do
 
     # Fills the domains, ports and process manager deployment.cfg leaves out.
     # Only BRANDO_URL_HOST/PORT are read from the .envrc files.
-    @legacy_deployment_globs [".envrc.*", "etc/nginx/*.conf", "etc/supervisord/*.conf", "etc/systemd/*.service"]
+    @legacy_deployment_globs ["etc/nginx/*.conf", "etc/supervisord/*.conf", "etc/systemd/*.service"]
     @legacy_deployment_file ~r{^(\.envrc\.[^/]+|etc/(nginx|supervisord)/[^/]+\.conf|etc/systemd/[^/]+\.service)$}
 
     defp legacy_deployment_files(igniter) do
       igniter = Enum.reduce(@legacy_deployment_globs, igniter, &Igniter.include_glob(&2, &1))
+      igniter = Enum.reduce(envrc_paths(igniter), igniter, &Igniter.include_existing_file(&2, &1))
 
       files =
         igniter.rewrite
@@ -1639,6 +1650,14 @@ if Code.ensure_loaded?(Igniter) do
         |> Map.new(&{&1, source_content(igniter, &1)})
 
       {igniter, files}
+    end
+
+    # Igniter's globs skip dotfiles.
+    defp envrc_paths(igniter) do
+      if igniter.assigns[:test_mode?],
+        do:
+          igniter.assigns |> Map.get(:test_files, %{}) |> Map.keys() |> Enum.filter(&String.starts_with?(&1, ".envrc.")),
+        else: Path.wildcard(".envrc.*", match_dot: true)
     end
 
     defp source_content(igniter, path) do

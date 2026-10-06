@@ -549,6 +549,12 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
         import Config
 
         config :brando, Brando.Images, processor_module: LegacyApp.Processor
+        """,
+        # Unformatted on purpose: files without the setting are not rewritten.
+        "config/e2e.exs" => """
+        import Config
+        config :legacy_app, sql_sandbox: true
+        config :legacy_app, LegacyAppWeb.Endpoint, server: false
         """
       })
 
@@ -560,7 +566,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     refute prod =~ "Brando.Images"
     assert prod =~ "server: true"
 
-    assert_unchanged(igniter, "config/dev.exs")
+    assert_unchanged(igniter, ["config/dev.exs", "config/e2e.exs"])
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
     assert_unchanged(rerun, [@brando_config_path, "config/prod.exs"])
