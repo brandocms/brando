@@ -38,6 +38,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> SourceUpgrade.rewrite_preview_targets()
       |> SourceUpgrade.configure_repo_module()
+      |> SourceUpgrade.remove_sharp_processor()
       |> SourceUpgrade.rewrite_dockerfiles()
       |> SourceUpgrade.rewrite_font_urls()
       |> SourceUpgrade.copy_gettext_script()
@@ -58,7 +59,8 @@ if Code.ensure_loaded?(Igniter) do
       The task also updates `Brando.Villain.list_villains/0`, legacy listing
       `filter:` keys, root Docker digest commands, and font cache suffixes. It
       adds the Brando Repo configuration when exactly one Ecto Repo is
-      available.
+      available, and removes `processor_module: Brando.Images.Processor.Sharp`
+      (Brando refuses to boot with it; Vix is the default).
 
       Continue in this order:
 
@@ -91,10 +93,11 @@ if Code.ensure_loaded?(Igniter) do
           declarations require an application-specific row component or child
           schema. Exports using the removed `after_export` callback and action
           option sets beyond `default_actions:` also remain for manual redesign.
-        * Vite 5 manifest configuration, custom Sharp-based processing, merged
-          admin Create/Update LiveViews, `<.head>` adoption, and navigation markup
-          depend on the application's frontend and custom code. Apply the
-          corresponding 0.54 changelog instructions manually where relevant.
+        * Vite 5 manifest configuration, custom processing that relied on
+          sharp-cli, merged admin Create/Update LiveViews, `<.head>` adoption,
+          and navigation markup depend on the application's frontend and
+          custom code. Apply the corresponding 0.54 changelog instructions
+          manually where relevant.
         * Back up Gettext catalogs before attempting recovery. After extracting
           the backend and frontend catalogs, run the copied helper explicitly
           with Bash, for example:

@@ -526,6 +526,46 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_has_warning(igniter, &String.contains?(&1, "differs from every version Brando shipped"))
   end
 
+  test "removes the retired Sharp image processor from config" do
+    igniter =
+      migrate(@legacy_blueprint, nil, %{
+        @brando_config_path => """
+        import Config
+
+        config :brando, otp_app: :legacy_app
+
+        config :brando, Brando.Images,
+          processor_module: Brando.Images.Processor.Sharp,
+          default_config: %{upload_path: "images/site/default"}
+        """,
+        "config/prod.exs" => """
+        import Config
+
+        config :brando, Brando.Images, processor_module: Brando.Images.Processor.Sharp
+
+        config :legacy_app, LegacyAppWeb.Endpoint, server: true
+        """,
+        "config/dev.exs" => """
+        import Config
+
+        config :brando, Brando.Images, processor_module: LegacyApp.Processor
+        """
+      })
+
+    brando = source(igniter, @brando_config_path)
+    refute brando =~ "Sharp"
+    assert brando =~ ~s(default_config: %{upload_path: "images/site/default"})
+
+    prod = source(igniter, "config/prod.exs")
+    refute prod =~ "Brando.Images"
+    assert prod =~ "server: true"
+
+    assert_unchanged(igniter, "config/dev.exs")
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, [@brando_config_path, "config/prod.exs"])
+  end
+
   test "copied Gettext helper fills single-line translations portably" do
     directory = Path.join(System.tmp_dir!(), "brando-gettext-#{System.unique_integer([:positive])}")
     File.mkdir_p!(directory)

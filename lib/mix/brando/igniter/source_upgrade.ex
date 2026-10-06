@@ -927,6 +927,52 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    Removes `processor_module: Brando.Images.Processor.Sharp` from
+    `config :brando, Brando.Images` in `config/*.exs`. The Sharp processor is
+    gone and Brando refuses to boot with it; the default is
+    `Brando.Images.Processor.Vix`. Other processors are left alone.
+    """
+    def remove_sharp_processor(igniter) do
+      igniter = Igniter.include_glob(igniter, "config/*.exs")
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&Source.get(&1, :path))
+      |> Enum.filter(&(Path.dirname(&1) == "config" and Path.extname(&1) == ".exs"))
+      |> Enum.reduce(igniter, fn path, igniter ->
+        Igniter.update_elixir_file(igniter, path, fn zipper ->
+          Common.update_all_matches(zipper, &sharp_processor_config?/1, &drop_processor_module/1)
+        end)
+      end)
+    end
+
+    defp sharp_processor_config?(zipper) do
+      with true <- CodeFunction.function_call?(zipper, :config, 3),
+           true <- CodeFunction.argument_equals?(zipper, 0, :brando),
+           true <- CodeFunction.argument_equals?(zipper, 1, Brando.Images),
+           {:ok, options} <- CodeFunction.move_to_nth_argument(zipper, 2),
+           {:ok, processor} <- Igniter.Code.Keyword.get_key(options, :processor_module) do
+        Common.nodes_equal?(processor, Brando.Images.Processor.Sharp)
+      else
+        _ -> false
+      end
+    end
+
+    defp drop_processor_module(zipper) do
+      with {:ok, options} <- CodeFunction.move_to_nth_argument(zipper, 2),
+           {:ok, options} <- Igniter.Code.Keyword.remove_keyword_key(options, :processor_module) do
+        case Zipper.node(options) do
+          # It was the only option: the whole call goes.
+          {:__block__, _, [[]]} -> {:ok, options |> Zipper.up() |> Zipper.remove()}
+          [] -> {:ok, options |> Zipper.up() |> Zipper.remove()}
+          _ -> {:ok, Zipper.up(options)}
+        end
+      else
+        _ -> {:ok, zipper}
+      end
+    end
+
     def configure_swoosh_client(igniter) do
       Config.configure_new(
         igniter,
