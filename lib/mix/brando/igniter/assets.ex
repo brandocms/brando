@@ -83,7 +83,8 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp upgrade_package(igniter, file, project) do
-      template = file |> template_contents(project) |> Jason.decode!()
+      template_json = template_contents(file, project)
+      template = Jason.decode!(template_json)
       igniter = Igniter.include_existing_file(igniter, @backend_package)
       contents = igniter.rewrite |> Rewrite.source!(@backend_package) |> Rewrite.Source.get(:content)
 
@@ -93,7 +94,7 @@ if Code.ensure_loaded?(Igniter) do
 
           if upgraded == current,
             do: igniter,
-            else: replace_file(igniter, @backend_package, Jason.encode!(upgraded, pretty: true) <> "\n")
+            else: replace_file(igniter, @backend_package, encode_package(upgraded, [contents, template_json]))
 
         _ ->
           Igniter.add_issue(igniter, "#{@backend_package} must be a JSON object.")
@@ -184,7 +185,7 @@ if Code.ensure_loaded?(Igniter) do
         Path.basename(target) == "package.json" && Igniter.exists?(igniter, target) ->
           template = Templates.contents(format, source)
           contents = if format == :eex, do: EEx.eval_string(template, Install.template_binding(project)), else: template
-          merge_package(igniter, target, Jason.decode!(contents))
+          merge_package(igniter, target, contents)
 
         true ->
           Install.copy(igniter, file, project)
@@ -213,7 +214,8 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp merge_package(igniter, path, defaults) do
+    defp merge_package(igniter, path, defaults_json) do
+      defaults = Jason.decode!(defaults_json)
       igniter = Igniter.include_existing_file(igniter, path)
       contents = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
 
@@ -231,7 +233,7 @@ if Code.ensure_loaded?(Igniter) do
           Igniter.update_file(
             igniter,
             path,
-            &Rewrite.Source.update(&1, :content, Jason.encode!(merged, pretty: true) <> "\n")
+            &Rewrite.Source.update(&1, :content, encode_package(merged, [contents, defaults_json]))
           )
         end
       else
@@ -241,6 +243,25 @@ if Code.ensure_loaded?(Igniter) do
             "#{path} must be a JSON object with object-valued dependency, script and pnpm settings."
           )
       end
+    end
+
+    # Top-level keys keep the order of the JSON documents they came from
+    # (the application's file first); Jason would sort them.
+    defp encode_package(package, sources) do
+      order =
+        sources
+        |> Enum.flat_map(fn json -> Jason.decode!(json, objects: :ordered_objects).values end)
+        |> Enum.map(&elem(&1, 0))
+        |> Enum.uniq()
+        |> Enum.filter(&Map.has_key?(package, &1))
+
+      rest = package |> Map.keys() |> Enum.reject(&(&1 in order))
+
+      (order ++ rest)
+      |> Enum.map(&{&1, package[&1]})
+      |> Jason.OrderedObject.new()
+      |> Jason.encode!(pretty: true)
+      |> Kernel.<>("\n")
     end
 
     defp merge_defaults(current, defaults) do

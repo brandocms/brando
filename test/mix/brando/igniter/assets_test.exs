@@ -107,8 +107,14 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       plan = upgrade(old_backend())
       assert plan.issues == []
 
-      package = plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
+      source = IgniterCase.source(plan, "assets/backend/package.json")
+      package = Jason.decode!(source)
       wanted = template("assets/backend/package.json") |> Jason.decode!()
+
+      # The file's own key order is kept, and new keys follow the template's.
+      keys = Jason.decode!(source, objects: :ordered_objects).values |> Enum.map(&elem(&1, 0))
+      assert Enum.take(keys, 6) == ~w(name version type scripts dependencies devDependencies)
+      assert Enum.drop(keys, 6) == ~w(pnpm engines packageManager)
 
       assert package["devDependencies"]["vite"] == wanted["devDependencies"]["vite"]
       assert package["devDependencies"]["svelte"] == wanted["devDependencies"]["svelte"]
