@@ -2102,8 +2102,9 @@ defmodule Brando.Content.Proposals do
   end
 
   # What follows an editor's save, once the proposal is committed: the
-  # traits' after-save work and the sync of synchronized translations, then
-  # notifications and broadcasts.
+  # traits' after-save work, then notifications and broadcasts. The sync of
+  # synchronized translations was queued by the context mutation that saved
+  # the entry.
   defp after_apply({target, entry, changeset}, actor) do
     try do
       Brando.Blueprint.AfterSave.run(entry.__struct__, entry, changeset, user!(actor))

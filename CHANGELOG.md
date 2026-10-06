@@ -1116,6 +1116,25 @@ production dump.
 
 #### Fixes
 
+- **Passwords saved through the context are hashed.** `trait :password`
+  hashed only in the admin form's save, so `Brando.Users.create_user/2` and
+  `update_user/3` stored a plain-text password as given, although the users
+  guide says they hash it. The trait now hashes a changed password when the
+  entry is written, from any save. Code that passed a pre-hashed password to
+  the context (`Bcrypt.hash_pwd_salt/1` before `create_user`) must pass the
+  plain text instead, or its users cannot sign in; inserting a struct with
+  `Repo.insert` is unchanged. Check existing user rows for plain-text
+  passwords created this way, and reset them.
+- **Context saves set `publish_at` and sync translations.**
+  `trait :scheduled_publishing` gives an entry published without a
+  `publish_at` the time it was saved from any save, not only the admin form's.
+  Context `create_*` and `update_*` calls now queue the sync of synchronized
+  translations (`Brando.Translations.source_saved/2`) themselves, as the admin
+  form, revisions, proposals and content transfer already did, so translations
+  of a source saved from code no longer go stale. Drop any
+  `source_saved/2` call made after a context save: a second call queues a
+  second sync. `minor: true` is now a mutation option. `Brando.Blueprint.AfterSave.run/4` now runs only the traits'
+  `after_save/3` and takes no options.
 - **Replaying the migration chain on a 0.51 database.** `brando_80` no
   longer queries a Blueprint whose table or embedded image column does not
   exist yet (a Blueprint added in the same upgrade), and Blueprint

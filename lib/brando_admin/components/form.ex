@@ -4684,13 +4684,7 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:progress_popup, "Entry saved."})
     if FrontendEditor.frontend?(socket), do: FrontendEditor.saved(socket, entry)
 
-    Brando.Blueprint.AfterSave.run(
-      schema,
-      entry,
-      save.changeset,
-      current_user,
-      minor: Map.get(socket.assigns, :minor_save?, false)
-    )
+    Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user)
 
     {socket, stale?} = after_translation_save(socket, schema, entry)
 
@@ -4810,9 +4804,7 @@ defmodule BrandoAdmin.Components.Form do
     %{schema: schema, current_user: current_user, mutation_type: mutation_type} = save
     singular = schema.__naming__().singular
 
-    Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user,
-      minor: Map.get(socket.assigns, :minor_save?, false)
-    )
+    Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user)
 
     {socket, _stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
@@ -5201,8 +5193,13 @@ defmodule BrandoAdmin.Components.Form do
           ),
         else: {:ok, changeset}
 
+    # A minor save (Save minor text corrections) passes `minor: true` on to the
+    # translation sync the mutation queues for a synchronized source. Other
+    # saves keep the two-argument call, which hand-written contexts define.
+    opts = if Map.get(socket.assigns, :minor_save?, false), do: [[minor: true]], else: []
+
     case check do
-      {:ok, changeset} -> apply(context, :"#{mutation_type}_#{singular}", [changeset, user])
+      {:ok, changeset} -> apply(context, :"#{mutation_type}_#{singular}", [changeset, user | opts])
       error -> error
     end
   end

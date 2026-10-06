@@ -60,7 +60,6 @@ defmodule BrandoAdmin.TranslationFormTest do
   defp change_source(c) do
     TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 1)
     {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
-    Translations.source_saved(load(c.source.id))
     Translations.get_pending_version(Article, c.target.id)
   end
 
@@ -162,7 +161,6 @@ defmodule BrandoAdmin.TranslationFormTest do
 
     # Meanwhile the source changes the year again.
     {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2030}, c.current_user)
-    Translations.source_saved(load(c.source.id))
 
     view |> element("button", "Save and continue editing") |> render_click()
     assert_push_event(view, "b:submit", %{}, 2_000)
