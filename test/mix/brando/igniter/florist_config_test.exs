@@ -146,4 +146,166 @@ defmodule Mix.Brando.Igniter.FloristConfigTest do
     assert {:error, message} = FloristConfig.generate(deployment_config, @fabfile)
     assert message =~ "SSH_HOST"
   end
+
+  describe "legacy deployment files" do
+    # Shaped like smartwatt's: the template's PROD_URL placeholder, supervisord,
+    # and a staging port that is not Brando's default.
+    @placeholder_config """
+    [DEPLOYMENT]
+    PROJECT_MODULE = Smartwatt
+    PROJECT_NAME = smartwatt
+    PROD_URL = http://somesite.com
+    SSH_USER = deploy
+    SSH_HOST = by18.example.net
+    SSH_PORT = 30000
+    """
+
+    @prod_nginx """
+    upstream smartwatt_prod_server {
+        server 127.0.0.1:8055 fail_timeout=0;
+    }
+
+    server {
+        listen 80;
+        server_name smartwatt.by18.example.net;
+        location / {
+            proxy_pass http://smartwatt_prod_server;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name www.smartwatt.no
+                    smartwatt.no;
+        return 301 https://smartwatt.no$request_uri;
+    }
+
+    # server {
+    #     server_name commented.example.com;
+    # }
+
+    server {
+        listen 443 ssl http2;
+        server_name smartwatt.no;
+        location / {
+            if ($cors = "true") {
+                add_header 'Access-Control-Allow-Origin' "$http_origin";
+            }
+            proxy_pass http://smartwatt_prod_server;
+        }
+    }
+    """
+
+    @staging_nginx """
+    upstream smartwatt_staging_server {
+        server 127.0.0.1:9055 fail_timeout=0;
+    }
+
+    server {
+        listen 80;
+        server_name smartwatt.staging.by18.example.net;
+        location / {
+            proxy_pass http://smartwatt_staging_server;
+        }
+    }
+    """
+
+    defp supervisord(target, port) do
+      """
+      [program:smartwatt_#{target}]
+      environment=MIX_ENV="prod",PORT="#{port}",HOME="/home/smartwatt"
+      command=/sites/#{target}/smartwatt/bin/smartwatt start
+      """
+    end
+
+    defp envrc(host, port) do
+      """
+      # export BRANDO_URL_HOST="smartwatt.byXX.b-y.no"
+      export BRANDO_URL_HOST="#{host}"
+      export BRANDO_URL_PORT="#{port}"
+      export DB_PASS="never-copy-this"
+      """
+    end
+
+    defp generate(files), do: FloristConfig.generate(@placeholder_config, @fabfile, files)
+
+    test "domains come from .envrc and ports from supervisord, not the template placeholder" do
+      assert {:ok, config, warnings} =
+               generate(%{
+                 ".envrc.prod" => envrc("smartwatt.no", 443),
+                 ".envrc.staging" => envrc("smartwatt.staging.by18.example.net", 80),
+                 "etc/nginx/prod.conf" => @prod_nginx,
+                 "etc/nginx/staging.conf" => @staging_nginx,
+                 "etc/supervisord/prod.conf" => supervisord(:prod, 8055),
+                 "etc/supervisord/staging.conf" => supervisord(:staging, 9055)
+               })
+
+      assert config =~ ~s(set :domain, "smartwatt.no"\n    set :ssl, :auto\n    set :redirect_http, true)
+
+      assert config =~
+               ~s(set :domain, "smartwatt.staging.by18.example.net"\n    set :ssl, false\n    set :redirect_http, false)
+
+      refute config =~ "somesite.com"
+      refute config =~ "TODO"
+      refute config =~ "never-copy-this"
+      assert config =~ "set :blue_port, 8055"
+      assert config =~ "set :blue_port, 9055"
+      refute config =~ "set :blue_port, 8060"
+
+      assert Enum.any?(warnings, &(&1 =~ "PROD_URL = http://somesite.com is the install template's placeholder"))
+      assert Enum.any?(warnings, &(&1 =~ "Took the prod domain smartwatt.no from .envrc.prod"))
+      assert Enum.any?(warnings, &(&1 =~ "runs under supervisord"))
+      refute Enum.any?(warnings, &(&1 =~ "Fabric defaults"))
+      refute Enum.any?(warnings, &(&1 =~ "No STAGING_URL"))
+    end
+
+    test "without .envrc files the domain is the proxying nginx server, preferring HTTPS" do
+      assert {:ok, config, warnings} =
+               generate(%{"etc/nginx/prod.conf" => @prod_nginx, "etc/nginx/staging.conf" => @staging_nginx})
+
+      assert config =~ ~s(set :domain, "smartwatt.no"\n    set :ssl, :auto)
+      assert config =~ ~s(set :domain, "smartwatt.staging.by18.example.net"\n    set :ssl, false)
+      refute config =~ "commented.example.com"
+
+      assert Enum.any?(
+               warnings,
+               &(&1 =~ "Took the staging domain smartwatt.staging.by18.example.net from etc/nginx/staging.conf")
+             )
+
+      # The upstream names the port when no process manager config does.
+      assert config =~ "set :blue_port, 9055"
+      refute Enum.any?(warnings, &(&1 =~ "Fabric defaults"))
+      assert Enum.any?(warnings, &(&1 =~ "process manager (systemd or supervisord)"))
+    end
+
+    test "a process manager port that disagrees with the nginx upstream is reported" do
+      assert {:ok, config, warnings} =
+               generate(%{
+                 "etc/nginx/staging.conf" => @staging_nginx,
+                 "etc/systemd/staging.service" => "[Service]\nEnvironment=PORT=9100\n"
+               })
+
+      assert config =~ "set :blue_port, 9100"
+
+      assert Enum.any?(
+               warnings,
+               &(&1 =~
+                   "etc/systemd/staging.service starts staging on port 9100, but etc/nginx/staging.conf proxies to 9055")
+             )
+
+      assert Enum.any?(warnings, &(&1 =~ "runs under systemd"))
+      assert Enum.any?(warnings, &(&1 =~ "Fabric defaults (prod 8055)"))
+    end
+
+    test "an explicit URL in deployment.cfg wins over the legacy files" do
+      deployment_config = String.replace(@placeholder_config, "http://somesite.com", "https://www.smartwatt.no")
+
+      assert {:ok, config, warnings} =
+               FloristConfig.generate(deployment_config, @fabfile, %{".envrc.prod" => envrc("smartwatt.no", 443)})
+
+      assert config =~ ~s(set :domain, "www.smartwatt.no")
+      refute Enum.any?(warnings, &(&1 =~ "placeholder"))
+      refute Enum.any?(warnings, &(&1 =~ "Took the prod domain"))
+    end
+  end
 end

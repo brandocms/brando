@@ -113,6 +113,94 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.assign(:brando_storage_plan, plan)
       |> Igniter.assign(:quiet_on_no_changes?, true)
       |> Igniter.add_task("brando.blueprint.apply_plan", [request])
+      |> warn_legacy_snapshot(plan)
+    end
+
+    @legacy_snapshot_guide ~s(the "Legacy snapshots" section of guides/migrating_from_053.md)
+
+    # A snapshot older than the database it describes (one written before the
+    # Villain-to-blocks conversion, say) makes the generator propose storage the
+    # Brando migration chain already created, or drop the legacy Villain
+    # columns the conversion still reads.
+    defp warn_legacy_snapshot(igniter, plan) do
+      existing =
+        existing_storage(plan.metadata[:created_tables] || [], plan.metadata[:added_columns] || [])
+
+      villain_columns =
+        for {:remove_column, column} <- plan.metadata[:destructive_operations] || [],
+            legacy_villain_column?(column),
+            do: column
+
+      igniter
+      |> then(fn igniter ->
+        if existing == [],
+          do: igniter,
+          else:
+            Igniter.add_warning(igniter, """
+            #{inspect(plan.module)}: the plan adds #{Enum.join(existing, ", ")}, which already exist in the database.
+            The latest snapshot is probably older than the database. Compare `\\d <table>` with each generated
+            operation and use `create_if_not_exists`/`add_if_not_exists` (and `drop_if_exists`/`remove_if_exists`)
+            where they disagree; see #{@legacy_snapshot_guide}.
+            """)
+      end)
+      |> then(fn igniter ->
+        if villain_columns == [],
+          do: igniter,
+          else:
+            Igniter.add_warning(igniter, """
+            #{inspect(plan.module)}: the plan drops #{Enum.map_join(villain_columns, ", ", &inspect/1)}, which look like
+            legacy Villain columns. Keep them until the blocks conversion is verified on production data;
+            see #{@legacy_snapshot_guide}.
+            """)
+      end)
+    end
+
+    defp legacy_villain_column?(column) do
+      name = to_string(column)
+      name in ["data", "html"] or String.ends_with?(name, "_data") or String.ends_with?(name, "_html")
+    end
+
+    # The planned tables, and `table.column` for planned columns, that already
+    # exist in the configured repo's database. The check is best effort: without
+    # a reachable database the plan is shown unchanged.
+    defp existing_storage([], []), do: []
+
+    defp existing_storage(tables, columns) do
+      # The repo's URL usually lives in config/runtime.exs, which a Mix task
+      # does not load on its own; Ecto's tasks do the same.
+      Mix.Task.run("app.config")
+
+      with repo when is_atom(repo) and not is_nil(repo) <- Brando.repo(),
+           true <- Code.ensure_loaded?(repo),
+           {:ok, existing, _apps} <- Ecto.Migrator.with_repo(repo, &query_existing_storage(&1, tables, columns)) do
+        existing
+      else
+        _ -> []
+      end
+    rescue
+      _error in [DBConnection.ConnectionError, Postgrex.Error] -> []
+    end
+
+    defp query_existing_storage(repo, tables, columns) do
+      %{rows: table_rows} =
+        repo.query!("SELECT t FROM unnest($1::text[]) AS t WHERE to_regclass(t) IS NOT NULL", [tables], log: false)
+
+      %{rows: column_rows} =
+        repo.query!(
+          """
+          SELECT w.t || '.' || w.c
+          FROM unnest($1::text[], $2::text[]) AS w(t, c)
+          WHERE EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = ANY(current_schemas(false)) AND table_name = w.t AND column_name = w.c
+          )
+          ORDER BY w.t, w.c
+          """,
+          [Enum.map(columns, &elem(&1, 0)), Enum.map(columns, &elem(&1, 1))],
+          log: false
+        )
+
+      List.flatten(table_rows ++ column_rows)
     end
 
     defp preview(plan) do

@@ -7,6 +7,7 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
 
       mix brando.assets.setup
       mix brando.assets.setup --no-build
+      mix brando.assets.setup --backend-only
       mix brando.assets.setup --source /path/to/matching/brando/assets
 
   Uses the selected Brando dependency's `assets` directory by default. Hex
@@ -18,21 +19,27 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   supplied, builds both consumers. It does not run a standalone framework build.
   Node.js, pnpm and Yalc must already be installed.
 
+  `--backend-only` installs and builds the admin (`assets/backend`) alone, for
+  applications whose frontend uses another package manager or build.
+
   This is an operational task. The Igniter installer only generates source;
   it never runs this command as part of accepting a diff.
   """
 
   @impl Mix.Task
   def run(argv) do
-    {options, rest, invalid} = OptionParser.parse(argv, strict: [source: :string, build: :boolean])
-    if rest != [] || invalid != [], do: Mix.raise("Usage: mix brando.assets.setup [--source PATH] [--no-build]")
+    {options, rest, invalid} =
+      OptionParser.parse(argv, strict: [source: :string, build: :boolean, backend_only: :boolean])
+
+    if rest != [] || invalid != [],
+      do: Mix.raise("Usage: mix brando.assets.setup [--source PATH] [--no-build] [--backend-only]")
 
     source = source_path(options)
     backend = Path.expand("assets/backend")
-    frontend = Path.expand("assets/frontend")
+    consumers = if options[:backend_only], do: [backend], else: [backend, Path.expand("assets/frontend")]
     store = Mix.Project.build_path() |> Path.join("brando_yalc") |> Path.expand()
 
-    Enum.each([source, backend, frontend], fn path ->
+    Enum.each([source | consumers], fn path ->
       unless File.regular?(Path.join(path, "package.json")),
         do:
           Mix.raise(
@@ -53,7 +60,7 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
     run!("yalc", ["publish", "--store-folder", store], source)
     run!("yalc", ["add", "@brandocms/brandojs", "--store-folder", store], backend)
 
-    Enum.each([backend, frontend], fn path ->
+    Enum.each(consumers, fn path ->
       run!("pnpm", ["install"], path)
       if options[:build] != false, do: run!("pnpm", ["build"], path)
     end)

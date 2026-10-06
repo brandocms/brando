@@ -1,0 +1,19 @@
+<article b-tpl="logo marquee">
+  <div class="inner marquee" data-moonwalk-section>
+    {% headless_ref refs.gallery %}
+    <div data-marquee>
+      <div data-marquee-holder>
+        <div data-marquee-item>
+          {% assign images = refs.gallery.gallery.gallery_objects %}
+          {% if images %}
+            {% for image in images %}
+              <div class="partner">
+              {% picture image { size: 'auto', srcset: 'default', prefix: '/media' } %}
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</article>

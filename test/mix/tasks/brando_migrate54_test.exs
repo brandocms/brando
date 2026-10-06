@@ -461,7 +461,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
     refute_creates(igniter, "lib/mix/brando.upgrade.ex")
 
-    assert_has_task(igniter, "igniter.update_gettext", [])
+    assert igniter.tasks == []
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))
     assert_has_notice(igniter, &String.contains?(&1, "mix brando.migrate55"))
     assert_has_warning(igniter, &String.contains?(&1, "Manual 0.54 decisions remain"))
@@ -473,6 +473,103 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Manual 0.55 decisions"))
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Form.Primitives"))
     refute Enum.any?(igniter.notices, &String.contains?(&1, "florist.config.exs"))
+  end
+
+  test "moves Gettext backends without compiling or touching the gettext requirement" do
+    mix_exs = """
+    defmodule LegacyApp.MixProject do
+      use Mix.Project
+
+      def project, do: [app: :legacy_app, version: "0.1.0", deps: deps()]
+
+      defp deps do
+        [{:gettext, "~> 1.0"}]
+      end
+    end
+    """
+
+    igniter =
+      migrate(@legacy_blueprint, nil, %{
+        "mix.exs" => mix_exs,
+        "lib/legacy_app_web/gettext.ex" => """
+        defmodule LegacyAppWeb.Gettext do
+          use Gettext, otp_app: :legacy_app
+        end
+        """,
+        "lib/legacy_app_web/components/core.ex" => """
+        defmodule LegacyAppWeb.Components.Core do
+          import LegacyAppWeb.Gettext
+        end
+        """
+      })
+
+    assert source(igniter, "lib/legacy_app_web/gettext.ex") =~ "use Gettext.Backend, otp_app: :legacy_app"
+    assert source(igniter, "lib/legacy_app_web/components/core.ex") =~ ~r/use Gettext,\s+backend: LegacyAppWeb.Gettext/
+    assert source(igniter, "mix.exs") == mix_exs
+    assert igniter.tasks == []
+  end
+
+  test "replaces a Gettext helper an earlier Brando shipped and keeps an edited one" do
+    legacy =
+      File.read!(Application.app_dir(:brando, "priv/templates/brando.migrate/legacy_sync_gettext/sync_gettext.0.54.sh"))
+
+    current = File.read!(Application.app_dir(:brando, "priv/templates/brando.migrate/sync_gettext.sh"))
+
+    igniter = migrate(@legacy_blueprint, nil, %{"scripts/sync_gettext.sh" => legacy})
+    assert igniter.issues == []
+    assert source(igniter, "scripts/sync_gettext.sh") == current
+
+    edited = legacy <> "\necho custom\n"
+    igniter = migrate(@legacy_blueprint, nil, %{"scripts/sync_gettext.sh" => edited})
+    assert igniter.issues == []
+    assert source(igniter, "scripts/sync_gettext.sh") == edited
+    assert_has_warning(igniter, &String.contains?(&1, "differs from every version Brando shipped"))
+  end
+
+  test "removes the retired Sharp image processor from config" do
+    igniter =
+      migrate(@legacy_blueprint, nil, %{
+        @brando_config_path => """
+        import Config
+
+        config :brando, otp_app: :legacy_app
+
+        config :brando, Brando.Images,
+          processor_module: Brando.Images.Processor.Sharp,
+          default_config: %{upload_path: "images/site/default"}
+        """,
+        "config/prod.exs" => """
+        import Config
+
+        config :brando, Brando.Images, processor_module: Brando.Images.Processor.Sharp
+
+        config :legacy_app, LegacyAppWeb.Endpoint, server: true
+        """,
+        "config/dev.exs" => """
+        import Config
+
+        config :brando, Brando.Images, processor_module: LegacyApp.Processor
+        """,
+        # Unformatted on purpose: files without the setting are not rewritten.
+        "config/e2e.exs" => """
+        import Config
+        config :legacy_app, sql_sandbox: true
+        config :legacy_app, LegacyAppWeb.Endpoint, server: false
+        """
+      })
+
+    brando = source(igniter, @brando_config_path)
+    refute brando =~ "Sharp"
+    assert brando =~ ~s(default_config: %{upload_path: "images/site/default"})
+
+    prod = source(igniter, "config/prod.exs")
+    refute prod =~ "Brando.Images"
+    assert prod =~ "server: true"
+
+    assert_unchanged(igniter, ["config/dev.exs", "config/e2e.exs"])
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, [@brando_config_path, "config/prod.exs"])
   end
 
   test "copied Gettext helper fills single-line translations portably" do

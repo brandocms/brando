@@ -1,0 +1,27 @@
+<article b-tpl="info slider">
+  <div class="inner">
+    <div class="info">
+      {% ref refs.info %}
+    </div>
+    <div class="slider">
+      {% headless_ref refs.slider %}
+      <div data-panner-container>
+        <div class="inner">
+          <section class="items" data-panner data-panner-snap data-panner-autoplay>
+            {% assign images = refs.slider.gallery.gallery_objects %}
+            {% for image in images %}
+              <figure data-panner-item>
+                {% picture image { size: 'auto', lazyload: true, srcset: 'default', prefix: '/media' } %}
+              </figure>
+            {% endfor %}
+          </section>
+        </div>
+        <div data-panner-previous>&larr;</div>
+        <div data-panner-next>&rarr;</div>
+        <div data-panner-indicator>
+          <div data-panner-indicator-nib="{{ images | size }}"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>

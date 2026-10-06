@@ -402,6 +402,39 @@ production dump.
 
 #### Improvements
 
+- **Upgrading a 0.53/0.54 site takes fewer manual steps** (from the smartwatt
+  upgrade). See [Migrating from 0.53 or 0.54](guides/migrating_from_053.md),
+  which now also covers the dependency, Node, legacy-snapshot and test-database
+  steps.
+  - `mix brando.migrate54` and `migrate55` no longer compile the application
+    first, so they run on the source they are meant to fix. Gettext backends
+    are rewritten in the same plan rather than by a separate
+    `igniter.update_gettext`, which compiled the application and pinned
+    `gettext ~> 0.26`. The consumer-owned `brando.upgrade` task is found by
+    content anywhere under `lib/`.
+  - `migrate54` replaces a copy of the 0.54 `scripts/sync_gettext.sh` instead of
+    aborting, and both tasks remove `processor_module:
+    Brando.Images.Processor.Sharp` from config.
+  - `migrate55` gives Villain parsers back the `use Phoenix.Component`,
+    `Brando.HTML`/`Phoenix.HTML` imports and aliases they used from the old
+    `use Brando.Villain.Parser`, and reports overrides of blocks Brando no
+    longer renders; completes
+    `Plural-Forms` headers Gettext 1.0 warns about; takes Florist domains and
+    ports from `.envrc.<flavor>`, `etc/nginx` and `etc/supervisord`/`etc/systemd`
+    instead of defaults, reporting placeholder URLs and the process manager;
+    and adds `plug Brando.Plug.Health` when it creates `florist.config.exs`.
+  - `mix brando.gen.backend --upgrade` brings an existing `assets/backend` and
+    the Dockerfile's `assets_backend` stage to the current pnpm template, and
+    `mix brando.assets.setup --backend-only` installs and builds the admin
+    alone.
+  - `mix brando.gen.blueprint_migration` backfills `edited_at` from
+    `updated_at` when it adds the Creator trait to an existing table, and
+    warns when a plan adds a table or column the database already has or
+    drops legacy Villain columns. `mix brando.gen.migrations` copies tenant
+    migrations only when tenancy is on.
+  - The backend template drops `svelte.config.cjs`, which vite-plugin-svelte
+    7 ignores (it logged "no Svelte config found"), and `svelte-preprocess`.
+
 - **`mix brando.migrations.check` finds outdated migration copies.**
   `mix brando.gen.migrations` matches copies by name and never updates one,
   so a copy made before a template was fixed replays the old code. The check
@@ -1118,6 +1151,20 @@ production dump.
 
 #### Fixes
 
+- **Listings with two or more alternates render again.** The alternates
+  column keyed its rows on identifiers built in memory, whose `id` is nil, and
+  LiveView 1.2 raised "found duplicate key nil in comprehension".
+- **`{% picture %}` renders a gallery object's image.** Since `brando_136`, a
+  loop over a gallery ref yields `GalleryObject`s; passing one to `picture`
+  raised `FunctionClauseError`. `brando_200` also rewrites stored module code
+  that loops over a variable assigned from a gallery ref
+  (`{% assign images = refs.slider.gallery.gallery_objects %}`), which
+  `brando_141` missed, so `image.alt` and friends read `image.image.alt`. Run
+  `mix brando.gen.migrations` for `brando_200`. `brando_141` is now a no-op:
+  it also rewrote HTML that named the loop variable (`class="image"`) and lost
+  the loop at a nested `{% endfor %}`, and `brando_200` repairs the loops it
+  handled. Sites that already ran it are unaffected; a copy that has not run
+  yet shows up in `mix brando.migrations.check`.
 - **Passwords saved through the context are hashed.** `trait :password`
   hashed only in the admin form's save, so `Brando.Users.create_user/2` and
   `update_user/3` stored a plain-text password as given, although the users

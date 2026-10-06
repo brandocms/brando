@@ -332,6 +332,54 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert upgraded =~ ~r/LegacyApp\.Repo,\s+\{Phoenix\.PubSub/
   end
 
+  test "the Florist conversion reads the legacy .envrc, nginx and supervisord files" do
+    igniter =
+      migrate(@blueprint_054, %{
+        @deployment_config_path => String.replace(@deployment_config, "https://example.com", "http://somesite.com"),
+        ".envrc.prod" => ~s(export BRANDO_URL_HOST="www.legacy-app.no"\nexport BRANDO_URL_PORT="443"\n),
+        "etc/supervisord/prod.conf" => ~s([program:legacy_app_prod]\nenvironment=PORT="8123"\n)
+      })
+
+    assert_creates(igniter, @florist_config_path, fn config ->
+      assert config =~ ~s(set(:domain, "www.legacy-app.no"\))
+      assert config =~ "set(:blue_port, 8123)"
+    end)
+
+    assert_has_warning(igniter, &String.contains?(&1, "from .envrc.prod (BRANDO_URL_HOST)"))
+    assert_has_warning(igniter, &String.contains?(&1, "runs under supervisord"))
+  end
+
+  test "adds the health plug Florist checks to the endpoint, before the router" do
+    endpoint_path = "lib/legacy_app_web/endpoint.ex"
+
+    endpoint = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{endpoint_path => endpoint})
+    # The test project's formatter has no Phoenix locals_without_parens.
+    assert source(igniter, endpoint_path) =~
+             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.Health\)?\n\s*plug\(?LegacyAppWeb.Router/
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, endpoint_path)
+
+    # An endpoint that already has the plug is not rewritten (or reformatted).
+    has_plug =
+      "defmodule LegacyAppWeb.Endpoint do\n  use Phoenix.Endpoint, otp_app: :legacy_app\n  plug Brando.Plug.Health\n  plug LegacyAppWeb.Router\nend\n"
+
+    assert_unchanged(migrate(@blueprint_054, %{endpoint_path => has_plug}), endpoint_path)
+
+    # Only when the task creates the Florist configuration.
+    existing = migrate(@blueprint_054, %{endpoint_path => endpoint, @florist_config_path => "use Florist.DSL\n"})
+    assert_unchanged(existing, endpoint_path)
+  end
+
   test "points Brando at the application's mailer" do
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer})
@@ -393,6 +441,134 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     end
   end
 
+  describe "Villain parsers" do
+    @parser_path "lib/legacy_app/villain/parser.ex"
+
+    defp migrate_parser(files) do
+      migrate(@blueprint_054, files)
+    end
+
+    # Compiles the rewritten parser and returns its diagnostics.
+    defp compile_diagnostics(source) do
+      {_result, diagnostics} =
+        Code.with_diagnostics(fn ->
+          modules = Code.compile_string(source, @parser_path)
+          for {module, _} <- modules, do: :code.delete(module) and :code.purge(module)
+        end)
+
+      diagnostics
+    end
+
+    test "a 0.54 parser override gets back what the old __using__ gave it, and compiles cleanly" do
+      # smartwatt's parser before the upgrade: a slideshow override rendering
+      # ~H with Brando.HTML's <.picture>.
+      original = File.read!("test/fixtures/villain_parser/parser_054.ex.txt")
+
+      # As it was, it no longer compiles: ~H and <.picture> came from __using__.
+      assert_raise CompileError, fn -> Code.with_diagnostics(fn -> Code.compile_string(original) end) end
+
+      igniter = migrate_parser(%{@parser_path => original})
+      upgraded = source(igniter, @parser_path)
+
+      assert upgraded =~ ~r/use Brando.Villain.Parser\n\s*use Phoenix.Component\n\s*import Brando.HTML\n/
+      refute upgraded =~ "import Phoenix.HTML"
+      assert compile_diagnostics(upgraded) == []
+
+      assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.slideshow/2 overrides no block"))
+
+      rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+      assert_unchanged(rerun, @parser_path)
+    end
+
+    test "imports and aliases are added only when the parser uses them" do
+      plain_path = "lib/legacy_app/villain/plain_parser.ex"
+
+      igniter =
+        migrate_parser(%{
+          @parser_path => """
+          defmodule LegacyApp.Villain.Parser do
+            use Brando.Villain.Parser
+
+            def text(%{text: text}, _opts), do: text |> Utils.slugify() |> raw()
+
+            def html(%{text: text}, _opts), do: truncate(text, 20)
+
+            def header(data, opts) when is_map(data), do: Brando.Villain.Parser.header(data, opts)
+
+            def helper(a, b), do: private(a, b)
+            defp private(a, b), do: {a, b}
+          end
+          """,
+          plain_path => """
+          defmodule LegacyApp.Villain.PlainParser do
+            use Brando.Villain.Parser
+            use Phoenix.Component
+            alias LegacyApp.Utils
+
+            def text(data, _opts) do
+              assigns = %{data: data}
+              ~H"<p>{Utils.title(@data.text)}</p>"
+            end
+          end
+          """
+        })
+
+      upgraded = source(igniter, @parser_path)
+      assert upgraded =~ "import Brando.HTML"
+      assert upgraded =~ "import Phoenix.HTML"
+      assert upgraded =~ "alias Brando.Utils"
+      refute upgraded =~ "use Phoenix.Component"
+      refute upgraded =~ "alias Brando.Content"
+      assert compile_diagnostics(upgraded) == []
+
+      # Already has Phoenix.Component, renders no Brando.HTML component, and
+      # its Utils is its own alias.
+      assert_unchanged(igniter, plain_path)
+
+      assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.helper/2"))
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, ".header/2"))
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, ".private/2"))
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, "PlainParser"))
+    end
+  end
+
+  test "completes Plural-Forms headers Gettext 1.0 cannot parse" do
+    po = fn plural_forms ->
+      """
+      msgid ""
+      msgstr ""
+      "Language: no\\n"
+      "Plural-Forms: #{plural_forms}\\n"
+
+      msgid "Hello"
+      msgstr "Hei"
+      """
+    end
+
+    paths = %{
+      rule_missing: "priv/gettext/backend/no/LC_MESSAGES/default.po",
+      semicolon_missing: "priv/gettext/en/LC_MESSAGES/default.po",
+      complete: "priv/gettext/sv/LC_MESSAGES/default.po",
+      unknown: "priv/gettext/xx/LC_MESSAGES/default.po"
+    }
+
+    igniter =
+      migrate(@blueprint_054, %{
+        paths.rule_missing => po.("nplurals=2;"),
+        paths.semicolon_missing => po.("nplurals=2; plural=(n != 1)"),
+        paths.complete => po.("nplurals=2; plural=(n != 1);"),
+        paths.unknown => po.("nplurals=2;")
+      })
+
+    assert source(igniter, paths.rule_missing) == po.("nplurals=2; plural=(n != 1);")
+    assert source(igniter, paths.semicolon_missing) == po.("nplurals=2; plural=(n != 1);")
+    assert_unchanged(igniter, [paths.complete, paths.unknown])
+    assert_has_warning(igniter, &String.contains?(&1, paths.unknown))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, [paths.rule_missing, paths.semicolon_missing])
+  end
+
   test "reports only the 0.55 manual workflow" do
     igniter = migrate(@blueprint_054)
 
@@ -429,7 +605,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
         @vite_config_path => @vite_config,
         @deployment_config_path => @deployment_config,
         @fabfile_path => @fabfile,
-        @gettext_script_path => File.read!("test/fixtures/brando_054/sync_gettext.sh"),
+        @gettext_script_path => legacy_gettext_script(),
         @legacy_task_path => legacy_task("0.54")
       }
       |> Map.merge(overrides)
@@ -439,6 +615,10 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     [app_name: :legacy_app, files: files]
     |> test_project()
     |> include_test_files()
+  end
+
+  defp legacy_gettext_script do
+    File.read!(Application.app_dir(:brando, "priv/templates/brando.migrate/legacy_sync_gettext/sync_gettext.0.54.sh"))
   end
 
   defp legacy_task(version) do

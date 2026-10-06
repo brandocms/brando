@@ -9,11 +9,23 @@ if Code.ensure_loaded?(Igniter) do
     Generates Vite backend assets without overwriting customized files.
     Existing package dependencies and scripts are preserved. This task does
     not install JavaScript packages or run a build.
+
+        mix brando.gen.backend --upgrade
+
+    brings an existing `assets/backend` up to the current template instead:
+    package versions, `engines` and `packageManager`, `vite.config.js`, the
+    retired `svelte.config.cjs`, yarn/npm lockfiles (the template uses pnpm),
+    and the Dockerfile's `assets_backend` stage. Customized CSS and other
+    existing files are kept. Install and build afterwards with
+    `mix brando.assets.setup --backend-only`.
     """
 
     @impl Igniter.Mix.Task
     def info(_argv, _source) do
-      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+      %Igniter.Mix.Task.Info{
+        group: :brando,
+        schema: Mix.Brando.Igniter.Project.options() ++ [upgrade: :boolean]
+      }
     end
 
     @impl Igniter.Mix.Task
@@ -21,7 +33,9 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, igniter, options} <-
              Mix.Brando.Igniter.Install.Configuration.namespace_options(igniter, igniter.args.options),
            {:ok, igniter, project} <- Mix.Brando.Igniter.Project.discover(igniter, options) do
-        Mix.Brando.Igniter.Assets.plan(igniter, project, [:backend])
+        if igniter.args.options[:upgrade],
+          do: Mix.Brando.Igniter.Assets.upgrade(igniter, project),
+          else: Mix.Brando.Igniter.Assets.plan(igniter, project, [:backend])
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)

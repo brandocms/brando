@@ -607,6 +607,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     assigns =
       assigns
       |> assign(:alternate_entries?, alternate_entries != [])
+      # In-memory identifiers: `id` is nil, so key the rows on schema + entry_id.
       |> assign(:identifiers, Identifier.identifiers_for!(alternate_entries))
 
     ~H"""
@@ -625,7 +626,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <div class="identifier-list">
           <Entries.dumb_identifier
             :for={identifier <- @identifiers}
-            :key={identifier.id}
+            :key={{identifier.schema, identifier.entry_id}}
             identifier={identifier}
             select={
               JS.push("update_entry",

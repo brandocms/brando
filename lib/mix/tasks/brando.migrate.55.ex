@@ -15,10 +15,14 @@ if Code.ensure_loaded?(Igniter) do
     dependency. Applications still on 0.53 syntax must run
     `mix brando.migrate54` first.
 
-    The task adds the explicit listing component imports, configures Req as
-    Swoosh's API client, points Brando at the application's mailer, pins the declared `phoenix_live_view` JavaScript
+    The task adds the explicit listing component imports, gives Villain parsers
+    back the `use Phoenix.Component`, imports and aliases they relied on from
+    `use Brando.Villain.Parser`, configures Req as
+    Swoosh's API client, points Brando at the application's mailer, removes the
+    retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
-    configuration, refreshes the gettext recovery helper, and retires the
+    configuration, refreshes the gettext recovery helper, completes
+    `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
     The task changes source files only. Review and compile its diff before
@@ -30,15 +34,23 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{group: :brando}
     end
 
+    # Loads dependencies and configuration only; the application's source is
+    # what this task fixes, so it may not compile yet.
+    @impl Mix.Task
+    def run(argv), do: Mix.Brando.Igniter.SourceTask.run(__MODULE__, argv)
+
     def igniter(igniter) do
       igniter
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
+      |> SourceUpgrade.update_villain_parsers()
       |> SourceUpgrade.configure_swoosh_client()
       |> SourceUpgrade.configure_brando_mailer()
+      |> SourceUpgrade.remove_sharp_processor()
       |> SourceUpgrade.pin_live_view_javascript()
       |> SourceUpgrade.hide_source_maps()
       |> SourceUpgrade.create_florist_config()
       |> SourceUpgrade.refresh_gettext_script()
+      |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
@@ -50,7 +62,10 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_notice(igniter, """
       Brando 0.55 source migration prepared.
 
-      Custom listing rows get the narrow component imports they use. The task
+      Custom listing rows get the narrow component imports they use, and
+      Villain parsers get back the `use Phoenix.Component`, `Brando.HTML` and
+      `Phoenix.HTML` imports, and aliases they used, which
+      `use Brando.Villain.Parser` no longer brings in. The task
       adds Req as Swoosh's API client when none is configured, points Brando at
       the application's `Mailer` when it has one, and pins the
       declared `phoenix_live_view` JavaScript dependency under `assets/` to the
@@ -62,7 +77,10 @@ if Code.ensure_loaded?(Igniter) do
       When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
       configuration exists, the task also creates a reviewable
       `florist.config.exs`. It preserves the legacy single-release/nginx model,
-      does not copy passwords, and leaves the legacy files untouched.
+      takes domains and ports the legacy `.envrc.<flavor>`, `etc/nginx` and
+      `etc/supervisord`/`etc/systemd` files name, does not copy passwords, and
+      leaves the legacy files untouched. It adds `plug Brando.Plug.Health` to
+      the endpoint, before the router, because Florist checks `/health`.
 
       Tenancy remains opt-in. Applications adopting named environments can run
       `mix brando.setup.tenancy` after this general source upgrade to prepare
@@ -131,7 +149,7 @@ if Code.ensure_loaded?(Igniter) do
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.
         * A generated Florist configuration deliberately retains `:single`
           deployment with nginx. Validate domains, Docker/release paths, remote
-          directories, systemd/nginx behavior, the persistent media symlink, and
+          directories, systemd or supervisord and nginx behavior, the persistent media symlink, and
           database backups before replacing Fabric. Opt into blue/green only as
           a separately rehearsed deployment change. Legacy rclone credentials
           and bucket paths are never inferred.

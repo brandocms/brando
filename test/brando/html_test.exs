@@ -127,6 +127,15 @@ defmodule Brando.HTMLTest do
       assert html =~ "Havna"
     end
 
+    test "renders a gallery object's image", %{image: image} do
+      gallery_object = %Brando.Galleries.GalleryObject{image: image}
+      assert render_picture(gallery_object, key: :small, language: "no") =~ ~s(alt="En ferje")
+    end
+
+    test "renders nothing for a gallery object without an image" do
+      assert render_picture(%Brando.Galleries.GalleryObject{image: nil}, key: :small) == ""
+    end
+
     test "falls back to the request's locale, then the default language", %{image: image} do
       Gettext.with_locale(Brando.Gettext, "no", fn ->
         assert render_picture(image, key: :small) =~ ~s(alt="En ferje")

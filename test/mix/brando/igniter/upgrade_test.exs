@@ -40,6 +40,18 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     assert IgniterCase.source(result, @archive) == legacy("0.54")
   end
 
+  test "the legacy task is found by its content wherever it lives under lib/" do
+    path = "lib/legacy_app/tasks/upgrade.ex"
+
+    result =
+      IgniterCase.phoenix_project(files: %{path => legacy("0.54")})
+      |> Igniter.compose_task("brando.upgrade.prepare", [])
+
+    assert result.issues == []
+    Igniter.Test.assert_rms(result, path)
+    assert IgniterCase.source(result, @archive) == legacy("0.54")
+  end
+
   test "the installer no longer ships a consumer-owned upgrade task" do
     refute Enum.any?(Mix.Brando.Install.Templates.manifest(), fn {_format, _source, target} ->
              target == "lib/mix/brando.upgrade.ex"
@@ -91,6 +103,27 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     rerun = Igniter.compose_task(applied, "brando.gen.migrations", [])
     assert rerun.issues == []
     Igniter.Test.assert_unchanged(rerun)
+  end
+
+  test "framework migration command copies tenant migrations only when tenancy is on" do
+    tenant_migration? = fn result ->
+      result.rewrite.sources |> Map.keys() |> Enum.any?(&String.starts_with?(&1, "priv/repo/tenant_migrations/"))
+    end
+
+    classic = IgniterCase.phoenix_project() |> Igniter.compose_task("brando.gen.migrations", [])
+    assert classic.issues == []
+    refute tenant_migration?.(classic)
+
+    for mode <- [:none, :single] do
+      config = "import Config\nconfig :brando, tenancy_mode: #{inspect(mode)}\n"
+
+      result =
+        IgniterCase.phoenix_project(files: %{"config/brando.exs" => config})
+        |> Igniter.compose_task("brando.gen.migrations", [])
+
+      assert result.issues == []
+      assert tenant_migration?.(result) == (mode == :single)
+    end
   end
 
   test "version hook composes through Igniter's actual apply-upgrades dispatcher" do

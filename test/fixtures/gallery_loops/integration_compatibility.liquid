@@ -1,0 +1,37 @@
+<article b-tpl="integration compatibility">
+  <div class="inner" data-moonwalk-section>
+    <div class="integrations" data-moonwalk-children>
+      {% ref refs.integ_text %}
+      {% headless_ref refs.integ_gallery %}
+      <div data-gallery data-moonwalk>
+        <div class="inner">
+          <section data-gallery-items>
+            {% assign images = refs.integ_gallery.gallery.gallery_objects %}
+            {% for image in images %}
+              {% picture image { sizes: 'auto', lazyload: true, srcset: 'default', prefix: '/media' } %}
+            {% endfor %}
+          </section>
+        </div>
+      </div>
+    </div>
+    
+    <div class="compatibilities">
+      <div class="text" data-moonwalk>
+        {% ref refs.compat_text %}
+      </div>
+      {% assign rows = block.table_rows %}
+      {% hide %}
+      <div class="checks">
+      {% for row in rows %}
+        {% for col in row.vars %}
+          <div class="check" data-moonwalk="lFast">
+            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#667EFF"/><path d="M9 14.077 13.571 19 21 11" stroke="#fff" stroke-width="3" stroke-miterlimit="10"/></svg>
+            <div class="value">{{ col.value }}</div>
+          </div>
+        {% endfor %}
+      {% endfor %}
+      </div>
+      {% endhide %}
+    </div>
+  </div>
+</article>

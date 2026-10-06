@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
 
     alias Mix.Brando.Igniter.Install
+    alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Install.Templates
 
     def preflight(igniter) do
@@ -44,16 +45,28 @@ if Code.ensure_loaded?(Igniter) do
 
     def plan(igniter, project, options \\ []) do
       igniter = Igniter.include_glob(igniter, "priv/repo/{migrations,tenant_migrations}/*.exs")
+      {igniter, tenancy?} = tenancy?(igniter)
 
       files =
         Templates.manifest()
         |> Enum.filter(fn {_format, _source, target} ->
-          migration_template?(target, options)
+          migration_template?(target, options) and (tenancy? or not tenant_template?(target))
         end)
         |> Enum.sort_by(fn {_format, _, target} -> target end)
 
       Enum.reduce(files, igniter, &copy_missing(&1, &2, project))
     end
+
+    # Tenant migrations only run with named environments; `mix brando.setup.tenancy`
+    # copies them when a site turns tenancy on.
+    defp tenancy?(igniter) do
+      case Configuration.read(igniter, :tenancy_mode) do
+        {:ok, igniter, mode} -> {igniter, mode in [:single, :multi]}
+        {:error, _message} -> {igniter, false}
+      end
+    end
+
+    defp tenant_template?(target), do: String.starts_with?(target, "priv/repo/tenant_migrations")
 
     defp migration_template?(target, options) do
       if options[:upgrade] do

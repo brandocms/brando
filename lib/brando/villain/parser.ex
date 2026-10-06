@@ -77,6 +77,41 @@ defmodule Brando.Villain.Parser do
   @doc "Default options passed to <.video> component for :file type"
   @callback video_file_options(data :: map) :: list
 
+  # Every function `__using__` defines. Brando dispatches blocks by their type
+  # name, so a site override of any other name is never called.
+  @overridable [
+    render_caption: 1,
+    video_file_options: 1,
+    header: 2,
+    input: 2,
+    module: 2,
+    blocks: 2,
+    datasource: 2,
+    text: 2,
+    html: 2,
+    svg: 2,
+    markdown: 2,
+    markdown_source: 2,
+    map: 2,
+    video: 2,
+    file: 2,
+    media: 2,
+    picture: 2,
+    gallery: 2,
+    list: 2,
+    datatable: 2,
+    table: 2,
+    divider: 2,
+    blockquote: 2,
+    comment: 2,
+    container: 2,
+    timeline: 2,
+    fragment: 2
+  ]
+
+  @doc false
+  def overridable_callbacks, do: @overridable
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Brando.Villain.Parser

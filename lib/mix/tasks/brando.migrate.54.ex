@@ -14,7 +14,7 @@ if Code.ensure_loaded?(Igniter) do
     Run this task from a clean, committed worktree after updating the Brando
     dependency. It rewrites legacy Blueprint and LivePreview syntax, preserves
     legacy Meta and JSON-LD path extraction semantics, creates the gettext
-    recovery helper, and schedules Igniter's Gettext source upgrade.
+    recovery helper, and moves Gettext backends to `use Gettext.Backend`.
 
     The task changes source files only, and every rewrite matches 0.53 syntax
     only, so rerunning it is safe. An application that already uses 0.54
@@ -27,16 +27,22 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{group: :brando}
     end
 
+    # Loads dependencies and configuration only; the application's source is
+    # what this task fixes, so it may not compile yet.
+    @impl Mix.Task
+    def run(argv), do: Mix.Brando.Igniter.SourceTask.run(__MODULE__, argv)
+
     def igniter(igniter) do
       igniter
       |> SourceUpgrade.rename_list_villains()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> SourceUpgrade.rewrite_preview_targets()
       |> SourceUpgrade.configure_repo_module()
+      |> SourceUpgrade.remove_sharp_processor()
       |> SourceUpgrade.rewrite_dockerfiles()
       |> SourceUpgrade.rewrite_font_urls()
       |> SourceUpgrade.copy_gettext_script()
-      |> Igniter.add_task("igniter.update_gettext")
+      |> SourceUpgrade.update_gettext_backends()
       |> add_notices()
       |> add_warnings()
     end
@@ -53,12 +59,14 @@ if Code.ensure_loaded?(Igniter) do
       The task also updates `Brando.Villain.list_villains/0`, legacy listing
       `filter:` keys, root Docker digest commands, and font cache suffixes. It
       adds the Brando Repo configuration when exactly one Ecto Repo is
-      available.
+      available, and removes `processor_module: Brando.Images.Processor.Sharp`
+      (Brando refuses to boot with it; Vix is the default).
 
       Continue in this order:
 
-        1. Review the complete Igniter diff, then run `mix format` and
-           `mix compile --warnings-as-errors`.
+        1. Review the complete Igniter diff and run `mix format`. Neither
+           task compiles the application, which usually compiles only after
+           both have run.
         2. Run `mix brando.migrate55` for the 0.54 to 0.55 source changes. Its
            notice continues with the database migration workflow.
 
@@ -85,10 +93,11 @@ if Code.ensure_loaded?(Igniter) do
           declarations require an application-specific row component or child
           schema. Exports using the removed `after_export` callback and action
           option sets beyond `default_actions:` also remain for manual redesign.
-        * Vite 5 manifest configuration, custom Sharp-based processing, merged
-          admin Create/Update LiveViews, `<.head>` adoption, and navigation markup
-          depend on the application's frontend and custom code. Apply the
-          corresponding 0.54 changelog instructions manually where relevant.
+        * Vite 5 manifest configuration, custom processing that relied on
+          sharp-cli, merged admin Create/Update LiveViews, `<.head>` adoption,
+          and navigation markup depend on the application's frontend and
+          custom code. Apply the corresponding 0.54 changelog instructions
+          manually where relevant.
         * Back up Gettext catalogs before attempting recovery. After extracting
           the backend and frontend catalogs, run the copied helper explicitly
           with Bash, for example:

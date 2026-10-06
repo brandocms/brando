@@ -20,6 +20,8 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
   alias Mix.Tasks.Brando.Gen.BlueprintMigration
 
   setup do
+    # Planning checks the database for tables the plan would create.
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.repo())
     Mix.shell(Mix.Shell.Process)
     root = Path.join(System.tmp_dir!(), "brando-mix-migration-#{System.unique_integer([:positive])}")
     on_exit(fn -> File.rm_rf!(root) end)
@@ -54,6 +56,54 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
     rerun = plan(context)
     assert rerun.issues == []
     assert rerun.tasks == []
+  end
+
+  describe "legacy snapshot hints" do
+    defp plan_for(context, module) do
+      Igniter.Test.test_project()
+      |> Igniter.compose_task(BlueprintMigration, [
+        inspect(module),
+        "--dry-run",
+        "--migration-path",
+        context.migration_path,
+        "--snapshot-path",
+        context.snapshot_path
+      ])
+    end
+
+    test "creating a table the database already has points at the legacy snapshot guide", context do
+      # The test database has `projects`; there is no snapshot for it here.
+      planned = plan_for(context, Brando.MigrationTest.Project)
+      assert planned.issues == []
+      assert [warning] = Enum.filter(planned.warnings, &(&1 =~ "already exist in the database"))
+      assert warning =~ "projects"
+      assert warning =~ ~s("Legacy snapshots")
+
+      new_table = plan_for(context, Brando.MigrationTest.ExecutionV1)
+      refute Enum.any?(new_table.warnings, &(&1 =~ "already exist"))
+    end
+
+    test "adding columns the database already has points at the legacy snapshot guide", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Brando.Blueprint.Migrations.create_migration(Brando.MigrationTest.LegacyProjectV1, opts)
+
+      # The test database's `projects` has the rendered_blocks columns already.
+      planned = plan_for(context, Brando.MigrationTest.LegacyProjectV2)
+      assert [warning] = Enum.filter(planned.warnings, &(&1 =~ "already exist in the database"))
+      assert warning =~ "projects.rendered_blocks, projects.rendered_blocks_at,"
+      refute warning =~ "never_added"
+      assert warning =~ "add_if_not_exists"
+    end
+
+    test "dropping legacy Villain columns points at the legacy snapshot guide", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Brando.Blueprint.Migrations.create_migration(Brando.MigrationTest.VillainV1, opts)
+
+      planned = plan_for(context, Brando.MigrationTest.VillainV2)
+      assert [warning] = Enum.filter(planned.warnings, &(&1 =~ "legacy Villain columns"))
+      assert warning =~ ":data, :hero_data, :html"
+      assert warning =~ ~s("Legacy snapshots")
+    end
   end
 
   test "rebaseline is explicitly reviewed and persists only after acceptance", context do

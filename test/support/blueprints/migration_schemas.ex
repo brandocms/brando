@@ -691,3 +691,104 @@ defmodule Brando.MigrationTest.RelationPrimaryKeyV2 do
       source: :owner_ref
   end
 end
+
+defmodule Brando.MigrationTest.StorageTimestamped do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.StorageCreator do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.VillainV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Article",
+    singular: "storage_article",
+    plural: "storage_articles",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :title, :string
+    attribute :data, :map
+    attribute :html, :text
+    attribute :hero_data, :map
+  end
+end
+
+defmodule Brando.MigrationTest.VillainV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Article",
+    singular: "storage_article",
+    plural: "storage_articles",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :title, :string
+  end
+end
+
+# Storage for the test database's existing `projects` table, as a snapshot
+# from before the blocks conversion saw it, and as it is now.
+defmodule Brando.MigrationTest.LegacyProjectV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Legacy",
+    schema: "Project",
+    singular: "legacy_project",
+    plural: "legacy_projects",
+    gettext_module: Brando.Gettext
+
+  table "projects"
+
+  attributes do
+    attribute :title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.LegacyProjectV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Legacy",
+    schema: "Project",
+    singular: "legacy_project",
+    plural: "legacy_projects",
+    gettext_module: Brando.Gettext
+
+  table "projects"
+
+  attributes do
+    attribute :title, :string
+    attribute :rendered_blocks, :text
+    attribute :rendered_blocks_at, :datetime
+    attribute :never_added, :string
+  end
+end
