@@ -105,4 +105,11 @@ defmodule BrandoAdmin.ListingUserContextTest do
     {:ok, view, _html} = live(conn, @path <> "?hide_incomplete=0&page=1")
     assert rows(await_selector(view, ".user-context-row")) == ["A much longer title", "Short"]
   end
+
+  test "a select's value reaches the context as declared, not escaped for ilike", %{conn: conn} = c do
+    SyncTest.update_article(c.long, %{featured: true}, c.current_user)
+
+    {:ok, view, _html} = live(conn, @path <> "?filter:kind=featured_only")
+    assert rows(await_selector(view, ".user-context-row")) == ["A much longer title"]
+  end
 end

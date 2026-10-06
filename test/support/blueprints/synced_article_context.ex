@@ -22,6 +22,7 @@ defmodule Brando.SyncTest do
     fn
       {:mine, "true"}, query, %{current_user: %{id: user_id}} -> from(q in query, where: q.creator_id == ^user_id)
       {:mine, _}, query, _ -> query
+      {:kind, "featured_only"}, query, _ -> from(q in query, where: q.featured == true)
     end
   end
 

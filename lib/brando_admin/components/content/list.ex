@@ -443,7 +443,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> params_to_list_opts(params, listing)
 
     # "off" only overrides a switched-on default; the context never sees it.
-    sanitized_list_opts = list_opts |> Listings.drop_switched_off(listing) |> sanitize_list_opts()
+    sanitized_list_opts = list_opts |> Listings.drop_switched_off(listing) |> sanitize_list_opts(listing)
 
     # The context's filter clauses may take the user (see `Brando.Query.filters/2`)
     {:ok, entries} = apply(context, :"list_#{plural}", [Map.put(sanitized_list_opts, :current_user, current_user)])
@@ -487,16 +487,21 @@ defmodule BrandoAdmin.Components.Content.List do
   defp decorate(entries, decorate, user) when is_function(decorate, 2), do: decorate.(entries, user)
   defp decorate(entries, decorate, _user) when is_list(entries), do: decorate.(entries)
 
-  defp sanitize_list_opts(%{filter: filters} = list_opts) do
+  # Text a user types is escaped for ilike. A select's or a toggle's value is
+  # one the listing declared, compared as it is: escaped, `not_rejected` would
+  # arrive as `not\_rejected`.
+  defp sanitize_list_opts(%{filter: filters} = list_opts, listing) do
+    exact = for %{type: type, key: key} <- listing.filters, type in [:boolean, :select], into: MapSet.new(), do: key
+
     sanitized_filters =
       Map.new(filters, fn {k, v} ->
-        {k, Query.sanitize_ilike_pattern(v)}
+        if MapSet.member?(exact, to_string(k)), do: {k, v}, else: {k, Query.sanitize_ilike_pattern(v)}
       end)
 
     Map.put(list_opts, :filter, sanitized_filters)
   end
 
-  defp sanitize_list_opts(list_opts) do
+  defp sanitize_list_opts(list_opts, _listing) do
     list_opts
   end
 
