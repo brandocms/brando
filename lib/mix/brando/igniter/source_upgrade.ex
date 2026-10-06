@@ -1567,11 +1567,13 @@ if Code.ensure_loaded?(Igniter) do
 
       deployment_config = source_content(igniter, "deployment.cfg")
       fabfile = source_content(igniter, "fabfile.py")
+      {igniter, legacy_files} = legacy_deployment_files(igniter)
 
-      case FloristConfig.generate(deployment_config, fabfile) do
+      case FloristConfig.generate(deployment_config, fabfile, legacy_files) do
         {:ok, content, warnings} ->
           igniter
           |> Igniter.create_new_file("florist.config.exs", content, on_exists: :skip)
+          |> add_health_plug()
           |> add_florist_warnings(warnings)
           |> Igniter.add_notice(
             "Created `florist.config.exs` from the legacy Fabric files. Review it before use; the source files were retained."
@@ -1580,6 +1582,63 @@ if Code.ensure_loaded?(Igniter) do
         {:error, reason} ->
           Igniter.add_warning(igniter, "Could not create `florist.config.exs`: #{reason}")
       end
+    end
+
+    @doc """
+    Adds `plug Brando.Plug.Health` to the endpoint, before the router.
+
+    Florist's deploy and its nginx templates check `/health`; without the plug
+    the request falls through to the router and the check never passes.
+    """
+    def add_health_plug(igniter, endpoint \\ nil) do
+      endpoint = endpoint || Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
+      missing = "add `plug Brando.Plug.Health` to #{inspect(endpoint)}, before the router. Florist checks /health."
+
+      case ProjectModule.find_and_update_module(igniter, endpoint, &health_plug_before_router(&1, missing)) do
+        {:ok, igniter} -> igniter
+        {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
+      end
+    end
+
+    defp health_plug_before_router(zipper, missing) do
+      with :error <- move_to_plug(zipper, &Common.nodes_equal?(&1, Brando.Plug.Health)),
+           {:ok, router} <- move_to_plug(zipper, &router?/1) do
+        {:ok, Common.add_code(router, "plug Brando.Plug.Health", placement: :before)}
+      else
+        {:ok, _health} -> {:ok, zipper}
+        :error -> {:warning, "Could not find the router plug; " <> missing}
+      end
+    end
+
+    defp move_to_plug(zipper, predicate) do
+      CodeFunction.move_to_function_call_in_current_scope(zipper, :plug, [1, 2], fn call ->
+        CodeFunction.argument_matches_predicate?(call, 0, predicate)
+      end)
+    end
+
+    defp router?(zipper) do
+      case Zipper.node(zipper) do
+        {:__aliases__, _, parts} -> List.last(parts) == :Router
+        _other -> false
+      end
+    end
+
+    # Fills the domains, ports and process manager deployment.cfg leaves out.
+    # Only BRANDO_URL_HOST/PORT are read from the .envrc files.
+    @legacy_deployment_globs [".envrc.*", "etc/nginx/*.conf", "etc/supervisord/*.conf", "etc/systemd/*.service"]
+    @legacy_deployment_file ~r{^(\.envrc\.[^/]+|etc/(nginx|supervisord)/[^/]+\.conf|etc/systemd/[^/]+\.service)$}
+
+    defp legacy_deployment_files(igniter) do
+      igniter = Enum.reduce(@legacy_deployment_globs, igniter, &Igniter.include_glob(&2, &1))
+
+      files =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&Source.get(&1, :path))
+        |> Enum.filter(&Regex.match?(@legacy_deployment_file, &1))
+        |> Map.new(&{&1, source_content(igniter, &1)})
+
+      {igniter, files}
     end
 
     defp source_content(igniter, path) do

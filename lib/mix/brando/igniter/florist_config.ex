@@ -16,31 +16,46 @@ if Code.ensure_loaded?(Igniter) do
     @required_settings ~w(PROJECT_MODULE PROJECT_NAME SSH_HOST SSH_PORT SSH_USER)
     @supported_targets [:prod, :staging]
 
+    # Values Brando's install templates shipped and sites left in place.
+    @placeholder_hosts ~w(somesite.com host.net)
+
     @type warning :: String.t()
 
     @doc """
     Generates `florist.config.exs` content from legacy `deployment.cfg` and
     `fabfile.py` contents.
 
+    `files` maps project-relative paths to the contents of the other legacy
+    deployment files, which fill what `deployment.cfg` leaves out:
+
+      * a target's domain, when `<TARGET>_URL` is missing or still the install
+        template's placeholder, from `.envrc.<flavor>` (`BRANDO_URL_HOST`) or
+        the proxying `server_name` in `etc/nginx/<flavor>.conf`;
+      * a target's application port from `PORT=` in
+        `etc/supervisord/<flavor>.conf` or `etc/systemd/<flavor>.service`,
+        checked against the `etc/nginx/<flavor>.conf` upstream;
+      * the process manager (`etc/supervisord/` or `etc/systemd/`), which the
+        warnings name.
+
     Password values are never copied into the generated configuration. The
     returned warnings identify required environment variables and any legacy
     expressions that could not be converted deterministically.
     """
-    @spec generate(String.t(), String.t()) ::
+    @spec generate(String.t(), String.t(), %{optional(String.t()) => String.t()}) ::
             {:ok, String.t(), [warning()]} | {:error, String.t()}
-    def generate(deployment_config, fabfile)
-        when is_binary(deployment_config) and is_binary(fabfile) do
+    def generate(deployment_config, fabfile, files \\ %{})
+        when is_binary(deployment_config) and is_binary(fabfile) and is_map(files) do
       with {:ok, settings} <- parse_deployment_config(deployment_config),
            :ok <- validate_required_settings(settings),
            :ok <- validate_project_module(settings["PROJECT_MODULE"]),
            {:ok, ssh_port} <- parse_ssh_port(settings["SSH_PORT"]),
            {:ok, target_names} <- find_targets(fabfile) do
-        {targets, conversion_warnings} = build_targets(target_names, settings, ssh_port, fabfile)
+        {targets, conversion_warnings} = build_targets(target_names, settings, ssh_port, fabfile, files)
 
         warnings =
           conversion_warnings
           |> Kernel.++(secret_warnings(settings, target_names))
-          |> Kernel.++(deployment_warnings(fabfile, target_names))
+          |> Kernel.++(deployment_warnings(fabfile, targets, files))
           |> Enum.uniq()
 
         {:ok, render_config(settings, targets), warnings}
@@ -114,19 +129,19 @@ if Code.ensure_loaded?(Igniter) do
       Regex.match?(~r/^def\s+#{target}\(\):/m, fabfile)
     end
 
-    defp build_targets(target_names, settings, ssh_port, fabfile) do
+    defp build_targets(target_names, settings, ssh_port, fabfile, files) do
       {group, warnings} = global_setting(fabfile, "project_group", "web")
       docker_host = blank_to_nil(settings["DOCKER_HOST"])
 
       Enum.map_reduce(target_names, warnings, fn target, warnings ->
         {target_config, target_warnings} =
-          build_target(target, settings, ssh_port, fabfile, group, docker_host)
+          build_target(target, settings, ssh_port, fabfile, group, docker_host, files)
 
         {target_config, warnings ++ target_warnings}
       end)
     end
 
-    defp build_target(target, settings, ssh_port, fabfile, group, docker_host) do
+    defp build_target(target, settings, ssh_port, fabfile, group, docker_host, files) do
       defaults = target_defaults(target)
       glue_body = glue_target_body(fabfile, target)
       function_body = target_function_body(fabfile, target)
@@ -141,7 +156,9 @@ if Code.ensure_loaded?(Igniter) do
 
       {mix_env, warnings} = atom_env_setting(function_body, target, "mix_env", "prod", warnings)
       {dockerfile, warnings} = env_setting(function_body, target, "dockerfile", "Dockerfile", warnings)
-      {domain, ssl, redirect_http, warnings} = target_webserver(settings, target, warnings)
+      legacy_files = flavor_files(files, flavor, target)
+      {domain, ssl, redirect_http, warnings} = target_webserver(settings, target, legacy_files, warnings)
+      {application_port, port_source, warnings} = application_port(target, legacy_files, warnings)
 
       target_config = %{
         name: target,
@@ -162,7 +179,8 @@ if Code.ensure_loaded?(Igniter) do
         domain: domain,
         ssl: ssl,
         redirect_http: redirect_http,
-        application_port: defaults.application_port,
+        application_port: application_port,
+        port_source: port_source,
         noindex: target == :staging
       }
 
@@ -176,8 +194,7 @@ if Code.ensure_loaded?(Igniter) do
         base_dir: "/sites/#{target_name}",
         process_name: "${PROJECT_NAME}_#{target_name}",
         database_name: "${PROJECT_NAME}_#{target_name}",
-        database_user: "${PROJECT_NAME}",
-        application_port: legacy_application_port(target)
+        database_user: "${PROJECT_NAME}"
       }
     end
 
@@ -316,17 +333,166 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    defp target_webserver(settings, target, warnings) do
+    defp target_webserver(settings, target, legacy_files, warnings) do
       key = target |> Atom.to_string() |> String.upcase() |> Kernel.<>("_URL")
 
-      case blank_to_nil(settings[key]) do
+      {configured, warnings} =
+        case blank_to_nil(settings[key]) do
+          nil ->
+            {nil, warnings}
+
+          url ->
+            case parse_target_webserver_url(url, key, target, warnings) do
+              {nil, _ssl, _redirect, warnings} ->
+                {nil, warnings}
+
+              {host, ssl, redirect_http, warnings} ->
+                if placeholder_host?(host) do
+                  warning = "#{key} = #{url} is the install template's placeholder, not the #{target} domain."
+                  {nil, [warning | warnings]}
+                else
+                  {{host, ssl, redirect_http}, warnings}
+                end
+            end
+        end
+
+      case configured || inferred_webserver(legacy_files) do
+        {host, ssl, redirect_http} ->
+          {host, ssl, redirect_http, warnings}
+
+        {host, ssl, redirect_http, source} ->
+          {host, ssl, redirect_http, ["Took the #{target} domain #{host} from #{source}; verify it." | warnings]}
+
         nil ->
           warning = "No #{key} was found; set the #{target} webserver domain in florist.config.exs."
           {nil, :auto, true, [warning | warnings]}
-
-        url ->
-          parse_target_webserver_url(url, key, target, warnings)
       end
+    end
+
+    defp inferred_webserver(legacy_files) do
+      envrc_webserver(legacy_files.envrc) || nginx_webserver(legacy_files.nginx)
+    end
+
+    defp envrc_webserver(nil), do: nil
+
+    defp envrc_webserver({path, content}) do
+      with host when is_binary(host) <- last_export(content, "BRANDO_URL_HOST"),
+           false <- placeholder_host?(host) do
+        https? = last_export(content, "BRANDO_URL_PORT") == "443" or last_export(content, "BRANDO_URL_SCHEME") == "https"
+        {host, if(https?, do: :auto, else: false), https?, "#{path} (BRANDO_URL_HOST)"}
+      else
+        _ -> nil
+      end
+    end
+
+    defp last_export(content, variable) do
+      case Regex.scan(~r/^[ \t]*export[ \t]+#{variable}=["']?([^"'\s#]+)/m, content) do
+        [] -> nil
+        matches -> matches |> List.last() |> List.last()
+      end
+    end
+
+    # The domain of the server block that proxies to the application, preferring
+    # one that serves HTTPS over a plain-HTTP block for the same upstream.
+    defp nginx_webserver(nil), do: nil
+
+    defp nginx_webserver({path, content}) do
+      servers =
+        content
+        |> strip_comments()
+        |> nginx_server_blocks()
+        |> Enum.filter(&String.contains?(&1, "proxy_pass"))
+        |> Enum.map(&{server_names(&1), Regex.match?(~r/\blisten\s+[^;]*\b443\b/, &1)})
+        |> Enum.reject(&match?({[], _https?}, &1))
+
+      case Enum.find(servers, &elem(&1, 1)) || List.first(servers) do
+        {[host | _], https?} -> {host, if(https?, do: :auto, else: false), https?, "#{path} (server_name)"}
+        nil -> nil
+      end
+    end
+
+    defp strip_comments(content), do: Regex.replace(~r/#[^\n]*/, content, "")
+
+    defp nginx_server_blocks(content) do
+      ~r/\bserver\s*\{/
+      |> Regex.scan(content, return: :index)
+      |> Enum.map(fn [{start, length}] -> block_body(content, start + length) end)
+    end
+
+    # The text from `offset` up to the brace that closes the block opened just before it.
+    defp block_body(content, offset) do
+      content
+      |> binary_part(offset, byte_size(content) - offset)
+      |> String.graphemes()
+      |> Enum.reduce_while({1, []}, fn
+        "}", {1, acc} -> {:halt, {0, acc}}
+        "}", {depth, acc} -> {:cont, {depth - 1, ["}" | acc]}}
+        "{", {depth, acc} -> {:cont, {depth + 1, ["{" | acc]}}
+        char, {depth, acc} -> {:cont, {depth, [char | acc]}}
+      end)
+      |> elem(1)
+      |> Enum.reverse()
+      |> Enum.join()
+    end
+
+    defp server_names(server) do
+      ~r/\bserver_name\s+([^;{}]+)/
+      |> Regex.scan(server, capture: :all_but_first)
+      |> Enum.flat_map(fn [names] -> String.split(names) end)
+      |> Enum.reject(&(&1 == "_" or String.contains?(&1, "*") or placeholder_host?(&1)))
+    end
+
+    defp placeholder_host?(host), do: host in @placeholder_hosts or String.contains?(host, "byXX")
+
+    # The port the process manager starts the release on, checked against the
+    # port nginx proxies to.
+    defp application_port(target, legacy_files, warnings) do
+      manager_port = find_port(legacy_files.manager, ~r/\bPORT=["']?(\d+)/)
+
+      upstream_port =
+        find_port(legacy_files.nginx, ~r/\bupstream\s+\S+\s*\{[^}]*?\bserver\s+(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)/)
+
+      case {manager_port, upstream_port} do
+        {nil, nil} ->
+          {legacy_application_port(target), :default, warnings}
+
+        {{port, source}, nil} ->
+          {port, source, warnings}
+
+        {nil, {port, source}} ->
+          {port, source, warnings}
+
+        {{port, source}, {port, _upstream}} ->
+          {port, source, warnings}
+
+        {{port, source}, {other, upstream}} ->
+          warning =
+            "#{source} starts #{target} on port #{port}, but #{upstream} proxies to #{other}; using #{port}."
+
+          {port, source, [warning | warnings]}
+      end
+    end
+
+    defp find_port(nil, _regex), do: nil
+
+    defp find_port({path, content}, regex) do
+      case Regex.run(regex, strip_comments(content), capture: :all_but_first) do
+        [port] -> {String.to_integer(port), path}
+        nil -> nil
+      end
+    end
+
+    # The legacy files for a target, found by its flavor (`etc/nginx/prod.conf`)
+    # or, failing that, its name.
+    defp flavor_files(files, flavor, target) do
+      names = Enum.uniq([flavor, Atom.to_string(target)])
+      find = fn paths -> Enum.find_value(paths, &(files[&1] && {&1, files[&1]})) end
+
+      %{
+        envrc: find.(Enum.map(names, &".envrc.#{&1}")),
+        nginx: find.(Enum.map(names, &"etc/nginx/#{&1}.conf")),
+        manager: find.(Enum.map(names, &"etc/supervisord/#{&1}.conf") ++ Enum.map(names, &"etc/systemd/#{&1}.service"))
+      }
     end
 
     defp parse_target_webserver_url(url, key, target, warnings) do
@@ -381,18 +547,36 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    defp deployment_warnings(fabfile, targets) do
-      application_ports =
-        Enum.map_join(targets, ", ", &"#{&1} #{legacy_application_port(&1)}")
+    defp deployment_warnings(fabfile, targets, files) do
+      defaulted = Enum.filter(targets, &(&1.port_source == :default))
+      application_ports = Enum.map_join(defaulted, ", ", &"#{&1.name} #{&1.application_port}")
 
       [
         "Florist keeps persistent media at `<base>/<project>/media` and links it into versioned releases; verify the legacy media location and protect its contents during the first cutover.",
-        "Review legacy `etc/` systemd, nginx, logrotate, pgbackup, and cron configuration before running `florist bootstrap`.",
-        "Generated application ports use Brando's bundled Fabric defaults (#{application_ports}); verify them against each `.envrc.<flavor>` and legacy nginx upstream."
+        process_manager_warning(files)
       ]
+      |> maybe_add_warning(defaulted != [], fn ->
+        "Generated application ports use Brando's bundled Fabric defaults (#{application_ports}); no `etc/supervisord`, `etc/systemd` or nginx upstream named them. Verify them against the server."
+      end)
       |> maybe_add_warning(String.contains?(fabfile, "def setup_rclone"), fn ->
         "Legacy rclone settings were not copied because the fabfile prompts for credentials and contains deployment-specific bucket paths; configure Florist's `rclone` block manually."
       end)
+    end
+
+    defp process_manager_warning(files) do
+      paths = Map.keys(files)
+
+      case {Enum.any?(paths, &String.starts_with?(&1, "etc/supervisord/")),
+            Enum.any?(paths, &String.starts_with?(&1, "etc/systemd/"))} do
+        {true, _systemd?} ->
+          "The legacy deployment runs under supervisord (`etc/supervisord/`), and Florist runs the release as a systemd service. Stop and disable the supervisord program on the server at cutover so both don't claim the port, and review the legacy nginx, logrotate, pgbackup and cron configuration before running `florist bootstrap`."
+
+        {false, true} ->
+          "The legacy deployment runs under systemd (`etc/systemd/`). Florist writes its own systemd unit; review the legacy unit, nginx, logrotate, pgbackup and cron configuration before running `florist bootstrap`."
+
+        {false, false} ->
+          "Review legacy `etc/` process manager (systemd or supervisord), nginx, logrotate, pgbackup, and cron configuration before running `florist bootstrap`."
+      end
     end
 
     defp maybe_add_warning(warnings, true, warning), do: warnings ++ [warning.()]

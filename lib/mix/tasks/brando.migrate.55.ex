@@ -75,7 +75,10 @@ if Code.ensure_loaded?(Igniter) do
       When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
       configuration exists, the task also creates a reviewable
       `florist.config.exs`. It preserves the legacy single-release/nginx model,
-      does not copy passwords, and leaves the legacy files untouched.
+      takes domains and ports the legacy `.envrc.<flavor>`, `etc/nginx` and
+      `etc/supervisord`/`etc/systemd` files name, does not copy passwords, and
+      leaves the legacy files untouched. It adds `plug Brando.Plug.Health` to
+      the endpoint, before the router, because Florist checks `/health`.
 
       Tenancy remains opt-in. Applications adopting named environments can run
       `mix brando.setup.tenancy` after this general source upgrade to prepare
@@ -144,7 +147,7 @@ if Code.ensure_loaded?(Igniter) do
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.
         * A generated Florist configuration deliberately retains `:single`
           deployment with nginx. Validate domains, Docker/release paths, remote
-          directories, systemd/nginx behavior, the persistent media symlink, and
+          directories, systemd or supervisord and nginx behavior, the persistent media symlink, and
           database backups before replacing Fabric. Opt into blue/green only as
           a separately rehearsed deployment change. Legacy rclone credentials
           and bucket paths are never inferred.

@@ -332,6 +332,31 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert upgraded =~ ~r/LegacyApp\.Repo,\s+\{Phoenix\.PubSub/
   end
 
+  test "adds the health plug Florist checks to the endpoint, before the router" do
+    endpoint_path = "lib/legacy_app_web/endpoint.ex"
+
+    endpoint = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{endpoint_path => endpoint})
+    # The test project's formatter has no Phoenix locals_without_parens.
+    assert source(igniter, endpoint_path) =~
+             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.Health\)?\n\s*plug\(?LegacyAppWeb.Router/
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, endpoint_path)
+
+    # Only when the task creates the Florist configuration.
+    existing = migrate(@blueprint_054, %{endpoint_path => endpoint, @florist_config_path => "use Florist.DSL\n"})
+    assert_unchanged(existing, endpoint_path)
+  end
+
   test "points Brando at the application's mailer" do
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer})
