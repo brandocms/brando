@@ -35,10 +35,10 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   without a change here.
 
   What follows is therefore a list of **examples**, not a set. These are the
-  ones with the sharpest consequences against **req 0.7.4**:
+  ones with the sharpest consequences against **req 0.7.5**:
 
     * `:redirect_trusted` — `remove_credentials_if_untrusted(request, true, _)`
-      hands the request back untouched (`req/steps.ex:1562`), disabling
+      hands the request back untouched (`req/steps.ex:1582`), disabling
       cross-host credential stripping outright. On a doc about config seams
       that can unset credentials, this is the sharpest one available.
 

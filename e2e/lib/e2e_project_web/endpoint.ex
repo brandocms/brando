@@ -54,7 +54,9 @@ defmodule E2eProjectWeb.Endpoint do
   plug Brando.Plug.Media, at: "/media"
 
   if Code.ensure_loaded?(Tidewave) do
-    plug Tidewave
+    # Tidewave 0.8+ injects a toolbar script from tidewave.ai into every HTML
+    # response by default, which would also load under Playwright.
+    plug Tidewave, toolbar: false
   end
 
   # Code reloading can be explicitly enabled under the
