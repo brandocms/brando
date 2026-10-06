@@ -111,10 +111,14 @@ Check by hand before the first Florist command:
   `FLORIST_DB_PASSWORD_STAGING` when a staging target was generated).
 - Anything the task warned about; unconvertible Python expressions fall back
   to documented defaults.
-- Ports (`8055` production, `8060` staging) against each `.envrc.<flavor>`
-  `PORT` and the old nginx upstream.
-- The persistent media directory, the legacy `etc/` units and rclone setup
-  (not migrated).
+- Domains, SSL modes and ports. Where `deployment.cfg` doesn't set them, the
+  task takes them from `.envrc.<flavor>`, `etc/nginx/<flavor>.conf` and
+  `etc/supervisord`/`etc/systemd`, and otherwise falls back to `8055`
+  (production) and `8060` (staging); its warnings say which.
+- `plug Brando.Plug.Health` in the endpoint, before the router. The task adds
+  it; see [Health endpoint](#health-endpoint).
+- The persistent media directory, the legacy `etc/` systemd units or
+  supervisord programs, and rclone setup (not migrated).
 
 The full checklist is in "Review a generated Florist configuration" in the
 [0.53 migration guide](migrating_from_053.md).
