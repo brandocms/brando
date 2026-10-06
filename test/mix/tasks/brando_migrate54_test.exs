@@ -461,7 +461,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
     refute_creates(igniter, "lib/mix/brando.upgrade.ex")
 
-    assert_has_task(igniter, "igniter.update_gettext", [])
+    assert igniter.tasks == []
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))
     assert_has_notice(igniter, &String.contains?(&1, "mix brando.migrate55"))
     assert_has_warning(igniter, &String.contains?(&1, "Manual 0.54 decisions remain"))
@@ -473,6 +473,40 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Manual 0.55 decisions"))
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Form.Primitives"))
     refute Enum.any?(igniter.notices, &String.contains?(&1, "florist.config.exs"))
+  end
+
+  test "moves Gettext backends without compiling or touching the gettext requirement" do
+    mix_exs = """
+    defmodule LegacyApp.MixProject do
+      use Mix.Project
+
+      def project, do: [app: :legacy_app, version: "0.1.0", deps: deps()]
+
+      defp deps do
+        [{:gettext, "~> 1.0"}]
+      end
+    end
+    """
+
+    igniter =
+      migrate(@legacy_blueprint, nil, %{
+        "mix.exs" => mix_exs,
+        "lib/legacy_app_web/gettext.ex" => """
+        defmodule LegacyAppWeb.Gettext do
+          use Gettext, otp_app: :legacy_app
+        end
+        """,
+        "lib/legacy_app_web/components/core.ex" => """
+        defmodule LegacyAppWeb.Components.Core do
+          import LegacyAppWeb.Gettext
+        end
+        """
+      })
+
+    assert source(igniter, "lib/legacy_app_web/gettext.ex") =~ "use Gettext.Backend, otp_app: :legacy_app"
+    assert source(igniter, "lib/legacy_app_web/components/core.ex") =~ ~r/use Gettext,\s+backend: LegacyAppWeb.Gettext/
+    assert source(igniter, "mix.exs") == mix_exs
+    assert igniter.tasks == []
   end
 
   test "copied Gettext helper fills single-line translations portably" do

@@ -40,6 +40,18 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     assert IgniterCase.source(result, @archive) == legacy("0.54")
   end
 
+  test "the legacy task is found by its content wherever it lives under lib/" do
+    path = "lib/legacy_app/tasks/upgrade.ex"
+
+    result =
+      IgniterCase.phoenix_project(files: %{path => legacy("0.54")})
+      |> Igniter.compose_task("brando.upgrade.prepare", [])
+
+    assert result.issues == []
+    Igniter.Test.assert_rms(result, path)
+    assert IgniterCase.source(result, @archive) == legacy("0.54")
+  end
+
   test "the installer no longer ships a consumer-owned upgrade task" do
     refute Enum.any?(Mix.Brando.Install.Templates.manifest(), fn {_format, _source, target} ->
              target == "lib/mix/brando.upgrade.ex"

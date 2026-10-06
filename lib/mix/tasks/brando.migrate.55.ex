@@ -30,6 +30,11 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{group: :brando}
     end
 
+    # Loads dependencies and configuration only; the application's source is
+    # what this task fixes, so it may not compile yet.
+    @impl Mix.Task
+    def run(argv), do: Mix.Brando.Igniter.SourceTask.run(__MODULE__, argv)
+
     def igniter(igniter) do
       igniter
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)

@@ -1397,6 +1397,25 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
+    Moves `use Gettext, otp_app: ...` backends to `use Gettext.Backend` and
+    their importers to `use Gettext, backend: ...`, as Igniter's
+    `igniter.update_gettext` does.
+
+    It is composed here rather than scheduled as a separate task: that task
+    compiles the application first, and it pins `gettext ~> 0.26` in
+    `mix.exs`. The application must already require Gettext 1.0 to fetch the
+    new Brando, so the requirement is left as it was.
+    """
+    def update_gettext_backends(igniter) do
+      igniter = Igniter.include_existing_file(igniter, "mix.exs")
+      mix_exs = igniter.rewrite |> Rewrite.source!("mix.exs") |> Source.get(:content)
+
+      igniter
+      |> Mix.Tasks.Igniter.UpdateGettext.igniter()
+      |> Igniter.update_file("mix.exs", &Source.update(&1, :content, mix_exs))
+    end
+
+    @doc """
     Creates the Gettext recovery helper, keeping an identical existing copy.
 
     A differing copy is a blocking issue so that a customized script is never
