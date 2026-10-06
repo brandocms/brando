@@ -8,12 +8,16 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
     # to populate galleries from the old image_series data.
     preserve_image_series_data()
 
+    # Other tables can still have foreign keys to the legacy tables (a post's
+    # image_series_id, say), and those would block the drops. Their ids are
+    # kept in _legacy_image_series_fks.
+    drop_foreign_keys_to(["images_series", "images_categories"])
+
     alter table(:images) do
       add :config_target, :text, default: "default"
       remove :image_series_id
     end
 
-    drop constraint(:images_series, "imageseries_image_category_id_fkey")
     drop table(:images_categories)
     drop table(:images_series)
 
@@ -130,6 +134,29 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
         """
       end
     end
+  end
+
+  defp drop_foreign_keys_to(tables) do
+    for table <- tables, table_exists?(table), {from_table, constraint} <- foreign_keys_to(table) do
+      execute ~s(ALTER TABLE "#{from_table}" DROP CONSTRAINT IF EXISTS "#{constraint}")
+    end
+  end
+
+  defp foreign_keys_to(table) do
+    %{rows: rows} =
+      Brando.repo().query!(
+        """
+        SELECT c.relname, con.conname
+        FROM pg_constraint con
+        JOIN pg_class c ON c.oid = con.conrelid
+        JOIN pg_class r ON r.oid = con.confrelid
+        JOIN pg_namespace n ON n.oid = r.relnamespace
+        WHERE con.contype = 'f' AND n.nspname = 'public' AND r.relname = $1
+        """,
+        [table]
+      )
+
+    Enum.map(rows, fn [from_table, constraint] -> {from_table, constraint} end)
   end
 
   defp table_exists?(table_name) do

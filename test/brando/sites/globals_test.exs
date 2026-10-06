@@ -36,6 +36,29 @@ defmodule Brando.Sites.GlobalsTest do
     assert global.key == "key-0"
   end
 
+  test "render_global", %{user: user} do
+    {:ok, _} =
+      Brando.Sites.create_global_set(
+        %{
+          label: "System",
+          key: "system",
+          language: "en",
+          vars: [
+            %{type: :text, label: "Title", key: "title", value: "Hello!"},
+            %{type: :boolean, label: "Open", key: "open", value_boolean: true},
+            %{type: :boolean, label: "Closed", key: "closed", value_boolean: false}
+          ]
+        },
+        user
+      )
+
+    assert Brando.Sites.render_global("en", "system", "title") == "Hello!"
+    assert Brando.Sites.render_global("en", "system", "open") == true
+    assert Brando.Sites.render_global("en", "system", "closed") == false
+    assert Brando.Sites.render_global("en", "system", "missing") == nil
+    assert Brando.Sites.render_global("en", "missing", "title") == nil
+  end
+
   test "get_global_set", %{user: user} do
     params =
       Factory.params_for(:global_set, creator_id: user.id) |> Brando.Utils.map_from_struct()

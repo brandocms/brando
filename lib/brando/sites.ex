@@ -270,10 +270,16 @@ defmodule Brando.Sites do
     get_in(Cache.Globals.get(language), [cat_key, key])
   end
 
+  @doc """
+  Render a global's value. Booleans come from `value_boolean`, everything else
+  from `value`.
+  """
   def render_global(language, cat_key, key) do
-    language
-    |> Cache.Globals.get()
-    |> get_in([cat_key, key, Access.key(:value)])
+    case global(language, cat_key, key) do
+      %{type: :boolean, value_boolean: value} -> value || false
+      %{value: value} -> value
+      _ -> nil
+    end
   end
 
   def render_identity(language, key) do

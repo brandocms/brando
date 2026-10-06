@@ -15,6 +15,10 @@ if Code.ensure_loaded?(Igniter) do
 
     Apply public migrations with mix brando.migrate, then named environments with
     mix brando.migrate --tenants. For initial installation use brando.install.
+
+    Existing copies are matched by name and left as they are, even when the
+    template has changed since. `mix brando.migrations.check` lists the ones
+    that have not run yet and differ from the current templates.
     """
 
     @impl Igniter.Mix.Task

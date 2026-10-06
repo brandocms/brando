@@ -3,6 +3,16 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
   import Ecto.Query
 
   def change do
+    if table_exists?("videos") do
+      raise """
+      brando_95 creates Brando's `videos` table, but this database already has one.
+
+      Rename the site's own table in a migration timestamped before this one
+      (`rename table(:videos), to: table(:legacy_videos)`), and move its rows
+      into Brando's videos in a later migration if they are still needed.
+      """
+    end
+
     create table(:videos) do
       add :url, :text
       add :source, :text
@@ -77,8 +87,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
           new_video = %{
             url: video_struct["url"],
             source: video_struct["source"],
-            filename:
-              (video_struct["source"] == :file && Path.basename(video_struct["url"])) || nil,
+            filename: (video_struct["source"] == :file && Path.basename(video_struct["url"])) || nil,
             remote_id: video_struct["remote_id"],
             width: video_struct["width"],
             height: video_struct["height"],
@@ -111,5 +120,15 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
         end
       end
     end
+  end
+
+  defp table_exists?(table_name) do
+    Brando.repo().all(
+      from(t in "tables",
+        prefix: "information_schema",
+        select: [:table_name],
+        where: [table_schema: "public", table_name: ^table_name]
+      )
+    ) != []
   end
 end

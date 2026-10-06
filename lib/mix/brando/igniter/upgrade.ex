@@ -90,6 +90,9 @@ if Code.ensure_loaded?(Igniter) do
         Apply public migrations explicitly with mix brando.migrate.
         For named environments, follow with mix brando.migrate --tenants.
         Historical migration files and timestamps are preserved; no database operations were scheduled.
+        Existing copies are matched by name and never updated. Run mix brando.migrations.check
+        against the database you will migrate to list copies that have not run yet but differ
+        from Brando's current templates.
         """)
       else
         {:error, %Igniter{} = igniter} -> igniter

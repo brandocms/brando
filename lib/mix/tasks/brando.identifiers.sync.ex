@@ -3,6 +3,9 @@ defmodule Mix.Tasks.Brando.Identifiers.Sync do
 
   @moduledoc """
   This task will clean up, update existing and recreate missing identifiers.
+
+  An entry that raises is skipped and listed at the end, and the task then
+  exits with status 1.
   """
   use Mix.Task
 
@@ -19,8 +22,13 @@ defmodule Mix.Tasks.Brando.Identifiers.Sync do
     -------------------------
     """)
 
-    Brando.Blueprint.Identifier.sync()
+    case Brando.Blueprint.Identifier.sync() do
+      :ok ->
+        Mix.shell().info([:green, "\n==> Done.\n"])
 
-    Mix.shell().info([:green, "\n==> Done.\n"])
+      {:error, failures} ->
+        Mix.shell().error("\n==> Done, but #{length(failures)} identifier(s) failed. See above.\n")
+        exit({:shutdown, 1})
+    end
   end
 end
