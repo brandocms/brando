@@ -150,7 +150,8 @@ defmodule Brando.Blueprint.Migrations do
         migration: build_migration_filename(module, sequence, opts),
         sequence: sequence,
         destructive_operations: Diff.destructive_operations(diff),
-        created_tables: Diff.created_tables(diff, schema)
+        created_tables: Diff.created_tables(diff, schema),
+        added_columns: Diff.added_columns(diff, schema)
       })
 
     %{result: :ok, migration_source: contents, snapshot: snapshot, metadata: metadata}

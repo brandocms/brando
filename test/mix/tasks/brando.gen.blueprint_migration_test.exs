@@ -83,6 +83,18 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       refute Enum.any?(new_table.warnings, &(&1 =~ "already exist"))
     end
 
+    test "adding columns the database already has points at the legacy snapshot guide", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Brando.Blueprint.Migrations.create_migration(Brando.MigrationTest.LegacyProjectV1, opts)
+
+      # The test database's `projects` has the rendered_blocks columns already.
+      planned = plan_for(context, Brando.MigrationTest.LegacyProjectV2)
+      assert [warning] = Enum.filter(planned.warnings, &(&1 =~ "already exist in the database"))
+      assert warning =~ "projects.rendered_blocks, projects.rendered_blocks_at,"
+      refute warning =~ "never_added"
+      assert warning =~ "add_if_not_exists"
+    end
+
     test "dropping legacy Villain columns points at the legacy snapshot guide", context do
       opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
       {:ok, _} = Brando.Blueprint.Migrations.create_migration(Brando.MigrationTest.VillainV1, opts)

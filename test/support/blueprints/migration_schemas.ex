@@ -755,3 +755,40 @@ defmodule Brando.MigrationTest.VillainV2 do
     attribute :title, :string
   end
 end
+
+# Storage for the test database's existing `projects` table, as a snapshot
+# from before the blocks conversion saw it, and as it is now.
+defmodule Brando.MigrationTest.LegacyProjectV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Legacy",
+    schema: "Project",
+    singular: "legacy_project",
+    plural: "legacy_projects",
+    gettext_module: Brando.Gettext
+
+  table "projects"
+
+  attributes do
+    attribute :title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.LegacyProjectV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Legacy",
+    schema: "Project",
+    singular: "legacy_project",
+    plural: "legacy_projects",
+    gettext_module: Brando.Gettext
+
+  table "projects"
+
+  attributes do
+    attribute :title, :string
+    attribute :rendered_blocks, :text
+    attribute :rendered_blocks_at, :datetime
+    attribute :never_added, :string
+  end
+end

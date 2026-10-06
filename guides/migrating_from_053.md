@@ -336,8 +336,8 @@ A snapshot written before Brando's blocks conversion describes a table the
 Brando migration chain has changed since. Diffed against it, the generator
 proposes storage that already exists (`create table(:projects_blocks)`,
 `rendered_blocks`) and drops the legacy Villain columns (`data`, `html`,
-`*_data`). It warns when a planned table already exists in the database or a
-planned drop looks like a Villain column. In that case:
+`*_data`). It warns when a planned table or column already exists in the
+database or a planned drop looks like a Villain column. In that case:
 
 - Compare `\d table` in a migrated copy of production with every generated
   operation.

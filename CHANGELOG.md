@@ -429,8 +429,8 @@ production dump.
     alone.
   - `mix brando.gen.blueprint_migration` backfills `edited_at` from
     `updated_at` when it adds the Creator trait to an existing table, and
-    warns when a plan creates a table the database already has or drops
-    legacy Villain columns. `mix brando.gen.migrations` copies tenant
+    warns when a plan adds a table or column the database already has or
+    drops legacy Villain columns. `mix brando.gen.migrations` copies tenant
     migrations only when tenancy is on.
   - The backend template drops `svelte.config.cjs`, which vite-plugin-svelte
     7 ignores (it logged "no Svelte config found"), and `svelte-preprocess`.
