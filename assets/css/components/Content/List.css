@@ -62,7 +62,8 @@
      then the label on a neutral background. */
   &.grid {
     display: grid;
-    grid-template-columns: 20px auto;
+    /* Wider than an icon only for a count of two or more digits */
+    grid-template-columns: minmax(20px, max-content) auto;
     row-gap: 0;
     width: fit-content;
     margin-top: 0.4em;
@@ -116,6 +117,16 @@
 
       &.false .grid-icon {
         color: #c43c3c;
+      }
+
+      /* A count (`checklist_count`) in the icon's cell */
+      &.count .grid-icon {
+        padding: 0 5px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      &.count.zero :is(.grid-icon, .content) {
+        color: #9aa59d;
       }
     }
   }
