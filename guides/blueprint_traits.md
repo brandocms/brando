@@ -157,9 +157,9 @@ adds a **History** drawer to the form. See [Revisions](revisions.md).
 
 `trait :scheduled_publishing` adds `attribute :publish_at, :datetime`. An entry
 with status `:pending` and a `publish_at` is published at that time, and the
-form gets a scheduling drawer. When the admin form publishes an entry without
-a `publish_at`, it is set to the current time. See
-[Scheduled publishing](scheduled_publishing.md).
+form gets a scheduling drawer. An entry published without a `publish_at` gets
+the time it was saved, whether the admin form, the context or a job saved it.
+See [Scheduled publishing](scheduled_publishing.md).
 
 ### Permalink redirects
 
@@ -198,8 +198,10 @@ These serve Brando's own schemas, and are available to applications:
   declares `uid`.
 * `:cast_polymorphic_embeds`: casts the schema's `PolymorphicEmbed`
   attributes.
-* `:password`: on update, ignores an empty `password`; when the admin form
-  saves, hashes the password with Bcrypt.
+* `:password`: on update, ignores an empty `password`, and hashes a changed
+  password with Bcrypt when the entry is written. Pass the plain text, through
+  the admin form or the context; validations see the plain text. Code that
+  inserts a struct without a changeset hashes the password itself.
 * `:protect_password` and `:protect_role`: refuse password and role changes
   the current user may not make.
 * `:focal`: marks an image for reprocessing when its focal point changes.
@@ -218,13 +220,24 @@ A trait acts at three points:
   Blueprint, and its options are validated after the module compiles.
 * **Changeset**: its `changeset_mutator` runs in every `changeset/5` call,
   before or after `validate_required` depending on the trait.
-* **Save**: `before_save/2` and `after_save/3` run when the admin form saves
-  an entry, and when a revision or proposal is applied. Saves through the
-  context's `create_*` and `update_*` functions do not call them.
+* **Admin save**: `before_save/2` and `after_save/3` run when the admin form
+  saves an entry, and when a revision or proposal is applied. Saves through
+  the context's `create_*` and `update_*` functions do not call them.
 
-So `trait :password` hashes passwords set through the admin form, and
-`trait :scheduled_publishing` fills `publish_at` there; code that saves
-through the context does that work itself.
+Use the save hooks only for work that belongs to editing in the admin. Work
+that every save needs belongs in `changeset_mutator`, deferred to the write
+with `Ecto.Changeset.prepare_changes/2` so form validation, which never
+writes, does not run it:
+
+```elixir
+@impl true
+def changeset_mutator(_schema, _config, changeset, _user, _opts) do
+  Ecto.Changeset.prepare_changes(changeset, &stamp/1)
+end
+```
+
+`trait :password` hashes passwords and `trait :scheduled_publishing` fills
+`publish_at` this way.
 
 ## Custom traits
 

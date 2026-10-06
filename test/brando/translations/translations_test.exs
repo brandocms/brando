@@ -69,6 +69,16 @@ defmodule Brando.TranslationsTest do
     end
   end
 
+  # An editor's save of a translation, as the admin form makes it: the editor
+  # reports the save with `target_saved/3`, so the mutation queues no
+  # recompute of its own.
+  defp editor_save(id, params, user) do
+    id
+    |> load()
+    |> Article.changeset(params, user)
+    |> SyncTest.update_article(user, editor_review: true)
+  end
+
   defp load(id) do
     {:ok, entry} = SyncTest.get_article(%{matches: %{id: id}, preload: Brando.Blueprint.preloads_for(Article)})
     entry
@@ -155,12 +165,10 @@ defmodule Brando.TranslationsTest do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
 
     {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.user)
-    Translations.source_saved(load(c.source.id))
     assert Enum.any?(pending(target).work_items, &(&1.kind == :shared_update and &1.path == "year"))
 
     # The source goes back to the translation's value before it was saved
     {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2020}, c.user)
-    Translations.source_saved(load(c.source.id))
     # Nothing is left to do, so there is no pending version at all
     assert pending(target) == nil
   end
@@ -224,7 +232,6 @@ defmodule Brando.TranslationsTest do
     first = pending(target)
 
     {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.user)
-    Translations.source_saved(load(c.source.id))
     second = pending(target)
 
     assert second.id != first.id
@@ -251,7 +258,6 @@ defmodule Brando.TranslationsTest do
       [first, _] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
       set_text(first, "Første avsnitt, endret")
       {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.user)
-      Translations.source_saved(load(c.source.id))
       version = pending(target)
       review_path = Enum.find(version.work_items, &(&1.kind == :review)).path
       %{target: target, version: version, review_path: review_path}
@@ -270,7 +276,7 @@ defmodule Brando.TranslationsTest do
       # The editor rewrote block 1 and saved the pending year.
       [first, _] = Enum.map(load(target.id).entry_blocks, & &1.block)
       set_text(first, "First paragraph, revised")
-      {:ok, _} = SyncTest.update_article(target.id, %{year: 2024}, c.user)
+      {:ok, _} = editor_save(target.id, %{year: 2024}, c.user)
 
       assert {:ok, %{open: 0, stale: false}} =
                Translations.target_saved(Article, target.id, %{version_id: version.id, acknowledged: []})
@@ -282,7 +288,7 @@ defmodule Brando.TranslationsTest do
 
     test "unchanged text stays open until the editor acknowledges it", c do
       %{target: target, version: version, review_path: path} = reviewed_change(c)
-      {:ok, _} = SyncTest.update_article(target.id, %{year: 2024}, c.user)
+      {:ok, _} = editor_save(target.id, %{year: 2024}, c.user)
 
       assert {:ok, %{open: 1}} = Translations.target_saved(Article, target.id, %{version_id: version.id})
       assert open_items(target) == [{:review, path}]
@@ -296,7 +302,7 @@ defmodule Brando.TranslationsTest do
 
     test "saving other fields does not clear the work", c do
       %{target: target, review_path: path} = reviewed_change(c)
-      {:ok, _} = SyncTest.update_article(target.id, %{subtitle: "Unrelated"}, c.user)
+      {:ok, _} = editor_save(target.id, %{subtitle: "Unrelated"}, c.user)
 
       # No reviewed version: an ordinary save, e.g. outside the editor.
       assert {:ok, %{open: 2}} = Translations.target_saved(Article, target.id)
@@ -314,7 +320,7 @@ defmodule Brando.TranslationsTest do
 
       [block, _] = Enum.map(load(target.id).entry_blocks, & &1.block)
       set_text(block, "First paragraph, revised")
-      {:ok, _} = SyncTest.update_article(target.id, %{year: 2024}, c.user)
+      {:ok, _} = editor_save(target.id, %{year: 2024}, c.user)
 
       assert {:ok, %{stale: true}} =
                Translations.target_saved(Article, target.id, %{version_id: version.id, acknowledged: [path]})
@@ -340,10 +346,20 @@ defmodule Brando.TranslationsTest do
       assert Translations.decode_payload(fresh).subtitle == "Published revision"
     end
 
+    test "an editor's save queues no recompute of its own", c do
+      %{target: target, version: version} = reviewed_change(c)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _} = editor_save(target.id, %{subtitle: "Edited"}, c.user)
+        refute_enqueued(worker: Brando.Worker.TranslationSync)
+      end)
+
+      assert pending(target).id == version.id
+    end
+
     test "a saved translation is recomputed in the background", c do
       %{target: target} = reviewed_change(c)
       {:ok, _} = SyncTest.update_article(target.id, %{subtitle: "Saved elsewhere"}, c.user)
-      Translations.source_saved(load(target.id))
 
       assert Translations.decode_payload(pending(target)).subtitle == "Saved elsewhere"
       assert length(open_items(target)) == 2

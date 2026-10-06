@@ -333,22 +333,29 @@ defmodule Brando.Translations do
   synchronized targets, enqueues their synchronization.
 
   `minor: true` marks a save of minor text corrections: changed source text
-  raises no review work.
+  raises no review work. `resync: false` skips the recompute of a saved
+  synchronized translation, for a caller that runs `target_saved/3` itself, as
+  the admin form does.
   """
   def source_saved(%schema{id: id}, opts \\ []) do
     with true <- synchronized?(schema),
          %Member{} = member <- get_member(schema, id) do
-      case member do
-        %Member{role: :source, group_id: group_id} -> enqueue_sync(group_id, Keyword.get(opts, :minor, false))
-        # A saved translation gets its pending version recomputed against what
-        # was saved, so applying it later keeps the new text.
-        %Member{role: :target, synchronized: true} -> enqueue_resync(member)
-        _ -> :ok
-      end
+      member_saved(member, opts)
     else
       _ -> :ok
     end
   end
+
+  defp member_saved(%Member{role: :source, group_id: group_id}, opts),
+    do: enqueue_sync(group_id, Keyword.get(opts, :minor, false))
+
+  # A saved translation gets its pending version recomputed against what was
+  # saved, so applying it later keeps the new text.
+  defp member_saved(%Member{role: :target, synchronized: true} = member, opts) do
+    if Keyword.get(opts, :resync, true), do: enqueue_resync(member), else: :ok
+  end
+
+  defp member_saved(_member, _opts), do: :ok
 
   defp enqueue_sync(group_id, minor?) do
     %{group_id: group_id, minor: minor?}

@@ -343,6 +343,9 @@ defmodule Brando.Revisions do
     case result do
       {:ok, %{changeset: changeset, entry: entry, identifier_id: identifier_id}} ->
         Brando.Blueprint.AfterSave.run(entry_schema, entry, changeset, user)
+        # Restoring writes past the context mutations, which queue this for
+        # ordinary saves.
+        Brando.Translations.source_saved(entry)
         Content.Blocks.enqueue_entry_cascade(entry_schema, entry, identifier_id)
         Content.Blocks.enqueue_entry_for_render(%{schema: to_string(entry_schema), entry_id: entry.id})
         Cache.Query.evict({:ok, entry})

@@ -145,7 +145,7 @@ defmodule Brando.Blueprint.TraitCompilerTest do
   test "ScheduledPublishing keeps its runtime publish-time callback" do
     changeset = Ecto.Changeset.change(%Brando.Pages.Page{}, status: :published)
 
-    updated_changeset = Brando.Trait.ScheduledPublishing.before_save(changeset, nil)
+    updated_changeset = Brando.Trait.ScheduledPublishing.stamp_publish_at(changeset)
 
     assert %DateTime{} = Ecto.Changeset.get_change(updated_changeset, :publish_at)
   end
