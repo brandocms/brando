@@ -137,8 +137,8 @@ if Code.ensure_loaded?(Igniter) do
           else:
             Igniter.add_warning(igniter, """
             #{inspect(plan.module)}: the plan creates #{Enum.join(existing, ", ")}, which already exist in the database.
-            The latest snapshot is probably older than the database. Compare `\\d <table>` with the
-            Blueprint and rebaseline instead of creating them; see #{@legacy_snapshot_guide}.
+            The latest snapshot is probably older than the database. Compare `\\d <table>` with each generated
+            operation and use `create_if_not_exists`/`drop_if_exists` where they disagree; see #{@legacy_snapshot_guide}.
             """)
       end)
       |> then(fn igniter ->
@@ -163,6 +163,10 @@ if Code.ensure_loaded?(Igniter) do
     defp existing_tables([]), do: []
 
     defp existing_tables(tables) do
+      # The repo's URL usually lives in config/runtime.exs, which a Mix task
+      # does not load on its own; Ecto's tasks do the same.
+      Mix.Task.run("app.config")
+
       with repo when is_atom(repo) and not is_nil(repo) <- Brando.repo(),
            true <- Code.ensure_loaded?(repo),
            {:ok, existing, _apps} <-
