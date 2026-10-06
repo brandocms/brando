@@ -123,4 +123,49 @@ defmodule Brando.Migrations.UpgradeFrom051Test do
     end
   end
 
+  describe "brando_69, brando_75 and brando_76" do
+    setup do
+      default_language = Application.get_env(:brando, :default_language)
+      Application.put_env(:brando, :default_language, "no")
+      on_exit(fn -> Application.put_env(:brando, :default_language, default_language) end)
+    end
+
+    test "give the site's records its default language, one identity and SEO per language" do
+      # Back to the 0.51 shape: one row each, no language
+      for {table, old} <- [{"sites_identities", "sites_identity"}, {"sites_seos", "sites_seo"}] do
+        query!("DELETE FROM #{table}")
+        query!("ALTER TABLE #{table} DROP COLUMN language CASCADE")
+        query!("ALTER TABLE #{table} RENAME TO #{old}")
+      end
+
+      query!("CREATE TABLE sites_global_categories (id bigserial PRIMARY KEY, key text)")
+      query!("INSERT INTO sites_global_categories (key) VALUES ('system')")
+
+      [[identity_id]] =
+        rows("""
+        INSERT INTO sites_identity (name, alternate_name, inserted_at, updated_at)
+        VALUES ('KF', 'Kunstnerforbundet', now(), now()) RETURNING id
+        """)
+
+      query!("""
+      INSERT INTO sites_seo (base_url, fallback_meta_title, inserted_at, updated_at)
+      VALUES ('https://example.com', 'Kunstnerforbundet', now(), now())
+      """)
+
+      run_template("brando_69_add_language_to_global_categories.exs")
+      run_template("brando_75_add_language_to_identity.exs")
+      run_template("brando_76_add_language_to_seo.exs")
+
+      assert rows("SELECT language FROM sites_global_categories") == [["no"]]
+
+      # The existing row keeps its id and becomes the default language's
+      assert rows("SELECT language FROM sites_identities WHERE id = $1", [identity_id]) == [["no"]]
+
+      assert rows("SELECT language, name FROM sites_identities ORDER BY language") ==
+               [["en", "KF"], ["no", "KF"]]
+
+      assert rows("SELECT language, fallback_meta_title FROM sites_seos ORDER BY language") ==
+               [["en", "Kunstnerforbundet"], ["no", "Kunstnerforbundet"]]
+    end
+  end
 end
