@@ -12,12 +12,13 @@ if Code.ensure_loaded?(Igniter) do
     # The tasks own the composition, notices, and warnings; this module owns
     # the rewrites.
 
-    alias Mix.Brando.Igniter.FloristConfig
+    alias Expo.PluralForms
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Config
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
+    alias Mix.Brando.Igniter.FloristConfig
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -942,8 +943,10 @@ if Code.ensure_loaded?(Igniter) do
       # reformats it.
       igniter.rewrite
       |> Rewrite.sources()
-      |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
-      |> Enum.filter(&(Source.get(&1, :content) =~ "Brando.Images.Processor.Sharp"))
+      |> Enum.filter(
+        &(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs" and
+            Source.get(&1, :content) =~ "Brando.Images.Processor.Sharp")
+      )
       |> Enum.map(&Source.get(&1, :path))
       |> Enum.reduce(igniter, fn path, igniter ->
         Igniter.update_elixir_file(igniter, path, fn zipper ->
@@ -992,31 +995,25 @@ if Code.ensure_loaded?(Igniter) do
           match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, Brando.Villain.Parser))
         end)
 
-      Enum.reduce(parsers, igniter, fn parser, igniter ->
-        {:ok, {igniter, _source, defmodule}} = ProjectModule.find_module(igniter, parser)
-        {:ok, zipper} = Common.move_to_do_block(defmodule)
+      Enum.reduce(parsers, igniter, &update_villain_parser(&2, &1))
+    end
 
+    defp update_villain_parser(igniter, parser) do
+      {:ok, {igniter, _source, defmodule}} = ProjectModule.find_module(igniter, parser)
+      {:ok, zipper} = Common.move_to_do_block(defmodule)
+      igniter = warn_dead_parser_overrides(igniter, parser, zipper)
+
+      if renders_heex?(zipper) and not uses_phoenix_component?(zipper) do
         igniter
-        |> warn_dead_parser_overrides(parser, zipper)
-        |> then(fn igniter ->
-          cond do
-            not renders_heex?(zipper) ->
-              igniter
-
-            uses_phoenix_component?(zipper) ->
-              igniter
-
-            true ->
-              igniter
-              |> ProjectModule.find_and_update_module!(parser, &add_phoenix_component/1)
-              |> Igniter.add_warning("""
-              #{inspect(parser)} renders ~H and now has `use Phoenix.Component`. The 0.53
-              `use Brando.Villain.Parser` also imported Brando.HTML and Phoenix.HTML and aliased
-              Brando.Cache, Content, Datasource, Utils and Villain. Add the ones it still uses.
-              """)
-          end
-        end)
-      end)
+        |> ProjectModule.find_and_update_module!(parser, &add_phoenix_component/1)
+        |> Igniter.add_warning("""
+        #{inspect(parser)} renders ~H and now has `use Phoenix.Component`. The 0.53
+        `use Brando.Villain.Parser` also imported Brando.HTML and Phoenix.HTML and aliased
+        Brando.Cache, Content, Datasource, Utils and Villain. Add the ones it still uses.
+        """)
+      else
+        igniter
+      end
     end
 
     defp renders_heex?(zipper), do: Zipper.find(zipper, &match?({:sigil_H, _, _}, &1)) != nil
@@ -1095,19 +1092,12 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp complete_plural_forms_header(igniter, path, header) do
-      with {:error, _} <- Expo.PluralForms.parse(header),
-           {:ok, plural_forms} <- path |> catalog_locale() |> Expo.PluralForms.plural_form() do
-        complete = Expo.PluralForms.to_string(plural_forms)
-
-        Igniter.update_file(igniter, path, fn source ->
-          Source.update(source, :content, fn content ->
-            Regex.replace(@plural_forms_header, content, fn line, _header ->
-              String.replace(line, header, complete, global: false)
-            end)
-          end)
-        end)
+      with {:error, _} <- PluralForms.parse(header),
+           {:ok, plural_forms} <- path |> catalog_locale() |> PluralForms.plural_form() do
+        complete = PluralForms.to_string(plural_forms)
+        Igniter.update_file(igniter, path, &Source.update(&1, :content, replace_plural_forms(&1, header, complete)))
       else
-        {:ok, %Expo.PluralForms{}} ->
+        {:ok, %PluralForms{}} ->
           igniter
 
         :error ->
@@ -1116,6 +1106,12 @@ if Code.ensure_loaded?(Igniter) do
           Complete it, for example `nplurals=2; plural=(n != 1);`, or remove the header.
           """)
       end
+    end
+
+    defp replace_plural_forms(source, header, complete) do
+      Regex.replace(@plural_forms_header, Source.get(source, :content), fn line, _header ->
+        String.replace(line, header, complete, global: false)
+      end)
     end
 
     # priv/gettext/<locale>/LC_MESSAGES/x.po or priv/gettext/<backend>/<locale>/LC_MESSAGES/x.po
@@ -1628,7 +1624,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp router?(zipper) do
       case Zipper.node(zipper) do
-        {:__aliases__, _, parts} -> List.last(parts) == :Router
+        {:__aliases__, _, parts} -> Enum.join(parts, ".") =~ ~r/(^|\.)Router$/
         _other -> false
       end
     end

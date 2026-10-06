@@ -335,26 +335,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp target_webserver(settings, target, legacy_files, warnings) do
       key = target |> Atom.to_string() |> String.upcase() |> Kernel.<>("_URL")
-
-      {configured, warnings} =
-        case blank_to_nil(settings[key]) do
-          nil ->
-            {nil, warnings}
-
-          url ->
-            case parse_target_webserver_url(url, key, target, warnings) do
-              {nil, _ssl, _redirect, warnings} ->
-                {nil, warnings}
-
-              {host, ssl, redirect_http, warnings} ->
-                if placeholder_host?(host) do
-                  warning = "#{key} = #{url} is the install template's placeholder, not the #{target} domain."
-                  {nil, [warning | warnings]}
-                else
-                  {{host, ssl, redirect_http}, warnings}
-                end
-            end
-        end
+      {configured, warnings} = configured_webserver(settings[key], key, target, warnings)
 
       case configured || inferred_webserver(legacy_files) do
         {host, ssl, redirect_http} ->
@@ -366,6 +347,20 @@ if Code.ensure_loaded?(Igniter) do
         nil ->
           warning = "No #{key} was found; set the #{target} webserver domain in florist.config.exs."
           {nil, :auto, true, [warning | warnings]}
+      end
+    end
+
+    # `<TARGET>_URL` from deployment.cfg, unless it is missing or a placeholder.
+    defp configured_webserver(url, key, target, warnings) do
+      with url when is_binary(url) <- blank_to_nil(url),
+           {host, ssl, redirect_http, warnings} when is_binary(host) <-
+             parse_target_webserver_url(url, key, target, warnings) do
+        if placeholder_host?(host),
+          do: {nil, ["#{key} = #{url} is the install template's placeholder, not the #{target} domain." | warnings]},
+          else: {{host, ssl, redirect_http}, warnings}
+      else
+        nil -> {nil, warnings}
+        {nil, _ssl, _redirect_http, warnings} -> {nil, warnings}
       end
     end
 

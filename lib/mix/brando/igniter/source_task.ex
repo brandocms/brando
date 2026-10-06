@@ -13,19 +13,20 @@ if Code.ensure_loaded?(Igniter) do
     # dependencies and the configuration is enough.
 
     alias Igniter.Mix.Task.Info
+    alias Mix.Task, as: MixTask
 
     def run(task, argv) do
       if Igniter.Mix.Task.help_requested?(argv) do
-        Mix.Task.run("help", [Mix.Task.task_name(task)])
+        MixTask.run("help", [MixTask.task_name(task)])
       else
         if Mix.Project.umbrella?() do
-          Mix.raise("Cannot run #{Mix.Task.task_name(task)} in an umbrella project.")
+          Mix.raise("Cannot run #{MixTask.task_name(task)} in an umbrella project.")
         end
 
         load_dependencies()
         Application.ensure_all_started(:rewrite)
 
-        task_name = Mix.Task.task_name(task)
+        task_name = MixTask.task_name(task)
         global_options = Info.global_options()
 
         info =
@@ -46,7 +47,7 @@ if Code.ensure_loaded?(Igniter) do
     # code paths and applications (for `Application.spec/2` and `app_dir/2`),
     # but not the application's own, possibly stale, build.
     defp load_dependencies do
-      Mix.Task.run("deps.loadpaths")
+      MixTask.run("deps.loadpaths")
       Mix.Project.deps_paths() |> Map.keys() |> Enum.each(&Application.load/1)
     end
   end
