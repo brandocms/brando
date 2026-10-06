@@ -105,6 +105,27 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     Igniter.Test.assert_unchanged(rerun)
   end
 
+  test "framework migration command copies tenant migrations only when tenancy is on" do
+    tenant_migration? = fn result ->
+      result.rewrite.sources |> Map.keys() |> Enum.any?(&String.starts_with?(&1, "priv/repo/tenant_migrations/"))
+    end
+
+    classic = IgniterCase.phoenix_project() |> Igniter.compose_task("brando.gen.migrations", [])
+    assert classic.issues == []
+    refute tenant_migration?.(classic)
+
+    for mode <- [:none, :single] do
+      config = "import Config\nconfig :brando, tenancy_mode: #{inspect(mode)}\n"
+
+      result =
+        IgniterCase.phoenix_project(files: %{"config/brando.exs" => config})
+        |> Igniter.compose_task("brando.gen.migrations", [])
+
+      assert result.issues == []
+      assert tenant_migration?.(result) == (mode == :single)
+    end
+  end
+
   test "version hook composes through Igniter's actual apply-upgrades dispatcher" do
     version = Application.spec(:brando, :vsn) |> to_string()
     project = IgniterCase.phoenix_project()
