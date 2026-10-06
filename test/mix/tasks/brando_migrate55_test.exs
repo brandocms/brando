@@ -441,55 +441,95 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     end
   end
 
-  test "Villain parsers that render ~H get Phoenix.Component, and dead overrides are reported" do
-    parser_path = "lib/legacy_app/villain/parser.ex"
-    plain_path = "lib/legacy_app/villain/plain_parser.ex"
+  describe "Villain parsers" do
+    @parser_path "lib/legacy_app/villain/parser.ex"
 
-    igniter =
-      migrate(@blueprint_054, %{
-        parser_path => """
-        defmodule LegacyApp.Villain.Parser do
-          use Brando.Villain.Parser
+    defp migrate_parser(files) do
+      migrate(@blueprint_054, files)
+    end
 
-          def slideshow(%{"images" => images}, _) do
-            assigns = %{images: images}
+    # Compiles the rewritten parser and returns its diagnostics.
+    defp compile_diagnostics(source) do
+      {_result, diagnostics} =
+        Code.with_diagnostics(fn ->
+          modules = Code.compile_string(source, @parser_path)
+          for {module, _} <- modules, do: :code.delete(module) and :code.purge(module)
+        end)
 
-            ~H\"\"\"
-            <div :for={image <- @images}>{image["title"]}</div>
-            \"\"\"
+      diagnostics
+    end
+
+    test "a 0.54 parser override gets back what the old __using__ gave it, and compiles cleanly" do
+      # smartwatt's parser before the upgrade: a slideshow override rendering
+      # ~H with Brando.HTML's <.picture>.
+      original = File.read!("test/fixtures/villain_parser/parser_054.ex.txt")
+
+      # As it was, it no longer compiles: ~H and <.picture> came from __using__.
+      assert_raise CompileError, fn -> Code.with_diagnostics(fn -> Code.compile_string(original) end) end
+
+      igniter = migrate_parser(%{@parser_path => original})
+      upgraded = source(igniter, @parser_path)
+
+      assert upgraded =~ ~r/use Brando.Villain.Parser\n\s*use Phoenix.Component\n\s*import Brando.HTML\n/
+      refute upgraded =~ "import Phoenix.HTML"
+      assert compile_diagnostics(upgraded) == []
+
+      assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.slideshow/2 overrides no block"))
+
+      rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+      assert_unchanged(rerun, @parser_path)
+    end
+
+    test "imports and aliases are added only when the parser uses them" do
+      plain_path = "lib/legacy_app/villain/plain_parser.ex"
+
+      igniter =
+        migrate_parser(%{
+          @parser_path => """
+          defmodule LegacyApp.Villain.Parser do
+            use Brando.Villain.Parser
+
+            def text(%{text: text}, _opts), do: text |> Utils.slugify() |> raw()
+
+            def html(%{text: text}, _opts), do: truncate(text, 20)
+
+            def header(data, opts) when is_map(data), do: Brando.Villain.Parser.header(data, opts)
+
+            def helper(a, b), do: private(a, b)
+            defp private(a, b), do: {a, b}
           end
+          """,
+          plain_path => """
+          defmodule LegacyApp.Villain.PlainParser do
+            use Brando.Villain.Parser
+            use Phoenix.Component
+            alias LegacyApp.Utils
 
-          def header(data, opts) when is_map(data), do: Brando.Villain.Parser.header(data, opts)
-
-          def helper(a, b), do: {a, b}
-          defp private(a, b), do: {a, b}
-        end
-        """,
-        plain_path => """
-        defmodule LegacyApp.Villain.PlainParser do
-          use Brando.Villain.Parser
-          use Phoenix.Component
-
-          def text(data, _opts) do
-            assigns = %{data: data}
-            ~H"<p>{@data.text}</p>"
+            def text(data, _opts) do
+              assigns = %{data: data}
+              ~H"<p>{Utils.title(@data.text)}</p>"
+            end
           end
-        end
-        """
-      })
+          """
+        })
 
-    assert source(igniter, parser_path) =~ ~r/use Brando.Villain.Parser\n\s*use Phoenix.Component\n/
-    assert_unchanged(igniter, plain_path)
+      upgraded = source(igniter, @parser_path)
+      assert upgraded =~ "import Brando.HTML"
+      assert upgraded =~ "import Phoenix.HTML"
+      assert upgraded =~ "alias Brando.Utils"
+      refute upgraded =~ "use Phoenix.Component"
+      refute upgraded =~ "alias Brando.Content"
+      assert compile_diagnostics(upgraded) == []
 
-    assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.slideshow/2 overrides no block"))
-    assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.helper/2"))
-    assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser renders ~H"))
-    refute Enum.any?(igniter.warnings, &String.contains?(&1, ".header/2"))
-    refute Enum.any?(igniter.warnings, &String.contains?(&1, ".private/2"))
-    refute Enum.any?(igniter.warnings, &String.contains?(&1, "PlainParser"))
+      # Already has Phoenix.Component, renders no Brando.HTML component, and
+      # its Utils is its own alias.
+      assert_unchanged(igniter, plain_path)
 
-    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
-    assert_unchanged(rerun, parser_path)
+      assert_has_warning(igniter, &String.contains?(&1, "LegacyApp.Villain.Parser.helper/2"))
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, ".header/2"))
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, ".private/2"))
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, "PlainParser"))
+    end
   end
 
   test "completes Plural-Forms headers Gettext 1.0 cannot parse" do

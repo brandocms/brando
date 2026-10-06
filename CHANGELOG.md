@@ -415,8 +415,10 @@ production dump.
   - `migrate54` replaces a copy of the 0.54 `scripts/sync_gettext.sh` instead of
     aborting, and both tasks remove `processor_module:
     Brando.Images.Processor.Sharp` from config.
-  - `migrate55` adds `use Phoenix.Component` to Villain parsers that render
-    `~H` and reports overrides of blocks Brando no longer renders; completes
+  - `migrate55` gives Villain parsers back the `use Phoenix.Component`,
+    `Brando.HTML`/`Phoenix.HTML` imports and aliases they used from the old
+    `use Brando.Villain.Parser`, and reports overrides of blocks Brando no
+    longer renders; completes
     `Plural-Forms` headers Gettext 1.0 warns about; takes Florist domains and
     ports from `.envrc.<flavor>`, `etc/nginx` and `etc/supervisord`/`etc/systemd`
     instead of defaults, reporting placeholder URLs and the process manager;

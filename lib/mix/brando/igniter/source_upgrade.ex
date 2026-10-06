@@ -981,13 +981,27 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # What the 0.53 `use Brando.Villain.Parser` brought into the module, beyond
+    # the callbacks. `use Phoenix.Component` and the imports are added when the
+    # parser uses them; an alias when the parser names it without its own.
+    @parser_imports [Brando.HTML, Phoenix.HTML]
+    @parser_aliases [Brando.Cache, Brando.Content, Brando.Datasource, Brando.Utils, Brando.Villain, Liquex.Context]
+
     @doc """
     Updates application modules that `use Brando.Villain.Parser`.
 
-    The parser's `__using__` no longer brings in `Phoenix.Component`, so a
-    module that renders `~H` gets `use Phoenix.Component`. Public overrides
-    of a block Brando no longer has (for example `slideshow/2`, which
-    became `gallery` in `brando_77`) are never called; each is reported.
+    The parser's `__using__` used to `use Phoenix.Component`, import
+    `Brando.HTML` and `Phoenix.HTML`, and alias `Brando.Cache`, `Content`,
+    `Datasource`, `Utils`, `Villain` and `Liquex.Context`; it no longer does.
+    A parser gets back the ones it uses: `use Phoenix.Component` when it
+    renders `~H`, an import when it calls one of the module's functions (or
+    renders one of `Brando.HTML`'s components, such as `<.picture>`), and an
+    alias when it names one without defining that alias itself. Nothing it
+    does not use is added, so no unused import warnings.
+
+    Public overrides of a block Brando no longer has (for example
+    `slideshow/2`, which became `gallery` in `brando_77`) are never called;
+    each is reported.
     """
     def update_villain_parsers(igniter) do
       {igniter, parsers} =
@@ -1003,36 +1017,138 @@ if Code.ensure_loaded?(Igniter) do
       {:ok, zipper} = Common.move_to_do_block(defmodule)
       igniter = warn_dead_parser_overrides(igniter, parser, zipper)
 
-      if renders_heex?(zipper) and not uses_phoenix_component?(zipper) do
-        igniter
-        |> ProjectModule.find_and_update_module!(parser, &add_phoenix_component/1)
-        |> Igniter.add_warning("""
-        #{inspect(parser)} renders ~H and now has `use Phoenix.Component`. The 0.53
-        `use Brando.Villain.Parser` also imported Brando.HTML and Phoenix.HTML and aliased
-        Brando.Cache, Content, Datasource, Utils and Villain. Add the ones it still uses.
-        """)
-      else
-        igniter
+      case missing_parser_code(zipper) do
+        [] -> igniter
+        lines -> ProjectModule.find_and_update_module!(igniter, parser, &add_after_parser_use(&1, lines))
+      end
+    end
+
+    defp missing_parser_code(zipper) do
+      ast = Zipper.node(zipper)
+      calls = parser_calls(ast)
+      defined = defined_functions(ast, [:def, :defp, :defmacro, :defmacrop])
+
+      component =
+        if renders_heex?(zipper) and not uses_or_imports?(zipper, Phoenix.Component),
+          do: ["use Phoenix.Component"],
+          else: []
+
+      imports =
+        for module <- @parser_imports,
+            not uses_or_imports?(zipper, module),
+            calls_function_of?(calls, defined, module),
+            do: "import #{inspect(module)}"
+
+      aliases =
+        for module <- @parser_aliases,
+            short = module |> Module.split() |> List.last() |> String.to_atom(),
+            names_alias?(ast, short),
+            not defines_alias?(ast, short),
+            do: "alias #{inspect(module)}"
+
+      component ++ imports ++ aliases
+    end
+
+    defp add_after_parser_use(zipper, lines) do
+      with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Brando.Villain.Parser) do
+        {:ok, Common.add_code(zipper, Enum.join(lines, "\n"), placement: :after)}
       end
     end
 
     defp renders_heex?(zipper), do: Zipper.find(zipper, &match?({:sigil_H, _, _}, &1)) != nil
 
-    defp uses_phoenix_component?(zipper) do
-      match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, Phoenix.Component)) or
+    defp uses_or_imports?(zipper, module) do
+      match?({:ok, _}, Igniter.Code.Module.move_to_use(zipper, module)) or
         match?(
           {:ok, _},
           Common.move_to(zipper, fn zipper ->
-            CodeFunction.function_call?(zipper, :import) and
-              CodeFunction.argument_equals?(zipper, 0, Phoenix.Component)
+            CodeFunction.function_call?(zipper, :import) and CodeFunction.argument_equals?(zipper, 0, module)
           end)
         )
     end
 
-    defp add_phoenix_component(zipper) do
-      with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Brando.Villain.Parser) do
-        {:ok, Common.add_code(zipper, "use Phoenix.Component", placement: :after)}
-      end
+    # Unqualified calls as `{name, arity}`, and calls inside `~H` templates
+    # (components and `{expressions}`) as `{name, :any}`.
+    defp parser_calls(ast) do
+      {_ast, calls} =
+        Macro.prewalk(ast, [], fn
+          {:|>, _, [_left, {name, _, args}]} = node, acc when is_atom(name) and is_list(args) ->
+            {node, [{name, length(args) + 1} | acc]}
+
+          {:&, _, [{:/, _, [{name, _, context}, arity]}]} = node, acc when is_atom(name) and is_atom(context) ->
+            {node, [{name, unwrap_literal(arity)} | acc]}
+
+          {:sigil_H, _, [{:<<>>, _, parts} | _]} = node, acc ->
+            template = parts |> Enum.filter(&is_binary/1) |> Enum.join()
+            {node, heex_calls(template) ++ acc}
+
+          {name, _, args} = node, acc when is_atom(name) and is_list(args) ->
+            {node, [{name, length(args)} | acc]}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      Enum.uniq(calls)
+    end
+
+    defp heex_calls(template) do
+      components = for [_, name] <- Regex.scan(~r/<\.([a-z_]\w*[?!]?)/, template), do: {String.to_atom(name), 1}
+
+      expressions =
+        for [_, name] <- Regex.scan(~r/(?<![\w.])([a-z_]\w*[?!]?)\(/, template), do: {String.to_atom(name), :any}
+
+      components ++ expressions
+    end
+
+    defp unwrap_literal({:__block__, _, [value]}), do: value
+    defp unwrap_literal(value), do: value
+
+    defp calls_function_of?(calls, defined, module) do
+      exports = if Code.ensure_loaded?(module), do: module.__info__(:functions), else: []
+      export_names = MapSet.new(exports, &elem(&1, 0))
+      defined_names = MapSet.new(defined, &elem(&1, 0))
+
+      Enum.any?(calls, fn
+        {name, :any} -> name in export_names and name not in defined_names
+        call -> call in exports and call not in defined
+      end)
+    end
+
+    defp names_alias?(ast, short) do
+      ast
+      |> Macro.prewalk(false, fn
+        {:__aliases__, _, [^short | _]} = node, _found -> {node, true}
+        node, found -> {node, found}
+      end)
+      |> elem(1)
+    end
+
+    # `alias Foo.Short`, `alias Foo.{Short, ...}` or `alias Foo, as: Short`
+    defp defines_alias?(ast, short) do
+      ast
+      |> Macro.prewalk(false, fn
+        {:alias, _, [_target, opts]} = node, found when is_list(opts) ->
+          {node, found or alias_as?(opts, short)}
+
+        {:alias, _, [{{:., _, [_base, :{}]}, _, children}]} = node, found ->
+          {node, found or Enum.any?(children, &match?({:__aliases__, _, [^short]}, &1))}
+
+        {:alias, _, [{:__aliases__, _, parts}]} = node, found ->
+          {node, found or List.last(parts) == short}
+
+        node, found ->
+          {node, found}
+      end)
+      |> elem(1)
+    end
+
+    defp alias_as?(opts, short) do
+      Enum.any?(opts, fn
+        {{:__block__, _, [:as]}, {:__aliases__, _, [^short]}} -> true
+        {:as, {:__aliases__, _, [^short]}} -> true
+        _option -> false
+      end)
     end
 
     defp warn_dead_parser_overrides(igniter, parser, zipper) do
@@ -1040,7 +1156,7 @@ if Code.ensure_loaded?(Igniter) do
 
       zipper
       |> Zipper.node()
-      |> public_functions()
+      |> defined_functions([:def])
       |> Enum.reject(&(&1 in callbacks))
       |> Enum.filter(fn {_name, arity} -> arity == 2 end)
       |> Enum.reduce(igniter, fn {name, arity}, igniter ->
@@ -1051,12 +1167,17 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    defp public_functions(ast) do
+    defp defined_functions(ast, kinds) do
       {_ast, functions} =
         Macro.prewalk(ast, [], fn
-          {:def, _, [{:when, _, [head | _]} | _]} = node, acc -> {node, [function_head(head) | acc]}
-          {:def, _, [head | _]} = node, acc -> {node, [function_head(head) | acc]}
-          node, acc -> {node, acc}
+          {kind, _, [{:when, _, [head | _]} | _]} = node, acc ->
+            if kind in kinds, do: {node, [function_head(head) | acc]}, else: {node, acc}
+
+          {kind, _, [head | _]} = node, acc when is_atom(kind) ->
+            if kind in kinds, do: {node, [function_head(head) | acc]}, else: {node, acc}
+
+          node, acc ->
+            {node, acc}
         end)
 
       functions |> Enum.reject(&is_nil/1) |> Enum.uniq()

@@ -101,11 +101,14 @@ when Igniter becomes available. The dependency remains optional at runtime.
 - points Brando at the application's `Mailer` when it has one
   (`config :brando, mailer: MyApp.Mailer`); set the address it sends from
   yourself, as described in [Email](email.md);
-- adds `use Phoenix.Component` to Villain parsers (`use Brando.Villain.Parser`)
-  that render `~H`, which the parser's `__using__` no longer brings in, and
-  warns about overrides of blocks Brando no longer renders, such as
-  `slideshow/2` (slideshows became `gallery` in `brando_77`). Delete those;
-  nothing calls them;
+- gives Villain parsers (`use Brando.Villain.Parser`) back what the parser's
+  `__using__` no longer brings in, where they use it: `use Phoenix.Component`
+  for `~H`, `import Brando.HTML` for components such as `<.picture>`,
+  `import Phoenix.HTML`, and the `Brando.Cache`, `Content`, `Datasource`,
+  `Utils`, `Villain` and `Liquex.Context` aliases. It also warns about
+  overrides of blocks Brando no longer renders, such as `slideshow/2`
+  (slideshows became `gallery` in `brando_77`). Delete those; nothing calls
+  them;
 - removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
   on `nplurals=2;` without a rule and on a rule without its trailing `;`, once

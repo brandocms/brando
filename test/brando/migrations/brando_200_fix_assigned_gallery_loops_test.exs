@@ -15,7 +15,7 @@ defmodule Brando.Migrations.FixAssignedGalleryLoopsTest do
 
   setup_all do
     [{module, _bytecode}] = Code.compile_file(@migration)
-    on_exit(fn -> :code.purge(module) && :code.delete(module) end)
+    on_exit(fn -> :code.delete(module) and :code.purge(module) end)
     %{migration: module}
   end
 
