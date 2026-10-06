@@ -20,7 +20,8 @@ if Code.ensure_loaded?(Igniter) do
     Swoosh's API client, points Brando at the application's mailer, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
-    configuration, refreshes the gettext recovery helper, and retires the
+    configuration, refreshes the gettext recovery helper, completes
+    `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
     The task changes source files only. Review and compile its diff before
@@ -48,6 +49,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.hide_source_maps()
       |> SourceUpgrade.create_florist_config()
       |> SourceUpgrade.refresh_gettext_script()
+      |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()

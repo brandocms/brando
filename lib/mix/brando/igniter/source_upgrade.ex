@@ -31,6 +31,8 @@ if Code.ensure_loaded?(Igniter) do
     @listing_core_components ~w(<.field <.i18n <.update_link <.url)
 
     @gettext_script_path "scripts/sync_gettext.sh"
+    # The value of a .po header line: "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+    @plural_forms_header ~r/^"Plural-Forms:[ \t]*((?:[^"\\]|\\[^n])*?)[ \t]*(?:\\n)?"$/m
 
     ## Blueprint composition
 
@@ -1062,6 +1064,64 @@ if Code.ensure_loaded?(Igniter) do
 
     defp function_head({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
     defp function_head(_head), do: nil
+
+    @doc """
+    Completes `Plural-Forms` headers in `priv/gettext/**/*.po`.
+
+    Gettext 1.0 warns, once per catalog per compile, on a header it cannot
+    parse: `nplurals=2;` without the rule, or a rule without its trailing `;`.
+    An incomplete header for a locale Expo knows is replaced with the full
+    one; other locales are reported.
+    """
+    def complete_plural_forms_headers(igniter) do
+      igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&Source.get(&1, :path))
+      |> Enum.filter(&(String.starts_with?(&1, "priv/gettext/") and Path.extname(&1) == ".po"))
+      |> Enum.sort()
+      |> Enum.reduce(igniter, fn path, igniter ->
+        content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
+
+        case Regex.run(@plural_forms_header, content, capture: :all_but_first) do
+          [header] -> complete_plural_forms_header(igniter, path, header)
+          nil -> igniter
+        end
+      end)
+    end
+
+    defp complete_plural_forms_header(igniter, path, header) do
+      with {:error, _} <- Expo.PluralForms.parse(header),
+           {:ok, plural_forms} <- path |> catalog_locale() |> Expo.PluralForms.plural_form() do
+        complete = Expo.PluralForms.to_string(plural_forms)
+
+        Igniter.update_file(igniter, path, fn source ->
+          Source.update(source, :content, fn content ->
+            Regex.replace(@plural_forms_header, content, fn line, _header ->
+              String.replace(line, header, complete, global: false)
+            end)
+          end)
+        end)
+      else
+        {:ok, %Expo.PluralForms{}} ->
+          igniter
+
+        :error ->
+          Igniter.add_warning(igniter, """
+          #{path} has an incomplete Plural-Forms header (#{header}) for a locale Gettext does not know.
+          Complete it, for example `nplurals=2; plural=(n != 1);`, or remove the header.
+          """)
+      end
+    end
+
+    # priv/gettext/<locale>/LC_MESSAGES/x.po or priv/gettext/<backend>/<locale>/LC_MESSAGES/x.po
+    defp catalog_locale(path) do
+      path
+      |> Path.split()
+      |> Enum.take_while(&(&1 != "LC_MESSAGES"))
+      |> List.last()
+    end
 
     def configure_swoosh_client(igniter) do
       Config.configure_new(

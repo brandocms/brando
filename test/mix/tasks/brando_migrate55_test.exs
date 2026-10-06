@@ -444,6 +444,43 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_unchanged(rerun, parser_path)
   end
 
+  test "completes Plural-Forms headers Gettext 1.0 cannot parse" do
+    po = fn plural_forms ->
+      """
+      msgid ""
+      msgstr ""
+      "Language: no\\n"
+      "Plural-Forms: #{plural_forms}\\n"
+
+      msgid "Hello"
+      msgstr "Hei"
+      """
+    end
+
+    paths = %{
+      rule_missing: "priv/gettext/backend/no/LC_MESSAGES/default.po",
+      semicolon_missing: "priv/gettext/en/LC_MESSAGES/default.po",
+      complete: "priv/gettext/sv/LC_MESSAGES/default.po",
+      unknown: "priv/gettext/xx/LC_MESSAGES/default.po"
+    }
+
+    igniter =
+      migrate(@blueprint_054, %{
+        paths.rule_missing => po.("nplurals=2;"),
+        paths.semicolon_missing => po.("nplurals=2; plural=(n != 1)"),
+        paths.complete => po.("nplurals=2; plural=(n != 1);"),
+        paths.unknown => po.("nplurals=2;")
+      })
+
+    assert source(igniter, paths.rule_missing) == po.("nplurals=2; plural=(n != 1);")
+    assert source(igniter, paths.semicolon_missing) == po.("nplurals=2; plural=(n != 1);")
+    assert_unchanged(igniter, [paths.complete, paths.unknown])
+    assert_has_warning(igniter, &String.contains?(&1, paths.unknown))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, [paths.rule_missing, paths.semicolon_missing])
+  end
+
   test "reports only the 0.55 manual workflow" do
     igniter = migrate(@blueprint_054)
 
