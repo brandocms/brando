@@ -1118,6 +1118,16 @@ production dump.
 
 #### Fixes
 
+- **Listings with two or more alternates render again.** The alternates
+  column keyed its rows on identifiers built in memory, whose `id` is nil, and
+  LiveView 1.2 raised "found duplicate key nil in comprehension".
+- **`{% picture %}` renders a gallery object's image.** Since `brando_136`, a
+  loop over a gallery ref yields `GalleryObject`s; passing one to `picture`
+  raised `FunctionClauseError`. `brando_200` also rewrites stored module code
+  that loops over a variable assigned from a gallery ref
+  (`{% assign images = refs.slider.gallery.gallery_objects %}`), which
+  `brando_141` missed, so `image.alt` and friends read `image.image.alt`. Run
+  `mix brando.gen.migrations` for `brando_200`.
 - **Passwords saved through the context are hashed.** `trait :password`
   hashed only in the admin form's save, so `Brando.Users.create_user/2` and
   `update_user/3` stored a plain-text password as given, although the users
