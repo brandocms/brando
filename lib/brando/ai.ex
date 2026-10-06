@@ -14,10 +14,13 @@ defmodule Brando.AI do
         models: [
           default: "anthropic:claude-opus-5-5",
           # Jobs that read images (alt text) use this when it is set
-          image: "anthropic:claude-haiku-4-5"
+          image: "anthropic:claude-haiku-4-5",
+          # Typed questions (`evaluate/3`) need an evaluation model
+          evaluate: "typesafe:jev-1.13.0"
         ],
         providers: [
-          anthropic: [api_key: System.get_env("ANTHROPIC_API_KEY")]
+          anthropic: [api_key: System.get_env("ANTHROPIC_API_KEY")],
+          typesafe: [api_key: System.get_env("TYPESAFE_API_KEY")]
         ],
         # Optional per-field defaults
         fields: [
@@ -35,6 +38,11 @@ defmodule Brando.AI do
   configured falls back to `:default`. A field's `model:` takes a name or a
   full `"provider:model"` spec. `default_model: "..."` is still read, as
   `models: [default: "..."]`.
+
+  `:evaluate` is the exception: it names an evaluation model, which answers
+  typed questions instead of writing text, and it never falls back to
+  `:default`. Pin a versioned id rather than an alias such as `jev-latest`
+  when thresholds are tuned against its answers.
 
   ## Resolution order
 
@@ -62,6 +70,8 @@ defmodule Brando.AI do
 
   alias ReqLLM.Keys
   alias ReqLLM.Response
+
+  @evaluate_opt_keys [:receive_timeout, :max_retries, :provider_options, :req_http_options]
 
   @request_opt_keys [
     :temperature,
@@ -117,6 +127,51 @@ defmodule Brando.AI do
       {:error, _} = error -> error
       false -> {:error, :disabled}
       error -> {:error, error}
+    end
+  end
+
+  @doc """
+  Asks the evaluation model typed questions about `state`, with
+  `ReqLLM.evaluate/4`. `state` is a string, map or list; `questions` maps
+  ids to `%{type: :choice | :score | :boolean, instructions, criteria}`.
+
+  Returns `answers` keyed by the question ids as strings, and the versioned
+  `model` that answered them. The model is `ai_opts[:model]` (a spec or a
+  name in `models:`), else `models[:evaluate]`; there is no fallback to the
+  generative `:default` model.
+  """
+  @spec evaluate(String.t() | map() | list(), map(), keyword() | map()) :: {:ok, map()} | {:error, term()}
+  def evaluate(state, questions, ai_opts \\ []) do
+    ai_opts = normalize_ai_opts(ai_opts)
+
+    with true <- enabled?() || {:error, :disabled},
+         {:ok, model} <- resolve_evaluation_model(ai_opts),
+         {:ok, provider} <- provider_from_model(model),
+         {:ok, api_key} <- resolve_api_key(provider, ai_opts),
+         req_opts = ai_opts |> Keyword.take(@evaluate_opt_keys) |> Keyword.put(:api_key, api_key),
+         {:ok, response} <- ReqLLM.evaluate(model, state, questions, req_opts) do
+      {:ok,
+       %{
+         answers: response.object,
+         usage: Response.usage(response),
+         model: response.model,
+         provider: provider
+       }}
+    end
+  end
+
+  @doc "Whether `evaluate/3` has a model and an API key to call."
+  @spec evaluation_configured?(keyword() | map()) :: boolean()
+  def evaluation_configured?(ai_opts \\ []) do
+    ai_opts = normalize_ai_opts(ai_opts)
+
+    with true <- enabled?(),
+         {:ok, model} <- resolve_evaluation_model(ai_opts),
+         {:ok, provider} <- provider_from_model(model),
+         {:ok, _api_key} <- resolve_api_key(provider, ai_opts) do
+      true
+    else
+      _ -> false
     end
   end
 
@@ -263,6 +318,17 @@ defmodule Brando.AI do
       spec when is_binary(spec) and spec != "" -> {:ok, spec}
       _ -> {:error, :missing_model}
     end
+  end
+
+  defp resolve_evaluation_model(ai_opts) do
+    spec =
+      case Keyword.get(ai_opts, :model) do
+        spec when is_binary(spec) and spec != "" -> spec
+        name when is_atom(name) and name not in [nil, :default] -> named_model(name)
+        _ -> named_model(:evaluate)
+      end
+
+    if is_binary(spec) and spec != "", do: {:ok, spec}, else: {:error, :missing_model}
   end
 
   defp model_for(spec) when is_binary(spec) and spec != "", do: spec

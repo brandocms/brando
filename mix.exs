@@ -264,7 +264,7 @@ defmodule Brando.Mixfile do
       {:html_sanitize_ex, "~> 1.5.0"},
 
       # Misc
-      {:req_llm, "~> 1.6"},
+      {:req_llm, "~> 1.25"},
       {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 1.0.0"},
       {:mdex, "~> 0.13.0"},
