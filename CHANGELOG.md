@@ -11,6 +11,10 @@ Then copy the Brando migrations added since `brando_130` with
 with `mix brando.entries.resave` and `mix brando.identifiers.sync`. The full
 ordered workflow, including Blueprint snapshot handling and Gettext recovery,
 is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
+Sites still on 0.51 (the `legacy` branch, with the Vue admin) have no
+automated path; [Migrating from 0.51](guides/migrating_from_051.md) is the
+ordered port, with the traps of replaying the migration chain on a
+production dump.
 
 #### Breaking
 

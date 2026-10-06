@@ -39,6 +39,7 @@ defmodule Brando.Mixfile do
         extras: [
           "guides/overview.md",
           "guides/migrating_from_053.md",
+          "guides/migrating_from_051.md",
           "guides/tenancy_and_environments.md",
           "guides/blueprints.md",
           "guides/blueprint_migrations.md",
@@ -78,7 +79,8 @@ defmodule Brando.Mixfile do
         groups_for_extras: [
           Introduction: ["guides/overview.md"],
           Upgrading: [
-            "guides/migrating_from_053.md"
+            "guides/migrating_from_053.md",
+            "guides/migrating_from_051.md"
           ],
           "Blueprint system": [
             "guides/blueprints.md",
