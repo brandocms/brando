@@ -8,7 +8,9 @@ defmodule Brando.Users.Throttle do
   password, a wrong two-factor code, a wrong password or code when
   confirming a change — are counted on the account itself, in the database:
   after `lockout_after` within `lockout_minutes` of the first of them, the
-  account is locked for `lockout_minutes`, on every node, and the lockout is recorded in the
+  account is locked for `lockout_minutes` — an hour the second time in a
+  day, four hours after that (`lockout_escalation_minutes`) — and the user
+  is emailed, on every node, and the lockout is recorded in the
   security log. A successful sign-in starts the count again.
 
   An address with no account counts its failures too, in the cache, so the
@@ -22,7 +24,8 @@ defmodule Brando.Users.Throttle do
         reset_per_ip: 10,
         reset_per_account: 3,
         lockout_after: 5,
-        lockout_minutes: 15
+        lockout_minutes: 15,
+        lockout_escalation_minutes: [60, 240]
 
   The IP address is the client's, also behind a trusted reverse proxy:
   see `Brando.ClientIP` and `config :brando, :trusted_proxies`.
@@ -43,7 +46,8 @@ defmodule Brando.Users.Throttle do
     reset_per_ip: 10,
     reset_per_account: 3,
     lockout_after: 5,
-    lockout_minutes: 15
+    lockout_minutes: 15,
+    lockout_escalation_minutes: [60, 240]
   ]
 
   @doc "The throttle's settings, the defaults merged with the application's."
@@ -129,6 +133,16 @@ defmodule Brando.Users.Throttle do
     case result do
       {:locked, until} ->
         SecurityLog.record(:locked, user, meta: meta, details: %{"until" => DateTime.to_iso8601(until)})
+
+        Brando.Users.notify_security(user, :locked, %{
+          time:
+            Brando.Utils.Datetime.format_datetime(
+              until,
+              "%-d %B %Y, %H:%M %Z",
+              to_string(Map.get(user, :language) || "en")
+            )
+        })
+
         {:locked, until}
 
       :ok ->
@@ -147,7 +161,7 @@ defmodule Brando.Users.Throttle do
     query = from(s in Security, where: s.user_id == ^user.id)
 
     if count >= config(:lockout_after) do
-      until = DateTime.add(now, lockout_seconds(user), :second)
+      until = DateTime.add(now, user |> lockouts_today() |> lockout_seconds(), :second)
       Repo.update_all(query, set: [failed_attempts: 0, failures_since: nil, locked_until: until])
       {:locked, until}
     else
@@ -156,8 +170,24 @@ defmodule Brando.Users.Throttle do
     end
   end
 
-  # How long a lockout lasts
-  defp lockout_seconds(_user_or_email), do: config(:lockout_minutes) * 60
+  # How long a lockout lasts: `lockout_minutes` the first time in a day, then
+  # each of `lockout_escalation_minutes` (an hour, then four), which slows a
+  # patient guesser down
+  defp lockout_seconds(previous_lockouts) do
+    steps = [config(:lockout_minutes) | config(:lockout_escalation_minutes)]
+    Enum.at(steps, min(previous_lockouts, length(steps) - 1)) * 60
+  end
+
+  defp lockouts_today(%{id: user_id}) do
+    day_ago = DateTime.add(DateTime.utc_now(), -86_400, :second)
+
+    Repo.aggregate(
+      from(e in Brando.Users.SecurityEvent,
+        where: e.user_id == ^user_id and e.action == :locked and e.inserted_at > ^day_ago
+      ),
+      :count
+    )
+  end
 
   @doc """
   Counts a failed sign-in for an address with no account, so that it is
@@ -174,7 +204,11 @@ defmodule Brando.Users.Throttle do
     if count == 1, do: Cachex.expire(:cache, key, config(:lockout_minutes) * 60_000)
 
     if count >= config(:lockout_after) do
-      seconds = lockout_seconds(email)
+      lockouts_key = {__MODULE__, :unknown_lockouts, email}
+      _ = Cachex.get(:cache, lockouts_key)
+      {_, lockouts} = Cachex.incr(:cache, lockouts_key, 1)
+      if lockouts == 1, do: Cachex.expire(:cache, lockouts_key, 86_400_000)
+      seconds = lockout_seconds(lockouts - 1)
       until = DateTime.add(DateTime.truncate(DateTime.utc_now(), :second), seconds, :second)
       Cachex.del(:cache, key)
       Cachex.put(:cache, {__MODULE__, :unknown_locked, email}, until, expire: seconds * 1000)
