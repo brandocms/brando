@@ -56,9 +56,13 @@ end
 ```
 
 `handle_event/1` runs in the event's site and environment. Keep it short and
-queue a job of your own for anything slow. Each event has an `id`: if the
-dispatcher job is retried, a subscriber can see an event twice and should
-ignore one it has already handled.
+queue a job of your own for anything slow. Return `{:error, reason}` (or
+raise) when the event could not be handled: the dispatcher job then runs
+again, up to three times, and every subscriber gets the event again.
+Subscribers must therefore be idempotent. Each event has an `id` that stays
+the same across these retries; ignore an `id` you have already handled.
+Brando's webhooks do this with a unique index, so a retry never queues a
+delivery twice.
 
 The dispatcher runs on the `:content_events` queue, and deliveries on
 `:webhooks`. Brando's default Oban configuration has both. If your
@@ -75,7 +79,16 @@ webhooks. A webhook has a name, an `https` URL, the events it gets (all, or
 some), and optionally the content types and languages it is limited to. When
 it is created, its signing secret is shown once. Only people with the
 Webhooks permission (`brando.webhooks.manage`) can see these screens; without
-group authorization, admins and superusers. Saving, deleting, pausing,
+group authorization, admins and superusers.
+
+Give that permission with care. A webhook is sent the type, id, URL, status
+and changed field names of every entry, drafts included, of every content
+type, whatever the manager may read, and it sends them to a URL the manager
+chooses. The screens themselves show entry titles and links only for content
+types the manager may read, and others by type and id.
+
+A saved webhook's URL is shown as its scheme and host only, since a build
+hook's URL often carries a key in its path. "Replace URL" sets a new one. Saving, deleting, pausing,
 rotating the secret, redelivering and sending a test event ask for the
 password again when the session has not confirmed it in the last ten minutes.
 
@@ -204,8 +217,13 @@ redeliver them from the log if you need them.
 - Redirects are not followed; a 3xx counts as a failure.
 - When the last attempt fails, the webhook is paused and the dashboard warns
   the people who manage webhooks. Resume it once the receiver works again.
-- At most two deliveries to one webhook run at a time (`concurrency`), so a
-  slow receiver cannot hold the queue.
+- At most two deliveries to one webhook run at a time (`concurrency`), and at
+  most three to all the webhooks of one site environment
+  (`site_concurrency`), so a slow receiver cannot hold the queue that every
+  site shares. A delivery waiting for a slot does not use up an attempt.
+- A delivery that arrived is never sent again by its job, even if writing
+  its result to the log fails: the log then says the answer could not be
+  saved.
 - The first 4 KB of each response are kept in the delivery log, with the
   status code and how long it took. The log keeps 30 days (`retention_days`).
 
@@ -213,8 +231,9 @@ redeliver them from the log if you need them.
 
 Only `https`, without a user name or password in the URL, on a host whose
 every address is public. Private, loopback, link-local, CGNAT, multicast and
-reserved IPv4 ranges, `0.0.0.0`, and IPv6 loopback, link-local, unique local
-and multicast are refused (see `Brando.Webhooks.URLGuard`). The check runs
+reserved IPv4 ranges, `0.0.0.0`, IPv6 loopback, link-local, unique local and
+multicast, Teredo and local-use NAT64, and IPv4 addresses inside IPv6 that
+fall in those ranges are refused (see `Brando.Webhooks.URLGuard`). The check runs
 when the webhook is saved and again before every delivery, and the delivery
 connects to the address that was checked, with the host name kept for TLS,
 so a host that later resolves to an internal address is not called.
@@ -226,7 +245,8 @@ For a receiver on your own machine in development:
 config :brando, Brando.Webhooks, allow_localhost: true
 ```
 
-This allows `http` and loopback addresses. Never set it in production.
+This allows loopback addresses, and `http` to them only; other hosts still
+need `https`. Never set it in production.
 
 ## Configuration
 
@@ -240,6 +260,7 @@ config :brando, Brando.Webhooks,
   enabled: true,
   retention_days: 30,
   concurrency: 2,
+  site_concurrency: 3,
   allow_localhost: false
 ```
 
