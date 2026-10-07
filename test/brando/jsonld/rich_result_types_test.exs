@@ -71,8 +71,10 @@ defmodule Brando.JSONLD.RichResultTypesTest do
     assert Rules.validate(node, lookup: lookup(graph)) == []
     refute_errors(inspection)
 
-    assert Enum.sort(Enum.map(inspection.nodes, & &1.type) -- ["Organization", "WebSite", "WebPage"]) ==
-             ["AggregateRating", "ImageObject", "Offer", "Product"]
+    # The entry's own nodes: the site's (identity, website, services) depend
+    # on whatever identity the cache holds
+    entry_types = for %{origin: :entry, type: type} <- inspection.nodes, type != "WebPage", do: type
+    assert Enum.sort(entry_types) == ["AggregateRating", "ImageObject", "Offer", "Product"]
   end
 
   test "Product without an offer, rating or review is an error" do
