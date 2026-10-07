@@ -234,6 +234,16 @@ client is the right-most address in the header that is not a trusted proxy.
 config :brando, :trusted_proxies, ["127.0.0.1/32", "::1/128", "10.0.0.0/8"]
 ```
 
+The trusted proxy must set or overwrite `X-Forwarded-For` itself, appending
+the address it got the request from. Traefik does by default; with nginx use
+
+```nginx
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+A proxy that passes the client's own header through unchanged lets every
+client choose its address for the per-IP limits.
+
 Entries are addresses or CIDR ranges, IPv4 or IPv6. The default trusts the
 loopback addresses only, which is what a proxy on the same server connects
 from: Florist puts Traefik or nginx in front of each release on the server,

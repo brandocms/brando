@@ -19,6 +19,10 @@ defmodule Brando.ClientIP do
   trusted proxy: each trusted proxy appends the address it got the request
   from, so everything left of the first untrusted address could have been
   made up by the client.
+
+  A trusted proxy must therefore append to the header itself (Traefik does;
+  nginx with `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for`),
+  never pass the client's header through unchanged.
   """
 
   import Bitwise
