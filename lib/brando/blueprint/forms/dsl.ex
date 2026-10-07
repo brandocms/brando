@@ -44,6 +44,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
                label: [type: :string],
                module_set: [type: :string],
                template_namespace: [type: :string],
+               starts_with: [type: {:list, {:or, [:string, :atom]}}],
                # Accepted for older Blueprints; read nowhere (see the forms moduledoc).
                palette_namespace: [type: :string],
                hidden: [type: {:or, [:boolean, {:tuple, [{:or, [:atom, :string]}, :any]}, {:fun, 1}]}]

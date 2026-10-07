@@ -252,34 +252,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     assign(socket, :modules_by_namespace, groups)
   end
 
-  def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: set_title} = filter})
-      when set_title != "all" do
-    {:ok, set} =
-      Brando.Content.get_module_set(%{
-        matches: %{title: set_title, filter_modules: filter},
-        preload: [module_set_modules: [module: :refs]],
-        cache: {:ttl, :infinite}
-      })
-
-    modules = Enum.map(set.module_set_modules, & &1.module)
-
-    modules_by_namespace =
-      modules
-      |> Brando.Utils.split_by(:namespace)
-      |> Enum.map(&__MODULE__.sort_namespace/1)
-
-    assign(socket, :modules_by_namespace, modules_by_namespace)
-  end
-
   def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: _} = filter}) do
-    modules = list_picker_modules(filter)
-
-    modules_by_namespace =
-      modules
-      |> Brando.Utils.split_by(:namespace)
-      |> Enum.map(&__MODULE__.sort_namespace/1)
-
-    assign(socket, :modules_by_namespace, modules_by_namespace)
+    assign(socket, :modules_by_namespace, root_modules_by_namespace(filter))
   end
 
   def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: parent_id}}) do
@@ -295,6 +269,41 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
   def maybe_update_modules_by_filter(socket, _assigns) do
     socket
+  end
+
+  @doc """
+  The modules the picker offers at the root of a block field with
+  `module_set`, in the order it lists them: by group, then by each module's
+  sequence. Only modules the site has enabled and the set allows.
+  """
+  def root_modules(module_set) do
+    %{parent_id: nil, namespace: module_set}
+    |> root_modules_by_namespace()
+    |> Enum.flat_map(fn {_translated_namespace, _namespace, modules} -> modules end)
+  end
+
+  defp root_modules_by_namespace(%{namespace: set_title} = filter) when set_title != "all" do
+    case Brando.Content.get_module_set(%{
+           matches: %{title: set_title, filter_modules: filter},
+           preload: [module_set_modules: [module: :refs]],
+           cache: {:ttl, :infinite}
+         }) do
+      {:ok, set} ->
+        set.module_set_modules
+        |> Enum.map(& &1.module)
+        |> Brando.Utils.split_by(:namespace)
+        |> Enum.map(&__MODULE__.sort_namespace/1)
+
+      {:error, _} ->
+        []
+    end
+  end
+
+  defp root_modules_by_namespace(filter) do
+    filter
+    |> list_picker_modules()
+    |> Brando.Utils.split_by(:namespace)
+    |> Enum.map(&__MODULE__.sort_namespace/1)
   end
 
   def assign_modules(socket) do

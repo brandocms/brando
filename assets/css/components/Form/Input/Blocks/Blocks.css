@@ -19,8 +19,9 @@
   }
 }
 
-/* Build with AI: opens the content assistant for this entry in a new tab.
-   The button is the shared AI action (AI.css). */
+/* Build with AI on a field that has blocks: opens the content assistant for
+   this entry in a new tab. The button is the shared AI action (AI.css); an
+   empty field offers it in its card instead. */
 .block-field-assistant {
   display: flex;
   align-items: center;
@@ -178,21 +179,51 @@ section.alert.danger {
   @space margin-y 25px;
 }
 
-/* An empty block field that has templates: a welcome offering them as
-   starting points, each shown as a small outline of the modules it holds. */
+/* The one empty state of a block field (approved option A, #2997): its
+   templates, when it has any, then the modules it usually starts with, then
+   the other ways to begin (all modules, paste, Build with AI). One quiet,
+   centred card on the shaded surface, on a solid hairline: a dashed border
+   means "drop here" in the block editor. */
+.blocks-content.is-empty {
+  padding: 0;
+  background-color: transparent;
+
+  > .block-plus-wrapper {
+    margin-top: 12px;
+  }
+}
+
 .blocks-welcome {
-  @space margin-y 25px;
-  padding: 28px 28px 24px;
-  border: 1px dashed #d5ddd5;
+  box-sizing: border-box;
+  max-width: 520px;
+  margin: 16px auto 0;
+  padding: 26px;
+  border: 1px solid var(--brando-line);
   border-radius: 12px;
-  background: #fbfcfa;
+  background: var(--brando-surface-shaded);
   text-align: center;
 
   h3 {
-    margin: 0 0 6px;
-    font-size: 20px;
+    margin: 0;
+    color: var(--brando-ink);
+    font-size: 18px;
     font-weight: 500;
-    letter-spacing: -0.02em;
+    line-height: 24px;
+  }
+
+  .blocks-welcome-lead {
+    margin: 6px 0 0;
+    color: var(--brando-muted);
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .blocks-welcome-or {
+    margin: 20px 0 0;
+    color: var(--brando-muted);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
   }
 
   .blocks-welcome-templates {
@@ -200,7 +231,7 @@ section.alert.danger {
     flex-wrap: wrap;
     justify-content: center;
     gap: 14px;
-    margin: 20px 0 18px;
+    margin-top: 16px;
   }
 
   .blocks-welcome-template {
@@ -210,16 +241,16 @@ section.alert.danger {
     gap: 4px;
     width: 196px;
     padding: 16px 16px 14px;
-    border: 1px solid #dce2dc;
+    border: 1px solid var(--brando-line);
     border-radius: 10px;
-    background: #fff;
+    background: var(--brando-surface);
     color: inherit;
     text-align: center;
     cursor: pointer;
     transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
 
     &:hover {
-      border-color: #9db3a2;
+      border-color: color-mix(in srgb, var(--brando-accent) 35%, var(--brando-line));
       box-shadow: 0 4px 14px rgba(22, 38, 28, 0.08);
       transform: translateY(-1px);
     }
@@ -231,14 +262,14 @@ section.alert.danger {
     }
 
     .blocks-welcome-instructions {
-      color: #626b66;
+      color: var(--brando-muted);
       font-size: 12px;
       line-height: 1.45;
     }
 
     small {
       margin-top: 2px;
-      color: #8a938d;
+      color: var(--brando-muted);
       font-size: 11px;
     }
   }
@@ -254,17 +285,180 @@ section.alert.danger {
       display: block;
       height: 7px;
       border-radius: 2px;
-      background: #d9e0d9;
+      background: var(--brando-line);
     }
 
     span:first-child {
-      background: #b9c6bb;
+      background: color-mix(in srgb, var(--brando-accent) 25%, var(--brando-line));
     }
   }
 
-  .blocks-welcome-or {
-    color: #8a938d;
-    font-size: 13px;
+  /* Up to four small square tiles in a row, two to a row on a phone. */
+  .blocks-welcome-modules {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 18px auto 0;
+  }
+
+  .blocks-welcome-module {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    box-sizing: border-box;
+    width: 94px;
+    min-height: 84px;
+    padding: 12px 6px 10px;
+    border: 1px solid var(--brando-line);
+    border-radius: 8px;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease;
+
+    > [data-icon] {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      margin-bottom: 4px;
+      color: var(--brando-accent);
+    }
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--brando-accent) 45%, var(--brando-line));
+      background: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+    }
+
+    /* Came first at least once: an accent hairline and wash. */
+    &.is-first {
+      border-color: color-mix(in srgb, var(--brando-accent) 38%, var(--brando-line));
+      background: color-mix(in srgb, var(--brando-accent) 3%, var(--brando-surface));
+
+      .blocks-welcome-module-count {
+        color: var(--brando-accent);
+      }
+    }
+  }
+
+  .blocks-welcome-module-name {
+    max-width: 100%;
+    font-size: 12.5px;
+    line-height: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .blocks-welcome-module-count {
+    color: color-mix(in srgb, var(--brando-muted) 70%, var(--brando-surface));
+    font-family: theme(typography.families.mono);
+    font-size: 10.5px;
+    line-height: 14px;
+    white-space: nowrap;
+  }
+
+  /* The container the module usually sits in. */
+  .blocks-welcome-module-container {
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--brando-badge-bg);
+    color: var(--brando-badge-ink);
+    font-size: 10px;
+    line-height: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .blocks-welcome-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  /* Secondary actions at the admin's small button size (30px). */
+  .blocks-welcome-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 5px 12px;
+    border: 1px solid var(--brando-line);
+    border-radius: 5px;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease;
+
+    [data-icon] {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--brando-accent) 35%, var(--brando-line));
+      background: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 3px;
+    }
+  }
+
+  .blocks-welcome-hint {
+    flex-basis: 100%;
+    color: var(--brando-muted);
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .blocks-welcome-note {
+    margin: 14px 0 0;
+    color: color-mix(in srgb, var(--brando-muted) 75%, var(--brando-surface));
+    font-size: 12px;
+    line-height: 18px;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+    }
+  }
+
+  @media (max-width: 599px) {
+    max-width: none;
+    padding: 22px 16px;
+
+    .blocks-welcome-modules {
+      max-width: calc(2 * 94px + 10px);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .blocks-welcome-action {
+      min-height: 40px;
+    }
   }
 }
 

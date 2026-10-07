@@ -717,6 +717,8 @@ form, not in a tab, and renders below the tabs. The schema needs
 * `template_namespace`: an empty editor offers the content templates of this
   namespace to start from. Without it, the namespace named after the schema
   is used. See `Brando.Content.StartingTemplates`.
+* `starts_with`: module classes an empty editor offers first. See
+  [Starting modules](blueprint_fields.md#starting-modules).
 * `hidden`: as for inputs: `true`, `{field, value}` or a function of the
   form. A hidden editor stays mounted.
 

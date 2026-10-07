@@ -65,9 +65,33 @@ defmodule BrandoAdmin.AssistantLiveTest do
   end
 
   describe "Build with AI in the block editor" do
-    test "links to the assistant for the saved entry and field", %{conn: conn} = c do
-      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+    # An empty field offers it in its card; a field with blocks by its label.
+    # Only one is ever rendered.
+    setup do
+      %{empty: Factory.insert(:page, title: "Empty page", uri: "empty-page", language: :en)}
+    end
+
+    test "an empty field links to the assistant from its card", %{conn: conn} = c do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.empty.id}")
       html = await_selector(view, "[data-testid=build-with-ai]")
+      [href] = html |> Floki.parse_document!() |> Floki.attribute("[data-testid=build-with-ai]", "href")
+
+      assert %URI{path: "/admin/assistant", query: query} = URI.parse(href)
+
+      assert URI.decode_query(query) == %{
+               "content_type" => "Brando.Pages.Page",
+               "id" => to_string(c.empty.id),
+               "field" => "blocks"
+             }
+
+      # A new tab: the editor, and anything unsaved in it, stays open.
+      assert has_element?(view, ".blocks-welcome a[data-testid=build-with-ai][target=_blank]", "Build with AI")
+      refute has_element?(view, ".block-field-assistant")
+    end
+
+    test "a field with blocks links to the assistant from its label", %{conn: conn} = c do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+      html = await_selector(view, ".block-field-assistant [data-testid=build-with-ai]")
       [href] = html |> Floki.parse_document!() |> Floki.attribute("[data-testid=build-with-ai]", "href")
 
       assert %URI{path: "/admin/assistant", query: query} = URI.parse(href)
@@ -78,23 +102,28 @@ defmodule BrandoAdmin.AssistantLiveTest do
                "field" => "blocks"
              }
 
-      # A new tab: the editor, and anything unsaved in it, stays open.
-      assert has_element?(view, "a[data-testid=build-with-ai][target=_blank]", "Build with AI")
+      assert has_element?(view, ".block-field-assistant a.ai-action.is-compact[target=_blank]", "Build with AI")
+      refute has_element?(view, ".blocks-welcome")
     end
 
     test "asks to save a new entry first", %{conn: conn} do
       {view, _html} = live_form(conn, "/admin/pages/create")
-      await_selector(view, ".block-field-assistant")
-      assert has_element?(view, ".block-field-assistant button[disabled]", "Build with AI")
-      assert has_element?(view, ".block-field-assistant-hint", "Save the entry to build it with AI")
-      refute has_element?(view, "[data-testid=build-with-ai]")
+      await_selector(view, ".blocks-welcome")
+      assert has_element?(view, ".blocks-welcome button[disabled][data-testid=build-with-ai]", "Build with AI")
+      assert has_element?(view, ".blocks-welcome-hint", "Save the entry to build it with AI")
+      refute has_element?(view, "a[data-testid=build-with-ai]")
+      refute has_element?(view, ".block-field-assistant")
     end
 
     test "is hidden without a model", %{conn: conn} = c do
       Application.delete_env(:brando, Brando.AI)
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.empty.id}")
+      await_selector(view, ".blocks-welcome")
+      refute has_element?(view, "[data-testid=build-with-ai]")
+
       {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
-      await_selector(view, ".blocks-wrapper")
-      refute has_element?(view, ".block-field-assistant")
+      await_selector(view, "[data-block-uid]")
+      refute has_element?(view, "[data-testid=build-with-ai]")
     end
 
     test "is hidden for users without the assistant permission", c do
@@ -114,14 +143,18 @@ defmodule BrandoAdmin.AssistantLiveTest do
       {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
       conn = log_in_user(build_conn(), editor)
 
-      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
-      await_selector(view, ".blocks-wrapper")
-      refute has_element?(view, ".block-field-assistant")
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.empty.id}")
+      await_selector(view, ".blocks-welcome")
+      refute has_element?(view, "[data-testid=build-with-ai]")
+      # Nor are they told where templates are added: they cannot add one.
+      refute has_element?(view, ".blocks-welcome-note")
 
       {:ok, assistants} = Groups.create(scope, %{name: "Assistant users"}, [Catalog.get(:use, :assistant).key])
       {:ok, :ok} = Groups.add_member(scope, assistants.id, editor.id)
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.empty.id}")
+      await_selector(view, ".blocks-welcome [data-testid=build-with-ai]")
       {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
-      await_selector(view, "[data-testid=build-with-ai]")
+      await_selector(view, ".block-field-assistant [data-testid=build-with-ai]")
     end
   end
 

@@ -54,7 +54,7 @@ test.describe('Block Copy/Paste', () => {
     // Add a Heading block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: 'HEADERS' }).click()
-    await page.getByRole('button', { name: 'Heading' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Heading' }).click()
     await syncLV(page)
 
     // Verify we have 1 block
@@ -98,7 +98,7 @@ test.describe('Block Copy/Paste', () => {
     // Add a Heading block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: 'HEADERS' }).click()
-    await page.getByRole('button', { name: 'Heading' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Heading' }).click()
     await syncLV(page)
 
     // Copy the block via dropdown
@@ -130,7 +130,7 @@ test.describe('Block Copy/Paste', () => {
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('navigation', { name: 'Module groups' })
       .getByRole('button', { name: 'MEDIA' }).click()
-    await page.getByRole('button', { name: 'Single Asset' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Single Asset' }).click()
     await syncLV(page)
 
     // Edit the var value
@@ -186,7 +186,7 @@ test.describe('Block Copy/Paste', () => {
     const container = page.locator('[data-block-type="container"]')
     await container.locator('.block-plus').first().click()
     await page.getByRole('button', { name: 'HEADERS' }).click()
-    await page.getByRole('button', { name: 'Heading' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Heading' }).click()
     await syncLV(page)
 
     // Verify 1 child block inside container
@@ -223,7 +223,7 @@ test.describe('Block Copy/Paste', () => {
     // Add a Heading block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: 'HEADERS' }).click()
-    await page.getByRole('button', { name: 'Heading' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Heading' }).click()
     await syncLV(page)
 
     // Copy and paste to get 2 blocks
@@ -320,7 +320,7 @@ test.describe('Block Copy/Paste', () => {
 
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: 'HEADERS' }).click()
-    await page.getByRole('button', { name: 'Heading' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Heading' }).click()
     await syncLV(page)
 
     await copyBlock(page.locator('.entry-block').first())
@@ -363,7 +363,7 @@ test.describe('Block Copy/Paste', () => {
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('navigation', { name: 'Module groups' })
       .getByRole('button', { name: 'MEDIA' }).click()
-    await page.getByRole('button', { name: 'Single Asset' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Single Asset' }).click()
     await syncLV(page)
 
     const sourceBlock = page.locator('.entry-block').first()

@@ -1425,4 +1425,89 @@ Code.require_file("block_slots_seeds.exs", __DIR__)
 }
 |> E2eProject.Repo.insert!()
 
+# What an empty block field offers to start with (Brando.Content.StartingModules,
+# tests/blocks/empty-block-field.spec.js). Six Norwegian cases: three start with
+# Heading, two with a Wide section holding Single Image with Caption, one with
+# Rich Text Article; Example module is used, but never first. Norwegian drafts,
+# so the English listings and the published-project datasources stay as they
+# are.
+starting_module = fn class ->
+  Brando.Content.Module
+  |> E2eProject.Repo.get_by!(class: class)
+  |> E2eProject.Repo.preload([:refs, :vars])
+end
+
+starting_heading = starting_module.("header")
+starting_image = starting_module.("single-image-caption")
+starting_text = starting_module.("rich-text-article")
+starting_example = starting_module.("example")
+
+wide_section =
+  %Brando.Content.Container{
+    name: "Wide section",
+    namespace: "sections",
+    code: "<section class=\"wide\">{{ content }}</section>",
+    sequence: 0
+  }
+  |> E2eProject.Repo.insert!()
+
+starting_block = fn module, sequence ->
+  %Brando.Content.Block{
+    type: :module,
+    uid: Brando.Utils.generate_uid(),
+    module_id: module.id,
+    source: E2eProject.Projects.Project.Blocks,
+    creator_id: user.id,
+    sequence: sequence,
+    # The module's refs, as a new block of it holds them.
+    refs:
+      Enum.map(module.refs, fn ref ->
+        %Brando.Content.Ref{
+          name: ref.name,
+          data: ref.data,
+          description: ref.description,
+          uid: Brando.Utils.generate_uid()
+        }
+      end),
+    vars: []
+  }
+end
+
+starting_section = fn module ->
+  %Brando.Content.Block{
+    type: :container,
+    uid: Brando.Utils.generate_uid(),
+    container_id: wide_section.id,
+    source: E2eProject.Projects.Project.Blocks,
+    creator_id: user.id,
+    sequence: 0,
+    children: [starting_block.(module, 0)]
+  }
+end
+
+for {roots, index} <-
+      Enum.with_index([
+        [starting_block.(starting_heading, 0), starting_block.(starting_text, 1)],
+        [starting_block.(starting_heading, 0), starting_block.(starting_text, 1)],
+        [starting_block.(starting_heading, 0), starting_block.(starting_example, 1)],
+        [starting_section.(starting_image), starting_block.(starting_text, 1)],
+        [starting_section.(starting_image)],
+        [starting_block.(starting_text, 0)]
+      ]) do
+  %E2eProject.Projects.Project{
+    title: "Norsk case #{index + 1}",
+    slug: "norsk-case-#{index + 1}",
+    status: :draft,
+    language: :no,
+    creator_id: user.id,
+    entry_blocks:
+      roots
+      |> Enum.with_index()
+      |> Enum.map(fn {block, sequence} ->
+        %E2eProject.Projects.Project.Blocks{block: block, sequence: sequence}
+      end)
+  }
+  |> E2eProject.Repo.insert!()
+end
+
 if Brando.Authorization.enabled?(), do: Brando.Authorization.Migration.run()
