@@ -19,6 +19,10 @@ defmodule Brando.EditSession.Data do
   * `marks` — `%{client => {rev, monotonic_ms}}`, one per save in flight.
   * `rev` — counts the ops applied to the field (and its rebases), so a
     replica can tell a gap from a duplicate.
+  * `seqs` — `%{client => seq}`, the last of each editor's own ops the
+    session has handled (applied or rejected). A replica that takes the
+    session's state wholesale (a rebase, a resync, a join) drops the pending
+    ops up to it: they are in that state already.
 
   `epoch` changes when the session process is replaced, which resets
   revision numbering.
@@ -44,26 +48,69 @@ defmodule Brando.EditSession.Data do
   @doc """
   Add an editor's view of `field`.
 
-  * An unknown field is seeded with what the editor holds: `base` is the rows
-    it loaded and `state` its current state (the same as `base` on a fresh
-    open, more than that when a replica re-seeds a replaced session).
+  `base` is the rows the editor loaded. `held` is what it shows, built on
+  `held_base` (the same rows, unless the editor had to read them again):
+  the same as `base` on a fresh open, more than that when a replica comes
+  back to a replaced session with unsaved work.
+
+  * An unknown field is seeded with what the editor holds.
   * A known field is joined when the editor loaded the same rows the session
-    is built on. Otherwise `{:mismatch, data}`: the editor's rows are older
-    or newer than the session's, and the caller decides (see
-    `Brando.EditSession.join/4`).
+    is built on. Work the editor holds is carried onto the session's state
+    (`{:merged, conflicts}`): a replica that comes back after a crash, after
+    a fresh joiner seeded the new session from the database, must not lose
+    what it had.
+  * Otherwise `:mismatch`: the editor's rows are older or newer than the
+    session's, and the caller decides (see `Brando.EditSession.join/4`).
   """
-  @spec join(t(), field(), Ops.t(), Ops.t()) :: {:seeded | :joined | :mismatch, t()}
-  def join(%__MODULE__{} = data, field, %Ops{} = base, %Ops{} = state) do
+  @spec join(t(), field(), Ops.t(), Ops.t(), Ops.t()) ::
+          {:seeded | :joined | {:merged, [String.t()]} | :mismatch, t()}
+  def join(%__MODULE__{} = data, field, %Ops{} = base, %Ops{} = held, held_base \\ nil) do
+    held_base = held_base || base
+
     case data.fields do
       %{^field => %{base: known}} ->
-        if Ops.signature(known) == Ops.signature(base), do: {:joined, data}, else: {:mismatch, data}
+        if Ops.signature(known) == Ops.signature(base),
+          do: merge_held(data, field, held, held_base),
+          else: {:mismatch, data}
 
       _ ->
+        state = if held_base == base, do: held, else: held |> Ops.carry(held_base, base) |> elem(0)
         {:seeded, put_field(data, field, new_field(base, state))}
     end
   end
 
-  defp new_field(base, state), do: %{base: base, state: state, rev: 0, log: [], marks: %{}}
+  @doc """
+  Carry the work an editor holds (`held`, built on `held_base`) onto the
+  session's state of a known field. Nothing to carry is `:joined`.
+  """
+  @spec merge_held(t(), field(), Ops.t(), Ops.t()) :: {:joined | {:merged, [String.t()]}, t()}
+  def merge_held(%__MODULE__{} = data, field, %Ops{} = held, %Ops{} = held_base) do
+    entry = Map.fetch!(data.fields, field)
+
+    if Ops.pristine?(held, held_base) do
+      {:joined, data}
+    else
+      {state, conflicts} = Ops.carry(held, held_base, entry.state)
+      {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: entry.rev + 1, log: []})}
+    end
+  end
+
+  defp new_field(base, state), do: %{base: base, state: state, rev: 0, log: [], marks: %{}, seqs: %{}}
+
+  @doc "The last of `client`'s ops the session has handled for `field` (0 for none)."
+  @spec seq(t(), field(), term()) :: non_neg_integer()
+  def seq(%__MODULE__{} = data, field, client) do
+    case data.fields do
+      %{^field => %{seqs: seqs}} -> Map.get(seqs, client, 0)
+      _ -> 0
+    end
+  end
+
+  @doc "Note that `client`'s op `seq` for `field` was handled, applied or not."
+  @spec note_seq(t(), field(), term(), non_neg_integer()) :: t()
+  def note_seq(%__MODULE__{} = data, field, client, seq) do
+    update_field(data, field, fn entry -> %{entry | seqs: Map.put(entry.seqs, client, seq)} end)
+  end
 
   @doc "The current state of `field`, or `nil`."
   @spec state(t(), field()) :: Ops.t() | nil
@@ -90,13 +137,18 @@ defmodule Brando.EditSession.Data do
   An op that raises is rejected as well: one malformed op must not take the
   session, and with it every editor's unsaved work, down.
   """
-  @spec apply_op(t(), field(), Ops.op()) :: {:ok, t()} | {:error, term()}
-  def apply_op(%__MODULE__{} = data, field, op) do
+  @spec apply_op(t(), field(), Ops.op(), {term(), non_neg_integer()} | nil) :: {:ok, t()} | {:error, term()}
+  def apply_op(%__MODULE__{} = data, field, op, origin \\ nil) do
     with %{} = entry <- Map.get(data.fields, field, {:error, {:unknown_field, field}}),
          {:ok, state} <- safe_apply(entry.state, op) do
       rev = entry.rev + 1
       log = if entry.marks == %{}, do: [], else: [{rev, op} | entry.log]
-      {:ok, put_field(data, field, %{entry | state: state, rev: rev, log: log})}
+      data = put_field(data, field, %{entry | state: state, rev: rev, log: log})
+
+      case origin do
+        {client, seq} -> {:ok, note_seq(data, field, client, seq)}
+        nil -> {:ok, data}
+      end
     end
   end
 
@@ -123,7 +175,20 @@ defmodule Brando.EditSession.Data do
   @spec drop_client(t(), term()) :: t()
   def drop_client(%__MODULE__{} = data, client) do
     Enum.reduce(Map.keys(data.fields), data, fn field, data ->
-      update_field(data, field, fn entry -> prune(%{entry | marks: Map.delete(entry.marks, client)}) end)
+      update_field(data, field, fn entry ->
+        prune(%{entry | marks: Map.delete(entry.marks, client), seqs: Map.delete(entry.seqs, client)})
+      end)
+    end)
+  end
+
+  @doc """
+  Forget saves that never rebased (failed, or abandoned), so their marks stop
+  pinning the log. The session calls this on a timer.
+  """
+  @spec expire(t(), integer()) :: t()
+  def expire(%__MODULE__{} = data, now) do
+    Enum.reduce(Map.keys(data.fields), data, fn field, data ->
+      update_field(data, field, fn entry -> prune(%{entry | marks: expire_marks(entry.marks, now)}) end)
     end)
   end
 
@@ -133,13 +198,15 @@ defmodule Brando.EditSession.Data do
   * `{:after, rev, client}` — `client` saved the state it read at `rev`. The
     ops after `rev` are replayed onto the saved rows; everything before is in
     them now.
+  * `{:client, client}` — the same, at the revision `client` marked when it
+    fetched the state to save (`mark_save/4`).
   * `:carry` — someone wrote the rows outside the session. All unsaved work
     is carried over with `Ops.carry/3`.
 
   The rebase counts as one revision. Returns the data and the blocks whose
   unsaved work could not be carried (`Ops.carry/3`).
   """
-  @spec rebase(t(), field(), Ops.t(), {:after, non_neg_integer(), term()} | :carry, integer()) ::
+  @spec rebase(t(), field(), Ops.t(), {:after, non_neg_integer(), term()} | {:client, term()} | :carry, integer()) ::
           {:ok, t(), [String.t()]} | {:error, term()}
   def rebase(%__MODULE__{} = data, field, %Ops{} = new_base, mode, now \\ 0) do
     case Map.get(data.fields, field) do
@@ -150,6 +217,13 @@ defmodule Brando.EditSession.Data do
         {state, conflicts, marks} = rebased_state(entry, new_base, mode, now)
         entry = prune(%{entry | base: new_base, state: state, marks: marks, rev: entry.rev + 1})
         {:ok, put_field(data, field, entry), conflicts}
+    end
+  end
+
+  defp rebased_state(entry, new_base, {:client, client}, now) do
+    case Map.get(entry.marks, client) do
+      {rev, _at} -> rebased_state(entry, new_base, {:after, rev, client}, now)
+      nil -> rebased_state(entry, new_base, {:after, nil, client}, now)
     end
   end
 
@@ -185,6 +259,11 @@ defmodule Brando.EditSession.Data do
       {:error, _} -> state
     end
   end
+
+  @mark_check_ms 30_000
+
+  @doc "How often the session expires marks of saves that never rebased."
+  def mark_check_ms, do: @mark_check_ms
 
   # Keep only the log the remaining saves need.
   defp prune(%{marks: marks} = entry) when marks == %{}, do: %{entry | log: []}

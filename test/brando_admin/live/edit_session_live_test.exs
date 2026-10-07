@@ -5,12 +5,12 @@ defmodule BrandoAdmin.EditSessionLiveTest do
   # without a reload.
   use Brando.LiveCase
 
+  import Brando.EditSessionEditors
+
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.InsertBlock
   alias Brando.EditSession
   alias Brando.Pages.Page
-
-  @text ["entry_block", "block", "refs", "0", "data", "data", "text"]
 
   setup %{current_user: user} do
     c = Brando.ProposalFixtures.context()
@@ -20,46 +20,12 @@ defmodule BrandoAdmin.EditSessionLiveTest do
     Map.merge(c, %{other_conn: other_conn, uids: uids, me: user})
   end
 
-  defp rows(page) do
-    Page
-    |> Repo.get!(page.id)
-    |> Repo.preload(Brando.Content.BlockPreloads.for_schema(Page), force: true)
-    |> Map.get(:entry_blocks)
-  end
-
   defp texts(page), do: Enum.map(rows(page), &hd(&1.block.refs).data.data.text)
 
   defp open(conn, page) do
     {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
     await_selector(view, "[data-block-uid]")
     view
-  end
-
-  # A keystroke in a block's text, as the browser sends it: the whole block
-  # form with the one value changed, targeted at it.
-  defp type(view, uid, text) do
-    selector = "#entry_block_form-#{uid}"
-
-    params =
-      view
-      |> render()
-      |> form_params(selector)
-      |> put_in(@text, text)
-      |> Map.put("_target", @text)
-
-    view |> element(selector) |> render_change(params)
-  end
-
-  defp shown_text(view, uid) do
-    view |> render() |> form_params("#entry_block_form-#{uid}") |> get_in(@text)
-  end
-
-  defp await(fun, tries \\ 100) do
-    cond do
-      fun.() -> :ok
-      tries == 0 -> flunk("condition never held")
-      true -> Process.sleep(20) && await(fun, tries - 1)
-    end
   end
 
   defp save(view) do

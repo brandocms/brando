@@ -65,6 +65,7 @@ defmodule Brando.EditSession do
   require Logger
 
   @registry Brando.EditSession.Registry
+  @written_key {__MODULE__, :written}
   @supervisor Brando.EditSession.Supervisor
 
   @type key :: {String.t() | nil, module(), term(), String.t() | nil}
@@ -112,13 +113,23 @@ defmodule Brando.EditSession do
   `state` what the caller holds now: the same on a fresh open, more when a
   replica re-seeds after the session died.
 
-  Returns `{:ok, info}` with `:session`, `:epoch`, `:rev`, `:state` and
-  `:seeded?`. When the caller's rows are not the ones the session is built
-  on, `{:error, :base_mismatch}`, unless `rebase: true` is given: then the
-  caller's freshly loaded rows are taken as written outside the session and
-  the unsaved work is carried onto them for everyone (see `rebase/4`).
+  Returns `{:ok, info}` with `:session`, `:epoch`, `:rev`, `:state`,
+  `:seq` (the last of the caller's ops the session handled) and `:seeded?`.
+  Work the caller holds beyond its rows is carried onto the session's state
+  (a replica coming back after a crash). When the caller's rows are not the
+  ones the session is built on, `{:error, :base_mismatch}`, unless
+  `rebase: true` is given: then the caller's freshly loaded rows are taken
+  as written outside the session and the unsaved work is carried onto them
+  for everyone (see `rebase/4`).
 
-  Options: `:user_id` (for the session's own bookkeeping) and `:rebase`.
+  Options:
+
+    * `:user_id` — for the session's own bookkeeping;
+    * `:rebase` — see above;
+    * `:held_base` — the rows `state` was built on, when the caller read its
+      rows again before joining;
+    * `:read_only` — the editor may look but not change the entry: the
+      session rejects its ops.
   """
   @spec join(ref(), term(), {Ops.t(), Ops.t()}, keyword()) :: {:ok, map()} | {:error, term()}
   def join(ref, field, {%Ops{} = base, %Ops{} = state}, opts \\ []) do
@@ -176,10 +187,13 @@ defmodule Brando.EditSession do
   Move `field` onto rows that were just written (`Ops.from_entry_blocks/1`
   of the reloaded entry) and broadcast the result to every replica.
 
-  `mode` is `{:after, rev}` when the caller saved the state it fetched at
-  `rev`, `:carry` when the rows were written outside the session.
+  `mode` is `:own_save` when the caller saved the state it fetched with
+  `purpose: :save` (only the ops after that are replayed), `{:after, rev}`
+  for a given revision, and `:carry` when the rows were written outside the
+  session.
   """
-  @spec rebase(pid(), term(), Ops.t(), {:after, non_neg_integer()} | :carry) :: {:ok, map()} | {:error, term()}
+  @spec rebase(pid(), term(), Ops.t(), :own_save | {:after, non_neg_integer()} | :carry) ::
+          {:ok, map()} | {:error, term()}
   def rebase(session, field, %Ops{} = base, mode) do
     GenServer.call(session, {:rebase, self(), field, base, mode})
   catch
@@ -200,22 +214,86 @@ defmodule Brando.EditSession do
   tenant prefix the entry belongs to.
   """
   @spec sync_saved(struct()) :: :ok
-  def sync_saved(%schema{} = entry) do
+  def sync_saved(%_{} = entry), do: rebase_all(entry, :carry)
+
+  @doc """
+  Note that `entry` was written outside the editor. Inside `collecting/1`
+  the entries are synced once the work succeeds (after its transaction has
+  committed); otherwise at once, with `sync_saved/1`.
+  """
+  @spec written(struct()) :: :ok
+  def written(%_{} = entry) do
+    case Process.get(@written_key) do
+      nil -> sync_saved(entry)
+      entries -> Process.put(@written_key, [entry | entries]) && :ok
+    end
+  end
+
+  @doc """
+  Run `fun`, which may write entries in a transaction and report them with
+  `written/1`. When it returns `{:ok, _}` or `:ok`, the open editors of those
+  entries move onto the new rows (`sync_saved/1`); on anything else the
+  writes were rolled back and nothing is synced.
+  """
+  @spec collecting((-> result)) :: result when result: var
+  def collecting(fun) when is_function(fun, 0) do
+    case Process.get(@written_key) do
+      nil ->
+        Process.put(@written_key, [])
+
+        try do
+          result = fun.()
+
+          if match?({:ok, _}, result) or result == :ok do
+            @written_key
+            |> Process.get()
+            |> Enum.reverse()
+            |> Enum.uniq_by(&{&1.__struct__, &1.id})
+            |> Enum.each(&sync_saved/1)
+          end
+
+          result
+        after
+          Process.delete(@written_key)
+        end
+
+      _nested ->
+        fun.()
+    end
+  end
+
+  @doc """
+  This process saved the entry from the state it fetched with `purpose:
+  :save`. The session moves onto the saved rows and keeps only the ops that
+  arrived after the save read the state. For a save that leaves the editor
+  (save and close, save and create new): the block fields that would
+  otherwise do it are going away.
+  """
+  @spec saved(struct()) :: :ok
+  def saved(%_{} = entry), do: rebase_all(entry, :own_save)
+
+  defp rebase_all(%schema{id: id} = entry, mode) do
     with pid when is_pid(pid) <- whereis(ref_for(entry)),
          true <- schema.has_trait(Brando.Trait.Blocks) do
-      entry = Brando.Repo.preload(entry, Brando.Content.BlockPreloads.for_schema(schema), force: true)
-
-      for %{name: field} <- schema.__blocks_fields__() do
-        base = entry |> Map.get(:"entry_#{field}") |> List.wrap() |> Ops.from_entry_blocks()
-        rebase(pid, field, base, :carry)
-      end
+      for {field, base} <- saved_bases(schema, id), do: rebase(pid, field, base, mode)
     end
 
     :ok
   rescue
     error ->
-      Logger.error("[EditSession] sync after an outside save failed: " <> Exception.message(error))
+      Logger.error("[EditSession] rebase after a save failed: " <> Exception.message(error))
       :ok
+  end
+
+  @doc "Each block field's rows as they are in the database, as `Ops` bases."
+  @spec saved_bases(module(), term()) :: [{atom(), Ops.t()}]
+  def saved_bases(schema, id) do
+    import Ecto.Query, only: [from: 2]
+
+    for {assoc, query} <- Brando.Content.BlockPreloads.for_schema(schema) do
+      field = assoc |> to_string() |> String.replace_prefix("entry_", "") |> String.to_existing_atom()
+      {field, Ops.from_entry_blocks(Brando.Repo.all(from(j in query, where: j.entry_id == ^id)))}
+    end
   end
 
   ## Server
@@ -227,6 +305,8 @@ defmodule Brando.EditSession do
   @impl true
   def init(%{key: {prefix, _schema, _id, _language} = key, topic: topic}) do
     if prefix, do: Tenant.put_prefix(prefix)
+
+    Process.send_after(self(), :expire_marks, Data.mark_check_ms())
 
     {:ok,
      %{
@@ -240,19 +320,32 @@ defmodule Brando.EditSession do
   end
 
   @impl true
-  def handle_call({:join, pid, field, base, state, opts}, _from, session) do
-    session = track(session, pid, field, opts[:user_id])
+  def handle_call({:join, pid, field, base, held, opts}, _from, session) do
+    session = track(session, pid, field, opts)
+    held_base = opts[:held_base] || base
 
-    case Data.join(session.data, field, base, state) do
+    case Data.join(session.data, field, base, held, held_base) do
       {result, data} when result in [:seeded, :joined] ->
-        {:reply, {:ok, info(%{session | data: data}, field, result == :seeded)}, %{session | data: data}}
+        session = %{session | data: data}
+        {:reply, {:ok, info(session, field, pid, result == :seeded)}, session}
+
+      {{:merged, conflicts}, data} ->
+        session = %{session | data: data}
+        broadcast_state(session, field, pid, :joined, conflicts)
+        {:reply, {:ok, info(session, field, pid, false)}, session}
 
       {:mismatch, data} ->
+        session = %{session | data: data}
+
         if opts[:rebase] do
-          session = do_rebase(%{session | data: data}, field, base, :carry, pid, :joined)
-          {:reply, {:ok, info(session, field, false)}, session}
+          session =
+            session
+            |> do_rebase(field, base, :carry, pid, :joined)
+            |> merge_held(field, held, held_base, pid)
+
+          {:reply, {:ok, info(session, field, pid, false)}, session}
         else
-          {:reply, {:error, :base_mismatch}, %{session | data: data}}
+          {:reply, {:error, :base_mismatch}, session}
         end
     end
   end
@@ -269,20 +362,31 @@ defmodule Brando.EditSession do
             else: session.data
 
         session = %{session | data: data}
-        {:reply, {:ok, info(session, field, false)}, session}
+        {:reply, {:ok, info(session, field, pid, false)}, session}
     end
   end
 
   def handle_call({:rebase, pid, field, base, mode}, _from, session) do
-    mode = if match?({:after, _}, mode), do: {:after, elem(mode, 1), pid}, else: mode
-    reason = if is_tuple(mode), do: :saved, else: :external
+    mode =
+      case mode do
+        :own_save -> {:client, pid}
+        {:after, rev} -> {:after, rev, pid}
+        :carry -> :carry
+      end
+
+    reason = if mode == :carry, do: :external, else: :saved
     session = do_rebase(session, field, base, mode, pid, reason)
-    {:reply, {:ok, info(session, field, false)}, session}
+    {:reply, {:ok, info(session, field, pid, false)}, session}
   end
 
   @impl true
   def handle_cast({:op, pid, field, op, seq}, session) do
-    case Data.apply_op(session.data, field, op) do
+    result =
+      if read_only?(session, pid),
+        do: {:error, :read_only},
+        else: Data.apply_op(session.data, field, op, {pid, seq})
+
+    case result do
       {:ok, data} ->
         session = %{session | data: data}
 
@@ -299,7 +403,7 @@ defmodule Brando.EditSession do
       {:error, reason} ->
         Logger.warning("[EditSession] rejected #{inspect(elem(op, 0))} for #{inspect(field)}: #{inspect(reason)}")
         send(pid, {:edit_session, field, %{kind: :rejected, epoch: session.data.epoch, seq: seq, reason: reason}})
-        {:noreply, session}
+        {:noreply, %{session | data: Data.note_seq(session.data, field, pid, seq)}}
     end
   end
 
@@ -331,6 +435,27 @@ defmodule Brando.EditSession do
 
   def handle_info({:stop_if_idle, _token}, session), do: {:noreply, session}
 
+  # A save that never rebased (it failed, or the editor went away mid-save)
+  # must not keep the op log growing.
+  def handle_info(:expire_marks, session) do
+    Process.send_after(self(), :expire_marks, Data.mark_check_ms())
+    {:noreply, %{session | data: Data.expire(session.data, now())}}
+  end
+
+  # A replica rejoining onto a session that moved on to other rows: what it
+  # holds is carried onto the session's state.
+  defp merge_held(session, field, held, held_base, pid) do
+    case Data.merge_held(session.data, field, held, held_base) do
+      {:joined, _data} ->
+        session
+
+      {{:merged, conflicts}, data} ->
+        session = %{session | data: data}
+        broadcast_state(session, field, pid, :joined, conflicts)
+        session
+    end
+  end
+
   defp do_rebase(session, field, base, mode, origin, reason) do
     {:ok, data, conflicts} = Data.rebase(session.data, field, base, mode, now())
     session = %{session | data: data}
@@ -339,40 +464,62 @@ defmodule Brando.EditSession do
       Logger.warning("[EditSession] unsaved work on #{inspect(conflicts)} could not be carried onto the new rows")
     end
 
+    broadcast_state(session, field, origin, reason, conflicts)
+    session
+  end
+
+  # The field's whole state, for every replica: after a rebase, or when a
+  # joiner carried work onto it. `seqs` tells each replica which of its
+  # pending ops the state already holds.
+  defp broadcast_state(session, field, origin, reason, conflicts) do
+    data = session.data
+    entry = Map.fetch!(data.fields, field)
+
     broadcast(session, field, %{
       kind: :rebase,
       epoch: data.epoch,
-      rev: Data.rev(data, field),
-      base: base,
-      state: Data.state(data, field),
+      rev: entry.rev,
+      base: entry.base,
+      state: entry.state,
+      seqs: entry.seqs,
       origin: origin,
       reason: reason,
       conflicts: conflicts
     })
-
-    session
   end
 
-  defp info(session, field, seeded?) do
+  defp info(session, field, pid, seeded?) do
     %{
       session: self(),
       epoch: session.data.epoch,
       rev: Data.rev(session.data, field),
       state: Data.state(session.data, field),
+      seq: Data.seq(session.data, field, pid),
       seeded?: seeded?
     }
   end
 
-  defp track(session, pid, field, user_id) do
+  defp read_only?(session, pid) do
+    match?(%{^pid => %{read_only: true}}, session.clients)
+  end
+
+  defp track(session, pid, field, opts) do
     session = cancel_stop(session)
+    read_only = Keyword.get(opts, :read_only, false)
 
     case session.clients do
       %{^pid => client} ->
-        put_in(session.clients[pid], %{client | fields: MapSet.put(client.fields, field)})
+        put_in(session.clients[pid], %{client | fields: MapSet.put(client.fields, field), read_only: read_only})
 
       _ ->
         ref = Process.monitor(pid)
-        put_in(session.clients[pid], %{ref: ref, user_id: user_id, fields: MapSet.new([field])})
+
+        put_in(session.clients[pid], %{
+          ref: ref,
+          user_id: opts[:user_id],
+          read_only: read_only,
+          fields: MapSet.new([field])
+        })
     end
   end
 

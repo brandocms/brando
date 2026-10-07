@@ -669,6 +669,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:deferred_roots, MapSet.new())
     |> assign(:remote_refresh, MapSet.new())
     |> assign(:remote_refresh_scheduled?, false)
+    |> assign(:remote_preview_dirty?, false)
     |> assign(:blocks_initialized, true)
     |> assign(:footnote_fields, assigns.opts[:footnote_fields] || %{})
     |> assign(:note_collection?, !!assigns.opts[:footnote_fields])
@@ -702,17 +703,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     ref = EditSession.ref_for(entry)
     subscribe_session(ref)
     base = Ops.from_entry_blocks(socket.assigns.entry_blocks || [])
+    # What this editor shows. On a fresh open that is the rows; a replica
+    # coming back to a replaced session holds unsaved work, which the
+    # session carries onto its state (a fresh joiner may have seeded it from
+    # the database first).
     held = Keyword.get(opts, :held, base)
+    join_opts = [user_id: user.id, read_only: not may_update?(socket)]
 
     {socket, result} =
-      case EditSession.join(ref, field, {base, held}, user_id: user.id, rebase: Keyword.get(opts, :rebase, false)) do
+      case EditSession.join(ref, field, {base, held}, [rebase: Keyword.get(opts, :rebase, false)] ++ join_opts) do
         {:error, :base_mismatch} ->
           # The rows this editor loaded are not the ones the session is built
           # on. Read them again: if they still differ, they are newer, written
-          # outside the session, and the session moves onto them.
+          # outside the session, and the session moves onto them, with what
+          # this editor holds carried over (it was built on the old rows).
           socket = reload_entry_blocks(socket)
-          base = Ops.from_entry_blocks(socket.assigns.entry_blocks)
-          {socket, EditSession.join(ref, field, {base, base}, user_id: user.id, rebase: true)}
+          new_base = Ops.from_entry_blocks(socket.assigns.entry_blocks)
+
+          {socket, EditSession.join(ref, field, {new_base, held}, [rebase: true, held_base: base] ++ join_opts)}
 
         result ->
           {socket, result}
@@ -736,26 +744,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # The LiveView receives the :DOWN; the hooks route it here by this key.
     Process.put({:brando_edit_session_monitor, monitor}, socket.assigns.id)
 
-    replica = Replica.new(ref, info, monitor)
-
-    # A replica that held unconfirmed ops when its session died casts them
-    # again, unless its own state is what seeded the new session.
-    {replica, socket} =
-      if info.seeded? do
-        {replica, socket}
-      else
-        opts
-        |> Keyword.get(:pending, [])
-        |> Enum.reduce({replica, socket}, fn {_seq, op}, {replica, socket} ->
-          {replica, seq} = Replica.local(replica, op)
-          EditSession.submit(info.session, socket.assigns.block_field, op, seq)
-          {replica, socket}
-        end)
-      end
+    # What this editor held, its unconfirmed ops included, went to the
+    # session with the join: nothing is cast again.
+    replica = %{Replica.new(ref, info, monitor) | read_only: not may_update?(socket)}
 
     socket
     |> assign(:edit_session, replica)
     |> show_state(Replica.displayed(replica), :all, mounted?: Keyword.get(opts, :mounted?, true))
+  end
+
+  defp may_update?(%{assigns: %{entry: entry, current_user: user}}) do
+    Brando.Authorization.Boundary.authorize(user, :update, entry) == :ok
+  rescue
+    _ -> false
   end
 
   # One subscription per LiveView process, however many block fields join.
@@ -781,6 +782,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
   end
 
+  # Someone who may not change the entry follows the others but sends nothing.
+  defp submit_to_session(%{assigns: %{edit_session: %Replica{read_only: true}}} = socket, _op), do: socket
+
   defp submit_to_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket, op) do
     {replica, seq} = Replica.local(replica, op)
     EditSession.submit(session, socket.assigns.block_field, op, seq)
@@ -798,7 +802,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
         |> assign(:edit_session, replica)
         |> show_state(displayed, hint_uids(message.op))
-        |> refresh_live_preview()
 
       :stale ->
         socket
@@ -810,10 +813,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp handle_session_message(%{assigns: %{edit_session: %Replica{} = replica}} = socket, %{kind: :rejected} = message) do
     case Replica.receive_rejected(replica, message) do
-      {replica, displayed} ->
+      {replica, displayed, op} ->
         socket
         |> assign(:edit_session, replica)
         |> show_state(displayed, :all)
+        |> report_rejection(op, message.reason)
 
       :stale ->
         socket
@@ -835,11 +839,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # then show the session's state on top of them.
   defp apply_rebase(socket, replica, message) do
     old_rows = rows_by_uid(socket.assigns.entry_blocks)
+    # Blocks this editor changed that the new rows no longer have: taken
+    # from what this editor showed, before it moves on, to bring them back.
+    rescued = rescue_conflicts(socket, replica, Map.get(message, :conflicts, []))
 
+    # The rows were written (by another editor's save, or outside the
+    # editor): read them, as their content can change while their ids and
+    # order stay. A join that only carried work onto the state wrote none.
     socket =
-      if Ops.signature(message.base) == Ops.signature(Ops.from_entry_blocks(socket.assigns.entry_blocks || [])),
-        do: socket,
-        else: reload_entry_blocks(socket)
+      if message.reason == :joined and
+           Ops.signature(message.base) == Ops.signature(Ops.from_entry_blocks(socket.assigns.entry_blocks || [])),
+         do: socket,
+         else: reload_entry_blocks(socket)
 
     new_rows = rows_by_uid(socket.assigns.entry_blocks)
     rewritten = for {uid, row} <- new_rows, Map.has_key?(old_rows, uid), old_rows[uid] != row, do: uid
@@ -850,25 +861,100 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:session_base, message.base)
     |> assign(:block_bin, [])
     |> show_state(displayed, :all, also: rewritten, base: message.base)
-    |> refresh_live_preview()
-    |> maybe_report_conflicts(message)
+    |> reinsert_rescued(rescued)
   end
 
   defp rows_by_uid(entry_blocks), do: Map.new(entry_blocks || [], &{&1.block.uid, &1})
 
-  defp maybe_report_conflicts(socket, %{conflicts: [_ | _], origin: origin}) when origin != self() do
+  # Unsaved work on a block that another save removed cannot be carried onto
+  # the new rows. The editors who did that work bring the block back as a
+  # new one, with their changes, so nothing they typed is lost. The removed
+  # rows may live on unattached, so the copy takes new uids, derived from the
+  # old ones: if two editors bring the same block back, the second insert is
+  # turned away and the first one stands.
+  defp rescue_conflicts(socket, %Replica{} = replica, conflicts) do
+    old = socket.assigns.block_ops
+
+    for uid <- conflicts,
+        Replica.touched?(replica, uid),
+        Ops.known?(old, uid),
+        params = rescued_params(socket, old, uid) do
+      {kept_uid(uid), params}
+    end
+  end
+
+  defp kept_uid(uid), do: uid <> "-kept"
+
+  defp rescued_params(socket, old, uid) do
+    params =
+      if uid in old.order do
+        socket |> materialized_form(old, uid) |> Map.fetch!(:source) |> Brando.Drafts.Params.snapshot()
+      else
+        {:ok, child} = build_child_changeset(socket, uid)
+        %{"block" => Brando.Drafts.Params.snapshot(child)}
+      end
+
+    params |> strip_row_ids() |> rename_uids()
+  rescue
+    error ->
+      Logger.error("BlockField could not keep a removed block's unsaved work: " <> Exception.message(error))
+      nil
+  end
+
+  # A block brought back as new owns none of the old rows.
+  @row_keys ~w(id entry_id block_id parent_id)
+  defp strip_row_ids(%{} = params) when not is_struct(params),
+    do: params |> Map.drop(@row_keys) |> Map.new(fn {key, value} -> {key, strip_row_ids(value)} end)
+
+  defp strip_row_ids(list) when is_list(list), do: Enum.map(list, &strip_row_ids/1)
+  defp strip_row_ids(value), do: value
+
+  defp rename_uids(%{} = params) when not is_struct(params) do
+    Map.new(params, fn
+      {"uid", uid} when is_binary(uid) -> {"uid", kept_uid(uid)}
+      {key, value} -> {key, rename_uids(value)}
+    end)
+  end
+
+  defp rename_uids(list) when is_list(list), do: Enum.map(list, &rename_uids/1)
+  defp rename_uids(value), do: value
+
+  defp reinsert_rescued(socket, []), do: socket
+
+  defp reinsert_rescued(socket, rescued) do
+    socket =
+      Enum.reduce(rescued, socket, fn {uid, params}, socket ->
+        form =
+          socket
+          |> materialize_base_struct(uid)
+          |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+          |> without_params()
+          |> to_form(as: "entry_block", id: "entry_block_form-#{uid}")
+
+        socket
+        |> put_seed_form(uid, form)
+        |> apply_block_op({:insert, uid, :end, params}, :replay)
+      end)
+
     send(
       self(),
       {:toast,
        gettext(
-         "A block with unsaved changes was removed by another save. Your changes to it are kept in your recovery copy."
+         "A block you had unsaved changes in was removed by another save. It is back at the end, as a new block, with your changes."
        )}
     )
 
     socket
   end
 
-  defp maybe_report_conflicts(socket, _message), do: socket
+  # An op turned away because another editor removed its block.
+  defp report_rejection(socket, op, {:unknown_uid, _uid})
+       when elem(op, 0) in [:update, :insert_child, :reorder_children] do
+    send(self(), {:toast, gettext("Another editor removed the block you were changing.")})
+    socket
+  end
+
+  defp report_rejection(socket, _op, _reason), do: socket
 
   # A revision went missing, or a broadcast op did not apply: take the
   # session's state as it is.
@@ -895,7 +981,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     socket
     |> assign(:edit_session, nil)
-    |> join_session(held: socket.assigns.block_ops, pending: replica.pending)
+    |> join_session(held: socket.assigns.block_ops)
   end
 
   defp rejoin_session(socket), do: socket
@@ -921,7 +1007,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # After a save: hand the session the saved rows. It replays the ops that
   # arrived while the save ran and tells the other replicas.
   defp rebase_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket, base) do
-    mode = if rev = socket.assigns[:save_rev], do: {:after, rev}, else: :carry
+    mode = if socket.assigns[:save_rev], do: :own_save, else: :carry
 
     case EditSession.rebase(session, socket.assigns.block_field, base, mode) do
       {:ok, info} ->
@@ -982,7 +1068,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:blocks_changed?, not Ops.pristine?(new, base))
 
       if Keyword.get(opts, :mounted?, true) do
-        queue_refresh(socket, changed)
+        socket |> assign(:remote_preview_dirty?, true) |> queue_refresh(changed)
       else
         Enum.reduce(changed, socket, &put_seed_form(&2, &1, materialized_form(&2, new, &1)))
       end
@@ -1001,8 +1087,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # Roots changed by other editors are refreshed together, a moment after
   # the first change, and a root this editor works in waits until they leave
   # it: its form is theirs while they type.
-  defp queue_refresh(socket, []), do: socket
-
   defp queue_refresh(socket, roots) do
     socket = update(socket, :remote_refresh, &MapSet.union(&1, MapSet.new(roots)))
 
@@ -1023,7 +1107,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:remote_refresh, MapSet.new())
     |> update(:deferred_roots, &MapSet.union(&1, MapSet.new(deferred)))
     |> refresh_roots(now)
+    |> refresh_preview_after_remote()
   end
+
+  # Other editors' changes reach the live preview once per flush, and only
+  # while it is open.
+  defp refresh_preview_after_remote(%{assigns: %{remote_preview_dirty?: true}} = socket) do
+    socket = assign(socket, :remote_preview_dirty?, false)
+    if socket.assigns.live_preview_active?, do: refresh_live_preview(socket), else: socket
+  end
+
+  defp refresh_preview_after_remote(socket), do: socket
 
   defp refresh_roots(socket, roots) do
     roots
@@ -1100,25 +1194,66 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         next
       end)
 
+    saved = Map.new(originals, &{&1.block.uid, &1})
+
     ops =
       Enum.reduce(forms, ops, fn {uid, form}, acc ->
         params = Brando.Drafts.Params.snapshot(form.source)
-        op = if Ops.known?(acc, uid), do: {:update, uid, params}, else: {:insert, uid, :end, params}
-        {:ok, next} = Ops.apply_op(acc, op)
-        next
+
+        cond do
+          # A block the copy holds as it is saved is no change: in a shared
+          # session it must not overwrite what others did to it.
+          unchanged?(saved[uid], params, socket) -> acc
+          Ops.known?(acc, uid) -> next!(acc, {:update, uid, params})
+          true -> next!(acc, {:insert, uid, :end, params})
+        end
       end)
 
     {:ok, ops} = Ops.apply_op(ops, {:reorder, wanted})
 
-    for {uid, form} <- forms, uid in socket.assigns.root_order do
-      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+    case socket.assigns[:edit_session] do
+      %Replica{} ->
+        # Others share this field: the copy's changes are carried onto what
+        # the session holds (`{:carry, ...}`), so their unsaved work stays —
+        # and with it the recovery copies their next capture writes.
+        restore_into_session(socket, ops, Ops.from_entry_blocks(originals))
+
+      _ ->
+        for {uid, form} <- forms, uid in socket.assigns.root_order do
+          send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+        end
+
+        socket
+        |> assign(:entry_blocks, originals)
+        |> assign(:seed_forms, Map.new(forms))
+        |> apply_block_op({:replace_state, ops}, :replay)
+        |> assign(:block_bin, [])
     end
+  end
+
+  defp next!(ops, op) do
+    {:ok, next} = Ops.apply_op(ops, op)
+    next
+  end
+
+  defp unchanged?(nil, _params, _socket), do: false
+
+  defp unchanged?(row, params, socket) do
+    saved = to_change_form(socket.assigns.block_module, row, %{}, socket.assigns.current_user.id)
+    Brando.Drafts.Params.snapshot(saved.source) == params
+  end
+
+  defp restore_into_session(socket, ops, base) do
+    op = {:carry, ops, base}
+    {:ok, restored} = Ops.apply_op(socket.assigns.block_ops, op)
 
     socket
-    |> assign(:entry_blocks, originals)
-    |> assign(:seed_forms, Map.new(forms))
-    |> apply_block_op({:replace_state, ops}, :replay)
+    |> show_state(restored, :all)
+    |> refresh_roots(restored.order -- (restored.order -- socket.assigns.root_order))
+    |> submit_to_session(op)
     |> assign(:block_bin, [])
+    |> assign(:blocks_changed?, true)
+    |> tap(fn socket -> send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty") end)
   end
 
   defp joined_with_work?(%{assigns: %{edit_session: %Replica{}}} = socket),
@@ -1226,11 +1361,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # The mounted root takes its new form through `replace_form`. Its seed
+  # is only read when it mounts again, and writing `@seed_forms` would
+  # re-render every root's shell (AGENTS.md: derived assigns) — so it is left
+  # alone, except in frontend edit mode, where a root mounts again whenever
+  # the selection moves to it.
   defp replace_root_from_store(socket, root_uid) do
     form = materialized_form(socket, socket.assigns.block_ops, root_uid)
 
     send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: form, remount_js: true)
-    put_seed_form(socket, root_uid, form)
+    if socket.assigns.focus, do: put_seed_form(socket, root_uid, form), else: socket
   end
 
   # The op chokepoint for this editor's own mutations (structural or

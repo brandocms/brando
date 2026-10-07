@@ -492,9 +492,6 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
            socket.assigns.current_user
          ) do
       {:ok, new_entry} ->
-        # The others editing the entry move onto the activated revision too.
-        Brando.EditSession.sync_saved(new_entry)
-
         send_update(BrandoAdmin.Components.Form,
           id: socket.assigns.form_id,
           action: :update_entry_hard_reset,

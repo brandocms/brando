@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
+  alias Brando.EditSession
   alias Brando.Images
   alias Brando.LivePreview
   alias Brando.Villain
@@ -822,6 +823,10 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry} = message, socket) do
     send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], 1000)
     send(self(), {:progress_popup, "Setting new block map..."})
+
+    # The block fields are mounted again from `updated_entry`. A previewed
+    # revision stays out of the entry's edit session until it is saved.
+    if Map.get(message, :detached, false), do: leave_edit_session(socket)
 
     socket
     |> assign(:blocks_detached?, Map.get(message, :detached, false))
@@ -4916,6 +4921,12 @@ defmodule BrandoAdmin.Components.Form do
   defp redirect_after_save_with_blocks(socket, entry, stale?, save) do
     %{schema: schema, mutation_type: mutation_type} = save
 
+    # Leaving the editor: the block fields that would hand the saved rows to
+    # the edit session are going away, so the form does it. Without it the
+    # others' sessions keep this save's new blocks as unsaved, and their next
+    # save inserts them again.
+    if save.save_redirect_target in [:listing, :new], do: EditSession.saved(entry)
+
     maybe_redirected_socket =
       case save.save_redirect_target do
         :self ->
@@ -4982,6 +4993,14 @@ defmodule BrandoAdmin.Components.Form do
     |> refresh_translation(stale?)
   end
 
+  defp leave_edit_session(%{assigns: %{entry: %{id: id} = entry, form_blueprint: blueprint}}) when not is_nil(id) do
+    if session = EditSession.whereis(EditSession.ref_for(entry)) do
+      for %{name: field} <- blueprint.blocks, do: EditSession.leave(session, field)
+    end
+  end
+
+  defp leave_edit_session(_socket), do: :ok
+
   defp maybe_refresh_revisions(socket, schema) do
     if schema.has_trait(Brando.Trait.Revisioned) do
       id = "#{socket.assigns.id}-revisions-drawer"
@@ -5008,10 +5027,16 @@ defmodule BrandoAdmin.Components.Form do
     if FrontendEditor.frontend?(socket),
       do: FrontendEditor.save_failed(socket, {:invalid, changeset |> traverse_errors(& &1) |> Map.keys()})
 
+    # The next save reads the blocks again rather than writing the ones this
+    # save collected: another editor's save may have written some of them
+    # since (a retry after two overlapping saves).
     {:noreply,
      socket
      |> assign(:processing, false)
      |> assign(:minor_save?, false)
+     |> assign(:all_blocks_received?, false)
+     |> clear_blocks_root_changesets()
+     |> reset_transformer_changesets()
      |> put_form(to_form(changeset, []))
      |> push_errors(changeset, save.form_blueprint, save.schema)}
   end

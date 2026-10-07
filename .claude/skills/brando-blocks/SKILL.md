@@ -597,9 +597,19 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   read `EditSession.fetch/3`; after a save the BlockField hands the saved rows to
   `EditSession.rebase/4`, which replays only the ops that arrived during the save and moves
   every replica onto the new rows. Writes outside the editor (Assistant apply, revision
-  activation) call `EditSession.sync_saved/1` (`Ops.carry/3`). If the session dies, each
-  replica re-seeds a new one from its own state (`:DOWN` → `rejoin_session/1`). Ops must
-  stay pure: the session and every replica must reach the same state from the same ops.
+  activation in `Revisions.set_entry_to_revision`, content transfer) call
+  `EditSession.sync_saved/1` (`Ops.carry/3`); a write inside a transaction goes through
+  `EditSession.collecting/1` + `written/1` so the sync runs after commit. If the session
+  dies, each replica rejoins with what it holds and the session CARRIES that onto its
+  state (`Data.join/5` → `{:merged, conflicts}`) — never resend only pending ops. The
+  session tracks the last op seq it handled per client and returns it with every
+  state/rebase, so `Replica.reset/2` drops pending ops it already folded in. A carry
+  conflict (another save removed a block this editor had unsaved work in) comes back to
+  that editor as a new block (`<uid>-kept`) with a toast — keep conflicts explicit, never
+  drop work silently. Applying a recovery copy is a `{:carry, ops, base}` op over the
+  session state, not a state replacement. Editors without `:update` on the entry join
+  read-only (the session refuses their ops). Ops must stay pure: the session and every
+  replica must reach the same state from the same ops.
 - **Delete undo is store replay**: local deletes stash `Ops.bin_snapshot/2` (structure +
   diffs + statuses + db ids + location) BEFORE the delete op; undo replays it as a
   `{:restore, snapshot}` op — restored roots mount fresh from a re-materialized seed form,

@@ -18107,5 +18107,10 @@ msgstr[1] "Søkeindeksen er bygget på nytt: %{count} oppføringer."
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "A block with unsaved changes was removed by another save. Your changes to it are kept in your recovery copy."
-msgstr "En blokk med ulagrede endringer ble fjernet av en annen lagring. Endringene dine i den ligger i gjenopprettingskopien din."
+msgid "A block you had unsaved changes in was removed by another save. It is back at the end, as a new block, with your changes."
+msgstr "En blokk du hadde ulagrede endringer i, ble fjernet av en annen lagring. Den er lagt tilbake nederst, som en ny blokk, med endringene dine."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor removed the block you were changing."
+msgstr "En annen redaktør fjernet blokken du endret."

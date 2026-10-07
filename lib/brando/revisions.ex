@@ -351,6 +351,9 @@ defmodule Brando.Revisions do
         Cache.Query.evict({:ok, entry})
         Brando.MarkdownSources.Publication.entry_saved(entry, user)
         broadcast_restored(entry_schema, entry)
+        # Whoever has the entry open moves onto the restored rows, keeping
+        # their unsaved work: the revisions drawer, a scheduled activation.
+        Brando.EditSession.sync_saved(entry)
         {:ok, entry}
 
       {:error, reason} ->

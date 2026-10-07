@@ -18112,5 +18112,10 @@ msgstr[1] ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "A block with unsaved changes was removed by another save. Your changes to it are kept in your recovery copy."
+msgid "A block you had unsaved changes in was removed by another save. It is back at the end, as a new block, with your changes."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor removed the block you were changing."
 msgstr ""

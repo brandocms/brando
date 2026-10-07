@@ -59,7 +59,7 @@ defmodule Brando.EditSessionTest do
         editor_loop(replica, test)
 
       {:edit_session, @field, %{kind: :rejected} = message} ->
-        {replica, _} = Replica.receive_rejected(replica, message)
+        {replica, _, _op} = Replica.receive_rejected(replica, message)
         editor_loop(replica, test)
 
       {:state, from} ->
@@ -330,6 +330,161 @@ defmodule Brando.EditSessionTest do
       {state, _} = session_state(ref)
       assert state.diffs["a"] == %{"block" => %{"anchor" => "before the crash"}}
       assert state.diffs["b"] == %{"block" => %{"anchor" => "recast"}}
+    end
+  end
+
+  describe "found in review" do
+    defp anchor(uid, value), do: {:update, uid, %{"block" => %{"anchor" => value}}}
+
+    # R1: the session applied A's op and then a save's rebase; A takes the
+    # rebase reply before its own op's broadcast. Replaying the op over the
+    # rebased state put A's old value back over a later one.
+    test "a reset drops the pending ops the session's state already holds" do
+      base = rows()
+      {:ok, with_a} = Ops.apply_op(base, anchor("b", "A typed"))
+      replica = Replica.new(nil, %{session: nil, epoch: 1, rev: 0, state: base}, nil)
+      {replica, 1} = Replica.local(replica, anchor("b", "A typed"))
+
+      {replica, _} = Replica.reset(replica, %{epoch: 1, rev: 2, state: with_a, seq: 1})
+      assert replica.pending == []
+      assert :stale == Replica.receive_op(replica, %{epoch: 1, rev: 1, op: anchor("b", "A typed"), origin: {self(), 1}})
+
+      {:remote, _replica, shown} =
+        Replica.receive_op(replica, %{epoch: 1, rev: 3, op: anchor("b", "B typed later"), origin: {:other, 1}})
+
+      assert shown.diffs["b"]["block"]["anchor"] == "B typed later"
+
+      # A broadcast rebase names the handled op by this process
+      replica = Replica.new(nil, %{session: nil, epoch: 1, rev: 0, state: base}, nil)
+      {replica, 1} = Replica.local(replica, anchor("b", "A typed"))
+      {replica, 2} = Replica.local(replica, anchor("a", "not yet"))
+      {replica, _} = Replica.reset(replica, %{epoch: 1, rev: 2, state: with_a, seqs: %{self() => 1}})
+      assert [{2, _}] = replica.pending
+    end
+
+    test "the session tells a replica which of its ops it has handled" do
+      ref = new_ref()
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      EditSession.submit(info.session, @field, anchor("b", "one"), 1)
+      EditSession.submit(info.session, @field, {:delete, "ghost"}, 2)
+      assert {:ok, %{seq: 2}} = EditSession.fetch(info.session, @field)
+    end
+
+    # R2: after a crash, a fresh editor reached the new session first and
+    # seeded it from the database; A's confirmed but unsaved work was lost.
+    test "a replica coming back after a crash carries its work onto a session a fresh joiner seeded" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      base = rows()
+      {:ok, info} = EditSession.join(ref, @field, {base, base})
+      EditSession.submit(info.session, @field, anchor("b", "unsaved by A"), 1)
+      assert_receive {:edit_session, @field, %{kind: :op, rev: 1}}
+      {:ok, held} = Ops.apply_op(base, anchor("b", "unsaved by A"))
+
+      monitor = Process.monitor(info.session)
+      Process.exit(info.session, :kill)
+      assert_receive {:DOWN, ^monitor, _, _, _}
+      wait_until(fn -> EditSession.whereis(ref) == nil end)
+
+      fresh = Task.async(fn -> EditSession.join(ref, @field, {base, base}) end)
+      assert {:ok, %{seeded?: true}} = Task.await(fresh)
+
+      assert {:ok, back} = EditSession.join(ref, @field, {base, held})
+      refute back.seeded?
+      assert back.state.diffs["b"]["block"]["anchor"] == "unsaved by A"
+      # and the others hear about it
+      assert_receive {:edit_session, @field, %{kind: :rebase, reason: :joined, state: state}}
+      assert state.diffs["b"]["block"]["anchor"] == "unsaved by A"
+    end
+
+    test "a replica whose rows changed under it carries its work onto the newer rows" do
+      ref = new_ref()
+      base = rows()
+      {:ok, _} = EditSession.join(ref, @field, {base, base})
+
+      newer =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11)]),
+          entry_block("b", 2, 20),
+          entry_block("c", 3, 30)
+        ])
+
+      {:ok, held} = Ops.apply_op(base, anchor("a", "held"))
+
+      assert {:ok, info} = EditSession.join(ref, @field, {newer, held}, rebase: true, held_base: base)
+      assert info.state.order == ["a", "b", "c"]
+      assert info.state.diffs["a"]["block"]["anchor"] == "held"
+    end
+
+    # R3: an unsaved move of a persisted child to another parent was dropped
+    # without a word when someone else wrote the entry.
+    test "carry keeps a child moved to another parent, and reports a move it cannot make" do
+      old =
+        Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11)]), entry_block("b", 2, 20, [child("b1", 21)])])
+
+      {:ok, moved} = Ops.apply_op(old, {:move_to_parent, "a1", "b", :end})
+
+      assert {carried, []} = Ops.carry(moved, old, old)
+      assert carried.child_order["b"] == ["b1", "a1"]
+      assert carried.child_order["a"] == []
+
+      # the new parent is gone in the new rows
+      without_b = Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11)])])
+      assert {_carried, ["a1"]} = Ops.carry(moved, old, without_b)
+    end
+
+    test "a read-only editor follows the others but its ops are turned away" do
+      ref = new_ref()
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()}, read_only: true)
+      EditSession.submit(info.session, @field, anchor("b", "not allowed"), 1)
+      assert_receive {:edit_session, @field, %{kind: :rejected, reason: :read_only}}
+      assert {_state, 0} = session_state(ref)
+    end
+
+    test "a save that never rebases stops keeping the op log" do
+      data = Data.new(1)
+      {:seeded, data} = Data.join(data, @field, rows(), rows())
+      data = Data.mark_save(data, @field, :client, 0)
+      {:ok, data} = Data.apply_op(data, @field, anchor("b", "x"))
+      assert [_] = data.fields[@field].log
+
+      data = Data.expire(data, 10 * 60_000)
+      assert data.fields[@field].marks == %{}
+      assert data.fields[@field].log == []
+    end
+
+    test "a save's rebase finds the revision it read by the saving process" do
+      data = Data.new(1)
+      {:seeded, data} = Data.join(data, @field, rows(), rows())
+      {:ok, data} = Data.apply_op(data, @field, {:insert, "saved", :end, %{}})
+      data = Data.mark_save(data, @field, :saver, 0)
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "after the read"))
+
+      saved_rows =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11)]),
+          entry_block("b", 2, 20),
+          entry_block("saved", 9, 90)
+        ])
+
+      {:ok, data, []} = Data.rebase(data, @field, saved_rows, {:client, :saver})
+      state = Data.state(data, @field)
+      assert state.statuses["saved"] == :persisted
+      assert state.diffs["a"]["block"]["anchor"] == "after the read"
+    end
+
+    test "writes collected in a transaction reach the session only when it succeeds" do
+      page = %Brando.Pages.Page{id: System.unique_integer([:positive]), language: "en"}
+
+      assert {:error, :rolled_back} =
+               EditSession.collecting(fn ->
+                 EditSession.written(page)
+                 assert Process.get({EditSession, :written}) == [page]
+                 {:error, :rolled_back}
+               end)
+
+      assert Process.get({EditSession, :written}) == nil
+      assert {:ok, :done} = EditSession.collecting(fn -> {:ok, :done} end)
     end
   end
 

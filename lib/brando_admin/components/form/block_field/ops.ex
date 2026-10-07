@@ -59,6 +59,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             diffs: %{},
             statuses: %{},
             db_ids: %{},
+            rel_ids: %{},
             deleted: []
 
   @type uid :: String.t()
@@ -72,6 +73,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           diffs: %{optional(uid()) => params()},
           statuses: %{optional(uid()) => status()},
           db_ids: %{optional(uid()) => {entry_block_id :: term() | nil, block_id :: term() | nil}},
+          rel_ids: %{optional(uid()) => %{optional({String.t(), String.t()}) => term()}},
           deleted: [uid()]
         }
 
@@ -87,6 +89,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           | {:delete, uid()}
           | {:restore, map()}
           | {:replace_state, t()}
+          | {:carry, t(), t()}
 
   @doc """
   Build a fresh state from root-block uids (no nesting, no db ids).
@@ -123,7 +126,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         state
         | order: state.order ++ [uid],
           statuses: Map.put(state.statuses, uid, :persisted),
-          db_ids: Map.put(state.db_ids, uid, {entry_block.id, entry_block.block.id})
+          db_ids: Map.put(state.db_ids, uid, {entry_block.id, entry_block.block.id}),
+          rel_ids: put_rel_ids(state.rel_ids, entry_block.block)
       }
 
       register_persisted_children(state, entry_block.block)
@@ -137,7 +141,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         | parents: Map.put(state.parents, child.uid, parent_uid),
           child_order: Map.update(state.child_order, parent_uid, [child.uid], &(&1 ++ [child.uid])),
           statuses: Map.put(state.statuses, child.uid, :persisted),
-          db_ids: Map.put(state.db_ids, child.uid, {nil, child.id})
+          db_ids: Map.put(state.db_ids, child.uid, {nil, child.id}),
+          rel_ids: put_rel_ids(state.rel_ids, child)
       }
 
       register_persisted_children(state, child)
@@ -145,6 +150,50 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   defp register_persisted_children(state, _block_without_loaded_children), do: state
+
+  # The ids of a block's rows, by what names them without an id: a ref by its
+  # uid, a var by its key, a table row by its sync uid. A diff taken while
+  # the block was new names its rows that way, and keeps naming them so when
+  # it is replayed after a save gave them ids (`fill_rel_ids/2`).
+  @rel_identities [{"refs", :uid}, {"vars", :key}, {"table_rows", :sync_uid}]
+
+  defp put_rel_ids(rel_ids, %{uid: uid} = block) do
+    ids =
+      for {key, field} <- @rel_identities,
+          rows = Map.get(block, String.to_existing_atom(key)),
+          is_list(rows),
+          %{id: id} = row when not is_nil(id) <- rows,
+          identity = Map.get(row, field),
+          identity not in [nil, ""],
+          into: %{},
+          do: {{key, to_string(identity)}, id}
+
+    if ids == %{}, do: rel_ids, else: Map.put(rel_ids, uid, ids)
+  end
+
+  defp fill_rel_ids(block_params, nil), do: block_params
+
+  defp fill_rel_ids(block_params, ids) do
+    Enum.reduce(@rel_identities, block_params, fn {key, field}, params ->
+      case params do
+        %{^key => rows} when is_list(rows) -> Map.put(params, key, Enum.map(rows, &fill_rel_id(&1, key, field, ids)))
+        _ -> params
+      end
+    end)
+  end
+
+  defp fill_rel_id(%{} = row, key, field, ids) do
+    with id when id in [nil, ""] <- Map.get(row, "id"),
+         identity when identity not in [nil, ""] <- Map.get(row, to_string(field)),
+         %{} <- row,
+         rel_id when not is_nil(rel_id) <- Map.get(ids, {key, to_string(identity)}) do
+      Map.put(row, "id", rel_id)
+    else
+      _ -> row
+    end
+  end
+
+  defp fill_rel_id(row, _key, _field, _ids), do: row
 
   @doc """
   Apply a named operation, returning `{:ok, state}` or `{:error, reason}`.
@@ -305,6 +354,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   # Applying a recovery copy replaces the field's whole state in one step.
   def apply_op(%__MODULE__{}, {:replace_state, %__MODULE__{} = state}), do: {:ok, state}
+
+  # A recovery copy (or any state built on `base`) applied to a field others
+  # share: its changes are carried onto what the field holds now, so their
+  # unsaved work stays (`carry/3`).
+  def apply_op(%__MODULE__{} = state, {:carry, %__MODULE__{} = carried, %__MODULE__{} = base}) do
+    {state, _conflicts} = carry(carried, base, state)
+    {:ok, state}
+  end
 
   def apply_op(%__MODULE__{}, op), do: {:error, {:unknown_op, op}}
 
@@ -537,6 +594,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> Map.drop(["sequence", "rendered_html", "rendered_at"])
     |> put_children(children)
     |> put_new_id(block_id)
+    |> fill_rel_ids(Map.get(state.rel_ids, uid))
   end
 
   # ALWAYS emit "children" — the tree is authoritative, including emptiness
@@ -546,8 +604,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # under the old one. An empty list over loaded-empty data is a no-op cast.
   defp put_children(params, children), do: Map.put(params, "children", children)
 
+  # A diff can carry `"id" => nil` (the snapshot of a block that was new when
+  # it was taken, replayed after a save gave it a row): the row's id wins.
   defp put_new_id(params, nil), do: params
-  defp put_new_id(params, id), do: Map.put_new(params, "id", id)
+
+  defp put_new_id(params, id) do
+    case params do
+      %{"id" => existing} when existing not in [nil, ""] -> params
+      _ -> Map.put(params, "id", id)
+    end
+  end
 
   @doc """
   Convert a changeset's changes into a string-keyed params map, recursively.
@@ -742,9 +808,30 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       |> Enum.sort_by(fn {uid, _} -> depth(state, uid) end)
       |> Enum.reduce(acc, &carry_update(&1, &2, state))
 
+    acc = state |> moved_children(old_base) |> Enum.reduce(acc, &carry_move(&1, &2, state))
+
     {carried, conflicts} = acc
     carried = carry_order(carried, state, old_base, new_base)
     {carried, Enum.reverse(conflicts)}
+  end
+
+  # Persisted blocks the editors moved to another parent.
+  defp moved_children(state, old_base) do
+    state.parents
+    |> Enum.filter(fn {uid, parent} ->
+      state.statuses[uid] == :persisted and Map.has_key?(old_base.statuses, uid) and old_base.parents[uid] != parent
+    end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sort_by(&depth(state, &1))
+  end
+
+  defp carry_move(uid, {acc, conflicts}, state) do
+    parent = state.parents[uid]
+
+    case known?(acc, uid) and known?(acc, parent) and apply_op(acc, {:move_to_parent, uid, parent, :end}) do
+      {:ok, acc} -> {acc, conflicts}
+      _ -> {acc, [uid | conflicts]}
+    end
   end
 
   defp carry_delete(uid, {acc, conflicts}) do

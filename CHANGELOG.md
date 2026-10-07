@@ -748,8 +748,12 @@ production dump.
   needing a reload, and their unsaved work is kept. The session stops 30
   seconds after its last editor leaves (`config :brando, Brando.EditSession,
   grace_period: …`). If it crashes, the editors seed a new one from what
-  they hold. Two people editing the same block still resolve as "last change
-  wins" for now.
+  they hold, and everyone's unsaved work is merged into it. Applying a
+  recovery copy keeps other editors' unsaved work. If another save removes a
+  block you have unsaved changes in, it comes back at the end as a new block
+  with your changes, and you are told. People who may view but not update
+  the entry follow along without sending changes. Two people editing the
+  same block still resolve as "last change wins" for now.
 
 - **Notes on entries.** Editors can leave each other notes in the entry
   editor, in a panel docked beside the content: on the entry, a block (the

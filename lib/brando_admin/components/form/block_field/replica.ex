@@ -22,7 +22,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
 
   require Logger
 
-  defstruct session: nil, monitor: nil, ref: nil, epoch: nil, rev: 0, seq: 0, confirmed: nil, pending: []
+  defstruct session: nil,
+            monitor: nil,
+            ref: nil,
+            epoch: nil,
+            rev: 0,
+            seq: 0,
+            confirmed: nil,
+            pending: [],
+            touched: MapSet.new(),
+            read_only: false
 
   @type t :: %__MODULE__{
           session: pid() | nil,
@@ -32,7 +41,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
           rev: non_neg_integer(),
           seq: non_neg_integer(),
           confirmed: Ops.t() | nil,
-          pending: [{non_neg_integer(), Ops.op()}]
+          pending: [{non_neg_integer(), Ops.op()}],
+          touched: MapSet.t(),
+          read_only: boolean()
         }
 
   @doc "A replica of a session that answered a join with `info`."
@@ -62,8 +73,22 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
   @spec local(t(), Ops.op()) :: {t(), non_neg_integer()}
   def local(%__MODULE__{} = replica, op) do
     seq = replica.seq + 1
-    {%{replica | seq: seq, pending: replica.pending ++ [{seq, op}]}, seq}
+    touched = op |> op_uids() |> Enum.reduce(replica.touched, &MapSet.put(&2, &1))
+    {%{replica | seq: seq, pending: replica.pending ++ [{seq, op}], touched: touched}, seq}
   end
+
+  # The blocks an op changes, to know later whose work a lost block held.
+  defp op_uids({kind, uid, _}) when kind in [:update, :move], do: [uid]
+  defp op_uids({:insert, uid, _at, _params}), do: [uid]
+  defp op_uids({:insert_child, parent, uid, _at, _params}), do: [parent, uid]
+  defp op_uids({:move_to_parent, uid, parent, _at}), do: [uid, parent]
+  defp op_uids({:remap_slot, uid, _destination, _params}), do: [uid]
+  defp op_uids({:reorder_children, parent, _uids}), do: [parent]
+  defp op_uids(_op), do: []
+
+  @doc "Whether this editor changed the block `uid` (as far as this replica knows)."
+  @spec touched?(t(), String.t()) :: boolean()
+  def touched?(%__MODULE__{touched: touched}, uid), do: MapSet.member?(touched, uid)
 
   @doc """
   An op broadcast by the session.
@@ -117,31 +142,51 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
   The session rejected one of this editor's ops. It leaves pending, and what
   the editor shows goes back to what the session holds.
   """
-  @spec receive_rejected(t(), map()) :: {t(), Ops.t()} | :stale
+  @spec receive_rejected(t(), map()) :: {t(), Ops.t(), Ops.op() | nil} | :stale
   def receive_rejected(%__MODULE__{epoch: epoch} = replica, %{epoch: epoch, seq: seq}) do
-    replica = %{replica | pending: Enum.reject(replica.pending, fn {pending_seq, _} -> pending_seq == seq end)}
-    {replica, displayed(replica)}
+    {rejected, pending} = Enum.split_with(replica.pending, fn {pending_seq, _} -> pending_seq == seq end)
+    replica = %{replica | pending: pending}
+
+    op =
+      case rejected do
+        [{_seq, op}] -> op
+        _ -> nil
+      end
+
+    {replica, displayed(replica), op}
   end
 
   def receive_rejected(%__MODULE__{}, _message), do: :stale
 
   @doc """
   Replace the confirmed state wholesale: a rebase broadcast, a resync, or a
-  join after the session was replaced. Pending ops stay pending and are
-  replayed on top.
+  join after the session was replaced.
+
+  The session says which of this editor's ops the state already holds (the
+  `:seq` of a reply, or this process's entry in a broadcast's `:seqs`).
+  Those leave pending; replaying them over the new state would put an old
+  value back over a later one from another editor. The rest stay pending
+  and are replayed on top.
   """
   @spec reset(t(), map()) :: {t(), Ops.t()}
   def reset(%__MODULE__{} = replica, %{epoch: epoch, rev: rev, state: state} = info) do
+    handled = handled_seq(info)
+
     replica = %{
       replica
       | epoch: epoch,
         rev: rev,
         confirmed: state,
-        session: Map.get(info, :session, replica.session)
+        session: Map.get(info, :session, replica.session),
+        pending: Enum.reject(replica.pending, fn {seq, _op} -> seq <= handled end)
     }
 
     {replica, displayed(replica)}
   end
+
+  defp handled_seq(%{seq: seq}) when is_integer(seq), do: seq
+  defp handled_seq(%{seqs: %{} = seqs}), do: Map.get(seqs, self(), 0)
+  defp handled_seq(_info), do: 0
 
   @doc "Whether a rebase or resync message is newer than what the replica holds."
   @spec newer?(t(), map()) :: boolean()
