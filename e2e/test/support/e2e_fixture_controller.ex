@@ -737,6 +737,26 @@ defmodule E2EFixtureController do
     end
   end
 
+  # Makes every session of `email` last confirm an hour ago, so the next
+  # sensitive action asks for the password again (BrandoAdmin.Reauth).
+  def two_factor(conn, %{"action" => "stale-sessions", "email" => email}) do
+    import Ecto.Query, only: [from: 2]
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    hour_ago = NaiveDateTime.add(NaiveDateTime.utc_now(), -3600, :second)
+
+    {count, _} =
+      Brando.Repo.update_all(
+        from(t in Brando.Users.UserToken,
+          join: u in assoc(t, :user),
+          where: u.email == ^email and t.context == "session"
+        ),
+        set: [confirmed_at: hour_ago]
+      )
+
+    json(conn, %{sessions: count})
+  end
+
   def image_creator(conn, %{"image_id" => image_id}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

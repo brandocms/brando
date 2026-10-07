@@ -84,7 +84,7 @@ test('a user sets up two-factor authentication, then logs in with a code', async
 
     await logIn(page, email, password)
     await enterCode(page, '000000')
-    await expect(page.locator('#two_factor_form .alert.danger')).toBeVisible()
+    await expect(page.locator('#two_factor .alert.danger')).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('wrong-code.png') })
 
     // The setup used up this step's code: the app's next one works, and
@@ -113,7 +113,7 @@ test('a user who lost their phone logs in with a recovery code, once', async ({ 
     await logIn(page, email, password)
     await enterCode(page, codes[0])
     await expect(page).toHaveURL('/admin/login/two-factor')
-    await expect(page.locator('#two_factor_form .alert.danger')).toBeVisible()
+    await expect(page.locator('#two_factor .alert.danger')).toBeVisible()
 
     await enterCode(page, codes[1])
     await expect(page).toHaveURL('/admin')
@@ -154,6 +154,9 @@ test('the sign-in policy makes an editor set two-factor authentication up at the
 
     await logIn(editor, email, password)
     await expect(editor).toHaveURL('/admin/login/two-factor/setup')
+    await syncLV(editor)
+    // A passkey is offered first; this editor uses the app
+    await editor.getByTestId('setup-method-app').click()
     await syncLV(editor)
     await editor.screenshot({ path: testInfo.outputPath('required-setup.png'), fullPage: true })
 
