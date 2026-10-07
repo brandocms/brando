@@ -20,7 +20,12 @@ defmodule Mix.Brando.MigrationRequest do
     |> Base.url_encode64(padding: false)
   end
 
-  def apply(request) do
+  def apply(request), do: request |> reviewed_plan() |> Migrations.commit_plan()
+
+  # Every request is checked against its review before any of them is written.
+  def apply_all(requests), do: requests |> Enum.map(&reviewed_plan/1) |> Migrations.commit_plans()
+
+  defp reviewed_plan(request) do
     with {:ok, json} <- Base.url_decode64(request, padding: false),
          {:ok, values} <- Jason.decode(json),
          true <- valid?(values) do
@@ -41,7 +46,7 @@ defmodule Mix.Brando.MigrationRequest do
             "The reviewed Blueprint migration plan is stale. Generate and review it again; no files were written."
           )
 
-      Migrations.commit_plan(plan)
+      plan
     else
       _ -> Mix.raise("Invalid Blueprint migration request. Run mix brando.gen.blueprint_migration to prepare a new plan.")
     end

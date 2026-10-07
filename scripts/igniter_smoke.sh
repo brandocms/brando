@@ -73,6 +73,8 @@ mix compile --warnings-as-errors > "$smoke_root/logs/blueprint-compile.log" 2>&1
 mix brando.gen IgniterSmoke.Catalog.Product --public-route /products --yes > "$smoke_root/logs/resource.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/resource-compile.log" 2>&1
 mix brando.gen.blueprint_migration IgniterSmoke.Catalog.Product --yes > "$smoke_root/logs/resource-storage.log" 2>&1
+# --all finds the consumer's Blueprints and, with Product planned, nothing left to plan.
+mix brando.gen.blueprint_migration --all --check > "$smoke_root/logs/resource-storage-all.log" 2>&1
 if [[ "$smoke_mode" == none ]]; then
   mix brando.migrate > "$smoke_root/logs/resource-migrate.log" 2>&1
 else

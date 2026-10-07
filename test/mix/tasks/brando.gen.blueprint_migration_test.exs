@@ -12,6 +12,20 @@ defmodule Brando.MigrationTest.FixedPrefix do
   end
 end
 
+defmodule Brando.MigrationTest.SharedPublic do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationTest",
+    schema: "SharedPublic",
+    singular: "shared_public",
+    plural: "shared_publics"
+
+  @schema_prefix "public"
+  attributes do
+    attribute :title, :string
+  end
+end
+
 defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
   use ExUnit.Case, async: false
 
@@ -210,5 +224,135 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
 
     assert explicit.issues == []
     refute File.exists?(context.root)
+  end
+
+  describe "--all" do
+    alias Brando.Blueprint.Migrations
+
+    defp plan_all(context, modules, flags \\ [], project \\ Igniter.Test.test_project()) do
+      project
+      |> Igniter.assign(:brando_blueprints, modules)
+      |> Igniter.compose_task(BlueprintMigration, ["--all", "--snapshot-path", context.snapshot_path | flags])
+    end
+
+    defp previews do
+      Stream.repeatedly(fn ->
+        receive do
+          {:mix_shell, :info, [preview]} -> preview
+        after
+          0 -> nil
+        end
+      end)
+      |> Enum.take_while(& &1)
+      |> Enum.filter(&String.starts_with?(&1, "Blueprint storage plan for"))
+    end
+
+    test "plans every changed Blueprint in one review and lists the rest as up to date", context do
+      {:ok, _} = Migrations.rebaseline_snapshot(Brando.MigrationTest.StorageV1, snapshot_path: context.snapshot_path)
+
+      planned =
+        plan_all(
+          context,
+          [
+            Brando.MigrationTest.Tag,
+            Brando.MigrationTest.StorageV1,
+            Brando.MigrationTest.ExecutionV1,
+            Brando.MigrationTest.Property
+          ],
+          ["--dry-run"]
+        )
+
+      assert planned.issues == []
+      plans = planned.assigns.brando_storage_plans
+      assert Enum.map(plans, & &1.module) == [Brando.MigrationTest.ExecutionV1, Brando.MigrationTest.Tag]
+      assert length(previews()) == 2
+
+      versions = Enum.map(plans, &(&1.metadata.migration |> Path.basename() |> String.split("_", parts: 2) |> hd()))
+      assert versions == versions |> Enum.uniq() |> Enum.sort()
+
+      assert [{"brando.blueprint.apply_plan", requests}] = planned.tasks
+      assert length(requests) == 2
+      assert [summary] = planned.notices
+      assert summary =~ "Brando.MigrationTest.ExecutionV1: priv/repo/migrations/#{hd(versions)}_"
+      assert summary =~ "Up to date: Brando.MigrationTest.StorageV1"
+      assert summary =~ "mix brando.migrate --tenants"
+      refute summary =~ "Property"
+
+      Igniter.Test.assert_unchanged(planned)
+      refute Enum.any?(plans, &File.exists?(&1.metadata.migration))
+      assert Path.wildcard(Path.join(context.snapshot_path, "**/*.snapshot")) |> length() == 1
+    end
+
+    test "nothing to plan is a notice and queues no task", context do
+      {:ok, _} = Migrations.rebaseline_snapshot(Brando.MigrationTest.StorageV1, snapshot_path: context.snapshot_path)
+      planned = plan_all(context, [Brando.MigrationTest.StorageV1])
+      assert planned.issues == []
+      assert planned.tasks == []
+      assert planned.notices == ["No storage changes necessary. Up to date: Brando.MigrationTest.StorageV1."]
+    end
+
+    test "each Blueprint keeps the migration path a single run would pick", context do
+      project =
+        Brando.IgniterCase.phoenix_project(
+          files: %{"config/brando.exs" => "import Config\nconfig :brando, tenancy_mode: :multi\n"}
+        )
+
+      modules = [Brando.MigrationTest.ExecutionV1, Brando.MigrationTest.SharedPublic, Brando.MigrationTest.FixedPrefix]
+      planned = plan_all(context, modules, [], project)
+
+      assert planned.issues == []
+
+      paths =
+        Map.new(planned.assigns.brando_storage_plans, &{&1.module, Path.dirname(&1.metadata.migration)})
+
+      assert paths == %{
+               Brando.MigrationTest.ExecutionV1 => "priv/repo/tenant_migrations",
+               Brando.MigrationTest.SharedPublic => "priv/repo/migrations"
+             }
+
+      assert [warning] = Enum.filter(planned.warnings, &(&1 =~ "Left out of --all"))
+      assert warning =~ "Brando.MigrationTest.FixedPrefix fixes its schema prefix"
+
+      for module <- [Brando.MigrationTest.ExecutionV1, Brando.MigrationTest.SharedPublic] do
+        single =
+          Igniter.compose_task(project, BlueprintMigration, [inspect(module), "--snapshot-path", context.snapshot_path])
+
+        assert Path.dirname(single.assigns.brando_storage_plan.metadata.migration) == paths[module]
+      end
+    end
+
+    test "refuses a Blueprint argument, --migration-path and --rebaseline", context do
+      for flags <- [
+            ["Brando.MigrationTest.ExecutionV1"],
+            ["--migration-path", context.migration_path],
+            ["--rebaseline"]
+          ] do
+        planned = plan_all(context, [Brando.MigrationTest.ExecutionV1], flags)
+        assert [issue] = planned.issues
+        assert issue =~ "--all"
+        assert planned.tasks == []
+      end
+
+      refute File.exists?(context.root)
+    end
+
+    test "the reviewed requests are written together or not at all", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, initial} = Migrations.create_migration(Brando.MigrationTest.Project, opts)
+      plans = Migrations.plan_all([{Brando.MigrationTest.ProjectUpdate1, opts}, {Brando.MigrationTest.Tag, opts}])
+      requests = Enum.map(plans, &MigrationRequest.encode/1)
+
+      snapshot = Snapshot.get_latest_snapshot(Brando.MigrationTest.Project, opts)
+      original = File.read!(initial.snapshot)
+      File.write!(initial.snapshot, :erlang.term_to_binary(%{snapshot | updated_at: ~U[2000-01-01 00:00:00Z]}))
+      assert_raise Mix.Error, ~r/stale/, fn -> Mix.Tasks.Brando.Blueprint.ApplyPlan.run(requests) end
+      assert Path.wildcard(Path.join(context.migration_path, "*.exs")) == [initial.migration]
+
+      File.write!(initial.snapshot, original)
+      Mix.Tasks.Brando.Blueprint.ApplyPlan.run(requests)
+      assert Enum.all?(plans, &File.exists?(&1.metadata.migration))
+      assert Enum.all?(plans, &File.exists?(&1.metadata.snapshot))
+      assert_received {:mix_shell, :info, ["Created " <> _]}
+    end
   end
 end
