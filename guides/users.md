@@ -157,6 +157,84 @@ Whichever way a password changes, the user is emailed to say so, with a link
 to reset it if they did not. Without a mailer the password still changes,
 without the email.
 
+## Two-factor authentication
+
+A user turns it on from **Security** in the account menu
+(`/admin/users/security`): they scan a QR code with an authenticator app, or
+type its key, and confirm with a code the app shows. Turning it on logs out
+their other sessions and shows ten one-time recovery codes, once. From then on
+the password is the first of two steps: Brando does not create a session until
+the user gives a code from the app, or a recovery code, at
+`/admin/login/two-factor`. Until then the browser only holds a short-lived
+token for that screen (ten minutes), and the remember-me cookie, which holds a
+session token, is only written after the second step.
+
+A code is six digits for a 30-second step; the step before and after are
+accepted for clocks that drift. Each code works once: the last accepted step is
+stored, and a code for it or an earlier step is refused. Each recovery code
+works once. Turning it off, or making new recovery codes, asks for the password
+or a current code from the app. The calls are in `Brando.Users.TwoFactor`.
+
+**When a user loses their phone and their codes.** A superuser opens their
+form and chooses **Reset two-factor**. It turns two-factor authentication off,
+ends a lockout, and logs the user out everywhere; they log in with their
+password and set it up again. The reset is recorded with who did it:
+
+```elixir
+{:ok, user} = Brando.Users.TwoFactor.reset(user.id, current_admin)
+```
+
+**Requiring it.** A superuser chooses who must use it under **Users →
+Sign-in policy** (`/admin/users/sign-in-policy`): nobody, everyone, or the
+users of some roles (with group authorization, some groups). Users are shared
+by every site, so the policy is the installation's (`Brando.Users.SecurityPolicy`).
+A user it applies to who has not set it up does so at their next login, before
+they get a session, and any session they have ends at their next request. A
+superuser must use two-factor authentication before saving a policy that
+applies to them.
+
+**Secrets at rest.** The TOTP secret is encrypted with `Brando.Crypto`
+(XChaCha20-Poly1305), with a key derived from the endpoint's
+`secret_key_base`; recovery codes are stored as keyed hashes. Rotating
+`secret_key_base` makes them unreadable, and users would set two-factor
+authentication up again. To rotate it freely, give Brando its own secret:
+
+```elixir
+config :brando, Brando.Crypto, secret: System.fetch_env!("BRANDO_ENCRYPTION_SECRET")
+```
+
+## Sign-in limits and lockout
+
+`Brando.Users.Throttle` limits sign-in attempts, two-factor codes and
+password reset requests per IP address and per account, in 15-minute windows.
+Five failures in a row — a wrong password, a wrong code, or a wrong password
+or code when confirming a change — lock the account for 15 minutes, on every
+node. While it is locked even the right password does not sign in, and an
+address without an account gets the same answer after as many tries, so the
+lockout tells nothing about which accounts exist. A successful sign-in starts
+the count again. The limits are configurable:
+
+```elixir
+config :brando, Brando.Users.Throttle,
+  login_per_ip: 30, login_per_account: 10, two_factor_per_ip: 30,
+  reset_per_ip: 10, reset_per_account: 3, lockout_after: 5, lockout_minutes: 15
+```
+
+The per-IP limits count `conn.remote_ip`, and, for the reset page, the admin
+socket's `:peer_data`. Behind a proxy or load balancer, set the client's
+address from a header the proxy sets (for example with the `remote_ip` plug),
+and add `:peer_data` to the socket's `connect_info`; otherwise every visitor
+shares the proxy's limit.
+
+## Security log
+
+Sign-ins, failed sign-ins, lockouts, password changes and changes to
+two-factor settings are written to `public.users_security_events`
+(`Brando.Users.SecurityLog`), with the IP address and browser. Users are
+shared by every site, so this log is separate from the content activity log.
+The user's Security page shows their latest events; it is kept as long as the
+activity log (`retention_days`).
+
 ## Deactivate without transferring ownership
 
 Choose **Disable user**, or call:

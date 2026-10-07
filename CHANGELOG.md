@@ -30,6 +30,13 @@ production dump.
   Run `mix brando.gen.migrations` and `mix ecto.migrate` for `brando_207`;
   until then, loading proposals fails with a missing-column error.
 
+- **Two-factor authentication adds four tables.** `brando_204` creates
+  `users_security`, `users_recovery_codes`, `users_security_events` and
+  `users_security_policy` in `public`. Run `mix brando.gen.migrations` and
+  `mix ecto.migrate`; until then, logging in fails with a missing-table error.
+  Applications with their own `:shared_tables` need no change; Brando lists
+  the new tables itself.
+
 - **Users have two new columns.** `job_title` and `same_as` back the user
   form's Job title and Profile links. Run `mix brando.gen.migrations` and
   `mix ecto.migrate` for `brando_202`; until then, loading users fails with a
@@ -729,6 +736,20 @@ production dump.
   `mix brando.migrate55` and `mix brando.install` do
   (`config :swoosh, api_client: Swoosh.ApiClient.Req`). See the
   [Email guide](guides/email.md).
+
+- **Two-factor authentication.** Users turn on codes from an authenticator
+  app under **Security** in the account menu, with ten one-time recovery codes.
+  Logging in then takes two steps: no session, and no remember-me cookie, until
+  the code is given. A code works once. Turning it off or making new recovery
+  codes asks for the password or a current code. A superuser can reset it for a
+  user who lost their phone, and can require it of everyone or of some roles
+  (groups, with group authorization) under **Users → Sign-in policy**; users it
+  applies to set it up at their next login. Sign-in attempts, codes and reset
+  requests are limited per IP address and account, and five failures in a row
+  lock the account for 15 minutes (`Brando.Users.Throttle`). Sign-ins, failures,
+  lockouts and security changes go to a security log, shown on the user's
+  Security page. The TOTP secret is encrypted at rest (`Brando.Crypto`). See
+  [User accounts and sessions](guides/users.md#two-factor-authentication).
 
 - **Password reset.** The login page has a "Forgot password?" link to
   `/admin/reset-password`, which emails a link to choose a new password. The
