@@ -108,19 +108,39 @@ defmodule Brando.Images.AltText do
   @spec alt_from_entry?(map(), [String.t()]) :: boolean()
   def alt_from_entry?(image, targets \\ entry_alt_targets()), do: Map.get(image, :config_target) in targets
 
+  @doc """
+  Per content language, how many of the images `missing/1` looks at lack alt
+  text in it, and how many there are: `%{"en" => {missing, total}}`.
+  """
+  @spec missing_count_by_language() :: %{String.t() => {non_neg_integer(), non_neg_integer()}}
+  def missing_count_by_language do
+    total = Brando.Repo.aggregate(describable_query(), :count)
+
+    Map.new(languages(), fn language ->
+      missing =
+        from(i in describable_query(), where: fragment("coalesce(btrim(? ->> ?), '') = ''", i.alt, ^language))
+        |> Brando.Repo.aggregate(:count)
+
+      {language, {missing, total}}
+    end)
+  end
+
   defp missing_query do
     missing_any =
       Enum.reduce(languages(), dynamic(false), fn language, acc ->
         dynamic([i], ^acc or fragment("coalesce(btrim(? ->> ?), '') = ''", i.alt, ^language))
       end)
 
+    from i in describable_query(), where: ^missing_any
+  end
+
+  defp describable_query do
     targets = entry_alt_targets()
 
     # Images in hidden folders (visitors' uploads) are not the site's to describe
     from i in Image,
       left_join: f in Brando.Media.Folder,
       on: f.id == i.folder_id,
-      where: ^missing_any,
       where: is_nil(i.deleted_at) and i.status == :processed and not ilike(i.path, "%.svg"),
       where: is_nil(i.config_target) or i.config_target not in ^targets,
       where: is_nil(f.id) or f.library

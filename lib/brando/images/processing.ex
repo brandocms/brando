@@ -131,6 +131,16 @@ defmodule Brando.Images.Processing do
   """
   @spec count_changed_images() :: non_neg_integer
   def count_changed_images do
+    changed_config_targets() |> Map.values() |> Enum.sum()
+  end
+
+  @doc """
+  The config targets whose current config differs from the one some of their
+  images were made with, and how many images each: what
+  `count_changed_images/0` counts, per target.
+  """
+  @spec changed_config_targets() :: %{String.t() => pos_integer}
+  def changed_config_targets do
     query =
       from i in Image,
         where: is_nil(i.deleted_at) and not is_nil(i.config_target),
@@ -145,8 +155,10 @@ defmodule Brando.Images.Processing do
       |> Enum.uniq()
       |> Map.new(&{&1, current_fingerprint(&1)})
 
-    Enum.reduce(rows, 0, fn {config_target, fingerprint, count}, total ->
-      if changed_config?(%{config_fingerprint: fingerprint}, current[config_target]), do: total + count, else: total
+    Enum.reduce(rows, %{}, fn {config_target, fingerprint, count}, changed ->
+      if changed_config?(%{config_fingerprint: fingerprint}, current[config_target]),
+        do: Map.update(changed, config_target, count, &(&1 + count)),
+        else: changed
     end)
   end
 

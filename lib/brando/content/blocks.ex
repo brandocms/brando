@@ -766,6 +766,24 @@ defmodule Brando.Content.Blocks do
   def count_stale_blocks(module_or_id, origin \\ :local),
     do: module_or_id |> list_stale_block_ids(origin) |> length()
 
+  @doc """
+  Stale blocks per module, for every module that has any: `[{module, count}]`,
+  most first. The same test as `list_stale_block_ids/2`, in one query.
+  """
+  @spec count_stale_blocks_by_module(atom()) :: [{Brando.Content.Module.t(), pos_integer()}]
+  def count_stale_blocks_by_module(origin \\ :local) do
+    from(b in Block,
+      join: m in Brando.Content.Module,
+      on: m.id == b.module_id,
+      where: is_nil(b.module_version) or b.module_version < coalesce(m.version, 1),
+      group_by: m.id,
+      order_by: [desc: count(b.id), asc: m.id],
+      select: {m, count(b.id)}
+    )
+    |> maybe_filter_library_origin(:module_origin, origin)
+    |> Repo.all()
+  end
+
   defp query_stale_block_ids(module_id, version, origin) do
     from(b in Block,
       where: b.module_id == ^module_id,
