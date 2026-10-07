@@ -20,5 +20,6 @@ defmodule Brando.JSONLD.Schema.Article do
             mainEntityOfPage: nil,
             name: nil,
             publisher: nil,
-            url: nil
+            url: nil,
+            video: nil
 end

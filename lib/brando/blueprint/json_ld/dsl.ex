@@ -14,7 +14,9 @@ defmodule Brando.Blueprint.JSONLD.Dsl do
       type: [
         type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
         required: true,
-        doc: "Field type. Atom for simple types or {:list, SchemaModule} for lists."
+        doc:
+          "Field type. Atom for simple types (`:person` maps users and People entries to `Person` nodes) " <>
+            "or {:list, SchemaModule} for lists."
       ],
       value_fn: [
         type: {:or, [nil, {:fun, 1}]},
@@ -35,6 +37,13 @@ defmodule Brando.Blueprint.JSONLD.Dsl do
         type: :atom,
         required: true,
         doc: "Schema to JSONLD"
+      ],
+      videos: [
+        type: :boolean,
+        default: true,
+        doc:
+          "Describe the videos the entry shows (its video fields and preloaded video blocks) " <>
+            "as `VideoObject`s linked from `video`, on schemas with a `video` property."
       ]
     ]
   }

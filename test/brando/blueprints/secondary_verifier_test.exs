@@ -176,6 +176,15 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
     )
 
     assert_compile_error(
+      ~r/type :person requires a value callback/,
+      quote do
+        json_ld_schema unquote(root) do
+          field :name, :person
+        end
+      end
+    )
+
+    assert_compile_error(
       ~r/type :current_url derives its value and does not accept a callback/,
       quote do
         json_ld_schema unquote(root) do

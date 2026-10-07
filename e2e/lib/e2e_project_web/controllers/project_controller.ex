@@ -23,11 +23,21 @@ defmodule E2eProjectWeb.ProjectController do
   @doc false
   @spec detail(conn, map) :: {:error, {:project, :not_found}} | conn
   def detail(conn, %{"slug" => slug}) do
-    opts = %{matches: %{slug: slug}, preload: [:alternate_entries, :listing_image], status: :published}
+    opts = %{
+      matches: %{slug: slug},
+      preload: [
+        :alternate_entries,
+        :listing_image,
+        creator: %{module: Brando.Users.User, preload: [:avatar]},
+        cover_video: %{module: Brando.Videos.Video, preload: [:thumbnail]}
+      ],
+      status: :published
+    }
 
     with {:ok, project} <- Projects.get_project(opts) do
       conn
       |> assign(:entry, project)
+      |> put_json_ld(Projects.Project, project)
       |> put_hreflang(project)
       |> put_section("project")
       |> render(:detail)

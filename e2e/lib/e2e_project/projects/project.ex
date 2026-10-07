@@ -282,6 +282,19 @@ defmodule E2eProject.Projects.Project do
     end
   end
 
+  # The creator is credited as the author; the cover video and preloaded
+  # video blocks become VideoObjects without being listed here.
+  json_ld_schema Brando.JSONLD.Schema.Article do
+    field :author, :person, & &1.creator
+    field :headline, :string, & &1.title
+    field :name, :string, & &1.title
+    field :publisher, :identity
+    field :datePublished, :datetime, & &1.inserted_at
+    field :dateModified, :datetime, &Brando.Blueprint.Value.modified_at/1
+    field :mainEntityOfPage, :current_url
+    field :url, :current_url
+  end
+
   json_api do
     type "projects"
 

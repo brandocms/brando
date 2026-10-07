@@ -13,6 +13,8 @@ Every page automatically gets a connected graph with:
 - **WebPage** — linked to website via `isPartOf`, type selectable per page
 - **BreadcrumbList** — if breadcrumbs are set, linked from WebPage
 - **Content entity** — Article, Event, CreativeWork, etc. from the blueprint DSL
+- **Person** — for each author the blueprint maps (see [Authors](#authors))
+- **VideoObject** — for each video the entry shows (see [Videos](#videos))
 
 The output is a single `<script type="application/ld+json">` tag:
 
@@ -89,6 +91,7 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 | Type | Description |
 |------|-------------|
 | `:identity` | Creates `{"@id": "hostname/#identity"}` reference to site identity |
+| `:person` | A Brando user, a People entry, a name, or a list of them, as linked `Person` nodes (see [Authors](#authors)) |
 | `:datetime` | Converts to ISO 8601 string |
 | `:date` | Converts to `YYYY-MM-DD` string |
 | `:image` | Builds an `ImageObject` with url, width, height |
@@ -111,6 +114,129 @@ json_ld_schema JSONLD.Schema.Event do
 end
 ```
 
+### Authors
+
+Map who wrote an entry with the `:person` field type. Nothing is emitted for
+an author unless the blueprint maps one, so admin users never appear in
+structured data by accident:
+
+```elixir
+json_ld_schema JSONLD.Schema.Article do
+  # a Brando user: `trait :creator` gives every entry one
+  field :author, :person, & &1.creator
+end
+```
+
+or People entries, from a relation:
+
+```elixir
+field :author, :person, & &1.authors
+```
+
+The callback may return one value or a list, and anything not preloaded is
+skipped (it never queries). Each author becomes its own `Person` node in the
+`@graph`, and the field holds a reference to it:
+
+```json
+{"@type": "Article", "author": {"@id": "https://example.com/people/ada/#person"}, ...},
+{"@type": "Person", "@id": "https://example.com/people/ada/#person", "name": "Ada Lovelace", ...}
+```
+
+**Brando users** give their public profile only: `name`, `jobTitle` and
+`sameAs` from the *Public profile* fields on the user form (Job title,
+Profile links), and `image` from the avatar when it is preloaded
+(`preload: [creator: %{module: Brando.Users.User, preload: [:avatar]}]`).
+Never the email, role or anything else. A user has no public page, so the
+`@id` is `https://example.com/#/schema/person/<hash>`, a hash of the user id
+that stays the same across pages.
+
+**People entries** use the People blueprint's own `json_ld_schema` when it is
+a `Person`, so the author on an article and the person on their own page are
+one node with one `@id`, `<the entry's absolute URL>/#person`:
+
+```elixir
+# MyApp.People.Person
+json_ld_schema JSONLD.Schema.Person do
+  field :name, :string, & &1.name
+  field :jobTitle, :string, & &1.job_title
+  field :sameAs, :string, & &1.profile_links
+  field :image, :image, & &1.portrait
+  field :url, :current_url
+end
+```
+
+A People blueprint without a `Person` mapping is read by convention: `name`
+(or the identifier's title), `job_title`, `same_as`, and the first preloaded
+image of `avatar`, `portrait`, `image` or `photo`. Only those fields are
+read, so a person's email or other columns stay out.
+
+#### ProfilePage
+
+When `put_json_ld/4` is given an entry whose schema is a `Person` — a People
+entry on its own page — the page becomes a `ProfilePage` with that Person as
+its `mainEntity`:
+
+```json
+{"@type": "ProfilePage", "@id": "https://example.com/people/ada/#webpage",
+ "mainEntity": {"@id": "https://example.com/people/ada/#person"}, ...},
+{"@type": "Person", "@id": "https://example.com/people/ada/#person", ...}
+```
+
+Google's [profile page](https://developers.google.com/search/docs/appearance/structured-data/profile-page)
+result needs `mainEntity` with the person's `name`; `image`, `sameAs`,
+`jobTitle` and `url` are recommended. Other `ProfilePage`s and `AboutPage`s
+are about the site's identity, as before.
+
+### Videos
+
+Every entry whose schema has a `video` property (`Article`, `CreativeWork`)
+describes the videos it shows as `VideoObject` nodes, linked from `video`, with
+no blueprint changes. The videos are:
+
+- the blueprint's video fields (`asset :cover_video, :video`), and
+- the videos in its block fields: each active ref with a video, in active
+  blocks and their children. A video block's title override names the video.
+
+Only what is preloaded is read, so preload the video (and its `thumbnail`)
+or the blocks where you want them described:
+
+```elixir
+preload: [cover_video: %{module: Brando.Videos.Video, preload: [:thumbnail]}]
+```
+
+A video shown twice is described once. The node's `@id` is site-wide,
+`https://example.com/#/schema/video/<id>`.
+
+Google needs three properties for a
+[video result](https://developers.google.com/search/docs/appearance/structured-data/video),
+and a video missing any of them gets no node:
+
+| Property | Required | Taken from |
+|----------|----------|------------|
+| `name` | Yes | The video's title, or the video block's title |
+| `thumbnailUrl` | Yes | The video's thumbnail image, else the provider's poster frame (Mux, Bunny, Cloudflare Stream, Vimeo) |
+| `uploadDate` | Yes | When the video was added to Brando |
+| `description` | Recommended | The video's caption |
+| `duration` | Recommended | The duration the provider reported, as ISO 8601 (`PT2M10S`) |
+| `contentUrl` | Recommended | The file or stream: Mux, Bunny, Cloudflare and Vimeo HLS, uploads, external files |
+| `embedUrl` | Recommended | The player: Bunny, Vimeo and YouTube |
+
+Signed Mux and Cloudflare videos have no public poster frame, so they are
+described only when they have a thumbnail image. Videos that are not ready
+are skipped.
+
+To leave a blueprint's videos out, say so in its schema:
+
+```elixir
+json_ld_schema JSONLD.Schema.Article do
+  videos false
+  field :headline, :string, & &1.title
+end
+```
+
+A blueprint that maps `video` itself keeps its own mapping. A custom schema
+module gets automatic videos by having a `video` field.
+
 ### Available schema modules
 
 | Module | schema.org type | Use case |
@@ -119,7 +245,8 @@ end
 | `JSONLD.Schema.CreativeWork` | CreativeWork | Generic creative content |
 | `JSONLD.Schema.Event` | Event | Events with dates |
 | `JSONLD.Schema.ExhibitionEvent` | ExhibitionEvent | Art exhibitions |
-| `JSONLD.Schema.Person` | Person | Author/creator |
+| `JSONLD.Schema.Person` | Person | Author/creator (use the `:person` field type) |
+| `JSONLD.Schema.VideoObject` | VideoObject | Built automatically from video fields and blocks |
 | `JSONLD.Schema.Place` | Place | Physical location |
 | `JSONLD.Schema.ImageObject` | ImageObject | Image metadata |
 | `JSONLD.Schema.VisualArtwork` | VisualArtwork | An artwork, in a project's `hasPart` |

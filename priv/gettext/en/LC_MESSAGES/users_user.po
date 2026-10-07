@@ -139,3 +139,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Role"
 msgstr ""
+
+#: lib/brando/users/user.ex:232
+#, elixir-autogen, elixir-format
+msgid "Job title"
+msgstr ""
+
+#: lib/brando/users/user.ex:233
+#, elixir-autogen, elixir-format
+msgid "Given to search engines on pages that name this user as the author."
+msgstr ""
+
+#: lib/brando/users/user.ex:236
+#, elixir-autogen, elixir-format
+msgid "Profile links"
+msgstr ""
+
+#: lib/brando/users/user.ex:237
+#, elixir-autogen, elixir-format
+msgid "Pages about this user on other sites, such as LinkedIn or a personal site."
+msgstr ""

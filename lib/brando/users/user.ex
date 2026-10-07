@@ -76,6 +76,11 @@ defmodule Brando.Users.User do
     attribute :last_seen, :naive_datetime
     attribute :language, :language, languages: RuntimeConfig.get(:admin_languages)
 
+    # Public profile, for JSON-LD where a blueprint maps the user as an author
+    # (`field :author, :person, & &1.creator`; see `Brando.JSONLD.Author`).
+    attribute :job_title, :string
+    attribute :same_as, Brando.Type.StringList, default: []
+
     attribute :password, :string,
       constraints: [min_length: 6, confirmation: true],
       required: true
@@ -218,6 +223,18 @@ defmodule Brando.Users.User do
         fieldset do
           size :half
           component &__MODULE__.password_access/1
+        end
+
+        fieldset do
+          size :half
+
+          input :job_title, :text,
+            label: t("Job title"),
+            instructions: t("Given to search engines on pages that name this user as the author.")
+
+          input :same_as, :string_list,
+            label: t("Profile links"),
+            instructions: t("Pages about this user on other sites, such as LinkedIn or a personal site.")
         end
       end
     end
