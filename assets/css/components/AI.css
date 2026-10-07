@@ -1,0 +1,161 @@
+/* AI in the admin: one look for an action that asks AI for something, and
+   one for what AI hands back for review. See "AI actions and suggestions" in
+   docs/admin-ui-design.md.
+
+   An AI action is a small secondary button: the sparkles icon and the accent
+   ink, on a solid sage hairline. Never dashed — a dashed outline means "drop
+   here" in the block editor. `BrandoAdmin.Components.AIAction.button/1`
+   renders it. */
+.ai-action {
+  --ai-action-line: color-mix(in srgb, var(--brando-accent) 22%, var(--brando-line));
+  --ai-action-line-hover: color-mix(in srgb, var(--brando-accent) 45%, var(--brando-line));
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 30px;
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--ai-action-line);
+  border-radius: 5px;
+  background: var(--brando-surface);
+  box-shadow: none;
+  color: var(--brando-accent);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-align: center;
+  text-decoration: none;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  > [data-icon] {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover:not(:disabled, [aria-disabled="true"]) {
+    border-color: var(--ai-action-line-hover);
+    background: var(--brando-surface-hover);
+    color: var(--brando-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: 3px;
+  }
+
+  &:disabled,
+  &[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Waiting for the reply: the sparkles breathe. */
+  &.is-busy,
+  &[aria-busy="true"],
+  &.phx-click-loading {
+    cursor: progress;
+    opacity: 1;
+
+    > [data-icon] {
+      animation: ai-action-busy 1.2s ease-in-out infinite;
+    }
+  }
+
+  /* Beside a field's label, where a 30px button would push into the input. */
+  &.is-compact {
+    min-height: 24px;
+    padding: 2px 8px;
+    gap: 5px;
+  }
+
+  /* Icon only, inside a text field. Needs an aria-label. */
+  &.is-icon {
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+
+    &:focus-visible {
+      outline-offset: 2px;
+    }
+  }
+}
+
+@keyframes ai-action-busy {
+  50% { opacity: 0.35; }
+}
+
+@media (pointer: coarse) {
+  .ai-action:not(.is-icon, .is-compact) {
+    min-height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-action > [data-icon] {
+    animation: none !important;
+  }
+}
+
+/* An AI result waiting for review: a rewrite, a review's advice, a proposed
+   block. It sits on the suggestion tint with a rule down its left edge and is
+   labelled with the sparkles, so it never reads as saved content. Accepting
+   it is the primary action beside it. */
+.ai-proposal {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--brando-suggestion-line) 35%, var(--brando-surface));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--brando-suggestion) 55%, var(--brando-surface));
+  box-shadow: inset 3px 0 0 var(--brando-suggestion-line);
+  color: var(--brando-ink);
+}
+
+.ai-proposal-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--brando-suggestion-ink);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+
+  > [data-icon] {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.ai-proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Suggested text still open for editing before it is accepted (bulk meta
+   descriptions, alt text): the field takes the suggestion tint. */
+.ai-proposal-field {
+  border-color: color-mix(in srgb, var(--brando-suggestion-line) 45%, var(--brando-surface));
+  background: color-mix(in srgb, var(--brando-suggestion) 40%, var(--brando-surface));
+
+  &:focus {
+    background: var(--brando-surface);
+  }
+}
