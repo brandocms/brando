@@ -191,6 +191,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :breadcrumbs, :jsonb, default: "[]"
       add :meta_title, :text
       add :meta_description, :text
+      add :meta_canonical_url, :text
+      add :content_modified_at, :utc_datetime
       add :meta_image_id, references(:images)
       add :rendered_blocks, :text
       add :rendered_blocks_at, :utc_datetime

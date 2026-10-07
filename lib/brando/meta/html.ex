@@ -42,11 +42,12 @@ defmodule Brando.Meta.HTML do
       |> put_meta_if_missing("og:title", seo.fallback_meta_title)
       |> put_meta_if_missing("og:site_name", app_name)
       |> put_meta_if_missing("og:type", "website")
-      |> put_meta_if_missing("og:url", Utils.current_url(conn))
+      |> put_meta_if_missing("og:url", get_canonical(conn) || Utils.current_url(conn))
       |> maybe_put_meta_description(seo.fallback_meta_description)
       |> maybe_put_meta_image(seo.fallback_meta_image)
       |> maybe_add_see_also()
       |> maybe_add_custom_meta()
+      |> put_x_card()
       |> get_meta()
 
     assigns = assign(assigns, :metas, metas)
@@ -61,6 +62,45 @@ defmodule Brando.Meta.HTML do
   def render_meta(assigns) do
     ~H""
   end
+
+  # X reads its own `twitter:*` tags and falls back to Open Graph for only
+  # some of them, so they are written out from the Open Graph values. Tags set
+  # by the page or the identity's custom metas win.
+  defp put_x_card(conn) do
+    image = get_meta(conn, "og:image")
+
+    conn
+    |> put_meta_if_missing("twitter:card", if(image, do: "summary_large_image", else: "summary"))
+    |> put_present_meta_if_missing("twitter:title", get_meta(conn, "og:title"))
+    |> put_present_meta_if_missing("twitter:description", get_meta(conn, "og:description"))
+    |> put_present_meta_if_missing("twitter:image", image)
+    |> put_present_meta_if_missing("twitter:site", x_handle(conn))
+  end
+
+  defp put_present_meta_if_missing(conn, _key, value) when value in [nil, ""], do: conn
+  defp put_present_meta_if_missing(conn, key, value), do: put_meta_if_missing(conn, key, value)
+
+  @x_hosts ~w(x.com www.x.com twitter.com www.twitter.com mobile.twitter.com)
+  @x_reserved_paths ~w(home i intent search share)
+
+  # The site's handle, from an X profile among the identity's links.
+  defp x_handle(%{assigns: %{language: language}}) do
+    case Cache.Identity.get(language) do
+      %{links: links} when is_list(links) -> Enum.find_value(links, &link_handle/1)
+      _ -> nil
+    end
+  end
+
+  defp link_handle(%{url: url}) when is_binary(url) do
+    with %URI{host: host, path: path} when host in @x_hosts and is_binary(path) <- URI.parse(url),
+         [handle | _] when handle not in @x_reserved_paths <- String.split(path, "/", trim: true) do
+      "@" <> String.trim_leading(handle, "@")
+    else
+      _ -> nil
+    end
+  end
+
+  defp link_handle(_link), do: nil
 
   defp maybe_add_see_also(%{assigns: %{language: language}} = conn) do
     case Cache.Identity.get(language) do

@@ -20,13 +20,13 @@ defmodule MyAppWeb.Sitemap do
     Brando.Pages.list_pages(%{
       filter: Brando.Pages.Page.__url_filter__(),
       status: :published,
-      select: {:struct, [:id, :title, :uri, :language, :updated_at, :has_url]},
+      select: {:struct, [:id, :title, :uri, :language, :content_modified_at, :edited_at, :updated_at, :has_url]},
       order: [{:asc, :id}]
     }, :stream)
     |> Stream.map(fn page ->
       url(%{
         loc: Brando.Blueprint.URL.resolve(page, :with_host),
-        lastmod: page.updated_at,
+        lastmod: Brando.Blueprint.Value.modified_at(page),
         changefreq: :weekly,
         priority: 0.7
       })
@@ -56,7 +56,11 @@ publicly reachable URL rather than an admin or preview route.
 `url/1` constructs a `Sitemapper.URL`. A naive `lastmod` is interpreted as UTC
 and converted to Brando's timezone; a `DateTime` already has a zone and is retained.
 Use a content timestamp that really represents modification, not the time the
-sitemap was generated.
+sitemap was generated. `Brando.Blueprint.Value.modified_at/1` is the one to use
+for entries: `content_modified_at` from `trait :meta`, which only substantive
+edits move, falling back to `edited_at` and `updated_at`. Select those fields.
+JSON-LD's `dateModified` should read the same value; see
+[JSON-LD](jsonld.md#datemodified).
 
 ## Generate and inspect
 

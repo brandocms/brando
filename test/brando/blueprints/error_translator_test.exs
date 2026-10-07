@@ -50,6 +50,25 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
     refute log =~ "%Brando.Blueprint.Forms.Form{"
   end
 
+  test "meta drawer fields use the drawer's translated labels without logging" do
+    form = form_with_fields([])
+
+    log =
+      capture_log(fn ->
+        Gettext.with_locale(Brando.Gettext, "no", fn ->
+          assert ErrorTranslator.translate_keys([:meta_canonical_url, :meta_title], form, Schema) ==
+                   [
+                     Gettext.dgettext(Brando.Gettext, "default", "Canonical URL"),
+                     Gettext.dgettext(Brando.Gettext, "default", "Meta title")
+                   ]
+
+          refute ErrorTranslator.translate_keys([:meta_canonical_url], form, Schema) == ["Meta canonical url"]
+        end)
+      end)
+
+    refute log =~ "Could not get field"
+  end
+
   defp form_with_fields(fields) do
     %Forms.Form{
       tabs: [

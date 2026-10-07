@@ -6526,8 +6526,8 @@ msgstr "Rapport er tilgjengelig"
 
 #: lib/brando_admin/live/sites/seo_live.ex:65
 #, elixir-autogen, elixir-format
-msgid "Requests for URLs that do not exist. Add a redirect above when a page has moved."
-msgstr "Forespørsler til URL-er som ikke finnes. Legg til en omdirigering ovenfor når en side har flyttet."
+msgid "Requests for URLs that do not exist, over the last %{days} days. Add a redirect above when a page has moved."
+msgstr "Forespørsler til URL-er som ikke finnes, de siste %{days} dagene. Legg til en omdirigering ovenfor når en side har flyttet."
 
 #: lib/brando_admin/components/authorization_tools.ex:56
 #, elixir-autogen, elixir-format
@@ -15060,3 +15060,18 @@ msgstr "Ulagrede endringer fra %{name}"
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes by another user"
 msgstr "Ulagrede endringer fra en annen bruker"
+
+#: lib/brando_admin/components/form/meta_drawer.ex:58
+#, elixir-autogen, elixir-format
+msgid "Canonical URL"
+msgstr "Kanonisk URL"
+
+#: lib/brando_admin/components/form/meta_drawer.ex:62
+#, elixir-autogen, elixir-format
+msgid "Leave empty to use this page's own address. Fill in the full address of the original when this content was first published elsewhere."
+msgstr "La feltet stå tomt for å bruke sidens egen adresse. Fyll inn den fulle adressen til originalen når innholdet først ble publisert et annet sted."
+
+#: lib/brando_admin/live/sites/seo_live.ex:149
+#, elixir-autogen, elixir-format
+msgid "Mostly from %{referrer}"
+msgstr "Mest fra %{referrer}"

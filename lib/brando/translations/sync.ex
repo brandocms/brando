@@ -50,7 +50,7 @@ defmodule Brando.Translations.Sync do
   alias Brando.Villain.Blocks.VideoBlock
 
   @excluded_fields ~w(id language status publish_at inserted_at updated_at deleted_at
-                      creator_id updated_by_id edited_at sequence)a
+                      creator_id updated_by_id edited_at content_modified_at sequence)a
   @text_inputs [:text, :textarea, :rich_text]
   # A form var follows its source too; the form is shown in each page's language.
   @media_fks [:image_id, :video_id, :file_id, :gallery_id, :form_id]

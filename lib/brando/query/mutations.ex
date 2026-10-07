@@ -15,6 +15,7 @@ defmodule Brando.Query.Mutations do
   alias Brando.Tenant
   alias Brando.Tenant.Job
   alias Brando.Trait
+  alias Brando.Trait.Meta.ContentModified
   alias Brando.Utils
 
   def create(module, params, user, callback_block, opts) do
@@ -33,6 +34,7 @@ defmodule Brando.Query.Mutations do
       |> struct()
       |> changeset_fun.(params, user, nil, opts)
       |> Publisher.maybe_override_status()
+      |> ContentModified.stamp(user)
 
     result = with :ok <- Boundary.change(user, :create, changeset), do: Query.insert(changeset)
 
@@ -76,6 +78,7 @@ defmodule Brando.Query.Mutations do
     pubsub? = Keyword.get(opts, :pubsub?, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :insert),
          :ok <- Boundary.change(user, :create, changeset),
          {:ok, entry} <- Query.insert(changeset),
@@ -139,6 +142,7 @@ defmodule Brando.Query.Mutations do
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
          changeset <- changeset_fun.(entry, params, user, nil, []),
          changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :update),
          :ok <- Boundary.change(user, :update, changeset),
          {:ok, entry} <- Query.update(changeset),
@@ -181,6 +185,7 @@ defmodule Brando.Query.Mutations do
     pubsub? = Keyword.get(opts, :pubsub, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :update),
          :ok <- Boundary.change(user, :update, changeset),
          {:ok, entry} <- Query.update(changeset),
@@ -437,8 +442,19 @@ defmodule Brando.Query.Mutations do
     put_in(struct, [Access.key(:__meta__), Access.key(:state)], :built)
   end
 
-  defp drop_fields(%{id: _} = entry), do: Utils.nilify_fields(entry, [:id, :inserted_at, :updated_at])
+  defp drop_fields(%{id: _} = entry) do
+    entry
+    |> Utils.nilify_fields([:id, :inserted_at, :updated_at])
+    |> restamp_content_modified()
+  end
+
   defp drop_fields(entry), do: entry
+
+  # A copy is new content as of now, like any other insert.
+  defp restamp_content_modified(%{content_modified_at: _} = entry),
+    do: %{entry | content_modified_at: DateTime.truncate(DateTime.utc_now(), :second)}
+
+  defp restamp_content_modified(entry), do: entry
 
   defp maybe_set_status(%{status: _} = entry), do: Map.put(entry, :status, :draft)
   defp maybe_set_status(entry), do: entry

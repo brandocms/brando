@@ -110,17 +110,42 @@ defmodule Brando.Blueprint.Migrations.Renderer do
 
   # Rows that predate `edited_at` (the Creator trait) take `updated_at` as an
   # upper bound, as brando_175 does for Brando's own tables. Without it every
-  # existing entry shows as never edited.
+  # existing entry shows as never edited. `content_modified_at` (the Meta
+  # trait) starts from the last edit the same way, as brando_201 does.
   defp render_backfills(current, diff) do
-    if current.timestamps and diff.timestamps != :add and Enum.any?(diff.add_columns, &(&1.name == :edited_at)) do
-      """
-      flush()
+    statements =
+      if current.timestamps and diff.timestamps != :add,
+        do: backfill_statements(current, diff),
+        else: []
 
-      execute "UPDATE #{current.table} SET edited_at = updated_at WHERE edited_at IS NULL"
-      """
-    else
-      ""
+    case statements do
+      [] ->
+        ""
+
+      statements ->
+        """
+        flush()
+
+        #{Enum.map_join(statements, "\n", &~s(execute "#{&1}"))}
+        """
     end
+  end
+
+  defp backfill_statements(current, diff) do
+    added = MapSet.new(diff.add_columns, & &1.name)
+
+    last_edit =
+      if Enum.any?(current.columns, &(&1.name == :edited_at)), do: "COALESCE(edited_at, updated_at)", else: "updated_at"
+
+    Enum.filter(
+      [
+        MapSet.member?(added, :edited_at) &&
+          "UPDATE #{current.table} SET edited_at = updated_at WHERE edited_at IS NULL",
+        MapSet.member?(added, :content_modified_at) &&
+          "UPDATE #{current.table} SET content_modified_at = #{last_edit} WHERE content_modified_at IS NULL"
+      ],
+      & &1
+    )
   end
 
   defp render_alter(direction, table, diff) do

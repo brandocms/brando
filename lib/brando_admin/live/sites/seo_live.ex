@@ -64,7 +64,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
           <header class="workspace-panel-heading">
             <div>
               <h2>{gettext("Not found (404)")}</h2><p>
-                {gettext("Requests for URLs that do not exist. Add a redirect above when a page has moved.")}
+                {gettext(
+                  "Requests for URLs that do not exist, over the last %{days} days. Add a redirect above when a page has moved.",
+                  days: @four_oh_four_days
+                )}
               </p>
             </div>
           </header>
@@ -148,7 +151,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
         </thead>
         <tbody>
           <tr :for={item <- @items}>
-            <td class="workspace-mono">{item.url}</td><td>{item.hits}</td><td>{item.last_hit_at}</td>
+            <td>
+              <span class="workspace-mono">{item.url}</span>
+              <span :if={item[:referrer]} class="seo-not-found-referrer">
+                {gettext("Mostly from %{referrer}", referrer: item.referrer)}
+              </span>
+            </td>
+            <td>{item.hits}</td>
+            <td>{item.last_hit_at}</td>
             <td :if={@redirectable} class="seo-not-found-action">
               <%= if MapSet.member?(@redirect_drafts, item.url) do %>
                 <span class="seo-not-found-added"><.icon name="check" />{gettext("Added above")}</span>
@@ -1086,8 +1096,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
     end)
   end
 
+  # Read from the database, so only once the socket is connected.
   defp assign_404s(socket) do
-    assign_new(socket, :four_oh_fours, fn -> Brando.Sites.FourOhFour.list() end)
+    socket
+    |> assign(:four_oh_fours, if(connected?(socket), do: Brando.Sites.FourOhFour.list(), else: []))
+    |> assign(:four_oh_four_days, Brando.Sites.FourOhFour.retention_days())
   end
 
   defp assign_audit_defaults(socket) do

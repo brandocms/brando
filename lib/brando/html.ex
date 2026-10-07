@@ -264,9 +264,10 @@ defmodule Brando.HTML do
 
   def render_hreflangs(%{conn: %{private: %{brando_hreflangs: hreflangs}}} = assigns) do
     canonical =
-      hreflangs
-      |> List.first()
-      |> elem(1)
+      Brando.Plug.HTML.get_canonical(assigns.conn) ||
+        hreflangs
+        |> List.first()
+        |> elem(1)
 
     assigns =
       assigns
@@ -289,7 +290,8 @@ defmodule Brando.HTML do
   end
 
   def render_hreflangs(assigns) do
-    assigns = assign(assigns, :canonical, Brando.Utils.current_url(assigns.conn))
+    canonical = Brando.Plug.HTML.get_canonical(assigns.conn) || Brando.Utils.current_url(assigns.conn)
+    assigns = assign(assigns, :canonical, canonical)
 
     ~H"""
     <link rel="canonical" href={@canonical} />

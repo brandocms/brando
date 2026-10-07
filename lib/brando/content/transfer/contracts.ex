@@ -39,7 +39,7 @@ defmodule Brando.Content.Transfer.Contracts do
   defp normalize(value) when is_map(value) do
     value
     |> Map.reject(fn {key, _} ->
-      key in ~w(id uid version sequence creator_id updated_by_id inserted_at updated_at edited_at) ||
+      key in ~w(id uid version sequence creator_id updated_by_id inserted_at updated_at edited_at content_modified_at) ||
         String.ends_with?(key, "_id")
     end)
     |> Map.new(fn {key, val} -> {key, normalize(val)} end)

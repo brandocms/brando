@@ -158,6 +158,10 @@ test('creates meta information', async ({ page }) => {
   await page.locator('input[name="page[meta_title]"]').fill('Overridden title')
   await page.locator('textarea[name="page[meta_description]"]').fill('Overridden description')
 
+  const canonicalInput = page.locator('input[name="page[meta_canonical_url]"]')
+  await canonicalInput.fill('https://example.com/original-hello')
+  await expect(page.getByText('Canonical URL', { exact: true })).toBeVisible()
+
   // Upload the SEO image directly in the Meta field.
   const imageField = page.locator('#page_meta_image-media')
   await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
@@ -206,4 +210,14 @@ test('creates meta information', async ({ page }) => {
   const metaTitleLocator = page.locator('meta[name="title"]')
   const metaTitle = await metaTitleLocator.getAttribute('content')
   expect(metaTitle).toBe('Overridden title')
+
+  // The canonical override replaces the page's own URL, and X gets a large
+  // card from the Open Graph values.
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://example.com/original-hello')
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', 'https://example.com/original-hello')
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image')
+  await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', 'Overridden title')
+  await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', 'Overridden description')
+  const ogImage = await page.locator('meta[property="og:image"]').getAttribute('content')
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', ogImage)
 })

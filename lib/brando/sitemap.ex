@@ -13,7 +13,10 @@ defmodule Brando.Sitemap do
         alias MyAppWeb.Router.Helpers, as: Routes
 
         sitemap "pages" do
-          Pages.list_pages(%{status: :published, select: [:uri, :updated_at]}, :stream)
+          Pages.list_pages(
+            %{status: :published, select: {:struct, [:uri, :content_modified_at, :edited_at, :updated_at]}},
+            :stream
+          )
           |> Stream.map(fn e ->
             page_url = Routes.page_url(Endpoint, :show, [e.uri])
 
@@ -21,7 +24,7 @@ defmodule Brando.Sitemap do
               priority: 0.7,
               changefreq: :weekly,
               loc: page_url,
-              lastmod: e.updated_at
+              lastmod: Brando.Blueprint.Value.modified_at(e)
             })
           end)
         end

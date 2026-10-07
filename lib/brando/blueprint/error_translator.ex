@@ -26,13 +26,26 @@ defmodule Brando.Blueprint.ErrorTranslator do
     Enum.map(error_keys, &translate_key(&1, form, gettext_module, gettext_domain))
   end
 
+  # The meta drawer (`Brando.Trait.Meta`) edits these outside the Blueprint
+  # form, under these labels in Brando's own catalog.
+  @meta_drawer_labels %{
+    "meta_title" => "Meta title",
+    "meta_description" => "Meta description",
+    "meta_canonical_url" => "Canonical URL",
+    "meta_image" => "Meta image",
+    "meta_image_id" => "Meta image"
+  }
+
   defp translate_key(error_key, form, gettext_module, gettext_domain) do
-    case Forms.get_field(error_key, form) do
-      nil ->
+    case {Forms.get_field(error_key, form), Map.get(@meta_drawer_labels, to_string(error_key))} do
+      {nil, nil} ->
         log_missing_field(error_key, form)
         humanize(error_key)
 
-      field ->
+      {nil, meta_label} ->
+        Gettext.dgettext(Brando.Gettext, "default", meta_label)
+
+      {field, _} ->
         Gettext.dgettext(gettext_module, gettext_domain, field_label(field, error_key))
     end
   end

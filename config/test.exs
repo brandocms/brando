@@ -76,6 +76,10 @@ config :brando, Oban,
   repo: BrandoIntegration.Repo,
   testing: :inline
 
+# 404 counts stay in the buffer until a test flushes them: a periodic flush
+# would write from a process outside the test's sandbox.
+config :brando, Brando.Sites.FourOhFour, flush_interval: false
+
 # Videos added in tests are not looked up at their source unless a test asks
 # for it, and lookups go to a stub.
 config :brando, Brando.Videos.Metadata,

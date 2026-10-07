@@ -91,9 +91,11 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
         end)
 
       # The atoms in `fields` are the fallback; the form knows the blueprint and
-      # replaces them with the labels the editor sees on those inputs.
-      assert log =~ "Could not get field :meta_image from form :default"
+      # replaces them with the labels the editor sees on those inputs, the meta
+      # drawer's included.
+      refute log =~ "Could not get field"
       assert html =~ "requires one of:"
+      assert html =~ "Meta image"
       refute html =~ "meta_image, title"
     end
   end
@@ -151,7 +153,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
           ])
         end)
 
-      assert log =~ "Could not get field :meta_image from form :default"
+      refute log =~ "Could not get field"
       assert length(items) == 1
       assert hd(items) =~ ~r/ or /
 
@@ -170,7 +172,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
           ])
         end)
 
-      assert log =~ "Could not get field :meta_image from form :default"
+      refute log =~ "Could not get field"
       assert length(items) == 1
     end
 
@@ -188,7 +190,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
           ])
         end)
 
-      assert log =~ "Could not get field :meta_image from form :default"
+      refute log =~ "Could not get field"
       assert length(items) == 1
     end
   end

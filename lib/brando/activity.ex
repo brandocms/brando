@@ -61,7 +61,7 @@ defmodule Brando.Activity do
   ]
 
   # Bookkeeping that every save touches; a change to these alone is not an edit.
-  @ignored_fields ~w(id inserted_at updated_at updated_by_id edited_at creator_id sequence deleted_at
+  @ignored_fields ~w(id inserted_at updated_at updated_by_id edited_at content_modified_at creator_id sequence deleted_at
                      last_login last_seen config)
 
   @default_retention_days 365

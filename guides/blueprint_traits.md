@@ -132,7 +132,11 @@ modes.
 ### Meta
 
 `trait :meta` adds `meta_title` and `meta_description` (`:text`) and a
-`meta_image` image asset. The form edits them in a **Meta** drawer. `ai:`
+`meta_image` image asset. The form edits them in a **Meta** drawer, along with
+`meta_canonical_url`, an optional [canonical override](meta.md#canonical-url).
+It also adds `content_modified_at`, which only substantive edits move: read it
+with `Brando.Blueprint.Value.modified_at/1` for JSON-LD
+[`dateModified`](jsonld.md#datemodified) and the sitemap's `lastmod`. `ai:`
 configures their [AI generation](blueprint_forms.md#ai-generated-values):
 
 ```elixir

@@ -65,6 +65,7 @@
   .seo-search-preview small { margin-top: 8px; color: var(--workspace-muted); font-size: 11px; }
   .seo-not-found { margin-top: 32px; }
   .seo-not-found td:first-child { overflow-wrap: anywhere; }
+  .seo-not-found-referrer { display: block; margin-top: 4px; color: var(--workspace-muted); font-size: 12px; line-height: 16px; }
   .seo-not-found-action { width: 1%; text-align: right; white-space: nowrap; }
   .seo-not-found-action .seo-row-action { display: inline-flex; align-items: center; gap: 4px; color: var(--workspace-ink); }
   .seo-not-found-action [data-icon] { width: 14px; height: 14px; }

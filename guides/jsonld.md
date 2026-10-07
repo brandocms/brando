@@ -41,7 +41,7 @@ json_ld_schema JSONLD.Schema.Article do
   field :publisher, :identity
 
   field :copyrightYear, :integer, & &1.inserted_at.year
-  field :dateModified, :datetime, & &1.updated_at
+  field :dateModified, :datetime, &Brando.Blueprint.Value.modified_at/1
   field :datePublished, :datetime, & &1.inserted_at
 
   field :description, :string, &fallback([&1.meta_description, {:strip_tags, &1.intro}])
@@ -53,6 +53,35 @@ json_ld_schema JSONLD.Schema.Article do
   field :mainEntityOfPage, :current_url
   field :url, :current_url
 end
+```
+
+#### dateModified
+
+Search and answer engines show `dateModified` as "Updated …", and compare it
+with the sitemap's `lastmod`. Read it with `Brando.Blueprint.Value.modified_at/1`
+rather than `updated_at`, which moves on every save, block re-render and
+`mix brando.entries.resave`.
+
+`modified_at/1` returns `content_modified_at` for entries with `trait :meta`.
+That column is set when an entry is created and moves only when a save changes
+its text substantially: at least 10% of its words, and never fewer than 5 or
+more than 20 words are needed. A typo fix, a reordering of blocks, a new meta
+description or a resave leaves it alone. Entries without it fall back to
+`edited_at`, then `updated_at`.
+
+The text compared is the entry's `:text`, `:textarea` and `:rich_text` form
+inputs (not slugs or the meta fields) and its rendered block fields. Tune the
+threshold with:
+
+```elixir
+config :brando, Brando.Trait.Meta, substantive_change: [min_words: 5, max_words: 20, ratio: 0.1]
+```
+
+Use the same value for a visible "Updated" line in templates, so readers,
+JSON-LD and the [sitemap](sitemaps.md) agree:
+
+```heex
+<p>Updated {Brando.Utils.Datetime.format_datetime(Brando.Blueprint.Value.modified_at(@post), "%d.%m.%Y")}</p>
 ```
 
 #### Field types

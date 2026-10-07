@@ -48,7 +48,7 @@ defmodule Brando.Content.Proposals.Tools do
   @outline_budgets [150, 80, 40, 20, 10, 0]
   @outline_bytes 20_000
   @system_fields ~w(id status publish_at deleted_at marked_as_deleted creator_id updated_by_id inserted_at updated_at
-                    sequence edited_at rendered_blocks rendered_blocks_at)
+                    sequence edited_at content_modified_at rendered_blocks rendered_blocks_at)
 
   @statuses ~w(published draft disabled pending)
 

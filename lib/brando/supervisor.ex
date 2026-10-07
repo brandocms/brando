@@ -42,7 +42,7 @@ defmodule Brando.Supervisor do
                hooks: [
                  hook(
                    module: Cachex.Limit.Scheduled,
-                   args: {500, [], []}
+                   args: {Brando.Sites.FourOhFour.buffer_limit(), [], []}
                  )
                ]
              ]
@@ -50,6 +50,10 @@ defmodule Brando.Supervisor do
       },
       {Oban, oban_config()}
     ]
+
+    # Starts after the cache it reads from, so it stops (flushing once more)
+    # before the cache does.
+    children = children ++ Brando.Sites.FourOhFour.Flusher.children()
 
     # Dev only, and only when configured: see its moduledoc
     children = children ++ Brando.Content.Definition.Watcher.children()
@@ -105,7 +109,9 @@ defmodule Brando.Supervisor do
               # Delete local files no environment has referenced for at least 24 hours
               {"0 5 * * *", Brando.Worker.MediaOrphanCleanup},
               # Delete form submissions older than their form's retention
-              {"15 5 * * *", Brando.Worker.FormSubmissionPurger}
+              {"15 5 * * *", Brando.Worker.FormSubmissionPurger},
+              # Delete 404 log rows past their retention period
+              {"25 5 * * *", Brando.Worker.NotFoundPurger}
             ] ++ extra_oban_cron_jobs(),
           timezone: "Etc/UTC"
         ],
