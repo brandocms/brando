@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.Hooks do
   @moduledoc false
+  use Gettext, backend: Brando.Gettext
+
   import Phoenix.Component
   import Phoenix.LiveView
 
@@ -171,9 +173,35 @@ defmodule BrandoAdmin.Hooks do
               updated_socket
             end
 
-          assign_uri_presence(updated_socket, presence)
+          updated_socket
+          |> assign_uri_presence(presence)
+          |> replay_dirty_fields(presence, latest_meta)
       end
     )
+  end
+
+  defp replay_dirty_fields(%{assigns: %{current_user: %{id: user_id}}} = socket, %{user: %{id: user_id}}, _meta),
+    do: socket
+
+  defp replay_dirty_fields(socket, presence, meta) do
+    case Map.get(meta, :dirty_fields) do
+      [_ | _] = fields -> push_dirty_fields(socket, presence.user.id, fields)
+      _ -> socket
+    end
+  end
+
+  @doc """
+  Pushes another editor's unsaved fields (input names such as `page[title]`)
+  to the form, which marks them. An empty list clears that editor's marks.
+  """
+  def push_dirty_fields(socket, user_id, fields) do
+    label =
+      case socket.assigns[:presences] do
+        %{^user_id => %{name: name}} when is_binary(name) -> gettext("Unsaved changes by %{name}", name: name)
+        _ -> gettext("Unsaved changes by another user")
+      end
+
+    push_event(socket, "b:set_dirty_fields", %{user_id: user_id, fields: fields, label: label})
   end
 
   defp assign_uri_presence(socket, %{user: nil}), do: socket

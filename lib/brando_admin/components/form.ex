@@ -98,6 +98,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_ready?, true)
      |> assign(:entry_load_status, nil)
      |> assign(:dirty_fields, [])
+     |> assign(:synced_values, %{})
      |> assign(:hidden_block_fields, [])
      |> assign(:server_owned_assets, %{})
      |> assign(:draft, nil)
@@ -210,10 +211,13 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, socket}
   end
 
-  # Apply field changes received from another user
+  # Apply field changes received from another user. A sender ships its whole
+  # changeset, so it can carry an older copy of the field we are typing in.
+  # Others see that field as locked, and our blur ships what we typed.
   def update(%{event: "apply_remote_field_changes", changes: changes}, socket) do
     changeset = socket.assigns.form.source
     schema = changeset.data.__struct__
+    changes = Enum.reject(changes, &focused_field?(socket, &1.field))
 
     # Build a set of image/video/file FK fields so we can load associations
     asset_fk_map = build_asset_fk_map(schema)
@@ -223,6 +227,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> put_form(to_form(updated_changeset, []))
+     |> mark_synced(changes)
      |> own_changed_assets(Enum.map(changes, & &1.field))
      |> Drafts.dirty()
      |> force_svelte_remounts(Enum.map(changes, & &1.field))}
@@ -1971,6 +1976,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # A cleared asset (`Repo.get/2` raises on a nil id).
+  defp put_loaded_asset(cs, _assoc_field, _asset_schema, nil), do: cs
+
   defp put_loaded_asset(cs, assoc_field, asset_schema, value) do
     case Brando.Repo.get(asset_schema, value) do
       nil ->
@@ -2029,23 +2037,11 @@ defmodule BrandoAdmin.Components.Form do
         end
       end)
 
-    # Exclude block-related fields, rendered fields, has_many/many_to_many assocs
-    block_fields =
-      if function_exported?(schema, :__blocks_fields__, 0) do
-        schema.__blocks_fields__()
-        |> Enum.flat_map(fn %{name: name} ->
-          name_str = to_string(name)
-          [name, :"rendered_#{name_str}", :"entry_#{name_str}"]
-        end)
-      else
-        []
-      end
-
     # Collect all has_many/many_to_many association names to skip
     all_assocs = schema.__schema__(:associations)
     has_many_assocs = all_assocs -- belongs_to_assocs
 
-    skip_fields = [:updated_at, :inserted_at | block_fields ++ has_many_assocs]
+    skip_fields = unsynced_field_keys(schema) ++ has_many_assocs
 
     changes =
       changeset.changes
@@ -2053,6 +2049,7 @@ defmodule BrandoAdmin.Components.Form do
       |> Enum.map(fn {field, value} ->
         %{field: field, value: value, assoc?: field in belongs_to_assocs}
       end)
+      |> Kernel.++(reverted_fields(socket))
 
     if changes != [] do
       Phoenix.PubSub.broadcast(
@@ -2063,6 +2060,95 @@ defmodule BrandoAdmin.Components.Form do
     end
 
     socket
+    |> mark_synced(changes)
+    |> broadcast_dirty_fields()
+  end
+
+  # Timestamps and block fields never ship as entry fields: blocks sync
+  # through their own ops.
+  defp unsynced_field_keys(schema) do
+    block_fields =
+      if function_exported?(schema, :__blocks_fields__, 0) do
+        Enum.flat_map(schema.__blocks_fields__(), fn %{name: name} ->
+          [name, :"rendered_#{name}", :"entry_#{name}"]
+        end)
+      else
+        []
+      end
+
+    [:updated_at, :inserted_at | block_fields]
+  end
+
+  # The value of each field the other editors already hold, because we
+  # shipped it or received it from them.
+  defp mark_synced(socket, changes) do
+    synced = Enum.reduce(changes, synced_values(socket), &Map.put(&2, &1.field, &1.value))
+    assign(socket, :synced_values, synced)
+  end
+
+  defp synced_values(socket), do: socket.assigns[:synced_values] || %{}
+
+  # Fields the other editors hold a value for that we have since changed back
+  # to the saved one. A field equal to the saved value is not in `changes`,
+  # so without this the editors keep the value we abandoned.
+  defp reverted_fields(socket) do
+    changeset = socket.assigns.form.source
+    schema_fields = changeset.data.__struct__.__schema__(:fields)
+
+    for {field, value} <- synced_values(socket),
+        field in schema_fields,
+        not Map.has_key?(changeset.changes, field),
+        Map.get(changeset.data, field) != value,
+        do: %{field: field, value: Map.get(changeset.data, field), assoc?: false}
+  end
+
+  defp focused_field?(socket, field) do
+    case socket.assigns[:focused_field] do
+      name when is_binary(name) -> String.starts_with?(name, "#{socket.assigns.singular}[#{field}]")
+      _ -> false
+    end
+  end
+
+  # Tells the other editors which of our changed fields they do not have yet,
+  # as input names (`page[title]`). Their forms mark those fields.
+  defp broadcast_dirty_fields(socket) do
+    %{schema: schema, singular: singular} = socket.assigns
+    synced = synced_values(socket)
+    skip = unsynced_field_keys(schema)
+
+    socket.assigns.form.source.changes
+    |> Enum.reject(fn {field, value} -> field in skip or Map.get(synced, field, :__unsynced__) == value end)
+    |> Enum.map(&elem(&1, 0))
+    |> Kernel.++(Enum.map(reverted_fields(socket), & &1.field))
+    |> Enum.map(&"#{singular}[#{&1}]")
+    |> Enum.sort()
+    |> then(&put_dirty_fields(socket, &1))
+  end
+
+  defp put_dirty_fields(%{assigns: %{dirty_fields: dirty_fields}} = socket, dirty_fields), do: socket
+
+  defp put_dirty_fields(socket, dirty_fields) do
+    entry = socket.assigns.entry
+
+    if entry && entry.id do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry.id),
+        {:dirty_fields, dirty_fields, socket.assigns.current_user.id}
+      )
+    end
+
+    assign(socket, :dirty_fields, dirty_fields)
+  end
+
+  # The form now matches the database, so nothing is pending for anyone.
+  defp clear_dirty_fields(socket) do
+    socket = assign(socket, :synced_values, %{})
+
+    case socket.assigns[:dirty_fields] do
+      [_ | _] -> put_dirty_fields(socket, [])
+      _ -> socket
+    end
   end
 
   defp extract_tab_names(%{assigns: %{form_blueprint: %{tabs: tabs}}} = socket) do
@@ -3150,29 +3236,13 @@ defmodule BrandoAdmin.Components.Form do
     socket = socket |> assign(:form_recovered?, true) |> Translation.put_acknowledged(params)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
-    current_user = socket.assigns.current_user
     singular = socket.assigns.singular
-    dirty_fields = socket.assigns.dirty_fields
     has_blocks? = socket.assigns.has_blocks?
 
     entry_params = Map.get(params, singular)
     entry_or_default = entry || struct(schema)
 
     changeset = socket |> cast_entry_params(entry_or_default, entry_params) |> Map.put(:action, :validate)
-    changed_fields = Map.keys(changeset.changes)
-
-    socket =
-      if changed_fields == dirty_fields do
-        socket
-      else
-        Phoenix.PubSub.broadcast(
-          Brando.pubsub(),
-          Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry.id),
-          {:dirty_fields, changed_fields, current_user.id}
-        )
-
-        assign(socket, :dirty_fields, changed_fields)
-      end
 
     # The recomputed form is assigned before the `_target` branch, and that
     # placement is load-bearing. Form *recovery* pushes this same event with a
@@ -3181,7 +3251,7 @@ defmodule BrandoAdmin.Components.Form do
     # entry field (`view.ts:2450`, `channel.ex:848-853`). Assigning inside the
     # `[^singular | rest]` branch meant every recovered value was recomputed and
     # then dropped, so a reconnect silently restored nothing.
-    socket = socket |> put_form(to_form(changeset, [])) |> Drafts.dirty()
+    socket = socket |> put_form(to_form(changeset, [])) |> broadcast_dirty_fields() |> Drafts.dirty()
 
     case Map.get(params, "_target") do
       [^singular | rest] ->
@@ -5738,6 +5808,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> put_form(to_form(schema.changeset(entry, %{}, current_user), []))
     |> clear_owned_assets()
+    |> clear_dirty_fields()
   end
 
   @doc """
