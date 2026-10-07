@@ -1,6 +1,6 @@
 # Content import and export
 
-**Configuration → Import/Export** moves complete saved entries between Brando
+**Configuration → Content transfer** moves complete saved entries between Brando
 installations, sites and environments. Entries include authored fields, metadata,
 assets, owned records and every block field. Review the bundle before creating
 new entries or updating existing ones on the destination.

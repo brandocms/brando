@@ -17,8 +17,8 @@ tenant environment. The admin's existing copy/install export remains available.
 
 ## Using the admin
 
-Open **Content Modules → Import / export DSL**. Both directions use the same
-definitions, authorization checks and importer as the CLI.
+Open **Block modules → Import / export → Modules as files**. Both directions use
+the same definitions, authorization checks and importer as the CLI.
 
 1. Choose **Prepare export**, then **Download ZIP** for all local modules in the
    current workspace. To export particular modules, select their listing rows and

@@ -728,8 +728,9 @@ The [interactive comparison](admin-ui/identifier-variants/standalone.html)
 retains the other variants for context.
 
 Use one outline around adjacent rows, thin dividers, small rectangular covers
-and a document icon when no cover exists. Titles lead; type, language and a
-localized status label sit below. Show a grip only for sortable rows, a checkbox
+and the content type's icon when no cover exists. Titles lead, with the status
+dot before them (its localized name is there for screen readers and on hover);
+type and language sit below. Show a grip only for sortable rows, a checkbox
 for picker choices, and a small remove button where removal is supported.
 Relation-field actions share a footer inside the outline. Link-picker results
 also retain their destination URL.
