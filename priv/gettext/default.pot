@@ -15364,3 +15364,43 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Some entries could not be copied."
 msgstr ""
+
+#: lib/brando_admin/components/form/entry_header.ex
+#, elixir-autogen, elixir-format
+msgid "New %{type}"
+msgstr ""
+
+#: lib/brando_admin/components/form/entry_header.ex
+#, elixir-autogen, elixir-format
+msgid "Breadcrumb"
+msgstr ""
+
+#: lib/brando_admin/components/form/entry_header.ex
+#, elixir-autogen, elixir-format
+msgid "Status: %{status}"
+msgstr ""
+
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Saved %{time}"
+msgstr ""
+
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved yet"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Share"
+msgstr ""
+
+#: lib/brando_admin/live/sites/identity_live.ex
+#, elixir-autogen, elixir-format
+msgid "The organisation behind the site: name, contact details, page titles and structured data."
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Metadata, indexing and redirects for the site, and a review of its content."
+msgstr ""

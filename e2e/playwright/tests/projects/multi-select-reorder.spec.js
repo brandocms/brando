@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, dragAndDrop, fillSlugSource } from '../../utils'
+import { syncLV, dragAndDrop, fillSlugSource, setEntryStatus } from '../../utils'
 
 test.describe('Multi-select reordering', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe('Multi-select reordering', () => {
     await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
-    await page.getByText('Published').click()
+    await setEntryStatus(page, 'published')
     const clientNameField = page.getByRole('textbox', { name: 'Name' })
     await fillSlugSource(clientNameField, 'Test Client')
     await syncLV(page)
@@ -61,7 +61,7 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
 
     // Fill required fields
-    await page.locator('label').filter({ hasText: 'Published' }).click()
+    await setEntryStatus(page, 'published')
     const titleField = page.getByRole('textbox', { name: 'Title' })
     await fillSlugSource(titleField, 'Reorder Test Project')
     await syncLV(page)
@@ -189,7 +189,7 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
 
     // Fill required fields
-    await page.locator('label').filter({ hasText: 'Published' }).click()
+    await setEntryStatus(page, 'published')
     const titleField = page.getByRole('textbox', { name: 'Title' })
     await fillSlugSource(titleField, 'Reset Test Project')
     await syncLV(page)

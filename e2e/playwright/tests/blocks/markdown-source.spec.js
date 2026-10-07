@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto'
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 test.describe('Markdown source placements', () => {
   test.setTimeout(90000)
@@ -17,7 +17,7 @@ test.describe('Markdown source placements', () => {
     await page.setViewportSize({ width: 1440, height: 1100 })
 
     await page.goto('/admin/pages/create')
-    await page.getByRole('radio', { name: 'Published', exact: true }).check()
+    await setEntryStatus(page, 'published')
     await page.getByLabel('Title', { exact: true }).fill('Connected documentation')
     await page.getByLabel('URI', { exact: true }).fill('connected-documentation')
     await page.getByRole('button', { name: 'Add block', exact: true }).last().click()

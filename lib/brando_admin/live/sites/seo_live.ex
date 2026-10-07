@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.SuggestionReview
+  alias BrandoAdmin.Components.Workspace
 
   # Image alt text shares the suggestion queue; it is reviewed in the image library.
   @meta_fields [:meta_description, :meta_title]
@@ -44,6 +45,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace settings-workspace seo-workspace">
+      <Workspace.header
+        eyebrow={gettext("Configuration")}
+        title={gettext("SEO")}
+        subtitle={gettext("Metadata, indexing and redirects for the site, and a review of its content.")}
+      />
       <nav class="pill-tabs seo-tabs" aria-label={gettext("SEO sections")}>
         <button type="button" phx-click="tab" phx-value-tab="settings" aria-current={@tab == "settings" && "page"}>
           {gettext("Settings")}
@@ -55,11 +61,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
       </nav>
 
       <div :if={@tab == "settings"}>
-        <.live_component module={Form} id="seo_form" entry_id={@entry_id} current_user={@current_user} schema={@schema}>
-          <:header>
-            {gettext("Update SEO")}
-          </:header>
-        </.live_component>
+        <.live_component
+          module={Form}
+          id="seo_form"
+          entry_id={@entry_id}
+          current_user={@current_user}
+          schema={@schema}
+          layout={:settings}
+        />
 
         <section class="workspace-panel seo-not-found">
           <header class="workspace-panel-heading">

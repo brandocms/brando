@@ -4,6 +4,7 @@ import {
   fillSlugSource,
   confirmUploadFolder,
   expectCanvasOverlayAligned,
+  setEntryStatus,
 } from '../../utils'
 
 test('opens image editor, adjusts focal point, and saves', async ({ page }, testInfo) => {
@@ -14,7 +15,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
-  await page.getByText('Published').click()
+  await setEntryStatus(page, 'published')
   await fillSlugSource(page.getByRole('textbox', { name: 'Name' }), 'ImgEdClient')
   await syncLV(page)
   await expect(page.locator('input[name="client[slug]"]')).toHaveValue('imgedclient', { timeout: 10000 })
@@ -29,7 +30,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await syncLV(page)
 
   // Fill required fields
-  await page.locator('label').filter({ hasText: 'Published' }).click()
+  await setEntryStatus(page, 'published')
   const titleField = page.getByRole('textbox', { name: 'Title' })
   await fillSlugSource(titleField, 'ImgEditorTest')
   await syncLV(page)

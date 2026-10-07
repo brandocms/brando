@@ -8,11 +8,11 @@ const screens = [
   ['pages', '/admin/pages', 'Pages & Sections'],
   ['modules', '/admin/config/content/modules', 'Block modules'],
   ['navigation', '/admin/config/navigation/menus', 'Navigation'],
-  ['menu-editor', '/admin/config/navigation/menus/update/1', 'Edit menu'],
+  ['menu-editor', '/admin/config/navigation/menus/update/1', 'Main menu'],
   ['files', '/admin/assets/files', 'Files'],
   ['videos', '/admin/assets/videos', 'Videos'],
-  ['seo', '/admin/config/seo', 'Update SEO'],
-  ['identity', '/admin/config/identity', /Update identity/],
+  ['seo', '/admin/config/seo', 'SEO'],
+  ['identity', '/admin/config/identity', 'Identity'],
   ['globals', '/admin/globals', 'Globals'],
 ]
 

@@ -46,3 +46,8 @@ msgstr "gallery"
 #, elixir-autogen, elixir-format
 msgid "galleries"
 msgstr "galleries"
+
+#: lib/brando/galleries/gallery.ex
+#, elixir-format
+msgid "New %{type}"
+msgstr ""

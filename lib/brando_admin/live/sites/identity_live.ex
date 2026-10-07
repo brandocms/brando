@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Sites.IdentityLive do
 
   alias Brando.Sites
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Workspace
 
   def mount(_params, %{"user_token" => token}, socket) do
     {:ok,
@@ -18,11 +19,21 @@ defmodule BrandoAdmin.Sites.IdentityLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace settings-workspace identity-workspace">
-      <.live_component module={Form} id="identity_form" entry_id={@entry_id} current_user={@current_user} schema={@schema}>
-        <:header>
-          <span>{gettext("Update identity")}</span><span class="workspace-language">{@current_user.config.content_language}</span>
-        </:header>
-      </.live_component>
+      <Workspace.header
+        eyebrow={gettext("Configuration")}
+        title={gettext("Identity")}
+        subtitle={gettext("The organisation behind the site: name, contact details, page titles and structured data.")}
+      >
+        <span class="workspace-language">{@current_user.config.content_language}</span>
+      </Workspace.header>
+      <.live_component
+        module={Form}
+        id="identity_form"
+        entry_id={@entry_id}
+        current_user={@current_user}
+        schema={@schema}
+        layout={:settings}
+      />
     </div>
     """
   end

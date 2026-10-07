@@ -54,7 +54,7 @@ test('switches preview views with unsaved content and restores the selected view
   await expect(page.locator('[name="live_preview[cache_key]"]')).toHaveValue(key)
 
   await expect(page.locator('.live-preview')).toHaveCSS('opacity', '1')
-  await page.getByRole('heading', { name: 'Create page', exact: true }).scrollIntoViewIfNeeded()
+  await page.getByTestId('entry-title').scrollIntoViewIfNeeded()
   await trigger.click()
   await expect(chooser.locator('[aria-pressed="true"]')).toContainText('Page listing')
   await page.screenshot({ path: testInfo.outputPath('preview-target-chooser.png'), fullPage: false })

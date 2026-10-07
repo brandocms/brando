@@ -415,6 +415,17 @@ production dump.
 
 #### Improvements
 
+- **The entry editor heads itself with the entry.** The heading is the
+  entry's title (or "New case" for a new one) under a breadcrumb with the
+  content type, and its status is one compact control beside it instead of
+  four radios in the form. A blueprint form's `<:header>` slot is no longer
+  shown and no longer required; LiveViews may keep passing one. Every toolbar
+  button has a label, and the save state ("Saved 23:20", "Unsaved changes")
+  sits next to Save. Pass `layout={:settings}` to `BrandoAdmin.Components.Form`
+  for a singleton settings screen: it renders no heading of its own (use
+  `Workspace.header`, which now takes an `eyebrow`) and saves in place from a
+  sticky bar.
+
 - **Listings that depend on who is looking.** A listing passes the signed-in
   user to its context, and a `filters` function whose clauses take a third
   argument receives `%{current_user: user}`, for filters like "hide what I have

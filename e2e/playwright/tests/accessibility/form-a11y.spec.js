@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 // Issue #1996. The admin is essentially one large form application, and before
 // this it shipped a single ARIA attribute in the whole form layer: a submitted
@@ -15,7 +15,7 @@ test.describe('Accessible form validation', () => {
 
     // Required attributes are not validated while an entry is a draft, and a new
     // page starts as one — so publish it first, or the blank save succeeds.
-    await page.locator('label').filter({ hasText: 'Published' }).click()
+    await setEntryStatus(page, 'published')
 
     const title = page.getByLabel('Title', { exact: true })
 
@@ -51,7 +51,7 @@ test.describe('Accessible form validation', () => {
   test('correcting the field clears the announcement', async ({ page }) => {
     await page.goto('/admin/pages/create')
     await syncLV(page)
-    await page.locator('label').filter({ hasText: 'Published' }).click()
+    await setEntryStatus(page, 'published')
 
     const title = page.getByLabel('Title', { exact: true })
     await page.getByTestId('submit').click()

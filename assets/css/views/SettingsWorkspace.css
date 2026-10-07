@@ -2,17 +2,12 @@
 .admin-workspace.settings-workspace {
   max-width: 1120px;
   .brando-form { --admin-field-height: 40px; --admin-field-font-size: 14px; }
-  .brando-form .form-content .form-header { margin: 0 0 24px; padding-bottom: 24px; border-bottom: 1px solid var(--workspace-line); }
-  .form-header h1 { display: flex; align-items: center; gap: 12px; }
-  .workspace-language { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border: 1px solid #dce6dc; border-radius: 5px; background: #eef4eb; color: #526b54; font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
-  /* A white bar: the sections (pill tabs, TabSwitch.css) and one sage Save */
-  .form-content > .form-tabs { min-height: 48px; padding: 6px; margin: 0 0 24px; border: 1px solid #e3e7e3; border-radius: 10px; background: #fff; box-shadow: none; }
-  .form-content > .form-tabs .form-tab-builtins .form-tool-save {
-    --form-tool-bg: #edf3e9;
-    --form-tool-hover: #e2ecdd;
-    --form-tool-ink: #3d5c48;
-    color: #3d5c48;
-  }
+  /* An editor of a configuration entry (a menu, a global set) heads itself
+     like the screen's workspace heading. */
+  .brando-form .form-content .entry-header { margin: 0 0 24px; padding-bottom: 24px; border-bottom: 1px solid var(--workspace-line); }
+  .workspace-language { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 5px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
+  /* A white bar with the sections (pill tabs, TabSwitch.css) */
+  .form-content > .form-tabs { margin: 0 0 24px; border-radius: 10px; box-shadow: none; }
   .brando-form .form-tab > .row { row-gap: 24px; }
   .brando-form fieldset { min-width: 0; padding: 0; margin: 0; }
   .brando-form .form-tab > .row > fieldset.labelled { padding-top: 24px; border-top: 1px solid var(--workspace-line); }
@@ -28,28 +23,29 @@
   .brando-form .field-wrapper { margin-bottom: 0; }
   .field-wrapper > .label-wrapper { margin-bottom: 8px; }
   .field-wrapper > .label-wrapper label { font-size: 13px; line-height: 20px; color: #46554c; }
-  .field-wrapper input.text, .field-wrapper input[type="email"], .field-wrapper input[type="tel"], .field-wrapper textarea, .field-wrapper .multiselect { border-color: #d7dfd9; border-radius: 6px; color: var(--workspace-ink); background: #fff; box-shadow: 0 1px 2px #233d2e05; font-size: 14px; }
+  .field-wrapper input.text, .field-wrapper input[type="email"], .field-wrapper input[type="tel"], .field-wrapper textarea, .field-wrapper .multiselect { border-color: var(--brando-line); border-radius: 6px; color: var(--workspace-ink); background: #fff; box-shadow: 0 1px 2px #233d2e05; font-size: 14px; }
   .field-wrapper input.text { padding-inline: 12px; }
   .field-wrapper textarea { padding: 10px 12px; line-height: 1.6; }
   .field-wrapper .instructions { color: var(--workspace-muted); font-size: 12px; }
   /* Subforms: one very light green on every settings screen */
-  .brando-form .subform { border: 1px solid #e2e9df; border-radius: 8px; background: #f8fbf6; box-shadow: none; padding: 16px; }
+  .brando-form .subform { border: 1px solid var(--brando-line-subform); border-radius: 8px; background: var(--brando-surface-subform); box-shadow: none; padding: 16px; }
   .subform > .label-wrapper { margin-bottom: 16px; }
   .subform > .label-wrapper label { font-size: 15px; color: #46554c; }
   /* Inline subforms are tables with their own rows (SubformTable.css) */
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) { border-color: #e2e9e3; background: #fff; border-radius: 6px; }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) { border-color: var(--brando-line-subform); background: var(--brando-surface); border-radius: 6px; }
   .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields { gap: 16px; align-items: flex-end; }
   .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields > .brando-input { margin: 0; min-width: 0; }
   .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields .field-wrapper { margin: 0; }
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-tools button { min-height: 26px; padding: 5px; background: #edf3e9; color: #3d5c48; }
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-tools button:hover { background: #e2ecdd; }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-tools button { min-height: 26px; padding: 5px; background: var(--brando-surface-selected); color: #3d5c48; }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-tools button:hover { background: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected)); }
   /* A button in a media group takes the group's size and corners. */
   .brando-form button.primary:not(.media-button), .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
-  .brando-form button.primary:not(.media-button, .submit-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
+  .brando-form button.primary:not(.media-button, .submit-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: var(--brando-surface); }
   .brando-form .submit-button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 116px; margin-top: 24px; }
-  .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid #d7dfd9; border-radius: 6px; background: #fff; color: #3d5c48; font-family: inherit; font-size: 13px; line-height: 18px; }
+  .brando-form .settings-save-bar .submit-button { margin: 0; }
+  .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface); color: #3d5c48; font-family: inherit; font-size: 13px; line-height: 18px; }
   .add-entry-button [data-icon] { display: block; width: 14px; height: 14px; margin: 0; }
-  .add-entry-button:hover { background: #edf3e9; border-color: #c3d5c5; }
+  .add-entry-button:hover { background: var(--brando-surface-selected); border-color: #c3d5c5; }
   .global-save-actions { padding-top: 20px; }
   .global-tabs > [role="region"] { max-width: 880px; }
   .global-tabs > .global-set-tabs { margin-bottom: 24px; }
@@ -75,7 +71,7 @@
   .seo-not-found-probes > summary::-webkit-details-marker { display: none; }
   .seo-not-found-probes > summary::before { content: ""; align-self: center; width: 6px; height: 6px; margin-right: 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform 150ms ease; }
   .seo-not-found-probes[open] > summary::before { transform: rotate(45deg); }
-  .seo-not-found-probes > summary:hover { background: #f7f9f4; }
+  .seo-not-found-probes > summary:hover { background: var(--brando-surface-hover); }
   .seo-not-found-probes > summary span { color: var(--workspace-muted); font-size: 12px; }
   .seo-not-found-probes .workspace-table td { color: var(--workspace-muted); }
 

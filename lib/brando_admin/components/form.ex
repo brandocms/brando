@@ -44,6 +44,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
   alias BrandoAdmin.Components.Form.Drafts
+  alias BrandoAdmin.Components.Form.EntryHeader
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
   alias BrandoAdmin.Components.Form.FrontendEditor
@@ -1124,30 +1125,13 @@ defmodule BrandoAdmin.Components.Form do
             form
         end
       end)
-      |> assign_new(:header, fn ->
-        IO.warn("""
-
-        No <:header> slot is defined for form component with schema `#{inspect(assigns.schema)}`.
-
-        It is recommended to use this instead of a standalone `<Content.header>` component
-        for better integration with Live Previews!
-
-        Example:
-
-            <.live_component module={Form}
-              id="page_form"
-              entry_id={@entry_id}
-              current_user={@current_user}
-              schema={@schema}>
-              <:header>
-                <%= gettext("Edit page") %>
-              </:header>
-            </.live_component>
-
-        """)
-
-        nil
-      end)
+      # The entry layout heads the form with the entry's own title (see
+      # `EntryHeader`); a `<:header>` slot is no longer shown, but older
+      # LiveViews may still pass one.
+      |> assign_new(:header, fn -> nil end)
+      |> assign_new(:layout, fn -> :entry end)
+      |> assign_settings_save_target()
+      |> assign_header()
       |> assign_new(:instructions, fn -> [] end)
       |> assign_new(:video_context, fn -> :asset end)
       |> assign_new(:frontend_edit, fn -> nil end)
@@ -1169,6 +1153,16 @@ defmodule BrandoAdmin.Components.Form do
         {:ok, socket |> assign_entry() |> finish_form_update()}
     end
   end
+
+  # A settings screen (`layout={:settings}`) is a singleton: its Save stays on
+  # the screen instead of closing back to a listing.
+  defp assign_settings_save_target(%{assigns: %{initial_update: true, layout: :settings}} = socket),
+    do: assign(socket, :save_redirect_target, :self)
+
+  defp assign_settings_save_target(socket), do: socket
+
+  defp default_save_target(%{assigns: %{layout: :settings}}), do: :self
+  defp default_save_target(socket), do: FrontendEditor.save_target(socket)
 
   # The tail of the update pipeline — expects :entry to be assigned. Runs
   # synchronously for create forms and subsequent parent updates, and from
@@ -1815,7 +1809,25 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:form, form)
     |> assign(:hidden_block_fields, hidden_block_fields)
+    |> assign_header_status(form)
   end
+
+  # The heading's status control reads these two instead of `@form`, so a
+  # keystroke in another field doesn't re-render it: `assign/3` marks them
+  # changed only when the status or the choices do.
+  defp assign_header_status(%{assigns: %{status_field: field}} = socket, form) when not is_nil(field) do
+    %{source: changeset} = form
+
+    socket
+    |> assign(:status_input_name, "#{form.name}[#{field}]")
+    |> assign(:entry_status, Changeset.get_field(changeset, field))
+    |> assign(
+      :status_options,
+      EntryHeader.status_options(Map.get(changeset.data, field), socket.assigns.can_publish?)
+    )
+  end
+
+  defp assign_header_status(socket, _form), do: socket
 
   defp build_block_map(%{assigns: %{has_blocks?: false}}), do: []
 
@@ -1883,6 +1895,25 @@ defmodule BrandoAdmin.Components.Form do
       :has_alternates?,
       (schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?()) && entry.id
     )
+  end
+
+  # The heading's fixed parts, once: the breadcrumb, the tabs without the
+  # status input when the heading shows it instead, and whether this user may
+  # publish. The title and status follow the entry and the form; see
+  # `put_form/2` and the template.
+  defp assign_header(%{assigns: %{body_tabs: _}} = socket), do: socket
+
+  defp assign_header(%{assigns: %{schema: schema, form_blueprint: blueprint, layout: layout}} = socket) do
+    {tabs, status_field} =
+      if layout == :entry,
+        do: EntryHeader.lift_status(blueprint.tabs),
+        else: {blueprint.tabs, nil}
+
+    socket
+    |> assign(:entry_crumbs, EntryHeader.crumbs(schema))
+    |> assign(:body_tabs, tabs)
+    |> assign(:status_field, status_field)
+    |> assign(:can_publish?, BrandoAdmin.Authorization.allowed?(:publish, schema))
   end
 
   # These two are STATE, not derived facts, and `reset_transformer_changesets/1`
@@ -2511,7 +2542,7 @@ defmodule BrandoAdmin.Components.Form do
     <div>
       <div id={"#{@id}-loading"} class="brando-form form-loading">
         <div class="form-content">
-          <Primitives.form_header :if={@header}>{render_slot(@header)}</Primitives.form_header>
+          <EntryHeader.header :if={@layout == :entry} crumbs={@entry_crumbs} />
         </div>
         <.entry_loader id={"#{@id}-loader-shell"} status={@entry_load_status} entering />
       </div>
@@ -2583,9 +2614,25 @@ defmodule BrandoAdmin.Components.Form do
         <%!-- Recovery captures are pushed from this empty element, see `draftRecovery.js` --%>
         <span id={"#{@id}-draft-capture"} data-draft-capture phx-target={@myself} hidden></span>
         <div class={["form-content", @live_preview_active? && "with-live-preview"]}>
-          <Primitives.form_header :if={@header}>{render_slot(@header)}</Primitives.form_header>
+          <EntryHeader.header
+            :if={@layout == :entry}
+            crumbs={@entry_crumbs}
+            language={EntryHeader.language(@entry)}
+            title={EntryHeader.title(@schema, @entry)}
+          >
+            <EntryHeader.status_control
+              :if={@status_field}
+              id={"#{@id}-status"}
+              form_id={"#{@id}_form"}
+              name={@status_input_name}
+              value={@entry_status}
+              options={@status_options}
+            />
+          </EntryHeader.header>
 
+          <%!-- The entry layout's breadcrumb names the language already. --%>
           <.creating_language
+            :if={@layout != :entry}
             entry_id={@entry_id}
             schema={@schema}
             form_blueprint={@form_blueprint}
@@ -2600,37 +2647,38 @@ defmodule BrandoAdmin.Components.Form do
             module={DraftRecoveryComponent}
             id={DraftRecoveryComponent.id(@id)}
             dom_id={"#{@id}-draft-recovery"}
+            part={:panels}
             seed={@draft_seed}
             target={@myself}
             entry_id={@entry_id}
           />
 
-          <div class="form-tabs">
-            <div class="form-tab-customs pill-tabs">
+          <div
+            :if={@layout == :entry or length(@tabs) > 1 or @has_meta? or @has_revisioning?}
+            class={["form-tabs", @layout == :settings && "form-tabs--plain"]}
+          >
+            <nav
+              class={["form-tab-customs pill-tabs", @layout == :entry && "pill-tabs--small"]}
+              aria-label={gettext("Sections")}
+            >
               <button
                 :for={tab <- @tabs}
                 :key={tab}
                 type="button"
                 class={[@active_tab == tab && "active"]}
+                aria-pressed={to_string(@active_tab == tab)}
                 phx-click={JS.push("select_tab", target: @myself)}
                 phx-value-name={tab}
               >
                 <span class="form-tab-label">{g(@schema, tab)}</span>
               </button>
-            </div>
-
-            <.form_presences presences={@presences} />
-
-            <div class="form-tab-builtins">
               <button
                 :if={@has_meta?}
                 class="form-tool-meta"
                 phx-click={toggle_drawer("##{@id}-meta-drawer")}
                 type="button"
-                aria-label="Meta"
-                title="Meta"
+                aria-haspopup="dialog"
               >
-                <.icon name="tag" class="s" />
                 <span class="tab-text">Meta</span>
               </button>
               <button
@@ -2641,10 +2689,8 @@ defmodule BrandoAdmin.Components.Form do
                   |> toggle_drawer("##{@id}-revisions-drawer")
                 }
                 type="button"
-                aria-label={gettext("History")}
-                title={gettext("History")}
+                aria-haspopup="dialog"
               >
-                <.icon name="clock" class="s" />
                 <span class="tab-text">{gettext("History")}</span>
               </button>
               <button
@@ -2652,21 +2698,35 @@ defmodule BrandoAdmin.Components.Form do
                 class="form-tool-schedule"
                 phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
                 type="button"
-                aria-label={gettext("Scheduled publishing")}
-                title={gettext("Scheduled publishing")}
+                aria-haspopup="dialog"
               >
-                <.icon name="calendar-days" class="s" />
                 <span class="tab-text">{gettext("Scheduled publishing")}</span>
               </button>
+            </nav>
+
+            <.form_presences :if={@layout != :entry} presences={@presences} />
+
+            <div :if={@layout == :entry} class="form-tab-builtins">
+              <.form_presences presences={@presences} />
+              <.live_component
+                module={DraftRecoveryComponent}
+                id={DraftRecoveryComponent.status_id(@id)}
+                dom_id={"#{@id}-save-state"}
+                part={:status}
+                seed={@draft_seed}
+                saved_at={Map.get(@entry, :updated_at)}
+                target={@myself}
+                entry_id={@entry_id}
+              />
               <button
                 :if={@has_alternates?}
                 class="form-tool-language"
                 phx-click={toggle_drawer("##{@id}-alternates-drawer")}
                 type="button"
-                aria-label={gettext("Languages")}
-                title={gettext("Languages")}
+                aria-haspopup="dialog"
               >
                 <.icon name="languages" class="s" />
+                <span class="tab-text">{gettext("Languages")}</span>
               </button>
               <button
                 :if={@has_live_preview? && length(@live_preview_targets) == 1}
@@ -2675,9 +2735,9 @@ defmodule BrandoAdmin.Components.Form do
                 type="button"
                 aria-label={gettext("Live preview")}
                 aria-pressed={to_string(@live_preview_active?)}
-                title={gettext("Live preview")}
               >
                 <.icon name="eye" class="s" />
+                <span class="tab-text">{gettext("Preview")}</span>
               </button>
               <div
                 :if={length(@live_preview_targets) > 1}
@@ -2697,6 +2757,7 @@ defmodule BrandoAdmin.Components.Form do
                   title={gettext("Choose preview")}
                 >
                   <.icon name="eye" class="s" />
+                  <span :if={!@live_preview_active?} class="tab-text">{gettext("Preview")}</span>
                   <span
                     :for={preview <- @live_preview_targets}
                     :if={
@@ -2759,13 +2820,13 @@ defmodule BrandoAdmin.Components.Form do
                 type="button"
                 aria-label={gettext("Share preview")}
                 aria-busy={to_string(@sharing_preview?)}
-                title={gettext("Share preview")}
                 disabled={@sharing_preview?}
               >
                 <%!-- Spins from the click until the link is ready, which
                       takes a moment while the blocks are gathered. --%>
                 <span class="form-tool-share-spinner" aria-hidden="true"></span>
                 <.icon name="external-link" class="s" />
+                <span class="tab-text">{gettext("Share")}</span>
               </button>
               <div class="split-dropdown form-tool-save">
                 <%!-- Saves and closes, like the bottom button and ⇧⌘S; the menu
@@ -2914,7 +2975,7 @@ defmodule BrandoAdmin.Components.Form do
             />
 
             <.form_tabs
-              tabs={@form_blueprint.tabs}
+              tabs={@body_tabs}
               active_tab={@active_tab}
               current_user={@current_user}
               form={@form}
@@ -2947,6 +3008,7 @@ defmodule BrandoAdmin.Components.Form do
           />
 
           <Primitives.submit_button
+            :if={@layout == :entry}
             processing={@processing}
             form_id={@id}
             label={gettext("Save and close")}
@@ -2954,6 +3016,28 @@ defmodule BrandoAdmin.Components.Form do
             icon="check"
             class="primary submit-button"
           />
+
+          <%!-- A settings screen has one Save, in a bar that stays in view. --%>
+          <div :if={@layout == :settings} class="settings-save-bar">
+            <.live_component
+              module={DraftRecoveryComponent}
+              id={DraftRecoveryComponent.status_id(@id)}
+              dom_id={"#{@id}-save-state"}
+              part={:status}
+              seed={@draft_seed}
+              saved_at={Map.get(@entry, :updated_at)}
+              target={@myself}
+              entry_id={@entry_id}
+            />
+            <Primitives.submit_button
+              processing={@processing}
+              form_id={@id}
+              label={gettext("Save")}
+              shortcut={%{key: "S"}}
+              icon="check"
+              class="primary submit-button"
+            />
+          </div>
 
           <div :if={@footer} class="form-footer">
             {render_slot(@footer)}
@@ -4797,7 +4881,7 @@ defmodule BrandoAdmin.Components.Form do
           push_navigate(socket, to: schema.__admin_route__(:create, []))
       end
 
-    assign(maybe_redirected_socket, :save_redirect_target, FrontendEditor.save_target(socket))
+    assign(maybe_redirected_socket, :save_redirect_target, default_save_target(socket))
   end
 
   defp refresh_saved_entry_with_blocks(socket, entry, stale?, %{schema: schema, mutation_type: :create}) do
@@ -4916,7 +5000,7 @@ defmodule BrandoAdmin.Components.Form do
     # the form until the page is reloaded. Its sibling clause above sets
     # the flag in each `:self` sub-branch; one place is harder to forget.
     maybe_redirected_socket
-    |> assign(:save_redirect_target, :listing)
+    |> assign(:save_redirect_target, if(socket.assigns[:layout] == :settings, do: :self, else: :listing))
     |> assign(:processing, false)
   end
 

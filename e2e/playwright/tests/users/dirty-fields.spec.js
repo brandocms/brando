@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 // Entry text inputs carry phx-debounce="300".
 const awaitFieldDebounce = async (page) => {
@@ -73,15 +73,15 @@ test.describe('Unsaved fields of other editors', () => {
     await open(page)
     await open(secondUserPage)
 
-    const status = (p, value) => p.locator(`.radios-wrapper.status input[value="${value}"]`)
-    const pickStatus = async (p, label) => {
-      await p.locator('.radios-wrapper.status').getByText(label, { exact: true }).click()
+    const status = (p, value) => p.locator(`[data-testid="status-options"] input[value="${value}"]`)
+    const pickStatus = async (p, value) => {
+      await setEntryStatus(p, value)
       await syncLV(p)
     }
     const bStatusLabel = fieldLabel(secondUserPage, 'page[status]')
 
     // Status radios send no focus/blur events, so nothing ships right away.
-    await pickStatus(page, 'Pending')
+    await pickStatus(page, 'pending')
     await expect(bStatusLabel).toHaveAttribute('data-dirty-label', /^Unsaved changes by /)
     await expect(status(secondUserPage, 'pending')).not.toBeChecked()
 
@@ -93,7 +93,7 @@ test.describe('Unsaved fields of other editors', () => {
 
     // Draft is the saved status. Changing back is a change B has not seen:
     // B still holds Pending and would save it.
-    await pickStatus(page, 'Draft')
+    await pickStatus(page, 'draft')
     await expect(bStatusLabel).toHaveAttribute('data-dirty-by')
 
     await saveAndContinue(page)

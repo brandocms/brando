@@ -89,3 +89,8 @@ msgstr "parent_key"
 
 msgid "Templates look this fragment up by its parent key and key. Pages that use it won't find it under the new ones until their templates are changed too."
 msgstr "Maler finner dette fragmentet ved foreldrenøkkel og nøkkel. Sider som bruker det finner det ikke under de nye før malene deres også er endret."
+
+#: lib/brando/pages/fragment.ex
+#, elixir-format
+msgid "New %{type}"
+msgstr "Nytt %{type}"

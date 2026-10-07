@@ -36,6 +36,16 @@ defmodule BrandoAdmin.DatesTest do
     assert Dates.short(nil) == ""
   end
 
+  test "clock/1 is the time today, and the short form on another day" do
+    Gettext.put_locale(Brando.Gettext, "no")
+    now = DateTime.utc_now()
+    local = DateTime.shift_zone!(now, Brando.timezone())
+
+    assert Dates.clock(now) == Calendar.strftime(local, "%H:%M")
+    assert Dates.clock(@at) == "28.09.26 18:40"
+    assert Dates.clock(nil) == ""
+  end
+
   test "time/1 carries the machine value and the full timestamp" do
     Gettext.put_locale(Brando.Gettext, "no")
     html = rendered_to_string(Dates.time(%{at: @at, format: :long, class: nil, __changed__: nil}))

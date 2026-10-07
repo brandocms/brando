@@ -1,26 +1,26 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 test('creates and edits clients', async ({ page }) => {
   await page.goto('/admin')
   await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
-  await page.getByText('Published').click()
+  await setEntryStatus(page, 'published')
   await page.getByRole('textbox', { name: 'Name' }).click()
   await page.getByRole('textbox', { name: 'Name' }).fill('Google')
   await page.getByTestId('submit').click()
   await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
-  await page.getByText('Published').click()
+  await setEntryStatus(page, 'published')
   await page.getByRole('textbox', { name: 'Name' }).click()
   await page.getByRole('textbox', { name: 'Name' }).fill('Microsoft')
   await page.getByTestId('submit').click()
   await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
-  await page.getByText('Published').click()
+  await setEntryStatus(page, 'published')
   await page.getByRole('textbox', { name: 'Name' }).click()
   await page.getByRole('textbox', { name: 'Name' }).fill('OpenAI')
   await page.getByTestId('submit').click()

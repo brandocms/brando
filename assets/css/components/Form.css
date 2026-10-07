@@ -341,7 +341,7 @@
       border-radius: 34px;
 
       &:before {
-        background-color: #fff;
+        background-color: var(--brando-surface);
         bottom: 2px;
         content: "";
         height: 11px;
@@ -385,7 +385,7 @@
     border-radius: 34px;
 
     &:before {
-      background-color: #fff;
+      background-color: var(--brando-surface);
       bottom: 3px;
       content: "";
       height: 20px;
@@ -478,90 +478,49 @@
 }
 
 /**
- * Entry form tab bar. The sections on the left are pill tabs
- * (`.pill-tabs`, TabSwitch.css); the builtin actions on the right share one
- * neutral tint as a single segmented group.
+ * The entry form's toolbar: its sections and drawers (Content, Meta, History…)
+ * as small pill tabs on the left, the editors present, then the save state,
+ * the labelled tools and Save on the right. Sticky under the page top.
  */
 .form-tabs {
-  --form-tool-tint-strength: 100%;
-  --form-tool-icon-strength: 100%;
-  margin-bottom: 25px;
-  background-color: var(--brando-color-white);
-  padding: 9px;
-  border-radius: var(--brando-tabbar-radius);
   display: flex;
-  justify-content: flex-start;
+  flex-wrap: wrap;
   align-items: center;
-  top: 5px;
+  gap: 8px 12px;
   position: sticky;
+  top: 5px;
   z-index: 3;
-  @space padding-x 10px;
-  box-shadow: 0 2px 6px rgba(5, 39, 82, 0.025), 0 0 0 1px rgba(5, 39, 82, 0.065);
+  margin-bottom: 25px;
+  padding: 6px;
+  border: 1px solid var(--brando-line);
+  border-radius: 12px;
+  background-color: var(--brando-surface);
+  box-shadow: 0 1px 2px rgb(39 43 42 / 3%);
 
-  @responsive $mobile {
-    flex-wrap: wrap;
-    gap: 12px;
-
-    /* The labelled save does not fit beside every tool at phone widths;
-       without wrapping the toolbar widens the whole page. */
-    .form-tab-builtins {
-      width: 100%;
-      flex-wrap: wrap;
-      row-gap: 8px;
-      justify-content: space-between;
-    }
+  .form-tab-customs {
+    flex: 0 1 auto;
   }
 
-  /* The builtins' chip */
-  .form-tab-builtins > * {
-    @font main;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 34px;
-    gap: 7px;
-    padding: var(--brando-chip-padding);
-    border: 0;
-    border-radius: var(--brando-chip-radius);
-    background-color: var(--brando-color-white);
-    color: var(--brando-color-dark);
-    white-space: nowrap;
-    cursor: pointer;
-    transition:
-      background-color 0.2s ease,
-      color 0.2s ease;
-
-    &:hover {
-      background-color: var(--brando-chip-hover-bg);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--brando-chip-active-fg);
-      outline-offset: 3px;
-    }
-
-    &.active,
-    &.active:hover {
-      background-color: var(--brando-chip-active-bg);
-      color: var(--brando-chip-active-fg);
+  /* On a phone the sections take the whole row and scroll inside their
+     track. Without the containment their width would widen the page. */
+  @media (max-width: 600px) {
+    .form-tab-customs {
+      flex: 1 1 100%;
+      contain: inline-size;
     }
   }
 
   .page-presences {
-    margin-right: 16px;
-    margin-left: 16px;
+    margin: 0;
 
     .user-presence > .avatar {
       display: flex;
       align-items: center;
       justify-content: center;
       border: 0;
-      background-color: color-mix(in srgb, var(--brando-color-dark) 2%, var(--brando-color-white));
-      color: color-mix(in srgb, var(--brando-color-dark) 60%, var(--brando-color-white));
-      box-shadow: 0 2px 7px rgba(5, 39, 82, 0.12), 0 1px 2px rgba(5, 39, 82, 0.045);
+      background-color: var(--brando-surface-hover);
+      color: var(--brando-muted);
+      box-shadow: 0 2px 7px rgb(39 43 42 / 12%), 0 1px 2px rgb(39 43 42 / 5%);
 
       /* A quiet, static shadow replaces the toolbar's pulsing presence glow. */
       &::before {
@@ -575,166 +534,133 @@
     }
   }
 
+  /* The save state, the tools and Save keep to the right edge, and wrap
+     under the sections when the bar is narrow (a phone, a live preview). */
   .form-tab-builtins {
-    --form-tool-bg: color-mix(in srgb, var(--brando-color-dark) 4%, var(--brando-color-white));
-    --form-tool-hover: color-mix(in srgb, var(--brando-color-dark) 8%, var(--brando-color-white));
-    --form-tool-ink: color-mix(in srgb, var(--brando-color-dark) 65%, var(--brando-color-white));
     display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 5px;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-left: auto;
 
-    > * {
-      background-color: color-mix(in srgb, var(--form-tool-bg) var(--form-tool-tint-strength), var(--brando-color-white));
+    .page-presences {
+      margin-right: 8px;
     }
+  }
 
-    > button:hover {
-      background-color: color-mix(in srgb, var(--form-tool-hover) var(--form-tool-tint-strength), var(--brando-color-white));
-    }
+  /* A tool: a quiet button with its icon and label */
+  .form-tab-builtins > button,
+  .form-tab-builtins > .preview-chooser > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 30px;
+    margin: 0;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--brando-ink);
+    font: 400 12px/18px "Main", sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 
     [data-icon] {
       display: block;
-      flex-shrink: 0;
-      width: 16px;
-      height: 16px;
-      color: color-mix(in srgb, var(--form-tool-ink) var(--form-tool-icon-strength), var(--brando-color-dark));
+      flex: none;
+      width: 15px;
+      height: 15px;
+      color: var(--brando-muted);
     }
 
-    > button.active {
-      &,
-      &:hover {
-        background-color: var(--brando-chip-active-bg);
-        color: var(--brando-chip-active-fg);
-      }
+    &:hover {
+      background-color: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+    }
+
+    &.active,
+    &.active:hover {
+      background-color: var(--brando-surface-selected);
+      color: var(--brando-accent);
 
       [data-icon] {
         color: inherit;
       }
     }
+  }
 
-    .split-dropdown {
-      position: relative;
-      padding: 0;
-      gap: 0;
-      margin-left: 3px;
+  .form-tab-builtins > .preview-chooser {
+    position: relative;
+  }
+
+  /* Save: the bar's one accent, a split button with the save options. */
+  .form-tab-builtins .split-dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    margin-left: 4px;
+    border-radius: 6px;
+    background-color: var(--brando-surface-selected);
+    color: var(--brando-accent);
+
+    > button,
+    .split-dropdown-wrapper > button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      margin: 0;
+      padding: 5px 12px;
+      border: 0;
+      border-radius: 6px 0 0 6px;
+      background-color: transparent;
+      color: inherit;
+      font: 500 12px/18px "Main", sans-serif;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
 
       &:hover {
-        background-color: color-mix(in srgb, var(--form-tool-bg) var(--form-tool-tint-strength), var(--brando-color-white));
+        background-color: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected));
       }
 
-      > button,
-      .split-dropdown-wrapper > button {
-        @font main;
-        font-size: 13px;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 34px;
-        padding: 7px 12px;
-        border: none;
-        border-radius: var(--brando-chip-radius);
-        background-color: transparent;
-        color: color-mix(in srgb, var(--form-tool-ink) var(--form-tool-icon-strength), var(--brando-color-dark));
-        transition: background-color 0.2s ease;
-
-        &:hover {
-          background-color: color-mix(in srgb, var(--form-tool-hover) var(--form-tool-tint-strength), var(--brando-color-white));
-        }
-
-        &:focus-visible {
-          outline: 2px solid var(--brando-chip-active-fg);
-          outline-offset: 3px;
-        }
-      }
-
-      .split-dropdown-wrapper > button {
-        position: relative;
-        width: 27px;
-        padding: 0;
-        border-radius: 0 var(--brando-chip-radius) var(--brando-chip-radius) 0;
-
-        &::before {
-          content: "";
-          position: absolute;
-          left: 0;
-          width: 1px;
-          height: 14px;
-          background-color: currentColor;
-          opacity: 0.12;
-        }
-
-        svg path:last-child {
-          fill: currentColor;
-        }
+      &:focus-visible {
+        outline: 2px solid var(--brando-accent);
+        outline-offset: 2px;
       }
     }
 
-    /* One segmented group: members sit flush, only the outer corners are
-       rounded, and a hairline marks each seam. Phones keep separate chips,
-       spread across the bar. */
-    @responsive >=ipad_portrait {
-      gap: 0;
+    > button.form-tool-save-button {
+      gap: 6px;
 
-      > * {
-        border-radius: 0;
-      }
-
-      > * + * {
-        box-shadow: inset 1px 0 0 color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
-      }
-
-      > :first-child {
-        border-radius: var(--brando-chip-radius) 0 0 var(--brando-chip-radius);
-      }
-
-      > :last-child {
-        border-radius: 0 var(--brando-chip-radius) var(--brando-chip-radius) 0;
-      }
-
-      /* The preview chooser carries its chip on the button inside it */
-      .preview-chooser > button {
-        border-radius: inherit;
-      }
-
-      /* The split button's main half sits inside the group, never at its edge */
-      .split-dropdown {
-        margin-left: 0;
-
-        > button {
-          border-radius: 0;
-        }
+      [data-icon] {
+        width: 15px;
+        height: 15px;
       }
     }
 
-    .tab-text {
-      @responsive <=ipad_landscape {
-        display: none;
-      }
-    }
+    .split-dropdown-wrapper > button {
+      position: relative;
+      width: 28px;
+      padding: 0;
+      border-radius: 0 6px 6px 0;
 
-    svg {
-      margin-top: 1px;
-    }
-  }
-
-  @responsive $mobile {
-    .form-tab-builtins > button {
-      padding: 7px 10px;
-    }
-  }
-
-  @media (max-width: 360px) {
-    .form-tab-builtins {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-
-      .split-dropdown {
-        grid-column: span 2;
-        margin-left: 0;
-
-        > button {
-          flex: 1;
-        }
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 1px;
+        height: 14px;
+        background-color: currentColor;
+        opacity: 0.18;
       }
     }
   }
@@ -746,9 +672,101 @@
   }
 }
 
-.dark-mode .form-tabs {
-  --form-tool-tint-strength: 14%;
-  --form-tool-icon-strength: 40%;
+/* The entry's save state, beside Save: "Saved 23:20", "Unsaved changes".
+   The recovery storage's own status is the title, and read out. */
+.draft-save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 6px;
+  color: var(--brando-muted);
+  font: 400 12px/18px "Main", sans-serif;
+
+  .draft-save-dot {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--brando-status-published);
+  }
+
+  &[data-state="dirty"] .draft-save-dot {
+    background-color: var(--brando-status-pending);
+  }
+
+  &[data-state="new"] .draft-save-dot {
+    background-color: var(--brando-line);
+  }
+
+  &[data-state="error"] {
+    color: var(--brando-status-disabled);
+
+    .draft-save-dot {
+      background-color: var(--brando-status-disabled);
+    }
+  }
+
+  .draft-save-label {
+    white-space: nowrap;
+  }
+
+  &[data-state="error"] .draft-save-label {
+    white-space: normal;
+  }
+
+  .draft-save-detail {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .draft-offline-status {
+    display: none;
+  }
+
+  .draft-save-history {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 26px;
+    margin: 0 0 0 4px;
+    padding: 3px 8px;
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+
+    .draft-icon {
+      width: 14px;
+      height: 14px;
+      color: var(--brando-muted);
+    }
+
+    &:hover {
+      background: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.draft-offline .draft-save-state {
+  color: var(--brando-status-disabled);
+
+  .draft-save-dot {
+    background-color: var(--brando-status-disabled);
+  }
 }
 
 /* One of the two spellings, by platform (`html.not-mac` is set by the Admin hook). */
@@ -763,10 +781,10 @@ html.not-mac .shortcut-other { display: inline; }
   flex: 0 0 auto;
   margin-left: auto;
   padding: 1px 5px;
-  border: 1px solid #dce2dc;
+  border: 1px solid var(--brando-line);
   border-radius: 4px;
-  background: #f5f7f3;
-  color: #626b66;
+  background: var(--brando-surface-hover);
+  color: var(--brando-muted);
   font: 10px/16px "Main", sans-serif;
   white-space: nowrap;
 }
@@ -863,19 +881,8 @@ html.not-mac .shortcut-other { display: inline; }
     cursor: default;
   }
 
+  /* Sized and inked like the other tools (see .form-tab-builtins above) */
   .preview-chooser-trigger {
-    font: inherit;
-    line-height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    min-height: 34px;
-    padding: var(--brando-chip-padding);
-    border: 0;
-    border-radius: var(--brando-chip-radius);
-    background: transparent;
-
     &.active {
       background: var(--brando-chip-active-bg);
       color: var(--brando-chip-active-fg);
@@ -884,11 +891,12 @@ html.not-mac .shortcut-other { display: inline; }
         color: inherit;
       }
     }
+  }
 
-    .preview-chooser-chevron {
-      width: 12px;
-      height: 12px;
-    }
+  /* The same chevron as Save's menu beside it, not the tools' 15px icon */
+  .preview-chooser > button > .preview-chooser-chevron.dropdown-chevron {
+    width: 14px;
+    height: 14px;
   }
 
   .preview-choices {
@@ -999,49 +1007,26 @@ html.not-mac .shortcut-other { display: inline; }
   transform: translateY(1px);
 }
 
-.form-tabs .split-dropdown-button > svg {
+.form-tabs .split-dropdown-button > [data-icon] {
   display: block;
+  width: 14px;
+  height: 14px;
   margin: 0;
 }
 
-/* Keep the preview and its toolbar fully visible when sharing the viewport. */
-@media (max-width: 1600px) {
-  .with-live-preview .form-tabs .form-tab-builtins .tab-text {
-    display: none;
-  }
-
-  .with-live-preview .form-tabs .preview-current-view {
-    max-width: 90px;
-  }
-}
-
 /* "Creating in Norsk" under a create form's heading. */
-.form-creating-language { margin: -8px 0 16px; color: #626b66; font-size: 13px; line-height: 18px; }
+.form-creating-language { margin: -8px 0 16px; color: var(--brando-muted); font-size: 13px; line-height: 18px; }
 
-/* Every form's heading at the size of the workspace headings, whether the
-   form is an entry's (pages, cases) or a setting's (identity, menus, SEO);
-   entry forms had a 50px display size of their own. */
-.form-header h1 { display: flex; align-items: center; gap: 12px; font-size: 32px; line-height: 1.2; letter-spacing: -.035em; }
-/* The blueprint form spaces its header itself; a hand-written form (the
-   module editor) gets the same room. */
+/* A hand-written form's heading (the module editor) at the size of the
+   workspace headings. Blueprint forms head themselves with EntryHeader.css. */
+.form-header h1 { display: flex; align-items: center; gap: 12px; font-size: 32px; font-weight: 500; line-height: 1.2; letter-spacing: -.035em; color: var(--brando-ink); }
 .form-header:not(.brando-form .form-header) { @space margin-top sm; @space margin-bottom sm; }
-.form-header-badge { display: inline-flex; align-items: center; padding: 4px 8px; border: 1px solid #dce6dc; border-radius: 5px; background: #eef4eb; color: #526b54; font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
-
-/* The recovery status reads as a caption of the heading: close under it, with
-   a small gap before the toolbar. */
-.brando-form .form-content .form-header:has(~ .draft-recovery-host) { margin-bottom: 8px; }
-.brando-form .form-content .draft-recovery-host > .draft-recovery { margin-bottom: 12px; }
-
-/* The toolbar's save: icon and label spaced and inked like its neighbours. */
-.form-tabs .form-tab-builtins .form-tool-save > button.form-tool-save-button {
-  display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px;
-  color: var(--brando-color-dark); font-size: 13px; font-weight: 500; white-space: nowrap;
-}
+.form-header-badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 5px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
 
 /* Sharing takes a moment while the blocks are gathered: the share button
    spins in place of its icon until the link is ready. */
 .form-tabs .form-tab-builtins .form-tool-share {
-  .form-tool-share-spinner { display: none; width: 14px; height: 14px; border: 1.5px solid #dce2dc; border-top-color: #254e3f; border-radius: 50%; animation: form-tool-share-spin 900ms linear infinite; }
+  .form-tool-share-spinner { display: none; width: 14px; height: 14px; border: 1.5px solid var(--brando-line); border-top-color: var(--brando-accent); border-radius: 50%; animation: form-tool-share-spin 900ms linear infinite; }
   &[aria-busy="true"] { cursor: progress; opacity: 1; }
   &[aria-busy="true"] .form-tool-share-spinner { display: inline-block; }
   &[aria-busy="true"] > [data-icon] { display: none; }
@@ -1063,14 +1048,14 @@ html.not-mac .shortcut-other { display: inline; }
   padding: 2px 0;
   border: 0;
   background: none;
-  color: #626b66;
+  color: var(--brando-muted);
   font-size: 12px;
   line-height: 18px;
   cursor: pointer;
 
   code { font-size: 12px; }
   [data-icon] { width: 13px; height: 13px; }
-  &:hover { color: #254e3f; }
+  &:hover { color: var(--brando-accent); }
 }
 
 .disclosed-text-field { display: none; }

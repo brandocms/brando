@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, dragAndDrop, fillSlugSource, confirmUploadFolder, keepDuplicateUploads } from '../../utils'
+import { syncLV, dragAndDrop, fillSlugSource, confirmUploadFolder, keepDuplicateUploads, setEntryStatus } from '../../utils'
 
 test('creates project', async ({ page }, testInfo) => {
   test.setTimeout(120000)
@@ -8,7 +8,7 @@ test('creates project', async ({ page }, testInfo) => {
   await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
-  await page.getByText('Published').click()
+  await setEntryStatus(page, 'published')
   await page.getByRole('textbox', { name: 'Name' }).click()
   await page.getByRole('textbox', { name: 'Name' }).fill('Microsoft')
   await page.getByTestId('submit').click()
@@ -33,13 +33,13 @@ test('creates project', async ({ page }, testInfo) => {
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
 
-  await page.locator('label').filter({ hasText: 'Published' }).click()
+  await setEntryStatus(page, 'published')
   const titleField = page.getByRole('textbox', { name: 'Title' })
   await fillSlugSource(titleField, 'Microsoft')
   await syncLV(page)
   // Wait for slug field to be populated
   await expect(page.locator('input[name="project[slug]"]')).toHaveValue(/microsoft/, { timeout: 10000 })
-  await page.locator('#project_status-field-base').getByText('Published', { exact: true }).click()
+  await setEntryStatus(page, 'published')
   await page.locator('#project_full_case-field-base div').click()
 
   // Use pressSequentially instead of fill() for TipTap contenteditable elements

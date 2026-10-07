@@ -368,6 +368,18 @@ function mediaMenuButton(field) {
   return field.locator('.media-action-menu > button')
 }
 
+// The entry heading's status control: a button opening the status radios.
+// Chooses by value (`draft`, `pending`, `published`, `disabled`), so it works
+// in any admin language, and waits until the form has taken the choice.
+async function setEntryStatus(page, status) {
+  const trigger = page.getByTestId('status-trigger')
+  await trigger.click()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await page.getByTestId('status-options').locator(`label:has(input[value="${status}"])`).click()
+  await expect(trigger).toHaveAttribute('data-status', status)
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+}
+
 async function mediaMenu(field, action) {
   await mediaMenuButton(field).click()
   await field.locator('.media-field-menu').getByRole('button', { name: action, exact: true }).click()
@@ -394,5 +406,6 @@ module.exports = {
   keepDuplicateUploads,
   expectCanvasOverlayAligned,
   mediaMenu,
-  mediaMenuButton
+  mediaMenuButton,
+  setEntryStatus
 }

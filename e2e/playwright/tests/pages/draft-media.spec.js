@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, mediaMenu, mediaMenuButton } from '../../utils'
+import { syncLV, confirmUploadFolder, mediaMenu, mediaMenuButton, setEntryStatus } from '../../utils'
 
 const mediaState = async (page, schema, id = 'new') => {
   const response = await page.request.post('/e2e/drafts/media-state', { data: { schema, entry_id: String(id) } })
@@ -30,7 +30,7 @@ const restore = async page => {
 const openProject = async page => {
   await page.goto('/admin/projects/clients/create')
   await syncLV(page)
-  await page.getByText('Published', { exact: true }).click()
+  await setEntryStatus(page, 'published')
   await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Recovery client')
   await page.getByRole('textbox', { name: 'Slug', exact: true }).fill('recovery-client')
   await page.getByTestId('submit').click()
@@ -162,7 +162,7 @@ test.describe('Media in entry recovery copies', () => {
 
   test('a rejected Save retains the full recovery payload', async ({ page }) => {
     await createPage(page, 'Work surviving a rejected save')
-    await page.getByText('Published', { exact: true }).click()
+    await setEntryStatus(page, 'published')
     await page.getByLabel('URI').fill('')
     await waitForCopy(page, 'page', 'new', copy => copy.main.uri === '')
     await page.getByTestId('submit').click()

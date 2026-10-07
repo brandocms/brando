@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, fillSlugSource } from '../../utils'
+import { syncLV, fillSlugSource, setEntryStatus } from '../../utils'
 
 // Seed data creates 3 published projects: Alpha, Beta, Gamma (none have full_case)
 // We create 1 additional project with full_case: true for testing
@@ -14,7 +14,7 @@ test.describe('Listing Filters', () => {
     await page.getByRole('link', { name: 'Create new' }).click()
     await expect(page).toHaveURL(/\/clients\/create/)
     await syncLV(page)
-    await page.getByText('Published').click()
+    await setEntryStatus(page, 'published')
     await fillSlugSource(page.getByRole('textbox', { name: 'Name' }), 'Test Client')
     await syncLV(page)
     await page.getByTestId('submit').click()
@@ -28,7 +28,7 @@ test.describe('Listing Filters', () => {
     await page.getByRole('link', { name: 'Create new' }).click()
     await expect(page).toHaveURL(/\/projects\/create/)
     await syncLV(page)
-    await page.locator('label').filter({ hasText: 'Published' }).click()
+    await setEntryStatus(page, 'published')
     await fillSlugSource(page.getByRole('textbox', { name: 'Title' }), 'Full Case Project')
     await syncLV(page)
     // Enable full case toggle

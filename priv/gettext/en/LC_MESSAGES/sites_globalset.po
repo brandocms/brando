@@ -46,3 +46,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "global sets"
 msgstr ""
+
+#: lib/brando/sites/global_set.ex
+#, elixir-format
+msgid "New %{type}"
+msgstr ""

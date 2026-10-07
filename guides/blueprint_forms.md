@@ -70,7 +70,6 @@ def default_link(_entry, _asset), do: %{}
 ```elixir
 defmodule MyAppAdmin.Articles.ArticleFormLive do
   use BrandoAdmin.LiveView.Form, schema: MyApp.Articles.Article
-  use Gettext, backend: MyAppAdmin.Gettext
 
   alias BrandoAdmin.Components.Form
 
@@ -83,11 +82,7 @@ defmodule MyAppAdmin.Articles.ArticleFormLive do
       current_user={@current_user}
       presences={@presences}
       schema={@schema}
-    >
-      <:header>
-        {if @live_action == :create, do: gettext("Create article"), else: gettext("Update article")}
-      </:header>
-    </.live_component>
+    />
     """
   end
 end
@@ -107,8 +102,18 @@ Give `BrandoAdmin.Components.Form`:
 * `name`: the [named form](#named-forms) to render. Default `:default`.
 * `initial_params`: params for a new entry. When given and not empty, they
   replace the form's `default_params`.
-* slots: `:header` (the page heading; a form without one prints a warning),
-  and the optional `:instructions` and `:footer`.
+* `layout`: `:entry` (default) heads the form with the entry's title, a
+  breadcrumb with the content type and language, and the status control
+  beside the title; Save and close sits in the toolbar. A new entry is headed
+  "New" and the blueprint's singular name. Where "new" must agree with the
+  noun, translate the msgid `"New %{type}"` in the blueprint's own Gettext
+  domain (`projects_project.po`: `msgstr "Nytt %{type}"`); the blueprint's
+  wording replaces the default. `:settings` is for a
+  singleton settings screen: the form renders no heading (put a
+  `Workspace.header` above it), shows its tabs as plain pill tabs, and saves
+  in place from a sticky bar at the bottom.
+* slots: the optional `:instructions` and `:footer`. A `:header` slot from
+  earlier versions is accepted and not shown.
 
 ## The form
 

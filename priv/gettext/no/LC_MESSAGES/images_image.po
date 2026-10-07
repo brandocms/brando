@@ -102,3 +102,8 @@ msgstr "Fokuspunkt"
 #, elixir-autogen, elixir-format
 msgid "Technical"
 msgstr "Teknisk"
+
+#: lib/brando/images/image.ex
+#, elixir-format
+msgid "New %{type}"
+msgstr "Nytt %{type}"
