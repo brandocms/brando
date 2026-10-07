@@ -1,0 +1,758 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/brando/doctor/checks/configuration.ex:119
+#, elixir-autogen, elixir-format
+msgid "%{context} CDN incomplete"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:114
+#, elixir-autogen, elixir-format
+msgid "%{context} CDN: %{bucket}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:118
+#, elixir-autogen, elixir-format
+msgid "%{context} CDN: missing %{settings}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:122
+#, elixir-autogen, elixir-format
+msgid "%{context} CDN: off"
+msgstr ""
+
+#: lib/brando/doctor/checks/modules.ex:41
+#, elixir-autogen, elixir-format
+msgid "%{count} block on an outdated module version"
+msgid_plural "%{count} blocks on outdated module versions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/deprecations.ex:48
+#, elixir-autogen, elixir-format
+msgid "%{count} call in lib/"
+msgid_plural "%{count} calls in lib/"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex:39
+#, elixir-autogen, elixir-format
+msgid "%{count} config changed since its images were made"
+msgid_plural "%{count} configs changed since their images were made"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/sitemap.ex:86
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/system_check.ex:25
+#, elixir-autogen, elixir-format
+msgid "%{count} detail"
+msgid_plural "%{count} details"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/oban.ex:86
+#, elixir-autogen, elixir-format
+msgid "%{count} discarded in 24 h"
+msgid_plural "%{count} discarded in 24 h"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/system_check.ex:132
+#, elixir-autogen, elixir-format
+msgid "%{count} error"
+msgid_plural "%{count} errors"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/deprecations.ex:49
+#, elixir-autogen, elixir-format
+msgid "%{count} file"
+msgid_plural "%{count} files"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/sitemap.ex:85
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex:44
+#, elixir-autogen, elixir-format
+msgid "%{count} image"
+msgid_plural "%{count} images"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/alt_text.ex:53
+#, elixir-autogen, elixir-format
+msgid "%{count} image without alt (%{language})"
+msgid_plural "%{count} images without alt (%{language})"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/migrations.ex:61
+#, elixir-autogen, elixir-format
+msgid "%{count} migration not run"
+msgid_plural "%{count} migrations not run"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/migrations.ex:80
+#, elixir-autogen, elixir-format
+msgid "%{count} new Brando migration not copied"
+msgid_plural "%{count} new Brando migrations not copied"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/oban.ex:62
+#, elixir-autogen, elixir-format
+msgid "%{count} paused"
+msgid_plural "%{count} paused"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/oban.ex:102
+#, elixir-autogen, elixir-format
+msgid "%{count} queue"
+msgid_plural "%{count} queues"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/migrations.ex:91
+#, elixir-autogen, elixir-format
+msgid "%{count} run"
+msgid_plural "%{count} run"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/oban.ex:101
+#, elixir-autogen, elixir-format
+msgid "%{count} running"
+msgid_plural "%{count} running"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/oban.ex:90
+#, elixir-autogen, elixir-format
+msgid "%{count} stuck"
+msgid_plural "%{count} stuck"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/migrations.ex:68
+#, elixir-autogen, elixir-format
+msgid "%{count} upgrade migration differs from Brando's template"
+msgid_plural "%{count} upgrade migrations differ from Brando's templates"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/system_check.ex:131
+#, elixir-autogen, elixir-format
+msgid "%{count} warning"
+msgid_plural "%{count} warnings"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/migrations.ex:103
+#, elixir-autogen, elixir-format
+msgid "%{file} differs from %{template}"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:106
+#, elixir-autogen, elixir-format
+msgid "%{file} is now %{template}"
+msgstr ""
+
+#: lib/brando/doctor/checks/alt_text.ex:37
+#, elixir-autogen, elixir-format
+msgid "%{language}: %{missing} of %{total} without alt text (%{coverage} covered)"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:70
+#, elixir-autogen, elixir-format
+msgid "%{language}: no %{missing}"
+msgstr ""
+
+#: lib/brando/doctor/checks/modules.ex:53
+#, elixir-autogen, elixir-format
+msgid "%{module} (%{uid}): %{count} block"
+msgid_plural "%{module} (%{uid}): %{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/versions.ex:50
+#, elixir-autogen, elixir-format
+msgid "%{name} %{version} (supported: %{requirement})"
+msgstr ""
+
+#: lib/brando/doctor/checks/versions.ex:64
+#, elixir-autogen, elixir-format
+msgid "%{name} %{version}, needs %{requirement}"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex:51
+#, elixir-autogen, elixir-format
+msgid "%{target}: %{count} image"
+msgid_plural "%{target}: %{count} images"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:87
+#, elixir-autogen, elixir-format
+msgid ".yalc brandojs %{version}"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:21
+#, elixir-autogen, elixir-format
+msgid "Admin assets"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:127
+#, elixir-autogen, elixir-format
+msgid "All checks passed"
+msgstr ""
+
+#: lib/brando/doctor/checks/alt_text.ex:17
+#, elixir-autogen, elixir-format
+msgid "Alt text"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:157
+#, elixir-autogen, elixir-format
+msgid "Assistant: %{model}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:160
+#, elixir-autogen, elixir-format
+msgid "Assistant: %{model} has no API key"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:151
+#, elixir-autogen, elixir-format
+msgid "Assistant: AI turned off"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:154
+#, elixir-autogen, elixir-format
+msgid "Assistant: not configured"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:25
+#, elixir-autogen, elixir-format
+msgid "Checking…"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:18
+#, elixir-autogen, elixir-format
+msgid "Configuration"
+msgstr ""
+
+#: lib/brando/doctor/checks/deprecations.ex:23
+#, elixir-autogen, elixir-format
+msgid "Deprecations"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:67
+#, elixir-autogen, elixir-format
+msgid "Endpoint URL: %{url}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:64
+#, elixir-autogen, elixir-format
+msgid "Endpoint URL: not set"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:124
+#, elixir-autogen, elixir-format
+msgid "Error"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:27
+#, elixir-autogen, elixir-format
+msgid "GET /robots.txt goes to %{plug}"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:57
+#, elixir-autogen, elixir-format
+msgid "Generate sitemap"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex:17
+#, elixir-autogen, elixir-format
+msgid "Image configs"
+msgstr ""
+
+#: lib/brando/doctor/checks/alt_text.ex:63
+#, elixir-autogen, elixir-format
+msgid "Images → Alt text drafts it with AI, for review before saving"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:16
+#, elixir-autogen, elixir-format
+msgid "JSON-LD"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:84
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer} does not exist"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:92
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, from %{from}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:88
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, no sender"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:81
+#, elixir-autogen, elixir-format
+msgid "Mailer: not set"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:21
+#, elixir-autogen, elixir-format
+msgid "Migrations"
+msgstr ""
+
+#: lib/brando/doctor/checks/modules.ex:18
+#, elixir-autogen, elixir-format
+msgid "Modules"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:122
+#, elixir-autogen, elixir-format
+msgid "OK"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:25
+#, elixir-autogen, elixir-format
+msgid "Oban queues"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:33
+#, elixir-autogen, elixir-format
+msgid "Open SEO"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:38
+#, elixir-autogen, elixir-format
+msgid "Open identity"
+msgstr ""
+
+#: lib/brando/doctor/checks/modules.ex:48
+#, elixir-autogen, elixir-format
+msgid "Open modules"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex:46
+#, elixir-autogen, elixir-format
+msgid "Recreate changed images"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:25
+#, elixir-autogen, elixir-format
+msgid "Run again"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:25
+#, elixir-autogen, elixir-format
+msgid "Running the checks…"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:18
+#, elixir-autogen, elixir-format
+msgid "Sitemap"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:125
+#, elixir-autogen, elixir-format
+msgid "Skipped"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:25
+#, elixir-autogen, elixir-format
+msgid "System check"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:25
+#, elixir-autogen, elixir-format
+msgid "The checks could not run. Check the application logs, or run mix brando.doctor."
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:37
+#, elixir-autogen, elixir-format
+msgid "URL, mailer and media settings in place"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:56
+#, elixir-autogen, elixir-format
+msgid "Utilities → Generate sitemap"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex:45
+#, elixir-autogen, elixir-format
+msgid "Utilities → Recreate changed images"
+msgstr ""
+
+#: lib/brando/doctor/checks/versions.ex:30
+#, elixir-autogen, elixir-format
+msgid "Versions"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:123
+#, elixir-autogen, elixir-format
+msgid "Warning"
+msgstr ""
+
+#: lib/brando_admin/components/system_check.ex:25
+#, elixir-autogen, elixir-format
+msgid "What is misconfigured or out of date. The checks only read; fixes are linked, not run."
+msgstr ""
+
+#: lib/brando/doctor/checks/alt_text.ex:64
+#, elixir-autogen, elixir-format
+msgid "Write alt text"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:31
+#, elixir-autogen, elixir-format
+msgid "a static robots.txt may stand in front of the SEO text"
+msgstr ""
+
+#: lib/brando/doctor/checks/modules.ex:35
+#, elixir-autogen, elixir-format
+msgid "all blocks on their module's current version"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex:32
+#, elixir-autogen, elixir-format
+msgid "all images match their settings"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:101
+#, elixir-autogen, elixir-format
+msgid "brandojs %{version}"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:70
+#, elixir-autogen, elixir-format
+msgid "brandojs is not a dependency of assets/backend"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:76
+#, elixir-autogen, elixir-format
+msgid "brandojs not installed"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:26
+#, elixir-autogen, elixir-format
+msgid "call page_routes() in the router's browser scope"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:83
+#, elixir-autogen, elixir-format
+msgid "check out the BrandoJS revision that matches Brando"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:69
+#, elixir-autogen, elixir-format
+msgid "check that a node runs the queues, and the logs for the stuck workers"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:67
+#, elixir-autogen, elixir-format
+msgid "check that the nightly SitemapGenerator job runs, or Utilities → Generate sitemap"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:74
+#, elixir-autogen, elixir-format
+msgid "check the errors of the discarded jobs"
+msgstr ""
+
+#: lib/brando/doctor.ex:110
+#, elixir-autogen, elixir-format
+msgid "could not run"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:32
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt and remove it from static_paths"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:67
+#, elixir-autogen, elixir-format
+msgid "endpoint URL is localhost"
+msgstr ""
+
+#: lib/brando/doctor/checks/alt_text.ex:48
+#, elixir-autogen, elixir-format
+msgid "every image has alt text"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:107
+#, elixir-autogen, elixir-format
+msgid "expected %{version}, run mix brando.assets.setup --backend-only"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:93
+#, elixir-autogen, elixir-format
+msgid "expected %{version}, run npx yalc update %{package} and pnpm install in assets/backend"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:37
+#, elixir-autogen, elixir-format
+msgid "fill in the identity's name and logo"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:74
+#, elixir-autogen, elixir-format
+msgid "generated %{age} ago"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:53
+#, elixir-autogen, elixir-format
+msgid "generated %{at}"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:57
+#, elixir-autogen, elixir-format
+msgid "give config :brando, Oban its queues (see Brando.Supervisor)"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:58
+#, elixir-autogen, elixir-format
+msgid "identity complete"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:46
+#, elixir-autogen, elixir-format
+msgid "identity incomplete in %{count} language"
+msgid_plural "identity incomplete in %{count} languages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/json_ld.ex:42
+#, elixir-autogen, elixir-format
+msgid "identity missing"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:66
+#, elixir-autogen, elixir-format
+msgid "last generated %{age} ago"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:84
+#, elixir-autogen, elixir-format
+msgid "less than an hour"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:82
+#, elixir-autogen, elixir-format
+msgid "linked to %{path}, brandojs %{version}"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:77
+#, elixir-autogen, elixir-format
+msgid "logo"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:85
+#, elixir-autogen, elixir-format
+msgid "mailer module missing"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:77
+#, elixir-autogen, elixir-format
+msgid "name"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:161
+#, elixir-autogen, elixir-format
+msgid "no API key for the Assistant"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:33
+#, elixir-autogen, elixir-format
+msgid "no assets/backend/package.json"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:64
+#, elixir-autogen, elixir-format
+msgid "no endpoint URL"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:62
+#, elixir-autogen, elixir-format
+msgid "no identity"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:81
+#, elixir-autogen, elixir-format
+msgid "no mailer"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:56
+#, elixir-autogen, elixir-format
+msgid "no queues, so background jobs never run"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:89
+#, elixir-autogen, elixir-format
+msgid "no sender address"
+msgstr ""
+
+#: lib/brando/doctor/checks/json_ld.ex:36
+#, elixir-autogen, elixir-format
+msgid "no site URL"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:30
+#, elixir-autogen, elixir-format
+msgid "no sitemap module"
+msgstr ""
+
+#: lib/brando/doctor/checks/deprecations.ex:42
+#, elixir-autogen, elixir-format
+msgid "none in lib/"
+msgstr ""
+
+#: lib/brando/doctor.ex:101
+#, elixir-autogen, elixir-format
+msgid "not a Brando.Doctor.Check"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:56
+#, elixir-autogen, elixir-format
+msgid "not copied: %{name}"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:52
+#, elixir-autogen, elixir-format
+msgid "not generated"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:25
+#, elixir-autogen, elixir-format
+msgid "not served by Brando"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:108
+#, elixir-autogen, elixir-format
+msgid "queue %{queue}, limit %{limit}"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:107
+#, elixir-autogen, elixir-format
+msgid "queue %{queue}, limit %{limit}, paused"
+msgstr ""
+
+#: lib/brando/doctor/checks/modules.ex:47
+#, elixir-autogen, elixir-format
+msgid "refresh the modules: mix brando.modules refresh --uid UID --user ID"
+msgstr ""
+
+#: lib/brando/doctor/checks/deprecations.ex:50
+#, elixir-autogen, elixir-format
+msgid "replace them as the deprecation notes say (mix brando.doctor --verbose)"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:63
+#, elixir-autogen, elixir-format
+msgid "resume the paused queues"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:14
+#, elixir-autogen, elixir-format
+msgid "robots.txt"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex:71
+#, elixir-autogen, elixir-format
+msgid "run mix brando.assets.setup --backend-only"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:86
+#, elixir-autogen, elixir-format
+msgid "run mix brando.gen.migrations, then mix brando.migrate"
+msgstr ""
+
+#: lib/brando/doctor/checks/sitemap.ex:30
+#, elixir-autogen, elixir-format
+msgid "run mix brando.gen.sitemap"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:96
+#, elixir-autogen, elixir-format
+msgid "run mix brando.migrate"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:95
+#, elixir-autogen, elixir-format
+msgid "run mix brando.migrate --tenants"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:99
+#, elixir-autogen, elixir-format
+msgid "run mix brando.migrate, then mix brando.migrate --tenants"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:74
+#, elixir-autogen, elixir-format
+msgid "run mix brando.migrations.check --update and review the diff"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex:41
+#, elixir-autogen, elixir-format
+msgid "see the guides for email, CDN delivery and the content assistant"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex:37
+#, elixir-autogen, elixir-format
+msgid "served from SEO settings"
+msgstr ""
+
+#: lib/brando/doctor.ex:104
+#, elixir-autogen, elixir-format
+msgid "skipped in a release: needs the project's source files"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex:97
+#, elixir-autogen, elixir-format
+msgid "testing mode, jobs run inline"
+msgstr ""
+
+#: lib/brando/doctor.ex:85
+#, elixir-autogen, elixir-format
+msgid "took too long"
+msgstr ""
+
+#: lib/brando/doctor/checks/migrations.ex:91
+#, elixir-autogen, elixir-format
+msgid "up to date"
+msgstr ""
+
+#: lib/brando/doctor/checks/versions.ex:72
+#, elixir-autogen, elixir-format
+msgid "use the versions this Brando supports (see the installation guide)"
+msgstr ""

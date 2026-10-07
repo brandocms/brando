@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   alias Brando.Authorization.{Configuration, Engine, Scope}
   alias Brando.Images
   alias BrandoAdmin.Components.AuthorizationTools
+  alias BrandoAdmin.Components.SystemCheck
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
 
@@ -22,7 +23,8 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> assign_info()
        |> assign(:loose_blocks, Brando.Content.BlockAudit.count_loose())
        |> assign_image_tasks()
-       |> assign_authorization_tools(params)}
+       |> assign_authorization_tools(params)
+       |> start_system_check()}
     else
       {:ok, assign(socket, :socket_connected, false)}
     end
@@ -100,6 +102,8 @@ defmodule BrandoAdmin.Sites.UtilsLive do
         download={@configuration_download}
       />
 
+      <SystemCheck.card results={@system_check} failed={@system_check_failed} socket={@socket} />
+
       <section class="utils-maintenance" aria-labelledby="maintenance-title">
         <div class="utils-section-heading">
           <div>
@@ -133,7 +137,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               <span :if={@loose_blocks > 0} class="utils-button-count">{@loose_blocks}</span>
             </.link>
           </article>
-          <article>
+          <article id="utils-sitemap">
             <div>
               <h3>{gettext("Sitemap")}</h3><p>
                 {gettext("Regenerate the sitemap from published content.")}
@@ -149,7 +153,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               "Generate sitemap"
             )}</button>
           </article>
-          <article>
+          <article id="utils-image-sizes">
             <div>
               <h3>{gettext("Image sizes")}</h3><p>
                 {gettext("Recreate the sizes and formats of images from their originals, using the current image settings.")}
@@ -250,6 +254,15 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     end
   end
 
+  # Re-runs the system check; "refresh" is a read for authorization
+  def handle_event("refresh", _, socket) do
+    if socket.assigns.system_check do
+      {:noreply, start_system_check(socket)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("sync_identifiers", _, socket) do
     Brando.Blueprint.Identifier.sync()
     send(self(), {:toast, gettext("Identifiers synced.")})
@@ -295,6 +308,17 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   defp image_task_started({:error, _reason}, socket, _message) do
     send(self(), {:toast, gettext("The operation could not be completed. Check the application logs and try again.")})
     {:noreply, socket}
+  end
+
+  # The checks query and read files, so they run beside the page rather than
+  # holding up its first render
+  defp start_system_check(socket) do
+    prefix = Brando.Tenant.current_prefix()
+    locale = Gettext.get_locale(Brando.Gettext)
+
+    socket
+    |> assign(system_check: nil, system_check_failed: false)
+    |> start_async(:system_check, fn -> Brando.Doctor.run(mode: :admin, prefix: prefix, locale: locale) end)
   end
 
   defp assign_authorization_tools(socket, params) do
@@ -423,6 +447,14 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   defp authorization_event(_, _, socket), do: {:noreply, socket}
+
+  def handle_async(:system_check, {:ok, results}, socket) do
+    {:noreply, assign(socket, system_check: results, system_check_failed: false)}
+  end
+
+  def handle_async(:system_check, {:exit, _reason}, socket) do
+    {:noreply, assign(socket, system_check: nil, system_check_failed: true)}
+  end
 
   def handle_async(:authorization_migration, result, socket) do
     if Configuration.allowed?(socket.assigns.configuration_scope) do
