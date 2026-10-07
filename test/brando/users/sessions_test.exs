@@ -22,7 +22,11 @@ defmodule Brando.Users.SessionsTest do
       set: [last_used_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -3600)]
     )
 
-    assert [%{token: ^second, ip: "10.0.0.2"}, %{token: ^first, user_agent: "Mozilla" <> _}] = Users.list_sessions(user)
+    assert [%{id: second_id, ip: "10.0.0.2", token: nil}, %{id: first_id, user_agent: "Mozilla" <> _}] =
+             Users.list_sessions(user)
+
+    assert second_id == Users.token_id(second)
+    assert first_id == Users.token_id(first)
     assert BrandoAdmin.Components.TwoFactor.browser(chrome()) == "Chrome on macOS"
   end
 
@@ -63,7 +67,7 @@ defmodule Brando.Users.SessionsTest do
     current = Users.generate_user_session_token(user)
     other = Users.generate_user_session_token(user)
 
-    assert :ok = Users.log_out_everywhere(user, user, except: current)
+    assert :ok = Users.log_out_everywhere(user, user, except_id: Users.token_id(current))
     assert Users.get_user_by_session_token(current)
     refute Users.get_user_by_session_token(other)
   end

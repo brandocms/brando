@@ -152,8 +152,10 @@ defmodule Brando.Users.UserNotifier do
   @doc """
   Queues the email telling `user` something changed in how they log in:
   `kind` is `:two_factor_enabled`, `:two_factor_disabled`, `:two_factor_reset`
-  (by an administrator) or `:two_factor_required` (the sign-in policy now
-  asks them to set it up). See `security_notice/3`.
+  (by an administrator), `:two_factor_required` (the sign-in policy now
+  asks them to set it up), `:passkey_added` and `:passkey_removed` (with
+  `%{name: name}`), or `:locked` (with `%{time: until}`). See
+  `security_notice/3`.
   """
   @spec deliver_security_notice(map(), atom(), map()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def deliver_security_notice(user, kind, details \\ %{}) do
@@ -170,9 +172,11 @@ defmodule Brando.Users.UserNotifier do
       url = String.trim_trailing(Brando.endpoint().url(), "/") <> "/admin/users/security"
 
       warning =
-        if kind == :two_factor_required,
-          do: gettext("You will set it up the next time you log in."),
-          else: gettext("If this was not you, reset your password now and tell an administrator.")
+        case kind do
+          :two_factor_required -> gettext("You will set it up the next time you log in.")
+          :locked -> gettext("If you need to log in sooner, ask an administrator.")
+          _ -> gettext("If this was not you, reset your password now and tell an administrator.")
+        end
 
       assigns = %{what: what, warning: warning, action: gettext("Review your security settings"), url: url}
 
@@ -204,6 +208,31 @@ defmodule Brando.Users.UserNotifier do
      gettext(
        "An administrator turned off two-factor authentication for %{email}, and the account was logged out everywhere.",
        email: user.email
+     )}
+  end
+
+  defp notice_text(:passkey_added, user, details) do
+    {gettext("A passkey was added"),
+     gettext("The passkey “%{name}” was added to %{email}. It logs in on its own, without the password.",
+       name: details[:name],
+       email: user.email
+     )}
+  end
+
+  defp notice_text(:passkey_removed, user, details) do
+    {gettext("A passkey was removed"),
+     gettext("The passkey “%{name}” was removed from %{email}. It no longer logs in.",
+       name: details[:name],
+       email: user.email
+     )}
+  end
+
+  defp notice_text(:locked, user, details) do
+    {gettext("Your account was locked for a while"),
+     gettext(
+       "After too many failed attempts to log in to %{email}, the account is locked until %{time}. If it was not you trying, somebody may know or be guessing your password: change it once you can log in.",
+       email: user.email,
+       time: details[:time]
      )}
   end
 

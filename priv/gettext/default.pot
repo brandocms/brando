@@ -16688,3 +16688,38 @@ msgid "One active session."
 msgid_plural "%{count} active sessions."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "If you need to log in sooner, ask an administrator."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "A passkey was added"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey “%{name}” was added to %{email}. It logs in on its own, without the password."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "A passkey was removed"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey “%{name}” was removed from %{email}. It no longer logs in."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Your account was locked for a while"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "After too many failed attempts to log in to %{email}, the account is locked until %{time}. If it was not you trying, somebody may know or be guessing your password: change it once you can log in."
+msgstr ""

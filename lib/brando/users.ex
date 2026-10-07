@@ -150,9 +150,11 @@ defmodule Brando.Users do
   def list_sessions(%{id: user_id}) do
     days = UserToken.session_validity_in_days()
 
+    # Without the token itself, which stays out of the caller's state
     from(t in UserToken,
       where: t.user_id == ^user_id and t.context == "session" and t.inserted_at > ago(^days, "day"),
-      order_by: [desc_nulls_last: t.last_used_at, desc: t.inserted_at]
+      order_by: [desc_nulls_last: t.last_used_at, desc: t.inserted_at],
+      select: struct(t, [:id, :user_id, :context, :ip, :user_agent, :inserted_at, :last_used_at, :confirmed_at])
     )
     |> Repo.all()
   end
@@ -180,12 +182,13 @@ defmodule Brando.Users do
   @doc """
   Logs `user` out everywhere on behalf of `actor`: an administrator allowed
   to reset the user's password (`Brando.Trait.ProtectPassword.allowed?/2`),
-  or the user themselves, who keeps the session with the token `except`.
+  or the user themselves, who keeps the session with the token row id
+  `opts[:except_id]`.
   """
   @spec log_out_everywhere(user, user, keyword()) :: :ok | {:error, :forbidden}
   def log_out_everywhere(user, actor, opts \\ []) do
     if Brando.Trait.ProtectPassword.allowed?(actor, user) do
-      revoke_sessions(user, except: opts[:except])
+      revoke_sessions(user, except_id: opts[:except_id])
       SecurityLog.record(:sessions_revoked, user, actor: actor, meta: opts[:meta])
       :ok
     else
@@ -217,24 +220,32 @@ defmodule Brando.Users do
   Notes that the session `token` has just given a password, a code or a
   passkey again (see `BrandoAdmin.Reauth`).
   """
-  @spec confirm_session(binary()) :: :ok
-  def confirm_session(token) when is_binary(token) do
+  @spec confirm_session(binary() | integer()) :: :ok
+  def confirm_session(token_or_id) do
     now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
-    Repo.update_all(UserToken.token_and_context_query(token, "session"), set: [confirmed_at: now])
+    Repo.update_all(session_query(token_or_id), set: [confirmed_at: now])
     :ok
   end
 
-  @doc "Whether the session `token` gave a password, a code or a passkey in the last `seconds`."
-  @spec session_confirmed_within?(binary() | nil, pos_integer()) :: boolean()
-  def session_confirmed_within?(token, seconds) when is_binary(token) do
-    since = NaiveDateTime.add(NaiveDateTime.utc_now(), -seconds, :second)
+  @doc """
+  When the session (its token, or its token row's id) last gave a password,
+  a code or a passkey, or nil.
+  """
+  @spec session_confirmed_at(binary() | integer() | nil) :: NaiveDateTime.t() | nil
+  def session_confirmed_at(nil), do: nil
+  def session_confirmed_at(token_or_id), do: Repo.one(from t in session_query(token_or_id), select: t.confirmed_at)
 
-    Repo.repo().exists?(
-      from t in UserToken, where: t.token == ^token and t.context == "session" and t.confirmed_at > ^since
-    )
+  @doc "Whether the session (its token, or its token row's id) gave a password, a code or a passkey in the last `seconds`."
+  @spec session_confirmed_within?(binary() | integer() | nil, pos_integer()) :: boolean()
+  def session_confirmed_within?(token_or_id, seconds) when is_binary(token_or_id) or is_integer(token_or_id) do
+    since = NaiveDateTime.add(NaiveDateTime.utc_now(), -seconds, :second)
+    Repo.repo().exists?(from t in session_query(token_or_id), where: t.confirmed_at > ^since)
   end
 
   def session_confirmed_within?(_token, _seconds), do: false
+
+  defp session_query(id) when is_integer(id), do: from(t in UserToken, where: t.id == ^id and t.context == "session")
+  defp session_query(token) when is_binary(token), do: UserToken.token_and_context_query(token, "session")
 
   @doc """
   Gets the user with the given signed token.

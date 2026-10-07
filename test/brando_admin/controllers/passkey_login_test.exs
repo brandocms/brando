@@ -25,7 +25,7 @@ defmodule BrandoAdmin.PasskeyLoginTest do
       Factory.insert(:random_user, role: :editor, config: %UserConfig{reset_password_on_first_login: false})
 
     authenticator = SoftAuthenticator.new()
-    {challenge, options} = Passkeys.registration_challenge(user)
+    {:ok, challenge, options} = Passkeys.start_registration(user, "admin")
 
     {:ok, _passkey, _codes} =
       Passkeys.register(user, "Laptop", SoftAuthenticator.register(authenticator, options, origin()), challenge)
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.PasskeyLoginTest do
   test "the second step refuses another user's passkey", %{user: user} do
     other = Factory.insert(:random_user, role: :editor, config: %UserConfig{reset_password_on_first_login: false})
     other_authenticator = SoftAuthenticator.new()
-    {challenge, options} = Passkeys.registration_challenge(other)
+    {:ok, challenge, options} = Passkeys.start_registration(other, "admin")
 
     {:ok, _, _} =
       Passkeys.register(other, "Theirs", SoftAuthenticator.register(other_authenticator, options, origin()), challenge)

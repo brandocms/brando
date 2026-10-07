@@ -20,7 +20,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
   alias BrandoAdmin.Toast
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
-  on_mount({BrandoAdmin.Reauth, events: ~w(open_setup new_passkey remove_passkey)})
+  on_mount({BrandoAdmin.Reauth, events: ~w(open_setup new_passkey remove_passkey revoke_session revoke_other_sessions)})
 
   def render(assigns) do
     ~H"""
@@ -185,7 +185,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             :for={session <- @sessions}
             class="security-item"
             data-testid="session"
-            data-current={to_string(session.token == @session_token)}
+            data-current={to_string(session.id == @session_id)}
           >
             <.icon
               name={if (session.user_agent || "") =~ ~r/iPhone|Android|iPad/, do: "smartphone", else: "monitor"}
@@ -194,7 +194,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             <div class="security-item-text">
               <span class="security-item-title">
                 {if session.user_agent, do: TwoFactorComponents.browser(session.user_agent), else: gettext("Unknown browser")}
-                <span :if={session.token == @session_token} class="workspace-badge positive">{gettext("This browser")}</span>
+                <span :if={session.id == @session_id} class="workspace-badge positive">{gettext("This browser")}</span>
               </span>
               <span class="security-item-meta">
                 {[
@@ -207,7 +207,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
               </span>
             </div>
             <button
-              :if={session.token != @session_token}
+              :if={session.id != @session_id}
               type="button"
               class="workspace-button quiet"
               phx-click="revoke_session"
@@ -264,7 +264,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
         module={TwoFactorComponents.PasskeySetup}
         id="passkey-setup"
         user={@current_user}
-        keep_token={@session_token}
+        keep_id={@session_id}
         meta={@meta}
       />
     </Content.modal>
@@ -392,8 +392,8 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
   end
 
   def handle_event("revoke_other_sessions", _params, socket) do
-    %{current_user: user, session_token: token, meta: meta} = socket.assigns
-    :ok = Users.log_out_everywhere(user, user, except: token, meta: meta)
+    %{current_user: user, session_id: session_id, meta: meta} = socket.assigns
+    :ok = Users.log_out_everywhere(user, user, except_id: session_id, meta: meta)
     Toast.send_to(user, gettext("Your other sessions were logged out."))
     {:noreply, load_state(socket)}
   end

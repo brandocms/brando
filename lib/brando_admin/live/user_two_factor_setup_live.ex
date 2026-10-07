@@ -60,7 +60,8 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
               module={TwoFactorComponents.PasskeySetup}
               id="passkey-setup"
               user={@user}
-              keep_token={@token}
+              keep_id={@token_id}
+              proof={:signed_in_now}
               meta={@meta}
             />
           </div>

@@ -269,11 +269,13 @@ end
 
 defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
   @moduledoc false
-  # Adds a passkey for `user`: a name for the device, then the browser's own
-  # dialog (the `Brando.Passkey` hook). The challenge stays in this
-  # component's assigns and answers once. On success it tells its LiveView
-  # `{:passkey_added, passkey, recovery_codes}`; the codes are nil unless
-  # this was the user's first second factor.
+  # Adds a passkey for `user`: a name for the device and, unless `proof` is
+  # `:signed_in_now`, the user's password or a code from their app; then the
+  # browser's own dialog (the `Brando.Passkey` hook). The registration — and
+  # its challenge — stays in this component's assigns, hidden from inspection,
+  # and answers once. On success it tells its LiveView
+  # `{:passkey_added, passkey, recovery_codes}`; the codes are nil unless this
+  # was the user's first second factor.
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
@@ -282,16 +284,17 @@ defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
   alias BrandoAdmin.Components.TwoFactor
 
   def update(assigns, socket) do
-    socket = assign(socket, Map.take(assigns, [:id, :user, :keep_token, :meta]))
+    socket = assign(socket, Map.take(assigns, [:id, :user, :keep_id, :meta]))
 
     default_name =
       socket.assigns[:meta] && socket.assigns.meta[:user_agent] && TwoFactor.browser(socket.assigns.meta.user_agent)
 
     {:ok,
      socket
-     |> assign_new(:form, fn -> to_form(%{"name" => default_name || ""}, id: assigns.id) end)
+     |> assign(:proof, Map.get(assigns, :proof, :password))
+     |> assign_new(:form, fn -> to_form(%{"name" => default_name || "", "proof" => ""}, id: assigns.id) end)
      |> assign_new(:error, fn -> nil end)
-     |> assign_new(:challenge, fn -> nil end)}
+     |> assign_new(:registration, fn -> nil end)}
   end
 
   def render(assigns) do
@@ -310,6 +313,16 @@ defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
         <div class="field-wrapper">
           <Auth.input field={@form[:name]} label={gettext("Name this passkey")} data-testid="passkey-name" required />
         </div>
+        <div :if={@proof == :password} class="field-wrapper">
+          <Auth.input
+            field={@form[:proof]}
+            type="password"
+            label={gettext("Password or code from your app")}
+            autocomplete="current-password"
+            data-testid="passkey-proof"
+            required
+          />
+        </div>
         <p class="passkey-setup-hint">
           {gettext("Your browser asks where to keep it: this device, your phone, or a security key.")}
         </p>
@@ -324,25 +337,35 @@ defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
     """
   end
 
-  def handle_event("options", _params, socket) do
-    {challenge, options} = Passkeys.registration_challenge(socket.assigns.user)
-    {:reply, %{publicKey: options}, assign(socket, challenge: challenge, error: nil)}
+  def handle_event("options", params, socket) do
+    %{user: user, meta: meta} = socket.assigns
+    proof = if socket.assigns.proof == :signed_in_now, do: :signed_in_now, else: params["proof"]
+    # Keeps the name the user typed when the form renders again; never the proof
+    socket = assign(socket, :form, to_form(%{"name" => params["name"] || "", "proof" => ""}, id: socket.assigns.id))
+
+    case Passkeys.start_registration(user, proof, meta: meta) do
+      {:ok, registration, options} ->
+        {:reply, %{publicKey: options}, assign(socket, registration: registration, error: nil)}
+
+      {:error, reason} ->
+        {:reply, %{}, assign(socket, registration: nil, error: proof_error(reason))}
+    end
   end
 
-  def handle_event("register", params, %{assigns: %{challenge: %Wax.Challenge{} = challenge}} = socket) do
+  def handle_event("register", params, %{assigns: %{registration: %Passkeys.Registration{} = registration}} = socket) do
     %{user: user} = socket.assigns
-    opts = [keep_token: socket.assigns[:keep_token], meta: socket.assigns[:meta]]
+    opts = [keep_id: socket.assigns[:keep_id], meta: socket.assigns[:meta]]
 
-    case Passkeys.register(user, params["name"], params, challenge, opts) do
+    case Passkeys.register(user, params["name"], params, registration, opts) do
       {:ok, passkey, codes} ->
         send(self(), {:passkey_added, passkey, codes})
-        {:noreply, assign(socket, challenge: nil)}
+        {:noreply, assign(socket, registration: nil)}
 
       {:error, :already_registered} ->
-        {:noreply, assign(socket, challenge: nil, error: gettext("This passkey is added already."))}
+        {:noreply, assign(socket, registration: nil, error: gettext("This passkey is added already."))}
 
       {:error, _reason} ->
-        {:noreply, assign(socket, challenge: nil, error: gettext("The passkey could not be added. Try again."))}
+        {:noreply, assign(socket, registration: nil, error: gettext("The passkey could not be added. Try again."))}
     end
   end
 
@@ -351,8 +374,13 @@ defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
   def handle_event("error", _params, socket) do
     {:noreply,
      assign(socket,
-       challenge: nil,
+       registration: nil,
        error: gettext("No passkey was made. The browser was closed, or this device cannot make one.")
      )}
   end
+
+  defp proof_error(:locked),
+    do: gettext("Too many failed attempts. Your account is locked for a few minutes; try again later.")
+
+  defp proof_error(_reason), do: gettext("That is not your password or a current code.")
 end

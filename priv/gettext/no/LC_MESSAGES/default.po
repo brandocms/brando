@@ -16683,3 +16683,38 @@ msgid "One active session."
 msgid_plural "%{count} active sessions."
 msgstr[0] "Én aktiv økt."
 msgstr[1] "%{count} aktive økter."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "If you need to log in sooner, ask an administrator."
+msgstr "Må du logge inn før det, kan du spørre en administrator."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "A passkey was added"
+msgstr "En passnøkkel ble lagt til"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey “%{name}” was added to %{email}. It logs in on its own, without the password."
+msgstr "Passnøkkelen «%{name}» ble lagt til for %{email}. Den logger inn alene, uten passordet."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "A passkey was removed"
+msgstr "En passnøkkel ble fjernet"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey “%{name}” was removed from %{email}. It no longer logs in."
+msgstr "Passnøkkelen «%{name}» ble fjernet fra %{email}. Den logger ikke lenger inn."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Your account was locked for a while"
+msgstr "Kontoen din ble låst en stund"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "After too many failed attempts to log in to %{email}, the account is locked until %{time}. If it was not you trying, somebody may know or be guessing your password: change it once you can log in."
+msgstr "Etter for mange mislykkede forsøk på å logge inn på %{email} er kontoen låst til %{time}. Var det ikke deg som prøvde, kan noen kjenne til eller gjette passordet ditt: bytt det så snart du kan logge inn."

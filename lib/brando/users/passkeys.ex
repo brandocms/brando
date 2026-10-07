@@ -74,14 +74,54 @@ defmodule Brando.Users.Passkeys do
 
   ## Registering
 
+  defmodule Registration do
+    @moduledoc """
+    A passkey registration under way for `user_id`, made by
+    `Brando.Users.Passkeys.start_registration/3` once the user proved it is
+    them. Its challenge does not show when inspected.
+    """
+    @derive {Inspect, only: [:user_id]}
+    @enforce_keys [:user_id, :challenge]
+    defstruct [:user_id, :challenge]
+
+    @type t :: %__MODULE__{user_id: integer(), challenge: Wax.Challenge.t()}
+  end
+
   @doc """
-  A challenge for registering a new passkey for `user`, and the
-  `publicKey` options for `navigator.credentials.create/1`, with binaries
-  Base64url-encoded. The user's own passkeys are excluded, so a device is
-  not added twice.
+  Starts adding a passkey for `user`, once they prove it is them: `proof` is
+  their password or a current code from their app (`TwoFactor.confirm/3`;
+  a wrong one counts towards the lockout), or `:signed_in_now` on the setup
+  screen of a sign-in whose password was right a moment ago. A passkey logs
+  in on its own and outlasts a password reset, so a session alone must not
+  be enough to add one.
+
+  Returns `{:ok, registration, options}` — the `publicKey` options for
+  `navigator.credentials.create/1` — or `{:error, :invalid_proof | :locked}`.
   """
-  @spec registration_challenge(map()) :: {Wax.Challenge.t(), map()}
-  def registration_challenge(user) do
+  @spec start_registration(map(), String.t() | :signed_in_now | nil, keyword()) ::
+          {:ok, Registration.t(), map()} | {:error, atom()}
+  def start_registration(user, proof, opts \\ []) do
+    with :ok <- check_proof(user, proof, opts[:meta]) do
+      {challenge, options} = registration_challenge(user)
+      {:ok, %Registration{user_id: user.id, challenge: challenge}, options}
+    end
+  end
+
+  defp check_proof(_user, :signed_in_now, _meta), do: :ok
+
+  defp check_proof(user, proof, meta) do
+    case TwoFactor.confirm(user, proof, meta) do
+      :ok -> :ok
+      {:error, :unreadable} -> {:error, :invalid_proof}
+      error -> error
+    end
+  end
+
+  # A challenge for registering a new passkey for `user`, and the `publicKey`
+  # options for `navigator.credentials.create/1`, with binaries
+  # Base64url-encoded. The user's own passkeys are excluded, so a device is
+  # not added twice.
+  defp registration_challenge(user) do
     challenge =
       Wax.new_registration_challenge(
         relying_party() ++ [attestation: "none", user_verification: "preferred", timeout: @timeout]
@@ -102,21 +142,23 @@ defmodule Brando.Users.Passkeys do
   end
 
   @doc """
-  Registers the passkey the browser made for `challenge` as `user`'s, under
-  `name`. `result` holds the browser's `attestation_object` and
-  `client_data_json`, Base64url-encoded.
+  Registers the passkey the browser made for `registration` (see
+  `start_registration/3`) as `user`'s, under `name`. `result` holds the
+  browser's `attestation_object` and `client_data_json`, Base64url-encoded.
+  The user is emailed.
 
   The first second factor a user adds — no app, no other passkey — also
-  makes their recovery codes, and logs out their other sessions (all but
-  `opts[:keep_token]`), as turning on the app does.
+  makes their recovery codes, and logs out their other sessions (all but the
+  token row `opts[:keep_id]`), as turning on the app does.
 
   Returns `{:ok, passkey, recovery_codes}`, with the codes only when they
   were made now (otherwise nil), or `{:error, reason}`.
   """
-  @spec register(map(), String.t() | nil, browser_result(), Wax.Challenge.t(), keyword()) ::
+  @spec register(map(), String.t() | nil, browser_result(), Registration.t(), keyword()) ::
           {:ok, Passkey.t(), [String.t()] | nil} | {:error, atom()}
-  def register(user, name, result, %Wax.Challenge{} = challenge, opts \\ []) do
+  def register(%{id: user_id} = user, name, result, %Registration{user_id: user_id} = registration, opts \\ []) do
     first? = not TwoFactor.enabled?(user)
+    challenge = registration.challenge
 
     with {:ok, attestation_object} <- decode(result["attestation_object"]),
          {:ok, client_data_json} <- decode(result["client_data_json"]),
@@ -125,6 +167,7 @@ defmodule Brando.Users.Passkeys do
          {:ok, passkey} <- insert(user, name, credential_id, cose_key, auth_data) do
       codes = if first?, do: first_factor_added(user, opts), else: nil
       SecurityLog.record(:passkey_added, user, meta: opts[:meta], details: %{"name" => passkey.name})
+      Brando.Users.notify_security(user, :passkey_added, %{name: passkey.name})
       {:ok, passkey, codes}
     else
       {:error, reason} -> {:error, reason}
@@ -155,7 +198,7 @@ defmodule Brando.Users.Passkeys do
   defp default_name, do: "Passkey"
 
   defp first_factor_added(user, opts) do
-    Brando.Users.revoke_sessions(user, except: opts[:keep_token])
+    Brando.Users.revoke_sessions(user, except_id: opts[:keep_id])
 
     if Repo.repo().exists?(from c in RecoveryCode, where: c.user_id == ^user.id and is_nil(c.used_at)),
       do: nil,
@@ -292,6 +335,7 @@ defmodule Brando.Users.Passkeys do
       Repo.delete!(passkey)
       unless TwoFactor.enabled?(user), do: TwoFactor.delete_recovery_codes(user)
       SecurityLog.record(:passkey_removed, user, meta: opts[:meta], details: %{"name" => passkey.name})
+      Brando.Users.notify_security(user, :passkey_removed, %{name: passkey.name})
       :ok
     else
       nil -> {:error, :not_found}

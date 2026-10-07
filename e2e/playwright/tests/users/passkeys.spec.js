@@ -55,6 +55,14 @@ test('a user adds a passkey, logs in with it alone, and as the second step', asy
     const modal = page.locator('#passkey-add-modal')
     await expect(modal).toBeVisible()
     await modal.getByTestId('passkey-name').fill('Work laptop')
+    // A session alone does not add a passkey
+    await modal.getByTestId('passkey-proof').fill('not my password')
+    await modal.getByTestId('passkey-create').click()
+    await expect(modal.getByTestId('passkey-error')).toBeVisible()
+    const { credentials: none } = await client.send('WebAuthn.getCredentials', { authenticatorId })
+    expect(none).toHaveLength(0)
+
+    await modal.getByTestId('passkey-proof').fill(password)
     await page.screenshot({ path: testInfo.outputPath('add-passkey.png') })
     await modal.getByTestId('passkey-create').click()
 

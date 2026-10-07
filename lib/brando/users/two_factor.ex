@@ -422,10 +422,12 @@ defmodule Brando.Users.TwoFactor do
   end
 
   defp clear(%{id: user_id} = user) do
-    from(s in Security, where: s.user_id == ^user_id)
-    |> Repo.update_all(set: [totp_secret: nil, totp_enabled_at: nil, totp_last_step: nil])
+    Repo.transaction(fn ->
+      from(s in Security, where: s.user_id == ^user_id)
+      |> Repo.update_all(set: [totp_secret: nil, totp_enabled_at: nil, totp_last_step: nil])
 
-    unless Passkeys.any?(user), do: delete_recovery_codes(user)
+      unless Passkeys.any?(user), do: delete_recovery_codes(user)
+    end)
   end
 
   defp check_enabled(user), do: check(enabled?(user), :not_enabled)

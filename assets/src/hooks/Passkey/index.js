@@ -109,11 +109,14 @@ export default () => ({
   },
 
   async create() {
+    // The form's fields (a name, and the password or a code that proves it is
+    // the user) go with the request for options; only the name goes back with
+    // the new credential.
     const fields = Object.fromEntries(new FormData(this.el))
     const reply = await this.push(this.el.dataset.optionsEvent, fields)
     if (!reply || !reply.publicKey) return
     const credential = await navigator.credentials.create({ publicKey: creationOptions(reply.publicKey) })
-    await this.push(this.el.dataset.resultEvent, { ...fields, ...credentialPayload(credential) })
+    await this.push(this.el.dataset.resultEvent, { name: fields.name, ...credentialPayload(credential) })
   },
 
   async get() {

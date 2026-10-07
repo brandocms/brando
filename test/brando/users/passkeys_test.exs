@@ -18,7 +18,7 @@ defmodule Brando.Users.PasskeysTest do
   defp origin, do: Keyword.fetch!(Passkeys.relying_party(), :origin)
 
   defp register(user, name \\ "Laptop", authenticator \\ SoftAuthenticator.new()) do
-    {challenge, options} = Passkeys.registration_challenge(user)
+    {:ok, challenge, options} = Passkeys.start_registration(user, "admin")
     result = SoftAuthenticator.register(authenticator, options, origin())
     {Passkeys.register(user, name, result, challenge), authenticator}
   end
@@ -28,6 +28,45 @@ defmodule Brando.Users.PasskeysTest do
     {challenge, options} = Passkeys.authentication_challenge(subject)
     result = SoftAuthenticator.assert(authenticator, options, Keyword.put_new(opts, :origin, origin()))
     Passkeys.authenticate(user_or_any, result, challenge)
+  end
+
+  describe "starting to add one" do
+    test "a session alone is not enough: it needs the password or a current code" do
+      user = user()
+
+      assert {:error, :invalid_proof} = Passkeys.start_registration(user, nil)
+      assert {:error, :invalid_proof} = Passkeys.start_registration(user, "not the password")
+
+      assert [%{details: %{"reason" => "confirm"}}, _] =
+               Repo.all(from e in SecurityEvent, where: e.user_id == ^user.id and e.action == :login_failed)
+
+      assert {:ok, %Passkeys.Registration{}, _options} = Passkeys.start_registration(user, "admin")
+      assert {:ok, _registration, _options} = Passkeys.start_registration(user, :signed_in_now)
+    end
+
+    test "with an app, a current code proves it is the user" do
+      user = user()
+      secret = TwoFactor.new_secret()
+      {:ok, _codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret), proof: "admin")
+      Repo.update_all(from(s in Brando.Users.Security, where: s.user_id == ^user.id), set: [totp_last_step: nil])
+
+      assert {:ok, _registration, _options} = Passkeys.start_registration(user, TwoFactor.current_code(secret))
+    end
+
+    test "a registration started for one user does not register for another" do
+      user = user()
+      other = user()
+      {:ok, registration, options} = Passkeys.start_registration(user, "admin")
+      result = SoftAuthenticator.register(SoftAuthenticator.new(), options, origin())
+
+      assert_raise FunctionClauseError, fn -> Passkeys.register(other, "x", result, registration) end
+    end
+
+    test "the challenge does not show when inspected" do
+      {:ok, registration, _options} = Passkeys.start_registration(user(), "admin")
+      refute inspect(registration) =~ "bytes"
+      refute inspect(Brando.Redacted.wrap(registration.challenge)) =~ "bytes"
+    end
   end
 
   describe "registering" do
@@ -47,6 +86,9 @@ defmodule Brando.Users.PasskeysTest do
       {{:ok, _second, nil}, _} = register(user, "Phone")
       assert length(Passkeys.list(user)) == 2
 
+      email = user.email
+      assert_received {:email, %{to: [{"", ^email}], subject: "A passkey was added"}}
+
       assert [:passkey_added, :passkey_added] =
                Repo.all(from e in SecurityEvent, where: e.user_id == ^user.id, select: e.action, order_by: e.id)
     end
@@ -59,8 +101,8 @@ defmodule Brando.Users.PasskeysTest do
 
     test "refuses an answer to another challenge, or from another origin" do
       user = user()
-      {challenge, options} = Passkeys.registration_challenge(user)
-      {other, _options} = Passkeys.registration_challenge(user)
+      {:ok, challenge, options} = Passkeys.start_registration(user, "admin")
+      {:ok, other, _options} = Passkeys.start_registration(user, "admin")
       authenticator = SoftAuthenticator.new()
 
       assert {:error, :invalid} =
@@ -80,7 +122,7 @@ defmodule Brando.Users.PasskeysTest do
     test "registration options exclude the user's passkeys, and hide who they are" do
       user = user()
       {{:ok, passkey, _}, _} = register(user)
-      {_challenge, options} = Passkeys.registration_challenge(user)
+      {:ok, _challenge, options} = Passkeys.start_registration(user, "admin")
 
       assert [%{id: id}] = options.excludeCredentials
       assert id == Base.url_encode64(passkey.credential_id, padding: false)
@@ -175,9 +217,12 @@ defmodule Brando.Users.PasskeysTest do
     test "a passkey satisfies it, and the last one cannot be removed" do
       user = user()
       assert TwoFactor.must_enroll?(user)
+      without = SecurityPolicy.without_two_factor_count(SecurityPolicy.get())
 
       {{:ok, passkey, _}, _} = register(user)
       refute TwoFactor.must_enroll?(user)
+      # The policy's count of users without it counts passkeys too
+      assert SecurityPolicy.without_two_factor_count(SecurityPolicy.get()) == without - 1
       assert {:error, :required} = Passkeys.delete(user, passkey.id)
 
       {{:ok, _second, _}, _} = register(user, "Phone")
@@ -187,7 +232,7 @@ defmodule Brando.Users.PasskeysTest do
     test "the app can be turned off when a passkey remains" do
       user = user()
       secret = TwoFactor.new_secret()
-      {:ok, _codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret))
+      {:ok, _codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret), proof: "admin")
       assert {:error, :required} = TwoFactor.disable(user, "admin")
 
       {{:ok, _, nil}, _} = register(user)
@@ -206,6 +251,8 @@ defmodule Brando.Users.PasskeysTest do
     assert :ok = Passkeys.delete(user, passkey.id)
     refute TwoFactor.enabled?(user)
     assert TwoFactor.recovery_codes_left(user) == 0
+    email = user.email
+    assert_received {:email, %{to: [{"", ^email}], subject: "A passkey was removed"}}
     assert {:error, :not_found} = Passkeys.delete(user, passkey.id)
   end
 
