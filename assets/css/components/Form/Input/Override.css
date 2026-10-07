@@ -8,7 +8,7 @@
   border-radius: 50%;
   border: 1px solid #ccc;
   background: transparent;
-  color: var(--brando-color-text-muted);
+  color: var(--brando-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,7 +42,7 @@ button.override-reset-button:hover {
 
 /* Subtle override indicator on input */
 input.is-overridden {
-  border-left: 3px solid var(--brando-color-primary);
+  border-left: 3px solid var(--brando-accent);
 }
 
 /* A rich text field has no placeholder to advertise the value it inherits when
@@ -52,7 +52,7 @@ input.is-overridden {
   font-size: 12px;
   line-height: 1.4;
   margin-top: 6px;
-  color: var(--brando-color-text-muted);
+  color: var(--brando-muted);
 
   &:before {
     content: "↳ ";
@@ -82,7 +82,7 @@ input.is-overridden {
 
 .override-reset-all {
   font-size: 11px;
-  color: var(--brando-color-text-muted);
+  color: var(--brando-muted);
   background: none;
   border: 1px solid #ccc;
   border-radius: 50%;
@@ -138,7 +138,7 @@ button.override-reset-all:hover {
 }
 
 .override-toggle-btn.active {
-  background: var(--brando-color-primary, #0d6efd);
+  background: var(--brando-accent);
 }
 
 .override-toggle-btn.active::after {
@@ -156,7 +156,7 @@ button.override-reset-all:hover {
   border: 1px solid #ccc;
   border-radius: 50%;
   background: none;
-  color: var(--brando-color-text-muted);
+  color: var(--brando-muted);
   cursor: pointer;
   display: flex;
   align-items: center;

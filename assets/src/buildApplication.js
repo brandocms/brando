@@ -17,7 +17,9 @@ import { animate, ease, sequence, set, stagger } from './motion'
 
 topbar.config({
   barThickness: 1,
-  barColors: { 0: 'rgba(5, 39, 82, 1)', 1: '#0047FF' },
+  // A canvas gradient cannot read custom properties: these are --brando-ink
+  // and --brando-accent from css/tokens.css.
+  barColors: { 0: '#272b2a', 1: '#254e3f' },
   shadowColor: 'rgba(0, 0, 0, .2)',
 })
 

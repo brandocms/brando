@@ -18,49 +18,47 @@ module.exports = {
       $sm: '<=ipad_portrait',
     },
 
+    /* The legacy palette names point at the colour roles in css/tokens.css,
+       so `theme(colors.dark)` and `@color fg dark` follow the tokens. EuropaCSS
+       inserts these strings verbatim (no colour maths), so a `var()` is safe
+       anywhere a colour is; `@color` splits on spaces, so keep values
+       space-free. The roles are defined on :root and are not available
+       outside the admin document. */
     colors: () => ({
-      dark: '#052752',
+      dark: 'var(--brando-ink)',
       grayLight: '#BCBCBC',
       white: '#ffffff',
       black: '#000000',
-      /* input: '#FAEFEA', */
       input: '#f6f6f6',
-      peach: '#FCF5F3',
-      peachLighter: '#fffbfa',
-      peachDarker: '#F6DFD5',
-      peachDarkest: '#ECBFAC',
-      blue: '#0047FF',
-      overlay: '#363E5C',
+      peach: 'var(--brando-surface-subform)',
+      peachLighter: 'var(--brando-surface-page)',
+      peachDarker: 'var(--brando-surface-selected)',
+      peachDarkest: 'var(--brando-line)',
+      blue: 'var(--brando-accent)',
+      overlay: 'var(--brando-overlay)',
       gray: '#333333',
       transparent: 'transparent',
 
       status: {
-        draft: '#636363',
-        pending: '#f1ac00',
-        published: '#3cb371',
-        disabled: '#cd5c5c',
+        draft: 'var(--brando-status-draft)',
+        pending: 'var(--brando-status-pending)',
+        published: 'var(--brando-status-published)',
+        disabled: 'var(--brando-status-disabled)',
+        deleted: 'var(--brando-status-deleted)',
       },
 
-      /*
-      $villain-background-color: #000 !default;
-      $villain-secondary-color: #94003e0d !default;
-      $villain-block-background-color: #fff !default;
-      $villain-available-block-color: $villain-main-color !default;
-      $villain-available-block-hover-col
-      */
-
       villain: {
-        main: '#0047FF',
+        main: 'var(--brando-accent)',
         mainFaded: '#aaaaaa',
         plus: '#222222',
         stripe: '#f7f7f7',
         background: '#000',
-        secondary: '#94003e0d',
+        secondary: 'var(--brando-surface-subform)',
         blockBackground: '#ffffff',
         blockBorder: '#9a9a9a26',
         availableBlock: 'rgb(211, 0, 0)',
         availableBlockHover: '#eeeeee',
-        popover: '#052752',
+        popover: 'var(--brando-ink)',
       },
     }),
 
