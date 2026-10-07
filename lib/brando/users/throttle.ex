@@ -178,6 +178,26 @@ defmodule Brando.Users.Throttle do
     Enum.at(steps, min(previous_lockouts, length(steps) - 1)) * 60
   end
 
+  # An address with no account keeps the times of its lockouts, so it counts
+  # them over the same rolling day as an account's `:locked` events
+  defp unknown_lockouts_today(email) do
+    length(recent_unknown_lockouts(email))
+  end
+
+  defp remember_unknown_lockout(email) do
+    times = [System.system_time(:second) | recent_unknown_lockouts(email)]
+    Cachex.put(:cache, {__MODULE__, :unknown_lockouts, email}, times, expire: 86_400_000)
+  end
+
+  defp recent_unknown_lockouts(email) do
+    day_ago = System.system_time(:second) - 86_400
+
+    case Cachex.get(:cache, {__MODULE__, :unknown_lockouts, email}) do
+      {:ok, times} when is_list(times) -> Enum.filter(times, &(&1 > day_ago))
+      _ -> []
+    end
+  end
+
   defp lockouts_today(%{id: user_id}) do
     day_ago = DateTime.add(DateTime.utc_now(), -86_400, :second)
 
@@ -204,11 +224,8 @@ defmodule Brando.Users.Throttle do
     if count == 1, do: Cachex.expire(:cache, key, config(:lockout_minutes) * 60_000)
 
     if count >= config(:lockout_after) do
-      lockouts_key = {__MODULE__, :unknown_lockouts, email}
-      _ = Cachex.get(:cache, lockouts_key)
-      {_, lockouts} = Cachex.incr(:cache, lockouts_key, 1)
-      if lockouts == 1, do: Cachex.expire(:cache, lockouts_key, 86_400_000)
-      seconds = lockout_seconds(lockouts - 1)
+      seconds = email |> unknown_lockouts_today() |> lockout_seconds()
+      remember_unknown_lockout(email)
       until = DateTime.add(DateTime.truncate(DateTime.utc_now(), :second), seconds, :second)
       Cachex.del(:cache, key)
       Cachex.put(:cache, {__MODULE__, :unknown_locked, email}, until, expire: seconds * 1000)

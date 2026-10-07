@@ -97,6 +97,30 @@ defmodule Brando.Users.ThrottleTest do
       assert_received {:email, %{to: [{"", ^email}], subject: "Your account was locked for a while"}}
     end
 
+    test "count over the same rolling day for an account and an unknown address" do
+      user = Factory.insert(:random_user, config: %UserConfig{})
+      address = email()
+      now = DateTime.utc_now()
+      hours_ago = &DateTime.add(now, -&1 * 3600, :second)
+
+      # The review's probe: one lockout a day and a bit ago, one an hour ago
+      for at <- [hours_ago.(25), hours_ago.(1)] do
+        Repo.insert!(%Brando.Users.SecurityEvent{user_id: user.id, action: :locked, inserted_at: at})
+      end
+
+      Cachex.put(:cache, {Throttle, :unknown_lockouts, address}, [
+        DateTime.to_unix(hours_ago.(25)),
+        DateTime.to_unix(hours_ago.(1))
+      ])
+
+      {:locked, known} = lock(fn -> Throttle.failed(user, :password) end)
+      {:locked, unknown} = lock(fn -> Throttle.failed_unknown(address) end)
+
+      # Only the lockout within the day counts, for both: the second step
+      assert minutes_until(known) == 60
+      assert minutes_until(unknown) == 60
+    end
+
     test "for an unknown address too, so the answers stay alike" do
       address = email()
 
