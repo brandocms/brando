@@ -77,6 +77,11 @@
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
   }
   .webhook-hint { color: var(--brando-muted); font-size: 12px; }
+  .webhook-label { font-size: 13px; font-weight: 500; }
+  .webhook-url-masked {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; max-width: 640px;
+    code { min-width: 0; overflow-wrap: anywhere; color: var(--brando-ink); font-size: 13px; }
+  }
   .webhook-modes { display: flex; flex-wrap: wrap; gap: 8px; }
   .webhook-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
   .webhook-checks-inline { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }

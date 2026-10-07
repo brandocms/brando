@@ -571,6 +571,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   permissions={@permissions}
                   editable_keys={@editable_keys}
                 />
+                <small :if={resource_note(hd(permissions))} class="authorization-resource-note">
+                  {resource_note(hd(permissions))}
+                </small>
               </th>
               <td :for={action <- @actions}>
                 <%= if permission = Enum.find(permissions, &(&1.action == action)) do %>
@@ -1075,6 +1078,15 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :activity}), do: gettext("Activity")
   defp resource_label(%{subject: :webhooks}), do: gettext("Webhooks")
   defp resource_label(permission), do: permission.label
+
+  # What a permission gives that its name does not say
+  defp resource_note(%{subject: :webhooks}),
+    do:
+      gettext(
+        "Shows the type, id, URL, status and changed fields of every entry, drafts included, and sends them to URLs the person chooses."
+      )
+
+  defp resource_note(_permission), do: nil
 
   defp activity_label("group.created"), do: gettext("Group created")
   defp activity_label("group.updated"), do: gettext("Group updated")

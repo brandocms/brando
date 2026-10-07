@@ -202,6 +202,95 @@ defmodule BrandoAdmin.Sites.WebhooksLiveTest do
     end
   end
 
+  describe "with group authorization" do
+    alias Brando.Authorization.{Catalog, Groups, Migration, Scope}
+
+    setup %{current_user: owner} do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Migration.run()
+      manager = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+
+      {:ok, group} =
+        Groups.create(Scope.standalone(owner), %{name: "Integrations"}, [
+          Catalog.get(:access, :backend).key,
+          Catalog.get(:manage, :webhooks).key
+        ])
+
+      {:ok, :ok} = Groups.add_member(Scope.standalone(owner), group.id, manager.id)
+
+      {:ok, page} =
+        Brando.Pages.create_page(
+          %{title: "Secret draft", uri: "secret-draft", language: "en", template: "default.html", status: :draft},
+          :system
+        )
+
+      %{manager: manager, page: page}
+    end
+
+    test "a manager who may not read a content type sees its entries by type and id only", c do
+      webhook = create_webhook(c.current_user)
+
+      Repo.insert!(%Brando.Webhooks.Delivery{
+        webhook_id: webhook.id,
+        delivery_id: Ecto.UUID.generate(),
+        event: "entry.created",
+        entry_schema: to_string(Brando.Pages.Page),
+        entry_type: "pages.page",
+        entry_id: c.page.id,
+        payload: %{},
+        state: "succeeded"
+      })
+
+      {:ok, _view, html} = live(log_in_user(c.conn, c.manager), "/admin/config/webhooks/#{webhook.id}/deliveries")
+      refute html =~ "Secret draft"
+      assert html =~ "Pages ##{c.page.id}"
+
+      # Someone who may read pages sees the title, linked
+      {:ok, _view, html} = live(c.conn, "/admin/config/webhooks/#{webhook.id}/deliveries")
+      assert html =~ "Secret draft"
+    end
+
+    test "the content-type filter offers readable types, and keeps the others chosen", c do
+      {:ok, webhook, _} =
+        Webhooks.create_webhook(
+          %{"name" => "Pages", "url" => "https://hooks.example.com/pages", "entry_types" => ["pages.page"]},
+          c.current_user
+        )
+
+      {:ok, view, _html} = live(log_in_user(c.conn, c.manager), "/admin/config/webhooks/#{webhook.id}/edit")
+      refute has_element?(view, ~s(input[type=checkbox][name="webhook[entry_types][]"][value="pages.page"]))
+      assert has_element?(view, ~s(input[type=hidden][name="webhook[entry_types][]"][value="pages.page"]))
+
+      view |> form("#webhook-form", webhook: %{name: "Renamed"}) |> render_submit()
+      assert %{name: "Renamed", entry_types: ["pages.page"]} = Repo.get!(Webhook, webhook.id)
+    end
+  end
+
+  describe "the URL of a saved webhook" do
+    test "shows its scheme and host only, until it is replaced", %{conn: conn, current_user: user} do
+      webhook = create_webhook(user, "https://hooks.example.com/build/s3cr3t-key?token=abc")
+      {:ok, view, html} = live(conn, "/admin/config/webhooks/#{webhook.id}/edit")
+
+      refute html =~ "s3cr3t-key"
+      refute html =~ "token=abc"
+      assert has_element?(view, "[data-testid=webhook-url-masked]", "https://hooks.example.com/")
+      refute has_element?(view, "#webhook-url")
+
+      # Saving other fields keeps the URL
+      view |> form("#webhook-form", webhook: %{name: "Build"}) |> render_submit()
+
+      assert %{name: "Build", url: "https://hooks.example.com/build/s3cr3t-key?token=abc"} =
+               Repo.get!(Webhook, webhook.id)
+
+      html = view |> element("[data-testid=webhook-replace-url]") |> render_click()
+      refute html =~ "s3cr3t-key"
+      assert has_element?(view, "#webhook-url[value='']")
+
+      view |> form("#webhook-form", webhook: %{url: "https://hooks.example.com/new"}) |> render_submit()
+      assert %{url: "https://hooks.example.com/new"} = Repo.get!(Webhook, webhook.id)
+    end
+  end
+
   describe "the dashboard" do
     test "warns the people who manage webhooks when one was paused after failures", %{current_user: user} do
       webhook = create_webhook(user)

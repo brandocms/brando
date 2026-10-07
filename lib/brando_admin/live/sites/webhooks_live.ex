@@ -33,7 +33,9 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
        socket
        |> assign(:socket_connected, connected?(socket))
        |> assign(:event_options, event_options())
+       |> assign(:type_labels, type_labels())
        |> assign(:entry_type_options, entry_type_options())
+       |> assign(:replace_url?, false)
        |> assign(:language_options, Enum.map(Webhooks.language_values(), &{String.upcase(&1), &1}))
        |> assign(:webhook, nil)
        |> assign(:deliveries, [])
@@ -66,6 +68,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
       socket
       |> assign(:page_title, gettext("Edit webhook"))
       |> assign(:webhook, webhook)
+      |> assign(:replace_url?, false)
       |> assign_form(Webhooks.change_webhook(webhook, %{}, resolve: false), events_mode(webhook.events))
     end)
   end
@@ -90,7 +93,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
   defp assign_deliveries(socket, deliveries) do
     socket
     |> assign(:deliveries, deliveries)
-    |> assign(:entry_titles, Webhooks.entry_titles(deliveries))
+    |> assign(:entry_titles, readable_titles(deliveries))
   end
 
   # Ids come from the URL: only a webhook of this environment is found.
@@ -151,6 +154,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             {:noreply,
              socket
              |> assign(:webhook, webhook)
+             |> assign(:replace_url?, false)
              |> assign_form(Webhooks.change_webhook(webhook, %{}, resolve: false), events_mode(webhook.events))}
 
           {:error, %Ecto.Changeset{} = changeset} ->
@@ -161,6 +165,8 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
         end
     end
   end
+
+  def handle_event("replace_url", _params, socket), do: {:noreply, assign(socket, :replace_url?, true)}
 
   def handle_event("rotate_secret", _params, %{assigns: %{webhook: %Webhook{} = webhook}} = socket) do
     case Webhooks.rotate_secret(webhook, socket.assigns.current_user) do
@@ -278,11 +284,36 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
     Enum.map(Brando.ContentEvents.types(), &{event_label(&1), &1})
   end
 
-  defp entry_type_options do
+  # Every content type's name, for labels; types the user may not read show
+  # by name and id only.
+  defp type_labels do
     Webhooks.entry_schemas()
     |> Enum.map(&{Brando.Blueprint.get_plural(&1), Event.entry_type(&1)})
     |> Enum.reject(fn {_label, value} -> is_nil(value) end)
     |> Enum.sort_by(fn {label, _} -> String.downcase(to_string(label)) end)
+  end
+
+  # The filter offers the content types the user may read. A type already
+  # chosen that they may not read is kept by a hidden input.
+  defp entry_type_options do
+    readable = MapSet.new(Enum.filter(Webhooks.entry_schemas(), &readable?/1), &Event.entry_type/1)
+    Enum.filter(type_labels(), fn {_label, value} -> value in readable end)
+  end
+
+  defp readable?(schema) when is_atom(schema), do: BrandoAdmin.Authorization.allowed?(:read, schema)
+
+  defp readable?(schema_name) when is_binary(schema_name) do
+    case BrandoAdmin.Components.Activity.schema(schema_name) do
+      nil -> false
+      schema -> readable?(schema)
+    end
+  end
+
+  # Entry titles in the log, for the entries of types the user may read
+  defp readable_titles(deliveries) do
+    deliveries
+    |> Webhooks.entry_titles()
+    |> Map.filter(fn {{schema, _id}, _title} -> readable?(schema) end)
   end
 
   @doc false
@@ -331,7 +362,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             <h3>{webhook.name} <.state webhook={webhook} /></h3>
             <p>
               <span class="workspace-mono">{Webhooks.host(webhook)}</span>
-              · {events_summary(webhook)}{filters_summary(webhook, @entry_type_options)}
+              · {events_summary(webhook)}{filters_summary(webhook, @type_labels)}
             </p>
             <p :if={webhook.last_delivery_at} class="integrations-meta">
               {last_delivery(webhook)}
@@ -394,13 +425,27 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             />
             <.field_errors field={@form[:name]} />
           </div>
-          <div class="webhook-field">
+          <div :if={@webhook && !@replace_url?} class="webhook-field">
+            <span class="webhook-label">{gettext("URL")}</span>
+            <div class="webhook-url-masked">
+              <code class="workspace-mono" data-testid="webhook-url-masked">{masked_url(@webhook)}</code>
+              <button type="button" class="workspace-button" phx-click="replace_url" data-testid="webhook-replace-url">
+                {gettext("Replace URL")}
+              </button>
+            </div>
+            <p class="webhook-hint">
+              {gettext("The path is hidden, as it may hold a key. Replace the URL to change it.")}
+            </p>
+          </div>
+          <div :if={!@webhook || @replace_url?} class="webhook-field">
             <label for="webhook-url">{gettext("URL")}</label>
             <input
               id="webhook-url"
               type="url"
               name={@form[:url].name}
-              value={@form[:url].value}
+              value={
+                if @webhook, do: Phoenix.HTML.Form.input_value(@form, :url) |> new_url(@webhook), else: @form[:url].value
+              }
               placeholder="https://example.com/brando-webhook"
               required
               autocomplete="off"
@@ -446,11 +491,18 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             <.field_errors field={@form[:events]} />
           </fieldset>
 
+          <%!-- Chosen types this user may not read are kept as they are --%>
+          <input type="hidden" name="webhook[entry_types][]" value="" />
+          <input
+            :for={value <- hidden_types(@form[:entry_types].value, @entry_type_options)}
+            type="hidden"
+            name="webhook[entry_types][]"
+            value={value}
+          />
           <fieldset :if={@entry_type_options != []} class="webhook-field">
             <legend>{gettext("Content types")}</legend>
             <p class="webhook-hint">{gettext("None chosen sends events for every content type.")}</p>
             <div class="webhook-checks">
-              <input type="hidden" name="webhook[entry_types][]" value="" />
               <label :for={{label, value} <- @entry_type_options} class="webhook-choice">
                 <input
                   type="checkbox"
@@ -627,7 +679,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
                   {event_label(delivery.event)}
                   <small class="workspace-mono">{delivery.event}</small>
                 </td>
-                <td><.entry delivery={delivery} types={@entry_type_options} titles={@entry_titles} /></td>
+                <td><.entry delivery={delivery} types={@type_labels} titles={@entry_titles} /></td>
                 <td>
                   <.delivery_state delivery={delivery} />
                   <small :if={delivery.error} class="webhook-error">{error_text(delivery.error)}</small>
@@ -777,6 +829,8 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
   defp error_text("secret_unreadable"), do: gettext("The secret could not be read; rotate it")
   defp error_text("webhook_paused"), do: gettext("The webhook was paused")
   defp error_text("invalid_response"), do: gettext("Not a valid HTTP response")
+  defp error_text("crashed"), do: gettext("The delivery stopped with an error")
+  defp error_text("result_not_recorded"), do: gettext("Sent, but the answer could not be saved")
   defp error_text(other), do: other
 
   defp duration(nil), do: ""
@@ -801,7 +855,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
       assign(assigns,
         title: assigns.titles[{delivery.entry_schema, delivery.entry_id}] || "#{type} ##{delivery.entry_id}",
         details: Enum.reject([type, delivery.language && String.upcase(delivery.language)], &is_nil/1),
-        path: entry_path(delivery)
+        path: if(Map.has_key?(assigns.titles, {delivery.entry_schema, delivery.entry_id}), do: entry_path(delivery))
       )
 
     ~H"""
@@ -853,6 +907,28 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
   defp validation_error(:required), do: gettext("Fill this in.")
   defp validation_error(:length), do: gettext("This is too long.")
   defp validation_error(_), do: gettext("Check this value.")
+
+  # A saved URL may carry a key in its path or query (a build hook): show its
+  # scheme and host only.
+  defp masked_url(%Webhook{url: url}) do
+    case URI.new(url || "") do
+      {:ok, %URI{scheme: scheme, host: host, path: path, query: query}} when is_binary(host) ->
+        rest = if path in [nil, "", "/"] and query in [nil, ""], do: "/", else: "/••••••"
+        "#{scheme}://#{host}#{rest}"
+
+      _ ->
+        "••••••"
+    end
+  end
+
+  # Replacing the URL starts from an empty field, not the saved URL.
+  defp new_url(value, %Webhook{url: value}), do: ""
+  defp new_url(value, _webhook), do: value
+
+  defp hidden_types(chosen, options) do
+    offered = Enum.map(options, &elem(&1, 1))
+    Enum.reject(List.wrap(chosen), &(&1 in offered or &1 == ""))
+  end
 
   ## Summaries
 

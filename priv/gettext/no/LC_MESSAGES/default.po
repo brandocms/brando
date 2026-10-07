@@ -17584,3 +17584,28 @@ msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet"
 #, elixir-autogen, elixir-format
 msgid "Resumed when this environment went live"
 msgstr "Gjenopptatt da dette miljøet ble live"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace URL"
+msgstr "Bytt URL"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The path is hidden, as it may hold a key. Replace the URL to change it."
+msgstr "Stien er skjult, siden den kan inneholde en nøkkel. Bytt URL-en for å endre den."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery stopped with an error"
+msgstr "Leveringen stoppet med en feil"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sent, but the answer could not be saved"
+msgstr "Sendt, men svaret kunne ikke lagres"
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shows the type, id, URL, status and changed fields of every entry, drafts included, and sends them to URLs the person chooses."
+msgstr "Viser type, id, URL, status og endrede felt for alle oppføringer, også utkast, og sender dem til URL-er personen velger."
