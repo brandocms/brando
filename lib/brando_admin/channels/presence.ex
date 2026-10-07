@@ -118,6 +118,18 @@ defmodule BrandoAdmin.Presence do
         )
 
         :ok
+    catch
+      # A pool checkout that fails exits rather than raises: a connection
+      # timeout in production, or in tests the owner of a sandboxed
+      # connection that has already gone when the leave arrives. The same
+      # reasoning applies; it must not take the tracker down.
+      :exit, reason ->
+        Logger.error(
+          "==> Presence: could not record last seen for user #{inspect(user_id)}: " <>
+            Exception.format_exit(reason)
+        )
+
+        :ok
     end
   end
 
