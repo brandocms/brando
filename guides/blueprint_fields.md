@@ -500,6 +500,34 @@ relation :blocks, :has_many, module: :blocks, constraints: [require_blocks: ["he
 `require_blocks:` lists module classes the field must contain, active and not
 deleted. It is checked when the blocks change, and not for drafts.
 
+#### Starting modules
+
+An empty block editor offers up to four modules to start with, under its
+templates when it has any. They are the modules entries of the same kind
+usually *start* with: the module of the first block, counted across the
+field's entries in the entry's language, with "first in 34 of 41" under
+each. When the first block is a container, the container is counted with
+its first module, and the tile inserts both. Free slots are filled with the
+field's most used modules, without a count. With fewer than five entries
+that have blocks, the editor offers the modules in the picker's order
+instead. Only modules the field's module set allows are offered. The counts
+are cached for five minutes. See `Brando.Content.StartingModules`.
+
+A new site has nothing to count. Pin modules to the front with
+`starts_with:` on the [`blocks` editor](blueprint_forms.md#block-editors),
+listing module classes, as `require_blocks:` does:
+
+```elixir
+forms do
+  form do
+    blocks :blocks, starts_with: ["hero", "intro"]
+  end
+end
+```
+
+Pinned modules come first, in this order, followed by what the content
+shows.
+
 ### Required collections
 
 `required: true` on a cast `has_many`, `many_to_many` or `entries` rejects

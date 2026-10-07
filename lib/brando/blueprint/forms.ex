@@ -364,6 +364,9 @@ defmodule Brando.Blueprint.Forms do
         this namespace to start from. Without it, the namespace named after
         the schema is used: `cases` (or `case`) for `MyApp.Cases.Case`. See
         `Brando.Content.StartingTemplates`.
+      - `starts_with`: Module classes an empty editor offers first, before
+        the modules entries of this kind usually start with. For a new site
+        with no content to learn from. See `Brando.Content.StartingModules`.
 
   `palette_namespace` is still accepted, so older Blueprints compile, but it
   does nothing: a container's palettes are narrowed by the container's own
