@@ -108,6 +108,7 @@ if Code.ensure_loaded?(Igniter) do
       |> upgrade_dependencies(template, "dependencies")
       |> upgrade_dependencies(template, "devDependencies")
       |> upgrade_built_dependencies(template)
+      |> upgrade_overrides(template)
     end
 
     # The template's version wins, except for BrandoJS, whose source (a Yalc
@@ -126,6 +127,19 @@ if Code.ensure_loaded?(Igniter) do
         |> Kernel.--(@retired_backend_packages)
 
       Map.update(package, "pnpm", %{"onlyBuiltDependencies" => built}, &Map.put(&1, "onlyBuiltDependencies", built))
+    end
+
+    # Pins the template needs (a dependency's broken release) win over the
+    # application's own; the application's other overrides stay.
+    defp upgrade_overrides(package, template) do
+      case get_in(template, ["pnpm", "overrides"]) do
+        wanted when is_map(wanted) and map_size(wanted) > 0 ->
+          overrides = Map.merge(get_in(package, ["pnpm", "overrides"]) || %{}, wanted)
+          Map.update(package, "pnpm", %{"overrides" => overrides}, &Map.put(&1, "overrides", overrides))
+
+        _ ->
+          package
+      end
     end
 
     @doc false
