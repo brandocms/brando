@@ -519,6 +519,24 @@ defmodule Brando.Blueprint.MigrationsTest do
     refute File.read!(created.migration) =~ "UPDATE"
   end
 
+  test "adding the Meta trait backfills content_modified_at from the last edit" do
+    assert {:ok, _} = Migrations.create_migration(Brando.MigrationTest.StorageCreator, @test_opts)
+    assert {:ok, update} = Migrations.create_migration(Brando.MigrationTest.StorageMeta, @test_opts)
+
+    [up, down] = update.migration |> File.read!() |> String.split("def down")
+
+    assert up =~ "add :meta_canonical_url, :text"
+    assert up =~ "add :content_modified_at, :utc_datetime"
+
+    assert appears_before?(
+             up,
+             "flush()",
+             ~s{execute "UPDATE storage_storage_records SET content_modified_at = COALESCE(edited_at, updated_at) WHERE content_modified_at IS NULL"}
+           )
+
+    refute down =~ "UPDATE"
+  end
+
   test "join table foreign keys use deterministic delete behavior and names" do
     assert {:ok, _} = Migrations.create_migration(Brando.MigrationTest.Tag, @test_opts)
     assert {:ok, generated} = Migrations.create_migration(Brando.MigrationTest.ProjectTag, @test_opts)

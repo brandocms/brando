@@ -8,6 +8,7 @@ defmodule Brando.Trait.Meta.Compiler do
         attribute :meta_title, :text
         attribute :meta_description, :text
         attribute :meta_canonical_url, :text
+        attribute :content_modified_at, :datetime
       end
 
       assets do

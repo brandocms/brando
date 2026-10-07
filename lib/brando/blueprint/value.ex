@@ -103,6 +103,30 @@ defmodule Brando.Blueprint.Value do
   defp flatten_html(_), do: nil
 
   @doc """
+  When `entry`'s content last changed in a way worth telling readers and
+  search engines about: `content_modified_at` (`Brando.Trait.Meta`, moved only
+  by substantive edits), else `edited_at` (`Brando.Trait.Creator`), else
+  `updated_at`, else `inserted_at`.
+
+  Use it for JSON-LD `dateModified`, the sitemap's `lastmod` and a visible
+  "Updated" line, so all three agree:
+
+      field :dateModified, :datetime, &Brando.Blueprint.Value.modified_at/1
+
+  ## Examples
+
+      iex> Brando.Blueprint.Value.modified_at(%{content_modified_at: ~U[2026-01-02 10:00:00Z], updated_at: ~N[2026-03-01 08:00:00]})
+      ~U[2026-01-02 10:00:00Z]
+
+      iex> Brando.Blueprint.Value.modified_at(%{updated_at: ~N[2026-03-01 08:00:00]})
+      ~N[2026-03-01 08:00:00]
+  """
+  @spec modified_at(map()) :: DateTime.t() | NaiveDateTime.t() | nil
+  def modified_at(entry) when is_map(entry) do
+    Enum.find_value([:content_modified_at, :edited_at, :updated_at, :inserted_at], &Map.get(entry, &1))
+  end
+
+  @doc """
   Converts a language code to the locale expected by Open Graph consumers.
   """
   @spec encode_locale(String.t()) :: String.t()

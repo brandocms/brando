@@ -5,6 +5,7 @@ defmodule Brando.Repo.Migrations.AddMetaFieldsToE2eProjects do
   def change do
     alter table(:projects_projects) do
       add :meta_canonical_url, :text
+      add :content_modified_at, :utc_datetime
     end
   end
 end

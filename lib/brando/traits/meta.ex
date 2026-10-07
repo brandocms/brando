@@ -7,6 +7,10 @@ defmodule Brando.Trait.Meta do
   `<link rel="canonical">` and `og:url`, for content first published
   elsewhere or duplicated across entries. It must be an absolute `http(s)`
   URL; empty keeps the entry's own address.
+
+  It also adds `content_modified_at`, which `Brando.Trait.Meta.ContentModified`
+  moves only on substantive edits. Read it through
+  `Brando.Blueprint.Value.modified_at/1`.
   """
   use Brando.Trait
 

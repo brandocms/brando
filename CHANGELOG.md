@@ -20,11 +20,13 @@ production dump.
 
 #### Breaking
 
-- **`trait :meta` adds a column.** Every schema with the meta trait now has
-  `meta_canonical_url`. Run `mix brando.gen.migrations` for Brando's pages
-  (`brando_201`) and `mix brando.gen.blueprint_migration MyApp.Domain.Schema`
-  for each application blueprint with `trait :meta`, then `mix ecto.migrate`;
-  until then, queries on those schemas fail with a missing-column error.
+- **`trait :meta` adds two columns.** Every schema with the meta trait now has
+  `meta_canonical_url` and `content_modified_at`. Run `mix brando.gen.migrations`
+  for Brando's pages (`brando_201`) and
+  `mix brando.gen.blueprint_migration MyApp.Domain.Schema` for each application
+  blueprint with `trait :meta`, then `mix ecto.migrate`; until then, queries on
+  those schemas fail with a missing-column error. Both migrations start
+  `content_modified_at` from each row's last edit.
 
 - **Admin icons are Lucide.** Heroicons and `assets/css/heroicons.css` are
   gone. `<.icon name="…" />` now renders `<span data-icon class="lucide-name">`,
@@ -549,6 +551,15 @@ production dump.
   duplicated content; `put_meta/3` and `put_hreflang/2` pass it to the
   canonical link and `og:url`, and `put_canonical/2` sets one by hand. Empty
   keeps the entry's own URL. See [Page metadata](guides/meta.md).
+- **An honest `dateModified`.** `trait :meta` adds `content_modified_at`, set
+  on insert and moved only when a save changes the entry's text (its text
+  inputs and rendered blocks) by at least 10% of its words, between 5 and 20
+  words: typo fixes, reordered blocks, meta edits, resaves and `:system`
+  saves leave it alone. `Brando.Blueprint.Value.modified_at/1` reads it,
+  falling back to `edited_at` and `updated_at`; Page's JSON-LD `dateModified`
+  and the `mix brando.gen.sitemap` template now use it, so the two agree.
+  Point your own blueprints' `dateModified`, sitemap `lastmod` and any
+  "Updated" line at it too; see [JSON-LD](guides/jsonld.md#datemodified).
 - **Transformer cards can act on their entry and see their neighbours.** A
   transformer's `listing:` component now also gets `@dom_id` and `@target`,
   and `BrandoAdmin.Components.Form.Transformer.set_field/4` builds a click

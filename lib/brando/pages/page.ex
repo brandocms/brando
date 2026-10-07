@@ -350,7 +350,7 @@ defmodule Brando.Pages.Page do
     field :creator, :identity
     field :publisher, :identity
     field :copyrightYear, :integer, & &1.inserted_at.year
-    field :dateModified, :datetime, & &1.updated_at
+    field :dateModified, :datetime, &Brando.Blueprint.Value.modified_at/1
     field :datePublished, :datetime, & &1.inserted_at
     field :description, :string, & &1.meta_description
     field :headline, :string, & &1.title

@@ -8,7 +8,7 @@ defmodule <%= web_module %>.Sitemap do
       %{
         filter: Page.__url_filter__(),
         status: :published,
-        select: {:struct, [:title, :uri, :updated_at, :language, :has_url]},
+        select: {:struct, [:title, :uri, :content_modified_at, :edited_at, :updated_at, :language, :has_url]},
         order: "asc language, asc title"
       },
       :stream
@@ -20,10 +20,7 @@ defmodule <%= web_module %>.Sitemap do
         priority: 0.7,
         changefreq: :weekly,
         loc: page_url,
-        lastmod:
-          page.updated_at
-          |> DateTime.from_naive!("Etc/UTC")
-          |> DateTime.shift_zone!(Brando.timezone())
+        lastmod: Brando.Blueprint.Value.modified_at(page)
       })
     end)
   end

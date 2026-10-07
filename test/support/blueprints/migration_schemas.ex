@@ -725,6 +725,24 @@ defmodule Brando.MigrationTest.StorageCreator do
   end
 end
 
+defmodule Brando.MigrationTest.StorageMeta do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Meta
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
+
 defmodule Brando.MigrationTest.VillainV1 do
   use Brando.Blueprint,
     application: "Brando",
