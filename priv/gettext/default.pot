@@ -15922,11 +15922,6 @@ msgstr ""
 msgid "I have saved my codes"
 msgstr ""
 
-#: lib/brando_admin/live/user_two_factor_setup_live.ex
-#, elixir-autogen, elixir-format
-msgid "This site requires two-factor authentication for %{email}. When you log in, you will give a code from an app on your phone as well as your password."
-msgstr ""
-
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "Save these recovery codes somewhere safe, away from your phone, such as a password manager. Each one signs you in once if you lose your authenticator app. They are not shown again."
@@ -16080,11 +16075,6 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Security"
-msgstr ""
-
-#: lib/brando_admin/live/users/user_security_live.ex
-#, elixir-autogen, elixir-format
-msgid "Log in with a code from an app on your phone as well as your password."
 msgstr ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -16401,12 +16391,345 @@ msgstr ""
 msgid "That is not your password."
 msgstr ""
 
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm"
+msgstr ""
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm it’s you"
+msgstr ""
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "This needs your password, a code from your authenticator app or a passkey, since you last gave one more than %{minutes} minutes ago."
+msgstr ""
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "Use a passkey"
+msgstr ""
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey did not confirm it. Try again, or use your password."
+msgstr ""
+
 #: lib/brando_admin/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication."
 msgstr ""
 
+msgid "That passkey did not work. Try again, or use another way to log in."
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm with your passkey: your fingerprint, face, PIN or security key."
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "No passkey was used. Try again, or use another way below."
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Or enter the 6-digit code from your authenticator app."
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lost your passkey?"
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Enter one of the recovery codes you saved when you added your first passkey. Each code works once. If you have none left, ask an administrator to reset two-factor authentication for you."
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recovery code"
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site requires two-factor authentication for %{email}. Choose how you will confirm it is you when you log in, as well as with your password."
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey"
+msgstr ""
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your fingerprint, face or screen lock, on this device or your phone. Nothing to type."
+msgstr ""
+
+#: lib/brando_admin/live/user_login_live.ex
+#, elixir-autogen, elixir-format
+msgid "No passkey was used. Try again, or log in with your password."
+msgstr ""
+
+#: lib/brando_admin/live/user_login_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log in with a passkey"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged in with a passkey"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey added: %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey removed: %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "A session was logged out"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged out everywhere"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Name this passkey"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Your browser asks where to keep it: this device, your phone, or a security key."
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Create a passkey"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "This passkey is added already."
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey could not be added. Try again."
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "No passkey was made. The browser was closed, or this device cannot make one."
+msgstr ""
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Codes from your app cannot be checked on this site right now. Use your password."
+msgstr ""
+
+msgid "Confirm it is you with a passkey or a code from your phone, as well as your password."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Passkeys"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your fingerprint, face or screen lock, on this device or your phone, or a security key. A passkey also logs you in without your password."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add a passkey"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{date}"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "last used %{date}"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "not used yet"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove the passkey %{name}?"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "It no longer logs you in. Remove it from the device too, in its settings."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove passkey"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sessions"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where you are logged in. Logging out a session ends it at once."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log out your other sessions?"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every other browser where you are logged in is logged out. This one stays logged in."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log them out"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log out other sessions"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown browser"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "This browser"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "logged in %{date}"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "last active %{date}"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey was removed."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The sign-in policy requires two-factor authentication: add another passkey or the app first."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your other sessions were logged out."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey was added."
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Log %{name} out everywhere?"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Every browser where they are logged in is logged out. They can log in again."
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Log out everywhere"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} was logged out everywhere."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can log another user out."
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "One active session."
+msgid_plural "%{count} active sessions."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "If you need to log in sooner, ask an administrator."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "A passkey was added"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey “%{name}” was added to %{email}. It logs in on its own, without the password."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "A passkey was removed"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey “%{name}” was removed from %{email}. It no longer logs in."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Your account was locked for a while"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "After too many failed attempts to log in to %{email}, the account is locked until %{time}. If it was not you trying, somebody may know or be guessing your password: change it once you can log in."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the live content, if the target is the live environment"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
 msgstr ""

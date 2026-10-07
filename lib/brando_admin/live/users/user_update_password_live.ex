@@ -82,7 +82,8 @@ defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
     {:ok,
      assign(socket,
        socket_connected: connected?(socket),
-       session_token: session["user_token"],
+       # The session's token row id, not the token, so it stays out of state
+       session_id: Users.token_id(session["user_token"]),
        first_login?: match?(%{reset_password_on_first_login: true}, user.config),
        form: to_form(Users.password_changeset(user), as: "user"),
        page_title: gettext("Change password")
@@ -99,11 +100,11 @@ defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
   end
 
   def handle_event("save", %{"user" => params}, socket) do
-    %{current_user: current_user, session_token: token} = socket.assigns
+    %{current_user: current_user, session_id: session_id} = socket.assigns
     # Fresh from the database: the password may have changed since mount.
     {:ok, user} = Users.get_user(current_user.id)
 
-    case Users.update_user_password(user, params["current_password"], params, token) do
+    case Users.update_user_password(user, params["current_password"], params, session_id) do
       {:ok, _user} ->
         send(self(), {:toast, gettext("Your password has been changed.")})
         {:noreply, push_navigate(socket, to: "/admin")}

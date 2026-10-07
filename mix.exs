@@ -234,6 +234,8 @@ defmodule Brando.Mixfile do
       # two-factor authentication: TOTP codes and the enrollment QR code
       {:nimble_totp, "~> 1.0"},
       {:eqrcode, "~> 0.2"},
+      # passkeys (WebAuthn)
+      {:wax_, "~> 0.7"},
 
       # dsl
       {:spark, "~> 2.4"},

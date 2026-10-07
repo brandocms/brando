@@ -111,7 +111,9 @@ defmodule Brando.Users.SecurityPolicy do
   end
 
   defp without_two_factor_query(policy) do
-    enrolled = from(s in Brando.Users.Security, where: not is_nil(s.totp_enabled_at), select: s.user_id)
+    with_app = from(s in Brando.Users.Security, where: not is_nil(s.totp_enabled_at), select: s.user_id)
+    with_passkey = from(p in Brando.Users.Passkey, select: p.user_id)
+    enrolled = union(with_app, ^with_passkey)
 
     base =
       from u in Brando.Users.User,

@@ -5,6 +5,11 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
+  # Changing where a site deploys to (its target and webhook), building (which
+  # may deploy at once), deploying and rolling back ask for the password, a
+  # code or a passkey when the session has not confirmed lately.
+  on_mount({BrandoAdmin.Reauth, events: ~w(save_deploy_config deploy rollback request_build schedule_build)})
+
   alias Brando.Environments.Environment
   alias Brando.SSG.Build
   alias Brando.SSG.Builds

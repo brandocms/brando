@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Users.SignInPolicyLive do
   alias BrandoAdmin.Toast
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
+  on_mount({BrandoAdmin.Reauth, :screen})
 
   def render(assigns) do
     ~H"""

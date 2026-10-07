@@ -26,12 +26,20 @@ defmodule Brando.Users.UserToken do
   @pending_validity_in_minutes 10
   @pending_contexts ~w(pending_2fa two_factor_verified)
 
+  @type t :: %__MODULE__{}
+
   @schema_prefix "public"
 
   schema "users_tokens" do
     field :token, :binary, redact: true
     field :context, :string
     field :sent_to, :string
+    # A session's browser and address, when it was last used, and when it last
+    # gave a password, a code or a passkey (see `BrandoAdmin.Reauth`)
+    field :ip, :string
+    field :user_agent, :string
+    field :last_used_at, :naive_datetime
+    field :confirmed_at, :naive_datetime
     belongs_to :user, Brando.Users.User
 
     timestamps(updated_at: false)
@@ -54,10 +62,24 @@ defmodule Brando.Users.UserToken do
   such as session or cookie. As they are signed, those
   tokens do not need to be hashed.
   """
-  def build_session_token(user) do
+  def build_session_token(user, meta \\ %{}) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {token, %Brando.Users.UserToken{token: token, context: "session", user_id: user.id}}
+    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+
+    {token,
+     %Brando.Users.UserToken{
+       token: token,
+       context: "session",
+       user_id: user.id,
+       ip: meta[:ip],
+       user_agent: meta[:user_agent] && String.slice(meta[:user_agent], 0, 255),
+       last_used_at: now,
+       confirmed_at: now
+     }}
   end
+
+  @doc "How long a session lasts, in days."
+  def session_validity_in_days, do: @session_validity_in_days
 
   @doc """
   Checks if the token is valid and returns its underlying lookup query.

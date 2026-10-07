@@ -3,6 +3,10 @@ defmodule BrandoAdmin.Users.UserListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Users.User
   use Gettext, backend: Brando.Gettext
 
+  # Disabling, enabling and deleting users ask for the password, a code or a
+  # passkey when the session has not confirmed lately.
+  on_mount({BrandoAdmin.Reauth, events: ~w(disable_user enable_user confirm_transfer_delete)})
+
   alias Brando.Users
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Workspace
@@ -243,17 +247,17 @@ defmodule BrandoAdmin.Users.UserListLive do
      |> assign(:user_select_open, false)}
   end
 
-  def handle_event("disable_user", %{"id" => id}, socket) do
-    user = Users.get_user!(id)
-    Users.set_active(id, false, user)
-    send(self(), {:toast, gettext("User disabled.")})
-    {:noreply, socket}
-  end
+  # On behalf of the signed-in user, who must be allowed to update users
+  # (`BrandoAdmin.Authorization` maps both events to :update).
+  def handle_event("disable_user", %{"id" => id}, socket), do: set_active(socket, id, false, gettext("User disabled."))
+  def handle_event("enable_user", %{"id" => id}, socket), do: set_active(socket, id, true, gettext("User enabled."))
 
-  def handle_event("enable_user", %{"id" => id}, socket) do
-    user = Users.get_user!(id)
-    Users.set_active(id, true, user)
-    send(self(), {:toast, gettext("User enabled.")})
+  defp set_active(socket, id, active, message) do
+    case Users.set_active(id, active, socket.assigns.current_user) do
+      {:ok, _user} -> send(self(), {:toast, message})
+      {:error, _reason} -> send(self(), {:toast, gettext("You do not have permission for this action.")})
+    end
+
     {:noreply, socket}
   end
 end

@@ -234,7 +234,7 @@ defmodule BrandoAdmin.Authorization do
   defp event_action(_, "export_modules"), do: :export
   defp event_action(_, "export_module_files"), do: :export
   defp event_action(_, "import_modules"), do: :create
-  defp event_action(_, "disable_user"), do: :update
+  defp event_action(_, event) when event in ["disable_user", "enable_user"], do: :update
   defp event_action(_, _), do: nil
 
   @doc "Presentation checks against the current administration scope."

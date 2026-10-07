@@ -30,6 +30,11 @@ production dump.
   Run `mix brando.gen.migrations` and `mix ecto.migrate` for `brando_207`;
   until then, loading proposals fails with a missing-column error.
 
+- **Passkeys and session details.** `brando_205` creates `users_passkeys` and
+  adds `ip`, `user_agent`, `last_used_at` and `confirmed_at` to
+  `users_tokens`. Run it with `brando_204`. Sessions from before it have no
+  `confirmed_at`, so their first sensitive action asks for the password.
+
 - **Two-factor authentication adds four tables.** `brando_204` creates
   `users_security`, `users_recovery_codes`, `users_security_events` and
   `users_security_policy` in `public`. Run `mix brando.gen.migrations` and
@@ -750,11 +755,28 @@ production dump.
   user who lost their phone, and can require it of everyone or of some roles
   (groups, with group authorization) under **Users → Sign-in policy**; users it
   applies to set it up at their next login. Sign-in attempts, codes and reset
-  requests are limited per IP address and account, and five failures in a row
-  lock the account for 15 minutes (`Brando.Users.Throttle`). Sign-ins, failures,
+  requests are limited per IP address and account, and five failures within 15
+  minutes lock the account for 15 minutes, an hour the second time in a day
+  and four hours after that, with an email to the user (`Brando.Users.Throttle`). Sign-ins, failures,
   lockouts and security changes go to a security log, shown on the user's
   Security page. The TOTP secret is encrypted at rest (`Brando.Crypto`). See
   [User accounts and sessions](guides/users.md#two-factor-authentication).
+
+- **Passkeys, confirming again, and sessions.** Users add passkeys (WebAuthn,
+  with `wax_`) under **Security**, name them per device and remove them. A
+  passkey is a second factor, satisfies a policy that requires two-factor
+  authentication, and logs in on its own from the login page; the app and
+  recovery codes stay as the fallback. Sensitive actions — the user form, the
+  sign-in policy, groups, disabling or deleting users, a site's lifecycle and
+  access, static builds and deploys, copying into an environment (a copy into
+  the live one must also be ticked), deleting a site, an environment or its
+  archives, setting an environment live, adding a passkey or setting up the app — ask
+  for the password, a code or a passkey again when the session last gave one
+  more than ten minutes ago: `on_mount {BrandoAdmin.Reauth, :screen}` or
+  `on_mount {BrandoAdmin.Reauth, events: [...]}` opts a screen in. **Security**
+  lists the user's sessions and logs them out, and a superuser can log a user
+  out everywhere from their form. See
+  [User accounts and sessions](guides/users.md#passkeys).
 
 - **Password reset.** The login page has a "Forgot password?" link to
   `/admin/reset-password`, which emails a link to choose a new password. The

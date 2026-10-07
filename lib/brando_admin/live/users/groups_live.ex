@@ -1,6 +1,10 @@
 defmodule BrandoAdmin.Users.GroupsLive do
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
+
+  # Changing a group's permissions or members asks for the password, a code
+  # or a passkey when the session has not confirmed lately.
+  on_mount({BrandoAdmin.Reauth, events: ~w(save delete add_member remove_member remove_retired)})
   alias Brando.Authorization.{Administration, Catalog, Engine, Group, Groups, Scope}
 
   def mount(_params, _session, socket) do

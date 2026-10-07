@@ -9,6 +9,11 @@ defmodule BrandoAdmin.Users.UserFormLive do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Toast
 
+  # Creating users and changing email, roles, passwords and two-factor
+  # authentication: the screen asks for the password, a code or a passkey
+  # when the session has not confirmed lately.
+  on_mount({BrandoAdmin.Reauth, :screen})
+
   def mount(_params, _session, socket) do
     {:ok, assign(socket, set_password: nil, security_meta: Brando.Users.SecurityLog.socket_meta(socket))}
   end
@@ -127,6 +132,28 @@ defmodule BrandoAdmin.Users.UserFormLive do
   end
 
   def handle_event("reset_two_factor", _params, socket), do: {:noreply, socket}
+
+  def handle_event("log_out_everywhere", _params, %{assigns: %{entry_id: entry_id}} = socket)
+      when not is_nil(entry_id) do
+    %{current_user: current_user} = socket.assigns
+
+    with {:ok, user} <- Users.get_user(entry_id),
+         :ok <- Users.log_out_everywhere(user, current_user, meta: socket.assigns[:security_meta]) do
+      Toast.send_to(current_user, gettext("%{email} was logged out everywhere.", email: user.email))
+      {:noreply, push_navigate(socket, to: "/admin/users/update/#{entry_id}")}
+    else
+      _ ->
+        Toast.send_to(
+          current_user,
+          gettext("Only a superuser can log another user out."),
+          %{level: :error, type: :notification}
+        )
+
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("log_out_everywhere", _params, socket), do: {:noreply, socket}
 
   def handle_event("open_set_password", _params, %{assigns: %{entry_id: entry_id}} = socket)
       when not is_nil(entry_id) do

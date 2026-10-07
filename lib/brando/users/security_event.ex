@@ -16,7 +16,11 @@ defmodule Brando.Users.SecurityEvent do
     :two_factor_reset,
     :recovery_codes_created,
     :password_changed,
-    :policy_changed
+    :policy_changed,
+    :passkey_added,
+    :passkey_removed,
+    :session_revoked,
+    :sessions_revoked
   ]
 
   @type t :: %__MODULE__{}

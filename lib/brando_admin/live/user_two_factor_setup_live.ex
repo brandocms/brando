@@ -28,11 +28,45 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
         <% else %>
           <p class="login-intro">
             {gettext(
-              "This site requires two-factor authentication for %{email}. When you log in, you will give a code from an app on your phone as well as your password.",
+              "This site requires two-factor authentication for %{email}. Choose how you will confirm it is you when you log in, as well as with your password.",
               email: @user.email
             )}
           </p>
+          <nav class="pill-tabs login-setup-methods" aria-label={gettext("Two-factor authentication")}>
+            <button
+              type="button"
+              phx-click="method"
+              phx-value-method="passkey"
+              aria-pressed={to_string(@method == :passkey)}
+              data-testid="setup-method-passkey"
+            >
+              <.icon name="fingerprint-pattern" />{gettext("Passkey")}
+            </button>
+            <button
+              type="button"
+              phx-click="method"
+              phx-value-method="app"
+              aria-pressed={to_string(@method == :app)}
+              data-testid="setup-method-app"
+            >
+              <.icon name="smartphone" />{gettext("Authenticator app")}
+            </button>
+          </nav>
+          <div :if={@method == :passkey} class="login-setup-method">
+            <p class="login-setup-method-intro">
+              {gettext("Your fingerprint, face or screen lock, on this device or your phone. Nothing to type.")}
+            </p>
+            <.live_component
+              module={TwoFactorComponents.PasskeySetup}
+              id="passkey-setup"
+              user={@user}
+              keep_id={@token_id}
+              proof={{:signed_in_now, @token_id}}
+              meta={@meta}
+            />
+          </div>
           <.live_component
+            :if={@method == :app}
             module={TwoFactorComponents.Setup}
             id="two-factor-setup"
             user={@user}
@@ -68,6 +102,7 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
              user: user,
              token_id: token_id,
              codes: nil,
+             method: :passkey,
              meta: Brando.Users.SecurityLog.socket_meta(socket),
              page_title: gettext("Set up two-factor authentication")
            )}
@@ -114,11 +149,16 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
     |> push_navigate(to: "/admin/login")
   end
 
+  def handle_event("method", %{"method" => method}, socket) when method in ["passkey", "app"],
+    do: {:noreply, assign(socket, :method, String.to_existing_atom(method))}
+
   def handle_info({:pending_login_ended, _id}, %{assigns: %{codes: nil}} = socket), do: {:noreply, ended(socket)}
 
   def handle_info(:check_pending_login, socket) do
     if pending?(socket), do: {:noreply, socket}, else: {:noreply, ended(socket)}
   end
+
+  def handle_info({:passkey_added, _passkey, codes}, socket), do: handle_info({:two_factor_enabled, codes || []}, socket)
 
   def handle_info({:two_factor_enabled, codes}, socket) do
     case Users.verify_pending_login(socket.assigns.token_id) do

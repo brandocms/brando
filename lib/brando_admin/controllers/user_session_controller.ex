@@ -3,6 +3,7 @@ defmodule BrandoAdmin.UserSessionController do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Users
+  alias Brando.Users.Passkeys
   alias Brando.Users.SecurityLog
   alias Brando.Users.Throttle
   alias Brando.Users.TwoFactor
@@ -128,6 +129,113 @@ defmodule BrandoAdmin.UserSessionController do
       {_user, :pending} -> redirect(conn, to: "/admin/login/two-factor/setup")
       nil -> UserAuth.abandon_pending_login(conn, expired_message())
     end
+  end
+
+  @doc """
+  Options for a passkey on the login screens, as JSON: for the second step
+  of a waiting sign-in (`"mode" => "second_factor"`), the user's passkeys;
+  otherwise any passkey for this site the device holds, to log in with it
+  alone. The challenge waits in the session for `passkey/2`, and answers once.
+  """
+  def passkey_options(conn, params) do
+    mode = if params["mode"] == "second_factor", do: "second_factor", else: "passwordless"
+
+    case passkey_subject(conn, mode) do
+      nil ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: "expired"})
+
+      subject ->
+        {challenge, options} = Passkeys.authentication_challenge(subject)
+
+        conn
+        |> put_session(:passkey_challenge, %{
+          "bytes" => Base.encode64(challenge.bytes),
+          "issued_at" => challenge.issued_at,
+          "mode" => mode
+        })
+        |> json(%{publicKey: options})
+    end
+  end
+
+  defp passkey_subject(conn, "second_factor") do
+    case UserAuth.pending_login(conn) do
+      {user, :pending} -> user
+      _ -> nil
+    end
+  end
+
+  defp passkey_subject(_conn, "passwordless"), do: :discoverable
+
+  @doc """
+  Logs in with a passkey: the second step of a waiting sign-in, or on its
+  own. The browser's answer comes in `passkey`, Base64url-encoded.
+  """
+  def passkey(conn, %{"passkey" => result} = params) when is_map(result) do
+    meta = SecurityLog.meta(conn)
+    state = get_session(conn, :passkey_challenge)
+    conn = delete_session(conn, :passkey_challenge)
+
+    with :ok <- Throttle.check_two_factor(meta.ip),
+         %{"bytes" => bytes, "issued_at" => issued_at, "mode" => mode} <- state,
+         {:ok, bytes} <- Base.decode64(bytes) do
+      passkey_login(conn, mode, bytes, issued_at, result, params, meta)
+    else
+      {:error, :rate_limited, retry_after} ->
+        conn
+        |> put_flash(:error, too_many_message(div(retry_after, 60_000) + 1))
+        |> redirect(to: "/admin/login")
+
+      _ ->
+        passkey_failed(conn, "passwordless")
+    end
+  end
+
+  def passkey(conn, _params), do: passkey_failed(conn, "passwordless")
+
+  defp passkey_login(conn, "second_factor", bytes, issued_at, result, _params, meta) do
+    with {user, :pending} <- UserAuth.pending_login(conn),
+         nil <- Throttle.locked_until(user),
+         challenge = Passkeys.restore_authentication_challenge(user, bytes, issued_at),
+         {:ok, _user_id, _passkey} <- Passkeys.authenticate(user, result, challenge) do
+      UserAuth.complete_pending_login(conn, user, :passkey)
+    else
+      nil -> UserAuth.abandon_pending_login(conn, expired_message())
+      %DateTime{} = until -> UserAuth.abandon_pending_login(conn, too_many_message(minutes_until(until)))
+      {:error, _reason} -> wrong_passkey(conn, meta)
+    end
+  end
+
+  # Rate limited per address; a failure here does not name an account to count against.
+  defp passkey_login(conn, "passwordless", bytes, issued_at, result, params, _meta) do
+    challenge = Passkeys.restore_authentication_challenge(:discoverable, bytes, issued_at)
+
+    with {:ok, user_id, _passkey} <- Passkeys.authenticate(:any, result, challenge),
+         {:ok, user} <- Users.get_user(%{matches: %{id: user_id, active: true}}),
+         nil <- Throttle.locked_until(user) do
+      UserAuth.log_in_user(conn, user, %{"remember_me" => params["remember_me"]}, :passkey)
+    else
+      %DateTime{} = until -> too_many(conn, nil, minutes_until(until))
+      _ -> passkey_failed(conn, "passwordless")
+    end
+  end
+
+  defp wrong_passkey(conn, meta) do
+    case UserAuth.pending_login(conn) do
+      {user, :pending} ->
+        case Throttle.failed(user, :two_factor, meta) do
+          :ok -> passkey_failed(conn, "second_factor")
+          {:locked, until} -> UserAuth.abandon_pending_login(conn, too_many_message(minutes_until(until)))
+        end
+
+      _ ->
+        UserAuth.abandon_pending_login(conn, expired_message())
+    end
+  end
+
+  defp passkey_failed(conn, mode) do
+    conn
+    |> put_flash(:error, gettext("That passkey did not work. Try again, or use another way to log in."))
+    |> redirect(to: if(mode == "second_factor", do: "/admin/login/two-factor", else: "/admin/login"))
   end
 
   def delete(conn, _params) do

@@ -3,6 +3,7 @@ defmodule BrandoAdmin.UserAuth do
   use Gettext, backend: Brando.Gettext
 
   import Phoenix.Controller
+  import Phoenix.LiveView, only: [connected?: 1]
   import Plug.Conn
 
   alias Brando.Users
@@ -30,11 +31,12 @@ defmodule BrandoAdmin.UserAuth do
   if you are not using LiveView.
   """
   def log_in_user(conn, user, params \\ %{}, method \\ :password) do
-    token = Users.generate_user_session_token(user)
+    meta = SecurityLog.meta(conn)
+    token = Users.generate_user_session_token(user, meta)
     user_return_to = get_session(conn, :user_return_to)
 
     Throttle.clear(user)
-    SecurityLog.record(:login, user, meta: SecurityLog.meta(conn), details: %{"method" => to_string(method)})
+    SecurityLog.record(:login, user, meta: meta, details: %{"method" => to_string(method)})
 
     conn
     |> renew_session()
@@ -164,6 +166,7 @@ defmodule BrandoAdmin.UserAuth do
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Users.get_user_by_session_token(user_token)
+    if user, do: Users.touch_session(user_token)
     assign(conn, :current_user, user)
   end
 
@@ -294,6 +297,7 @@ defmodule BrandoAdmin.UserAuth do
     socket = mount_current_user(socket, session)
 
     if socket.assigns.current_user do
+      if connected?(socket), do: Users.touch_session(session["user_token"])
       {:cont, socket}
     else
       socket =

@@ -106,7 +106,32 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
     refute TwoFactor.enabled?(user)
   end
 
+  describe "sessions" do
+    test "lists where you are logged in, and logs out another session", %{conn: conn, current_user: user} do
+      other = Users.generate_user_session_token(user, %{ip: "10.1.2.3", user_agent: "Mozilla/5.0 (iPhone) Safari/605.1"})
+      {:ok, view, html} = live(conn, "/admin/users/security")
+
+      assert html =~ "10.1.2.3"
+      assert html =~ ~s(data-current="true")
+
+      view |> element("[data-testid=session-revoke]") |> render_click()
+      refute Users.get_user_by_session_token(other)
+      assert Users.get_user_by_session_token(get_session(conn, :user_token))
+    end
+  end
+
   describe "the user form" do
+    test "a superuser logs another user out everywhere", %{conn: conn} do
+      user = Factory.insert(:random_user, role: :editor, avatar: nil, config: %UserConfig{})
+      token = Users.generate_user_session_token(user)
+
+      {:ok, view, _html} = live(conn, "/admin/users/update/#{user.id}")
+      assert await_selector(view, "[data-testid=log-out-everywhere]")
+      view |> element("[data-testid=log-out-everywhere]") |> render_click()
+
+      refute Users.get_user_by_session_token(token)
+    end
+
     test "a superuser resets another user's two-factor authentication", %{conn: conn, current_user: admin} do
       user = Factory.insert(:random_user, role: :editor, avatar: nil, config: %UserConfig{})
       enable(user, conn)

@@ -70,6 +70,71 @@ defmodule Brando.Users.ThrottleTest do
     assert Throttle.unknown_locked_until(address) == until
   end
 
+  describe "repeated lockouts" do
+    defp lock(fun) do
+      Enum.reduce(1..Throttle.config()[:lockout_after], nil, fn _, _ -> fun.() end)
+    end
+
+    defp minutes_until(until), do: round(DateTime.diff(until, DateTime.utc_now()) / 60)
+
+    test "last longer each time within a day, and the user is emailed" do
+      user = Factory.insert(:random_user, config: %UserConfig{})
+
+      unlock = fn ->
+        Repo.update_all(from(s in Brando.Users.Security, where: s.user_id == ^user.id), set: [locked_until: nil])
+      end
+
+      durations =
+        for _ <- 1..4 do
+          {:locked, until} = lock(fn -> Throttle.failed(user, :password) end)
+          unlock.()
+          minutes_until(until)
+        end
+
+      assert durations == [15, 60, 240, 240]
+
+      email = user.email
+      assert_received {:email, %{to: [{"", ^email}], subject: "Your account was locked for a while"}}
+    end
+
+    test "count over the same rolling day for an account and an unknown address" do
+      user = Factory.insert(:random_user, config: %UserConfig{})
+      address = email()
+      now = DateTime.utc_now()
+      hours_ago = &DateTime.add(now, -&1 * 3600, :second)
+
+      # The review's probe: one lockout a day and a bit ago, one an hour ago
+      for at <- [hours_ago.(25), hours_ago.(1)] do
+        Repo.insert!(%Brando.Users.SecurityEvent{user_id: user.id, action: :locked, inserted_at: at})
+      end
+
+      Cachex.put(:cache, {Throttle, :unknown_lockouts, address}, [
+        DateTime.to_unix(hours_ago.(25)),
+        DateTime.to_unix(hours_ago.(1))
+      ])
+
+      {:locked, known} = lock(fn -> Throttle.failed(user, :password) end)
+      {:locked, unknown} = lock(fn -> Throttle.failed_unknown(address) end)
+
+      # Only the lockout within the day counts, for both: the second step
+      assert minutes_until(known) == 60
+      assert minutes_until(unknown) == 60
+    end
+
+    test "for an unknown address too, so the answers stay alike" do
+      address = email()
+
+      durations =
+        for _ <- 1..3 do
+          {:locked, until} = lock(fn -> Throttle.failed_unknown(address) end)
+          Cachex.del(:cache, {Throttle, :unknown_locked, address})
+          minutes_until(until)
+        end
+
+      assert durations == [15, 60, 240]
+    end
+  end
+
   describe "spaced failures" do
     # Failures count in a window from the first of them, for an account and
     # for an address without one alike, so spaced guesses cannot tell them apart.

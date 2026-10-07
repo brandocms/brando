@@ -92,6 +92,11 @@ defmodule BrandoAdmin.PasswordResetLiveTest do
       other = Users.generate_user_session_token(user)
       {:ok, view, _html} = live(conn, "/admin/users/password")
 
+      # The session is kept by its token row id; the token stays out of state
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute Map.has_key?(assigns, :session_token)
+      assert assigns.session_id == Users.token_id(get_session(conn, :user_token))
+
       html =
         view
         |> form("#password_form",

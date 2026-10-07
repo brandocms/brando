@@ -49,6 +49,39 @@ defmodule BrandoAdmin.UserLoginLive do
           </.link>
         </div>
       </.form>
+
+      <%!-- With a passkey, no password is needed: the device asks for its PIN, fingerprint or face --%>
+      <.form
+        for={%{}}
+        id="passkey_login_form"
+        action="/admin/login/passkey"
+        class="login-passkey-alternative"
+        phx-update="ignore"
+      >
+        <input
+          :for={field <- ~w(id authenticator_data signature client_data_json user_handle)}
+          type="hidden"
+          name={"passkey[#{field}]"}
+        />
+        <input type="hidden" name="remember_me" value="false" />
+        <p class="login-passkey-error" data-passkey-error hidden>
+          {gettext("No passkey was used. Try again, or log in with your password.")}
+        </p>
+        <button
+          type="button"
+          id="login-passkey"
+          class="login-passkey-button"
+          phx-hook="Brando.Passkey"
+          data-passkey="login"
+          data-mode="passwordless"
+          data-options-url="/admin/login/passkey/options"
+          data-form="#passkey_login_form"
+          data-remember="#user_remember_me"
+          data-testid="login-passkey"
+        >
+          <.icon name="fingerprint-pattern" />{gettext("Log in with a passkey")}
+        </button>
+      </.form>
     </Auth.shell>
     """
   end

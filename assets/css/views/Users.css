@@ -280,3 +280,65 @@
   .security-confirm-form .field-wrapper { margin: 0; }
   .security-confirm-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
 }
+
+/* Passkeys and sessions: a list inside a security panel, one line each */
+.admin-workspace.security-workspace {
+  .security-items { display: grid; margin: 0; padding: 0 20px 8px; list-style: none; }
+  .security-row + .security-items { margin-top: -8px; }
+  .security-item {
+    display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+    padding: 12px 0; border-top: 1px solid var(--brando-line);
+  }
+  .security-sessions .security-item:first-child { border-top: 0; }
+  .security-item-icon { width: 18px; height: 18px; color: var(--brando-muted); }
+  .security-item-text { display: grid; gap: 2px; min-width: 0; }
+  .security-item-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+  .security-item-title .workspace-badge { font-weight: 400; }
+  .security-item-meta { color: var(--brando-muted); font-size: 12px; overflow-wrap: anywhere; }
+  .security-sessions { padding-top: 4px; }
+}
+
+/* Adding a passkey: a name for the device, then the browser's own dialog */
+.passkey-setup {
+  .passkey-setup-form { display: grid; gap: 12px; }
+  .passkey-setup-form .field-wrapper { margin: 0; }
+  .passkey-setup-form input.text {
+    width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
+    background: var(--brando-surface); color: var(--brando-ink); font: 14px/20px "Main", sans-serif;
+  }
+  .passkey-setup-hint { margin: 0; color: var(--brando-muted); font-size: 12px; line-height: 1.5; }
+  .two-factor-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; line-height: 1.5; }
+  .passkey-setup-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
+  .workspace-button {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
+    font: 500 12px/18px "Main", sans-serif; cursor: pointer;
+    &.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
+    > [data-icon] { width: 14px; height: 14px; }
+  }
+}
+
+/* Confirming it is you before a sensitive action (BrandoAdmin.Reauth), in a
+   dialog over the screen or on the confirm page */
+.reauth-prompt {
+  display: grid; gap: 16px;
+  .reauth-intro { margin: 0; color: var(--brando-muted); font-size: 13px; line-height: 1.5; }
+  .reauth-form .field-wrapper { margin: 0; }
+  .reauth-form input.text {
+    width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
+    background: var(--brando-surface); color: var(--brando-ink); font: 14px/20px "Main", sans-serif;
+  }
+  .reauth-error { margin: 0; color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
+  .reauth-passkey { display: flex; align-items: center; gap: 12px; color: var(--brando-muted); font-size: 12px; }
+  .reauth-passkey .workspace-button, .reauth-actions .workspace-button {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
+    font: 500 12px/18px "Main", sans-serif; text-decoration: none; cursor: pointer;
+    > [data-icon] { width: 14px; height: 14px; }
+  }
+  .reauth-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px; }
+  .reauth-actions .workspace-button.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
+  .reauth-actions .workspace-button.quiet { border-color: transparent; background: transparent; }
+}
+.reauth-prompt.reauth-prompt-page { padding: 20px 20px 24px; max-width: 520px; }
+.admin-workspace.confirm-workspace .security-panel { max-width: 560px; }
