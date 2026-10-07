@@ -78,7 +78,8 @@ defmodule Brando.Mixfile do
           "guides/authorization.md",
           "guides/i18n.md",
           "guides/querying.md",
-          "guides/deployment.md"
+          "guides/deployment.md",
+          "guides/doctor.md"
         ],
         groups_for_extras: [
           Introduction: ["guides/overview.md"],
@@ -132,7 +133,8 @@ defmodule Brando.Mixfile do
             "guides/authorization.md",
             "guides/i18n.md",
             "guides/querying.md",
-            "guides/deployment.md"
+            "guides/deployment.md",
+            "guides/doctor.md"
           ]
         ]
       ]

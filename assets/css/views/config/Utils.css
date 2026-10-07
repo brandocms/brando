@@ -262,3 +262,61 @@
   .block-audit-archive li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 10px 16px; }
   .block-audit-archive li + li { border-top: 1px solid #eef1ee; }
 }
+
+/* Utilities → System check: Brando.Doctor's results as a settings list.
+   The finding on the left; the status and the fix's link on a shared right edge. */
+.utils-workspace .system-check {
+  .system-check-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .system-check-heading p { color: var(--brando-muted); font-size: 12px; margin-top: 4px; max-width: 76ch; }
+  .system-check-totals { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
+  .system-check-tally { color: var(--brando-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  .system-check-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--brando-line); border-radius: 8px; overflow: hidden; background: var(--brando-surface); }
+  /* Status and link in fixed columns, so every status shares one left edge
+     and every link one right edge, with or without a link in the row. */
+  .system-check-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 156px; align-items: center; column-gap: 24px; padding: 16px 24px; }
+  .system-check-row + .system-check-row { border-top: 1px solid var(--brando-line); }
+  .system-check-finding { min-width: 0; }
+  .system-check-finding h3 { font-size: 13px; margin-bottom: 4px; }
+  .system-check-finding p { color: var(--brando-ink); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+  .system-check-finding small { display: block; margin-top: 4px; color: var(--brando-muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+
+  .system-check-items { margin-top: 8px; font-size: 11px; color: var(--brando-muted); }
+  .system-check-items summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; color: var(--brando-accent); }
+  .system-check-items summary::after { content: ''; width: 5px; height: 5px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+  .system-check-items[open] summary::after { transform: rotate(-135deg) translate(-1px, -1px); }
+  .system-check-items ul { list-style: none; display: grid; gap: 4px; margin-top: 8px; padding: 8px 10px; border-radius: 4px; background: var(--brando-surface-shaded); font-family: theme(typography.families.mono); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+
+  .system-check-side { display: contents; }
+  .system-check-side .utils-button { grid-column: 3; width: 100%; }
+  .system-check-status { grid-column: 2; display: inline-flex; align-items: center; gap: 6px; color: var(--brando-ink); font-size: 12px; white-space: nowrap; }
+  .system-check-status i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--brando-status-draft); }
+  .system-check-status.is-ok i { background: var(--brando-status-published); }
+  .system-check-status.is-warning i { background: var(--brando-status-pending); }
+  .system-check-status.is-error i { background: var(--brando-status-disabled); }
+  .system-check-status.is-skipped { color: var(--brando-muted); }
+
+  .system-check-loading { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .system-check-bone { display: block; width: 46%; height: 10px; margin-top: 8px; border-radius: 3px; background: var(--brando-surface-selected); animation: system-check-pulse 1.4s ease-in-out infinite; }
+  .system-check-bone.is-title { width: 22%; height: 12px; margin-top: 0; }
+  .system-check-bone.is-status { grid-column: 2; width: 72px; margin-top: 0; }
+  .system-check-failed { padding: 12px 16px; border: 1px solid var(--brando-line); border-radius: 5px; color: var(--brando-ink); font-size: 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .system-check-bone { animation: none; }
+  }
+
+  @media (max-width: 800px) {
+    .system-check-heading { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .system-check-totals { justify-content: flex-start; }
+    .system-check-row { grid-template-columns: 1fr; gap: 12px; padding: 16px 20px; }
+    .system-check-side { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 12px 16px; }
+    .system-check-side .utils-button { width: auto; }
+    .system-check-bone.is-status { grid-column: auto; }
+    .system-check-bone { width: 70%; }
+  }
+}
+
+@keyframes system-check-pulse {
+  50% { opacity: .45; }
+}
