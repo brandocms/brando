@@ -17073,3 +17073,509 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Checked in %{ms} ms. Kept for ten minutes; Run again checks again."
 msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A new secret replaces this one at once; update the receiver straight after."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A test event was sent."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A webhook tells another system — a static site build, a cache, a search index — when content is published or changes."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add webhook"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "All events"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "An https address on the public internet. Redirects are not followed."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Check this value."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Copy the signing secret now"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not connect"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create webhook"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this webhook?"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete webhook"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted with its delivery log"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delivered"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deliveries show here when content changes, or when you send a test event."
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Deliveries to %{names} failed for a day. Check the receiver, then resume it."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delivery log"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit webhook"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ends in %{hint}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Events are sent as content changes. Pausing stops them until you resume."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fill this in."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Integrations"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "It is shown only this once. The receiver uses it to check the Brando-Signature header of every request."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last delivered %{time}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last delivery %{time} to %{webhook}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last delivery failed %{time}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the user name and password out of the address."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Manage"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "New webhook"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "No answer within 10 seconds"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "No webhooks"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "None chosen sends events for every content type."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "None chosen sends events in every language."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not a valid HTTP response"
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not set up"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is sent while it is paused. Changes made meanwhile are not sent later."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing more is sent to it, and its delivery log is removed."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing sent yet"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only these"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Pause"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused after failures"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Paused after its deliveries kept failing"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because its deliveries kept failing for a day. Check the receiver, then resume."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because this environment was copied from another one. Resume it only if this environment should call this URL."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: copied environment"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redeliver"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Response"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restored"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resume"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resume the webhook to send to it."
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Resumed"
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Review webhooks"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rotate secret"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rotate the secret?"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rotated %{date}."
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Rotated the signing secret"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save webhook"
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Searches, clicks and impressions per entry, in Content SEO."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Searches, clicks and impressions per entry, in Content SEO. A developer sets it up in the site's configuration."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Send test event"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sending"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Sends to %{host}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Services this site sends content to or reads data from."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shop cache"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Signed requests to other systems when content changes in this environment."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Signing secret"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stops all deliveries and removes the delivery log."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tell other systems when content is published or changes, with a signed request."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Test event"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "That webhook does not exist in this environment."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The URL is not https"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The address is on a private network"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The current secret stops working at once. Deliveries fail to verify until the receiver has the new one."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery was sent again."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The host name could not be found"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The secret could not be read; rotate it"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook was deleted."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook was paused"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook was saved."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This address is on a private or local network, which webhooks may not call."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This host name could not be found."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This is not a valid address."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use an https:// address."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Visitors per entry, in Content SEO."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Visitors per entry, in Content SEO. A developer sets it up in the site's configuration."
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook settings"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Webhooks"
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What was sent to every webhook in this environment, newest first."
+msgstr ""
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where to send events, and which ones. The secret to verify them is shown once, after saving."
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "retrying"
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} failed in 24 h"
+msgid_plural "%{count} failed in 24 h"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} webhook"
+msgid_plural "%{count} webhooks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "A webhook was paused"
+msgid_plural "%{count} webhooks were paused"
+msgstr[0] ""
+msgstr[1] ""

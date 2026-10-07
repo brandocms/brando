@@ -1,0 +1,137 @@
+/* Configuration → Integrations and the webhook screens: one bordered settings
+   list (as in Utilities), the webhook form and the delivery log. */
+.admin-workspace.integrations-workspace {
+  max-width: 1120px;
+  min-width: 0;
+
+  .workspace-panel { min-width: 0; }
+
+  .integrations-back {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;
+    color: var(--brando-muted); font-size: 12px; text-decoration: none;
+    [data-icon] { width: 14px; height: 14px; }
+    &:hover { color: var(--brando-ink); }
+  }
+
+  .integrations-list {
+    border: 1px solid var(--brando-line); border-radius: 8px; background: var(--brando-surface); overflow: hidden;
+  }
+  .integrations-list + .integrations-list, .workspace-panel + .integrations-list, .integrations-list + .workspace-panel { margin-top: 24px; }
+  .integrations-list section + section { border-top: 1px solid var(--brando-line); }
+
+  .integrations-group {
+    padding: 12px 24px; border-bottom: 1px solid var(--brando-line); background: var(--brando-surface-shaded);
+    color: var(--brando-muted); font-family: theme(typography.families.mono); font-size: 11px; font-weight: 400;
+    line-height: 18px; letter-spacing: .12em; text-transform: uppercase;
+  }
+
+  .integrations-row {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px 20px;
+    padding: 20px 24px;
+  }
+  .integrations-row.plain { grid-template-columns: minmax(0, 1fr) auto; }
+  .integrations-row + .integrations-row { border-top: 1px solid var(--brando-line); }
+
+  .integrations-icon {
+    display: grid; place-items: center; width: 40px; height: 40px;
+    border: 1px solid var(--brando-line); border-radius: 8px; background: var(--brando-surface-shaded);
+    color: var(--brando-ink);
+    [data-icon] { width: 18px; height: 18px; }
+  }
+
+  .integrations-text { display: grid; gap: 4px; min-width: 0; }
+  .integrations-text h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+  .integrations-text p { color: var(--brando-muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+  .integrations-text .integrations-meta { font-size: 12px; }
+
+  .integrations-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+  .workspace-heading-actions > span { display: inline-flex; }
+
+  /* The new secret, shown once */
+  .webhook-secret {
+    display: grid; gap: 16px; margin-bottom: 24px; padding: 20px 24px;
+    border-color: var(--brando-suggestion-line); background: var(--brando-surface-subform);
+  }
+  .webhook-secret[hidden] { display: none; }
+  .webhook-secret-text { display: grid; gap: 4px; }
+  .webhook-secret-text h2 { font-size: 14px; letter-spacing: 0; }
+  .webhook-secret-text p { color: var(--brando-muted); font-size: 13px; }
+  .webhook-secret-value { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .webhook-secret-value input {
+    flex: 1 1 320px; min-width: 0; height: 40px; padding: 0 12px;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface);
+    color: var(--brando-ink); font-family: theme(typography.families.mono); font-size: 13px;
+  }
+
+  /* The form */
+  .webhook-form { margin: 0; }
+  .webhook-fields { display: grid; gap: 24px; padding: 24px; }
+  .webhook-field { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+  .webhook-field > label, .webhook-field > legend { padding: 0; font-size: 13px; font-weight: 500; }
+  .webhook-field > legend { margin-bottom: 8px; }
+  .webhook-field > input {
+    width: 100%; max-width: 640px; height: 40px; padding: 0 12px;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface);
+    color: var(--brando-ink); font-size: 14px;
+    &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
+  }
+  .webhook-hint { color: var(--brando-muted); font-size: 12px; }
+  .webhook-modes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .webhook-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .webhook-checks-inline { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .webhook-modes + .webhook-checks { margin-top: 8px; }
+  .webhook-choice {
+    display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px;
+    border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface);
+    font-size: 13px; cursor: pointer;
+    &:hover { background: var(--brando-surface-hover); }
+    input { flex: none; margin: 0; accent-color: var(--brando-accent); }
+    > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
+    code { color: var(--brando-muted); font-size: 11px; }
+  }
+  .webhook-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
+  .webhook-form-footer {
+    display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px;
+    border-top: 1px solid var(--brando-line); background: var(--brando-surface-shaded); border-radius: 0 0 7px 7px;
+  }
+
+  .webhook-paused-note {
+    margin-bottom: 16px; padding: 12px 16px; border-radius: 6px;
+    background: var(--brando-note); color: var(--brando-note-ink); font-size: 13px;
+  }
+
+  /* The delivery log */
+  .webhook-log {
+    td { vertical-align: top; }
+    td small { overflow-wrap: anywhere; }
+    .webhook-response { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .webhook-duration { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .webhook-muted { color: var(--brando-muted); }
+    time { white-space: nowrap; }
+  }
+
+  @media (max-width: 700px) {
+    .integrations-row { grid-template-columns: auto minmax(0, 1fr); align-items: start; padding: 20px; }
+    .integrations-row.plain { grid-template-columns: minmax(0, 1fr); }
+    .integrations-actions { grid-column: 1 / -1; justify-content: flex-start; }
+    .integrations-group { padding: 12px 20px; }
+    .webhook-fields { padding: 20px; }
+    .webhook-checks { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .webhook-secret { padding: 20px; }
+    .webhook-form-footer { padding: 16px 20px; }
+
+    /* The log as stacked rows: what, then the response and the action */
+    .webhook-log {
+      > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      > tbody > tr {
+        display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 16px;
+        border-bottom: 1px solid var(--brando-line);
+      }
+      > tbody > tr:last-child { border-bottom: 0; }
+      > tbody > tr > td, > tbody > tr > td:first-child, > tbody > tr > td:last-child { display: block; padding: 0; border: 0; }
+      > tbody > tr > td.row-actions { grid-column: 2; grid-row: 1 / span 2; width: auto; align-self: start; }
+      .webhook-response { max-width: 100%; }
+    }
+  }
+}

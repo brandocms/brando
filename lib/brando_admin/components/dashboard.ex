@@ -12,13 +12,40 @@ defmodule BrandoAdmin.Components.Dashboard do
   alias BrandoAdmin.Components.Workspace
 
   def update(assigns, socket) do
-    {:ok, socket |> assign(assigns) |> assign(:overview, BrandoAdmin.Dashboard.load(assigns.current_user))}
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:overview, BrandoAdmin.Dashboard.load(assigns.current_user))
+     |> assign(:paused_webhooks, paused_webhooks(assigns.current_user))}
+  end
+
+  # Shown to the people who can do something about it.
+  defp paused_webhooks(user) do
+    if Brando.Webhooks.can_manage?(user), do: Brando.Webhooks.paused_after_failures(), else: []
   end
 
   def render(assigns) do
     ~H"""
     <div class="admin-workspace dashboard-workspace">
       <Workspace.header title={gettext("Dashboard")} subtitle={@current_user.name} />
+      <div :if={@paused_webhooks != []} class="dashboard-alert" role="alert" data-testid="dashboard-webhooks-paused">
+        <.icon name="triangle-alert" />
+        <div>
+          <h2>
+            {ngettext(
+              "A webhook was paused",
+              "%{count} webhooks were paused",
+              length(@paused_webhooks)
+            )}
+          </h2>
+          <p>
+            {gettext("Deliveries to %{names} failed for a day. Check the receiver, then resume it.",
+              names: Enum.map_join(@paused_webhooks, ", ", & &1.name)
+            )}
+          </p>
+        </div>
+        <.link navigate="/admin/config/webhooks" class="workspace-button">{gettext("Review webhooks")}</.link>
+      </div>
       <div class="dashboard-layout">
         <section class="dashboard-recent" aria-labelledby="dashboard-recent-heading">
           <h2 id="dashboard-recent-heading" class="dashboard-heading">{gettext("Recently updated")}</h2>

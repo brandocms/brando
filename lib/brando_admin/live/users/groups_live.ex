@@ -1045,6 +1045,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp action_label(:deploy), do: gettext("Deploy")
   defp action_label(:promote), do: gettext("Promote")
   defp action_label(:reorder), do: gettext("Reorder")
+  defp action_label(:manage), do: gettext("Manage")
   defp action_label(action), do: action |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
   defp permission_label(catalog, key) do
@@ -1072,6 +1073,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :shared_library}), do: gettext("Shared content library")
   defp resource_label(%{subject: :utilities}), do: gettext("Utilities & caches")
   defp resource_label(%{subject: :activity}), do: gettext("Activity")
+  defp resource_label(%{subject: :webhooks}), do: gettext("Webhooks")
   defp resource_label(permission), do: permission.label
 
   defp activity_label("group.created"), do: gettext("Group created")

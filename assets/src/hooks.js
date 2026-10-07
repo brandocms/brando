@@ -29,6 +29,7 @@ import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
 import PasskeyHook from './hooks/Passkey'
+import WebhookSecretHook from './hooks/WebhookSecret'
 import BlockSlotHook from './hooks/BlockSlot'
 import MuxUploaderHook from './hooks/MuxUploader'
 import BunnyUploaderHook from './hooks/BunnyUploader'
@@ -99,6 +100,7 @@ export default (app) => {
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
     'Brando.Passkey': PasskeyHook(app),
+    'Brando.WebhookSecret': WebhookSecretHook(app),
     'Brando.BlockSlot': BlockSlotHook(app),
     'Brando.MuxUploader': MuxUploaderHook(app),
     'Brando.BunnyUploader': BunnyUploaderHook(app),
