@@ -98,6 +98,15 @@ jobs:
           path: cover/unit.coverdata
           retention-days: 7
 
+  css_colors:
+    name: Admin CSS colour tokens
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Reject new hex colours outside the tokens file
+        run: bash .github/scripts/check_css_colors.sh
+
   quality:
     name: Blueprint quality gates
     runs-on: ubuntu-latest

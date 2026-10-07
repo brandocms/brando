@@ -166,21 +166,51 @@ Use regular or medium weights, restrained borders, and minimal shadows. Sentence
 case suits headings and actions. Reserve small uppercase labels for short context
 labels, and use monospace for keys, configuration, and technical values.
 
-The approved palette uses these roles:
+The approved palette is defined once, as custom properties in
+[`assets/css/tokens.css`](../assets/css/tokens.css). Use the token, not its
+value:
 
-| Role | Utilities reference |
-| --- | --- |
-| Main text | `#272b2a` |
-| Secondary text | `#626b66` |
-| Borders | `#dce2dc` |
-| Main accent | `#254e3f` |
-| Authorization header | `#f1f5ef` |
-| Export surface | `#f8f9f5` |
-| Import surface | `#f8f8fc` |
+| Role | Token | Value |
+| --- | --- | --- |
+| Main text | `--brando-ink` | `#272b2a` |
+| Secondary text | `--brando-muted` | `#626b66` |
+| Borders and dividers | `--brando-line` | `#dce2dc` |
+| Main accent (actions, links, focus, progress) | `--brando-accent` | `#254e3f` |
+| Page ground | `--brando-surface-page` | `#fafbf9` |
+| Content, cards, inputs | `--brando-surface` | `#ffffff` |
+| Subform surface | `--brando-surface-subform` | `#f8fbf6` |
+| Subform border | `--brando-line-subform` | `#e2e9df` |
+| Table header and footer rows, shaded fieldsets | `--brando-surface-shaded` | `#fbfcfa` |
+| Row hover | `--brando-surface-hover` | `#f5f8f3` |
+| Selected item, drop target | `--brando-surface-selected` | `#eef3ea` |
+| Modal and loader backdrop | `--brando-overlay` | `rgb(30 43 37 / 30%)` |
+| Badge fill / ink | `--brando-badge-bg` / `--brando-badge-ink` | `#eef0eb` / `#566153` |
+| Status: published | `--brando-status-published` | `#3cb371` |
+| Status: pending | `--brando-status-pending` | `#f1ac00` |
+| Status: draft | `--brando-status-draft` | `#636363` |
+| Status: deactivated | `--brando-status-disabled` | `#cd5c5c` |
+| Status: deleted | `--brando-status-deleted` | `#171a18` |
 
-Prefer existing design tokens where they serve the same purpose. Keep tinted
-surfaces subtle, and check text and control contrast in the rendered interface.
-Status needs a textual label as well as color.
+Utilities also uses screen-specific tints: the authorization header `#f1f5ef`,
+the export surface `#f8f9f5` and the import surface `#f8f8fc`.
+
+The legacy Europa colours in `assets/europa.config.js` point at these roles, so
+`theme(colors.dark)` is `--brando-ink`, `blue` is `--brando-accent`, `peach` is
+`--brando-surface-subform`, `peachDarker` is `--brando-surface-selected` and
+`colors.status.*` are the status tokens. The old custom properties are aliases:
+`--brando-color-dark` → `--brando-ink`, `--brando-color-blue` →
+`--brando-accent`, `--brando-color-peach` → `--brando-surface-subform`. Use the
+role names in new CSS.
+
+Do not add hex colours to admin stylesheets. CI runs
+`.github/scripts/check_css_colors.sh`, which fails when a file outside
+`tokens.css` gains a hex literal. Files not yet converted are listed with their
+current count in `.github/css-color-allowlist.txt`; when you convert colours,
+lower the count (or remove the entry), which `--update` rewrites for you. A
+colour that has no role yet belongs in `tokens.css` under a role name.
+
+Keep tinted surfaces subtle, and check text and control contrast in the
+rendered interface. Status needs a textual label as well as color.
 
 ## Write factual, useful copy
 
@@ -439,8 +469,8 @@ shared subform components and other nested/repeated editors.
 - Increase the status dot **inside the link preview field** to `1em` in both
   dimensions, relative to its accompanying text. This is separate from the row's
   status selector. Align the dot with the visible text and prevent flex shrinking.
-- Subform surfaces on settings screens are one very light green, `#f8fbf6`
-  with a `#e2e9df` border (approved 5 October 2026, replacing the earlier blue
+- Subform surfaces on settings screens are one very light green,
+  `--brando-surface-subform` with a `--brando-line-subform` border (approved 5 October 2026, replacing the earlier blue
   and olive tints). Retain white rows and input surfaces, readable
   labels/icons, and clear hover/focus states.
 - Audit nested levels, row rhythm, label/control alignment, and action placement
@@ -453,11 +483,11 @@ shared subform components and other nested/repeated editors.
 
 Approved on 4 October 2026 (`design/drafts/redirects-subform.html`). An inline
 subform (`inputs_for … style :inline, cardinality :many`) and a table block's
-rows are both a table, built like `.identifier-list`: one `#dce2dc` border with a
+rows are both a table, built like `.identifier-list`: one `--brando-line` border with a
 6px radius around the whole, hairlines between rows, white rows tinted
-`#f5f8f3` on hover.
+`--brando-surface-hover` on hover.
 
-- Column headings appear once, in a `#fbfcfa` header row, from each input's own
+- Column headings appear once, in a `--brando-surface-shaded` header row, from each input's own
   label. A cell's label is visually hidden; its error shows under the control.
 - Every row is one line. Controls take the block variables' compact look: 32px,
   13px, borderless until the row is hovered or the control focused. Media fields
@@ -467,7 +497,7 @@ rows are both a table, built like `.identifier-list`: one `#dce2dc` border with 
   shrink their column to fit; text columns share the rest.
 - The grip sits at the left and a ghost × at the right, shown on row hover. An
   insert button sits on the line above each row; "Add entry" and the count sit
-  in a `#fbfcfa` footer. A row added either way fades in, tinted for a moment.
+  in a `--brando-surface-shaded` footer. A row added either way fades in, tinted for a moment.
 - A field hidden by `show_if` leaves an empty cell, so later columns stay under
   their headings.
 
@@ -622,8 +652,7 @@ Bulk selection uses a light fixed bar above presence avatars, with a count and
 an explicit Actions button. Listing title links reveal an arrow on hover/focus.
 Shortcut badges are compact and muted, with a shared right edge inside each menu.
 Badges (`.badge`) are pills without a border: a sage fill
-(`--brando-badge-bg`, `#eef0eb`) and muted ink (`--brando-badge-ink`,
-`#566153`), the same palette as `.workspace-badge`. Keep the hard 1px border
+(`--brando-badge-bg`) and muted ink (`--brando-badge-ink`), the same palette as `.workspace-badge`. Keep the hard 1px border
 for controls with a selected state, such as the status radios.
 
 Meta, revisions and scheduled publishing use the media browser's workspace
@@ -657,7 +686,7 @@ preferences. See the [portrait](admin-ui/image-ref-processing-portrait.png) and
 
 The gallery field and the gallery block share one grid view, approved as design
 3a on 4 October 2026 (`design/drafts/gallery-grid.html`). Square thumbnails
-(`object-fit: cover`) join into one block: an outer `#dce2dc` border with a 6px
+(`object-fit: cover`) join into one block: an outer `--brando-line` border with a 6px
 radius, hairlines drawn as each cell's 1px outline over a 1px gap on a white
 grid, so the empty cells of a short last row stay white. Five columns, six once
 the sheet is wider than about 905px (a grid formula; EuropaCSS reserves
@@ -676,7 +705,7 @@ what the object's configuration dialog writes, so the two stay in step.
 
 `Gallery.Tile` owns the square, popover, legend and view switch; `Gallery.css`
 owns their styles. The grid/list switch — two 28×26 icon buttons at the right end
-of the gallery toolbar, the selected one `#eef3ea` with accent ink — is the
+of the gallery toolbar, the selected one `--brando-surface-selected` with `--brando-accent` ink — is the
 admin's view only. It starts at the field's `layout:` or the block's `display`,
 is remembered per field or block in `localStorage` (`Brando.GalleryView`), and
 never changes saved content.

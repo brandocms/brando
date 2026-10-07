@@ -1,0 +1,73 @@
+/* Admin colour tokens.
+
+   The only stylesheet allowed to contain hex colours: every other file uses
+   these custom properties (or `theme(colors.*)`, which europa.config.js points
+   at them). `.github/scripts/check_css_colors.sh` enforces this in CI.
+
+   Names describe a role, not a colour, so a role can change value (or gain a
+   dark-mode value) without renaming its uses. See docs/admin-ui-design.md. */
+
+:root {
+  /* Text */
+  --brando-ink: #272b2a;
+  --brando-muted: #626b66;
+
+  /* Hairlines, borders and dividers */
+  --brando-line: #dce2dc;
+
+  /* The one action colour: primary buttons, links, focus, progress */
+  --brando-accent: #254e3f;
+
+  /* Surfaces */
+  --brando-surface-page: #fafbf9;
+  --brando-surface: #ffffff;
+  --brando-surface-subform: #f8fbf6;
+  --brando-line-subform: #e2e9df;
+  --brando-surface-shaded: #fbfcfa;
+  --brando-surface-hover: #f5f8f3;
+  --brando-surface-selected: #eef3ea;
+  --brando-overlay: rgb(30 43 37 / 30%);
+
+  /* Badges: a sage pill with muted ink */
+  --brando-badge-bg: #eef0eb;
+  --brando-badge-ink: #566153;
+
+  /* Entry status. Always shown with a text label as well. */
+  --brando-status-published: #3cb371;
+  --brando-status-pending: #f1ac00;
+  --brando-status-draft: #636363;
+  --brando-status-disabled: #cd5c5c;
+  --brando-status-deleted: #171a18;
+
+  /* The sidebar's own inks: dark green text, a muted green for secondary
+     text, a hairline, the hover tint and the surface of the current page. */
+  --brando-nav-ink: #16261c;
+  --brando-nav-accent: #1f3d2b;
+  --brando-nav-muted: rgba(22, 38, 28, 0.62);
+  --brando-nav-rule: rgba(22, 38, 28, 0.13);
+  --brando-nav-hover: rgba(22, 38, 28, 0.045);
+  --brando-nav-surface: #ffffff;
+  --brando-nav-surface-shadow: 0 1px 2px rgba(22, 38, 28, 0.08), 0 0 0 1px rgba(22, 38, 28, 0.05);
+
+  /* Inputs, chips and tab bars */
+  --brando-input-border: #e0e0e0;
+  --brando-color-block-ref-background: #fcfcfc;
+  --brando-tabbar-bg: #fcfcfd;
+  --brando-chip-hover-bg: var(--brando-surface-hover);
+  --brando-chip-active-bg: var(--brando-surface-selected);
+  --brando-chip-active-fg: var(--brando-accent);
+
+  /* Legacy names, kept so existing rules follow the roles above. Prefer the
+     role names in new CSS. */
+  --brando-color-background: var(--brando-surface-page);
+  --brando-color-content-background: var(--brando-surface);
+  --brando-color-foreground: var(--brando-ink);
+  --brando-color-dark: var(--brando-ink);
+  --brando-color-blue: var(--brando-accent);
+  --brando-color-peach: var(--brando-surface-subform);
+  --brando-color-peach-darker: var(--brando-surface-selected);
+  --brando-color-nav-background: var(--brando-surface-page);
+  --brando-color-shaded: #fcfcfd;
+  --brando-color-input: #ffffff;
+  --brando-shaded-surface: var(--brando-surface-shaded);
+}
