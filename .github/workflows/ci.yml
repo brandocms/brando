@@ -373,9 +373,36 @@ jobs:
 
       - name: Install Playwright
         working-directory: brando/e2e/playwright
+        timeout-minutes: 5
         run: |
           pnpm install --frozen-lockfile
-          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install chromium
+
+      # `install-deps` is `apt-get update && apt-get install` against the Ubuntu
+      # mirrors. On 7 October 2026 a mirror stopped answering mid-update and
+      # five shards sat in this step until the 30-minute job limit, each
+      # costing a full rerun. apt now gives up on a silent mirror after 30 s
+      # and retries, and each attempt is capped at 3 minutes (a normal run
+      # takes 10-20 s; a slow mirror about 3). The runner image already has
+      # Chromium's libraries; this step adds fonts and newer Mesa. If both
+      # attempts fail the job carries on, and Playwright names any library
+      # that is missing when it launches the browser.
+      - name: Install Chromium's system packages
+        working-directory: brando/e2e/playwright
+        timeout-minutes: 8
+        run: |
+          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' |
+            sudo tee /etc/apt/apt.conf.d/80-brando-ci-timeouts > /dev/null
+          for attempt in 1 2; do
+            # As root, Playwright runs apt itself rather than through sudo,
+            # so `timeout` can stop the whole apt process group.
+            if sudo env "PATH=$PATH" timeout --kill-after=15s 3m pnpm exec playwright install-deps chromium; then
+              exit 0
+            fi
+            echo "::warning::Installing Chromium's system packages failed (attempt $attempt of 2)"
+            sudo timeout 1m dpkg --configure -a || true
+          done
+          echo "::warning::Continuing with the runner image's packages"
 
       - name: Run fast rich-text regressions
         if: matrix.suite == 'legacy-1'
