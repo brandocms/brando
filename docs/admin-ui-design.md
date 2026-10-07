@@ -260,6 +260,13 @@ behavioral coverage. When fixing a failing test, rerun that specific test first.
    screenshot of the actual implementation. Keep saved reference images current
    when the approved design changes.
 
+`e2e/playwright/scripts/admin-ui-references.mjs` retakes the reference images
+linked from these docs. Start the E2E server (`cd e2e && source .envrc &&
+MIX_ENV=e2e mix phx.server`), then in a second terminal run `cd e2e && source
+.envrc && node playwright/scripts/admin-ui-references.mjs`; `--list` prints the
+catalogue and `--only <name>` retakes one image. Take the committed references
+on a Mac: Linux renders the admin's text differently.
+
 ## AI actions and suggestions
 
 Approved with issue #2983. Everything AI in the admin uses two looks, so an
