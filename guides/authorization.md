@@ -288,6 +288,8 @@ identical record IDs in different resources or environments do not share edits.
 Run the ordinary unit suite with `mix test`. The authorization tests include
 real PostgreSQL schemas with identical IDs in multiple sites/environments,
 revocation, record policies, delegation, and concurrent Superuser removal.
+`test/brando_admin/live/authorization_sites_live_test.exs` drives the admin
+as a site editor in both tenancy modes.
 
 The repository's browser checks use its isolated E2E consumer:
 

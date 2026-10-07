@@ -1,6 +1,6 @@
 defmodule Brando.SyncTest.ArticleListing do
   @moduledoc false
-  # The `:user_context` listing's callbacks
+  # The `:user_context` and `:filters` listings' callbacks
   use Phoenix.Component
 
   import Ecto.Query
@@ -10,6 +10,12 @@ defmodule Brando.SyncTest.ArticleListing do
   def row(assigns) do
     ~H"""
     <div class="user-context-row" data-viewer={@entry.viewer} data-user={@current_user.name}>{@entry.title}</div>
+    """
+  end
+
+  def title_row(assigns) do
+    ~H"""
+    <div class="article-title-row">{@entry.title}</div>
     """
   end
 

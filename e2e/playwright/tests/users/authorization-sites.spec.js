@@ -22,42 +22,9 @@ async function switchTo(page, name, value) {
   await syncLV(page)
 }
 
-test('isolates roles, membership, reads and writes across sites and environments', async ({ secondUserPage: editor, sandboxUserAgent }) => {
-  const data = await fixture(sandboxUserAgent, 'setup')
-  await editor.goto('/admin/groups')
-  await syncLV(editor)
-  await expect(editor.locator('.authorization-scope')).toContainText('Alpha')
-  await expect(editor.locator(`[data-user-id="${data.outsider_id}"]`)).toHaveCount(0)
-  await editor.goto('/admin/pages/update/1')
-  await syncLV(editor)
-  await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Alpha production page')
-  await switchTo(editor, 'environment_key', 'staging')
-  await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Alpha staging page')
-  await editor.getByLabel('Title', { exact: true }).fill('Edited only in staging')
-  await editor.getByTestId('submit').click()
-  await syncLV(editor)
-  await expect.poll(async () => (await fixture(sandboxUserAgent, 'titles'))['auth-alpha/staging'].title).toBe('Edited only in staging')
-  const titles = await fixture(sandboxUserAgent, 'titles')
-  expect(titles['auth-alpha/staging'].title).toBe('Edited only in staging')
-  expect(titles['auth-alpha/production'].title).toBe('Alpha production page')
-  expect(titles['auth-beta/production'].title).toBe('Beta production page')
-
-  if (process.env.BRANDO_TENANCY_MODE === 'multi') {
-    await editor.goto('/admin/pages')
-    await syncLV(editor)
-    await switchTo(editor, 'site_key', 'auth-beta')
-    await expect(editor.locator('#list-row-1')).toContainText('Beta production page')
-    await expect(editor.getByRole('link', { name: 'Create page', exact: true })).toHaveCount(0)
-    await expect(editor.locator(`[data-user-id="${data.outsider_id}"]`)).toBeVisible()
-    await editor.evaluate(() => window.liveSocket.main.channel.push('event', { type: 'click', event: 'delete_entry', value: { id: '1' } }))
-    await syncLV(editor)
-    await expect(editor.locator('#list-row-1')).toBeVisible()
-    await editor.goto('/admin/pages/update/1')
-    await expect(editor).toHaveURL('/admin/access-denied')
-    await editor.goto('/admin/groups')
-    await expect(editor).toHaveURL('/admin/access-denied')
-  }
-})
+// Roles, membership, reads and writes across sites and environments are
+// LiveView tests in test/brando_admin/live/authorization_sites_live_test.exs.
+// These two need a browser: the preview iframe and two connected editors.
 
 test('private previews reject other accounts and close after site access is revoked', async ({ page: owner, secondUserPage: editor, sandboxUserAgent }) => {
   const data = await fixture(sandboxUserAgent, 'setup')

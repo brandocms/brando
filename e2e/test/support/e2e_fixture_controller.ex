@@ -38,16 +38,6 @@ defmodule E2EFixtureController do
         "content-transfer-media" ->
           create_content_transfer_media()
 
-        "content-transfer-related" ->
-          user = create_content_transfer()
-          source = Brando.Repo.get_by!(Brando.Pages.Page, uri: "campaign-launch")
-          parent = Brando.Repo.get_by!(Brando.Pages.Page, uri: "destination-page")
-          source |> Ecto.Changeset.change(parent_id: parent.id) |> Brando.Repo.update!()
-          user
-
-        "content-transfer-unmatched" ->
-          create_content_transfer()
-
         "gallery-preview" ->
           {_filename, image} = create_directory_avatar()
           [gallery | _] = Brando.Repo.all(Brando.Galleries.Gallery)
@@ -75,31 +65,7 @@ defmodule E2EFixtureController do
     # Log the user in
     conn = login_user(conn, scenario)
 
-    if scenario_name == "content-transfer-unmatched" do
-      source = Brando.Repo.get_by!(Brando.Pages.Page, uri: "campaign-launch")
-
-      {:ok, exported} =
-        Brando.Content.Transfer.export([%{schema: Brando.Pages.Page, id: source.id, fields: ["blocks"]}], scenario)
-
-      module =
-        Brando.Repo.get_by!(Brando.Content.Module, name: %{"en" => "Campaign introduction"}) |> Brando.Repo.preload(:refs)
-
-      module |> Ecto.Changeset.change(uid: Ecto.UUID.generate()) |> Brando.Repo.update!()
-
-      Enum.each(module.refs, fn ref ->
-        ref |> Ecto.Changeset.change(uid: Brando.Utils.generate_uid()) |> Brando.Repo.update!()
-      end)
-
-      bundle =
-        exported.bundle
-        |> put_in(["source", "scope"], "external-test-installation")
-        |> put_in(["definitions", "source"], "external-test-installation")
-
-      {:ok, binary} = Brando.Content.Transfer.Archive.export(bundle, exported.files)
-      json(conn, %{bundle: Base.encode64(binary)})
-    else
-      send_resp(conn, 200, "")
-    end
+    send_resp(conn, 200, "")
   end
 
   # A published contact form on a published page, in a module's form var. The
