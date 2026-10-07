@@ -93,10 +93,24 @@ requires that the account remains active and non-deleted. `last_seen` records
 when the last tracked admin presence session goes away, so it answers a different
 question from the last password sign-in.
 
-Normal logout deletes that session token, broadcasts a disconnect for its
-LiveView session, clears session data, and removes the remember-me cookie. It
+Signing out is a `DELETE /admin/logout` with the CSRF token: the account
+menu's **Log out** sends one. `GET /admin/logout` only asks "Sign out?", so a
+link or an image on another site cannot sign anybody out, while links to it
+keep working. Signing out deletes that session token, disconnects the
+session's sockets, clears session data, and removes the remember-me cookie. It
 does not mean “revoke every other browser belonging to this account”;
 changing the password does (see below).
+
+A session's sockets are its LiveViews and its admin socket
+(`BrandoAdmin.AdminSocket`: presence, notifications and live preview). They
+share one id per session, `Brando.Users.live_socket_id/1`, and
+`Brando.Users.disconnect_session/1` closes them. Whatever ends a session —
+signing out, revoking it on the Security page, logging out everywhere, a
+password change or reset, a two-factor reset, deactivating or deleting the
+account — disconnects them, and the user's other sessions keep theirs. The
+admin socket's token, in the page's `user_token` meta tag, names the session
+by its row id (`Brando.Users.build_socket_token/2`); it lasts a day, and only
+while the session does, so a disconnected socket cannot reconnect with it.
 
 ## Reset a forgotten password
 
