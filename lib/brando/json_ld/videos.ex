@@ -7,9 +7,9 @@ defmodule Brando.JSONLD.Videos do
 
     * the blueprint's video fields (`asset :cover_video, :video`), when the
       video is preloaded;
-    * the entry's block fields, when their blocks and refs are preloaded:
-      every active ref with a video, in active blocks and their children. A
-      video block's title override names the video.
+    * the entry's block fields, when their blocks are preloaded: every
+      active ref with a video and every video variable, in active blocks and
+      their children. A video block's title override names the video.
 
   Each video becomes a `Brando.JSONLD.Schema.VideoObject`, or nothing when it
   lacks a property Google requires (see that module). A video shown twice is
@@ -18,6 +18,7 @@ defmodule Brando.JSONLD.Videos do
 
   alias Brando.Content.Block
   alias Brando.Content.Ref
+  alias Brando.Content.Var
   alias Brando.JSONLD.Schema.VideoObject
   alias Brando.Videos.Video
   alias Brando.Villain.Blocks.VideoBlock
@@ -66,8 +67,9 @@ defmodule Brando.JSONLD.Videos do
 
   defp videos_in_block(%Block{} = block) do
     ref_videos = block.refs |> loaded_list() |> Enum.flat_map(&ref_video/1)
+    var_videos = block.vars |> loaded_list() |> Enum.flat_map(&var_video/1)
     child_videos = block.children |> loaded_list() |> Enum.flat_map(&videos_in_block/1)
-    ref_videos ++ child_videos
+    ref_videos ++ var_videos ++ child_videos
   end
 
   defp videos_in_block(_block), do: []
@@ -76,6 +78,10 @@ defmodule Brando.JSONLD.Videos do
   defp ref_video(%Ref{video: %Video{} = video, data: %VideoBlock{data: %{title: title}}}), do: [{video, [name: title]}]
   defp ref_video(%Ref{video: %Video{} = video}), do: [{video, []}]
   defp ref_video(_ref), do: []
+
+  # A module's video variable, loaded with the block's vars.
+  defp var_video(%Var{type: :video, video: %Video{} = video}), do: [{video, []}]
+  defp var_video(_var), do: []
 
   defp loaded_list(list) when is_list(list), do: list
   defp loaded_list(_not_loaded), do: []
