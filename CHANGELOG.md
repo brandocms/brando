@@ -755,8 +755,9 @@ production dump.
   user who lost their phone, and can require it of everyone or of some roles
   (groups, with group authorization) under **Users → Sign-in policy**; users it
   applies to set it up at their next login. Sign-in attempts, codes and reset
-  requests are limited per IP address and account, and five failures in a row
-  lock the account for 15 minutes (`Brando.Users.Throttle`). Sign-ins, failures,
+  requests are limited per IP address and account, and five failures within 15
+  minutes lock the account for 15 minutes, an hour the second time in a day
+  and four hours after that, with an email to the user (`Brando.Users.Throttle`). Sign-ins, failures,
   lockouts and security changes go to a security log, shown on the user's
   Security page. The TOTP secret is encrypted at rest (`Brando.Crypto`). See
   [User accounts and sessions](guides/users.md#two-factor-authentication).
@@ -766,10 +767,11 @@ production dump.
   passkey is a second factor, satisfies a policy that requires two-factor
   authentication, and logs in on its own from the login page; the app and
   recovery codes stay as the fallback. Sensitive actions — the user form, the
-  sign-in policy, groups, deleting a site or an environment, setting an
-  environment live, adding a passkey or setting up the app — ask for the
-  password, a code or a passkey again when the session last gave one more than
-  ten minutes ago: `on_mount {BrandoAdmin.Reauth, :screen}` or
+  sign-in policy, groups, disabling or deleting users, a site's lifecycle and
+  access, static deploys, deleting a site, an environment or its archives,
+  setting an environment live, adding a passkey or setting up the app — ask
+  for the password, a code or a passkey again when the session last gave one
+  more than ten minutes ago: `on_mount {BrandoAdmin.Reauth, :screen}` or
   `on_mount {BrandoAdmin.Reauth, events: [...]}` opts a screen in. **Security**
   lists the user's sessions and logs them out, and a superuser can log a user
   out everywhere from their form. See
