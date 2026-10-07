@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV, confirmUploadFolder, setEntryStatus } from '../../utils'
 
 test('creates a simple page', async ({ page }) => {
   await page.goto('/admin')
@@ -7,7 +7,7 @@ test('creates a simple page', async ({ page }) => {
   await page.getByRole('link', { name: 'Create page' }).click()
   await syncLV(page)
 
-  await page.locator('label').filter({ hasText: 'Published' }).click()
+  await setEntryStatus(page, 'published')
   await page.getByLabel('Title', { exact: true }).click()
   await page.getByLabel('Title', { exact: true }).fill('About')
   await page.getByLabel('URI').click()
@@ -116,7 +116,7 @@ test('duplicates to other language', async ({ page }) => {
   await page.getByRole('link', { name: 'Pages & Sections' }).click()
   await page.getByRole('link', { name: 'Create page' }).click()
   await syncLV(page)
-  await page.getByText('Published', { exact: true }).click()
+  await setEntryStatus(page, 'published')
   await page.getByLabel('Title', { exact: true }).fill('Clients')
   await page.getByLabel('URI').fill('clients')
   await page.getByRole('button', { name: 'Add block' }).click()
@@ -138,7 +138,7 @@ test('creates meta information', async ({ page }) => {
   await page.getByRole('link', { name: 'Create page' }).click()
   await syncLV(page)
 
-  await page.getByLabel('Published').check()
+  await setEntryStatus(page, 'published')
   await page.getByLabel('Title', { exact: true }).click()
   await page.getByLabel('Title', { exact: true }).fill('Hello')
   await page.getByLabel('URI').click()

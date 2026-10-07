@@ -1,12 +1,12 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, awaitBlockDebounce } from '../../utils'
+import { syncLV, awaitBlockDebounce, setEntryStatus } from '../../utils'
 
-async function openCreateForm(page, listUrl, heading) {
+async function openCreateForm(page, listUrl) {
   await page.goto(listUrl)
   await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
-  await expect(page.getByRole('heading', { name: heading })).toBeVisible()
+  await expect(page.getByTestId('entry-title')).toBeVisible()
 }
 
 async function replaceCodeEditor(page, code) {
@@ -21,7 +21,7 @@ async function replaceCodeEditor(page, code) {
 
 test('creates and persists a module set', async ({ page }) => {
   const listUrl = '/admin/config/content/module_sets'
-  await openCreateForm(page, listUrl, 'Create module set')
+  await openCreateForm(page, listUrl)
 
   await page.getByLabel('Title', { exact: true }).fill('Editorial modules')
   await page.getByTestId('submit').click()
@@ -34,7 +34,7 @@ test('creates and persists a module set', async ({ page }) => {
 
 test('creates and persists a container', async ({ page }) => {
   const listUrl = '/admin/config/content/containers'
-  await openCreateForm(page, listUrl, 'Create container')
+  await openCreateForm(page, listUrl)
 
   await page.getByLabel('Name', { exact: true }).fill('Centered content')
   await page.getByLabel('Namespace', { exact: true }).fill('layout')
@@ -49,7 +49,7 @@ test('creates and persists a container', async ({ page }) => {
 
 test('creates and persists a table template', async ({ page }) => {
   const listUrl = '/admin/config/content/table_templates'
-  await openCreateForm(page, listUrl, 'Create template')
+  await openCreateForm(page, listUrl)
 
   await page.getByLabel('Name', { exact: true }).fill('Contact table')
   await page.getByTestId('submit').click()
@@ -61,7 +61,7 @@ test('creates and persists a table template', async ({ page }) => {
 
 test('creates and persists a content template', async ({ page }) => {
   const listUrl = '/admin/config/content/templates'
-  await openCreateForm(page, listUrl, 'Create template')
+  await openCreateForm(page, listUrl)
 
   await page.getByLabel('Name', { exact: true }).fill('Landing page')
   await page.getByLabel('Namespace', { exact: true }).fill('pages')
@@ -76,9 +76,9 @@ test('creates and persists a content template', async ({ page }) => {
 
 test('creates and persists a palette with a color', async ({ page }) => {
   const listUrl = '/admin/config/content/palettes'
-  await openCreateForm(page, listUrl, 'Create palette')
+  await openCreateForm(page, listUrl)
 
-  await page.getByLabel('Published').check()
+  await setEntryStatus(page, 'published')
   await page.getByLabel('Name', { exact: true }).fill('Ocean')
   await page.getByLabel('Key', { exact: true }).fill('ocean')
   await page.getByLabel('Namespace', { exact: true }).fill('brand')

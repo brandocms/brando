@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 test.describe('Embeds many reordering and deletion', () => {
   test('creates price category with embedded prices, reorders and deletes them', async ({
@@ -12,7 +12,7 @@ test.describe('Embeds many reordering and deletion', () => {
     await syncLV(page)
 
     // Set status to published
-    await page.locator('label').filter({ hasText: 'Published' }).click()
+    await setEntryStatus(page, 'published')
 
     // Fill category title (use the specific ID to avoid ambiguity with price titles)
     await page.locator('#price_category_title').fill('Test Category')

@@ -1,10 +1,10 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 async function createPage(page) {
   await page.goto('/admin/pages/create')
   await syncLV(page)
-  await page.getByLabel('Published', { exact: true }).check()
+  await setEntryStatus(page, 'published')
   await page.getByLabel('Title', { exact: true }).fill('About our studio')
   await page.getByLabel('URI', { exact: true }).fill('about-our-studio')
   await page.getByTestId('submit').click()

@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   // Create a parent page "Services" via admin
@@ -8,7 +8,7 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   await page.getByRole('link', { name: 'Create page' }).click()
   await syncLV(page)
 
-  await page.locator('label').filter({ hasText: 'Published' }).click()
+  await setEntryStatus(page, 'published')
   await page.getByLabel('Title', { exact: true }).fill('Services')
   await page.getByLabel('URI').fill('services')
 
@@ -29,7 +29,7 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   await page.getByRole('link', { name: 'Create page' }).click()
   await syncLV(page)
 
-  await page.locator('label').filter({ hasText: 'Published' }).click()
+  await setEntryStatus(page, 'published')
   await page.getByLabel('Title', { exact: true }).fill('Design')
   await page.getByLabel('URI').fill('services/design')
 
