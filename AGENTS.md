@@ -114,11 +114,11 @@ records why the other candidates in #2701 do not need standalone skills.
   (320 KB per keystroke at 115 blocks). Use `assign_derived/3` and `nested_block_form/1`
   in `Block.Render`, or pass precomputed values from the LiveComponent.
 - **Sticky JS for persistent client-side decorations**: DOM state that must survive
-  LiveView patches (presence locks, etc.) MUST go through the hook's `this.js()`
+  LiveView patches (field presence, etc.) MUST go through the hook's `this.js()`
   commands (`addClass`/`setAttribute`/… → `DOM.putSticky`) — plain
   `classList`/`setAttribute` mutations are wiped on the next morphdom pass of that
   element. Inline styles and injected child nodes are NOT sticky-covered: express
-  them in CSS keyed on a sticky data attribute (see `assets/src/Presence/blockLocks.js`
+  them in CSS keyed on a sticky data attribute (see `assets/src/Presence/fieldPresence.js`
   + the presence palette in `Block.css`). Transient state (drag hover, dropdown open)
   is fine as plain mutations.
 
