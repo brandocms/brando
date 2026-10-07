@@ -392,8 +392,10 @@ a further argument, so `{MyApp.Articles, :list_featured, [:published]}` calls
 of each. Metadata targets are non-empty strings. JSON-LD fields must exist on
 the schema struct, value types need a callback and derived types
 (`:current_url`, `:identity`, `:language`) must not have one, and nested
-schema modules must export `build/1`. See [Page metadata](meta.md) and
-[JSON-LD](jsonld.md).
+schema modules must export `build/1`. The `:person` type maps users and
+People entries to `Person` nodes and needs a callback too. `videos false`
+inside a `json_ld_schema` turns off the automatic `VideoObject`s. See
+[Page metadata](meta.md) and [JSON-LD](jsonld.md).
 
 The imported metadata helpers `fallback/2` and `try_path/2` follow paths
 through maps, structs, keyword lists and list indexes, such as

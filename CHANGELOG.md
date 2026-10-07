@@ -20,6 +20,11 @@ production dump.
 
 #### Breaking
 
+- **Users have two new columns.** `job_title` and `same_as` back the user
+  form's Job title and Profile links. Run `mix brando.gen.migrations` and
+  `mix ecto.migrate` for `brando_202`; until then, loading users fails with a
+  missing-column error.
+
 - **`trait :meta` adds two columns.** Every schema with the meta trait now has
   `meta_canonical_url` and `content_modified_at`. Run `mix brando.gen.migrations`
   for Brando's pages (`brando_201`) and
@@ -542,6 +547,20 @@ production dump.
 
 #### Features
 
+- **Videos and authors in JSON-LD.** Entries whose schema has a `video`
+  property (`Article`, `CreativeWork`) now describe the videos they show — the
+  blueprint's video fields and the preloaded videos in its blocks — as
+  `VideoObject` nodes linked from `video`, with no blueprint change. A video
+  gets a node only when Google's required `name`, `thumbnailUrl` and
+  `uploadDate` are known; Mux, Bunny, Cloudflare Stream and Vimeo supply the
+  poster frame, stream and player. `videos false` in a `json_ld_schema` turns
+  it off. The new `:person` field type (`field :author, :person, & &1.creator`)
+  maps Brando users and People entries to linked `Person` nodes with a stable
+  `@id`; nothing is emitted for authors a blueprint doesn't map, and a user
+  gives only name, job title, profile links and avatar. A People entry on its
+  own page becomes a `ProfilePage` about the same Person. Users get optional
+  **Job title** and **Profile links** fields for this (`brando_202` adds the
+  columns). See [JSON-LD](guides/jsonld.md#authors).
 - **X cards and a canonical override.** `render_meta` writes `twitter:card`
   (`summary_large_image` with an image, `summary` without), `twitter:title`,
   `twitter:description` and `twitter:image` from the Open Graph values, and
