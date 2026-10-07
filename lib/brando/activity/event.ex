@@ -19,7 +19,10 @@ defmodule Brando.Activity.Event do
     :revision_restored,
     :duplicated,
     :imported,
-    :reordered
+    :reordered,
+    :note_added,
+    :note_resolved,
+    :note_reopened
   ]
 
   @sources [:admin, :scheduler, :assistant, :import, :system]

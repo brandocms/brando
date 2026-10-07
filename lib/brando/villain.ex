@@ -299,16 +299,21 @@ defmodule Brando.Villain do
 
     # Refs can emit Liquid for this final pass. Ordinary rendered HTML needs
     # only the identifier cleanup, without allocating another parsed document.
-    if String.contains?(html_string, ["{{", "{%"]) do
-      liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
+    rendered =
+      if String.contains?(html_string, ["{{", "{%"]) do
+        liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
-      case liquex_parse(html_string, liquex_parser) do
-        {:ok, parsed_doc} -> render_parsed_doc(html_string, parsed_doc, context)
-        error -> log_liquex_parse_error(html, error)
+        case liquex_parse(html_string, liquex_parser) do
+          {:ok, parsed_doc} -> render_parsed_doc(html_string, parsed_doc, context)
+          error -> log_liquex_parse_error(html, error)
+        end
+      else
+        html_string
       end
-    else
-      html_string
-    end
+
+    # Editors' note marks (`Brando.Notes`) belong to the admin only: they
+    # never reach the site, the live preview or a shared preview.
+    Brando.Notes.strip_marks(rendered)
   end
 
   @liquex_parse_cache :brando_liquex_parse_cache

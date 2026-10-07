@@ -21,6 +21,10 @@ defmodule Brando.Blueprint.AfterSave do
   """
   @spec run(module(), struct(), Ecto.Changeset.t(), map() | atom()) :: list()
   def run(schema, entry, changeset, user) do
-    Brando.Trait.run_trait_after_save_callbacks(schema, entry, changeset, user)
+    results = Brando.Trait.run_trait_after_save_callbacks(schema, entry, changeset, user)
+    # Notes anchored to blocks follow what was saved: detached when their
+    # block is gone, attached again when a revision brings it back.
+    Brando.Notes.entry_saved(schema, entry)
+    results
   end
 end
