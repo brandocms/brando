@@ -52,6 +52,20 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
       </div>
 
       <div class="brando-input">
+        <Input.text
+          field={@form[:meta_canonical_url]}
+          target={@form_cid}
+          label={gettext("Canonical URL")}
+          placeholder="https://"
+          instructions={
+            gettext(
+              "Leave empty to use this page's own address. Fill in the full address of the original when this content was first published elsewhere."
+            )
+          }
+        />
+      </div>
+
+      <div class="brando-input">
         <.live_component
           module={Input.Image}
           id={"#{@form.id}-meta-image"}

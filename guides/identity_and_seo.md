@@ -76,7 +76,9 @@ For code outside a request, `Brando.Cache.Identity.get("en")` returns that
 language's record, or `%{}` if absent. It does not fall back to another language.
 `Brando.Sites.render_identity("en", :name)` is the scalar convenience API.
 Use the cached record's `links` collection for named-link lookup; older unscoped
-identity helpers are not a recipe for multilingual output.
+identity helpers are not a recipe for multilingual output. Links also become
+`og:see_also` tags, and a link to an X profile (`https://x.com/example`) gives
+pages their `twitter:site` handle; see [Page metadata](meta.md#x-cards).
 
 Identity updates refresh the cache and enqueue block content referencing identity,
 configs, or links for rendering. Direct `Repo` writes skip those callbacks. During

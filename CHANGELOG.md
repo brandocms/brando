@@ -20,6 +20,12 @@ production dump.
 
 #### Breaking
 
+- **`trait :meta` adds a column.** Every schema with the meta trait now has
+  `meta_canonical_url`. Run `mix brando.gen.migrations` for Brando's pages
+  (`brando_201`) and `mix brando.gen.blueprint_migration MyApp.Domain.Schema`
+  for each application blueprint with `trait :meta`, then `mix ecto.migrate`;
+  until then, queries on those schemas fail with a missing-column error.
+
 - **Admin icons are Lucide.** Heroicons and `assets/css/heroicons.css` are
   gone. `<.icon name="…" />` now renders `<span data-icon class="lucide-name">`,
   masked by a stylesheet Brando generates from the vendored Lucide set.
@@ -534,6 +540,15 @@ production dump.
 
 #### Features
 
+- **X cards and a canonical override.** `render_meta` writes `twitter:card`
+  (`summary_large_image` with an image, `summary` without), `twitter:title`,
+  `twitter:description` and `twitter:image` from the Open Graph values, and
+  `twitter:site` from an X profile among the identity's links. Tags a page sets
+  itself win. The meta drawer has a **Canonical URL** field
+  (`meta_canonical_url`, an absolute `http(s)` URL) for syndicated or
+  duplicated content; `put_meta/3` and `put_hreflang/2` pass it to the
+  canonical link and `og:url`, and `put_canonical/2` sets one by hand. Empty
+  keeps the entry's own URL. See [Page metadata](guides/meta.md).
 - **Transformer cards can act on their entry and see their neighbours.** A
   transformer's `listing:` component now also gets `@dom_id` and `@target`,
   and `BrandoAdmin.Components.Form.Transformer.set_field/4` builds a click

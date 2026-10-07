@@ -233,7 +233,9 @@ defmodule Brando.Plug.HTML do
           |> Enum.filter(&(Map.get(&1, :status, :published) == :published and URL.has_url?(&1)))
           |> Enum.flat_map(&alternate_hreflang/1)
 
-        put_private(conn, :brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
+        conn
+        |> put_private(:brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
+        |> maybe_put_entry_canonical(entry)
     end
   end
 
@@ -275,6 +277,28 @@ defmodule Brando.Plug.HTML do
   end
 
   @doc """
+  Sets the URL of the page's `<link rel="canonical">` and `og:url`.
+
+  Without it, the canonical URL is the entry's own URL from `put_hreflang/2`,
+  or the request URL. `put_meta/3` and `put_hreflang/2` call this for an entry
+  with a `meta_canonical_url` (`Brando.Trait.Meta`), so controllers only need
+  it for pages that are not entries:
+
+      put_canonical(conn, "https://example.com/original-article")
+
+  """
+  @spec put_canonical(conn, String.t() | nil) :: conn
+  def put_canonical(conn, url) when is_binary(url) and url != "", do: put_private(conn, :brando_canonical_url, url)
+  def put_canonical(conn, _url), do: conn
+
+  @doc "The canonical URL set by `put_canonical/2`, if any."
+  @spec get_canonical(conn) :: String.t() | nil
+  def get_canonical(conn), do: conn.private[:brando_canonical_url]
+
+  defp maybe_put_entry_canonical(conn, %{meta_canonical_url: url}), do: put_canonical(conn, url)
+  defp maybe_put_entry_canonical(conn, _entry), do: conn
+
+  @doc """
   Put META data in conn
   """
   def put_meta(conn, module, data, opts \\ [])
@@ -285,7 +309,10 @@ defmodule Brando.Plug.HTML do
     data_with_meta = Map.merge(data, meta_meta)
     extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)
     merged_meta = (conn.private[:brando_meta] || []) ++ extracted_meta
-    put_private(conn, :brando_meta, merged_meta)
+
+    conn
+    |> put_private(:brando_meta, merged_meta)
+    |> maybe_put_entry_canonical(data)
   end
 
   def put_meta(conn, key, data, opts) when is_binary(key) do

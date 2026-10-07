@@ -64,7 +64,8 @@ defmodule Brando.Blueprint.Attributes.Transformer do
       :sequence,
       :marked_as_deleted,
       :meta_title,
-      :meta_description
+      :meta_description,
+      :meta_canonical_url
     ]
 
     {normal_attrs, attrs_to_move} =

@@ -15075,3 +15075,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes by another user"
 msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex:58
+#, elixir-autogen, elixir-format
+msgid "Canonical URL"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex:62
+#, elixir-autogen, elixir-format
+msgid "Leave empty to use this page's own address. Fill in the full address of the original when this content was first published elsewhere."
+msgstr ""

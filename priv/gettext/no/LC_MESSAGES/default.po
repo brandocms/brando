@@ -15060,3 +15060,13 @@ msgstr "Ulagrede endringer fra %{name}"
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes by another user"
 msgstr "Ulagrede endringer fra en annen bruker"
+
+#: lib/brando_admin/components/form/meta_drawer.ex:58
+#, elixir-autogen, elixir-format
+msgid "Canonical URL"
+msgstr "Kanonisk URL"
+
+#: lib/brando_admin/components/form/meta_drawer.ex:62
+#, elixir-autogen, elixir-format
+msgid "Leave empty to use this page's own address. Fill in the full address of the original when this content was first published elsewhere."
+msgstr "La feltet stå tomt for å bruke sidens egen adresse. Fyll inn den fulle adressen til originalen når innholdet først ble publisert et annet sted."

@@ -115,6 +115,39 @@ Without a language assign, `render_meta` renders no tags. Without a configured
 fallback, absent values stay absent. Neither case should be mistaken for an
 application crash or proof that your page schema ran.
 
+### X cards
+
+`render_meta` also writes the tags X (Twitter) reads, copied from the final
+Open Graph values:
+
+| Tag | Value |
+| --- | --- |
+| `twitter:card` | `summary_large_image` when there is an `og:image`, otherwise `summary` |
+| `twitter:title` | `og:title` |
+| `twitter:description` | `og:description` |
+| `twitter:image` | `og:image` |
+| `twitter:site` | `@handle`, when one of the identity's links is an `x.com` or `twitter.com` profile |
+
+A value the page or the identity's custom metadata already set wins, so
+`put_meta(conn, "twitter:card", "summary")` keeps a small card on a page with an
+image. Blueprints do not need `twitter:*` fields in their `meta_schema`.
+
+## Canonical URL
+
+The canonical link is the entry's own URL, from `put_hreflang/2`, or the
+request URL when there is none. For content first published elsewhere, or
+duplicated across entries, an editor can override it: `trait :meta` adds a
+**Canonical URL** field to the entry's meta drawer (`meta_canonical_url`). It
+takes a full `https://` or `http://` address; left empty, nothing changes.
+
+`put_meta/3` and `put_hreflang/2` pick the override up from the entry, and
+`render_hreflangs` and `og:url` use it. Language alternates are still written.
+For a page that is not an entry, set one yourself:
+
+```elixir
+put_canonical(conn, "https://example.com/original-article")
+```
+
 ## Check the rendered result
 
 Open the **page source** for a published post. Verify one `<title>`, matching
