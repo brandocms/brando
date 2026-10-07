@@ -227,6 +227,11 @@ defmodule Brando.Users.User do
 
         fieldset do
           size :half
+          component &__MODULE__.security_access/1
+        end
+
+        fieldset do
+          size :half
 
           input :job_title, :text,
             label: t("Job title"),
@@ -263,6 +268,71 @@ defmodule Brando.Users.User do
 
   @doc false
   def persisted?(form), do: not is_nil(form.data.id)
+
+  @doc """
+  The two-factor row of a saved user's form: your own account links to your
+  security page; an administrator allowed to reset the user's password may
+  also turn off two-factor authentication for a user who lost their phone and
+  recovery codes (`Brando.Users.TwoFactor.reset/3`).
+  """
+  def security_access(%{form: form, current_user: current_user} = assigns) do
+    security = if persisted?(form), do: Brando.Users.TwoFactor.security(form.data)
+    locked_until = security && security.locked_until
+
+    assigns =
+      assign(assigns,
+        user: form.data,
+        own?: form.data.id == current_user.id,
+        enabled?: !!(security && security.totp_enabled_at),
+        locked_until: locked_until && DateTime.compare(locked_until, DateTime.utc_now()) == :gt && locked_until,
+        can_reset?: persisted?(form) and Brando.Trait.ProtectPassword.allowed?(current_user, form.data)
+      )
+
+    ~H"""
+    <div :if={persisted?(@form)} class="user-password-access user-security-access" data-testid="user-security-access">
+      <div class="user-password-access-text">
+        <span class="user-password-access-label">
+          {gettext("Two-factor authentication")}
+          <span class={["workspace-badge", @enabled? && "positive"]} data-testid="user-two-factor-status">
+            {if @enabled?, do: gettext("On"), else: gettext("Off")}
+          </span>
+        </span>
+        <p :if={@own?}>{gettext("Set it up, make new recovery codes and see recent logins on your security page.")}</p>
+        <p :if={!@own? and @enabled? and @can_reset?}>
+          {gettext(
+            "If %{name} has lost their phone and their recovery codes, turn it off so they can log in with their password and set it up again.",
+            name: @user.name
+          )}
+        </p>
+        <p :if={@locked_until} class="user-security-locked">
+          {gettext("Locked after too many failed attempts, until %{time}.",
+            time: Brando.Utils.Datetime.format_datetime(@locked_until, "%H:%M %Z")
+          )}
+        </p>
+      </div>
+      <div :if={@own? or (@enabled? and @can_reset?)} class="user-password-access-actions">
+        <.link :if={@own?} navigate="/admin/users/security" class="workspace-button" data-testid="open-security">
+          <Brando.HTML.icon name="shield" />{gettext("Security")}
+        </.link>
+        <button
+          :if={!@own? and @enabled? and @can_reset?}
+          type="button"
+          class="workspace-button"
+          phx-click="reset_two_factor"
+          data-testid="reset-two-factor"
+          data-confirm-title={gettext("Turn off two-factor authentication for %{name}?", name: @user.name)}
+          data-confirm={
+            gettext("They are logged out everywhere, and log in with their password alone until they set it up again.")
+          }
+          data-confirm-ok={gettext("Turn it off")}
+          data-confirm-destructive
+        >
+          <Brando.HTML.icon name="shield-off" />{gettext("Reset two-factor")}
+        </button>
+      </div>
+    </div>
+    """
+  end
 
   @doc """
   The password row of a saved user's form: your own account links to the

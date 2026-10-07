@@ -118,3 +118,37 @@
     width: 100%;
   }
 }
+
+/* The second step of a sign-in, and setting two-factor authentication up on
+   the way in */
+.login {
+  .login-recovery {
+    padding-bottom: 20px;
+    font-size: 14px;
+
+    summary {
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    p {
+      padding-top: 8px;
+      line-height: 1.5;
+    }
+  }
+
+  .login-two-factor-setup {
+    .two-factor-setup {
+      padding-bottom: 24px;
+    }
+
+    .two-factor-codes {
+      padding: 16px 0 24px;
+    }
+
+    .alert {
+      margin-bottom: 16px;
+    }
+  }
+}

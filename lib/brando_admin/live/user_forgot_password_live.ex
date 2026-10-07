@@ -53,6 +53,7 @@ defmodule BrandoAdmin.UserForgotPasswordLive do
 
     {:ok,
      assign(socket,
+       ip: if(connected?(socket), do: Brando.Users.SecurityLog.meta(connect_info(socket)).ip),
        form: to_form(%{"email" => ""}, as: "user"),
        sent: nil,
        error_message: Phoenix.Flash.get(socket.assigns.flash, :error),
@@ -60,8 +61,21 @@ defmodule BrandoAdmin.UserForgotPasswordLive do
      )}
   end
 
+  # Too many requests for one address get the same answer as one that went
+  # out, so the limit tells nothing about the account; too many from one IP
+  # address are told to wait.
   def handle_event("send", %{"user" => %{"email" => email}}, socket) when is_binary(email) do
-    case Brando.Users.request_password_reset(email) do
+    case Brando.Users.Throttle.check_reset(socket.assigns.ip, email) do
+      :ok -> send_reset(socket, email, Brando.Users.request_password_reset(email))
+      {:error, :account_limited, _retry_after} -> send_reset(socket, email, :ok)
+      {:error, :ip_limited, _retry_after} -> {:noreply, assign(socket, error_message: too_many_requests())}
+    end
+  end
+
+  def handle_event("send", _params, socket), do: {:noreply, socket}
+
+  defp send_reset(socket, email, result) do
+    case result do
       :ok ->
         minutes = Brando.Users.UserToken.reset_password_validity_in_minutes()
 
@@ -82,5 +96,11 @@ defmodule BrandoAdmin.UserForgotPasswordLive do
     end
   end
 
-  def handle_event("send", _params, socket), do: {:noreply, socket}
+  defp too_many_requests, do: gettext("Too many requests from your network. Try again in a few minutes.")
+
+  # The socket's peer data, when the endpoint's socket gives it
+  # (`connect_info: [:peer_data, ...]`); otherwise only the email is counted.
+  defp connect_info(socket) do
+    %{peer_data: get_connect_info(socket, :peer_data), user_agent: get_connect_info(socket, :user_agent)}
+  end
 end

@@ -9,7 +9,17 @@ defmodule BrandoAdmin.Users.UserFormLive do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Toast
 
-  def mount(_params, _session, socket), do: {:ok, assign(socket, :set_password, nil)}
+  def mount(_params, _session, socket) do
+    meta =
+      if connected?(socket),
+        do:
+          Brando.Users.SecurityLog.meta(%{
+            peer_data: get_connect_info(socket, :peer_data),
+            user_agent: get_connect_info(socket, :user_agent)
+          })
+
+    {:ok, assign(socket, set_password: nil, security_meta: meta)}
+  end
 
   def render(assigns) do
     ~H"""
@@ -97,6 +107,34 @@ defmodule BrandoAdmin.Users.UserFormLive do
   end
 
   def handle_event("send_password_reset", _params, socket), do: {:noreply, socket}
+
+  # Brando.Users.TwoFactor.reset/3 decides who may.
+  def handle_event("reset_two_factor", _params, %{assigns: %{entry_id: entry_id}} = socket)
+      when not is_nil(entry_id) do
+    %{current_user: current_user} = socket.assigns
+
+    case Brando.Users.TwoFactor.reset(entry_id, current_user, meta: socket.assigns[:security_meta]) do
+      {:ok, user} ->
+        Toast.send_to(
+          current_user,
+          gettext("Two-factor authentication is off for %{email}. They were logged out everywhere.", email: user.email)
+        )
+
+        # Reloaded, so the form shows it off
+        {:noreply, push_navigate(socket, to: "/admin/users/update/#{entry_id}")}
+
+      {:error, _reason} ->
+        Toast.send_to(
+          current_user,
+          gettext("Only a superuser can reset two-factor authentication for another user."),
+          %{level: :error, type: :notification}
+        )
+
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("reset_two_factor", _params, socket), do: {:noreply, socket}
 
   def handle_event("open_set_password", _params, %{assigns: %{entry_id: entry_id}} = socket)
       when not is_nil(entry_id) do

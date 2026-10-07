@@ -3,22 +3,118 @@ defmodule BrandoAdmin.UserSessionController do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Users
+  alias Brando.Users.SecurityLog
+  alias Brando.Users.Throttle
+  alias Brando.Users.TwoFactor
   alias BrandoAdmin.UserAuth
 
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
+    meta = SecurityLog.meta(conn)
+
+    case Throttle.check_login(meta.ip, email) do
+      :ok -> check_account(conn, email, password, user_params, meta)
+      {:error, :rate_limited, retry_after} -> too_many(conn, email, div(retry_after, 60_000) + 1)
+    end
+  end
+
+  defp check_account(conn, email, password, user_params, meta) do
     case Users.get_user(%{matches: %{email: email, active: true}}) do
-      {:ok, user} ->
-        if Bcrypt.verify_pass(password, user.password) do
-          UserAuth.log_in_user(conn, user, user_params)
-        else
-          invalid(conn, email)
+      {:ok, user} -> check_password(conn, user, password, user_params, meta)
+      _ -> unknown_account(conn, email)
+    end
+  end
+
+  # The password is checked even for a locked account, so the time taken
+  # tells nothing, but a locked account does not sign in, right password or
+  # not: otherwise the answer would tell a guesser when they got it right.
+  defp check_password(conn, user, password, user_params, meta) do
+    valid? = Bcrypt.verify_pass(password, user.password)
+
+    cond do
+      until = Throttle.locked_until(user) ->
+        too_many(conn, user_params["email"], minutes_until(until))
+
+      valid? ->
+        UserAuth.after_password(conn, user, user_params)
+
+      true ->
+        case Throttle.failed(user, :password, meta) do
+          :ok -> invalid(conn, user_params["email"])
+          {:locked, until} -> too_many(conn, user_params["email"], minutes_until(until))
         end
+    end
+  end
+
+  # Takes as long as checking a password, and answers as an account would
+  # after as many failures, so neither tells whether the account exists.
+  defp unknown_account(conn, email) do
+    Bcrypt.no_user_verify()
+
+    cond do
+      Throttle.unknown_locked?(email) ->
+        too_many(conn, email, Throttle.config()[:lockout_minutes])
+
+      match?({:locked, _}, Throttle.failed_unknown(email)) ->
+        too_many(conn, email, Throttle.config()[:lockout_minutes])
+
+      true ->
+        invalid(conn, email)
+    end
+  end
+
+  @doc """
+  The second step of a sign-in: a code from the user's authenticator app, or
+  a recovery code.
+  """
+  def two_factor(conn, params) do
+    code = get_in(params, ["two_factor", "code"])
+    meta = SecurityLog.meta(conn)
+
+    with {user, :pending} <- UserAuth.pending_login(conn),
+         :ok <- Throttle.check_two_factor(meta.ip) do
+      check_code(conn, user, code, meta)
+    else
+      {:error, :rate_limited, retry_after} ->
+        conn
+        |> put_flash(:error, too_many_message(div(retry_after, 60_000) + 1))
+        |> redirect(to: "/admin/login/two-factor")
 
       _ ->
-        # Takes as long as checking a password, so the time taken does not
-        # tell whether the account exists.
-        Bcrypt.no_user_verify()
-        invalid(conn, email)
+        UserAuth.abandon_pending_login(conn, expired_message())
+    end
+  end
+
+  defp check_code(conn, user, code, meta) do
+    with nil <- Throttle.locked_until(user),
+         {:ok, method} <- TwoFactor.verify(user, code) do
+      UserAuth.complete_pending_login(conn, user, method)
+    else
+      %DateTime{} = until -> UserAuth.abandon_pending_login(conn, too_many_message(minutes_until(until)))
+      {:error, :invalid} -> wrong_code(conn, user, meta)
+    end
+  end
+
+  defp wrong_code(conn, user, meta) do
+    case Throttle.failed(user, :two_factor, meta) do
+      :ok ->
+        conn
+        |> put_flash(:error, gettext("That code did not work. Check your app and try again."))
+        |> redirect(to: "/admin/login/two-factor")
+
+      {:locked, until} ->
+        UserAuth.abandon_pending_login(conn, too_many_message(minutes_until(until)))
+    end
+  end
+
+  @doc """
+  Finishes the sign-in of a user who has just set two-factor authentication
+  up on the way in, on the screen at `/admin/login/two-factor/setup`.
+  """
+  def complete_setup(conn, _params) do
+    case UserAuth.pending_login(conn) do
+      {user, :verified} -> UserAuth.complete_pending_login(conn, user, :two_factor_setup)
+      {_user, :pending} -> redirect(conn, to: "/admin/login/two-factor/setup")
+      nil -> UserAuth.abandon_pending_login(conn, expired_message())
     end
   end
 
@@ -31,7 +127,26 @@ defmodule BrandoAdmin.UserSessionController do
   defp invalid(conn, email) do
     conn
     |> put_flash(:error, gettext("Invalid email or password"))
-    |> put_flash(:email, String.slice(email, 0, 160))
+    |> put_flash(:email, String.slice(email || "", 0, 160))
     |> redirect(to: "/admin/login")
   end
+
+  defp too_many(conn, email, minutes) do
+    conn
+    |> put_flash(:error, too_many_message(minutes))
+    |> put_flash(:email, String.slice(email || "", 0, 160))
+    |> redirect(to: "/admin/login")
+  end
+
+  defp too_many_message(minutes) do
+    ngettext(
+      "Too many attempts. Try again in a minute.",
+      "Too many attempts. Try again in %{count} minutes.",
+      minutes
+    )
+  end
+
+  defp expired_message, do: gettext("Your login took too long. Log in again.")
+
+  defp minutes_until(until), do: max(div(DateTime.diff(until, DateTime.utc_now()), 60) + 1, 1)
 end

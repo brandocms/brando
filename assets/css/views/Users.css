@@ -140,3 +140,143 @@
   }
   .password-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 8px; }
 }
+
+/* The two-factor row under the password row of a saved user's form */
+.user-security-access {
+  .user-password-access-label { display: flex; align-items: center; gap: 8px; }
+  .user-password-access-label .workspace-badge {
+    padding: 0 7px; border-radius: 4px; background: var(--brando-badge-bg); color: var(--brando-badge-ink);
+    font-size: 11px; line-height: 18px; font-weight: 400;
+  }
+  .user-password-access-label .workspace-badge.positive { background: var(--brando-surface-selected); color: var(--brando-accent); }
+  .user-security-locked { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); }
+}
+
+/* Your security page and the sign-in policy: settings rows, description on
+   the left and the action on the right, as on Utilities. */
+.admin-workspace.security-workspace {
+  max-width: 880px;
+  .security-panel + .security-panel, form + .security-panel { margin-top: 24px; }
+  .workspace-panel-heading { align-items: flex-start; padding: 16px 20px; }
+  /* A panel that is only its heading, with the action beside it */
+  .workspace-panel-heading.security-panel-single { align-items: center; border-bottom: 0; border-radius: 6px; }
+  .security-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    padding: 20px; border-top: 1px solid var(--brando-line);
+  }
+  .workspace-panel-heading + .security-row, .workspace-panel-heading + .security-choices { border-top: 0; }
+  .security-row-text { display: grid; gap: 4px; min-width: 0; }
+  .security-row-text h3 { font-size: 13px; }
+  .security-row-text p { color: var(--brando-muted); font-size: 12px; line-height: 1.5; }
+  .security-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+  .security-events-wrapper { padding: 8px 20px 12px; }
+  .security-choices { display: grid; gap: 8px; margin: 0; padding: 20px; border: 0; }
+  .security-choices-nested { padding-top: 0; }
+  .security-choices-nested legend { padding: 0 0 4px; font-size: 13px; font-weight: 500; }
+  .security-choices-nested { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .security-choice {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
+    border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface); cursor: pointer;
+    &:hover { background: var(--brando-surface-hover); }
+    input { flex: none; margin: 2px 0 0; accent-color: var(--brando-accent); }
+    > span { display: grid; gap: 2px; }
+  }
+  .security-choice.compact { align-items: center; padding: 10px 12px; }
+  .security-choice.compact input { margin: 0; }
+  .security-choice-label { font-size: 13px; font-weight: 500; }
+  .security-choice-hint { color: var(--brando-muted); font-size: 12px; }
+  .security-policy-footer { border-top: 1px solid var(--brando-line); }
+  .security-policy-effect { color: var(--brando-muted); font-size: 12px; line-height: 1.5; }
+  .security-policy-error { padding: 0 20px 20px; color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
+  @media (max-width: 600px) {
+    .security-row { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .security-row-actions { justify-content: flex-start; }
+    .workspace-panel-heading.security-panel-single { flex-direction: column; align-items: flex-start; gap: 16px; }
+  }
+}
+
+/* The security log: one line per event, newest first */
+.security-events { display: grid; margin: 0; padding: 0; list-style: none; }
+.security-event {
+  display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: baseline; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--brando-line); font-size: 13px;
+  &:last-child { border-bottom: 0; }
+  time { color: var(--brando-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+}
+.security-event-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brando-status-published); transform: translateY(-1px); }
+.security-event-dot.negative { background: var(--brando-status-disabled); }
+.security-event-text { display: grid; gap: 2px; min-width: 0; }
+.security-event-meta { color: var(--brando-muted); font-size: 12px; overflow-wrap: anywhere; }
+.security-empty { color: var(--brando-muted); font-size: 12px; padding: 12px 0; }
+@media (max-width: 600px) {
+  .security-event { grid-template-columns: 8px minmax(0, 1fr); }
+  .security-event time { grid-column: 2; }
+}
+
+/* Setting up two-factor authentication: on the security page, in a dialog,
+   and on the way in, in the login screen's frame. */
+.two-factor-setup {
+  .two-factor-steps { display: grid; gap: 24px; margin: 0; padding: 0; list-style: none; }
+  .two-factor-step { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; }
+  .two-factor-step-number {
+    display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--brando-surface-selected); color: var(--brando-accent); font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  .two-factor-step-body { display: grid; gap: 8px; min-width: 0; }
+  .two-factor-step-body h3 { margin: 0; font-size: 14px; font-weight: 500; line-height: 24px; }
+  .two-factor-step-body p { margin: 0; color: var(--brando-muted); font-size: 13px; line-height: 1.5; }
+  .two-factor-qr {
+    width: 184px; margin: 8px 0 0; padding: 12px; border: 1px solid var(--brando-line); border-radius: 6px;
+    background: var(--brando-surface); line-height: 0;
+    svg { display: block; width: 100%; height: auto; }
+  }
+  .two-factor-manual summary { cursor: pointer; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+  .two-factor-manual[open] { display: grid; gap: 8px; }
+  .two-factor-manual[open] summary { margin-bottom: 4px; }
+  .two-factor-secret {
+    display: block; padding: 8px 10px; border-radius: 5px; background: var(--brando-surface-shaded);
+    border: 1px solid var(--brando-line); font-family: theme(typography.families.mono); font-size: 13px;
+    letter-spacing: .04em; overflow-wrap: anywhere; user-select: all;
+  }
+  .two-factor-confirm { display: grid; gap: 12px; max-width: 320px; }
+  .two-factor-confirm .field-wrapper { margin: 0; }
+  .two-factor-confirm input.text {
+    width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
+    background: var(--brando-surface); color: var(--brando-ink); font: 16px/20px theme(typography.families.mono); letter-spacing: .12em;
+  }
+  .two-factor-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; line-height: 1.5; }
+  .two-factor-confirm-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .workspace-button {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
+    font: 500 12px/18px "Main", sans-serif; cursor: pointer;
+    &.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
+  }
+}
+
+/* Recovery codes, shown once */
+.two-factor-codes {
+  display: grid; gap: 16px;
+  .two-factor-codes-intro { margin: 0; color: var(--brando-muted); font-size: 13px; line-height: 1.5; }
+  .two-factor-code-list {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; margin: 0; padding: 16px 20px;
+    border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface-shaded); list-style: none;
+  }
+  .two-factor-code-list code { font-family: theme(typography.families.mono); font-size: 14px; letter-spacing: .04em; background: none; }
+  .two-factor-codes-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .workspace-button {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
+    font: 500 12px/18px "Main", sans-serif; text-decoration: none; cursor: pointer;
+    &:hover { background: var(--brando-surface-hover); }
+    > [data-icon] { width: 14px; height: 14px; }
+  }
+}
+
+/* Asking for the password or a code before a change to sign-in security */
+#security-confirm-modal {
+  .security-confirm-intro { padding-bottom: 16px; color: var(--brando-muted); font-size: 13px; line-height: 1.5; }
+  .security-confirm-form { display: grid; gap: 12px; }
+  .security-confirm-form .field-wrapper { margin: 0; }
+  .security-confirm-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
+}

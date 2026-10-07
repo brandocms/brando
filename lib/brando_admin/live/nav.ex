@@ -231,6 +231,11 @@ defmodule BrandoAdmin.Nav do
               <section class="dropdown-content">
                 <ul>
                   <li>
+                    <.link navigate="/admin/users/security" data-testid="security" tabindex="0">
+                      {gettext("Security")}
+                    </.link>
+                  </li>
+                  <li>
                     <.link href="/admin/logout" data-testid="logout" tabindex="0">
                       {gettext("Log out")}
                     </.link>
