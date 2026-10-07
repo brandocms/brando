@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Workspace
   alias Phoenix.LiveView.JS
@@ -52,14 +53,12 @@ defmodule BrandoAdmin.Content.ModuleListLive do
             </button>
           </div>
         </details>
-        <button
+        <AIAction.button
           :if={@sketches.available? and BrandoAdmin.Authorization.allowed?(:update, @schema)}
-          type="button"
-          class="workspace-button"
           phx-click={JS.push("open_sketches") |> show_modal("#module-sketches-modal")}
         >
-          <.icon name="sparkles" /> {gettext("Sketches with AI")}
-        </button>
+          {gettext("Sketches with AI")}
+        </AIAction.button>
         <button
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           class="workspace-button primary"
