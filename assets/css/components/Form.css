@@ -891,11 +891,12 @@ html.not-mac .shortcut-other { display: inline; }
         color: inherit;
       }
     }
+  }
 
-    .preview-chooser-chevron {
-      width: 12px;
-      height: 12px;
-    }
+  /* The same chevron as Save's menu beside it, not the tools' 15px icon */
+  .preview-chooser > button > .preview-chooser-chevron.dropdown-chevron {
+    width: 14px;
+    height: 14px;
   }
 
   .preview-choices {
