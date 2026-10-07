@@ -14812,12 +14812,23 @@ msgstr ""
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
+msgid "%{client} via MCP"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
 msgid "Added a note"
+msgstr ""
+
+msgid "A tool via MCP"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Resolved a note"
+msgstr ""
+
+msgid "by %{client} via MCP"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -14828,4 +14839,82 @@ msgstr ""
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Note on this block"
+msgstr ""
+
+msgid "by a tool via MCP"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From connected tools"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "waiting for review"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Proposals that tools such as Claude Code prepared as you, through MCP. Review and apply them here. To change one, ask the tool again."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "No proposals from connected tools."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Untitled proposal"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to review"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a proposal"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "When a tool connected over MCP, such as Claude Code, prepares content changes as you, they appear here for review. Nothing is saved until you apply them."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a proposal in the list to review it entry by entry. Nothing is saved until you apply it."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Prepared outside the admin, as you. Review it here like any proposal: leave out what you do not want, or discard it. To change it, ask the tool again."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From %{client} via MCP"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From a tool via MCP"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From outside the Assistant"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for review"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
 msgstr ""

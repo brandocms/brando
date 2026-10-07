@@ -76,6 +76,30 @@
   [data-icon] { width: 14px; height: 14px; color: var(--assistant-faint); }
 }
 
+/* "From connected tools": proposals made over MCP, with how many wait. */
+.assistant-connected-link {
+  flex-shrink: 0;
+  gap: 6px;
+  margin: -4px -12px 0 0;
+
+  [data-icon] { width: 14px; height: 14px; }
+}
+
+.assistant-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--brando-accent);
+  color: var(--brando-surface);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 .assistant-history { position: relative; }
 
 .assistant-history-list {
@@ -147,6 +171,54 @@
   font-size: 13px;
 }
 
+/* Proposals from connected tools take the conversation's column. */
+.assistant-connected-list {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 4px;
+  overflow: auto;
+  margin-right: -8px;
+  padding-right: 8px;
+
+  a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a:hover { background: var(--brando-surface-hover); }
+  a[aria-current="page"] { background: var(--brando-surface-selected); }
+  .assistant-badge { grid-column: 2; grid-row: 1; align-self: start; }
+  .assistant-badge.is-waiting { background: var(--brando-suggestion); color: var(--brando-suggestion-ink); }
+}
+
+.assistant-connected-summary { grid-column: 1; grid-row: 1; font-size: 13px; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
+
+.assistant-connected-meta {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 0 8px;
+  color: var(--assistant-muted);
+  font-size: 12px;
+}
+
+.assistant-connected-empty { color: var(--assistant-muted); font-size: 13px; }
+
+/* Where a proposal from outside the Assistant came from (AI.css look). */
+.assistant-origin {
+  justify-self: start;
+  max-width: 64ch;
+  margin: 4px 0;
+
+  p:not(.ai-proposal-label) { color: var(--assistant-muted); font-size: 13px; }
+}
+
 /* Two columns */
 
 .assistant-body {
@@ -170,8 +242,14 @@
 }
 
 .assistant-chat-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  > div { min-width: 0; }
   h2 { font-size: 16px; line-height: 1.4; }
-  span { display: block; margin-top: 2px; color: var(--assistant-muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  > div > span { display: block; margin-top: 2px; color: var(--assistant-muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 }
 
 /* column-reverse keeps the newest message in view without a scroll hook. */

@@ -15755,3 +15755,98 @@ msgstr "åpne i ny fane"
 #, elixir-autogen, elixir-format
 msgid "commands"
 msgstr "kommandoer"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "%{client} via MCP"
+msgstr "%{client} via MCP"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "A tool via MCP"
+msgstr "Et verktøy via MCP"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by %{client} via MCP"
+msgstr "av %{client} via MCP"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "by a tool via MCP"
+msgstr "av et verktøy via MCP"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From connected tools"
+msgstr "Fra tilkoblede verktøy"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "waiting for review"
+msgstr "venter på gjennomgang"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Proposals that tools such as Claude Code prepared as you, through MCP. Review and apply them here. To change one, ask the tool again."
+msgstr "Forslag som verktøy som Claude Code har laget som deg, via MCP. Gå gjennom og utfør dem her. Vil du endre et forslag, ber du verktøyet om det igjen."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "No proposals from connected tools."
+msgstr "Ingen forslag fra tilkoblede verktøy."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Untitled proposal"
+msgstr "Forslag uten tittel"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to review"
+msgstr "Ingenting å gå gjennom"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a proposal"
+msgstr "Velg et forslag"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "When a tool connected over MCP, such as Claude Code, prepares content changes as you, they appear here for review. Nothing is saved until you apply them."
+msgstr "Når et verktøy som er koblet til via MCP, for eksempel Claude Code, lager innholdsendringer som deg, dukker de opp her til gjennomgang. Ingenting lagres før du utfører dem."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a proposal in the list to review it entry by entry. Nothing is saved until you apply it."
+msgstr "Velg et forslag i listen for å gå gjennom det, oppføring for oppføring. Ingenting lagres før du utfører det."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Prepared outside the admin, as you. Review it here like any proposal: leave out what you do not want, or discard it. To change it, ask the tool again."
+msgstr "Laget utenfor adminpanelet, som deg. Gå gjennom det her som et hvilket som helst forslag: utelat det du ikke vil ha, eller forkast det. Vil du endre det, ber du verktøyet om det igjen."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From %{client} via MCP"
+msgstr "Fra %{client} via MCP"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From a tool via MCP"
+msgstr "Fra et verktøy via MCP"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "From outside the Assistant"
+msgstr "Laget utenfor assistenten"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for review"
+msgstr "Venter på gjennomgang"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Utløpt"

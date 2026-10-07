@@ -59,6 +59,9 @@ defmodule E2EFixtureController do
 
         "frontend-edit" ->
           create_frontend_edit_page()
+
+        "mcp-proposals" ->
+          create_mcp_proposals()
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
@@ -318,6 +321,37 @@ defmodule E2EFixtureController do
       client_id: client.id
     )
     |> Brando.Repo.update!()
+
+    user
+  end
+
+  # Two proposals from Claude Code over MCP, prepared the way BrandoMCP
+  # prepares them: `Proposals.Tools` with the user and no conversation. One is
+  # applied in the test, the other rejected.
+  defp create_mcp_proposals do
+    user = get_admin_user()
+    alias Brando.Content.Proposals.Tools
+
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+
+    for {title, uri, new_title, summary} <- [
+          {"MCP review", "mcp-review", "MCP review, from Claude Code", "Retitle the MCP review page"},
+          {"MCP rejected", "mcp-rejected", "Should not be applied", "Retitle the MCP rejected page"}
+        ] do
+      {:ok, page} =
+        Brando.Pages.create_page(
+          %{title: title, uri: uri, language: "en", template: "default.html", status: :draft},
+          user
+        )
+
+      op = %{
+        "op" => "set_fields",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => page.id},
+        "fields" => %{"title" => new_title}
+      }
+
+      {:ok, %{applicable: true}} = Tools.call("prepare_proposal", %{"summary" => summary, "operations" => [op]}, context)
+    end
 
     user
   end

@@ -7,6 +7,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
   This view shows the proposal under review — built from the stored, frozen
   operations — and is the only place a proposal is approved and applied: one
   explicit click approves exactly the version on screen and applies it.
+
+  Proposals from tools connected over MCP have no conversation. They are
+  listed under "From connected tools" (`/admin/assistant/connected`), where
+  the list takes the conversation's place beside the same review.
   """
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
@@ -62,7 +66,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
        show_history: false,
        applying: false,
        preview: nil,
-       preview_keys: []
+       preview_keys: [],
+       proposal_id: nil,
+       connected: [],
+       connected_count: 0
      )}
   end
 
@@ -111,10 +118,47 @@ defmodule BrandoAdmin.AI.AssistantLive do
          |> assign_conversations()
          |> assign_messages()
          |> assign_proposal()
-         |> assign_guidance()}
+         |> assign_guidance()
+         |> assign_connected()}
 
       {:error, message} ->
         {:noreply, socket |> put_toast(:error, message) |> push_patch(to: "/admin/assistant")}
+    end
+  end
+
+  # Proposals from tools connected over MCP: the list, and the one chosen.
+  def handle_params(params, _uri, %{assigns: %{live_action: :connected}} = socket) do
+    if connected?(socket) && socket.assigns.conversation,
+      do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), topic(socket.assigns.conversation.id))
+
+    socket =
+      socket
+      |> discard_previews()
+      |> assign(
+        conversation: nil,
+        target: nil,
+        guidance: [],
+        messages: [],
+        turns: [],
+        cost: nil,
+        run: nil,
+        progress: nil,
+        receipt: nil,
+        error: nil,
+        preview: nil,
+        publish: MapSet.new(),
+        review_link: nil,
+        share_choice: nil,
+        share_url: nil,
+        proposal_id: params["proposal_id"]
+      )
+      |> assign_connected()
+      |> assign_proposal()
+
+    case socket.assigns.proposal do
+      # A conversation's proposal is reviewed in its conversation.
+      %{conversation_id: id} when is_binary(id) -> {:noreply, push_patch(socket, to: "/admin/assistant/#{id}")}
+      _ -> {:noreply, socket}
     end
   end
 
@@ -149,7 +193,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
      |> assign(:target, target)
      |> put_prompt(params)
      |> assign_conversations()
-     |> assign_guidance()}
+     |> assign_guidance()
+     |> assign_connected()}
   end
 
   # `?prompt=…` comes from the command palette's "Ask the Assistant about…":
@@ -184,6 +229,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           media={@media}
           aliases={%{}}
           receipt={nil}
+          origin={origin_label(@proposal)}
           run={nil}
           error={@error}
           applying={false}
@@ -242,7 +288,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </div>
       </header>
 
-      <details :if={@guidance != [] or @configurable?} class="assistant-guidance" id="assistant-guidance">
+      <details
+        :if={@live_action != :connected and (@guidance != [] or @configurable?)}
+        class="assistant-guidance"
+        id="assistant-guidance"
+      >
         <summary>
           <.icon name="book-open" />
           <span :if={@guidance != []}>{gettext("Site guidance in use")}</span>
@@ -266,17 +316,34 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </div>
       </details>
 
-      <div :if={!@available?} class="assistant-notice" role="status">
+      <div :if={!@available? and @live_action != :connected} class="assistant-notice" role="status">
         {gettext(
           "No AI model is configured for this site. Add a model and key to the Brando.AI configuration to use the assistant."
         )}
       </div>
 
       <div class="assistant-body">
-        <section class="assistant-chat" aria-label={gettext("Conversation")}>
+        <.connected
+          :if={@live_action == :connected}
+          proposals={@connected}
+          proposal_id={@proposal_id}
+        />
+        <section :if={@live_action != :connected} class="assistant-chat" aria-label={gettext("Conversation")}>
           <div class="assistant-chat-title">
-            <h2>{(@conversation && @conversation.title) || gettext("New conversation")}</h2>
-            <span :if={@conversation}><BrandoAdmin.Dates.time at={@conversation.inserted_at} format={:long} /></span>
+            <div>
+              <h2>{(@conversation && @conversation.title) || gettext("New conversation")}</h2>
+              <span :if={@conversation}><BrandoAdmin.Dates.time at={@conversation.inserted_at} format={:long} /></span>
+            </div>
+            <.link
+              :if={@connected_count > 0 or @connected != []}
+              patch="/admin/assistant/connected"
+              class="assistant-quiet-button assistant-connected-link"
+            >
+              <.icon name="plug" />{gettext("From connected tools")}
+              <span :if={@connected_count > 0} class="assistant-count">
+                {@connected_count}<span class="visually-hidden">{gettext("waiting for review")}</span>
+              </span>
+            </.link>
           </div>
 
           <.destination target={(@conversation && @conversation.target) || @target} />
@@ -402,6 +469,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
             review_link={@review_link}
             share_choice={@share_choice}
             share_url={@share_url}
+            origin={origin_label(@proposal)}
+            connected={@live_action == :connected}
+            connected_empty?={@connected == []}
           />
         </section>
       </div>
@@ -409,6 +479,48 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <.live_component module={ImagePicker} id="image-picker" />
       <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
     </div>
+    """
+  end
+
+  attr :proposals, :list, required: true
+  attr :proposal_id, :string, default: nil
+
+  # Where the conversation is otherwise: the proposals connected tools made.
+  defp connected(assigns) do
+    ~H"""
+    <section class="assistant-chat assistant-connected" aria-labelledby="assistant-connected-title">
+      <div class="assistant-chat-title">
+        <div>
+          <h2 id="assistant-connected-title">{gettext("From connected tools")}</h2>
+        </div>
+      </div>
+      <p class="assistant-intro">
+        {gettext(
+          "Proposals that tools such as Claude Code prepared as you, through MCP. Review and apply them here. To change one, ask the tool again."
+        )}
+      </p>
+      <p :if={@proposals == []} class="assistant-connected-empty">
+        {gettext("No proposals from connected tools.")}
+      </p>
+      <ul :if={@proposals != []} class="assistant-connected-list" id="assistant-connected-list">
+        <li :for={record <- @proposals}>
+          <.link
+            patch={"/admin/assistant/connected/#{record.id}"}
+            aria-current={@proposal_id == record.id && "page"}
+            data-proposal-id={record.id}
+          >
+            <span class="assistant-connected-summary">{record.summary || gettext("Untitled proposal")}</span>
+            <span class="assistant-connected-meta">
+              <span>{origin_label(record)}</span>
+              <BrandoAdmin.Dates.time at={record.inserted_at} />
+            </span>
+            <span class={["assistant-badge", "is-#{connected_state(record)}"]}>
+              {connected_state_label(connected_state(record))}
+            </span>
+          </.link>
+        </li>
+      </ul>
+    </section>
     """
   end
 
@@ -649,6 +761,27 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :review_link, :string, default: nil
   attr :share_choice, :list, default: nil
   attr :share_url, :string, default: nil
+  attr :origin, :string, default: nil
+  attr :connected, :boolean, default: false
+  attr :connected_empty?, :boolean, default: false
+
+  defp review(%{proposal: nil, connected: true} = assigns) do
+    ~H"""
+    <div class="assistant-empty">
+      <span class="assistant-empty-mark" aria-hidden="true"><.icon name="plug" /></span>
+      <h2 :if={@connected_empty?}>{gettext("Nothing to review")}</h2>
+      <h2 :if={!@connected_empty?}>{gettext("Choose a proposal")}</h2>
+      <p :if={@connected_empty?}>
+        {gettext(
+          "When a tool connected over MCP, such as Claude Code, prepares content changes as you, they appear here for review. Nothing is saved until you apply them."
+        )}
+      </p>
+      <p :if={!@connected_empty?}>
+        {gettext("Choose a proposal in the list to review it entry by entry. Nothing is saved until you apply it.")}
+      </p>
+    </div>
+    """
+  end
 
   defp review(%{proposal: nil} = assigns) do
     ~H"""
@@ -685,6 +818,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </span>
         <h2 :if={!@preview}>{proposal_title(@proposal, @receipt)}</h2>
         <p :if={@proposal.summary && !@preview} class="assistant-summary">{@proposal.summary}</p>
+        <div :if={@origin && !@preview} class="ai-proposal assistant-origin" id="assistant-origin">
+          <p class="ai-proposal-label"><.icon name="sparkles" />{@origin}</p>
+          <p :if={!@shared and @under_review?}>
+            {gettext(
+              "Prepared outside the admin, as you. Review it here like any proposal: leave out what you do not want, or discard it. To change it, ask the tool again."
+            )}
+          </p>
+        </div>
         <p :if={!@preview} class="assistant-counts">
           <span :for={{count, label} <- counts(@proposal.effects)}><strong>{count}</strong> {label}</span>
         </p>
@@ -872,7 +1013,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <button type="button" class="assistant-button assistant-discard" phx-click="cancel_proposal">
             {gettext("Discard")}
           </button>
-          <button type="button" class="assistant-button" phx-click={JS.focus(to: "#assistant-input")}>
+          <button
+            :if={@proposal.conversation_id}
+            type="button"
+            class="assistant-button"
+            phx-click={JS.focus(to: "#assistant-input")}
+          >
             {gettext("Adjust")}
           </button>
           <button
@@ -1421,6 +1567,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        |> discard_previews()
        |> assign(:preview, nil)
        |> assign_proposal()
+       |> assign_connected()
        |> put_toast(:info, gettext("Changes applied"))}
     else
       {:error, message} -> {:noreply, socket |> assign(applying: false, error: message) |> assign_proposal()}
@@ -1432,6 +1579,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
     indices = indices |> String.split(",", trim: true) |> Enum.map(&String.to_integer/1)
 
     case Proposals.leave_out(proposal.id, proposal.version, indices, user) do
+      # A proposal from a connected tool has no conversation to note it in.
+      {:ok, refined} when is_nil(conversation) ->
+        {:noreply,
+         socket
+         |> discard_previews()
+         |> assign(:preview, nil)
+         |> push_patch(to: "/admin/assistant/connected/#{refined.id}")}
+
       {:ok, refined} ->
         conversation |> Ecto.Changeset.change(proposal_id: refined.id) |> Brando.Repo.update!()
         Agent.note(conversation.id, gettext("Left out of the proposal: %{change}", change: subject), user)
@@ -1460,7 +1615,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     case Proposals.undo(proposal.id, user) do
       {:ok, _receipt} ->
-        {:noreply, socket |> assign_proposal() |> put_toast(:info, gettext("The proposal is undone"))}
+        {:noreply,
+         socket |> assign_proposal() |> assign_connected() |> put_toast(:info, gettext("The proposal is undone"))}
 
       {:error, message} ->
         {:noreply, assign(socket, :error, message)}
@@ -1508,7 +1664,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     if proposal = socket.assigns.proposal,
       do: Proposals.cancel(proposal.id, socket.assigns.current_user)
 
-    {:noreply, assign_proposal(socket)}
+    {:noreply, socket |> assign_proposal() |> assign_connected()}
   end
 
   def handle_event("preview", %{"key" => key}, socket) do
@@ -1788,7 +1944,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
     socket |> assign(messages: messages, turns: turns(messages), cost: cost) |> assign_media()
   end
 
-  defp assign_proposal(%{assigns: %{conversation: %{proposal_id: id}}} = socket) when is_binary(id) do
+  defp assign_proposal(socket) do
+    case proposal_id(socket.assigns) do
+      nil -> socket |> assign(proposal: nil, review: []) |> assign_media()
+      id -> assign_proposal(socket, id)
+    end
+  end
+
+  defp assign_proposal(socket, id) do
     user = socket.assigns.current_user
 
     case Proposals.get(id, user) do
@@ -1805,7 +1968,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
-  defp assign_proposal(socket), do: socket |> assign(proposal: nil, review: []) |> assign_media()
+  # The proposal on screen: the one chosen under "From connected tools", or
+  # the conversation's.
+  defp proposal_id(%{live_action: :connected, proposal_id: id}), do: id
+  defp proposal_id(%{conversation: %{proposal_id: id}}) when is_binary(id), do: id
+  defp proposal_id(_assigns), do: nil
+
+  defp assign_connected(socket) do
+    user = socket.assigns.current_user
+    assign(socket, connected: Proposals.list_external(user), connected_count: Proposals.count_external(user))
+  end
 
   # After apply, link each card to the entry it produced, including new ones.
   defp with_saved_urls(review, nil), do: review
@@ -2201,6 +2373,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     socket
   end
+
+  # Where a proposal came from, when that was not this Assistant.
+  defp origin_label(%{origin: "mcp", client: client}) when is_binary(client),
+    do: gettext("From %{client} via MCP", client: client)
+
+  defp origin_label(%{origin: "mcp"}), do: gettext("From a tool via MCP")
+  defp origin_label(%{conversation_id: nil, origin: nil}), do: gettext("From outside the Assistant")
+  defp origin_label(_proposal), do: nil
+
+  defp connected_state(%{status: status}) when status in ~w(applied undone), do: status
+
+  defp connected_state(record) do
+    if DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt, do: "expired", else: "waiting"
+  end
+
+  defp connected_state_label("waiting"), do: gettext("Waiting for review")
+  defp connected_state_label("applied"), do: gettext("Applied")
+  defp connected_state_label("undone"), do: gettext("Undone")
+  defp connected_state_label("expired"), do: gettext("Expired")
 
   defp running?(%{status: "running"}), do: true
   defp running?(_), do: false

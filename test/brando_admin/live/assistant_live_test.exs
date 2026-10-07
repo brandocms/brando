@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.AssistantLiveTest do
   use Brando.LiveCase
+  import Ecto.Query, only: [from: 2]
   alias Brando.AI.Agent
   alias Brando.AIStub
   alias Brando.Content.Transfer.Catalog
@@ -598,6 +599,160 @@ defmodule BrandoAdmin.AssistantLiveTest do
       {:ok, shared, _html} = live(log_in_user(build_conn(), colleague), URI.parse(link).path)
       assert has_element?(shared, ".assistant-card", "News")
       refute has_element?(shared, ".assistant-card", "Work, renamed")
+    end
+  end
+
+  describe "from connected tools" do
+    # As BrandoMCP calls the tools: the user, no conversation, and the client.
+    defp mcp_proposal(c, user, headings \\ ["From Claude"]) do
+      context = %Brando.Content.Proposals.Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+
+      ops =
+        for heading <- List.wrap(headings) do
+          %{
+            "op" => "insert_block",
+            "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+            "module" => "local:#{c.text_module.id}",
+            "texts" => %{"body" => "<p>#{heading}</p>"}
+          }
+        end
+
+      summary = Enum.join(List.wrap(headings), ", ")
+
+      {:ok, %{proposal_id: id}} =
+        Brando.Content.Proposals.Tools.call("prepare_proposal", %{"summary" => summary, "operations" => ops}, context)
+
+      id
+    end
+
+    defp blocks(c), do: length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks)
+
+    test "the Assistant counts them, lists them and applies one after review", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant")
+      refute has_element?(view, ".assistant-connected-link")
+
+      id = mcp_proposal(c, c.current_user)
+      {:ok, view, _} = live(conn, "/admin/assistant")
+      assert has_element?(view, ".assistant-connected-link .assistant-count", "1")
+
+      view |> element(".assistant-connected-link") |> render_click()
+      assert_patch(view, "/admin/assistant/connected")
+      assert has_element?(view, "h2", "Choose a proposal")
+      assert has_element?(view, ~s(#assistant-connected-list a[data-proposal-id="#{id}"]), "From Claude Code via MCP")
+      assert has_element?(view, "#assistant-connected-list .assistant-badge.is-waiting", "Waiting for review")
+      refute has_element?(view, "#assistant-composer")
+
+      view |> element(~s(#assistant-connected-list a[data-proposal-id="#{id}"])) |> render_click()
+      assert_patch(view, "/admin/assistant/connected/#{id}")
+      assert has_element?(view, "#assistant-origin .ai-proposal-label", "From Claude Code via MCP")
+      assert has_element?(view, "h2", "Ready for your review")
+      assert render(view) =~ "From Claude"
+      # Adjusting is a conversation with the Assistant; this one is changed in the tool.
+      refute has_element?(view, ".assistant-apply-bar button", "Adjust")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      assert has_element?(view, ".assistant-preview")
+      view |> element("button", "All changes") |> render_click()
+
+      assert blocks(c) == 3
+      view |> element("button.assistant-apply") |> render_click()
+      assert has_element?(view, "h2", "Applied")
+      assert blocks(c) == 4
+      assert has_element?(view, "#assistant-connected-list .assistant-badge.is-applied", "Applied")
+
+      # Nothing waits now; the applied one stays listed.
+      {:ok, view, _} = live(conn, "/admin/assistant")
+      assert has_element?(view, ".assistant-connected-link")
+      refute has_element?(view, ".assistant-connected-link .assistant-count")
+
+      [event] = Brando.Repo.all(from(e in Brando.Activity.Event, where: e.schema == "Elixir.Brando.Pages.Page"))
+      assert {event.source, event.details["client"]} == {:mcp, "Claude Code"}
+    end
+
+    test "one is rejected, and a change can be left out of another", %{conn: conn} = c do
+      rejected = mcp_proposal(c, c.current_user, "Rejected")
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{rejected}")
+      view |> element("button.assistant-discard") |> render_click()
+      assert has_element?(view, "h2", "Discarded")
+      refute has_element?(view, ~s(#assistant-connected-list a[data-proposal-id="#{rejected}"]))
+      assert has_element?(view, ".assistant-connected-empty")
+      assert Brando.Content.Proposals.count_external(c.current_user) == 0
+      assert blocks(c) == 3
+
+      kept = mcp_proposal(c, c.current_user, ["Kept", "Left out"])
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{kept}")
+      assert has_element?(view, ".assistant-eyebrow", "version 1")
+      view |> element(~s(button.assistant-leave-out[phx-value-operations="1"])) |> render_click()
+
+      [%{id: refined, version: 2}] = Brando.Content.Proposals.list_external(c.current_user)
+      assert_patch(view, "/admin/assistant/connected/#{refined}")
+      assert has_element?(view, ".assistant-eyebrow", "version 2")
+      assert has_element?(view, "#assistant-origin", "From Claude Code via MCP")
+      assert has_element?(view, ".assistant-changes", "Kept")
+      refute has_element?(view, ".assistant-changes", "Left out")
+    end
+
+    test "another user's proposal is not shown, and the conversation's stay in their conversation", %{conn: conn} = c do
+      other = Brando.Factory.insert(:random_user)
+      id = mcp_proposal(c, other)
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+      refute has_element?(view, "#assistant-connected-list")
+      refute has_element?(view, "#assistant-origin")
+      refute has_element?(view, "button.assistant-apply")
+      assert has_element?(view, ".assistant-feedback.is-error, .assistant-empty")
+
+      {:ok, conversation} = Agent.start_conversation(c.current_user)
+
+      {:ok, proposal} =
+        Brando.Content.Proposals.propose(
+          [%Brando.Content.Proposals.SetFields{target: {Page, c.identity.id}, fields: %{title: "Renamed"}}],
+          c.current_user,
+          conversation_id: conversation.id
+        )
+
+      assert {:error, {:live_redirect, %{to: path}}} = live(conn, "/admin/assistant/connected/#{proposal.id}")
+      assert path == "/admin/assistant/#{conversation.id}"
+    end
+
+    test "users without the assistant permission cannot open them", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      alias Brando.Authorization.{Catalog, Groups, Scope}
+      editor = Brando.Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      scope = Scope.standalone(c.current_user)
+
+      {:ok, group} =
+        Groups.create(scope, %{name: "Page editors"}, [
+          Catalog.get(:access, :backend).key,
+          Catalog.get(:read, Page).key,
+          Catalog.get(:update, Page).key
+        ])
+
+      {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+      mcp_proposal(c, editor)
+      conn = log_in_user(build_conn(), editor)
+
+      assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(conn, "/admin/assistant/connected")
+      refute Enum.any?(menu_items(editor), &(&1.url == "/admin/assistant"))
+    end
+
+    test "without a model, the Assistant is in the menu while proposals wait", c do
+      Application.delete_env(:brando, Brando.AI)
+      refute Enum.any?(menu_items(c.current_user), &(&1.url == "/admin/assistant"))
+
+      id = mcp_proposal(c, c.current_user)
+      assert Enum.any?(menu_items(c.current_user), &(&1.url == "/admin/assistant"))
+
+      :ok = Brando.Content.Proposals.cancel(id, c.current_user)
+      refute Enum.any?(menu_items(c.current_user), &(&1.url == "/admin/assistant"))
+    end
+
+    defp menu_items(user) do
+      for section <- BrandoAdmin.Menu.get_menu(user), item <- section.items, do: item
     end
   end
 end
