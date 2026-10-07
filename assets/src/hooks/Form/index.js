@@ -2,6 +2,7 @@ import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
 import locateBlock from './locateBlock'
 import dirtyFields from '../../Presence/dirtyFields'
+import notes from '../../Notes'
 import {
   setBlockLock,
   clearBlockLock,
@@ -18,6 +19,8 @@ export default (app) => ({
     this.draftRecovery = draftRecovery(this)
     this.stopLocatingBlock = locateBlock(this)
     this.dirtyFields = dirtyFields(this)
+    this.notes = notes(this)
+    app.notes = this.notes
     // Keep the measurement outside LiveView's patched inline attributes.
     this.toolbarStyle = document.createElement('style')
     document.head.appendChild(this.toolbarStyle)
@@ -163,9 +166,12 @@ export default (app) => ({
   updated() {
     this.updateToolbarOffset()
     this.dirtyFields.apply()
+    this.notes.apply()
   },
 
   destroyed() {
+    this.notes?.destroy()
+    if (app.notes === this.notes) app.notes = null
     this.stopLocatingBlock?.()
     this.toolbarObserver?.disconnect()
     this.toolbarStyle?.remove()

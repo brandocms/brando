@@ -15,6 +15,7 @@ const readJSON = (value, fallback = {}) => { try { return value ? JSON.parse(val
 export default app => ({
   mounted() {
     this._handlers = []
+    this._noteRanges = new Map()
     this._revision = -1
     this._destroyed = false
     this._input = this.el.querySelector('.tiptap-text')
@@ -65,6 +66,15 @@ export default app => ({
     this.mount()
   },
 
+  // "Add note" on selected text: the panel opens a composer for it, and once
+  // the note exists (`b:tiptap:note:<id>`) the text gets its mark.
+  addNote(from, to, text) {
+    if (!this._editor || this.locked()) return
+    const token = crypto.randomUUID()
+    this._noteRanges.set(token, captureRange(this._editor, { from, to }))
+    app.notes?.composeText(this.el, { quote: text.slice(0, 500), tiptap_id: this.el.id, token })
+  },
+
   openFootnote(uid, number) {
     if (this.locked()) return
     if (!uid) this._footnoteRange = captureRange(this._editor, { from: this._editor.state.selection.to, to: this._editor.state.selection.to })
@@ -111,6 +121,8 @@ export default app => ({
         footnotes: this.el.dataset.footnotes === 'true', footnoteLabels: readFootnoteLabels(this.el),
         onOpenFootnote: (uid, number) => this.openFootnote(uid, number),
         aiEnabled: this.el.dataset.tiptapAi === 'true',
+        canAddNote: () => !!app.notes?.canAddText(this.el),
+        onAddNote: ({ from, to, text }) => this.addNote(from, to, text),
         onGenerateAi: payload => this.pushEditorEvent('tiptap_ai_generate', { ...payload, tiptap_id: this.el.id, ref_name: this.el.dataset.footnoteRef, field_name: this._input.name, field_key: this.el.dataset.tiptapField }),
         onCancelAi: request_id => this.pushEditorEvent('tiptap_ai_cancel', { request_id, tiptap_id: this.el.id }),
         onEditorCreated: editor => {
@@ -119,6 +131,7 @@ export default app => ({
           editor.on('transaction', ({ transaction }) => {
             this._linkRange = mapRange(this._linkRange, transaction)
             this._footnoteRange = mapRange(this._footnoteRange, transaction)
+            this._noteRanges.forEach((range, token) => this._noteRanges.set(token, mapRange(range, transaction)))
           })
           this.updateEditable()
           queueMicrotask(() => {
@@ -259,6 +272,13 @@ export default app => ({
       this.commitInput(() => document.getElementById(`block-slot-drawer-${uid}`)?.querySelector('[data-name="TipTap"]')?.dispatchEvent(new Event('brando:tiptap:activate')))
     }
     this._handlers.push(this.handleEvent(`b:tiptap:ai:${this.el.id}`, payload => this._instance?.receiveAi?.(payload)))
+    this._handlers.push(this.handleEvent(`b:tiptap:note:${this.el.id}`, ({ token, note_id }) => {
+      const range = this._noteRanges.get(token)
+      this._noteRanges.delete(token)
+      if (!note_id || !range?.valid || !this._editor?.isEditable) return
+      const applied = this._editor.chain().setTextSelection({ from: range.from, to: range.to }).setMark('noteAnchor', { id: String(note_id) }).run()
+      if (applied) this.commitInput()
+    }))
     this._handlers.push(this.handleEvent('b:tiptap:update', payload => { if (payload.id === this.el.id) this.replaceContent(payload) }))
     this._clearListener = () => {
       if (this.locked()) return

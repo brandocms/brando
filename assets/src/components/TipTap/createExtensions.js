@@ -10,6 +10,7 @@ import Link from './extensions/Link'
 import JumpAnchor from './extensions/JumpAnchor'
 import PreventDrop from './extensions/PreventDrop'
 import Footnote from './extensions/Footnote'
+import NoteMark from './extensions/NoteMark'
 
 // Keep parsing/rendering legacy nodes. Restrict authoring at the extension's
 // commands and rules, instead of dropping its schema and losing stored HTML.
@@ -85,6 +86,7 @@ export function createExtensions({ capabilities, styles, footnoteLabels, onOpenF
     Placeholder.configure({ placeholder }),
     PreventDrop,
     Footnote.configure({ onOpen: onOpenFootnote, editLabel: footnoteLabels.edit }),
+    NoteMark,
     textStyleKit,
     authoringGate(TextAlign.configure({ types: ['heading', 'paragraph'] }), has('align')),
   ]

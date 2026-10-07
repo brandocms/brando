@@ -209,6 +209,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
      )}
   end
 
+  def on_mount({:hooks_notes, _schema}, _params, _session, socket) do
+    {:cont, attach_hook(socket, :b_form_notes, :handle_info, &handle_hooks_notes_info/2)}
+  end
+
   def on_mount({:hooks_tiptap_link, _schema}, _params, _session, socket) do
     {:cont, attach_hook(socket, :b_form_tiptap_link, :handle_info, &handle_hooks_tiptap_link_info/2)}
   end
@@ -227,7 +231,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp subscribe_entry_topics(schema, entry_id) do
     Enum.each(
-      ~w(dirty_fields active_field block_presence field_sync),
+      ~w(dirty_fields active_field block_presence field_sync notes),
       &PubSub.subscribe(Brando.pubsub(), Topic.entry(&1, schema, entry_id))
     )
   end
@@ -1396,6 +1400,23 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       end
     end
   end
+
+  # Someone added, answered, resolved or reopened a note on this entry, or a
+  # save moved an anchor: the notes panel reloads them (`Brando.Notes`).
+  defp handle_hooks_notes_info({:notes_changed, msg}, socket) do
+    if schema = socket.assigns[:schema] do
+      send_update(BrandoAdmin.Components.Form.NotesDrawer,
+        id: "#{schema.__naming__().singular}_form-notes",
+        event: :refresh,
+        origin: msg.origin,
+        note_event: msg.event
+      )
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_notes_info(_, socket), do: {:cont, socket}
 
   defp handle_hooks_tiptap_link_info({:tiptap_set_link, tiptap_id, link_data}, socket) do
     {:halt, push_event(socket, "b:tiptap:set_link:#{tiptap_id}", link_data)}

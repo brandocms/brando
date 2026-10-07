@@ -33,6 +33,7 @@
   &.is-updated i { background: #5d7fa6; }
   &.is-restored i { background: #8a76b8; }
   &.is-trashed i { background: #c4874a; }
+  &.is-note i { background: var(--brando-note-line); }
   &.is-deleted i { background: #b44a3a; }
 }
 

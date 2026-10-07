@@ -33,6 +33,7 @@ import BunnyUploaderHook from './hooks/BunnyUploader'
 import CloudflareUploaderHook from './hooks/CloudflareUploader'
 import VimeoUploaderHook from './hooks/VimeoUploader'
 import NavigationHook from './hooks/Navigation'
+import NoteComposerHook from './hooks/NoteComposer'
 import PublishClosestInputHook from './hooks/PublishClosestInput'
 import PublishInputHook from './hooks/PublishInput'
 import PreviewChoicesHook from './hooks/PreviewChoices'
@@ -99,6 +100,7 @@ export default (app) => {
     'Brando.CloudflareUploader': CloudflareUploaderHook(app),
     'Brando.VimeoUploader': VimeoUploaderHook(app),
     'Brando.Navigation': NavigationHook(app),
+    'Brando.NoteComposer': NoteComposerHook(app),
     'Brando.PublishClosestInput': PublishClosestInputHook(app),
     'Brando.PublishInput': PublishInputHook(app),
     'Brando.PreviewChoices': PreviewChoicesHook(app),
