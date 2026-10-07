@@ -303,10 +303,19 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
-  # Shown when a model is configured and the user may use the assistant.
+  # Shown to users who may use the assistant, when a model is configured or
+  # proposals from connected tools (MCP) wait for their review: those need no
+  # model to be reviewed and applied.
   defp assistant_menu_item(current_user) do
-    if current_user && Brando.AI.Agent.available?() && Brando.AI.Agent.allowed?(current_user),
-      do: %{name: gettext("Assistant"), url: "/admin/assistant", icon: "sparkles"}
+    if current_user && Brando.AI.Agent.allowed?(current_user) &&
+         (Brando.AI.Agent.available?() || external_proposals?(current_user)),
+       do: %{name: gettext("Assistant"), url: "/admin/assistant", icon: "sparkles"}
+  end
+
+  defp external_proposals?(current_user) do
+    Brando.Content.Proposals.count_external(current_user) > 0
+  rescue
+    _ -> false
   end
 
   # Shown to users who may configure the assistant; superusers by default.

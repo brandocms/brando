@@ -84,6 +84,18 @@ defmodule BrandoAdmin.ActivityLiveTest do
     assert has_element?(view, ".activity-action", "Deleted permanently")
   end
 
+  test "a change prepared over MCP names the tool, and the person who approved it", %{conn: conn, current_user: user} do
+    page = create_page(user, "Sommerro")
+
+    Brando.Activity.with_source(:mcp, %{"client" => "Claude Code"}, fn ->
+      {:ok, _} = Pages.update_page(page.id, %{title: "Sommerro hotel"}, user)
+    end)
+
+    {:ok, view, _} = live(conn, "/admin/config/activity")
+    assert has_element?(view, ".activity-person.is-source", "Claude Code via MCP")
+    assert has_element?(view, ".activity-person.is-source small", "Approved by #{user.name}")
+  end
+
   test "editors can't open it without group authorization", %{conn: conn} do
     editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
     conn = log_in_user(conn, editor)

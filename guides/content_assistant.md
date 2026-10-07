@@ -80,6 +80,45 @@ may publish.
   answer in the editor's language. New entries get the conversation's content
   language unless the editor names another.
 
+## Proposals from connected tools
+
+A coding agent such as Claude Code can prepare proposals too, through
+BrandoMCP: `mix brando.mcp` serves the same tools over stdio in development,
+as a named Brando user (see the BrandoMCP README). Its proposals belong to
+that user but to no conversation, so the Assistant lists them apart:
+
+- **From connected tools** sits beside the conversation's title, with the
+  number of proposals waiting for review. It opens a list of them in place of
+  the conversation, newest first, each with its summary, where it came from
+  ("From Claude Code via MCP") and its state: waiting for review, applied,
+  undone or expired. Discarded and superseded versions are left out.
+- **The review is the Assistant's own.** Choose a proposal to review it entry
+  by entry, preview its pages, leave changes out, share it, apply it with the
+  usual version check, or discard it to reject it. It is marked with its
+  origin in the AI suggestion look. There is no Adjust: to change it, ask the
+  tool again, and its next proposal replaces this one as a new version.
+- **The tool is told where to look.** `prepare_proposal`'s result gives the
+  address of the proposal under "From connected tools".
+- **Who sees them.** Only the user the tool ran as, in the site and
+  environment it was prepared in, and only with **Content assistant → use**,
+  like the Assistant itself. Without a configured model the Assistant has no
+  conversation, but its menu item still appears while proposals wait.
+- **Activity** records an applied proposal from MCP with the tool as its
+  source, "Claude Code via MCP", and the person who approved it underneath.
+
+Each proposal records its origin: `"assistant"`, or `"mcp"` with the tool's
+name when the MCP client gives one (its `clientInfo` name). A tool call that
+reaches `Proposals.Tools` without a conversation is recorded as MCP unless
+the caller names its origin in the `Context`:
+
+```elixir
+context = %Brando.Content.Proposals.Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+Brando.Content.Proposals.Tools.call("prepare_proposal", args, context)
+```
+
+`Proposals.list_external/2` and `Proposals.count_external/1` list and count
+these proposals for a user.
+
 ## Language versions
 
 An entry's outline and its review card list its other language versions
@@ -276,4 +315,6 @@ reported as a problem, because the new entry is a draft.
 
 `Brando.Content.Proposals.Preview` renders a proposed or saved entry through
 the site's live-preview targets without saving it. BrandoMCP exposes the same
-tools to developer clients in-process, for an actor the host provides.
+tools in-process, for an actor the host provides, and over stdio to local
+coding agents in development; their proposals are reviewed under
+[From connected tools](#proposals-from-connected-tools).

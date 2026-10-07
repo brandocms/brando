@@ -25,6 +25,11 @@ production dump.
   `mix ecto.migrate`; until then the entry editor's Notes panel stays empty
   and saves carry on without it.
 
+- **Content proposals have two new columns.** `origin` and `client` record
+  where a proposal came from (the Assistant, or a tool connected over MCP).
+  Run `mix brando.gen.migrations` and `mix ecto.migrate` for `brando_207`;
+  until then, loading proposals fails with a missing-column error.
+
 - **Users have two new columns.** `job_title` and `same_as` back the user
   form's Job title and Profile links. Run `mix brando.gen.migrations` and
   `mix ecto.migrate` for `brando_202`; until then, loading users fails with a
@@ -591,6 +596,16 @@ production dump.
   like revisions, and adding, resolving and reopening them shows in the
   entry's activity. Anyone who may update an entry may write notes on it.
   See `Brando.Notes`.
+
+- **Review proposals from connected tools.** Proposals a coding agent such
+  as Claude Code prepares through BrandoMCP have no conversation; the
+  Assistant now lists them under **From connected tools**, with a count of
+  those waiting, marked "From Claude Code via MCP". They are reviewed,
+  previewed, applied or rejected like the Assistant's own, and Activity names
+  the tool as the source of an applied one. `Proposals.Tools.Context` takes
+  `origin` and `client`. See
+  [Content assistant](guides/content_assistant.md#proposals-from-connected-tools).
+
 - **Videos and authors in JSON-LD.** Entries whose schema has a `video`
   property (`Article`, `CreativeWork`) now describe the videos they show — the
   blueprint's video fields and the preloaded videos in its blocks — as

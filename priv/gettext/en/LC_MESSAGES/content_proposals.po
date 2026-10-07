@@ -557,3 +557,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You cannot publish or unpublish this content type."
 msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown proposal origin."
+msgstr ""

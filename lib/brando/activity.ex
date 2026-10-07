@@ -17,8 +17,10 @@ defmodule Brando.Activity do
   The person is the user the change was made as. `source` says how it was
   made when that wasn't by hand in the admin: `:scheduler` (scheduled
   publishing; the user is whoever scheduled it), `:assistant` (an applied
-  proposal; the user approved it), `:import` (content transfer) or `:system`
-  (no user).
+  proposal; the user approved it), `:mcp` (an applied proposal that a tool
+  connected over MCP prepared, with the tool's name as `details["client"]`
+  when known; the user approved it), `:import` (content transfer) or
+  `:system` (no user).
 
   Recording never fails a save. An event that can't be written (for example
   before the `brando_193` migration has run) is logged and dropped, inside a
@@ -45,6 +47,7 @@ defmodule Brando.Activity do
   require Logger
 
   @source_key :brando_activity_source
+  @source_details_key :brando_activity_source_details
   @batch_key :brando_activity_batch
 
   @internal [
@@ -73,15 +76,23 @@ defmodule Brando.Activity do
 
   @doc """
   Run `fun` with every event it records attributed to `source` (`:scheduler`,
-  `:assistant`, `:import` or `:system`) rather than to the admin.
+  `:assistant`, `:mcp`, `:import` or `:system`) rather than to the admin.
+  `details` are added to each event's details, such as the name of the tool
+  behind an `:mcp` change: `%{"client" => "Claude Code"}`.
   """
-  def with_source(source, fun) when source in [:admin, :scheduler, :assistant, :import, :system] do
+  def with_source(source, details \\ %{}, fun)
+      when source in [:admin, :scheduler, :assistant, :mcp, :import, :system] and is_map(details) do
     previous = Process.put(@source_key, source)
+    previous_details = Process.put(@source_details_key, details)
 
     try do
       fun.()
     after
       if previous, do: Process.put(@source_key, previous), else: Process.delete(@source_key)
+
+      if previous_details,
+        do: Process.put(@source_details_key, previous_details),
+        else: Process.delete(@source_details_key)
     end
   end
 
@@ -192,7 +203,7 @@ defmodule Brando.Activity do
         schema: to_string(schema),
         user_id: user_id(user),
         source: source(user),
-        details: details
+        details: Map.merge(source_details(), details)
       })
     end)
   end
@@ -231,7 +242,7 @@ defmodule Brando.Activity do
       language: language(entry),
       fields: Keyword.get(opts, :fields, []),
       revision: Keyword.get(opts, :revision),
-      details: Keyword.get(opts, :details, %{}),
+      details: Map.merge(source_details(), Keyword.get(opts, :details, %{})),
       batch_id: Process.get(@batch_key)
     })
   end
@@ -292,6 +303,8 @@ defmodule Brando.Activity do
       to -> %{"status" => %{"from" => to_string(from), "to" => to_string(to)}}
     end
   end
+
+  defp source_details, do: Process.get(@source_details_key) || %{}
 
   defp source(user) do
     case Process.get(@source_key) do

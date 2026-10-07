@@ -324,6 +324,9 @@ defmodule BrandoAdmin.Components.Activity do
   defp source(%{source: :assistant} = event),
     do: %{icon: "sparkles", label: gettext("Assistant"), caption: by(event, :assistant)}
 
+  defp source(%{source: :mcp} = event),
+    do: %{icon: "plug", label: mcp_label(event), caption: by(event, :assistant)}
+
   defp source(%{source: :import} = event),
     do: %{icon: "download", label: gettext("Content transfer"), caption: by(event, :import)}
 
@@ -337,9 +340,19 @@ defmodule BrandoAdmin.Components.Activity do
   defp by(%{user: user}, :assistant), do: gettext("Approved by %{name}", name: user.name)
   defp by(%{user: user}, :import), do: gettext("Run by %{name}", name: user.name)
 
+  defp mcp_label(%{details: %{"client" => client}}) when is_binary(client),
+    do: gettext("%{client} via MCP", client: client)
+
+  defp mcp_label(_event), do: gettext("A tool via MCP")
+
   @doc "The person, or the source, as a short phrase for the entry history: `by Ola Hansen`."
   def by_phrase(%{source: :scheduler}), do: gettext("by scheduled publishing")
   def by_phrase(%{source: :assistant}), do: gettext("by the assistant")
+
+  def by_phrase(%{source: :mcp, details: %{"client" => client}}) when is_binary(client),
+    do: gettext("by %{client} via MCP", client: client)
+
+  def by_phrase(%{source: :mcp}), do: gettext("by a tool via MCP")
   def by_phrase(%{source: :import}), do: gettext("by a content transfer")
   def by_phrase(%{source: :system, user: nil}), do: gettext("by the system")
   def by_phrase(%{user: nil}), do: gettext("by a deleted user")

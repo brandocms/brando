@@ -39,6 +39,9 @@ underneath:
   scheduled it.
 - **Assistant**: an applied [proposal](content_assistant.md), approved by the user
   who applied it.
+- **A tool via MCP**: an applied proposal that a [connected
+  tool](content_assistant.md#proposals-from-connected-tools) prepared, named
+  when known ("Claude Code via MCP"), approved by the user who applied it.
 - **Content transfer**: an import, run by the user who imported it.
 - **System**: no user, such as `mix brando.entries.resave` or the trash purge.
 
