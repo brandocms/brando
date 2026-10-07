@@ -87,6 +87,7 @@
 @import "./components/SideBar/NavigationMenuSection.css";
 @import "./components/SideBar/NavigationMenuSectionItem.css";
 @import "./components/Toast.css";
+@import "./components/CommandPalette.css";
 @import "./components/UploadManager.css";
 @import "./components/MediaField.css";
 @import "./components/Var.css";

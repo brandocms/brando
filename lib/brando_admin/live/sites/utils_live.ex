@@ -113,7 +113,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
           </div>
         </div>
         <div class="utils-maintenance-list">
-          <article>
+          <article id="utils-identifiers">
             <div>
               <h3>{gettext("Content identifiers")}</h3><p>
                 {gettext("Update the identifiers used to reference content.")}
@@ -123,7 +123,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               "Sync identifiers"
             )}</button>
           </article>
-          <article>
+          <article id="utils-loose-blocks">
             <div>
               <h3>{gettext("Loose blocks")}</h3><p>
                 {gettext("Find blocks no entry uses any more, and remove the ones nothing can bring back.")}
@@ -195,7 +195,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               </button>
             </div>
           </article>
-          <article>
+          <article id="utils-dominant-colors">
             <div>
               <h3>{gettext("Dominant colors")}</h3><p>
                 {gettext("Read the dominant color of every image again. It is used as a placeholder while images load.")}

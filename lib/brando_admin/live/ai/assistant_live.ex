@@ -147,9 +147,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
        error: nil
      )
      |> assign(:target, target)
+     |> put_prompt(params)
      |> assign_conversations()
      |> assign_guidance()}
   end
+
+  # `?prompt=…` comes from the command palette's "Ask the Assistant about…":
+  # the question waits in the composer, to be sent or changed.
+  defp put_prompt(socket, %{"prompt" => prompt}) when is_binary(prompt) and prompt != "",
+    do: assign(socket, :draft, String.slice(prompt, 0, 2000))
+
+  defp put_prompt(socket, _params), do: socket
 
   ## Render
 

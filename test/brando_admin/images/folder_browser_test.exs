@@ -24,6 +24,23 @@ defmodule BrandoAdmin.Images.FolderBrowserTest do
     assert videos |> Enum.map(& &1.id) |> Enum.sort() == Enum.sort([in_root_folder.id, without_folder.id])
   end
 
+  test "all folders lists every library folder and the root, never a hidden folder" do
+    site = Brando.Repo.insert!(%Folder{scope: "images", name: "site", path: "site"})
+    nested = Brando.Repo.insert!(%Folder{scope: "images", name: "press", path: "site/press", parent_id: site.id})
+    hidden_id = Brando.Media.Folders.hidden_folder_id("visitor-uploads")
+
+    in_nested = Factory.insert(:image, path: "images/site/press/launch-1.jpg", folder_id: nested.id)
+    without_folder = Factory.insert(:image, path: "images/launch-2.jpg")
+    Factory.insert(:image, path: "images/hidden/launch-3.jpg", folder_id: hidden_id)
+
+    params = AssetListHelpers.list_params(%{"filter:folder_id" => "all", "filter:path" => "launch"}, [])
+    assert %{"filter:folder_id" => {:library, [^hidden_id]}, "filter:path" => "launch"} = params
+    assert AssetListHelpers.resolve_current_folder("all", "images") == ""
+
+    {:ok, images} = Brando.Images.list_images(%{filter: %{folder_id: params["filter:folder_id"], path: "launch"}})
+    assert images |> Enum.map(& &1.id) |> Enum.sort() == Enum.sort([in_nested.id, without_folder.id])
+  end
+
   describe "where folders are stored" do
     test "a folder made in a picker lands in the library's tree" do
       site = Brando.Repo.insert!(%Folder{scope: "images", name: "site", path: "site"})

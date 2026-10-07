@@ -2,6 +2,21 @@ import tippy from 'tippy.js'
 import { Dom } from '@brandocms/jupiter'
 import { alertError, alertWarning, alertInfo } from '../../alerts'
 
+// Smoothly scrolls the window so `node` sits `offsetY` below where it would
+// (a negative offset leaves room above it). The browser's own smooth scroll,
+// not Jupiter's `app.scrollTo`: Jupiter animates with a requestAnimationFrame
+// loop nothing can stop, so a scroll started just before a LiveView navigation
+// went on dragging the next page down. On a new entry it pulled the status
+// control out of view just after it was clicked, and its menu closed again.
+// A native smooth scroll ends when the navigation scrolls to the top.
+function scrollToNode(node, offsetY = 0) {
+  const top = node.getBoundingClientRect().top + window.scrollY + offsetY
+  const reduceMotion =
+    document.querySelector('meta[name="prefers_reduced_motion"]') ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({ top: Math.max(top, 0), behavior: reduceMotion ? 'instant' : 'smooth' })
+}
+
 export default app => ({
   mounted() {
     console.log('==> Brando/Admin mounted.')
@@ -53,9 +68,9 @@ export default app => ({
       if (!$fieldErrors.length) return
 
       const firstError = $fieldErrors[0]
-      // Jupiter adds offsetY to the target, so a negative one stops short of
-      // it and leaves the field clear of the top edge.
-      app.scrollTo({ y: firstError, offsetY: -50 })
+      // A negative offset stops short of the field and leaves it clear of
+      // the top edge.
+      scrollToNode(firstError, -50)
 
       // Scrolling alone leaves a keyboard or screen-reader user wherever they
       // were — usually the submit button — with no indication of which field
@@ -80,10 +95,13 @@ export default app => ({
     })
 
     this.handleEvent('b:scroll_to', ({ selector, focus }) => {
-      setTimeout(() => {
+      // Cleared in destroyed(): a scroll asked for on the page we just left
+      // must not move the next one.
+      clearTimeout(this.scrollTimer)
+      this.scrollTimer = setTimeout(() => {
         const $node = Dom.find(selector)
         if ($node) {
-          app.scrollTo({ y: $node, offsetY: -50 })
+          scrollToNode($node, -50)
           if (focus) $node.focus({ preventScroll: true })
         }
       }, 250)
@@ -122,6 +140,7 @@ export default app => ({
 
   destroyed() {
     console.log('(!) Brando.Admin destroyed')
+    clearTimeout(this.scrollTimer)
     this.destroyTippys()
   }
 })

@@ -332,6 +332,7 @@ defmodule BrandoAdmin.Menu do
             sites_menu_item(current_user),
             %{
               name: gettext("Configuration"),
+              key: :configuration,
               icon: "settings",
               url: nil,
               items:

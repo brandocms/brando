@@ -54,6 +54,10 @@ defmodule Brando.Files do
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
 
+      # The listing's "Filename" filter
+      {:filename, filename}, query ->
+        from q in query, where: ilike(q.filename, ^"%#{filename}%")
+
       {:unused, value}, query when value in [true, "true"] ->
         from(t in query, where: t.id not in ^Brando.Content.Usage.used_ids(:file))
 
@@ -63,6 +67,10 @@ defmodule Brando.Files do
       # The root: entries without a folder, and those in a folder that is the root itself.
       {:folder_id, {:root, root_folder_ids}}, query ->
         from(t in query, where: is_nil(t.folder_id) or t.folder_id in ^root_folder_ids)
+
+      # Every library folder and the root: all but the hidden folders.
+      {:folder_id, {:library, hidden_folder_ids}}, query ->
+        from(t in query, where: is_nil(t.folder_id) or t.folder_id not in ^hidden_folder_ids)
 
       {:folder_id, folder_id}, query ->
         case normalize_folder_id(folder_id) do

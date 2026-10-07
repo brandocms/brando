@@ -1,0 +1,399 @@
+/* The command palette (⌘K): BrandoAdmin.CommandPaletteLive and the
+   Brando.CommandPalette hook. One input, results in groups under small-caps
+   mono headings with hairlines between them, and the keys along the foot. */
+
+.command-palette {
+  --palette-inset: 8px;
+  --palette-pad: 16px;
+
+  width: min(640px, calc(100vw - 24px));
+  max-width: none;
+  max-height: none;
+  margin: 12vh auto auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--brando-line);
+  border-radius: 10px;
+  background: var(--brando-surface);
+  color: var(--brando-ink);
+  font: 14px/20px "Main", sans-serif;
+  box-shadow:
+    0 24px 60px color-mix(in srgb, var(--brando-ink) 18%, transparent),
+    0 2px 6px color-mix(in srgb, var(--brando-ink) 8%, transparent);
+
+  &[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &::backdrop {
+    background: var(--brando-overlay);
+  }
+
+  kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border: 1px solid var(--brando-line);
+    border-radius: 4px;
+    background: var(--brando-surface);
+    color: var(--brando-muted);
+    font: 11px/1 "Mono", monospace;
+    box-sizing: border-box;
+  }
+}
+
+.command-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 14px 0 var(--palette-pad);
+  border-bottom: 1px solid var(--brando-line);
+
+  .command-palette-search-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    color: var(--brando-muted);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 54px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--brando-ink);
+    font: 18px/24px "Main", sans-serif;
+    box-shadow: none;
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      border: 0;
+      box-shadow: none;
+    }
+
+    &::placeholder {
+      color: var(--brando-muted);
+      font-size: 16px;
+    }
+  }
+
+  .command-palette-esc {
+    flex: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    kbd {
+      height: 24px;
+      padding: 0 7px;
+      font-size: 12px;
+    }
+
+    &:hover kbd {
+      color: var(--brando-ink);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+}
+
+.command-palette-results {
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.command-palette-group {
+  padding: 10px var(--palette-inset);
+
+  & + & {
+    border-top: 1px solid var(--brando-line);
+  }
+}
+
+.command-palette-heading {
+  padding: 6px 8px 8px;
+  color: var(--brando-muted);
+  font: 11px/14px "Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.command-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--brando-ink);
+  text-decoration: none;
+  cursor: pointer;
+  scroll-margin: 8px;
+
+  &:hover {
+    background: var(--brando-surface-hover);
+  }
+
+  &.is-active {
+    background: var(--brando-surface-selected);
+  }
+
+  &.is-entry {
+    min-height: 40px;
+  }
+
+  .command-palette-icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-inline: 1px;
+    color: var(--brando-muted);
+  }
+
+  .command-palette-cover {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 30px;
+    height: 22px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--brando-badge-bg);
+    color: var(--brando-muted);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    > [data-icon] {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .command-palette-copy {
+    display: flex;
+    flex: 1;
+    align-items: baseline;
+    gap: 4px 10px;
+    min-width: 0;
+  }
+
+  .command-palette-label {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 15px;
+    line-height: 20px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .command-palette-meta {
+    display: inline-flex;
+    flex: none;
+    gap: 5px;
+    color: var(--brando-muted);
+    font-size: 13px;
+    line-height: 18px;
+    white-space: nowrap;
+
+    > span + span::before {
+      content: "·";
+      margin-right: 5px;
+    }
+  }
+
+  .command-palette-status {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 7px;
+    color: var(--brando-muted);
+    font-size: 13px;
+
+    > span {
+      text-box: trim-both cap alphabetic;
+    }
+
+    > i {
+      width: 1cap;
+      height: 1cap;
+      border-radius: 50%;
+      background: var(--brando-status-draft);
+    }
+
+    &[data-status="published"] > i { background: var(--brando-status-published); }
+    &[data-status="pending"] > i { background: var(--brando-status-pending); }
+    &[data-status="disabled"] > i { background: var(--brando-status-disabled); }
+  }
+
+  .command-palette-count {
+    flex: none;
+    color: var(--brando-muted);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Only the selected row shows the key that opens it. */
+  .command-palette-enter {
+    display: none;
+    flex: none;
+  }
+
+  &.is-active .command-palette-enter {
+    display: inline-grid;
+  }
+}
+
+.command-palette-empty {
+  padding: 20px var(--palette-pad);
+  color: var(--brando-muted);
+}
+
+.command-palette-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  padding: 9px var(--palette-pad);
+  border-top: 1px solid var(--brando-line);
+  background: var(--brando-surface-shaded);
+  color: var(--brando-muted);
+  font: 12px/16px "Mono", monospace;
+
+  .command-palette-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    kbd + kbd {
+      margin-left: -1px;
+    }
+
+    kbd:last-of-type {
+      margin-right: 3px;
+    }
+  }
+
+  .commands {
+    margin-left: auto;
+  }
+}
+
+/* Phones have no keyboard to show, and less height to spare. */
+@media (max-width: 600px) {
+  .command-palette {
+    width: calc(100vw - 16px);
+    margin-top: 8px;
+  }
+
+  .command-palette-results {
+    max-height: calc(100dvh - 90px);
+  }
+
+  .command-palette-footer {
+    display: none;
+  }
+
+  .command-palette-item {
+    min-height: 44px;
+
+    .command-palette-copy {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+    }
+
+    .command-palette-label {
+      max-width: 100%;
+    }
+
+    .command-palette-enter {
+      display: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .command-palette[open] {
+    animation: command-palette-in 120ms ease-out;
+  }
+}
+
+@keyframes command-palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* The sidebar's way in, for people who don't use the shortcut: a row like
+   the menu's, with the shortcut at its end. */
+#navigation .nav-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% + 20px);
+  block-size: 36px;
+  margin: 10px -10px 0;
+  padding: 0 10px;
+  border: 1px solid var(--brando-nav-rule);
+  border-radius: 8px;
+  background: var(--brando-nav-surface);
+  color: var(--brando-nav-muted);
+  font-size: 16px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease;
+
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+    margin-inline: 1px;
+    opacity: 0.8;
+  }
+
+  .nav-label {
+    flex: 1;
+  }
+
+  .nav-search-shortcut {
+    padding: 2px 5px;
+    border: 1px solid var(--brando-nav-rule);
+    border-radius: 4px;
+    font: 11px/14px "Mono", monospace;
+    color: var(--brando-nav-muted);
+  }
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--brando-nav-ink) 28%, transparent);
+    color: var(--brando-nav-ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: 2px;
+  }
+}

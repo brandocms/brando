@@ -6,6 +6,12 @@
  */
 export default () => ({
   mounted() {
+    // A question brought from the command palette waits here, ready to send.
+    if (this.el.value.trim() !== '') {
+      this.el.focus()
+      this.el.setSelectionRange(this.el.value.length, this.el.value.length)
+    }
+
     this.el.addEventListener('keydown', e => {
       if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return
       e.preventDefault()

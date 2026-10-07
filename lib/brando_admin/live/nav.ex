@@ -239,6 +239,24 @@ defmodule BrandoAdmin.Nav do
               </section>
             </div>
 
+            <%!-- Opens the command palette (BrandoAdmin.CommandPaletteLive), for
+                  people who don't use the shortcut. --%>
+            <button
+              :if={@current_user}
+              type="button"
+              id="nav-search"
+              class="nav-search"
+              aria-haspopup="dialog"
+              aria-controls="command-palette-dialog"
+              phx-click={JS.dispatch("brando:command-palette:open", to: "#command-palette")}
+            >
+              <.icon name="search" class="nav-icon" />
+              <span class="nav-label">{gettext("Search")}</span>
+              <kbd class="nav-search-shortcut" aria-hidden="true">
+                <span class="shortcut-mac">⌘K</span><span class="shortcut-other">Ctrl K</span>
+              </kbd>
+            </button>
+
             <nav :if={@menu_sections != []} phx-hook="Brando.Navigation" id="nav">
               <div class="nav-sections" id="nav-sections">
                 <section :for={section <- @menu_sections} class="navigation-section">
