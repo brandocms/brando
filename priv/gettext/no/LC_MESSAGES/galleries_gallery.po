@@ -50,4 +50,4 @@ msgstr "gallerier"
 #: lib/brando/galleries/gallery.ex
 #, elixir-format
 msgid "New %{type}"
-msgstr "Nytt galleri"
+msgstr "Nytt %{type}"

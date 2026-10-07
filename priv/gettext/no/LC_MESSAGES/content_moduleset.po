@@ -40,4 +40,4 @@ msgstr "blokkmodulsett"
 #: lib/brando/content/module_set.ex
 #, elixir-format
 msgid "New %{type}"
-msgstr "Nytt blokkmodulsett"
+msgstr "Nytt %{type}"

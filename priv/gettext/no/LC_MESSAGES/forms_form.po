@@ -190,4 +190,4 @@ msgstr "Innsendinger eldre enn dette slettes hver natt. La stå tomt for å beho
 #: lib/brando/forms/form.ex
 #, elixir-format
 msgid "New %{type}"
-msgstr "Nytt skjema"
+msgstr "Nytt %{type}"

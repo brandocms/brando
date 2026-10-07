@@ -51,4 +51,4 @@ msgstr "globalsett"
 #: lib/brando/sites/global_set.ex
 #, elixir-format
 msgid "New %{type}"
-msgstr "Nytt globalsett"
+msgstr "Nytt %{type}"

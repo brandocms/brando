@@ -93,4 +93,4 @@ msgstr "Maler finner dette fragmentet ved foreldrenøkkel og nøkkel. Sider som 
 #: lib/brando/pages/fragment.ex
 #, elixir-format
 msgid "New %{type}"
-msgstr "Nytt fragment"
+msgstr "Nytt %{type}"

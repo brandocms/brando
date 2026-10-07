@@ -106,4 +106,4 @@ msgstr "Teknisk"
 #: lib/brando/images/image.ex
 #, elixir-format
 msgid "New %{type}"
-msgstr "Nytt bilde"
+msgstr "Nytt %{type}"
