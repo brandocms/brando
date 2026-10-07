@@ -13510,11 +13510,6 @@ msgid "Start from a template"
 msgstr "Start fra en mal"
 
 
-#: lib/brando_admin/components/form/block_field.ex
-#, elixir-autogen, elixir-format
-msgid "Or click the plus to start with an empty page."
-msgstr "Eller klikk på plusstegnet for å begynne med en tom side."
-
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Video details"
@@ -15389,3 +15384,43 @@ msgstr "Organisasjonen bak nettstedet: navn, kontaktinformasjon, sidetitler og s
 #, elixir-autogen, elixir-format
 msgid "Metadata, indexing and redirects for the site, and a review of its content."
 msgstr "Metadata, indeksering og videresendinger for nettstedet, og en gjennomgang av innholdet."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Start with a block"
+msgstr "Start med en blokk"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Or start with a block"
+msgstr "Eller start med en blokk"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "first in %{count} of %{total}"
+msgstr "først i %{count} av %{total}"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "All modules…"
+msgstr "Alle moduler…"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "No templates for %{name} yet."
+msgstr "Ingen maler for %{name} ennå."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Add one in Configuration → Templates"
+msgstr "Legg til en i Konfigurasjon → Maler"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Start with %{module}"
+msgstr "Start med %{module}"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Paste copied block"
+msgstr "Lim inn kopiert blokk"

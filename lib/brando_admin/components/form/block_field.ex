@@ -501,55 +501,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # INSERT ROOT BLOCK
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id}, socket) do
-    {module_origin, module_id} = Brando.Content.SharedLibrary.reference(module_id)
-    block_module = socket.assigns.block_module
-    user_id = socket.assigns.current_user.id
-    parent_id = nil
-    source = socket.assigns.block_module
-    empty_block_cs = build_block({module_origin, module_id}, user_id, parent_id, source, :module)
-
     sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
-
-    entry_block_cs =
-      block_module
-      |> struct(%{})
-      |> Changeset.change(%{entry_id: socket.assigns.entry.id})
-      |> Changeset.put_assoc(:block, empty_block_cs)
-      |> Changeset.put_change(:sequence, sequence)
-      |> Map.put(:action, :insert)
-
-    uid = Changeset.get_field(empty_block_cs, :uid)
-
-    entry_block_form =
-      to_form(entry_block_cs,
-        as: "entry_block",
-        id: "entry_block_form-#{uid}"
-      )
-
-    selector = "[data-block-uid=\"#{uid}\"]"
-
-    # Broadcast to other users
-    if topic = socket.assigns[:blocks_topic] do
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:block_added,
-         %{
-           uid: uid,
-           module_id: module_id,
-           module_origin: module_origin,
-           sequence: sequence,
-           user_id: socket.assigns.current_user.id
-         }}
-      )
-    end
-
-    socket
-    |> put_seed_form(uid, entry_block_form)
-    |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
-    |> refresh_live_preview()
-    |> push_event("b:scroll_to", %{selector: selector})
-    |> then(&{:ok, &1})
+    {:ok, insert_root_module(socket, module_id, sequence)}
   end
 
   def update(%{event: "insert_container", sequence: sequence}, socket) do
@@ -843,6 +796,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> maybe_arm_blocks_topic()
     |> assign_module_set()
     |> assign_new(:templates, fn -> [] end)
+    |> maybe_assign_starting_modules()
     |> then(&{:ok, &1})
   end
 
@@ -928,6 +882,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:footnote_fields, assigns.opts[:footnote_fields] || %{})
     |> assign(:note_collection?, !!assigns.opts[:footnote_fields])
     |> assign(:assistant?, assistant?(assigns))
+    |> assign(:manages_templates?, manages_templates?(assigns))
     |> assign_new(:source_locked, fn -> false end)
     |> assign_new(:source_url, fn -> nil end)
     |> request_blocks_sync()
@@ -942,6 +897,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp assistant?(%{entry: entry, current_user: user}) do
     entry.__struct__ in Brando.Content.Transfer.Catalog.schemas() and Brando.AI.Agent.allowed?(user) and
       Brando.AI.Agent.available?()
+  end
+
+  # The empty field says where templates are added to the people who can add
+  # them: whoever may create templates, or a superuser — the one who sees
+  # Configuration → Templates — without the authorization engine.
+  defp manages_templates?(%{templates: [_ | _]}), do: false
+
+  defp manages_templates?(%{current_user: user}) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.current(user), :create, Brando.Content.Template),
+      else: match?(%{role: :superuser}, user)
   end
 
   defp assistant_url(entry, block_field) do
@@ -1087,7 +1053,39 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:block_ops, ops_state)
     |> assign(:root_order, ops_state.order)
+    |> maybe_assign_starting_modules()
     |> notify_note_observers()
+  end
+
+  # The modules an empty field offers to start with (see
+  # `Brando.Content.StartingModules`). Looked up once, when the field is first
+  # seen empty — at mount, or when its last block is deleted — and never for a
+  # field that has blocks. The counts behind them are cached per site, field
+  # and language, so the connected mount after the dead render reads no rows.
+  defp maybe_assign_starting_modules(
+         %{assigns: %{root_order: [], note_collection?: false, focus: nil, module_set: module_set} = assigns} = socket
+       )
+       when not is_map_key(assigns, :starting_modules) do
+    %{block_module: block_module, entry: entry, opts: opts} = assigns
+
+    modules =
+      Brando.Content.StartingModules.list(block_module, ModulePicker.root_modules(module_set),
+        language: Map.get(entry, :language),
+        starts_with: opts[:starts_with]
+      )
+
+    assign(socket, :starting_modules, modules)
+  end
+
+  defp maybe_assign_starting_modules(socket), do: socket
+
+  # A tile is named for its action ("Start with Heading"); the container it
+  # comes in and its count describe it.
+  defp starting_module_description(id, index, tile) do
+    [tile.container && "#{id}-starting-#{index}-container", tile.count && "#{id}-starting-#{index}-count"]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+    |> then(&if(&1 == "", do: nil, else: &1))
   end
 
   defp field_note_slots(socket) do
@@ -1449,7 +1447,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # reposition a main block
-  @locked_client_events ~w(reposition paste_block_at_end restore_block outline_root_reposition outline_reposition start_from_template)
+  @locked_client_events ~w(reposition paste_block_at_end restore_block outline_root_reposition outline_reposition start_from_template
+                           insert_starting_module)
 
   def handle_event(event, _params, %{assigns: %{source_locked: true}} = socket) when event in @locked_client_events,
     do: {:noreply, refuse_structure(socket, event)}
@@ -1495,6 +1494,26 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       {:noreply, socket}
     else
       _ -> {:noreply, socket}
+    end
+  end
+
+  # A starting module (`@starting_modules`), offered while the field is empty:
+  # the module goes in first, the same way the module picker inserts it, or
+  # with the container it usually starts in. Only a tile this field offers,
+  # and only into an empty field, as with templates.
+  def handle_event("insert_starting_module", %{"module" => module_ref} = params, socket) do
+    container_ref = params["container"] |> to_string() |> String.trim() |> then(&if(&1 == "", do: nil, else: &1))
+
+    offered? =
+      Enum.any?(
+        socket.assigns[:starting_modules] || [],
+        &(&1.module_ref == module_ref and &1.container_ref == container_ref)
+      )
+
+    cond do
+      socket.assigns.block_ops.order != [] or not offered? -> {:noreply, socket}
+      container_ref -> {:noreply, insert_root_container_with_module(socket, container_ref, module_ref)}
+      true -> {:noreply, insert_root_module(socket, module_ref, 0)}
     end
   end
 
@@ -2021,26 +2040,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <span>{gettext("Blocks")}</span>
           <div class="field-presence" phx-update="ignore" id={"#{@form_name}[#{@block_field}]-field-presence"}></div>
         </label>
-        <div :if={@assistant?} class="block-field-assistant">
-          <span :if={@entry.id && @blocks_changed?} class="block-field-assistant-hint">
-            {gettext("The assistant reads the saved entry, without your unsaved changes")}
-          </span>
-          <span :if={!@entry.id} class="block-field-assistant-hint">
-            {gettext("Save the entry to build it with AI")}
-          </span>
-          <AIAction.button
-            :if={@entry.id}
-            href={assistant_url(@entry, @block_field)}
-            target="_blank"
-            rel="noopener"
-            data-testid="build-with-ai"
-          >
-            {gettext("Build with AI")}
-          </AIAction.button>
-          <AIAction.button :if={!@entry.id} disabled>
-            {gettext("Build with AI")}
-          </AIAction.button>
-        </div>
       </div>
       <p :if={@source_locked} class="blocks-source-note">
         {gettext("Blocks, their order and media follow the source. Edit the text here.")}
@@ -2136,37 +2135,123 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           hide_fragments={false}
           hide_sections={false}
         />
-        <%= if @root_order == [] && !@note_collection? do %>
-          <div :if={@templates != []} class="blocks-welcome" data-testid="blocks-welcome">
-            <h3>{gettext("Start from a template")}</h3>
-            <div class="blocks-welcome-templates">
+        <%= if @root_order == [] && !@note_collection? && !@source_locked do %>
+          <section class="blocks-welcome" data-testid="blocks-welcome" aria-labelledby={"#{@id}-welcome-title"}>
+            <%= if @templates != [] do %>
+              <h3 id={"#{@id}-welcome-title"}>{gettext("Start from a template")}</h3>
+              <div class="blocks-welcome-templates">
+                <button
+                  :for={template <- @templates}
+                  type="button"
+                  class="blocks-welcome-template"
+                  phx-click="start_from_template"
+                  phx-value-id={template.id}
+                  phx-target={@myself}
+                  data-testid="start-from-template"
+                  title={Enum.map_join(template.modules, " · ", &(Brando.Type.I18nString.localized(&1.name) || "–"))}
+                >
+                  <span class="blocks-welcome-stack" aria-hidden="true">
+                    <span :for={_block <- Enum.take(template.modules, 5)}></span>
+                  </span>
+                  <strong>{template.name}</strong>
+                  <span :if={template.instructions not in [nil, ""]} class="blocks-welcome-instructions">
+                    {template.instructions}
+                  </span>
+                  <small>
+                    {ngettext("%{count} block", "%{count} blocks", template.block_count, count: template.block_count)}
+                  </small>
+                </button>
+              </div>
+              <h4 :if={@starting_modules != []} class="blocks-welcome-subtitle">{gettext("Or start with a block")}</h4>
+            <% else %>
+              <h3 id={"#{@id}-welcome-title"}>{gettext("Start with a block")}</h3>
+            <% end %>
+
+            <div :if={@starting_modules != []} class="blocks-welcome-modules">
               <button
-                :for={template <- @templates}
+                :for={{tile, index} <- Enum.with_index(@starting_modules)}
                 type="button"
-                class="blocks-welcome-template"
-                phx-click="start_from_template"
-                phx-value-id={template.id}
+                class="blocks-welcome-module"
+                aria-label={gettext("Start with %{module}", module: ModulePicker.translate(tile.module.name))}
+                aria-describedby={starting_module_description(@id, index, tile)}
+                phx-click="insert_starting_module"
+                phx-value-module={tile.module_ref}
+                phx-value-container={tile.container_ref}
                 phx-target={@myself}
-                data-testid="start-from-template"
-                title={Enum.map_join(template.modules, " · ", &(Brando.Type.I18nString.localized(&1.name) || "–"))}
+                data-testid="starting-module"
+                data-module-ref={tile.module_ref}
+                data-container-ref={tile.container_ref}
+                data-first-count={tile.count}
+                data-of={tile.of}
               >
-                <span class="blocks-welcome-stack" aria-hidden="true">
-                  <span :for={_block <- Enum.take(template.modules, 5)}></span>
+                <span class="blocks-welcome-module-sketch" aria-hidden="true">
+                  <img :if={tile.module.svg} src={"data:image/svg+xml;base64,#{tile.module.svg}"} alt="" />
+                  <.icon :if={!tile.module.svg} name={ModulePicker.module_icon(tile.module)} />
                 </span>
-                <strong>{template.name}</strong>
-                <span :if={template.instructions not in [nil, ""]} class="blocks-welcome-instructions">
-                  {template.instructions}
+                <span class="blocks-welcome-module-text">
+                  <span
+                    :if={tile.container}
+                    id={"#{@id}-starting-#{index}-container"}
+                    class="blocks-welcome-module-container"
+                  >
+                    {tile.container.name}
+                  </span>
+                  <strong>{ModulePicker.translate(tile.module.name)}</strong>
+                  <small :if={tile.count} id={"#{@id}-starting-#{index}-count"} data-testid="starting-module-count">
+                    {gettext("first in %{count} of %{total}", count: tile.count, total: tile.of)}
+                  </small>
                 </span>
-                <small>
-                  {ngettext("%{count} block", "%{count} blocks", template.block_count, count: template.block_count)}
-                </small>
               </button>
             </div>
-            <p class="blocks-welcome-or">{gettext("Or click the plus to start with an empty page.")}</p>
-          </div>
-          <div :if={@templates == []} class="blocks-empty-instructions">
-            {gettext("Click the plus to start adding content blocks")}
-          </div>
+
+            <div class="blocks-welcome-actions">
+              <button
+                type="button"
+                class="blocks-welcome-action"
+                phx-click={JS.push("show_block_picker", target: @myself)}
+                data-ui-modal-show={@module_picker_id}
+                data-testid="all-modules"
+              >
+                <.icon name="plus" />{gettext("All modules…")}
+              </button>
+              <button
+                :if={Block.Render.paste_allow(@clipboard_meta)}
+                type="button"
+                class="blocks-welcome-action"
+                phx-click="paste_block_at_end"
+                phx-target={@myself}
+                title={@clipboard_meta.label}
+                data-testid="paste-first-block"
+              >
+                <.icon name="clipboard-check" />{gettext("Paste copied block")}
+              </button>
+              <AIAction.button
+                :if={@assistant? && @entry.id}
+                href={assistant_url(@entry, @block_field)}
+                target="_blank"
+                rel="noopener"
+                data-testid="build-with-ai"
+              >
+                {gettext("Build with AI")}
+              </AIAction.button>
+              <AIAction.button :if={@assistant? && !@entry.id} disabled data-testid="build-with-ai">
+                {gettext("Build with AI")}
+              </AIAction.button>
+              <span :if={@assistant? && !@entry.id} class="blocks-welcome-hint">
+                {gettext("Save the entry to build it with AI")}
+              </span>
+              <span :if={@assistant? && @entry.id && @blocks_changed?} class="blocks-welcome-hint">
+                {gettext("The assistant reads the saved entry, without your unsaved changes")}
+              </span>
+            </div>
+
+            <p :if={@templates == [] && @manages_templates?} class="blocks-welcome-note">
+              {gettext("No templates for %{name} yet.", name: Brando.Blueprint.get_plural(@entry.__struct__))}
+              <.link href="/admin/config/content/templates" target="_blank" rel="noopener">
+                {gettext("Add one in Configuration → Templates")}
+              </.link>
+            </p>
+          </section>
         <% end %>
 
         <div
@@ -2478,6 +2563,78 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp block_type_label(:container), do: gettext("Container")
   defp block_type_label(:fragment), do: gettext("Fragment")
   defp block_type_label(_type), do: gettext("Block")
+
+  # A new module block at the root: the module picker's insert, and a starting
+  # module's on an empty field.
+  defp insert_root_module(socket, module_reference, sequence) do
+    {module_origin, module_id} = Brando.Content.SharedLibrary.reference(module_reference)
+
+    block_module = socket.assigns.block_module
+    user_id = socket.assigns.current_user.id
+    parent_id = nil
+    source = socket.assigns.block_module
+    empty_block_cs = build_block({module_origin, module_id}, user_id, parent_id, source, :module)
+
+    entry_block_cs =
+      block_module
+      |> struct(%{})
+      |> Changeset.change(%{entry_id: socket.assigns.entry.id})
+      |> Changeset.put_assoc(:block, empty_block_cs)
+      |> Changeset.put_change(:sequence, sequence)
+      |> Map.put(:action, :insert)
+
+    uid = Changeset.get_field(empty_block_cs, :uid)
+
+    entry_block_form =
+      to_form(entry_block_cs,
+        as: "entry_block",
+        id: "entry_block_form-#{uid}"
+      )
+
+    selector = "[data-block-uid=\"#{uid}\"]"
+
+    # Broadcast to other users
+    if topic = socket.assigns[:blocks_topic] do
+      PubSub.broadcast(
+        Brando.pubsub(),
+        topic,
+        {:block_added,
+         %{
+           uid: uid,
+           module_id: module_id,
+           module_origin: module_origin,
+           sequence: sequence,
+           user_id: socket.assigns.current_user.id
+         }}
+      )
+    end
+
+    socket
+    |> put_seed_form(uid, entry_block_form)
+    |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
+    |> refresh_live_preview()
+    |> push_event("b:scroll_to", %{selector: selector})
+  end
+
+  # A starting module that usually comes inside a container goes in with it:
+  # the container, holding a new block of the module. Inserted as a template's
+  # blocks are, so the child reaches the op store with its parent.
+  defp insert_root_container_with_module(socket, container_reference, module_reference) do
+    {container_origin, container_id} = Brando.Content.SharedLibrary.reference(container_reference)
+    user_id = socket.assigns.current_user.id
+    source = socket.assigns.block_module
+
+    child_cs = build_block(module_reference, user_id, nil, source, :module)
+
+    container_cs =
+      user_id
+      |> build_container(nil, source)
+      |> Changeset.put_change(:container_id, container_id)
+      |> Changeset.put_change(:container_origin, container_origin)
+      |> Changeset.put_assoc(:children, [child_cs])
+
+    insert_pasted_root_block(socket, %{changeset: container_cs}, 0)
+  end
 
   defp paste_root_block(socket, sequence) do
     user_id = socket.assigns.current_user.id

@@ -27,7 +27,7 @@ assets/css/components/Form/FormFields.css 17
 assets/css/components/Form/Input/AssetField.css 2
 assets/css/components/Form/Input/Blocks/Block.css 147
 assets/css/components/Form/Input/Blocks/BlockSlot.css 26
-assets/css/components/Form/Input/Blocks/Blocks.css 51
+assets/css/components/Form/Input/Blocks/Blocks.css 41
 assets/css/components/Form/Input/Blocks/GalleryBlock.css 15
 assets/css/components/Form/Input/Blocks/ModuleBlock.css 1
 assets/css/components/Form/Input/Blocks/PictureBlock.css 4
