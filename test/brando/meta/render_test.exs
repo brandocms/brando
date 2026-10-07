@@ -171,6 +171,13 @@ defmodule Brando.MetaRenderTest do
   describe "X cards" do
     setup do
       {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+
+      # `update_identity/3` also refreshes the identity cache, which outlives
+      # the test's database sandbox. Put the seeded identity back, so later
+      # tests (the JSON-LD organisation's `sameAs`) don't read these links.
+      cached = Brando.Cache.get(:identity)
+      on_exit(fn -> Brando.Cache.put(:identity, cached, :infinite) end)
+
       %{identity: identity}
     end
 
