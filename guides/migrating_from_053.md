@@ -311,8 +311,11 @@ and compiled before using the library-owned versioned upgrade hook.
 
 Handle application Blueprints according to their history:
 
-- For a Blueprint with valid generated migrations and snapshots, run
-  `mix brando.gen.blueprint_migration MyApp.Domain.Schema` and review the diff.
+- For Blueprints with valid generated migrations and snapshots, run
+  `mix brando.gen.blueprint_migration --all` and review the diffs, or plan one
+  with `mix brando.gen.blueprint_migration MyApp.Domain.Schema`. `--all` also
+  proposes a create-table migration for every Blueprint without a snapshot, so
+  rebaseline existing tables first (next point).
 - For an existing table with no generated Blueprint snapshot, do not apply the
   create-table migration that a first normal run would propose. Independently
   verify the live table, columns, indexes, and foreign keys against the current

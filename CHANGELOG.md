@@ -28,9 +28,9 @@ production dump.
 - **`trait :meta` adds two columns.** Every schema with the meta trait now has
   `meta_canonical_url` and `content_modified_at`. Run `mix brando.gen.migrations`
   for Brando's pages (`brando_201`) and
-  `mix brando.gen.blueprint_migration MyApp.Domain.Schema` for each application
-  blueprint with `trait :meta`, then `mix ecto.migrate`; until then, queries on
-  those schemas fail with a missing-column error. Both migrations start
+  `mix brando.gen.blueprint_migration --all` for the application blueprints
+  with `trait :meta`, then `mix ecto.migrate`; until then, queries on those
+  schemas fail with a missing-column error. Both migrations start
   `content_modified_at` from each row's last edit.
 
 - **Admin icons are Lucide.** Heroicons and `assets/css/heroicons.css` are
@@ -135,9 +135,9 @@ production dump.
 
 - **`trait :creator` adds two columns.** Every schema with the creator trait now
   has `updated_by_id` and `edited_at`. Run `mix brando.gen.migrations` for
-  Brando's tables and `mix brando.gen.blueprint_migration MyApp.Domain.Schema`
-  for each application blueprint, then `mix ecto.migrate`; until then, queries
-  on those schemas fail with a missing-column error.
+  Brando's tables and `mix brando.gen.blueprint_migration --all` for the
+  application blueprints, then `mix ecto.migrate`; until then, queries on those
+  schemas fail with a missing-column error.
 
 - **Video Type Migration**: The deprecated `Brando.Type.Video` has been replaced with `Brando.Videos.Video`. The video schema has been updated:
   - `source` field renamed to `type` (enum: `:upload`, `:external_file`, `:vimeo`, `:youtube`)
@@ -425,6 +425,17 @@ production dump.
   for a singleton settings screen: it renders no heading of its own (use
   `Workspace.header`, which now takes an `eyebrow`) and saves in place from a
   sticky bar.
+
+- **One command plans storage for every blueprint.**
+  `mix brando.gen.blueprint_migration --all` plans a migration and snapshot
+  for each application blueprint whose storage differs from its snapshot, or
+  that has none yet, and lists the rest as up to date. You review them once
+  and accept them together. Each blueprint keeps the migration path a single
+  run would pick (classic, tenant or public history), and the migrations get
+  increasing versions, ordered so a table exists before a foreign key to it.
+  Every plan is checked again before anything is written; if one is stale,
+  no files are written. `--dry-run` previews them all. A blueprint whose
+  destination needs `--migration-path` is left out with a warning.
 
 - **Listings that depend on who is looking.** A listing passes the signed-in
   user to its context, and a `filters` function whose clauses take a third
@@ -1017,7 +1028,7 @@ production dump.
   it no longer pairs the creator with `updated_at`. Brando's own tables get the
   columns from the `brando_175` migration (`mix brando.gen.migrations`);
   application blueprints get them planned by
-  `mix brando.gen.blueprint_migration MyApp.Schema`.
+  `mix brando.gen.blueprint_migration --all`.
 - Add `mix brando.setup`, which runs the operational steps after
   `mix brando.install`: asset builds, `ecto.create`/`ecto.migrate`, a superuser
   account and default content seeds. Every step is skipped when its result

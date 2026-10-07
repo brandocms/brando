@@ -403,7 +403,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen` | Reviewed context/admin source; optional public routes |
 | `brando.gen.backend` / `brando.gen.frontend` | Reviewed asset scaffolds with conflict checks |
 | `brando.assets.setup` | Operational Yalc installation and consumer builds |
-| `brando.gen.blueprint_migration` | Reviewed migration/snapshot pair with stale-plan checks; database application is separate |
+| `brando.gen.blueprint_migration` | Reviewed migration/snapshot pair with stale-plan checks, for one Blueprint or every application Blueprint with `--all`; database application is separate |
 | `brando.setup` | Operational post-install setup: assets, database, account, seeds |
 | `brando.gen.languages` / `brando.gen.admin` | Operational language/account initialization |
 | `brando.gen.seeds` | Operational default content: identity, seven modules, index page, menu, footer fragment |
