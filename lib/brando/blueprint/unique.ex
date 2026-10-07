@@ -11,8 +11,10 @@ defmodule Brando.Blueprint.Unique do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Blueprint.AssociationKey
+  alias Brando.Blueprint.Attributes
   alias Brando.Blueprint.Collision
   alias Brando.Blueprint.DatabaseIdentifier
+  alias Brando.Blueprint.Relations
   alias Brando.Blueprint.UniqueFields
   alias Ecto.Changeset
 
@@ -42,6 +44,87 @@ defmodule Brando.Blueprint.Unique do
         relation.opts.unique
       )
     end)
+  end
+
+  @doc """
+  Adds the unique constraints `module` declares, without collision handling.
+
+  For an insert built from a struct rather than cast params, such as a
+  duplicate: a value another row already holds comes back as a changeset
+  error instead of raising.
+  """
+  @spec put_unique_constraints(Changeset.t(), module()) :: Changeset.t()
+  def put_unique_constraints(changeset, module) do
+    changeset =
+      module
+      |> Attributes.__attributes__()
+      |> Enum.reduce(changeset, fn
+        %{name: field, opts: %{unique: true}}, acc ->
+          add_unique_constraint(acc, field, true)
+
+        %{name: field, opts: %{unique: unique_opts}}, acc when is_list(unique_opts) ->
+          add_unique_constraint(acc, field, unique_opts, Keyword.get(unique_opts, :prevent_collision))
+
+        _attribute, acc ->
+          acc
+      end)
+
+    run_unique_relation_constraints(changeset, module, Relations.__relations__(module))
+  end
+
+  @doc """
+  Returns `value`, or the first of `value-2`, `value-3`, … that no other row
+  of `module` holds for the unique attribute `field`. A field that isn't
+  unique gets `value` back.
+
+  The attribute's scope fields (`prevent_collision: :language`, `:with`) take
+  their values from `entry`, so a copy into another language keeps its value
+  when that language has it free. `entry` itself is never counted as taken.
+  Soft-deleted rows count: the unique index covers them too.
+  """
+  @spec free_value(module(), atom(), String.t(), struct()) :: String.t()
+  def free_value(module, field, value, entry) when is_binary(value) do
+    scope =
+      module
+      |> Attributes.__attributes__()
+      |> Enum.find_value(:not_unique, fn
+        %{name: ^field, opts: %{unique: true}} ->
+          []
+
+        %{name: ^field, opts: %{unique: unique_opts}} when is_list(unique_opts) ->
+          unique_opts
+          |> UniqueFields.scope(Keyword.get(unique_opts, :prevent_collision))
+          |> Enum.map(&{&1, Map.get(entry, &1)})
+
+        _ ->
+          nil
+      end)
+
+    # The index treats NULLs as distinct: a row with a NULL scope collides with nothing.
+    if scope == :not_unique or Enum.any?(scope, fn {_scope_field, scope_value} -> is_nil(scope_value) end) do
+      value
+    else
+      query =
+        Enum.reduce(scope, from(q in module, select: true, limit: 1), fn {scope_field, scope_value}, query ->
+          from q in query, where: field(q, ^scope_field) == ^scope_value
+        end)
+
+      query =
+        case Map.get(entry, :id) do
+          nil -> query
+          id -> from q in query, where: q.id != ^id
+        end
+
+      first_free(query, field, value, 1)
+    end
+  end
+
+  defp first_free(query, field, base, n) do
+    candidate = if n == 1, do: base, else: "#{base}-#{n}"
+
+    if Brando.Repo.one(from(q in query, where: field(q, ^field) == ^candidate)),
+      do: first_free(query, field, base, n + 1),
+      else: candidate
   end
 
   defp apply_attribute_constraint(changeset, _module, %{name: field, opts: %{unique: true}}) do

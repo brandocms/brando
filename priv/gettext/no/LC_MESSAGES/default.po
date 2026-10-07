@@ -15339,3 +15339,13 @@ msgstr "%{first}–%{last} av %{total}"
 #, elixir-autogen, elixir-format
 msgid "Per page"
 msgstr "Per side"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Could not copy this entry. Nothing was saved."
+msgstr "Kunne ikke kopiere denne oppføringen. Ingenting ble lagret."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Some entries could not be copied."
+msgstr "Noen av oppføringene kunne ikke kopieres."

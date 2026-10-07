@@ -520,6 +520,23 @@ defmodule Brando.TranslationsTest do
       assert {copied.uid, copied.label} == {original.uid, original.label}
     end
 
+    test "a translation whose URI the language already uses gets a free one", c do
+      alias Brando.Pages.Page
+
+      put_test_env(Page, translatable: [mode: :synchronized])
+      Factory.insert(:page, title: "Indeks", uri: "index", language: :no)
+      Factory.insert(:page, title: "Indeks 2", uri: "index-2", language: :no)
+      about = Factory.insert(:page, title: "About", uri: "about", language: :en)
+      index = Factory.insert(:page, title: "Index", uri: "index", language: :en)
+
+      assert {:ok, no_index} = Translations.create_target(Page, index.id, :no, c.user)
+      assert {no_index.uri, no_index.language} == {"index-3", :no}
+
+      # A language that has the URI free keeps it.
+      assert {:ok, no_about} = Translations.create_target(Page, about.id, :no, c.user)
+      assert no_about.uri == "about"
+    end
+
     test "alternates are not taken from the original", c do
       {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
       {:ok, copy} = SyncTest.duplicate_article(en.id, c.user, change_fields: [slug: "copy"])
