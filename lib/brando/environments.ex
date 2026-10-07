@@ -501,6 +501,10 @@ defmodule Brando.Environments do
          :ok <- schema_cloner().clone_schema(target_prefix, archive_prefix),
          :ok <- Schema.drop(target_prefix),
          :ok <- clone_with_recovery(source_prefix, target_prefix, archive_prefix) do
+      # The copy's webhooks are the source's: paused, so a staging copy
+      # never calls production endpoints.
+      Brando.Webhooks.after_environment_copy(target_prefix)
+
       log =
         log_operation!(site.id, :copy,
           source_environment_id: source.id,

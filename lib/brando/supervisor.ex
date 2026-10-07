@@ -88,7 +88,14 @@ defmodule Brando.Supervisor do
           # interactive FileUploader/ImageUploader, so a reaper sweep doing one
           # network round trip per abandoned object would block user-facing
           # uploads for as long as it ran.
-          upload_reaping: [limit: 1]
+          upload_reaping: [limit: 1],
+          # Content events go out one at a time, in order; each only queues
+          # work for its subscribers (`Brando.ContentEvents`).
+          content_events: [limit: 1],
+          # Webhook deliveries wait on other servers for up to 10 seconds.
+          # Each webhook is limited to `Brando.Webhooks.concurrency/0` of
+          # these at a time, so one slow receiver cannot hold them all.
+          webhooks: [limit: 5]
         ],
         cron: [
           crontab:
@@ -111,7 +118,9 @@ defmodule Brando.Supervisor do
               # Delete form submissions older than their form's retention
               {"15 5 * * *", Brando.Worker.FormSubmissionPurger},
               # Delete 404 log rows past their retention period
-              {"25 5 * * *", Brando.Worker.NotFoundPurger}
+              {"25 5 * * *", Brando.Worker.NotFoundPurger},
+              # Delete webhook deliveries past their retention period
+              {"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}
             ] ++ extra_oban_cron_jobs(),
           timezone: "Etc/UTC"
         ],

@@ -31,6 +31,7 @@ defmodule Brando.Authorization.Catalog do
      [:installation]},
     {:utilities, "brando.utilities", "Utilities & caches", "Settings", [:read, :update], [:standalone, :site]},
     {:activity, "brando.activity", "Activity", "Settings", [:read], [:standalone, :site]},
+    {:webhooks, "brando.webhooks", "Webhooks", "Settings", [:manage], [:standalone, :site]},
     {:assistant, "brando.assistant", "Content assistant", "Content", [:use, :configure], [:standalone, :site]}
   ]
 
