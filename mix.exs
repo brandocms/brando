@@ -231,6 +231,10 @@ defmodule Brando.Mixfile do
       {:comeonin, "~> 5.0"},
       {:base62, "~> 1.2"},
 
+      # two-factor authentication: TOTP codes and the enrollment QR code
+      {:nimble_totp, "~> 1.0"},
+      {:eqrcode, "~> 0.2"},
+
       # dsl
       {:spark, "~> 2.4"},
 
