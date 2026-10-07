@@ -325,7 +325,7 @@ the keyed `:for` — never from a form's `sequence` field, which is stale by des
 
 ### Downward (Parent → Child)
 - **`replace_form`** — the ONLY sanctioned form handoff after mount. Used post-save and on
-  remote-sync apply, and it cascades down the tree. Anything else re-introduces the clobber
+  applying other editors' ops, and it cascades down the tree. Anything else re-introduces the clobber
   class.
 - Structural and UI messages: `set_collapsed`, `set_children_collapsed`, `insert_block`,
   `insert_pasted_block`, `paste_block`, `paste_child_block`, `outline_reorder_child`,
@@ -576,27 +576,33 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   delete, never reordered, never reconciled. There is no parallel ordered form list —
   do not reintroduce one.
 - **The ONLY sanctioned parent→child form handoff after mount is `replace_form`**
-  (cascades down the tree): used post-save (re-seed with fresh db ids) and on remote-sync
-  apply. Anything else re-introduces the historical clobber/FK-wipe class.
+  (cascades down the tree): used post-save (re-seed with fresh db ids) and when other
+  editors' ops arrive. Anything else re-introduces the historical clobber/FK-wipe class.
 - **Media commits: use `Block.commit_ref_data/2`** for one-shot ref commits
   (picker select / reset / upload-complete / image-editor) — never raw
   `send_update(..., event: "update_ref_data", ...)`. Not for per-keystroke updates.
   Related helpers: `Block.current_block_data_map/3` (ref_data payloads),
   `Block.resolve_ref_association/4` (display-media resolution),
   `Block.push_image_editor_init/3` (image editor from blocks).
-- **Multi-user sync ships op snapshots** (`Ops.subtree_snapshot/2` →
-  `Ops.apply_remote_snapshot/3`), never changesets. Ships fire on focus-settle
-  (any focusout, via the Block JS hook), focus switch, pre-save force-ship and
-  immediately on child structural ops; snapshots carry delete tombstones (child
-  deletes have no structural broadcast of their own). Receivers DEFER a snapshot
-  for the root they're editing (`pending_remote_snapshots`, applied on blur) —
-  never drop it — and `ship_or_flush/2` suppresses unchanged re-broadcasts
-  (`last_synced_snapshots`) so stale state can't clobber newer remote edits.
-  Late joiners broadcast `{:blocks_sync_request, ...}`; diverged editors
-  (`blocks_changed?`) replay state as the standard sync messages.
+- **Multi-user editing goes through the entry's edit session** (`Brando.EditSession`,
+  one process per open entry, Livebook's model). Each BlockField's store is a replica
+  (`BlockField.Replica`): `apply_block_op/3` applies a local op at once and casts it to the
+  session, which applies it with the SAME reducer, gives it a revision and broadcasts it;
+  other editors' ops arrive as `{:edit_session, field, message}` (routed by the form
+  hooks) and go onto the replica's confirmed state with this editor's unconfirmed ops
+  replayed on top, so everyone converges on the session's order. There is no snapshot
+  shipping and no late-joiner request: a joiner gets the session's state. Remote changes
+  refresh affected roots through `replace_form` (coalesced); a root the local user works
+  in (`@local_focus`) waits until they leave it. Save, preview, share and recovery copies
+  read `EditSession.fetch/3`; after a save the BlockField hands the saved rows to
+  `EditSession.rebase/4`, which replays only the ops that arrived during the save and moves
+  every replica onto the new rows. Writes outside the editor (Assistant apply, revision
+  activation) call `EditSession.sync_saved/1` (`Ops.carry/3`). If the session dies, each
+  replica re-seeds a new one from its own state (`:DOWN` → `rejoin_session/1`). Ops must
+  stay pure: the session and every replica must reach the same state from the same ops.
 - **Delete undo is store replay**: local deletes stash `Ops.bin_snapshot/2` (structure +
-  diffs + statuses + db ids + location) BEFORE the delete op; undo replays it via
-  `Ops.restore_snapshot/2` — restored roots mount fresh from a re-materialized seed form,
-  restored children reach their mounted root via the `replace_form` cascade. Restores
-  broadcast `{:block_restored, ...}` (a uid left in a remote `deleted` list would kill the
-  rows again on that editor's save); the bin clears on save (stashed db ids go stale).
+  diffs + statuses + db ids + location) BEFORE the delete op; undo replays it as a
+  `{:restore, snapshot}` op — restored roots mount fresh from a re-materialized seed form,
+  restored children reach their mounted root via the `replace_form` cascade. The op reaches
+  the other editors through the session (a uid left in a remote `deleted` list would kill
+  the rows again on that editor's save); the bin clears on save (stashed db ids go stale).
