@@ -29,7 +29,7 @@ defmodule Brando.Trait.Meta do
     |> Changeset.validate_change(:meta_canonical_url, fn :meta_canonical_url, url ->
       if absolute_http_url?(url),
         do: [],
-        else: [meta_canonical_url: "must be a full address starting with https:// or http://"]
+        else: [meta_canonical_url: "must start with https://"]
     end)
   end
 
