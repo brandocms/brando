@@ -499,6 +499,33 @@ Capture fresh screenshots after the last change. Record limitations honestly;
 visual approval belongs to the person using the interface.
 
 
+## Entry editor heading and settings screens
+
+Approved in #2982 (October 2026). An entry editor heads itself with the entry:
+a 12px muted breadcrumb (the content type's icon, its listing name linked to
+the listing, the blueprint's own name for its entries where it has one, and
+the language: `Projects · Case · EN`), then the entry's title as a 32px ink
+heading at weight 500, or "New case" before the first save. The status is one
+pill beside the title (dot, label, chevron) opening the choices as radios of
+the entry form; choices the user may not save are disabled, following
+`Engine.publication_allowed?/2`. `Form.EntryHeader` renders both, and
+`EntryHeader.css` styles them. The heading follows the saved entry, so typing
+in the title costs no server work.
+
+The toolbar under it holds the sections and drawers (Content, Meta, History,
+Scheduled publishing) as `.pill-tabs--small`, then the editors present, the
+save state ("Saved 23:20", "Unsaved changes", with the recovery status as its
+title), the tools with icon and label, and Save. On a phone the tabs take a
+row of their own and scroll inside their track.
+
+A singleton settings screen (Identity, SEO) passes `layout={:settings}` to
+the form and puts `Workspace.header` above it: the eyebrow "Configuration",
+the screen's name and one plain line on what it holds. Its tabs are pill tabs
+under the heading, and its one Save sits in a sticky bar at the bottom with
+the save state, leading on the left, clear of the editors' avatars. A
+configuration entry with a listing (a menu, a global set) keeps the entry
+heading and Save and close.
+
 ## Dashboard
 
 Approved on 5 October 2026 (option E of the card studies). Recently updated

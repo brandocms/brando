@@ -10,15 +10,7 @@ defmodule <%= admin_module %>.<%= domain %>.<%= camel_singular %>FormLive do
       entry_id={@entry_id}
       current_user={@current_user}
       presences={@presences}
-      schema={@schema}>
-      <:header>
-        <%%= if @live_action == :create do %>
-          <%%= gettext("Create <%= singular %>") %>
-        <%% else %>
-          <%%= gettext("Update <%= singular %>") %>
-        <%% end %>
-      </:header>
-    </.live_component>
+      schema={@schema} />
     """
   end
 end
