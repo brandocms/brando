@@ -11,29 +11,26 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   attr :target, :any, required: true
   attr :entry_id, :any, default: nil
 
+  attr :part, :atom,
+    default: :all,
+    values: [:all, :status, :panels],
+    doc: "`:status` is the save state for a toolbar or save bar, `:panels` the notice and recovery panel"
+
+  attr :saved_at, :any, default: nil, doc: "When the entry was last saved, for \"Saved 23:20\""
+
+  def render(%{part: :status} = assigns) do
+    ~H"""
+    <div id={@id} class="draft-save-state" data-state={save_state(@state, @saved_at)} title={status(@state)}>
+      <.save_status state={@state} saved_at={@saved_at} target={@target} />
+    </div>
+    """
+  end
+
   def render(assigns) do
     ~H"""
     <section id={@id} class="draft-recovery" aria-label={gettext("Recovery copies")} data-testid="draft-recovery">
-      <div class="draft-recovery-status">
-        <div class="draft-storage-status" role="status">
-          <Brando.HTML.Icon.icon name="rotate-ccw-clock" class="draft-icon" />
-          <span class="draft-online-status" data-testid="draft-status">{status(@state)}</span>
-          <span class="draft-offline-status">{gettext("Offline — recent edits have not reached recovery storage")}</span>
-        </div>
-        <%!-- Counts only copies still waiting for a decision: a dismissed copy
-              doesn't call for attention, but the button stays so it can still
-              be reopened (e.g. content left out of a partial restore). --%>
-        <button
-          :if={@state && (@state.candidates != [] or @state.open?)}
-          type="button"
-          class="draft-button draft-button-quiet"
-          phx-click="draft_open"
-          phx-target={@target}
-          aria-expanded={to_string(@state.open?)}
-        >
-          {history_label(@state.candidates)}
-          <Brando.HTML.Icon.icon name="chevron-right" class="draft-icon" />
-        </button>
+      <div :if={@part == :all} class="draft-save-state" data-state={save_state(@state, @saved_at)} title={status(@state)}>
+        <.save_status state={@state} saved_at={@saved_at} target={@target} />
       </div>
 
       <div
@@ -365,6 +362,63 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
       count -> gettext("Recovery copies (%{count})", count: count)
     end
   end
+
+  attr :state, :any, required: true
+  attr :saved_at, :any, required: true
+  attr :target, :any, required: true
+
+  # The visible label is short ("Saved 23:20", "Unsaved changes"); the
+  # recovery storage's own status is read out to screen readers and shown on
+  # hover, and an error is shown in full.
+  defp save_status(assigns) do
+    ~H"""
+    <span class="draft-save-dot" aria-hidden="true"></span>
+    <span class="draft-save-label draft-online-status" aria-hidden="true">{save_label(@state, @saved_at)}</span>
+    <span class="draft-save-detail" role="status" data-testid="draft-status">{status(@state)}</span>
+    <span class="draft-offline-status">{gettext("Offline — recent edits have not reached recovery storage")}</span>
+    <%!-- Counts only copies still waiting for a decision: a dismissed copy
+          doesn't call for attention, but the button stays so it can still
+          be reopened (e.g. content left out of a partial restore). --%>
+    <button
+      :if={@state && (@state.candidates != [] or @state.open?)}
+      type="button"
+      class="draft-save-history"
+      phx-click="draft_open"
+      phx-target={@target}
+      aria-expanded={to_string(@state.open?)}
+    >
+      <Brando.HTML.Icon.icon name="rotate-ccw-clock" class="draft-icon" />
+      {history_label(@state.candidates)}
+    </button>
+    """
+  end
+
+  # "new" is clean, but not saved yet.
+  defp save_state(state, saved_at) do
+    case save_state(state) do
+      "clean" when is_nil(saved_at) -> "new"
+      key -> key
+    end
+  end
+
+  @doc false
+  def save_state(%{status: :error}), do: "error"
+  def save_state(%{status: :saving}), do: "dirty"
+  def save_state(%{checksum: checksum, baseline: checksum}), do: "clean"
+  def save_state(%{}), do: "dirty"
+  def save_state(nil), do: "clean"
+
+  @doc false
+  def save_label(%{status: :error} = state, _saved_at), do: status(state)
+
+  def save_label(state, saved_at) do
+    if save_state(state) == "clean",
+      do: saved_label(saved_at),
+      else: gettext("Unsaved changes")
+  end
+
+  defp saved_label(nil), do: gettext("Not saved yet")
+  defp saved_label(at), do: gettext("Saved %{time}", time: BrandoAdmin.Dates.clock(at))
 
   defp status(nil), do: gettext("Recovery storage is unavailable")
   defp status(%{status: :error}), do: gettext("Recovery copy could not be saved — keep this editor open")

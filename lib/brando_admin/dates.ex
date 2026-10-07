@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Dates do
   hover.
 
     * `short/1` — `28.09.26 18:40`, for lists and tight rows
+    * `clock/1` — `18:40` today, or the short form, for a recent moment
     * `long/1` — `28. sep. 2026 kl. 18:40` (`28 Sep 2026, 18:40`), where
       there is room
     * `full/1` — the whole timestamp, with seconds, for a title attribute
@@ -19,6 +20,18 @@ defmodule BrandoAdmin.Dates do
   @doc "`28.09.26 18:40`"
   def short(nil), do: ""
   def short(datetime), do: Datetime.format_datetime(datetime, "%d.%m.%y %H:%M", locale())
+
+  @doc "`18:40` today, the `short/1` form on another day"
+  def clock(nil), do: ""
+
+  def clock(datetime) do
+    local = local(datetime)
+    today = Brando.timezone() |> DateTime.now!() |> DateTime.to_date()
+
+    if DateTime.to_date(local) == today,
+      do: Calendar.strftime(local, "%H:%M"),
+      else: short(datetime)
+  end
 
   @doc "`28. sep. 2026 kl. 18:40`, or `28 Sep 2026, 18:40` in English"
   def long(nil), do: ""

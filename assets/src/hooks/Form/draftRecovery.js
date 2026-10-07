@@ -67,7 +67,10 @@ export default function draftRecovery(hook) {
     schedule()
   }
   const onInput = event => {
-    const form = event.target.closest('form.main-form, form[phx-change="validate_block"]')
+    // The heading's status radios sit outside the form and name it with `form=`.
+    const owner = event.target.form
+    const form = event.target.closest('form.main-form, form[phx-change="validate_block"]') ||
+      (owner?.matches('form.main-form') ? owner : null)
     if (!form) return
     if (!form.matches('form.main-form')) editedForms.add(formUid(form))
     dirty()

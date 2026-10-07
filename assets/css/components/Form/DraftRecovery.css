@@ -4,7 +4,9 @@
   --draft-line: #dde3ed;
   --draft-accent: #1746cb;
   --draft-tint: #f3f6ff;
-  margin-bottom: 24px;
+  /* The notice and the panel carry the spacing, so an editor without
+     either leaves no gap under its heading. */
+  margin-bottom: 0;
   color: var(--draft-ink);
   font-size: 14px;
   line-height: 1.5;
@@ -130,7 +132,7 @@
 
   .draft-recovery-notice,
   .draft-recovery-panel {
-    margin-top: 12px;
+    margin: 0 0 20px;
     border: 1px solid var(--draft-line);
     border-radius: 10px;
     background: white;

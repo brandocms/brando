@@ -16,7 +16,10 @@ defmodule BrandoAdmin.Components.Form.DraftRecoveryComponent do
   @doc "The component id for the form with `form_id`."
   def id(form_id), do: "#{form_id}-draft-recovery-component"
 
-  def mount(socket), do: {:ok, assign(socket, :state, nil)}
+  @doc "The id of the form's save state (`part={:status}`) beside its Save."
+  def status_id(form_id), do: "#{form_id}-save-state-component"
+
+  def mount(socket), do: {:ok, socket |> assign(:state, nil) |> assign(:part, :all) |> assign(:saved_at, nil)}
 
   def update(%{state: state}, socket), do: {:ok, assign(socket, :state, state)}
 
@@ -36,7 +39,14 @@ defmodule BrandoAdmin.Components.Form.DraftRecoveryComponent do
     <%!-- A stateful component needs a static root tag; `display: contents`
           keeps the form's layout as it was without it. --%>
     <div class="draft-recovery-host" style="display: contents">
-      <DraftRecovery.render id={@dom_id} state={@state} target={@target} entry_id={@entry_id} />
+      <DraftRecovery.render
+        id={@dom_id}
+        part={@part}
+        state={@state}
+        saved_at={@saved_at}
+        target={@target}
+        entry_id={@entry_id}
+      />
     </div>
     """
   end
