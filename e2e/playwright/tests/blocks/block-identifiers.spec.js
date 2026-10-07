@@ -19,7 +19,7 @@ test.describe('Block Identifier Selection', () => {
     // Add datasource block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: 'DATASOURCE' }).click()
-    await page.getByRole('button', { name: 'Featured Projects' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Featured Projects' }).click()
     await syncLV(page)
 
     // Click "Select entries" button to open modal
@@ -223,7 +223,7 @@ test.describe('Block Identifier Selection', () => {
     // Add datasource block
     await page.getByRole('button', { name: 'Add block' }).click()
     await page.getByRole('button', { name: 'DATASOURCE' }).click()
-    await page.getByRole('button', { name: 'Featured Projects' }).click()
+    await page.locator('.module-picker').getByRole('button', { name: 'Featured Projects' }).click()
     await syncLV(page)
 
     await page.getByRole('button', { name: 'Select entries' }).click()

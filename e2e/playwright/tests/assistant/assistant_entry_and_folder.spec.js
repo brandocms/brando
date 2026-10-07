@@ -29,8 +29,18 @@ test('Build with AI opens the assistant on the entry, and a folder fills the pro
   await page.getByLabel('Upload images', { exact: true }).setInputFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
   await expect(page.locator('.content-list .list-row')).toHaveCount(2, { timeout: 30000 })
 
-  // The block editor offers the assistant beside the field.
-  await page.goto('/admin/pages/update/1')
+  // An empty block field offers the assistant in its card.
+  const response = await page.request.post('/__e2e/db/factory', {
+    data: {
+      schema: 'Brando.Pages.Page',
+      attributes: { title: 'Assistant lobby', uri: 'assistant-lobby', language: 'en', status: 'published', template: 'default.html' },
+      creator_id: 1,
+      fields: ['id'],
+    },
+  })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  const lobby = await response.json()
+  await page.goto(`/admin/pages/update/${lobby.id}`)
   await syncLV(page)
   const action = page.getByTestId('build-with-ai').first()
   await expect(action).toBeVisible({ timeout: 15000 })
@@ -44,7 +54,7 @@ test('Build with AI opens the assistant on the entry, and a folder fills the pro
   await assistant.setViewportSize({ width: 1440, height: 1000 })
   await assistant.waitForLoadState()
   await syncLV(assistant)
-  await expect(page).toHaveURL(/\/admin\/pages\/update\/1$/)
+  await expect(page).toHaveURL(new RegExp(`/admin/pages/update/${lobby.id}$`))
 
   const destination = assistant.locator('#assistant-destination')
   await expect(destination).toContainText('Working on')

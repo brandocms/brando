@@ -57,7 +57,8 @@ defmodule E2eProject.SyncTest.Article do
 
   forms do
     form do
-      blocks :blocks
+      # An empty article offers Rich Text Article first (empty-block-field.spec.js).
+      blocks :blocks, starts_with: ["rich-text-article"]
 
       tab "Content" do
         fieldset do
