@@ -16718,3 +16718,13 @@ msgstr "Kontoen din ble låst en stund"
 #, elixir-autogen, elixir-format
 msgid "After too many failed attempts to log in to %{email}, the account is locked until %{time}. If it was not you trying, somebody may know or be guessing your password: change it once you can log in."
 msgstr "Etter for mange mislykkede forsøk på å logge inn på %{email} er kontoen låst til %{time}. Var det ikke deg som prøvde, kan noen kjenne til eller gjette passordet ditt: bytt det så snart du kan logge inn."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the live content, if the target is the live environment"
+msgstr "Erstatt live-innholdet, hvis målet er live-miljøet"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
+msgstr "Målet er live-miljøet: kopieringen erstatter det besøkende ser. Kryss av for «Erstatt live-innholdet» for å fortsette."

@@ -768,8 +768,9 @@ production dump.
   authentication, and logs in on its own from the login page; the app and
   recovery codes stay as the fallback. Sensitive actions — the user form, the
   sign-in policy, groups, disabling or deleting users, a site's lifecycle and
-  access, static deploys, deleting a site, an environment or its archives,
-  setting an environment live, adding a passkey or setting up the app — ask
+  access, static builds and deploys, copying into an environment (a copy into
+  the live one must also be ticked), deleting a site, an environment or its
+  archives, setting an environment live, adding a passkey or setting up the app — ask
   for the password, a code or a passkey again when the session last gave one
   more than ten minutes ago: `on_mount {BrandoAdmin.Reauth, :screen}` or
   `on_mount {BrandoAdmin.Reauth, events: [...]}` opts a screen in. **Security**

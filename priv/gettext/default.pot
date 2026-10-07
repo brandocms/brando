@@ -16723,3 +16723,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "After too many failed attempts to log in to %{email}, the account is locked until %{time}. If it was not you trying, somebody may know or be guessing your password: change it once you can log in."
 msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the live content, if the target is the live environment"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
+msgstr ""

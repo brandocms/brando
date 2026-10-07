@@ -244,8 +244,10 @@ or role, resetting another user's password or two-factor authentication,
 logging them out), disabling, enabling and deleting users, the sign-in policy,
 changing groups and their members, deleting, suspending or archiving a site
 and changing who has access to it, a static site's deploy target and webhook,
-deploying and rolling back, deleting an environment or its archives, and
-setting an environment live. Changing your own password, turning the app off
+building (which may deploy at once), deploying and rolling back, copying into
+an environment, deleting an environment or its archives, and setting an
+environment live. A copy into the live environment must also be ticked
+explicitly, since it replaces what visitors see. Changing your own password, turning the app off
 and adding a passkey ask for the current password or a code every time.
 
 A screen opts in with one line, and so do some events of a LiveView:
@@ -279,7 +281,8 @@ password reset requests per IP address and per account, in 15-minute windows.
 Five failures within 15 minutes of the first — a wrong password, a wrong
 code, or a wrong password or code when confirming a change — lock the account
 for 15 minutes, on every node; the second lockout in a day lasts an hour, and
-any after that four hours. The user is emailed when their account is locked. While it is locked even the right password does not sign in, and an
+any after that four hours, counted over a rolling day for an account and for
+an address without one alike. The user is emailed when their account is locked. While it is locked even the right password does not sign in, and an
 address without an account gets the same answer after as many tries, so the
 lockout tells nothing about which accounts exist. A successful sign-in starts
 the count again. The limits are configurable:
