@@ -31,6 +31,14 @@ const virtualAuthenticator = async (page) => {
   return { client, authenticatorId }
 }
 
+// GET /admin/logout only asks; its button signs out (a DELETE)
+const logOut = async (page) => {
+  await page.goto('/admin/logout')
+  await syncLV(page)
+  await page.getByTestId('logout-confirm').click()
+  await expect(page).toHaveURL('/admin/login')
+}
+
 const logIn = async (page, email, password) => {
   await page.goto('/admin/login')
   await syncLV(page)
@@ -76,14 +84,14 @@ test('a user adds a passkey, logs in with it alone, and as the second step', asy
     expect(credentials).toHaveLength(1)
 
     // A passkey alone logs in
-    await page.goto('/admin/logout')
+    await logOut(page)
     await page.goto('/admin/login')
     await syncLV(page)
     await page.getByTestId('login-passkey').click()
     await expect(page).toHaveURL('/admin')
 
     // After the password, the passkey is the second step
-    await page.goto('/admin/logout')
+    await logOut(page)
     await logIn(page, email, password)
     await expect(page).toHaveURL('/admin/login/two-factor')
     await syncLV(page)

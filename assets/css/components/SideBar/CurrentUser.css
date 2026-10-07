@@ -101,7 +101,8 @@
   .dropdown-content {
     padding-top: 8px;
 
-    ul li a {
+    /* "Log out" is a button in a form (a DELETE), made to match the links. */
+    ul li :is(a, button) {
       display: block;
       /* In line with the name above: avatar + gap. */
       padding: 6px 10px 6px 58px;
@@ -114,6 +115,19 @@
       &:hover {
         background-color: var(--brando-nav-hover);
       }
+    }
+
+    ul li button {
+      /* A button does not stretch like the block link: as wide, margins and all */
+      box-sizing: border-box;
+      width: calc(100% + 20px);
+      border: 0;
+      border-radius: 0;
+      background: none;
+      font: inherit;
+      font-size: 14px;
+      text-align: left;
+      cursor: pointer;
     }
   }
 }

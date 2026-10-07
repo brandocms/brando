@@ -20,6 +20,14 @@ const loggedOut = async (browser, userAgent) => {
   return { context, page: await context.newPage() }
 }
 
+// GET /admin/logout only asks; its button signs out (a DELETE)
+const logOut = async (page) => {
+  await page.goto('/admin/logout')
+  await syncLV(page)
+  await page.getByTestId('logout-confirm').click()
+  await expect(page).toHaveURL('/admin/login')
+}
+
 const logIn = async (page, email, password) => {
   await page.goto('/admin/login')
   await syncLV(page)
@@ -76,7 +84,7 @@ test('a user sets up two-factor authentication, then logs in with a code', async
     await expect(page.getByTestId('security-events').locator('[data-action="two_factor_enabled"]')).toBeVisible()
 
     // The password alone is not enough any more
-    await page.goto('/admin/logout')
+    await logOut(page)
     await logIn(page, email, password)
     await expect(page).toHaveURL('/admin/login/two-factor')
     await page.goto('/admin/users')
@@ -109,7 +117,7 @@ test('a user who lost their phone logs in with a recovery code, once', async ({ 
     await syncLV(page)
     await expect(page.getByTestId('recovery-codes-left')).toContainText('9')
 
-    await page.goto('/admin/logout')
+    await logOut(page)
     await logIn(page, email, password)
     await enterCode(page, codes[0])
     await expect(page).toHaveURL('/admin/login/two-factor')

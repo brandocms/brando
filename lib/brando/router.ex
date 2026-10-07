@@ -127,7 +127,15 @@ defmodule Brando.Router do
         scope "/", BrandoAdmin do
           pipe_through [:admin]
 
-          get "/logout", UserSessionController, :delete
+          # A GET only asks (`BrandoAdmin.UserLogoutLive`): signing out takes a
+          # DELETE with the CSRF token. POST is for an endpoint without
+          # `Plug.MethodOverride`.
+          live_session :logout, on_mount: sandbox_hooks ++ [{BrandoAdmin.UserAuth, :mount_current_user}] do
+            live "/logout", UserLogoutLive, :confirm
+          end
+
+          delete "/logout", UserSessionController, :delete
+          post "/logout", UserSessionController, :delete
         end
       end
 

@@ -75,10 +75,11 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
             meta={@meta}
           />
           <div class="login-actions">
-            <.link href="/admin/logout" class="login-link">{gettext("Back to login")}</.link>
+            <Auth.back_to_login />
           </div>
         <% end %>
       </div>
+      <Auth.logout_form />
     </Auth.shell>
     """
   end

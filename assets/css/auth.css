@@ -114,6 +114,17 @@
     }
   }
 
+  /* "Back to login" signs out, so it is a button (a DELETE) that looks like
+     the links */
+  button.login-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    line-height: inherit;
+    cursor: pointer;
+  }
+
   .login-form .alert {
     width: 100%;
   }
@@ -216,7 +227,7 @@
 
 /* The second step's other ways in, when a passkey leads: outlined, the
    primary button's size */
-.login .login-two-factor .login-two-factor-alternative button:not(.primary) {
+.login .login-two-factor .login-two-factor-alternative button:not(.primary, .login-link) {
   height: 50px;
   min-width: 180px;
   padding: 0 24px;
