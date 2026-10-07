@@ -40,6 +40,20 @@ defmodule Brando.Query do
   escape hatch. A custom query can also be supplied explicitly inside an include:
 
       include: [children: [query: comments_query, include: [:user]]]
+
+  ## Status counts
+
+  A paginated list of a schema with a status can also count its entries by
+  status, in one grouped query that ignores the list's own `:status`:
+
+      {:ok, %{entries: entries, status_counts: counts}} =
+        Pages.list_pages(%{paginate: true, limit: 25, status: :draft, status_counts: true})
+
+      counts
+      #=> %{published: 12, draft: 3, pending: 0, disabled: 1, deleted: 2}
+
+  `:deleted` is present for soft-deleted schemas only. The admin listings use
+  this for the counts on their status filters.
   """
 
   alias Brando.Query.Compiler

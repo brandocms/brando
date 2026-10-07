@@ -204,6 +204,102 @@ defmodule Brando.QueryTest do
     end
   end
 
+  describe "status counts" do
+    test "count every status in one grouped query, apart from the list's own status" do
+      for status <- [:published, :published, :draft, :disabled],
+          do: Factory.insert(:page, title: "Counted #{status}", status: status)
+
+      Factory.insert(:page, title: "Counted trashed", status: :published, deleted_at: DateTime.utc_now(:second))
+      Factory.insert(:page, title: "Other draft", status: :draft)
+
+      ref = make_ref()
+      parent = self()
+      handler = "status-counts-#{inspect(ref)}"
+
+      :telemetry.attach(
+        handler,
+        Brando.repo().config()[:telemetry_prefix] ++ [:query],
+        fn _, _, meta, _ -> send(parent, {ref, meta.query}) end,
+        nil
+      )
+
+      {:ok, %{entries: entries, status_counts: counts}} =
+        __MODULE__.Context.list_pages(%{
+          paginate: true,
+          limit: 25,
+          status: :draft,
+          filter: %{title: "Counted"},
+          status_counts: true
+        })
+
+      :telemetry.detach(handler)
+
+      assert Enum.map(entries, & &1.title) == ["Counted draft"]
+      # Pending has none and is still there; the trashed page counts as deleted only
+      assert counts == %{published: 2, draft: 1, pending: 0, disabled: 1, deleted: 1}
+
+      queries = collect_queries(ref)
+      assert queries |> Enum.filter(&(&1 =~ "GROUP BY")) |> length() == 1
+      assert length(queries) == 3
+    end
+
+    test "counts follow the language and are absent unless asked for" do
+      Factory.insert(:page, title: "Lang en", language: :en, status: :pending)
+      Factory.insert(:page, title: "Lang no", language: :no, status: :pending)
+
+      {:ok, %{status_counts: counts}} =
+        __MODULE__.Context.list_pages(%{
+          paginate: true,
+          limit: 25,
+          language: "no",
+          filter: %{title: "Lang"},
+          status_counts: true
+        })
+
+      assert counts.pending == 1
+
+      {:ok, page} = __MODULE__.Context.list_pages(%{paginate: true, limit: 25, filter: %{title: "Lang"}})
+      refute Map.has_key?(page, :status_counts)
+    end
+
+    test "counts only what the admin may read" do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      owner = Factory.insert(:random_user, role: :superuser)
+      user = Factory.insert(:random_user, role: :user)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      Factory.insert(:page, title: "Scoped page", status: :draft)
+
+      counts = fn ->
+        Brando.Authorization.Boundary.with_scope(Brando.Authorization.Scope.standalone(user), fn ->
+          {:ok, %{status_counts: counts}} =
+            __MODULE__.Context.list_pages(%{paginate: true, limit: 25, filter: %{title: "Scoped"}, status_counts: true})
+
+          counts
+        end)
+      end
+
+      assert counts.() == %{published: 0, draft: 0, pending: 0, disabled: 0, deleted: 0}
+
+      scope = Brando.Authorization.Scope.standalone(owner)
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(scope, %{name: "Readers"}, ~w(brando.admin.access brando.pages.read))
+
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
+
+      assert counts.().draft == 1
+    end
+  end
+
+  defp collect_queries(ref) do
+    receive do
+      {^ref, query} -> [query | collect_queries(ref)]
+    after
+      0 -> []
+    end
+  end
+
   describe "mutations" do
     test "mutation :create" do
       usr = Factory.insert(:random_user)
