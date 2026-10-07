@@ -16733,3 +16733,343 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
 msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Save the entry to see the structured data its page gives search engines."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "The entry could not be read."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Reading structured data…"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "The site has no identity in this language, so its pages give no structured data."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Structured data graph"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Entities on the page"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} to fix"
+msgid_plural "%{count} to fix"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "The mapping comes from the blueprint's json_ld_schema and is read-only here. Errors are properties Google requires; warnings are properties it recommends, or values it can't read."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Copy JSON-LD"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Rich Results Test"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "not mapped"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "not set"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "1 item"
+msgid_plural "%{count} items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "1 service"
+msgid_plural "%{count} services"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "1 warning"
+msgid_plural "%{count} warnings"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "1 error"
+msgid_plural "%{count} errors"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} blueprint"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Breadcrumbs"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Missing"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Linked"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "The blueprint maps no author. A developer can add one with the :person field type."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "This entry has no author. Set the field the mapping reads."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "The blueprint maps no image. A developer can add one with the :image field type."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "This entry has no image in the field the mapping reads."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "This entry shows no video, or its videos lack a title, a thumbnail or an upload date, which Google needs."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "identity"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "page URL"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "language"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "SEO settings"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "breadcrumbs"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "video fields and blocks"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "video provider"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "thumbnail or provider poster"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "computed"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Required by Google"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Recommended by Google"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Required by Google: %{property}"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Recommended by Google: %{property}"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{property}: required by Google"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{property}: recommended by Google"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "not an ISO 8601 date"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "needs an absolute URL"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "empty"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "not an ISO 8601 duration"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "not a value Google reads"
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "This entry has no page of its own."
+msgstr ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Publish the entry to test its page."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Meta sections"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Meta tags"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Structured data"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The structured data (JSON-LD) this entry's page gives search engines, checked against what Google requires and recommends. Select a node to see where its properties come from."
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Published entries of every content type with a JSON-LD mapping, checked against what Google requires (errors) and recommends (warnings). Language: %{language}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checking structured data…"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "The structured data could not be checked."
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checked"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "With errors"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "With warnings only"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "No structured data issues"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every checked entry has what Google requires and recommends."
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Entries with structured data issues"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Errors"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Warnings"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "First issue"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open structured data"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Showing %{shown} of %{count} entries with issues, most errors first."
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checked in %{ms} ms. Kept for ten minutes; Run again checks again."
+msgstr ""

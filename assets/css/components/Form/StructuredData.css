@@ -1,0 +1,315 @@
+/* The structured data inspector in an entry's Meta drawer
+   (BrandoAdmin.Components.Form.StructuredData): the JSON-LD graph on a dotted
+   field at the left, the selected node's mapping at the right. */
+
+/* The drawer widens while its Structured data tab is open. */
+.drawer.media-workspace-drawer.editor-workspace-drawer.narrow.structured-data-open {
+  width: min(1180px, 100vw);
+}
+
+.drawer.editor-workspace-drawer {
+  .drawer-info .meta-drawer-tabs { margin-bottom: 12px; }
+  .drawer-info .meta-drawer-tabs:last-child { margin-bottom: 0; }
+  .drawer-info .meta-drawer-tabs ~ p { padding-top: 0; }
+
+  /* The inspector runs edge to edge under the info strip. */
+  .drawer-form > .meta-drawer-structured-data { margin: -24px; }
+}
+
+.structured-data {
+  --sd-line: var(--brando-line);
+  --sd-edge: color-mix(in srgb, var(--brando-accent) 28%, var(--brando-line));
+  --sd-warning: var(--brando-note-line);
+  --sd-error: var(--brando-status-disabled);
+  --sd-ok: var(--brando-status-published);
+  color: var(--brando-ink);
+  font: 14px/20px "Main", sans-serif;
+}
+
+.structured-data-empty {
+  margin: 0;
+  padding: 24px;
+  color: var(--brando-muted);
+  font-size: 13px;
+}
+
+.structured-data-inspector {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The graph */
+.structured-data-graph {
+  overflow: auto;
+  padding: 24px 16px;
+  border-bottom: 1px solid var(--sd-line);
+  background-color: var(--brando-surface-shaded);
+  background-image: radial-gradient(circle, var(--sd-line) 1px, transparent 1.4px);
+  background-size: 18px 18px;
+
+  &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: -2px; }
+}
+
+.structured-data-canvas {
+  display: block;
+  min-width: 560px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+
+  foreignObject { overflow: visible; }
+}
+
+.structured-data-edges {
+  path {
+    fill: none;
+    stroke: var(--sd-edge);
+    stroke-width: 1.5;
+  }
+
+  path[data-potential="true"] { stroke-dasharray: 4 4; }
+
+  text {
+    fill: var(--brando-muted);
+    font: 11px/1 theme(typography.families.mono);
+    paint-order: stroke;
+    stroke: var(--brando-surface-shaded);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+  }
+}
+
+.structured-data-node {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--sd-line);
+  border-radius: 6px;
+  background: var(--brando-surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 7%, transparent);
+  color: var(--brando-ink);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: var(--brando-surface-hover); }
+  &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
+
+  &[data-level="warning"] { border-color: var(--sd-warning); box-shadow: 0 0 0 1px var(--sd-warning); }
+  &[data-level="error"] { border-color: var(--sd-error); box-shadow: 0 0 0 1px var(--sd-error); }
+
+  /* What the page would gain from a field it lacks. */
+  &[data-potential="true"] {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--brando-muted) 45%, var(--sd-line));
+    background: color-mix(in srgb, var(--brando-surface) 75%, transparent);
+    box-shadow: none;
+  }
+
+  &[aria-pressed="true"] {
+    border: 1.5px solid var(--brando-ink);
+    box-shadow: 0 0 0 3px var(--brando-surface-selected);
+  }
+}
+
+.structured-data-node-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font: 500 14px/18px "Main", sans-serif;
+
+  > [data-icon] { flex: none; width: 16px; height: 16px; color: var(--brando-muted); }
+  > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+.structured-data-node-id {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  color: var(--brando-muted);
+  font: 11px/16px theme(typography.families.mono);
+  white-space: nowrap;
+
+  > span:first-child { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
+}
+
+/* The issue count stays whole; a long @id gives way. */
+.structured-data-node-count { flex: none; }
+[data-level="warning"] .structured-data-node-count { color: var(--brando-note-ink); }
+[data-level="error"] .structured-data-node-count { color: color-mix(in srgb, var(--sd-error) 70%, var(--brando-ink)); }
+
+/* The mapping */
+.structured-data-mapping {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px;
+}
+
+.structured-data-mapping-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+
+  h3 { margin: 0; font: 500 20px/26px "Main", sans-serif; letter-spacing: -0.01em; }
+
+  .badge {
+    padding: 3px 8px;
+    text-transform: none;
+    letter-spacing: 0;
+    border: 0;
+    border-radius: 5px;
+    background: var(--brando-badge-bg);
+    color: var(--brando-badge-ink);
+    font: 12px/18px "Main", sans-serif;
+  }
+}
+
+.structured-data-fix {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--brando-note);
+  color: var(--brando-note-ink);
+  font-size: 12px;
+  line-height: 18px;
+
+  &[data-level="error"] {
+    background: color-mix(in srgb, var(--sd-error) 14%, var(--brando-surface));
+    color: color-mix(in srgb, var(--sd-error) 70%, var(--brando-ink));
+  }
+}
+
+.structured-data-reason {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, var(--brando-muted) 45%, var(--sd-line));
+  border-radius: 6px;
+  color: var(--brando-muted);
+  font-size: 13px;
+}
+
+.structured-data-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > li {
+    display: grid;
+    grid-template-columns: minmax(96px, 9.5em) 16px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sd-line);
+
+    > [data-icon] { width: 16px; height: 16px; color: var(--brando-muted); }
+  }
+}
+
+.structured-data-property {
+  overflow: hidden;
+  color: var(--brando-ink);
+  font: 13px/20px theme(typography.families.mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.structured-data-source {
+  overflow: hidden;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--sd-line);
+  border-radius: 5px;
+  background: var(--brando-surface);
+  font-size: 13px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &[data-mapped="false"] { color: var(--brando-muted); }
+}
+
+.structured-data-status {
+  display: grid;
+  place-items: center;
+
+  > [data-icon] { width: 18px; height: 18px; color: var(--brando-muted); }
+}
+
+[data-status="ok"] .structured-data-status > [data-icon] { color: var(--sd-ok); }
+[data-status="warning"] .structured-data-status > [data-icon] { color: var(--brando-note-ink); }
+[data-status="error"] .structured-data-status > [data-icon] { color: var(--sd-error); }
+
+.structured-data-issue {
+  grid-column: 3 / 5;
+  color: var(--brando-note-ink);
+  font-size: 12px;
+  line-height: 16px;
+
+  &[data-level="error"] { color: color-mix(in srgb, var(--sd-error) 70%, var(--brando-ink)); }
+}
+
+.structured-data-note {
+  margin: 0;
+  color: var(--brando-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.structured-data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.structured-data-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--sd-line);
+  border-radius: 5px;
+  background: var(--brando-surface);
+  color: var(--brando-ink);
+  font: 12px/18px "Main", sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+
+  > [data-icon] { width: 14px; height: 14px; }
+  &:hover:not(:disabled) { background: var(--brando-surface-hover); color: var(--brando-accent); }
+  &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+.structured-data-disabled-reason {
+  color: var(--brando-muted);
+  font-size: 12px;
+}
+
+@media (min-width: 1100px) {
+  .structured-data-inspector {
+    grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr);
+    min-height: calc(100dvh - 220px);
+  }
+
+  .structured-data-graph {
+    border-right: 1px solid var(--sd-line);
+    border-bottom: 0;
+  }
+}
+
+@media (pointer: coarse) {
+  .structured-data-action { min-height: 40px; }
+}

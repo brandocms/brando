@@ -294,6 +294,17 @@
   .seo-duplicate > ul > li small code { font-size: 11px; }
   .seo-duplicate-actions { display: flex; flex-shrink: 0; gap: 8px; }
 
+  /* Structured data: the site-wide JSON-LD check under the audit. */
+  .seo-structured-data { margin-top: 24px; }
+  .seo-structured-data .workspace-table-scroll { contain: inline-size; }
+  .seo-structured-data-table > tbody > tr > td > small { display: block; margin-top: 2px; color: var(--workspace-muted); font-size: 11px; }
+  .seo-structured-data-table > tbody > tr > td.seo-number { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .seo-structured-data-table > tbody > tr > td.seo-number[data-warn="true"] { color: var(--brando-status-disabled); }
+  .seo-structured-data-issue { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .seo-structured-data-table > thead > tr > th:last-child,
+  .seo-structured-data-table > tbody > tr > td:last-child { width: 1%; text-align: right; }
+  .seo-structured-data-meta { margin: 0; padding: 12px 18px 16px; color: var(--workspace-muted); font-size: 12px; }
+
   /* The table scrolls inside its region. Without containment its width —
      long URLs, the traffic columns — propagates up and widens the page. */
   .seo-audit .workspace-table-scroll { contain: inline-size; }

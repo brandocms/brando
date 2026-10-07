@@ -37,6 +37,7 @@ defmodule E2eProjectWeb.ProjectController do
     with {:ok, project} <- Projects.get_project(opts) do
       conn
       |> assign(:entry, project)
+      |> put_title(project.title)
       |> put_json_ld(Projects.Project, project)
       |> put_hreflang(project)
       |> put_section("project")

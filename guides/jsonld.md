@@ -94,6 +94,7 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 | `:person` | A Brando user, a People entry, a name, or a list of them, as linked `Person` nodes (see [Authors](#authors)) |
 | `:datetime` | Converts to ISO 8601 string |
 | `:date` | Converts to `YYYY-MM-DD` string |
+| `:duration` | Converts whole minutes, a `Duration` or `"HH:MM:SS"` to ISO 8601 (`90` is `"PT1H30M"`); an ISO 8601 duration is kept |
 | `:image` | Builds an `ImageObject` with url, width, height |
 | `:current_url` | Uses the page's current absolute URL |
 | `:language` | Extracts the language from the entry or meta |
@@ -194,8 +195,9 @@ describes the videos it shows as `VideoObject` nodes, linked from `video`, with
 no blueprint changes. The videos are:
 
 - the blueprint's video fields (`asset :cover_video, :video`), and
-- the videos in its block fields: each active ref with a video, in active
-  blocks and their children. A video block's title override names the video.
+- the videos in its block fields: each active ref with a video and each
+  video variable, in active blocks and their children. A video block's title
+  override names the video.
 
 Only what is preloaded is read, so preload the video (and its `thumbnail`)
 or the blocks where you want them described:
@@ -248,6 +250,17 @@ module gets automatic videos by having a `video` field.
 | `JSONLD.Schema.Person` | Person | Author/creator (use the `:person` field type) |
 | `JSONLD.Schema.VideoObject` | VideoObject | Built automatically from video fields and blocks |
 | `JSONLD.Schema.Place` | Place | Physical location |
+| `JSONLD.Schema.Product` | Product | A product for sale (see [Rich result types](#rich-result-types)) |
+| `JSONLD.Schema.Offer` | Offer | A product's price, currency and availability |
+| `JSONLD.Schema.AggregateRating` | AggregateRating | The average of many ratings |
+| `JSONLD.Schema.Review` | Review | A review of a thing, or one of a product's reviews |
+| `JSONLD.Schema.Rating` | Rating | A review's rating |
+| `JSONLD.Schema.JobPosting` | JobPosting | A job opening |
+| `JSONLD.Schema.MonetaryAmount` | MonetaryAmount | A job's salary |
+| `JSONLD.Schema.Recipe` | Recipe | A recipe |
+| `JSONLD.Schema.HowToStep` | HowToStep | One of a recipe's steps |
+| `JSONLD.Schema.NutritionInformation` | NutritionInformation | A recipe's nutrition per serving |
+| `JSONLD.Schema.Thing` | any type | Something Brando has no schema for: the book a review is about, the country a remote job is open to |
 | `JSONLD.Schema.ImageObject` | ImageObject | Image metadata |
 | `JSONLD.Schema.VisualArtwork` | VisualArtwork | An artwork, in a project's `hasPart` |
 
@@ -422,15 +435,14 @@ identity's links become `sameAs`.
 Create your own schema module for types not covered by the built-in ones:
 
 ```elixir
-defmodule MyApp.JSONLD.Schema.Product do
+defmodule MyApp.JSONLD.Schema.Course do
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
-            "@type": "Product",
+            "@type": "Course",
             "@id": nil,
             name: nil,
             description: nil,
-            image: nil,
-            offers: nil
+            provider: nil
 
   def build(data) when is_map(data) do
     %__MODULE__{
@@ -444,9 +456,198 @@ end
 Then use it in your blueprint:
 
 ```elixir
-json_ld_schema MyApp.JSONLD.Schema.Product do
+json_ld_schema MyApp.JSONLD.Schema.Course do
   field :name, :string, & &1.title
   field :description, :string, & &1.description
-  field :image, :image, & &1.cover
+  field :provider, :identity
 end
 ```
+
+A type that earns a rich result should get its rules in
+`Brando.JSONLD.Rules`, so the inspector and Content SEO check it.
+
+### Rich result types
+
+These types earn their own results in Google Search. Each is a schema module
+for `json_ld_schema`, with nested modules for its parts, and each is checked
+against the properties listed here (see [Checking](#checking-structured-data)).
+*Required* properties are errors when missing: Google shows no rich result
+without them. *Recommended* ones are warnings.
+
+#### Product and Offer
+
+```elixir
+json_ld_schema JSONLD.Schema.Product do
+  field :name, :string, & &1.title
+  field :description, :string, & &1.meta_description
+  field :image, :image, & &1.cover
+  field :sku, :string, & &1.sku
+
+  field :offers, JSONLD.Schema.Offer, fn product ->
+    %{price: product.price, price_currency: "NOK", availability: if(product.in_stock, do: :in_stock, else: :out_of_stock)}
+  end
+
+  field :aggregateRating, JSONLD.Schema.AggregateRating, &%{rating_value: &1.rating, review_count: &1.review_count}
+  field :review, {:list, JSONLD.Schema.Review}, & &1.reviews
+  field :url, :current_url
+end
+```
+
+| Type | Required | Recommended |
+|------|----------|-------------|
+| [`Product`](https://developers.google.com/search/docs/appearance/structured-data/product-snippet) | `name`, and one of `offers`, `review` or `aggregateRating` | `image`, `description`, `sku` |
+| [`Offer`](https://developers.google.com/search/docs/appearance/structured-data/merchant-listing) | `price`, `priceCurrency` (ISO 4217, such as `NOK`) | `availability` |
+| [`AggregateRating`](https://developers.google.com/search/docs/appearance/structured-data/review-snippet) | `ratingValue`, and `ratingCount` or `reviewCount` | |
+
+`Offer.build/1` takes `price` (a number, a string or a `Decimal`),
+`price_currency`, `availability`, `price_valid_until` and `url`.
+`availability` is any schema.org item availability, as an atom or string in
+snake case (`:in_stock`, `"pre_order"`) or by name (`"InStock"`); it is
+emitted as the URL Google reads, `https://schema.org/InStock`. A nested
+`Review` takes a map with `:author` (a user, a People entry or a name),
+`:rating`, `:date_published`, `:body` and `:name`.
+
+#### JobPosting
+
+```elixir
+json_ld_schema JSONLD.Schema.JobPosting do
+  field :title, :string, & &1.title
+  field :description, :string, & &1.description
+  field :datePosted, :date, & &1.publish_at
+  field :validThrough, :datetime, & &1.deadline
+  field :employmentType, :string, fn _ -> "FULL_TIME" end
+  field :hiringOrganization, :identity
+  field :jobLocation, JSONLD.Schema.Place, & &1.office
+  field :baseSalary, JSONLD.Schema.MonetaryAmount, &%{currency: "NOK", min: &1.salary_from, max: &1.salary_to, unit: "YEAR"}
+  field :url, :current_url
+end
+```
+
+A remote job has no `jobLocation`; it says so, and where applicants may live:
+
+```elixir
+field :jobLocationType, :string, fn _ -> "TELECOMMUTE" end
+field :applicantLocationRequirements, JSONLD.Schema.Thing, fn _ -> %{type: "Country", name: "NO"} end
+```
+
+| Required | Recommended |
+|----------|-------------|
+| `title`, `description` (HTML is allowed), `datePosted`, `hiringOrganization` (the site's identity with `:identity`), and `jobLocation` or `jobLocationType: "TELECOMMUTE"`; a remote job also needs `applicantLocationRequirements` | `validThrough`, `employmentType`, `baseSalary` |
+
+`employmentType` is one or a list of `FULL_TIME`, `PART_TIME`, `CONTRACTOR`,
+`TEMPORARY`, `INTERN`, `VOLUNTEER`, `PER_DIEM` and `OTHER`.
+`MonetaryAmount.build/1` takes `currency`, a `value` or a `min` and `max`,
+and the `unit` it is paid per (`HOUR`, `DAY`, `WEEK`, `MONTH`, `YEAR`).
+Google's [job posting guide](https://developers.google.com/search/docs/appearance/structured-data/job-posting)
+has the details.
+
+#### Recipe
+
+```elixir
+json_ld_schema JSONLD.Schema.Recipe do
+  field :name, :string, & &1.title
+  field :description, :string, & &1.meta_description
+  field :image, :image, & &1.cover
+  field :author, :person, & &1.creator
+  field :datePublished, :datetime, & &1.publish_at
+  field :prepTime, :duration, & &1.prep_minutes
+  field :cookTime, :duration, & &1.cook_minutes
+  field :totalTime, :duration, &(&1.prep_minutes + &1.cook_minutes)
+  field :recipeYield, :string, &"#{&1.servings} servings"
+  field :recipeIngredient, :string, & &1.ingredients
+  field :recipeInstructions, {:list, JSONLD.Schema.HowToStep}, & &1.steps
+  field :nutrition, JSONLD.Schema.NutritionInformation, &%{calories: "#{&1.calories} calories"}
+end
+```
+
+| Required | Recommended |
+|----------|-------------|
+| `name`, `image` | `author`, `datePublished`, `description`, `recipeIngredient`, `recipeInstructions`, `recipeYield`, `prepTime`, `cookTime`, `totalTime` (ISO 8601 durations), `recipeCategory`, `recipeCuisine`, `keywords`, `nutrition.calories`, `aggregateRating`, `video` |
+
+Each step is its text, or a map with `:text`, `:name`, `:url` and `:image`.
+The recipe's videos are described automatically, as for articles (see
+[Videos](#videos)). See Google's [recipe guide](https://developers.google.com/search/docs/appearance/structured-data/recipe).
+
+#### Review
+
+```elixir
+json_ld_schema JSONLD.Schema.Review do
+  field :name, :string, & &1.title
+  field :author, :person, & &1.creator
+  field :datePublished, :datetime, & &1.publish_at
+  field :reviewBody, :string, & &1.summary
+  field :reviewRating, JSONLD.Schema.Rating, &%{rating_value: &1.rating, best_rating: 6, worst_rating: 1}
+  field :itemReviewed, JSONLD.Schema.Thing, &%{type: "Book", name: &1.book_title}
+  field :publisher, :identity
+end
+```
+
+| Required | Recommended |
+|----------|-------------|
+| `author` with its `name`, `itemReviewed`, `reviewRating` with its `ratingValue` | `datePublished` |
+
+Inside a `Product` or a `Recipe` the item reviewed is the product or recipe,
+so a nested review may leave `itemReviewed` out. Give `bestRating` and
+`worstRating` when the scale isn't 1 to 5. Google reads `itemReviewed` of
+the types its [review snippet guide](https://developers.google.com/search/docs/appearance/structured-data/review-snippet)
+lists: `Book`, `Course`, `Event`, `LocalBusiness`, `Movie`, `Product`,
+`Recipe`, `SoftwareApplication` and a few more.
+
+### Checking structured data
+
+`Brando.JSONLD.Rules` holds Google's required and recommended properties for
+every type with a rich result, as data, with the page each rule comes from:
+`Article` (and `NewsArticle`, `BlogPosting`), `Product`, `Offer`,
+`AggregateRating`, `Review`, `JobPosting`, `Recipe`, `VideoObject`,
+`BreadcrumbList`, `Organization` (and its subtypes), `LocalBusiness` (and its
+subtypes), `Person`, `ProfilePage` and `Event`.
+
+A missing required property is an **error**. A missing recommended property
+is a **warning**, as is a value Google can't read: a date that isn't ISO
+8601, a relative URL where an absolute one is needed, an empty name or
+headline, a duration that isn't ISO 8601, or a value outside the type's
+vocabulary (an availability, an employment type). Paths such as
+`author.name` are followed through `@id` references to the linked node.
+
+```elixir
+Brando.JSONLD.Rules.validate(%{"@type" => "Recipe", "name" => "Waffles"})
+#=> [%{level: :error, property: "image", kind: :missing}, ...]
+```
+
+#### The inspector
+
+An entry's Meta drawer has a **Structured data** tab for blueprints with a
+`json_ld_schema`. It shows the graph the entry's page emits, built by
+`Brando.JSONLD.Graph.for_entry/3` the way the [controller
+example](#adding-a-content-entity) builds it: `put_title/2` with the
+entry's title, `put_breadcrumbs/2` for stored breadcrumbs, and
+`put_json_ld/3`. It reads the entry with what its mapping reads (the
+associations its callbacks use, a user's avatar, its video fields and the
+videos in its blocks). A controller that adds more, or preloads less, emits
+a different graph.
+
+- Each entity is a node with its type and `@id`. Edges are labelled with the
+  property that links them (`publisher`, `isPartOf`, `author`, `video`,
+  `mainEntityOfPage`…).
+- A node Google would flag has an amber border (a red one for errors) and a
+  count.
+- A dashed node is what the page would gain: an author the blueprint doesn't
+  map or the entry doesn't have, an image, a video.
+- Selecting a node lists its properties and where each comes from: an
+  entry field (`title`; `meta_description → intro` for a fallback), the
+  identity, the page URL, or `computed`. Required and recommended properties
+  that aren't mapped say so. The mapping is read-only: it lives in the
+  blueprint.
+- **Copy JSON-LD** copies the content of the page's
+  `<script type="application/ld+json">`; **Rich Results Test** opens
+  Google's test for the page's public URL, for published entries with a page.
+
+Content SEO (Configuration → SEO → Content SEO) counts the published entries
+of every such blueprint with errors and with warnings, and links each to its
+inspector. Only the nodes that describe the entry count, not the site's
+identity, which every page shares. The check builds every entry's graph
+without its blocks, so videos in blocks are not counted there; it runs when
+the tab opens and is kept for ten minutes, and **Run again** checks again.
+
+The E2E data is checked in a few milliseconds; 2,000 projects with authors
+and cover videos took about half a second on a laptop.

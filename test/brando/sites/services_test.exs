@@ -9,6 +9,14 @@ defmodule Brando.Sites.ServicesTest do
   alias Brando.Sites
   alias Brando.Sites.Services
 
+  # `update_identity` refreshes the identity cache, which outlives the test's
+  # database sandbox. Put the cached identity back, so later tests (a JSON-LD
+  # graph's site nodes) don't read these services.
+  setup do
+    cached = Brando.Cache.get(:identity)
+    on_exit(fn -> Brando.Cache.put(:identity, cached, :infinite) end)
+  end
+
   defp identity_for(language) do
     {:ok, identity} = Sites.get_identity(%{matches: %{language: language}, preload: [services: :identifier]})
     identity

@@ -29,6 +29,27 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     assert has_element?(view, ".seo-audit-details .seo-check-table tr[data-status=fail]")
   end
 
+  test "the content tab counts structured data issues site-wide and links to the inspector", %{conn: conn} do
+    Brando.Test.Support.put_test_env(Brando.JSONLDTest,
+      products: [%Brando.JSONLDTest.Product{id: 42, title: "Teapot", slug: "teapot", sku: "T-1"}]
+    )
+
+    on_exit(fn -> Brando.Cache.del({:seo_structured_data, "en", Brando.SEO.StructuredData.schemas()}) end)
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+    render_async(view, 5_000)
+    # Fresh, whatever an earlier test left in the cache.
+    view |> element(".seo-audit button[phx-click=rerun_audit]") |> render_click()
+    render_async(view, 5_000)
+
+    assert has_element?(view, "#seo-structured-data [data-testid=structured-data-errors] dd", "1")
+    assert has_element?(view, "#seo-structured-data tr.seo-structured-data-row", "Teapot")
+    assert has_element?(view, "#seo-structured-data td.seo-structured-data-issue", "offers.price")
+
+    # This blueprint has no admin form to open.
+    refute has_element?(view, "#seo-structured-data tr.seo-structured-data-row a.seo-row-action")
+  end
+
   test "a recorded 404 matching an entry's slug can become a redirect", %{conn: conn} do
     user = Factory.insert(:random_user)
     Brando.Cache.SEO.set()
