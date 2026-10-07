@@ -52,8 +52,11 @@ test('an empty case offers what cases usually start with, and a tile inserts and
   // The fourth fills in without a count.
   await expect(tiles.nth(3).getByTestId('starting-module-count')).toHaveCount(0)
 
-  // The other ways to start sit with them; the plus stays.
+  // The other ways to start sit with them; the plus stays. Build with AI is
+  // in the card, not also by the label.
   await expect(welcome.getByTestId('all-modules')).toBeVisible()
+  await expect(welcome.getByTestId('build-with-ai')).toHaveAttribute('target', '_blank')
+  await expect(page.locator('.block-field-assistant')).toHaveCount(0)
   await expect(page.locator('.blocks-wrapper .block-plus').last()).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('empty-block-field-desktop.png'), fullPage: true })
 
@@ -76,6 +79,10 @@ test('an empty case offers what cases usually start with, and a tile inserts and
   await expect(block).not.toHaveClass(/collapsed/)
   await expect(block.locator('[data-block-type="module"]').first()).toBeVisible()
   await expect(block).toContainText('Heading')
+
+  // With a block, Build with AI moves to the field's label.
+  await expect(page.locator('.block-field-assistant').getByTestId('build-with-ai')).toBeVisible()
+  await expect(page.getByTestId('build-with-ai')).toHaveCount(1)
 })
 
 test('a tile whose module starts in a container inserts both', async ({ page }) => {

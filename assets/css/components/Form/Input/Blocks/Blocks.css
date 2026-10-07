@@ -19,6 +19,25 @@
   }
 }
 
+/* Build with AI on a field that has blocks: opens the content assistant for
+   this entry in a new tab. The button is the shared AI action (AI.css); an
+   empty field offers it in its card instead. */
+.block-field-assistant {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.block-field-assistant-hint {
+  color: var(--brando-muted);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: right;
+}
+
 /* ---------------------------------------------------------------------------
    Drag and drop affordances for the block lists.
 

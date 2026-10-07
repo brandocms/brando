@@ -2040,6 +2040,29 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <span>{gettext("Blocks")}</span>
           <div class="field-presence" phx-update="ignore" id={"#{@form_name}[#{@block_field}]-field-presence"}></div>
         </label>
+        <%!-- With blocks, Build with AI sits by the label; an empty field
+              offers it in its card instead, so it is never shown twice. --%>
+        <div :if={@assistant? && @root_order != []} class="block-field-assistant">
+          <span :if={@entry.id && @blocks_changed?} class="block-field-assistant-hint">
+            {gettext("The assistant reads the saved entry, without your unsaved changes")}
+          </span>
+          <span :if={!@entry.id} class="block-field-assistant-hint">
+            {gettext("Save the entry to build it with AI")}
+          </span>
+          <AIAction.button
+            :if={@entry.id}
+            href={assistant_url(@entry, @block_field)}
+            target="_blank"
+            rel="noopener"
+            size={:compact}
+            data-testid="build-with-ai"
+          >
+            {gettext("Build with AI")}
+          </AIAction.button>
+          <AIAction.button :if={!@entry.id} size={:compact} disabled data-testid="build-with-ai">
+            {gettext("Build with AI")}
+          </AIAction.button>
+        </div>
       </div>
       <p :if={@source_locked} class="blocks-source-note">
         {gettext("Blocks, their order and media follow the source. Edit the text here.")}

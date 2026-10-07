@@ -65,12 +65,13 @@ defmodule BrandoAdmin.AssistantLiveTest do
   end
 
   describe "Build with AI in the block editor" do
-    # Offered in the empty field's card, to build the page from nothing.
+    # An empty field offers it in its card; a field with blocks by its label.
+    # Only one is ever rendered.
     setup do
       %{empty: Factory.insert(:page, title: "Empty page", uri: "empty-page", language: :en)}
     end
 
-    test "links to the assistant for the saved entry and field", %{conn: conn} = c do
+    test "an empty field links to the assistant from its card", %{conn: conn} = c do
       {view, _html} = live_form(conn, "/admin/pages/update/#{c.empty.id}")
       html = await_selector(view, "[data-testid=build-with-ai]")
       [href] = html |> Floki.parse_document!() |> Floki.attribute("[data-testid=build-with-ai]", "href")
@@ -85,12 +86,24 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
       # A new tab: the editor, and anything unsaved in it, stays open.
       assert has_element?(view, ".blocks-welcome a[data-testid=build-with-ai][target=_blank]", "Build with AI")
+      refute has_element?(view, ".block-field-assistant")
     end
 
-    test "is part of the empty field only", %{conn: conn} = c do
+    test "a field with blocks links to the assistant from its label", %{conn: conn} = c do
       {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
-      await_selector(view, "[data-block-uid]")
-      refute has_element?(view, "[data-testid=build-with-ai]")
+      html = await_selector(view, ".block-field-assistant [data-testid=build-with-ai]")
+      [href] = html |> Floki.parse_document!() |> Floki.attribute("[data-testid=build-with-ai]", "href")
+
+      assert %URI{path: "/admin/assistant", query: query} = URI.parse(href)
+
+      assert URI.decode_query(query) == %{
+               "content_type" => "Brando.Pages.Page",
+               "id" => to_string(c.identity.id),
+               "field" => "blocks"
+             }
+
+      assert has_element?(view, ".block-field-assistant a.ai-action.is-compact[target=_blank]", "Build with AI")
+      refute has_element?(view, ".blocks-welcome")
     end
 
     test "asks to save a new entry first", %{conn: conn} do
@@ -99,12 +112,17 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert has_element?(view, ".blocks-welcome button[disabled][data-testid=build-with-ai]", "Build with AI")
       assert has_element?(view, ".blocks-welcome-hint", "Save the entry to build it with AI")
       refute has_element?(view, "a[data-testid=build-with-ai]")
+      refute has_element?(view, ".block-field-assistant")
     end
 
     test "is hidden without a model", %{conn: conn} = c do
       Application.delete_env(:brando, Brando.AI)
       {view, _html} = live_form(conn, "/admin/pages/update/#{c.empty.id}")
       await_selector(view, ".blocks-welcome")
+      refute has_element?(view, "[data-testid=build-with-ai]")
+
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+      await_selector(view, "[data-block-uid]")
       refute has_element?(view, "[data-testid=build-with-ai]")
     end
 
@@ -134,7 +152,9 @@ defmodule BrandoAdmin.AssistantLiveTest do
       {:ok, assistants} = Groups.create(scope, %{name: "Assistant users"}, [Catalog.get(:use, :assistant).key])
       {:ok, :ok} = Groups.add_member(scope, assistants.id, editor.id)
       {view, _html} = live_form(conn, "/admin/pages/update/#{c.empty.id}")
-      await_selector(view, "[data-testid=build-with-ai]")
+      await_selector(view, ".blocks-welcome [data-testid=build-with-ai]")
+      {view, _html} = live_form(conn, "/admin/pages/update/#{c.identity.id}")
+      await_selector(view, ".block-field-assistant [data-testid=build-with-ai]")
     end
   end
 
