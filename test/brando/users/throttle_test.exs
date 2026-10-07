@@ -65,8 +65,40 @@ defmodule Brando.Users.ThrottleTest do
   test "an address with no account is answered as a locked one would be" do
     address = email()
     for _ <- 1..(Throttle.config()[:lockout_after] - 1), do: assert(:ok = Throttle.failed_unknown(address))
-    refute Throttle.unknown_locked?(address)
-    assert {:locked, _} = Throttle.failed_unknown(address)
-    assert Throttle.unknown_locked?(address)
+    refute Throttle.unknown_locked_until(address)
+    assert {:locked, until} = Throttle.failed_unknown(address)
+    assert Throttle.unknown_locked_until(address) == until
+  end
+
+  describe "spaced failures" do
+    # Failures count in a window from the first of them, for an account and
+    # for an address without one alike, so spaced guesses cannot tell them apart.
+    test "an account's count starts again once its window has passed" do
+      user = Factory.insert(:random_user, config: %UserConfig{})
+      lockout_after = Throttle.config()[:lockout_after]
+      for _ <- 1..(lockout_after - 1), do: assert(:ok = Throttle.failed(user, :password))
+
+      window_ago = DateTime.add(DateTime.utc_now(), -(Throttle.config()[:lockout_minutes] * 60 + 1), :second)
+
+      Repo.update_all(from(s in Brando.Users.Security, where: s.user_id == ^user.id),
+        set: [failures_since: DateTime.truncate(window_ago, :second)]
+      )
+
+      assert :ok = Throttle.failed(user, :password)
+      refute Throttle.locked_until(user)
+    end
+
+    test "so does an unknown address's" do
+      address = email()
+      lockout_after = Throttle.config()[:lockout_after]
+      for _ <- 1..(lockout_after - 1), do: assert(:ok = Throttle.failed_unknown(address))
+
+      # Its window passes
+      Cachex.expire(:cache, {Throttle, :unknown_failures, address}, 1)
+      Process.sleep(10)
+
+      assert :ok = Throttle.failed_unknown(address)
+      refute Throttle.unknown_locked_until(address)
+    end
   end
 end

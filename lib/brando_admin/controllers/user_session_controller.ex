@@ -50,15 +50,13 @@ defmodule BrandoAdmin.UserSessionController do
   defp unknown_account(conn, email) do
     Bcrypt.no_user_verify()
 
-    cond do
-      Throttle.unknown_locked?(email) ->
-        too_many(conn, email, Throttle.config()[:lockout_minutes])
-
-      match?({:locked, _}, Throttle.failed_unknown(email)) ->
-        too_many(conn, email, Throttle.config()[:lockout_minutes])
-
-      true ->
-        invalid(conn, email)
+    if until = Throttle.unknown_locked_until(email) do
+      too_many(conn, email, minutes_until(until))
+    else
+      case Throttle.failed_unknown(email) do
+        {:locked, until} -> too_many(conn, email, minutes_until(until))
+        :ok -> invalid(conn, email)
+      end
     end
   end
 
@@ -91,7 +89,21 @@ defmodule BrandoAdmin.UserSessionController do
     else
       %DateTime{} = until -> UserAuth.abandon_pending_login(conn, too_many_message(minutes_until(until)))
       {:error, :invalid} -> wrong_code(conn, user, meta)
+      {:error, :unreadable} -> unreadable_code(conn)
     end
+  end
+
+  # The site cannot decrypt the secret (its encryption secret changed): not
+  # the user's fault, so not counted towards the lockout. Logged by TwoFactor.
+  defp unreadable_code(conn) do
+    conn
+    |> put_flash(
+      :error,
+      gettext(
+        "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication."
+      )
+    )
+    |> redirect(to: "/admin/login/two-factor")
   end
 
   defp wrong_code(conn, user, meta) do

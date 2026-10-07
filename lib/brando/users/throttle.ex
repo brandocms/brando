@@ -7,8 +7,8 @@ defmodule Brando.Users.Throttle do
   (`Brando.RateLimit`, so each node counts its own). Failures — a wrong
   password, a wrong two-factor code, a wrong password or code when
   confirming a change — are counted on the account itself, in the database:
-  after `lockout_after` in a row, the account is locked for
-  `lockout_minutes`, on every node, and the lockout is recorded in the
+  after `lockout_after` within `lockout_minutes` of the first of them, the
+  account is locked for `lockout_minutes`, on every node, and the lockout is recorded in the
   security log. A successful sign-in starts the count again.
 
   An address with no account counts its failures too, in the cache, so the
@@ -24,9 +24,8 @@ defmodule Brando.Users.Throttle do
         lockout_after: 5,
         lockout_minutes: 15
 
-  Behind a proxy, the IP address is the proxy's unless the application sets
-  `conn.remote_ip` from a trusted header (for example with the `remote_ip`
-  library) and the admin socket gives `:peer_data` that does the same.
+  The IP address is the client's, also behind a trusted reverse proxy:
+  see `Brando.ClientIP` and `config :brando, :trusted_proxies`.
   """
 
   import Ecto.Query
@@ -110,55 +109,87 @@ defmodule Brando.Users.Throttle do
   Counts a failed attempt by `user` (`reason` is `:password`, `:two_factor`
   or `:confirm`), and records it. Returns `:ok`, or `{:locked, until}` when
   this failure locked the account.
+
+  Failures count in a window of `lockout_minutes` from the first of them, as
+  they do for an address with no account (`failed_unknown/1`), so spaced
+  attempts get the same answers either way.
   """
   @spec failed(map(), atom(), SecurityLog.meta()) :: :ok | {:locked, DateTime.t()}
   def failed(%{id: user_id} = user, reason, meta \\ %{}) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
-    naive_now = DateTime.to_naive(now)
-
-    {:ok, %{failed_attempts: count}} =
-      Repo.insert(%Security{user_id: user_id, failed_attempts: 1},
-        on_conflict: [inc: [failed_attempts: 1], set: [updated_at: naive_now]],
-        conflict_target: :user_id,
-        returning: [:failed_attempts]
-      )
-
     SecurityLog.record(:login_failed, user, meta: meta, details: %{"reason" => to_string(reason)})
 
+    {:ok, result} =
+      Repo.transaction(fn ->
+        Repo.insert(%Security{user_id: user_id}, on_conflict: :nothing, conflict_target: :user_id)
+        security = Repo.one!(from s in Security, where: s.user_id == ^user_id, lock: "FOR UPDATE")
+        count_failure(user, security, now)
+      end)
+
+    case result do
+      {:locked, until} ->
+        SecurityLog.record(:locked, user, meta: meta, details: %{"until" => DateTime.to_iso8601(until)})
+        {:locked, until}
+
+      :ok ->
+        :ok
+    end
+  end
+
+  defp count_failure(user, security, now) do
+    window_start = DateTime.add(now, -config(:lockout_minutes) * 60, :second)
+
+    {count, since} =
+      if security.failures_since && DateTime.compare(security.failures_since, window_start) == :gt,
+        do: {security.failed_attempts + 1, security.failures_since},
+        else: {1, now}
+
+    query = from(s in Security, where: s.user_id == ^user.id)
+
     if count >= config(:lockout_after) do
-      until = DateTime.add(now, config(:lockout_minutes) * 60, :second)
+      until = DateTime.add(now, lockout_seconds(user), :second)
+      Repo.update_all(query, set: [failed_attempts: 0, failures_since: nil, locked_until: until])
+      {:locked, until}
+    else
+      Repo.update_all(query, set: [failed_attempts: count, failures_since: since])
+      :ok
+    end
+  end
 
-      from(s in Security, where: s.user_id == ^user_id)
-      |> Repo.update_all(set: [failed_attempts: 0, locked_until: until, updated_at: naive_now])
+  # How long a lockout lasts
+  defp lockout_seconds(_user_or_email), do: config(:lockout_minutes) * 60
 
-      SecurityLog.record(:locked, user, meta: meta, details: %{"until" => DateTime.to_iso8601(until)})
+  @doc """
+  Counts a failed sign-in for an address with no account, so that it is
+  answered as an account's would be: the same window, the same lockout.
+  Returns `:ok`, or `{:locked, until}`.
+  """
+  @spec failed_unknown(String.t()) :: :ok | {:locked, DateTime.t()}
+  def failed_unknown(email) do
+    email = normalize(email)
+    key = {__MODULE__, :unknown_failures, email}
+    # A read first, so a count whose window has passed is dropped before it grows
+    _ = Cachex.get(:cache, key)
+    {_, count} = Cachex.incr(:cache, key, 1)
+    if count == 1, do: Cachex.expire(:cache, key, config(:lockout_minutes) * 60_000)
+
+    if count >= config(:lockout_after) do
+      seconds = lockout_seconds(email)
+      until = DateTime.add(DateTime.truncate(DateTime.utc_now(), :second), seconds, :second)
+      Cachex.del(:cache, key)
+      Cachex.put(:cache, {__MODULE__, :unknown_locked, email}, until, expire: seconds * 1000)
       {:locked, until}
     else
       :ok
     end
   end
 
-  @doc """
-  Counts a failed sign-in for an address with no account, so that it is
-  answered as an account's would be. Returns `:ok`, or `{:locked, until}`.
-  """
-  @spec failed_unknown(String.t()) :: :ok | {:locked, DateTime.t()}
-  def failed_unknown(email) do
-    key = {__MODULE__, :unknown_failures, normalize(email)}
-    {_, count} = Cachex.incr(:cache, key, 1)
-    if count == 1, do: Cachex.expire(:cache, key, config(:lockout_minutes) * 60_000)
-
-    if count >= config(:lockout_after),
-      do: {:locked, DateTime.add(DateTime.utc_now(), config(:lockout_minutes) * 60, :second)},
-      else: :ok
-  end
-
-  @doc "Whether an address with no account has failed as often as locks an account."
-  @spec unknown_locked?(String.t()) :: boolean()
-  def unknown_locked?(email) do
-    case Cachex.get(:cache, {__MODULE__, :unknown_failures, normalize(email)}) do
-      {:ok, count} when is_integer(count) -> count >= config(:lockout_after)
-      _ -> false
+  @doc "When the lockout of an address with no account ends, as `locked_until/1`."
+  @spec unknown_locked_until(String.t()) :: DateTime.t() | nil
+  def unknown_locked_until(email) do
+    case Cachex.get(:cache, {__MODULE__, :unknown_locked, normalize(email)}) do
+      {:ok, %DateTime{} = until} -> if DateTime.compare(until, DateTime.utc_now()) == :gt, do: until
+      _ -> nil
     end
   end
 
@@ -166,7 +197,7 @@ defmodule Brando.Users.Throttle do
   @spec clear(map()) :: :ok
   def clear(%{id: user_id}) do
     from(s in Security, where: s.user_id == ^user_id and (s.failed_attempts > 0 or not is_nil(s.locked_until)))
-    |> Repo.update_all(set: [failed_attempts: 0, locked_until: nil])
+    |> Repo.update_all(set: [failed_attempts: 0, failures_since: nil, locked_until: nil])
 
     :ok
   end

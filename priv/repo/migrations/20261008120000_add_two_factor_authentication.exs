@@ -14,6 +14,7 @@ defmodule BrandoIntegration.Repo.Migrations.AddTwoFactorAuthentication do
       add :totp_enabled_at, :utc_datetime
       add :totp_last_step, :bigint
       add :failed_attempts, :integer, null: false, default: 0
+      add :failures_since, :utc_datetime
       add :locked_until, :utc_datetime
       timestamps()
     end

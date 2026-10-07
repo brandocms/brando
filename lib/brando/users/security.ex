@@ -20,6 +20,7 @@ defmodule Brando.Users.Security do
     field :totp_enabled_at, :utc_datetime
     field :totp_last_step, :integer
     field :failed_attempts, :integer, default: 0
+    field :failures_since, :utc_datetime
     field :locked_until, :utc_datetime
     timestamps()
   end
