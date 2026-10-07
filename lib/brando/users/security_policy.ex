@@ -35,6 +35,15 @@ defmodule Brando.Users.SecurityPolicy do
     |> validate_subset(:two_factor_roles, @roles)
   end
 
+  defp require_enrollment(policy, before_ids) do
+    for user <- without_two_factor(policy) do
+      Brando.Users.revoke_sessions(user)
+      unless MapSet.member?(before_ids, user.id), do: Brando.Users.notify_security(user, :two_factor_required)
+    end
+
+    :ok
+  end
+
   defp save(%Ecto.Changeset{data: %{id: nil}} = changeset), do: Repo.insert(changeset)
   defp save(changeset), do: Repo.update(changeset)
 
@@ -86,16 +95,29 @@ defmodule Brando.Users.SecurityPolicy do
   """
   @spec without_two_factor_count(t()) :: non_neg_integer()
   def without_two_factor_count(%__MODULE__{} = policy) do
+    case without_two_factor_query(policy) do
+      nil -> 0
+      query -> Repo.aggregate(query, :count)
+    end
+  end
+
+  @doc "The active users `policy` requires two-factor authentication of who have not set it up."
+  @spec without_two_factor(t()) :: [Brando.Users.User.t()]
+  def without_two_factor(%__MODULE__{} = policy) do
+    case without_two_factor_query(policy) do
+      nil -> []
+      query -> Repo.all(query)
+    end
+  end
+
+  defp without_two_factor_query(policy) do
     enrolled = from(s in Brando.Users.Security, where: not is_nil(s.totp_enabled_at), select: s.user_id)
 
     base =
       from u in Brando.Users.User,
         where: u.active == true and is_nil(u.deleted_at) and u.id not in subquery(enrolled)
 
-    case scope_query(base, policy) do
-      nil -> 0
-      query -> Repo.aggregate(query, :count)
-    end
+    scope_query(base, policy)
   end
 
   defp scope_query(query, %{two_factor: :everyone}), do: query
@@ -121,6 +143,11 @@ defmodule Brando.Users.SecurityPolicy do
   have two-factor authentication themselves before a policy that applies to
   them, so that saving it does not end their own session.
 
+  The users it applies to who have not set two-factor authentication up are
+  logged out at once (their open admin views are disconnected), and those it
+  did not apply to before are emailed that they will set it up at their next
+  login.
+
   Returns `{:ok, policy}`, `{:error, changeset}`, or `{:error, reason}`:
   `:forbidden` or `:enroll_first`.
   """
@@ -140,7 +167,11 @@ defmodule Brando.Users.SecurityPolicy do
         {:error, :enroll_first}
 
       true ->
+        before_ids = policy |> without_two_factor() |> MapSet.new(& &1.id)
+
         with {:ok, saved} <- save(changeset) do
+          require_enrollment(saved, before_ids)
+
           SecurityLog.record(:policy_changed, actor,
             actor: actor,
             meta: opts[:meta],

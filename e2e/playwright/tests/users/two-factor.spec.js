@@ -54,10 +54,19 @@ test('a user sets up two-factor authentication, then logs in with a code', async
 
     const secret = (await modal.getByTestId('two-factor-secret').textContent()).trim()
     await modal.getByTestId('two-factor-setup-code').fill('000000')
+    await modal.getByTestId('two-factor-setup-proof').fill(password)
     await modal.getByTestId('two-factor-enable').click()
     await expect(modal.locator('.two-factor-error')).toBeVisible()
 
+    // A session alone does not add a factor: the password goes with the code
     await modal.getByTestId('two-factor-setup-code').fill(totp(secret))
+    await modal.getByTestId('two-factor-setup-proof').fill('not my password')
+    await modal.getByTestId('two-factor-enable').click()
+    await expect(modal.locator('.two-factor-error')).toBeVisible()
+    await expect(modal.getByTestId('two-factor-setup-code')).toHaveValue('')
+
+    await modal.getByTestId('two-factor-setup-code').fill(totp(secret))
+    await modal.getByTestId('two-factor-setup-proof').fill(password)
     await modal.getByTestId('two-factor-enable').click()
     const codes = page.locator('#recovery-codes-modal').getByTestId('recovery-code')
     await expect(codes).toHaveCount(10)

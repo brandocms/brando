@@ -16326,3 +16326,78 @@ msgstr "For mange forespørsler fra nettverket ditt. Prøv igjen om noen minutte
 #, elixir-autogen, elixir-format
 msgid "Two-factor authentication is already on for this account."
 msgstr "Tofaktorautentisering er allerede slått på for denne kontoen."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "You will set it up the next time you log in."
+msgstr "Du setter det opp neste gang du logger inn."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "If this was not you, reset your password now and tell an administrator."
+msgstr "Var det ikke deg, bør du tilbakestille passordet nå og si fra til en administrator."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Review your security settings"
+msgstr "Se over sikkerhetsinnstillingene dine"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was turned on"
+msgstr "Tofaktorautentisering ble slått på"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "An authenticator app was set up for %{email}. Logging in now asks for a code from it, and the account was logged out on other devices."
+msgstr "En autentiseringsapp ble satt opp for %{email}. Innlogging ber nå om en kode fra den, og kontoen ble logget ut på andre enheter."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was turned off"
+msgstr "Tofaktorautentisering ble slått av"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The authenticator app was removed from %{email}. Its codes no longer log in."
+msgstr "Autentiseringsappen ble fjernet fra %{email}. Kodene fra den logger ikke lenger inn."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was reset"
+msgstr "Tofaktorautentisering ble tilbakestilt"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "An administrator turned off two-factor authentication for %{email}, and the account was logged out everywhere."
+msgstr "En administrator slo av tofaktorautentisering for %{email}, og kontoen ble logget ut overalt."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication is now required"
+msgstr "Tofaktorautentisering er nå påkrevd"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "This site now requires two-factor authentication for %{email}: a second step after your password when you log in."
+msgstr "Dette nettstedet krever nå tofaktorautentisering for %{email}: et ekstra steg etter passordet når du logger inn."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Your password"
+msgstr "Passordet ditt"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "That is not your password."
+msgstr "Det er ikke passordet ditt."
+
+#: lib/brando_admin/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication."
+msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk en gjenopprettingskode, eller be en administrator om å tilbakestille tofaktorautentiseringen."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Codes from your app cannot be checked on this site right now. Use your password."
+msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk passordet ditt."

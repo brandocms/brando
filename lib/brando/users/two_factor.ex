@@ -35,6 +35,8 @@ defmodule Brando.Users.TwoFactor do
 
   import Ecto.Query
 
+  require Logger
+
   alias Brando.Repo
   alias Brando.Users
   alias Brando.Users.RecoveryCode
@@ -112,20 +114,31 @@ defmodule Brando.Users.TwoFactor do
   to move to a new phone, the user turns it off (which asks for their
   password or a code) and on again.
 
-  Logs the user out of their other sessions, keeping the one with
-  `opts[:keep_token]`. Records the change, with `opts[:meta]`.
+  A session alone is not enough: `opts[:proof]` must be the user's password
+  or a current code from a factor they already have (see `confirm/3`; a
+  wrong one counts towards the lockout), or `:signed_in_now` from the setup
+  screen of a sign-in whose password was right a moment ago. Otherwise a
+  stolen session cookie could add the thief's app, and log the owner out.
+
+  Logs the user out of their other sessions, keeping the token row
+  `opts[:keep_id]`, and emails the user. Records the change, with
+  `opts[:meta]`.
 
   Returns `{:ok, recovery_codes}` — shown once, then only hashes are kept —
-  or `{:error, :invalid_code}` or `{:error, :already_enabled}`.
+  or `{:error, reason}`: `:invalid_code`, `:already_enabled`,
+  `:invalid_proof` or `:locked`.
   """
-  @spec enable(map(), binary(), String.t(), keyword()) :: {:ok, [String.t()]} | {:error, :invalid_code | :already_enabled}
+  @spec enable(map(), binary(), String.t(), keyword()) :: {:ok, [String.t()]} | {:error, atom()}
   def enable(%{id: user_id} = user, secret, code, opts \\ []) do
-    cond do
-      enabled?(user) -> {:error, :already_enabled}
-      step = matching_step(secret, normalize_code(code)) -> do_enable(user_id, user, secret, step, opts)
-      true -> {:error, :invalid_code}
+    with :ok <- check(not enabled?(user), :already_enabled),
+         step when is_integer(step) <- matching_step(secret, normalize_code(code)) || {:error, :invalid_code},
+         :ok <- check_proof(user, opts[:proof], opts[:meta]) do
+      do_enable(user_id, user, secret, step, opts)
     end
   end
+
+  defp check_proof(_user, :signed_in_now, _meta), do: :ok
+  defp check_proof(user, proof, meta), do: confirm(user, proof, meta)
 
   defp do_enable(user_id, user, secret, step, opts) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
@@ -144,8 +157,9 @@ defmodule Brando.Users.TwoFactor do
         replace_recovery_codes(user)
       end)
 
-    Users.revoke_sessions(user, except: opts[:keep_token])
+    Users.revoke_sessions(user, except_id: opts[:keep_id])
     SecurityLog.record(:two_factor_enabled, user, meta: opts[:meta])
+    Users.notify_security(user, :two_factor_enabled)
     {:ok, codes}
   end
 
@@ -155,21 +169,26 @@ defmodule Brando.Users.TwoFactor do
   Checks a code `user` gave at sign-in: six digits from their app, or one of
   their recovery codes, which is then used up.
 
-  Returns `{:ok, :totp}`, `{:ok, :recovery_code}` or `{:error, :invalid}`.
+  Returns `{:ok, :totp}`, `{:ok, :recovery_code}`, `{:error, :invalid}`, or
+  `{:error, :unreadable}` when the stored secret cannot be decrypted (the
+  encryption secret changed), which is the site's fault, not a wrong guess.
   It does not count failures; the caller does, with `Brando.Users.Throttle`.
   """
-  @spec verify(map(), String.t() | nil) :: {:ok, :totp | :recovery_code} | {:error, :invalid}
+  @spec verify(map(), String.t() | nil) :: {:ok, :totp | :recovery_code} | {:error, :invalid | :unreadable}
   def verify(user, code) when is_binary(code) do
     normalized = normalize_code(code)
 
     cond do
-      totp_shaped?(normalized) and valid_totp?(user, normalized) -> {:ok, :totp}
-      not totp_shaped?(normalized) and use_recovery_code(user, normalized) -> {:ok, :recovery_code}
+      totp_shaped?(normalized) -> totp_result(check_totp(user, normalized))
+      use_recovery_code(user, normalized) -> {:ok, :recovery_code}
       true -> {:error, :invalid}
     end
   end
 
   def verify(_user, _code), do: {:error, :invalid}
+
+  defp totp_result(:ok), do: {:ok, :totp}
+  defp totp_result(error), do: {:error, error}
 
   @doc """
   Whether `code` is the app's code for `user` now, and not one already used:
@@ -177,9 +196,13 @@ defmodule Brando.Users.TwoFactor do
   last one, so a code cannot be used twice even by two requests at once.
   """
   @spec valid_totp?(map(), String.t()) :: boolean()
-  def valid_totp?(%{id: user_id} = user, code) do
+  def valid_totp?(user, code), do: check_totp(user, code) == :ok
+
+  # `:ok`, `:invalid`, or `:unreadable` when the stored secret does not
+  # decrypt: logged, since it means the encryption secret changed.
+  defp check_totp(%{id: user_id} = user, code) do
     with %Security{totp_secret: encrypted, totp_enabled_at: %DateTime{}} <- security(user),
-         {:ok, secret} <- Brando.Crypto.decrypt(encrypted, encryption_context(user)),
+         {:ok, secret} <- decrypt_secret(user, encrypted),
          step when is_integer(step) <- matching_step(secret, normalize_code(code)) do
       {count, _} =
         from(s in Security,
@@ -188,9 +211,26 @@ defmodule Brando.Users.TwoFactor do
         )
         |> Repo.update_all(set: [totp_last_step: step])
 
-      count == 1
+      if count == 1, do: :ok, else: :invalid
     else
-      _ -> false
+      :unreadable -> :unreadable
+      _ -> :invalid
+    end
+  end
+
+  defp decrypt_secret(user, encrypted) do
+    case Brando.Crypto.decrypt(encrypted, encryption_context(user)) do
+      {:ok, secret} ->
+        {:ok, secret}
+
+      :error ->
+        Logger.error(
+          "[Brando.Users.TwoFactor] The two-factor secret of user ##{user.id} cannot be decrypted. " <>
+            "Has the encryption secret (Brando.Crypto, or the endpoint's secret_key_base) changed? " <>
+            "The user can log in with a recovery code, or an administrator can reset two-factor authentication."
+        )
+
+        :unreadable
     end
   end
 
@@ -261,12 +301,29 @@ defmodule Brando.Users.TwoFactor do
     codes
   end
 
+  @doc false
   # Ten characters from an alphabet without look-alikes (no l, o, 0, 1):
-  # 50 bits, shown as xxxxx-xxxxx
-  defp new_recovery_code do
-    chars = for _ <- 1..10, do: Enum.random(@recovery_alphabet)
-    {first, second} = Enum.split(chars, 5)
+  # 50 bits, shown as xxxxx-xxxxx. From the operating system's secure random
+  # bytes, never `:rand`.
+  def new_recovery_code do
+    {first, second} = @recovery_alphabet |> random_chars(10) |> Enum.split(5)
     "#{first}-#{second}"
+  end
+
+  # Rejection sampling: a byte is used only below the largest multiple of the
+  # alphabet's size, so every character is equally likely. (With 32
+  # characters every byte is used; the rule keeps it so for another alphabet.)
+  defp random_chars(alphabet, count, acc \\ [])
+  defp random_chars(_alphabet, 0, acc), do: acc
+
+  defp random_chars(alphabet, count, acc) do
+    size = length(alphabet)
+    limit = 256 - rem(256, size)
+
+    case :crypto.strong_rand_bytes(1) do
+      <<byte>> when byte < limit -> random_chars(alphabet, count - 1, [Enum.at(alphabet, rem(byte, size)) | acc])
+      _ -> random_chars(alphabet, count, acc)
+    end
   end
 
   defp hash_recovery_code(%{id: user_id}, normalized),
@@ -287,6 +344,7 @@ defmodule Brando.Users.TwoFactor do
          :ok <- confirm(user, proof, opts[:meta]) do
       clear(user)
       SecurityLog.record(:two_factor_disabled, user, meta: opts[:meta])
+      Users.notify_security(user, :two_factor_disabled)
       :ok
     end
   end
@@ -310,6 +368,7 @@ defmodule Brando.Users.TwoFactor do
       Throttle.clear(user)
       Users.revoke_sessions(user)
       SecurityLog.record(:two_factor_reset, user, actor: actor, meta: opts[:meta])
+      Users.notify_security(user, :two_factor_reset)
       {:ok, user}
     end
   end
@@ -342,29 +401,40 @@ defmodule Brando.Users.TwoFactor do
   security: `proof` is their password, or a current code from their app
   (not a recovery code). A wrong one counts towards the lockout.
 
-  Returns `:ok`, or `{:error, :invalid_proof}` or `{:error, :locked}`.
+  Returns `:ok`, or `{:error, reason}`: `:invalid_proof`, `:locked`, or
+  `:unreadable` for a code when the stored secret cannot be decrypted, which
+  does not count as a failure.
   """
-  @spec confirm(map(), String.t() | nil, SecurityLog.meta() | nil) :: :ok | {:error, :invalid_proof | :locked}
+  @spec confirm(map(), String.t() | nil, SecurityLog.meta() | nil) ::
+          :ok | {:error, :invalid_proof | :locked | :unreadable}
   def confirm(user, proof, meta \\ nil) do
-    cond do
-      Throttle.locked_until(user) ->
-        {:error, :locked}
-
-      is_binary(proof) and proof_valid?(user, proof) ->
-        :ok
-
-      true ->
-        case Throttle.failed(user, :confirm, meta || %{}) do
-          {:locked, _until} -> {:error, :locked}
-          :ok -> {:error, :invalid_proof}
-        end
+    if Throttle.locked_until(user) do
+      {:error, :locked}
+    else
+      case is_binary(proof) && proof_result(user, proof) do
+        :ok -> :ok
+        :unreadable -> {:error, :unreadable}
+        _ -> count_failure(user, meta)
+      end
     end
   end
 
-  defp proof_valid?(user, proof) do
-    code = normalize_code(proof)
+  defp count_failure(user, meta) do
+    case Throttle.failed(user, :confirm, meta || %{}) do
+      {:locked, _until} -> {:error, :locked}
+      :ok -> {:error, :invalid_proof}
+    end
+  end
 
-    (totp_shaped?(code) and valid_totp?(user, code)) or password_valid?(user, proof)
+  defp proof_result(user, proof) do
+    code = normalize_code(proof)
+    totp = if totp_shaped?(code), do: check_totp(user, code), else: :invalid
+
+    cond do
+      totp == :ok -> :ok
+      password_valid?(user, proof) -> :ok
+      true -> totp
+    end
   end
 
   defp password_valid?(%{id: user_id}, password) do

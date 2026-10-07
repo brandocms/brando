@@ -19,7 +19,7 @@ defmodule Brando.Users.SecurityPolicyGroupsTest do
     {:ok, _} = Migration.run()
 
     secret = TwoFactor.new_secret()
-    {:ok, _codes} = TwoFactor.enable(owner, secret, TwoFactor.current_code(secret))
+    {:ok, _codes} = TwoFactor.enable(owner, secret, TwoFactor.current_code(secret), proof: "admin")
 
     %{owner: owner, editor: editor, user: user}
   end

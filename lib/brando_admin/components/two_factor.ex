@@ -141,24 +141,27 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
 
   alias Brando.Users.TwoFactor
 
-  # `keep_token`: the session to keep when the user's other sessions are
-  # logged out. `meta`: the request's IP address and browser, for the log.
+  # `keep_id`: the token row (session, or waiting sign-in) to keep when the
+  # user's other sessions are logged out. `proof`: `:password` asks for the
+  # password with the code; `:signed_in_now` is for the setup screen of a
+  # sign-in whose password was right a moment ago. `meta`: the request's IP
+  # address and browser, for the log. The secret is kept wrapped
+  # (`Brando.Redacted`), so it stays out of logged state.
   def update(assigns, socket) do
-    socket = assign(socket, Map.take(assigns, [:id, :user, :keep_token, :meta]))
+    socket = assign(socket, Map.take(assigns, [:id, :user, :keep_id, :meta]))
 
     {:ok,
-     assign_new(socket, :secret, fn -> TwoFactor.new_secret() end)
-     |> then(&assign_new(&1, :form, fn -> to_form(%{"code" => ""}, as: "setup") end))
-     |> then(&assign_new(&1, :error, fn -> nil end))
-     |> then(&assign_display/1)}
+     socket
+     |> assign(:proof, Map.get(assigns, :proof, :password))
+     |> assign_new(:secret, fn -> Brando.Redacted.wrap(TwoFactor.new_secret()) end)
+     |> assign_new(:form, fn -> to_form(%{"code" => "", "proof" => ""}, as: "setup") end)
+     |> assign_new(:error, fn -> nil end)}
   end
 
-  defp assign_display(%{assigns: %{secret: secret, user: user}} = socket) do
-    assign(socket,
-      qr_code: Phoenix.HTML.raw(TwoFactor.qr_code_svg(TwoFactor.otpauth_uri(user, secret))),
-      display_secret: TwoFactor.display_secret(secret)
-    )
-  end
+  defp qr_code(user, secret),
+    do: Phoenix.HTML.raw(TwoFactor.qr_code_svg(TwoFactor.otpauth_uri(user, Brando.Redacted.value(secret))))
+
+  defp display_secret(secret), do: TwoFactor.display_secret(Brando.Redacted.value(secret))
 
   def render(assigns) do
     ~H"""
@@ -172,12 +175,12 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
               {gettext("Use an authenticator app, such as 1Password, Google Authenticator or Microsoft Authenticator.")}
             </p>
             <figure class="two-factor-qr" role="img" aria-label={gettext("QR code for your authenticator app")}>
-              {@qr_code}
+              {qr_code(@user, @secret)}
             </figure>
             <details class="two-factor-manual">
               <summary>{gettext("Can’t scan it? Enter a key instead")}</summary>
               <p>{gettext("Choose to enter a setup key in the app, and type:")}</p>
-              <code class="two-factor-secret" data-testid="two-factor-secret">{@display_secret}</code>
+              <code class="two-factor-secret" data-testid="two-factor-secret">{display_secret(@secret)}</code>
             </details>
           </div>
         </li>
@@ -194,6 +197,16 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
                   inputmode="numeric"
                   spellcheck="false"
                   data-testid="two-factor-setup-code"
+                  required
+                />
+              </div>
+              <div :if={@proof == :password} class="field-wrapper">
+                <BrandoAdmin.Components.Auth.input
+                  field={@form[:proof]}
+                  type="password"
+                  label={gettext("Your password")}
+                  autocomplete="current-password"
+                  data-testid="two-factor-setup-proof"
                   required
                 />
               </div>
@@ -216,23 +229,27 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
     """
   end
 
-  def handle_event("confirm", %{"setup" => %{"code" => code}}, socket) do
+  def handle_event("confirm", %{"setup" => %{"code" => code} = params}, socket) do
     %{user: user, secret: secret} = socket.assigns
+    proof = if socket.assigns.proof == :signed_in_now, do: :signed_in_now, else: params["proof"]
+    opts = [proof: proof, keep_id: socket.assigns[:keep_id], meta: socket.assigns[:meta]]
 
-    case TwoFactor.enable(user, secret, code, keep_token: socket.assigns[:keep_token], meta: socket.assigns[:meta]) do
+    case TwoFactor.enable(user, Brando.Redacted.value(secret), code, opts) do
       {:ok, codes} ->
         send(self(), {:two_factor_enabled, codes})
         {:noreply, assign(socket, error: nil)}
 
-      {:error, :already_enabled} ->
-        {:noreply, assign(socket, error: gettext("Two-factor authentication is already on for this account."))}
-
-      {:error, :invalid_code} ->
-        {:noreply,
-         assign(socket,
-           error: gettext("That code did not match. Check that the app shows this account, and try the newest code."),
-           form: to_form(%{"code" => ""}, as: "setup")
-         )}
+      {:error, reason} ->
+        {:noreply, assign(socket, error: error(reason), form: to_form(%{"code" => "", "proof" => ""}, as: "setup"))}
     end
   end
+
+  defp error(:already_enabled), do: gettext("Two-factor authentication is already on for this account.")
+  defp error(:invalid_proof), do: gettext("That is not your password.")
+
+  defp error(:locked),
+    do: gettext("Too many failed attempts. Your account is locked for a few minutes; try again later.")
+
+  defp error(_invalid_code),
+    do: gettext("That code did not match. Check that the app shows this account, and try the newest code.")
 end

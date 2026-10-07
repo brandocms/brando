@@ -35,7 +35,8 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
             module={TwoFactorComponents.Setup}
             id="two-factor-setup"
             user={@user}
-            keep_token={@token}
+            keep_id={@token_id}
+            proof={:signed_in_now}
             meta={@meta}
           />
           <div class="login-actions">
@@ -60,9 +61,9 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
           {:ok,
            assign(socket,
              user: user,
-             token: token,
+             token_id: Users.token_id(token, "pending_2fa"),
              codes: nil,
-             meta: if(connected?(socket), do: Brando.Users.SecurityLog.meta(connect_info(socket))),
+             meta: Brando.Users.SecurityLog.socket_meta(socket),
              page_title: gettext("Set up two-factor authentication")
            )}
         end
@@ -73,7 +74,7 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
         Auth.put_locale(user.language)
 
         {:ok,
-         assign(socket, user: user, token: token, codes: [], meta: nil, page_title: gettext("Two-factor authentication"))}
+         assign(socket, user: user, token_id: nil, codes: [], meta: nil, page_title: gettext("Two-factor authentication"))}
 
       nil ->
         Auth.put_locale()
@@ -86,7 +87,7 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
   end
 
   def handle_info({:two_factor_enabled, codes}, socket) do
-    case Users.verify_pending_login(socket.assigns.token) do
+    case Users.verify_pending_login(socket.assigns.token_id) do
       :ok ->
         {:noreply, assign(socket, codes: codes)}
 
@@ -98,7 +99,6 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
     end
   end
 
-  defp connect_info(socket) do
-    %{peer_data: get_connect_info(socket, :peer_data), user_agent: get_connect_info(socket, :user_agent)}
-  end
+  # Anything else, such as a test mailer's copy of an email sent from here
+  def handle_info(_message, socket), do: {:noreply, socket}
 end

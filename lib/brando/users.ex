@@ -164,24 +164,39 @@ defmodule Brando.Users do
   end
 
   @doc """
-  Logs `user` out of every session, but the one with the token `except`,
-  and ends any sign-in waiting for its second step. Their open admin views
-  are disconnected.
+  Logs `user` out of every session, and ends any sign-in waiting for its
+  second step, but the token row `opts[:except_id]` (the current session, or
+  the waiting sign-in that is setting two-factor authentication up). Their
+  open admin views are disconnected.
   """
   @spec revoke_sessions(user, keyword()) :: :ok
   def revoke_sessions(%{id: _} = user, opts \\ []) do
     query = UserToken.user_and_contexts_query(user, ["session" | UserToken.pending_contexts()])
 
     query =
-      case opts[:except] do
+      case opts[:except_id] do
         nil -> query
-        token -> from t in query, where: t.token != ^token
+        id -> from t in query, where: t.id != ^id
       end
 
     {_count, tokens} = Repo.delete_all(from(t in query, select: {t.context, t.token}))
     for {"session", token} <- tokens, do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
     :ok
   end
+
+  @doc """
+  The id of the token row of `token` in `context`, or nil. LiveViews keep
+  this rather than the token itself, so the token does not end up in their
+  state.
+  """
+  @spec token_id(binary() | nil, String.t() | [String.t()]) :: integer() | nil
+  def token_id(token, contexts \\ "session")
+
+  def token_id(token, contexts) when is_binary(token) do
+    Repo.one(from t in UserToken, where: t.token == ^token and t.context in ^List.wrap(contexts), select: t.id)
+  end
+
+  def token_id(_token, _contexts), do: nil
 
   ## Sign-in waiting for its second step
 
@@ -220,10 +235,15 @@ defmodule Brando.Users do
 
   def get_pending_login(_token), do: nil
 
-  @doc "Marks a sign-in waiting for its second step as done: the user has just set two-factor authentication up."
-  @spec verify_pending_login(binary()) :: :ok | :error
-  def verify_pending_login(token) when is_binary(token) do
-    case Repo.update_all(UserToken.token_and_context_query(token, "pending_2fa"), set: [context: "two_factor_verified"]) do
+  @doc """
+  Marks the sign-in waiting for its second step with the token row `id` as
+  done: the user has just set two-factor authentication up.
+  """
+  @spec verify_pending_login(integer()) :: :ok | :error
+  def verify_pending_login(id) when is_integer(id) do
+    query = from t in UserToken, where: t.id == ^id and t.context == "pending_2fa"
+
+    case Repo.update_all(query, set: [context: "two_factor_verified"]) do
       {1, _} -> :ok
       _ -> :error
     end
@@ -497,6 +517,22 @@ defmodule Brando.Users do
   end
 
   defp save_password(changeset, _revoked_tokens, _by), do: {:error, Map.put(changeset, :action, :update)}
+
+  @doc """
+  Emails `user` about a change to how they log in
+  (`Brando.Users.UserNotifier.deliver_security_notice/3`), when the site has
+  a mailer. Without one, the change still happens, and is logged.
+  """
+  @spec notify_security(user, atom(), map()) :: :ok
+  def notify_security(user, kind, details \\ %{}) do
+    if Brando.Mailer.configured?() and not is_nil(Brando.Mailer.sender()[:from]) do
+      _ = UserNotifier.deliver_security_notice(user, kind, details)
+    else
+      Logger.info("[Brando.Users] No email sent to user ##{user.id} about #{kind}: no mailer configured")
+    end
+
+    :ok
+  end
 
   # Without a mailer the password is still changed; there is just no email.
   defp notify_password_changed(user, by) do

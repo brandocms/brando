@@ -18,7 +18,7 @@ defmodule Brando.Users.TwoFactorTest do
 
   defp enable(user) do
     secret = TwoFactor.new_secret()
-    {:ok, codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret))
+    {:ok, codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret), proof: "admin")
     # The code that turned it on is used up; let the tests use the current
     # step again.
     Repo.update_all(from(s in Security, where: s.user_id == ^user.id), set: [totp_last_step: nil])
@@ -30,19 +30,41 @@ defmodule Brando.Users.TwoFactorTest do
   end
 
   describe "turning it on" do
-    test "needs a code the app shows for the new secret" do
+    test "needs a code the app shows for the new secret, and emails the user" do
       user = user()
       secret = TwoFactor.new_secret()
 
-      assert {:error, :invalid_code} = TwoFactor.enable(user, secret, "000000")
+      assert {:error, :invalid_code} = TwoFactor.enable(user, secret, "000000", proof: "admin")
       refute TwoFactor.enabled?(user)
 
-      assert {:ok, codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret))
+      assert {:ok, codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret), proof: "admin")
       assert TwoFactor.enabled?(user)
       assert length(codes) == 10
       assert Enum.all?(codes, &(&1 =~ ~r/^[a-z2-9]{5}-[a-z2-9]{5}$/))
       assert TwoFactor.recovery_codes_left(user) == 10
       assert :two_factor_enabled in actions(user)
+
+      email = user.email
+      assert_received {:email, %{to: [{"", ^email}], subject: "Two-factor authentication was turned on"}}
+    end
+
+    test "a session alone is not enough: it needs the password" do
+      user = user()
+      session = Users.generate_user_session_token(user)
+      secret = TwoFactor.new_secret()
+      code = TwoFactor.current_code(secret)
+
+      assert {:error, :invalid_proof} = TwoFactor.enable(user, secret, code)
+      assert {:error, :invalid_proof} = TwoFactor.enable(user, secret, code, proof: "not the password")
+      refute TwoFactor.enabled?(user)
+      # Nothing was logged out
+      assert Users.get_user_by_session_token(session)
+      # The wrong proof counts towards the lockout
+      assert [%{details: %{"reason" => "confirm"}} | _] =
+               Repo.all(from e in SecurityEvent, where: e.user_id == ^user.id and e.action == :login_failed)
+
+      # The setup screen of a sign-in whose password was right a moment ago
+      assert {:ok, _codes} = TwoFactor.enable(user, secret, code, proof: :signed_in_now)
     end
 
     test "logs out the other sessions, keeping the current one" do
@@ -51,7 +73,8 @@ defmodule Brando.Users.TwoFactorTest do
       other = Users.generate_user_session_token(user)
       secret = TwoFactor.new_secret()
 
-      {:ok, _codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret), keep_token: current)
+      {:ok, _codes} =
+        TwoFactor.enable(user, secret, TwoFactor.current_code(secret), proof: "admin", keep_id: Users.token_id(current))
 
       assert Users.get_user_by_session_token(current)
       refute Users.get_user_by_session_token(other)
@@ -131,6 +154,29 @@ defmodule Brando.Users.TwoFactorTest do
   end
 
   describe "recovery codes" do
+    test "come from secure random bytes, not :rand" do
+      # The same :rand seed twice gives the same Enum.random results; secure
+      # random bytes do not repeat
+      :rand.seed(:exsss, {1, 2, 3})
+      first = for _ <- 1..20, do: TwoFactor.new_recovery_code()
+      :rand.seed(:exsss, {1, 2, 3})
+      second = for _ <- 1..20, do: TwoFactor.new_recovery_code()
+
+      assert first != second
+      assert Enum.all?(first ++ second, &(&1 =~ ~r/^[a-km-np-z2-9]{5}-[a-km-np-z2-9]{5}$/))
+      assert length(Enum.uniq(first ++ second)) == 40
+    end
+
+    test "every character of the alphabet comes up" do
+      chars =
+        for _ <- 1..200,
+            char <- String.graphemes(String.replace(TwoFactor.new_recovery_code(), "-", "")),
+            uniq: true,
+            do: char
+
+      assert length(chars) == 32
+    end
+
     test "each works once, written any way" do
       user = user()
       {_secret, [first, second | _]} = enable(user)
@@ -195,6 +241,25 @@ defmodule Brando.Users.TwoFactorTest do
     end
   end
 
+  describe "a secret that no longer decrypts" do
+    test "is logged and does not count towards the lockout" do
+      user = user()
+      {secret, [recovery | _]} = enable(user)
+      Repo.update_all(from(s in Security, where: s.user_id == ^user.id), set: [totp_secret: "XCP.garbage"])
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, :unreadable} = TwoFactor.verify(user, TwoFactor.current_code(secret))
+          assert {:error, :unreadable} = TwoFactor.confirm(user, TwoFactor.current_code(secret))
+        end)
+
+      assert log =~ "cannot be decrypted"
+      refute Enum.any?(actions(user), &(&1 == :login_failed))
+      # A recovery code still works
+      assert {:ok, :recovery_code} = TwoFactor.verify(user, recovery)
+    end
+  end
+
   describe "an administrator's reset" do
     test "turns it off, ends the lockout and the sessions, and is logged" do
       admin = user(role: :superuser)
@@ -208,6 +273,8 @@ defmodule Brando.Users.TwoFactorTest do
       )
 
       assert {:ok, _user} = TwoFactor.reset(user.id, admin)
+      email = user.email
+      assert_received {:email, %{to: [{"", ^email}], subject: "Two-factor authentication was reset"}}
       refute TwoFactor.enabled?(user)
       refute Brando.Users.Throttle.locked_until(user)
       refute Users.get_user_by_session_token(session)
@@ -265,17 +332,25 @@ defmodule Brando.Users.TwoFactorTest do
       assert [:policy_changed] = actions(admin)
     end
 
-    test "ends the session of a user who must now set it up" do
+    test "logs out a user who must now set it up, and emails them once" do
       admin = user(role: :superuser)
       editor = user(role: :editor)
       enable(admin)
       session = Users.generate_user_session_token(editor)
       assert Users.get_user_by_session_token(session)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Users.live_socket_id(session))
 
       {:ok, _} = SecurityPolicy.update(%{"two_factor" => "everyone"}, admin)
 
-      refute Users.get_user_by_session_token(session)
+      # Gone at once, and its open admin views are told to disconnect
       refute Repo.get_by(Brando.Users.UserToken, token: session)
+      assert_received %Phoenix.Socket.Broadcast{event: "disconnect"}
+      email = editor.email
+      assert_received {:email, %{to: [{"", ^email}], subject: "Two-factor authentication is now required"}}
+
+      # Saving again does not email them again
+      {:ok, _} = SecurityPolicy.update(%{"two_factor" => "everyone"}, admin)
+      refute_received {:email, %{to: [{"", ^email}]}}
     end
   end
 

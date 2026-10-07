@@ -32,7 +32,7 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
 
   defp enable(user) do
     secret = TwoFactor.new_secret()
-    {:ok, codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret))
+    {:ok, codes} = TwoFactor.enable(user, secret, TwoFactor.current_code(secret), proof: "admin")
     Repo.update_all(from(s in Security, where: s.user_id == ^user.id), set: [totp_last_step: nil])
     {secret, codes}
   end

@@ -140,7 +140,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
         module={TwoFactorComponents.Setup}
         id="two-factor-setup"
         user={@current_user}
-        keep_token={@session_token}
+        keep_id={@session_id}
         meta={@meta}
       />
     </Content.modal>
@@ -207,8 +207,8 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
      socket
      |> assign(
        socket_connected: connected?(socket),
-       session_token: session["user_token"],
-       meta: if(connected?(socket), do: SecurityLog.meta(connect_info(socket))),
+       session_id: Brando.Users.token_id(session["user_token"]),
+       meta: Brando.Users.SecurityLog.socket_meta(socket),
        modal: nil,
        confirm_form: to_form(%{"proof" => ""}, as: "confirm"),
        confirm_error: nil,
@@ -226,10 +226,6 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
       required?: TwoFactor.required?(user),
       events: SecurityLog.list(user, 10)
     )
-  end
-
-  defp connect_info(socket) do
-    %{peer_data: get_connect_info(socket, :peer_data), user_agent: get_connect_info(socket, :user_agent)}
   end
 
   def handle_event("open_setup", _params, socket) do
@@ -281,6 +277,9 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
     {:noreply, socket |> assign(modal: {:codes, codes}) |> load_state()}
   end
 
+  # Anything else, such as a test mailer's copy of an email sent from here
+  def handle_info(_message, socket), do: {:noreply, socket}
+
   defp confirm_title(:disable), do: gettext("Turn off two-factor authentication?")
   defp confirm_title(:regenerate), do: gettext("Create new recovery codes?")
 
@@ -297,6 +296,9 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
 
   defp confirm_error(:locked),
     do: gettext("Too many failed attempts. Your account is locked for a few minutes; try again later.")
+
+  defp confirm_error(:unreadable),
+    do: gettext("Codes from your app cannot be checked on this site right now. Use your password.")
 
   defp confirm_error(:required), do: gettext("The sign-in policy of this site requires two-factor authentication.")
   defp confirm_error(_), do: gettext("That did not work. Reload the page and try again.")

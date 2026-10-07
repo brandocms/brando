@@ -22,7 +22,10 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
     secret = TwoFactor.new_secret()
 
     {:ok, codes} =
-      TwoFactor.enable(user, secret, TwoFactor.current_code(secret), keep_token: get_session(conn, :user_token))
+      TwoFactor.enable(user, secret, TwoFactor.current_code(secret),
+        proof: "admin",
+        keep_id: Users.token_id(get_session(conn, :user_token))
+      )
 
     BrandoIntegration.Repo.update_all(from(s in Security, where: s.user_id == ^user.id), set: [totp_last_step: nil])
     {secret, codes}
@@ -39,14 +42,14 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
 
       html =
         view
-        |> form("#two-factor-setup-form", setup: %{code: "000000"})
+        |> form("#two-factor-setup-form", setup: %{code: "000000", proof: "admin"})
         |> render_submit()
 
       assert html =~ "did not match"
       refute TwoFactor.enabled?(user)
 
       view
-      |> form("#two-factor-setup-form", setup: %{code: TwoFactor.current_code(secret)})
+      |> form("#two-factor-setup-form", setup: %{code: TwoFactor.current_code(secret), proof: "admin"})
       |> render_submit()
 
       html = render(view)
@@ -87,6 +90,20 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
       assert length(Regex.scan(~r/data-testid="recovery-code"/, html)) == 10
       assert {:error, :invalid} = TwoFactor.verify(user, old)
     end
+  end
+
+  test "setting up the app asks for the password, not only a session", %{conn: conn, current_user: user} do
+    {:ok, view, _html} = live(conn, "/admin/users/security")
+    html = view |> element("[data-testid=two-factor-setup]") |> render_click()
+    secret = secret_from(html)
+
+    html =
+      view
+      |> form("#two-factor-setup-form", setup: %{code: TwoFactor.current_code(secret), proof: "not it"})
+      |> render_submit()
+
+    assert html =~ "That is not your password"
+    refute TwoFactor.enabled?(user)
   end
 
   describe "the user form" do

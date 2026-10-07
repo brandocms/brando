@@ -16335,3 +16335,78 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Two-factor authentication is already on for this account."
 msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "You will set it up the next time you log in."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "If this was not you, reset your password now and tell an administrator."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Review your security settings"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was turned on"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "An authenticator app was set up for %{email}. Logging in now asks for a code from it, and the account was logged out on other devices."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was turned off"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The authenticator app was removed from %{email}. Its codes no longer log in."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was reset"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "An administrator turned off two-factor authentication for %{email}, and the account was logged out everywhere."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication is now required"
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "This site now requires two-factor authentication for %{email}: a second step after your password when you log in."
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Your password"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "That is not your password."
+msgstr ""
+
+#: lib/brando_admin/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Codes from your app cannot be checked on this site right now. Use your password."
+msgstr ""

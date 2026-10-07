@@ -721,7 +721,7 @@ defmodule E2EFixtureController do
 
     if action == "enabled-user" do
       secret = Brando.Users.TwoFactor.new_secret()
-      {:ok, codes} = Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret))
+      {:ok, codes} = Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret), proof: password)
       # The code that turned it on is used up; the spec signs in with the current one.
       import Ecto.Query, only: [from: 2]
       Brando.Repo.update_all(from(s in Brando.Users.Security, where: s.user_id == ^user.id), set: [totp_last_step: nil])
