@@ -15050,3 +15050,13 @@ msgid "1 variable"
 msgid_plural "%{count} variables"
 msgstr[0] "1 variabel"
 msgstr[1] "%{count} variabler"
+
+#: lib/brando_admin/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Unsaved changes by %{name}"
+msgstr "Ulagrede endringer fra %{name}"
+
+#: lib/brando_admin/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Unsaved changes by another user"
+msgstr "Ulagrede endringer fra en annen bruker"

@@ -821,6 +821,25 @@ html.not-mac .shortcut-other { display: inline; }
   }
 }
 
+/* Another editor has changes in this field that have not reached this form
+   yet. The label and colour are sticky attributes on the field's presence
+   label, set by assets/src/Presence/dirtyFields.js. */
+[data-field-presence][data-dirty-label]::after {
+  content: attr(data-dirty-label);
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px 0 14px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 7px 50%, var(--presence-color-strong, rgba(77, 144, 254, 0.8)) 3px, transparent 3.5px),
+    var(--brando-badge-bg);
+  color: var(--brando-badge-ink);
+  font: 11px/18px "Main", sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
 /* Field locked — another user is editing this field */
 .field-wrapper.field-locked {
   > :not(.label-wrapper) {

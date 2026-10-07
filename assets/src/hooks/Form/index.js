@@ -1,6 +1,7 @@
 import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
 import locateBlock from './locateBlock'
+import dirtyFields from '../../Presence/dirtyFields'
 import {
   setBlockLock,
   clearBlockLock,
@@ -16,6 +17,7 @@ export default (app) => ({
     this.submitListenerEvent = this.submitListener.bind(this)
     this.draftRecovery = draftRecovery(this)
     this.stopLocatingBlock = locateBlock(this)
+    this.dirtyFields = dirtyFields(this)
     // Keep the measurement outside LiveView's patched inline attributes.
     this.toolbarStyle = document.createElement('style')
     document.head.appendChild(this.toolbarStyle)
@@ -93,6 +95,11 @@ export default (app) => ({
 
       // Remove block presence/lock for this user
       clearUserBlockLocks(this.js(), user_id)
+      this.dirtyFields.clearUser(user_id)
+    })
+
+    this.handleEvent('b:set_dirty_fields', ({ user_id, fields, label }) => {
+      this.dirtyFields.set(user_id, fields, label)
     })
 
     this.handleEvent('b:set_active_field', (opts) => {
@@ -153,7 +160,10 @@ export default (app) => ({
     })
   },
 
-  updated() { this.updateToolbarOffset() },
+  updated() {
+    this.updateToolbarOffset()
+    this.dirtyFields.apply()
+  },
 
   destroyed() {
     this.stopLocatingBlock?.()

@@ -1105,19 +1105,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         Brando.presence().update_dirty_fields(socket.assigns.uri.path, user_id, fields)
         socket
       else
-        # TODO: there are updated dirty fields from other users.
-        require Logger
-
-        Logger.debug("""
-
-        ==> dirty_fields
-
-        #{inspect(fields, pretty: true)}
-        #{inspect(user_id, pretty: true)}
-
-        """)
-
-        socket
+        BrandoAdmin.Hooks.push_dirty_fields(socket, user_id, fields)
       end
 
     {:halt, socket}
