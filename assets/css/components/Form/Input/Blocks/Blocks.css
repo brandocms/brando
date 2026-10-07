@@ -179,36 +179,57 @@ section.alert.danger {
   @space margin-y 25px;
 }
 
-/* The one empty state of a block field: its templates, when it has any,
-   then the modules it usually starts with, then the other ways to begin
-   (all modules, paste, Build with AI). A white card on a solid hairline: a
-   dashed border means "drop here" in the block editor. */
+/* The one empty state of a block field (approved option A, #2997): its
+   templates, when it has any, then the modules it usually starts with, then
+   the other ways to begin (all modules, paste, Build with AI). One quiet,
+   centred card on the shaded surface, on a solid hairline: a dashed border
+   means "drop here" in the block editor. */
+.blocks-content.is-empty {
+  padding: 0;
+  background-color: transparent;
+
+  > .block-plus-wrapper {
+    margin-top: 12px;
+  }
+}
+
 .blocks-welcome {
-  @space margin-y 25px;
-  padding: 24px;
+  box-sizing: border-box;
+  max-width: 520px;
+  margin: 16px auto 0;
+  padding: 26px;
   border: 1px solid var(--brando-line);
   border-radius: 12px;
-  background: var(--brando-surface);
+  background: var(--brando-surface-shaded);
+  text-align: center;
 
   h3 {
     margin: 0;
+    color: var(--brando-ink);
     font-size: 18px;
     font-weight: 500;
-    line-height: 1.3;
-    letter-spacing: -0.01em;
+    line-height: 24px;
   }
 
-  .blocks-welcome-subtitle {
-    margin: 24px 0 0;
+  .blocks-welcome-lead {
+    margin: 6px 0 0;
     color: var(--brando-muted);
     font-size: 13px;
-    font-weight: 500;
     line-height: 18px;
+  }
+
+  .blocks-welcome-or {
+    margin: 20px 0 0;
+    color: var(--brando-muted);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
   }
 
   .blocks-welcome-templates {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 14px;
     margin-top: 16px;
   }
@@ -272,34 +293,43 @@ section.alert.danger {
     }
   }
 
-  /* Up to four modules, at least two to a row. No max-width here: with
-     one, auto-fill counts its columns from it and the grid's minimum width
-     becomes four tiles, which pushes a phone layout sideways. Empty tracks
-     keep the tiles compact on a wide screen instead. */
+  /* Up to four small square tiles in a row, two to a row on a phone. */
   .blocks-welcome-modules {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 6px)), 1fr));
-    gap: 12px;
-    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 18px auto 0;
   }
 
   .blocks-welcome-module {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    min-width: 0;
-    padding: 14px;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    box-sizing: border-box;
+    width: 94px;
+    min-height: 84px;
+    padding: 12px 6px 10px;
     border: 1px solid var(--brando-line);
     border-radius: 8px;
     background: var(--brando-surface);
     color: var(--brando-ink);
-    text-align: left;
+    text-align: center;
     cursor: pointer;
     transition: border-color 150ms ease, background-color 150ms ease;
 
+    > [data-icon] {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      margin-bottom: 4px;
+      color: var(--brando-accent);
+    }
+
     &:hover {
-      border-color: color-mix(in srgb, var(--brando-accent) 35%, var(--brando-line));
+      border-color: color-mix(in srgb, var(--brando-accent) 45%, var(--brando-line));
       background: var(--brando-surface-hover);
     }
 
@@ -307,57 +337,43 @@ section.alert.danger {
       outline: 2px solid var(--brando-accent);
       outline-offset: 2px;
     }
-  }
 
-  .blocks-welcome-module-sketch {
-    display: grid;
-    place-items: center start;
-    height: 28px;
-    color: var(--brando-muted);
+    /* Came first at least once: an accent hairline and wash. */
+    &.is-first {
+      border-color: color-mix(in srgb, var(--brando-accent) 38%, var(--brando-line));
+      background: color-mix(in srgb, var(--brando-accent) 3%, var(--brando-surface));
 
-    img {
-      max-width: 42px;
-      max-height: 28px;
-    }
-
-    [data-icon] {
-      width: 20px;
-      height: 20px;
+      .blocks-welcome-module-count {
+        color: var(--brando-accent);
+      }
     }
   }
 
-  .blocks-welcome-module-text {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    min-width: 0;
+  .blocks-welcome-module-name {
     max-width: 100%;
+    font-size: 12.5px;
+    line-height: 16px;
+    overflow-wrap: anywhere;
+  }
 
-    strong {
-      font-size: 14px;
-      font-weight: 500;
-      line-height: 18px;
-      overflow-wrap: anywhere;
-    }
-
-    small {
-      color: var(--brando-muted);
-      font-size: 12px;
-      line-height: 16px;
-    }
+  .blocks-welcome-module-count {
+    color: color-mix(in srgb, var(--brando-muted) 70%, var(--brando-surface));
+    font-family: theme(typography.families.mono);
+    font-size: 10.5px;
+    line-height: 14px;
+    white-space: nowrap;
   }
 
   /* The container the module usually sits in. */
   .blocks-welcome-module-container {
     max-width: 100%;
     overflow: hidden;
-    padding: 1px 6px;
+    padding: 0 5px;
     border-radius: 4px;
     background: var(--brando-badge-bg);
     color: var(--brando-badge-ink);
-    font-size: 11px;
-    line-height: 16px;
+    font-size: 10px;
+    line-height: 15px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -365,9 +381,10 @@ section.alert.danger {
   .blocks-welcome-actions {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
-    gap: 8px 12px;
-    padding-top: 20px;
+    gap: 8px;
+    margin-top: 16px;
   }
 
   /* Secondary actions at the admin's small button size (30px). */
@@ -406,26 +423,36 @@ section.alert.danger {
   }
 
   .blocks-welcome-hint {
+    flex-basis: 100%;
     color: var(--brando-muted);
     font-size: 12px;
     line-height: 18px;
   }
 
   .blocks-welcome-note {
-    margin: 16px 0 0;
-    color: var(--brando-muted);
+    margin: 14px 0 0;
+    color: color-mix(in srgb, var(--brando-muted) 75%, var(--brando-surface));
     font-size: 12px;
     line-height: 18px;
 
     a {
-      color: var(--brando-accent);
-      text-decoration: underline;
-      text-underline-offset: 2px;
+      color: inherit;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
     }
   }
 
   @media (max-width: 599px) {
-    padding: 20px 16px;
+    max-width: none;
+    padding: 22px 16px;
+
+    .blocks-welcome-modules {
+      max-width: calc(2 * 94px + 10px);
+    }
   }
 
   @media (pointer: coarse) {

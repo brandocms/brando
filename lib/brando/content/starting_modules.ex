@@ -12,7 +12,7 @@ defmodule Brando.Content.StartingModules do
     1. modules pinned with the field's `starts_with:` option, in that order
        (see `blocks` in `Brando.Blueprint.Forms`);
     2. the modules that came first, most often first, each with its count
-       ("first in 34 of 41"). When the first root block is a container, the
+       ("first 34/41"). When the first root block is a container, the
        container is counted together with its first module;
     3. if that leaves free slots, the field's most used modules, without a
        count — useful as a second block, never ahead of a first-position one;
@@ -49,7 +49,13 @@ defmodule Brando.Content.StartingModules do
           used: [{ref(), pos_integer()}]
         }
 
+  @typedoc """
+  A tile. `source` says why it is offered: `:first` (it came first, `count`
+  of `of` times), `:used` (a filler from overall use) or `:order` (pinned with
+  `starts_with`, or the modules' own order).
+  """
   @type tile :: %{
+          source: :first | :used | :order,
           module: map(),
           module_ref: String.t(),
           container: map() | nil,
@@ -156,12 +162,18 @@ defmodule Brando.Content.StartingModules do
       |> Enum.map(&{elem(&1, 0), nil})
 
     first_counts = Map.new(counts.first)
+    sources = Map.new(used, &{&1, :used})
+    sources = Enum.reduce(pinned, sources, &Map.put(&2, &1, :order))
 
     (pinned ++ first)
     |> Enum.uniq()
     |> fill(used ++ Enum.map(modules, &{module_ref(&1), nil}))
     |> Enum.take(Keyword.get(opts, :limit, @limit))
-    |> Enum.map(&tile(&1, Map.get(first_counts, &1), counts.entries, by_ref, containers))
+    |> Enum.map(fn key ->
+      count = Map.get(first_counts, key)
+      source = if count, do: :first, else: Map.get(sources, key, :order)
+      tile(key, count, source, counts.entries, by_ref, containers)
+    end)
   end
 
   # Most counted first; ties in the modules' own order.
@@ -169,8 +181,9 @@ defmodule Brando.Content.StartingModules do
     Enum.sort_by(counted, fn {_key, count} = item -> {-count, position(modules, module_ref.(item))} end)
   end
 
-  defp tile({module_ref, container_ref}, count, entries, by_ref, containers) do
+  defp tile({module_ref, container_ref}, count, source, entries, by_ref, containers) do
     %{
+      source: source,
       module: Map.fetch!(by_ref, module_ref),
       module_ref: encode(module_ref),
       container: container_ref && Map.fetch!(containers, container_ref),

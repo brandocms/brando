@@ -15387,18 +15387,8 @@ msgstr "Metadata, indeksering og videresendinger for nettstedet, og en gjennomga
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "Start with a block"
-msgstr "Start med en blokk"
-
-#: lib/brando_admin/components/form/block_field.ex
-#, elixir-autogen, elixir-format
 msgid "Or start with a block"
 msgstr "Eller start med en blokk"
-
-#: lib/brando_admin/components/form/block_field.ex
-#, elixir-autogen, elixir-format
-msgid "first in %{count} of %{total}"
-msgstr "først i %{count} av %{total}"
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
@@ -15424,3 +15414,28 @@ msgstr "Start med %{module}"
 #, elixir-autogen, elixir-format
 msgid "Paste copied block"
 msgstr "Lim inn kopiert blokk"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Start this %{type}"
+msgstr "Start en ny %{type}"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "%{types} usually start with one of these."
+msgstr "%{types} starter som regel med en av disse."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a first block."
+msgstr "Velg en første blokk."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "first %{count}/%{total}"
+msgstr "først %{count}/%{total}"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "often used"
+msgstr "ofte brukt"

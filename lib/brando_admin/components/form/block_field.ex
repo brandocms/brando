@@ -1074,10 +1074,41 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         starts_with: opts[:starts_with]
       )
 
-    assign(socket, :starting_modules, modules)
+    schema = entry.__struct__
+
+    socket
+    |> assign(:starting_modules, modules)
+    |> assign(:welcome_title, start_title(schema))
+    |> assign(:welcome_lead, start_lead(schema, modules))
   end
 
   defp maybe_assign_starting_modules(socket), do: socket
+
+  # "Start this case". A blueprint can word it for a language where the
+  # phrase agrees with the noun ("Start et nytt prosjekt") by translating the
+  # msgid `"Start this %{type}"` in its own Gettext domain; otherwise Brando's
+  # string is used.
+  defp start_title(schema) do
+    type = String.downcase(Brando.Blueprint.get_singular(schema))
+    blueprint_start_title(schema, type) || gettext("Start this %{type}", type: type)
+  end
+
+  defp blueprint_start_title(schema, type) do
+    %{domain: domain, schema: schema_name} = schema.__naming__()
+    gettext_domain = String.downcase("#{domain}_#{schema_name}")
+    title = Gettext.dgettext(schema.__modules__().gettext, gettext_domain, "Start this %{type}", type: type)
+
+    # Untranslated, Gettext returns the msgid itself
+    if title != "Start this #{type}", do: title
+  rescue
+    _ -> nil
+  end
+
+  defp start_lead(schema, modules) do
+    if Enum.any?(modules, &(&1.source == :first)),
+      do: gettext("%{types} usually start with one of these.", types: Brando.Blueprint.get_plural(schema)),
+      else: gettext("Pick a first block.")
+  end
 
   # A tile is named for its action ("Start with Heading"); the container it
   # comes in and its count describe it.
@@ -2068,7 +2099,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         {gettext("Blocks, their order and media follow the source. Edit the text here.")}
         <.link :if={@source_url} navigate={@source_url}>{gettext("Change structure in the source")}</.link>
       </p>
-      <div class="blocks-content">
+      <div class={["blocks-content", @root_order == [] && !@note_collection? && !@source_locked && "is-empty"]}>
         <div :if={!@note_collection? && (@root_order != [] or @clipboard_meta)} class="blocks-actions">
           <div class="block-field-dropdown">
             <button
@@ -2185,16 +2216,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   </small>
                 </button>
               </div>
-              <h4 :if={@starting_modules != []} class="blocks-welcome-subtitle">{gettext("Or start with a block")}</h4>
+              <h4 :if={@starting_modules != []} class="blocks-welcome-or">{gettext("Or start with a block")}</h4>
             <% else %>
-              <h3 id={"#{@id}-welcome-title"}>{gettext("Start with a block")}</h3>
+              <h3 id={"#{@id}-welcome-title"}>{@welcome_title}</h3>
+              <p class="blocks-welcome-lead">{@welcome_lead}</p>
             <% end %>
 
             <div :if={@starting_modules != []} class="blocks-welcome-modules">
               <button
                 :for={{tile, index} <- Enum.with_index(@starting_modules)}
                 type="button"
-                class="blocks-welcome-module"
+                class={["blocks-welcome-module", "is-#{tile.source}"]}
                 aria-label={gettext("Start with %{module}", module: ModulePicker.translate(tile.module.name))}
                 aria-describedby={starting_module_description(@id, index, tile)}
                 phx-click="insert_starting_module"
@@ -2202,28 +2234,32 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 phx-value-container={tile.container_ref}
                 phx-target={@myself}
                 data-testid="starting-module"
+                data-source={tile.source}
                 data-module-ref={tile.module_ref}
                 data-container-ref={tile.container_ref}
                 data-first-count={tile.count}
                 data-of={tile.of}
               >
-                <span class="blocks-welcome-module-sketch" aria-hidden="true">
-                  <img :if={tile.module.svg} src={"data:image/svg+xml;base64,#{tile.module.svg}"} alt="" />
-                  <.icon :if={!tile.module.svg} name={ModulePicker.module_icon(tile.module)} />
+                <.icon name={ModulePicker.module_icon(tile.module)} />
+                <span
+                  :if={tile.container}
+                  id={"#{@id}-starting-#{index}-container"}
+                  class="blocks-welcome-module-container"
+                >
+                  {tile.container.name}
                 </span>
-                <span class="blocks-welcome-module-text">
-                  <span
-                    :if={tile.container}
-                    id={"#{@id}-starting-#{index}-container"}
-                    class="blocks-welcome-module-container"
-                  >
-                    {tile.container.name}
-                  </span>
-                  <strong>{ModulePicker.translate(tile.module.name)}</strong>
-                  <small :if={tile.count} id={"#{@id}-starting-#{index}-count"} data-testid="starting-module-count">
-                    {gettext("first in %{count} of %{total}", count: tile.count, total: tile.of)}
-                  </small>
-                </span>
+                <span class="blocks-welcome-module-name">{ModulePicker.translate(tile.module.name)}</span>
+                <small
+                  :if={tile.count}
+                  id={"#{@id}-starting-#{index}-count"}
+                  class="blocks-welcome-module-count"
+                  data-testid="starting-module-count"
+                >
+                  {gettext("first %{count}/%{total}", count: tile.count, total: tile.of)}
+                </small>
+                <small :if={tile.source == :used} class="blocks-welcome-module-count">
+                  {gettext("often used")}
+                </small>
               </button>
             </div>
 

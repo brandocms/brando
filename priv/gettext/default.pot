@@ -15402,17 +15402,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "Start with a block"
-msgstr ""
-
-#: lib/brando_admin/components/form/block_field.ex
-#, elixir-autogen, elixir-format
 msgid "Or start with a block"
-msgstr ""
-
-#: lib/brando_admin/components/form/block_field.ex
-#, elixir-autogen, elixir-format
-msgid "first in %{count} of %{total}"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -15438,4 +15428,29 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Paste copied block"
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Start this %{type}"
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "%{types} usually start with one of these."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a first block."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "first %{count}/%{total}"
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "often used"
 msgstr ""

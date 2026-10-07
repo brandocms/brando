@@ -90,6 +90,7 @@ defmodule Brando.Content.StartingModulesTest do
            ]
 
     assert [%{module_ref: "local:" <> _, container_ref: nil} | _] = tiles(c)
+    assert Enum.map(tiles(c), & &1.source) == [:first, :first, :first, :used]
   end
 
   test "a container that comes first is counted with its first module", c do
@@ -122,6 +123,8 @@ defmodule Brando.Content.StartingModulesTest do
              {"hero", nil, 5, 5},
              {"intro", nil, nil, nil}
            ]
+
+    assert Enum.map(tiles(c, starts_with: ["image", :text]), & &1.source) == [:order, :order, :first, :order]
 
     # A pinned module keeps its count when it does come first.
     assert [{"hero", nil, 5, 5} | _] = summary(tiles(c, starts_with: ["hero"]))

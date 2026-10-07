@@ -4,8 +4,9 @@ import { syncLV } from '../../utils'
 // An empty block field offers the modules this field usually starts with
 // (Brando.Content.StartingModules). The seeds hold six Norwegian cases: three
 // start with Heading, two with a Wide section holding Single Image with
-// Caption, one with Rich Text Article. Articles pin Rich Text Article with
-// `starts_with:` and have no content to count.
+// Caption, one with Rich Text Article; Example module is used but never
+// first. Articles pin Rich Text Article with `starts_with:` and have no
+// content to count.
 
 async function factory(page, schema, attributes) {
   const response = await page.request.post('/__e2e/db/factory', { data: { schema, attributes, creator_id: 1, fields: ['id'] } })
@@ -49,7 +50,10 @@ test('an empty case offers what cases usually start with, and a tile inserts and
 
   await expect(tiles.nth(2)).toContainText('Rich Text Article')
   await expect(tiles.nth(2)).toHaveAttribute('data-first-count', '1')
-  // The fourth fills in without a count.
+  await expect(tiles.nth(0)).toHaveAttribute('data-source', 'first')
+  // The fourth fills in from overall use, without a count.
+  await expect(tiles.nth(3)).toContainText('Example module')
+  await expect(tiles.nth(3)).toHaveAttribute('data-source', 'used')
   await expect(tiles.nth(3).getByTestId('starting-module-count')).toHaveCount(0)
 
   // The other ways to start sit with them; the plus stays. Build with AI is
@@ -126,6 +130,7 @@ test('without content to count, pinned modules come first and the rest keep the 
   await expect(tiles.first()).toContainText('Rich Text Article')
   // Too little content: no counts.
   await expect(welcome.getByTestId('starting-module-count')).toHaveCount(0)
+  await expect(welcome.locator('[data-source="order"]')).toHaveCount(4)
 
   // The rest follow the module picker, which opens from "All modules…".
   await welcome.getByTestId('all-modules').click()

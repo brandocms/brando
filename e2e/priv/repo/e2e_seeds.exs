@@ -1428,8 +1428,9 @@ Code.require_file("block_slots_seeds.exs", __DIR__)
 # What an empty block field offers to start with (Brando.Content.StartingModules,
 # tests/blocks/empty-block-field.spec.js). Six Norwegian cases: three start with
 # Heading, two with a Wide section holding Single Image with Caption, one with
-# Rich Text Article. Norwegian drafts, so the English listings and the
-# published-project datasources stay as they are.
+# Rich Text Article; Example module is used, but never first. Norwegian drafts,
+# so the English listings and the published-project datasources stay as they
+# are.
 starting_module = fn class ->
   Brando.Content.Module
   |> E2eProject.Repo.get_by!(class: class)
@@ -1439,6 +1440,7 @@ end
 starting_heading = starting_module.("header")
 starting_image = starting_module.("single-image-caption")
 starting_text = starting_module.("rich-text-article")
+starting_example = starting_module.("example")
 
 wide_section =
   %Brando.Content.Container{
@@ -1487,7 +1489,7 @@ for {roots, index} <-
       Enum.with_index([
         [starting_block.(starting_heading, 0), starting_block.(starting_text, 1)],
         [starting_block.(starting_heading, 0), starting_block.(starting_text, 1)],
-        [starting_block.(starting_heading, 0)],
+        [starting_block.(starting_heading, 0), starting_block.(starting_example, 1)],
         [starting_section.(starting_image), starting_block.(starting_text, 1)],
         [starting_section.(starting_image)],
         [starting_block.(starting_text, 0)]

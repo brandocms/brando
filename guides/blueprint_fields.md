@@ -505,7 +505,7 @@ deleted. It is checked when the blocks change, and not for drafts.
 An empty block editor offers up to four modules to start with, under its
 templates when it has any. They are the modules entries of the same kind
 usually *start* with: the module of the first block, counted across the
-field's entries in the entry's language, with "first in 34 of 41" under
+field's entries in the entry's language, with "first 34/41" under
 each. When the first block is a container, the container is counted with
 its first module, and the tile inserts both. Free slots are filled with the
 field's most used modules, without a count. With fewer than five entries
