@@ -756,3 +756,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "use the versions this Brando supports (see the installation guide)"
 msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "no %{queues} queue"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
+msgstr ""

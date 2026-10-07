@@ -1,7 +1,9 @@
 defmodule Brando.Doctor.Checks.Oban do
   @moduledoc """
-  Background jobs: the queues Oban runs, jobs stuck waiting or executing for
-  more than an hour, and jobs discarded in the last 24 hours.
+  Background jobs: the queues Oban runs, whether Brando's own queues for
+  content events and webhook deliveries are among them, jobs stuck waiting
+  or executing for more than an hour, and jobs discarded in the last 24
+  hours.
 
   In the admin the queues are read from the running Oban, so a paused queue
   shows. `mix brando.doctor` starts Oban without queues, so nothing runs while
@@ -17,6 +19,9 @@ defmodule Brando.Doctor.Checks.Oban do
   @stuck_after_seconds 60 * 60
   @discarded_within_seconds 24 * 60 * 60
   @listed 20
+  # Queues an application's own `config :brando, Oban` must keep: without
+  # them content events and webhook deliveries wait forever.
+  @required ~w(content_events webhooks)
 
   @impl true
   def id, do: "oban"
@@ -42,6 +47,7 @@ defmodule Brando.Doctor.Checks.Oban do
   def evaluate(findings) do
     queues = findings.queues
     paused = Enum.filter(queues, & &1.paused)
+    missing = missing_queues(findings)
     stuck = findings.stuck
     discarded = findings.discarded
 
@@ -55,6 +61,15 @@ defmodule Brando.Doctor.Checks.Oban do
       queues == [] and findings.testing not in [:inline, :manual] ->
         error(dgettext("doctor", "no queues, so background jobs never run"),
           fix: dgettext("doctor", "give config :brando, Oban its queues (see Brando.Supervisor)"),
+          items: items
+        )
+
+      missing != [] ->
+        warning(summary <> " · " <> dgettext("doctor", "no %{queues} queue", queues: Enum.join(missing, ", ")),
+          fix:
+            dgettext("doctor", "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)",
+              queues: Enum.map_join(missing, ", ", &"#{&1}: [limit: …]")
+            ),
           items: items
         )
 
@@ -76,6 +91,14 @@ defmodule Brando.Doctor.Checks.Oban do
       true ->
         ok(summary, items: items)
     end
+  end
+
+  defp missing_queues(%{testing: testing}) when testing in [:inline, :manual], do: []
+  defp missing_queues(%{queues: []}), do: []
+
+  defp missing_queues(%{queues: queues}) do
+    names = Enum.map(queues, & &1.queue)
+    Enum.reject(@required, &(&1 in names))
   end
 
   defp summary(findings, paused) do

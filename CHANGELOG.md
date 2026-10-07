@@ -24,10 +24,12 @@ production dump.
   `webhooks` and `webhook_deliveries` in every environment. Run
   `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
   events find no webhooks and saves carry on without them. Brando's default
-  Oban configuration has the new `content_events` and `webhooks` queues; an
-  application that sets `config :brando, Oban` itself must add them
-  (`content_events: [limit: 1], webhooks: [limit: 5]`) and may add
-  `{"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}` to its crontab. See
+  Oban configuration has the new `content_events` and `webhooks` queues. **An
+  application that sets `config :brando, Oban` itself must declare both
+  (`content_events: [limit: 1], webhooks: [limit: 5]`), or no content events
+  and no webhook deliveries ever run**; `mix brando.doctor` warns when they
+  are missing. Add `{"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}` to
+  its crontab as well. See
   [Webhooks and content events](guides/webhooks.md).
 
 - **Notes need two tables.** `brando_203` creates `entry_notes` and

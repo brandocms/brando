@@ -756,3 +756,13 @@ msgstr "oppdatert"
 #, elixir-autogen, elixir-format
 msgid "use the versions this Brando supports (see the installation guide)"
 msgstr "bruk versjonene denne Brando støtter (se installasjonsveiledningen)"
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "no %{queues} queue"
+msgstr "ingen %{queues}-kø"
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
+msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"

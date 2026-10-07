@@ -47,7 +47,8 @@ defmodule MyApp.IndexNow do
   def handle_event(%{type: "entry.published", url: url} = event) when is_binary(url) do
     %{url: url, event_id: event.id}
     |> Brando.Tenant.Job.attach()
-    |> MyApp.Workers.SubmitUrl.new()
+    # One job per event: a retried dispatch finds it and adds none
+    |> MyApp.Workers.SubmitUrl.new(unique: [keys: [:event_id], period: :infinity])
     |> Oban.insert()
   end
 
@@ -65,11 +66,17 @@ Brando's webhooks do this with a unique index, so a retry never queues a
 delivery twice.
 
 The dispatcher runs on the `:content_events` queue, and deliveries on
-`:webhooks`. Brando's default Oban configuration has both. If your
-application sets `config :brando, Oban`, add them:
+`:webhooks`. Brando's default Oban configuration has both. **An application
+that sets `config :brando, Oban` itself must declare both queues, or no
+events and no webhook deliveries ever run**: the jobs are queued and wait
+forever. `mix brando.doctor` (and the system check under Configuration →
+Utilities) warns when they are missing.
 
 ```elixir
-queues: [default: [limit: 1], content_events: [limit: 1], webhooks: [limit: 5], ...]
+config :brando, Oban,
+  queues: [default: [limit: 1], content_events: [limit: 1], webhooks: [limit: 5], ...],
+  # also schedule the delivery log's cleanup
+  cron: [crontab: [{"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}, ...]]
 ```
 
 ## Setting up a webhook
