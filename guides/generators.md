@@ -421,7 +421,9 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.upgrade FROM TO` | Version-aware hook called by Igniter |
 | `brando.migrate54` / `brando.migrate55` | Migrates application source from Brando 0.53 to 0.54 / 0.54 to 0.55 |
 | `brando.gen.tenant_migration` | Tenant migration source; see the tenancy guide |
+| `brando.doctor` | Read-only checks of versions, migrations, configuration, assets and content; see [System check](doctor.md) |
 
 For setup failures, fix the first compiler, migration or asset error before
-continuing. Do not mark a migration applied to skip an error. Keep historical
+continuing. After an upgrade, `mix brando.doctor` lists what is still out of
+date (see [System check](doctor.md)). Do not mark a migration applied to skip an error. Keep historical
 migrations and snapshots in version control.
