@@ -178,8 +178,9 @@ cannot add a factor. The user is emailed whenever two-factor authentication is
 turned on, off or reset. The calls are in `Brando.Users.TwoFactor`.
 
 **When a user loses their phone and their codes.** A superuser opens their
-form and chooses **Reset two-factor**. It turns two-factor authentication off,
-ends a lockout, and logs the user out everywhere; they log in with their
+form and chooses **Reset two-factor**. It turns two-factor authentication off
+(the app, every passkey and the recovery codes), ends a lockout, and logs the
+user out everywhere; they log in with their
 password and set it up again. The reset is recorded with who did it:
 
 ```elixir
@@ -204,6 +205,63 @@ authentication up again. To rotate it freely, give Brando its own secret:
 ```elixir
 config :brando, Brando.Crypto, secret: System.fetch_env!("BRANDO_ENCRYPTION_SECRET")
 ```
+
+## Passkeys
+
+A passkey is a second factor in place of the app's code, and satisfies a
+sign-in policy that requires two-factor authentication. Users add one or more
+under **Security → Passkeys**, with a name for each device, and remove them
+there. The first second factor a user adds — a passkey or the app — makes
+their recovery codes and logs out their other sessions. Once a user has a
+passkey, **Log in with a passkey** on the login page signs them in without the
+password: the device asks for its PIN, fingerprint or face (user verification
+is required for that), so the passkey is two factors on its own. After a
+password, a passkey is also the second step. The app and recovery codes stay
+as the fallback; the last second factor of a user the policy applies to cannot
+be removed.
+
+Passkeys are checked with [`wax_`](https://hex.pm/packages/wax_). The relying
+party is the admin's own address — the endpoint's URL as the origin and its
+host as the RP ID — unless the application sets them:
+
+```elixir
+config :brando, Brando.Users.Passkeys, origin: "https://admin.example.com", rp_id: "example.com"
+```
+
+A passkey only works for the RP ID it was made for, so keep it stable. Every
+challenge is random, valid for five minutes, and answers once
+(`Brando.Users.Passkeys`).
+
+## Confirming it is you again
+
+Some actions ask for the password, a code from the app or a passkey again when
+the session last gave one more than ten minutes ago, even inside a valid
+session (`BrandoAdmin.Reauth`): setting up the app, adding or removing a
+passkey, the user form (creating users, changing email or role, resetting
+another user's password or two-factor authentication, logging them out), the
+sign-in policy, changing groups and their members, deleting a site or an
+environment, and setting an environment live. Changing your own password and
+turning the app off ask for the current password or a code every time.
+
+A screen opts in with one line, and so do some events of a LiveView:
+
+```elixir
+on_mount {BrandoAdmin.Reauth, :screen}
+on_mount {BrandoAdmin.Reauth, events: ~w(delete_environment queue_set_live)}
+```
+
+A controller route uses `plug :require_recent_auth`. The window is
+configurable (`config :brando, BrandoAdmin.Reauth, window_minutes: 10`). When
+the session last confirmed is kept with the session in `users_tokens`; logging
+in counts as confirming.
+
+## Sessions
+
+**Security → Sessions** lists where the user is logged in — the browser, the
+address, when it logged in and when it was last active — and logs out any of
+them, or all but the current one. On another user's form, a superuser chooses
+**Log out everywhere** (`Brando.Users.log_out_everywhere/3`); it is recorded in
+the security log with who did it.
 
 ## Sign-in limits and lockout
 
