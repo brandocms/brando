@@ -3,5 +3,6 @@ defmodule Brando.Blueprint.JSONLD.JSONLDSchema do
   defstruct __identifier__: nil,
             __spark_metadata__: nil,
             schema: nil,
+            videos: true,
             fields: []
 end

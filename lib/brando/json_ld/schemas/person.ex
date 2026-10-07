@@ -1,9 +1,15 @@
 defmodule Brando.JSONLD.Schema.Person do
   @moduledoc """
-  Person schema
+  Person schema.
+
+  Built three ways: `build/1` for a nested person (a performer, a name),
+  `build_person/1` from a map of attributes, and `Brando.JSONLD.Author` for
+  the `:person` field type, which maps Brando users and People entries.
   """
 
   alias Brando.JSONLD.Schema
+
+  @type t :: %__MODULE__{}
 
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",

@@ -21,12 +21,12 @@ defmodule Brando.JSONLD do
       |> Spark.Dsl.Extension.get_entities(:json_ld_schemas)
       |> List.first()
 
-    extract_json_ld_schema(json_ld_data, data, extra_fields)
+    extract_json_ld_schema(module, json_ld_data, data, extra_fields)
   end
 
-  defp extract_json_ld_schema(nil, _data, _extra_fields), do: nil
+  defp extract_json_ld_schema(_module, nil, _data, _extra_fields), do: nil
 
-  defp extract_json_ld_schema(json_ld_data, data, extra_fields) do
+  defp extract_json_ld_schema(module, json_ld_data, data, extra_fields) do
     fields = json_ld_data.fields ++ extra_fields
     schema = json_ld_data.schema
 
@@ -71,6 +71,9 @@ defmodule Brando.JSONLD do
         result = value_fn.(data)
         Map.put(acc, name, result)
 
+      %{name: name, type: :person, value_fn: value_fn}, acc ->
+        Map.put(acc, name, Brando.JSONLD.Author.build(value_fn.(data)))
+
       %{name: name, type: {:list, schema}, value_fn: value_fn}, acc ->
         items = value_fn.(data)
         result = if is_list(items), do: Enum.map(items, &schema.build/1), else: nil
@@ -80,9 +83,26 @@ defmodule Brando.JSONLD do
         result = schema.build(value_fn.(data))
         Map.put(acc, name, result)
     end)
+    |> maybe_put_videos(module, json_ld_data, fields, data)
     |> maybe_override_type(data)
     |> maybe_add_id(data)
   end
+
+  # The videos the entry shows, on schemas with a `video` property, unless the
+  # blueprint maps `video` itself or opts out with `videos: false`.
+  defp maybe_put_videos(struct, module, json_ld_data, fields, data) do
+    with true <- Map.get(json_ld_data, :videos, true),
+         true <- Map.has_key?(struct, :video),
+         false <- Enum.any?(fields, &(&1.name == :video)),
+         [_ | _] = videos <- Brando.JSONLD.Videos.from_entry(module, data) do
+      Map.put(struct, :video, single_or_list(videos))
+    else
+      _ -> struct
+    end
+  end
+
+  defp single_or_list([one]), do: one
+  defp single_or_list(many), do: many
 
   defp maybe_add_id(struct, %{__meta__: %{current_url: url}}) when is_binary(url) and url != "" do
     type =
@@ -122,6 +142,7 @@ defmodule Brando.JSONLD do
       entities
       |> List.flatten()
       |> Enum.reject(&is_nil/1)
+      |> lift_linked_nodes()
       |> Enum.map(fn entity ->
         entity
         |> to_slim_map()
@@ -136,6 +157,49 @@ defmodule Brando.JSONLD do
     }
     |> Jason.encode!()
   end
+
+  # Nodes the graph links to rather than nests: a `Person` built for an author
+  # and a `VideoObject`. Each is lifted out of the entity that holds it and
+  # left there as an `@id` reference, so the graph has one node per person or
+  # video however many entities point at it — the first occurrence wins.
+  @linked_nodes [Brando.JSONLD.Schema.Person, Brando.JSONLD.Schema.VideoObject]
+
+  @doc """
+  Lifts linked nodes (`Person`s with an `@id`, `VideoObject`s) out of
+  `entities` into top-level graph nodes, replacing each with an `@id`
+  reference. Nodes already at the top level keep their place; duplicates by
+  `@id` are dropped.
+  """
+  @spec lift_linked_nodes([term()]) :: [term()]
+  def lift_linked_nodes(entities) do
+    {entities, lifted} = Enum.map_reduce(entities, [], &lift_fields/2)
+
+    (entities ++ Enum.reverse(lifted))
+    |> Enum.uniq_by(fn
+      %{"@id": id} when is_binary(id) -> id
+      other -> {:unidentified, make_ref(), other}
+    end)
+  end
+
+  defp lift_fields(%_{} = struct, acc) do
+    struct
+    |> Map.from_struct()
+    |> Enum.reduce({struct, acc}, fn {key, value}, {struct, acc} ->
+      {value, acc} = lift(value, acc)
+      {Map.put(struct, key, value), acc}
+    end)
+  end
+
+  defp lift_fields(other, acc), do: {other, acc}
+
+  defp lift(%module{"@id": id} = node, acc) when module in @linked_nodes and is_binary(id) do
+    {node, acc} = lift_fields(node, acc)
+    {%{"@id": id}, [node | acc]}
+  end
+
+  defp lift(%_{} = struct, acc), do: lift_fields(struct, acc)
+  defp lift(list, acc) when is_list(list), do: Enum.map_reduce(list, acc, &lift/2)
+  defp lift(value, acc), do: {value, acc}
 
   @doc """
   Converts a struct or map to a slim map, stripping nil values recursively.

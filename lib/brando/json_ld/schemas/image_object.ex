@@ -15,6 +15,9 @@ defmodule Brando.JSONLD.Schema.ImageObject do
     nil
   end
 
+  # An image association the caller did not preload.
+  def build(%Ecto.Association.NotLoaded{}), do: nil
+
   def build(image) do
     largest_size_url =
       image

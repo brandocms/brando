@@ -36,15 +36,19 @@ defmodule Brando.JSONLD.Schema.WebPage do
       inLanguage: conn.assigns[:language],
       isPartOf: %{"@id": Path.join(Brando.Utils.hostname(), "#website")},
       breadcrumb: build_breadcrumb_ref(conn),
-      mainEntity: main_entity(type)
+      mainEntity: main_entity(type, conn.assigns[:json_ld_main_entity])
     }
   end
 
-  # A profile or about page is about the site's person or organisation.
-  defp main_entity(type) when type in ["ProfilePage", "AboutPage"],
+  # A profile page about a person entry (see `Brando.Plug.HTML.put_json_ld/4`)
+  # is about that Person; any other profile or about page is about the site's
+  # person or organisation.
+  defp main_entity("ProfilePage", id) when is_binary(id), do: %{"@id": id}
+
+  defp main_entity(type, _id) when type in ["ProfilePage", "AboutPage"],
     do: %{"@id": Path.join(Brando.Utils.hostname(), "#identity")}
 
-  defp main_entity(_type), do: nil
+  defp main_entity(_type, _id), do: nil
 
   defp build_breadcrumb_ref(%{assigns: %{json_ld_breadcrumbs: _}}) do
     %{"@id": "#{Brando.Utils.hostname()}/#breadcrumb"}

@@ -158,15 +158,25 @@ defmodule Brando.Plug.HTML do
     }
 
     data_with_meta = Map.merge(data, meta_meta)
-    json_ld_type = Map.get(data, :json_ld_type, "WebPage")
 
     entity = JSONLD.extract_json_ld(module, data_with_meta, extra_fields)
     existing = Map.get(conn.assigns, :json_ld_entities, [])
 
     conn
     |> assign(:json_ld_entities, existing ++ List.wrap(entity))
-    |> assign(:json_ld_page_type, json_ld_type)
+    |> put_json_ld_page(data, entity)
   end
+
+  # A person's own page is their profile: a `ProfilePage` about the Person.
+  # (An entry with its own `json_ld_type` gives the entity that type instead.)
+  defp put_json_ld_page(conn, _data, %{"@type": "Person", "@id": id}) when is_binary(id) do
+    conn
+    |> assign(:json_ld_page_type, "ProfilePage")
+    |> assign(:json_ld_main_entity, id)
+  end
+
+  defp put_json_ld_page(conn, data, _entity),
+    do: assign(conn, :json_ld_page_type, Map.get(data, :json_ld_type, "WebPage"))
 
   @doc """
   Put hreflang data in conn
