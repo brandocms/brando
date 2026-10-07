@@ -1238,6 +1238,12 @@ production dump.
 
 #### Fixes
 
+- **Fresh installs build the admin again.** `@codemirror/language` 6.13.0
+  (7 October 2026) imports `@codemirror/streamparser` without declaring it, so
+  `mix brando.assets.setup` failed to resolve it in new projects. The backend
+  `package.json` pins `@codemirror/language` to 6.12.4 through
+  `pnpm.overrides`, and `mix brando.upgrade` adds the pin to existing projects.
+
 - **Listings with two or more alternates render again.** The alternates
   column keyed its rows on identifiers built in memory, whose `id` is nil, and
   LiveView 1.2 raised "found duplicate key nil in comprehension".

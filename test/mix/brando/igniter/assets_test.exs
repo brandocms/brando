@@ -130,6 +130,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert package["packageManager"] == wanted["packageManager"]
       assert package["engines"] == wanted["engines"]
       assert package["pnpm"]["onlyBuiltDependencies"] == wanted["pnpm"]["onlyBuiltDependencies"]
+      assert package["pnpm"]["overrides"] == wanted["pnpm"]["overrides"]
 
       assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
       assert package["dependencies"]["site-widget"] == "^2.0.0"
