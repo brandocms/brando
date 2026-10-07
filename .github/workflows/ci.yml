@@ -241,10 +241,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Four legacy shards: with two, the slower one ran about 18 minutes
+          # of tests and set the PR's wall-clock time. Playwright splits by
+          # test count with whole files kept together, so the shards are not
+          # even; on the 7 October timings the longest of four is about 10
+          # minutes of tests.
           - suite: legacy-1
-            shard: 1/2
+            shard: 1/4
           - suite: legacy-2
-            shard: 2/2
+            shard: 2/4
+          - suite: legacy-3
+            shard: 3/4
+          - suite: legacy-4
+            shard: 4/4
           - suite: authorization
             shard: ''
     env:
