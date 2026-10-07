@@ -828,7 +828,14 @@ defmodule BrandoAdmin.Components.Content.List do
           <.icon name="chevron-right" />
         </button>
       </nav>
-      <form :if={@has_entries} class="pagination-limit" phx-change={@change_limit}>
+      <%!-- The page size lives in the URL, so a reconnect has nothing to recover. --%>
+      <form
+        :if={@has_entries}
+        id={"#{@id}-limit-form"}
+        class="pagination-limit"
+        phx-change={@change_limit}
+        phx-auto-recover="ignore"
+      >
         <label for={"#{@id}-limit"}>{gettext("Per page")}</label>
         <select id={"#{@id}-limit"} name="limit" class="admin-select">
           <option
