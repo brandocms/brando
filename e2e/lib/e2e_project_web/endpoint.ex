@@ -81,6 +81,7 @@ defmodule E2eProjectWeb.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, {:multipart, length: 100_000_000}, :json],
     pass: ["*/*"],
+    body_reader: {E2eProjectWeb.RawBodyReader, :read_body, []},
     json_decoder: Phoenix.json_library()
 
   plug Plug.MethodOverride

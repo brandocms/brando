@@ -61,6 +61,8 @@ defmodule E2eProjectWeb.Router do
       post "/dashboard-access/:mode", E2EFixtureController, :dashboard_access
       post "/authorization/:role", E2EFixtureController, :authorization
       post "/authorization-sites/:action", E2EAuthorizationController, :run
+      post "/webhook-receiver/:inbox", E2EWebhookReceiverController, :receive_delivery
+      get "/webhook-receiver/:inbox", E2EWebhookReceiverController, :list
     end
   end
 

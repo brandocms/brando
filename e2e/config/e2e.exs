@@ -38,6 +38,10 @@ config :brando, Oban,
 
 config :e2e_project, hmr: false
 
+# Webhooks call the E2E server's own test receiver (`/e2e/webhook-receiver`)
+# over http on localhost. Development and E2E only: never in production.
+config :brando, Brando.Webhooks, allow_localhost: true
+
 # Email sent while the tests run (form notifications, password reset links)
 # is kept in Swoosh's in-memory mailbox, where `/e2e/password-reset/mailbox`
 # reads it back for the browser.
