@@ -14918,3 +14918,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Expired"
 msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "A block with unsaved changes was removed by another save. Your changes to it are kept in your recovery copy."
+msgstr ""

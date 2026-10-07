@@ -18109,3 +18109,8 @@ msgid "Search index rebuilt: %{count} entry."
 msgid_plural "Search index rebuilt: %{count} entries."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "A block with unsaved changes was removed by another save. Your changes to it are kept in your recovery copy."
+msgstr ""
