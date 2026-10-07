@@ -41,6 +41,10 @@ defmodule Brando.Tenant.SharedTables do
     user_sites
     user_tokens
     users
+    users_recovery_codes
+    users_security
+    users_security_events
+    users_security_policy
     users_tokens
   )
 

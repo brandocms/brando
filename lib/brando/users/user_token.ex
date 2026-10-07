@@ -1,7 +1,7 @@
 defmodule Brando.Users.UserToken do
   @moduledoc """
-  Tokens that stand in for a user: a session after login, and a password
-  reset link.
+  Tokens that stand in for a user: a session after login, a sign-in waiting
+  for its second step, and a password reset link.
 
   A session token lives in the signed session or remember-me cookie, so it is
   stored as it is. A reset token is emailed, so only its SHA-256 hash is
@@ -18,6 +18,13 @@ defmodule Brando.Users.UserToken do
   # for it and may not be waiting for it.
   @reset_password_validity %{"reset_password" => 60, "admin_reset_password" => 24 * 60}
   @session_validity_in_days 60
+
+  # A sign-in whose password was right, waiting for a two-factor code
+  # (`"pending_2fa"`), or for the user to finish setting two-factor
+  # authentication up (`"two_factor_verified"` once they have). It is not a
+  # session: nothing but the second step accepts it.
+  @pending_validity_in_minutes 10
+  @pending_contexts ~w(pending_2fa two_factor_verified)
 
   @schema_prefix "public"
 
@@ -67,6 +74,35 @@ defmodule Brando.Users.UserToken do
 
     {:ok, query}
   end
+
+  @doc """
+  Generates the token of a sign-in waiting for its second step, kept in the
+  signed session like a session token. `context` is `"pending_2fa"`.
+  """
+  def build_pending_token(user) do
+    token = :crypto.strong_rand_bytes(@rand_size)
+    {token, %Brando.Users.UserToken{token: token, context: "pending_2fa", user_id: user.id}}
+  end
+
+  @doc """
+  The query for the active, undeleted user of a sign-in waiting for its
+  second step, while it is valid, with the token's context:
+  `{user, context}`.
+  """
+  def verify_pending_token_query(token) when is_binary(token) do
+    from t in Brando.Users.UserToken,
+      join: user in assoc(t, :user),
+      where: t.token == ^token and t.context in @pending_contexts,
+      where: t.inserted_at > ago(@pending_validity_in_minutes, "minute"),
+      where: user.active == true and is_nil(user.deleted_at),
+      select: {user, t.context}
+  end
+
+  @doc "The contexts of a sign-in waiting for its second step."
+  def pending_contexts, do: @pending_contexts
+
+  @doc "How long a sign-in waits for its second step, in minutes."
+  def pending_validity_in_minutes, do: @pending_validity_in_minutes
 
   @doc """
   Builds a token to email to `user`, and its hashed counterpart to store.

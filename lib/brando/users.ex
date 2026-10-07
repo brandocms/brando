@@ -11,6 +11,8 @@ defmodule Brando.Users do
   require Logger
 
   alias Brando.Repo
+  alias Brando.Users.SecurityLog
+  alias Brando.Users.TwoFactor
   alias Brando.Users.User
   alias Brando.Users.UserNotifier
   alias Brando.Users.UserToken
@@ -19,6 +21,9 @@ defmodule Brando.Users do
   alias Ecto.Multi
 
   @type user :: User.t()
+
+  # A user's sign-in security, which is theirs alone: content transfer leaves it out.
+  @security_tables ["users_security", "users_recovery_codes", "users_security_events", "users_security_policy"]
 
   query :list, User do
     fn q -> from(t in q) end
@@ -108,6 +113,19 @@ defmodule Brando.Users do
   end
 
   @doc """
+  Whether `user` is a superuser: in the installation's superuser group with
+  groups authorization, or of the `:superuser` role without.
+  """
+  @spec superuser?(user | term()) :: boolean()
+  def superuser?(%User{} = user) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.Engine.superuser?(Brando.Authorization.Scope.installation(user)),
+      else: user.role == :superuser
+  end
+
+  def superuser?(_), do: false
+
+  @doc """
   Generates a session token.
   """
   def generate_user_session_token(user) do
@@ -118,14 +136,107 @@ defmodule Brando.Users do
 
   @doc """
   Gets the user with the given signed token.
+
+  A user whom the sign-in policy now requires to use two-factor
+  authentication, and who has not set it up, gets nil, and the session ends:
+  they set it up at their next sign-in (`Brando.Users.TwoFactor.must_enroll?/1`).
   """
   def get_user_by_session_token(token) do
     {:ok, query} = UserToken.verify_session_token_query(token)
 
-    query
-    |> Repo.one()
-    |> Repo.preload(:avatar)
+    case Repo.one(query) do
+      nil ->
+        nil
+
+      user ->
+        if TwoFactor.must_enroll?(user) do
+          end_session(token)
+          nil
+        else
+          Repo.preload(user, :avatar)
+        end
+    end
   end
+
+  defp end_session(token) do
+    delete_session_token(token)
+    Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+  end
+
+  @doc """
+  Logs `user` out of every session, but the one with the token `except`,
+  and ends any sign-in waiting for its second step. Their open admin views
+  are disconnected.
+  """
+  @spec revoke_sessions(user, keyword()) :: :ok
+  def revoke_sessions(%{id: _} = user, opts \\ []) do
+    query = UserToken.user_and_contexts_query(user, ["session" | UserToken.pending_contexts()])
+
+    query =
+      case opts[:except] do
+        nil -> query
+        token -> from t in query, where: t.token != ^token
+      end
+
+    {_count, tokens} = Repo.delete_all(from(t in query, select: {t.context, t.token}))
+    for {"session", token} <- tokens, do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+    :ok
+  end
+
+  ## Sign-in waiting for its second step
+
+  @doc """
+  Starts a sign-in whose password was right but which waits for a
+  two-factor code, or for the user to set two-factor authentication up.
+  Returns the token to keep in the session; it is not a session token.
+  Any earlier such sign-in of the user ends.
+  """
+  @spec generate_pending_token(user) :: binary()
+  def generate_pending_token(user) do
+    {token, user_token} = UserToken.build_pending_token(user)
+
+    Repo.transaction(fn ->
+      Repo.delete_all(UserToken.user_and_contexts_query(user, UserToken.pending_contexts()))
+      Repo.insert!(user_token)
+    end)
+
+    token
+  end
+
+  @doc """
+  The user of a sign-in waiting for its second step, and whether they have
+  just set two-factor authentication up (`:verified`) or must give a code
+  (`:pending`): `{user, state}`, or nil when the token is unknown or older
+  than `Brando.Users.UserToken.pending_validity_in_minutes/0`.
+  """
+  @spec get_pending_login(binary() | nil) :: {user, :pending | :verified} | nil
+  def get_pending_login(token) when is_binary(token) do
+    case Repo.one(UserToken.verify_pending_token_query(token)) do
+      {user, "pending_2fa"} -> {user, :pending}
+      {user, "two_factor_verified"} -> {user, :verified}
+      nil -> nil
+    end
+  end
+
+  def get_pending_login(_token), do: nil
+
+  @doc "Marks a sign-in waiting for its second step as done: the user has just set two-factor authentication up."
+  @spec verify_pending_login(binary()) :: :ok | :error
+  def verify_pending_login(token) when is_binary(token) do
+    case Repo.update_all(UserToken.token_and_context_query(token, "pending_2fa"), set: [context: "two_factor_verified"]) do
+      {1, _} -> :ok
+      _ -> :error
+    end
+  end
+
+  @doc "Ends a sign-in waiting for its second step."
+  @spec delete_pending_token(binary() | nil) :: :ok
+  def delete_pending_token(token) when is_binary(token) do
+    Repo.delete_all(from t in UserToken, where: t.token == ^token and t.context in ^UserToken.pending_contexts())
+    :ok
+  end
+
+  def delete_pending_token(_token), do: :ok
 
   @doc """
   Deletes the signed token with the given context.
@@ -287,6 +398,7 @@ defmodule Brando.Users do
     user
     |> password_changeset(attrs)
     |> save_password(UserToken.user_and_contexts_query(user, :all))
+    |> log_password_change(%{"by" => "reset_link"})
   end
 
   @doc """
@@ -309,6 +421,7 @@ defmodule Brando.Users do
     |> password_changeset(attrs)
     |> validate_current_password(current_password)
     |> save_password(revoked)
+    |> log_password_change(%{"by" => "user"})
   end
 
   @doc """
@@ -334,8 +447,18 @@ defmodule Brando.Users do
       user
       |> password_changeset(attrs)
       |> save_password(UserToken.user_and_contexts_query(user, :all), :admin)
+      |> log_password_change(%{"by" => "admin"}, current_user)
     end
   end
+
+  defp log_password_change(result, details, actor \\ nil)
+
+  defp log_password_change({:ok, user} = result, details, actor) do
+    SecurityLog.record(:password_changed, user, actor: actor, details: details)
+    result
+  end
+
+  defp log_password_change(result, _details, _actor), do: result
 
   defp same_user?(%{id: id}, %{id: id}), do: true
   defp same_user?(_user, _other), do: false
@@ -422,6 +545,7 @@ defmodule Brando.Users do
     get_user_foreign_key_references()
     |> Enum.reject(fn {table, _column} ->
       table in ["users_tokens", "user_sites", "activity_events", "entry_notes", "note_mentions"] or
+        table in @security_tables or
         String.starts_with?(table, "authorization_")
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
@@ -452,11 +576,12 @@ defmodule Brando.Users do
     end)
   end
 
-  defp transfer_or_delete_ref("users_tokens", _column, from_user_id, _to_user_id) do
+  defp transfer_or_delete_ref(table, "user_id", from_user_id, _to_user_id)
+       when table in ["users_tokens", "users_security", "users_recovery_codes"] do
     %{num_rows: num_rows} =
       Ecto.Adapters.SQL.query!(
         Brando.repo(),
-        "DELETE FROM users_tokens WHERE user_id = $1",
+        "DELETE FROM #{table} WHERE user_id = $1",
         [from_user_id]
       )
 
@@ -470,6 +595,8 @@ defmodule Brando.Users do
   # Likewise who wrote a note, resolved it or was mentioned in it (`Brando.Notes`).
   defp transfer_or_delete_ref("entry_notes", _column, _from, _to), do: 0
   defp transfer_or_delete_ref("note_mentions", _column, _from, _to), do: 0
+  # The security log records who signed in and who changed what, and the policy who last saved it.
+  defp transfer_or_delete_ref(table, _column, _from, _to) when table in @security_tables, do: 0
 
   defp transfer_or_delete_ref(table, column, from_user_id, to_user_id) do
     %{num_rows: num_rows} =
