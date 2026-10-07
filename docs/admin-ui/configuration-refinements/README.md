@@ -5,9 +5,10 @@ viewport: 1440 × 1000; mobile viewport: 390 × 844. Full-page captures can be t
 The surrounding sidebar, large blue logo and sample content belong to the E2E
 application. Custom Blueprint names use that application's translations.
 
-## Import/Export
+## Content transfer
 
-The menu and page title now use `Import/Export` (`Import/Eksport` in Norwegian).
+The menu and page title are now `Content transfer` (`Innholdsoverføring` in
+Norwegian).
 Content-type filters support multiple selections and retain selected entries
 when filtering. They constrain the catalog before its result limit is applied.
 The filters share one labelled surface with checked selections. Each result

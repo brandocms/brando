@@ -260,6 +260,13 @@ behavioral coverage. When fixing a failing test, rerun that specific test first.
    screenshot of the actual implementation. Keep saved reference images current
    when the approved design changes.
 
+`e2e/playwright/scripts/admin-ui-references.mjs` retakes the reference images
+linked from these docs. Start the E2E server (`cd e2e && source .envrc &&
+MIX_ENV=e2e mix phx.server`), then in a second terminal run `cd e2e && source
+.envrc && node playwright/scripts/admin-ui-references.mjs`; `--list` prints the
+catalogue and `--only <name>` retakes one image. Take the committed references
+on a Mac: Linux renders the admin's text differently.
+
 ## AI actions and suggestions
 
 Approved with issue #2983. Everything AI in the admin uses two looks, so an
@@ -721,8 +728,9 @@ The [interactive comparison](admin-ui/identifier-variants/standalone.html)
 retains the other variants for context.
 
 Use one outline around adjacent rows, thin dividers, small rectangular covers
-and a document icon when no cover exists. Titles lead; type, language and a
-localized status label sit below. Show a grip only for sortable rows, a checkbox
+and the content type's icon when no cover exists. Titles lead, with the status
+dot before them (its localized name is there for screen readers and on hover);
+type and language sit below. Show a grip only for sortable rows, a checkbox
 for picker choices, and a small remove button where removal is supported.
 Relation-field actions share a footer inside the outline. Link-picker results
 also retain their destination URL.

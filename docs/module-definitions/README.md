@@ -1,7 +1,7 @@
 # Module definition files in the admin
 
-Open **Content Modules → Import / export DSL**. These screenshots show the real
-E2E application at 1440px desktop and 390px mobile widths.
+Open **Block modules → Import / export → Modules as files**. These screenshots
+show the real E2E application at 1440px desktop and 390px mobile widths.
 
 ## Export and import
 
