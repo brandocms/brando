@@ -694,6 +694,49 @@ defmodule E2EFixtureController do
     end
   end
 
+  # An editor for the two-factor specs, with an address of their own and no
+  # first-login password change. "enabled-user" has two-factor
+  # authentication on already: the secret comes back Base32, as the app's
+  # setup key, with the recovery codes.
+  def two_factor(conn, %{"action" => action}) when action in ["user", "enabled-user"] do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    email = "two-factor-#{System.unique_integer([:positive])}@brandocms.com"
+    password = "two factor password"
+
+    {:ok, user} =
+      Brando.Users.create_user(
+        %{
+          name: "Two-factor Editor",
+          email: email,
+          password: password,
+          password_confirmation: password,
+          language: conn.params["language"] || "en",
+          role: :editor,
+          active: true,
+          config: %{reset_password_on_first_login: false}
+        },
+        :system
+      )
+
+    if action == "enabled-user" do
+      secret = Brando.Users.TwoFactor.new_secret()
+      {:ok, codes} = Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret))
+      # The code that turned it on is used up; the spec signs in with the current one.
+      import Ecto.Query, only: [from: 2]
+      Brando.Repo.update_all(from(s in Brando.Users.Security, where: s.user_id == ^user.id), set: [totp_last_step: nil])
+      json(conn, %{
+        id: user.id,
+        email: email,
+        password: password,
+        secret: Base.encode32(secret, padding: false),
+        codes: codes
+      })
+    else
+      json(conn, %{id: user.id, email: email, password: password})
+    end
+  end
+
   def image_creator(conn, %{"image_id" => image_id}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
