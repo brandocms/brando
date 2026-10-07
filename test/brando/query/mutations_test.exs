@@ -319,6 +319,64 @@ defmodule Brando.Query.MutationsTest do
       assert {first.uri, second.uri} == {"taken-uri-copy", "taken-uri-copy-2"}
     end
 
+    # The listing's "Duplicate to"/"Translate to" copy a page into another
+    # language. When that language already has a page at the same URI, the
+    # insert must come back as an error rather than raise and crash the view.
+    test "a copy that takes a unique value returns an error and saves nothing" do
+      user = Factory.insert(:random_user)
+      Factory.insert(:page, title: "Indeks", uri: "index", language: :no)
+      original = Factory.insert(:page, title: "Index", uri: "index", language: :en)
+      count = Brando.Repo.aggregate(Page, :count)
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               TestContext.duplicate_page(original.id, user, change_fields: [language: :no])
+
+      assert {"has already been taken", _} = changeset.errors[:uri]
+      assert Brando.Repo.aggregate(Page, :count) == count
+    end
+
+    test "a copy that can't be saved leaves no cloned gallery behind" do
+      user = Factory.insert(:random_user)
+      {:ok, module} = Brando.Content.create_module(Factory.params_for(:module, %{code: "gallery"}), :system)
+      gallery = Factory.insert(:gallery, config_target: "ref:gallery")
+      Factory.insert(:page, uri: "taken", language: :no)
+
+      page = Factory.insert(:page, uri: "taken", language: :en)
+
+      block =
+        %Brando.Content.Block{}
+        |> Brando.Content.Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "source" => to_string(Page.Blocks),
+            "module_id" => module.id,
+            "creator_id" => user.id,
+            "refs" => [
+              %{
+                "uid" => Brando.Utils.generate_uid(),
+                "name" => "gallery",
+                "gallery_id" => gallery.id,
+                "data" => %{"type" => "gallery", "data" => %{}}
+              }
+            ]
+          },
+          user
+        )
+        |> Brando.Repo.insert!()
+
+      Brando.Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
+
+      galleries = Brando.Repo.aggregate(Brando.Galleries.Gallery, :count)
+
+      assert {:error, %Ecto.Changeset{}} = TestContext.duplicate_page(page.id, user, change_fields: [language: :no])
+      assert Brando.Repo.aggregate(Brando.Galleries.Gallery, :count) == galleries
+
+      # A copy that saves does clone it
+      assert {:ok, _} = TestContext.duplicate_page(page.id, user, change_fields: [language: :no, uri: "free"])
+      assert Brando.Repo.aggregate(Brando.Galleries.Gallery, :count) == galleries + 1
+    end
+
     test "sets status to draft" do
       user = Factory.insert(:random_user)
       original = Factory.insert(:page, title: "Published", status: :published)

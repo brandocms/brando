@@ -21,6 +21,7 @@ defmodule Brando.Translations do
 
   import Ecto.Query
 
+  alias Brando.Blueprint.Unique
   alias Brando.Content.Identifier
   alias Brando.Repo
   alias Brando.Translations.Group
@@ -1144,12 +1145,35 @@ defmodule Brando.Translations do
           do: {name, fn _entry, value -> value end}
 
     override_opts = [
-      change_fields: [{:language, String.to_existing_atom(language)} | slug_fields] ++ kept_text ++ separate,
+      change_fields:
+        [{:language, String.to_existing_atom(language)} | slug_fields] ++
+          kept_text ++ separate ++ free_unique_values(schema),
       merge_change_fields: true,
       keep_sync_uid: true
     ]
 
     apply(context, :"duplicate_#{singular}", [source_id, actor, override_opts])
+  end
+
+  @doc """
+  `change_fields` for copying an entry of `schema` into another language.
+
+  Each unique text value (a page's URI, a slug, a form's key) stays as it is
+  when the copy's language has it free, and is otherwise numbered: a Norwegian
+  copy of the English `index` page becomes `index-2` when a Norwegian page is
+  already at `index`. Put these after the language and any other change to the
+  same fields: each one checks the value those leave.
+  """
+  def free_unique_values(schema) do
+    for %{name: name, opts: %{unique: unique}} <- Brando.Blueprint.Attributes.__attributes__(schema),
+        unique not in [nil, false] do
+      # The entry is still the source here: its own row counts as taken.
+      {name,
+       fn
+         entry, value when is_binary(value) -> Unique.free_value(schema, name, value, Map.put(entry, :id, nil))
+         _entry, value -> value
+       end}
+    end
   end
 
   defp load_entry(schema, id) do

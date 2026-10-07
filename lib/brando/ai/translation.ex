@@ -589,8 +589,13 @@ defmodule Brando.AI.Translation do
       source = get_slug_source(schema, slug_field.name)
       slug_value = slug_value(source, fresh_entry)
 
+      # Another entry may already have the translated slug.
       if slug_value && slug_value != "" do
-        Map.put(acc, slug_field.name, slug_value)
+        Map.put(
+          acc,
+          slug_field.name,
+          Brando.Blueprint.Unique.free_value(schema, slug_field.name, slug_value, fresh_entry)
+        )
       else
         acc
       end

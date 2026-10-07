@@ -5,12 +5,14 @@ defmodule Brando.Query.Mutations do
 
   alias Brando.Activity
   alias Brando.Authorization.Boundary
+  alias Brando.Blueprint.Unique
   alias Brando.Content
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Datasource
   alias Brando.Notifications
   alias Brando.Publisher
   alias Brando.Query
+  alias Brando.Repo
   alias Brando.Revisions
   alias Brando.Tenant
   alias Brando.Tenant.Job
@@ -263,12 +265,31 @@ defmodule Brando.Query.Mutations do
         |> update_meta()
 
       with :ok <- Boundary.change(user, :create, Ecto.Changeset.change(cloned_entry)),
-           {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
-           {:ok, copy} <- Brando.Repo.insert(cloned_entry) do
+           {:ok, copy} <- insert_copy(cloned_entry, module, user) do
         Activity.duplicated(copy, entry, user)
         {:ok, copy}
       end
     end
+  end
+
+  # The copy is inserted through a changeset that knows the schema's unique
+  # constraints, so a value another entry holds (a page's URI in the copy's
+  # language) comes back as `{:error, changeset}` instead of raising. Its
+  # galleries are cloned in the same transaction: a copy that can't be saved
+  # leaves none behind.
+  defp insert_copy(cloned_entry, module, user) do
+    Repo.transaction(fn ->
+      with {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
+           {:ok, copy} <-
+             cloned_entry
+             |> Ecto.Changeset.change()
+             |> Unique.put_unique_constraints(module)
+             |> Repo.insert() do
+        copy
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   # A loaded `has_many` row that still has its id would be re-pointed at the
