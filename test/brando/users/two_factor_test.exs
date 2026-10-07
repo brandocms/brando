@@ -64,7 +64,34 @@ defmodule Brando.Users.TwoFactorTest do
                Repo.all(from e in SecurityEvent, where: e.user_id == ^user.id and e.action == :login_failed)
 
       # The setup screen of a sign-in whose password was right a moment ago
-      assert {:ok, _codes} = TwoFactor.enable(user, secret, code, proof: :signed_in_now)
+      pending_id = Users.token_id(Users.generate_pending_token(user), "pending_2fa")
+      assert {:ok, _codes} = TwoFactor.enable(user, secret, code, proof: {:signed_in_now, pending_id})
+    end
+
+    test "a waiting sign-in vouches only while it lasts, for its own user, without a factor yet" do
+      user = user()
+      other = user()
+      pending_id = Users.token_id(Users.generate_pending_token(user), "pending_2fa")
+      secret = TwoFactor.new_secret()
+      code = TwoFactor.current_code(secret)
+
+      assert {:error, :invalid_proof} = TwoFactor.enable(other, secret, code, proof: {:signed_in_now, pending_id})
+      assert {:error, :invalid_proof} = TwoFactor.enable(user, secret, code, proof: {:signed_in_now, nil})
+
+      # The review's probe: the owner resets their password, which ends the
+      # attacker's waiting sign-in
+      {:ok, _} = Users.reset_user_password(user, %{password: "a new one", password_confirmation: "a new one"})
+      assert {:error, :invalid_proof} = TwoFactor.enable(user, secret, code, proof: {:signed_in_now, pending_id})
+      refute TwoFactor.enabled?(user)
+
+      # An expired one does not vouch either
+      expired_id = Users.token_id(Users.generate_pending_token(user), "pending_2fa")
+
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.id == ^expired_id),
+        set: [inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -11 * 60)]
+      )
+
+      assert {:error, :invalid_proof} = TwoFactor.enable(user, secret, code, proof: {:signed_in_now, expired_id})
     end
 
     test "logs out the other sessions, keeping the current one" do

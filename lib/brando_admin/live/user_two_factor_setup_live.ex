@@ -10,6 +10,7 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
 
   alias Brando.Users
   alias Brando.Users.TwoFactor
+  alias Brando.Users.UserToken
   alias BrandoAdmin.Components.Auth
   alias BrandoAdmin.Components.TwoFactor, as: TwoFactorComponents
 
@@ -36,7 +37,7 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
             id="two-factor-setup"
             user={@user}
             keep_id={@token_id}
-            proof={:signed_in_now}
+            proof={{:signed_in_now, @token_id}}
             meta={@meta}
           />
           <div class="login-actions">
@@ -55,13 +56,17 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
       {user, :pending} ->
         Auth.put_locale(user.language)
 
+        token_id = Users.token_id(token, "pending_2fa")
+
         if TwoFactor.enabled?(user) do
           {:ok, push_navigate(socket, to: "/admin/login/two-factor")}
         else
           {:ok,
-           assign(socket,
+           socket
+           |> watch_pending_login(token_id)
+           |> assign(
              user: user,
-             token_id: Users.token_id(token, "pending_2fa"),
+             token_id: token_id,
              codes: nil,
              meta: Brando.Users.SecurityLog.socket_meta(socket),
              page_title: gettext("Set up two-factor authentication")
@@ -84,6 +89,35 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
          |> put_flash(:error, gettext("Your login took too long. Log in again."))
          |> push_navigate(to: "/admin/login")}
     end
+  end
+
+  # Only the waiting sign-in vouches for the user here, so the screen closes
+  # when it ends: deleted by a password change or reset, or simply too old.
+  # Every event checks it again, and so does whatever adds a factor.
+  defp watch_pending_login(socket, token_id) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Users.pending_login_topic(token_id))
+      Process.send_after(self(), :check_pending_login, UserToken.pending_validity_in_minutes() * 60_000)
+    end
+
+    attach_hook(socket, :pending_login, :handle_event, fn _event, _params, socket ->
+      if pending?(socket), do: {:cont, socket}, else: {:halt, ended(socket)}
+    end)
+  end
+
+  defp pending?(%{assigns: %{codes: codes}}) when is_list(codes), do: true
+  defp pending?(socket), do: Users.pending_login_valid?(socket.assigns.token_id, socket.assigns.user)
+
+  defp ended(socket) do
+    socket
+    |> put_flash(:error, gettext("Your login took too long. Log in again."))
+    |> push_navigate(to: "/admin/login")
+  end
+
+  def handle_info({:pending_login_ended, _id}, %{assigns: %{codes: nil}} = socket), do: {:noreply, ended(socket)}
+
+  def handle_info(:check_pending_login, socket) do
+    if pending?(socket), do: {:noreply, socket}, else: {:noreply, ended(socket)}
   end
 
   def handle_info({:two_factor_enabled, codes}, socket) do

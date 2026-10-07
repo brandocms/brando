@@ -143,8 +143,9 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
 
   # `keep_id`: the token row (session, or waiting sign-in) to keep when the
   # user's other sessions are logged out. `proof`: `:password` asks for the
-  # password with the code; `:signed_in_now` is for the setup screen of a
-  # sign-in whose password was right a moment ago. `meta`: the request's IP
+  # password with the code; `{:signed_in_now, pending_id}` is for the setup
+  # screen of a sign-in whose password was right a moment ago, checked
+  # against that sign-in on every attempt (`TwoFactor.enable/4`). `meta`: the request's IP
   # address and browser, for the log. The secret is kept wrapped
   # (`Brando.Redacted`), so it stays out of logged state.
   def update(assigns, socket) do
@@ -231,7 +232,7 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
 
   def handle_event("confirm", %{"setup" => %{"code" => code} = params}, socket) do
     %{user: user, secret: secret} = socket.assigns
-    proof = if socket.assigns.proof == :signed_in_now, do: :signed_in_now, else: params["proof"]
+    proof = if socket.assigns.proof == :password, do: params["proof"], else: socket.assigns.proof
     opts = [proof: proof, keep_id: socket.assigns[:keep_id], meta: socket.assigns[:meta]]
 
     case TwoFactor.enable(user, Brando.Redacted.value(secret), code, opts) do

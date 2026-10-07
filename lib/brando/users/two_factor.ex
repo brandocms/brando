@@ -116,9 +116,13 @@ defmodule Brando.Users.TwoFactor do
 
   A session alone is not enough: `opts[:proof]` must be the user's password
   or a current code from a factor they already have (see `confirm/3`; a
-  wrong one counts towards the lockout), or `:signed_in_now` from the setup
-  screen of a sign-in whose password was right a moment ago. Otherwise a
+  wrong one counts towards the lockout), or `{:signed_in_now, pending_id}`
+  from the setup screen of a sign-in whose password was right a moment ago. Otherwise a
   stolen session cookie could add the thief's app, and log the owner out.
+  `{:signed_in_now, pending_id}` is accepted only while the waiting sign-in
+  with the token row `pending_id` is still valid for the user
+  (`Brando.Users.pending_login_valid?/2`) and they have no second factor:
+  a password reset ends it.
 
   Logs the user out of their other sessions, keeping the token row
   `opts[:keep_id]`, and emails the user. Records the change, with
@@ -137,7 +141,14 @@ defmodule Brando.Users.TwoFactor do
     end
   end
 
-  defp check_proof(_user, :signed_in_now, _meta), do: :ok
+  # The setup screen of a sign-in: only while that sign-in (its token row)
+  # still waits, and the user has no second factor yet
+  defp check_proof(user, {:signed_in_now, pending_id}, _meta) do
+    if Users.pending_login_valid?(pending_id, user) and not enabled?(user),
+      do: :ok,
+      else: {:error, :invalid_proof}
+  end
+
   defp check_proof(user, proof, meta), do: confirm(user, proof, meta)
 
   defp do_enable(user_id, user, secret, step, opts) do

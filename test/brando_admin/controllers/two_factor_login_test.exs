@@ -268,6 +268,39 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       assert conn.resp_cookies[@remember_me]
     end
 
+    test "the setup screen checks its waiting sign-in on every event" do
+      user = user()
+      conn = log_in(anonymous(), user)
+      {:ok, view, _html} = live(next(conn), "/admin/login/two-factor/setup")
+
+      # Ended without a word to the screen: too old
+      Repo.update_all(from(t in UserToken, where: t.user_id == ^user.id and t.context == "pending_2fa"),
+        set: [inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -11 * 60)]
+      )
+
+      assert {:error, {:live_redirect, %{to: "/admin/login"}}} = render_click(view, "method", %{"method" => "app"})
+      refute TwoFactor.enabled?(user)
+    end
+
+    test "an open setup screen is closed when its sign-in ends, and adds nothing" do
+      user = user()
+      conn = log_in(anonymous(), user)
+      {:ok, view, html} = live(next(conn), "/admin/login/two-factor/setup")
+      pending_id = Users.token_id(get_session(conn, :pending_login_token), "pending_2fa")
+
+      # The review's probe: someone with the password holds the setup screen
+      # open; the owner resets their password, which ends that sign-in
+      {:ok, _} = Users.reset_user_password(user, %{password: "a new one", password_confirmation: "a new one"})
+      assert_redirect(view, "/admin/login")
+
+      # and what the screen would have sent no longer adds a factor
+      [secret_text] = Regex.run(~r/data-testid="two-factor-secret"[^>]*>([^<]+)</, html, capture: :all_but_first)
+      {:ok, secret} = Base.decode32(String.replace(secret_text, " ", ""), padding: false)
+
+      assert {:error, :invalid_proof} =
+               TwoFactor.enable(user, secret, TwoFactor.current_code(secret), proof: {:signed_in_now, pending_id})
+    end
+
     test "a user with it signs in with a code as usual" do
       user = user()
       {secret, _codes} = enable(user)

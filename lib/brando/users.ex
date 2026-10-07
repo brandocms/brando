@@ -179,10 +179,36 @@ defmodule Brando.Users do
         id -> from t in query, where: t.id != ^id
       end
 
-    {_count, tokens} = Repo.delete_all(from(t in query, select: {t.context, t.token}))
-    for {"session", token} <- tokens, do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+    {_count, tokens} = Repo.delete_all(from(t in query, select: {t.context, t.token, t.id}))
+    announce_deleted(tokens)
+  end
+
+  # Tells whoever holds a deleted token: a session's open admin views are
+  # disconnected, and a waiting sign-in's setup screen is closed.
+  defp announce_deleted(tokens) do
+    for {context, token, id} <- tokens do
+      cond do
+        context == "session" ->
+          Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+
+        context in UserToken.pending_contexts() ->
+          Phoenix.PubSub.broadcast(Brando.pubsub(), pending_login_topic(id), {:pending_login_ended, id})
+
+        true ->
+          :ok
+      end
+    end
+
     :ok
   end
+
+  @doc """
+  The PubSub topic a waiting sign-in's screens listen on, told
+  `{:pending_login_ended, id}` when its token row `id` is deleted — by a
+  password change, a reset, or logging the user out everywhere.
+  """
+  @spec pending_login_topic(integer()) :: String.t()
+  def pending_login_topic(id), do: "users_pending_logins:#{id}"
 
   @doc """
   The id of the token row of `token` in `context`, or nil. LiveViews keep
@@ -210,11 +236,15 @@ defmodule Brando.Users do
   def generate_pending_token(user) do
     {token, user_token} = UserToken.build_pending_token(user)
 
-    Repo.transaction(fn ->
-      Repo.delete_all(UserToken.user_and_contexts_query(user, UserToken.pending_contexts()))
-      Repo.insert!(user_token)
-    end)
+    {:ok, ended} =
+      Repo.transaction(fn ->
+        query = UserToken.user_and_contexts_query(user, UserToken.pending_contexts())
+        {_count, ended} = Repo.delete_all(from(t in query, select: {t.context, t.token, t.id}))
+        Repo.insert!(user_token)
+        ended
+      end)
 
+    announce_deleted(ended)
     token
   end
 
@@ -236,6 +266,28 @@ defmodule Brando.Users do
   def get_pending_login(_token), do: nil
 
   @doc """
+  Whether the token row `id` is still `user`'s sign-in waiting for its
+  second step: not used, not ended by a password change or reset, and not
+  older than `Brando.Users.UserToken.pending_validity_in_minutes/0`; and the
+  account still active. The setup screen of a sign-in checks this before
+  anything it adds, since only the sign-in vouches for the user there.
+  """
+  @spec pending_login_valid?(integer() | nil, user) :: boolean()
+  def pending_login_valid?(id, %{id: user_id}) when is_integer(id) do
+    minutes = UserToken.pending_validity_in_minutes()
+
+    Repo.repo().exists?(
+      from t in UserToken,
+        join: u in assoc(t, :user),
+        where: t.id == ^id and t.user_id == ^user_id and t.context == "pending_2fa",
+        where: t.inserted_at > ago(^minutes, "minute"),
+        where: u.active == true and is_nil(u.deleted_at)
+    )
+  end
+
+  def pending_login_valid?(_id, _user), do: false
+
+  @doc """
   Marks the sign-in waiting for its second step with the token row `id` as
   done: the user has just set two-factor authentication up.
   """
@@ -252,8 +304,14 @@ defmodule Brando.Users do
   @doc "Ends a sign-in waiting for its second step."
   @spec delete_pending_token(binary() | nil) :: :ok
   def delete_pending_token(token) when is_binary(token) do
-    Repo.delete_all(from t in UserToken, where: t.token == ^token and t.context in ^UserToken.pending_contexts())
-    :ok
+    {_count, ended} =
+      Repo.delete_all(
+        from t in UserToken,
+          where: t.token == ^token and t.context in ^UserToken.pending_contexts(),
+          select: {t.context, t.token, t.id}
+      )
+
+    announce_deleted(ended)
   end
 
   def delete_pending_token(_token), do: :ok
@@ -503,11 +561,11 @@ defmodule Brando.Users do
 
     Multi.new()
     |> Multi.update(:user, changeset)
-    |> Multi.delete_all(:tokens, from(t in revoked_tokens, select: {t.context, t.token}))
+    |> Multi.delete_all(:tokens, from(t in revoked_tokens, select: {t.context, t.token, t.id}))
     |> Repo.transaction()
     |> case do
       {:ok, %{user: user, tokens: {_count, tokens}}} ->
-        for {"session", token} <- tokens, do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+        announce_deleted(tokens)
         notify_password_changed(user, by)
         {:ok, user}
 
