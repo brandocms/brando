@@ -14523,3 +14523,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes by another user"
 msgstr ""
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "%{first}–%{last} of %{total}"
+msgstr ""
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Per page"
+msgstr ""

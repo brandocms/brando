@@ -147,7 +147,6 @@
     .image-picker-browser .folder-action, .image-picker-browser .new-folder-trigger, .image-picker-browser .folder-row { min-height: 40px; }
   }
 }
-.admin-workspace.workspace-list .pagination-prefix { display: none; }
 
 /* Library shell: one navigation bar above a shared folder/list surface. */
 .admin-workspace.media-workspace {

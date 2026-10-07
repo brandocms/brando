@@ -174,15 +174,36 @@
     margin-top: 0;
   }
 
+  /* The footer: the count and the visible range, the pages and the page
+     size, on the shaded surface of a table footer with a hairline above
+     (as the inline subform tables, SubformTable.css). */
   .pagination {
-    margin-top: 10px;
-    border-top: 1px solid #ccc;
-    padding-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-top: 0;
+    padding: 8px 12px;
+    border-top: 1px solid var(--brando-line);
+    background: var(--brando-surface-shaded);
+    color: var(--brando-muted);
+    font-size: 12px;
+    line-height: 18px;
 
-    .pagination-entries {
-      font-size: 12px;
-      margin-right: 15px;
-      margin-bottom: 5px;
+    .pagination-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 4px 12px;
+      margin-right: auto;
+    }
+
+    .pagination-count {
+      color: var(--brando-ink);
+    }
+
+    .pagination-range {
+      font-variant-numeric: tabular-nums;
     }
 
     .pagination-buttons {
@@ -229,22 +250,28 @@
       &:hover {
         background-color: var(--brando-color-peach);
       }
+    }
 
-      &.limit-button {
-        border: none !important;
-        color: var(--brando-color-dark);
-        width: auto !important;
-        height: auto !important;
-        background-color: transparent !important;
-        margin-left: 0 !important;
+    /* A small admin-select (Select.css) beside its label */
+    .pagination-limit {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
 
-        &:hover {
-          color: var(--brando-color-dark);
-        }
+      label {
+        white-space: nowrap;
+      }
 
-        &.active {
-          text-decoration: underline;
-        }
+      select.admin-select {
+        width: auto;
+        min-width: 76px;
+        height: 30px;
+        padding: 0 30px 0 10px;
+        font-size: 12px;
+        line-height: 18px;
+        background-position: right 8px center;
+        background-size: 14px;
       }
     }
   }
@@ -306,6 +333,18 @@
         &.active {
           background-color: theme(colors.peachDarker);
         }
+
+        /* No entries under the other filters: still there, quieter */
+        &.is-empty {
+          --pill-ink: var(--brando-muted);
+          color: var(--brando-muted);
+
+          svg { opacity: .45; }
+        }
+      }
+
+      .status-count {
+        margin-left: 8px;
       }
 
       .label {

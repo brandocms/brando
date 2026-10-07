@@ -11,7 +11,7 @@ assets/css/components/CircleFlag.css 1
 assets/css/components/Content.css 1
 assets/css/components/Content/Identifier.css 45
 assets/css/components/Content/ItemMeta.css 1
-assets/css/components/Content/List.css 39
+assets/css/components/Content/List.css 38
 assets/css/components/Content/SelectedRows.css 15
 assets/css/components/DefinitionFile.css 17
 assets/css/components/Dialog.css 14
