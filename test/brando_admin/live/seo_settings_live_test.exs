@@ -1,0 +1,97 @@
+defmodule BrandoAdmin.SEOSettingsLiveTest do
+  # The SEO settings form and what the site serves from it: the search
+  # preview, the fallback description in a page's meta tags, robots.txt and
+  # redirects. This was most of e2e/playwright/tests/configuration/seo.spec.js.
+  # Uploading the fallback image and the narrow layout stay in the browser.
+  use Brando.LiveCase
+
+  import Phoenix.Component, only: [sigil_H: 2]
+
+  alias Brando.Pages.Page
+
+  setup do
+    # Saving refreshes the global SEO cache. Put back what it held, since the
+    # rows behind the new value are rolled back.
+    cached = Brando.Cache.get(:seo)
+    on_exit(fn -> Brando.Cache.put(:seo, cached, :infinite) end)
+    :ok
+  end
+
+  # A page's meta tags as the site's controllers set and render them.
+  defp page_meta(page) do
+    conn =
+      Phoenix.ConnTest.build_conn(:get, "/")
+      |> Plug.Conn.assign(:language, "en")
+      |> Brando.Plug.HTML.put_meta(Page, page)
+
+    assigns = %{conn: conn}
+
+    ~H"""
+    <Brando.HTML.render_meta conn={@conn} />
+    """
+    |> rendered_to_string()
+    |> Floki.parse_fragment!()
+    |> Floki.find("meta[name]")
+    |> Enum.group_by(&hd(Floki.attribute(&1, "name")), &hd(Floki.attribute(&1, "content")))
+  end
+
+  test "SEO settings preview, save, and reach the site's meta tags, robots.txt and redirects", %{conn: conn} do
+    index = Factory.insert(:page, title: "Index", uri: "index", meta_description: nil, status: :published)
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+    render_async(view)
+
+    view
+    |> form("#seo_form_form", %{
+      "seo" => %{"fallback_meta_title" => "Brando CMS", "fallback_meta_description" => "Brando CMS: A CMS of sorts."}
+    })
+    |> render_change()
+
+    assert view |> element(".seo-search-preview") |> render() =~ "Brando CMS: A CMS of sorts."
+    assert view |> element(".seo-preview-title") |> render() =~ ~r/>\s*Brando CMS\s*</
+
+    view |> element("#seo_form_form button", "Add entry") |> render_click()
+    # A new redirect starts as an example rule: /example/:slug to /new/:slug.
+    assert has_element?(view, "input[name='seo[redirects][0][from]'][value='/example/:slug']")
+
+    view
+    |> form("#seo_form_form", %{
+      "seo" => %{
+        "base_url" => "https://brando.dev",
+        "robots" => "User-agent: *\nDisallow: /secret",
+        "redirects" => %{"0" => %{"code" => "301"}}
+      }
+    })
+    |> render_submit()
+
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
+    assert seo.fallback_meta_description == "Brando CMS: A CMS of sorts."
+    assert seo.base_url == "https://brando.dev"
+
+    # The front page has no description of its own, so it gets the fallback.
+    # Loaded as a site's page controller loads it.
+    {:ok, index} =
+      Brando.Pages.get_page(%{
+        matches: %{id: index.id},
+        status: :published,
+        preload: [:alternate_entries, :vars]
+      })
+
+    meta = page_meta(index)
+    assert meta["description"] == ["Brando CMS: A CMS of sorts."]
+    assert meta["title"] == ["Index"]
+
+    robots = get(build_conn(), "/robots.txt")
+    assert robots.resp_body =~ "User-agent: *\nDisallow: /secret"
+
+    # An unknown path is answered by the fallback controller, which applies
+    # the redirects.
+    redirect =
+      build_conn(:get, "/example/redirect")
+      |> Plug.Conn.assign(:language, "en")
+      |> BrandoWeb.FallbackController.call({:error, {:page, :not_found}})
+
+    assert redirect.status == 301
+    assert Plug.Conn.get_resp_header(redirect, "location") == ["/new/redirect"]
+  end
+end
