@@ -89,4 +89,71 @@ defmodule Brando.Blueprint.MigrationPlanTest do
     assert File.read!(metadata.snapshot) == before
     refute File.exists?(opts[:migration_path])
   end
+
+  describe "batches" do
+    defp versions(plans) do
+      for %{migration_source: source} = plan when is_binary(source) <- plans,
+          do: plan.metadata.migration |> Path.basename() |> String.split("_", parts: 2) |> hd()
+    end
+
+    test "plan after the tables they reference, with increasing versions, and commit together", %{
+      root: root,
+      options: opts
+    } do
+      entries =
+        Enum.map([Brando.MigrationTest.ProjectTag, Brando.MigrationTest.Tag, Brando.MigrationTest.Project], &{&1, opts})
+
+      plans = Migrations.plan_all(entries)
+
+      assert Enum.map(plans, & &1.module) == [
+               Brando.MigrationTest.Project,
+               Brando.MigrationTest.Tag,
+               Brando.MigrationTest.ProjectTag
+             ]
+
+      assert versions(plans) == versions(plans) |> Enum.uniq() |> Enum.sort()
+      assert length(versions(plans)) == 3
+      refute File.exists?(root)
+
+      assert [{:ok, _}, {:ok, _}, {:ok, _}] = Migrations.commit_plans(plans)
+      assert Enum.all?(plans, &(File.read!(&1.metadata.migration) == &1.migration_source))
+      assert Enum.all?(plans, &File.exists?(&1.metadata.snapshot))
+      assert entries |> Migrations.plan_all() |> Enum.map(& &1.result) == [:noop, :noop, :noop]
+    end
+
+    test "one stale plan stops the whole batch", %{options: opts} do
+      {:ok, initial} = Migrations.create_migration(Brando.MigrationTest.Project, opts)
+      plans = Migrations.plan_all([{Brando.MigrationTest.ProjectUpdate1, opts}, {Brando.MigrationTest.Tag, opts}])
+      snapshot = Snapshot.get_latest_snapshot(Brando.MigrationTest.Project, opts)
+      File.write!(initial.snapshot, :erlang.term_to_binary(%{snapshot | updated_at: ~U[2000-01-01 00:00:00Z]}))
+
+      assert_raise BlueprintError, ~r/changed after planning/, fn -> Migrations.commit_plans(plans) end
+      assert Path.wildcard(Path.join(opts[:migration_path], "*.exs")) == [initial.migration]
+      refute Enum.any?(plans, &File.exists?(&1.metadata.snapshot))
+    end
+
+    test "a failed write removes what the earlier plans wrote", %{root: root, options: opts} do
+      blocked = Path.join(root, "blocked")
+      File.mkdir_p!(root)
+      File.write!(blocked, "blocked directory")
+
+      plans =
+        Migrations.plan_all([
+          {Brando.MigrationTest.ExecutionV1, opts},
+          {Brando.MigrationTest.Tag, Keyword.put(opts, :snapshot_path, blocked)}
+        ])
+
+      assert Enum.map(plans, & &1.module) == [Brando.MigrationTest.ExecutionV1, Brando.MigrationTest.Tag]
+      assert_raise File.Error, fn -> Migrations.commit_plans(plans) end
+      assert Path.wildcard(Path.join(opts[:migration_path], "*")) == []
+      assert Path.wildcard(Path.join(opts[:snapshot_path], "**/*.snapshot")) == []
+      assert File.read!(blocked) == "blocked directory"
+    end
+
+    test "Blueprints sharing a snapshot directory cannot be planned together", %{options: opts} do
+      assert_raise BlueprintError, ~r/share the snapshot directory/, fn ->
+        Migrations.plan_all([{Brando.MigrationTest.ExecutionV1, opts}, {Brando.MigrationTest.ExecutionV2, opts}])
+      end
+    end
+  end
 end

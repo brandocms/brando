@@ -22,6 +22,27 @@ Commit the Blueprint, migration, and snapshot together. Never edit a snapshot by
 or migration files. If no storage-relevant configuration changed, the task reports that no migration is needed and
 does not create another version.
 
+After an upgrade that changes every Blueprint with a trait, or after editing
+several Blueprints, plan them all in one run:
+
+```shell
+mix brando.gen.blueprint_migration --all
+```
+
+`--all` plans every application Blueprint (the ones compiled into your
+`:otp_app`) whose storage differs from its latest snapshot, or that has no
+snapshot yet, and lists the rest as up to date. You review all the plans once
+and accept them together. Each Blueprint gets the migration path a single run
+would pick, and the migrations get increasing versions: a Blueprint comes after
+the Blueprints whose tables it references, otherwise they are in alphabetical
+order. After acceptance every plan is checked again before anything is
+written; if one is stale, no files are written. A Blueprint whose destination
+cannot be inferred (a fixed schema prefix, or history in the other directory)
+is left out with a warning; plan it on its own with `--migration-path`. `--all`
+takes `--dry-run` and `--snapshot-path`, but not a Blueprint module,
+`--migration-path` or `--rebaseline`. Brando's own tables are not included;
+they come from `mix brando.gen.migrations`.
+
 Public-schema Blueprints keep public migration history. `--migration-path`
 overrides the destination explicitly. Other fixed schema prefixes require an
 explicit destination and the matching Ecto `--prefix` when applying migrations.
@@ -81,8 +102,8 @@ writer. `--dry-run` leaves files, directories and snapshot versions unchanged;
 redirected, so always use `--dry-run` for unattended previews.
 
 Accept and compile Blueprint edits before planning storage. Prepare one Blueprint
-storage plan per invocation, committing it before planning another so migration
-ordering and history checks remain valid. If the schema, an existing snapshot,
+storage plan per invocation, or all of them with `--all`, committing it before
+planning another so migration ordering and history checks remain valid. If the schema, an existing snapshot,
 or the migration directory changes after review, the commit rejects the stale
 plan. Generate and review a new plan; do not reuse the old deferred command.
 
@@ -94,7 +115,8 @@ explicit `--rebaseline` behavior are retained. No database migration is run by
 the source generator.
 
 For programmatic callers, `Brando.Blueprint.Migrations.plan/2` creates the plan
-without writes and `commit_plan/1` verifies and persists it. Existing
+without writes and `commit_plan/1` verifies and persists it. `plan_all/1` and
+`commit_plans/1` do the same for several Blueprints, all or nothing. Existing
 `create_migration/2` and `rebaseline_snapshot/2` callers retain immediate operation
 through the same implementation.
 

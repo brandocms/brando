@@ -11,14 +11,21 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Input
     alias Mix.Brando.Igniter.Install.Configuration
 
+    @storage_options [:migration_path, :snapshot_path, :rebaseline]
+
     def plan(igniter) do
       options = igniter.args.options
+      if options[:all], do: plan_all(igniter, options), else: plan_one(igniter, options)
+    rescue
+      error in [BlueprintError, File.Error] -> Igniter.add_issue(igniter, Exception.message(error))
+    end
 
+    defp plan_one(igniter, options) do
       with {:ok, name} <- Input.required(igniter.args.positional[:blueprint], "Blueprint module", options[:interactive]),
            {:ok, name} <- Input.module_name(name, "Blueprint module"),
            module = Module.concat([name]),
            :ok <- compiled?(module),
-           :ok <- accepted_source?(igniter, module),
+           {:ok, _igniter} <- accepted_source?(igniter, module),
            :ok <- single_storage_plan(igniter),
            {:ok, igniter, options} <- storage_options(igniter, module, options) do
         prepared = Migrations.plan(module, options)
@@ -26,20 +33,100 @@ if Code.ensure_loaded?(Igniter) do
       else
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
-    rescue
-      error in [BlueprintError, File.Error] -> Igniter.add_issue(igniter, Exception.message(error))
+    end
+
+    # Plans every application Blueprint in one review. Each Blueprint gets the
+    # destination a single run would pick; one that needs an explicit
+    # --migration-path is left out and named in a warning.
+    defp plan_all(igniter, options) do
+      with :ok <- all_compatible(igniter, options),
+           :ok <- single_storage_plan(igniter),
+           {:ok, modules} <- application_blueprints(igniter),
+           {:ok, igniter} <- accepted_sources?(igniter, modules),
+           {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode) do
+        {entries, unplanned} = destinations(modules, Keyword.take(options, @storage_options), mode)
+
+        entries
+        |> Migrations.plan_all()
+        |> then(&attach_all(igniter, &1))
+        |> warn_unplanned(unplanned)
+      else
+        {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    defp destinations(modules, options, mode) do
+      {planned, unplanned} =
+        modules
+        |> Enum.map(&{&1, default_storage_options(&1, options, mode)})
+        |> Enum.split_with(&match?({_, {:ok, _}}, &1))
+
+      {for({module, {:ok, options}} <- planned, do: {module, options}),
+       for({_, {:error, message}} <- unplanned, do: message)}
+    end
+
+    defp all_compatible(igniter, options) do
+      cond do
+        igniter.args.positional[:blueprint] ->
+          {:error, "--all plans every application Blueprint. Pass either a Blueprint module or --all, not both."}
+
+        options[:migration_path] ->
+          {:error,
+           "--all picks each Blueprint's migration path the way a single run does, so it cannot take --migration-path. Plan a Blueprint that needs a custom path on its own."}
+
+        options[:rebaseline] ->
+          {:error,
+           "--rebaseline records one reviewed hand-written migration and cannot be combined with --all. Re-baseline that Blueprint on its own."}
+
+        true ->
+          :ok
+      end
+    end
+
+    # The same list the admin and the content tasks use: the Blueprints compiled
+    # into the configured :otp_app. Brando's own tables come from its upgrade
+    # migrations (mix brando.gen.migrations), not from this task. Tests assign
+    # :brando_blueprints because Brando's own app is the :otp_app there.
+    defp application_blueprints(%{assigns: %{brando_blueprints: modules}}), do: {:ok, reject_embedded(modules)}
+
+    defp application_blueprints(_igniter) do
+      app = Brando.RuntimeConfig.get(:otp_app)
+
+      if is_atom(app) && !is_nil(app) && Application.load(app) in [:ok, {:error, {:already_loaded, app}}],
+        do: {:ok, reject_embedded(Brando.Blueprint.list_blueprints())},
+        else:
+          {:error, "Could not list the application's Blueprints. Set config :brando, otp_app: :my_app and compile first."}
+    end
+
+    defp reject_embedded(modules) do
+      modules |> Enum.uniq() |> Enum.reject(&Brando.Blueprint.embedded?/1) |> Enum.sort_by(&inspect/1)
+    end
+
+    defp accepted_sources?(igniter, modules) do
+      Enum.reduce_while(modules, {:ok, igniter}, fn module, {:ok, igniter} ->
+        case accepted_source?(igniter, module) do
+          {:ok, igniter} -> {:cont, {:ok, igniter}}
+          error -> {:halt, error}
+        end
+      end)
     end
 
     defp storage_options(igniter, module, options) do
-      options = Keyword.take(options, [:migration_path, :snapshot_path, :rebaseline])
+      options = Keyword.take(options, @storage_options)
 
       if options[:migration_path] do
         {:ok, igniter, options}
       else
         with {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode),
-             {:ok, path} <- default_migration_path(module, mode) do
-          {:ok, igniter, Keyword.put(options, :migration_path, path)}
+             {:ok, options} <- default_storage_options(module, options, mode) do
+          {:ok, igniter, options}
         end
+      end
+    end
+
+    defp default_storage_options(module, options, mode) do
+      with {:ok, path} <- default_migration_path(module, mode) do
+        {:ok, Keyword.put(options, :migration_path, path)}
       end
     end
 
@@ -78,20 +165,20 @@ if Code.ensure_loaded?(Igniter) do
 
     defp accepted_source?(igniter, module) do
       case ProjectModule.find_module(igniter, module) do
-        {:ok, {_, source, _}} ->
+        {:ok, {igniter, source, _}} ->
           if source.from != :file || Rewrite.Source.updated?(source, :content),
             do:
               {:error,
                "#{inspect(module)} has pending changes. Accept and compile the Blueprint before planning storage."},
-            else: :ok
+            else: {:ok, igniter}
 
-        {:error, _} ->
-          :ok
+        {:error, igniter} ->
+          {:ok, igniter}
       end
     end
 
     defp single_storage_plan(igniter) do
-      if igniter.assigns[:brando_storage_plan],
+      if igniter.assigns[:brando_storage_plan] || igniter.assigns[:brando_storage_plans],
         do:
           {:error,
            "Compose one Blueprint storage plan per invocation. Commit it before planning the next Blueprint so migration ordering and history checks stay valid."},
@@ -114,6 +201,65 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.assign(:quiet_on_no_changes?, true)
       |> Igniter.add_task("brando.blueprint.apply_plan", [request])
       |> warn_legacy_snapshot(plan)
+    end
+
+    defp attach_all(igniter, plans) do
+      {up_to_date, planned} = Enum.split_with(plans, &match?(%{result: :noop, snapshot: nil}, &1))
+
+      if planned == [] do
+        Igniter.add_notice(igniter, up_to_date_notice(up_to_date))
+      else
+        Enum.each(planned, &Mix.shell().info(preview(&1)))
+        requests = Enum.map(planned, &Mix.Brando.MigrationRequest.encode/1)
+
+        planned
+        |> Enum.reduce(igniter, &warn_legacy_snapshot(&2, &1))
+        |> Igniter.assign(:brando_storage_plans, planned)
+        |> Igniter.assign(:quiet_on_no_changes?, true)
+        |> Igniter.add_task("brando.blueprint.apply_plan", requests)
+        |> Igniter.add_notice(summary(planned, up_to_date))
+      end
+    end
+
+    defp up_to_date_notice([]), do: "No application Blueprints to plan."
+
+    defp up_to_date_notice(up_to_date),
+      do: "No storage changes necessary. Up to date: #{Enum.map_join(up_to_date, ", ", &inspect(&1.module))}."
+
+    defp summary(planned, up_to_date) do
+      lines =
+        Enum.map(planned, fn plan ->
+          file =
+            if plan.metadata[:migration],
+              do: Path.relative_to_cwd(plan.metadata.migration),
+              else: "snapshot only, #{Path.relative_to_cwd(snapshot_path(plan))}"
+
+          "  #{inspect(plan.module)}: #{file}"
+        end)
+
+      up_to_date =
+        if up_to_date == [],
+          do: [],
+          else: ["", "Up to date: #{Enum.map_join(up_to_date, ", ", &inspect(&1.module))}"]
+
+      Enum.join(
+        ["Blueprint storage plans:" | lines] ++
+          up_to_date ++
+          [
+            "",
+            "Apply the migrations with mix brando.migrate, followed by mix brando.migrate --tenants when using named environments."
+          ],
+        "\n"
+      )
+    end
+
+    defp warn_unplanned(igniter, []), do: igniter
+
+    defp warn_unplanned(igniter, messages) do
+      Igniter.add_warning(igniter, """
+      Left out of --all. Plan each of these on its own with mix brando.gen.blueprint_migration and --migration-path:
+      #{Enum.map_join(messages, "\n", &"  * #{&1}")}
+      """)
     end
 
     @legacy_snapshot_guide ~s(the "Legacy snapshots" section of guides/migrating_from_053.md)

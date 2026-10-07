@@ -73,6 +73,48 @@ defmodule Brando.Blueprint.Migrations do
     with_storage_lock(plan.module, plan.options, fn -> commit_prepared(plan) end)
   end
 
+  @doc """
+  Prepares storage plans for several Blueprints, to be reviewed and committed together.
+
+  Each entry is `{module, opts}` with the options `plan/2` takes. A Blueprint is
+  planned after the Blueprints whose tables it references, otherwise in
+  alphabetical order, and each planned migration gets a version above the one
+  before it, so the batch applies in that order. Commit the result with
+  `commit_plans/1`.
+  """
+  @spec plan_all([{module(), keyword()}]) :: [Plan.t()]
+  def plan_all(entries) do
+    entries = Enum.map(entries, fn {module, opts} -> {module, Keyword.merge(@default_opts, opts)} end)
+    ensure_distinct_storage!(entries)
+
+    entries
+    |> order_by_references()
+    |> Enum.map_reduce(nil, fn {module, opts}, previous ->
+      version = batch_migration_version(previous, opts)
+      plan = plan(module, Keyword.put(opts, :planned_migration_version, version))
+      {plan, if(plan.migration_source, do: version, else: previous)}
+    end)
+    |> elem(0)
+  end
+
+  @doc """
+  Commits reviewed plans together, or none of them.
+
+  Every plan is checked for changes under the locks of all its migration
+  directories and snapshots before anything is written. If a write fails, the
+  files already written by the batch are removed or restored.
+  """
+  @spec commit_plans([Plan.t()]) :: [{:ok | :noop, map()}]
+  def commit_plans(plans) do
+    ensure_distinct_storage!(Enum.map(plans, &{&1.module, &1.options}))
+
+    with_storage_locks(plans, fn ->
+      Enum.each(plans, &ensure_fresh!/1)
+      persist_all(plans)
+      Enum.map(plans, &{&1.result, &1.metadata})
+    end)
+  end
+
   @doc "Fingerprints the reviewed source and history, excluding the snapshot's informational creation time."
   @spec plan_digest(Plan.t()) :: String.t()
   def plan_digest(%Plan{} = plan) do
@@ -189,18 +231,121 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp snapshot_metadata(module, snapshot, opts) do
-    filename = Path.join(Snapshot.build_path(module, opts), "#{pad_sequence(snapshot.version)}.snapshot")
-    %{module: module, snapshot: filename, snapshot_version: snapshot.version}
+    %{module: module, snapshot: snapshot_filename(module, snapshot.version, opts), snapshot_version: snapshot.version}
+  end
+
+  defp snapshot_filename(module, version, opts) do
+    Path.join(Snapshot.build_path(module, opts), "#{pad_sequence(version)}.snapshot")
   end
 
   defp commit_prepared(plan) do
-    current_schema = Schema.build(plan.module)
-
-    if history_digest(plan.module, plan.options) != plan.history_digest || current_schema != plan.schema,
-      do: stale_plan!()
-
+    ensure_fresh!(plan)
     persist_plan(plan)
     {plan.result, plan.metadata}
+  end
+
+  defp ensure_fresh!(plan) do
+    if history_digest(plan.module, plan.options) != plan.history_digest || Schema.build(plan.module) != plan.schema,
+      do: stale_plan!()
+  end
+
+  # Writes each plan in turn. When one fails, the files the earlier plans wrote
+  # are removed, or restored where a plan replaced a snapshot in place.
+  defp persist_all(plans) do
+    Enum.reduce(plans, [], fn plan, written ->
+      originals = original_files(plan)
+
+      try do
+        persist_plan(plan)
+        originals ++ written
+      rescue
+        error ->
+          Enum.each(written, &restore_file/1)
+          reraise error, __STACKTRACE__
+      end
+    end)
+  end
+
+  defp original_files(plan) do
+    migration = if plan.migration_source, do: [plan.metadata.migration], else: []
+    snapshot = if plan.snapshot, do: [snapshot_filename(plan.module, plan.snapshot.version, plan.options)], else: []
+    Enum.map(migration ++ snapshot, &{&1, File.read(&1)})
+  end
+
+  defp restore_file({path, {:ok, contents}}), do: File.write!(path, contents)
+  defp restore_file({path, _missing}), do: File.rm(path)
+
+  # Locks are taken in one global order (migration directories, then snapshot
+  # directories) so a batch and a single run cannot wait on each other.
+  defp with_storage_locks(plans, fun) do
+    migration_locks =
+      plans
+      |> Enum.map(& &1.options)
+      |> Enum.uniq_by(&Path.expand(Keyword.fetch!(&1, :migration_path)))
+      |> Enum.sort_by(&Path.expand(Keyword.fetch!(&1, :migration_path)))
+      |> Enum.map(fn opts -> fn inner -> with_migration_lock(opts, inner) end end)
+
+    snapshot_locks =
+      plans
+      |> Enum.sort_by(&Path.expand(Snapshot.build_path(&1.module, &1.options)))
+      |> Enum.map(fn plan -> fn inner -> Snapshot.with_lock(plan.module, plan.options, inner) end end)
+
+    (migration_locks ++ snapshot_locks)
+    |> Enum.reverse()
+    |> Enum.reduce(fun, fn lock, inner -> fn -> lock.(inner) end end)
+    |> then(& &1.())
+  end
+
+  # Two Blueprints sharing a snapshot directory would write the same snapshot
+  # version and migration name.
+  defp ensure_distinct_storage!(entries) do
+    entries
+    |> Enum.group_by(fn {module, opts} -> Path.expand(Snapshot.build_path(module, opts)) end, &elem(&1, 0))
+    |> Enum.find(fn {_path, modules} -> length(modules) > 1 end)
+    |> case do
+      nil ->
+        :ok
+
+      {path, modules} ->
+        raise BlueprintError,
+          message:
+            "#{Enum.map_join(modules, " and ", &inspect/1)} share the snapshot directory #{path}. Give each Blueprint its own application, domain and schema naming before planning them together."
+    end
+  end
+
+  # Places each Blueprint after the Blueprints whose tables it references, so a
+  # new table exists before a foreign key to it is added. Ties and reference
+  # cycles fall back to alphabetical order.
+  defp order_by_references(entries) do
+    entries = Enum.sort_by(entries, fn {module, _} -> inspect(module) end)
+    storage = Map.new(entries, fn {module, _} -> {module, tables_and_references(module)} end)
+    owners = for {module, {tables, _}} <- storage, table <- tables, into: %{}, do: {table, module}
+
+    dependencies =
+      Map.new(storage, fn {module, {_, references}} ->
+        {module, references |> Enum.map(&owners[&1]) |> Enum.reject(&(&1 in [nil, module])) |> MapSet.new()}
+      end)
+
+    sort_dependencies(entries, dependencies, [])
+  end
+
+  defp sort_dependencies([], _dependencies, sorted), do: Enum.reverse(sorted)
+
+  defp sort_dependencies([first | _] = pending, dependencies, sorted) do
+    waiting = MapSet.new(pending, &elem(&1, 0))
+
+    entry =
+      Enum.find(pending, first, fn {module, _} -> MapSet.disjoint?(dependencies[module], waiting) end)
+
+    sort_dependencies(List.delete(pending, entry), dependencies, [entry | sorted])
+  end
+
+  defp tables_and_references(module) do
+    schema = Schema.build(module)
+    columns = schema.columns ++ Enum.flat_map(schema.auxiliary_tables, & &1.columns)
+    tables = Enum.map([schema.table | Enum.map(schema.auxiliary_tables, & &1.name)], &to_string/1)
+    references = for %{reference: %{table: table}} <- columns, do: to_string(table)
+    {tables, references}
   end
 
   defp persist_plan(%Plan{migration_source: nil, snapshot: nil}), do: :ok
@@ -321,22 +466,43 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp next_migration_version(opts) do
-    current_version = DateTime.utc_now() |> Calendar.strftime("%Y%m%d%H%M%S") |> String.to_integer()
-
-    latest_version =
-      opts
-      |> Keyword.fetch!(:migration_path)
-      |> Path.join("*.exs")
-      |> Path.wildcard()
-      |> Enum.map(&ecto_migration_version!/1)
-      |> Enum.max(fn -> 0 end)
-
-    version = Keyword.get(opts, :planned_migration_version) || max(current_version, latest_version + 1)
+    latest_version = latest_migration_version(opts)
+    version = Keyword.get(opts, :planned_migration_version) || max(current_migration_version(), latest_version + 1)
     if version <= latest_version, do: stale_plan!()
 
     version
     |> Integer.to_string()
     |> String.pad_leading(14, "0")
+  end
+
+  defp current_migration_version do
+    DateTime.utc_now() |> Calendar.strftime("%Y%m%d%H%M%S") |> String.to_integer()
+  end
+
+  defp latest_migration_version(opts) do
+    opts
+    |> Keyword.fetch!(:migration_path)
+    |> Path.join("*.exs")
+    |> Path.wildcard()
+    |> Enum.map(&ecto_migration_version!/1)
+    |> Enum.max(fn -> 0 end)
+  end
+
+  # The first migration of a batch takes the current time; each later one
+  # takes the next second, and always follows its own directory's history.
+  defp batch_migration_version(previous, opts) do
+    floor = if previous, do: following_second(previous), else: current_migration_version()
+    max(floor, latest_migration_version(opts) + 1)
+  end
+
+  defp following_second(version) do
+    with <<year::binary-4, month::binary-2, day::binary-2, hour::binary-2, minute::binary-2, second::binary-2>> <-
+           Integer.to_string(version),
+         {:ok, time} <- NaiveDateTime.from_iso8601("#{year}-#{month}-#{day}T#{hour}:#{minute}:#{second}") do
+      time |> NaiveDateTime.add(1) |> Calendar.strftime("%Y%m%d%H%M%S") |> String.to_integer()
+    else
+      _ -> version + 1
+    end
   end
 
   defp ecto_migration_version!(filename) do
