@@ -32,6 +32,12 @@
   --brando-badge-bg: #eef0eb;
   --brando-badge-ink: #566153;
 
+  /* AI results waiting for review: a suggestion or proposal that is not
+     content yet. The tint, its rule and its ink (AI.css). */
+  --brando-suggestion: #e6f1ea;
+  --brando-suggestion-line: #6a9b80;
+  --brando-suggestion-ink: #2f6a4d;
+
   /* Entry status. Always shown with a text label as well. */
   --brando-status-published: #3cb371;
   --brando-status-pending: #f1ac00;

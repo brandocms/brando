@@ -260,6 +260,66 @@ behavioral coverage. When fixing a failing test, rerun that specific test first.
    screenshot of the actual implementation. Keep saved reference images current
    when the approved design changes.
 
+## AI actions and suggestions
+
+Approved with issue #2983. Everything AI in the admin uses two looks, so an
+editor recognises AI the same way everywhere and it belongs to the admin's
+palette. Both live in `assets/css/components/AI.css`.
+
+![AI actions and AI suggestions](admin-ui/ai-actions-and-suggestions.png)
+
+**The AI action** is any control that asks AI for something: Build with AI,
+Suggest alt text, the generate button in a meta field, Write or Review with AI
+in Content SEO, Draw a sketch with AI. It is a small secondary button: the
+Lucide `sparkles` icon, `--brando-accent` text, a solid sage hairline (the
+accent mixed into `--brando-line`), white, 30px high with a 5px radius, like
+the other small admin buttons. Render it with `AIAction.button/1`:
+
+```heex
+<AIAction.button phx-click="suggest_alt_text" phx-target={@myself} size={:compact}>
+  {gettext("Suggest alt text")}
+</AIAction.button>
+```
+
+- `href` makes it a link (Build with AI opens the assistant in a new tab).
+- `size={:compact}` (24px) beside a field's label; `size={:icon}` (28px
+  square, with an `aria-label`) inside a text field.
+- `busy` while the request runs: the sparkles pulse and the button stays
+  fully visible; `disabled` fades it. Focus is the admin's 2px accent outline.
+- In a toolbar or a menu, an AI item keeps the host's shape and only takes
+  the accent and the sparkles: the rich-text toolbar's sparkles button, the
+  listing's "Translate to" menu item (icon after the label, so the labels stay
+  aligned).
+- A costed batch's confirm step ("Write 3 descriptions", "Describe 3 images",
+  after the estimate) stays the panel's primary button, with the sparkles.
+- Sidebar rows are navigation, not actions: the Assistant row keeps the
+  sidebar's look with the `sparkles` icon.
+
+**The suggestion** is what AI hands back for review before it is content: a
+rich-text rewrite, a Content SEO review, suggested meta descriptions or alt
+text, what an assistant proposal adds. It sits on the suggestion tint
+(`--brando-suggestion`, mixed lighter for a panel) with a 3px
+`--brando-suggestion-line` rule down its left edge, and is labelled with the
+sparkles in `--brando-suggestion-ink` ("AI suggestion", "AI review"). Accept is
+the primary button beside it; Discard and Try again are secondary.
+
+- A panel: `.ai-proposal`, its label `.ai-proposal-label`, its buttons in
+  `.ai-proposal-actions`.
+- Suggested text the editor can still change before accepting
+  (`SuggestionReview`): the textarea takes `.ai-proposal-field`.
+- The assistant's proposals use the same tokens for new and changed blocks.
+
+Do not:
+
+- use purple, or any colour outside the tokens, for AI;
+- draw an AI action or a suggestion with a dashed border — dashed means
+  "drop here" in the block editor;
+- fill a field with an AI result and style it as a suggestion: text written
+  straight into a field (Generate with AI, Suggest alt text) is ordinary unsaved
+  input, kept or discarded with the form;
+- add a second AI button style for a new screen; add a size to `AIAction`
+  instead.
+
 ## Confirmations, alerts and toasts
 
 Confirmations and alerts use the native `<dialog>` (`assets/src/alerts.js`):

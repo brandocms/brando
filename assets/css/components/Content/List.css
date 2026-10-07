@@ -938,40 +938,48 @@
   }
 }
 
-/* Translation dialog */
+/* Translation dialog: progress of an AI translation from the listing's
+   "Translate to" action. The sparkles and accent mark it as AI (AI.css). */
 
 .translation-dialog-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  padding: 16px;
+  background-color: var(--brando-overlay);
 }
 
 .translation-dialog {
-  background-color: var(--brando-color-peach);
-  border: 1px solid var(--brando-color-dark);
-  border-radius: 8px;
-  width: 380px;
+  box-sizing: border-box;
+  width: min(400px, 100%);
   padding: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--brando-line);
+  border-radius: 8px;
+  background-color: var(--brando-surface);
+  box-shadow: 0 16px 48px rgb(19 37 28 / 16%);
+  color: var(--brando-ink);
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .translation-dialog-header {
-  @font mono;
-  font-size: 14px;
-  text-transform: uppercase;
-  margin-bottom: 20px;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #6d4de3;
+  margin-bottom: 20px;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: -0.01em;
 
   .lucide-sparkles {
-    width: 1.2rem;
-    height: 1.2rem;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    color: var(--brando-accent);
   }
 }
 
@@ -979,65 +987,60 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .translation-step {
-  @font mono;
-  font-size: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-  line-height: 1;
-  color: var(--brando-color-dark);
-  opacity: 0.4;
-  transition: opacity 0.2s;
+  color: var(--brando-muted);
+  transition: color 0.2s;
 
   &.step-done {
-    opacity: 1;
-    color: #2a9d5c;
+    color: var(--brando-ink);
+
+    .translation-step-icon { color: var(--brando-accent); }
   }
 
   &.step-active {
-    opacity: 1;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
+    font-weight: 500;
   }
 
   &.step-error {
-    opacity: 1;
-    color: #e53e3e;
+    color: var(--brando-status-disabled);
   }
 }
 
 .translation-step-icon {
-  width: 18px;
-  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
 
   .lucide-circle-check,
   .lucide-circle-x {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 
   .spinner {
     width: 14px;
     height: 14px;
-    border: 2px solid #6d4de3;
+    border: 2px solid var(--brando-accent);
     border-top-color: transparent;
     border-radius: 50%;
     animation: translation-spin 0.6s linear infinite;
   }
 
   .pending-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background-color: var(--brando-color-dark);
-    opacity: 0.3;
+    background-color: var(--brando-line);
   }
 }
 
@@ -1051,53 +1054,61 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .translation-step-icon .spinner { animation-duration: 2s; }
+}
+
 .translation-dialog-error {
-  @font mono;
-  font-size: 12px;
-  color: #e53e3e;
-  padding: 8px 12px;
-  background-color: rgba(229, 62, 62, 0.08);
-  border-radius: 4px;
   margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 5px;
+  background-color: color-mix(in srgb, var(--brando-status-disabled) 10%, var(--brando-surface));
+  color: var(--brando-status-disabled);
+  font-size: 12px;
 }
 
 .translation-dialog-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 
-  a.translation-dialog-link {
-    @font mono;
+  a.translation-dialog-link,
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    margin: 0;
+    padding: 5px 12px;
+    border: 1px solid var(--brando-line);
+    border-radius: 5px;
+    background-color: var(--brando-surface);
+    color: var(--brando-ink);
+    font-family: inherit;
     font-size: 12px;
-    text-transform: uppercase;
-    background-color: #6d4de3;
-    color: #fff;
-    padding: 6px 14px;
-    border-radius: 4px;
+    font-weight: 500;
+    line-height: 18px;
+    text-transform: none;
     text-decoration: none;
-    transition: background-color 0.2s;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
 
-    &:hover {
-      background-color: #5a3dc7;
+    &:hover { background-color: var(--brando-surface-hover); }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 3px;
     }
   }
 
-  button {
-    @font mono;
-    font-size: 12px;
-    text-transform: uppercase;
-    background-color: transparent;
-    border: 1px solid var(--brando-color-dark);
-    padding: 5px 14px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
+  a.translation-dialog-link {
+    border-color: var(--brando-accent);
+    background-color: var(--brando-accent);
+    color: var(--brando-surface);
 
-    &:hover {
-      background-color: var(--brando-color-dark);
-      color: var(--brando-color-peach);
-    }
+    &:hover { background-color: color-mix(in srgb, var(--brando-accent) 85%, var(--brando-ink)); }
   }
 }
 

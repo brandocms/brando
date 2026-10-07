@@ -98,14 +98,16 @@
       }
     }
 
+    /* An AI item keeps the menu's row and takes the AI action's ink and
+       sparkles (AI.css), after the label so the labels stay aligned. */
     button.ai-translate-action {
-      color: #6d4de3;
+      color: var(--brando-accent);
 
       .lucide-sparkles {
-        width: 18px;
-        height: 18px;
-        margin-left: 3px;
-        vertical-align: middle;
+        width: 14px;
+        height: 14px;
+        margin-left: 4px;
+        vertical-align: -2px;
       }
     }
   }

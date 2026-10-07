@@ -311,10 +311,9 @@
   .seo-audit-table > tbody > .seo-audit-row > td:last-child { width: 1%; text-align: right; }
   .seo-row-toggle, .seo-row-action { border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; padding: 4px 10px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
   .seo-row-toggle:hover, .seo-row-action:hover { background: #f4f7f2; }
-  /* AI actions carry the sparkles in the AI button's purple. */
-  .seo-row-action:has(.ai-icon) { display: inline-flex; align-items: center; gap: 6px; }
-  .ai-icon { flex-shrink: 0; width: 14px; height: 14px; color: #6d4de3; }
-  .workspace-button.primary .ai-icon { color: currentColor; }
+  /* AI actions in these rows are the shared AI action (AI.css); the plain
+     actions beside them share its 30px height. */
+  :is(.seo-preview-actions, .seo-duplicate-actions) > .seo-row-action { display: inline-flex; align-items: center; min-height: 30px; box-sizing: border-box; }
   /* Opening the entry and the alt-text page are links, but they sit in one
      row with the buttons and read as the same kind of action. */
   a.seo-row-action, a.seo-row-action:hover { color: inherit; text-decoration: none; }
@@ -366,7 +365,10 @@
   .seo-context-schema .seo-audit-filters { padding: 8px 0 0; border-bottom: 0; }
   .seo-context-schema .seo-chip { font-family: theme(typography.families.mono); font-size: 11px; }
 
-  .seo-critique { display: grid; gap: 6px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--workspace-line); border-radius: 6px; background: var(--workspace-wash); font-size: 12px; }
+  /* The finished review is an AI suggestion (.ai-proposal, AI.css); while it
+     runs, or when it fails, it is a plain note. */
+  .seo-critique { display: grid; gap: 6px; margin-top: 12px; font-size: 12px; }
+  .seo-critique:not(.ai-proposal) { padding: 10px 12px; border: 1px solid var(--workspace-line); border-radius: 6px; background: var(--workspace-wash); }
   .seo-critique h4 { margin: 0; font-size: 12px; font-weight: 500; }
   .seo-critique ul { display: grid; gap: 4px; margin: 0; padding-left: 16px; list-style: disc; line-height: 1.5; }
   .seo-critique p { display: flex; gap: 8px; align-items: center; margin: 0; padding: 0; color: var(--workspace-muted); }

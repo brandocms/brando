@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   alias Brando.SEO.Generate
   alias Brando.SEO.Suggestions
   alias Brando.Sites
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.SuggestionReview
 
@@ -417,21 +418,19 @@ defmodule BrandoAdmin.Sites.SEOLive do
                           <.link class="seo-row-action" navigate={row.schema.__admin_route__(:update, [row.id])}>
                             {gettext("Open entry")}
                           </.link>
-                          <button
+                          <AIAction.button
                             :if={@ai_available}
-                            type="button"
-                            class="seo-row-action"
                             phx-click="generate_description"
                             phx-value-key={key}
+                            busy={MapSet.member?(@generating, key)}
                             disabled={MapSet.member?(@generating, key)}
                           >
-                            <.ai_icon />
                             <%= if MapSet.member?(@generating, key) do %>
                               {gettext("Writing…")}
                             <% else %>
                               {if row.meta_description, do: gettext("Rewrite description"), else: gettext("Write description")}
                             <% end %>
-                          </button>
+                          </AIAction.button>
                           <.link
                             :if={warns?(row, :image_alt)}
                             class="seo-row-action"
@@ -441,17 +440,15 @@ defmodule BrandoAdmin.Sites.SEOLive do
                           >
                             {gettext("Write alt text")}
                           </.link>
-                          <button
+                          <AIAction.button
                             :if={@ai_available and row.meta_description}
-                            type="button"
-                            class="seo-row-action"
                             phx-click="critique"
                             phx-value-key={key}
+                            busy={@critiques[key] == :running}
                             disabled={@critiques[key] == :running}
                           >
-                            <.ai_icon />
                             {gettext("Review with AI")}
-                          </button>
+                          </AIAction.button>
                         </div>
                         <.critique :if={@critiques[key]} critique={@critiques[key]} />
                         <.traffic
@@ -503,12 +500,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
         </span>
       </p>
       <div class="seo-batch-actions">
-        <button :if={!@confirm} type="button" class="workspace-button" phx-click="confirm_batch">
-          <.ai_icon />
+        <AIAction.button :if={!@confirm} phx-click="confirm_batch">
           {gettext("Write missing descriptions")}
-        </button>
+        </AIAction.button>
         <button :if={@confirm} type="button" class="workspace-button primary" phx-click="start_batch">
-          <.ai_icon />
+          <.icon name="sparkles" />
           {ngettext("Write one description", "Write %{count} descriptions", @count)}
         </button>
         <button :if={@confirm} type="button" class="workspace-button" phx-click="cancel_batch">
@@ -587,12 +583,12 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   defp critique(assigns) do
     ~H"""
-    <div class="seo-critique" role="status" aria-live="polite">
+    <div class={["seo-critique", match?({:ok, _}, @critique) && "ai-proposal"]} role="status" aria-live="polite">
       <%= case @critique do %>
         <% :running -> %>
           <p><span class="seo-spinner" aria-hidden="true"></span>{gettext("Reviewing…")}</p>
         <% {:ok, points} -> %>
-          <h4>{gettext("AI review")}</h4>
+          <h4 class="ai-proposal-label"><.icon name="sparkles" />{gettext("AI review")}</h4>
           <ul>
             <li :for={point <- points}>{point}</li>
           </ul>
@@ -762,14 +758,6 @@ defmodule BrandoAdmin.Sites.SEOLive do
     """
   end
 
-  # Marks an action that writes or judges with AI, as the AI button in form
-  # fields does.
-  defp ai_icon(assigns) do
-    ~H"""
-    <Brando.HTML.Icon.icon name="sparkles" class="ai-icon" />
-    """
-  end
-
   attr :kind, :string
   attr :field, :string
   attr :action, :string
@@ -801,18 +789,16 @@ defmodule BrandoAdmin.Sites.SEOLive do
             </small>
           </div>
           <div class="seo-duplicate-actions">
-            <button
+            <AIAction.button
               :if={@ai_available}
-              type="button"
-              class="seo-row-action"
               phx-click="generate_description"
               phx-value-key={row_key(row)}
               phx-value-field={@field}
+              busy={MapSet.member?(@generating, row_key(row))}
               disabled={MapSet.member?(@generating, row_key(row))}
             >
-              <.ai_icon />
               {if MapSet.member?(@generating, row_key(row)), do: gettext("Writing…"), else: @action}
-            </button>
+            </AIAction.button>
             <.link class="seo-row-action" navigate={row.schema.__admin_route__(:update, [row.id])}>
               {gettext("Open entry")}
             </.link>

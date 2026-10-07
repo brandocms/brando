@@ -2,7 +2,8 @@ defmodule BrandoAdmin.Components.SuggestionReview do
   @moduledoc """
   The review list for AI-written suggestions (`Brando.SEO.Suggestion`): each
   one queued, failed, or waiting to be edited, accepted or rejected, with an
-  "Accept all" for the lot.
+  "Accept all" for the lot. Suggested text takes the shared suggestion look
+  (`.ai-proposal-label`, `.ai-proposal-field` in `assets/css/components/AI.css`).
 
   The hosting LiveView handles `accept_suggestion` (params `suggestion_id`,
   and `text` — or `values`, language → text, for suggestions written in
@@ -10,6 +11,8 @@ defmodule BrandoAdmin.Components.SuggestionReview do
   """
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
+
+  import Brando.HTML.Icon, only: [icon: 1]
 
   attr :id, :string, required: true
   attr :heading, :string, required: true
@@ -26,7 +29,7 @@ defmodule BrandoAdmin.Components.SuggestionReview do
     <section class="ai-suggestions" id={@id} aria-labelledby={"#{@id}-heading"}>
       <header class="ai-suggestions-heading">
         <div>
-          <h3 id={"#{@id}-heading"}>{@heading}</h3>
+          <h3 id={"#{@id}-heading"} class="ai-proposal-label"><.icon name="sparkles" />{@heading}</h3>
           <p role="status" aria-live="polite">
             <span :if={@counts[:queued]}>{gettext("%{count} being written", count: @counts[:queued])}</span>
             <span :if={@counts[:pending]}>{gettext("%{count} to review", count: @counts[:pending])}</span>
@@ -79,6 +82,7 @@ defmodule BrandoAdmin.Components.SuggestionReview do
               id={"suggestion-text-#{suggestion.id}"}
               name="text"
               rows="3"
+              class="ai-proposal-field"
               phx-update="ignore"
               aria-label={@label.(suggestion)}
             >{suggestion.text}</textarea>
@@ -89,6 +93,7 @@ defmodule BrandoAdmin.Components.SuggestionReview do
                   id={"suggestion-text-#{suggestion.id}-#{language}"}
                   name={"values[#{language}]"}
                   rows="2"
+                  class="ai-proposal-field"
                   lang={language}
                   phx-update="ignore"
                   aria-label={"#{@label.(suggestion)} (#{Brando.AI.language_name(language)})"}

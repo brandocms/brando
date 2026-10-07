@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
@@ -249,16 +250,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     />
                     <%!-- This use's alt text, in the entry's language (asked of the
                         form), beside the field's label --%>
-                    <button
+                    <AIAction.button
                       :if={@image && @form_id && alt_text_ai?()}
-                      type="button"
-                      class={["ai-suggest", "ref-alt-suggest", @alt_suggesting && "is-busy"]}
+                      size={:compact}
+                      class="ref-alt-suggest"
+                      busy={@alt_suggesting}
                       phx-click="suggest_alt_text"
                       phx-target={@myself}
                       disabled={@alt_suggesting}
                     >
-                      <.icon name="sparkles" /> {gettext("Suggest alt text")}
-                    </button>
+                      {gettext("Suggest alt text")}
+                    </AIAction.button>
                   </div>
                   <Input.override_text
                     field={block_data[:credits]}
