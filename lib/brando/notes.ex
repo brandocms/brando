@@ -50,7 +50,7 @@ defmodule Brando.Notes do
 
   ## Reading
 
-  @doc "The value `entry_type` holds for `schema`."
+  @doc "Notes name their entry's schema as a string, as revisions and activity events do."
   def entry_type(schema) when is_atom(schema), do: to_string(schema)
 
   @doc """
@@ -149,26 +149,15 @@ defmodule Brando.Notes do
   """
   def create_thread(schema, entry_id, %User{} = user, attrs) do
     with {:ok, entry} <- fetch_entry(schema, entry_id),
-         :ok <- authorize(user, entry) do
-      attrs = normalize_attrs(attrs)
-      {body, mentioned} = encode_mentions(attrs["body"] || "", mention_candidates(entry, attrs))
-
-      changeset =
-        Note.thread_changeset(
-          %Note{},
-          Map.merge(attrs, %{
-            "body" => body,
-            "author_id" => user.id,
-            "entry_type" => entry_type(schema),
-            "entry_id" => entry.id
-          })
-        )
-
-      with {:ok, note} <- insert_with_mentions(changeset, mentioned, user) do
-        record(:note_added, entry, user, note)
-        broadcast(schema, entry.id, :added, note)
-        {:ok, note, mentioned}
-      end
+         :ok <- authorize(user, entry),
+         attrs = normalize_attrs(attrs),
+         {body, mentioned} = encode_mentions(attrs["body"] || "", mention_candidates(entry, attrs)),
+         fields = %{"body" => body, "author_id" => user.id, "entry_type" => entry_type(schema), "entry_id" => entry.id},
+         changeset = Note.thread_changeset(%Note{}, Map.merge(attrs, fields)),
+         {:ok, note} <- insert_with_mentions(changeset, mentioned, user) do
+      record(:note_added, entry, user, note)
+      broadcast(schema, entry.id, :added, note)
+      {:ok, note, mentioned}
     end
   end
 
@@ -181,16 +170,14 @@ defmodule Brando.Notes do
     schema = schema_of(thread)
 
     with {:ok, entry} <- fetch_entry(schema, thread.entry_id),
-         :ok <- authorize(user, entry) do
-      attrs = normalize_attrs(attrs)
-      {body, mentioned} = encode_mentions(attrs["body"] || "", mention_candidates(entry, attrs))
-      changeset = Note.reply_changeset(%Note{}, thread, %{"body" => body, "author_id" => user.id})
-
-      with {:ok, reply} <- insert_with_mentions(changeset, mentioned, user) do
-        if Note.resolved?(thread), do: set_resolved(thread, entry, user, false)
-        broadcast(schema, entry.id, :replied, thread)
-        {:ok, reply, mentioned}
-      end
+         :ok <- authorize(user, entry),
+         attrs = normalize_attrs(attrs),
+         {body, mentioned} = encode_mentions(attrs["body"] || "", mention_candidates(entry, attrs)),
+         changeset = Note.reply_changeset(%Note{}, thread, %{"body" => body, "author_id" => user.id}),
+         {:ok, reply} <- insert_with_mentions(changeset, mentioned, user) do
+      if Note.resolved?(thread), do: set_resolved(thread, entry, user, false)
+      broadcast(schema, entry.id, :replied, thread)
+      {:ok, reply, mentioned}
     end
   end
 
@@ -228,32 +215,30 @@ defmodule Brando.Notes do
     end
   end
 
+  # Writing about yourself mentions no one.
   defp insert_with_mentions(changeset, mentioned, author) do
-    Repo.transaction(fn ->
-      with {:ok, note} <- Repo.insert(changeset) do
-        now = DateTime.utc_now()
+    others = Enum.reject(mentioned, &(&1.id == author.id))
 
-        rows =
-          for user <- mentioned, user.id != author.id do
-            %{note_id: note.id, user_id: user.id, inserted_at: now}
-          end
-
-        if rows != [], do: Repo.insert_all(Mention, rows, on_conflict: :nothing)
-        note
-      else
-        {:error, changeset} -> Repo.rollback(changeset)
-      end
-    end)
-    |> case do
+    case Repo.transaction(fn -> insert_note!(changeset, others) end) do
       {:ok, note} ->
-        mentioned
-        |> Enum.reject(&(&1.id == author.id))
-        |> Enum.each(&schedule_mention_email(&1.id))
-
+        Enum.each(others, &schedule_mention_email(&1.id))
         {:ok, note}
 
       error ->
         error
+    end
+  end
+
+  defp insert_note!(changeset, mentioned) do
+    case Repo.insert(changeset) do
+      {:ok, note} ->
+        now = DateTime.utc_now()
+        rows = Enum.map(mentioned, &%{note_id: note.id, user_id: &1.id, inserted_at: now})
+        if rows != [], do: Repo.insert_all(Mention, rows, on_conflict: :nothing)
+        note
+
+      {:error, changeset} ->
+        Repo.rollback(changeset)
     end
   end
 
@@ -371,7 +356,7 @@ defmodule Brando.Notes do
       schema
       |> entry_query(entry_id)
       |> where([n], is_nil(n.parent_id) and not is_nil(n.block_uid))
-      |> Repo.all()
+      |> Repo.all(guarded())
 
     if anchored == [] do
       :ok
@@ -555,7 +540,7 @@ defmodule Brando.Notes do
 
       schema
       |> entry_query(id)
-      |> Repo.update_all(set: [deleted_at: to_utc_usec(deleted_at)])
+      |> Repo.update_all([set: [deleted_at: to_utc_usec(deleted_at)]], guarded())
     else
       entries_purged(schema, [id])
     end
@@ -571,7 +556,7 @@ defmodule Brando.Notes do
     at = to_utc_usec(deleted_at)
 
     from(n in Note, where: n.entry_type == ^type and n.entry_id == ^id and n.deleted_at == ^at)
-    |> Repo.update_all(set: [deleted_at: nil])
+    |> Repo.update_all([set: [deleted_at: nil]], guarded())
 
     :ok
   rescue
@@ -585,10 +570,18 @@ defmodule Brando.Notes do
 
   def entries_purged(schema, ids) do
     type = entry_type(schema)
-    Repo.delete_all(from(n in Note, where: n.entry_type == ^type and n.entry_id in ^ids))
+    Repo.delete_all(from(n in Note, where: n.entry_type == ^type and n.entry_id in ^ids), guarded())
     :ok
   rescue
     error -> log_lifecycle_error(error)
+  end
+
+  # Entries are saved, trashed and purged inside transactions. Before the
+  # `brando_203` migration has run there is no notes table, and a failed
+  # statement would abort the caller's transaction: run the first statement
+  # in a savepoint, as `Brando.Activity` does, so the save carries on.
+  defp guarded do
+    if Repo.repo().in_transaction?(), do: [mode: :savepoint], else: []
   end
 
   defp log_lifecycle_error(error) do

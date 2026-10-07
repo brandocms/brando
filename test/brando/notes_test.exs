@@ -257,6 +257,41 @@ defmodule Brando.NotesTest do
       assert id == note.id
     end
 
+    test "handing a user's content to someone else leaves their notes and mentions theirs", %{
+      author: author,
+      other: other,
+      page: page
+    } do
+      {note, _} = thread!(page, author, %{"body" => "@Trond Mjøen look", "mentions" => [other.id]})
+      third = Factory.insert(:random_user)
+
+      tables = Enum.map(Brando.Users.get_user_content_summary(author.id), & &1.table)
+      refute "entry_notes" in tables
+      {:ok, _} = Brando.Users.transfer_user_content(author.id, third.id)
+      {:ok, _} = Brando.Users.transfer_user_content(other.id, third.id)
+
+      assert Repo.get!(Note, note.id).author_id == author.id
+      assert [_] = Notes.mentions_for(other.id)
+    end
+
+    test "a site without the notes table can still save, trash and restore entries", %{page: page} do
+      put_test_env(:tenancy_mode, :multi)
+      Repo.query!(~s(CREATE SCHEMA "tenant_notes_unmigrated"))
+
+      assert {:ok, :still_working} =
+               Repo.transaction(fn ->
+                 Brando.Tenant.with_prefix("tenant_notes_unmigrated", fn ->
+                   assert :ok = Notes.entry_saved(Page, page)
+                   assert :ok = Notes.entry_deleted(Page, %{page | deleted_at: DateTime.utc_now()}, true)
+                   assert :ok = Notes.entry_restored(Page, %{page | deleted_at: DateTime.utc_now()})
+                   assert :ok = Notes.entries_purged(Page, [page.id])
+                 end)
+
+                 Repo.one!(from(p in Page, where: p.id == ^page.id, select: count()), prefix: "public")
+                 :still_working
+               end)
+    end
+
     test "purging entries removes their notes", %{author: author, page: page} do
       {note, _} = thread!(page, author, %{"body" => "Bye"})
       Notes.entries_purged(Page, [page.id])
