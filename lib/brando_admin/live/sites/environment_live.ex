@@ -5,6 +5,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
+  # Deleting an environment and setting one live ask for the password, a code
+  # or a passkey when the session has not confirmed lately.
+  on_mount({BrandoAdmin.Reauth, events: ~w(delete_environment queue_set_live schedule_set_live)})
+
   alias Brando.Environments
   alias Brando.Environments.Environment
   alias Brando.Tenant

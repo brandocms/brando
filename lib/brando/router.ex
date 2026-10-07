@@ -120,6 +120,8 @@ defmodule Brando.Router do
           post "/login", UserSessionController, :create
           post "/login/two-factor", UserSessionController, :two_factor
           post "/login/two-factor/complete", UserSessionController, :complete_setup
+          post "/login/passkey/options", UserSessionController, :passkey_options
+          post "/login/passkey", UserSessionController, :passkey
         end
 
         scope "/", BrandoAdmin do
@@ -290,6 +292,8 @@ defmodule Brando.Router do
         live "/security", BrandoAdmin.Users.UserSecurityLive
         live "/sign-in-policy", BrandoAdmin.Users.SignInPolicyLive
       end
+
+      live "/confirm", BrandoAdmin.Users.ConfirmLive
     end
   end
 

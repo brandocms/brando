@@ -5,6 +5,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
+  # Deleting a site asks for the password, a code or a passkey when the
+  # session has not confirmed lately.
+  on_mount({BrandoAdmin.Reauth, events: ~w(delete)})
+
   alias Brando.Sites.Site
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry

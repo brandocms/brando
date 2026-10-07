@@ -38,6 +38,8 @@
         <article class={["content", assigns[:admin_workspace?] && "admin-workspace content-workspace"]}>
           {@inner_content}
         </article>
+        <%!-- A sensitive action held until the user confirms it is them, see BrandoAdmin.Reauth --%>
+        <BrandoAdmin.Reauth.prompt :if={match?(%{event: _}, assigns[:reauth])} reauth={@reauth} />
       </main>
     <% end %>
   </div>
