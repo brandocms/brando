@@ -10,7 +10,11 @@ test('sign in, create and edit generated content, then render it publicly', asyn
   await page.goto('/admin/catalog/products/create')
   await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Igniter smoke product')
   await page.getByRole('textbox', { name: 'Slug', exact: true }).fill('igniter-smoke-product')
-  await page.getByText('Published', { exact: true }).click()
+  // The status is a control beside the entry's heading: open it, pick by value
+  const status = page.locator('[data-testid="status-trigger"]')
+  await status.click()
+  await page.locator('[data-testid="status-options"] label:has(input[value="published"])').click()
+  await expect(status).toHaveAttribute('data-status', 'published')
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/catalog\/products$/)
   await page.getByText('Igniter smoke product', { exact: true }).click()
