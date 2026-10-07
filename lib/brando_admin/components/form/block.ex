@@ -1159,6 +1159,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     push_event(socket, "b:component:remount_block", %{uid: socket.assigns.uid})
   end
 
+  # Another editor's change to a block this editor works in: the widget with
+  # the focus keeps what is being typed.
+  defp maybe_push_remount(socket, %{remount_js: :skip_focused}) do
+    push_event(socket, "b:component:remount_block", %{uid: socket.assigns.uid, skip_focused: true})
+  end
+
   defp maybe_push_remount(socket, _msg), do: socket
 
   defp reset_changesets(socket, block_uid) do
@@ -2293,14 +2299,29 @@ defmodule BrandoAdmin.Components.Form.Block do
   Exceptions that intentionally assign `:form` directly: live-preview
   render stamping (`rendered_html`/`rendered_at` only — materialization
   strips render artifacts anyway).
+
+  `target:` is the input a `validate_block` event names (`_target`). When it
+  is one field, the op is `{:set_field, ...}` for that field only.
   """
-  def assign_block_form(socket, form) do
+  def assign_block_form(socket, form, opts \\ []) do
     socket
     |> assign(:form, form)
     |> assign_hidden_block_fields()
-    |> emit_block_op({:update, socket.assigns.uid, Ops.block_diff_params(form.source)})
+    |> emit_block_op(form_op(socket.assigns.uid, form, opts[:target], socket.assigns[:form]))
     |> assign_unused_collections()
   end
+
+  # A keystroke changes one field: it goes to the edit session as that field
+  # alone (`{:set_field, ...}`), so someone typing in another field of the
+  # block keeps their change. Anything else sends the block's whole diff.
+  defp form_op(uid, form, target, previous) when is_list(target) do
+    case Ops.field_op(form.source, uid, target, previous && previous.source) do
+      {:ok, op} -> op
+      :error -> {:update, uid, Ops.block_diff_params(form.source)}
+    end
+  end
+
+  defp form_op(uid, form, _target, _previous), do: {:update, uid, Ops.block_diff_params(form.source)}
 
   @doc """
   Send a block op to the owning BlockField's reducer (see `Ops.apply_op/2`).

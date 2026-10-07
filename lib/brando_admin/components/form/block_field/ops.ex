@@ -51,6 +51,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   state: no process, no database, no clock.
   """
 
+  alias BrandoAdmin.Components.Form.BlockField.FractionalKey
   alias Ecto.Changeset
 
   defstruct order: [],
@@ -60,6 +61,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             statuses: %{},
             db_ids: %{},
             rel_ids: %{},
+            keys: %{},
             deleted: []
 
   @type uid :: String.t()
@@ -74,17 +76,34 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           statuses: %{optional(uid()) => status()},
           db_ids: %{optional(uid()) => {entry_block_id :: term() | nil, block_id :: term() | nil}},
           rel_ids: %{optional(uid()) => %{optional({String.t(), String.t()}) => term()}},
+          keys: %{optional(uid()) => FractionalKey.t()},
           deleted: [uid()]
         }
 
+  @typedoc """
+  Where a block goes among its siblings: an index, the end, or a fractional
+  key (`FractionalKey`). Editors send keys, so an insert lands between the
+  neighbours it was put between whatever else moved in the meantime.
+  """
+  @type position :: non_neg_integer() | :end | {:key, FractionalKey.t()}
+
+  @typedoc """
+  Where one field sits in a block's diff: map keys, list items by identity
+  (`{:at, key, identity, skeleton}`, the skeleton being the whole list's
+  identities in case the diff has no list yet) and `{:map, key, default}`
+  for a map the diff may lack (an embed, whose default is its full value).
+  """
+  @type field_path :: [String.t() | {:at, String.t(), term(), [map()]} | {:map, String.t(), map()}]
+
   @type op ::
-          {:insert, uid(), non_neg_integer() | :end, params()}
-          | {:insert_child, parent :: uid(), uid(), non_neg_integer() | :end, params()}
+          {:insert, uid(), position(), params()}
+          | {:insert_child, parent :: uid(), uid(), position(), params()}
           | {:update, uid(), params()}
-          | {:move, uid(), non_neg_integer()}
+          | {:set_field, uid(), field_path(), term(), rev :: non_neg_integer() | nil}
+          | {:move, uid(), position()}
           | {:reorder, [uid()]}
           | {:reorder_children, parent :: uid(), [uid()]}
-          | {:move_to_parent, uid(), new_parent :: uid(), non_neg_integer() | :end}
+          | {:move_to_parent, uid(), new_parent :: uid(), position()}
           | {:remap_slot, uid(), uid() | nil, params()}
           | {:delete, uid()}
           | {:restore, map()}
@@ -108,7 +127,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   """
   @spec new([uid()]) :: t()
   def new(uids) do
-    %__MODULE__{order: uids, statuses: Map.new(uids, &{&1, :persisted})}
+    put_spread_keys(%__MODULE__{order: uids, statuses: Map.new(uids, &{&1, :persisted})})
   end
 
   @doc """
@@ -132,6 +151,17 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
       register_persisted_children(state, entry_block.block)
     end)
+    |> put_spread_keys()
+  end
+
+  # Evenly spread keys for every sibling list, roots included.
+  defp put_spread_keys(state) do
+    keys =
+      [state.order | Map.values(state.child_order)]
+      |> Enum.flat_map(fn uids -> Enum.zip(uids, FractionalKey.spread(length(uids))) end)
+      |> Map.new()
+
+    %{state | keys: keys}
   end
 
   defp register_persisted_children(state, %{uid: parent_uid, children: children}) when is_list(children) do
@@ -242,11 +272,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         {:error, {:bad_position, at}}
 
       true ->
-        state = %{
-          state
-          | order: List.insert_at(state.order, clamp(at, state.order), uid),
-            statuses: Map.put(state.statuses, uid, :inserted)
-        }
+        {order, keys} = place(state.order, state.keys, uid, at)
+        state = %{state | order: order, keys: keys, statuses: Map.put(state.statuses, uid, :inserted)}
 
         {:ok, register_params(state, uid, params, :entry_block)}
     end
@@ -283,22 +310,46 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
+  # One field of one block, last arrival wins. The rest of the block's diff
+  # is left alone, so two editors in different fields of one block both keep
+  # their changes.
+  def apply_op(%__MODULE__{} = state, {:set_field, uid, path, value, _rev}) when is_list(path) and path != [] do
+    if known?(state, uid) do
+      {:ok, %{state | diffs: Map.put(state.diffs, uid, put_path(Map.get(state.diffs, uid, %{}), path, value))}}
+    else
+      {:error, {:unknown_uid, uid}}
+    end
+  end
+
   def apply_op(%__MODULE__{} = state, {:move, uid, to}) do
     cond do
-      uid not in state.order -> {:error, {:unknown_uid, uid}}
-      not is_integer(to) or to < 0 -> {:error, {:bad_position, to}}
-      true -> {:ok, %{state | order: state.order |> List.delete(uid) |> List.insert_at(to, uid)}}
+      uid not in state.order ->
+        {:error, {:unknown_uid, uid}}
+
+      not valid_position?(to) or to == :end ->
+        {:error, {:bad_position, to}}
+
+      true ->
+        {order, keys} = place(List.delete(state.order, uid), state.keys, uid, to)
+        {:ok, %{state | order: order, keys: keys}}
     end
   end
 
   def apply_op(%__MODULE__{} = state, {:reorder, uids}) when is_list(uids) do
-    {:ok, %{state | order: sanitize_order(uids, state.order)}}
+    order = sanitize_order(uids, state.order)
+    {:ok, %{state | order: order, keys: FractionalKey.rekey(order, state.keys)}}
   end
 
   def apply_op(%__MODULE__{} = state, {:reorder_children, parent_uid, uids}) when is_list(uids) do
     if known?(state, parent_uid) do
-      current = Map.get(state.child_order, parent_uid, [])
-      {:ok, %{state | child_order: Map.put(state.child_order, parent_uid, sanitize_order(uids, current))}}
+      order = sanitize_order(uids, Map.get(state.child_order, parent_uid, []))
+
+      {:ok,
+       %{
+         state
+         | child_order: Map.put(state.child_order, parent_uid, order),
+           keys: FractionalKey.rekey(order, state.keys)
+       }}
     else
       {:error, {:unknown_uid, parent_uid}}
     end
@@ -320,13 +371,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
       true ->
         state = detach(state, uid)
-        siblings = Map.get(state.child_order, new_parent_uid, [])
+        {siblings, keys} = place(Map.get(state.child_order, new_parent_uid, []), state.keys, uid, at)
 
         {:ok,
          %{
            state
            | parents: Map.put(state.parents, uid, new_parent_uid),
-             child_order: Map.put(state.child_order, new_parent_uid, List.insert_at(siblings, clamp(at, siblings), uid))
+             child_order: Map.put(state.child_order, new_parent_uid, siblings),
+             keys: keys
          }}
     end
   end
@@ -363,6 +415,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
            diffs: Map.drop(state.diffs, doomed),
            statuses: Map.drop(state.statuses, doomed),
            db_ids: Map.drop(state.db_ids, doomed),
+           keys: Map.drop(state.keys, doomed),
            deleted: state.deleted ++ newly_deleted
        }}
     else
@@ -461,7 +514,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> Map.merge(%{
       location: location,
       statuses: Map.take(state.statuses, uids),
-      db_ids: Map.take(state.db_ids, uids)
+      db_ids: Map.take(state.db_ids, uids),
+      keys: Map.take(state.keys, uids)
     })
   end
 
@@ -506,27 +560,40 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             diffs: Map.merge(state.diffs, snapshot.diffs),
             statuses: Map.merge(state.statuses, snapshot.statuses),
             db_ids: Map.merge(state.db_ids, snapshot.db_ids),
+            keys: Map.merge(state.keys, Map.get(snapshot, :keys, %{})),
             deleted: Enum.reject(state.deleted, &(&1 in uids))
         }
 
-        {:ok, reattach(state, uid, location)}
+        {:ok, reattach(state, uid, restore_position(snapshot, uid, location))}
     end
   end
 
   defp location_known?(_state, {:root, _at}), do: true
   defp location_known?(state, {:child, parent_uid, _at}), do: known?(state, parent_uid)
 
+  # Back between the neighbours it had (its old key), or at its old index
+  # when the snapshot has no key.
+  defp restore_position(snapshot, uid, location) do
+    case {Map.get(snapshot, :keys, %{}), location} do
+      {%{^uid => key}, {:root, _at}} -> {:root, {:key, key}}
+      {%{^uid => key}, {:child, parent_uid, _at}} -> {:child, parent_uid, {:key, key}}
+      _ -> location
+    end
+  end
+
   defp reattach(state, uid, {:root, at}) do
-    %{state | order: List.insert_at(state.order, clamp(at, state.order), uid)}
+    {order, keys} = place(state.order, Map.delete(state.keys, uid), uid, at)
+    %{state | order: order, keys: keys}
   end
 
   defp reattach(state, uid, {:child, parent_uid, at}) do
-    siblings = Map.get(state.child_order, parent_uid, [])
+    {siblings, keys} = place(Map.get(state.child_order, parent_uid, []), Map.delete(state.keys, uid), uid, at)
 
     %{
       state
       | parents: Map.put(state.parents, uid, parent_uid),
-        child_order: Map.put(state.child_order, parent_uid, List.insert_at(siblings, clamp(at, siblings), uid))
+        child_order: Map.put(state.child_order, parent_uid, siblings),
+        keys: keys
     }
   end
 
@@ -821,7 +888,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   """
   @spec carry(t(), t(), t()) :: {t(), [uid()]}
   def carry(%__MODULE__{} = state, %__MODULE__{} = old_base, %__MODULE__{} = new_base) do
-    acc = {new_base, []}
+    acc = {adopt_keys(new_base, state), []}
     acc = Enum.reduce(state.deleted, acc, &carry_delete/2)
     acc = state |> inserted_tops() |> Enum.reduce(acc, &carry_insert(&1, &2, state))
 
@@ -969,10 +1036,263 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> then(&(&1 ++ Enum.reject(present, fn uid -> uid in &1 end)))
   end
 
+  ## Fields
+
+  @doc """
+  The `{:set_field, ...}` op for the input a block form just changed, or
+  `:error` when the input is not one field (a table row, a hidden helper).
+
+  `changeset` is the block's new changeset and `target` the input's name as
+  LiveView sends it in `_target` (`["entry_block", "block", "refs", "0",
+  "data", "data", "text"]`). List items are named by identity (`id`, `uid`
+  or `key`) rather than index, and the value is read from the changeset's
+  applied state, so a field changed back to its saved value is set as well.
+
+  ## Examples
+
+      iex> alias BrandoAdmin.Components.Form.BlockField.Ops
+      iex> cs = Ecto.Changeset.change(%Brando.Content.Block{id: 1, uid: "b"}, %{description: "New"})
+      iex> {:ok, {:set_field, "b", ["description"], "New", nil}} = Ops.field_op(cs, "b", ["child_block", "description"])
+
+  """
+  @render_artifacts ~w(rendered_html rendered_at)
+
+  @spec field_op(Changeset.t(), uid(), [String.t()], Changeset.t() | nil) :: {:ok, op()} | :error
+  def field_op(changeset, uid, target, previous \\ nil)
+
+  def field_op(%Changeset{} = changeset, uid, [_form_name | path], previous) when path != [] do
+    snapshot = changeset |> snapshot_params() |> drop_artifacts()
+
+    with true <- only_change?(previous, snapshot, path),
+         {:ok, field_path, value} <- field_path(snapshot, path, [], :top) do
+      {:ok, {:set_field, uid, field_path, value, nil}}
+    else
+      _ -> :error
+    end
+  rescue
+    _ -> :error
+  end
+
+  def field_op(_changeset, _uid, _target, _previous), do: :error
+
+  # The input is the one thing that changed since `previous` (the form
+  # before this event): a table row moved by dragging, or a value a widget
+  # sets beside the one it names, is more than one field and goes as the
+  # block's whole diff.
+  defp only_change?(nil, _snapshot, _path), do: true
+
+  defp only_change?(%Changeset{} = previous, snapshot, path) do
+    with {:ok, value} <- dom_get(snapshot, path),
+         {:ok, before} <- previous |> snapshot_params() |> drop_artifacts() |> dom_put(path, value) do
+      before == snapshot
+    else
+      _ -> false
+    end
+  end
+
+  defp dom_get(value, []), do: {:ok, value}
+  defp dom_get(%{} = map, [key | rest]) when is_map_key(map, key), do: dom_get(Map.fetch!(map, key), rest)
+
+  defp dom_get(list, [index | rest]) when is_list(list) do
+    with {i, ""} <- Integer.parse(index),
+         true <- i < length(list),
+         do: dom_get(Enum.at(list, i), rest),
+         else: (_ -> :error)
+  end
+
+  defp dom_get(_value, _path), do: :error
+
+  defp dom_put(_value, [], new), do: {:ok, new}
+
+  defp dom_put(%{} = map, [key | rest], new) when is_map_key(map, key) do
+    with {:ok, value} <- dom_put(Map.fetch!(map, key), rest, new), do: {:ok, Map.put(map, key, value)}
+  end
+
+  defp dom_put(list, [index | rest], new) when is_list(list) do
+    with {i, ""} <- Integer.parse(index),
+         true <- i < length(list),
+         {:ok, value} <- dom_put(Enum.at(list, i), rest, new) do
+      {:ok, List.replace_at(list, i, value)}
+    else
+      _ -> :error
+    end
+  end
+
+  defp dom_put(_value, _path, _new), do: :error
+
+  defp drop_artifacts(%{} = map) when not is_struct(map),
+    do: map |> Map.drop(@render_artifacts) |> Map.new(fn {k, v} -> {k, drop_artifacts(v)} end)
+
+  defp drop_artifacts(list) when is_list(list), do: Enum.map(list, &drop_artifacts/1)
+  defp drop_artifacts(other), do: other
+
+  defp field_path(map, [key], acc, _level) when is_map(map) do
+    if Map.has_key?(map, key) and key not in @render_artifacts,
+      do: {:ok, Enum.reverse([key | acc]), Map.get(map, key)},
+      else: :error
+  end
+
+  defp field_path(map, [key, index | rest], acc, _level) when is_map(map) and is_list(:erlang.map_get(key, map)) do
+    list = Map.fetch!(map, key)
+
+    with {i, ""} <- Integer.parse(index),
+         %{} = element <- Enum.at(list, i) do
+      skeleton = list |> Enum.with_index() |> Enum.map(fn {item, n} -> identity_map(identity(item, n)) end)
+      field_path(element, rest, [{:at, key, identity(element, i), skeleton} | acc], :item)
+    else
+      _ -> :error
+    end
+  end
+
+  # The block of a root's entry-block diff is partial by nature (its rows
+  # are matched by id); a map below a list item is an embed and needs its
+  # whole value if the stored diff has none.
+  defp field_path(map, [key | rest], acc, level) when is_map(map) and is_map(:erlang.map_get(key, map)) do
+    segment = if level == :item, do: {:map, key, Map.fetch!(map, key)}, else: key
+    field_path(Map.fetch!(map, key), rest, [segment | acc], :inner)
+  end
+
+  defp field_path(_value, _path, _acc, _level), do: :error
+
+  defp identity(%{"id" => id}, _index) when id not in [nil, ""], do: {"id", id}
+  defp identity(%{"uid" => uid}, _index) when uid not in [nil, ""], do: {"uid", uid}
+  defp identity(%{"key" => key}, _index) when key not in [nil, ""], do: {"key", key}
+  defp identity(_item, index), do: {:index, index}
+
+  defp identity_map({:index, _}), do: %{}
+  defp identity_map({key, value}), do: %{key => value}
+
+  defp put_path(map, [key], value) when is_binary(key), do: Map.put(as_map(map), key, value)
+
+  defp put_path(map, [key | rest], value) when is_binary(key) do
+    map = as_map(map)
+    Map.put(map, key, put_path(Map.get(map, key), rest, value))
+  end
+
+  defp put_path(map, [{:map, key, default} | rest], value) do
+    map = as_map(map)
+
+    current =
+      case Map.get(map, key) do
+        %{} = current -> current
+        _ -> default
+      end
+
+    Map.put(map, key, put_path(current, rest, value))
+  end
+
+  defp put_path(map, [{:at, key, identity, skeleton} | rest], value) do
+    map = as_map(map)
+
+    list =
+      case Map.get(map, key) do
+        list when is_list(list) -> list
+        _ -> skeleton
+      end
+
+    index = Enum.find_index(Enum.with_index(list), fn {item, n} -> same_item?(item, n, identity) end)
+
+    list =
+      case index do
+        nil -> list ++ [put_path(identity_map(identity), rest, value)]
+        index -> List.update_at(list, index, &put_path(&1, rest, value))
+      end
+
+    Map.put(map, key, list)
+  end
+
+  defp as_map(%{} = map), do: map
+  defp as_map(_), do: %{}
+
+  defp same_item?(_item, n, {:index, index}), do: n == index
+  defp same_item?(%{} = item, _n, {key, value}), do: to_string(Map.get(item, key)) == to_string(value)
+  defp same_item?(_item, _n, _identity), do: false
+
   ## State plumbing
 
   defp valid_position?(:end), do: true
+  defp valid_position?({:key, key}), do: is_binary(key) and key != ""
   defp valid_position?(at), do: is_integer(at) and at >= 0
+
+  # Put `uid` into a sibling list kept in key order. A key places it among
+  # the keys; an index gets a key between the neighbours at that index. Two
+  # editors' blocks with the same key sort by uid. Neighbours without keys,
+  # or with equal keys, are keyed again around it.
+  defp place(list, keys, uid, {:key, key}) do
+    index = Enum.find_index(list, &({Map.get(keys, &1), &1} > {key, uid})) || length(list)
+    {List.insert_at(list, index, uid), Map.put(keys, uid, key)}
+  end
+
+  defp place(list, keys, uid, at) do
+    index = clamp(at, list)
+    list = List.insert_at(list, index, uid)
+
+    case key_between(list, keys, index) do
+      {:ok, key} -> {list, Map.put(keys, uid, key)}
+      :rekey -> {list, FractionalKey.rekey(list, Map.delete(keys, uid))}
+    end
+  end
+
+  # The key between the neighbours of `index` in `list`, if they allow one.
+  defp key_between(list, keys, index) do
+    before = if index > 0, do: Map.get(keys, Enum.at(list, index - 1)), else: :start
+    next = if index + 1 < length(list), do: Map.get(keys, Enum.at(list, index + 1)), else: :end
+
+    case {bound(before, :start), bound(next, :end)} do
+      {:missing, _} -> :rekey
+      {_, :missing} -> :rekey
+      {before, next} when is_nil(before) or is_nil(next) or before < next -> {:ok, FractionalKey.between(before, next)}
+      _equal -> :rekey
+    end
+  end
+
+  # A neighbour's key, nil for the start or end of the list, `:missing` for a
+  # neighbour without a key.
+  defp bound(edge, edge), do: nil
+  defp bound(nil, _edge), do: :missing
+  defp bound(key, _edge), do: key
+
+  @doc """
+  The same op with its position as a fractional key, worked out on `state`,
+  the editor's view when they made it. What the editor meant by "between
+  these two" then survives other editors' ops that arrive first. Ops without
+  a position, or whose neighbours allow no key, come back unchanged.
+  """
+  @spec keyed(t(), op()) :: op()
+  def keyed(%__MODULE__{} = state, {:insert, uid, at, params}) when at == :end or is_integer(at),
+    do: {:insert, uid, key_at(state.order, state.keys, at), params}
+
+  def keyed(%__MODULE__{} = state, {:insert_child, parent_uid, uid, at, params}) when at == :end or is_integer(at),
+    do: {:insert_child, parent_uid, uid, key_at(Map.get(state.child_order, parent_uid, []), state.keys, at), params}
+
+  def keyed(%__MODULE__{} = state, {:move, uid, to}) when is_integer(to),
+    do: {:move, uid, key_at(List.delete(state.order, uid), state.keys, to)}
+
+  def keyed(_state, op), do: op
+
+  defp key_at(list, keys, at) do
+    index = clamp(at, list)
+
+    case key_between(List.insert_at(list, index, :__new__), keys, index) do
+      {:ok, key} -> {:key, key}
+      :rekey -> at
+    end
+  end
+
+  @doc """
+  Give `base`, rows that were just loaded, the keys `state` already uses
+  for the same blocks, so ops that name those keys still land where their
+  editors meant. Blocks only `base` knows get keys between their neighbours.
+  """
+  @spec adopt_keys(t(), t()) :: t()
+  def adopt_keys(%__MODULE__{} = base, %__MODULE__{} = state) do
+    keys =
+      [base.order | Map.values(base.child_order)]
+      |> Enum.reduce(Map.merge(base.keys, state.keys), &FractionalKey.rekey/2)
+      |> Map.take(Map.keys(base.statuses))
+
+    %{base | keys: keys}
+  end
 
   defp clamp(:end, list), do: length(list)
   defp clamp(at, list), do: min(at, length(list))
@@ -1001,12 +1321,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   defp attach_child(state, parent_uid, uid, at, params) do
-    siblings = Map.get(state.child_order, parent_uid, [])
+    {siblings, keys} = place(Map.get(state.child_order, parent_uid, []), state.keys, uid, at)
 
     state = %{
       state
       | parents: Map.put(state.parents, uid, parent_uid),
-        child_order: Map.put(state.child_order, parent_uid, List.insert_at(siblings, clamp(at, siblings), uid)),
+        child_order: Map.put(state.child_order, parent_uid, siblings),
+        keys: keys,
         statuses: Map.put(state.statuses, uid, :inserted)
     }
 
