@@ -1430,7 +1430,12 @@ Code.require_file("block_slots_seeds.exs", __DIR__)
 # Heading, two with a Wide section holding Single Image with Caption, one with
 # Rich Text Article. Norwegian drafts, so the English listings and the
 # published-project datasources stay as they are.
-starting_module = fn class -> E2eProject.Repo.get_by!(Brando.Content.Module, class: class) end
+starting_module = fn class ->
+  Brando.Content.Module
+  |> E2eProject.Repo.get_by!(class: class)
+  |> E2eProject.Repo.preload([:refs, :vars])
+end
+
 starting_heading = starting_module.("header")
 starting_image = starting_module.("single-image-caption")
 starting_text = starting_module.("rich-text-article")
@@ -1452,7 +1457,16 @@ starting_block = fn module, sequence ->
     source: E2eProject.Projects.Project.Blocks,
     creator_id: user.id,
     sequence: sequence,
-    refs: [],
+    # The module's refs, as a new block of it holds them.
+    refs:
+      Enum.map(module.refs, fn ref ->
+        %Brando.Content.Ref{
+          name: ref.name,
+          data: ref.data,
+          description: ref.description,
+          uid: Brando.Utils.generate_uid()
+        }
+      end),
     vars: []
   }
 end
