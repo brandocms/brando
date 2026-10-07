@@ -70,7 +70,8 @@ defmodule BrandoAdmin.Components.Form.Input.RichTextLabels do
       aiAccepted: gettext("Suggestion accepted. Undo is available."),
       words: gettext("%{count} words", count: "%{count}"),
       indent: gettext("Indent list item"),
-      outdent: gettext("Outdent list item")
+      outdent: gettext("Outdent list item"),
+      addNote: gettext("Add note")
     }
   end
 end

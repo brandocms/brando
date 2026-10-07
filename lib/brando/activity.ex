@@ -11,6 +11,9 @@ defmodule Brando.Activity do
   revision the change saved. It does not keep values; the revisions hold the
   content, and Configuration → Activity compares them.
 
+  Notes on an entry record `:note_added`, `:note_resolved` and
+  `:note_reopened` (`Brando.Notes`), with the note's opening words.
+
   The person is the user the change was made as. `source` says how it was
   made when that wasn't by hand in the admin: `:scheduler` (scheduled
   publishing; the user is whoever scheduled it), `:assistant` (an applied

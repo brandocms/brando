@@ -2740,6 +2740,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         {render_slot(@inner_block)}
       </div>
       <div class="block-actions" id={"block-#{@uid}-block-toolbar-actions"}>
+        <%!-- Notes: the count of open notes is a sticky attribute the client
+              sets (`assets/src/Notes`), so a note never re-renders a block. --%>
+        <button
+          :if={!@is_ref?}
+          type="button"
+          class="block-action block-note"
+          data-block-note
+          aria-label={gettext("Note on this block")}
+        >
+          <.icon name="message-square-text" />
+        </button>
         <.handle :if={!@is_ref?} />
         <.block_actions_dropdown
           :if={!@is_ref?}

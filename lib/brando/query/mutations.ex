@@ -655,6 +655,7 @@ defmodule Brando.Query.Mutations do
       end
 
       Activity.deleted(entry, user, soft_deletable?)
+      Brando.Notes.entry_deleted(module, entry, soft_deletable?)
 
       maybe_notify(entry, "deleted", user, true)
       maybe_broadcast(module, entry, :deleted, true)

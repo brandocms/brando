@@ -38,6 +38,12 @@
   --brando-suggestion-line: #6a9b80;
   --brando-suggestion-ink: #2f6a4d;
 
+  /* Editors' notes: the amber of a missing alt text. A tint for highlights
+     and counts, a rule for underlines and pins, and its ink (Notes.css). */
+  --brando-note: #fbefda;
+  --brando-note-line: #e4b866;
+  --brando-note-ink: #87662d;
+
   /* Entry status. Always shown with a text label as well. */
   --brando-status-published: #3cb371;
   --brando-status-pending: #f1ac00;

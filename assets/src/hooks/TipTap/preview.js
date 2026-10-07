@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify'
 
 const tags = ['p', 'br', 'div', 'span', 'strong', 'b', 'em', 'i', 's', 'strike', 'u', 'code', 'pre', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'sub', 'sup', 'ul', 'ol', 'li', 'hr']
-const attributes = ['href', 'class', 'id', 'style', 'start', 'data-type', 'data-footnote-uid', 'data-identifier-id']
+const attributes = ['href', 'class', 'id', 'style', 'start', 'data-type', 'data-footnote-uid', 'data-identifier-id', 'data-brando-note']
 
 // This is a display copy. Never put sanitized or normalized preview markup
 // back into the input: an untouched field must keep its original value.

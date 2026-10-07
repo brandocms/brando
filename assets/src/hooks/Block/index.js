@@ -9,6 +9,8 @@ const SHIP_SETTLE_MS = 400
 export default app => ({
   mounted() {
     this.autosizeElements()
+    // A block that mounts after the entry's notes arrived shows its count.
+    app.notes?.decorateBlock(this.el)
 
     // Block-level presence: any interaction inside the block signals focus.
     // Push to the root LiveView (not this.el) because the hook element may be

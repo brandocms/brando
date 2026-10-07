@@ -26,6 +26,7 @@ defmodule BrandoAdmin.LiveView.Form.Compiler do
     :hooks_images,
     :hooks_asset_delivery,
     :hooks_tiptap_link,
+    :hooks_notes,
     :hooks_videos,
     :hooks_video_events,
     # Catch port exits from image processing (ImageMagick, etc)

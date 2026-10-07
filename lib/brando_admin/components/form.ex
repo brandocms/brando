@@ -53,6 +53,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias BrandoAdmin.Components.Form.Input.Select
   alias BrandoAdmin.Components.Form.MetaDrawer
+  alias BrandoAdmin.Components.Form.NotesDrawer
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RevisionsDrawer
@@ -114,6 +115,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:video_context, :asset)
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
+     |> assign(:notes_open_count, 0)
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
@@ -1073,6 +1075,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # Async entry-load progress, reported from the loading task via
   # send_update/3 — keeps the loading overlay's status current.
+  def update(%{action: :notes_count, count: count}, socket) do
+    {:ok, assign(socket, :notes_open_count, count)}
+  end
+
   def update(%{action: :entry_load_progress, status: status}, socket) do
     {:ok, assign(socket, :entry_load_status, status)}
   end
@@ -2610,6 +2616,7 @@ defmodule BrandoAdmin.Components.Form do
         data-draft-enabled={@draft_enabled? && "true"}
         data-draft-form-id={@id}
         data-draft-leave-message={gettext("Your latest edits have not reached recovery storage. Leave this editor anyway?")}
+        data-notes={notes?(@layout, @entry_id) && "#{@id}-notes"}
       >
         <%!-- Recovery captures are pushed from this empty element, see `draftRecovery.js` --%>
         <span id={"#{@id}-draft-capture"} data-draft-capture phx-target={@myself} hidden></span>
@@ -2718,6 +2725,19 @@ defmodule BrandoAdmin.Components.Form do
                 target={@myself}
                 entry_id={@entry_id}
               />
+              <button
+                :if={notes?(@layout, @entry_id)}
+                id={"#{@id}-notes-toggle"}
+                class="form-tool-notes"
+                phx-click={JS.dispatch("brando:notes:toggle")}
+                type="button"
+                aria-controls={"#{@id}-notes"}
+                aria-expanded="false"
+              >
+                <.icon name="message-square" class="s" />
+                <span class="tab-text">{gettext("Notes")}</span>
+                <span :if={@notes_open_count > 0} class="form-tool-count">{@notes_open_count}</span>
+              </button>
               <button
                 :if={@has_alternates?}
                 class="form-tool-language"
@@ -3044,6 +3064,17 @@ defmodule BrandoAdmin.Components.Form do
           </div>
         </div>
 
+        <.live_component
+          :if={notes?(@layout, @entry_id)}
+          module={NotesDrawer}
+          id={"#{@id}-notes"}
+          schema={@schema}
+          entry_id={@entry_id}
+          entry_title={EntryHeader.title(@schema, @entry)}
+          current_user={@current_user}
+          form_id={@id}
+        />
+
         <.live_preview
           live_preview_active?={@live_preview_active?}
           live_preview_cache_key={@live_preview_cache_key}
@@ -3110,6 +3141,9 @@ defmodule BrandoAdmin.Components.Form do
       true -> "pending"
     end
   end
+
+  # Notes belong to a saved entry, in the entry editor (not settings screens).
+  defp notes?(layout, entry_id), do: layout == :entry and not is_nil(entry_id)
 
   attr :presences, :list
 

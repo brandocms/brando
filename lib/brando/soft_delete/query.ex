@@ -94,12 +94,13 @@ defmodule Brando.SoftDelete.Query do
     Repo.transaction(fn ->
       purged = if Brando.Activity.logged?(schema), do: Repo.all(query), else: []
 
+      ids = query |> select([t], t.id) |> Repo.all()
+
       if schema.__trait__(Brando.Trait.Revisioned) do
-        query
-        |> select([t], t.id)
-        |> Repo.all()
-        |> Enum.each(&Brando.Revisions.delete_entry_revisions(schema, &1))
+        Enum.each(ids, &Brando.Revisions.delete_entry_revisions(schema, &1))
       end
+
+      Brando.Notes.entries_purged(schema, ids)
 
       result = Repo.delete_all(query)
       Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))

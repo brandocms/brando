@@ -127,6 +127,9 @@ defmodule BrandoAdmin.Components.Activity do
   def action_label(%{action: :duplicated}), do: gettext("Duplicated")
   def action_label(%{action: :imported}), do: gettext("Imported")
   def action_label(%{action: :reordered}), do: gettext("Reordered")
+  def action_label(%{action: :note_added}), do: gettext("Added a note")
+  def action_label(%{action: :note_resolved}), do: gettext("Resolved a note")
+  def action_label(%{action: :note_reopened}), do: gettext("Reopened a note")
 
   @doc "The filter options for actions: `[{label, value}]`."
   def action_options do
@@ -141,7 +144,10 @@ defmodule BrandoAdmin.Components.Activity do
       {gettext("Restored a revision"), "revision_restored"},
       {gettext("Duplicated"), "duplicated"},
       {gettext("Imported"), "imported"},
-      {gettext("Reordered"), "reordered"}
+      {gettext("Reordered"), "reordered"},
+      {gettext("Added a note"), "note_added"},
+      {gettext("Resolved a note"), "note_resolved"},
+      {gettext("Reopened a note"), "note_reopened"}
     ]
   end
 
@@ -154,6 +160,9 @@ defmodule BrandoAdmin.Components.Activity do
   defp tone(:revision_restored), do: "is-restored"
   defp tone(:trashed), do: "is-trashed"
   defp tone(:deleted), do: "is-deleted"
+  defp tone(:note_added), do: "is-note"
+  defp tone(:note_resolved), do: "is-note"
+  defp tone(:note_reopened), do: "is-note"
   defp tone(_), do: "is-neutral"
 
   @doc "A content type's name in the admin's language."
@@ -378,6 +387,16 @@ defmodule BrandoAdmin.Components.Activity do
   end
 
   defp lines(%{action: :created} = event, _fields, _states), do: [status_saved(event.details)]
+
+  defp lines(%{action: action, details: details}, _fields, _states)
+       when action in [:note_added, :note_resolved, :note_reopened] do
+    excerpt = if details["excerpt"] not in [nil, ""], do: "“" <> details["excerpt"] <> "”"
+
+    case Enum.reject([details["anchor"], excerpt], &(&1 in [nil, ""])) do
+      [] -> []
+      parts -> [Enum.join(parts, " · ")]
+    end
+  end
 
   defp lines(%{action: :reordered, details: details}, _fields, _states) do
     count = details["count"] || 0

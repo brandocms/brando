@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { Editor } from '@tiptap/core'
+  import { Editor, posToDOMRect } from '@tiptap/core'
   import { closeHistory } from '@tiptap/pm/history'
   import { Fragment, Slice } from '@tiptap/pm/model'
   import { computePosition, autoUpdate, offset, flip, shift } from '@floating-ui/dom'
@@ -16,12 +16,12 @@
 
   let { content = '', extensions, styles = '[]', onFocus, onBlur, onToggleLink, onToggleButton, onEditorCreated, tiptapInput,
     footnotes = false, footnoteLabels = defaultFootnoteLabels, onOpenFootnote, labels: providedLabels = {}, accessibility = {},
-    aiEnabled = false, onGenerateAi, onCancelAi, typography = {}, labelMode = 'compact' } = $props()
+    aiEnabled = false, onGenerateAi, onCancelAi, typography = {}, labelMode = 'compact', canAddNote, onAddNote } = $props()
   const labels = $derived({ ...defaultLabels, ...providedLabels })
   const capabilities = $derived(resolveCapabilities(extensions))
   const parsedStyles = $derived(normalizeStyles(styles))
   const has = key => capabilities.includes(key)
-  let element, shell, typeMenu, listMenu, moreMenu, anchorMenu, aiMenu
+  let element, shell, typeMenu, listMenu, moreMenu, anchorMenu, aiMenu, noteBubble, stopNoteBubble
   let toolbar = $state.raw(null)
   let editor = $state.raw(null)
   let revision = $state(0)
@@ -167,6 +167,24 @@
     editor.view.dispatch(closeHistory(editor.state.tr).setMeta('addToHistory', false))
     notice = labels.aiAccepted
   }
+  // "Add note" floats over a text selection in block-owned rich text, while
+  // the entry's notes are on (`assets/src/Notes`).
+  function hideNoteBubble() { if (noteBubble && !noteBubble.hidden) noteBubble.hidden = true; stopNoteBubble?.(); stopNoteBubble = null }
+  function updateNoteBubble() {
+    if (!noteBubble || !editor || editor.isDestroyed) return
+    const { from, to, empty } = editor.state.selection
+    if (empty || expanded || !editor.isEditable || !editor.view.hasFocus() || !canAddNote?.() || !editor.state.doc.textBetween(from, to, ' ').trim()) { hideNoteBubble(); return }
+    const reference = { getBoundingClientRect: () => posToDOMRect(editor.view, editor.state.selection.from, editor.state.selection.to), contextElement: editor.view.dom }
+    noteBubble.hidden = false
+    stopNoteBubble?.()
+    stopNoteBubble = autoUpdate(reference, noteBubble, () => computePosition(reference, noteBubble, { strategy: 'fixed', placement: 'top', middleware: [offset(8), flip(), shift({ padding: 8 })] }).then(({ x, y }) => Object.assign(noteBubble.style, { left: `${x}px`, top: `${y}px` })))
+  }
+  function addNote() {
+    if (!editor || editor.state.selection.empty) return
+    const { from, to } = editor.state.selection
+    hideNoteBubble()
+    onAddNote?.({ from, to, text: editor.state.doc.textBetween(from, to, ' ') })
+  }
   onMount(() => {
     editor = new Editor({
       element, content,
@@ -174,10 +192,16 @@
       editorProps: {
         attributes: { role: 'textbox', 'aria-multiline': 'true', ...accessibility },
         transformPastedHTML: html => new HTMLInputParser({ capabilities, styles: parsedStyles, scope: element.closest('.blocks-wrapper') || element, onWarning: key => notice = labels[key] }).prepareHTML(html),
-        handleKeyDown: (_view, event) => { if (event.altKey && event.key === 'F10') { toolbar.querySelector('button:not(:disabled)')?.focus(); return true } return false },
+        handleKeyDown: (_view, event) => {
+          if (event.altKey && event.key === 'F10') { toolbar.querySelector('button:not(:disabled)')?.focus(); return true }
+          // ⌥⌘M / Ctrl+Alt+M: add a note on the selected text.
+          if (event.altKey && (event.metaKey || event.ctrlKey) && event.code === 'KeyM' && canAddNote?.() && !editor.state.selection.empty) { addNote(); return true }
+          return false
+        },
       },
-      onFocus: payload => onFocus?.(payload),
-      onBlur: () => onBlur?.(),
+      onFocus: payload => { onFocus?.(payload); updateNoteBubble() },
+      onBlur: () => { hideNoteBubble(); onBlur?.() },
+      onSelectionUpdate: () => updateNoteBubble(),
       onUpdate: ({ editor: current }) => { tiptapInput.value = current.getHTML(); tiptapInput.dispatchEvent(new Event('input', { bubbles: true })); renumberFootnotes(element) },
       onTransaction: ({ transaction }) => {
         revision++
@@ -199,7 +223,7 @@
       }
     })
   })
-  onDestroy(() => { menuCleanups.forEach(cleanup => cleanup()); stopPositioning?.(); releaseInert(); if (pending?.status === 'pending') onCancelAi?.(pending.id); editor?.destroy() })
+  onDestroy(() => { menuCleanups.forEach(cleanup => cleanup()); stopPositioning?.(); stopNoteBubble?.(); releaseInert(); if (pending?.status === 'pending') onCancelAi?.(pending.id); editor?.destroy() })
 </script>
 
 <div bind:this={shell} class="tiptap-editor-shell" class:expanded role={expanded ? 'dialog' : 'group'} aria-modal={expanded ? 'true' : undefined} aria-label={accessibility['aria-label'] || labels.toolbar} onkeydown={shellKeys}>
@@ -239,6 +263,10 @@
     <div class="tiptap-link-preview"><span>{active.linkAttrs.href}</span><button type="button" disabled={!active.editable} onclick={() => openLink(isButtonLink(active.linkAttrs))}>{labels.edit}</button><button type="button" disabled={!active.editable} onclick={() => command('unsetLink')}>{labels.remove}</button><a href={active.linkAttrs.href} target="_blank" rel="noopener noreferrer">{labels.open}</a></div>
   {/if}
   {#if notice || expanded}<div class="tiptap-status" role="status">{#if expanded}<span class="tiptap-return-hint"><kbd>Esc</kbd>{labels.returnToForm}</span>{/if}{#if notice}<span class="tiptap-notice">{notice}</span>{/if}{#if expanded && editor}<span class="tiptap-word-count">{labels.words.replace('%{count}', wordCount)}</span>{/if}</div>{/if}
+
+  <div bind:this={noteBubble} class="tiptap-note-bubble" hidden>
+    <button type="button" onpointerdown={event => event.preventDefault()} onclick={addNote} title={`${labels.addNote} · ⌥⌘M`}><Icon name="message-square-plus" />{labels.addNote}</button>
+  </div>
 
   <div bind:this={typeMenu} id={`${id}-types`} popover="auto" class="tiptap-popover style-dropdown" role="menu" tabindex="-1" aria-label={labels.styles} onkeydown={menuKeys}>
     <button type="button" role="menuitem" onclick={() => setParagraph()}>{labels.paragraph}</button>

@@ -14593,3 +14593,239 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "often used"
 msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex lib/brando_admin/components/form/input/rich_text_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Add note"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Notes"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} open"
+msgid_plural "%{count} open"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} mentioned you in a note on %{title}"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "You can't add notes to this entry."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "This entry no longer exists."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Write something first."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The note could not be saved."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No one by that name"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Resolved"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Close notes"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Note on the entry"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Search resolved notes"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No open notes. Add one from a block, a field label or selected text, or on the entry as a whole."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No open notes."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No resolved notes match."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No resolved notes."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "People you mention get a toast if they are online, and an email."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Notes are kept when a revision is restored. A note on a deleted block is kept as detached."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "New note"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Write a note. Type @ to mention someone."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The text is marked when you save the entry."
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Resolved by %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Show thread (%{count} message)"
+msgid_plural "Show thread (%{count} messages)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Collapse"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Reply…"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Reply"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Send reply"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Show in the editor"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Detached"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Text removed"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Whole entry"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "whole block"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Field"
+msgstr ""
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "unknown"
+msgstr ""
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "You were mentioned in a note"
+msgid_plural "You were mentioned in %{count} notes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "Here is what you were mentioned in:"
+msgstr ""
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "Open the entry"
+msgstr ""
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "You get one email at most every ten minutes, with every mention since the last one."
+msgstr ""
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} in %{place}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Added a note"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Resolved a note"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reopened a note"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Note on this block"
+msgstr ""

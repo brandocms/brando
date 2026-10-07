@@ -15439,3 +15439,239 @@ msgstr "først %{count}/%{total}"
 #, elixir-autogen, elixir-format
 msgid "often used"
 msgstr "ofte brukt"
+
+#: lib/brando_admin/components/form/notes_drawer.ex lib/brando_admin/components/form/input/rich_text_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Add note"
+msgstr "Legg til notat"
+
+#: lib/brando_admin/components/form/notes_drawer.ex lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Notes"
+msgstr "Notater"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} open"
+msgid_plural "%{count} open"
+msgstr[0] "%{count} åpen"
+msgstr[1] "%{count} åpne"
+
+#: lib/brando_admin/components/form/notes_drawer.ex lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} mentioned you in a note on %{title}"
+msgstr "%{name} nevnte deg i et notat på %{title}"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "You can't add notes to this entry."
+msgstr "Du kan ikke legge til notater på denne oppføringen."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "This entry no longer exists."
+msgstr "Denne oppføringen finnes ikke lenger."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Write something first."
+msgstr "Skriv noe først."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The note could not be saved."
+msgstr "Notatet kunne ikke lagres."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No one by that name"
+msgstr "Ingen med det navnet"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Resolved"
+msgstr "Løst"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Close notes"
+msgstr "Lukk notater"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Note on the entry"
+msgstr "Notat på oppføringen"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Search resolved notes"
+msgstr "Søk i løste notater"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No open notes. Add one from a block, a field label or selected text, or on the entry as a whole."
+msgstr "Ingen åpne notater. Legg til et fra en blokk, en feltetikett eller markert tekst, eller på hele oppføringen."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No open notes."
+msgstr "Ingen åpne notater."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No resolved notes match."
+msgstr "Ingen løste notater passer."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No resolved notes."
+msgstr "Ingen løste notater."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "People you mention get a toast if they are online, and an email."
+msgstr "De du nevner, får et varsel hvis de er pålogget, og en e-post."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Notes are kept when a revision is restored. A note on a deleted block is kept as detached."
+msgstr "Notater beholdes når en revisjon gjenopprettes. Et notat på en slettet blokk beholdes som frakoblet."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "New note"
+msgstr "Nytt notat"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Write a note. Type @ to mention someone."
+msgstr "Skriv et notat. Skriv @ for å nevne noen."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The text is marked when you save the entry."
+msgstr "Teksten blir merket når du lagrer oppføringen."
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Resolved by %{name}"
+msgstr "Løst av %{name}"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Show thread (%{count} message)"
+msgid_plural "Show thread (%{count} messages)"
+msgstr[0] "Vis tråden (%{count} melding)"
+msgstr[1] "Vis tråden (%{count} meldinger)"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Collapse"
+msgstr "Skjul"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen"
+msgstr "Gjenåpne"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Reply…"
+msgstr "Svar …"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Reply"
+msgstr "Svar"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Send reply"
+msgstr "Send svar"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve"
+msgstr "Marker som løst"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Show in the editor"
+msgstr "Vis i editoren"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Detached"
+msgstr "Frakoblet"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Text removed"
+msgstr "Teksten er fjernet"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Whole entry"
+msgstr "Hele oppføringen"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "whole block"
+msgstr "hele blokken"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Field"
+msgstr "Felt"
+
+#: lib/brando_admin/components/form/notes_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "unknown"
+msgstr "ukjent"
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "You were mentioned in a note"
+msgid_plural "You were mentioned in %{count} notes"
+msgstr[0] "Du ble nevnt i et notat"
+msgstr[1] "Du ble nevnt i %{count} notater"
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "Here is what you were mentioned in:"
+msgstr "Her er det du ble nevnt i:"
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "Open the entry"
+msgstr "Åpne oppføringen"
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "You get one email at most every ten minutes, with every mention since the last one."
+msgstr "Du får høyst én e-post hvert tiende minutt, med alle omtaler siden forrige."
+
+#: lib/brando/notes/mention_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} in %{place}"
+msgstr "%{name} i %{place}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Added a note"
+msgstr "La til et notat"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Resolved a note"
+msgstr "Løste et notat"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reopened a note"
+msgstr "Gjenåpnet et notat"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Note on this block"
+msgstr "Notat på denne blokken"
