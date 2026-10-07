@@ -164,6 +164,9 @@ or externally callable endpoint is permitted, in development or production.**
 The browser talks only to the ordinary authenticated Brando admin. The backend
 makes outbound LLM API calls and executes returned tool calls locally.
 
+> **Changed 7 October 2026** (see the note at the end): this rule now has a
+> development-only stdio exception and a planned OAuth endpoint.
+
 ```mermaid
 flowchart LR
   UI[Admin chat and attachments] --> R[Backend agent runtime]
@@ -829,3 +832,20 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
   provider reports them apart (`input_includes_cached: false`). Configured
   and catalogue prices bill cache reads at 10% and writes at 125% of the
   input price.
+
+## Requirement change: MCP outside the admin (7 October 2026)
+
+The rule above that BrandoMCP runs only in-process, with no network endpoint,
+changed with [#2996](https://github.com/brandocms/brando/issues/2996):
+
+- **Development stdio.** `mix brando.mcp` serves `Proposals.Tools` over stdio
+  to a local coding agent, as a named user, and refuses production and
+  releases ([brando_mcp#3](https://github.com/brandocms/brando_mcp/pull/3)).
+  BrandoMCP's HTTP Plug and listener are removed.
+- **Planned remote endpoint.** An OAuth 2.1 endpoint for users with the
+  `:connect_mcp` permission and 2FA, off by default, with the security
+  requirements in #2996. It is the only planned network path.
+- **Review stays in the admin.** Both paths read and propose only. Their
+  proposals have no conversation; each records its origin (`mcp`, with the
+  client's name) and is reviewed, applied or rejected in the Assistant under
+  "From connected tools". Activity names the tool as the source.
