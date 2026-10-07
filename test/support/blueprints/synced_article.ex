@@ -74,6 +74,24 @@ defmodule Brando.SyncTest.Article do
       selection_action label: "Never", event: "never_selected", visible: &Brando.SyncTest.ArticleListing.never/1
       selection_action label: "Named", event: "named_selected", visible: &Brando.SyncTest.ArticleListing.named?/1
     end
+
+    # A text, a boolean and a select filter side by side, as an application
+    # declares them (ListingFiltersLiveTest)
+    listing :filters do
+      component &Brando.SyncTest.ArticleListing.title_row/1
+      filter label: "Title", key: "title"
+      filter label: "Featured only", key: "featured", type: :boolean, default: false
+
+      filter do
+        label "Status"
+        key("status_filter")
+        type :select
+        default nil
+        option("All", nil)
+        option("Published", "published")
+        option("Draft", "draft")
+      end
+    end
   end
 
   forms do
