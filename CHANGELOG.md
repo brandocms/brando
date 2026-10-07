@@ -20,6 +20,16 @@ production dump.
 
 #### Breaking
 
+- **Webhooks need two tables and two Oban queues.** `brando_209` creates
+  `webhooks` and `webhook_deliveries` in every environment. Run
+  `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
+  events find no webhooks and saves carry on without them. Brando's default
+  Oban configuration has the new `content_events` and `webhooks` queues; an
+  application that sets `config :brando, Oban` itself must add them
+  (`content_events: [limit: 1], webhooks: [limit: 5]`) and may add
+  `{"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}` to its crontab. See
+  [Webhooks and content events](guides/webhooks.md).
+
 - **Notes need two tables.** `brando_203` creates `entry_notes` and
   `note_mentions` in every environment. Run `mix brando.gen.migrations` and
   `mix ecto.migrate`; until then the entry editor's Notes panel stays empty
@@ -595,6 +605,21 @@ production dump.
   Not yet done: associating a field's `help-text` instructions with its control.
 
 #### Features
+
+- **Content events and outbound webhooks.** Every change Activity records
+  for an entry becomes a content event (`entry.created`, `entry.updated`,
+  `entry.published`, `entry.unpublished`, `entry.deleted`,
+  `entry.restored`), delivered after commit through Oban to subscribers
+  listed in `config :brando, Brando.ContentEvents, subscribers: [...]`;
+  scheduled publishing fires `entry.published` like a manual publish, and
+  quick successive saves are one `entry.updated`. Webhooks, under
+  Configuration → Integrations → Webhooks, post a small signed JSON envelope
+  (HMAC-SHA256 in `Brando-Signature: t=…,v1=…`, no entry content) to `https`
+  URLs on public addresses, with retries for about a day, a delivery log,
+  redelivery and a test event. Managing them needs the new Webhooks
+  permission (`brando.webhooks.manage`; admins and superusers without
+  groups) and a recent password. Copying an environment copies its
+  webhooks paused. See [Webhooks and content events](guides/webhooks.md).
 
 - **Notes on entries.** Editors can leave each other notes in the entry
   editor, in a panel docked beside the content: on the entry, a block (the

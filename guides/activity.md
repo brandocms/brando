@@ -10,6 +10,9 @@ changed and the [revision](revisions.md) the change saved. It doesn't keep the
 values; the revisions hold the content, and **Compare** shows the difference
 between a change's revision and the one before it.
 
+Every change recorded for an entry is also a content event that webhooks and
+other integrations receive; see [Webhooks and content events](webhooks.md).
+
 ## What is recorded
 
 Every Blueprint entry that changes through Brando records an event:

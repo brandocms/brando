@@ -555,6 +555,10 @@ result.archive_schema
 #=> "tenant_acme_staging_archive_20260816143000"
 ```
 
+The target's [webhooks](webhooks.md) are the source's after a copy, paused and
+with an empty delivery log, so a staging copy never calls the endpoints
+production calls. Resume them in the target only if it should.
+
 Copying requires `pg_dump` and `psql` compatible with the target PostgreSQL
 server. Brando finds them on `PATH`; explicit locations can be configured when
 needed:

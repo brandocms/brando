@@ -64,6 +64,7 @@ defmodule Brando.Mixfile do
           "guides/content_lifecycle.md",
           "guides/revisions.md",
           "guides/activity.md",
+          "guides/webhooks.md",
           "guides/scheduled_publishing.md",
           "guides/media.md",
           "guides/videos.md",
@@ -112,6 +113,7 @@ defmodule Brando.Mixfile do
             "guides/content_lifecycle.md",
             "guides/revisions.md",
             "guides/activity.md",
+            "guides/webhooks.md",
             "guides/scheduled_publishing.md"
           ],
           Media: [
