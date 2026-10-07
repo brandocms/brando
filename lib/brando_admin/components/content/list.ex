@@ -445,8 +445,14 @@ defmodule BrandoAdmin.Components.Content.List do
     # "off" only overrides a switched-on default; the context never sees it.
     sanitized_list_opts = list_opts |> Listings.drop_switched_off(listing) |> sanitize_list_opts(listing)
 
-    # The context's filter clauses may take the user (see `Brando.Query.filters/2`)
-    {:ok, entries} = apply(context, :"list_#{plural}", [Map.put(sanitized_list_opts, :current_user, current_user)])
+    # The context's filter clauses may take the user (see `Brando.Query.filters/2`).
+    # A listing with status filters also gets each status's count, in one query.
+    context_opts =
+      sanitized_list_opts
+      |> Map.put(:current_user, current_user)
+      |> then(&if socket.assigns.status?, do: Map.put(&1, :status_counts, true), else: &1)
+
+    {:ok, entries} = apply(context, :"list_#{plural}", [context_opts])
 
     entries =
       entries
@@ -456,6 +462,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
     socket
     |> assign(:list_opts, list_opts)
+    |> assign(:status_counts, Map.get(entries, :status_counts))
     |> assign(:entries, entries)
     |> assign(:content_language, content_language)
   end
@@ -739,33 +746,13 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
-  # Page size button component
-  attr :page_size, :integer, required: true
-  attr :current_page_size, :integer, required: true
-  attr :change_limit, :any, required: true
-  attr :label, :string, default: nil
+  @page_sizes [25, 50]
 
-  def page_size_button(assigns) do
-    label = assigns.label || to_string(assigns.page_size)
-
-    assigns =
-      assigns
-      |> assign(:is_active, assigns.page_size == assigns.current_page_size)
-      |> assign(:label, label)
-
-    ~H"""
-    <button
-      type="button"
-      class={[
-        "limit-button",
-        @is_active && "active"
-      ]}
-      phx-click={@change_limit}
-      phx-value-limit={@page_size}
-    >
-      {@label}
-    </button>
-    """
+  # The page sizes to offer: 25, 50 and the listing's own if it is another,
+  # then All (0).
+  defp page_size_options(page_size) do
+    sizes = if page_size in [0 | @page_sizes], do: @page_sizes, else: Enum.sort([page_size | @page_sizes])
+    Enum.map(sizes, &{to_string(&1), &1}) ++ [{gettext("All"), 0}]
   end
 
   defp pagination(
@@ -792,6 +779,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:current_page, current_page)
       |> assign(:total_entries, total_entries)
       |> assign(:page_size, page_size)
+      |> assign(:page_size_options, page_size_options(page_size))
       |> assign(:has_entries, has_entries)
       |> assign(:showing_start, showing_start)
       |> assign(:showing_end, showing_end)
@@ -799,16 +787,14 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:total_pages, total_pages)
 
     ~H"""
-    <div class="pagination">
-      <div class="pagination-entries">
-        <span class="pagination-prefix" aria-hidden="true">&rarr;</span> {@total_entries} {gettext("entries")}
-        <%= if @has_entries do %>
-          | {gettext("showing")} {@showing_start}-{@showing_end}
-        <% end %>
-        — {gettext("Per page:")}
-        <.page_size_button page_size={25} current_page_size={@page_size} change_limit={@change_limit} /> /
-        <.page_size_button page_size={50} current_page_size={@page_size} change_limit={@change_limit} /> /
-        <.page_size_button page_size={0} current_page_size={@page_size} change_limit={@change_limit} label={gettext("All")} />
+    <footer class="pagination" data-testid="listing-footer">
+      <div class="pagination-summary">
+        <span class="pagination-count" data-testid="listing-count">
+          {ngettext("%{count} entry", "%{count} entries", @total_entries)}
+        </span>
+        <span :if={@total_pages > 1} class="pagination-range" data-testid="listing-range">
+          {gettext("%{first}–%{last} of %{total}", first: @showing_start, last: @showing_end, total: @total_entries)}
+        </span>
       </div>
       <nav :if={@total_pages > 1} class="pagination-buttons" aria-label={gettext("Pages")}>
         <button
@@ -842,7 +828,20 @@ defmodule BrandoAdmin.Components.Content.List do
           <.icon name="chevron-right" />
         </button>
       </nav>
-    </div>
+      <form :if={@has_entries} class="pagination-limit" phx-change={@change_limit}>
+        <label for={"#{@id}-limit"}>{gettext("Per page")}</label>
+        <select id={"#{@id}-limit"} name="limit" class="admin-select">
+          <option
+            :for={{label, size} <- @page_size_options}
+            :key={size}
+            value={size}
+            selected={size == @page_size}
+          >
+            {label}
+          </option>
+        </select>
+      </form>
+    </footer>
     """
   end
 
@@ -1134,6 +1133,7 @@ defmodule BrandoAdmin.Components.Content.List do
               :for={status <- @statuses}
               :key={status}
               status={status}
+              count={@status_counts && @status_counts[status]}
               list_opts={@list_opts}
               on_update_status={@update_status}
             />
@@ -1240,6 +1240,7 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   attr :status, :atom, required: true
+  attr :count, :integer, default: nil, doc: "entries with this status, under the listing's other filters"
   attr :on_update_status, :any, required: true
   attr :list_opts, :list, required: true
 
@@ -1259,7 +1260,8 @@ defmodule BrandoAdmin.Components.Content.List do
       aria-pressed={to_string(@active_class != "")}
       class={[
         "status",
-        @active_class
+        @active_class,
+        @count == 0 && "is-empty"
       ]}
       type="button"
     >
@@ -1267,6 +1269,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <circle class={@status} r="6" cy="6" cx="6" />
       </svg>
       <span class="label">{@rendered_status_label}</span>
+      <span :if={@count} class="pill-tabs-count status-count">{@count}</span>
     </button>
     """
   end

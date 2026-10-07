@@ -15329,3 +15329,13 @@ msgstr "En administrator har satt et nytt passord for %{email}, og kontoen ble l
 #, elixir-autogen, elixir-format
 msgid "If you did not expect this, reset your password now and tell an administrator."
 msgstr "Hvis du ikke ventet dette, tilbakestill passordet nå og si fra til en administrator."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "%{first}–%{last} of %{total}"
+msgstr "%{first}–%{last} av %{total}"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Per page"
+msgstr "Per side"

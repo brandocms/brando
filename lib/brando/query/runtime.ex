@@ -326,6 +326,7 @@ defmodule Brando.Query.Runtime do
         {:exclude_language, language}, q -> with_exclude_language(q, language)
         {:filter, filter}, q -> context.with_filter(q, module, filter, filter_context(prepared_args))
         {:current_user, _}, q -> q
+        {:status_counts, _}, q -> q
         {:paginate, true}, q -> q
         {:with_deleted, true}, q -> q
         {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
@@ -544,6 +545,7 @@ defmodule Brando.Query.Runtime do
         stream \\ false
       ) do
     args = Brando.Authorization.Boundary.cache_options(args)
+    {status_counts?, args} = Map.pop(args, :status_counts, false)
     initial_query = Brando.Authorization.Boundary.query(initial_query, module)
     cache_args = Map.get(args, :cache)
 
@@ -575,10 +577,16 @@ defmodule Brando.Query.Runtime do
 
         pagination_meta = maybe_build_pagination_meta(query, args)
 
-        if stream do
-          Repo.stream(query)
-        else
-          list_entries(query, pagination_meta)
+        cond do
+          stream ->
+            Repo.stream(query)
+
+          status_counts? and pagination_meta != nil ->
+            {:ok, page} = list_entries(query, pagination_meta)
+            {:ok, Map.put(page, :status_counts, count_by_status(context, args, initial_query, module))}
+
+          true ->
+            list_entries(query, pagination_meta)
         end
     end
   end
@@ -591,6 +599,56 @@ defmodule Brando.Query.Runtime do
     else
       {:ok, entries}
     end
+  end
+
+  @doc """
+  Counts a list query's entries by status, in one grouped query.
+
+  The counts follow everything the list does (the context's query, filters,
+  language and the admin's authorization scope) except its own status, so each
+  number is what that status would list. Soft-deleted entries are counted as
+  `:deleted`, whatever their status. Every status is present, with 0 when none
+  match. A paginated `list_*` call returns these as `:status_counts` when
+  given `status_counts: true`.
+  """
+  def count_by_status(context, args, initial_query, module) do
+    soft_delete? = module.has_trait(Brando.Trait.SoftDelete)
+
+    args =
+      args
+      |> Map.drop([:status, :order, :offset, :limit, :preload, :select, :include, :paginate, :cache, :with_deleted])
+      |> then(&if soft_delete?, do: Map.put(&1, :with_deleted, true), else: &1)
+
+    # The entries go through a subquery, so a filter that joins or a distinct
+    # in the context's query still counts each entry once.
+    entries =
+      context
+      |> run_list_query_reducer(args, initial_query, module)
+      |> exclude(:preload)
+      |> exclude(:order_by)
+      |> exclude(:select)
+
+    statuses = [:published, :disabled, :draft, :pending]
+    empty = Map.new(if(soft_delete?, do: statuses ++ [:deleted], else: statuses), &{&1, 0})
+
+    entries
+    |> grouped_status_counts(soft_delete?)
+    |> Repo.all()
+    |> Enum.reduce(empty, fn
+      {_status, true, count}, acc -> Map.update!(acc, :deleted, &(&1 + count))
+      {status, _, count}, acc when is_map_key(acc, status) -> Map.update!(acc, status, &(&1 + count))
+      _, acc -> acc
+    end)
+  end
+
+  defp grouped_status_counts(entries, true) do
+    entries = select(entries, [q], %{id: q.id, status: q.status, deleted: not is_nil(q.deleted_at)})
+    from(e in subquery(entries), group_by: [e.status, e.deleted], select: {e.status, e.deleted, count(e.id)})
+  end
+
+  defp grouped_status_counts(entries, false) do
+    entries = select(entries, [q], %{id: q.id, status: q.status})
+    from(e in subquery(entries), group_by: e.status, select: {e.status, false, count(e.id)})
   end
 
   @doc """

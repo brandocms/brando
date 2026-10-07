@@ -113,6 +113,7 @@
   .content-list .list-tools .statuses button:hover { background: #edf3e9; }
   .content-list .list-tools .statuses .status .label { display: inline; line-height: 20px; padding: 0; }
   .content-list .list-tools .statuses svg { display: block; flex: 0 0 1cap; width: 1cap; height: 1cap; margin: 0; }
+  .content-list .list-tools .statuses .status-count { margin: 0; }
   .content-list .list-tools .filters { width: 250px; }
   .content-list .list-filters-and-sorts { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; padding: 0; }
   .content-list .list-filters-and-sorts:empty { display: none; }

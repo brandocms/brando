@@ -12,6 +12,7 @@
       active_sort={@active_sort}
       sortable?={@sortable?}
       list_opts={@list_opts}
+      status_counts={@status_counts}
       hidden_filters={@hidden_filters}
       content_language={@content_language}
       exports={@listing.exports}
@@ -67,7 +68,7 @@
     </.entries>
 
     <.pagination
-      :if={@entries.pagination_meta.total_entries > 0}
+      id={"listing-#{@listing.name}-pagination"}
       pagination_meta={@entries.pagination_meta}
       change_page={JS.push("change_page", target: @myself)}
       change_limit={JS.push("change_limit", target: @myself)}
