@@ -503,11 +503,7 @@ defmodule Brando.Environments do
          true <- Schema.exists?(target_prefix),
          :ok <- schema_cloner().clone_schema(target_prefix, archive_prefix),
          :ok <- Schema.drop(target_prefix),
-         :ok <- clone_with_recovery(source_prefix, target_prefix, archive_prefix) do
-      # The copy's webhooks are the source's: paused, so a staging copy
-      # never calls production endpoints. They resume when it goes live.
-      Brando.Webhooks.after_environment_copy(target_prefix, opts[:creator] || :system)
-
+         :ok <- clone_with_recovery(source_prefix, target_prefix, archive_prefix, opts) do
       log =
         log_operation!(site.id, :copy,
           source_environment_id: source.id,
@@ -528,11 +524,14 @@ defmodule Brando.Environments do
     end
   end
 
-  defp clone_with_recovery(source_prefix, target_prefix, archive_prefix) do
-    case schema_cloner().clone_schema(source_prefix, target_prefix) do
-      :ok ->
-        :ok
-
+  # The copy's webhooks are the source's: they are paused, so a staging copy
+  # never calls production endpoints (they resume when it goes live). A copy
+  # whose webhooks could not be paused is undone like a failed copy.
+  defp clone_with_recovery(source_prefix, target_prefix, archive_prefix, opts) do
+    with :ok <- schema_cloner().clone_schema(source_prefix, target_prefix),
+         :ok <- Brando.Webhooks.after_environment_copy(target_prefix, opts[:creator] || :system) do
+      :ok
+    else
       {:error, copy_reason} ->
         Schema.drop(target_prefix)
 
@@ -571,11 +570,8 @@ defmodule Brando.Environments do
     with {:ok, environment} <- Registry.create_environment(site, attrs),
          prefix = Tenant.prefix(site, environment),
          :ok <- clone_archive_or_compensate(environment, archive.schema, prefix),
-         {:ok, _versions} <- migrate_or_compensate(site, environment, prefix) do
-      # Restored as a new, non-live environment: its webhooks must not call
-      # the endpoints the live environment calls, as after a copy.
-      Brando.Webhooks.after_environment_copy(prefix, opts[:creator] || :system)
-
+         {:ok, _versions} <- migrate_or_compensate(site, environment, prefix),
+         :ok <- pause_webhooks_or_compensate(environment, prefix, opts) do
       log_operation!(site.id, :rollback,
         target_environment_id: environment.id,
         creator_id: creator_id(opts),
@@ -586,6 +582,21 @@ defmodule Brando.Environments do
       Cache.invalidate()
       announce(site.id)
       {:ok, environment}
+    end
+  end
+
+  # Restored as a new, non-live environment: its webhooks must not call the
+  # endpoints the live environment calls, as after a copy. If they cannot be
+  # paused, the restored environment is removed again.
+  defp pause_webhooks_or_compensate(environment, prefix, opts) do
+    case Brando.Webhooks.after_environment_copy(prefix, opts[:creator] || :system) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Schema.drop(prefix)
+        Registry.delete_environment(environment)
+        {:error, {:archive_restore_failed, reason}}
     end
   end
 

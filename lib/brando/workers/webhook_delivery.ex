@@ -4,10 +4,16 @@ defmodule Brando.Worker.WebhookDelivery do
   environment it belongs to.
 
   Before each attempt the webhook must still be active, a slot must be free
-  (at most `Brando.Webhooks.concurrency/0` deliveries to one webhook at a
-  time; otherwise the job waits five seconds without using an attempt), and
-  the URL must still resolve to public addresses only. The request is
-  signed when it is sent, over the exact body.
+  (at most `Brando.Webhooks.concurrency/0` deliveries to one webhook, and
+  `Brando.Webhooks.site_concurrency/0` to all webhooks of one site
+  environment, at a time; otherwise the job waits five seconds without
+  using an attempt), and the URL must still resolve to public addresses
+  only. The request is signed when it is sent, over the exact body.
+
+  Once the request is sent, recording the answer cannot make the job fail:
+  a delivery that arrived is never sent again because its log row could not
+  be written. If the job crashes on its last attempt anyway, the delivery is
+  marked failed and the webhook paused, as for any final failure.
 
   A failed attempt is retried with exponential backoff: 30 seconds, then
   doubling up to four hours between attempts, 15 attempts over about 24
@@ -39,8 +45,27 @@ defmodule Brando.Worker.WebhookDelivery do
   rescue
     # Returned rather than raised: with Oban's inline testing mode the job
     # runs inside the save, which must not fail for it.
-    error -> {:error, Exception.message(error)}
+    error ->
+      Logger.error("[Brando.Webhooks] Delivery job #{job.id} crashed: " <> Exception.message(error))
+      crashed(job)
+      {:error, Exception.message(error)}
   end
+
+  # The attempt crashed: it counts as failed, so the delivery does not hold
+  # its slot, and on the last attempt it is given up as any final failure.
+  defp crashed(%Oban.Job{args: %{"delivery" => delivery_id, "webhook" => webhook_id}} = job) do
+    TenantJob.run(job, fn ->
+      with {:ok, delivery} <- load(delivery_id, webhook_id),
+           {:ok, webhook} <- Webhooks.get_webhook(webhook_id) do
+        result = %{status: nil, body: "", error: :crashed, duration_ms: 0}
+        fail(webhook, delivery, result, final?: delivery.test or job.attempt >= job.max_attempts)
+      end
+    end)
+  rescue
+    error -> Logger.error("[Brando.Webhooks] Could not mark delivery as failed: " <> Exception.message(error))
+  end
+
+  defp crashed(_job), do: :ok
 
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}) do
@@ -54,6 +79,7 @@ defmodule Brando.Worker.WebhookDelivery do
   @doc false
   def deliver(%Oban.Job{args: %{"delivery" => delivery_id, "webhook" => webhook_id}} = job) do
     with {:ok, delivery} <- load(delivery_id, webhook_id),
+         :ok <- ensure_unfinished(delivery),
          {:ok, webhook} <- Webhooks.get_webhook(webhook_id),
          :ok <- ensure_active(webhook, delivery),
          :claimed <- claim(webhook, delivery) do
@@ -74,6 +100,13 @@ defmodule Brando.Worker.WebhookDelivery do
     end
   end
 
+  # A delivery that has arrived, or was given up, is never sent again by
+  # this job, whatever happened after it was recorded.
+  defp ensure_unfinished(%Delivery{state: state}) when state in ["succeeded", "failed", "cancelled"],
+    do: {:cancel, :already_finished}
+
+  defp ensure_unfinished(_delivery), do: :ok
+
   defp ensure_active(%Webhook{active: true}, _delivery), do: :ok
 
   defp ensure_active(_webhook, delivery) do
@@ -81,27 +114,32 @@ defmodule Brando.Worker.WebhookDelivery do
     {:cancel, :webhook_paused}
   end
 
-  # A slot among the webhook's concurrent deliveries. "sending" rows older
-  # than the timeout are from an attempt that never finished and don't count.
+  # A slot among the deliveries running for this webhook and for this site
+  # environment (the queues are shared by every site). One lock per site
+  # environment serializes the claims. "sending" rows older than the timeout
+  # are from an attempt that never finished and don't count.
   defp claim(webhook, delivery) do
     cutoff = DateTime.add(DateTime.utc_now(), -(Client.timeout() + 5_000), :millisecond)
-    key = "brando:webhook:#{Brando.Tenant.current_prefix() || "public"}:#{webhook.id}"
+    key = "brando:webhooks:#{Brando.Tenant.current_prefix() || "public"}"
 
     {:ok, result} =
       Repo.transaction(fn ->
         Repo.repo().query!("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [key])
 
-        busy =
-          Repo.aggregate(
-            from(d in Delivery,
-              where:
-                d.webhook_id == ^webhook.id and d.id != ^delivery.id and d.state == "sending" and
-                  d.started_at > ^cutoff
-            ),
-            :count
+        running =
+          from(d in Delivery,
+            where: d.id != ^delivery.id and d.state == "sending" and d.started_at > ^cutoff,
+            group_by: d.webhook_id,
+            select: {d.webhook_id, count(d.id)}
           )
+          |> Repo.all()
+          |> Map.new()
 
-        if busy >= Webhooks.concurrency() do
+        busy? =
+          Map.get(running, webhook.id, 0) >= Webhooks.concurrency() or
+            Enum.sum(Map.values(running)) >= Webhooks.site_concurrency()
+
+        if busy? do
           :busy
         else
           Repo.update_all(from(d in Delivery, where: d.id == ^delivery.id),
@@ -136,7 +174,7 @@ defmodule Brando.Worker.WebhookDelivery do
       # The URL now points somewhere a webhook may not call, or the secret
       # cannot be read: trying again won't help.
       {:error, reason} when reason in [:private_address, :https_required, :scheme_not_allowed, :secret_unreadable] ->
-        fail(webhook, delivery, %{status: nil, body: "", error: reason, duration_ms: 0}, job, final?: true)
+        fail(webhook, delivery, %{status: nil, body: "", error: reason, duration_ms: 0}, final?: true)
         {:cancel, reason}
 
       {:error, reason} ->
@@ -159,13 +197,13 @@ defmodule Brando.Worker.WebhookDelivery do
 
   defp record(result, webhook, delivery, job) do
     final? = delivery.test or job.attempt >= job.max_attempts
-    fail(webhook, delivery, result, job, final?: final?)
+    fail(webhook, delivery, result, final?: final?)
 
     reason = if result.status, do: "HTTP #{result.status}", else: to_string(result.error)
     if final?, do: {:cancel, reason}, else: {:error, reason}
   end
 
-  defp fail(webhook, delivery, result, _job, final?: final?) do
+  defp fail(webhook, delivery, result, final?: final?) do
     finish(delivery, %{
       state: if(final?, do: "failed", else: "retrying"),
       response_status: result.status,
@@ -181,23 +219,48 @@ defmodule Brando.Worker.WebhookDelivery do
     )
 
     # A delivery that failed every attempt, about a day: stop calling it.
-    if final? and not delivery.test and webhook.active do
-      Logger.warning("[Brando.Webhooks] Paused webhook ##{webhook.id} after its deliveries kept failing")
-      Webhooks.pause(Repo.reload!(webhook), :failures, :system)
-    end
+    if final? and not delivery.test and webhook.active, do: pause_after_failures(webhook)
   end
 
+  defp pause_after_failures(webhook) do
+    Logger.warning("[Brando.Webhooks] Paused webhook ##{webhook.id} after its deliveries kept failing")
+    Webhooks.pause(Repo.reload!(webhook), :failures, :system)
+  rescue
+    error -> Logger.error("[Brando.Webhooks] Could not pause webhook ##{webhook.id}: " <> Exception.message(error))
+  end
+
+  # Records how an attempt went. Never raises: the request may already have
+  # arrived, and a job that failed here would send it again. If the answer
+  # cannot be written (say the response held something Postgres refuses),
+  # the state is written without it, with a short note.
   defp finish(delivery, changes) do
     changes =
       changes
       |> Map.put(:completed_at, DateTime.utc_now())
       |> Map.put(:attempts, delivery.attempts + if(changes.state == "cancelled", do: 0, else: 1))
 
-    Repo.update_all(from(d in Delivery, where: d.id == ^delivery.id), set: Map.to_list(changes))
-    Webhooks.broadcast({:delivery, delivery.webhook_id})
+    with :error <- write(delivery, changes),
+         :error <- write(delivery, Map.merge(changes, %{response_body: nil, error: "result_not_recorded"})) do
+      Logger.error("[Brando.Webhooks] Could not record delivery ##{delivery.id}")
+    end
+
+    safely(fn -> Webhooks.broadcast({:delivery, delivery.webhook_id}) end)
+  end
+
+  defp write(delivery, changes) do
+    safely(fn -> Repo.update_all(from(d in Delivery, where: d.id == ^delivery.id), set: Map.to_list(changes)) end)
   end
 
   defp update_webhook(webhook, changes) do
-    Repo.update_all(from(w in Webhook, where: w.id == ^webhook.id), set: changes)
+    safely(fn -> Repo.update_all(from(w in Webhook, where: w.id == ^webhook.id), set: changes) end)
+  end
+
+  defp safely(fun) do
+    fun.()
+    :ok
+  rescue
+    error ->
+      Logger.error("[Brando.Webhooks] " <> Exception.message(error))
+      :error
   end
 end

@@ -285,6 +285,118 @@ defmodule Brando.WebhooksTest do
       end)
     end
 
+    test "a 2xx answer with a NUL byte is one success, recorded", %{user: user} do
+      receiver = WebhookReceiver.start(fn _ -> {200, "ok\0x\u0007"} end)
+      {webhook, _} = create_webhook(user, WebhookReceiver.url(receiver))
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _} = Webhooks.send_test(webhook, user)
+        [job] = all_enqueued(worker: WebhookDelivery)
+        assert :ok = perform_job(WebhookDelivery, job.args)
+      end)
+
+      assert next_request()
+      refute_receive {:webhook_request, _}, 200
+      assert [%{state: "succeeded", response_status: 200, response_body: "okx", attempts: 1}] = deliveries(webhook)
+    end
+
+    test "a delivery that arrived is not sent again if its job runs again", %{user: user} do
+      receiver = WebhookReceiver.start()
+      {webhook, _} = create_webhook(user, WebhookReceiver.url(receiver))
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _} = Webhooks.send_test(webhook, user)
+        [job] = all_enqueued(worker: WebhookDelivery)
+        assert :ok = perform_job(WebhookDelivery, job.args)
+        assert next_request()
+
+        assert {:cancel, :already_finished} = perform_job(WebhookDelivery, job.args, attempt: 2)
+        refute_receive {:webhook_request, _}, 200
+      end)
+    end
+
+    test "response bodies keep printable text, tabs and line breaks" do
+      assert Brando.Webhooks.Client.valid_text("a\0b\tc\nd\r\e\u007fé") == "ab\tc\nd\ré"
+      assert Brando.Webhooks.Client.valid_text(<<"ok", 0xFF, "!">>) == "ok!"
+    end
+
+    test "a job that crashes on its last attempt marks the delivery failed and pauses the webhook", %{user: user} do
+      {webhook, _} = create_webhook(user, "https://hooks.example.com/hook")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        create_page(user)
+        [event_job] = all_enqueued(worker: ContentEventDispatcher)
+        assert :ok = perform_job(ContentEventDispatcher, event_job.args)
+        [job] = all_enqueued(worker: WebhookDelivery)
+
+        put_test_env(Brando.Webhooks, resolver: fn _host -> raise "resolver broke" end)
+
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, _} = perform_job(WebhookDelivery, job.args, attempt: 2)
+          # It does not keep its slot
+          assert [%{state: "retrying", error: "crashed"}] = deliveries(webhook)
+
+          assert {:error, _} = perform_job(WebhookDelivery, job.args, attempt: 15)
+        end)
+
+        assert [%{state: "failed", error: "crashed"}] = deliveries(webhook)
+        assert %{active: false, paused_reason: :failures} = Repo.get!(Webhook, webhook.id)
+      end)
+    end
+
+    test "one site environment runs at most three deliveries at once", %{user: user} do
+      receiver = WebhookReceiver.start()
+      {first, _} = create_webhook(user, WebhookReceiver.url(receiver, "/first"))
+      {second, _} = create_webhook(user, WebhookReceiver.url(receiver, "/second"))
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for _ <- 1..2, do: {:ok, _} = Webhooks.send_test(first, user)
+        for _ <- 1..2, do: {:ok, _} = Webhooks.send_test(second, user)
+        [a1, a2, b1, b2] = all_enqueued(worker: WebhookDelivery) |> Enum.sort_by(& &1.args["delivery"])
+
+        # Two to the first webhook and one to the second are sending
+        for job <- [a1, a2, b1] do
+          Repo.update_all(from(d in Delivery, where: d.id == ^job.args["delivery"]),
+            set: [state: "sending", started_at: DateTime.utc_now()]
+          )
+        end
+
+        # The second webhook has room of its own, but the site has none
+        assert {:snooze, 5} = perform_job(WebhookDelivery, b2.args)
+        refute_receive {:webhook_request, _}, 100
+
+        put_test_env(Brando.Webhooks, allow_localhost: true, resolver: @resolver, site_concurrency: 4)
+        assert :ok = perform_job(WebhookDelivery, b2.args)
+        assert next_request().path == "/second"
+      end)
+    end
+
+    test "a delivery that could not be queued makes the dispatcher retry, and is queued once", %{user: user} do
+      receiver = WebhookReceiver.start()
+      {webhook, _} = create_webhook(user, WebhookReceiver.url(receiver))
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        create_page(user)
+        [event_job] = all_enqueued(worker: ContentEventDispatcher)
+
+        # A passing database error while queueing
+        Repo.query!("ALTER TABLE public.webhook_deliveries RENAME TO webhook_deliveries_away")
+
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, message} = perform_job(ContentEventDispatcher, event_job.args)
+          assert message =~ "Brando.Webhooks"
+        end)
+
+        Repo.query!("ALTER TABLE public.webhook_deliveries_away RENAME TO webhook_deliveries")
+        assert all_enqueued(worker: WebhookDelivery) == []
+
+        assert :ok = perform_job(ContentEventDispatcher, event_job.args)
+        assert :ok = perform_job(ContentEventDispatcher, event_job.args)
+        assert [_] = deliveries(webhook)
+        assert [_] = all_enqueued(worker: WebhookDelivery)
+      end)
+    end
+
     test "connects to the address it checked, keeping the host name", %{user: user} do
       receiver = WebhookReceiver.start()
       {webhook, _} = create_webhook(user, "http://pinned.test:#{receiver.port}/hook")
@@ -295,7 +407,7 @@ defmodule Brando.WebhooksTest do
     test "a host that moved to a private address is refused at delivery (DNS rebinding)", %{user: user} do
       receiver = WebhookReceiver.start()
       Brando.WebhookTestResolver.rebind({93, 184, 216, 34})
-      {webhook, _} = create_webhook(user, "http://rebind.test:#{receiver.port}/hook")
+      {webhook, _} = create_webhook(user, "https://rebind.test:#{receiver.port}/hook")
 
       Brando.WebhookTestResolver.rebind({10, 0, 0, 5})
 
@@ -311,7 +423,7 @@ defmodule Brando.WebhooksTest do
     test "the test event goes through the same checks", %{user: user} do
       receiver = WebhookReceiver.start()
       Brando.WebhookTestResolver.rebind({93, 184, 216, 34})
-      {webhook, _} = create_webhook(user, "http://rebind.test:#{receiver.port}/hook")
+      {webhook, _} = create_webhook(user, "https://rebind.test:#{receiver.port}/hook")
       Brando.WebhookTestResolver.rebind({169, 254, 169, 254})
 
       {:ok, _} = Webhooks.send_test(webhook, user)
@@ -546,17 +658,39 @@ defmodule Brando.WebhooksTest do
     defmodule CopyingCloner do
       @behaviour Brando.Environments.SchemaCloner
 
-      # Stands in for pg_dump: the tables webhooks use, with their rows.
+      # Stands in for pg_dump: the tables webhooks use, with their rows. When
+      # the :break_webhooks predicate says so, the target gets a webhooks
+      # table that cannot be paused (no paused_reason column).
       @impl true
       def clone_schema(source, target) do
         :ok = Brando.Environments.Schema.create(target)
 
-        for table <- ["webhooks", "webhook_deliveries", "activity_events"] do
+        if broken?(source, target) do
+          Brando.Repo.repo().query!(~s|CREATE TABLE "#{target}".webhooks (id bigserial PRIMARY KEY, active boolean)|)
+
+          Brando.Repo.repo().query!(
+            ~s|INSERT INTO "#{target}".webhooks (id, active) SELECT id, active FROM "#{source}".webhooks|
+          )
+        end
+
+        tables =
+          if broken?(source, target),
+            do: ["webhook_deliveries", "activity_events"],
+            else: ["webhooks", "webhook_deliveries", "activity_events"]
+
+        for table <- tables do
           Brando.Repo.repo().query!(~s|CREATE TABLE "#{target}".#{table} (LIKE "#{source}".#{table} INCLUDING ALL)|)
           Brando.Repo.repo().query!(~s|INSERT INTO "#{target}".#{table} SELECT * FROM "#{source}".#{table}|)
         end
 
         :ok
+      end
+
+      defp broken?(source, target) do
+        case Process.get(:break_webhooks) do
+          nil -> false
+          broken? -> broken?.(source, target)
+        end
       end
     end
 
@@ -686,6 +820,40 @@ defmodule Brando.WebhooksTest do
 
       assert {:ok, _} = Brando.Environments.set_live(c.staging)
       assert %{active: false, paused_reason: :manual} = webhook_in("tenant_hooks-copy_staging", c.deploy.id)
+    end
+
+    test "a copy whose webhooks cannot be paused fails, and the target is put back", c do
+      # The copy into staging breaks; putting staging's archive back works
+      Process.put(:break_webhooks, fn source, target ->
+        target == "tenant_hooks-copy_staging" and source == "tenant_hooks-copy_production"
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, {:copy_failed, :webhooks_not_paused, :ok}} =
+                   Brando.Environments.copy_environment(c.production, c.staging)
+        end)
+
+      assert log =~ "Could not pause the webhooks of tenant_hooks-copy_staging"
+
+      # Staging is what it was before the copy: no webhooks of production's
+      Process.delete(:break_webhooks)
+
+      Brando.Tenant.with_prefix("tenant_hooks-copy_staging", fn ->
+        assert Webhooks.list_webhooks() == []
+      end)
+    end
+
+    test "a rollback whose webhooks cannot be paused fails, and leaves no environment", c do
+      assert {:ok, _} = Brando.Environments.set_live(c.staging)
+      Process.put(:break_webhooks, fn _source, target -> String.starts_with?(target, "tenant_hooks-copy_rollback") end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert {:error, {:archive_restore_failed, :webhooks_not_paused}} = Brando.Environments.rollback(c.site)
+      end)
+
+      Process.delete(:break_webhooks)
+      refute Enum.any?(Brando.Tenant.Registry.list_environments(c.site), &String.starts_with?(&1.key, "rollback"))
     end
 
     test "an archive restored as a new environment has its webhooks paused", c do

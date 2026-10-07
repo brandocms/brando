@@ -20,6 +20,7 @@ defmodule Brando.Webhooks.URLGuardTest do
             169.254.169.254 169.254.0.1
             172.16.0.1 172.31.255.255
             192.0.0.8 192.0.2.10
+            192.88.99.1
             192.168.0.1 192.168.255.255
             198.18.0.1 198.19.255.255
             198.51.100.7 203.0.113.9
@@ -48,6 +49,9 @@ defmodule Brando.Webhooks.URLGuardTest do
             ::127.0.0.1
             64:ff9b::a9fe:a9fe
             2002:c0a8:0101::1
+            ::ffff:0:a00:1 ::ffff:0:7f00:1
+            64:ff9b:1::5db8:d822 64:ff9b:1:ffff::1
+            2001:0:4136:e378:8000:63bf:3fff:fdd2 2001::1
             2001:db8::1
             100::1
           ) do
@@ -56,7 +60,8 @@ defmodule Brando.Webhooks.URLGuardTest do
     end
 
     test "allows public IPv6" do
-      for address <- ~w(2606:4700:4700::1111 2a00:1450:4010:c05::64 ::ffff:93.184.216.34 2002:5db8:d822::1) do
+      for address <- ~w(2606:4700:4700::1111 2a00:1450:4010:c05::64 ::ffff:93.184.216.34 2002:5db8:d822::1
+                         ::ffff:0:5db8:d822 64:ff9b::5db8:d822 2001:4860:4860::8888) do
         refute URLGuard.blocked?(ip(address)), "#{address} should be allowed"
       end
     end
@@ -116,6 +121,15 @@ defmodule Brando.Webhooks.URLGuardTest do
     test "a resolver can be passed in" do
       assert {:error, :private_address} =
                URLGuard.resolve("https://hooks.example.com/", resolver: fn _ -> {:ok, [{192, 168, 0, 2}]} end)
+    end
+
+    test "the localhost override allows http to loopback only" do
+      put_test_env(Brando.Webhooks, allow_localhost: true, resolver: {Brando.WebhookTestResolver, :resolve})
+
+      assert {:error, :https_required} = URLGuard.resolve("http://hooks.example.com/")
+      assert {:error, :https_required} = URLGuard.resolve("http://93.184.216.34/")
+      assert {:ok, %{scheme: :https}} = URLGuard.resolve("https://hooks.example.com/")
+      assert {:ok, %{scheme: :http}} = URLGuard.resolve("http://pinned.test/")
     end
 
     test "the localhost override allows http and loopback, and nothing else private" do

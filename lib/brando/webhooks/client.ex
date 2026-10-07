@@ -118,9 +118,17 @@ defmodule Brando.Webhooks.Client do
     %{status: state.status, body: body, error: error}
   end
 
-  # A cut may split a UTF-8 character, and a body may be binary: keep text.
-  defp valid_text(body) do
-    if String.valid?(body), do: body, else: body |> String.chunk(:valid) |> Enum.filter(&String.valid?/1) |> Enum.join()
+  # A cut may split a UTF-8 character, and a body may be binary or carry
+  # control characters (Postgres refuses NUL in text): keep printable text,
+  # with tabs and line breaks.
+  @doc false
+  def valid_text(body) do
+    body =
+      if String.valid?(body),
+        do: body,
+        else: body |> String.chunk(:valid) |> Enum.filter(&String.valid?/1) |> Enum.join()
+
+    String.replace(body, ~r/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u, "")
   end
 
   defp remaining(deadline), do: max(deadline - System.monotonic_time(:millisecond), 0)

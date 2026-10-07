@@ -40,8 +40,9 @@ defmodule Brando.ContentEvents do
       lose events;
     * debouncing is a scheduled job that later saves update.
 
-  Enqueuing never blocks or fails the save: an error is logged and the save
-  carries on, and the subscribers run later, in the job.
+  Enqueuing never blocks or fails the save: inside a transaction every query
+  runs in a savepoint, an error is logged and the save carries on, and the
+  subscribers run later, in the job.
 
   ## Debounce
 
@@ -80,10 +81,13 @@ defmodule Brando.ContentEvents do
       end
 
   `handle_event/1` runs in the event's site and environment (the tenant
-  prefix is set). An exception in one subscriber is logged and does not stop
-  the others. If the dispatcher job itself is retried (the node went down
-  while it ran), a subscriber may see the same event twice: use `event.id`
-  to ignore repeats.
+  prefix is set). A subscriber that raises or returns `{:error, reason}` is
+  logged, does not stop the others, and makes the dispatcher job run again
+  (up to three attempts), so a passing database error does not lose the
+  event. **Subscribers must therefore be idempotent**: the same event, with
+  the same `event.id`, can arrive more than once — after such a retry, or if
+  the node went down while the job ran. Use `event.id` to ignore repeats, as
+  `Brando.Webhooks` does with a unique index on its deliveries.
 
   A process that only needs to know while it runs, such as a LiveView, can
   subscribe to the PubSub topic of the current environment instead; it gets
@@ -261,67 +265,78 @@ defmodule Brando.ContentEvents do
     end
   end
 
+  # Every query here runs in a savepoint when the save is in a transaction
+  # (with group authorization it always is), so a failing one cannot abort
+  # the save. Each is one statement, so concurrent saves cannot lose fields.
   defp pending_update(args) do
     fragment = Map.merge(%{"debounce_key" => args["debounce_key"], "type" => "entry.updated"}, tenant_fragment(args))
 
     from(j in Oban.Job,
       where:
         j.worker == ^inspect(ContentEventDispatcher) and j.state == "scheduled" and
-          fragment("? @> ?", j.args, ^fragment),
-      lock: "FOR UPDATE SKIP LOCKED",
-      limit: 1
+          fragment("? @> ?", j.args, ^fragment)
     )
   end
 
   defp tenant_fragment(args), do: Map.take(args, ["tenant_prefix"])
 
+  # Adds this save's fields, status and actor to a scheduled update.
   defp merge_into_pending(args) do
-    {:ok, result} =
-      Repo.transaction(fn ->
-        case Repo.one(pending_update(args)) do
-          nil ->
-            :none
+    overlay = Map.take(args, ["language", "status", "actor", "occurred_at"])
+    fields = args["fields"] || []
 
-          %Oban.Job{} = job ->
-            merged =
-              job.args
-              |> Map.merge(Map.take(args, ["language", "status", "actor", "occurred_at"]))
-              |> Map.put("fields", union(job.args["fields"], args["fields"]))
+    query =
+      from(j in pending_update(args),
+        update: [
+          set: [
+            args:
+              fragment(
+                "(? || ?) || jsonb_build_object('fields', (SELECT coalesce(jsonb_agg(DISTINCT f ORDER BY f), '[]'::jsonb) FROM jsonb_array_elements_text(coalesce(? -> 'fields', '[]'::jsonb) || to_jsonb(?::text[])) AS f))",
+                j.args,
+                type(^overlay, :map),
+                j.args,
+                type(^fields, {:array, :string})
+              )
+          ]
+        ]
+      )
 
-            Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [args: merged])
-            :merged
-        end
-      end)
-
-    result
+    case Repo.update_all(query, [], savepoint() ++ [prefix: "public"]) do
+      {0, _} -> :none
+      {_count, _} -> :merged
+    end
   end
 
   # A pending `entry.updated` for the same entry is folded into this event,
   # which goes out now.
   defp absorb_pending_update(args) do
-    {:ok, args} =
-      Repo.transaction(fn ->
-        case Repo.one(pending_update(args)) do
-          nil ->
-            args
+    query = from(j in pending_update(args), select: j.args)
 
-          %Oban.Job{} = job ->
-            Repo.delete_all(from(j in Oban.Job, where: j.id == ^job.id))
-            Map.put(args, "fields", union(job.args["fields"], args["fields"]))
-        end
-      end)
-
-    args
+    case Repo.delete_all(query, savepoint() ++ [prefix: "public"]) do
+      {0, _} -> args
+      {_count, pending} -> Map.put(args, "fields", Enum.reduce(pending, args["fields"], &union(&1["fields"], &2)))
+    end
   end
 
   defp union(a, b), do: Enum.sort(Enum.uniq(List.wrap(a) ++ List.wrap(b)))
 
+  # Oban.insert/1 cannot run in a savepoint, so inside a transaction the job
+  # row is inserted directly; Oban picks it up once the save has committed.
+  # Oban's inline testing mode needs Oban.insert/1, which runs the job.
   defp insert(args, opts) do
-    args
-    |> ContentEventDispatcher.new(opts)
-    |> Oban.insert()
+    changeset = ContentEventDispatcher.new(args, opts)
+
+    if Repo.repo().in_transaction?() and not inline_testing?(),
+      do: Repo.insert(changeset, mode: :savepoint, prefix: "public"),
+      else: Oban.insert(changeset)
 
     :ok
+  end
+
+  defp inline_testing? do
+    Oban.Config.get_engine(Oban.config()) == Oban.Engines.Inline
+  rescue
+    _ -> false
   end
 
   @doc """

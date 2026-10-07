@@ -5,8 +5,10 @@ defmodule Brando.Worker.ContentEventDispatcher do
   environment's PubSub topic. A debounced `entry.updated` waits here, as a
   scheduled job, for more saves of the same entry.
 
-  A subscriber that raises is logged and skipped; the job itself does not
-  fail for it, so the other subscribers are not called twice.
+  A subscriber that raises or returns `{:error, reason}` is logged, the
+  others still run, and the job fails so that Oban runs it again (three
+  attempts). Every subscriber then sees the event again, which is why they
+  must be idempotent: `event.id` stays the same.
   """
   use Oban.Worker, queue: :content_events, max_attempts: 3
 
@@ -20,7 +22,7 @@ defmodule Brando.Worker.ContentEventDispatcher do
   def perform(%Oban.Job{args: args} = job) do
     TenantJob.run(job, fn ->
       case build(args) do
-        {:ok, event} -> dispatch(event)
+        {:ok, event} -> dispatch(event, final?: job.attempt >= job.max_attempts)
         :error -> {:cancel, :invalid_event}
       end
     end)
@@ -33,21 +35,42 @@ defmodule Brando.Worker.ContentEventDispatcher do
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(60)
 
-  @doc "Calls every subscriber with `event`, then broadcasts it."
-  def dispatch(%Event{} = event) do
-    Enum.each(ContentEvents.subscribers(), &call(&1, event))
-    Phoenix.PubSub.broadcast(Brando.pubsub(), ContentEvents.topic(), {:content_event, event})
-    :ok
+  @doc """
+  Calls every subscriber with `event`, then broadcasts it. Returns
+  `{:error, failed}` when a subscriber failed (and broadcasts only once
+  every subscriber has had it, or on the last attempt).
+  """
+  def dispatch(%Event{} = event, opts \\ []) do
+    case Enum.reject(ContentEvents.subscribers(), &(call(&1, event) == :ok)) do
+      [] ->
+        broadcast(event)
+        :ok
+
+      failed ->
+        if Keyword.get(opts, :final?, false), do: broadcast(event)
+        {:error, "subscribers failed: " <> Enum.map_join(failed, ", ", &inspect/1)}
+    end
   end
 
+  defp broadcast(event), do: Phoenix.PubSub.broadcast(Brando.pubsub(), ContentEvents.topic(), {:content_event, event})
+
   defp call(subscriber, event) do
-    subscriber.handle_event(event)
+    case subscriber.handle_event(event) do
+      {:error, reason} ->
+        log_failure(subscriber, event, inspect(reason))
+        :error
+
+      _ ->
+        :ok
+    end
   rescue
     error ->
-      Logger.error(
-        "[Brando.ContentEvents] #{inspect(subscriber)} failed on #{event.type} #{event.id}: " <>
-          Exception.message(error)
-      )
+      log_failure(subscriber, event, Exception.message(error))
+      :error
+  end
+
+  defp log_failure(subscriber, event, reason) do
+    Logger.error("[Brando.ContentEvents] #{inspect(subscriber)} failed on #{event.type} #{event.id}: " <> reason)
   end
 
   @doc """

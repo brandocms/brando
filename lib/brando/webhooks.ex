@@ -12,7 +12,10 @@ defmodule Brando.Webhooks do
   (`after_going_live/2`); webhooks paused for another reason stay paused.
 
   Managing webhooks needs the Webhooks permission (`brando.webhooks.manage`)
-  with group authorization, or the admin or superuser role without it. The
+  with group authorization, or the admin or superuser role without it. It
+  shows content metadata (type, id, URL, status, changed field names) for
+  every content type, drafts included, since a webhook sends them to a URL
+  its manager chooses. The
   admin screens also ask for the password again (`BrandoAdmin.Reauth`)
   before anything changes.
 
@@ -56,7 +59,9 @@ defmodule Brando.Webhooks do
   whose delivery has failed for that long is paused, and the dashboard tells
   the people who manage webhooks. At most `concurrency` deliveries to one
   webhook run at a time (default 2), so a slow receiver cannot hold the
-  whole queue. Only `https` URLs on public addresses are called (see
+  whole queue, and at most `site_concurrency` (default 3) to all the webhooks
+  of one site environment, so one site cannot hold the queue every site
+  shares. Only `https` URLs on public addresses are called (see
   `Brando.Webhooks.URLGuard`), checked again before every delivery.
 
   ## Secrets
@@ -73,6 +78,7 @@ defmodule Brando.Webhooks do
         enabled: true,
         retention_days: 30,
         concurrency: 2,
+        site_concurrency: 3,
         # development only: http and loopback addresses
         allow_localhost: false
 
@@ -97,6 +103,7 @@ defmodule Brando.Webhooks do
 
   @default_retention_days 30
   @default_concurrency 2
+  @default_site_concurrency 3
   @test_event "webhook.test"
 
   ## Configuration
@@ -109,6 +116,9 @@ defmodule Brando.Webhooks do
 
   @doc "How many deliveries to one webhook may run at once."
   def concurrency, do: Keyword.get(config(), :concurrency, @default_concurrency)
+
+  @doc "How many deliveries to all the webhooks of one site environment may run at once."
+  def site_concurrency, do: Keyword.get(config(), :site_concurrency, @default_site_concurrency)
 
   defp config, do: Brando.config(__MODULE__) || []
 
@@ -323,15 +333,19 @@ defmodule Brando.Webhooks do
 
   @impl Brando.ContentEvents.Subscriber
   @doc "Queue a delivery of `event` to every active webhook that wants it."
+  # Returns `{:error, _}` when a delivery could not be queued, so the
+  # dispatcher retries; deliveries already queued for the event are not
+  # queued twice.
   def handle_event(%Event{} = event) do
-    # In a savepoint when Oban runs the dispatcher inline (tests), inside the
-    # save's transaction: an environment without the tables must not abort it.
-    opts = if Repo.repo().in_transaction?(), do: [mode: :savepoint], else: []
-
     from(w in Webhook, where: w.active == true)
-    |> Repo.all(opts)
+    |> Repo.all(savepoint())
     |> Enum.filter(&Webhook.matches?(&1, event.type, event.entry_type, event.language))
-    |> Enum.each(&queue(&1, event))
+    |> Enum.map(&queue(&1, event))
+    |> Enum.reject(&(&1 == :ok))
+    |> case do
+      [] -> :ok
+      failed -> {:error, {:not_queued, length(failed)}}
+    end
   rescue
     # An environment that has not run the `brando_209` migration has no webhooks
     error in Postgrex.Error ->
@@ -353,19 +367,47 @@ defmodule Brando.Webhooks do
       payload: payload(event, delivery_id)
     }
 
-    # Once per webhook and event, should the dispatcher run twice
-    %Delivery{}
-    |> Ecto.Changeset.change(attrs)
-    |> Repo.insert(
-      on_conflict: :nothing,
-      conflict_target:
-        {:unsafe_fragment, "(webhook_id, event_id) WHERE event_id IS NOT NULL AND redelivery_of_id IS NULL"}
-    )
-    |> case do
-      {:ok, %Delivery{id: id} = delivery} when not is_nil(id) -> enqueue(delivery)
-      _ -> :ok
-    end
+    # The row and its job together, once per webhook and event: a
+    # dispatcher that runs again finds the row and queues nothing more.
+    in_transaction(fn ->
+      %Delivery{}
+      |> Ecto.Changeset.change(attrs)
+      |> Repo.insert(
+        [
+          on_conflict: :nothing,
+          conflict_target:
+            {:unsafe_fragment, "(webhook_id, event_id) WHERE event_id IS NOT NULL AND redelivery_of_id IS NULL"}
+        ] ++ savepoint()
+      )
+      |> case do
+        {:ok, %Delivery{id: id} = delivery} when not is_nil(id) -> enqueue(delivery)
+        {:ok, existing} -> {:ok, existing}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
   end
+
+  # Inside a transaction already (Oban's inline testing mode runs the
+  # dispatcher in the save), each query runs in a savepoint instead.
+  defp in_transaction(fun) do
+    if Repo.repo().in_transaction?() do
+      with {:ok, _} <- fun.(), do: :ok
+    else
+      case Repo.transaction(fn -> rollback_on_error(fun.()) end) do
+        {:ok, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  rescue
+    error ->
+      Logger.error("[Brando.Webhooks] Could not queue a delivery: " <> Exception.message(error))
+      {:error, :not_queued}
+  end
+
+  defp rollback_on_error({:error, reason}), do: Repo.rollback(reason)
+  defp rollback_on_error(result), do: result
+
+  defp savepoint, do: Brando.ContentEvents.savepoint()
 
   @doc "The JSON envelope for `event` (see the moduledoc)."
   def payload(%Event{} = event, delivery_id) do
@@ -408,8 +450,10 @@ defmodule Brando.Webhooks do
     |> TenantJob.attach()
     |> WebhookDelivery.new()
     |> Oban.insert()
-
-    {:ok, delivery}
+    |> case do
+      {:ok, _job} -> {:ok, delivery}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc "Send a `webhook.test` event to an active webhook, through the same checks as any delivery."

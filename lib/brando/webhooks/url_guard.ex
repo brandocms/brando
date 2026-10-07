@@ -8,13 +8,16 @@ defmodule Brando.Webhooks.URLGuard do
 
     * IPv4: `0.0.0.0/8` (including `0.0.0.0`), `10.0.0.0/8`, `100.64.0.0/10`
       (CGNAT), `127.0.0.0/8` (loopback), `169.254.0.0/16` (link-local),
-      `172.16.0.0/12`, `192.0.0.0/24`, `192.0.2.0/24`, `192.168.0.0/16`,
-      `198.18.0.0/15`, `198.51.100.0/24`, `203.0.113.0/24`, `224.0.0.0/4`
-      (multicast) and `240.0.0.0/4` (reserved, including broadcast);
+      `172.16.0.0/12`, `192.0.0.0/24`, `192.0.2.0/24`, `192.88.99.0/24`
+      (6to4 relays), `192.168.0.0/16`, `198.18.0.0/15`, `198.51.100.0/24`,
+      `203.0.113.0/24`, `224.0.0.0/4` (multicast) and `240.0.0.0/4`
+      (reserved, including broadcast);
     * IPv6: `::` and `::1`, `fe80::/10` (link-local), `fec0::/10`,
       `fc00::/7` (unique local), `ff00::/8` (multicast), `100::/64`,
-      `2001:db8::/32`, and IPv4 addresses inside IPv6 (`::ffff:0:0/96`,
-      `::/96`, `64:ff9b::/96`, `2002::/16`) by the IPv4 rules.
+      `2001::/32` (Teredo), `2001:db8::/32`, `64:ff9b:1::/48` (local-use
+      NAT64), and IPv4 addresses inside IPv6 (`::ffff:0:0/96`,
+      `::ffff:0:0:0/96`, `::/96`, `64:ff9b::/96`, `2002::/16`) by the IPv4
+      rules.
 
   The check runs when a webhook is saved and again before every delivery,
   and the delivery connects to the address that was checked, with the host
@@ -26,9 +29,9 @@ defmodule Brando.Webhooks.URLGuard do
 
       config :brando, Brando.Webhooks, allow_localhost: true
 
-  allows `http` and loopback addresses (`127.0.0.0/8`, `::1`), for a
-  receiver on the developer's own machine. Other private ranges stay
-  refused. Never set it in production.
+  allows loopback addresses (`127.0.0.0/8`, `::1`), and `http` to them only,
+  for a receiver on the developer's own machine. Other private ranges stay
+  refused, and other hosts still need `https`. Never set it in production.
   """
 
   import Bitwise
@@ -71,7 +74,8 @@ defmodule Brando.Webhooks.URLGuard do
   def resolve(url, opts \\ []) do
     with {:ok, uri} <- validate(url),
          {:ok, addresses} <- addresses(uri.host, opts),
-         :ok <- check_addresses(addresses) do
+         :ok <- check_addresses(addresses),
+         :ok <- check_plain_http(uri, addresses) do
       {:ok,
        %{
          scheme: String.to_existing_atom(uri.scheme),
@@ -99,6 +103,13 @@ defmodule Brando.Webhooks.URLGuard do
     do: if(allow_localhost?(), do: :ok, else: {:error, :https_required})
 
   defp check_scheme(_uri), do: {:error, :scheme_not_allowed}
+
+  # http only under the localhost override, and only to loopback
+  defp check_plain_http(%URI{scheme: "http"}, addresses) do
+    if Enum.all?(addresses, &loopback?/1), do: :ok, else: {:error, :https_required}
+  end
+
+  defp check_plain_http(_uri, _addresses), do: :ok
 
   defp check_userinfo(%URI{userinfo: nil}), do: :ok
   defp check_userinfo(_uri), do: {:error, :credentials_in_url}
@@ -179,6 +190,7 @@ defmodule Brando.Webhooks.URLGuard do
     {{172, 16, 0, 0}, 12},
     {{192, 0, 0, 0}, 24},
     {{192, 0, 2, 0}, 24},
+    {{192, 88, 99, 0}, 24},
     {{192, 168, 0, 0}, 16},
     {{198, 18, 0, 0}, 15},
     {{198, 51, 100, 0}, 24},
@@ -194,6 +206,10 @@ defmodule Brando.Webhooks.URLGuard do
     {{0x0100, 0, 0, 0, 0, 0, 0, 0}, 64},
     # documentation
     {{0x2001, 0x0DB8, 0, 0, 0, 0, 0, 0}, 32},
+    # Teredo, which tunnels to an IPv4 address of its own
+    {{0x2001, 0, 0, 0, 0, 0, 0, 0}, 32},
+    # local-use NAT64, which may reach any IPv4 network
+    {{0x64, 0xFF9B, 1, 0, 0, 0, 0, 0}, 48},
     # unique local
     {{0xFC00, 0, 0, 0, 0, 0, 0, 0}, 7},
     # link-local and the old site-local
@@ -216,9 +232,11 @@ defmodule Brando.Webhooks.URLGuard do
 
   def blocked?(_), do: true
 
-  # IPv4 inside IPv6: mapped (::ffff:a.b.c.d), compatible (::a.b.c.d), NAT64
-  # (64:ff9b::a.b.c.d) and 6to4 (2002:aabb:ccdd::)
+  # IPv4 inside IPv6: mapped (::ffff:a.b.c.d), SIIT, compatible (::a.b.c.d),
+  # NAT64 (64:ff9b::a.b.c.d) and 6to4 (2002:aabb:ccdd::)
   defp embedded_v4({0, 0, 0, 0, 0, 0xFFFF, g, h}), do: v4(g, h)
+  # SIIT (::ffff:0:a.b.c.d)
+  defp embedded_v4({0, 0, 0, 0, 0xFFFF, 0, g, h}), do: v4(g, h)
   defp embedded_v4({0, 0, 0, 0, 0, 0, g, h}) when g != 0 or h > 1, do: v4(g, h)
   defp embedded_v4({0x64, 0xFF9B, 0, 0, 0, 0, g, h}), do: v4(g, h)
   defp embedded_v4({0x2002, g, h, _, _, _, _, _}), do: v4(g, h)

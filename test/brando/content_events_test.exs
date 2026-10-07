@@ -204,6 +204,26 @@ defmodule Brando.ContentEventsTest do
   end
 
   describe "subscribers" do
+    test "one that fails makes the job run again, after the others had it", %{user: user} do
+      put_test_env(Brando.ContentEvents, subscribers: [Exploding, Collector], debounce_seconds: 0)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        create_page(user)
+        [job] = all_enqueued(worker: ContentEventDispatcher)
+
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, message} = perform_job(ContentEventDispatcher, job.args)
+          assert message =~ "Exploding"
+        end)
+
+        assert [%Event{type: "entry.created", id: id}] = collected()
+
+        # Again: the same event, the same id
+        ExUnit.CaptureLog.capture_log(fn -> perform_job(ContentEventDispatcher, job.args) end)
+        assert [%Event{id: ^id}] = collected()
+      end)
+    end
+
     test "one that raises does not stop the others, or the save", %{user: user} do
       put_test_env(Brando.ContentEvents, subscribers: [Exploding, Collector], debounce_seconds: 0)
 
@@ -237,6 +257,52 @@ defmodule Brando.ContentEventsTest do
         end)
 
         refute_enqueued(worker: ContentEventDispatcher)
+      end)
+    end
+
+    test "a failed enqueue leaves the save's transaction usable", %{user: user} do
+      put_test_env(Brando.ContentEvents, subscribers: [Collector], debounce_seconds: 5)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, %Page{} = page} =
+                   Brando.Repo.transaction(fn ->
+                     # Like a save under group authorization, when queueing the event fails
+                     Brando.Repo.repo().query!(
+                       "ALTER TABLE public.oban_jobs ADD CONSTRAINT no_content_events CHECK (worker <> 'Brando.Worker.ContentEventDispatcher') NOT VALID"
+                     )
+
+                     page = create_page(user)
+                     {:ok, _} = Pages.update_page(page.id, %{title: "Changed"}, user)
+                     Brando.Repo.repo().query!("ALTER TABLE public.oban_jobs DROP CONSTRAINT no_content_events")
+                     page
+                   end)
+
+          assert Brando.Repo.get(Page, page.id).title == "Changed"
+        end)
+
+        # The events were not queued, and the save went through
+        refute_enqueued(worker: ContentEventDispatcher)
+      end)
+    end
+
+    test "inside a transaction, the job row is inserted and debounced in savepoints", %{user: user} do
+      put_test_env(Brando.ContentEvents, subscribers: [Collector], debounce_seconds: 5)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, page} =
+          Brando.Repo.transaction(fn ->
+            page = create_page(user)
+            {:ok, _} = Pages.update_page(page.id, %{title: "One"}, user)
+            {:ok, _} = Pages.update_page(page.id, %{meta_description: "Two"}, user)
+            page
+          end)
+
+        assert [created, updated] =
+                 all_enqueued(worker: ContentEventDispatcher) |> Enum.sort_by(& &1.id)
+
+        assert created.args["entry_id"] == page.id
+        assert updated.args["fields"] == ["meta_description", "title"]
       end)
     end
 
