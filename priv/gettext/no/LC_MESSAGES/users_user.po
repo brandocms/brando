@@ -135,3 +135,23 @@ msgstr "Ikke registrert"
 #, elixir-autogen, elixir-format
 msgid "Role"
 msgstr "Rolle"
+
+#: lib/brando/users/user.ex:232
+#, elixir-autogen, elixir-format
+msgid "Job title"
+msgstr "Stillingstittel"
+
+#: lib/brando/users/user.ex:233
+#, elixir-autogen, elixir-format
+msgid "Given to search engines on pages that name this user as the author."
+msgstr "Gis til søkemotorer på sider som oppgir denne brukeren som forfatter."
+
+#: lib/brando/users/user.ex:236
+#, elixir-autogen, elixir-format
+msgid "Profile links"
+msgstr "Profillenker"
+
+#: lib/brando/users/user.ex:237
+#, elixir-autogen, elixir-format
+msgid "Pages about this user on other sites, such as LinkedIn or a personal site."
+msgstr "Sider om denne brukeren på andre nettsteder, som LinkedIn eller en personlig side."
