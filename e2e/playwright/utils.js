@@ -25,7 +25,7 @@ const syncLV = async (page, timeout = 15000) => {
 // which is the part that actually varies with machine speed. Keep these in step
 // with the hook.
 const BLOCK_DEBOUNCE_MS = 300 // phx-debounce on block inputs
-const BLOCK_SHIP_SETTLE_MS = 400 // SHIP_SETTLE_MS — focusout → ship
+const BLOCK_SHIP_SETTLE_MS = 400 // SETTLE_MS in the Block hook — focusout settles
 
 // Wait until a block edit has been debounced, pushed, and answered.
 //
@@ -41,7 +41,8 @@ const awaitBlockDebounce = async page => {
   await syncLV(page)
 }
 
-// Wait until a blur has shipped the block's ops to the other editors.
+// Wait until a blur has settled: presence has cleared and the block has taken
+// the other editors' changes it held back while it was in use.
 //
 // Replaces flat 1200–1500ms sleeps. The receiving side is not covered here on
 // purpose — assert it with a retrying `expect` on the *other* page, which is
