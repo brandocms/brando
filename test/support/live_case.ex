@@ -54,6 +54,8 @@ defmodule Brando.LiveCase do
 
   setup tags do
     Brando.ConnCase.setup_sandbox(tags)
+    # Runs before the sandbox owner stops (on_exit callbacks run last-first)
+    ExUnit.Callbacks.on_exit(&await_presence_idle/0)
 
     # `config` has to be present: `UserAuth.log_in_user/3` reads
     # `user.config.content_language` on the way in, and the factory leaves the
@@ -82,6 +84,41 @@ defmodule Brando.LiveCase do
     |> Plug.Test.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
     |> Plug.Conn.put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+  end
+
+  @doc """
+  Waits, up to a second, until the presence tracker has no lookup running.
+
+  A LiveView that closes with the test leaves presence, and presence looks
+  the user up in the database in a task. Should that task still run when the
+  test's sandbox owner stops, it dies on the closed connection, and
+  `Phoenix.Presence` has no clause for a task that died: the tracker crashes,
+  and the next test to mount an admin LiveView fails to track.
+  """
+  def await_presence_idle(deadline \\ System.monotonic_time(:millisecond) + 1_000) do
+    shard = :"Elixir.BrandoIntegration.Presence_shard0"
+
+    idle? =
+      case Process.whereis(shard) do
+        nil -> true
+        pid -> match?(%{tracker_state: %{current_task: nil}}, :sys.get_state(pid))
+      end
+
+    cond do
+      idle? and settled?(shard) -> :ok
+      System.monotonic_time(:millisecond) > deadline -> :ok
+      true -> await_presence_idle(deadline)
+    end
+  end
+
+  # Idle twice, a moment apart: a leave may still be on its way
+  defp settled?(shard) do
+    Process.sleep(20)
+
+    case Process.whereis(shard) do
+      nil -> true
+      pid -> match?(%{tracker_state: %{current_task: nil}}, :sys.get_state(pid))
+    end
   end
 
   @doc """
