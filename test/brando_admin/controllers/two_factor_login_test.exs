@@ -251,7 +251,9 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       assert redirected_to(early) == "/admin/login/two-factor/setup"
       assert session_tokens(user) == []
 
-      {:ok, view, html} = live(next(conn), "/admin/login/two-factor/setup")
+      {:ok, view, _html} = live(next(conn), "/admin/login/two-factor/setup")
+      # A passkey is offered first; this user chooses the app
+      html = view |> element("[data-testid=setup-method-app]") |> render_click()
       [secret_text] = Regex.run(~r/data-testid="two-factor-secret"[^>]*>([^<]+)</, html, capture: :all_but_first)
       {:ok, secret} = Base.decode32(String.replace(secret_text, " ", ""), padding: false)
 

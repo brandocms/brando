@@ -28,6 +28,7 @@ import ListingHook from './hooks/Listing'
 import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
+import PasskeyHook from './hooks/Passkey'
 import BlockSlotHook from './hooks/BlockSlot'
 import MuxUploaderHook from './hooks/MuxUploader'
 import BunnyUploaderHook from './hooks/BunnyUploader'
@@ -96,6 +97,7 @@ export default (app) => {
     'Brando.FrontendEditBridge': FrontendEditBridgeHook(app),
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
+    'Brando.Passkey': PasskeyHook(app),
     'Brando.BlockSlot': BlockSlotHook(app),
     'Brando.MuxUploader': MuxUploaderHook(app),
     'Brando.BunnyUploader': BunnyUploaderHook(app),

@@ -152,3 +152,83 @@
     }
   }
 }
+
+/* Passkeys on the way in */
+.login {
+  .login-passkey-alternative {
+    padding-top: 24px;
+    margin-top: 24px;
+    border-top: 1px solid var(--brando-line);
+  }
+
+  .login-passkey-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 14px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+
+    [data-icon] {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .login-passkey-error {
+    padding-bottom: 12px;
+    font-size: 14px;
+    color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%);
+  }
+
+  .login-passkey {
+    padding-bottom: 24px;
+  }
+
+  .login-two-factor-alternative {
+    padding-top: 24px;
+    border-top: 1px solid var(--brando-line);
+  }
+
+  .login-setup-methods {
+    margin-bottom: 20px;
+  }
+
+  .login-setup-method-intro {
+    padding-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .login-setup-method {
+    padding-bottom: 24px;
+  }
+}
+
+/* The second step's other ways in, when a passkey leads: outlined, the
+   primary button's size */
+.login .login-two-factor .login-two-factor-alternative button:not(.primary) {
+  height: 50px;
+  min-width: 180px;
+  padding: 0 24px;
+  border: 1px solid var(--brando-ink);
+  border-radius: 22px;
+  background: var(--brando-surface);
+  color: var(--brando-ink);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--brando-surface-hover);
+  }
+}

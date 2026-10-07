@@ -272,18 +272,21 @@ defmodule Brando.Users.User do
   @doc """
   The two-factor row of a saved user's form: your own account links to your
   security page; an administrator allowed to reset the user's password may
-  also turn off two-factor authentication for a user who lost their phone and
-  recovery codes (`Brando.Users.TwoFactor.reset/3`).
+  also turn off two-factor authentication for a user who lost their phone,
+  passkeys and recovery codes (`Brando.Users.TwoFactor.reset/3`), and log
+  them out everywhere (`Brando.Users.log_out_everywhere/3`).
   """
   def security_access(%{form: form, current_user: current_user} = assigns) do
-    security = if persisted?(form), do: Brando.Users.TwoFactor.security(form.data)
+    persisted? = persisted?(form)
+    security = if persisted?, do: Brando.Users.TwoFactor.security(form.data)
     locked_until = security && security.locked_until
 
     assigns =
       assign(assigns,
         user: form.data,
         own?: form.data.id == current_user.id,
-        enabled?: !!(security && security.totp_enabled_at),
+        enabled?: persisted? and Brando.Users.TwoFactor.enabled?(form.data),
+        sessions: if(persisted?, do: length(Brando.Users.list_sessions(form.data)), else: 0),
         locked_until: locked_until && DateTime.compare(locked_until, DateTime.utc_now()) == :gt && locked_until,
         can_reset?: persisted?(form) and Brando.Trait.ProtectPassword.allowed?(current_user, form.data)
       )
@@ -304,13 +307,16 @@ defmodule Brando.Users.User do
             name: @user.name
           )}
         </p>
+        <p :if={!@own?} data-testid="user-sessions-count">
+          {ngettext("One active session.", "%{count} active sessions.", @sessions)}
+        </p>
         <p :if={@locked_until} class="user-security-locked">
           {gettext("Locked after too many failed attempts, until %{time}.",
             time: Brando.Utils.Datetime.format_datetime(@locked_until, "%H:%M %Z")
           )}
         </p>
       </div>
-      <div :if={@own? or (@enabled? and @can_reset?)} class="user-password-access-actions">
+      <div :if={@own? or @can_reset?} class="user-password-access-actions">
         <.link :if={@own?} navigate="/admin/users/security" class="workspace-button" data-testid="open-security">
           <Brando.HTML.icon name="shield" />{gettext("Security")}
         </.link>
@@ -328,6 +334,18 @@ defmodule Brando.Users.User do
           data-confirm-destructive
         >
           <Brando.HTML.icon name="shield-off" />{gettext("Reset two-factor")}
+        </button>
+        <button
+          :if={!@own? and @can_reset? and @sessions > 0}
+          type="button"
+          class="workspace-button"
+          phx-click="log_out_everywhere"
+          data-testid="log-out-everywhere"
+          data-confirm-title={gettext("Log %{name} out everywhere?", name: @user.name)}
+          data-confirm={gettext("Every browser where they are logged in is logged out. They can log in again.")}
+          data-confirm-ok={gettext("Log out everywhere")}
+        >
+          <Brando.HTML.icon name="log-out" />{gettext("Log out everywhere")}
         </button>
       </div>
     </div>

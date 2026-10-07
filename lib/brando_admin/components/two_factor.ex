@@ -61,7 +61,8 @@ defmodule BrandoAdmin.Components.TwoFactor do
     """
   end
 
-  defp negative?(action), do: action in [:login_failed, :locked, :two_factor_disabled, :two_factor_reset]
+  defp negative?(action),
+    do: action in [:login_failed, :locked, :two_factor_disabled, :two_factor_reset, :passkey_removed]
 
   @doc "What a security event says, in the admin's language."
   def event_label(%{action: :login, details: %{"method" => "totp"}}),
@@ -72,6 +73,8 @@ defmodule BrandoAdmin.Components.TwoFactor do
 
   def event_label(%{action: :login, details: %{"method" => "two_factor_setup"}}),
     do: gettext("Logged in after setting up two-factor authentication")
+
+  def event_label(%{action: :login, details: %{"method" => "passkey"}}), do: gettext("Logged in with a passkey")
 
   def event_label(%{action: :login}), do: gettext("Logged in")
   def event_label(%{action: :login_failed, details: %{"reason" => "two_factor"}}), do: gettext("Wrong two-factor code")
@@ -94,6 +97,15 @@ defmodule BrandoAdmin.Components.TwoFactor do
 
   def event_label(%{action: :password_changed}), do: gettext("Password changed")
   def event_label(%{action: :policy_changed}), do: gettext("Sign-in policy changed")
+
+  def event_label(%{action: :passkey_added, details: %{"name" => name}}),
+    do: gettext("Passkey added: %{name}", name: name)
+
+  def event_label(%{action: :passkey_removed, details: %{"name" => name}}),
+    do: gettext("Passkey removed: %{name}", name: name)
+
+  def event_label(%{action: :session_revoked}), do: gettext("A session was logged out")
+  def event_label(%{action: :sessions_revoked}), do: gettext("Logged out everywhere")
   def event_label(%{action: action}), do: to_string(action)
 
   defp event_meta(event) do
@@ -253,4 +265,94 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
 
   defp error(_invalid_code),
     do: gettext("That code did not match. Check that the app shows this account, and try the newest code.")
+end
+
+defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
+  @moduledoc false
+  # Adds a passkey for `user`: a name for the device, then the browser's own
+  # dialog (the `Brando.Passkey` hook). The challenge stays in this
+  # component's assigns and answers once. On success it tells its LiveView
+  # `{:passkey_added, passkey, recovery_codes}`; the codes are nil unless
+  # this was the user's first second factor.
+  use BrandoAdmin, :live_component
+  use Gettext, backend: Brando.Gettext
+
+  alias Brando.Users.Passkeys
+  alias BrandoAdmin.Components.Auth
+  alias BrandoAdmin.Components.TwoFactor
+
+  def update(assigns, socket) do
+    socket = assign(socket, Map.take(assigns, [:id, :user, :keep_token, :meta]))
+
+    default_name =
+      socket.assigns[:meta] && socket.assigns.meta[:user_agent] && TwoFactor.browser(socket.assigns.meta.user_agent)
+
+    {:ok,
+     socket
+     |> assign_new(:form, fn -> to_form(%{"name" => default_name || ""}, id: assigns.id) end)
+     |> assign_new(:error, fn -> nil end)
+     |> assign_new(:challenge, fn -> nil end)}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div class="passkey-setup">
+      <.form
+        for={@form}
+        id={"#{@id}-form"}
+        class="passkey-setup-form"
+        phx-hook="Brando.Passkey"
+        data-passkey="create"
+        data-options-event="options"
+        data-result-event="register"
+        data-error-event="error"
+      >
+        <div class="field-wrapper">
+          <Auth.input field={@form[:name]} label={gettext("Name this passkey")} data-testid="passkey-name" required />
+        </div>
+        <p class="passkey-setup-hint">
+          {gettext("Your browser asks where to keep it: this device, your phone, or a security key.")}
+        </p>
+        <p :if={@error} class="two-factor-error" role="alert" data-testid="passkey-error">{@error}</p>
+        <div class="passkey-setup-actions">
+          <button type="submit" class="workspace-button primary" data-testid="passkey-create">
+            <.icon name="fingerprint-pattern" />{gettext("Create a passkey")}
+          </button>
+        </div>
+      </.form>
+    </div>
+    """
+  end
+
+  def handle_event("options", _params, socket) do
+    {challenge, options} = Passkeys.registration_challenge(socket.assigns.user)
+    {:reply, %{publicKey: options}, assign(socket, challenge: challenge, error: nil)}
+  end
+
+  def handle_event("register", params, %{assigns: %{challenge: %Wax.Challenge{} = challenge}} = socket) do
+    %{user: user} = socket.assigns
+    opts = [keep_token: socket.assigns[:keep_token], meta: socket.assigns[:meta]]
+
+    case Passkeys.register(user, params["name"], params, challenge, opts) do
+      {:ok, passkey, codes} ->
+        send(self(), {:passkey_added, passkey, codes})
+        {:noreply, assign(socket, challenge: nil)}
+
+      {:error, :already_registered} ->
+        {:noreply, assign(socket, challenge: nil, error: gettext("This passkey is added already."))}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, challenge: nil, error: gettext("The passkey could not be added. Try again."))}
+    end
+  end
+
+  def handle_event("register", _params, socket), do: {:noreply, socket}
+
+  def handle_event("error", _params, socket) do
+    {:noreply,
+     assign(socket,
+       challenge: nil,
+       error: gettext("No passkey was made. The browser was closed, or this device cannot make one.")
+     )}
+  end
 end

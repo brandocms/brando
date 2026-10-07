@@ -15913,11 +15913,6 @@ msgstr "Tofaktorautentisering er slått på."
 msgid "I have saved my codes"
 msgstr "Jeg har lagret kodene"
 
-#: lib/brando_admin/live/user_two_factor_setup_live.ex
-#, elixir-autogen, elixir-format
-msgid "This site requires two-factor authentication for %{email}. When you log in, you will give a code from an app on your phone as well as your password."
-msgstr "Dette nettstedet krever tofaktorautentisering for %{email}. Når du logger inn, oppgir du en kode fra en app på telefonen i tillegg til passordet."
-
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "Save these recovery codes somewhere safe, away from your phone, such as a password manager. Each one signs you in once if you lose your authenticator app. They are not shown again."
@@ -16072,11 +16067,6 @@ msgstr "Koden stemte ikke. Sjekk at appen viser denne kontoen, og prøv den nyes
 #, elixir-autogen, elixir-format
 msgid "Security"
 msgstr "Sikkerhet"
-
-#: lib/brando_admin/live/users/user_security_live.ex
-#, elixir-autogen, elixir-format
-msgid "Log in with a code from an app on your phone as well as your password."
-msgstr "Logg inn med en kode fra en app på telefonen i tillegg til passordet."
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -16401,3 +16391,295 @@ msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk 
 #, elixir-autogen, elixir-format
 msgid "Codes from your app cannot be checked on this site right now. Use your password."
 msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk passordet ditt."
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm"
+msgstr "Bekreft"
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm it’s you"
+msgstr "Bekreft at det er deg"
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "This needs your password, a code from your authenticator app or a passkey, since you last gave one more than %{minutes} minutes ago."
+msgstr "Dette krever passordet ditt, en kode fra autentiseringsappen eller en passnøkkel, siden det er mer enn %{minutes} minutter siden du sist oppga en."
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "Use a passkey"
+msgstr "Bruk en passnøkkel"
+
+#: lib/brando_admin/reauth.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey did not confirm it. Try again, or use your password."
+msgstr "Passnøkkelen bekreftet det ikke. Prøv igjen, eller bruk passordet ditt."
+
+#: lib/brando_admin/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That passkey did not work. Try again, or use another way to log in."
+msgstr "Passnøkkelen virket ikke. Prøv igjen, eller logg inn på en annen måte."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm with your passkey: your fingerprint, face, PIN or security key."
+msgstr "Bekreft med passnøkkelen din: fingeravtrykk, ansikt, PIN-kode eller sikkerhetsnøkkel."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "No passkey was used. Try again, or use another way below."
+msgstr "Ingen passnøkkel ble brukt. Prøv igjen, eller bruk en annen måte nedenfor."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Or enter the 6-digit code from your authenticator app."
+msgstr "Eller skriv inn den sekssifrede koden fra autentiseringsappen."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lost your passkey?"
+msgstr "Mistet passnøkkelen?"
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Enter one of the recovery codes you saved when you added your first passkey. Each code works once. If you have none left, ask an administrator to reset two-factor authentication for you."
+msgstr "Skriv inn en av gjenopprettingskodene du lagret da du la til din første passnøkkel. Hver kode virker én gang. Har du ingen igjen, kan du be en administrator om å tilbakestille tofaktorautentiseringen for deg."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recovery code"
+msgstr "Gjenopprettingskode"
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site requires two-factor authentication for %{email}. Choose how you will confirm it is you when you log in, as well as with your password."
+msgstr "Dette nettstedet krever tofaktorautentisering for %{email}. Velg hvordan du skal bekrefte at det er deg når du logger inn, i tillegg til med passordet."
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey"
+msgstr "Passnøkkel"
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your fingerprint, face or screen lock, on this device or your phone. Nothing to type."
+msgstr "Fingeravtrykk, ansikt eller skjermlås, på denne enheten eller telefonen. Ingenting å skrive inn."
+
+#: lib/brando_admin/live/user_login_live.ex
+#, elixir-autogen, elixir-format
+msgid "No passkey was used. Try again, or log in with your password."
+msgstr "Ingen passnøkkel ble brukt. Prøv igjen, eller logg inn med passordet ditt."
+
+#: lib/brando_admin/live/user_login_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log in with a passkey"
+msgstr "Logg inn med passnøkkel"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged in with a passkey"
+msgstr "Logget inn med passnøkkel"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey added: %{name}"
+msgstr "Passnøkkel lagt til: %{name}"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey removed: %{name}"
+msgstr "Passnøkkel fjernet: %{name}"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "A session was logged out"
+msgstr "En økt ble logget ut"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged out everywhere"
+msgstr "Logget ut overalt"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Name this passkey"
+msgstr "Gi passnøkkelen et navn"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Your browser asks where to keep it: this device, your phone, or a security key."
+msgstr "Nettleseren spør hvor den skal lagres: på denne enheten, på telefonen eller på en sikkerhetsnøkkel."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Create a passkey"
+msgstr "Lag en passnøkkel"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "This passkey is added already."
+msgstr "Denne passnøkkelen er allerede lagt til."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey could not be added. Try again."
+msgstr "Passnøkkelen kunne ikke legges til. Prøv igjen."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "No passkey was made. The browser was closed, or this device cannot make one."
+msgstr "Ingen passnøkkel ble laget. Nettleservinduet ble lukket, eller denne enheten kan ikke lage en."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm it is you with a passkey or a code from your phone, as well as your password."
+msgstr "Bekreft at det er deg med en passnøkkel eller en kode fra telefonen, i tillegg til passordet."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Passkeys"
+msgstr "Passnøkler"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your fingerprint, face or screen lock, on this device or your phone, or a security key. A passkey also logs you in without your password."
+msgstr "Fingeravtrykk, ansikt eller skjermlås, på denne enheten eller telefonen, eller en sikkerhetsnøkkel. En passnøkkel logger deg også inn uten passord."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add a passkey"
+msgstr "Legg til passnøkkel"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{date}"
+msgstr "Lagt til %{date}"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "last used %{date}"
+msgstr "sist brukt %{date}"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "not used yet"
+msgstr "ikke brukt ennå"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove the passkey %{name}?"
+msgstr "Fjerne passnøkkelen %{name}?"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "It no longer logs you in. Remove it from the device too, in its settings."
+msgstr "Den logger deg ikke lenger inn. Fjern den fra enheten også, i innstillingene der."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove passkey"
+msgstr "Fjern passnøkkel"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sessions"
+msgstr "Økter"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where you are logged in. Logging out a session ends it at once."
+msgstr "Hvor du er logget inn. Logger du ut en økt, avsluttes den med en gang."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log out your other sessions?"
+msgstr "Logge ut de andre øktene dine?"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every other browser where you are logged in is logged out. This one stays logged in."
+msgstr "Alle andre nettlesere der du er logget inn, blir logget ut. Denne forblir innlogget."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log them out"
+msgstr "Logg dem ut"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log out other sessions"
+msgstr "Logg ut andre økter"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown browser"
+msgstr "Ukjent nettleser"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "This browser"
+msgstr "Denne nettleseren"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "logged in %{date}"
+msgstr "logget inn %{date}"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "last active %{date}"
+msgstr "sist aktiv %{date}"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey was removed."
+msgstr "Passnøkkelen ble fjernet."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The sign-in policy requires two-factor authentication: add another passkey or the app first."
+msgstr "Innloggingsreglene krever tofaktorautentisering: legg til en annen passnøkkel eller appen først."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your other sessions were logged out."
+msgstr "De andre øktene dine ble logget ut."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The passkey was added."
+msgstr "Passnøkkelen ble lagt til."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Log %{name} out everywhere?"
+msgstr "Logge ut %{name} overalt?"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Every browser where they are logged in is logged out. They can log in again."
+msgstr "Alle nettlesere der brukeren er logget inn, blir logget ut. Brukeren kan logge inn igjen."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Log out everywhere"
+msgstr "Logg ut overalt"
+
+#: lib/brando_admin/live/users/user_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} was logged out everywhere."
+msgstr "%{email} ble logget ut overalt."
+
+#: lib/brando_admin/live/users/user_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can log another user out."
+msgstr "Bare en superbruker kan logge ut en annen bruker."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "One active session."
+msgid_plural "%{count} active sessions."
+msgstr[0] "Én aktiv økt."
+msgstr[1] "%{count} aktive økter."
