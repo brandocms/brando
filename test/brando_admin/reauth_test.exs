@@ -75,11 +75,11 @@ defmodule BrandoAdmin.ReauthTest do
     test "a passkey answers too", %{conn: conn, current_user: user} do
       authenticator = SoftAuthenticator.new()
       origin = Keyword.fetch!(Passkeys.relying_party(), :origin)
-      {challenge, options} = Passkeys.registration_challenge(user)
+      {:ok, challenge, options} = Passkeys.start_registration(user, "admin")
 
       {:ok, _, _} =
         Passkeys.register(user, "Laptop", SoftAuthenticator.register(authenticator, options, origin), challenge,
-          keep_token: get_session(conn, :user_token)
+          keep_id: Users.token_id(get_session(conn, :user_token))
         )
 
       confirmed_ago(conn, 30)
@@ -121,6 +121,99 @@ defmodule BrandoAdmin.ReauthTest do
       confirmed_ago(conn, 30)
       user = Factory.insert(:random_user, avatar: nil, config: %UserConfig{})
       assert {:error, {:redirect, %{to: "/admin/confirm" <> _}}} = live(conn, "/admin/users/update/#{user.id}")
+    end
+  end
+
+  describe "a screen that asks first, once open" do
+    # The review's probe: open while confirmed, let the confirmation age, then
+    # send a sensitive event over the open socket.
+    test "holds an event when the confirmation has run out, and runs it once answered", %{conn: conn} do
+      user = Factory.insert(:random_user, role: :editor, avatar: nil, config: %UserConfig{})
+      secret = Brando.Users.TwoFactor.new_secret()
+      {:ok, _} = Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret), proof: "admin")
+
+      confirmed_ago(conn, 1)
+      {:ok, view, _html} = live(conn, "/admin/users/update/#{user.id}")
+      confirmed_ago(conn, 60)
+
+      html = render_click(view, "reset_two_factor", %{})
+      assert html =~ "reauth-modal"
+      assert Brando.Users.TwoFactor.enabled?(user)
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      refute Brando.Users.TwoFactor.enabled?(user)
+    end
+
+    test "is left for the confirm page when the confirmation runs out", %{conn: conn} do
+      token = confirmed_ago(conn, 1)
+      {:ok, view, _html} = live(conn, "/admin/users/sign-in-policy")
+      confirmed_ago(conn, 60)
+
+      send(view.pid, {Reauth, :check, Users.token_id(token)})
+      assert_redirect(view, "/admin/confirm?return_to=%2Fadmin%2Fusers%2Fsign-in-policy")
+    end
+
+    test "is not left while the confirmation holds", %{conn: conn} do
+      token = confirmed_ago(conn, 1)
+      {:ok, view, _html} = live(conn, "/admin/users/sign-in-policy")
+
+      send(view.pid, {Reauth, :check, Users.token_id(token)})
+      assert render(view) =~ "sign-in-policy-form"
+    end
+  end
+
+  describe "sensitive actions that ask again" do
+    @guarded [
+      {BrandoAdmin.Sites.SiteLive, ~w(delete suspend archive grant revoke)},
+      {BrandoAdmin.Sites.PublishingLive, ~w(save_deploy_config deploy rollback)},
+      {BrandoAdmin.Sites.EnvironmentLive, ~w(delete_environment queue_set_live schedule_set_live prune_archives)},
+      {BrandoAdmin.Users.UserListLive, ~w(disable_user enable_user confirm_transfer_delete)},
+      {BrandoAdmin.Users.GroupsLive, ~w(save delete add_member remove_member)},
+      {BrandoAdmin.Users.UserSecurityLive, ~w(open_setup new_passkey remove_passkey revoke_session revoke_other_sessions)}
+    ]
+
+    for {module, events} <- @guarded do
+      test "#{inspect(module)} guards #{Enum.join(events, ", ")}" do
+        guarded =
+          for %{id: {Reauth, opts}} <- unquote(module).__live__()[:lifecycle].mount,
+              is_list(opts),
+              event <- opts[:events],
+              do: event
+
+        assert unquote(events) -- guarded == []
+      end
+    end
+
+    for module <- [BrandoAdmin.Users.UserFormLive, BrandoAdmin.Users.SignInPolicyLive] do
+      test "#{inspect(module)} asks for the whole screen" do
+        assert Enum.any?(unquote(module).__live__()[:lifecycle].mount, &match?(%{id: {Reauth, :screen}}, &1))
+      end
+    end
+
+    test "disabling a user waits for the password", %{conn: conn} do
+      target = Factory.insert(:random_user, role: :editor, config: %UserConfig{})
+      confirmed_ago(conn, 30)
+      {:ok, view, _html} = live(conn, "/admin/users")
+
+      html = render_click(view, "disable_user", %{"id" => to_string(target.id)})
+      assert html =~ "reauth-modal"
+      assert Repo.get!(Brando.Users.User, target.id).active
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      refute Repo.get!(Brando.Users.User, target.id).active
+    end
+
+    test "logging out another session waits for the password", %{conn: conn, current_user: user} do
+      other = Users.generate_user_session_token(user)
+      confirmed_ago(conn, 30)
+      {:ok, view, _html} = live(conn, "/admin/users/security")
+
+      html = view |> element("[data-testid=session-revoke]") |> render_click()
+      assert html =~ "reauth-modal"
+      assert Users.get_user_by_session_token(other)
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      refute Users.get_user_by_session_token(other)
     end
   end
 

@@ -3,6 +3,10 @@ defmodule BrandoAdmin.Users.UserListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Users.User
   use Gettext, backend: Brando.Gettext
 
+  # Disabling, enabling and deleting users ask for the password, a code or a
+  # passkey when the session has not confirmed lately.
+  on_mount({BrandoAdmin.Reauth, events: ~w(disable_user enable_user confirm_transfer_delete)})
+
   alias Brando.Users
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Workspace

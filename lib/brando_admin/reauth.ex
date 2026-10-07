@@ -17,7 +17,9 @@ defmodule BrandoAdmin.Reauth do
   ## Screens and actions opt in with one line
 
   A whole screen — every visit to it asks first, when the session has not
-  confirmed lately, and comes back after:
+  confirmed lately, and comes back after; once open, every event of the
+  LiveView is held until the user confirms again, and the screen is left for
+  the confirm page when the confirmation runs out:
 
       on_mount {BrandoAdmin.Reauth, :screen}
 
@@ -26,8 +28,9 @@ defmodule BrandoAdmin.Reauth do
 
       on_mount {BrandoAdmin.Reauth, events: ~w(delete_environment queue_set_live)}
 
-  Events of a LiveComponent do not reach the LiveView's hooks; guard the
-  screen, or an event of the LiveView that opens the component.
+  Events of a LiveComponent do not reach the LiveView's hooks. A screen
+  guarded as a whole covers them by leaving when the confirmation runs out;
+  otherwise guard an event of the LiveView that opens the component.
 
   A controller route uses the plug, which sends the user to confirm and back
   (for a GET; a form post is sent back to the page it came from):
@@ -39,7 +42,7 @@ defmodule BrandoAdmin.Reauth do
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
-  import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, get_connect_info: 2, push_navigate: 2, redirect: 2]
+  import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, push_navigate: 2, redirect: 2]
 
   alias Brando.Users
   alias Brando.Users.Passkeys
@@ -55,8 +58,8 @@ defmodule BrandoAdmin.Reauth do
   @spec window_seconds() :: pos_integer()
   def window_seconds, do: ((Brando.config(__MODULE__) || [])[:window_minutes] || 10) * 60
 
-  @doc "Whether the session `token` confirmed within the window."
-  @spec fresh?(binary() | nil) :: boolean()
+  @doc "Whether the session (its token, or its token row's id) confirmed within the window."
+  @spec fresh?(binary() | integer() | nil) :: boolean()
   def fresh?(token), do: Users.session_confirmed_within?(token, window_seconds())
 
   @doc "Where to confirm, coming back to `return_to` after."
@@ -99,8 +102,17 @@ defmodule BrandoAdmin.Reauth do
   ## on_mount
 
   def on_mount(:screen, _params, session, socket) do
-    if fresh?(session["user_token"]) do
-      {:cont, socket}
+    session_id = Users.token_id(session["user_token"])
+
+    socket =
+      socket
+      |> setup(session_id, :all)
+      |> attach_hook(:brando_reauth_uri, :handle_params, fn _params, uri, socket ->
+        {:cont, Phoenix.Component.assign(socket, :reauth_return_to, local_path(uri))}
+      end)
+
+    if fresh?(session_id) do
+      {:cont, schedule_expiry(socket, session_id)}
     else
       {:cont,
        attach_hook(socket, :brando_reauth_screen, :handle_params, fn _params, uri, socket ->
@@ -110,39 +122,72 @@ defmodule BrandoAdmin.Reauth do
   end
 
   def on_mount(opts, _params, session, socket) when is_list(opts) do
-    events = Keyword.get(opts, :events, [])
-    token = session["user_token"]
+    session_id = Users.token_id(session["user_token"])
 
     socket =
       socket
       |> Phoenix.Component.assign(:reauth, Keyword.get(opts, :prompt))
-      |> Phoenix.Component.assign(:reauth_meta, meta(socket))
-      |> attach_hook(:brando_reauth, :handle_event, fn event, params, socket ->
-        handle_event(event, params, socket, events, token)
-      end)
+      |> setup(session_id, Keyword.get(opts, :events, []))
 
     {:cont, socket}
   end
 
-  defp meta(socket) do
+  # The session is kept by its token row's id, so the token itself stays out
+  # of the LiveView's state.
+  defp setup(socket, session_id, events) do
+    socket
+    |> Phoenix.Component.assign_new(:reauth, fn -> nil end)
+    |> Phoenix.Component.assign(:reauth_meta, SecurityLog.socket_meta(socket))
+    |> attach_hook(:brando_reauth, :handle_event, fn event, params, socket ->
+      handle_event(event, params, socket, events, session_id)
+    end)
+  end
+
+  # A screen opened while confirmed is left when the confirmation runs out,
+  # so that a socket held open cannot outlast it; the confirm page brings the
+  # user back. Every event is checked as well (see `handle_event/5`).
+  defp schedule_expiry(socket, session_id) do
     if connected?(socket) do
-      SecurityLog.meta(%{
-        peer_data: get_connect_info(socket, :peer_data),
-        user_agent: get_connect_info(socket, :user_agent)
-      })
+      send_check(session_id)
+
+      attach_hook(socket, :brando_reauth_expiry, :handle_info, fn
+        {__MODULE__, :check, ^session_id}, socket -> {:halt, check_expiry(socket, session_id)}
+        _message, socket -> {:cont, socket}
+      end)
+    else
+      socket
     end
+  end
+
+  defp check_expiry(socket, session_id) do
+    if fresh?(session_id) do
+      send_check(session_id)
+      socket
+    else
+      redirect(socket, to: confirm_path(socket.assigns[:reauth_return_to] || "/admin"))
+    end
+  end
+
+  defp send_check(session_id) do
+    remaining =
+      case Users.session_confirmed_at(session_id) do
+        nil -> 0
+        at -> window_seconds() * 1000 - NaiveDateTime.diff(NaiveDateTime.utc_now(), at, :millisecond)
+      end
+
+    Process.send_after(self(), {__MODULE__, :check, session_id}, max(remaining, 0) + 500)
   end
 
   ## The prompt's events
 
-  defp handle_event("brando:reauth:" <> action, params, socket, _events, token) do
-    if socket.assigns[:reauth], do: prompt_event(action, params, socket, token), else: {:halt, socket}
+  defp handle_event("brando:reauth:" <> action, params, socket, _events, session_id) do
+    if socket.assigns[:reauth], do: prompt_event(action, params, socket, session_id), else: {:halt, socket}
   end
 
-  defp handle_event(event, params, socket, events, token) do
+  defp handle_event(event, params, socket, events, session_id) do
     cond do
-      event not in events -> {:cont, socket}
-      fresh?(token) -> {:cont, socket}
+      events != :all and event not in events -> {:cont, socket}
+      fresh?(session_id) -> {:cont, socket}
       true -> {:halt, ask(socket, %{event: event, params: params})}
     end
   end
@@ -157,29 +202,35 @@ defmodule BrandoAdmin.Reauth do
     )
   end
 
-  defp prompt_event("submit", %{"reauth" => %{"proof" => proof}}, socket, token) do
+  defp prompt_event("submit", %{"reauth" => %{"proof" => proof}}, socket, session_id) do
     %{current_user: user, reauth_meta: meta} = socket.assigns
 
     case TwoFactor.confirm(user, proof, meta) do
-      :ok -> confirmed(socket, token)
+      :ok -> confirmed(socket, session_id)
       {:error, reason} -> {:halt, error(socket, reason)}
     end
   end
 
-  defp prompt_event("cancel", _params, socket, _token) do
+  defp prompt_event("cancel", _params, socket, _session_id) do
     case socket.assigns.reauth do
       %{return_to: _} -> {:halt, push_navigate(socket, to: "/admin")}
       _ -> {:halt, Phoenix.Component.assign(socket, :reauth, nil)}
     end
   end
 
-  defp prompt_event("passkey_options", _params, socket, _token) do
+  defp prompt_event("passkey_options", _params, socket, _session_id) do
     {challenge, options} = Passkeys.authentication_challenge(socket.assigns.current_user)
-    socket = Phoenix.Component.update(socket, :reauth, &%{&1 | challenge: challenge})
+    socket = Phoenix.Component.update(socket, :reauth, &%{&1 | challenge: Brando.Redacted.wrap(challenge)})
     {:halt, %{publicKey: options}, socket}
   end
 
-  defp prompt_event("passkey", params, %{assigns: %{reauth: %{challenge: %Wax.Challenge{} = challenge}}} = socket, token) do
+  defp prompt_event(
+         "passkey",
+         params,
+         %{assigns: %{reauth: %{challenge: %Brando.Redacted{} = challenge}}} = socket,
+         session_id
+       ) do
+    challenge = Brando.Redacted.value(challenge)
     %{current_user: user, reauth_meta: meta} = socket.assigns
     # A challenge answers once
     socket = Phoenix.Component.update(socket, :reauth, &%{&1 | challenge: nil})
@@ -189,7 +240,7 @@ defmodule BrandoAdmin.Reauth do
         {:halt, error(socket, :locked)}
 
       match?({:ok, _, _}, Passkeys.authenticate(user, params, challenge)) ->
-        confirmed(socket, token)
+        confirmed(socket, session_id)
 
       true ->
         case Throttle.failed(user, :confirm, meta || %{}) do
@@ -199,14 +250,14 @@ defmodule BrandoAdmin.Reauth do
     end
   end
 
-  defp prompt_event("passkey_error", _params, socket, _token), do: {:halt, error(socket, :passkey)}
-  defp prompt_event(_action, _params, socket, _token), do: {:halt, socket}
+  defp prompt_event("passkey_error", _params, socket, _session_id), do: {:halt, error(socket, :passkey)}
+  defp prompt_event(_action, _params, socket, _session_id), do: {:halt, socket}
 
   defp error(socket, reason), do: Phoenix.Component.update(socket, :reauth, &%{&1 | error: reason})
 
   # Confirmed: carry on with what was asked, or go back to the screen
-  defp confirmed(socket, token) do
-    Users.confirm_session(token)
+  defp confirmed(socket, session_id) do
+    Users.confirm_session(session_id)
     pending = socket.assigns.reauth
     socket = Phoenix.Component.assign(socket, :reauth, nil)
 
