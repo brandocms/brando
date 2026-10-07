@@ -20,6 +20,11 @@ production dump.
 
 #### Breaking
 
+- **Notes need two tables.** `brando_203` creates `entry_notes` and
+  `note_mentions` in every environment. Run `mix brando.gen.migrations` and
+  `mix ecto.migrate`; until then the entry editor's Notes panel stays empty
+  and saves carry on without it.
+
 - **Users have two new columns.** `job_title` and `same_as` back the user
   form's Job title and Profile links. Run `mix brando.gen.migrations` and
   `mix ecto.migrate` for `brando_202`; until then, loading users fails with a
@@ -569,6 +574,23 @@ production dump.
 
 #### Features
 
+- **Notes on entries.** Editors can leave each other notes in the entry
+  editor, in a panel docked beside the content: on the entry, a block (the
+  note button in its toolbar), a field (a button beside its label) or text
+  selected in a block's rich text ("Add note" over the selection, ⌥⌘M).
+  Threads have replies and can be resolved and reopened; resolved threads
+  collapse and can be searched. `@Name` mentions anyone who can read the
+  entry: they get a toast if they are online and an email, at most one every
+  ten minutes (`Brando.Worker.NoteMentions`). Blocks with open notes show an
+  amber count and marked text is highlighted, in the editor only: the mark
+  (`<span data-brando-note>`) is stripped from every render, so it never
+  reaches the site or the live preview. Notes belong to the entry, not a
+  revision: restoring a revision keeps them, a note on a deleted block is
+  kept as detached, and one whose text was deleted becomes a note on its
+  block. Notes follow the entry to the trash and back, are kept per site
+  like revisions, and adding, resolving and reopening them shows in the
+  entry's activity. Anyone who may update an entry may write notes on it.
+  See `Brando.Notes`.
 - **Videos and authors in JSON-LD.** Entries whose schema has a `video`
   property (`Article`, `CreativeWork`) now describe the videos they show — the
   blueprint's video fields and the preloaded videos in its blocks — as
