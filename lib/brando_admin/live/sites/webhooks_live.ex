@@ -740,7 +740,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
   defp pause_text(%Webhook{paused_reason: :environment_copy}),
     do:
       gettext(
-        "Paused because this environment was copied from another one. Resume it only if this environment should call this URL."
+        "Paused because this environment was copied or restored from another one. It resumes when this environment goes live; resume it sooner only if this environment should call this URL."
       )
 
   defp pause_text(_webhook), do: gettext("Nothing is sent while it is paused. Changes made meanwhile are not sent later.")

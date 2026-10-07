@@ -618,8 +618,9 @@ production dump.
   URLs on public addresses, with retries for about a day, a delivery log,
   redelivery and a test event. Managing them needs the new Webhooks
   permission (`brando.webhooks.manage`; admins and superusers without
-  groups) and a recent password. Copying an environment copies its
-  webhooks paused. See [Webhooks and content events](guides/webhooks.md).
+  groups) and a recent password. Copying an environment, or restoring an
+  archive, pauses the copy's webhooks; they resume when that environment
+  goes live. See [Webhooks and content events](guides/webhooks.md).
 
 - **Notes on entries.** Editors can leave each other notes in the entry
   editor, in a panel docked beside the content: on the entry, a block (the

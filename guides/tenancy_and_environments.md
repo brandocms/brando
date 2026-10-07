@@ -555,9 +555,13 @@ result.archive_schema
 #=> "tenant_acme_staging_archive_20260816143000"
 ```
 
-The target's [webhooks](webhooks.md) are the source's after a copy, paused and
-with an empty delivery log, so a staging copy never calls the endpoints
-production calls. Resume them in the target only if it should.
+The target's [webhooks](webhooks.md) are the source's after a copy. They are
+paused and the delivery log is empty, so a staging copy never calls the
+endpoints production calls. An archive restored with `rollback/2` gets its
+webhooks paused the same way. When an environment is set live, by hand or as
+scheduled, the webhooks that were paused because it was a copy resume.
+Webhooks paused by hand or after failing deliveries stay paused, and the
+previous live environment keeps its webhooks as they were.
 
 Copying requires `pg_dump` and `psql` compatible with the target PostgreSQL
 server. Brando finds them on `PATH`; explicit locations can be configured when

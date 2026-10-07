@@ -5,9 +5,11 @@ defmodule Brando.Webhooks do
 
   Webhooks belong to a site environment: their tables live in its schema,
   so a webhook, its deliveries and every id a screen receives are looked up
-  in the current environment only. Copying an environment copies its
-  webhooks paused (`after_environment_copy/1`), so a staging copy never
-  calls production endpoints until someone resumes them there.
+  in the current environment only. Copying an environment, or restoring an
+  archive as a new one, pauses the copy's webhooks
+  (`after_environment_copy/2`), so a staging copy never calls production
+  endpoints. When that environment goes live, they resume
+  (`after_going_live/2`); webhooks paused for another reason stay paused.
 
   Managing webhooks needs the Webhooks permission (`brando.webhooks.manage`)
   with group authorization, or the admin or superuser role without it. The
@@ -566,12 +568,24 @@ defmodule Brando.Webhooks do
   end
 
   @doc """
-  After an environment was copied into `prefix`: its webhooks — the source's —
-  are paused, and the source's delivery log is cleared, so the copy calls no
-  endpoint until someone resumes its webhooks there.
+  After an environment's content was replaced from another schema — copied
+  from another environment, or restored from an archive as a new
+  environment — its webhooks (the source's) are paused with the reason
+  `:environment_copy`, and the delivery log that came along is cleared, so
+  the copy calls no endpoint. Webhooks paused for another reason stay as
+  they are. `actor` is recorded in Activity.
   """
-  def after_environment_copy(prefix) do
-    if tables?(prefix), do: pause_copied(prefix), else: :ok
+  def after_environment_copy(prefix, actor \\ :system) do
+    if tables?(prefix), do: pause_copied(prefix, actor), else: :ok
+  end
+
+  @doc """
+  After the environment at `prefix` became the live one: its webhooks paused
+  because the environment was a copy are resumed. Webhooks paused after
+  failures or by hand stay paused. Returns how many were resumed.
+  """
+  def after_going_live(prefix, actor \\ :system) do
+    if tables?(prefix), do: resume_copied(prefix, actor), else: 0
   end
 
   defp tables?(prefix) do
@@ -579,21 +593,52 @@ defmodule Brando.Webhooks do
     not is_nil(table)
   end
 
-  defp pause_copied(prefix) do
+  defp pause_copied(prefix, actor) do
     now = DateTime.utc_now()
 
-    Repo.update_all(
-      from(w in Webhook, where: w.active == true),
-      [set: [active: false, paused_reason: :environment_copy, paused_at: now]],
-      prefix: prefix
-    )
+    {_count, paused} =
+      Repo.update_all(
+        from(w in Webhook, where: w.active == true, select: w),
+        [set: [active: false, paused_reason: :environment_copy, paused_at: now]],
+        prefix: prefix
+      )
 
     Repo.delete_all(Delivery, prefix: prefix)
+
+    record_lifecycle(prefix, paused, actor, %{"webhook" => "paused", "reason" => "environment_copy"})
     :ok
   rescue
     error ->
       Logger.error("[Brando.Webhooks] Could not pause the webhooks of #{prefix}: " <> Exception.message(error))
       {:error, :webhooks_not_paused}
+  end
+
+  defp resume_copied(prefix, actor) do
+    {count, resumed} =
+      Repo.update_all(
+        from(w in Webhook, where: w.active == false and w.paused_reason == :environment_copy, select: w),
+        [set: [active: true, paused_reason: nil, paused_at: nil, failing_since: nil]],
+        prefix: prefix
+      )
+
+    record_lifecycle(prefix, resumed, actor, %{"webhook" => "resumed", "reason" => "went_live"})
+    count
+  rescue
+    error ->
+      Logger.error("[Brando.Webhooks] Could not resume the webhooks of #{prefix}: " <> Exception.message(error))
+      0
+  end
+
+  defp record_lifecycle(_prefix, [], _actor, _details), do: :ok
+
+  defp record_lifecycle(prefix, webhooks, actor, details) do
+    Brando.Tenant.with_prefix(prefix, fn ->
+      Enum.each(webhooks, fn webhook ->
+        Activity.setting_changed(:updated, webhook, webhook.name, actor, fields: ["active"], details: details)
+      end)
+
+      broadcast(:changed)
+    end)
   end
 
   ## Updates for the admin

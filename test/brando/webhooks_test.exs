@@ -542,16 +542,16 @@ defmodule Brando.WebhooksTest do
     end
   end
 
-  describe "environment copy" do
+  describe "the environment lifecycle" do
     defmodule CopyingCloner do
       @behaviour Brando.Environments.SchemaCloner
 
-      # Stands in for pg_dump: the webhook tables with their rows.
+      # Stands in for pg_dump: the tables webhooks use, with their rows.
       @impl true
       def clone_schema(source, target) do
         :ok = Brando.Environments.Schema.create(target)
 
-        for table <- ["webhooks", "webhook_deliveries"] do
+        for table <- ["webhooks", "webhook_deliveries", "activity_events"] do
           Brando.Repo.repo().query!(~s|CREATE TABLE "#{target}".#{table} (LIKE "#{source}".#{table} INCLUDING ALL)|)
           Brando.Repo.repo().query!(~s|INSERT INTO "#{target}".#{table} SELECT * FROM "#{source}".#{table}|)
         end
@@ -560,12 +560,21 @@ defmodule Brando.WebhooksTest do
       end
     end
 
-    test "copying production to staging copies its webhooks paused", %{user: user} do
+    defmodule NoMigrator do
+      @behaviour Brando.Environments.Migrator
+      @impl true
+      def migrate(_site, _environment), do: {:ok, []}
+    end
+
+    setup %{user: user} do
       alias Brando.Tenant.Registry
 
       put_test_env(:tenancy_mode, :multi)
       put_test_env(:environment_schema_cloner, CopyingCloner)
+      put_test_env(:tenant_migrator, NoMigrator)
       put_test_env(:sites_path, Path.join(System.tmp_dir!(), "brando-webhooks-#{System.unique_integer([:positive])}"))
+      Brando.Tenant.Cache.clear()
+      on_exit(fn -> Brando.Tenant.Cache.clear() end)
 
       {:ok, site} =
         Registry.create_site(%{
@@ -582,26 +591,117 @@ defmodule Brando.WebhooksTest do
 
       for prefix <- ["tenant_hooks-copy_production", "tenant_hooks-copy_staging"] do
         Repo.query!(~s|CREATE SCHEMA "#{prefix}"|)
-        Repo.query!(~s|CREATE TABLE "#{prefix}".webhooks (LIKE public.webhooks INCLUDING ALL)|)
-        Repo.query!(~s|CREATE TABLE "#{prefix}".webhook_deliveries (LIKE public.webhook_deliveries INCLUDING ALL)|)
+
+        for table <- ["webhooks", "webhook_deliveries", "activity_events"],
+            do: Repo.query!(~s|CREATE TABLE "#{prefix}".#{table} (LIKE public.#{table} INCLUDING ALL)|)
       end
 
-      {:ok, webhook, _} =
-        Brando.Tenant.with_prefix("tenant_hooks-copy_production", fn ->
-          Webhooks.create_webhook(%{"name" => "Production cache", "url" => "https://hooks.example.com/"}, user)
+      in_production = fn fun -> Brando.Tenant.with_prefix("tenant_hooks-copy_production", fun) end
+
+      {:ok, deploy, _} =
+        in_production.(fn ->
+          Webhooks.create_webhook(%{"name" => "Deploy hook", "url" => "https://hooks.example.com/deploy"}, user)
         end)
 
-      assert {:ok, _} = Brando.Environments.copy_environment(production, staging)
+      {:ok, broken, _} =
+        in_production.(fn ->
+          {:ok, webhook, secret} =
+            Webhooks.create_webhook(%{"name" => "Broken cache", "url" => "https://hooks.example.com/cache"}, user)
+
+          {:ok, webhook} = Webhooks.pause(webhook, :failures, :system)
+
+          Brando.Repo.insert!(%Delivery{
+            webhook_id: webhook.id,
+            delivery_id: Ecto.UUID.generate(),
+            event: "entry.updated",
+            payload: %{},
+            state: "failed"
+          })
+
+          {:ok, webhook, secret}
+        end)
+
+      %{site: site, production: production, staging: staging, deploy: deploy, broken: broken}
+    end
+
+    # The details of a webhook's Activity events in the current environment
+    defp webhook_activity(id) do
+      Brando.Repo.all(
+        from(e in Brando.Activity.Event,
+          where: e.schema == ^to_string(Webhook) and e.entry_id == ^id,
+          select: e.details
+        )
+      )
+    end
+
+    defp webhook_in(prefix, id) do
+      Brando.Tenant.with_prefix(prefix, fn ->
+        {:ok, webhook} = Webhooks.get_webhook(id)
+        webhook
+      end)
+    end
+
+    test "a copy's webhooks are paused and its log is empty; the source's are untouched", c do
+      assert {:ok, _} = Brando.Environments.copy_environment(c.production, c.staging)
+
+      assert %{active: false, paused_reason: :environment_copy} = webhook_in("tenant_hooks-copy_staging", c.deploy.id)
+      # Paused for another reason: left as it was
+      assert %{active: false, paused_reason: :failures} = webhook_in("tenant_hooks-copy_staging", c.broken.id)
 
       Brando.Tenant.with_prefix("tenant_hooks-copy_staging", fn ->
-        assert {:ok, copy} = Webhooks.get_webhook(webhook.id)
-        assert copy.active == false
-        assert copy.paused_reason == :environment_copy
+        assert Webhooks.list_all_deliveries() == []
+
+        assert %{"webhook" => "paused", "reason" => "environment_copy"} in webhook_activity(c.deploy.id)
+        refute %{"webhook" => "paused", "reason" => "environment_copy"} in webhook_activity(c.broken.id)
       end)
 
-      Brando.Tenant.with_prefix("tenant_hooks-copy_production", fn ->
-        assert {:ok, %{active: true}} = Webhooks.get_webhook(webhook.id)
+      assert %{active: true} = webhook_in("tenant_hooks-copy_production", c.deploy.id)
+    end
+
+    test "going live resumes webhooks paused by the copy, not those paused after failures", c do
+      assert {:ok, _} = Brando.Environments.copy_environment(c.production, c.staging)
+      assert {:ok, %{live: true}} = Brando.Environments.set_live(c.staging)
+
+      assert %{active: true, paused_reason: nil} = webhook_in("tenant_hooks-copy_staging", c.deploy.id)
+      assert %{active: false, paused_reason: :failures} = webhook_in("tenant_hooks-copy_staging", c.broken.id)
+
+      Brando.Tenant.with_prefix("tenant_hooks-copy_staging", fn ->
+        assert %{"webhook" => "resumed", "reason" => "went_live"} in webhook_activity(c.deploy.id)
+        refute %{"webhook" => "resumed", "reason" => "went_live"} in webhook_activity(c.broken.id)
       end)
+
+      # The environment that was live keeps its webhooks as they were
+      assert %{active: true} = webhook_in("tenant_hooks-copy_production", c.deploy.id)
+      assert %{active: false, paused_reason: :failures} = webhook_in("tenant_hooks-copy_production", c.broken.id)
+    end
+
+    test "a webhook paused by hand in the copy stays paused when it goes live", c do
+      assert {:ok, _} = Brando.Environments.copy_environment(c.production, c.staging)
+
+      Brando.Tenant.with_prefix("tenant_hooks-copy_staging", fn ->
+        {:ok, webhook} = Webhooks.get_webhook(c.deploy.id)
+        {:ok, webhook} = Webhooks.resume(webhook, :system)
+        {:ok, _} = Webhooks.pause(webhook, :manual, :system)
+      end)
+
+      assert {:ok, _} = Brando.Environments.set_live(c.staging)
+      assert %{active: false, paused_reason: :manual} = webhook_in("tenant_hooks-copy_staging", c.deploy.id)
+    end
+
+    test "an archive restored as a new environment has its webhooks paused", c do
+      # Going live archives production, webhooks active
+      assert {:ok, _} = Brando.Environments.set_live(c.staging)
+      assert {:ok, restored} = Brando.Environments.rollback(c.site)
+      refute restored.live
+
+      prefix = Brando.Tenant.prefix(c.site, restored)
+      assert %{active: false, paused_reason: :environment_copy} = webhook_in(prefix, c.deploy.id)
+      assert %{active: false, paused_reason: :failures} = webhook_in(prefix, c.broken.id)
+      Brando.Tenant.with_prefix(prefix, fn -> assert Webhooks.list_all_deliveries() == [] end)
+
+      # Making it live again resumes it
+      assert {:ok, _} = Brando.Environments.set_live(restored)
+      assert %{active: true} = webhook_in(prefix, c.deploy.id)
     end
   end
 

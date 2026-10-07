@@ -17311,8 +17311,8 @@ msgstr "Satt på pause fordi leveringene feilet i et døgn. Sjekk mottakeren, og
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
-msgid "Paused because this environment was copied from another one. Resume it only if this environment should call this URL."
-msgstr "Satt på pause fordi dette miljøet ble kopiert fra et annet. Gjenoppta bare hvis dette miljøet skal kalle denne URL-en."
+msgid "Paused because this environment was copied or restored from another one. It resumes when this environment goes live; resume it sooner only if this environment should call this URL."
+msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet fra et annet. Den gjenopptas når dette miljøet blir live; gjenoppta den før bare hvis dette miljøet skal kalle denne URL-en."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -17574,3 +17574,13 @@ msgid "A webhook was paused"
 msgid_plural "%{count} webhooks were paused"
 msgstr[0] "En webhook ble satt på pause"
 msgstr[1] "%{count} webhooks ble satt på pause"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because this environment was copied or restored"
+msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Resumed when this environment went live"
+msgstr "Gjenopptatt da dette miljøet ble live"

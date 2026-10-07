@@ -412,6 +412,12 @@ defmodule BrandoAdmin.Components.Activity do
   defp lines(%{schema: @webhook, details: %{"webhook" => "paused", "reason" => "failures"}}, _fields, _states),
     do: [gettext("Paused after its deliveries kept failing")]
 
+  defp lines(%{schema: @webhook, details: %{"webhook" => "paused", "reason" => "environment_copy"}}, _fields, _states),
+    do: [gettext("Paused because this environment was copied or restored")]
+
+  defp lines(%{schema: @webhook, details: %{"webhook" => "resumed", "reason" => "went_live"}}, _fields, _states),
+    do: [gettext("Resumed when this environment went live")]
+
   defp lines(%{schema: @webhook, details: %{"webhook" => "paused"}}, _fields, _states), do: [gettext("Paused")]
   defp lines(%{schema: @webhook, details: %{"webhook" => "resumed"}}, _fields, _states), do: [gettext("Resumed")]
 

@@ -17316,7 +17316,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
-msgid "Paused because this environment was copied from another one. Resume it only if this environment should call this URL."
+msgid "Paused because this environment was copied or restored from another one. It resumes when this environment goes live; resume it sooner only if this environment should call this URL."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -17579,3 +17579,13 @@ msgid "A webhook was paused"
 msgid_plural "%{count} webhooks were paused"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because this environment was copied or restored"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Resumed when this environment went live"
+msgstr ""

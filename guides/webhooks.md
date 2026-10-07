@@ -79,9 +79,25 @@ group authorization, admins and superusers. Saving, deleting, pausing,
 rotating the secret, redelivering and sending a test event ask for the
 password again when the session has not confirmed it in the last ten minutes.
 
-Webhooks belong to one environment. Copying an environment copies its
-webhooks paused, with the reason shown, so a staging copy never calls a
-production endpoint until someone resumes the webhook there.
+### Webhooks and environments
+
+Webhooks belong to one environment, and they follow it through the release
+flow:
+
+- When you copy an environment (Production → Staging, say), the copy gets the
+  source's webhooks, paused, and an empty delivery log. Staging therefore
+  never calls the endpoints production calls.
+- When an archive is restored as a new environment (a rollback), its
+  webhooks are paused the same way.
+- When an environment goes live, by hand or as scheduled, the webhooks that
+  were paused because it was a copy start sending again. Webhooks paused by
+  hand, or after their deliveries kept failing, stay paused.
+- The environment that was live before keeps its webhooks as they were.
+- Each pause and resume is recorded in Activity.
+
+You can resume a copy's webhook before it goes live, if that environment
+should call the URL. Every request carries the `environment` it came from,
+so a receiver can also filter by it.
 
 ## The request
 
