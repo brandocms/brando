@@ -140,6 +140,7 @@ defmodule Brando.AI.Agent.Loop do
   defp tool_context(conversation, user) do
     %Tools.Context{
       actor: user,
+      origin: :assistant,
       conversation_id: conversation.id,
       proposal_id: conversation.proposal_id,
       # Uploads still in progress have an alias but no asset yet.

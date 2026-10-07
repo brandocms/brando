@@ -6,10 +6,17 @@ defmodule Brando.Content.Proposals.Record do
   version is marked `superseded`, and its approval no longer counts. The
   operations are stored frozen, in `Brando.Content.Proposals.Codec` form, so
   review, preview and apply all build the same content.
+
+  `origin` says where the proposal came from: `"assistant"` (the admin's
+  Assistant, in a conversation) or `"mcp"` (a tool connected over MCP, with
+  no conversation). `client` names that tool when it is known, such as
+  "Claude Code". Proposals stored before `brando_207` without a
+  conversation have no origin.
   """
   use Ecto.Schema
 
   @statuses ~w(pending approved applied undone superseded cancelled)
+  @origins ~w(assistant mcp)
 
   @type t :: %__MODULE__{}
 
@@ -22,6 +29,8 @@ defmodule Brando.Content.Proposals.Record do
     field :scope, :string
     field :actor_id, :integer
     field :summary, :string
+    field :origin, :string
+    field :client, :string
     field :operations, {:array, :map}
     field :fingerprints, :map
     field :module_versions, {:array, :map}
@@ -34,4 +43,5 @@ defmodule Brando.Content.Proposals.Record do
   end
 
   def statuses, do: @statuses
+  def origins, do: @origins
 end

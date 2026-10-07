@@ -1769,6 +1769,14 @@ defmodule Brando.Content.Proposals do
     * `:supersedes` — the id of the proposal this one refines. It is marked
       `superseded`, its approval lapses, and this proposal takes the next version.
     * `:summary` — a short description for review
+    * `:origin` — where the proposal comes from: `:assistant` (the default
+      with a conversation) or `:mcp`, a tool connected over MCP
+    * `:client` — the connected tool's name, such as "Claude Code", when it
+      is known
+
+  A refinement keeps the origin and client of the version it supersedes.
+  Proposals without a conversation are listed for review by
+  `list_external/2`.
 
   Validation problems do not fail; they are stored and block approval.
   """
@@ -1801,9 +1809,14 @@ defmodule Brando.Content.Proposals do
   end
 
   defp new_record(proposal, previous, opts) do
+    conversation_id = if(previous, do: previous.conversation_id, else: opts[:conversation_id])
+    {origin, client} = origin(previous, conversation_id, opts)
+
     %Record{
       id: proposal.id,
-      conversation_id: if(previous, do: previous.conversation_id, else: opts[:conversation_id]),
+      conversation_id: conversation_id,
+      origin: origin,
+      client: client,
       version: if(previous, do: previous.version + 1, else: 1),
       supersedes_id: previous && previous.id,
       scope: proposal.scope,
@@ -1823,6 +1836,35 @@ defmodule Brando.Content.Proposals do
     }
   end
 
+  # A refinement keeps where the proposal came from unless told otherwise.
+  defp origin(nil, conversation_id, opts),
+    do: {origin!(opts[:origin]) || (conversation_id && "assistant"), client(opts[:client])}
+
+  defp origin(previous, _conversation_id, opts),
+    do: {origin!(opts[:origin]) || previous.origin, client(opts[:client]) || previous.client}
+
+  defp origin!(nil), do: nil
+
+  defp origin!(origin) do
+    origin = to_string(origin)
+
+    if origin in Record.origins(),
+      do: origin,
+      else: Error.fail!(dgettext("content_proposals", "Unknown proposal origin."))
+  end
+
+  # A connected tool names itself; keep a short, single line of it.
+  @client_length 80
+
+  defp client(client) when is_binary(client) do
+    case client |> String.replace(~r/\s+/u, " ") |> String.trim() do
+      "" -> nil
+      client -> String.slice(client, 0, @client_length)
+    end
+  end
+
+  defp client(_), do: nil
+
   @doc """
   Load a stored proposal version. Its entries are read as they are now; the
   fingerprints are the ones captured when it was prepared, so a preview or
@@ -1839,6 +1881,49 @@ defmodule Brando.Content.Proposals do
         where: r.conversation_id == ^conversation_id and r.scope == ^Transfer.scope() and r.actor_id == ^user!(actor).id,
         order_by: [desc: r.version]
       )
+    )
+  end
+
+  @doc """
+  The actor's proposals in this site/environment that came from outside the
+  admin's conversations — from a tool connected over MCP — newest first.
+
+  Proposals under review and applied or undone ones are listed; superseded
+  and discarded versions are not. The records carry what a list shows, not
+  their operations: load one with `get/2` to review it. Options: `:limit`
+  (default 30).
+  """
+  @spec list_external(term(), keyword()) :: [Record.t()]
+  def list_external(actor, opts \\ []) do
+    Repo.all(
+      from(r in external(actor),
+        where: r.status not in ~w(superseded cancelled),
+        order_by: [desc: r.inserted_at],
+        limit: ^Keyword.get(opts, :limit, 30),
+        select:
+          struct(r, [:id, :version, :scope, :actor_id, :summary, :origin, :client, :status, :expires_at, :inserted_at])
+      )
+    )
+  end
+
+  @doc """
+  How many of the actor's proposals from outside the admin's conversations
+  wait for review in this site/environment: pending or approved, and not
+  expired.
+  """
+  @spec count_external(term()) :: non_neg_integer()
+  def count_external(actor) do
+    now = DateTime.utc_now()
+
+    Repo.aggregate(
+      from(r in external(actor), where: r.status in ~w(pending approved) and r.expires_at > ^now),
+      :count
+    )
+  end
+
+  defp external(actor) do
+    from(r in Record,
+      where: is_nil(r.conversation_id) and r.scope == ^Transfer.scope() and r.actor_id == ^user!(actor).id
     )
   end
 
@@ -1914,7 +1999,10 @@ defmodule Brando.Content.Proposals do
   has no revision to go back to.
   """
   @spec undo(Ecto.UUID.t(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
-  def undo(id, actor), do: Brando.Activity.with_source(:assistant, fn -> do_undo(id, actor) end)
+  def undo(id, actor) do
+    {source, details} = activity_source(id, actor)
+    Brando.Activity.with_source(source, details, fn -> do_undo(id, actor) end)
+  end
 
   defp do_undo(id, actor) do
     Error.protect(fn ->
@@ -2079,8 +2167,20 @@ defmodule Brando.Content.Proposals do
   returns its receipt.
   """
   @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
-  def apply(id, version, actor, opts \\ []),
-    do: Brando.Activity.with_source(:assistant, fn -> do_apply(id, version, actor, opts) end)
+  def apply(id, version, actor, opts \\ []) do
+    {source, details} = activity_source(id, actor)
+    Brando.Activity.with_source(source, details, fn -> do_apply(id, version, actor, opts) end)
+  end
+
+  # The activity log says who prepared the change: the Assistant, or a tool
+  # connected over MCP, by name when it is known. The person is the reviewer.
+  defp activity_source(id, actor) do
+    case Error.protect(fn -> record!(id, actor) end) do
+      {:ok, %Record{origin: "mcp", client: nil}} -> {:mcp, %{}}
+      {:ok, %Record{origin: "mcp", client: client}} -> {:mcp, %{"client" => client}}
+      _ -> {:assistant, %{}}
+    end
+  end
 
   defp do_apply(id, version, actor, opts) do
     result =
@@ -2186,6 +2286,8 @@ defmodule Brando.Content.Proposals do
         status: record.status,
         conversation_id: record.conversation_id,
         summary: record.summary,
+        origin: record.origin,
+        client: record.client,
         expires_at: record.expires_at
     }
   end

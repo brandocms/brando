@@ -557,3 +557,8 @@ msgstr "Denne innholdstypen har ingen status."
 #, elixir-autogen, elixir-format
 msgid "You cannot publish or unpublish this content type."
 msgstr "Du kan ikke publisere eller avpublisere denne innholdstypen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown proposal origin."
+msgstr "Ukjent opphav for forslaget."

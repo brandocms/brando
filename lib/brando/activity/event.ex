@@ -25,7 +25,7 @@ defmodule Brando.Activity.Event do
     :note_reopened
   ]
 
-  @sources [:admin, :scheduler, :assistant, :import, :system]
+  @sources [:admin, :scheduler, :assistant, :mcp, :import, :system]
 
   @type t :: %__MODULE__{}
 

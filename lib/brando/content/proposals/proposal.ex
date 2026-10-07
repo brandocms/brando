@@ -13,6 +13,8 @@ defmodule Brando.Content.Proposals.Proposal do
       changes live
     * `status`, `version`, `conversation_id`, `summary`, `expires_at` — set
       once the proposal is stored with `Brando.Content.Proposals.propose/3`
+    * `origin`, `client` — where the stored proposal came from: `"assistant"`
+      or `"mcp"`, and the connected tool's name when known
   """
   defstruct [
     :id,
@@ -21,6 +23,8 @@ defmodule Brando.Content.Proposals.Proposal do
     :status,
     :conversation_id,
     :summary,
+    :origin,
+    :client,
     :expires_at,
     version: 1,
     operations: [],

@@ -11,6 +11,12 @@ defmodule Brando.Content.Proposals.Tools do
   The same registry serves the admin's embedded agent and BrandoMCP's
   in-process content tools. Results are compact maps, bounded in size, so a
   model does not pay for whole entries.
+
+  A proposal records where it came from (`Context`'s `origin` and `client`).
+  The admin's agent works in a conversation; a call without one comes from
+  outside the admin and is recorded as `:mcp` unless the caller names another
+  origin. Such proposals are reviewed in the Assistant under "From connected
+  tools", and `prepare_proposal`'s result says where.
   """
   import Ecto.Query, only: [from: 2]
 
@@ -32,9 +38,14 @@ defmodule Brando.Content.Proposals.Tools do
     `attachments` maps aliases such as `"image1"` to
     `%{kind: :image | :video, id: id, label: label}`. `proposal_id` is the
     conversation's proposal under review; `prepare_proposal` refines it.
+
+    `origin` is where the call comes from: `:assistant` or `:mcp`. Without
+    one, a call in a conversation is the Assistant's and any other is
+    `:mcp`. `client` names the connected tool, such as "Claude Code", from
+    the MCP client's `clientInfo`; the admin shows it with the proposal.
     """
     @type t :: %__MODULE__{}
-    defstruct [:actor, :conversation_id, :proposal_id, attachments: %{}]
+    defstruct [:actor, :conversation_id, :proposal_id, :origin, :client, attachments: %{}]
   end
 
   @max_results 20
@@ -618,13 +629,19 @@ defmodule Brando.Content.Proposals.Tools do
            Proposals.propose(operations, context.actor,
              conversation_id: context.conversation_id,
              supersedes: refinable(context),
-             summary: args["summary"]
+             summary: args["summary"],
+             origin: origin(context),
+             client: context.client
            ) do
       review(proposal)
     else
       {:error, message} -> Error.fail!(message)
     end
   end
+
+  defp origin(%{origin: origin}) when not is_nil(origin), do: origin
+  defp origin(%{conversation_id: nil}), do: :mcp
+  defp origin(_context), do: :assistant
 
   # Refine the conversation's proposal while it is under review; after it is
   # applied or cancelled, a new proposal starts at version 1.
@@ -652,6 +669,7 @@ defmodule Brando.Content.Proposals.Tools do
       effects: Map.update!(proposal.effects, :live, fn live -> Enum.map(live, &target_key/1) end),
       note: "The user reviews and approves this in the admin. Nothing is saved yet."
     }
+    |> Map.merge(review_place(proposal))
     |> then(fn review ->
       case Proposals.notes(proposal) do
         [] ->
@@ -664,6 +682,25 @@ defmodule Brando.Content.Proposals.Tools do
           })
       end
     end)
+  end
+
+  # A proposal from outside the admin is reviewed under "From connected tools".
+  defp review_place(%{conversation_id: nil, id: id}) when is_binary(id) do
+    path = "/admin/assistant/connected/#{id}"
+
+    %{
+      note:
+        "The user reviews and approves this in the Brando admin, under Assistant → From connected tools. Nothing is saved yet.",
+      review_url: review_url(path)
+    }
+  end
+
+  defp review_place(_proposal), do: %{}
+
+  defp review_url(path) do
+    Brando.endpoint().url() <> path
+  rescue
+    _ -> path
   end
 
   defp target_key(target) when is_binary(target), do: target
