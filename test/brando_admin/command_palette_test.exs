@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.CommandPaletteTest do
   use Brando.ConnCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Authorization.{Groups, Migration, Scope}
   alias Brando.Content.Identifier
   alias Brando.Factory
@@ -206,6 +208,24 @@ defmodule BrandoAdmin.CommandPaletteTest do
       [%{items: actions}] = CommandPalette.results(context, "sommerro")
       assert %{count: 2, url: url} = Enum.find(actions, &(&1.id == "palette-assets-images"))
       assert url == "/admin/assets/images?filter%3Afolder_id=all&filter%3Apath=sommerro"
+    end
+
+    test "images in nested library folders count, images in hidden folders never do", c do
+      site = Repo.insert!(%Brando.Media.Folder{scope: "images", name: "site", path: "site"})
+      nested = Repo.insert!(%Brando.Media.Folder{scope: "images", name: "press", path: "site/press", parent_id: site.id})
+      hidden = Brando.Media.Folders.hidden_folder_id("visitor-uploads")
+
+      Factory.insert(:image, path: "images/site/press/sommerro-1.jpg", folder_id: nested.id)
+      Factory.insert(:image, path: "images/hidden/sommerro-2.jpg", folder_id: hidden)
+      Factory.insert(:image, path: "images/hidden/sommerro-3.jpg", folder_id: hidden)
+
+      context = %{c.context | assets: [images: "/admin/assets/images"]}
+      [%{items: actions}] = CommandPalette.results(context, "sommerro")
+      assert %{count: 1} = Enum.find(actions, &(&1.id == "palette-assets-images"))
+
+      Repo.delete_all(from(i in Brando.Images.Image, where: i.folder_id == ^nested.id))
+      items = context |> CommandPalette.results("sommerro") |> Enum.flat_map(& &1.items)
+      refute Enum.find(items, &(&1.id == "palette-assets-images"))
     end
   end
 

@@ -79,6 +79,10 @@ defmodule Brando.Images do
       {:folder_id, {:root, root_folder_ids}}, query ->
         from(t in query, where: is_nil(t.folder_id) or t.folder_id in ^root_folder_ids)
 
+      # Every library folder and the root: all but the hidden folders.
+      {:folder_id, {:library, hidden_folder_ids}}, query ->
+        from(t in query, where: is_nil(t.folder_id) or t.folder_id not in ^hidden_folder_ids)
+
       {:folder_id, folder_id}, query ->
         case normalize_folder_id(folder_id) do
           nil -> from(t in query, where: is_nil(t.folder_id))

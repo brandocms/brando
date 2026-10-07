@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       |> assign(:new_folder, "")
       |> assign(:show_new_folder_form, false)
       |> assign(:visible_image_count, 0)
+      |> assign(:all_folders?, false)
       |> assign(:current_folder_config_target, "default")
       |> assign(:clipboard_ids, [])
       |> assign(:root_folder_ids, [])
@@ -50,7 +51,12 @@ defmodule BrandoAdmin.Images.ImageListLive do
   @impl true
   def handle_params(params, _uri, socket) do
     folder_filter = params["filter:folder_id"] || params["filter:path"]
-    socket = socket |> assign_folder_state(folder_filter) |> assign_unused_count(params)
+
+    socket =
+      socket
+      |> assign_folder_state(folder_filter)
+      |> assign_unused_count(params)
+      |> AssetListHelpers.assign_all_folders(params, &Images.list_images/1, :visible_image_count)
 
     # Arriving without a folder at an empty root (uploads land in the default
     # config's folder, e.g. images/site/default) shows nothing. Open that
@@ -320,7 +326,13 @@ defmodule BrandoAdmin.Images.ImageListLive do
       >
         <:main_header>
           <div class="image-picker-main-header">
-            <h3>{if @current_folder == "", do: gettext("Root folder"), else: Path.basename(@current_folder)}</h3>
+            <h3>
+              {cond do
+                @all_folders? -> gettext("All folders")
+                @current_folder == "" -> gettext("Root folder")
+                true -> Path.basename(@current_folder)
+              end}
+            </h3>
             <div class="image-picker-main-actions">
               <span>
                 {ngettext("%{count} image", "%{count} images", @visible_image_count, count: @visible_image_count)}

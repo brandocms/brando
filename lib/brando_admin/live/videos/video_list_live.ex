@@ -30,6 +30,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       |> assign(:new_folder, "")
       |> assign(:show_new_folder_form, false)
       |> assign(:visible_video_count, 0)
+      |> assign(:all_folders?, false)
       |> assign(:clipboard_ids, [])
       |> assign(:playing, nil)
       |> assign(:missing_metadata_count, length(Videos.list_video_ids_missing_metadata()))
@@ -42,7 +43,11 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   @impl true
   def handle_params(params, _uri, socket) do
     folder_filter = params["filter:folder_id"] || params["filter:path"]
-    {:noreply, assign_folder_state(socket, folder_filter)}
+
+    {:noreply,
+     socket
+     |> assign_folder_state(folder_filter)
+     |> AssetListHelpers.assign_all_folders(params, &Videos.list_videos/1, :visible_video_count)}
   end
 
   @impl true
@@ -252,7 +257,13 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       >
         <:main_header>
           <div class="image-picker-main-header">
-            <h3>{if @current_folder == "", do: gettext("Library root"), else: Path.basename(@current_folder)}</h3>
+            <h3>
+              {cond do
+                @all_folders? -> gettext("All folders")
+                @current_folder == "" -> gettext("Library root")
+                true -> Path.basename(@current_folder)
+              end}
+            </h3>
             <div class="image-picker-main-actions">
               <span>
                 {ngettext("%{count} video", "%{count} videos", @visible_video_count, count: @visible_video_count)}

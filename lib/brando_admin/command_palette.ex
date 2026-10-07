@@ -284,9 +284,13 @@ defmodule BrandoAdmin.CommandPalette do
   # Images, files and videos whose name matches, linking to their library
   # filtered by the query, across every folder. One count each, only for
   # libraries in the menu.
+  defp asset_actions(%{assets: []}, _term), do: []
+
   defp asset_actions(context, term) do
+    hidden_folder_ids = Brando.Media.Folders.hidden_folder_ids()
+
     Enum.flat_map(context.assets, fn {kind, path} ->
-      case asset_count(kind, term) do
+      case asset_count(kind, term, hidden_folder_ids) do
         0 ->
           []
 
@@ -296,7 +300,8 @@ defmodule BrandoAdmin.CommandPalette do
               id: "palette-assets-#{kind}",
               kind: :action,
               label: asset_label(kind, term),
-              url: path <> "?" <> URI.encode_query([{"filter:folder_id", "all"}, {asset_filter(kind), term}]),
+              url:
+                path <> "?" <> URI.encode_query([{"filter:folder_id", "all"}, {"filter:#{asset_filter_key(kind)}", term}]),
               icon: asset_icon(kind),
               count: count
             }
@@ -305,33 +310,28 @@ defmodule BrandoAdmin.CommandPalette do
     end)
   end
 
-  defp asset_count(kind, term) do
-    contains = "%" <> escape_like(term) <> "%"
+  # Counted with the library's own filters, so the number is what the link
+  # lists: every library folder and the root, never a hidden folder.
+  defp asset_count(kind, term, hidden_folder_ids) do
+    {context, schema} = asset_source(kind)
+    filter = %{asset_filter_key(kind) => term, folder_id: {:library, hidden_folder_ids}}
 
-    query =
-      case kind do
-        :images ->
-          from(a in Brando.Images.Image, where: ilike(a.path, ^contains))
-
-        :files ->
-          from(a in Brando.Files.File, where: ilike(a.filename, ^contains))
-
-        :videos ->
-          from(a in Brando.Videos.Video,
-            where: ilike(a.title, ^contains) or ilike(a.source_url, ^contains) or ilike(a.remote_id, ^contains)
-          )
-      end
-
-    Repo.aggregate(from(a in query, where: is_nil(a.deleted_at)), :count)
+    from(a in schema, where: is_nil(a.deleted_at))
+    |> context.with_filter(schema, filter)
+    |> Repo.aggregate(:count)
   end
+
+  defp asset_source(:images), do: {Brando.Images, Brando.Images.Image}
+  defp asset_source(:files), do: {Brando.Files, Brando.Files.File}
+  defp asset_source(:videos), do: {Brando.Videos, Brando.Videos.Video}
+
+  # The library listing's own search filter for each kind
+  defp asset_filter_key(:files), do: :filename
+  defp asset_filter_key(_kind), do: :path
 
   defp asset_label(:images, term), do: gettext("Images matching “%{query}”", query: term)
   defp asset_label(:files, term), do: gettext("Files matching “%{query}”", query: term)
   defp asset_label(:videos, term), do: gettext("Videos matching “%{query}”", query: term)
-
-  # The library listing's own search filter for each kind.
-  defp asset_filter(:files), do: "filter:filename"
-  defp asset_filter(_kind), do: "filter:path"
 
   defp asset_icon(:images), do: "image"
   defp asset_icon(:files), do: "file"

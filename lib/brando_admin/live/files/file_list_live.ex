@@ -36,6 +36,7 @@ defmodule BrandoAdmin.Files.FileListLive do
       |> assign(:new_folder, "")
       |> assign(:show_new_folder_form, false)
       |> assign(:visible_file_count, 0)
+      |> assign(:all_folders?, false)
       |> assign(:current_folder_config_target, "default")
       |> assign(:clipboard_ids, [])
       |> assign(:root_folder_ids, [])
@@ -47,7 +48,11 @@ defmodule BrandoAdmin.Files.FileListLive do
   @impl true
   def handle_params(params, _uri, socket) do
     folder_filter = params["filter:folder_id"] || params["filter:path"]
-    {:noreply, assign_folder_state(socket, folder_filter)}
+
+    {:noreply,
+     socket
+     |> assign_folder_state(folder_filter)
+     |> AssetListHelpers.assign_all_folders(params, &Files.list_files/1, :visible_file_count)}
   end
 
   @impl true
@@ -294,7 +299,13 @@ defmodule BrandoAdmin.Files.FileListLive do
       >
         <:main_header>
           <div class="image-picker-main-header">
-            <h3>{if @current_folder == "", do: gettext("Library root"), else: Path.basename(@current_folder)}</h3>
+            <h3>
+              {cond do
+                @all_folders? -> gettext("All folders")
+                @current_folder == "" -> gettext("Library root")
+                true -> Path.basename(@current_folder)
+              end}
+            </h3>
             <div class="image-picker-main-actions">
               <span>
                 {ngettext("%{count} file", "%{count} files", @visible_file_count, count: @visible_file_count)}

@@ -146,14 +146,49 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   @doc """
   Adds default folder filter to listing params.
 
-  `filter:folder_id=all` lists every folder: the command palette's "Images
+  `filter:folder_id=all` lists every library folder and the root, leaving out
+  hidden folders as the library always does: the command palette's "Images
   matching …" links search the whole library that way.
   """
   def list_params(params, root_folder_ids \\ []) when is_map(params) do
     case Map.get(params, "filter:folder_id") do
-      "all" -> Map.delete(params, "filter:folder_id")
+      "all" -> Map.put(params, "filter:folder_id", {:library, Brando.Media.Folders.hidden_folder_ids()})
       folder when folder in [nil, "", "root"] -> Map.put(params, "filter:folder_id", {:root, root_folder_ids})
       _ -> params
+    end
+  end
+
+  @all_folders_filters ~w(path filename unused)
+
+  @doc """
+  Marks the library as listing all folders (`filter:folder_id=all`) and puts
+  the number of assets it lists in `count_key`, for the folder header. `list`
+  is the context's list function, such as `&Brando.Images.list_images/1`.
+  """
+  def assign_all_folders(socket, params, list, count_key) do
+    if Map.get(params, "filter:folder_id") == "all" do
+      filter =
+        params
+        |> list_params()
+        |> Enum.flat_map(fn
+          {"filter:folder_id", value} ->
+            [{:folder_id, value}]
+
+          {"filter:" <> key, value} when key in @all_folders_filters and value not in [nil, ""] ->
+            [{String.to_existing_atom(key), value}]
+
+          _ ->
+            []
+        end)
+        |> Map.new()
+
+      {:ok, entries} = list.(%{filter: filter, select: [:id]})
+
+      socket
+      |> Component.assign(:all_folders?, true)
+      |> Component.assign(count_key, length(entries))
+    else
+      Component.assign(socket, :all_folders?, false)
     end
   end
 
