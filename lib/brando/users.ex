@@ -596,17 +596,21 @@ defmodule Brando.Users do
   Changes the password of the logged-in `user`, who must give their
   `current_password`, to the one in `attrs` (see `password_changeset/2`).
 
-  Logs the user out of every other session, keeping `current_token` — the
-  session token of the browser doing the change — and deletes any password
-  reset link. The user is emailed that the password changed.
+  Logs the user out of every other session, keeping `current` — the session
+  token of the browser doing the change, or that session's token row id —
+  and deletes any password reset link. The user is emailed that the password changed.
   """
-  @spec update_user_password(user, String.t() | nil, map(), binary() | nil) ::
+  @spec update_user_password(user, String.t() | nil, map(), binary() | integer() | nil) ::
           {:ok, user} | {:error, Changeset.t()}
-  def update_user_password(%User{} = user, current_password, attrs, current_token \\ nil) do
+  def update_user_password(%User{} = user, current_password, attrs, current \\ nil) do
+    all = UserToken.user_and_contexts_query(user, :all)
+
     revoked =
-      if current_token,
-        do: from(t in UserToken.user_and_contexts_query(user, :all), where: t.token != ^current_token),
-        else: UserToken.user_and_contexts_query(user, :all)
+      cond do
+        is_integer(current) -> from(t in all, where: t.id != ^current)
+        is_binary(current) -> from(t in all, where: t.token != ^current)
+        true -> all
+      end
 
     user
     |> password_changeset(attrs)
