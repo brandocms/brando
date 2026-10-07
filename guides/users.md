@@ -173,7 +173,9 @@ A code is six digits for a 30-second step; the step before and after are
 accepted for clocks that drift. Each code works once: the last accepted step is
 stored, and a code for it or an earlier step is refused. Each recovery code
 works once. Turning it off, or making new recovery codes, asks for the password
-or a current code from the app. The calls are in `Brando.Users.TwoFactor`.
+or a current code from the app, and so does turning it on: a session alone
+cannot add a factor. The user is emailed whenever two-factor authentication is
+turned on, off or reset. The calls are in `Brando.Users.TwoFactor`.
 
 **When a user loses their phone and their codes.** A superuser opens their
 form and chooses **Reset two-factor**. It turns two-factor authentication off,
@@ -188,8 +190,8 @@ password and set it up again. The reset is recorded with who did it:
 Sign-in policy** (`/admin/users/sign-in-policy`): nobody, everyone, or the
 users of some roles (with group authorization, some groups). Users are shared
 by every site, so the policy is the installation's (`Brando.Users.SecurityPolicy`).
-A user it applies to who has not set it up does so at their next login, before
-they get a session, and any session they have ends at their next request. A
+A user it applies to who has not set it up is logged out when the policy is
+saved, emailed, and sets it up at their next login, before they get a session. A
 superuser must use two-factor authentication before saving a policy that
 applies to them.
 
@@ -207,9 +209,9 @@ config :brando, Brando.Crypto, secret: System.fetch_env!("BRANDO_ENCRYPTION_SECR
 
 `Brando.Users.Throttle` limits sign-in attempts, two-factor codes and
 password reset requests per IP address and per account, in 15-minute windows.
-Five failures in a row — a wrong password, a wrong code, or a wrong password
-or code when confirming a change — lock the account for 15 minutes, on every
-node. While it is locked even the right password does not sign in, and an
+Five failures within 15 minutes of the first — a wrong password, a wrong
+code, or a wrong password or code when confirming a change — lock the account
+for 15 minutes, on every node. While it is locked even the right password does not sign in, and an
 address without an account gets the same answer after as many tries, so the
 lockout tells nothing about which accounts exist. A successful sign-in starts
 the count again. The limits are configurable:
@@ -220,11 +222,37 @@ config :brando, Brando.Users.Throttle,
   reset_per_ip: 10, reset_per_account: 3, lockout_after: 5, lockout_minutes: 15
 ```
 
-The per-IP limits count `conn.remote_ip`, and, for the reset page, the admin
-socket's `:peer_data`. Behind a proxy or load balancer, set the client's
-address from a header the proxy sets (for example with the `remote_ip` plug),
-and add `:peer_data` to the socket's `connect_info`; otherwise every visitor
-shares the proxy's limit.
+### Behind a proxy
+
+The per-IP limits and the security log need the visitor's address. Behind a
+reverse proxy every request arrives from the proxy, so Brando believes the
+proxy's `X-Forwarded-For` header — but only when the request comes from a
+trusted proxy, since anyone can send the header (`Brando.ClientIP`). The
+client is the right-most address in the header that is not a trusted proxy.
+
+```elixir
+config :brando, :trusted_proxies, ["127.0.0.1/32", "::1/128", "10.0.0.0/8"]
+```
+
+Entries are addresses or CIDR ranges, IPv4 or IPv6. The default trusts the
+loopback addresses only, which is what a proxy on the same server connects
+from: Florist puts Traefik or nginx in front of each release on the server,
+so a Florist deploy needs no setting. A load balancer on another machine
+needs its addresses added; `[]` never believes the header. Without the right
+setting every visitor shares the proxy's limits, and a burst of bad logins
+from anyone locks everyone out.
+
+LiveView screens (the reset request, the security page) read the address from
+the socket, so its `connect_info` must give the peer and the forwarded
+headers; `mix brando.install` writes this:
+
+```elixir
+socket "/live", Phoenix.LiveView.Socket,
+  websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
+```
+
+Two-factor codes and confirmation fields are kept out of the request logs
+with `config :phoenix, :filter_parameters, ["password", "code", "proof", "secret"]`.
 
 ## Security log
 

@@ -35,7 +35,12 @@ production dump.
   `users_security_policy` in `public`. Run `mix brando.gen.migrations` and
   `mix ecto.migrate`; until then, logging in fails with a missing-table error.
   Applications with their own `:shared_tables` need no change; Brando lists
-  the new tables itself.
+  the new tables itself. Behind a reverse proxy that is not on the same
+  server, list it in `config :brando, :trusted_proxies` (loopback is trusted
+  by default), add `:peer_data` and `:x_headers` to the `/live` socket's
+  `connect_info`, and add `"code"`, `"proof"` and `"secret"` to
+  `config :phoenix, :filter_parameters`; see
+  [Behind a proxy](guides/users.md#behind-a-proxy).
 
 - **Users have two new columns.** `job_title` and `same_as` back the user
   form's Job title and Profile links. Run `mix brando.gen.migrations` and
