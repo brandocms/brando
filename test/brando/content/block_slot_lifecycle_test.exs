@@ -124,25 +124,34 @@ defmodule Brando.Content.BlockSlotLifecycleTest do
     assert new_slot.slot_remap == nil
   end
 
-  test "remapping survives remote snapshots, delete undo and draft reconciliation", %{
+  test "remapping survives other replicas, delete undo and draft reconciliation", %{
     entry: entry,
     module: module,
     user: user
   } do
-    ops = remap_ops(entry, module)
     [region] = entry.block.children
+    [source] = entry.block.children
+    {:ok, destination, params} = Lifecycle.remap(entry.block, module.refs, source.uid, "related")
 
-    {:ok, remote} =
-      Ops.apply_remote_snapshot(
-        Ops.from_entry_blocks([entry]),
-        entry.block.uid,
-        Ops.subtree_snapshot(ops, entry.block.uid)
-      )
+    # The same ops, applied in the edit session's order by two replicas.
+    replay = fn ->
+      {:ok, ops} =
+        Ops.apply_op(
+          Ops.from_entry_blocks([entry]),
+          {:update, hd(source.children).uid, %{"description" => "Unsaved child edit"}}
+        )
+
+      {:ok, ops} = Ops.apply_op(ops, {:remap_slot, source.uid, destination, params})
+      ops
+    end
+
+    ops = replay.()
+    remote = replay.()
 
     assert Ops.materialize_root(remote, entry.block.uid) == Ops.materialize_root(ops, entry.block.uid)
     snapshot = Ops.bin_snapshot(remote, region.uid)
     {:ok, deleted} = Ops.apply_op(remote, {:delete, region.uid})
-    {:ok, restored} = Ops.restore_snapshot(deleted, snapshot)
+    {:ok, restored} = Ops.apply_op(deleted, {:restore, snapshot})
     assert Ops.materialize_root(restored, entry.block.uid) == Ops.materialize_root(ops, entry.block.uid)
 
     fields = %{"blocks" => [materialize(entry, restored, user) |> Brando.Drafts.Params.snapshot()]}

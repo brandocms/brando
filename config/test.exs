@@ -46,6 +46,7 @@ config :brando, Brando.Images,
     ]
   }
 
+config :brando, Brando.EditSession, grace_period: 0
 config :brando, Brando.Static, cdn: [enabled: false]
 config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 config :brando, Brando.Villain, extra_blocks: []

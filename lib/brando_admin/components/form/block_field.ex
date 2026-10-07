@@ -30,44 +30,52 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   sanctioned parent→child form handoff after mount. Roots that provably hold
   the saved rows already are skipped.
 
-  ## Multi-user sync
+  ## Multi-user editing: a replica of the edit session
 
-  Content ships as `Ops.subtree_snapshot/2` over PubSub when a block's
-  editing session settles (focusout + settle delay in the Block JS hook,
-  focus switch, pre-save force-ship); child structural ops ship their root
-  immediately. Snapshots carry delete tombstones so remote child deletes
-  replicate. Receivers merge via `Ops.apply_remote_snapshot/3` and hand the
-  mounted root a fresh form through the replace_form cascade — unless the
-  local user is editing inside that root, in which case the snapshot parks
-  in `@pending_remote_snapshots` and applies on their blur (never dropped).
-  `ship_or_flush/2` never re-broadcasts an unchanged snapshot
-  (`@last_synced_snapshots`), so blurring an untouched block cannot clobber
-  newer remote edits; concurrent same-block edits resolve last-editor-wins.
-  Late joiners broadcast a sync request on mount; any editor whose store
-  diverged from the database (`@blocks_changed?`) replays its state as the
-  standard structural + snapshot messages.
+  With a saved entry open, the store is a replica of the entry's
+  `Brando.EditSession` (see `BlockField.Replica`). Every op this editor
+  applies is also cast to the session, which orders it, gives it a revision
+  and broadcasts it; other editors' ops arrive the same way and are applied
+  with the same reducer, so all editors converge on one order. Editors no
+  longer exchange snapshots, and a joiner gets the session's current state,
+  unsaved work included, instead of asking the others for it.
+
+  Another editor's op refreshes the affected root through the
+  `replace_form` cascade, coalesced per root. A root this editor is working
+  in is refreshed when they leave it (`@local_focus`), so their own form is
+  never replaced under their typing; concurrent edits to one root resolve as
+  the last op wins.
+
+  Save, live preview and recovery copies read the session's state, and a
+  save hands the saved rows back (`EditSession.rebase/4`) so every replica
+  continues from them. If the session dies, the replica joins a new one
+  seeded with its own state and casts its unconfirmed ops again.
 
   ## Restorable bin (delete undo)
 
   Every local delete stashes an `Ops.bin_snapshot/2` in `@block_bin` before
   the delete op runs; an undo toast offers LIFO restore. Restoring replays
-  the snapshot into the store (`Ops.restore_snapshot/2`), then re-mounts a
+  the snapshot into the store (a `{:restore, snapshot}` op), then re-mounts a
   root from its re-materialized seed form or hands a child's root the
-  `replace_form` cascade. Restores broadcast so other editors' stores
-  resurrect the block too. The bin clears on save — the save deletes the
-  underlying rows, so stashed db ids go stale.
+  `replace_form` cascade. The op reaches the other editors like any other.
+  The bin clears on save — the save deletes the underlying rows, so stashed
+  db ids go stale.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
+  alias Brando.EditSession
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.BlockField.Outline
+  alias BrandoAdmin.Components.Form.BlockField.Replica
   alias Ecto.Changeset
   alias Phoenix.PubSub
 
@@ -171,7 +179,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
         |> apply_block_op({:remap_slot, uid, destination_uid, params})
         |> replace_root_from_store(root_uid)
-        |> ship_or_flush(root_uid)
         |> refresh_live_preview()
 
       send_update(reply_to, event: "region_remapped")
@@ -234,46 +241,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals}, socket) do
-    # Seed from the saved entry, then replay a complete replacement through the
-    # reducer. This retains owned IDs and deletion tombstones for the next save.
-    ops = Ops.from_entry_blocks(originals)
-
-    forms =
-      Enum.map(changesets, fn cs ->
-        uid = cs |> Changeset.get_assoc(:block) |> Changeset.get_field(:uid)
-        {uid, to_form(cs, as: "entry_block", id: "entry_block_form-#{uid}")}
-      end)
-
-    wanted = Enum.map(forms, &elem(&1, 0))
-
-    ops =
-      Enum.reduce(ops.order -- wanted, ops, fn uid, acc ->
-        {:ok, next} = Ops.apply_op(acc, {:delete, uid})
-        next
-      end)
-
-    ops =
-      Enum.reduce(forms, ops, fn {uid, form}, acc ->
-        params = Brando.Drafts.Params.snapshot(form.source)
-        op = if Ops.known?(acc, uid), do: {:update, uid, params}, else: {:insert, uid, :end, params}
-        {:ok, next} = Ops.apply_op(acc, op)
-        next
-      end)
-
-    {:ok, ops} = Ops.apply_op(ops, {:reorder, wanted})
-
-    for {uid, form} <- forms, uid in socket.assigns.root_order do
-      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+  def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
+    if Map.get(message, :source) == :translation and joined_with_work?(socket) do
+      # A synchronized translation's pending version, loaded by an editor who
+      # joined an edit session that already holds unsaved work: the editor
+      # who opened it first loaded the version, and the work is on top of it.
+      {:ok, socket}
+    else
+      {:ok, restore_draft(socket, changesets, originals)}
     end
-
-    {:ok,
-     socket
-     |> assign(:entry_blocks, originals)
-     |> assign(:seed_forms, Map.new(forms))
-     |> assign_ops(ops)
-     |> assign(:blocks_changed?, true)
-     |> assign(:block_bin, [])}
   end
 
   # duplicate block (that is an entry block)
@@ -414,15 +390,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "delete_block", uid: uid}, socket) do
-    # Broadcast to other users
-    if topic = socket.assigns[:blocks_topic] do
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:block_deleted, %{uid: uid, user_id: socket.assigns.current_user.id}}
-      )
-    end
-
     {:ok, socket |> stash_in_bin(uid) |> remove_block_from_state(uid)}
   end
 
@@ -430,28 +397,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # Block.emit_block_op/2. Forms never travel up; seed forms are only read
   # at first mount.
   # Child deletes pass through the bin first — the op tears the subtree out
-  # of the store, so the undo snapshot must be captured here. Child
-  # structural ops ship their root's subtree immediately: they never had a
-  # broadcast of their own (only root-level add/delete/reorder do), so a
-  # remote editor would only learn of them on the next content blur.
+  # of the store, so the undo snapshot must be captured here.
   def update(%{event: "block_op", op: {:delete, uid} = op}, socket) do
-    root_uid = Ops.root_of(socket.assigns.block_ops, uid)
-
     {:ok,
      socket
      |> stash_in_bin(uid)
-     |> apply_block_op(op)
-     |> ship_or_flush(root_uid)}
-  end
-
-  def update(%{event: "block_op", op: {:insert_child, parent_uid, _uid, _at, _params} = op}, socket) do
-    socket = apply_block_op(socket, op)
-    {:ok, ship_or_flush(socket, parent_uid)}
-  end
-
-  def update(%{event: "block_op", op: {:reorder_children, parent_uid, _uids} = op}, socket) do
-    socket = apply_block_op(socket, op)
-    {:ok, ship_or_flush(socket, parent_uid)}
+     |> apply_block_op(op)}
   end
 
   def update(%{event: "block_op", op: op}, socket) do
@@ -570,7 +521,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "capture_draft", capture_id: id, reply_to: target, forms: forms}, socket) do
     alias Brando.Drafts.Params
 
-    ops = socket.assigns.block_ops
+    # A recovery copy holds what the session holds: this editor's work and
+    # whatever the others' replicas have not shown here yet.
+    ops = session_ops(socket)
     cache = socket.assigns[:draft_snapshots] || %{}
 
     # A root's snapshot is a pure function of its saved row, its store state
@@ -611,7 +564,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # materialization pass builds all root changesets for any tag. The old
   # recursive fetch/provide gather across the component tree is gone.
   def update(%{event: "fetch_root_blocks", tag: tag}, socket) do
-    ops = socket.assigns.block_ops
+    # The session's state, not the replica's: it holds every op this editor
+    # cast before asking (a process's messages arrive in order) and every op
+    # the others' did. A save marks the revision it read, so its rebase can
+    # replay what arrives while it runs.
+    {ops, socket} = session_ops_for(socket, tag)
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
 
@@ -639,213 +596,55 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, reload_all_blocks(socket, Map.get(msg, :scope, :all))}
   end
 
-  # === Block Sync: Data Shipping ===
+  # === Edit session ===
 
-  # Blur/settle (or force-ship before save) for `uid`'s root.
-  def update(%{event: "fetch_block_for_shipping", uid: uid}, socket) do
-    {:ok, ship_or_flush(socket, uid)}
+  # Everything the session broadcasts for this field (routed by
+  # `BrandoAdmin.LiveView.Form.Hooks`): ops, rebases, rejections.
+  def update(%{event: "edit_session", message: message}, socket) do
+    {:ok, handle_session_message(socket, message)}
   end
 
-  # A remote editor shipped a subtree snapshot. If we're currently editing
-  # inside the same root, applying would replace the form under our own
-  # typing — defer it instead (latest snapshot wins); `ship_or_flush/2`
-  # applies it when we leave the block. Otherwise apply immediately.
-  def update(%{event: "apply_remote_block_ops", uid: uid, snapshot: snapshot} = msg, socket) do
+  # The session process died: join a new one seeded with this replica.
+  def update(%{event: "edit_session_down"}, socket) do
+    {:ok, rejoin_session(socket)}
+  end
+
+  # Coalesced refresh of the roots other editors changed.
+  def update(%{event: "flush_remote_refresh"}, socket) do
+    {:ok, flush_remote_refresh(assign(socket, :remote_refresh_scheduled?, false))}
+  end
+
+  # Where this editor works (root block uid or nil). Roots it leaves get
+  # the refreshes that waited for it.
+  def update(%{event: "local_focus", uid: uid}, socket) do
     ops = socket.assigns.block_ops
-    focused_uid = Map.get(msg, :focused_uid)
-    root_uid = if Ops.known?(ops, uid), do: Ops.root_of(ops, uid), else: uid
+    root = if uid && Ops.known?(ops, uid), do: Ops.root_of(ops, uid)
+    previous = socket.assigns[:local_focus]
+    socket = assign(socket, :local_focus, root)
 
-    focused_same_root? =
-      focused_uid && Ops.known?(ops, focused_uid) && Ops.root_of(ops, focused_uid) == root_uid
-
-    if focused_same_root? do
-      {:ok, update(socket, :pending_remote_snapshots, &Map.put(&1, root_uid, %{uid: uid, snapshot: snapshot}))}
-    else
-      {:ok, apply_remote_root_snapshot(socket, uid, snapshot)}
-    end
-  end
-
-  # === Block Sync: Structural Operations ===
-
-  # Remote user added a block
-  def update(
-        %{
-          event: "remote_block_added",
-          uid: remote_uid,
-          module_id: module_id,
-          sequence: sequence,
-          user_id: remote_user_id
-        } = msg,
-        socket
-      ) do
-    # Skip if we already have this block (dedup)
-    if Ops.known?(socket.assigns.block_ops, remote_uid) do
-      {:ok, socket}
-    else
-      block_module = socket.assigns.block_module
-      source = socket.assigns.block_module
-
-      module_origin = Map.get(msg, :module_origin, :local)
-      empty_block_cs = build_block({module_origin, module_id}, remote_user_id, nil, source, :module)
-      # Override UID to match the original
-      empty_block_cs = Changeset.put_change(empty_block_cs, :uid, remote_uid)
-
-      entry_block_cs =
-        block_module
-        |> struct(%{})
-        |> Changeset.change(%{entry_id: socket.assigns.entry.id})
-        |> Changeset.put_assoc(:block, empty_block_cs)
-        |> Changeset.put_change(:sequence, sequence)
-        |> Map.put(:action, :insert)
-
-      entry_block_form =
-        to_form(entry_block_cs,
-          as: "entry_block",
-          id: "entry_block_form-#{remote_uid}"
-        )
-
-      socket
-      |> put_seed_form(remote_uid, entry_block_form)
-      |> apply_block_op({:insert, remote_uid, sequence, Ops.block_diff_params(entry_block_cs)}, :internal)
-      |> refresh_live_preview()
-      |> then(&{:ok, &1})
-    end
-  end
-
-  # Remote user deleted a block. No bin stash — the undo toast belongs to
-  # the deleting editor; their restore broadcasts back to us.
-  def update(%{event: "remote_block_deleted", uid: uid}, socket) do
-    if uid in socket.assigns.block_ops.order do
-      {:ok, remove_block_from_state(socket, uid)}
+    if previous && previous != root && MapSet.member?(socket.assigns.deferred_roots, previous) do
+      {:ok, socket |> update(:deferred_roots, &MapSet.delete(&1, previous)) |> refresh_roots([previous])}
     else
       {:ok, socket}
     end
-  end
-
-  # Remote user undid a delete — replay their bin snapshot against our store.
-  # The origin field guard matters: the Form fans sync events out to every
-  # block field, and a root restore against the wrong field's store would
-  # succeed (all uids unknown there) and duplicate the block.
-  def update(%{event: "remote_block_restored", snapshot: snapshot, origin_block_field: origin}, socket) do
-    if origin == socket.assigns.block_field do
-      case restore_from_snapshot(socket, snapshot) do
-        {:ok, socket} ->
-          {:ok, socket}
-
-        {:error, reason} ->
-          Logger.warning(
-            "BlockField (#{socket.assigns.block_field}) could not apply remote block restore: #{inspect(reason)}"
-          )
-
-          {:ok, socket}
-      end
-    else
-      {:ok, socket}
-    end
-  end
-
-  # A late joiner asked for unsaved state. If our store diverged from the
-  # database, replay it as the standard sync messages IN ORDER (PubSub
-  # preserves per-publisher ordering): structural adds for inserted module
-  # roots → content snapshots for dirty roots → root deletes → final order.
-  # The joiner's existing receive paths handle each. A clean store stays
-  # silent — the database it just loaded is already the truth.
-  def update(%{event: "remote_sync_requested", origin_block_field: origin}, socket) do
-    ops = socket.assigns.block_ops
-    topic = socket.assigns[:blocks_topic]
-
-    if origin == socket.assigns.block_field and socket.assigns.blocks_changed? and topic do
-      user_id = socket.assigns.current_user.id
-
-      ops.order
-      |> Enum.with_index()
-      |> Enum.each(&broadcast_inserted_root(&1, ops, topic, user_id))
-
-      socket = Enum.reduce(ops.order, socket, &sync_dirty_snapshot(&2, ops, &1))
-
-      Enum.each(ops.deleted_roots, fn uid ->
-        PubSub.broadcast(Brando.pubsub(), topic, {:block_deleted, %{uid: uid, user_id: user_id}})
-      end)
-
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:blocks_reordered, %{block_list: ops.order, user_id: user_id}}
-      )
-
-      {:ok, socket}
-    else
-      {:ok, socket}
-    end
-  end
-
-  # Remote user reordered blocks
-  def update(%{event: "remote_blocks_reordered", block_list: remote_block_list}, socket) do
-    socket
-    |> apply_block_op({:reorder, remote_block_list}, :internal)
-    |> refresh_live_preview()
-    |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
+    # On the first update no block has mounted yet: a session state shown
+    # now only needs seed forms.
+    mounted? = !!socket.assigns[:blocks_initialized]
+
     socket
     |> assign(assigns)
     |> assign_new(:hidden, fn -> false end)
     |> assign_new(:focus, fn -> nil end)
+    |> assign_new(:session_detached?, fn -> false end)
     |> initialize_blocks(assigns)
-    |> maybe_arm_blocks_topic()
+    |> maybe_join_session(mounted?)
     |> assign_module_set()
     |> assign_new(:templates, fn -> [] end)
     |> maybe_assign_starting_modules()
     |> then(&{:ok, &1})
-  end
-
-  # Create forms initialize with a nil-id entry, so no sync topic exists.
-  # Arm it as soon as a persisted entry lands (post-create-save re-render) —
-  # otherwise multi-user block sync stays disarmed until a full reload.
-  defp maybe_arm_blocks_topic(%{assigns: %{blocks_topic: nil, entry: %{id: entry_id}}} = socket)
-       when not is_nil(entry_id) do
-    topic = Brando.Tenant.Topic.entry("blocks:#{socket.assigns.block_field}", socket.assigns.entry.__struct__, entry_id)
-    subscribe_to_blocks(socket, topic)
-
-    socket
-    |> assign(:blocks_topic, topic)
-    |> request_blocks_sync()
-  end
-
-  defp maybe_arm_blocks_topic(socket), do: socket
-
-  # The dead render subscribes a process that is about to be discarded, so the
-  # subscription can never deliver anything. The topic is still assigned either
-  # way — the connected mount runs `initialize_blocks/2` again in a fresh
-  # process and subscribes there, which is the subscription that matters.
-  defp subscribe_to_blocks(socket, topic) do
-    if connected?(socket) do
-      PubSub.subscribe(Brando.pubsub(), topic)
-    end
-
-    socket
-  end
-
-  # Late-joiner catch-up: ask already-connected editors for their unsaved
-  # state. We initialize from the database, but another editor's uncommitted
-  # edits live only in their op store — without this, a joiner sees stale
-  # content until the next blur-ship happens to arrive.
-  #
-  # Gated on `connected?/1`: from the dead render this asks every OTHER
-  # connected editor to gather and broadcast its unsaved op-store state, for a
-  # listener that is discarded microseconds later. That is the expensive half —
-  # the waste lands in other processes, once per page load, per editor.
-  defp request_blocks_sync(socket) do
-    if socket.assigns[:blocks_topic] && connected?(socket) do
-      PubSub.broadcast(
-        Brando.pubsub(),
-        socket.assigns.blocks_topic,
-        {:blocks_sync_request, %{block_field: socket.assigns.block_field, user_id: socket.assigns.current_user.id}}
-      )
-    end
-
-    socket
   end
 
   defp initialize_blocks(%{assigns: %{blocks_initialized: true}} = socket, _assigns), do: socket
@@ -857,16 +656,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
 
-    # Subscribe to blocks sync topic for structural changes + data shipping
-    entry_id = assigns.entry && assigns.entry.id
-
-    blocks_topic =
-      entry_id && Brando.Tenant.Topic.entry("blocks:#{assigns.block_field}", assigns.entry.__struct__, entry_id)
-
-    if blocks_topic do
-      subscribe_to_blocks(socket, blocks_topic)
-    end
-
     socket
     |> assign(:seed_forms, Map.new(entry_blocks_forms, &{get_form_block_uid(&1), &1}))
     |> assign_ops(Ops.from_entry_blocks(entry_blocks))
@@ -874,10 +663,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:module_picker_id, "block-field-#{assigns.block_field}-module-picker")
     |> assign_clipboard_meta(read_clipboard(user_id))
     |> assign(:block_bin, [])
-    |> assign(:pending_remote_snapshots, %{})
-    |> assign(:last_synced_snapshots, %{})
     |> assign(:blocks_changed?, false)
-    |> assign(:blocks_topic, blocks_topic)
+    |> assign(:edit_session, nil)
+    |> assign(:local_focus, nil)
+    |> assign(:deferred_roots, MapSet.new())
+    |> assign(:remote_refresh, MapSet.new())
+    |> assign(:remote_refresh_scheduled?, false)
     |> assign(:blocks_initialized, true)
     |> assign(:footnote_fields, assigns.opts[:footnote_fields] || %{})
     |> assign(:note_collection?, !!assigns.opts[:footnote_fields])
@@ -885,8 +676,455 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:manages_templates?, manages_templates?(assigns))
     |> assign_new(:source_locked, fn -> false end)
     |> assign_new(:source_url, fn -> nil end)
-    |> request_blocks_sync()
   end
+
+  ## Edit session
+  #
+  # The store as a replica of `Brando.EditSession` (see `BlockField.Replica`).
+
+  # Join once the field has a saved entry, in a connected process. A create
+  # form has no entry id yet and joins when its first save lands the entry
+  # here. A revision being previewed (`session_detached?`) does not join: what
+  # it shows is not what the others edit.
+  defp maybe_join_session(%{assigns: %{edit_session: nil, entry: %{id: id}}} = socket, mounted?)
+       when not is_nil(id) do
+    cond do
+      not connected?(socket) -> socket
+      socket.assigns.session_detached? -> assign(socket, :edit_session, :detached)
+      true -> join_session(socket, mounted?: mounted?)
+    end
+  end
+
+  defp maybe_join_session(socket, _mounted?), do: socket
+
+  defp join_session(socket, opts) do
+    %{entry: entry, block_field: field, current_user: user} = socket.assigns
+    ref = EditSession.ref_for(entry)
+    subscribe_session(ref)
+    base = Ops.from_entry_blocks(socket.assigns.entry_blocks || [])
+    held = Keyword.get(opts, :held, base)
+
+    {socket, result} =
+      case EditSession.join(ref, field, {base, held}, user_id: user.id, rebase: Keyword.get(opts, :rebase, false)) do
+        {:error, :base_mismatch} ->
+          # The rows this editor loaded are not the ones the session is built
+          # on. Read them again: if they still differ, they are newer, written
+          # outside the session, and the session moves onto them.
+          socket = reload_entry_blocks(socket)
+          base = Ops.from_entry_blocks(socket.assigns.entry_blocks)
+          {socket, EditSession.join(ref, field, {base, base}, user_id: user.id, rebase: true)}
+
+        result ->
+          {socket, result}
+      end
+
+    case result do
+      {:ok, info} ->
+        socket
+        |> assign(:session_base, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
+        |> adopt_session(ref, info, opts)
+        |> announce_join()
+
+      {:error, reason} ->
+        Logger.warning("BlockField (#{field}) could not join its edit session: #{inspect(reason)}")
+        assign(socket, :edit_session, :failed)
+    end
+  end
+
+  defp adopt_session(socket, ref, info, opts) do
+    monitor = Process.monitor(info.session)
+    # The LiveView receives the :DOWN; the hooks route it here by this key.
+    Process.put({:brando_edit_session_monitor, monitor}, socket.assigns.id)
+
+    replica = Replica.new(ref, info, monitor)
+
+    # A replica that held unconfirmed ops when its session died casts them
+    # again, unless its own state is what seeded the new session.
+    {replica, socket} =
+      if info.seeded? do
+        {replica, socket}
+      else
+        opts
+        |> Keyword.get(:pending, [])
+        |> Enum.reduce({replica, socket}, fn {_seq, op}, {replica, socket} ->
+          {replica, seq} = Replica.local(replica, op)
+          EditSession.submit(info.session, socket.assigns.block_field, op, seq)
+          {replica, socket}
+        end)
+      end
+
+    socket
+    |> assign(:edit_session, replica)
+    |> show_state(Replica.displayed(replica), :all, mounted?: Keyword.get(opts, :mounted?, true))
+  end
+
+  # One subscription per LiveView process, however many block fields join.
+  defp subscribe_session(%{topic: topic}) do
+    unless Process.get({:brando_edit_session_topic, topic}) do
+      PubSub.subscribe(Brando.pubsub(), topic)
+      Process.put({:brando_edit_session_topic, topic}, true)
+    end
+  end
+
+  # Other editors replay unsaved entry fields and their focus for a joiner
+  # (see `BrandoAdmin.LiveView.Form.Hooks`). Blocks need no replay: the
+  # session's state already holds them.
+  defp announce_join(socket) do
+    entry = socket.assigns.entry
+
+    PubSub.broadcast(
+      Brando.pubsub(),
+      Brando.Tenant.Topic.entry("field_sync", entry.__struct__, entry.id),
+      {:editor_joined, %{user_id: socket.assigns.current_user.id}}
+    )
+
+    socket
+  end
+
+  defp submit_to_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket, op) do
+    {replica, seq} = Replica.local(replica, op)
+    EditSession.submit(session, socket.assigns.block_field, op, seq)
+    assign(socket, :edit_session, replica)
+  end
+
+  defp submit_to_session(socket, _op), do: socket
+
+  defp handle_session_message(%{assigns: %{edit_session: %Replica{} = replica}} = socket, %{kind: :op} = message) do
+    case Replica.receive_op(replica, message) do
+      {:own, replica} ->
+        assign(socket, :edit_session, replica)
+
+      {:remote, replica, displayed} ->
+        socket
+        |> assign(:edit_session, replica)
+        |> show_state(displayed, hint_uids(message.op))
+        |> refresh_live_preview()
+
+      :stale ->
+        socket
+
+      :resync ->
+        resync_session(socket)
+    end
+  end
+
+  defp handle_session_message(%{assigns: %{edit_session: %Replica{} = replica}} = socket, %{kind: :rejected} = message) do
+    case Replica.receive_rejected(replica, message) do
+      {replica, displayed} ->
+        socket
+        |> assign(:edit_session, replica)
+        |> show_state(displayed, :all)
+
+      :stale ->
+        socket
+    end
+  end
+
+  defp handle_session_message(%{assigns: %{edit_session: %Replica{} = replica}} = socket, %{kind: :rebase} = message) do
+    if Replica.newer?(replica, message) do
+      apply_rebase(socket, replica, message)
+    else
+      socket
+    end
+  end
+
+  defp handle_session_message(socket, _message), do: socket
+
+  # Someone saved, or the entry was written outside the editor: the session
+  # moved onto new rows. Read them unless they are the ones already here,
+  # then show the session's state on top of them.
+  defp apply_rebase(socket, replica, message) do
+    old_rows = rows_by_uid(socket.assigns.entry_blocks)
+
+    socket =
+      if Ops.signature(message.base) == Ops.signature(Ops.from_entry_blocks(socket.assigns.entry_blocks || [])),
+        do: socket,
+        else: reload_entry_blocks(socket)
+
+    new_rows = rows_by_uid(socket.assigns.entry_blocks)
+    rewritten = for {uid, row} <- new_rows, Map.has_key?(old_rows, uid), old_rows[uid] != row, do: uid
+    {replica, displayed} = Replica.reset(replica, message)
+
+    socket
+    |> assign(:edit_session, replica)
+    |> assign(:session_base, message.base)
+    |> assign(:block_bin, [])
+    |> show_state(displayed, :all, also: rewritten, base: message.base)
+    |> refresh_live_preview()
+    |> maybe_report_conflicts(message)
+  end
+
+  defp rows_by_uid(entry_blocks), do: Map.new(entry_blocks || [], &{&1.block.uid, &1})
+
+  defp maybe_report_conflicts(socket, %{conflicts: [_ | _], origin: origin}) when origin != self() do
+    send(
+      self(),
+      {:toast,
+       gettext(
+         "A block with unsaved changes was removed by another save. Your changes to it are kept in your recovery copy."
+       )}
+    )
+
+    socket
+  end
+
+  defp maybe_report_conflicts(socket, _message), do: socket
+
+  # A revision went missing, or a broadcast op did not apply: take the
+  # session's state as it is.
+  defp resync_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket) do
+    case EditSession.fetch(session, socket.assigns.block_field) do
+      {:ok, info} ->
+        {replica, displayed} = Replica.reset(replica, info)
+
+        socket
+        |> assign(:edit_session, replica)
+        |> show_state(displayed, :all)
+
+      {:error, _} ->
+        rejoin_session(socket)
+    end
+  end
+
+  # The session died. Join a new one: the first replica back seeds it with
+  # its own state, the others take that state and cast the ops it never
+  # confirmed again. Nothing in a replica is lost, and recovery copies stay
+  # the safety net if every editor went away too.
+  defp rejoin_session(%{assigns: %{edit_session: %Replica{} = replica}} = socket) do
+    Process.delete({:brando_edit_session_monitor, replica.monitor})
+
+    socket
+    |> assign(:edit_session, nil)
+    |> join_session(held: socket.assigns.block_ops, pending: replica.pending)
+  end
+
+  defp rejoin_session(socket), do: socket
+
+  defp session_ops(%{assigns: %{edit_session: %Replica{session: session}}} = socket) do
+    case EditSession.fetch(session, socket.assigns.block_field) do
+      {:ok, %{state: %Ops{} = state}} -> state
+      _ -> socket.assigns.block_ops
+    end
+  end
+
+  defp session_ops(socket), do: socket.assigns.block_ops
+
+  defp session_ops_for(%{assigns: %{edit_session: %Replica{session: session}}} = socket, :save) do
+    case EditSession.fetch(session, socket.assigns.block_field, purpose: :save) do
+      {:ok, %{state: %Ops{} = state, rev: rev}} -> {state, assign(socket, :save_rev, rev)}
+      _ -> {socket.assigns.block_ops, assign(socket, :save_rev, nil)}
+    end
+  end
+
+  defp session_ops_for(socket, _tag), do: {session_ops(socket), socket}
+
+  # After a save: hand the session the saved rows. It replays the ops that
+  # arrived while the save ran and tells the other replicas.
+  defp rebase_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket, base) do
+    mode = if rev = socket.assigns[:save_rev], do: {:after, rev}, else: :carry
+
+    case EditSession.rebase(session, socket.assigns.block_field, base, mode) do
+      {:ok, info} ->
+        {replica, displayed} = Replica.reset(replica, info)
+        {:ok, socket |> assign(:edit_session, replica) |> assign(:save_rev, nil), displayed}
+
+      {:error, _} ->
+        :detached
+    end
+  end
+
+  # A previewed revision that was saved, or a field whose join failed: the
+  # saved rows are the newest, so join and carry the others' work onto them.
+  defp rebase_session(%{assigns: %{edit_session: status, entry: %{id: id}}} = socket, _base)
+       when status in [:detached, :failed] and not is_nil(id) do
+    if connected?(socket) and !socket.assigns[:session_detached?] do
+      socket = socket |> assign(:edit_session, nil) |> join_session(rebase: true, mounted?: false)
+
+      case socket.assigns.edit_session do
+        %Replica{} = replica -> {:ok, socket, Replica.displayed(replica)}
+        _ -> :detached
+      end
+    else
+      :detached
+    end
+  end
+
+  defp rebase_session(_socket, _base), do: :detached
+
+  # Show `new` where the editor showed `socket.assigns.block_ops`: seed forms
+  # for roots that appeared, none for roots that went, and a refresh for
+  # roots whose subtree changed. `hint` narrows which roots to compare.
+  #
+  # `mounted?: false` when the blocks have not mounted yet (the connected
+  # mount): their seed forms are all they need.
+  defp show_state(socket, %Ops{} = new, hint, opts \\ []) do
+    old = socket.assigns.block_ops
+    also = Keyword.get(opts, :also, [])
+
+    if new == old and also == [] do
+      socket
+    else
+      added = new.order -- old.order
+      removed = old.order -- new.order
+      changed = Enum.uniq(Ops.changed_roots(old, new, hint) ++ Enum.filter(also, &(&1 in new.order)))
+
+      base =
+        Keyword.get_lazy(opts, :base, fn ->
+          socket.assigns[:session_base] || Ops.from_entry_blocks(socket.assigns.entry_blocks || [])
+        end)
+
+      seeds = Map.new(added, &{&1, materialized_form(socket, new, &1)})
+
+      socket =
+        socket
+        |> update(:seed_forms, &(&1 |> Map.drop(removed) |> Map.merge(seeds)))
+        |> assign_ops(new)
+        |> assign(:blocks_changed?, not Ops.pristine?(new, base))
+
+      if Keyword.get(opts, :mounted?, true) do
+        queue_refresh(socket, changed)
+      else
+        Enum.reduce(changed, socket, &put_seed_form(&2, &1, materialized_form(&2, new, &1)))
+      end
+    end
+  end
+
+  # The uids an op names, to narrow `Ops.changed_roots/3`. Ops that move or
+  # remove blocks compare every root.
+  defp hint_uids({:update, uid, _params}), do: [uid]
+  defp hint_uids({:insert_child, parent_uid, _uid, _at, _params}), do: [parent_uid]
+  defp hint_uids({:reorder_children, parent_uid, _uids}), do: [parent_uid]
+  defp hint_uids({:move, _uid, _at}), do: []
+  defp hint_uids({:reorder, _uids}), do: []
+  defp hint_uids(_op), do: :all
+
+  # Roots changed by other editors are refreshed together, a moment after
+  # the first change, and a root this editor works in waits until they leave
+  # it: its form is theirs while they type.
+  defp queue_refresh(socket, []), do: socket
+
+  defp queue_refresh(socket, roots) do
+    socket = update(socket, :remote_refresh, &MapSet.union(&1, MapSet.new(roots)))
+
+    if socket.assigns.remote_refresh_scheduled? do
+      socket
+    else
+      send_update_after(__MODULE__, [id: socket.assigns.id, event: "flush_remote_refresh"], 120)
+      assign(socket, :remote_refresh_scheduled?, true)
+    end
+  end
+
+  defp flush_remote_refresh(socket) do
+    roots = socket.assigns.remote_refresh
+    focus = socket.assigns.local_focus
+    {deferred, now} = Enum.split_with(roots, &(&1 == focus))
+
+    socket
+    |> assign(:remote_refresh, MapSet.new())
+    |> update(:deferred_roots, &MapSet.union(&1, MapSet.new(deferred)))
+    |> refresh_roots(now)
+  end
+
+  defp refresh_roots(socket, roots) do
+    roots
+    |> Enum.filter(&(&1 in socket.assigns.block_ops.order))
+    |> Enum.reduce(socket, &replace_root_from_store(&2, &1))
+  end
+
+  # A root's form built from the store. The params it was cast from are
+  # dropped: a form reads a field from `params` before `data`, so a mounted
+  # block would otherwise take its untouched children as raw param maps
+  # (`block[:children].value`) instead of the rows.
+  defp materialized_form(socket, %Ops{} = ops, root_uid) do
+    {:ok, params} = Ops.materialize_root(ops, root_uid)
+
+    socket
+    |> materialize_base_struct(root_uid)
+    |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+    |> without_params()
+    |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
+  end
+
+  defp without_params(%Changeset{} = changeset),
+    do: %{changeset | params: nil, changes: Map.new(changeset.changes, fn {k, v} -> {k, without_params(v)} end)}
+
+  defp without_params(list) when is_list(list), do: Enum.map(list, &without_params/1)
+  defp without_params(other), do: other
+
+  defp subtree_dirty?(%Ops{} = ops, uid) do
+    Ops.known?(ops, uid) and
+      Enum.any?([uid | Ops.descendants(ops, uid)], &(Map.get(ops.diffs, &1, %{}) != %{} or ops.statuses[&1] == :inserted))
+  end
+
+  defp seeds_for_new_roots(socket, %Ops{} = ops, known) do
+    ops.order
+    |> Enum.reject(&(&1 in known))
+    |> Map.new(&{&1, materialized_form(socket, ops, &1)})
+  end
+
+  # Read this field's rows again, for a rebase onto rows someone else wrote.
+  # The Form's copy of the entry follows, so its save starts from them too.
+  defp reload_entry_blocks(socket) do
+    %{entry: %{__struct__: schema, id: entry_id}, block_field: field} = socket.assigns
+    {_assoc, query} = schema |> Brando.Content.BlockPreloads.for_schema() |> List.keyfind(:"entry_#{field}", 0)
+    entry_blocks = Brando.Repo.all(from(j in query, where: j.entry_id == ^entry_id))
+
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "entry_blocks_reloaded",
+      block_field: field,
+      entry_blocks: entry_blocks
+    )
+
+    assign(socket, :entry_blocks, entry_blocks)
+  end
+
+  defp restore_draft(socket, changesets, originals) do
+    # Seed from the saved entry, then replay a complete replacement through the
+    # reducer. This retains owned IDs and deletion tombstones for the next save.
+    # The result reaches the session (and the other editors) as one
+    # `{:replace_state, ops}` op.
+    ops = Ops.from_entry_blocks(originals)
+
+    forms =
+      Enum.map(changesets, fn cs ->
+        uid = cs |> Changeset.get_assoc(:block) |> Changeset.get_field(:uid)
+        {uid, to_form(cs, as: "entry_block", id: "entry_block_form-#{uid}")}
+      end)
+
+    wanted = Enum.map(forms, &elem(&1, 0))
+
+    ops =
+      Enum.reduce(ops.order -- wanted, ops, fn uid, acc ->
+        {:ok, next} = Ops.apply_op(acc, {:delete, uid})
+        next
+      end)
+
+    ops =
+      Enum.reduce(forms, ops, fn {uid, form}, acc ->
+        params = Brando.Drafts.Params.snapshot(form.source)
+        op = if Ops.known?(acc, uid), do: {:update, uid, params}, else: {:insert, uid, :end, params}
+        {:ok, next} = Ops.apply_op(acc, op)
+        next
+      end)
+
+    {:ok, ops} = Ops.apply_op(ops, {:reorder, wanted})
+
+    for {uid, form} <- forms, uid in socket.assigns.root_order do
+      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+    end
+
+    socket
+    |> assign(:entry_blocks, originals)
+    |> assign(:seed_forms, Map.new(forms))
+    |> apply_block_op({:replace_state, ops}, :replay)
+    |> assign(:block_bin, [])
+  end
+
+  defp joined_with_work?(%{assigns: %{edit_session: %Replica{}}} = socket),
+    do: not Ops.pristine?(socket.assigns.block_ops, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
+
+  defp joined_with_work?(_socket), do: false
 
   # Build with AI opens the content assistant for this entry and field. It is
   # offered when the assistant has a model, the user may use it, and the
@@ -989,24 +1227,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp replace_root_from_store(socket, root_uid) do
-    {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
-
-    form =
-      socket
-      |> materialize_base_struct(root_uid)
-      |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
-      |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
+    form = materialized_form(socket, socket.assigns.block_ops, root_uid)
 
     send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: form, remount_js: true)
     put_seed_form(socket, root_uid, form)
   end
 
-  # The op chokepoint: every mutation (structural or content, local or
-  # remote) lands here. A rejected op means a caller drifted from the store —
-  # log it loudly, keep the socket usable.
+  # The op chokepoint for this editor's own mutations (structural or
+  # content). A rejected op means a caller drifted from the store — log it
+  # loudly, keep the socket usable. An applied op is cast to the edit session.
+  # Other editors' ops do not come through here: see
+  # `handle_session_message/2`.
   # A synchronized translation's structure follows its source. Structural ops
-  # from this editor are refused; `:internal` ops — another editor's shipped
-  # state, reconnect recovery — replay what was already accepted.
+  # from this editor are refused; `:replay` ops — reconnect recovery, an
+  # applied recovery copy — replay what was already accepted.
   defp apply_block_op(socket, op, mode \\ :local)
 
   defp apply_block_op(%{assigns: %{source_locked: true}} = socket, op, :local)
@@ -1023,6 +1257,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
         |> assign_ops(ops_state)
         |> assign(:blocks_changed?, true)
+        |> submit_to_session(op)
 
       {:error, reason} ->
         Logger.error(
@@ -1176,20 +1411,54 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     entry_blocks = socket.assigns.entry_blocks || []
 
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
+    base = Ops.from_entry_blocks(entry_blocks)
 
+    case reload_state(assign(socket, :session_base, base), base, scope) do
+      {:ok, socket, state} -> reseed_from_state(socket, entry_blocks_forms, state, base, scope)
+      :detached -> reseed_from_rows(socket, entry_blocks_forms, base, scope)
+    end
+  end
+
+  # After a save (`:changed`) the session moves onto the saved rows. Other
+  # reloads show what the session already holds.
+  defp reload_state(socket, base, :changed), do: rebase_session(socket, base)
+
+  defp reload_state(%{assigns: %{edit_session: %Replica{}}} = socket, _base, _scope),
+    do: {:ok, socket, socket.assigns.block_ops}
+
+  defp reload_state(_socket, _base, _scope), do: :detached
+
+  # Ops of other editors that are not saved yet sit on top of the rows: the
+  # roots they touch show the session's state, not the rows.
+  defp reseed_from_state(socket, entry_blocks_forms, state, base, scope) do
+    forms =
+      Map.new(entry_blocks_forms, fn form ->
+        uid = get_form_block_uid(form)
+        if subtree_dirty?(state, uid), do: {uid, materialized_form(socket, state, uid)}, else: {uid, form}
+      end)
+
+    for {uid, form} <- forms, scope == :all or subtree_dirty?(state, uid) or not holds_persisted?(socket, form) do
+      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+    end
+
+    socket
+    |> assign(:seed_forms, Map.merge(forms, seeds_for_new_roots(socket, state, Map.keys(forms))))
+    |> assign_ops(state)
+    |> assign(:block_bin, [])
+    |> assign(:blocks_changed?, not Ops.pristine?(state, base))
+  end
+
+  defp reseed_from_rows(socket, entry_blocks_forms, base, scope) do
     for form <- entry_blocks_forms, scope == :all or not holds_persisted?(socket, form) do
       send_update(Block, id: "block-#{get_form_block_uid(form)}", event: "replace_form", form: form)
     end
 
     socket
     |> assign(:seed_forms, Map.new(entry_blocks_forms, &{get_form_block_uid(&1), &1}))
-    |> assign_ops(Ops.from_entry_blocks(entry_blocks))
+    |> assign_ops(base)
     # bin snapshots don't survive a save — the save deleted the underlying
-    # rows, so their captured db ids are stale. Sync bookkeeping resets with
-    # the store: the persisted data is the new shared baseline.
+    # rows, so their captured db ids are stale.
     |> assign(:block_bin, [])
-    |> assign(:pending_remote_snapshots, %{})
-    |> assign(:last_synced_snapshots, %{})
     |> assign(:blocks_changed?, false)
   end
 
@@ -1227,151 +1496,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  # Ship or catch up on `uid`'s root when its editing session settles (blur,
-  # focus-switch, structural child op, pre-save force-ship). Three outcomes:
-  #
-  # * we edited since the last sync → broadcast our snapshot (concurrent
-  #   same-block edits resolve last-editor-wins) and drop any deferred
-  #   remote snapshot for it;
-  # * we didn't edit but a remote snapshot was deferred while we were
-  #   focused → apply it now;
-  # * nothing changed on either side → no-op. Never re-broadcast an
-  #   unchanged snapshot: shipping stale state would clobber newer remote
-  #   edits on the other editors.
-  defp ship_or_flush(socket, uid) do
-    ops = socket.assigns.block_ops
-
-    if Ops.known?(ops, uid) do
-      root_uid = Ops.root_of(ops, uid)
-      snapshot = Ops.subtree_snapshot(ops, root_uid)
-      pending = socket.assigns.pending_remote_snapshots[root_uid]
-
-      edited? =
-        case socket.assigns.last_synced_snapshots[root_uid] do
-          nil -> snapshot_dirty?(snapshot)
-          last_synced -> snapshot != last_synced
-        end
-
-      cond do
-        edited? ->
-          socket
-          |> broadcast_snapshot(root_uid, snapshot)
-          |> record_synced_snapshot(root_uid, snapshot)
-          |> update(:pending_remote_snapshots, &Map.delete(&1, root_uid))
-
-        pending ->
-          socket
-          |> update(:pending_remote_snapshots, &Map.delete(&1, root_uid))
-          |> apply_remote_root_snapshot(pending.uid, pending.snapshot)
-
-        true ->
-          socket
-      end
-    else
-      socket
-    end
-  end
-
-  defp broadcast_inserted_root({uid, index}, ops, topic, user_id) do
-    with :inserted <- ops.statuses[uid],
-         module_id when not is_nil(module_id) <- get_in(ops.diffs, [uid, "block", "module_id"]) do
-      module_origin = get_in(ops.diffs, [uid, "block", "module_origin"]) || "local"
-
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:block_added,
-         %{
-           uid: uid,
-           module_id: module_id,
-           module_origin: module_origin,
-           sequence: index,
-           user_id: user_id
-         }}
-      )
-    end
-  end
-
-  defp sync_dirty_snapshot(socket, ops, uid) do
-    snapshot = Ops.subtree_snapshot(ops, uid)
-
-    if snapshot_dirty?(snapshot) do
-      socket
-      |> broadcast_snapshot(uid, snapshot)
-      |> record_synced_snapshot(uid, snapshot)
-    else
-      socket
-    end
-  end
-
-  # A subtree with no diffs and no tombstones matches persisted data — an
-  # untouched block has nothing worth broadcasting.
-  defp snapshot_dirty?(snapshot) do
-    snapshot.deleted != [] or Enum.any?(snapshot.uids, &(Map.get(snapshot.diffs, &1, %{}) != %{}))
-  end
-
-  defp broadcast_snapshot(socket, root_uid, snapshot) do
-    if topic = socket.assigns[:blocks_topic] do
-      PubSub.broadcast(Brando.pubsub(), topic, {
-        :block_ops_shipped,
-        %{uid: root_uid, snapshot: snapshot, user_id: socket.assigns.current_user.id}
-      })
-    end
-
-    socket
-  end
-
-  defp record_synced_snapshot(socket, root_uid, snapshot) do
-    update(socket, :last_synced_snapshots, &Map.put(&1, root_uid, snapshot))
-  end
-
-  # Merge a remote snapshot into the op store, re-materialize the affected
-  # root and hand the fresh form to the mounted component via the
-  # replace_form cascade (blocks own their forms — a seed swap alone would
-  # never reach them). The remount_block push re-boots JS widgets inside
-  # the block. Records the post-apply snapshot so our own next blur
-  # compares as unchanged instead of echoing it back.
-  defp apply_remote_root_snapshot(socket, uid, snapshot) do
-    ops = socket.assigns.block_ops
-
-    with {:ok, updated_ops} <- Ops.apply_remote_snapshot(ops, uid, snapshot),
-         root_uid = Ops.root_of(updated_ops, uid),
-         {:ok, params} <- Ops.materialize_root(updated_ops, root_uid) do
-      block_module = socket.assigns.block_module
-      user_id = socket.assigns.current_user.id
-
-      new_form =
-        socket
-        |> materialize_base_struct(root_uid)
-        |> block_module.changeset(params, user_id, true)
-        |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
-
-      # remount_js: the Block pushes the widget-remount event itself so it
-      # rides the SAME diff frame as the form patch — pushed from here it
-      # dispatches before the patch and widgets re-boot with stale content
-      send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
-
-      socket
-      |> assign_ops(updated_ops)
-      # received state diverges us from the database too — later joiners
-      # must be able to get it from us (the original editor may be gone)
-      |> assign(:blocks_changed?, true)
-      |> put_seed_form(root_uid, new_form)
-      |> record_synced_snapshot(root_uid, Ops.subtree_snapshot(updated_ops, root_uid))
-    else
-      {:error, reason} ->
-        Logger.warning(
-          "BlockField (#{socket.assigns.block_field}) could not apply remote block ops " <>
-            "for #{uid}: #{inspect(reason)}"
-        )
-
-        socket
-    end
-  end
-
   # Capture the doomed subtree for undo BEFORE the delete tears it down.
-  # Local deletes only — the deleting editor gets the undo toast; restoring
-  # broadcasts so every editor's store resurrects the block (leaving a uid in
+  # Local deletes only — the deleting editor gets the undo toast; the restore
+  # is an op, so every editor's store resurrects the block (leaving a uid in
   # a remote `deleted` list would kill the rows again on their next save).
   defp stash_in_bin(socket, uid) do
     ops = socket.assigns.block_ops
@@ -1383,57 +1510,32 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  # Undo a delete: replay the bin snapshot into the op store, then bring the
-  # block back on screen. A restored ROOT mounts a fresh component from its
-  # re-materialized seed form (the shell comprehension picks it up from
-  # ops.order); a restored CHILD lives inside a mounted parent that owns its
-  # form, so the root gets the `replace_form` cascade + remount push — the
-  # same path remote-sync applies use (the only sanctioned post-mount form
-  # handoff).
+  # Undo a delete: replay the bin snapshot into the op store (a `{:restore,
+  # snapshot}` op), then bring the block back on screen. A restored ROOT
+  # mounts a fresh component from its re-materialized seed form (the shell
+  # comprehension picks it up from ops.order); a restored CHILD lives inside a
+  # mounted parent that owns its form, so the root gets the `replace_form`
+  # cascade + remount push — the same path remote ops use (the only
+  # sanctioned post-mount form handoff).
   defp restore_from_snapshot(socket, %{uids: [uid | _], location: location} = snapshot) do
-    with {:ok, updated_ops} <- Ops.restore_snapshot(socket.assigns.block_ops, snapshot) do
+    with {:ok, updated_ops} <- Ops.apply_op(socket.assigns.block_ops, {:restore, snapshot}) do
       root_uid = Ops.root_of(updated_ops, uid)
-      # a materialization failure here must fail loudly — see fetch_root_blocks
-      {:ok, params} = Ops.materialize_root(updated_ops, root_uid)
-
-      new_form =
-        socket
-        |> materialize_base_struct(root_uid)
-        |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
-        |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
+      new_form = materialized_form(socket, updated_ops, root_uid)
 
       socket =
         socket
-        |> assign_ops(updated_ops)
-        |> assign(:blocks_changed?, true)
         |> put_seed_form(root_uid, new_form)
+        |> apply_block_op({:restore, snapshot}, :replay)
 
-      socket =
-        case location do
-          {:root, _at} ->
-            socket
+      case location do
+        {:root, _at} ->
+          :ok
 
-          {:child, _parent_uid, _at} ->
-            send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
-            socket
-        end
+        {:child, _parent_uid, _at} ->
+          send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
+      end
 
       {:ok, refresh_live_preview(socket)}
-    end
-  end
-
-  defp broadcast_block_restored(socket, snapshot) do
-    if topic = socket.assigns[:blocks_topic] do
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:block_restored,
-         %{
-           snapshot: snapshot,
-           block_field: socket.assigns.block_field,
-           user_id: socket.assigns.current_user.id
-         }}
-      )
     end
   end
 
@@ -1472,9 +1574,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp apply_recovered_block_ops(socket, recovered_forms, merged_uids) do
     recovered_forms
     |> Enum.reduce(socket, fn {uid, form}, acc ->
-      apply_block_op(acc, {:insert, uid, :end, Ops.block_diff_params(form.source)}, :internal)
+      apply_block_op(acc, {:insert, uid, :end, Ops.block_diff_params(form.source)}, :replay)
     end)
-    |> apply_block_op({:reorder, merged_uids}, :internal)
+    |> apply_block_op({:reorder, merged_uids}, :replay)
   end
 
   # reposition a main block
@@ -1490,18 +1592,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def handle_event("reposition", %{"uid" => uid, "new" => new_idx, "old" => _old_idx}, socket) do
-    socket = apply_block_op(socket, {:move, uid, new_idx})
-
-    # Broadcast the store's order to other users
-    if topic = socket.assigns[:blocks_topic] do
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:blocks_reordered, %{block_list: socket.assigns.block_ops.order, user_id: socket.assigns.current_user.id}}
-      )
-    end
-
     socket
+    |> apply_block_op({:move, uid, new_idx})
     |> refresh_live_preview()
     |> then(&{:noreply, &1})
   end
@@ -1574,7 +1666,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
         case restore_from_snapshot(socket, snapshot) do
           {:ok, socket} ->
-            broadcast_block_restored(socket, snapshot)
             uid = hd(snapshot.uids)
             {:noreply, push_event(socket, "b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})}
 
@@ -1622,18 +1713,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def handle_event("outline_root_reposition", %{"uid" => uid, "new" => new_idx, "old" => _old_idx}, socket) do
-    socket = apply_block_op(socket, {:move, uid, new_idx})
-
-    # Broadcast the store's order to other users
-    if topic = socket.assigns[:blocks_topic] do
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:blocks_reordered, %{block_list: socket.assigns.block_ops.order, user_id: socket.assigns.current_user.id}}
-      )
-    end
-
     socket
+    |> apply_block_op({:move, uid, new_idx})
     |> refresh_live_preview()
     |> rebuild_outline_items()
     |> then(&{:noreply, &1})
@@ -2651,22 +2732,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       )
 
     selector = "[data-block-uid=\"#{uid}\"]"
-
-    # Broadcast to other users
-    if topic = socket.assigns[:blocks_topic] do
-      PubSub.broadcast(
-        Brando.pubsub(),
-        topic,
-        {:block_added,
-         %{
-           uid: uid,
-           module_id: module_id,
-           module_origin: module_origin,
-           sequence: sequence,
-           user_id: socket.assigns.current_user.id
-         }}
-      )
-    end
 
     socket
     |> put_seed_form(uid, entry_block_form)

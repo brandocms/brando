@@ -319,7 +319,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
   end
 
-  describe "remote sync snapshots" do
+  describe "session helpers" do
     defp sync_state do
       Ops.from_entry_blocks([
         entry_block("a", 1, 10, [child("a1", 11), child("a2", 12, [child("a2x", 13)])]),
@@ -333,91 +333,118 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert Ops.root_of(state, "b") == "b"
     end
 
-    test "subtree_snapshot/2 carries diffs, structure and DFS order" do
+    test "{:restore, snapshot} undoes a delete like restore_snapshot/2" do
+      state = sync_state()
+      snapshot = Ops.bin_snapshot(state, "a2")
+      deleted = apply!(state, {:delete, "a2"})
+
+      assert apply!(deleted, {:restore, snapshot}) == state
+    end
+
+    test "{:replace_state, state} replaces everything" do
+      replacement = apply!(Ops.new(["x"]), {:update, "x", %{"block" => %{"description" => "d"}}})
+      assert apply!(sync_state(), {:replace_state, replacement}) == replacement
+    end
+
+    test "signature/1 compares rows, not edits" do
+      edited = apply!(sync_state(), {:update, "a1", %{"description" => "edited"}})
+      assert Ops.signature(edited) == Ops.signature(sync_state())
+
+      other_rows = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      refute Ops.signature(other_rows) == Ops.signature(sync_state())
+    end
+
+    test "pristine?/2 is false once anything changed" do
+      base = sync_state()
+      assert Ops.pristine?(base, base)
+      refute Ops.pristine?(apply!(base, {:update, "b", %{"block" => %{"anchor" => "x"}}}), base)
+      refute Ops.pristine?(apply!(base, {:reorder, ["b", "a"]}), base)
+      refute Ops.pristine?(apply!(base, {:delete, "a1"}), base)
+      refute Ops.pristine?(apply!(base, {:insert, "n", :end, %{}}), base)
+      # an empty diff is no change
+      assert Ops.pristine?(apply!(base, {:update, "a1", %{}}), base)
+    end
+
+    test "changed_roots/3 names the roots whose subtree changed" do
+      before = sync_state()
+      after_state = apply!(before, {:update, "a2x", %{"description" => "deep"}})
+
+      assert Ops.changed_roots(before, after_state) == ["a"]
+      assert Ops.changed_roots(before, after_state, ["a2x"]) == ["a"]
+      assert Ops.changed_roots(before, after_state, ["b"]) == []
+
+      # appearing and disappearing roots are the caller's to handle
+      inserted = apply!(before, {:insert, "n", 0, %{}})
+      assert Ops.changed_roots(before, inserted) == []
+
+      child_deleted = apply!(before, {:delete, "a1"})
+      assert Ops.changed_roots(before, child_deleted) == ["a"]
+    end
+  end
+
+  describe "carry/3 (writes from outside the session)" do
+    defp base_rows do
+      Ops.from_entry_blocks([
+        entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]),
+        entry_block("b", 2, 20),
+        entry_block("c", 3, 30)
+      ])
+    end
+
+    test "unsaved field changes, inserts and deletes are carried onto the new rows" do
+      old_base = base_rows()
+
       state =
-        sync_state()
-        |> apply!({:update, "a2", %{"type" => "module"}})
-        |> apply!({:update, "a2x", %{"uid" => "a2x"}})
+        old_base
+        |> apply!({:update, "b", %{"block" => %{"description" => "editor"}}})
+        |> apply!({:update, "a1", %{"description" => "child edit"}})
+        |> apply!({:insert, "n", 1, %{"block" => %{"uid" => "n", "type" => "module"}}})
+        |> apply!({:insert_child, "a", "nc", 0, %{"uid" => "nc"}})
+        |> apply!({:delete, "c"})
 
-      snapshot = Ops.subtree_snapshot(state, "a2")
+      # The assistant appended a block "z" after "c" and gave "b" a new row id.
+      new_base =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]),
+          entry_block("b", 4, 21),
+          entry_block("c", 3, 30),
+          entry_block("z", 5, 50)
+        ])
 
-      assert snapshot.uids == ["a2", "a2x"]
-      assert snapshot.diffs == %{"a2" => %{"type" => "module"}, "a2x" => %{"uid" => "a2x"}}
-      assert snapshot.parents == %{"a2" => "a", "a2x" => "a2"}
-      assert snapshot.child_order == %{"a2" => ["a2x"]}
+      assert {carried, []} = Ops.carry(state, old_base, new_base)
+
+      assert carried.order == ["a", "n", "b", "z"]
+      assert carried.child_order["a"] == ["nc", "a1", "a2"]
+      assert carried.diffs["b"] == %{"block" => %{"description" => "editor"}}
+      assert carried.diffs["a1"] == %{"description" => "child edit"}
+      assert carried.statuses["n"] == :inserted
+      assert carried.statuses["nc"] == :inserted
+      assert carried.db_ids["b"] == {4, 21}
+      assert "c" in carried.deleted
+      refute Ops.known?(carried, "c")
     end
 
-    test "apply_remote_snapshot/3 updates known uids" do
-      sender = apply!(sync_state(), {:update, "a2", %{"type" => "module"}})
-      snapshot = Ops.subtree_snapshot(sender, "a2")
+    test "the other writer's order wins unless the editors moved blocks" do
+      old_base = base_rows()
+      new_base = Ops.from_entry_blocks([entry_block("c", 3, 30), entry_block("a", 1, 10), entry_block("b", 2, 20)])
 
-      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a2", snapshot)
-      assert receiver.diffs["a2"] == %{"type" => "module"}
-      assert receiver.order == sync_state().order
+      {kept, []} = Ops.carry(old_base, old_base, new_base)
+      assert kept.order == ["c", "a", "b"]
+
+      moved = apply!(old_base, {:move, "a", 2})
+      {carried, []} = Ops.carry(moved, old_base, new_base)
+      assert carried.order == ["b", "c", "a"]
     end
 
-    test "apply_remote_snapshot/3 attaches unknown children under their shipped parent" do
-      sender =
-        sync_state()
-        |> apply!({:insert_child, "a", "new1", 1, %{"uid" => "new1", "type" => "module"}})
-        |> apply!({:update, "a", %{"block" => %{"description" => "edited"}}})
+    test "work on a block the other writer deleted is reported, not replayed" do
+      old_base = base_rows()
+      state = apply!(old_base, {:update, "c", %{"block" => %{"description" => "lost?"}}})
 
-      snapshot = Ops.subtree_snapshot(sender, "a")
+      new_base =
+        Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]), entry_block("b", 2, 20)])
 
-      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
-      assert receiver.parents["new1"] == "a"
-      assert receiver.statuses["new1"] == :inserted
-      # shipped child order applied, so the remote insert lands at position 1
-      assert receiver.child_order["a"] == ["a1", "new1", "a2"]
-      assert receiver.diffs["new1"]["type"] == "module"
-    end
-
-    test "apply_remote_snapshot/3 rejects a fully unknown subtree" do
-      snapshot = %{uids: ["ghost"], diffs: %{}, parents: %{}, child_order: %{}}
-      assert {:error, {:unknown_uid, "ghost"}} = Ops.apply_remote_snapshot(sync_state(), "ghost", snapshot)
-    end
-
-    test "snapshot tombstones remove children the sender deleted" do
-      sender = apply!(sync_state(), {:delete, "a1"})
-      snapshot = Ops.subtree_snapshot(sender, "a")
-
-      assert snapshot.deleted == ["a1"]
-      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
-      refute Ops.known?(receiver, "a1")
-      assert receiver.child_order["a"] == ["a2"]
-      # the delete is recorded locally too — the receiver's save must kill the rows
-      assert "a1" in receiver.deleted
-    end
-
-    test "tombstones cascade through a deleted child's own subtree" do
-      sender = apply!(sync_state(), {:delete, "a2"})
-      snapshot = Ops.subtree_snapshot(sender, "a")
-
-      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
-      refute Ops.known?(receiver, "a2")
-      refute Ops.known?(receiver, "a2x")
-    end
-
-    test "tombstones never touch roots or unknown uids" do
-      snapshot =
-        sync_state()
-        |> Ops.subtree_snapshot("a")
-        |> Map.put(:deleted, ["b", "ghost"])
-
-      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
-      # root "b" survives — root deletes travel as structural broadcasts only
-      assert Ops.known?(receiver, "b")
-      assert receiver.order == ["a", "b"]
-    end
-
-    test "delete tracks roots separately from children" do
-      state =
-        sync_state()
-        |> apply!({:delete, "a1"})
-        |> apply!({:delete, "b"})
-
-      assert Enum.sort(state.deleted) == ["a1", "b"]
-      assert state.deleted_roots == ["b"]
+      assert {carried, ["c"]} = Ops.carry(state, old_base, new_base)
+      assert carried.order == ["a", "b"]
     end
   end
 
