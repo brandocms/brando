@@ -24,6 +24,8 @@
   /* The blueprint's icon leads the listing title, a step quieter than the text. */
   :is(.workspace-heading-icon, .content-header-icon) { width: .8em; height: .8em; margin-right: .3em; vertical-align: -.08em; color: var(--workspace-muted); }
   .workspace-heading p { margin-top: 8px; font-size: 13px; color: var(--workspace-muted); }
+  /* "Configuration" above a settings screen's title, as on Utilities */
+  .workspace-eyebrow { display: block; margin-bottom: 8px; color: var(--workspace-muted); font-size: 10px; font-weight: 500; line-height: 1.5; letter-spacing: .12em; text-transform: uppercase; }
   .workspace-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
   > #content-header {
     margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--workspace-line);

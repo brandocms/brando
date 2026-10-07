@@ -18,7 +18,7 @@ assets/css/components/Dialog.css 14
 assets/css/components/Drawer.css 24
 assets/css/components/EditorWorkspace.css 25
 assets/css/components/FloatingDropdown.css 7
-assets/css/components/Form.css 18
+assets/css/components/Form.css 5
 assets/css/components/Form/BlockEditor.css 41
 assets/css/components/Form/BlockFieldOutline.css 8
 assets/css/components/Form/DraftRecovery.css 45
@@ -67,7 +67,7 @@ assets/css/components/Workspace.css 25
 assets/css/views/AltTextWorkspace.css 3
 assets/css/views/Assistant.css 40
 assets/css/views/ContentWorkspace.css 29
-assets/css/views/SettingsWorkspace.css 88
+assets/css/views/SettingsWorkspace.css 67
 assets/css/views/Users.css 11
 assets/css/views/assets/Images.css 44
 assets/css/views/config/Activity.css 26
