@@ -28,7 +28,8 @@ defmodule BrandoAdmin.Authorization do
     "Elixir.BrandoAdmin.Forms.SubmissionsLive" => {:read, Brando.Forms.Form},
     "Elixir.BrandoAdmin.Users.GroupsLive" => {:read, :groups},
     "Elixir.BrandoAdmin.Nav" => {:access, :backend},
-    "Elixir.BrandoAdmin.Chrome" => {:access, :backend}
+    "Elixir.BrandoAdmin.Chrome" => {:access, :backend},
+    "Elixir.BrandoAdmin.CommandPaletteLive" => {:access, :backend}
   }
 
   def requirement(view, params, live_action) do

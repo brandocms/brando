@@ -17,6 +17,14 @@
     },
     sticky: true
   )}
+  {live_render(@socket, BrandoAdmin.CommandPaletteLive,
+    id: "brando-command-palette",
+    session: %{
+      "brando_site_key" => @current_site && @current_site.key,
+      "brando_environment_key" => @current_environment && @current_environment.key
+    },
+    sticky: true
+  )}
   <div id="admin" phx-hook="Brando.Admin">
     <%= if @socket_connected do %>
       <%!-- Nothing to switch between on a single-language site. --%>

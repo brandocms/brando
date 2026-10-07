@@ -15690,3 +15690,83 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Note on this block"
 msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Recent"
+msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Images matching “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Files matching “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Videos matching “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Ask the Assistant"
+msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Ask the Assistant about “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Create %{type}…"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search and commands"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search entries, settings and actions"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search, or type > for commands"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Results"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing matches “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "move"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "open"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "open in new tab"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "commands"
+msgstr ""

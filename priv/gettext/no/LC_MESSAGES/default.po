@@ -15675,3 +15675,83 @@ msgstr "Gjenåpnet et notat"
 #, elixir-autogen, elixir-format
 msgid "Note on this block"
 msgstr "Notat på denne blokken"
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Recent"
+msgstr "Sist besøkt"
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Images matching “%{query}”"
+msgstr "Bilder som passer til «%{query}»"
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Files matching “%{query}”"
+msgstr "Filer som passer til «%{query}»"
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Videos matching “%{query}”"
+msgstr "Videoer som passer til «%{query}»"
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Ask the Assistant"
+msgstr "Spør assistenten"
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Ask the Assistant about “%{query}”"
+msgstr "Spør assistenten om «%{query}»"
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Create %{type}…"
+msgstr "Opprett %{type}…"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search and commands"
+msgstr "Søk og kommandoer"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search entries, settings and actions"
+msgstr "Søk i innhold, innstillinger og handlinger"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search, or type > for commands"
+msgstr "Søk, eller skriv > for kommandoer"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Results"
+msgstr "Resultater"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing matches “%{query}”"
+msgstr "Ingenting passer til «%{query}»"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "move"
+msgstr "flytt"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "open"
+msgstr "åpne"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "open in new tab"
+msgstr "åpne i ny fane"
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "commands"
+msgstr "kommandoer"

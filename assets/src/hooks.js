@@ -9,6 +9,7 @@ import AssetFolderDropHook from './hooks/AssetFolderDrop'
 import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
 import CodeEditorHook from './hooks/CodeEditor'
+import CommandPaletteHook from './hooks/CommandPalette'
 import ColorPickerHook from './hooks/ColorPicker'
 import ConfirmClickHook from './hooks/ConfirmClick'
 import DatePickerHook from './hooks/DatePicker'
@@ -76,6 +77,7 @@ export default (app) => {
     'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
+    'Brando.CommandPalette': CommandPaletteHook(app),
     'Brando.ColorPicker': ColorPickerHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),
     'Brando.DatePicker': DatePickerHook(app),
