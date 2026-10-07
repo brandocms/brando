@@ -130,7 +130,8 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   // Verify the main canvas is present and wait for image to load
   const mainCanvas = page.locator('#image-editor-canvas')
   await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-  await page.waitForTimeout(2000)
+  // The hook clears aria-busy once the image is drawn on the canvas.
+  await expect(page.locator('#image-editor-hook')).toHaveAttribute('aria-busy', 'false', { timeout: 15000 })
 
   // Step 9: Verify key UI elements
   const focalPin = editorDrawer.locator('.image-editor-focal-pin')
@@ -219,39 +220,36 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   // Step 11: Test zoom slider
   await zoomSlider.fill('1.5')
   await zoomSlider.dispatchEvent('input')
-  await page.waitForTimeout(300)
   await expect(zoomValue).toContainText('1.50x')
 
   // Step 12: Test reset button
   const resetBtn = page.locator('#image-editor-reset')
   await resetBtn.click()
-  await page.waitForTimeout(300)
   await expect(zoomValue).toContainText('1.00x')
 
   // Step 13: Zoom to 1.5 and save with crop via "Save changes"
   await zoomSlider.fill('1.5')
   await zoomSlider.dispatchEvent('input')
-  await page.waitForTimeout(300)
   await expect(zoomValue).toContainText('1.50x')
+
+  // The field's size readout is how the save shows: the drawer closes at once,
+  // while the cropped file uploads and the server swaps the field's image.
+  const dims = imageField.locator('.media-field-meta')
+  await expect(dims).toHaveText('292 × 173')
 
   const saveReplaceBtn = page.locator('#image-editor-save-replace')
   await saveReplaceBtn.click()
 
   // Editor drawer should auto-close after save
   await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })
-  await page.waitForTimeout(3000)
+  await expect(dims).not.toHaveText('292 × 173', { timeout: 30000 })
   await syncLV(page, 30000)
 
   // Close the image drawer
   await details.getByRole('button', { name: 'Done', exact: true }).click()
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
-
-  // Verify the image dimensions changed after crop (original was 292x173)
-  const dims = imageField.locator('.media-field-meta')
   await expect(dims).toBeVisible({ timeout: 10000 })
-  const dimsText = await dims.textContent()
-  expect(dimsText).not.toBe('292 × 173')
 
   // Step 14: Save the project again so the cropped image is persisted
   await page.getByTestId('submit').click()
@@ -276,20 +274,22 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   // Step 17: Verify the image editor opens and works for the second time
   await expect(page.locator('#image-editor-drawer')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('#image-editor-canvas')).toBeVisible({ timeout: 10000 })
-  await page.waitForTimeout(2000)
+  // The hook clears aria-busy once the image is drawn on the canvas.
+  await expect(page.locator('#image-editor-hook')).toHaveAttribute('aria-busy', 'false', { timeout: 15000 })
 
   // Step 18: Zoom and save again to verify "Save changes" works on re-edit
   const zoomSlider2 = page.locator('#image-editor-zoom')
   await zoomSlider2.fill('1.3')
   await zoomSlider2.dispatchEvent('input')
-  await page.waitForTimeout(300)
+  await expect(page.locator('#image-editor-zoom-value')).toContainText('1.30x')
 
+  const croppedDims = await imageField.locator('.media-field-meta').textContent()
   const saveReplaceBtn2 = page.locator('#image-editor-save-replace')
   await saveReplaceBtn2.click()
 
   // Editor drawer should auto-close after save
   await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })
-  await page.waitForTimeout(3000)
+  await expect(imageField.locator('.media-field-meta')).not.toHaveText(croppedDims, { timeout: 30000 })
   await syncLV(page, 30000)
 
   // Close the image drawer

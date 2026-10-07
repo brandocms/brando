@@ -33,8 +33,9 @@ of every migration after the baseline. CI runs this once, on `legacy-1`:
 ```
 
 Keep one Playwright worker per server: SQL sandboxes do not isolate PubSub,
-caches or other application state. The existing two CI shards use separate
-servers and PostgreSQL services.
+caches or other application state. CI runs the legacy suite in four shards
+(`legacy-1` to `legacy-4`), each on its own runner with its own server and
+PostgreSQL service.
 
 Each attempt writes its duration and result to `playwright/test-results/timings.jsonl`
 (or the selected `--output` directory), including on runs interrupted before
