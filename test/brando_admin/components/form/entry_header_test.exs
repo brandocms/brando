@@ -49,6 +49,17 @@ defmodule BrandoAdmin.Components.Form.EntryHeaderTest do
       assert EntryHeader.title(Brando.Pages.Page, %Brando.Pages.Page{}) == "New page"
     end
 
+    test "a blueprint words \"New\" itself in its own Gettext domain" do
+      Gettext.with_locale(Brando.Gettext, "no", fn ->
+        assert EntryHeader.new_title(Brando.Forms.Form) == "Nytt skjema"
+        assert EntryHeader.new_title(Brando.Pages.Page) == "Ny side"
+      end)
+
+      Gettext.with_locale(Brando.Gettext, "en", fn ->
+        assert EntryHeader.new_title(Brando.Forms.Form) == "New form"
+      end)
+    end
+
     test "a saved entry is titled as its identifier renders it" do
       page = %Brando.Pages.Page{id: 1, title: "About us", language: :en, uri: "about"}
       assert EntryHeader.title(Brando.Pages.Page, page) == "About us"

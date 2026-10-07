@@ -186,3 +186,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Submissions older than this are deleted every night. Leave empty to keep them."
 msgstr ""
+
+#: lib/brando/forms/form.ex
+#, elixir-format
+msgid "New %{type}"
+msgstr ""

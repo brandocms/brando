@@ -35,3 +35,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "module sets"
 msgstr ""
+
+#: lib/brando/content/module_set.ex
+#, elixir-format
+msgid "New %{type}"
+msgstr ""

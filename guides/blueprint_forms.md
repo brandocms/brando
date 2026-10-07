@@ -104,7 +104,11 @@ Give `BrandoAdmin.Components.Form`:
   replace the form's `default_params`.
 * `layout`: `:entry` (default) heads the form with the entry's title, a
   breadcrumb with the content type and language, and the status control
-  beside the title; Save and close sits in the toolbar. `:settings` is for a
+  beside the title; Save and close sits in the toolbar. A new entry is headed
+  "New" and the blueprint's singular name. Where "new" must agree with the
+  noun, translate the msgid `"New %{type}"` in the blueprint's own Gettext
+  domain (`projects_project.po`: `msgstr "Nytt prosjekt"`); the blueprint's
+  wording replaces the default. `:settings` is for a
   singleton settings screen: the form renders no heading (put a
   `Workspace.header` above it), shows its tabs as plain pill tabs, and saves
   in place from a sticky bar at the bottom.

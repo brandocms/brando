@@ -90,9 +90,27 @@ defmodule BrandoAdmin.Components.Form.EntryHeader do
 
   def title(schema, _entry), do: new_title(schema)
 
-  @doc "\"New case\": the blueprint's own name for an entry not yet saved."
+  @doc """
+  "New case": the blueprint's own name for an entry not yet saved.
+
+  A blueprint can word it itself, for a language where "new" agrees with the
+  noun ("Nytt skjema"), by translating the msgid `"New %{type}"` in its own
+  Gettext domain. Otherwise Brando's "New %{type}" is used.
+  """
   def new_title(schema) do
-    gettext("New %{type}", type: String.downcase(Brando.Blueprint.get_singular(schema)))
+    type = String.downcase(Brando.Blueprint.get_singular(schema))
+    blueprint_new_title(schema, type) || gettext("New %{type}", type: type)
+  end
+
+  defp blueprint_new_title(schema, type) do
+    %{domain: domain, schema: schema_name} = schema.__naming__()
+    gettext_domain = String.downcase("#{domain}_#{schema_name}")
+    title = Gettext.dgettext(schema.__modules__().gettext, gettext_domain, "New %{type}", type: type)
+
+    # Untranslated, Gettext returns the msgid itself
+    if title != "New #{type}", do: title
+  rescue
+    _ -> nil
   end
 
   defp identifier_title(schema, entry) do
