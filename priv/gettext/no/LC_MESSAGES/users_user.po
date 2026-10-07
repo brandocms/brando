@@ -81,11 +81,6 @@ msgstr "Passord"
 msgid "Superuser"
 msgstr "Superbruker"
 
-#: lib/brando/users/user.ex:174
-#, elixir-autogen, elixir-format
-msgid "The administrator has set a mandatory password change on first login for this website."
-msgstr "Administratoren har angitt obligatorisk passordendring ved første pålogging for dette nettstedet."
-
 #: lib/brando/users/user.ex:200
 #, elixir-autogen, elixir-format
 msgid "User"

@@ -36,14 +36,11 @@ defmodule BrandoAdmin.UserAuth do
     |> maybe_write_remember_me_cookie(token, params)
     |> write_last_login(user)
     |> check_content_language(user)
-    |> redirect(to: set_initial_password(conn, user) || user_return_to || signed_in_path(conn))
+    |> redirect(to: set_initial_password(user) || user_return_to || signed_in_path(conn))
   end
 
-  defp set_initial_password(conn, %{config: %{reset_password_on_first_login: true}} = user) do
-    Brando.routes().admin_live_path(conn, BrandoAdmin.Users.UserUpdatePasswordLive, user.id)
-  end
-
-  defp set_initial_password(_, _), do: nil
+  defp set_initial_password(%{config: %{reset_password_on_first_login: true}}), do: "/admin/users/password"
+  defp set_initial_password(_), do: nil
 
   defp write_last_login(conn, user) do
     Brando.Users.set_last_login(user)
@@ -183,7 +180,7 @@ defmodule BrandoAdmin.UserAuth do
   defp put_token_in_session(conn, token) do
     conn
     |> put_session(:user_token, token)
-    |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+    |> put_session(:live_socket_id, Users.live_socket_id(token))
   end
 
   defp maybe_store_return_to(%{method: "GET"} = conn) do

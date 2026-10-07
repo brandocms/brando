@@ -78,3 +78,43 @@
     font-size: 14px;
   }
 }
+
+/* Forgot password and choose a new password share the login screen. Spacing
+   is padding and gaps, which the global last-paragraph margin reset leaves be. */
+.login {
+  .login-subtitle {
+    display: block;
+    margin-top: 8px;
+    font-family: theme(typography.families.main);
+    font-size: 15px;
+  }
+
+  .login-intro {
+    padding-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .login-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .login-link {
+    font-size: 14px;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .login-form .alert {
+    width: 100%;
+  }
+}

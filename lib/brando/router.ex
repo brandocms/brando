@@ -111,6 +111,8 @@ defmodule Brando.Router do
           live_session :redirect_if_user_is_authenticated,
             on_mount: sandbox_hooks ++ [{BrandoAdmin.UserAuth, :redirect_if_user_is_authenticated}] do
             live "/login", UserLoginLive, :new
+            live "/reset-password", UserForgotPasswordLive, :new
+            live "/reset-password/:token", UserResetPasswordLive, :edit
           end
 
           post "/login", UserSessionController, :create
@@ -278,7 +280,7 @@ defmodule Brando.Router do
         live "/", BrandoAdmin.Users.UserListLive
         live "/create", BrandoAdmin.Users.UserFormLive
         live "/update/:entry_id", BrandoAdmin.Users.UserFormLive, :update
-        live "/password/:entry_id", BrandoAdmin.Users.UserUpdatePasswordLive
+        live "/password", BrandoAdmin.Users.UserUpdatePasswordLive
       end
     end
   end

@@ -30,11 +30,8 @@ defmodule Brando.Pages.FragmentKeyWarningTest do
   end
 
   test "tab alerts are kept (they used to be dropped)" do
-    password_form =
-      Brando.Users.User
-      |> Spark.Dsl.Extension.get_entities([:forms])
-      |> Enum.find(&(&1.name == :password))
+    [seo_form] = Spark.Dsl.Extension.get_entities(Brando.Sites.SEO, [:forms])
 
-    assert [%Brando.Blueprint.Forms.Alert{type: :info}] = Enum.flat_map(password_form.tabs, & &1.alerts)
+    assert [%Brando.Blueprint.Forms.Alert{type: :warning}] = Enum.flat_map(seo_form.tabs, & &1.alerts)
   end
 end

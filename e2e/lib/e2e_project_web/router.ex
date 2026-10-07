@@ -53,6 +53,7 @@ defmodule E2eProjectWeb.Router do
       post "/drafts/:action", E2EFixtureController, :drafts
       post "/frontend-assets/:action", E2EFrontendAssetsController, :run
       post "/user-directory/:action", E2EFixtureController, :user_directory
+      post "/password-reset/:action", E2EFixtureController, :password_reset
       post "/image-creator/:image_id", E2EFixtureController, :image_creator
       post "/admin-workspace-fixtures", E2EFixtureController, :admin_workspaces
       post "/synchronized-translation", E2EFixtureController, :synchronized_translation

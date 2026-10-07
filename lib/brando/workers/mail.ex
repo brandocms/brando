@@ -10,7 +10,7 @@ defmodule Brando.Worker.Mail do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    TenantJob.run(job, fn ->
+    TenantJob.run_current(job, fn ->
       case args |> email() |> Brando.Mailer.deliver() do
         {:ok, _} -> :ok
         {:error, reason} when reason in [:no_mailer, :no_sender] -> {:cancel, reason}

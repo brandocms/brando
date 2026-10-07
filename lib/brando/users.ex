@@ -8,9 +8,15 @@ defmodule Brando.Users do
 
   import Ecto.Query
 
+  require Logger
+
+  alias Brando.Repo
   alias Brando.Users.User
+  alias Brando.Users.UserNotifier
   alias Brando.Users.UserToken
   alias Brando.Utils
+  alias Ecto.Changeset
+  alias Ecto.Multi
 
   @type user :: User.t()
 
@@ -106,7 +112,7 @@ defmodule Brando.Users do
   """
   def generate_user_session_token(user) do
     {token, user_token} = UserToken.build_session_token(user)
-    Brando.Repo.insert!(user_token)
+    Repo.insert!(user_token)
     token
   end
 
@@ -117,17 +123,25 @@ defmodule Brando.Users do
     {:ok, query} = UserToken.verify_session_token_query(token)
 
     query
-    |> Brando.Repo.one()
-    |> Brando.Repo.preload(:avatar)
+    |> Repo.one()
+    |> Repo.preload(:avatar)
   end
 
   @doc """
   Deletes the signed token with the given context.
   """
   def delete_session_token(token) do
-    Brando.Repo.delete_all(UserToken.token_and_context_query(token, "session"))
+    Repo.delete_all(UserToken.token_and_context_query(token, "session"))
     :ok
   end
+
+  @doc """
+  The id of the LiveView sockets of the session `token`, which
+  the login puts in the session. Broadcasting `"disconnect"` to it
+  closes them.
+  """
+  @spec live_socket_id(binary()) :: String.t()
+  def live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
   def build_token(id) do
     Phoenix.Token.sign(Brando.endpoint(), "user_token", id)
@@ -137,8 +151,204 @@ defmodule Brando.Users do
     Phoenix.Token.verify(Brando.endpoint(), "user_token", token, max_age: 86_400)
   end
 
-  def reset_user_password(_user, _attrs) do
-    raise "TODO"
+  ## Passwords
+
+  @doc """
+  The admin's page to ask for a password reset link, or, with `token`, the
+  link itself.
+  """
+  @spec reset_password_url(String.t() | nil) :: String.t()
+  def reset_password_url(token \\ nil) do
+    base = String.trim_trailing(Brando.endpoint().url(), "/") <> "/admin/reset-password"
+    if token, do: base <> "/" <> token, else: base
+  end
+
+  @doc """
+  Asks for a password reset link for the account with `email`.
+
+  The answer is the same whether or not there is such an account: the lookup
+  and the email happen in a background job (`Brando.Worker.PasswordReset`), so
+  neither the reply nor the time it takes tells anything. Only an active,
+  undeleted account gets an email.
+
+  Returns `:ok`, or — without a mailer or sender, in production —
+  `{:error, :no_mailer}` or `{:error, :no_sender}`. Development and test raise
+  instead, see `Brando.Mailer.ensure_configured/0`.
+  """
+  @spec request_password_reset(String.t()) :: :ok | {:error, :no_mailer | :no_sender}
+  def request_password_reset(email) when is_binary(email) do
+    with :ok <- Brando.Mailer.ensure_configured() do
+      {:ok, _job} =
+        %{"email" => email |> String.trim() |> String.slice(0, 160)}
+        |> Brando.Tenant.Job.attach_current()
+        |> Brando.Worker.PasswordReset.new()
+        |> Oban.insert()
+
+      :ok
+    end
+  end
+
+  @doc """
+  Emails a password reset link to the active, undeleted account with `email`,
+  if there is one. Run by `Brando.Worker.PasswordReset`; returns `:ok` either
+  way, or `{:error, reason}` when the email could not be queued.
+  """
+  @spec deliver_password_reset(String.t()) :: :ok | {:error, term()}
+  def deliver_password_reset(email) when is_binary(email) do
+    query = from u in User, where: u.email == ^email and u.active == true and is_nil(u.deleted_at)
+
+    case Repo.one(query) do
+      nil -> :ok
+      user -> user |> deliver_reset_link(:requested) |> ok()
+    end
+  end
+
+  @doc """
+  Sends `user_id` a link to choose a new password, on behalf of
+  `current_user`. A superuser may send one to anyone, others only to
+  themselves, and only an active account gets one.
+
+  Returns `{:ok, user}`, or `{:error, reason}`: `:forbidden`, `:inactive`, an
+  unknown user, or no mailer or sender in production.
+  """
+  @spec send_password_reset(integer() | String.t(), user) :: {:ok, user} | {:error, term()}
+  def send_password_reset(user_id, current_user) do
+    with {:ok, user} <- get_user(user_id),
+         :ok <- check(Brando.Trait.ProtectPassword.allowed?(current_user, user), :forbidden),
+         :ok <- check(user.active, :inactive),
+         :ok <- Brando.Mailer.ensure_configured(),
+         {:ok, _job} <- deliver_reset_link(user, :admin) do
+      {:ok, user}
+    end
+  end
+
+  # Only the newest link works: one sent earlier is deleted with it.
+  defp deliver_reset_link(user, reason) do
+    {encoded, user_token} = UserToken.build_email_token(user, "reset_password")
+
+    Repo.transaction(fn ->
+      Repo.delete_all(UserToken.user_and_contexts_query(user, ["reset_password"]))
+      Repo.insert!(user_token)
+    end)
+
+    UserNotifier.deliver_reset_password_instructions(user, reset_password_url(encoded), reason)
+  end
+
+  defp check(true, _reason), do: :ok
+  defp check(_, reason), do: {:error, reason}
+
+  defp ok({:ok, _}), do: :ok
+  defp ok(error), do: error
+
+  @doc """
+  The active, undeleted user the password reset `token` was sent to, while
+  the link is valid, or nil.
+  """
+  @spec get_user_by_reset_password_token(String.t()) :: user | nil
+  def get_user_by_reset_password_token(token) when is_binary(token) do
+    case UserToken.verify_email_token_query(token, "reset_password") do
+      {:ok, query} -> Repo.one(query)
+      :error -> nil
+    end
+  end
+
+  def get_user_by_reset_password_token(_token), do: nil
+
+  @doc """
+  A changeset for a new password: `password` and a matching
+  `password_confirmation`, checked against the `User` blueprint's password
+  constraints. Nothing else in `attrs` is cast.
+  """
+  @spec password_changeset(user, map()) :: Changeset.t()
+  def password_changeset(%User{} = user, attrs \\ %{}) do
+    password = Brando.Blueprint.Attributes.__attribute__(User, :password)
+    password = %{password | opts: Map.update(password.opts, :constraints, [], &Keyword.delete(&1, :confirmation))}
+
+    user
+    |> Changeset.cast(attrs, [:password])
+    |> Changeset.validate_required([:password])
+    |> Brando.Blueprint.Constraints.run_validations(User, [password])
+    # Bcrypt only reads the first 72 bytes
+    |> Changeset.validate_length(:password, max: 72, count: :bytes)
+    |> Changeset.validate_confirmation(:password, required: true)
+  end
+
+  @doc """
+  Sets the password of `user`, who opened a valid reset link, to the one in
+  `attrs` (see `password_changeset/2`).
+
+  Logs the user out everywhere: every token is deleted — sessions, and the
+  reset link with any other — and their open admin views are disconnected.
+  The user is emailed that the password changed.
+  """
+  @spec reset_user_password(user, map()) :: {:ok, user} | {:error, Changeset.t()}
+  def reset_user_password(%User{} = user, attrs) do
+    user
+    |> password_changeset(attrs)
+    |> save_password(UserToken.user_and_contexts_query(user, :all))
+  end
+
+  @doc """
+  Changes the password of the logged-in `user`, who must give their
+  `current_password`, to the one in `attrs` (see `password_changeset/2`).
+
+  Logs the user out of every other session, keeping `current_token` — the
+  session token of the browser doing the change — and deletes any password
+  reset link. The user is emailed that the password changed.
+  """
+  @spec update_user_password(user, String.t() | nil, map(), binary() | nil) ::
+          {:ok, user} | {:error, Changeset.t()}
+  def update_user_password(%User{} = user, current_password, attrs, current_token \\ nil) do
+    revoked =
+      if current_token,
+        do: from(t in UserToken.user_and_contexts_query(user, :all), where: t.token != ^current_token),
+        else: UserToken.user_and_contexts_query(user, :all)
+
+    user
+    |> password_changeset(attrs)
+    |> validate_current_password(current_password)
+    |> save_password(revoked)
+  end
+
+  defp validate_current_password(changeset, password) do
+    if is_binary(password) and Bcrypt.verify_pass(password, changeset.data.password) do
+      changeset
+    else
+      Changeset.add_error(changeset, :current_password, gettext("is not your current password"))
+    end
+  end
+
+  # Clears the first-login reset as well: the user has chosen a password.
+  defp save_password(%Changeset{valid?: true} = changeset, revoked_tokens) do
+    changeset =
+      changeset
+      |> Changeset.put_embed(:config, %{reset_password_on_first_login: false})
+      |> Changeset.prepare_changes(&Brando.Trait.Password.hash_password/1)
+
+    Multi.new()
+    |> Multi.update(:user, changeset)
+    |> Multi.delete_all(:tokens, from(t in revoked_tokens, select: {t.context, t.token}))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user, tokens: {_count, tokens}}} ->
+        for {"session", token} <- tokens, do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+        notify_password_changed(user)
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  defp save_password(changeset, _revoked_tokens), do: {:error, Map.put(changeset, :action, :update)}
+
+  # Without a mailer the password is still changed; there is just no email.
+  defp notify_password_changed(user) do
+    if Brando.Mailer.configured?() and not is_nil(Brando.Mailer.sender()[:from]) do
+      UserNotifier.deliver_password_changed(user)
+    else
+      Logger.info("[Brando.Users] No email sent about the changed password of user ##{user.id}: no mailer configured")
+    end
   end
 
   @doc """

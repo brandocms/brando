@@ -23,6 +23,27 @@ defmodule Brando.Tenant.Job do
     end
   end
 
+  @doc """
+  Like `attach/1`, for a job that may also run outside any site, such as
+  email sent from the login page: without a current tenant prefix, `args` are
+  returned as they are. Run such a job with `run_current/2`.
+  """
+  @spec attach_current(map()) :: map()
+  def attach_current(args) when is_map(args) do
+    if Tenant.current_prefix(), do: attach(args), else: args
+  end
+
+  @doc """
+  Runs a job queued with `attach_current/1`: under the prefix it was queued
+  with, as `run/2` does, or without one when it was queued outside any site.
+  """
+  @spec run_current(Oban.Job.t() | map(), (-> result)) :: result | {:cancel, atom()} when result: var
+  def run_current(%Oban.Job{args: args}, fun), do: run_current(args, fun)
+
+  def run_current(args, fun) when is_map(args) and is_function(fun, 0) do
+    if Map.has_key?(args, @prefix_key), do: run(args, fun), else: fun.()
+  end
+
   @doc "Runs a tenant-owned job under the prefix captured when it was enqueued."
   @spec run(Oban.Job.t() | map(), (-> result)) :: result | {:cancel, atom()} when result: var
   def run(%Oban.Job{args: args}, fun), do: run(args, fun)

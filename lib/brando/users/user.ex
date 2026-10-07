@@ -181,20 +181,6 @@ defmodule Brando.Users.User do
   end
 
   forms do
-    form :password do
-      after_save &__MODULE__.update_password_config/2
-
-      tab t("Content") do
-        alert :info,
-              t("The administrator has set a mandatory password change on first login for this website.")
-
-        fieldset do
-          size :half
-          input :password, :password, label: t("Password"), confirmation: true
-        end
-      end
-    end
-
     form :default do
       after_save &__MODULE__.maybe_update_current_user/2
 
@@ -203,7 +189,8 @@ defmodule Brando.Users.User do
           size :half
           input :name, :text, label: t("Name")
           input :email, :email, label: t("Email")
-          input :password, :password, label: t("Password")
+          # A saved user's password is changed with the current one, or reset by email
+          input :password, :password, label: t("Password"), hidden: &__MODULE__.persisted?/1
           input :language, :radios, options: :admin_languages, label: t("Language")
 
           input :role, :radios,
@@ -226,6 +213,11 @@ defmodule Brando.Users.User do
             input :show_mutation_notifications, :toggle, label: t("Show mutation notifications", UserConfig)
             input :prefers_reduced_motion, :toggle, label: t("Prefers reduced motion", UserConfig)
           end
+        end
+
+        fieldset do
+          size :half
+          component &__MODULE__.password_access/1
         end
       end
     end
@@ -252,11 +244,54 @@ defmodule Brando.Users.User do
     end
   end
 
-  def update_password_config(entry, _current_user) do
-    Brando.Users.update_user(
-      entry.id,
-      %{config: %{reset_password_on_first_login: false}},
-      entry
-    )
+  @doc false
+  def persisted?(form), do: not is_nil(form.data.id)
+
+  @doc """
+  The password row of a saved user's form: your own account links to the
+  page that changes it, and an administrator allowed to may email another
+  user a link to choose a new one.
+  """
+  def password_access(%{form: form, current_user: current_user} = assigns) do
+    assigns =
+      assign(assigns,
+        user: form.data,
+        own?: form.data.id == current_user.id,
+        can_reset?: persisted?(form) and Brando.Trait.ProtectPassword.allowed?(current_user, form.data)
+      )
+
+    ~H"""
+    <div :if={persisted?(@form)} class="user-password-access">
+      <div class="user-password-access-text">
+        <span class="user-password-access-label">{gettext("Password")}</span>
+        <p :if={@own?}>{gettext("Changing your password asks for the current one, and logs out your other sessions.")}</p>
+        <p :if={!@own? and @can_reset?}>
+          {gettext("Email %{email} a link to choose a new password. The link works once, for an hour.",
+            email: @user.email
+          )}
+        </p>
+        <p :if={!@own? and !@can_reset?}>{gettext("Only a superuser can reset the password of another user.")}</p>
+      </div>
+      <.link :if={@own?} navigate="/admin/users/password" class="workspace-button" data-testid="change-password">
+        <Brando.HTML.icon name="key-round" />{gettext("Change password")}
+      </.link>
+      <button
+        :if={!@own? and @can_reset?}
+        type="button"
+        class="workspace-button"
+        phx-click="send_password_reset"
+        data-testid="send-password-reset"
+        data-confirm-title={gettext("Send a password reset link?")}
+        data-confirm={
+          gettext("%{email} gets an email with a link to choose a new password. The current password works until then.",
+            email: @user.email
+          )
+        }
+        data-confirm-ok={gettext("Send link")}
+      >
+        <Brando.HTML.icon name="mail" />{gettext("Send reset link")}
+      </button>
+    </div>
+    """
   end
 end

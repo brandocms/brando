@@ -1501,11 +1501,6 @@ msgstr "Feil ved lagring av skjema. Rett merkede felt og send inn på nytt<br><b
 msgid "Image duplicated"
 msgstr "Bilde duplisert"
 
-#: lib/brando_admin/live/users/user_update_password_live.ex:19
-#, elixir-autogen, elixir-format
-msgid "Set initial password"
-msgstr "Sett ditt eget passord"
-
 #: lib/brando_admin/components/form/input.ex:263
 #, elixir-autogen, elixir-format
 msgid "confirm"
@@ -15075,3 +15070,220 @@ msgstr "La feltet stå tomt for å bruke sidens egen adresse. Fyll inn den fulle
 #, elixir-autogen, elixir-format
 msgid "Mostly from %{referrer}"
 msgstr "Mest fra %{referrer}"
+
+#: lib/brando/users/user.ex:286
+#, elixir-autogen, elixir-format
+msgid "%{email} gets an email with a link to choose a new password. The current password works until then."
+msgstr "%{email} får en e-post med en lenke for å velge nytt passord. Det nåværende passordet virker til da."
+
+#: lib/brando_admin/live/users/user_form_live.ex:30
+#, elixir-autogen, elixir-format
+msgid "A password reset link was sent to %{email}."
+msgstr "En lenke for å tilbakestille passordet ble sendt til %{email}."
+
+#: lib/brando/users/user_notifier.ex:41
+#, elixir-autogen, elixir-format
+msgid "An administrator sent you this link to choose a new password for %{email}."
+msgstr "En administrator har sendt deg denne lenken for å velge nytt passord for %{email}."
+
+#: lib/brando_admin/live/user_forgot_password_live.ex:17 lib/brando_admin/live/user_forgot_password_live.ex:44 lib/brando_admin/live/user_reset_password_live.ex:49
+#, elixir-autogen, elixir-format
+msgid "Back to login"
+msgstr "Tilbake til innlogging"
+
+#: lib/brando/users/user.ex:276 lib/brando_admin/live/users/user_update_password_live.ex:18 lib/brando_admin/live/users/user_update_password_live.ex:47 lib/brando_admin/live/users/user_update_password_live.ex:103
+#, elixir-autogen, elixir-format
+msgid "Change password"
+msgstr "Endre passord"
+
+#: lib/brando/users/user.ex:267
+#, elixir-autogen, elixir-format
+msgid "Changing your password asks for the current one, and logs out your other sessions."
+msgstr "For å endre passordet må du oppgi det nåværende, og de andre øktene dine logges ut."
+
+#: lib/brando_admin/live/user_forgot_password_live.ex:14
+#, elixir-autogen, elixir-format
+msgid "Check your email"
+msgstr "Sjekk e-posten din"
+
+#: lib/brando/users/user_notifier.ex:50 lib/brando_admin/live/user_reset_password_live.ex:15 lib/brando_admin/live/user_reset_password_live.ex:17 lib/brando_admin/live/user_reset_password_live.ex:69
+#, elixir-autogen, elixir-format
+msgid "Choose a new password"
+msgstr "Velg nytt passord"
+
+#: lib/brando_admin/live/user_reset_password_live.ex:17
+#, elixir-autogen, elixir-format
+msgid "Choose a new password for %{email}. You will be logged out everywhere, and can then log in with it."
+msgstr "Velg et nytt passord for %{email}. Du blir logget ut overalt, og kan deretter logge inn med det."
+
+#: lib/brando_admin/live/user_reset_password_live.ex:38 lib/brando_admin/live/users/user_update_password_live.ex:42
+#, elixir-autogen, elixir-format
+msgid "Confirm new password"
+msgstr "Bekreft nytt passord"
+
+#: lib/brando_admin/live/users/user_update_password_live.ex:36
+#, elixir-autogen, elixir-format
+msgid "Current password"
+msgstr "Nåværende passord"
+
+#: lib/brando/users/user.ex:269
+#, elixir-autogen, elixir-format
+msgid "Email %{email} a link to choose a new password. The link works once, for an hour."
+msgstr "Send %{email} en lenke for å velge nytt passord. Lenken virker én gang, i en time."
+
+#: lib/brando_admin/live/user_forgot_password_live.ex:25
+#, elixir-autogen, elixir-format
+msgid "Enter the email address you log in with, and we will send you a link to choose a new password."
+msgstr "Skriv inn e-postadressen du logger inn med, så sender vi deg en lenke for å velge nytt passord."
+
+#: lib/brando_admin/live/user_login_live.ex:47
+#, elixir-autogen, elixir-format
+msgid "Forgot password?"
+msgstr "Glemt passord?"
+
+#: lib/brando_admin/live/users/user_update_password_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "Forgot your current password? Log out and use “Forgot password?” on the login page."
+msgstr "Glemt det nåværende passordet? Logg ut og bruk «Glemt passord?» på innloggingssiden."
+
+#: lib/brando_admin/live/user_forgot_password_live.ex:22 lib/brando_admin/live/user_forgot_password_live.ex:57
+#, elixir-autogen, elixir-format
+msgid "Forgot your password?"
+msgstr "Glemt passordet?"
+
+#: lib/brando_admin/live/user_forgot_password_live.ex:68
+#, elixir-autogen, elixir-format
+msgid "If %{email} belongs to an account, we have sent it a link to choose a new password. The link works once, for %{minutes} minutes."
+msgstr "Hvis %{email} hører til en konto, har vi sendt en lenke dit for å velge nytt passord. Lenken virker én gang, i %{minutes} minutter."
+
+#: lib/brando/users/user_notifier.ex:57
+#, elixir-autogen, elixir-format
+msgid "If you did not ask for this, you can ignore this email. Your password stays the same."
+msgstr "Hvis du ikke ba om dette, kan du se bort fra denne e-posten. Passordet ditt forblir det samme."
+
+#: lib/brando/users/user_notifier.ex:102
+#, elixir-autogen, elixir-format
+msgid "If you did not change it, reset your password now and tell an administrator."
+msgstr "Hvis det ikke var du som endret det, tilbakestill passordet nå og si fra til en administrator."
+
+#: lib/brando_admin/live/user_reset_password_live.ex:26 lib/brando_admin/live/users/user_update_password_live.ex:25 lib/brando_admin/live/users/user_update_password_live.ex:39
+#, elixir-autogen, elixir-format
+msgid "New password"
+msgstr "Nytt passord"
+
+#: lib/brando/users/user.ex:273 lib/brando_admin/live/users/user_form_live.ex:41
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can reset the password of another user."
+msgstr "Bare en superbruker kan tilbakestille passordet til en annen bruker."
+
+#: lib/brando/users/user_notifier.ex:60 lib/brando/users/user_notifier.ex:103
+#, elixir-autogen, elixir-format
+msgid "Reset your password"
+msgstr "Tilbakestill passordet ditt"
+
+#: lib/brando_admin/live/user_reset_password_live.ex:46 lib/brando_admin/live/users/user_update_password_live.ex:46
+#, elixir-autogen, elixir-format
+msgid "Saving..."
+msgstr "Lagrer..."
+
+#: lib/brando/users/user.ex:284
+#, elixir-autogen, elixir-format
+msgid "Send a password reset link?"
+msgstr "Sende en lenke for å tilbakestille passordet?"
+
+#: lib/brando/users/user.ex:290
+#, elixir-autogen, elixir-format
+msgid "Send link"
+msgstr "Send lenke"
+
+#: lib/brando/users/user.ex:292 lib/brando_admin/live/user_forgot_password_live.ex:42
+#, elixir-autogen, elixir-format
+msgid "Send reset link"
+msgstr "Send lenke for nytt passord"
+
+#: lib/brando_admin/live/user_forgot_password_live.ex:41
+#, elixir-autogen, elixir-format
+msgid "Sending..."
+msgstr "Sender..."
+
+#: lib/brando_admin/live/user_reset_password_live.ex:47
+#, elixir-autogen, elixir-format
+msgid "Set new password"
+msgstr "Lagre nytt passord"
+
+#: lib/brando_admin/live/users/user_update_password_live.ex:18
+#, elixir-autogen, elixir-format
+msgid "Set your password"
+msgstr "Velg ditt passord"
+
+#: lib/brando/users/user_notifier.ex:44
+#, elixir-autogen, elixir-format
+msgid "Somebody asked to reset the password for %{email}."
+msgstr "Noen har bedt om å tilbakestille passordet for %{email}."
+
+#: lib/brando_admin/live/users/user_update_password_live.ex:28
+#, elixir-autogen, elixir-format
+msgid "The administrator has set a mandatory password change on first login for this website."
+msgstr "Administratoren har angitt obligatorisk passordendring ved første pålogging for dette nettstedet."
+
+#: lib/brando/users/user_notifier.ex:53 lib/brando/users/user_notifier.ex:54
+#, elixir-autogen, elixir-format
+msgid "The link works once and expires in %{count} minute."
+msgid_plural "The link works once and expires in %{count} minutes."
+msgstr[0] "Lenken virker én gang og utløper om %{count} minutt."
+msgstr[1] "Lenken virker én gang og utløper om %{count} minutter."
+
+#: lib/brando/users/user_notifier.ex:99
+#, elixir-autogen, elixir-format
+msgid "The password for %{email} was changed, and the account was logged out on other devices."
+msgstr "Passordet for %{email} ble endret, og kontoen ble logget ut på andre enheter."
+
+#: lib/brando_admin/live/users/user_form_live.ex:47
+#, elixir-autogen, elixir-format
+msgid "The reset link could not be sent."
+msgstr "Lenken for nytt passord kunne ikke sendes."
+
+#: lib/brando_admin/live/users/user_form_live.ex:42
+#, elixir-autogen, elixir-format
+msgid "The user is deactivated, so no reset link was sent."
+msgstr "Brukeren er deaktivert, så ingen lenke for nytt passord ble sendt."
+
+#: lib/brando_admin/live/user_reset_password_live.ex:107
+#, elixir-autogen, elixir-format
+msgid "This password reset link is invalid or has expired. Ask for a new one below."
+msgstr "Denne lenken for å tilbakestille passordet er ugyldig eller utløpt. Be om en ny nedenfor."
+
+#: lib/brando_admin/live/user_forgot_password_live.ex:78
+#, elixir-autogen, elixir-format
+msgid "This site cannot send email right now. Ask an administrator to reset your password."
+msgstr "Nettstedet kan ikke sende e-post nå. Be en administrator om å tilbakestille passordet ditt."
+
+#: lib/brando_admin/live/users/user_form_live.ex:45
+#, elixir-autogen, elixir-format
+msgid "This site cannot send email, so no reset link was sent."
+msgstr "Nettstedet kan ikke sende e-post, så ingen lenke for nytt passord ble sendt."
+
+#: lib/brando_admin/live/users/user_update_password_live.ex:29
+#, elixir-autogen, elixir-format
+msgid "Your other sessions are logged out when the password changes. This one stays logged in."
+msgstr "De andre øktene dine logges ut når passordet endres. Denne forblir innlogget."
+
+#: lib/brando_admin/live/user_reset_password_live.ex:87 lib/brando_admin/live/users/user_update_password_live.ex:123
+#, elixir-autogen, elixir-format
+msgid "Your password has been changed."
+msgstr "Passordet ditt er endret."
+
+#: lib/brando_admin/live/user_reset_password_live.ex:87
+#, elixir-autogen, elixir-format
+msgid "Your password has been changed. Log in with your new password."
+msgstr "Passordet ditt er endret. Logg inn med det nye passordet."
+
+#: lib/brando/users/user_notifier.ex:107
+#, elixir-autogen, elixir-format
+msgid "Your password was changed"
+msgstr "Passordet ditt ble endret"
+
+#: lib/brando/users.ex:314
+#, elixir-autogen, elixir-format
+msgid "is not your current password"
+msgstr "er ikke ditt nåværende passord"

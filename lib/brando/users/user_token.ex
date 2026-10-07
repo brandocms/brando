@@ -1,15 +1,20 @@
 defmodule Brando.Users.UserToken do
+  @moduledoc """
+  Tokens that stand in for a user: a session after login, and a password
+  reset link.
+
+  A session token lives in the signed session or remember-me cookie, so it is
+  stored as it is. A reset token is emailed, so only its SHA-256 hash is
+  stored: someone who reads the database cannot rebuild the link.
+  """
   use Ecto.Schema
   import Ecto.Query
 
   @hash_algorithm :sha256
   @rand_size 32
 
-  # It is very important to keep the reset password token expiry short,
-  # since someone with access to the email may take over the account.
-  @reset_password_validity_in_days 1
-  @confirm_validity_in_days 7
-  @change_email_validity_in_days 7
+  # Short: whoever can read the user's email can take over the account with it.
+  @reset_password_validity_in_minutes 60
   @session_validity_in_days 60
 
   @schema_prefix "public"
@@ -22,6 +27,10 @@ defmodule Brando.Users.UserToken do
 
     timestamps(updated_at: false)
   end
+
+  @doc "How long a password reset link works, in minutes."
+  @spec reset_password_validity_in_minutes() :: pos_integer()
+  def reset_password_validity_in_minutes, do: @reset_password_validity_in_minutes
 
   @doc """
   Generates a token that will be stored in a signed place,
@@ -50,18 +59,13 @@ defmodule Brando.Users.UserToken do
   end
 
   @doc """
-  Builds a token with a hashed counter part.
+  Builds a token to email to `user`, and its hashed counterpart to store.
 
-  The non-hashed token is sent to the user email while the
-  hashed part is stored in the database, to avoid reconstruction.
-  The token is valid for a week as long as users don't change
-  their email.
+  Returns `{encoded, user_token}`: the URL-safe token for the link, and the
+  `UserToken` holding its hash and the address it was sent to. The token stops
+  working when the user's email changes.
   """
   def build_email_token(user, context) do
-    build_hashed_token(user, context, user.email)
-  end
-
-  defp build_hashed_token(user, context, sent_to) do
     token = :crypto.strong_rand_bytes(@rand_size)
     hashed_token = :crypto.hash(@hash_algorithm, token)
 
@@ -69,26 +73,27 @@ defmodule Brando.Users.UserToken do
      %Brando.Users.UserToken{
        token: hashed_token,
        context: context,
-       sent_to: sent_to,
+       sent_to: user.email,
        user_id: user.id
      }}
   end
 
   @doc """
-  Checks if the token is valid and returns its underlying lookup query.
-
-  The query returns the user found by the token.
+  The query for the active, undeleted user an emailed `token` was sent to,
+  while it is valid. Returns `{:ok, query}`, or `:error` for a token that
+  cannot be one of ours.
   """
-  def verify_email_token_query(token, context) do
+  def verify_email_token_query(token, "reset_password" = context) when is_binary(token) do
     case Base.url_decode64(token, padding: false) do
       {:ok, decoded_token} ->
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
-        days = days_for_context(context)
 
         query =
           from token in token_and_context_query(hashed_token, context),
             join: user in assoc(token, :user),
-            where: token.inserted_at > ago(^days, "day") and token.sent_to == user.email,
+            where:
+              token.inserted_at > ago(@reset_password_validity_in_minutes, "minute") and
+                token.sent_to == user.email and user.active == true and is_nil(user.deleted_at),
             select: user
 
         {:ok, query}
@@ -98,29 +103,7 @@ defmodule Brando.Users.UserToken do
     end
   end
 
-  defp days_for_context("confirm"), do: @confirm_validity_in_days
-  defp days_for_context("reset_password"), do: @reset_password_validity_in_days
-
-  @doc """
-  Checks if the token is valid and returns its underlying lookup query.
-
-  The query returns the user token record.
-  """
-  def verify_change_email_token_query(token, context) do
-    case Base.url_decode64(token, padding: false) do
-      {:ok, decoded_token} ->
-        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
-
-        query =
-          from token in token_and_context_query(hashed_token, context),
-            where: token.inserted_at > ago(@change_email_validity_in_days, "day")
-
-        {:ok, query}
-
-      :error ->
-        :error
-    end
-  end
+  def verify_email_token_query(_token, _context), do: :error
 
   @doc """
   Returns the given token with the given context.

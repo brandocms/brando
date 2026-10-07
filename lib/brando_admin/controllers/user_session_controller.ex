@@ -11,19 +11,14 @@ defmodule BrandoAdmin.UserSessionController do
         if Bcrypt.verify_pass(password, user.password) do
           UserAuth.log_in_user(conn, user, user_params)
         else
-          Bcrypt.no_user_verify()
-
-          conn
-          |> put_flash(:error, gettext("Invalid email or password"))
-          |> put_flash(:email, String.slice(email, 0, 160))
-          |> redirect(to: "/admin/login")
+          invalid(conn, email)
         end
 
       _ ->
-        conn
-        |> put_flash(:error, gettext("Invalid email or password"))
-        |> put_flash(:email, String.slice(email, 0, 160))
-        |> redirect(to: "/admin/login")
+        # Takes as long as checking a password, so the time taken does not
+        # tell whether the account exists.
+        Bcrypt.no_user_verify()
+        invalid(conn, email)
     end
   end
 
@@ -31,5 +26,12 @@ defmodule BrandoAdmin.UserSessionController do
     conn
     |> put_flash(:info, gettext("Logged out successfully."))
     |> UserAuth.log_out_user()
+  end
+
+  defp invalid(conn, email) do
+    conn
+    |> put_flash(:error, gettext("Invalid email or password"))
+    |> put_flash(:email, String.slice(email, 0, 160))
+    |> redirect(to: "/admin/login")
   end
 end

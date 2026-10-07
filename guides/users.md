@@ -11,11 +11,11 @@ records in `public`; site content and group scope are separate.
 ## Create an editor account
 
 Open **Users → Create new**, enter the name, email, interface language, and a
-password, then save. The next sign-in redirects to a password form, so the
-editor sets their own; turn off `reset_password_on_first_login` in the user's
-configuration to skip it. The current
-`reset_user_password/2` function is not an implemented email-reset workflow;
-do not advertise a reset email without an application implementation.
+password, then save. The next sign-in redirects to `/admin/users/password`,
+where the editor replaces it with their own; turn off
+`reset_password_on_first_login` in the user's configuration to skip it. If you
+would rather not hand over a password at all, save the user and send them a
+reset link from their form (see [Reset a forgotten password](#reset-a-forgotten-password)).
 
 The equivalent context call uses plaintext input and lets the password trait
 hash it:
@@ -95,7 +95,57 @@ question from the last password sign-in.
 
 Normal logout deletes that session token, broadcasts a disconnect for its
 LiveView session, clears session data, and removes the remember-me cookie. It
-does not mean “revoke every other browser belonging to this account.”
+does not mean “revoke every other browser belonging to this account”;
+changing the password does (see below).
+
+## Reset a forgotten password
+
+Password reset email goes through the application's mailer, so set one up
+first; see the [Email guide](email.md). Without a mailer, asking for a link
+raises `Brando.Exception.ConfigError` in development and test. In production
+it logs a warning, and the page says the site cannot send email.
+
+**Forgot password.** The login page links to `/admin/reset-password`. The
+user enters their email address and always gets the same answer, so the page
+cannot be used to find out which addresses have accounts. The account is
+looked up in a background job (`Brando.Worker.PasswordReset`), which emails
+an active, undeleted account a link to `/admin/reset-password/:token`, and
+sends nothing otherwise:
+
+```elixir
+:ok = Brando.Users.request_password_reset(email)
+```
+
+The link works once, for an hour, and only the newest link for an account
+works. Only a SHA-256 hash of its token is stored in `users_tokens`; a link
+also stops working when the account is deactivated or its email changes.
+Choosing a new password, with `Brando.Users.reset_user_password/2`, deletes
+every token of the account — its sessions and remember-me cookies, and the
+link itself — and disconnects its open admin views. The user then logs in
+with the new password.
+
+**From the user's form.** A superuser opens another user's form and chooses
+**Send reset link**: the user is emailed a link, as above, saying an
+administrator sent it. Their current password keeps working until they use
+it. A saved user's form has no password field: nobody types a password on
+someone else's behalf. The call is:
+
+```elixir
+{:ok, user} = Brando.Users.send_password_reset(user.id, current_admin)
+```
+
+It returns `{:error, :forbidden}` unless `current_admin` is a superuser or the
+user themselves, and `{:error, :inactive}` for a deactivated account.
+
+**Change your own password.** Your own form links to `/admin/users/password`,
+which asks for the current password and the new one twice. Saving logs out
+your other sessions and keeps the one you are using
+(`Brando.Users.update_user_password/4`). The first-login password change is
+the same page.
+
+Whichever way a password changes, the user is emailed to say so, with a link
+to reset it if they did not. Without a mailer the password still changes,
+without the email.
 
 ## Deactivate without transferring ownership
 
@@ -114,7 +164,8 @@ Deactivation does not delete stored session tokens. If the account is re-enabled
 before a token expires, that token can become valid again. For permanent session
 revocation, delete the applicable session tokens as part of a controlled account
 operation. `Brando.Users.delete_session_token(token)` revokes one known token;
-it is not an all-device API. Test both an already open tab and a fresh request.
+it is not an all-device API. A password reset deletes them all. Test both an
+already open tab and a fresh request.
 
 Group mode protects the last active Superuser from removal/deactivation. If an
 operation is denied, retain the account and establish another authorized active
