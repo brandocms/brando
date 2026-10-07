@@ -33,11 +33,13 @@ test.describe('Webhooks', () => {
     const inbox = receiver(`inbox-${Date.now()}-${Math.round(Math.random() * 1e6)}`)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    // Configuration → Integrations → Webhooks → Set up
+    // Configuration → Integrations → Webhooks (Manage) → Add webhook
     await page.goto('/admin/config/integrations')
     await syncLV(page)
-    await expect(page.getByTestId('integration-webhooks')).toBeVisible()
-    await page.getByTestId('integration-webhooks').locator('a[href="/admin/config/webhooks/new"]').click()
+    await page.getByTestId('integration-webhooks').locator('a[href="/admin/config/webhooks"]').click()
+    await expect(page).toHaveURL('/admin/config/webhooks')
+    await syncLV(page)
+    await page.getByTestId('webhook-new').click()
     await expect(page).toHaveURL('/admin/config/webhooks/new')
     await syncLV(page)
 
@@ -51,6 +53,8 @@ test.describe('Webhooks', () => {
     const secretField = page.getByTestId('webhook-secret-value')
     await expect(page.getByTestId('webhook-secret')).toBeVisible()
     await expect(secretField).toHaveValue(/^whsec_/)
+    await expect(secretField).toBeInViewport()
+    await expect(secretField).toBeFocused()
     const secret = await secretField.inputValue()
     await page.screenshot({ path: testInfo.outputPath('webhook-secret.png') })
 

@@ -15,9 +15,12 @@ export default () => ({
     this.handleEvent('brando:webhook-secret', ({ secret }) => {
       this.input.value = secret
       this.el.hidden = false
-      this.el.scrollIntoView({ block: 'nearest' })
-      this.input.focus()
-      this.input.select()
+      // After the patch that brought the page here has settled
+      requestAnimationFrame(() => {
+        this.el.scrollIntoView({ block: 'center' })
+        this.input.focus({ preventScroll: true })
+        this.input.select()
+      })
     })
 
     this.copyButton?.addEventListener('click', async () => {
