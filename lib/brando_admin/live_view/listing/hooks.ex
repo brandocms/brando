@@ -168,14 +168,24 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    for entry_id <- ids do
-      override_opts = [
-        change_fields: [{:language, language}],
-        delete_fields: []
-      ]
+    override_opts = [
+      change_fields: language_copy_fields(schema, language),
+      delete_fields: []
+    ]
 
-      apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts])
-    end
+    failed =
+      Enum.count(ids, fn entry_id ->
+        case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+          {:ok, _} ->
+            false
+
+          error ->
+            log_duplicate_error(singular, error)
+            true
+        end
+      end)
+
+    if failed > 0, do: send(self(), {:toast, gettext("Some entries could not be copied.")})
 
     update_list_entries(schema)
 
@@ -213,28 +223,26 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    override_opts = [
-      change_fields: [{:language, String.to_existing_atom(language)}]
-    ]
+    override_opts = [change_fields: language_copy_fields(schema, language)]
 
-    case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
-      {:ok, duped_entry} ->
-        send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
+    with :ok <- ensure_no_version_in(schema, entry_id, language),
+         {:ok, duped_entry} <- apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+      send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
 
-        # the entry is translatable, but might not have alternates setup
-        if schema.has_alternates?() do
-          # link the entries together
-          _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
-        end
+      # the entry is translatable, but might not have alternates setup
+      if schema.has_alternates?() do
+        # link the entries together
+        _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+      end
 
-        update_url = schema.__admin_route__(:update, [duped_entry.id])
-        send(self(), {:set_content_language_and_navigate, language, update_url})
+      update_url = schema.__admin_route__(:update, [duped_entry.id])
+      send(self(), {:set_content_language_and_navigate, language, update_url})
 
-        {:halt, socket}
-
-      {:error, changeset} ->
-        log_duplicate_error(singular, changeset)
-        send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
+      {:halt, socket}
+    else
+      error ->
+        log_duplicate_error(singular, error)
+        send(self(), {:toast, copy_error_message(error)})
         {:halt, socket}
     end
   end
@@ -277,19 +285,21 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     )
 
     override_opts = [
-      change_fields: [{:language, String.to_existing_atom(language)} | translation_slug_changes(schema, language)]
+      change_fields: language_copy_fields(schema, language, translation_slug_changes(schema, language))
     ]
 
-    case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
-      {:ok, duped_entry} ->
-        start_entry_translation(schema, entry_id, duped_entry, language, user)
-        {:halt, socket}
+    with :ok <- ensure_no_version_in(schema, entry_id, language),
+         {:ok, duped_entry} <- apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+      start_entry_translation(schema, entry_id, duped_entry, language, user)
+      {:halt, socket}
+    else
+      error ->
+        log_duplicate_error(singular, error)
 
-      {:error, _changeset} ->
         send_update(BrandoAdmin.Components.Content.List,
           id: list_id,
           action: :translation_progress,
-          translation_dialog: %{step: {:error, "Duplication failed"}, entry_url: nil}
+          translation_dialog: %{step: {:error, copy_error_message(error)}, entry_url: nil}
         )
 
         {:halt, socket}
@@ -321,7 +331,10 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     Gettext.dgettext(gettext_module, gettext_domain, msgid)
   end
 
-  defp log_duplicate_error(singular, changeset) do
+  defp log_duplicate_error(singular, {:error, %Ecto.Changeset{} = changeset}),
+    do: log_duplicate_error(singular, changeset)
+
+  defp log_duplicate_error(singular, %Ecto.Changeset{} = changeset) do
     Logger.error("""
     (!) Error duplicating #{String.capitalize(singular)}
 
@@ -331,6 +344,30 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     Changes with errors:
     #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
     """)
+  end
+
+  defp log_duplicate_error(singular, error) do
+    Logger.error("(!) Error duplicating #{String.capitalize(singular)}: #{inspect(error, pretty: true)}")
+  end
+
+  defp copy_error_message({:error, :language_exists}), do: gettext("This language already has a version.")
+  defp copy_error_message({:error, :forbidden}), do: gettext("You do not have permission to do this.")
+  defp copy_error_message(_error), do: gettext("Could not copy this entry. Nothing was saved.")
+
+  # A language the entry is already linked to has its version: a copy would
+  # give the entry two. The row menu leaves those languages out; this covers a
+  # listing that hasn't caught up.
+  defp ensure_no_version_in(schema, entry_id, language) do
+    if language in Brando.Translations.alternate_languages(schema, entry_id),
+      do: {:error, :language_exists},
+      else: :ok
+  end
+
+  # The copy's language and the caller's `changes`, then a free value in that
+  # language for each unique field: a page's URI that the language already
+  # uses gets a number instead of failing the insert.
+  defp language_copy_fields(schema, language, changes \\ []) do
+    [{:language, String.to_existing_atom(language)} | changes] ++ Brando.Translations.free_unique_values(schema)
   end
 
   # Duplicate entry — change language and suffix slug fields to avoid unique constraint

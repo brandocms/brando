@@ -274,7 +274,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:translated_singular, translated_singular)
       |> assign(
         :duplicate_langs,
-        get_duplication_langs(assigns.content_language, duplicate_langs?)
+        get_duplication_langs(assigns.content_language, duplicate_langs?) -- linked_languages(assigns.entry)
       )
 
     ~H"""
@@ -876,6 +876,14 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     {(source && source.entry_id) || entry.id, languages}
   end
+
+  # Languages the entry already has a version in, through its alternates: a
+  # copy into one of those would give it a second.
+  defp linked_languages(%{alternate_entries: alternates}) when is_list(alternates) do
+    for %{language: language} = alternate <- alternates, is_nil(Map.get(alternate, :deleted_at)), do: to_string(language)
+  end
+
+  defp linked_languages(_entry), do: []
 
   defp get_duplication_langs(_, false), do: []
 

@@ -221,3 +221,19 @@ test('creates meta information', async ({ page }) => {
   const ogImage = await page.locator('meta[property="og:image"]').getAttribute('content')
   await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', ogImage)
 })
+
+// Norwegian already has its own Index page at "index". Copying the English one
+// into Norwegian used to hit the (uri, language) unique index and crash the
+// listing; the copy now gets a free URI and opens in the editor.
+test('duplicates the Index page to a language that already uses its URI', async ({ page }) => {
+  await page.goto('/admin/pages')
+  await syncLV(page)
+  const row = page.locator('.list-row').filter({ has: page.getByRole('link', { name: 'Index', exact: true }) })
+  const entryId = (await row.getAttribute('id')).replace('list-row-', '')
+  const duplicateToNo = page.locator(`#action_default_duplicate_entry_to_lang_${entryId}_lang_no`)
+
+  await row.getByTestId('circle-dropdown-button').click()
+  await duplicateToNo.click()
+  await expect(page).toHaveURL(/\/admin\/pages\/update\/\d+/)
+  await expect(page.getByLabel('URI')).toHaveValue('index-2')
+})
