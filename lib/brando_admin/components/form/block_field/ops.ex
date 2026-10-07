@@ -171,6 +171,29 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     if ids == %{}, do: rel_ids, else: Map.put(rel_ids, uid, ids)
   end
 
+  @doc """
+  Keep the row ids (`rel_ids`) of `uids` only, and of the blocks with a
+  diff.
+
+  A diff names a block's rows by uid only when they were new, so only a
+  block that has unsaved work, or had it when a save gave its rows ids,
+  needs them. The edit session keeps the rest out of its state: for a long
+  entry they are most of its size.
+  """
+  @spec keep_rel_ids(t(), Enumerable.t()) :: t()
+  def keep_rel_ids(%__MODULE__{} = state, uids \\ []) do
+    keep = state.diffs |> Enum.reject(fn {_uid, diff} -> diff == %{} end) |> Enum.map(&elem(&1, 0)) |> Enum.concat(uids)
+    %{state | rel_ids: Map.take(state.rel_ids, keep)}
+  end
+
+  @doc "The blocks of `state` with unsaved work: inserted, or with a diff."
+  @spec edited(t()) :: [uid()]
+  def edited(%__MODULE__{} = state) do
+    inserted = for {uid, :inserted} <- state.statuses, do: uid
+    diffed = for {uid, diff} <- state.diffs, diff != %{}, do: uid
+    inserted ++ diffed
+  end
+
   defp fill_rel_ids(block_params, nil), do: block_params
 
   defp fill_rel_ids(block_params, ids) do

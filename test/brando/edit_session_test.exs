@@ -441,6 +441,38 @@ defmodule Brando.EditSessionTest do
       assert {_state, 0} = session_state(ref)
     end
 
+    test "the session keeps row ids only for blocks with unsaved work" do
+      with_refs = fn uid, eb_id, block_id, refs ->
+        %{id: eb_id, block: %{uid: uid, id: block_id, children: [], refs: refs}}
+      end
+
+      loaded =
+        Ops.from_entry_blocks([
+          with_refs.("a", 1, 10, [%{id: 100, uid: "ra"}]),
+          with_refs.("b", 2, 20, [%{id: 200, uid: "rb"}])
+        ])
+
+      assert map_size(loaded.rel_ids) == 2
+      {:seeded, data} = Data.join(Data.new(1), @field, loaded, loaded)
+      assert Data.state(data, @field).rel_ids == %{}
+      assert data.fields[@field].base.rel_ids == %{}
+
+      # a new block is saved while it has unsaved work: its rows' ids stay,
+      # since ops made before the save name them by uid
+      {:ok, data} = Data.apply_op(data, @field, {:insert, "n", :end, %{}})
+      data = Data.mark_save(data, @field, :saver, 0)
+
+      saved =
+        Ops.from_entry_blocks([
+          with_refs.("a", 1, 10, [%{id: 100, uid: "ra"}]),
+          with_refs.("b", 2, 20, [%{id: 200, uid: "rb"}]),
+          with_refs.("n", 3, 30, [%{id: 300, uid: "rn"}])
+        ])
+
+      {:ok, data, []} = Data.rebase(data, @field, saved, {:client, :saver})
+      assert Data.state(data, @field).rel_ids == %{"n" => %{{"refs", "rn"} => 300}}
+    end
+
     test "a save that never rebases stops keeping the op log" do
       data = Data.new(1)
       {:seeded, data} = Data.join(data, @field, rows(), rows())

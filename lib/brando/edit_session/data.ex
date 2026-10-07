@@ -75,7 +75,8 @@ defmodule Brando.EditSession.Data do
 
       _ ->
         state = if held_base == base, do: held, else: held |> Ops.carry(held_base, base) |> elem(0)
-        {:seeded, put_field(data, field, new_field(base, state))}
+        state = Ops.keep_rel_ids(state)
+        {:seeded, put_field(data, field, new_field(Ops.keep_rel_ids(base, Map.keys(state.rel_ids)), state))}
     end
   end
 
@@ -91,6 +92,7 @@ defmodule Brando.EditSession.Data do
       {:joined, data}
     else
       {state, conflicts} = Ops.carry(held, held_base, entry.state)
+      state = Ops.keep_rel_ids(state, Map.keys(entry.state.rel_ids))
       {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: entry.rev + 1, log: []})}
     end
   end
@@ -211,10 +213,15 @@ defmodule Brando.EditSession.Data do
   def rebase(%__MODULE__{} = data, field, %Ops{} = new_base, mode, now \\ 0) do
     case Map.get(data.fields, field) do
       nil ->
+        new_base = Ops.keep_rel_ids(new_base)
         {:ok, put_field(data, field, %{new_field(new_base, new_base) | rev: 1}), []}
 
       entry ->
         {state, conflicts, marks} = rebased_state(entry, new_base, mode, now)
+        # the rows' ids stay for blocks that had unsaved work when the save
+        # read them: ops made then name new rows by uid
+        state = Ops.keep_rel_ids(state, Ops.edited(entry.state))
+        new_base = Ops.keep_rel_ids(new_base, Map.keys(state.rel_ids))
         entry = prune(%{entry | base: new_base, state: state, marks: marks, rev: entry.rev + 1})
         {:ok, put_field(data, field, entry), conflicts}
     end

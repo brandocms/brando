@@ -14,7 +14,9 @@ import path from 'path'
 //   LiveView is idle, three fresh opens per entry;
 // * typing: bytes in and out for one debounced keystroke on the typist;
 // * observer: bytes a second editor on the same entry receives for that
-//   keystroke, and for the blur that follows it.
+//   keystroke, and for the blur that follows it;
+// * window: the keystroke's start and end (ms since the epoch), to match
+//   server-side LiveView telemetry against.
 
 const IDS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture-ids.json'), 'utf8'))
 
@@ -71,11 +73,13 @@ for (const [label, id] of [['flat-115', IDS.flat['115']], ['nested', IDS.nested]
 
     let t = typist.mark()
     let o = observer.mark()
+    const from = Date.now()
     await input.pressSequentially('B', { delay: 20 })
     await page.waitForTimeout(1400)
     await syncLV(page, 60000)
     await page.waitForTimeout(600)
     row.typing = typist.since(t)
+    row.window = [from, Date.now()]
     row.observerKeystroke = observer.since(o)
 
     o = observer.mark()
