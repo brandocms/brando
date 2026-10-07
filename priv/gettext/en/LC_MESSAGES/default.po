@@ -2706,3 +2706,18 @@ msgstr ""
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Pink"
 msgstr ""
+
+#: lib/brando_admin/live_view/listing.ex:170
+#, elixir-autogen, elixir-format
+msgid "Some entries could not be copied."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing.ex:359
+#, elixir-autogen, elixir-format
+msgid "Could not copy this entry. Nothing was saved."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing.ex:358
+#, elixir-autogen, elixir-format
+msgid "This language already has a version."
+msgstr ""

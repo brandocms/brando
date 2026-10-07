@@ -9,6 +9,7 @@ defmodule BrandoAdmin.LiveView.Listing do
   """
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
   import Phoenix.Component
   import Phoenix.LiveView
 
@@ -149,14 +150,24 @@ defmodule BrandoAdmin.LiveView.Listing do
         singular = schema.__naming__().singular
         context = schema.__modules__().context
 
-        for entry_id <- ids do
-          override_opts = [
-            change_fields: [{:language, language}],
-            delete_fields: []
-          ]
+        override_opts = [
+          change_fields: language_copy_fields(schema, language),
+          delete_fields: []
+        ]
 
-          apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts])
-        end
+        failed =
+          Enum.count(ids, fn entry_id ->
+            case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+              {:ok, _} ->
+                false
+
+              error ->
+                log_duplicate_error(singular, error)
+                true
+            end
+          end)
+
+        if failed > 0, do: send(self(), {:toast, gettext("Some entries could not be copied.")})
 
         update_list_entries(schema)
 
@@ -195,39 +206,26 @@ defmodule BrandoAdmin.LiveView.Listing do
         singular = schema.__naming__().singular
         context = schema.__modules__().context
 
-        override_opts = [
-          change_fields: [{:language, String.to_existing_atom(language)}]
-        ]
+        override_opts = [change_fields: language_copy_fields(schema, language)]
 
-        case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
-          {:ok, duped_entry} ->
-            send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
+        with :ok <- ensure_no_version_in(schema, entry_id, language),
+             {:ok, duped_entry} <- apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+          send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
 
-            # the entry is translatable, but might not have alternates setup
-            if schema.has_alternates?() do
-              # link the entries together
-              _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
-            end
+          # the entry is translatable, but might not have alternates setup
+          if schema.has_alternates?() do
+            # link the entries together
+            _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+          end
 
-            update_url = schema.__admin_route__(:update, [duped_entry.id])
-            send(self(), {:set_content_language_and_navigate, language, update_url})
+          update_url = schema.__admin_route__(:update, [duped_entry.id])
+          send(self(), {:set_content_language_and_navigate, language, update_url})
 
-            {:halt, socket}
-
-          {:error, changeset} ->
-            require Logger
-
-            Logger.error("""
-            (!) Error duplicating #{String.capitalize(singular)}
-
-            Errors:
-            #{inspect(changeset.errors, pretty: true)}
-
-            Changes with errors:
-            #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
-            """)
-
-            send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
+          {:halt, socket}
+        else
+          error ->
+            log_duplicate_error(singular, error)
+            send(self(), {:toast, copy_error_message(error)})
             {:halt, socket}
         end
 
@@ -335,6 +333,81 @@ defmodule BrandoAdmin.LiveView.Listing do
       _, socket ->
         {:cont, socket}
     end)
+  end
+
+  defp log_duplicate_error(singular, {:error, %Ecto.Changeset{} = changeset}) do
+    require Logger
+
+    Logger.error("""
+    (!) Error duplicating #{String.capitalize(singular)}
+
+    Errors:
+    #{inspect(changeset.errors, pretty: true)}
+
+    Changes with errors:
+    #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
+    """)
+  end
+
+  defp log_duplicate_error(singular, error) do
+    require Logger
+
+    Logger.error("(!) Error duplicating #{String.capitalize(singular)}: #{inspect(error, pretty: true)}")
+  end
+
+  defp copy_error_message({:error, :language_exists}), do: gettext("This language already has a version.")
+  defp copy_error_message(_error), do: gettext("Could not copy this entry. Nothing was saved.")
+
+  # A language the entry is already linked to has its version: a copy would
+  # give the entry two. The row menu leaves those languages out; this covers a
+  # listing that hasn't caught up.
+  defp ensure_no_version_in(schema, entry_id, language) do
+    if language in alternate_languages(schema, entry_id),
+      do: {:error, :language_exists},
+      else: :ok
+  end
+
+  defp alternate_languages(schema, entry_id) do
+    if schema.has_alternates?() do
+      query =
+        from a in Module.concat(schema, Alternate),
+          join: e in ^schema,
+          on: e.id == a.linked_entry_id,
+          where: a.entry_id == ^entry_id,
+          select: e.language
+
+      query =
+        if schema.has_trait(Brando.Trait.SoftDelete),
+          do: from([_a, e] in query, where: is_nil(e.deleted_at)),
+          else: query
+
+      query
+      |> Brando.Repo.all()
+      |> Enum.map(&to_string/1)
+    else
+      []
+    end
+  end
+
+  # The copy's language, then a free value in that language for each unique
+  # field: a page's URI that the language already uses gets a number
+  # (`index` -> `index-2`) instead of failing the insert.
+  defp language_copy_fields(schema, language) do
+    free_unique_values =
+      for %{name: name, opts: %{unique: unique}} <- Brando.Blueprint.Attributes.__attributes__(schema),
+          unique not in [nil, false] do
+        # The entry is still the source here: its own row counts as taken.
+        {name,
+         fn
+           entry, value when is_binary(value) ->
+             Brando.Blueprint.Unique.free_value(schema, name, value, Map.put(entry, :id, nil))
+
+           _entry, value ->
+             value
+         end}
+      end
+
+    [{:language, String.to_existing_atom(language)} | free_unique_values]
   end
 
   def update_list_entries(schema) do

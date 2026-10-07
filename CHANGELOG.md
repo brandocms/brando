@@ -1,3 +1,13 @@
+## 0.54.1 (Unreleased)
+
+* Fix "Duplicate to [XX]" crashing the listing ("Mainframe connection was dropped")
+  when the target language already holds one of the entry's unique values, such as
+  a page's URI. The copy now gets the first free value in that language
+  (`index` → `index-2`), a duplicate that can't be saved shows a toast instead of
+  raising, and languages the entry is already linked to through its alternates are
+  no longer offered. The bulk "duplicate to language" no longer crashes either, and
+  reports entries it couldn't copy.
+
 ## 0.54.0
 
 Before running the migration script, you must fix some `form` syntax in your blueprints.

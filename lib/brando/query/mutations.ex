@@ -1,6 +1,7 @@
 defmodule Brando.Query.Mutations do
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Blueprint.Unique
   alias Brando.Content
   alias Brando.Datasource
   alias Brando.Notifications
@@ -227,7 +228,13 @@ defmodule Brando.Query.Mutations do
           |> drop_fields()
           |> update_meta()
 
-        Brando.Repo.insert(cloned_entry)
+        # Inserted through a changeset that knows the schema's unique
+        # constraints, so a value another entry holds (a page's URI in the
+        # copy's language) comes back as `{:error, changeset}` instead of raising.
+        cloned_entry
+        |> Ecto.Changeset.change()
+        |> Unique.put_unique_constraints(module)
+        |> Brando.Repo.insert()
 
       err ->
         err
