@@ -1,44 +1,24 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 
-async function capturePage(page, options) {
-  // A full-page capture from a scrolled position can include the admin's fixed
-  // progress rail, which is normally translated above the visible viewport.
-  await page.evaluate(() => window.scrollTo(0, 0))
-  await page.waitForTimeout(100)
-  await page.screenshot({ ...options, fullPage: true })
+// The export, review, import and recovery flows are LiveView tests in
+// test/brando_admin/live/content_transfer_live_test.exs. What stays here
+// needs a browser: keyboard focus, focus outlines, scrolling the diff, and the
+// layout at a phone's width.
+
+async function fitsPhone(page) {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
 }
 
-test('related entries can be included from export review', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 1050 })
-  expect((await page.request.post('/e2e/setup_fixtures/content-transfer-related')).ok()).toBeTruthy()
-  await page.goto('/admin/config/import-export')
-  await syncLV(page)
-  await page.getByRole('button', { name: 'Select Campaign launch', exact: true }).click()
-  await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
-  await expect(page.locator('.transfer-related')).toContainText('Destination page')
-  await expect(page.locator('.transfer-reference-paths')).toContainText('Campaign launch')
-  await expect(page.locator('.transfer-related-title')).toContainText('Page')
-  const downloading = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'Download content bundle' }).click()
-  const file = await downloading
-  expect(file.suggestedFilename()).toBe('brando-content.zip')
-  expect((await readFile(await file.path())).subarray(0, 2).toString()).toBe('PK')
-  await capturePage(page, { path: testInfo.outputPath('entries-related-desktop.png') })
-  await page.getByRole('button', { name: 'Include entry', exact: true }).click()
-  await expect(page.locator('.transfer-review-list article')).toHaveCount(2)
-  await expect(page.locator('.transfer-related')).toHaveCount(0)
-  await page.getByText('Included dependencies', { exact: true }).click()
-  await expect(page.locator('.transfer-dependency-groups')).not.toContainText('Destination page')
-  await expect(page.locator('.transfer-review-list')).toContainText('Destination page')
-})
-
-test('whole entry export, conflict review, draft creation, update and recovery', async ({ page }, testInfo) => {
+test('export: keyboard selection, field pills and a phone-width layout', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1050 })
   expect((await page.request.post('/e2e/setup_fixtures/content-transfer')).ok()).toBeTruthy()
   await page.goto('/admin/config/import-export')
   await syncLV(page)
+
+  // A whole entry is selected with Space and keeps focus.
   await page.getByLabel('Search saved content').fill('Campaign')
   await expect(page.locator('.transfer-entry')).toHaveCount(1)
   const select = page.getByRole('button', { name: 'Select Campaign launch', exact: true })
@@ -47,253 +27,11 @@ test('whole entry export, conflict review, draft creation, update and recovery',
   await select.press('Space')
   await expect(select).toHaveAttribute('aria-pressed', 'true')
   await expect(select).toBeFocused()
-  await expect(page.locator('.transfer-summary')).toContainText('1 entry selected')
-  await page.getByLabel('Search saved content').fill('')
-  await expect.poll(() => page.locator('.transfer-entry').count()).toBeGreaterThan(2)
-  await page.getByLabel('Search saved content').blur()
-  await capturePage(page, { path: testInfo.outputPath('entries-export-desktop.png') })
-  const workspace = await page.locator('.transfer-workspace').boundingBox()
-  const thirdCard = await page.locator('.transfer-entry').nth(2).boundingBox()
-  await page.screenshot({ path: testInfo.outputPath('entries-export-detail.png'), clip: { x: workspace.x, y: workspace.y, width: workspace.width, height: thirdCard.y + thirdCard.height - workspace.y + 1 } })
-  await captureControlMetrics(page, testInfo, 'entries-export')
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600) // Allow the admin navigation resize animation to settle.
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  await capturePage(page, { path: testInfo.outputPath('entries-export-mobile.png') })
-  await page.getByRole('link', { name: /Review selection/ }).click()
-  await expect(page.getByRole('complementary', { name: 'Your export' })).toBeInViewport()
-  await page.setViewportSize({ width: 1440, height: 1050 })
-  await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Your bundle is ready' })).toBeVisible()
-  await expect(page.locator('.transfer-review-list')).toContainText('Whole entry')
-  const downloading = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'Download content bundle' }).click()
-  const file = await downloading
-  const binary = await readFile(await file.path())
-  const review = async () => {
-    await page.getByRole('button', { name: 'Import content', exact: true }).click()
-    await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-launch-entry.zip', mimeType: 'application/zip', buffer: binary })
-    await expect(page.getByRole('button', { name: 'Review bundle', exact: true })).toBeEnabled()
-    await page.getByRole('button', { name: 'Review bundle', exact: true }).click()
-    await expect(page.locator('#transfer-entry-mappings')).toBeVisible()
-  }
-  await review()
-  await expect(page.getByLabel('Import action', { exact: true })).toHaveValue('create')
-  await expect(page.getByLabel('Publication', { exact: true })).toHaveValue('draft')
-  await expect(page.locator('.transfer-inline-error')).toContainText('already in use')
-  await expect(page.getByRole('button', { name: 'Apply content import' })).toBeDisabled()
-  await page.getByLabel('URI', { exact: true }).fill('campaign-launch-copy')
-  await expect(page.getByRole('button', { name: 'Apply content import' })).toBeEnabled()
-  await page.getByText('Review fields & content', { exact: true }).click()
-  await expect(page.locator('.transfer-change-table')).toContainText('Draft')
-  await expect(page.locator('.admin-text-diff')).toContainText('2 lines added')
-  await expect(page.locator('.admin-text-diff del')).toHaveCount(0)
-  await expect(page.locator('.admin-text-diff ins')).toHaveCount(2)
-  await page.getByLabel('URI', { exact: true }).blur()
-  await capturePage(page, { path: testInfo.outputPath('entries-review-desktop.png') })
-  await page.locator('.transfer-whole-entry').screenshot({ path: testInfo.outputPath('entries-review-detail.png') })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600) // Allow the admin navigation resize animation to settle.
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  await capturePage(page, { path: testInfo.outputPath('entries-review-mobile.png') })
-  await page.getByRole('button', { name: 'Apply content import' }).click()
-  await expect(page.getByRole('heading', { name: 'Content imported' })).toBeVisible()
-  await expect(page.locator('#transfer-result')).toContainText('1 entry saved')
-  await expect(page.locator('#transfer-result .error')).toHaveCount(0)
-  await page.getByRole('button', { name: 'View recovery snapshot' }).click()
-  await page.getByRole('button', { name: 'Recover previous content' }).click()
-  await page.getByRole('button', { name: 'Restore previous content', exact: true }).click()
-  await expect(page.locator('.transfer-history-row')).toContainText('Recovered')
-  await page.setViewportSize({ width: 1440, height: 1050 })
-  await page.getByRole('button', { name: 'Import content', exact: true }).click()
-  await page.getByRole('button', { name: 'Import another bundle' }).click()
-  await review()
-  await page.getByLabel('Import action', { exact: true }).selectOption('update')
-  await expect(page.getByLabel('Destination entry', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('Publication', { exact: true })).toHaveValue('preserve')
-  await page.getByLabel('Destination entry', { exact: true }).selectOption({ label: 'Destination page · English' })
-  await page.getByLabel('URI', { exact: true }).fill('destination-entry-copy')
-  await expect(page.getByRole('button', { name: 'Apply content import' })).toBeEnabled()
-  await page.getByText('Review fields & content', { exact: true }).click()
-  await expect(page.locator('.transfer-change-table')).toContainText('Destination page')
-  const diff = page.locator('.admin-text-diff')
-  await expect(diff.locator('del')).toHaveText('Discover the stories behind our previous collection.')
-  await expect(diff.locator('ins')).toHaveText('A considered introduction to our next collection.')
-  await expect(diff.locator('.is-eq .text-diff-text')).toHaveText('Introduction')
-  await capturePage(page, { path: testInfo.outputPath('entries-update-desktop.png') })
-  await diff.screenshot({ path: testInfo.outputPath('entries-content-diff.png') })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600)
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  await diff.screenshot({ path: testInfo.outputPath('entries-content-diff-mobile.png') })
-  await page.getByRole('button', { name: 'Apply content import' }).click()
-  await expect(page.getByRole('heading', { name: 'Content imported' })).toBeVisible()
-  await page.getByRole('button', { name: 'View recovery snapshot' }).click()
-  const latest = page.locator('.transfer-history-row').first()
-  await latest.getByRole('button', { name: 'Recover previous content' }).click()
-  await latest.getByRole('button', { name: 'Restore previous content', exact: true }).click()
-  await expect(latest).toContainText('Recovered')
-  await expect(page.locator('.phx-error')).toHaveCount(0)
-})
 
-test('media replacements and moves stay in their block context', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 1050 })
-  expect((await page.request.post('/e2e/setup_fixtures/content-transfer-media')).ok()).toBeTruthy()
+  // A field pill is reached with Tab, shows its outline, and toggles with
+  // Space and Enter without losing focus.
   await page.goto('/admin/config/import-export')
   await syncLV(page)
-  await page.getByRole('button', { name: 'Select Campaign launch', exact: true }).click()
-  await page.locator('#transfer-export-options input[name="media"]').uncheck()
-  await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
-  const downloading = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'Download content bundle' }).click()
-  const binary = await readFile(await (await downloading).path())
-
-  await page.getByRole('button', { name: 'Import content', exact: true }).click()
-  await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-media.zip', mimeType: 'application/zip', buffer: binary })
-  await page.getByRole('button', { name: 'Review bundle', exact: true }).click()
-  await page.getByLabel('Import action', { exact: true }).selectOption('update')
-  await page.getByLabel('Destination entry', { exact: true }).selectOption({ label: 'Destination page · English' })
-  await page.getByLabel('URI', { exact: true }).fill('destination-media-copy')
-
-  for (const name of ['courtyard.jpg', 'collection-detail.jpg']) {
-    await page.getByLabel(`Destination for images/${name}`, { exact: true }).selectOption({ label: `images/${name}` })
-  }
-
-  await page.getByText('Review fields & content', { exact: true }).click()
-  const diff = page.locator('.admin-text-diff')
-  await expect(diff.locator('del')).toContainText([
-    'Discover the stories behind our previous collection.',
-    'Image · Hero: coastal-house.jpg',
-    'Image · Detail: collection-detail.jpg',
-  ])
-  await expect(diff.locator('ins')).toContainText([
-    'A considered introduction to our next collection.',
-    'Image · Hero: courtyard.jpg',
-    'Alt text: The courtyard in morning light',
-    'Image · Detail: collection-detail.jpg',
-  ])
-  const rows = await diff.locator('.text-diff-line').evaluateAll(elements => elements.map(el => ({
-    kind: el.className, text: el.querySelector('.text-diff-text').textContent,
-  })))
-  const heading = rows.findIndex(row => row.text === 'The details')
-  expect(rows.findIndex(row => row.text.includes('collection-detail.jpg') && row.kind.includes('is-del'))).toBeLessThan(heading)
-  expect(rows.findIndex(row => row.text.includes('collection-detail.jpg') && row.kind.includes('is-ins'))).toBeGreaterThan(heading)
-  await expect(diff).not.toContainText('Text preview only')
-  await diff.screenshot({ path: testInfo.outputPath('entries-media-diff.png') })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600)
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  const viewport = diff.getByRole('region')
-  await viewport.focus()
-  await expect(viewport).toBeFocused()
-  await viewport.press('End')
-  await expect(diff.locator('ins').last()).toBeInViewport()
-  await viewport.press('Home')
-  await diff.screenshot({ path: testInfo.outputPath('entries-media-diff-mobile.png') })
-
-  // Selecting a different destination asset updates the preview to what will be imported.
-  await page.getByLabel('Destination for images/courtyard.jpg', { exact: true }).selectOption({ label: 'images/coastal-house.jpg' })
-  await expect(diff.locator('.is-eq.is-media')).toContainText('Image · Hero: coastal-house.jpg')
-  await expect(diff).not.toContainText('courtyard.jpg')
-
-  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBeTruthy()
-  await page.goto('/admin/config/import-export')
-  await syncLV(page)
-  await page.getByRole('button', { name: 'Importer innhold', exact: true }).click()
-  await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-media.zip', mimeType: 'application/zip', buffer: binary })
-  await page.getByRole('button', { name: 'Gjennomgå pakken', exact: true }).click()
-  await page.getByText('Gjennomgå felt og innhold', { exact: true }).click()
-  await expect(diff).toContainText('Bilde · Hero: courtyard.jpg')
-  await expect(diff).toContainText('Alternativ tekst: The courtyard in morning light')
-  await expect(diff).toContainText('Tekst og mediereferanser.')
-  await diff.screenshot({ path: testInfo.outputPath('entries-media-diff-norwegian.png') })
-})
-
-test('Norwegian import keeps translated dropdowns and validation after changes', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 1050 })
-  expect((await page.request.post('/e2e/setup_fixtures/content-transfer')).ok()).toBeTruthy()
-  await page.goto('/admin/config/import-export')
-  await syncLV(page)
-  await page.getByRole('button', { name: 'Select Campaign launch', exact: true }).click()
-  await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
-  const downloading = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'Download content bundle' }).click()
-  const binary = await readFile(await (await downloading).path())
-
-  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBeTruthy()
-  await page.goto('/admin/config/import-export')
-  await syncLV(page)
-  await expect(page.locator('html')).toHaveAttribute('lang', 'no')
-  await expect(page.getByRole('heading', { name: 'Velg innhold', exact: true })).toBeVisible()
-  await expect(page.locator('.transfer-entry').first()).toContainText('Engelsk')
-  await page.getByRole('button', { name: 'Importer innhold', exact: true }).click()
-
-  const upload = page.locator('#transfer-upload-form input[type=file]')
-  await upload.setInputFiles({ name: 'invalid.zip', mimeType: 'application/zip', buffer: Buffer.from('invalid archive') })
-  await page.getByRole('button', { name: 'Gjennomgå pakken', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('forventet et gyldig ZIP-arkiv')
-  await upload.setInputFiles({ name: 'campaign-launch.zip', mimeType: 'application/zip', buffer: binary })
-  await page.getByRole('button', { name: 'Gjennomgå pakken', exact: true }).click()
-  await expect(page.locator('#transfer-entry-mappings')).toBeVisible()
-  await expect(page.locator('.transfer-inline-error')).toContainText('allerede i bruk')
-
-  const publication = page.getByLabel('Publisering', { exact: true })
-  const language = page.getByLabel('Språk', { exact: true })
-  await expect(publication.locator('option')).toHaveText(['Lagre som utkast', 'Bruk kildens status: Publisert'])
-  await expect(language.locator('option')).toHaveText(['Engelsk', 'Norsk'])
-  await expect(page.getByLabel('Tittel', { exact: true })).toHaveValue('Campaign launch')
-  await page.getByLabel('URI', { exact: true }).fill('campaign-launch-norsk')
-  await page.getByText('Gjennomgå felt og innhold', { exact: true }).click()
-  await expect(page.locator('.transfer-change-table')).toContainText('Utkast')
-
-  await page.locator('select[id^="entry-action-"]').focus()
-  await page.keyboard.press('Tab')
-  await expect(publication).toBeFocused()
-  await expect(publication).toHaveCSS('outline-style', 'solid')
-  // Type-ahead picks the option on every platform. ArrowDown only cycles a
-  // closed <select> on Linux/Windows; on macOS it opens the native popup, which
-  // the page cannot script, so the value never changes.
-  await publication.press('b')
-  await publication.press('Tab')
-  await expect(publication).toHaveValue('source')
-  await expect(page.locator('.transfer-change-table')).toContainText('Publisert')
-  await language.selectOption('no')
-  await expect(language).toHaveValue('no')
-  await expect(page.locator('.transfer-change-table')).toContainText('Norsk')
-  await publication.selectOption('draft')
-  await expect(page.locator('.transfer-change-table')).toContainText('Utkast')
-  await expect(page.locator('.transfer-change-table')).toBeVisible()
-  await expect(page.locator('.admin-text-diff')).toContainText('2 linjer lagt til')
-  await expect(page.locator('.admin-text-diff')).toContainText('Ny oppføring · alt innhold legges til')
-  await expect(page.locator('#transfer-apply')).toHaveText('Importer innhold')
-  await expect(page.locator('#transfer-apply')).toBeEnabled()
-  await page.getByRole('heading', { name: 'Gjennomgå oppføringene', exact: true }).click()
-  await capturePage(page, { path: testInfo.outputPath('entries-review-norwegian.png') })
-  await page.locator('.transfer-whole-entry').screenshot({ path: testInfo.outputPath('entries-review-norwegian-detail.png') })
-  await publication.click()
-  await page.screenshot({ path: testInfo.outputPath('entries-publication-open.png') })
-  await publication.press('Escape')
-  await page.getByRole('heading', { name: 'Gjennomgå oppføringene', exact: true }).click()
-
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600)
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  await capturePage(page, { path: testInfo.outputPath('entries-review-norwegian-mobile.png') })
-  await page.locator('#transfer-apply').click()
-  await expect(page.getByRole('heading', { name: 'Innhold importert', exact: true })).toBeVisible()
-  await expect(page.locator('#transfer-result')).toContainText('1 oppføring lagret')
-  await page.getByRole('button', { name: 'Vis gjenopprettingspunkt', exact: true }).click()
-  await page.getByRole('button', { name: 'Gjenopprett tidligere innhold', exact: true }).click()
-  await page.locator('.transfer-recovery-confirm').getByRole('button', { name: 'Gjenopprett tidligere innhold', exact: true }).click()
-  await expect(page.locator('.transfer-history-row')).toContainText('Gjenopprettet')
-})
-
-test('select, export, review, cancel, apply and recover saved content at desktop and mobile widths', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 1050 })
-  expect((await page.request.post('/e2e/setup_fixtures/content-transfer')).ok()).toBeTruthy()
-  await page.goto('/admin/config/import-export')
-  await syncLV(page)
-  await expect(page.getByRole('heading', { level: 1, name: 'Content transfer' })).toBeVisible()
   await page.getByText('Advanced export options', { exact: true }).click()
   await page.getByLabel('Export scope', { exact: true }).selectOption('fields')
   await expect(page.getByRole('button', { name: 'Prepare export', exact: true })).toBeDisabled()
@@ -314,153 +52,64 @@ test('select, export, review, cancel, apply and recover saved content at desktop
   await expect(field).toHaveAttribute('aria-pressed', 'true')
   await expect(field).toBeFocused()
   await expect(field).toHaveCSS('outline-style', 'solid')
-  await row.screenshot({ path: testInfo.outputPath('transfer-entry-focus.png') })
+
   await page.getByLabel('Search saved content').fill('')
   await expect.poll(() => page.locator('.transfer-entry').count()).toBeGreaterThan(1)
   await expect(field).toHaveAttribute('aria-pressed', 'true')
-  await expect(row).toContainText('English')
-  await expect(row).toContainText('Published')
   await page.getByLabel('Search saved content').blur()
-  await capturePage(page, { path: testInfo.outputPath('transfer-export-desktop.png') })
-  const workspace = await page.locator('.transfer-workspace').boundingBox()
-  const thirdCard = await page.locator('.transfer-entry').nth(2).boundingBox()
-  await page.screenshot({ path: testInfo.outputPath('transfer-export-detail.png'), clip: {
-    x: workspace.x, y: workspace.y, width: workspace.width, height: thirdCard.y + thirdCard.height - workspace.y + 1
-  } })
-  await page.locator('.transfer-tabs').screenshot({ path: testInfo.outputPath('transfer-toolbar.png') })
-  await row.screenshot({ path: testInfo.outputPath('transfer-entry.png') })
-  await captureControlMetrics(page, testInfo, 'export-desktop')
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600) // Allow the admin navigation resize animation to settle.
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  await capturePage(page, { path: testInfo.outputPath('transfer-export-mobile.png') })
+  await fitsPhone(page)
   await page.getByRole('link', { name: /Review selection/ }).click()
   await expect(page.getByRole('complementary', { name: 'Your export' })).toBeInViewport()
   await page.setViewportSize({ width: 1440, height: 1050 })
   await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your bundle is ready' })).toBeVisible()
-  const downloading = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'Download content bundle' }).click()
-  const file = await downloading
-  const binary = await readFile(await file.path())
-  expect(binary.subarray(0, 2).toString()).toBe('PK')
-  await page.getByRole('button', { name: 'Import content', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Review bundle', exact: true })).toBeDisabled()
-  await capturePage(page, { path: testInfo.outputPath('transfer-import-desktop.png') })
-  await captureControlMetrics(page, testInfo, 'import-disabled')
-  await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('Not a content bundle') })
-  await expect(page.getByRole('alert')).toContainText('Choose a .zip content bundle.')
-  await expect(page.getByText('Upload needs attention', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Review bundle', exact: true })).toBeDisabled()
-  await capturePage(page, { path: testInfo.outputPath('transfer-import-error.png') })
-  await page.getByRole('button', { name: 'Remove file', exact: true }).click()
-  await expect(page.getByRole('alert')).toHaveCount(0)
-  const upload = async (capture = false) => {
-    await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-launch-autumn-2026-content-bundle.zip', mimeType: 'application/zip', buffer: binary })
-    await expect(page.getByRole('button', { name: 'Review bundle', exact: true })).toBeEnabled()
-    if (capture) {
-      await expect(page.getByText('Bundle uploaded', { exact: true })).toBeVisible()
-      await expect(page.locator('#transfer-upload-form input[type=file]')).toBeHidden()
-      await page.getByRole('button', { name: 'Remove file', exact: true }).click()
-      await expect(page.getByRole('button', { name: 'Review bundle', exact: true })).toBeDisabled()
-      await expect(page.locator('#transfer-upload-form input[type=file]')).toBeVisible()
-      await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-launch-autumn-2026-content-bundle.zip', mimeType: 'application/zip', buffer: binary })
-      await expect(page.getByRole('button', { name: 'Review bundle', exact: true })).toBeEnabled()
-      await page.mouse.move(0, 0)
-      await capturePage(page, { path: testInfo.outputPath('transfer-import-ready.png') })
-      const workspace = await page.locator('.transfer-workspace').boundingBox()
-      const card = await page.locator('.transfer-upload-card').boundingBox()
-      await page.screenshot({ path: testInfo.outputPath('transfer-import-detail.png'), clip: {
-        x: workspace.x, y: workspace.y, width: workspace.width, height: card.y + card.height - workspace.y + 1
-      } })
-      await captureControlMetrics(page, testInfo, 'import-ready')
-      await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600) // Allow the admin navigation resize animation to settle.
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-      await capturePage(page, { path: testInfo.outputPath('transfer-import-mobile.png') })
-      await page.setViewportSize({ width: 1440, height: 1050 })
-    }
-    await page.getByRole('button', { name: 'Review bundle', exact: true }).click()
-    await expect(page.locator('#transfer-import-review')).toBeVisible()
-  }
-  await upload(true)
-  await expect(page.getByRole('button', { name: 'Apply content import' })).toBeDisabled()
-  await page.getByLabel('Destination entry', { exact: true }).selectOption({ label: 'Destination page · EN · Page' })
-  await expect(page.getByRole('button', { name: 'Apply content import' })).toBeEnabled()
-  await page.getByText('Compare content', { exact: true }).click()
-  await capturePage(page, { path: testInfo.outputPath('transfer-review-desktop.png') })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(600) // Allow the admin navigation resize animation to settle.
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  await capturePage(page, { path: testInfo.outputPath('transfer-review-mobile.png') })
-  await expect(page.getByLabel('Import action', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Cancel import', exact: true }).click()
-  await page.getByRole('button', { name: 'Recent imports', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'No imports yet' })).toBeVisible()
-  await page.getByRole('button', { name: 'Import content', exact: true }).click()
-  await upload()
-  await page.getByLabel('Destination entry', { exact: true }).selectOption({ label: 'Destination page · EN · Page' })
-  await page.getByLabel('Import action', { exact: true }).selectOption('append')
-  await page.getByText('Compare content', { exact: true }).click()
-  await expect(page.locator('.admin-text-diff')).toBeVisible()
-  await expect(page.locator('.admin-text-diff del')).toHaveCount(0)
-  await expect(page.locator('.admin-text-diff .is-eq')).toContainText(['Introduction', 'Discover the stories behind our previous collection.'])
-  await expect(page.locator('.admin-text-diff ins')).toContainText(['', 'Introduction', 'A considered introduction to our next collection.'])
-  await page.locator('.admin-text-diff').screenshot({ path: testInfo.outputPath('entries-content-diff-append.png') })
-  await page.getByRole('button', { name: 'Apply content import' }).click()
-  await expect(page.getByRole('heading', { name: 'Content imported' })).toBeVisible()
-  await page.getByRole('button', { name: 'View recovery snapshot' }).click()
-  await page.getByRole('button', { name: 'Recover previous content' }).click()
-  await page.getByRole('button', { name: 'Restore previous content', exact: true }).click()
-  await expect(page.locator('.transfer-history-row')).toContainText('Recovered')
-  await expect(page.locator('.phx-error')).toHaveCount(0)
+  await fitsPhone(page)
 })
 
-// Keep actual font, icon and control measurements with the visual review artifacts.
-async function captureControlMetrics(page, testInfo, name) {
-  const metrics = await page.evaluate(() => {
-    const selectors = ['.transfer-tabs button', '.transfer-entry-status', '.transfer-field-pills button', '.transfer-button']
-    return selectors.flatMap(selector => [...document.querySelectorAll(selector)].slice(0, 4).map(element => {
-      const style = getComputedStyle(element)
-      const rect = element.getBoundingClientRect()
-      const label = element.querySelector('.transfer-control-label')?.getBoundingClientRect()
-      const icon = element.querySelector('[data-icon], .transfer-status-dot')?.getBoundingClientRect()
-      return {
-        selector, label: element.textContent.trim(), width: rect.width, height: rect.height,
-        font: { family: style.fontFamily, size: style.fontSize, lineHeight: style.lineHeight },
-        background: style.backgroundColor, color: style.color,
-        icon: icon && { width: icon.width, height: icon.height },
-        labelCenterOffset: label && label.y + label.height / 2 - (rect.y + rect.height / 2),
-        iconCenterOffset: icon && icon.y + icon.height / 2 - (rect.y + rect.height / 2),
-        textBox: getComputedStyle(element.querySelector('.transfer-control-label') || element).textBox
-      }
-    }))
-  })
-  const path = testInfo.outputPath(`${name}.json`)
-  await writeFile(path, JSON.stringify(metrics, null, 2))
-  await testInfo.attach(name, { path, contentType: 'application/json' })
-}
-
-test('review and install a missing definition without importing content until apply', async ({ page }) => {
-  const response = await page.request.post('/e2e/setup_fixtures/content-transfer-unmatched')
-  expect(response.ok()).toBeTruthy()
-  const { bundle } = await response.json()
+test('import: keyboard order, a scrollable diff and a phone-width layout', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1050 })
+  expect((await page.request.post('/e2e/setup_fixtures/content-transfer-media')).ok()).toBeTruthy()
   await page.goto('/admin/config/import-export')
   await syncLV(page)
+  await page.getByRole('button', { name: 'Select Campaign launch', exact: true }).click()
+  await page.locator('#transfer-export-options input[name="media"]').uncheck()
+  await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Download content bundle' }).click()
+  const binary = await readFile(await (await downloading).path())
+
   await page.getByRole('button', { name: 'Import content', exact: true }).click()
-  await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'external-content.zip', mimeType: 'application/zip', buffer: Buffer.from(bundle, 'base64') })
+  await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-media.zip', mimeType: 'application/zip', buffer: binary })
   await expect(page.getByRole('button', { name: 'Review bundle', exact: true })).toBeEnabled()
+  await fitsPhone(page)
+  await page.setViewportSize({ width: 1440, height: 1050 })
   await page.getByRole('button', { name: 'Review bundle', exact: true }).click()
-  await page.getByLabel('Destination entry', { exact: true }).selectOption({ label: 'Destination page · EN · Page' })
-  await expect(page.getByRole('button', { name: 'Apply content import' })).toBeDisabled()
-  await page.getByRole('button', { name: 'Review included definitions' }).click()
-  await expect(page.getByRole('heading', { name: 'Definition changes' })).toBeVisible()
-  await page.getByRole('button', { name: 'Install missing definitions' }).click()
-  await expect(page.getByRole('button', { name: 'Apply content import' })).toBeEnabled()
-  await page.getByRole('button', { name: 'Recent imports', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'No imports yet' })).toBeVisible()
-  await page.getByRole('button', { name: 'Import content', exact: true }).click()
-  await page.getByRole('button', { name: 'Apply content import' }).click()
-  await expect(page.getByRole('heading', { name: 'Content imported' })).toBeVisible()
-  await expect(page.locator('.phx-error')).toHaveCount(0)
+  await expect(page.locator('#transfer-entry-mappings')).toBeVisible()
+
+  // Publication follows the import action in the tab order, with its outline.
+  const publication = page.getByLabel('Publication', { exact: true })
+  await page.locator('select[id^="entry-action-"]').focus()
+  await page.keyboard.press('Tab')
+  await expect(publication).toBeFocused()
+  await expect(publication).toHaveCSS('outline-style', 'solid')
+  await fitsPhone(page)
+  await page.setViewportSize({ width: 1440, height: 1050 })
+
+  // A long diff scrolls inside its own region from the keyboard.
+  await page.getByLabel('Import action', { exact: true }).selectOption('update')
+  await page.getByLabel('Destination entry', { exact: true }).selectOption({ label: 'Destination page · English' })
+  await page.getByLabel('URI', { exact: true }).fill('destination-media-copy')
+  for (const name of ['courtyard.jpg', 'collection-detail.jpg']) {
+    await page.getByLabel(`Destination for images/${name}`, { exact: true }).selectOption({ label: `images/${name}` })
+  }
+  await page.getByText('Review fields & content', { exact: true }).click()
+  const diff = page.locator('.admin-text-diff')
+  await expect(diff.locator('ins')).toContainText(['Image · Hero: courtyard.jpg'])
+  await fitsPhone(page)
+  const viewport = diff.getByRole('region')
+  await viewport.focus()
+  await expect(viewport).toBeFocused()
+  await viewport.press('End')
+  await expect(diff.locator('ins').last()).toBeInViewport()
+  await viewport.press('Home')
 })
