@@ -188,6 +188,30 @@
     gap: 12px;
   }
 
+  /* Copying into the live environment has to be ticked */
+  .environment-replace-live {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    > span {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+      color: color-mix(in srgb, var(--brando-color-dark) 72%, transparent);
+    }
+
+    input {
+      flex: none;
+      width: auto;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+    }
+  }
+
   /* Matching the select's height and centring inside it lines the glyph up
      with the field, rather than padding-bottom nudging the box while leaving
      the arrow itself sitting high. */

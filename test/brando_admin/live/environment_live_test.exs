@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
   use Brando.LiveCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Environments
   alias Brando.Environments.OperationLog
   alias Brando.Environments.Schema
@@ -61,6 +63,31 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       })
 
     %{site: site, production: production}
+  end
+
+  test "copying into the live environment has to be ticked", %{conn: conn, site: site, production: production} do
+    {:ok, preview} =
+      Environments.create_environment(site, %{name: "Preview", key: "preview-copy-live", domain: "p.example.com"})
+
+    {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+    copies = fn ->
+      Brando.Repo.all(from(l in OperationLog, where: l.target_environment_id == ^production.id and l.operation == :copy),
+        prefix: "public"
+      )
+    end
+
+    view
+    |> form("#copy-environment-form", operation: %{source_id: preview.id, target_id: production.id})
+    |> render_submit()
+
+    assert copies.() == []
+
+    view
+    |> form("#copy-environment-form", operation: %{source_id: preview.id, target_id: production.id, replace_live: "true"})
+    |> render_submit()
+
+    assert [%OperationLog{operation: :copy}] = copies.()
   end
 
   test "creates an environment and exposes a queued copy that can be cancelled", %{

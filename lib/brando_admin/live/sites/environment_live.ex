@@ -5,10 +5,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  # Deleting an environment or its archives, and setting one live, ask for
-  # the password, a code or a passkey when the session has not confirmed
-  # lately.
-  on_mount({BrandoAdmin.Reauth, events: ~w(delete_environment queue_set_live schedule_set_live prune_archives)})
+  # Deleting an environment or its archives, copying into one and setting one
+  # live ask for the password, a code or a passkey when the session has not
+  # confirmed lately.
+  on_mount(
+    {BrandoAdmin.Reauth,
+     events: ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy)}
+  )
 
   alias Brando.Environments
   alias Brando.Environments.Environment
@@ -463,6 +466,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         </select>
       </label>
     </div>
+    <label class="environment-replace-live">
+      <input type="checkbox" name="operation[replace_live]" value="true" />
+      <span>{gettext("Replace the live content, if the target is the live environment")}</span>
+    </label>
     """
   end
 
@@ -524,6 +531,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     with :ok <- authorize(socket),
          {:ok, source} <- environment_for_site(socket, params["source_id"]),
          {:ok, target} <- environment_for_site(socket, params["target_id"]),
+         :ok <- check_live_target(target, params),
          {:ok, _job} <-
            Environments.schedule_copy(source, target, DateTime.utc_now(),
              creator: socket.assigns.current_user,
@@ -542,6 +550,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     with :ok <- authorize(socket),
          {:ok, source} <- environment_for_site(socket, params["source_id"]),
          {:ok, target} <- environment_for_site(socket, params["target_id"]),
+         :ok <- check_live_target(target, params),
          {:ok, scheduled_at} <- parse_future_datetime(params["scheduled_at"]),
          {:ok, _job} <-
            Environments.schedule_copy(source, target, scheduled_at,
@@ -760,6 +769,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     socket
   end
 
+  # A copy into the live environment replaces what visitors see, as setting
+  # another environment live does: it must be ticked explicitly.
+  defp check_live_target(%{live: true}, %{"replace_live" => "true"}), do: :ok
+  defp check_live_target(%{live: true}, _params), do: {:error, :live_target}
+  defp check_live_target(_target, _params), do: :ok
+
   defp operation_error(%Ecto.Changeset{} = changeset) do
     changeset
     |> Ecto.Changeset.traverse_errors(fn {message, opts} ->
@@ -770,6 +785,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     |> Enum.flat_map(fn {field, messages} -> Enum.map(messages, &"#{field} #{&1}") end)
     |> Enum.join(", ")
   end
+
+  defp operation_error(:live_target),
+    do:
+      gettext(
+        "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
+      )
 
   defp operation_error(:not_authorized), do: gettext("You are not allowed to manage environments.")
   defp operation_error(:same_environment), do: gettext("Source and target must be different environments.")

@@ -165,8 +165,9 @@ defmodule BrandoAdmin.ReauthTest do
   describe "sensitive actions that ask again" do
     @guarded [
       {BrandoAdmin.Sites.SiteLive, ~w(delete suspend archive grant revoke)},
-      {BrandoAdmin.Sites.PublishingLive, ~w(save_deploy_config deploy rollback)},
-      {BrandoAdmin.Sites.EnvironmentLive, ~w(delete_environment queue_set_live schedule_set_live prune_archives)},
+      {BrandoAdmin.Sites.PublishingLive, ~w(save_deploy_config deploy rollback request_build schedule_build)},
+      {BrandoAdmin.Sites.EnvironmentLive,
+       ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy)},
       {BrandoAdmin.Users.UserListLive, ~w(disable_user enable_user confirm_transfer_delete)},
       {BrandoAdmin.Users.GroupsLive, ~w(save delete add_member remove_member)},
       {BrandoAdmin.Users.UserSecurityLive, ~w(open_setup new_passkey remove_passkey revoke_session revoke_other_sessions)}
