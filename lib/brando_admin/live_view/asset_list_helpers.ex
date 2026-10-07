@@ -80,7 +80,7 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   @doc "Resolves a folder filter parameter to a relative folder path."
   def resolve_current_folder(folder_filter, upload_root) do
     cond do
-      is_nil(folder_filter) or folder_filter in ["", "root"] ->
+      is_nil(folder_filter) or folder_filter in ["", "root", "all"] ->
         ""
 
       is_integer(folder_filter) ->
@@ -143,9 +143,15 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   @doc "Returns the listing component ID for a schema."
   def listing_id(schema), do: "content_listing_#{schema}_default"
 
-  @doc "Adds default folder filter to listing params."
+  @doc """
+  Adds default folder filter to listing params.
+
+  `filter:folder_id=all` lists every folder: the command palette's "Images
+  matching …" links search the whole library that way.
+  """
   def list_params(params, root_folder_ids \\ []) when is_map(params) do
     case Map.get(params, "filter:folder_id") do
+      "all" -> Map.delete(params, "filter:folder_id")
       folder when folder in [nil, "", "root"] -> Map.put(params, "filter:folder_id", {:root, root_folder_ids})
       _ -> params
     end

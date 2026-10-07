@@ -24,6 +24,12 @@ defmodule BrandoAdmin.Images.FolderBrowserTest do
     assert videos |> Enum.map(& &1.id) |> Enum.sort() == Enum.sort([in_root_folder.id, without_folder.id])
   end
 
+  test "all folders drops the folder filter, as the command palette's search links ask" do
+    params = AssetListHelpers.list_params(%{"filter:folder_id" => "all", "filter:path" => "launch"}, [1])
+    assert params == %{"filter:path" => "launch"}
+    assert AssetListHelpers.resolve_current_folder("all", "videos") == ""
+  end
+
   describe "where folders are stored" do
     test "a folder made in a picker lands in the library's tree" do
       site = Brando.Repo.insert!(%Folder{scope: "images", name: "site", path: "site"})
