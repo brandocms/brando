@@ -8,7 +8,6 @@ defmodule BrandoAdmin.Users.SignInPolicyLive do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Users.SecurityLog
   alias Brando.Users.SecurityPolicy
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Toast
@@ -97,7 +96,7 @@ defmodule BrandoAdmin.Users.SignInPolicyLive do
          options: options(groups?),
          modes: modes(),
          error: nil,
-         meta: if(connected?(socket), do: SecurityLog.meta(connect_info(socket))),
+         meta: Brando.Users.SecurityLog.socket_meta(socket),
          page_title: gettext("Sign-in policy")
        )
        |> assign_draft(policy)}
@@ -107,10 +106,6 @@ defmodule BrandoAdmin.Users.SignInPolicyLive do
        |> put_flash(:error, gettext("Only a superuser can change the sign-in policy."))
        |> push_navigate(to: "/admin/users")}
     end
-  end
-
-  defp connect_info(socket) do
-    %{peer_data: get_connect_info(socket, :peer_data), user_agent: get_connect_info(socket, :user_agent)}
   end
 
   defp modes do

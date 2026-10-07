@@ -53,7 +53,7 @@ defmodule BrandoAdmin.UserForgotPasswordLive do
 
     {:ok,
      assign(socket,
-       ip: if(connected?(socket), do: Brando.Users.SecurityLog.meta(connect_info(socket)).ip),
+       ip: Brando.Users.SecurityLog.socket_meta(socket)[:ip],
        form: to_form(%{"email" => ""}, as: "user"),
        sent: nil,
        error_message: Phoenix.Flash.get(socket.assigns.flash, :error),
@@ -97,10 +97,4 @@ defmodule BrandoAdmin.UserForgotPasswordLive do
   end
 
   defp too_many_requests, do: gettext("Too many requests from your network. Try again in a few minutes.")
-
-  # The socket's peer data, when the endpoint's socket gives it
-  # (`connect_info: [:peer_data, ...]`); otherwise only the email is counted.
-  defp connect_info(socket) do
-    %{peer_data: get_connect_info(socket, :peer_data), user_agent: get_connect_info(socket, :user_agent)}
-  end
 end

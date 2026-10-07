@@ -10,15 +10,7 @@ defmodule BrandoAdmin.Users.UserFormLive do
   alias BrandoAdmin.Toast
 
   def mount(_params, _session, socket) do
-    meta =
-      if connected?(socket),
-        do:
-          Brando.Users.SecurityLog.meta(%{
-            peer_data: get_connect_info(socket, :peer_data),
-            user_agent: get_connect_info(socket, :user_agent)
-          })
-
-    {:ok, assign(socket, set_password: nil, security_meta: meta)}
+    {:ok, assign(socket, set_password: nil, security_meta: Brando.Users.SecurityLog.socket_meta(socket))}
   end
 
   def render(assigns) do

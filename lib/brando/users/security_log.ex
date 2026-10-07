@@ -17,6 +17,7 @@ defmodule Brando.Users.SecurityLog do
 
   alias Brando.Repo
   alias Brando.Users.SecurityEvent
+  alias Phoenix.LiveView
 
   require Logger
 
@@ -63,15 +64,36 @@ defmodule Brando.Users.SecurityLog do
 
   @doc """
   The IP address and browser of a request, from a `Plug.Conn`, or from the
-  `:peer_data` and `:user_agent` of a LiveView's connect info.
+  `:peer_data`, `:x_headers` and `:user_agent` of a LiveView's connect info.
+  The address is the client's behind a trusted proxy (`Brando.ClientIP`).
   """
   @spec meta(Plug.Conn.t() | map()) :: meta()
   def meta(%Plug.Conn{} = conn) do
-    %{ip: ip_string(conn.remote_ip), user_agent: conn |> Plug.Conn.get_req_header("user-agent") |> List.first()}
+    %{
+      ip: ip_string(Brando.ClientIP.from_conn(conn)),
+      user_agent: conn |> Plug.Conn.get_req_header("user-agent") |> List.first()
+    }
   end
 
   def meta(%{} = info) do
-    %{ip: ip_string(get_in(info, [:peer_data, :address])), user_agent: info[:user_agent]}
+    %{ip: ip_string(Brando.ClientIP.from_connect_info(info)), user_agent: info[:user_agent]}
+  end
+
+  @doc """
+  `meta/1` of a connected LiveView socket, or nil before it connects. The
+  socket's `connect_info` should give `:peer_data`, `:x_headers` and
+  `:user_agent`; without them there is no address, and limits per IP
+  address do not apply.
+  """
+  @spec socket_meta(Phoenix.LiveView.Socket.t()) :: meta() | nil
+  def socket_meta(socket) do
+    if LiveView.connected?(socket) do
+      meta(%{
+        peer_data: LiveView.get_connect_info(socket, :peer_data),
+        x_headers: LiveView.get_connect_info(socket, :x_headers),
+        user_agent: LiveView.get_connect_info(socket, :user_agent)
+      })
+    end
   end
 
   defp ip_string(nil), do: nil
