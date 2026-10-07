@@ -39,6 +39,7 @@ defmodule Brando.Users.TwoFactor do
 
   alias Brando.Repo
   alias Brando.Users
+  alias Brando.Users.Passkeys
   alias Brando.Users.RecoveryCode
   alias Brando.Users.Security
   alias Brando.Users.SecurityLog
@@ -57,9 +58,16 @@ defmodule Brando.Users.TwoFactor do
     Repo.get_by(Security, user_id: user_id) || %Security{user_id: user_id}
   end
 
-  @doc "Whether `user` has turned two-factor authentication on."
+  @doc """
+  Whether `user` has a second factor: codes from an authenticator app, or a
+  passkey (`Brando.Users.Passkeys`).
+  """
   @spec enabled?(map()) :: boolean()
-  def enabled?(%{id: user_id}) do
+  def enabled?(user), do: totp_enabled?(user) or Passkeys.any?(user)
+
+  @doc "Whether `user` has turned on codes from an authenticator app."
+  @spec totp_enabled?(map()) :: boolean()
+  def totp_enabled?(%{id: user_id}) do
     Repo.repo().exists?(from s in Security, where: s.user_id == ^user_id and not is_nil(s.totp_enabled_at))
   end
 
@@ -134,7 +142,7 @@ defmodule Brando.Users.TwoFactor do
   """
   @spec enable(map(), binary(), String.t(), keyword()) :: {:ok, [String.t()]} | {:error, atom()}
   def enable(%{id: user_id} = user, secret, code, opts \\ []) do
-    with :ok <- check(not enabled?(user), :already_enabled),
+    with :ok <- check(not totp_enabled?(user), :already_enabled),
          step when is_integer(step) <- matching_step(secret, normalize_code(code)) || {:error, :invalid_code},
          :ok <- check_proof(user, opts[:proof], opts[:meta]) do
       do_enable(user_id, user, secret, step, opts)
@@ -299,6 +307,24 @@ defmodule Brando.Users.TwoFactor do
     end
   end
 
+  @doc """
+  Makes `user` a new set of recovery codes, replacing any they had, and
+  returns them, for showing once. For a first second factor; making new ones
+  later asks for proof, with `regenerate_recovery_codes/3`.
+  """
+  @spec create_recovery_codes(map()) :: [String.t()]
+  def create_recovery_codes(user) do
+    {:ok, codes} = Repo.transaction(fn -> replace_recovery_codes(user) end)
+    codes
+  end
+
+  @doc "Deletes `user`'s recovery codes, once they have no second factor left."
+  @spec delete_recovery_codes(map()) :: :ok
+  def delete_recovery_codes(%{id: user_id}) do
+    Repo.delete_all(from c in RecoveryCode, where: c.user_id == ^user_id)
+    :ok
+  end
+
   defp replace_recovery_codes(%{id: user_id} = user) do
     Repo.delete_all(from c in RecoveryCode, where: c.user_id == ^user_id)
     now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
@@ -343,15 +369,16 @@ defmodule Brando.Users.TwoFactor do
   ## Turning it off
 
   @doc """
-  Turns two-factor authentication off for `user`, once they confirm it is
-  them (`confirm/3`). Returns `:ok`, or `{:error, reason}`: `:invalid_proof`,
-  `:locked`, `:not_enabled`, or `:required` when the sign-in policy says
-  they must use it.
+  Turns codes from an authenticator app off for `user`, once they confirm
+  it is them (`confirm/3`). With no passkey left, the recovery codes go too.
+  Returns `:ok`, or `{:error, reason}`: `:invalid_proof`, `:locked`,
+  `:not_enabled`, or `:required` when the sign-in policy says they must use
+  two-factor authentication and they have no passkey.
   """
   @spec disable(map(), String.t(), keyword()) :: :ok | {:error, atom()}
   def disable(user, proof, opts \\ []) do
-    with :ok <- check_enabled(user),
-         :ok <- check(not required?(user), :required),
+    with :ok <- check(totp_enabled?(user), :not_enabled),
+         :ok <- check(Passkeys.any?(user) or not required?(user), :required),
          :ok <- confirm(user, proof, opts[:meta]) do
       clear(user)
       SecurityLog.record(:two_factor_disabled, user, meta: opts[:meta])
@@ -362,8 +389,9 @@ defmodule Brando.Users.TwoFactor do
 
   @doc """
   Turns two-factor authentication off for the user `user_id` on behalf of
-  `actor`, for someone who lost their app and their recovery codes. Also
-  ends a lockout, and logs the user out everywhere: they sign in with their
+  `actor`, for someone who lost their app, passkeys and recovery codes: the
+  app's secret, every passkey and the recovery codes go. Also ends a
+  lockout, and logs the user out everywhere: they sign in with their
   password, and set two-factor authentication up again if they must.
 
   Allowed to whoever may reset the user's password
@@ -376,6 +404,8 @@ defmodule Brando.Users.TwoFactor do
          :ok <- check(user.id != actor.id, :forbidden),
          :ok <- check(Brando.Trait.ProtectPassword.allowed?(actor, user), :forbidden) do
       clear(user)
+      Passkeys.delete_all(user)
+      delete_recovery_codes(user)
       Throttle.clear(user)
       Users.revoke_sessions(user)
       SecurityLog.record(:two_factor_reset, user, actor: actor, meta: opts[:meta])
@@ -391,13 +421,11 @@ defmodule Brando.Users.TwoFactor do
     end
   end
 
-  defp clear(%{id: user_id}) do
-    Repo.transaction(fn ->
-      from(s in Security, where: s.user_id == ^user_id)
-      |> Repo.update_all(set: [totp_secret: nil, totp_enabled_at: nil, totp_last_step: nil])
+  defp clear(%{id: user_id} = user) do
+    from(s in Security, where: s.user_id == ^user_id)
+    |> Repo.update_all(set: [totp_secret: nil, totp_enabled_at: nil, totp_last_step: nil])
 
-      Repo.delete_all(from c in RecoveryCode, where: c.user_id == ^user_id)
-    end)
+    unless Passkeys.any?(user), do: delete_recovery_codes(user)
   end
 
   defp check_enabled(user), do: check(enabled?(user), :not_enabled)

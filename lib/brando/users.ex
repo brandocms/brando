@@ -23,7 +23,13 @@ defmodule Brando.Users do
   @type user :: User.t()
 
   # A user's sign-in security, which is theirs alone: content transfer leaves it out.
-  @security_tables ["users_security", "users_recovery_codes", "users_security_events", "users_security_policy"]
+  @security_tables [
+    "users_security",
+    "users_recovery_codes",
+    "users_passkeys",
+    "users_security_events",
+    "users_security_policy"
+  ]
 
   query :list, User do
     fn q -> from(t in q) end
@@ -126,13 +132,109 @@ defmodule Brando.Users do
   def superuser?(_), do: false
 
   @doc """
-  Generates a session token.
+  Generates a session token, noting the browser and address of `meta`
+  (`Brando.Users.SecurityLog.meta/1`) for the user's list of sessions. A
+  new session has just given its password (and second factor), so it counts
+  as confirmed (`confirm_session/1`).
   """
-  def generate_user_session_token(user) do
-    {token, user_token} = UserToken.build_session_token(user)
+  def generate_user_session_token(user, meta \\ %{}) do
+    {token, user_token} = UserToken.build_session_token(user, meta)
     Repo.insert!(user_token)
     token
   end
+
+  ## Sessions
+
+  @doc "`user`'s sessions, most recently used first."
+  @spec list_sessions(user) :: [UserToken.t()]
+  def list_sessions(%{id: user_id}) do
+    days = UserToken.session_validity_in_days()
+
+    from(t in UserToken,
+      where: t.user_id == ^user_id and t.context == "session" and t.inserted_at > ago(^days, "day"),
+      order_by: [desc_nulls_last: t.last_used_at, desc: t.inserted_at]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Logs out `user`'s session `session_id` (the token row's id, not the
+  token). Returns `:ok`, or `{:error, :not_found}` for a session that is not
+  theirs.
+  """
+  @spec revoke_session(user, integer() | String.t(), keyword()) :: :ok | {:error, :not_found}
+  def revoke_session(%{id: user_id} = user, session_id, opts \\ []) do
+    query = from t in UserToken, where: t.id == ^session_id and t.user_id == ^user_id and t.context == "session"
+
+    case Repo.delete_all(from(t in query, select: t.token)) do
+      {1, [token]} ->
+        Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+        SecurityLog.record(:session_revoked, user, meta: opts[:meta])
+        :ok
+
+      _ ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Logs `user` out everywhere on behalf of `actor`: an administrator allowed
+  to reset the user's password (`Brando.Trait.ProtectPassword.allowed?/2`),
+  or the user themselves, who keeps the session with the token `except`.
+  """
+  @spec log_out_everywhere(user, user, keyword()) :: :ok | {:error, :forbidden}
+  def log_out_everywhere(user, actor, opts \\ []) do
+    if Brando.Trait.ProtectPassword.allowed?(actor, user) do
+      revoke_sessions(user, except: opts[:except])
+      SecurityLog.record(:sessions_revoked, user, actor: actor, meta: opts[:meta])
+      :ok
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  Notes that the session `token` is in use, at most every five minutes, for
+  the list of sessions.
+  """
+  @spec touch_session(binary() | nil) :: :ok
+  def touch_session(token) when is_binary(token) do
+    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    stale = NaiveDateTime.add(now, -300, :second)
+
+    from(t in UserToken,
+      where: t.token == ^token and t.context == "session",
+      where: is_nil(t.last_used_at) or t.last_used_at < ^stale
+    )
+    |> Repo.update_all(set: [last_used_at: now])
+
+    :ok
+  end
+
+  def touch_session(_token), do: :ok
+
+  @doc """
+  Notes that the session `token` has just given a password, a code or a
+  passkey again (see `BrandoAdmin.Reauth`).
+  """
+  @spec confirm_session(binary()) :: :ok
+  def confirm_session(token) when is_binary(token) do
+    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    Repo.update_all(UserToken.token_and_context_query(token, "session"), set: [confirmed_at: now])
+    :ok
+  end
+
+  @doc "Whether the session `token` gave a password, a code or a passkey in the last `seconds`."
+  @spec session_confirmed_within?(binary() | nil, pos_integer()) :: boolean()
+  def session_confirmed_within?(token, seconds) when is_binary(token) do
+    since = NaiveDateTime.add(NaiveDateTime.utc_now(), -seconds, :second)
+
+    Repo.repo().exists?(
+      from t in UserToken, where: t.token == ^token and t.context == "session" and t.confirmed_at > ^since
+    )
+  end
+
+  def session_confirmed_within?(_token, _seconds), do: false
 
   @doc """
   Gets the user with the given signed token.
@@ -671,7 +773,7 @@ defmodule Brando.Users do
   end
 
   defp transfer_or_delete_ref(table, "user_id", from_user_id, _to_user_id)
-       when table in ["users_tokens", "users_security", "users_recovery_codes"] do
+       when table in ["users_tokens", "users_security", "users_recovery_codes", "users_passkeys"] do
     %{num_rows: num_rows} =
       Ecto.Adapters.SQL.query!(
         Brando.repo(),
