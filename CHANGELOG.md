@@ -658,13 +658,16 @@ production dump.
   only active, undeleted accounts get an email. The link works once, for an
   hour, and only the newest one works; the token is stored hashed. Choosing a
   new password logs the user out everywhere and disconnects their open admin
-  views. On a saved user's form, a superuser sends another user a reset link
-  instead of typing a password for them, and your own form links to
-  `/admin/users/password`, which asks for the current password and logs out
-  your other sessions. The first-login password change uses the same page.
-  Users are emailed when their password changes. `Brando.Users` has
-  `request_password_reset/1`, `send_password_reset/2`,
-  `reset_user_password/2` and `update_user_password/4`; the unused
+  views. A saved user's form no longer has a password field: a superuser sends
+  another user a reset link (valid for 24 hours), or, on a site without email,
+  sets a password in a dialog behind "Set a password instead", which logs the
+  user out everywhere and makes them choose their own at the next login. Your
+  own form links to `/admin/users/password`, which asks for the current
+  password and logs out your other sessions. The first-login password change
+  uses the same page. Users are emailed when their password changes.
+  `Brando.Users` has `request_password_reset/1`, `send_password_reset/2`,
+  `set_user_password/3`, `reset_user_password/2` and
+  `update_user_password/4`; the unused
   `UserNotifier.deliver_confirmation_instructions/2` and
   `deliver_update_email_instructions/2` are gone. Reset email needs the mailer
   from the [Email guide](guides/email.md); see

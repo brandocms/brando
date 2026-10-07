@@ -116,8 +116,8 @@ sends nothing otherwise:
 :ok = Brando.Users.request_password_reset(email)
 ```
 
-The link works once, for an hour, and only the newest link for an account
-works. Only a SHA-256 hash of its token is stored in `users_tokens`; a link
+The link works once, for an hour (a day when an administrator sent it, see
+below), and only the newest link for an account works, whoever sent it. Only a SHA-256 hash of its token is stored in `users_tokens`; a link
 also stops working when the account is deactivated or its email changes.
 Choosing a new password, with `Brando.Users.reset_user_password/2`, deletes
 every token of the account — its sessions and remember-me cookies, and the
@@ -126,9 +126,9 @@ with the new password.
 
 **From the user's form.** A superuser opens another user's form and chooses
 **Send reset link**: the user is emailed a link, as above, saying an
-administrator sent it. Their current password keeps working until they use
-it. A saved user's form has no password field: nobody types a password on
-someone else's behalf. The call is:
+administrator sent it. That link works for 24 hours, since the user did not
+ask for it and may not be waiting for it. Their current password keeps
+working until they use it. The call is:
 
 ```elixir
 {:ok, user} = Brando.Users.send_password_reset(user.id, current_admin)
@@ -136,6 +136,16 @@ someone else's behalf. The call is:
 
 It returns `{:error, :forbidden}` unless `current_admin` is a superuser or the
 user themselves, and `{:error, :inactive}` for a deactivated account.
+
+A saved user's form has no password field. When the site cannot send email,
+the superuser chooses **Set a password instead** under the reset button and
+types a password twice in the dialog that opens. The user is logged out
+everywhere, emailed that an administrator set their password if a mailer is
+configured, and must choose their own password the next time they log in
+(`reset_password_on_first_login` is switched on). Hand the password over
+another way. The call is
+`Brando.Users.set_user_password(user.id, attrs, current_admin)`; a superuser
+cannot use it on their own account.
 
 **Change your own password.** Your own form links to `/admin/users/password`,
 which asks for the current password and the new one twice. Saving logs out

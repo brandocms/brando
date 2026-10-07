@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Users
+  alias BrandoAdmin.Components.Auth
   alias BrandoAdmin.Components.Workspace
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
@@ -31,17 +32,33 @@ defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
           </div>
         </header>
         <.form for={@form} id="password_form" class="password-form" phx-change="validate" phx-submit="save">
-          <.password_field
-            field={@form[:current_password]}
-            label={gettext("Current password")}
-            autocomplete="current-password"
-          />
-          <.password_field field={@form[:password]} label={gettext("New password")} autocomplete="new-password" />
-          <.password_field
-            field={@form[:password_confirmation]}
-            label={gettext("Confirm new password")}
-            autocomplete="new-password"
-          />
+          <div class="field-wrapper">
+            <Auth.input
+              field={@form[:current_password]}
+              type="password"
+              label={gettext("Current password")}
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <div class="field-wrapper">
+            <Auth.input
+              field={@form[:password]}
+              type="password"
+              label={gettext("New password")}
+              autocomplete="new-password"
+              required
+            />
+          </div>
+          <div class="field-wrapper">
+            <Auth.input
+              field={@form[:password_confirmation]}
+              type="password"
+              label={gettext("Confirm new password")}
+              autocomplete="new-password"
+              required
+            />
+          </div>
           <div class="password-actions">
             <button type="submit" class="workspace-button primary" phx-disable-with={gettext("Saving...")}>
               {gettext("Change password")}
@@ -55,39 +72,6 @@ defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
       <p class="workspace-note password-note">
         {gettext("Forgot your current password? Log out and use “Forgot password?” on the login page.")}
       </p>
-    </div>
-    """
-  end
-
-  attr :field, Phoenix.HTML.FormField, required: true
-  attr :label, :string, required: true
-  attr :autocomplete, :string, required: true
-
-  defp password_field(assigns) do
-    errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
-    assigns = assign(assigns, :errors, Enum.map(errors, &BrandoAdmin.Components.Form.Primitives.translate_error/1))
-
-    ~H"""
-    <div class="field-wrapper">
-      <div class="label-wrapper">
-        <label class={["control-label", @errors != [] && "failed"]} for={@field.id}>
-          <span>{@label}</span>
-        </label>
-        <div id={"#{@field.id}-error"} class="field-errors" role="alert">
-          <span :for={error <- @errors} class="field-error">{error}</span>
-        </div>
-      </div>
-      <input
-        type="password"
-        name={@field.name}
-        id={@field.id}
-        class="text"
-        value={Phoenix.HTML.Form.normalize_value("password", @field.value)}
-        autocomplete={@autocomplete}
-        aria-invalid={@errors != [] && "true"}
-        aria-describedby={"#{@field.id}-error"}
-        required
-      />
     </div>
     """
   end

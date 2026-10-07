@@ -15141,11 +15141,6 @@ msgstr ""
 msgid "Current password"
 msgstr ""
 
-#: lib/brando/users/user.ex:269
-#, elixir-autogen, elixir-format
-msgid "Email %{email} a link to choose a new password. The link works once, for an hour."
-msgstr ""
-
 #: lib/brando_admin/live/user_forgot_password_live.ex:25
 #, elixir-autogen, elixir-format
 msgid "Enter the email address you log in with, and we will send you a link to choose a new password."
@@ -15301,4 +15296,51 @@ msgstr ""
 #: lib/brando/users.ex:314
 #, elixir-autogen, elixir-format
 msgid "is not your current password"
+msgstr ""
+
+#: lib/brando/users/user.ex:269
+#, elixir-autogen, elixir-format
+msgid "Email %{email} a link to choose a new password. The link works once, for %{hours} hours."
+msgstr ""
+
+#: lib/brando/users/user.ex:303
+#, elixir-autogen, elixir-format
+msgid "Set a password instead"
+msgstr ""
+
+#: lib/brando/users/user.ex:303 lib/brando_admin/live/users/user_form_live.ex:29
+#, elixir-autogen, elixir-format
+msgid "Set a password"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_form_live.ex:76
+#, elixir-autogen, elixir-format
+msgid "Set password"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_form_live.ex:38
+#, elixir-autogen, elixir-format
+msgid "For when the user cannot get email from this site. They are logged out everywhere, and must choose their own password the next time they log in. Unsaved changes in the form are lost."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_form_live.ex:132
+#, elixir-autogen, elixir-format
+msgid "A new password was set for %{email}. They choose their own the next time they log in."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex:72 lib/brando/users/user_notifier.ex:73 lib/brando/users/user_notifier.ex:80 lib/brando/users/user_notifier.ex:81
+#, elixir-autogen, elixir-format
+msgid "The link works once and expires in %{count} hour."
+msgid_plural "The link works once and expires in %{count} hours."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/users/user_notifier.ex:117
+#, elixir-autogen, elixir-format
+msgid "An administrator set a new password for %{email}, and the account was logged out everywhere. You will be asked to choose your own password the next time you log in."
+msgstr ""
+
+#: lib/brando/users/user_notifier.ex:119
+#, elixir-autogen, elixir-format
+msgid "If you did not expect this, reset your password now and tell an administrator."
 msgstr ""

@@ -217,8 +217,40 @@ defmodule Brando.Users.PasswordResetTest do
       assert_email_sent(fn email ->
         assert email.subject == "Reset your password"
         assert email.text_body =~ "An administrator sent you this link"
+        assert email.text_body =~ "expires in 24 hours"
         assert email.text_body =~ "/admin/reset-password/"
       end)
+    end
+
+    test "the link lasts a day, once, and only until a newer one is sent", %{user: user} do
+      admin = Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Users.send_password_reset(user.id, admin)
+      token = sent_token()
+      assert [%UserToken{context: "admin_reset_password"}] = tokens(user, "admin_reset_password")
+
+      age = fn minutes ->
+        Repo.update_all(from(t in UserToken, where: t.user_id == ^user.id),
+          set: [inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -minutes, :minute)]
+        )
+      end
+
+      age.(23 * 60)
+      assert Users.get_user_by_reset_password_token(token).id == user.id
+      age.(24 * 60 + 1)
+      assert is_nil(Users.get_user_by_reset_password_token(token))
+
+      {:ok, _} = Users.send_password_reset(user.id, admin)
+      admin_link = sent_token()
+      :ok = Users.request_password_reset(user.email)
+      own_link = sent_token()
+      assert is_nil(Users.get_user_by_reset_password_token(admin_link))
+      assert Users.get_user_by_reset_password_token(own_link).id == user.id
+
+      {:ok, _} = Users.send_password_reset(user.id, admin)
+      admin_link = sent_token()
+      attrs = %{"password" => "a new password", "password_confirmation" => "a new password"}
+      {:ok, _} = Users.reset_user_password(user, attrs)
+      assert is_nil(Users.get_user_by_reset_password_token(admin_link))
     end
 
     test "others may not, and nobody sends one to an inactive account", %{user: user} do
@@ -230,6 +262,55 @@ defmodule Brando.Users.PasswordResetTest do
       assert {:error, :inactive} = Users.send_password_reset(inactive.id, admin)
       assert_no_email_sent()
       assert {:ok, _} = Users.send_password_reset(editor.id, editor)
+    end
+  end
+
+  describe "set_user_password/3" do
+    setup do
+      {:ok, admin: Factory.insert(:random_user, role: :superuser)}
+    end
+
+    test "a superuser sets another user's password, which logs them out everywhere", %{user: user, admin: admin} do
+      user =
+        user
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_embed(:config, %{reset_password_on_first_login: false})
+        |> Repo.update!()
+
+      session = Users.generate_user_session_token(user)
+      @endpoint.subscribe(Users.live_socket_id(session))
+      attrs = %{"password" => "set by admin", "password_confirmation" => "set by admin", "role" => "superuser"}
+
+      assert {:ok, updated} = Users.set_user_password(user.id, attrs, admin)
+
+      assert Bcrypt.verify_pass("set by admin", updated.password)
+      assert updated.role == user.role
+      assert updated.config.reset_password_on_first_login
+      assert is_nil(Users.get_user_by_session_token(session))
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Your password was changed"
+        assert email.text_body =~ "An administrator set a new password"
+      end)
+    end
+
+    test "nobody else may, nor for their own account", %{user: user, admin: admin} do
+      editor = Factory.insert(:random_user, role: :editor)
+      attrs = %{"password" => "set by admin", "password_confirmation" => "set by admin"}
+
+      assert {:error, :forbidden} = Users.set_user_password(user.id, attrs, editor)
+      assert {:error, :forbidden} = Users.set_user_password(admin.id, attrs, admin)
+      assert {:error, %Ecto.Changeset{}} = Users.set_user_password(user.id, %{"password" => "short"}, admin)
+      assert Bcrypt.verify_pass("admin", Repo.get!(Brando.Users.User, user.id).password)
+      assert_no_email_sent()
+    end
+
+    test "works without a mailer, with no email", %{user: user, admin: admin} do
+      Application.delete_env(:brando, :mailer)
+      attrs = %{"password" => "set by admin", "password_confirmation" => "set by admin"}
+      assert {:ok, _} = Users.set_user_password(user.id, attrs, admin)
+      assert_no_email_sent()
     end
   end
 

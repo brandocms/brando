@@ -101,3 +101,39 @@ test('a superuser sends an editor a reset link from the user form', async ({ pag
   await expect.poll(async () => (await fixture(sandboxUserAgent, 'mailbox', { to: email })).text)
     .toContain('An administrator sent you this link')
 })
+
+test('without email, a superuser sets a password the user must then replace', async ({ page, browser, sandboxUserAgent }) => {
+  const { email } = await fixture(sandboxUserAgent, 'user')
+
+  await page.goto('/admin/users')
+  await syncLV(page)
+  await page.locator('.content-list .list-row').filter({ hasText: email }).getByRole('link', { name: 'Reset Editor' }).click()
+  await syncLV(page)
+
+  await page.getByTestId('open-set-password').click()
+  const dialog = page.locator('#user-set-password')
+  await expect(dialog).toBeVisible()
+  await dialog.getByLabel('New password', { exact: true }).fill('set by an admin')
+  await dialog.getByLabel('Confirm new password').fill('set by an admin')
+  await dialog.getByTestId('set-password').click()
+  await syncLV(page)
+  await expect(page.locator('#user-set-password')).toHaveCount(0)
+
+  await expect.poll(async () => (await fixture(sandboxUserAgent, 'mailbox', { to: email })).text)
+    .toContain('An administrator set a new password')
+
+  // The user logs in with it, and is sent to choose their own
+  const context = await browser.newContext({ baseURL, userAgent: sandboxUserAgent })
+  const user = await context.newPage()
+
+  try {
+    await user.goto('/admin/login')
+    await syncLV(user)
+    await user.getByTestId('email').fill(email)
+    await user.getByTestId('password').fill('set by an admin')
+    await user.getByTestId('login-button').click()
+    await expect(user).toHaveURL('/admin/users/password')
+  } finally {
+    await context.close()
+  }
+})

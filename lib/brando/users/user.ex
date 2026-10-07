@@ -266,31 +266,43 @@ defmodule Brando.Users.User do
         <span class="user-password-access-label">{gettext("Password")}</span>
         <p :if={@own?}>{gettext("Changing your password asks for the current one, and logs out your other sessions.")}</p>
         <p :if={!@own? and @can_reset?}>
-          {gettext("Email %{email} a link to choose a new password. The link works once, for an hour.",
-            email: @user.email
+          {gettext("Email %{email} a link to choose a new password. The link works once, for %{hours} hours.",
+            email: @user.email,
+            hours: div(Brando.Users.UserToken.reset_password_validity_in_minutes("admin_reset_password"), 60)
           )}
         </p>
         <p :if={!@own? and !@can_reset?}>{gettext("Only a superuser can reset the password of another user.")}</p>
       </div>
-      <.link :if={@own?} navigate="/admin/users/password" class="workspace-button" data-testid="change-password">
-        <Brando.HTML.icon name="key-round" />{gettext("Change password")}
-      </.link>
-      <button
-        :if={!@own? and @can_reset?}
-        type="button"
-        class="workspace-button"
-        phx-click="send_password_reset"
-        data-testid="send-password-reset"
-        data-confirm-title={gettext("Send a password reset link?")}
-        data-confirm={
-          gettext("%{email} gets an email with a link to choose a new password. The current password works until then.",
-            email: @user.email
-          )
-        }
-        data-confirm-ok={gettext("Send link")}
-      >
-        <Brando.HTML.icon name="mail" />{gettext("Send reset link")}
-      </button>
+      <div :if={@own? or @can_reset?} class="user-password-access-actions">
+        <.link :if={@own?} navigate="/admin/users/password" class="workspace-button" data-testid="change-password">
+          <Brando.HTML.icon name="key-round" />{gettext("Change password")}
+        </.link>
+        <button
+          :if={!@own?}
+          type="button"
+          class="workspace-button"
+          phx-click="send_password_reset"
+          data-testid="send-password-reset"
+          data-confirm-title={gettext("Send a password reset link?")}
+          data-confirm={
+            gettext("%{email} gets an email with a link to choose a new password. The current password works until then.",
+              email: @user.email
+            )
+          }
+          data-confirm-ok={gettext("Send link")}
+        >
+          <Brando.HTML.icon name="mail" />{gettext("Send reset link")}
+        </button>
+        <button
+          :if={!@own?}
+          type="button"
+          class="user-password-access-fallback"
+          phx-click="open_set_password"
+          data-testid="open-set-password"
+        >
+          {gettext("Set a password instead")}
+        </button>
+      </div>
     </div>
     """
   end

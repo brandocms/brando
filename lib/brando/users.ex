@@ -222,12 +222,13 @@ defmodule Brando.Users do
     end
   end
 
-  # Only the newest link works: one sent earlier is deleted with it.
+  # Only the newest link works: one sent earlier, either way, is deleted.
   defp deliver_reset_link(user, reason) do
-    {encoded, user_token} = UserToken.build_email_token(user, "reset_password")
+    context = if reason == :admin, do: "admin_reset_password", else: "reset_password"
+    {encoded, user_token} = UserToken.build_email_token(user, context)
 
     Repo.transaction(fn ->
-      Repo.delete_all(UserToken.user_and_contexts_query(user, ["reset_password"]))
+      Repo.delete_all(UserToken.user_and_contexts_query(user, UserToken.reset_password_contexts()))
       Repo.insert!(user_token)
     end)
 
@@ -246,7 +247,7 @@ defmodule Brando.Users do
   """
   @spec get_user_by_reset_password_token(String.t()) :: user | nil
   def get_user_by_reset_password_token(token) when is_binary(token) do
-    case UserToken.verify_email_token_query(token, "reset_password") do
+    case UserToken.verify_reset_password_token_query(token) do
       {:ok, query} -> Repo.one(query)
       :error -> nil
     end
@@ -310,6 +311,35 @@ defmodule Brando.Users do
     |> save_password(revoked)
   end
 
+  @doc """
+  Sets the password of the user `user_id` to the one in `attrs` (see
+  `password_changeset/2`), on behalf of `current_user`: the fallback for a
+  site that cannot email a reset link.
+
+  Only a superuser may, and not for their own account, which changes with
+  `update_user_password/4`. The user is logged out everywhere, emailed that
+  an administrator set their password when a mailer is configured, and must
+  choose their own password the next time they log in
+  (`reset_password_on_first_login`).
+
+  Returns `{:ok, user}`, `{:error, changeset}`, or `{:error, reason}`:
+  `:forbidden` or an unknown user.
+  """
+  @spec set_user_password(integer() | String.t(), map(), user) ::
+          {:ok, user} | {:error, Changeset.t() | term()}
+  def set_user_password(user_id, attrs, current_user) do
+    with {:ok, user} <- get_user(user_id),
+         :ok <- check(not same_user?(user, current_user), :forbidden),
+         :ok <- check(Brando.Trait.ProtectPassword.allowed?(current_user, user), :forbidden) do
+      user
+      |> password_changeset(attrs)
+      |> save_password(UserToken.user_and_contexts_query(user, :all), :admin)
+    end
+  end
+
+  defp same_user?(%{id: id}, %{id: id}), do: true
+  defp same_user?(_user, _other), do: false
+
   defp validate_current_password(changeset, password) do
     if is_binary(password) and Bcrypt.verify_pass(password, changeset.data.password) do
       changeset
@@ -318,11 +348,14 @@ defmodule Brando.Users do
     end
   end
 
-  # Clears the first-login reset as well: the user has chosen a password.
-  defp save_password(%Changeset{valid?: true} = changeset, revoked_tokens) do
+  # A password the user chose clears the first-login change; one an
+  # administrator set (`by: :admin`) asks for it.
+  defp save_password(changeset, revoked_tokens, by \\ :user)
+
+  defp save_password(%Changeset{valid?: true} = changeset, revoked_tokens, by) do
     changeset =
       changeset
-      |> Changeset.put_embed(:config, %{reset_password_on_first_login: false})
+      |> Changeset.put_embed(:config, %{reset_password_on_first_login: by == :admin})
       |> Changeset.prepare_changes(&Brando.Trait.Password.hash_password/1)
 
     Multi.new()
@@ -332,7 +365,7 @@ defmodule Brando.Users do
     |> case do
       {:ok, %{user: user, tokens: {_count, tokens}}} ->
         for {"session", token} <- tokens, do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
-        notify_password_changed(user)
+        notify_password_changed(user, by)
         {:ok, user}
 
       {:error, :user, changeset, _} ->
@@ -340,12 +373,12 @@ defmodule Brando.Users do
     end
   end
 
-  defp save_password(changeset, _revoked_tokens), do: {:error, Map.put(changeset, :action, :update)}
+  defp save_password(changeset, _revoked_tokens, _by), do: {:error, Map.put(changeset, :action, :update)}
 
   # Without a mailer the password is still changed; there is just no email.
-  defp notify_password_changed(user) do
+  defp notify_password_changed(user, by) do
     if Brando.Mailer.configured?() and not is_nil(Brando.Mailer.sender()[:from]) do
-      UserNotifier.deliver_password_changed(user)
+      UserNotifier.deliver_password_changed(user, by)
     else
       Logger.info("[Brando.Users] No email sent about the changed password of user ##{user.id}: no mailer configured")
     end

@@ -13,8 +13,10 @@ defmodule Brando.Users.UserToken do
   @hash_algorithm :sha256
   @rand_size 32
 
-  # Short: whoever can read the user's email can take over the account with it.
-  @reset_password_validity_in_minutes 60
+  # Short: whoever can read the user's email can take over the account with
+  # it. A link an administrator sends lasts a day, since the user did not ask
+  # for it and may not be waiting for it.
+  @reset_password_validity %{"reset_password" => 60, "admin_reset_password" => 24 * 60}
   @session_validity_in_days 60
 
   @schema_prefix "public"
@@ -28,9 +30,17 @@ defmodule Brando.Users.UserToken do
     timestamps(updated_at: false)
   end
 
-  @doc "How long a password reset link works, in minutes."
-  @spec reset_password_validity_in_minutes() :: pos_integer()
-  def reset_password_validity_in_minutes, do: @reset_password_validity_in_minutes
+  @doc """
+  The contexts of password reset links: `"reset_password"` for one the user
+  asked for, `"admin_reset_password"` for one an administrator sent.
+  """
+  @spec reset_password_contexts() :: [String.t()]
+  def reset_password_contexts, do: Map.keys(@reset_password_validity)
+
+  @doc "How long a password reset link of `context` works, in minutes."
+  @spec reset_password_validity_in_minutes(String.t()) :: pos_integer()
+  def reset_password_validity_in_minutes(context \\ "reset_password"),
+    do: Map.fetch!(@reset_password_validity, context)
 
   @doc """
   Generates a token that will be stored in a signed place,
@@ -79,31 +89,34 @@ defmodule Brando.Users.UserToken do
   end
 
   @doc """
-  The query for the active, undeleted user an emailed `token` was sent to,
-  while it is valid. Returns `{:ok, query}`, or `:error` for a token that
-  cannot be one of ours.
+  The query for the active, undeleted user a password reset `token` was sent
+  to, while it is valid for its context (see `reset_password_contexts/0`).
+  Returns `{:ok, query}`, or `:error` for a token that cannot be one of ours.
   """
-  def verify_email_token_query(token, "reset_password" = context) when is_binary(token) do
+  def verify_reset_password_token_query(token) when is_binary(token) do
     case Base.url_decode64(token, padding: false) do
-      {:ok, decoded_token} ->
-        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
-
-        query =
-          from token in token_and_context_query(hashed_token, context),
-            join: user in assoc(token, :user),
-            where:
-              token.inserted_at > ago(@reset_password_validity_in_minutes, "minute") and
-                token.sent_to == user.email and user.active == true and is_nil(user.deleted_at),
-            select: user
-
-        {:ok, query}
-
-      :error ->
-        :error
+      {:ok, decoded_token} -> {:ok, reset_password_user_query(:crypto.hash(@hash_algorithm, decoded_token))}
+      :error -> :error
     end
   end
 
-  def verify_email_token_query(_token, _context), do: :error
+  def verify_reset_password_token_query(_token), do: :error
+
+  defp reset_password_user_query(hashed_token) do
+    from token in Brando.Users.UserToken,
+      join: user in assoc(token, :user),
+      where: token.token == ^hashed_token,
+      where: ^reset_password_valid(),
+      where: token.sent_to == user.email and user.active == true and is_nil(user.deleted_at),
+      select: user
+  end
+
+  # A reset context, while it is younger than that context allows
+  defp reset_password_valid do
+    Enum.reduce(@reset_password_validity, dynamic(false), fn {context, minutes}, valid ->
+      dynamic([token], ^valid or (token.context == ^context and token.inserted_at > ago(^minutes, "minute")))
+    end)
+  end
 
   @doc """
   Returns the given token with the given context.

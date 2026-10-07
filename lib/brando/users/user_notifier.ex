@@ -21,10 +21,13 @@ defmodule Brando.Users.UserNotifier do
     user |> reset_password_instructions(url, reason) |> Mailer.deliver_later()
   end
 
-  @doc "Queues the email telling `user` their password was changed."
-  @spec deliver_password_changed(map()) :: {:ok, Oban.Job.t()} | {:error, term()}
-  def deliver_password_changed(user) do
-    user |> password_changed(Brando.Users.reset_password_url()) |> Mailer.deliver_later()
+  @doc """
+  Queues the email telling `user` their password was changed: `by` `:user`
+  when they changed it, `:admin` when an administrator set it.
+  """
+  @spec deliver_password_changed(map(), :user | :admin) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def deliver_password_changed(user, by \\ :user) do
+    user |> password_changed(Brando.Users.reset_password_url(), by) |> Mailer.deliver_later()
   end
 
   @doc "The email with the link `url` to choose a new password. See `deliver_reset_password_instructions/3`."
@@ -33,7 +36,8 @@ defmodule Brando.Users.UserNotifier do
     language = language(user)
 
     Gettext.with_locale(Brando.Gettext, language, fn ->
-      minutes = UserToken.reset_password_validity_in_minutes()
+      context = if reason == :admin, do: "admin_reset_password", else: "reset_password"
+      minutes = UserToken.reset_password_validity_in_minutes(context)
 
       intro =
         case reason do
@@ -48,12 +52,7 @@ defmodule Brando.Users.UserNotifier do
         intro: intro,
         url: url,
         action: gettext("Choose a new password"),
-        expiry:
-          ngettext(
-            "The link works once and expires in %{count} minute.",
-            "The link works once and expires in %{count} minutes.",
-            minutes
-          ),
+        expiry: expiry(minutes),
         ignore: gettext("If you did not ask for this, you can ignore this email. Your password stays the same.")
       }
 
@@ -66,6 +65,22 @@ defmodule Brando.Users.UserNotifier do
         text: Enum.join([assigns.intro, assigns.action <> ":\n" <> url, assigns.expiry, assigns.ignore], "\n\n")
       )
     end)
+  end
+
+  defp expiry(minutes) when rem(minutes, 60) == 0 and minutes > 60 do
+    ngettext(
+      "The link works once and expires in %{count} hour.",
+      "The link works once and expires in %{count} hours.",
+      div(minutes, 60)
+    )
+  end
+
+  defp expiry(minutes) do
+    ngettext(
+      "The link works once and expires in %{count} minute.",
+      "The link works once and expires in %{count} minutes.",
+      minutes
+    )
   end
 
   defp reset_html(assigns) do
@@ -87,19 +102,31 @@ defmodule Brando.Users.UserNotifier do
 
   @doc """
   The email telling `user` their password was changed, with `url`, where
-  they can reset it if somebody else changed it.
+  they can reset it if somebody else changed it. See
+  `deliver_password_changed/2` for `by`.
   """
-  @spec password_changed(map(), String.t()) :: Swoosh.Email.t()
-  def password_changed(user, url) do
+  @spec password_changed(map(), String.t(), :user | :admin) :: Swoosh.Email.t()
+  def password_changed(user, url, by \\ :user) do
     language = language(user)
 
     Gettext.with_locale(Brando.Gettext, language, fn ->
+      {changed, warning} =
+        case by do
+          :admin ->
+            {gettext(
+               "An administrator set a new password for %{email}, and the account was logged out everywhere. You will be asked to choose your own password the next time you log in.",
+               email: user.email
+             ), gettext("If you did not expect this, reset your password now and tell an administrator.")}
+
+          :user ->
+            {gettext("The password for %{email} was changed, and the account was logged out on other devices.",
+               email: user.email
+             ), gettext("If you did not change it, reset your password now and tell an administrator.")}
+        end
+
       assigns = %{
-        changed:
-          gettext("The password for %{email} was changed, and the account was logged out on other devices.",
-            email: user.email
-          ),
-        warning: gettext("If you did not change it, reset your password now and tell an administrator."),
+        changed: changed,
+        warning: warning,
         action: gettext("Reset your password"),
         url: url
       }

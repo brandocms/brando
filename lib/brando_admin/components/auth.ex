@@ -1,7 +1,8 @@
 defmodule BrandoAdmin.Components.Auth do
   @moduledoc false
   # The screens before login — log in, forgot password, choose a new password —
-  # share the login screen's frame and its inputs.
+  # share the login screen's frame and its inputs. The admin's password forms
+  # use the inputs too.
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 

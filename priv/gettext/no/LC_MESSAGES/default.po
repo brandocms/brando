@@ -15126,11 +15126,6 @@ msgstr "Bekreft nytt passord"
 msgid "Current password"
 msgstr "Nåværende passord"
 
-#: lib/brando/users/user.ex:269
-#, elixir-autogen, elixir-format
-msgid "Email %{email} a link to choose a new password. The link works once, for an hour."
-msgstr "Send %{email} en lenke for å velge nytt passord. Lenken virker én gang, i en time."
-
 #: lib/brando_admin/live/user_forgot_password_live.ex:25
 #, elixir-autogen, elixir-format
 msgid "Enter the email address you log in with, and we will send you a link to choose a new password."
@@ -15287,3 +15282,50 @@ msgstr "Passordet ditt ble endret"
 #, elixir-autogen, elixir-format
 msgid "is not your current password"
 msgstr "er ikke ditt nåværende passord"
+
+#: lib/brando/users/user.ex:269
+#, elixir-autogen, elixir-format
+msgid "Email %{email} a link to choose a new password. The link works once, for %{hours} hours."
+msgstr "Send %{email} en lenke for å velge nytt passord. Lenken virker én gang, i %{hours} timer."
+
+#: lib/brando/users/user.ex:303
+#, elixir-autogen, elixir-format
+msgid "Set a password instead"
+msgstr "Velg et passord i stedet"
+
+#: lib/brando/users/user.ex:303 lib/brando_admin/live/users/user_form_live.ex:29
+#, elixir-autogen, elixir-format
+msgid "Set a password"
+msgstr "Velg et passord"
+
+#: lib/brando_admin/live/users/user_form_live.ex:76
+#, elixir-autogen, elixir-format
+msgid "Set password"
+msgstr "Lagre passord"
+
+#: lib/brando_admin/live/users/user_form_live.ex:38
+#, elixir-autogen, elixir-format
+msgid "For when the user cannot get email from this site. They are logged out everywhere, and must choose their own password the next time they log in. Unsaved changes in the form are lost."
+msgstr "Til bruk når brukeren ikke kan få e-post fra dette nettstedet. Brukeren logges ut overalt, og må velge sitt eget passord neste gang vedkommende logger inn. Endringer i skjemaet som ikke er lagret, går tapt."
+
+#: lib/brando_admin/live/users/user_form_live.ex:132
+#, elixir-autogen, elixir-format
+msgid "A new password was set for %{email}. They choose their own the next time they log in."
+msgstr "Et nytt passord ble satt for %{email}. Brukeren velger sitt eget neste gang vedkommende logger inn."
+
+#: lib/brando/users/user_notifier.ex:72 lib/brando/users/user_notifier.ex:73 lib/brando/users/user_notifier.ex:80 lib/brando/users/user_notifier.ex:81
+#, elixir-autogen, elixir-format
+msgid "The link works once and expires in %{count} hour."
+msgid_plural "The link works once and expires in %{count} hours."
+msgstr[0] "Lenken virker én gang og utløper om %{count} time."
+msgstr[1] "Lenken virker én gang og utløper om %{count} timer."
+
+#: lib/brando/users/user_notifier.ex:117
+#, elixir-autogen, elixir-format
+msgid "An administrator set a new password for %{email}, and the account was logged out everywhere. You will be asked to choose your own password the next time you log in."
+msgstr "En administrator har satt et nytt passord for %{email}, og kontoen ble logget ut overalt. Du blir bedt om å velge ditt eget passord neste gang du logger inn."
+
+#: lib/brando/users/user_notifier.ex:119
+#, elixir-autogen, elixir-format
+msgid "If you did not expect this, reset your password now and tell an administrator."
+msgstr "Hvis du ikke ventet dette, tilbakestill passordet nå og si fra til en administrator."
