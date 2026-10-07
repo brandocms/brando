@@ -6,6 +6,9 @@ defmodule BrandoAdmin.UserAuth do
   import Plug.Conn
 
   alias Brando.Users
+  alias Brando.Users.SecurityLog
+  alias Brando.Users.Throttle
+  alias Brando.Users.TwoFactor
 
   # Make the remember me cookie valid for 60 days.
   # If you want bump or reduce this value, also change
@@ -26,9 +29,12 @@ defmodule BrandoAdmin.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def log_in_user(conn, user, params \\ %{}) do
+  def log_in_user(conn, user, params \\ %{}, method \\ :password) do
     token = Users.generate_user_session_token(user)
     user_return_to = get_session(conn, :user_return_to)
+
+    Throttle.clear(user)
+    SecurityLog.record(:login, user, meta: SecurityLog.meta(conn), details: %{"method" => to_string(method)})
 
     conn
     |> renew_session()
@@ -37,6 +43,59 @@ defmodule BrandoAdmin.UserAuth do
     |> write_last_login(user)
     |> check_content_language(user)
     |> redirect(to: set_initial_password(user) || user_return_to || signed_in_path(conn))
+  end
+
+  @doc """
+  The password of `user` was right: log them in, or, when they use
+  two-factor authentication or the sign-in policy requires it, start a
+  sign-in that waits for its second step.
+
+  Nothing in the waiting sign-in is a session. Its token only opens the
+  code screen (or, for a user who must set two-factor authentication up,
+  the setup screen), and the remember-me choice waits with it: the cookie is
+  only written by `log_in_user/4`, after the second step.
+  """
+  def after_password(conn, user, params \\ %{}) do
+    cond do
+      TwoFactor.enabled?(user) -> start_pending_login(conn, user, params, "/admin/login/two-factor")
+      TwoFactor.required?(user) -> start_pending_login(conn, user, params, "/admin/login/two-factor/setup")
+      true -> log_in_user(conn, user, params)
+    end
+  end
+
+  defp start_pending_login(conn, user, params, path) do
+    token = Users.generate_pending_token(user)
+    user_return_to = get_session(conn, :user_return_to)
+
+    conn
+    |> renew_session()
+    |> put_session(:pending_login_token, token)
+    |> put_session(:pending_login_remember_me, params["remember_me"] == "true")
+    |> then(&if(user_return_to, do: put_session(&1, :user_return_to, user_return_to), else: &1))
+    |> redirect(to: path)
+  end
+
+  @doc """
+  The user of the sign-in in `conn`'s session that waits for its second
+  step: `{user, state}` (see `Brando.Users.get_pending_login/1`), or nil.
+  """
+  def pending_login(conn), do: Users.get_pending_login(get_session(conn, :pending_login_token))
+
+  @doc "Completes the waiting sign-in in `conn`'s session for `user`, after its second step."
+  def complete_pending_login(conn, user, method) do
+    remember_me = get_session(conn, :pending_login_remember_me)
+    Users.delete_pending_token(get_session(conn, :pending_login_token))
+    log_in_user(conn, user, %{"remember_me" => to_string(remember_me == true)}, method)
+  end
+
+  @doc "Ends the waiting sign-in in `conn`'s session, and sends the user back to log in with `message`."
+  def abandon_pending_login(conn, message) do
+    Users.delete_pending_token(get_session(conn, :pending_login_token))
+
+    conn
+    |> renew_session()
+    |> put_flash(:error, message)
+    |> redirect(to: "/admin/login")
   end
 
   defp set_initial_password(%{config: %{reset_password_on_first_login: true}}), do: "/admin/users/password"
@@ -86,6 +145,7 @@ defmodule BrandoAdmin.UserAuth do
   def log_out_user(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Users.delete_session_token(user_token)
+    Users.delete_pending_token(get_session(conn, :pending_login_token))
 
     if live_socket_id = get_session(conn, :live_socket_id) do
       Brando.endpoint().broadcast(live_socket_id, "disconnect", %{})

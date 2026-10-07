@@ -30,6 +30,10 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Kept out of the request logs: passwords (any parameter whose name contains
+# "password"), and the two-factor code and proof fields of the admin login.
+config :phoenix, :filter_parameters, ["password", "code", "proof", "secret"]
 # config :phoenix, :static_compressors, [Phoenix.Digester.Gzip, Brando.Digester.Brotli]
 
 # Import environment specific config. This must remain at the bottom

@@ -149,5 +149,79 @@ defmodule Brando.Users.UserNotifier do
     """
   end
 
+  @doc """
+  Queues the email telling `user` something changed in how they log in:
+  `kind` is `:two_factor_enabled`, `:two_factor_disabled`, `:two_factor_reset`
+  (by an administrator) or `:two_factor_required` (the sign-in policy now
+  asks them to set it up). See `security_notice/3`.
+  """
+  @spec deliver_security_notice(map(), atom(), map()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def deliver_security_notice(user, kind, details \\ %{}) do
+    user |> security_notice(kind, details) |> Mailer.deliver_later()
+  end
+
+  @doc "The email of `deliver_security_notice/3`."
+  @spec security_notice(map(), atom(), map()) :: Swoosh.Email.t()
+  def security_notice(user, kind, details \\ %{}) do
+    language = language(user)
+
+    Gettext.with_locale(Brando.Gettext, language, fn ->
+      {subject, what} = notice_text(kind, user, details)
+      url = String.trim_trailing(Brando.endpoint().url(), "/") <> "/admin/users/security"
+
+      warning =
+        if kind == :two_factor_required,
+          do: gettext("You will set it up the next time you log in."),
+          else: gettext("If this was not you, reset your password now and tell an administrator.")
+
+      assigns = %{what: what, warning: warning, action: gettext("Review your security settings"), url: url}
+
+      [to: user.email, subject: subject]
+      |> Mailer.new()
+      |> Layout.put_body(
+        language: language,
+        html: notice_html(assigns),
+        text: Enum.join([assigns.what, assigns.warning, assigns.action <> ":\n" <> url], "\n\n")
+      )
+    end)
+  end
+
+  defp notice_text(:two_factor_enabled, user, _details) do
+    {gettext("Two-factor authentication was turned on"),
+     gettext(
+       "An authenticator app was set up for %{email}. Logging in now asks for a code from it, and the account was logged out on other devices.",
+       email: user.email
+     )}
+  end
+
+  defp notice_text(:two_factor_disabled, user, _details) do
+    {gettext("Two-factor authentication was turned off"),
+     gettext("The authenticator app was removed from %{email}. Its codes no longer log in.", email: user.email)}
+  end
+
+  defp notice_text(:two_factor_reset, user, _details) do
+    {gettext("Two-factor authentication was reset"),
+     gettext(
+       "An administrator turned off two-factor authentication for %{email}, and the account was logged out everywhere.",
+       email: user.email
+     )}
+  end
+
+  defp notice_text(:two_factor_required, user, _details) do
+    {gettext("Two-factor authentication is now required"),
+     gettext(
+       "This site now requires two-factor authentication for %{email}: a second step after your password when you log in.",
+       email: user.email
+     )}
+  end
+
+  defp notice_html(assigns) do
+    ~H"""
+    <p style="margin:0 0 16px;">{@what}</p>
+    <p style="margin:0 0 16px;">{@warning}</p>
+    <p style="margin:0;"><a href={@url} style="color:#254e3f;">{@action}</a></p>
+    """
+  end
+
   defp language(user), do: to_string(user.language || Brando.config(:default_admin_language) || "en")
 end

@@ -96,6 +96,10 @@ config :brando,
   site_key: "auth-alpha"
 
 # Test-only public GitHub provider; requests still traverse the real signed endpoint.
+# Every spec signs in from 127.0.0.1, so the per-address limits would add up
+# over a run; the per-account limits and the lockout stay as in production.
+config :brando, Brando.Users.Throttle, login_per_ip: 10_000, two_factor_per_ip: 10_000, reset_per_ip: 10_000
+
 config :brando, :markdown_sources,
   connections: %{
     "e2e-docs" => %{

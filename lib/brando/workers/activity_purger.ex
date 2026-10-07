@@ -1,5 +1,8 @@
 defmodule Brando.Worker.ActivityPurger do
-  @moduledoc "Removes activity events older than `Brando.Activity.retention_days/0`, in every active environment."
+  @moduledoc """
+  Removes activity events older than `Brando.Activity.retention_days/0`, in
+  every active environment, and sign-in security events as old.
+  """
   use Oban.Worker, queue: :default, max_attempts: 2
 
   require Logger
@@ -14,6 +17,10 @@ defmodule Brando.Worker.ActivityPurger do
       |> Enum.sum()
 
     Logger.info("==> [CRON] Deleted #{purged} activity events older than #{Brando.Activity.retention_days()} days")
+
+    # The sign-in security log is shared by every site, so it is purged once
+    security = Brando.Users.SecurityLog.purge()
+    Logger.info("==> [CRON] Deleted #{security} security events older than #{Brando.Activity.retention_days()} days")
     :ok
   end
 

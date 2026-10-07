@@ -28,6 +28,9 @@ defmodule BrandoAdmin.Users.UserListLive do
         >
           {gettext("Permissions")}
         </.link>
+        <.link :if={Brando.Users.superuser?(@current_user)} navigate="/admin/users/sign-in-policy" class="workspace-button">
+          {gettext("Sign-in policy")}
+        </.link>
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate="/admin/users/create"

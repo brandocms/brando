@@ -6,7 +6,7 @@ defmodule Brando.Forms.RateLimit do
         rate_limit: [window: :timer.minutes(10), per_visitor: 10, per_form: 200]
 
   Visitors are counted by a hash of their IP address. Counts live in the
-  `:cache` Cachex cache, so each node counts its own.
+  `:cache` Cachex cache, so each node counts its own (`Brando.RateLimit`).
   """
 
   @defaults [window: :timer.minutes(10), per_visitor: 10, per_form: 200]
@@ -32,9 +32,5 @@ defmodule Brando.Forms.RateLimit do
     :ok
   end
 
-  defp count(key, ttl) do
-    {_, count} = Cachex.incr(:cache, key, 1)
-    if count == 1, do: Cachex.expire(:cache, key, ttl * 2)
-    count
-  end
+  defp count(key, ttl), do: Brando.RateLimit.increment(key, ttl)
 end

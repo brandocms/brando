@@ -15850,3 +15850,554 @@ msgstr "Venter på gjennomgang"
 #, elixir-autogen, elixir-format
 msgid "Expired"
 msgstr "Utløpt"
+
+#: lib/brando_admin/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That code did not work. Check your app and try again."
+msgstr "Koden virket ikke. Sjekk appen og prøv igjen."
+
+#: lib/brando_admin/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Try again in a minute."
+msgid_plural "Too many attempts. Try again in %{count} minutes."
+msgstr[0] "For mange forsøk. Prøv igjen om et minutt."
+msgstr[1] "For mange forsøk. Prøv igjen om %{count} minutter."
+
+#: lib/brando_admin/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your login took too long. Log in again."
+msgstr "Innloggingen tok for lang tid. Logg inn på nytt."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication"
+msgstr "Tofaktorautentisering"
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open your authenticator app and enter the 6-digit code it shows for %{email}."
+msgstr "Åpne autentiseringsappen og skriv inn den sekssifrede koden den viser for %{email}."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lost your phone?"
+msgstr "Mistet telefonen?"
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Enter one of the recovery codes you saved when you set up two-factor authentication, in the field above. Each code works once. If you have none left, ask an administrator to reset two-factor authentication for you."
+msgstr "Skriv inn en av gjenopprettingskodene du lagret da du satte opp tofaktorautentisering, i feltet over. Hver kode virker én gang. Har du ingen igjen, kan du be en administrator om å tilbakestille tofaktorautentiseringen for deg."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checking..."
+msgstr "Sjekker..."
+
+#: lib/brando_admin/live/user_two_factor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Verify"
+msgstr "Bekreft"
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Set up two-factor authentication"
+msgstr "Sett opp tofaktorautentisering"
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication is on."
+msgstr "Tofaktorautentisering er slått på."
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "I have saved my codes"
+msgstr "Jeg har lagret kodene"
+
+#: lib/brando_admin/live/user_two_factor_setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site requires two-factor authentication for %{email}. When you log in, you will give a code from an app on your phone as well as your password."
+msgstr "Dette nettstedet krever tofaktorautentisering for %{email}. Når du logger inn, oppgir du en kode fra en app på telefonen i tillegg til passordet."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Save these recovery codes somewhere safe, away from your phone, such as a password manager. Each one signs you in once if you lose your authenticator app. They are not shown again."
+msgstr "Lagre disse gjenopprettingskodene et trygt sted, ikke på telefonen, for eksempel i en passordbehandler. Hver kode logger deg inn én gang hvis du mister autentiseringsappen. De vises ikke igjen."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Download codes"
+msgstr "Last ned kodene"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Recovery codes"
+msgstr "Gjenopprettingskoder"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing recorded yet."
+msgstr "Ingenting registrert ennå."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged in with an authenticator code"
+msgstr "Logget inn med kode fra autentiseringsapp"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged in with a recovery code"
+msgstr "Logget inn med gjenopprettingskode"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged in after setting up two-factor authentication"
+msgstr "Logget inn etter å ha satt opp tofaktorautentisering"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Logged in"
+msgstr "Logget inn"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Wrong two-factor code"
+msgstr "Feil tofaktorkode"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Wrong password or code when confirming a change"
+msgstr "Feil passord eller kode ved bekreftelse av en endring"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Wrong password"
+msgstr "Feil passord"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Locked after too many failed attempts"
+msgstr "Låst etter for mange mislykkede forsøk"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication turned on"
+msgstr "Tofaktorautentisering slått på"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication turned off"
+msgstr "Tofaktorautentisering slått av"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication reset by an administrator"
+msgstr "Tofaktorautentisering tilbakestilt av en administrator"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "New recovery codes created"
+msgstr "Nye gjenopprettingskoder laget"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Password set by an administrator"
+msgstr "Passord satt av en administrator"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Password reset by email link"
+msgstr "Passord tilbakestilt med lenke på e-post"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Password changed"
+msgstr "Passord endret"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Sign-in policy changed"
+msgstr "Innloggingsreglene endret"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "%{browser} on %{system}"
+msgstr "%{browser} på %{system}"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Scan the QR code"
+msgstr "Skann QR-koden"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Use an authenticator app, such as 1Password, Google Authenticator or Microsoft Authenticator."
+msgstr "Bruk en autentiseringsapp, for eksempel 1Password, Google Authenticator eller Microsoft Authenticator."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "QR code for your authenticator app"
+msgstr "QR-kode for autentiseringsappen"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Can’t scan it? Enter a key instead"
+msgstr "Får du ikke skannet den? Skriv inn en nøkkel i stedet"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Choose to enter a setup key in the app, and type:"
+msgstr "Velg å skrive inn en oppsettsnøkkel i appen, og skriv:"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the code from the app"
+msgstr "Skriv inn koden fra appen"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "6-digit code"
+msgstr "Sekssifret kode"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on two-factor authentication"
+msgstr "Slå på tofaktorautentisering"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "That code did not match. Check that the app shows this account, and try the newest code."
+msgstr "Koden stemte ikke. Sjekk at appen viser denne kontoen, og prøv den nyeste koden."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Security"
+msgstr "Sikkerhet"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Log in with a code from an app on your phone as well as your password."
+msgstr "Logg inn med en kode fra en app på telefonen i tillegg til passordet."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Authenticator app"
+msgstr "Autentiseringsapp"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turned on %{date}."
+msgstr "Slått på %{date}."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The sign-in policy of this site requires it for your account."
+msgstr "Innloggingsreglene for dette nettstedet krever det for kontoen din."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off"
+msgstr "Slå av"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "One unused code left. Each code signs you in once if you lose your phone."
+msgid_plural "%{count} unused codes left. Each code signs you in once if you lose your phone."
+msgstr[0] "Én ubrukt kode igjen. Hver kode logger deg inn én gang hvis du mister telefonen."
+msgstr[1] "%{count} ubrukte koder igjen. Hver kode logger deg inn én gang hvis du mister telefonen."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create new codes"
+msgstr "Lag nye koder"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not set up. Someone who learns your password cannot log in without your phone once it is. Setting it up logs out your other sessions."
+msgstr "Ikke satt opp. Når det er satt opp, kan ingen som får vite passordet ditt, logge inn uten telefonen din. Oppsettet logger ut de andre øktene dine."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Set up"
+msgstr "Sett opp"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Logins, failed attempts and changes to your sign-in settings."
+msgstr "Innlogginger, mislykkede forsøk og endringer i innloggingsinnstillingene dine."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your recovery codes"
+msgstr "Gjenopprettingskodene dine"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Password or code from your app"
+msgstr "Passord eller kode fra appen"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication is off."
+msgstr "Tofaktorautentisering er slått av."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off two-factor authentication?"
+msgstr "Slå av tofaktorautentisering?"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create new recovery codes?"
+msgstr "Lage nye gjenopprettingskoder?"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your recovery codes stop working too. Enter your password or a code from your app to continue."
+msgstr "Gjenopprettingskodene slutter også å virke. Skriv inn passordet ditt eller en kode fra appen for å fortsette."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your current recovery codes stop working. Enter your password or a code from your app to continue."
+msgstr "De nåværende gjenopprettingskodene slutter å virke. Skriv inn passordet ditt eller en kode fra appen for å fortsette."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "That is not your password or a current code."
+msgstr "Det er verken passordet ditt eller en gyldig kode."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Too many failed attempts. Your account is locked for a few minutes; try again later."
+msgstr "For mange mislykkede forsøk. Kontoen din er låst i noen minutter; prøv igjen senere."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The sign-in policy of this site requires two-factor authentication."
+msgstr "Innloggingsreglene for dette nettstedet krever tofaktorautentisering."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "That did not work. Reload the page and try again."
+msgstr "Det virket ikke. Last inn siden på nytt og prøv igjen."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sign-in policy"
+msgstr "Innloggingsregler"
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Who must use two-factor authentication. Applies to every site in this installation."
+msgstr "Hvem som må bruke tofaktorautentisering. Gjelder alle nettsteder i denne installasjonen."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Users it applies to set it up the next time they log in."
+msgstr "Brukere det gjelder, setter det opp neste gang de logger inn."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Require two-factor authentication"
+msgstr "Krev tofaktorautentisering"
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Roles"
+msgstr "Roller"
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save policy"
+msgstr "Lagre reglene"
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can change the sign-in policy."
+msgstr "Bare en superbruker kan endre innloggingsreglene."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not required"
+msgstr "Ikke påkrevd"
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Each user decides for themselves."
+msgstr "Hver bruker bestemmer selv."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every user must use it."
+msgstr "Alle brukere må bruke det."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some users"
+msgstr "Noen brukere"
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Users with the roles or in the groups you choose."
+msgstr "Brukere med rollene eller i gruppene du velger."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "The sign-in policy was saved."
+msgstr "Innloggingsreglene er lagret."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "The policy applies to you. Set up two-factor authentication on your Security page first."
+msgstr "Reglene gjelder deg. Sett opp tofaktorautentisering på Sikkerhet-siden din først."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "The policy could not be saved."
+msgstr "Reglene kunne ikke lagres."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody is required to use two-factor authentication."
+msgstr "Ingen må bruke tofaktorautentisering."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone this applies to already uses two-factor authentication."
+msgstr "Alle dette gjelder, bruker allerede tofaktorautentisering."
+
+#: lib/brando_admin/live/users/sign_in_policy_live.ex
+#, elixir-autogen, elixir-format
+msgid "One user this applies to has not set it up. They set it up at their next login, and their current sessions end when you save."
+msgid_plural "%{count} users this applies to have not set it up. They set it up at their next login, and their current sessions end when you save."
+msgstr[0] "Én bruker dette gjelder, har ikke satt det opp. Brukeren setter det opp ved neste innlogging, og de nåværende øktene avsluttes når du lagrer."
+msgstr[1] "%{count} brukere dette gjelder, har ikke satt det opp. De setter det opp ved neste innlogging, og de nåværende øktene deres avsluttes når du lagrer."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Set it up, make new recovery codes and see recent logins on your security page."
+msgstr "Sett det opp, lag nye gjenopprettingskoder og se nylige innlogginger på sikkerhetssiden din."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "If %{name} has lost their phone and their recovery codes, turn it off so they can log in with their password and set it up again."
+msgstr "Har %{name} mistet telefonen og gjenopprettingskodene, kan du slå det av, så kan brukeren logge inn med passordet og sette det opp igjen."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Locked after too many failed attempts, until %{time}."
+msgstr "Låst etter for mange mislykkede forsøk, til %{time}."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off two-factor authentication for %{name}?"
+msgstr "Slå av tofaktorautentisering for %{name}?"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "They are logged out everywhere, and log in with their password alone until they set it up again."
+msgstr "Brukeren logges ut overalt, og logger inn med bare passordet til det er satt opp igjen."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Turn it off"
+msgstr "Slå det av"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Reset two-factor"
+msgstr "Tilbakestill tofaktor"
+
+#: lib/brando_admin/live/users/user_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication is off for %{email}. They were logged out everywhere."
+msgstr "Tofaktorautentisering er slått av for %{email}. Brukeren ble logget ut overalt."
+
+#: lib/brando_admin/live/users/user_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can reset two-factor authentication for another user."
+msgstr "Bare en superbruker kan tilbakestille tofaktorautentisering for en annen bruker."
+
+#: lib/brando_admin/live/user_forgot_password_live.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests from your network. Try again in a few minutes."
+msgstr "For mange forespørsler fra nettverket ditt. Prøv igjen om noen minutter."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication is already on for this account."
+msgstr "Tofaktorautentisering er allerede slått på for denne kontoen."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "You will set it up the next time you log in."
+msgstr "Du setter det opp neste gang du logger inn."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "If this was not you, reset your password now and tell an administrator."
+msgstr "Var det ikke deg, bør du tilbakestille passordet nå og si fra til en administrator."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Review your security settings"
+msgstr "Se over sikkerhetsinnstillingene dine"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was turned on"
+msgstr "Tofaktorautentisering ble slått på"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "An authenticator app was set up for %{email}. Logging in now asks for a code from it, and the account was logged out on other devices."
+msgstr "En autentiseringsapp ble satt opp for %{email}. Innlogging ber nå om en kode fra den, og kontoen ble logget ut på andre enheter."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was turned off"
+msgstr "Tofaktorautentisering ble slått av"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "The authenticator app was removed from %{email}. Its codes no longer log in."
+msgstr "Autentiseringsappen ble fjernet fra %{email}. Kodene fra den logger ikke lenger inn."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication was reset"
+msgstr "Tofaktorautentisering ble tilbakestilt"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "An administrator turned off two-factor authentication for %{email}, and the account was logged out everywhere."
+msgstr "En administrator slo av tofaktorautentisering for %{email}, og kontoen ble logget ut overalt."
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication is now required"
+msgstr "Tofaktorautentisering er nå påkrevd"
+
+#: lib/brando/users/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "This site now requires two-factor authentication for %{email}: a second step after your password when you log in."
+msgstr "Dette nettstedet krever nå tofaktorautentisering for %{email}: et ekstra steg etter passordet når du logger inn."
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Your password"
+msgstr "Passordet ditt"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "That is not your password."
+msgstr "Det er ikke passordet ditt."
+
+#: lib/brando_admin/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication."
+msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk en gjenopprettingskode, eller be en administrator om å tilbakestille tofaktorautentiseringen."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Codes from your app cannot be checked on this site right now. Use your password."
+msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk passordet ditt."

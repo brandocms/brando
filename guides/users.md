@@ -157,6 +157,122 @@ Whichever way a password changes, the user is emailed to say so, with a link
 to reset it if they did not. Without a mailer the password still changes,
 without the email.
 
+## Two-factor authentication
+
+A user turns it on from **Security** in the account menu
+(`/admin/users/security`): they scan a QR code with an authenticator app, or
+type its key, and confirm with a code the app shows. Turning it on logs out
+their other sessions and shows ten one-time recovery codes, once. From then on
+the password is the first of two steps: Brando does not create a session until
+the user gives a code from the app, or a recovery code, at
+`/admin/login/two-factor`. Until then the browser only holds a short-lived
+token for that screen (ten minutes), and the remember-me cookie, which holds a
+session token, is only written after the second step.
+
+A code is six digits for a 30-second step; the step before and after are
+accepted for clocks that drift. Each code works once: the last accepted step is
+stored, and a code for it or an earlier step is refused. Each recovery code
+works once. Turning it off, or making new recovery codes, asks for the password
+or a current code from the app, and so does turning it on: a session alone
+cannot add a factor. The user is emailed whenever two-factor authentication is
+turned on, off or reset. The calls are in `Brando.Users.TwoFactor`.
+
+**When a user loses their phone and their codes.** A superuser opens their
+form and chooses **Reset two-factor**. It turns two-factor authentication off,
+ends a lockout, and logs the user out everywhere; they log in with their
+password and set it up again. The reset is recorded with who did it:
+
+```elixir
+{:ok, user} = Brando.Users.TwoFactor.reset(user.id, current_admin)
+```
+
+**Requiring it.** A superuser chooses who must use it under **Users →
+Sign-in policy** (`/admin/users/sign-in-policy`): nobody, everyone, or the
+users of some roles (with group authorization, some groups). Users are shared
+by every site, so the policy is the installation's (`Brando.Users.SecurityPolicy`).
+A user it applies to who has not set it up is logged out when the policy is
+saved, emailed, and sets it up at their next login, before they get a session. A
+superuser must use two-factor authentication before saving a policy that
+applies to them.
+
+**Secrets at rest.** The TOTP secret is encrypted with `Brando.Crypto`
+(XChaCha20-Poly1305), with a key derived from the endpoint's
+`secret_key_base`; recovery codes are stored as keyed hashes. Rotating
+`secret_key_base` makes them unreadable, and users would set two-factor
+authentication up again. To rotate it freely, give Brando its own secret:
+
+```elixir
+config :brando, Brando.Crypto, secret: System.fetch_env!("BRANDO_ENCRYPTION_SECRET")
+```
+
+## Sign-in limits and lockout
+
+`Brando.Users.Throttle` limits sign-in attempts, two-factor codes and
+password reset requests per IP address and per account, in 15-minute windows.
+Five failures within 15 minutes of the first — a wrong password, a wrong
+code, or a wrong password or code when confirming a change — lock the account
+for 15 minutes, on every node. While it is locked even the right password does not sign in, and an
+address without an account gets the same answer after as many tries, so the
+lockout tells nothing about which accounts exist. A successful sign-in starts
+the count again. The limits are configurable:
+
+```elixir
+config :brando, Brando.Users.Throttle,
+  login_per_ip: 30, login_per_account: 10, two_factor_per_ip: 30,
+  reset_per_ip: 10, reset_per_account: 3, lockout_after: 5, lockout_minutes: 15
+```
+
+### Behind a proxy
+
+The per-IP limits and the security log need the visitor's address. Behind a
+reverse proxy every request arrives from the proxy, so Brando believes the
+proxy's `X-Forwarded-For` header — but only when the request comes from a
+trusted proxy, since anyone can send the header (`Brando.ClientIP`). The
+client is the right-most address in the header that is not a trusted proxy.
+
+```elixir
+config :brando, :trusted_proxies, ["127.0.0.1/32", "::1/128", "10.0.0.0/8"]
+```
+
+The trusted proxy must set or overwrite `X-Forwarded-For` itself, appending
+the address it got the request from. Traefik does by default; with nginx use
+
+```nginx
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+A proxy that passes the client's own header through unchanged lets every
+client choose its address for the per-IP limits.
+
+Entries are addresses or CIDR ranges, IPv4 or IPv6. The default trusts the
+loopback addresses only, which is what a proxy on the same server connects
+from: Florist puts Traefik or nginx in front of each release on the server,
+so a Florist deploy needs no setting. A load balancer on another machine
+needs its addresses added; `[]` never believes the header. Without the right
+setting every visitor shares the proxy's limits, and a burst of bad logins
+from anyone locks everyone out.
+
+LiveView screens (the reset request, the security page) read the address from
+the socket, so its `connect_info` must give the peer and the forwarded
+headers; `mix brando.install` writes this:
+
+```elixir
+socket "/live", Phoenix.LiveView.Socket,
+  websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
+```
+
+Two-factor codes and confirmation fields are kept out of the request logs
+with `config :phoenix, :filter_parameters, ["password", "code", "proof", "secret"]`.
+
+## Security log
+
+Sign-ins, failed sign-ins, lockouts, password changes and changes to
+two-factor settings are written to `public.users_security_events`
+(`Brando.Users.SecurityLog`), with the IP address and browser. Users are
+shared by every site, so this log is separate from the content activity log.
+The user's Security page shows their latest events; it is kept as long as the
+activity log (`retention_days`).
+
 ## Deactivate without transferring ownership
 
 Choose **Disable user**, or call:
