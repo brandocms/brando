@@ -270,7 +270,7 @@ end
 defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
   @moduledoc false
   # Adds a passkey for `user`: a name for the device and, unless `proof` is
-  # `:signed_in_now`, the user's password or a code from their app; then the
+  # `{:signed_in_now, pending_id}`, the user's password or a code from their app; then the
   # browser's own dialog (the `Brando.Passkey` hook). The registration — and
   # its challenge — stays in this component's assigns, hidden from inspection,
   # and answers once. On success it tells its LiveView
@@ -339,7 +339,7 @@ defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
 
   def handle_event("options", params, socket) do
     %{user: user, meta: meta} = socket.assigns
-    proof = if socket.assigns.proof == :signed_in_now, do: :signed_in_now, else: params["proof"]
+    proof = if socket.assigns.proof == :password, do: params["proof"], else: socket.assigns.proof
     # Keeps the name the user typed when the form renders again; never the proof
     socket = assign(socket, :form, to_form(%{"name" => params["name"] || "", "proof" => ""}, id: socket.assigns.id))
 

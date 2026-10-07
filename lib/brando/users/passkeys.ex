@@ -82,32 +82,41 @@ defmodule Brando.Users.Passkeys do
     """
     @derive {Inspect, only: [:user_id]}
     @enforce_keys [:user_id, :challenge]
-    defstruct [:user_id, :challenge]
+    defstruct [:user_id, :challenge, :pending_id]
 
-    @type t :: %__MODULE__{user_id: integer(), challenge: Wax.Challenge.t()}
+    @type t :: %__MODULE__{user_id: integer(), challenge: Wax.Challenge.t(), pending_id: integer() | nil}
   end
 
   @doc """
   Starts adding a passkey for `user`, once they prove it is them: `proof` is
   their password or a current code from their app (`TwoFactor.confirm/3`;
-  a wrong one counts towards the lockout), or `:signed_in_now` on the setup
-  screen of a sign-in whose password was right a moment ago. A passkey logs
-  in on its own and outlasts a password reset, so a session alone must not
-  be enough to add one.
+  a wrong one counts towards the lockout), or `{:signed_in_now, pending_id}`
+  on the setup screen of a sign-in whose password was right a moment ago —
+  accepted only while that sign-in (its token row `pending_id`) still waits
+  for this user and they have no second factor, checked again by
+  `register/5`. A passkey logs in on its own and outlasts a password reset,
+  so a session alone must not be enough to add one.
 
   Returns `{:ok, registration, options}` — the `publicKey` options for
   `navigator.credentials.create/1` — or `{:error, :invalid_proof | :locked}`.
   """
-  @spec start_registration(map(), String.t() | :signed_in_now | nil, keyword()) ::
+  @spec start_registration(map(), String.t() | {:signed_in_now, integer()} | nil, keyword()) ::
           {:ok, Registration.t(), map()} | {:error, atom()}
   def start_registration(user, proof, opts \\ []) do
     with :ok <- check_proof(user, proof, opts[:meta]) do
       {challenge, options} = registration_challenge(user)
-      {:ok, %Registration{user_id: user.id, challenge: challenge}, options}
+
+      pending_id =
+        case proof do
+          {:signed_in_now, id} -> id
+          _ -> nil
+        end
+
+      {:ok, %Registration{user_id: user.id, challenge: challenge, pending_id: pending_id}, options}
     end
   end
 
-  defp check_proof(_user, :signed_in_now, _meta), do: :ok
+  defp check_proof(user, {:signed_in_now, pending_id}, _meta), do: check_pending(user, pending_id)
 
   defp check_proof(user, proof, meta) do
     case TwoFactor.confirm(user, proof, meta) do
@@ -160,7 +169,8 @@ defmodule Brando.Users.Passkeys do
     first? = not TwoFactor.enabled?(user)
     challenge = registration.challenge
 
-    with {:ok, attestation_object} <- decode(result["attestation_object"]),
+    with :ok <- recheck_pending(user, registration),
+         {:ok, attestation_object} <- decode(result["attestation_object"]),
          {:ok, client_data_json} <- decode(result["client_data_json"]),
          {:ok, {auth_data, _attestation}} <- wax(Wax.register(attestation_object, client_data_json, challenge)),
          %{credential_id: credential_id, credential_public_key: cose_key} <- auth_data.attested_credential_data,
@@ -173,6 +183,16 @@ defmodule Brando.Users.Passkeys do
       {:error, reason} -> {:error, reason}
       _ -> {:error, :invalid}
     end
+  end
+
+  # A registration a waiting sign-in vouched for: only while it still waits
+  defp recheck_pending(_user, %Registration{pending_id: nil}), do: :ok
+  defp recheck_pending(user, %Registration{pending_id: id}), do: check_pending(user, id)
+
+  defp check_pending(user, pending_id) do
+    if Brando.Users.pending_login_valid?(pending_id, user) and not TwoFactor.enabled?(user),
+      do: :ok,
+      else: {:error, :invalid_proof}
   end
 
   defp insert(%{id: user_id}, name, credential_id, cose_key, auth_data) do

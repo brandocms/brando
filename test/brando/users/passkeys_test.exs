@@ -41,7 +41,31 @@ defmodule Brando.Users.PasskeysTest do
                Repo.all(from e in SecurityEvent, where: e.user_id == ^user.id and e.action == :login_failed)
 
       assert {:ok, %Passkeys.Registration{}, _options} = Passkeys.start_registration(user, "admin")
-      assert {:ok, _registration, _options} = Passkeys.start_registration(user, :signed_in_now)
+      pending_id = Users.token_id(Users.generate_pending_token(user), "pending_2fa")
+      assert {:ok, _registration, _options} = Passkeys.start_registration(user, {:signed_in_now, pending_id})
+    end
+
+    # The review's probe: someone with the password holds the required-setup
+    # screen open; the owner resets their password, which ends that sign-in
+    test "a waiting sign-in vouches only while it lasts, from the start to the registration" do
+      user = user()
+      pending_id = Users.token_id(Users.generate_pending_token(user), "pending_2fa")
+      {:ok, registration, options} = Passkeys.start_registration(user, {:signed_in_now, pending_id})
+      result = SoftAuthenticator.register(SoftAuthenticator.new(), options, origin())
+
+      {:ok, _} = Users.reset_user_password(user, %{password: "a new one", password_confirmation: "a new one"})
+
+      assert {:error, :invalid_proof} = Passkeys.register(user, "Thief's laptop", result, registration)
+      assert {:error, :invalid_proof} = Passkeys.start_registration(user, {:signed_in_now, pending_id})
+      assert Passkeys.list(user) == []
+    end
+
+    test "a waiting sign-in does not vouch once the user has a second factor" do
+      user = user()
+      pending_id = Users.token_id(Users.generate_pending_token(user), "pending_2fa")
+      register(user)
+
+      assert {:error, :invalid_proof} = Passkeys.start_registration(user, {:signed_in_now, pending_id})
     end
 
     test "with an app, a current code proves it is the user" do

@@ -287,8 +287,10 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
     test "an open setup screen is closed when its sign-in ends, and adds nothing" do
       user = user()
       conn = log_in(anonymous(), user)
-      {:ok, view, html} = live(next(conn), "/admin/login/two-factor/setup")
+      {:ok, view, _html} = live(next(conn), "/admin/login/two-factor/setup")
       pending_id = Users.token_id(get_session(conn, :pending_login_token), "pending_2fa")
+      # The app's key; a passkey is offered first
+      html = render_click(view, "method", %{"method" => "app"})
 
       # The review's probe: someone with the password holds the setup screen
       # open; the owner resets their password, which ends that sign-in

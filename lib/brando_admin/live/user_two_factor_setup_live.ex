@@ -61,7 +61,7 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
               id="passkey-setup"
               user={@user}
               keep_id={@token_id}
-              proof={:signed_in_now}
+              proof={{:signed_in_now, @token_id}}
               meta={@meta}
             />
           </div>
