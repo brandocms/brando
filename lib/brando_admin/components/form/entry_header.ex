@@ -117,7 +117,7 @@ defmodule BrandoAdmin.Components.Form.EntryHeader do
 
   @doc """
   The status choices with their labels. Mirrors the publishing rule of
-  `Brando.Authorization.Engine`: without the publish permission, a user can't
+  the authorization engine: without the publish permission, a user can't
   publish an entry, and can't change a published one, so those choices are
   disabled rather than refused on save.
   """
