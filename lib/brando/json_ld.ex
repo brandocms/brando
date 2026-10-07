@@ -51,6 +51,14 @@ defmodule Brando.JSONLD do
 
         Map.put(acc, name, result)
 
+      %{name: name, type: :duration, value_fn: value_fn}, acc ->
+        result =
+          data
+          |> value_fn.()
+          |> to_duration()
+
+        Map.put(acc, name, result)
+
       %{name: name, type: :image, value_fn: value_fn}, acc ->
         result = Brando.JSONLD.Schema.ImageObject.build(value_fn.(data))
         Map.put(acc, name, result)
@@ -204,20 +212,21 @@ defmodule Brando.JSONLD do
   @doc """
   Converts a struct or map to a slim map, stripping nil values recursively.
   """
-  def to_slim_map(%_{} = struct) do
-    for {k, v} <- Map.from_struct(struct),
-        v != nil,
-        into: %{} do
-      {k, slim_map(v)}
-    end
-  end
+  def to_slim_map(%_{} = struct), do: struct |> Map.from_struct() |> slim_entries()
+  def to_slim_map(map) when is_map(map), do: slim_entries(map)
 
-  def to_slim_map(map) when is_map(map) do
-    for {k, v} <- map,
-        v != nil,
-        into: %{} do
-      {k, slim_map(v)}
-    end
+  # A nested entity with nothing to say is left out, not emitted as null.
+  defp slim_entries(map) do
+    Enum.reduce(map, %{}, fn
+      {_key, nil}, acc ->
+        acc
+
+      {key, value}, acc ->
+        case slim_map(value) do
+          nil -> acc
+          slimmed -> Map.put(acc, key, slimmed)
+        end
+    end)
   end
 
   defp slim_map(map) when is_map(map) do
@@ -226,7 +235,7 @@ defmodule Brando.JSONLD do
     key_count =
       map_without_nils
       |> Map.keys()
-      |> Enum.reject(&String.starts_with?(to_string(&1), ["@context", "@type"]))
+      |> Enum.reject(&(&1 == :__struct__ or String.starts_with?(to_string(&1), ["@context", "@type"])))
       |> Enum.count()
 
     # A nested entity is read in its document's context; a Place or
@@ -248,6 +257,42 @@ defmodule Brando.JSONLD do
   @spec to_date(Date.t() | nil) :: binary() | nil
   def to_date(nil), do: nil
   def to_date(date), do: Calendar.strftime(date, "%Y-%m-%d")
+
+  @doc """
+  Converts a duration to ISO 8601, as Google wants for `totalTime`,
+  `prepTime`, `cookTime` and `duration`.
+
+  Takes whole minutes (`90` is `"PT1H30M"`), a `Duration`, an
+  `"HH:MM:SS"` or `"MM:SS"` string, or an ISO 8601 duration, which is kept.
+  `nil` for anything else.
+
+      iex> Brando.JSONLD.to_duration(90)
+      "PT1H30M"
+      iex> Brando.JSONLD.to_duration("00:45:00")
+      "PT45M"
+      iex> Brando.JSONLD.to_duration("PT20M")
+      "PT20M"
+  """
+  @spec to_duration(term()) :: String.t() | nil
+  def to_duration(minutes) when is_integer(minutes) and minutes > 0,
+    do: Brando.JSONLD.Schema.VideoObject.duration("#{div(minutes, 60)}:#{rem(minutes, 60)}:00")
+
+  def to_duration(%Duration{year: 0, month: 0} = duration) do
+    seconds = duration |> to_timeout() |> div(1000)
+    if seconds > 0, do: Brando.JSONLD.Schema.VideoObject.duration("0:0:#{seconds}")
+  end
+
+  def to_duration("P" <> _ = iso), do: if(iso_duration?(iso), do: iso)
+
+  def to_duration(value) when is_binary(value), do: Brando.JSONLD.Schema.VideoObject.duration(value)
+  def to_duration(_value), do: nil
+
+  @doc "Whether `value` is an ISO 8601 duration, such as `PT1H30M`."
+  @spec iso_duration?(term()) :: boolean()
+  def iso_duration?(value) when is_binary(value),
+    do: Regex.match?(~r/^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$/, value)
+
+  def iso_duration?(_value), do: false
 
   @doc """
   Convert datetime to ISO friendly string

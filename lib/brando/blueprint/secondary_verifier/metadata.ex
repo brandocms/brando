@@ -5,7 +5,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.Metadata do
   alias Spark.Dsl.Verifier
 
   @json_ld_context_types [:current_url, :identity, :language]
-  @json_ld_value_types [:date, :datetime, :image, :integer, :person, :string]
+  @json_ld_value_types [:date, :datetime, :duration, :image, :integer, :person, :string]
 
   @doc false
   def verify(dsl_state) do

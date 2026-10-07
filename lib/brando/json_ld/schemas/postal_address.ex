@@ -13,16 +13,17 @@ defmodule Brando.JSONLD.Schema.PostalAddress do
 
   def build(organization) do
     %__MODULE__{
-      addressCountry: organization.country || nil,
-      addressLocality: organization.city || nil,
+      addressCountry: Map.get(organization, :country),
+      addressLocality: Map.get(organization, :city),
       addressRegion: Map.get(organization, :region, nil),
-      postalCode: organization.zipcode || nil,
+      postalCode: Map.get(organization, :zipcode),
       streetAddress: build_street_adress(organization) || nil
     }
   end
 
   defp build_street_adress(organization) do
-    [organization.address, organization.address2, organization.address3]
+    [:address, :address2, :address3]
+    |> Enum.map(&Map.get(organization, &1))
     |> Enum.filter(&(&1 != nil))
     |> Enum.join(", ")
   end
