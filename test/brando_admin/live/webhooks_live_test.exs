@@ -273,7 +273,7 @@ defmodule BrandoAdmin.Sites.WebhooksLiveTest do
 
       refute html =~ "s3cr3t-key"
       refute html =~ "token=abc"
-      assert has_element?(view, "[data-testid=webhook-url-masked]", "https://hooks.example.com/")
+      assert render(element(view, "[data-testid=webhook-url-masked]")) =~ "https://hooks.example.com/••••••"
       refute has_element?(view, "#webhook-url")
 
       # Saving other fields keeps the URL

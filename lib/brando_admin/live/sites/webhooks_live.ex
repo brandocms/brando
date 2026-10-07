@@ -912,9 +912,10 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
   # scheme and host only.
   defp masked_url(%Webhook{url: url}) do
     case URI.new(url || "") do
-      {:ok, %URI{scheme: scheme, host: host, path: path, query: query}} when is_binary(host) ->
+      {:ok, %URI{scheme: scheme, host: host, port: port, path: path, query: query}} when is_binary(host) ->
+        port = if port == URI.default_port(scheme), do: "", else: ":#{port}"
         rest = if path in [nil, "", "/"] and query in [nil, ""], do: "/", else: "/••••••"
-        "#{scheme}://#{host}#{rest}"
+        "#{scheme}://#{host}#{port}#{rest}"
 
       _ ->
         "••••••"
