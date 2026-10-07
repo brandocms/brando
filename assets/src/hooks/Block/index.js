@@ -1,4 +1,5 @@
 import autosize from 'autosize'
+import { fieldOf } from '../../Presence/fieldPresence'
 
 const PRESENCE_THROTTLE_MS = 500
 // Focus-settle delay before telling the server focus left the block — long
@@ -23,17 +24,23 @@ export default app => ({
 
     if (!this._isRefBlock) {
       this._lastPresencePush = 0
+      this._lastPresenceField = null
       this._lastPointerInside = 0
-      this._handleBlockPresence = () => {
+      // Field presence: the field (a form field's wrapper or a ref) goes with
+      // the block, so others see which field this editor is in. Moving to
+      // another field is pushed at once; repeats inside one are throttled.
+      this._handleBlockPresence = (event) => {
         this._lastPointerInside = Date.now()
 
+        const { field, label } = fieldOf(this.el, event.target)
         const now = Date.now()
-        if (now - this._lastPresencePush < PRESENCE_THROTTLE_MS) return
+        if (field === this._lastPresenceField && now - this._lastPresencePush < PRESENCE_THROTTLE_MS) return
         this._lastPresencePush = now
+        this._lastPresenceField = field
 
         const uid = this.el.getAttribute('data-block-uid')
         if (uid) {
-          this.pushEvent('block_focused', { uid })
+          this.pushEvent('block_focused', { uid, field, label })
         }
       }
       this.el.addEventListener('focusin', this._handleBlockPresence)
@@ -56,6 +63,7 @@ export default app => ({
           const active = document.activeElement
           const focusInside = !!(active && active !== document.body && this.el.contains(active))
           const pointerInside = Date.now() - this._lastPointerInside < SETTLE_MS * 2
+          if (!(focusInside || pointerInside)) this._lastPresenceField = null
           this.pushEvent('block_blurred', { uid, still_inside: focusInside || pointerInside })
         }, SETTLE_MS)
       }

@@ -1131,12 +1131,20 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_active_field_info(_, socket), do: {:cont, socket}
 
-  defp handle_hooks_block_presence_info({:block_focus, %{uid: uid, user_id: user_id}}, socket) do
+  # Field presence: the block and the field in it another editor is in, with
+  # their name for the label ("Ingrid · Caption").
+  defp handle_hooks_block_presence_info({:block_focus, %{uid: uid, user_id: user_id} = focus}, socket) do
     socket =
       if user_id == socket.assigns.current_user.id do
         socket
       else
-        push_event(socket, "b:set_active_block", %{uid: uid, user_id: user_id})
+        push_event(socket, "b:set_active_block", %{
+          uid: uid,
+          user_id: user_id,
+          field: Map.get(focus, :field),
+          label: Map.get(focus, :label),
+          name: presence_name(socket, user_id)
+        })
       end
 
     {:halt, socket}
@@ -1155,11 +1163,22 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_block_presence_info(_, socket), do: {:cont, socket}
 
-  # Block-level presence — fired by Brando.Block JS hook on any focusin
-  defp handle_hooks_block_focused_event("block_focused", %{"uid" => uid}, socket) do
+  defp presence_name(socket, user_id) do
+    case socket.assigns[:presences] do
+      %{^user_id => %{name: name}} when is_binary(name) -> name
+      _ -> nil
+    end
+  end
+
+  # Block and field presence — fired by the Brando.Block JS hook on focusin
+  # and pointerdown, with the field (its element id) and a label for it.
+  defp handle_hooks_block_focused_event("block_focused", %{"uid" => uid} = params, socket) do
     entry_id = socket.assigns[:entry_id]
     current_user_id = socket.assigns.current_user.id
     old_uid = socket.assigns[:current_focused_block_uid]
+    old_field = socket.assigns[:current_focused_block_field]
+    field = string_or_nil(params["field"])
+    label = string_or_nil(params["label"])
 
     if entry_id do
       if old_uid && old_uid != uid do
@@ -1173,13 +1192,18 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       PubSub.broadcast(
         Brando.pubsub(),
         Topic.entry("block_presence", socket.assigns.schema, entry_id),
-        {:block_focus, %{uid: uid, user_id: current_user_id}}
+        {:block_focus, %{uid: uid, field: field, label: label, user_id: current_user_id}}
       )
     end
 
-    if old_uid != uid, do: send_to_block_fields(socket, event: "local_focus", uid: uid)
+    if {old_uid, old_field} != {uid, field},
+      do: send_to_block_fields(socket, event: "local_focus", uid: uid, field: field)
 
-    {:halt, assign(socket, :current_focused_block_uid, uid)}
+    {:halt,
+     socket
+     |> assign(:current_focused_block_uid, uid)
+     |> assign(:current_focused_block_field, field)
+     |> assign(:current_focused_block_label, label)}
   end
 
   # Fired by the Block JS hook when focus settles after a focusout.
@@ -1196,6 +1220,9 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_block_focused_event(_, _, socket), do: {:cont, socket}
 
+  defp string_or_nil(value) when is_binary(value) and value != "", do: String.slice(value, 0, 200)
+  defp string_or_nil(_value), do: nil
+
   defp clear_block_focus(socket) do
     current_uid = socket.assigns[:current_focused_block_uid]
     entry_id = socket.assigns[:entry_id]
@@ -1209,10 +1236,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         )
       end
 
-      send_to_block_fields(socket, event: "local_focus", uid: nil)
+      send_to_block_fields(socket, event: "local_focus", uid: nil, field: nil)
     end
 
-    assign(socket, :current_focused_block_uid, nil)
+    socket
+    |> assign(:current_focused_block_uid, nil)
+    |> assign(:current_focused_block_field, nil)
+    |> assign(:current_focused_block_label, nil)
   end
 
   # An entry field took the focus, or a save started: no block is in use.
@@ -1269,7 +1299,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         PubSub.broadcast(
           Brando.pubsub(),
           Topic.entry("block_presence", socket.assigns.schema, entry_id),
-          {:block_focus, %{uid: focused_uid, user_id: socket.assigns.current_user.id}}
+          {:block_focus,
+           %{
+             uid: focused_uid,
+             field: socket.assigns[:current_focused_block_field],
+             label: socket.assigns[:current_focused_block_label],
+             user_id: socket.assigns.current_user.id
+           }}
         )
       end
     end

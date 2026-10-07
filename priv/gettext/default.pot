@@ -18124,3 +18124,24 @@ msgstr ""
 msgid "A block you had unsaved changes in was removed by another save, and could not be brought back."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Follow %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} editing"
+msgid_plural "%{count} editing"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Following %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Stop following"
+msgstr ""

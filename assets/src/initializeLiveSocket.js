@@ -24,6 +24,79 @@ const SORTABLE_RUNTIME_CLASSES = [
   'sortable-drag',
 ]
 
+// Block inputs while another editor's changes arrive (field presence, #2992).
+//
+// LiveView leaves the focused input's value alone when it patches; a rich
+// text editor's hidden input is not focused (its editor is), so it is kept
+// here while the editor is in use and was typed into in the last moments —
+// a patch must not put back what the server rendered before the keystroke.
+//
+// Either way the server's value is noted. When the editor leaves the field
+// and has not typed since that value arrived, the input takes it: the other
+// editor typed last, and last arrival wins.
+const PENDING_INPUT_MS = 2000
+const lastInput = new WeakMap()
+const serverValue = new WeakMap()
+
+const blockInput = el => (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA') && el.closest('[data-block-uid]')
+
+document.addEventListener(
+  'input',
+  ({ target }) => {
+    if (blockInput(target)) {
+      lastInput.set(target, Date.now())
+      serverValue.delete(target)
+    }
+  },
+  true
+)
+
+// The rich text editor this hidden input belongs to has the focus.
+const editorInUse = input =>
+  input.classList.contains('tiptap-text') &&
+  !!input.closest('[phx-hook="Brando.TipTap"]')?.contains(document.activeElement)
+
+const keepPendingValue = (from, to) => {
+  if (from.value === to.value || !blockInput(from)) return
+  const focused = from === document.activeElement
+  const richText = !focused && editorInUse(from)
+  if (!focused && !richText) return
+
+  serverValue.set(from, { value: to.value, at: Date.now() })
+
+  const typedAt = lastInput.get(from)
+  if (richText && typedAt && Date.now() - typedAt < PENDING_INPUT_MS) {
+    to.value = from.value
+    to.setAttribute('value', from.value)
+  }
+}
+
+const takeServerValues = widget => {
+  const inputs = blockInput(widget) ? [widget] : Array.from(widget.querySelectorAll?.('input, textarea') || [])
+  inputs.forEach(input => {
+    const noted = serverValue.get(input)
+    if (!noted || input === document.activeElement) return
+    serverValue.delete(input)
+    if ((lastInput.get(input) || 0) > noted.at || input.value === noted.value) return
+    input.value = noted.value
+    input.closest('[phx-hook="Brando.TipTap"]')?.dispatchEvent(new CustomEvent('brando:tiptap:sync'))
+  })
+}
+
+document.addEventListener(
+  'focusout',
+  ({ target }) => {
+    // after LiveView has flushed the field's own debounced change
+    if (target?.closest?.('[data-block-uid]')) {
+      const widget = target.closest('[phx-hook]') || target
+      setTimeout(() => {
+        if (!widget.contains(document.activeElement)) takeServerValues(widget)
+      }, 0)
+    }
+  },
+  true
+)
+
 export default (hooks) => {
   let csrfToken = document
     .querySelector("meta[name='csrf-token']")
@@ -37,6 +110,7 @@ export default (hooks) => {
         for (const className of SORTABLE_RUNTIME_CLASSES) {
           if (from.classList.contains(className)) to.classList.add(className)
         }
+        if (from.tagName === 'INPUT' || from.tagName === 'TEXTAREA') keepPendingValue(from, to)
       },
     },
     metadata: {

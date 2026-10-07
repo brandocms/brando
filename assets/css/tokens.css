@@ -61,6 +61,16 @@
   --brando-nav-surface: #ffffff;
   --brando-nav-surface-shadow: 0 1px 2px rgba(22, 38, 28, 0.08), 0 0 0 1px rgba(22, 38, 28, 0.05);
 
+  /* Other editors, by their place among the avatars: field presence tags,
+     outlines and the follow bar. Dark enough for white text. The pale glows
+     of the same hues are rgba values in Block.css and app.css. */
+  --brando-presence-0: #2563c9;
+  --brando-presence-1: #1f7a4f;
+  --brando-presence-2: #a8520b;
+  --brando-presence-3: #7e3fc4;
+  --brando-presence-4: #c0392b;
+  --brando-presence-5: #0f766e;
+
   /* Inputs, chips and tab bars */
   --brando-input-border: #e0e0e0;
   --brando-color-block-ref-background: #fcfcfc;

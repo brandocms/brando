@@ -15,7 +15,12 @@ export default (app) => ({
   // a portal on <body>, like a multi-select's "Create client", have no form
   // around them, and pushing to the LiveView instead crashed any view without
   // its own focus/blur handlers, discarding everything unsaved on the page.
+  //
+  // A field inside a block reports nothing here: the Block hook's field
+  // presence covers it (`block_focused` with the field), and an entry-field
+  // focus would lock the field and clear this editor's block presence.
   handleFocus() {
+    if (this.el.closest('[data-block-uid]')) return
     const formEl = this.el.closest('.brando-form')
     if (formEl) {
       this.pushEventTo(formEl, 'focus', { field: this.field.getAttribute('name') })
@@ -23,6 +28,7 @@ export default (app) => ({
   },
 
   handleBlur() {
+    if (this.el.closest('[data-block-uid]')) return
     const formEl = this.el.closest('.brando-form')
     if (formEl) {
       this.pushEventTo(formEl, 'blur', {})

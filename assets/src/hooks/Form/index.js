@@ -2,13 +2,14 @@ import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
 import locateBlock from './locateBlock'
 import dirtyFields from '../../Presence/dirtyFields'
+import follow from '../../Presence/follow'
 import notes from '../../Notes'
 import {
-  setBlockLock,
-  clearBlockLock,
-  clearUserBlockLocks,
+  setFieldPresence,
+  clearFieldPresence,
+  clearUserPresence,
   getPresenceColor,
-} from '../../Presence/blockLocks'
+} from '../../Presence/fieldPresence'
 
 export default (app) => ({
   mounted() {
@@ -19,6 +20,7 @@ export default (app) => ({
     this.draftRecovery = draftRecovery(this)
     this.stopLocatingBlock = locateBlock(this)
     this.dirtyFields = dirtyFields(this)
+    this.follow = follow(this)
     this.notes = notes(this)
     app.notes = this.notes
     // Keep the measurement outside LiveView's patched inline attributes.
@@ -73,16 +75,17 @@ export default (app) => ({
       }
     })
 
-    // Lock decorations go through LiveView's sticky JS commands (this.js())
-    // so the patcher itself re-applies them after every morphdom pass —
-    // plain classList mutations get wiped whenever a locked block
-    // re-renders (e.g. when its owner's shipped edit applies here).
-    this.handleEvent('b:set_active_block', ({ uid, user_id }) => {
-      setBlockLock(this.js(), uid, user_id)
+    // Field presence goes through LiveView's sticky JS commands (this.js())
+    // so the patcher itself re-applies it after every morphdom pass — plain
+    // classList mutations get wiped whenever the block re-renders (e.g. when
+    // the other editor's change arrives here).
+    this.handleEvent('b:set_active_block', (presence) => {
+      const el = setFieldPresence(this.js(), presence)
+      this.follow.seen(presence.user_id, el)
     })
 
     this.handleEvent('b:clear_block_lock', ({ uid, user_id }) => {
-      clearBlockLock(this.js(), uid, user_id)
+      clearFieldPresence(this.js(), uid, user_id)
     })
 
     this.handleEvent('b:clear_user_presence', ({ user_id }) => {
@@ -96,9 +99,10 @@ export default (app) => ({
           el.remove()
         })
 
-      // Remove block presence/lock for this user
-      clearUserBlockLocks(this.js(), user_id)
+      // Remove block and field presence for this user
+      clearUserPresence(this.js(), user_id)
       this.dirtyFields.clearUser(user_id)
+      this.follow.left(user_id)
     })
 
     this.handleEvent('b:set_dirty_fields', ({ user_id, fields, label }) => {
@@ -111,6 +115,8 @@ export default (app) => ({
       const fieldPresence = document.querySelector(
         `[data-field-presence="${opts.field}"] .field-presence`
       )
+
+      this.follow.seen(opts.user_id, fieldPresence?.closest('.field-wrapper'))
 
       if (fieldPresence) {
         // see if we find any other presence indicators from this user
@@ -170,6 +176,7 @@ export default (app) => ({
   },
 
   destroyed() {
+    this.follow?.destroy()
     this.notes?.destroy()
     if (app.notes === this.notes) app.notes = null
     this.stopLocatingBlock?.()

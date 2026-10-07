@@ -2746,10 +2746,10 @@ defmodule BrandoAdmin.Components.Form do
               </button>
             </nav>
 
-            <.form_presences :if={@layout != :entry} presences={@presences} />
+            <.form_presences :if={@layout != :entry} presences={@presences} id={@id} current_user={@current_user} />
 
             <div :if={@layout == :entry} class="form-tab-builtins">
-              <.form_presences presences={@presences} />
+              <.form_presences presences={@presences} id={@id} current_user={@current_user} />
               <.live_component
                 module={DraftRecoveryComponent}
                 id={DraftRecoveryComponent.status_id(@id)}
@@ -3182,27 +3182,76 @@ defmodule BrandoAdmin.Components.Form do
   defp notes?(layout, entry_id), do: layout == :entry and not is_nil(entry_id)
 
   attr :presences, :list
+  attr :id, :string, required: true
+  attr :current_user, :map, required: true
 
+  # The editors present, each ringed in the colour their field presence has
+  # (`data-presence-color-index`, by position, as fieldPresence.js counts it).
+  # Another editor's avatar is a button: it follows
+  # where they work (the `Brando.Form` hook scrolls to the block and field
+  # they move to, until this editor scrolls or clicks). The follow bar is
+  # the client's (`phx-update="ignore"`), which fills in the name.
   def form_presences(assigns) do
+    assigns = assign(assigns, :count, map_size(assigns.presences))
+
     ~H"""
-    <div class="page-presences">
-      <div
-        :for={{_, user} <- @presences}
-        :key={user.id}
-        class={["user-presence visible", user[:frontend?] && "is-frontend"]}
-        data-presence-user-id={user.id}
-      >
-        <div class="avatar" data-popover={presence_label(user)} role="img" aria-label={presence_label(user)}>
-          <%= if user.avatar do %>
-            <Content.image image={user.avatar} size={:thumb} />
-          <% else %>
-            <.icon name="user" class="avatar-placeholder" />
-          <% end %>
-          <span :if={user[:frontend?]} class="user-presence-website" aria-hidden="true">
-            <.icon name="globe" />
-          </span>
+    <div class="page-presences" data-presence-count={@count}>
+      <%= for {{_, user}, index} <- Enum.with_index(@presences) do %>
+        <div
+          :if={user.id == @current_user.id}
+          class={["user-presence visible", user[:frontend?] && "is-frontend"]}
+          data-presence-user-id={user.id}
+          data-presence-color-index={rem(index, 6)}
+        >
+          <.presence_avatar user={user} />
         </div>
-      </div>
+        <button
+          :if={user.id != @current_user.id}
+          type="button"
+          class={["user-presence visible", user[:frontend?] && "is-frontend"]}
+          data-presence-user-id={user.id}
+          data-presence-color-index={rem(index, 6)}
+          data-presence-name={user.name}
+          data-follow-user={user.id}
+          aria-pressed="false"
+          aria-label={gettext("Follow %{name}", name: user.name)}
+        >
+          <.presence_avatar user={user} />
+        </button>
+      <% end %>
+    </div>
+    <span :if={@count > 1} class="presence-count">
+      {ngettext("%{count} editing", "%{count} editing", @count)}
+    </span>
+    <div
+      id={"#{@id}-follow-bar"}
+      class="follow-bar"
+      phx-update="ignore"
+      hidden
+      data-label={gettext("Following %{name}", name: "%{name}")}
+    >
+      <.icon name="eye" />
+      <span class="follow-bar-label"></span>
+      <button type="button" class="follow-bar-stop" aria-label={gettext("Stop following")}>
+        <.icon name="x" />
+      </button>
+    </div>
+    """
+  end
+
+  attr :user, :map, required: true
+
+  defp presence_avatar(assigns) do
+    ~H"""
+    <div class="avatar" data-popover={presence_label(@user)} role="img" aria-label={presence_label(@user)}>
+      <%= if @user.avatar do %>
+        <Content.image image={@user.avatar} size={:thumb} />
+      <% else %>
+        <.icon name="user" class="avatar-placeholder" />
+      <% end %>
+      <span :if={@user[:frontend?]} class="user-presence-website" aria-hidden="true">
+        <.icon name="globe" />
+      </span>
     </div>
     """
   end
