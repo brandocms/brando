@@ -32,6 +32,10 @@ defmodule Brando.ContentEvents do
 
   The save inserts an Oban job (`Brando.Worker.ContentEventDispatcher`, on
   the `:content_events` queue); the job hands the event to each subscriber.
+  Brando's default Oban configuration has that queue and `:webhooks`. An
+  application that sets `config :brando, Oban` itself must declare both, or
+  no events and no webhook deliveries ever run; `mix brando.doctor` warns
+  when they are missing.
   Oban was chosen over PubSub alone because:
 
     * the job is inserted in the save's transaction, so it exists only once
@@ -71,9 +75,10 @@ defmodule Brando.ContentEvents do
             when type in ["entry.published", "entry.updated", "entry.deleted"] and is_binary(url) do
           # Queue your own job: subscribers run one after the other, inside the
           # dispatcher job, and should return quickly.
+          # One job per event: a retried dispatch finds it and adds none
           %{url: url, event_id: event.id}
           |> Brando.Tenant.Job.attach()
-          |> MyApp.Workers.SubmitUrl.new()
+          |> MyApp.Workers.SubmitUrl.new(unique: [keys: [:event_id], period: :infinity])
           |> Oban.insert()
         end
 
@@ -326,12 +331,23 @@ defmodule Brando.ContentEvents do
   defp insert(args, opts) do
     changeset = ContentEventDispatcher.new(args, opts)
 
-    if Repo.repo().in_transaction?() and not inline_testing?(),
-      do: Repo.insert(changeset, mode: :savepoint, prefix: "public"),
-      else: Oban.insert(changeset)
+    result =
+      if Repo.repo().in_transaction?() and not inline_testing?(),
+        do: Repo.insert(changeset, mode: :savepoint, prefix: "public"),
+        else: Oban.insert(changeset)
 
-    :ok
+    case result do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("[Brando.ContentEvents] Could not queue a content event: #{inspect(error_summary(reason))}")
+        :ok
+    end
   end
+
+  defp error_summary(%Ecto.Changeset{errors: errors}), do: errors
+  defp error_summary(reason), do: reason
 
   defp inline_testing? do
     Oban.Config.get_engine(Oban.config()) == Oban.Engines.Inline

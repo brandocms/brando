@@ -43,8 +43,9 @@ defmodule Brando.Webhooks.Webhook do
   def changeset(webhook, attrs, opts \\ []) do
     webhook
     |> cast(attrs, [:name, :url, :events, :entry_types, :languages])
-    |> update_change(:name, &String.trim/1)
-    |> update_change(:url, &String.trim/1)
+    # An emptied field casts to nil
+    |> update_change(:name, &(&1 && String.trim(&1)))
+    |> update_change(:url, &(&1 && String.trim(&1)))
     |> validate_required([:name, :url])
     |> validate_length(:name, max: 120)
     |> validate_length(:url, max: 2000)

@@ -514,6 +514,18 @@ defmodule Brando.WebhooksTest do
                Webhooks.create_webhook(%{"name" => "x", "url" => "https://hooks.example.com/"}, user)
     end
 
+    test "an emptied name or URL is a validation error, not a crash", %{user: user} do
+      {:ok, webhook, _} = Webhooks.create_webhook(%{"name" => "x", "url" => "https://hooks.example.com/"}, user)
+
+      changeset = Webhooks.change_webhook(webhook, %{"name" => "", "url" => ""}, resolve: false)
+      refute changeset.valid?
+      assert {_, [validation: :required]} = changeset.errors[:name]
+      assert {_, [validation: :required]} = changeset.errors[:url]
+
+      changeset = Webhooks.change_webhook(webhook, %{"name" => "  Shop  "}, resolve: false)
+      assert Ecto.Changeset.get_change(changeset, :name) == "Shop"
+    end
+
     test "only known events, content types and languages", %{user: user} do
       assert {:error, changeset} =
                Webhooks.create_webhook(

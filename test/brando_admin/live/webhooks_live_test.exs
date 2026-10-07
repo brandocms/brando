@@ -289,6 +289,29 @@ defmodule BrandoAdmin.Sites.WebhooksLiveTest do
       view |> form("#webhook-form", webhook: %{url: "https://hooks.example.com/new"}) |> render_submit()
       assert %{url: "https://hooks.example.com/new"} = Repo.get!(Webhook, webhook.id)
     end
+
+    test "changing the form while the new URL is still empty keeps the screen and the URL", %{
+      conn: conn,
+      current_user: user
+    } do
+      webhook = create_webhook(user, "https://hooks.example.com/build/key")
+      {:ok, view, _html} = live(conn, "/admin/config/webhooks/#{webhook.id}/edit")
+      view |> element("[data-testid=webhook-replace-url]") |> render_click()
+
+      html =
+        view
+        |> form("#webhook-form", webhook: %{url: "", languages: ["en"]})
+        |> render_change()
+
+      assert Process.alive?(view.pid)
+      assert html =~ "webhook-form"
+
+      # An emptied name is an error to show, too
+      view |> form("#webhook-form", webhook: %{name: "", url: ""}) |> render_change()
+      assert Process.alive?(view.pid)
+
+      assert %{url: "https://hooks.example.com/build/key", name: "Shop cache"} = Repo.get!(Webhook, webhook.id)
+    end
   end
 
   describe "the dashboard" do
