@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   alias Brando.SEO.Analyze
   alias Brando.SEO.Audit
   alias Brando.SEO.Generate
+  alias Brando.SEO.StructuredData
   alias Brando.SEO.Suggestions
   alias Brando.Sites
   alias BrandoAdmin.Components.AIAction
@@ -36,7 +37,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
     socket = assign(socket, :tab, tab)
 
     if tab == "content" and socket.assigns.audit_status == :idle do
-      {:noreply, start_audit(socket)}
+      {:noreply, socket |> start_audit() |> start_structured_data()}
     else
       {:noreply, socket}
     end
@@ -104,6 +105,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
           critiques={@critiques}
           sort={@sort}
           queries={@queries}
+        />
+        <.structured_data
+          result={@structured_data}
+          status={@structured_data_status}
+          language={@audit_language}
         />
       </div>
     </div>
@@ -480,6 +486,118 @@ defmodule BrandoAdmin.Sites.SEOLive do
     """
   end
 
+  attr :result, :any
+  attr :status, :any
+  attr :language, :string
+
+  @structured_data_rows 50
+
+  # Site-wide: every content type with a JSON-LD mapping, whatever the chips
+  # above select. Each row opens the entry with its Structured data tab.
+  defp structured_data(assigns) do
+    assigns = assign(assigns, :max_rows, @structured_data_rows)
+
+    ~H"""
+    <section class="workspace-panel seo-structured-data" id="seo-structured-data">
+      <header class="workspace-panel-heading">
+        <div>
+          <h2>{gettext("Structured data")}</h2><p>
+            {gettext(
+              "Published entries of every content type with a JSON-LD mapping, checked against what Google requires (errors) and recommends (warnings). Language: %{language}.",
+              language: @language
+            )}
+          </p>
+        </div>
+      </header>
+
+      <div :if={@status == :running} class="seo-audit-status" role="status" aria-live="polite">
+        <span class="seo-spinner" aria-hidden="true"></span>{gettext("Checking structured data…")}
+      </div>
+
+      <div :if={match?({:error, _}, @status)} class="seo-audit-status error" role="alert">
+        {gettext("The structured data could not be checked.")} {elem(@status, 1)}
+      </div>
+
+      <%= if @result && @status == :done do %>
+        <div class="seo-audit-overview">
+          <dl class="seo-stats seo-structured-data-stats">
+            <div class="seo-stat">
+              <dt>{gettext("Checked")}</dt>
+              <dd>{@result.checked}</dd>
+            </div>
+            <div class="seo-stat" data-warn={to_string(@result.with_errors > 0)} data-testid="structured-data-errors">
+              <dt>{gettext("With errors")}</dt>
+              <dd>{@result.with_errors}</dd>
+            </div>
+            <div class="seo-stat" data-warn={to_string(@result.with_warnings > 0)} data-testid="structured-data-warnings">
+              <dt>{gettext("With warnings only")}</dt>
+              <dd>{@result.with_warnings}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <BrandoAdmin.Components.Workspace.empty
+          :if={@result.rows == []}
+          title={gettext("No structured data issues")}
+          description={gettext("Every checked entry has what Google requires and recommends.")}
+        />
+
+        <div
+          :if={@result.rows != []}
+          class="workspace-table-scroll"
+          tabindex="0"
+          role="region"
+          aria-label={gettext("Entries with structured data issues")}
+        >
+          <table class="workspace-table seo-structured-data-table">
+            <thead>
+              <tr>
+                <th>{gettext("Entry")}</th>
+                <th>{gettext("Type")}</th>
+                <th>{gettext("Errors")}</th>
+                <th>{gettext("Warnings")}</th>
+                <th>{gettext("First issue")}</th>
+                <th><span class="visually-hidden">{gettext("Actions")}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={row <- Enum.take(@result.rows, @max_rows)} class="seo-structured-data-row">
+                <td>
+                  <strong>{row.title}</strong>
+                  <small>{Brando.Blueprint.get_singular(row.schema)}</small>
+                </td>
+                <td class="workspace-mono">{row.type || "—"}</td>
+                <td class="seo-number" data-warn={to_string(row.errors > 0)}>{row.errors}</td>
+                <td class="seo-number">{row.warnings}</td>
+                <td class="seo-structured-data-issue">{first_issue(row)}</td>
+                <td>
+                  <a :if={row.admin_url} class="seo-row-action" href={row.admin_url}>
+                    {gettext("Open structured data")}
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="seo-structured-data-meta">
+          <span :if={length(@result.rows) > @max_rows}>
+            {gettext("Showing %{shown} of %{count} entries with issues, most errors first.",
+              shown: @max_rows,
+              count: length(@result.rows)
+            )}
+          </span>
+          {gettext("Checked in %{ms} ms. Kept for ten minutes; Run again checks again.", ms: @result.duration_ms)}
+        </p>
+      <% end %>
+    </section>
+    """
+  end
+
+  defp first_issue(%{issues: [issue | _]}),
+    do: BrandoAdmin.Components.Form.StructuredData.describe_issue(issue)
+
+  defp first_issue(_row), do: "—"
+
   attr :candidates, :list
   attr :confirm, :boolean
   attr :max, :integer
@@ -841,7 +959,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   def handle_event("rerun_audit", _params, socket) do
-    {:noreply, socket |> assign(:queries, %{}) |> start_audit(refresh_analytics: true)}
+    {:noreply,
+     socket
+     |> assign(:queries, %{})
+     |> start_audit(refresh_analytics: true)
+     |> start_structured_data(refresh: true)}
   end
 
   def handle_event("sort", %{"sort" => sort}, socket) when sort in ~w(score visitors impressions) do
@@ -1022,6 +1144,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
     {:noreply, assign(socket, audit_status: {:error, Exception.format_exit(reason)})}
   end
 
+  def handle_async(:structured_data, {:ok, %StructuredData.Result{} = result}, socket) do
+    {:noreply, assign(socket, structured_data: result, structured_data_status: :done)}
+  end
+
+  def handle_async(:structured_data, {:exit, reason}, socket) do
+    {:noreply, assign(socket, structured_data_status: {:error, Exception.format_exit(reason)})}
+  end
+
   # The entry is written before the audit re-runs, so the row picks the new
   # description up from the database rather than from the reply.
   def handle_async({:generate, key}, {:ok, {:ok, generated}}, socket) do
@@ -1107,6 +1237,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
     |> assign(:audit, nil)
     |> assign(:audit_sandbox, sandbox_owner(socket))
     |> assign(:audit_status, :idle)
+    |> assign(:structured_data, nil)
+    |> assign(:structured_data_status, :idle)
     |> assign(:audit_schemas, schemas)
     |> assign(:selected_schemas, default)
     |> assign(:include_drafts, false)
@@ -1149,6 +1281,18 @@ defmodule BrandoAdmin.Sites.SEOLive do
     |> assign(:audit_language, language)
     |> assign_suggestions()
     |> start_async(:audit, in_captured_context(socket, run))
+  end
+
+  # Site-wide and cached for ten minutes (`Brando.SEO.StructuredData`), so
+  # opening the tab again within that time reads the cache.
+  defp start_structured_data(socket, opts \\ []) do
+    language = content_language(socket)
+    refresh? = Keyword.get(opts, :refresh, false)
+    run = fn -> StructuredData.run(language, refresh: refresh?) end
+
+    socket
+    |> assign(:structured_data_status, :running)
+    |> start_async(:structured_data, in_captured_context(socket, run))
   end
 
   defp assign_suggestions(socket) do
@@ -1327,9 +1471,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
     socket = socket |> assign_entry_id() |> assign_ai_context_fields(socket.assigns.audit_schemas)
 
     if socket.assigns.tab == "content" do
-      {:noreply, start_audit(socket)}
+      {:noreply, socket |> start_audit() |> start_structured_data()}
     else
-      {:noreply, assign(socket, audit: nil, audit_status: :idle)}
+      {:noreply, assign(socket, audit: nil, audit_status: :idle, structured_data: nil, structured_data_status: :idle)}
     end
   end
 

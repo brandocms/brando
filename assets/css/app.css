@@ -103,6 +103,7 @@
 @import "./views/assets/Images.css";
 @import "./components/MediaWorkspace.css";
 @import "./components/EditorWorkspace.css";
+@import "./components/Form/StructuredData.css";
 @import "./components/MarkdownSources.css";
 @import "./components/ModuleFiles.css";
 @import "./components/DefinitionFile.css";
