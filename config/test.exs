@@ -56,7 +56,10 @@ config :brando, BrandoIntegrationWeb.Endpoint,
   http: [port: 80],
   debug_errors: true,
   server: false,
-  secret_key_base: "verysecret",
+  # Must be >= 64 bytes: the cookie session store rejects anything shorter
+  # once a test dispatches a real request through this endpoint.
+  secret_key_base: String.duplicate("verysecret", 8),
+  live_view: [signing_salt: "testsigningsalt"],
   pubsub_server: BrandoIntegration.PubSub
 
 config :brando, Oban,

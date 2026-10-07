@@ -10,17 +10,34 @@ BrandoIntegration.Repo.start_link()
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
-Supervisor.start_link(
-  [{Phoenix.PubSub, name: BrandoIntegration.PubSub, pool_size: 1}, Brando],
-  strategy: :one_for_one
-)
-
 defmodule BrandoIntegration.Presence do
   @moduledoc false
   use BrandoAdmin.Presence,
     otp_app: :brando,
     pubsub_server: BrandoIntegration.PubSub,
     presence: __MODULE__
+end
+
+# Presence has to be running, not merely defined: `BrandoAdmin.Hooks.handle_params/3`
+# tracks every mounted admin LiveView.
+Supervisor.start_link(
+  [
+    {Phoenix.PubSub, name: BrandoIntegration.PubSub, pool_size: 1},
+    Brando,
+    BrandoIntegration.Presence
+  ],
+  strategy: :one_for_one
+)
+
+# The admin nav LiveView (mounted by the admin root layout) calls
+# `<admin_module>.Menus.__menus__/0`, so a routed admin request needs one to exist.
+defmodule BrandoIntegrationAdmin.Menus do
+  @moduledoc false
+  use BrandoAdmin.Menu
+
+  menus do
+    menu_item Brando.Pages.Page
+  end
 end
 
 defmodule BrandoIntegrationWeb.Gettext do
@@ -66,6 +83,9 @@ defmodule BrandoIntegrationWeb.Endpoint do
     only: ~w(css images js fonts favicon.ico robots.txt),
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
+
+  # Lets `Phoenix.LiveViewTest.live/2` mount the real admin LiveViews.
+  plug BrandoIntegrationWeb.Router
 end
 
 defmodule BrandoIntegration.Authorization do

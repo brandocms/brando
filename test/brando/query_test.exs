@@ -270,5 +270,39 @@ defmodule Brando.QueryTest do
         _a = __MODULE__.Context.get_page!(%{matches: %{id: p3a.id}})
       end
     end
+
+    # The listing's "Duplicate to" copies a page into another language. When
+    # that language already has a page at the same URI, the insert must come
+    # back as an error rather than raise and crash the view.
+    test "mutation :duplicate that takes a unique value returns an error and saves nothing" do
+      usr = Factory.insert(:random_user)
+      Factory.insert(:page, title: "Indeks", uri: "index", language: :no)
+      original = Factory.insert(:page, title: "Index", uri: "index", language: :en)
+      count = Brando.repo().aggregate(Page, :count)
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Brando.Pages.duplicate_page(original.id, usr, change_fields: [language: :no])
+
+      assert {"has already been taken", _} = changeset.errors[:uri]
+      assert Brando.repo().aggregate(Page, :count) == count
+    end
+  end
+
+  describe "free unique values" do
+    test "keeps a value the copy's language has free, and numbers a taken one" do
+      Factory.insert(:page, uri: "index", language: :no)
+      Factory.insert(:page, uri: "index-2", language: :no)
+      Factory.insert(:page, uri: "about", language: :en)
+      en_index = Factory.insert(:page, uri: "index", language: :en)
+
+      copy = %{en_index | id: nil, language: :no}
+
+      assert Brando.Blueprint.Unique.free_value(Page, :uri, "index", copy) == "index-3"
+      assert Brando.Blueprint.Unique.free_value(Page, :uri, "about", copy) == "about"
+      # the entry itself doesn't count as taken
+      assert Brando.Blueprint.Unique.free_value(Page, :uri, "index", en_index) == "index"
+      # a field that isn't unique is left alone
+      assert Brando.Blueprint.Unique.free_value(Page, :title, "index", copy) == "index"
+    end
   end
 end

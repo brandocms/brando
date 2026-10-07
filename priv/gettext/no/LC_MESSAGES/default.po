@@ -2707,3 +2707,18 @@ msgstr "Fersken"
 #, elixir-autogen, elixir-format
 msgid "Pink"
 msgstr "Rosa"
+
+#: lib/brando_admin/live_view/listing.ex:170
+#, elixir-autogen, elixir-format
+msgid "Some entries could not be copied."
+msgstr "Noen av oppføringene kunne ikke kopieres."
+
+#: lib/brando_admin/live_view/listing.ex:359
+#, elixir-autogen, elixir-format
+msgid "Could not copy this entry. Nothing was saved."
+msgstr "Kunne ikke kopiere denne oppføringen. Ingenting ble lagret."
+
+#: lib/brando_admin/live_view/listing.ex:358
+#, elixir-autogen, elixir-format
+msgid "This language already has a version."
+msgstr "Dette språket har allerede en versjon."
