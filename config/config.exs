@@ -72,6 +72,10 @@ config :brando,
 
 config :phoenix, :json_library, Jason
 
+# Kept out of the request logs: passwords (any parameter whose name contains
+# "password"), and the two-factor code and proof fields of the admin login.
+config :phoenix, :filter_parameters, ["password", "code", "proof", "secret"]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

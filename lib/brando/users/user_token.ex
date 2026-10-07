@@ -29,7 +29,7 @@ defmodule Brando.Users.UserToken do
   @schema_prefix "public"
 
   schema "users_tokens" do
-    field :token, :binary
+    field :token, :binary, redact: true
     field :context, :string
     field :sent_to, :string
     belongs_to :user, Brando.Users.User

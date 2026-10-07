@@ -31,6 +31,10 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Kept out of the request logs: passwords (any parameter whose name contains
+# "password"), and the two-factor code and proof fields of the admin login.
+config :phoenix, :filter_parameters, ["password", "code", "proof", "secret"]
+
 # The scaffold has no HTTP mail adapter. Configure Swoosh's API client when
 # adding a delivery provider; otherwise its default requires an absent Hackney.
 config :swoosh, :api_client, false
