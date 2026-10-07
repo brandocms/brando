@@ -59,8 +59,22 @@ defmodule Brando.Users do
   end
 
   mutation :create, User
-  mutation :update, User
-  mutation :delete, User
+
+  # A deactivated or deleted account cannot log in, and nor may its open
+  # admin views and sockets go on: its sessions end with it.
+  mutation :update, User do
+    fn entry ->
+      if entry.active == false or not is_nil(entry.deleted_at), do: revoke_sessions(entry)
+      {:ok, entry}
+    end
+  end
+
+  mutation :delete, User do
+    fn entry ->
+      revoke_sessions(entry)
+      {:ok, entry}
+    end
+  end
 
   @doc """
   The user id a background job records for `user`: `nil` for `:system`,
@@ -170,7 +184,7 @@ defmodule Brando.Users do
 
     case Repo.delete_all(from(t in query, select: t.token)) do
       {1, [token]} ->
-        Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+        disconnect_session(token)
         SecurityLog.record(:session_revoked, user, meta: opts[:meta])
         :ok
 
@@ -273,7 +287,7 @@ defmodule Brando.Users do
 
   defp end_session(token) do
     delete_session_token(token)
-    Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+    disconnect_session(token)
   end
 
   @doc """
@@ -302,7 +316,7 @@ defmodule Brando.Users do
     for {context, token, id} <- tokens do
       cond do
         context == "session" ->
-          Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+          disconnect_session(token)
 
         context in UserToken.pending_contexts() ->
           Phoenix.PubSub.broadcast(Brando.pubsub(), pending_login_topic(id), {:pending_login_ended, id})
@@ -438,17 +452,70 @@ defmodule Brando.Users do
   end
 
   @doc """
-  The id of the LiveView sockets of the session `token`, which
-  the login puts in the session. Broadcasting `"disconnect"` to it
-  closes them.
+  The id of the sockets of the session `token`: its LiveViews (the login
+  puts the id in the session) and its admin socket
+  (`BrandoAdmin.AdminSocket`). `disconnect_session/1` broadcasts
+  `"disconnect"` to it. It stays on the server: the page never sees it.
   """
   @spec live_socket_id(binary()) :: String.t()
   def live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
+  @doc """
+  Disconnects every socket of the session `token` — its LiveViews and its
+  admin socket — and no other session's. Call it once the session's token
+  is deleted: the sockets try to reconnect, and are turned away.
+  """
+  @spec disconnect_session(binary()) :: :ok | {:error, term()}
+  def disconnect_session(token) when is_binary(token),
+    do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+
+  @socket_token_salt "brando_admin_socket"
+  @socket_token_max_age 86_400
+
+  @doc """
+  A token for the admin socket (`BrandoAdmin.AdminSocket`) of `user`'s
+  session with the token row id `session_id` (`token_id/2`).
+
+  The page hands it to its JavaScript, so it holds no secret: it is signed,
+  not encrypted, and names the session by its row id, never by its token. It
+  is good for a day, and only while the session lasts: the socket checks
+  that on every connect (`verify_socket_token/1`), and ending the session
+  disconnects it (`live_socket_id/1`).
+  """
+  @spec build_socket_token(user | %{id: integer()}, integer()) :: String.t()
+  def build_socket_token(%{id: user_id}, session_id) when is_integer(session_id) do
+    Phoenix.Token.sign(Brando.endpoint(), @socket_token_salt, %{"user_id" => user_id, "session_id" => session_id})
+  end
+
+  @doc """
+  The session behind an admin socket token (`build_socket_token/2`), while it
+  is valid: `{:ok, %{user_id: id, session_id: id, socket_id: id}}`. A token
+  older than a day, a session that has ended or expired, and an account
+  deactivated or deleted since give `{:error, :invalid}`. `socket_id` is the
+  session's `live_socket_id/1`, so ending the session disconnects the socket
+  along with the session's LiveViews.
+  """
+  @spec verify_socket_token(String.t() | nil) :: {:ok, map()} | {:error, :invalid}
+  def verify_socket_token(token) when is_binary(token) do
+    with {:ok, %{"user_id" => user_id, "session_id" => session_id}}
+         when is_integer(user_id) and is_integer(session_id) <-
+           Phoenix.Token.verify(Brando.endpoint(), @socket_token_salt, token, max_age: @socket_token_max_age),
+         session_token when is_binary(session_token) <-
+           Repo.one(UserToken.verify_session_id_query(session_id, user_id)) do
+      {:ok, %{user_id: user_id, session_id: session_id, socket_id: live_socket_id(session_token)}}
+    else
+      _ -> {:error, :invalid}
+    end
+  end
+
+  def verify_socket_token(_token), do: {:error, :invalid}
+
+  @deprecated "Not tied to a session, and no longer accepted by BrandoAdmin.AdminSocket: use build_socket_token/2"
   def build_token(id) do
     Phoenix.Token.sign(Brando.endpoint(), "user_token", id)
   end
 
+  @deprecated "Not tied to a session: use verify_socket_token/1"
   def verify_token(token) do
     Phoenix.Token.verify(Brando.endpoint(), "user_token", token, max_age: 86_400)
   end
@@ -830,6 +897,9 @@ defmodule Brando.Users do
       with {:ok, user} <- get_user(user_id),
            :ok <- Brando.Authorization.Boundary.authorize(actor, :delete, user),
            :ok <- protect_account(user),
+           # The transfer deletes the tokens without a word to the sessions'
+           # sockets: end the sessions properly first.
+           :ok <- revoke_sessions(user),
            {:ok, _counts} <- transfer_user_content(user_id, transfer_to_user_id) do
         delete_user(user_id, actor)
       end

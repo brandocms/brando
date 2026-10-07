@@ -80,12 +80,13 @@ defmodule Brando.Plug.LivePreview do
           |> Phoenix.Controller.fetch_flash()
           |> BrandoAdmin.UserAuth.fetch_current_user(nil)
 
-        current_user = conn_copy.assigns[:current_user]
-
         try do
+          # Signed in, as the preview's socket requires; nil fails the preview
+          socket_token = BrandoAdmin.UserAuth.socket_token(conn_copy) || raise "no admin session"
+
           inject_html = """
           <!-- BRANDO LIVE PREVIEW -->
-          <meta name="user_token" content="#{Brando.Users.build_token(current_user.id)}">
+          <meta name="user_token" content="#{socket_token}">
           <script>
           var livePreviewKey = '#{key}';
           #{@phoenix_js}

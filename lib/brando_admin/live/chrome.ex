@@ -25,13 +25,17 @@ defmodule BrandoAdmin.Chrome do
   # Socket tokens are verified with a 24h max_age; refreshed well inside it
   @socket_tokens_interval :timer.hours(6)
 
-  def mount(_params, _session, socket) do
-    if connected?(socket) do
+  def mount(_params, session, socket) do
+    # Without a user, its session has just ended: the page's own LiveView
+    # sends it to log in, and this one shows nothing meanwhile.
+    if connected?(socket) and socket.assigns.current_user do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
 
       {:ok,
        socket
        |> assign(:socket_connected, true)
+       # The row id rather than the token, which stays out of this view's state
+       |> assign(:session_id, Brando.Users.token_id(session["user_token"]))
        |> refresh_authorization()
        |> push_socket_tokens()}
     else
@@ -150,10 +154,16 @@ defmodule BrandoAdmin.Chrome do
     Process.send_after(self(), :push_socket_tokens, @socket_tokens_interval)
     user = socket.assigns.current_user
 
-    push_event(socket, "brando:socket_tokens", %{
-      user_token: Brando.Users.build_token(user.id),
-      realtime_scope: Brando.Authorization.Realtime.token(user)
-    })
+    case socket.assigns.session_id do
+      nil ->
+        socket
+
+      session_id ->
+        push_event(socket, "brando:socket_tokens", %{
+          user_token: Brando.Users.build_socket_token(user, session_id),
+          realtime_scope: Brando.Authorization.Realtime.token(user)
+        })
+    end
   end
 
   def refresh_authorization(socket) do

@@ -86,13 +86,18 @@ defmodule Brando.Authorization.RealtimeTest do
   test "disabled and deleted accounts cannot connect with existing signed socket tokens", c do
     for attrs <- [%{active: false}, %{deleted_at: ~U[2026-01-01 00:00:00Z]}] do
       Repo.update_all(from(user in Brando.Users.User, where: user.id == ^c.editor.id), set: [active: true])
-      token = Brando.Users.build_token(c.editor.id)
+      token = socket_token(c.editor)
+      assert {:ok, _socket} = BrandoAdmin.AdminSocket.connect(%{"token" => token}, %Phoenix.Socket{})
       Repo.update!(Ecto.Changeset.change(c.editor, attrs))
       assert :error = BrandoAdmin.AdminSocket.connect(%{"token" => token}, %Phoenix.Socket{})
     end
 
-    assert :error =
-             BrandoAdmin.AdminSocket.connect(%{"token" => Brando.Users.build_token(c.outsider.id)}, %Phoenix.Socket{})
+    assert :error = BrandoAdmin.AdminSocket.connect(%{"token" => socket_token(c.outsider)}, %Phoenix.Socket{})
+  end
+
+  defp socket_token(user) do
+    session = Brando.Users.generate_user_session_token(user)
+    Brando.Users.build_socket_token(user, Brando.Users.token_id(session))
   end
 
   test "a late preview subscriber receives changes made since the iframe loaded", c do

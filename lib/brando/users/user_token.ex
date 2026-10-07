@@ -98,6 +98,20 @@ defmodule Brando.Users.UserToken do
   end
 
   @doc """
+  The query for the token of `user_id`'s session with the row id `id`, while
+  the session is valid and the account active and undeleted, as
+  `verify_session_token_query/1` checks it.
+  """
+  def verify_session_id_query(id, user_id) when is_integer(id) and is_integer(user_id) do
+    from token in Brando.Users.UserToken,
+      join: user in assoc(token, :user),
+      where: token.id == ^id and token.user_id == ^user_id and token.context == "session",
+      where:
+        token.inserted_at > ago(@session_validity_in_days, "day") and user.active == true and is_nil(user.deleted_at),
+      select: token.token
+  end
+
+  @doc """
   Generates the token of a sign-in waiting for its second step, kept in the
   signed session like a session token. `context` is `"pending_2fa"`.
   """
