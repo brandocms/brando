@@ -150,7 +150,10 @@ defmodule Brando.Users.PasskeysTest do
 
       assert [%{id: id}] = options.excludeCredentials
       assert id == Base.url_encode64(passkey.credential_id, padding: false)
-      refute options.user.id =~ to_string(user.id)
+      # An HMAC of the id, not the id: a 32-byte handle that doesn't decode to it
+      handle = Base.url_decode64!(options.user.id, padding: false)
+      assert byte_size(handle) == 32
+      refute handle == to_string(user.id)
       assert options.authenticatorSelection.residentKey == "preferred"
     end
   end

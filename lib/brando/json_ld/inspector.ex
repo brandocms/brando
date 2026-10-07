@@ -370,7 +370,7 @@ defmodule Brando.JSONLD.Inspector do
       ref: ref,
       type: type_name(data),
       role: role,
-      origin: if(role in [:identity, :website, :service], do: :site, else: :entry),
+      origin: if(role in [:identity, :website], do: :site, else: :entry),
       data: data,
       property: nil,
       source: nil,
