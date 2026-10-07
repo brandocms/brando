@@ -40,6 +40,20 @@ defmodule Brando.TenantJobTest do
              {:cancel, :invalid_tenant_prefix}
   end
 
+  test "a job that may run outside any site keeps the site it was queued in, if any" do
+    assert Job.attach_current(%{"email" => "ada@example.com"}) == %{"email" => "ada@example.com"}
+    assert Job.run_current(%{}, fn -> :ran end) == :ran
+
+    Tenant.put_prefix("tenant_acme_production")
+    args = Job.attach_current(%{})
+    Tenant.put_prefix(nil)
+
+    assert Job.run_current(args, &Tenant.current_prefix/0) == "tenant_acme_production"
+
+    assert Job.run_current(%{"tenant_prefix" => "public"}, fn -> flunk("must not run") end) ==
+             {:cancel, :invalid_tenant_prefix}
+  end
+
   test "runs maintenance in every environment of active sites" do
     active = create_site("acme", :active)
     suspended = create_site("beta", :suspended)

@@ -623,6 +623,43 @@ defmodule E2EFixtureController do
     json(conn, %{ok: true})
   end
 
+  # An editor who has forgotten their password, with an address of their own
+  def password_reset(conn, %{"action" => "user"}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    email = "reset-#{System.unique_integer([:positive])}@brandocms.com"
+    password = "forgotten password"
+
+    {:ok, user} =
+      Brando.Users.create_user(
+        %{
+          name: "Reset Editor",
+          email: email,
+          password: password,
+          password_confirmation: password,
+          language: "en",
+          role: :editor,
+          active: true
+        },
+        :system
+      )
+
+    json(conn, %{email: user.email})
+  end
+
+  # The newest email sent to `to`, from Swoosh's in-memory mailbox
+  def password_reset(conn, %{"action" => "mailbox", "to" => to}) do
+    email =
+      Enum.find(Swoosh.Adapters.Local.Storage.Memory.all(), fn email ->
+        Enum.any?(email.to, fn {_name, address} -> address == to end)
+      end)
+
+    case email do
+      nil -> json(conn, %{})
+      email -> json(conn, %{subject: email.subject, text: email.text_body})
+    end
+  end
+
   def image_creator(conn, %{"image_id" => image_id}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

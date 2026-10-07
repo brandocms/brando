@@ -78,6 +78,22 @@ defmodule Brando.Mailer do
   def configured?, do: not is_nil(mailer())
 
   @doc """
+  `:ok` when a mailer and an address to send from are configured. Otherwise
+  the same as sending: raises in development and test, and in production logs
+  a warning and returns `{:error, :no_mailer}` or `{:error, :no_sender}`.
+
+  Use it before work that is pointless without email, such as creating a
+  password reset link.
+  """
+  @spec ensure_configured() :: :ok | {:error, :no_mailer | :no_sender}
+  def ensure_configured do
+    with {:ok, _mailer} <- fetch_mailer(),
+         {:ok, _email} <- put_sender(Email.new()) do
+      :ok
+    end
+  end
+
+  @doc """
   Sends `email` now, with the current site's sender when it has none.
   Returns what the mailer returns, or `{:error, :no_mailer}`.
   """
@@ -91,8 +107,9 @@ defmodule Brando.Mailer do
 
   @doc """
   Sends `email` from a background job, which keeps the site it was sent from
-  and tries again when the provider fails. Returns `{:ok, job}`, or
-  `{:error, :no_mailer}` without queueing anything.
+  and tries again when the provider fails. Email sent outside any site, such
+  as an account email from the login page, is queued without one. Returns
+  `{:ok, job}`, or `{:error, :no_mailer}` without queueing anything.
 
   The job carries the addresses, subject, bodies and headers; attachments and
   provider options cannot be queued, so send those with `deliver/1`.
@@ -103,7 +120,7 @@ defmodule Brando.Mailer do
          {:ok, email} <- put_sender(email) do
       email
       |> Brando.Worker.Mail.args()
-      |> Brando.Tenant.Job.attach()
+      |> Brando.Tenant.Job.attach_current()
       |> Brando.Worker.Mail.new()
       |> Oban.insert()
     end

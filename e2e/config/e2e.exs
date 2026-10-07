@@ -38,9 +38,10 @@ config :brando, Oban,
 
 config :e2e_project, hmr: false
 
-# Form notifications are sent while the tests run; the test adapter keeps
-# them in the sending process instead of a mail provider.
-config :e2e_project, E2eProject.Mailer, adapter: Swoosh.Adapters.Test
+# Email sent while the tests run (form notifications, password reset links)
+# is kept in Swoosh's in-memory mailbox, where `/e2e/password-reset/mailbox`
+# reads it back for the browser.
+config :e2e_project, E2eProject.Mailer, adapter: Swoosh.Adapters.Local
 
 # Minimal image sizes for faster uploads in e2e tests.
 # Core code now uses :largest (resolved dynamically) so we can safely

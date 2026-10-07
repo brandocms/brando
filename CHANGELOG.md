@@ -652,6 +652,27 @@ production dump.
   (`config :swoosh, api_client: Swoosh.ApiClient.Req`). See the
   [Email guide](guides/email.md).
 
+- **Password reset.** The login page has a "Forgot password?" link to
+  `/admin/reset-password`, which emails a link to choose a new password. The
+  page answers the same whether or not the email belongs to an account, and
+  only active, undeleted accounts get an email. The link works once, for an
+  hour, and only the newest one works; the token is stored hashed. Choosing a
+  new password logs the user out everywhere and disconnects their open admin
+  views. A saved user's form no longer has a password field: a superuser sends
+  another user a reset link (valid for 24 hours), or, on a site without email,
+  sets a password in a dialog behind "Set a password instead", which logs the
+  user out everywhere and makes them choose their own at the next login. Your
+  own form links to `/admin/users/password`, which asks for the current
+  password and logs out your other sessions. The first-login password change
+  uses the same page. Users are emailed when their password changes.
+  `Brando.Users` has `request_password_reset/1`, `send_password_reset/2`,
+  `set_user_password/3`, `reset_user_password/2` and
+  `update_user_password/4`; the unused
+  `UserNotifier.deliver_confirmation_instructions/2` and
+  `deliver_update_email_instructions/2` are gone. Reset email needs the mailer
+  from the [Email guide](guides/email.md); see
+  [User accounts and sessions](guides/users.md#reset-a-forgotten-password).
+
 - **Forms.** Editors build forms visitors fill in, such as a contact form, under
   **Configuration → Forms**, laying out fields on the same 12-unit canvas as module
   variables, beside the form as visitors will see it. Forms are synchronized

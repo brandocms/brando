@@ -1,7 +1,9 @@
 # Email
 
-Brando sends its email — account email to admin users, and the notifications
-and confirmations of a form submission (see the [Forms guide](forms.md)) —
+Brando sends its email — password reset links and "your password was changed"
+notices to admin users (see [User accounts and sessions](users.md#reset-a-forgotten-password)),
+and the notifications and confirmations of a form submission (see the
+[Forms guide](forms.md)) —
 through your application's own Swoosh mailer. It needs to know which mailer that is, and which address to send from.
 
 ## Set up
@@ -47,7 +49,14 @@ config :brando, Brando.Mailer,
 When no mailer or sender is configured, sending raises
 `Brando.Exception.ConfigError` in development and test, so it is noticed
 early. In production it logs a warning and returns an error, and whatever was
-sending carries on without the email.
+sending carries on without the email. `Brando.Mailer.ensure_configured/0`
+makes the same check before work that is pointless without email: the
+"Forgot password?" page uses it, and tells the user the site cannot send
+email rather than promising a link that never comes.
+
+Email sent outside any site — a password reset asked for on the login page
+of a multi-site installation — is queued without a site, and sent from the
+general `:from` address.
 
 ## Sending your own email
 

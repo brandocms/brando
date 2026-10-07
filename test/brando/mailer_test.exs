@@ -162,7 +162,7 @@ defmodule Brando.MailerTest do
     assert_email_sent(fn email ->
       assert email.to == [{"", user.email}]
       assert email.text_body =~ "https://example.com/reset/abc"
-      assert email.html_body =~ "<p>https://example.com/reset/abc</p>"
+      assert email.html_body =~ ~s(href="https://example.com/reset/abc")
     end)
   end
 end
