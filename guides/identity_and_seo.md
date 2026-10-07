@@ -186,6 +186,32 @@ not found. A still-existing page therefore takes precedence over a manual rule;
 this is not an unconditional redirect plug. Code `410` produces a Gone response
 through that fallback rather than a Location redirect.
 
+### Find the URLs worth redirecting
+
+The fallback controller logs every 404 it serves. **Configuration → SEO** lists
+the missing URLs below the form, most requested first, with their hits, the last
+hit and the referrer that sent most of them. **Redirect** adds a row for one to
+the form's redirects; save the form to keep it. Requests from vulnerability
+scanners (`/wp-login.php`, `/.env`) are folded away under them.
+
+`Brando.Sites.FourOhFour` counts hits in memory and writes them to the
+`sites_not_found_hits` table every minute, and when the node shuts down, as one
+row per URL, referrer and day. A burst of requests for missing pages therefore
+costs one database statement a minute, and the log survives deploys. The
+referrer is kept without its query string. Rows are deleted after 90 days by
+`Brando.Worker.NotFoundPurger`, nightly at 05:25 UTC in every active
+environment:
+
+```elixir
+config :brando, Brando.Sites.FourOhFour,
+  retention_days: 30,
+  flush_interval: :timer.seconds(60)
+```
+
+An application that sets its own `config :brando, Oban` replaces Brando's
+crontab and must add `{"25 5 * * *", Brando.Worker.NotFoundPurger}` to its own.
+`Brando.Sites.FourOhFour.add_404/1` records a miss from a controller of your own.
+
 For permalink changes, the admin can offer a confirmed automatic redirect. That
 flow stores an escaped exact source, removes stale exact rules on the new URL,
 and avoids simple rename-back loops. See [Permalink redirects](blueprint_traits.md#permalink-redirects).

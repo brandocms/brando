@@ -551,6 +551,16 @@ production dump.
   duplicated content; `put_meta/3` and `put_hreflang/2` pass it to the
   canonical link and `og:url`, and `put_canonical/2` sets one by hand. Empty
   keeps the entry's own URL. See [Page metadata](guides/meta.md).
+- **The 404 log survives deploys.** `Brando.Sites.FourOhFour` still counts
+  misses in memory, but now writes them every minute (and on shutdown) to a
+  `sites_not_found_hits` table, one row per URL, referrer and day, with one
+  upsert per batch rather than a write per request. The SEO settings list
+  totals per URL with the referrer that sent most hits, and **Redirect** works
+  from the stored log. `Brando.Worker.NotFoundPurger` deletes rows older than
+  90 days (`config :brando, Brando.Sites.FourOhFour, retention_days: …`) at
+  05:25 UTC; apps with their own Oban crontab must add it. `brando_201`
+  creates the table in every environment. See "Find the URLs worth
+  redirecting" in [Identity, SEO settings, and redirects](guides/identity_and_seo.md).
 - **An honest `dateModified`.** `trait :meta` adds `content_modified_at`, set
   on insert and moved only when a save changes the entry's text (its text
   inputs and rendered blocks) by at least 10% of its words, between 5 and 20

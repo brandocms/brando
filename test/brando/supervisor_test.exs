@@ -38,6 +38,7 @@ defmodule Brando.SupervisorTest do
       assert Brando.Worker.UploadIntentReaper in workers
       assert Brando.Worker.MediaOrphanCleanup in workers
       assert Brando.Worker.FormSubmissionPurger in workers
+      assert Brando.Worker.NotFoundPurger in workers
     end
 
     test "gives every queue Brando serializes a limit" do
