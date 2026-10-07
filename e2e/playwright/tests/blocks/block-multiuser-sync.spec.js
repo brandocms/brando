@@ -318,7 +318,7 @@ test.describe('Multi-user block sync', () => {
     )
   })
 
-  test('block locks appear for late joiners, survive remote applies, clear on blur', async ({
+  test('field presence appears for late joiners, survives remote applies, clears on blur', async ({
     page,
     secondUserPage,
   }) => {
@@ -327,21 +327,24 @@ test.describe('Multi-user block sync', () => {
     await page.goto(entryUrl)
     await syncLV(page)
 
-    // A focuses block 1 and stays in it
+    // A focuses block 1's heading and stays in it
     const ta = page.locator('.header-block textarea').nth(0)
     await ta.click()
 
-    // B joins late — A's focus replays via the join sync request, so the
-    // block must show locked WITHOUT waiting for A's next focus event
+    // B joins late — A's focus replays when B joins, so the field must show
+    // A's presence WITHOUT waiting for A's next focus event. Nothing is
+    // locked: B can still work in the block.
     await secondUserPage.goto(entryUrl)
     await syncLV(secondUserPage)
     const bBlockOne = secondUserPage.locator('.entry-block').nth(0).locator('.block').first()
-    await expect(bBlockOne).toHaveClass(/block-locked/, { timeout: 5000 })
+    const bHeading = bBlockOne.locator('.ref_block').first()
+    await expect(bHeading).toHaveAttribute('data-field-presence-user', /\d+/, { timeout: 5000 })
+    await expect(bBlockOne.locator('.block-toolbar').first()).toHaveAttribute('data-presence-label', /.+/)
+    await expect(bBlockOne).not.toHaveClass(/block-locked/)
 
-    // A edits, then clicks elsewhere INSIDE the same block — content ships
-    // (still_inside), B's locked block re-renders from the applied snapshot.
-    // The patch resets classes to server truth; the lock must be re-asserted,
-    // not flicker away (this was the flaky-lock class of bugs).
+    // A edits, then clicks elsewhere INSIDE the same block — B's block
+    // re-renders with the edit. The patch resets attributes to server truth;
+    // the presence must be re-asserted, not flicker away.
     await ta.fill('Alpha locked edit')
     await awaitBlockDebounce(page)
     await page.locator('.entry-block').nth(0).locator('.block-description').first().click()
@@ -351,11 +354,12 @@ test.describe('Multi-user block sync', () => {
       'Alpha locked edit',
       { timeout: 5000 }
     )
-    await expect(bBlockOne).toHaveClass(/block-locked/)
+    await expect(bBlockOne).toHaveAttribute('data-block-presence-user', /\d+/)
 
-    // A leaves the block entirely → the lock must clear on B
+    // A leaves the block entirely → the presence must clear on B
     await page.getByLabel('Title', { exact: true }).click()
-    await expect(bBlockOne).not.toHaveClass(/block-locked/, { timeout: 5000 })
+    await expect(bBlockOne.locator('[data-field-presence-user]')).toHaveCount(0, { timeout: 5000 })
+    await expect(bBlockOne).not.toHaveAttribute('data-block-presence-user', /.*/)
   })
 
   test('field locks appear for late joiners and survive form patches', async ({
