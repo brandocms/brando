@@ -6,12 +6,12 @@ assets/css/auth.css 1
 assets/css/chrome.css 4
 assets/css/components/Alert.css 2
 assets/css/components/Button.css 20
-assets/css/components/CircleDropdown.css 2
+assets/css/components/CircleDropdown.css 1
 assets/css/components/CircleFlag.css 1
 assets/css/components/Content.css 1
 assets/css/components/Content/Identifier.css 45
 assets/css/components/Content/ItemMeta.css 1
-assets/css/components/Content/List.css 38
+assets/css/components/Content/List.css 30
 assets/css/components/Content/SelectedRows.css 15
 assets/css/components/DefinitionFile.css 17
 assets/css/components/Dialog.css 14
@@ -27,7 +27,7 @@ assets/css/components/Form/FormFields.css 17
 assets/css/components/Form/Input/AssetField.css 2
 assets/css/components/Form/Input/Blocks/Block.css 147
 assets/css/components/Form/Input/Blocks/BlockSlot.css 26
-assets/css/components/Form/Input/Blocks/Blocks.css 57
+assets/css/components/Form/Input/Blocks/Blocks.css 51
 assets/css/components/Form/Input/Blocks/GalleryBlock.css 15
 assets/css/components/Form/Input/Blocks/ModuleBlock.css 1
 assets/css/components/Form/Input/Blocks/PictureBlock.css 4
@@ -38,8 +38,8 @@ assets/css/components/Form/Input/Override.css 4
 assets/css/components/Form/Input/Radios.css 1
 assets/css/components/Form/Input/Select.css 14
 assets/css/components/Form/Input/StringList.css 13
-assets/css/components/Form/Input/Text.css 8
-assets/css/components/Form/Input/TipTap.css 89
+assets/css/components/Form/Input/Text.css 3
+assets/css/components/Form/Input/TipTap.css 78
 assets/css/components/Form/Input/Video.css 5
 assets/css/components/Form/Subform.css 33
 assets/css/components/Form/SubformTable.css 32
@@ -56,7 +56,6 @@ assets/css/components/Modal.css 16
 assets/css/components/ModalWorkspace.css 71
 assets/css/components/ModuleFiles.css 41
 assets/css/components/Progress.css 1
-assets/css/components/SuggestionReview.css 7
 assets/css/components/TabSwitch.css 7
 assets/css/components/TextDiff.css 27
 assets/css/components/Toast.css 14
@@ -66,9 +65,9 @@ assets/css/components/Var.css 7
 assets/css/components/Video/VideoPicker.css 19
 assets/css/components/Workspace.css 25
 assets/css/views/AltTextWorkspace.css 3
-assets/css/views/Assistant.css 48
+assets/css/views/Assistant.css 40
 assets/css/views/ContentWorkspace.css 29
-assets/css/views/SettingsWorkspace.css 89
+assets/css/views/SettingsWorkspace.css 88
 assets/css/views/Users.css 11
 assets/css/views/assets/Images.css 44
 assets/css/views/config/Activity.css 26

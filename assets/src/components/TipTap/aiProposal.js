@@ -19,20 +19,25 @@ export function proposalExtension({ labels, accept, discard, retry }) {
             if (!proposal) return DecorationSet.empty
             return DecorationSet.create(state.doc, [Decoration.widget(proposal.pos, () => {
               const panel = document.createElement('span')
-              panel.className = 'tiptap-ai-proposal'
+              // The shared look for AI results waiting for review (AI.css).
+              panel.className = 'tiptap-ai-proposal ai-proposal'
               panel.contentEditable = 'false'
               panel.setAttribute('role', 'region')
               panel.setAttribute('aria-label', labels.aiSuggestion)
               const title = document.createElement('span')
-              title.className = 'tiptap-ai-heading'
-              title.textContent = proposal.status === 'pending' ? labels.generating : labels.aiSuggestion
+              title.className = 'tiptap-ai-heading ai-proposal-label'
+              const icon = document.createElement('span')
+              icon.className = 'lucide-sparkles'
+              icon.dataset.icon = ''
+              icon.setAttribute('aria-hidden', 'true')
+              title.append(icon, proposal.status === 'pending' ? labels.generating : labels.aiSuggestion)
               title.setAttribute('role', 'status')
               panel.append(title)
               if (proposal.text) { const text = document.createElement('span'); text.className = 'tiptap-ai-text'; text.textContent = proposal.text; panel.append(text) }
               if (proposal.error) { const error = document.createElement('span'); error.className = 'tiptap-ai-error'; error.setAttribute('role', 'alert'); error.textContent = proposal.error; panel.append(error) }
               const actions = document.createElement('span')
-              actions.className = 'tiptap-ai-actions'
-              const button = (label, action, primary = false) => { const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = label; btn.className = primary ? 'primary' : 'secondary'; btn.addEventListener('mousedown', e => e.preventDefault()); btn.addEventListener('click', action); actions.append(btn) }
+              actions.className = 'tiptap-ai-actions ai-proposal-actions'
+              const button = (label, action, primary = false) => { const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = label; if (primary) btn.className = 'primary'; btn.addEventListener('mousedown', e => e.preventDefault()); btn.addEventListener('click', action); actions.append(btn) }
               if (proposal.status === 'ready' && !proposal.error) button(labels.accept, accept, true)
               button(proposal.status === 'pending' ? labels.cancel : labels.discard, discard)
               if (proposal.status !== 'pending') button(labels.retry, retry)

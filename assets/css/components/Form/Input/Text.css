@@ -141,6 +141,8 @@ textarea.text {
   }
 }
 
+/* The AI action inside a text field (AIAction, size :icon; styled in AI.css),
+   in the field's top right corner. */
 .input-with-action {
   position: relative;
 
@@ -148,45 +150,7 @@ textarea.text {
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    border: 1px dashed color-mix(in srgb, #6d4de3 45%, transparent);
-    background: transparent;
-    color: #6d4de3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 200ms ease;
     z-index: 2;
-
-    &:hover {
-      background: transparent;
-      border-color: #6d4de3;
-    }
-
-    .icon-loading {
-      display: none;
-    }
-
-    &.phx-click-loading {
-      cursor: wait;
-      opacity: 0.8;
-      pointer-events: none;
-
-      .icon-default {
-        display: none;
-      }
-
-      .icon-loading {
-        display: block;
-      }
-    }
-
-    .lucide-sparkles {
-      width: 0.8rem;
-      height: 0.8rem;
-    }
   }
 
   /* A single-line field centres the button whatever the field's height; a
@@ -197,61 +161,19 @@ textarea.text {
   }
 }
 
-/* Azure is for the dark blue drawers only; the light and workspace drawers
-   are white, where it made the button all but invisible. */
-.drawer:not(.light, .admin-workspace) {
-  .input-with-action {
-    .ai-generate-button {
-      background: transparent;
-      border: 1px dashed azure;
-      color: azure;
-
-      &:hover {
-        background: transparent;
-        border-color: azure;
-      }
-    }
-  }
-}
-
 input.text.has-ai-action,
 textarea.text.has-ai-action {
   padding-right: 46px;
 }
 
-/* A small AI action (e.g. "Suggest alt text"), in the AI actions' purple */
-.ai-suggest {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  width: auto;
-  height: auto;
-  margin: 0;
-  padding: 2px 4px;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: #6d4de3;
-  font-size: 12px;
-  line-height: 18px;
-  cursor: pointer;
-
-  [data-icon] { width: 14px; height: 14px; }
-  &:hover { background: color-mix(in srgb, #6d4de3 8%, transparent); }
-}
-
-/* Beside the label of the field it fills */
+/* "Suggest alt text" beside the label of the field it fills */
 .ref-alt-field { position: relative; }
-.ref-alt-field > .ref-alt-suggest { position: absolute; top: -2px; right: 0; }
+.ref-alt-field > .ref-alt-suggest { position: absolute; top: -4px; right: 0; }
 
-/* While a suggestion is on its way */
-.ai-suggest.is-busy,
+/* While the image form waits for a suggestion */
 .is-suggesting-alt .i18n-suggest {
   pointer-events: none;
-  animation: i18n-suggest-pulse 1.2s ease-in-out infinite;
-}
+  cursor: progress;
 
-@keyframes i18n-suggest-pulse {
-  50% { opacity: 0.4; }
+  > [data-icon] { animation: ai-action-busy 1.2s ease-in-out infinite; }
 }
-

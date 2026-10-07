@@ -121,6 +121,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
                 phx-click="describe"
                 disabled={match?({:error, :no_image_input}, @estimate)}
               >
+                <.icon name="sparkles" />
                 {ngettext("Describe one image", "Describe %{count} images", min(length(@candidates), @max_batch))}
               </button>
             </div>

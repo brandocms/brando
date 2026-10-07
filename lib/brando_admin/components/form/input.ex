@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Input.Options
   alias BrandoAdmin.Components.Form.Primitives
 
@@ -1127,9 +1128,9 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-target={@target}
           phx-change={@change}
         />
-        <button
+        <AIAction.button
           :if={@ai_enabled?}
-          type="button"
+          size={:icon}
           class="ai-generate-button"
           phx-click="ai_generate_input"
           phx-target={@target}
@@ -1137,15 +1138,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-value-field_key={to_string(@field.field)}
           title={@ai_label}
           aria-label={@ai_label}
-        >
-          <.icon name="sparkles" class="icon-default" />
-          <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-            <path
-              fill="none"
-              d="M0 0h24v24H0z"
-            /><path d="M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z" />
-          </svg>
-        </button>
+        />
       </div>
     </Primitives.field_base>
     """
@@ -1313,9 +1306,9 @@ defmodule BrandoAdmin.Components.Form.Input do
           data-watch-focus
           id={@generated_uid}
         />
-        <button
+        <AIAction.button
           :if={@ai_enabled?}
-          type="button"
+          size={:icon}
           class="ai-generate-button"
           phx-click="ai_generate_input"
           phx-target={@target}
@@ -1323,15 +1316,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-value-field_key={to_string(@field.field)}
           title={@ai_label}
           aria-label={@ai_label}
-        >
-          <.icon name="sparkles" class="icon-default" />
-          <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-            <path
-              fill="none"
-              d="M0 0h24v24H0z"
-            /><path d="M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z" />
-          </svg>
-        </button>
+        />
       </div>
     </Primitives.field_base>
     """
@@ -1450,15 +1435,15 @@ defmodule BrandoAdmin.Components.Form.Input do
             </button>
           </div>
           <%!-- An image's alt text, described by AI and filled in unsaved --%>
-          <button
+          <AIAction.button
             :if={@suggest_alt?}
-            type="button"
-            class="ai-suggest i18n-suggest"
+            size={:compact}
+            class="i18n-suggest"
             phx-click={@suggest_event}
             phx-target={@suggest_target}
           >
-            <.icon name="sparkles" /> {gettext("Suggest alt text")}
-          </button>
+            {gettext("Suggest alt text")}
+          </AIAction.button>
         </div>
         <div
           :for={{language, name} <- @languages}

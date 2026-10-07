@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Datasource
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -525,13 +526,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         <span :if={!@src}>{gettext("No sketch")}</span>
       </div>
       <div :if={@sketch && @sketch.available?} class="module-sketch-actions">
-        <button
-          type="button"
-          class="secondary"
+        <AIAction.button
           phx-click="generate_sketch"
+          busy={@sketch.status == :loading}
           disabled={@sketch.status == :loading}
         >
-          <.icon name="sparkles" />
           <%= cond do %>
             <% @sketch.status == :loading -> %>
               {gettext("Drawing…")}
@@ -540,7 +539,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <% true -> %>
               {gettext("Draw a sketch with AI")}
           <% end %>
-        </button>
+        </AIAction.button>
         <p class="module-sketch-hint">
           {gettext("Drawn from the template, references and variables. Save the module to keep it.")}
         </p>

@@ -63,6 +63,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.BlockField.Ops
@@ -2027,19 +2028,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <span :if={!@entry.id} class="block-field-assistant-hint">
             {gettext("Save the entry to build it with AI")}
           </span>
-          <.link
+          <AIAction.button
             :if={@entry.id}
             href={assistant_url(@entry, @block_field)}
             target="_blank"
             rel="noopener"
-            class="block-field-assistant-button"
             data-testid="build-with-ai"
           >
-            <.icon name="sparkles" />{gettext("Build with AI")}
-          </.link>
-          <button :if={!@entry.id} type="button" class="block-field-assistant-button" disabled>
-            <.icon name="sparkles" />{gettext("Build with AI")}
-          </button>
+            {gettext("Build with AI")}
+          </AIAction.button>
+          <AIAction.button :if={!@entry.id} disabled>
+            {gettext("Build with AI")}
+          </AIAction.button>
         </div>
       </div>
       <p :if={@source_locked} class="blocks-source-note">
