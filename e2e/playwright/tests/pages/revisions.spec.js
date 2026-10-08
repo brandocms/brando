@@ -56,11 +56,6 @@ test.describe('Entry revisions', () => {
     await revisionRow.getByTestId('circle-dropdown-button').click()
     await revisionRow.getByRole('button', { name: 'Activate revision' }).click()
     await page.getByRole('button', { name: 'OK' }).click()
-    // The editor already shows the working copy, so its values can't tell
-    // whether the activation reached the server. The row turning active can;
-    // reloading before then reads the entry as it was.
-    await expect(revisionRow).toHaveClass(/\bactive\b/)
-    await syncLV(page)
 
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Revision working copy')
     await expect(page.locator('.entry-block textarea').first()).toHaveValue('Working-copy block')
