@@ -39,6 +39,10 @@ defmodule Brando.Authorization.Catalog do
     # changed field names) for every content type, drafts included: the
     # payload goes to a URL the manager chooses (guides/webhooks.md).
     {:webhooks, "brando.webhooks", "Webhooks", "Settings", [:manage], [:standalone, :site]},
+    # Notification routes send entry titles and people's names to a Slack or
+    # Teams channel, or by email to users, as the manager chooses
+    # (`Brando.Notifications.Routing`).
+    {:notifications, "brando.notifications", "Notifications", "Settings", [:manage], [:standalone, :site]},
     # Connecting a tool over MCP (`Brando.MCP`): `connect` lets a person with
     # two-factor authentication connect Claude, ChatGPT and the like to read
     # content and propose changes as them; `manage` turns the endpoint on and

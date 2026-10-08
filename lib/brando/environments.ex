@@ -451,6 +451,7 @@ defmodule Brando.Environments do
       # Committed: webhooks paused because this environment was a copy now
       # call their endpoints. Those paused for another reason stay paused.
       Brando.Webhooks.after_going_live(Tenant.prefix(site, live_environment), opts[:creator] || :system)
+      Brando.Notifications.Routing.after_going_live(Tenant.prefix(site, live_environment), opts[:creator] || :system)
       prune_archives_under_lock(site, opts[:keep_archives] || @default_archive_keep)
       {:ok, live_environment}
     end
@@ -532,12 +533,14 @@ defmodule Brando.Environments do
     end
   end
 
-  # The copy's webhooks are the source's: they are paused, so a staging copy
-  # never calls production endpoints (they resume when it goes live). A copy
-  # whose webhooks could not be paused is undone like a failed copy.
+  # The copy's webhooks and notification routes are the source's: they are
+  # paused, so a staging copy never calls production endpoints or channels
+  # (they resume when it goes live). A copy whose webhooks or routes could
+  # not be paused is undone like a failed copy.
   defp clone_with_recovery(source_prefix, target_prefix, archive_prefix, opts) do
     with :ok <- schema_cloner().clone_schema(source_prefix, target_prefix),
-         :ok <- Brando.Webhooks.after_environment_copy(target_prefix, opts[:creator] || :system) do
+         :ok <- Brando.Webhooks.after_environment_copy(target_prefix, opts[:creator] || :system),
+         :ok <- Brando.Notifications.Routing.after_environment_copy(target_prefix, opts[:creator] || :system) do
       :ok
     else
       {:error, copy_reason} ->
@@ -611,9 +614,15 @@ defmodule Brando.Environments do
          :ok <- step(ArchiveUpgrade.replay(replays, prefix), :archive_upgrade_failed),
          :ok <- step(migrator().migrate(site, environment), :migration_failed),
          :ok <- up_to_date(site, environment, prefix),
-         # Restored as a new, non-live environment: its webhooks must not
-         # call the endpoints the live environment calls, as after a copy
-         :ok <- step(Brando.Webhooks.after_environment_copy(prefix, opts[:creator] || :system), :archive_restore_failed) do
+         # Restored as a new, non-live environment: its webhooks and
+         # notification routes must not call the endpoints the live
+         # environment calls, as after a copy
+         :ok <- step(Brando.Webhooks.after_environment_copy(prefix, opts[:creator] || :system), :archive_restore_failed),
+         :ok <-
+           step(
+             Brando.Notifications.Routing.after_environment_copy(prefix, opts[:creator] || :system),
+             :archive_restore_failed
+           ) do
       log_operation!(site.id, :rollback,
         target_environment_id: environment.id,
         creator_id: creator_id(opts),

@@ -21,6 +21,10 @@ defmodule Brando.Users.UserConfig do
     attribute :show_mutation_notifications, :boolean, default: true
     attribute :show_onboarding, :boolean, default: false
     attribute :prefers_reduced_motion, :boolean, default: false
+
+    # Mentions and notifications routed to the user by email: one email
+    # each (`:off`), or a daily or weekly summary (`Brando.Notifications.Digest`)
+    attribute :notification_digest, :enum, values: [:off, :daily, :weekly], default: :off
   end
 
   translations do

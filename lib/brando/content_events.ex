@@ -2,8 +2,9 @@ defmodule Brando.ContentEvents do
   @moduledoc """
   Content events: one normalised message for each change to an entry, for
   anything outside the save that has to react to it: outbound webhooks
-  (`Brando.Webhooks`), IndexNow (`Brando.IndexNow`) and the admin search
-  index (`Brando.Search`).
+  (`Brando.Webhooks`), IndexNow (`Brando.IndexNow`), the admin search
+  index (`Brando.Search`) and notifications of scheduled publishing
+  (`Brando.Notifications.Routing`).
 
   ## Events
 
@@ -63,10 +64,12 @@ defmodule Brando.ContentEvents do
   ## Subscribing
 
   A subscriber implements `Brando.ContentEvents.Subscriber` and is listed in
-  the configuration. Brando's own webhooks, IndexNow and search index are
-  always subscribed (unless `config :brando, Brando.Webhooks, enabled: false`,
-  `config :brando, Brando.IndexNow, enabled: false` or
-  `config :brando, Brando.Search, enabled: false`).
+  the configuration. Brando's own webhooks, IndexNow, search index and
+  notification routes are always subscribed (unless
+  `config :brando, Brando.Webhooks, enabled: false`,
+  `config :brando, Brando.IndexNow, enabled: false`,
+  `config :brando, Brando.Search, enabled: false` or
+  `config :brando, Brando.Notifications, enabled: false`).
 
       config :brando, Brando.ContentEvents, subscribers: [MyApp.CdnPurge]
 
@@ -140,15 +143,16 @@ defmodule Brando.ContentEvents do
   def debounce_seconds, do: Keyword.get(config(), :debounce_seconds, @default_debounce)
 
   @doc """
-  The modules that receive every event: Brando's webhooks, IndexNow and
-  search index, then the configured subscribers.
+  The modules that receive every event: Brando's webhooks, IndexNow,
+  search index and notification routes, then the configured subscribers.
   """
   @spec subscribers() :: [module()]
   def subscribers do
     builtin =
       if(Brando.Webhooks.enabled?(), do: [Brando.Webhooks], else: []) ++
         if(Brando.IndexNow.available?(), do: [Brando.IndexNow], else: []) ++
-        if(Brando.Search.enabled?(), do: [Brando.Search], else: [])
+        if(Brando.Search.enabled?(), do: [Brando.Search], else: []) ++
+        if(Brando.Notifications.Routing.enabled?(), do: [Brando.Notifications.Routing], else: [])
 
     builtin ++ Keyword.get(config(), :subscribers, [])
   end

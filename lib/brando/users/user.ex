@@ -217,6 +217,15 @@ defmodule Brando.Users.User do
             input :reset_password_on_first_login, :toggle, label: t("Reset password on first login", UserConfig)
             input :show_mutation_notifications, :toggle, label: t("Show mutation notifications", UserConfig)
             input :prefers_reduced_motion, :toggle, label: t("Prefers reduced motion", UserConfig)
+
+            input :notification_digest, :radios,
+              label: t("Email notifications", UserConfig),
+              instructions: t("Mentions and the notifications an administrator sends you by email.", UserConfig),
+              options: [
+                %{label: t("One email for each", UserConfig), value: :off},
+                %{label: t("A daily summary", UserConfig), value: :daily},
+                %{label: t("A weekly summary, on Mondays", UserConfig), value: :weekly}
+              ]
           end
         end
 
