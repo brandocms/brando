@@ -94,5 +94,10 @@ defmodule Brando.Plug.LivePreviewTest do
 
     assert conn.halted == true
     assert conn.resp_body =~ "</main><!-- BRANDO LIVE PREVIEW -->"
+
+    # The preview's socket token is for this session, which it lasts as long as
+    [_, socket_token] = Regex.run(~r/<meta name="user_token" content="([^"]+)">/, conn.resp_body)
+    session_id = Brando.Users.token_id(token)
+    assert {:ok, %{session_id: ^session_id}} = Brando.Users.verify_socket_token(socket_token)
   end
 end

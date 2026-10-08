@@ -84,7 +84,7 @@ defmodule BrandoAdmin.UserTwoFactorLive do
               >
                 {gettext("Verify")}
               </button>
-              <.link href="/admin/logout" class="login-link">{gettext("Back to login")}</.link>
+              <Auth.back_to_login />
             </div>
           <% else %>
             <details class="login-recovery">
@@ -100,11 +100,12 @@ defmodule BrandoAdmin.UserTwoFactorLive do
               </div>
             </details>
             <div class="login-actions">
-              <.link href="/admin/logout" class="login-link">{gettext("Back to login")}</.link>
+              <Auth.back_to_login />
             </div>
           <% end %>
         </.form>
       </div>
+      <Auth.logout_form />
     </Auth.shell>
     """
   end

@@ -110,6 +110,28 @@ defmodule BrandoAdmin.Components.Auth do
     """
   end
 
+  @doc """
+  The form that signs out — a DELETE to `/admin/logout`, with the CSRF
+  token — for `back_to_login/1`, which may sit inside another form.
+  """
+  def logout_form(assigns) do
+    ~H"""
+    <.form for={%{}} id="logout_form" action="/admin/logout" method="delete"></.form>
+    """
+  end
+
+  @doc """
+  "Back to login" on the screens of a sign-in waiting for its second step:
+  it ends the sign-in, submitting `logout_form/1`.
+  """
+  def back_to_login(assigns) do
+    ~H"""
+    <button type="submit" form="logout_form" class="login-link" data-testid="back-to-login">
+      {gettext("Back to login")}
+    </button>
+    """
+  end
+
   @doc "A message above the form: `:error`, or `:info` for what has happened."
   attr :kind, :atom, values: [:info, :error], default: :info
   attr :message, :string, default: nil

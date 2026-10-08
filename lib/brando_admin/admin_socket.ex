@@ -23,11 +23,17 @@ defmodule BrandoAdmin.AdminSocket do
     connect(params, socket)
   end
 
+  # The token names the user's session (`Brando.Users.build_socket_token/2`):
+  # the socket connects only while that session lasts, and its id is the
+  # session's, so ending the session — logging out, revoking it, a password
+  # change, a two-factor reset, deactivating the account — disconnects it
+  # with the session's LiveViews (`Brando.Users.disconnect_session/1`), and
+  # its reconnects are turned away. The user's other sessions keep theirs.
   @impl true
   def connect(%{"token" => token}, socket) do
-    with {:ok, user_id} <- Brando.Users.verify_token(token),
-         :ok <- Brando.Authorization.Realtime.authorize_account(user_id) do
-      {:ok, assign(socket, :user_id, user_id)}
+    with {:ok, session} <- Brando.Users.verify_socket_token(token),
+         :ok <- Brando.Authorization.Realtime.authorize_account(session.user_id) do
+      {:ok, assign(socket, user_id: session.user_id, session_id: session.session_id, socket_id: session.socket_id)}
     else
       _ -> :error
     end
@@ -38,16 +44,15 @@ defmodule BrandoAdmin.AdminSocket do
     :error
   end
 
-  # Socket id's are topics that allow you to identify all sockets for a given user:
-  #
-  #     def id(socket), do: "users_socket:#{socket.assigns.user_id}"
-  #
-  # Would allow you to broadcast a "disconnect" event and terminate
-  # all active sockets and channels for a given user:
-  #
-  #     KoiWeb.Endpoint.broadcast("users_socket:#{user.id}", "disconnect", %{})
-  #
-  # Returning `nil` makes this socket anonymous.
+  # The session's `Brando.Users.live_socket_id/1`
   @impl true
-  def id(socket), do: "brando_admin_socket:#{socket.assigns.user_id}"
+  def id(socket), do: socket.assigns.socket_id
+
+  @doc """
+  Whether the session the socket connected with is still valid. The
+  channels check it as they join: the socket only subscribes to its id
+  after `connect/2`, so a session ended in between would go unnoticed.
+  """
+  @spec session_valid?(Phoenix.Socket.t()) :: boolean()
+  def session_valid?(socket), do: Brando.Users.session_valid?(socket.assigns[:session_id], socket.assigns[:user_id])
 end

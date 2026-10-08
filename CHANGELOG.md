@@ -32,6 +32,25 @@ production dump.
   its crontab as well. See
   [Webhooks and content events](guides/webhooks.md).
 
+- **Signing out takes a DELETE, and the admin socket belongs to a session.**
+  `GET /admin/logout` no longer signs out: it asks "Sign out?" and signs out
+  from a button, so another site cannot sign an admin out with a link or an
+  image. Links to it keep working, one click later. Brando's own sign-out
+  buttons send `DELETE /admin/logout` with the CSRF token (`POST` works too,
+  for an endpoint without `Plug.MethodOverride`). The admin socket's token now
+  names the session, and the socket shares the session's id with its
+  LiveViews: ending a session (signing out, revoking it, a password change or
+  reset, a two-factor reset, deactivating or deleting the user) disconnects
+  both, and the old token no longer connects. The session's socket id
+  (`live_socket_id`) is now made from a hash of its token; a session from
+  before the upgrade gets the new id on its next request.
+  `Brando.Users.build_token/1`
+  and `verify_token/1` are deprecated, and `BrandoAdmin.AdminSocket` no
+  longer accepts their tokens; use `build_socket_token/2` and
+  `verify_socket_token/1`. Open admin tabs pick up a new token when their
+  LiveView reconnects after the deploy; open live previews need a reload. See
+  [User accounts and sessions](guides/users.md#understand-sign-in-and-session-lifetime).
+
 - **Notes need two tables.** `brando_203` creates `entry_notes` and
   `note_mentions` in every environment. Run `mix brando.gen.migrations` and
   `mix ecto.migrate`; until then the entry editor's Notes panel stays empty

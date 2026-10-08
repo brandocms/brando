@@ -35,7 +35,10 @@ test('related entries can be cleared, saved and selected again without losing ot
   async function select(title) {
     await field.getByRole('button', { name: 'Select entries', exact: true }).click()
     await filter.fill(title)
-    await dialog.locator('.identifier:visible').click()
+    // The filter hides the other entries a moment after typing: wait for it
+    const match = dialog.locator('.identifier:visible')
+    await expect(match).toHaveCount(1)
+    await match.click()
     await syncLV(page)
     await filter.press('Escape')
     await filter.press('Escape')

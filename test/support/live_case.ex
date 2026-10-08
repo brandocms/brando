@@ -83,7 +83,7 @@ defmodule Brando.LiveCase do
     conn
     |> Plug.Test.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
-    |> Plug.Conn.put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+    |> Plug.Conn.put_session(:live_socket_id, Brando.Users.live_socket_id(token))
   end
 
   @doc """

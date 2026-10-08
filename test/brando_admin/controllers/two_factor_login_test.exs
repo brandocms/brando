@@ -104,6 +104,21 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       assert html =~ user.email
     end
 
+    test "Back to login ends the waiting sign-in with a DELETE", %{user: user} do
+      conn = log_in(anonymous(), user)
+      pending = get_session(conn, :pending_login_token)
+
+      {:ok, _view, html} = live(next(conn), "/admin/login/two-factor")
+      assert html =~ ~s(form="logout_form")
+      assert html =~ ~r/<form[^>]*id="logout_form"[^>]*>/
+      refute html =~ ~s(href="/admin/logout")
+
+      conn = conn |> next() |> delete("/admin/logout")
+      assert redirected_to(conn) == "/admin/login"
+      refute get_session(conn, :pending_login_token)
+      assert is_nil(Users.get_pending_login(pending))
+    end
+
     test "a remember-me cookie holding the waiting sign-in's token is no way around it", %{user: user} do
       conn = log_in(anonymous(), user, %{"remember_me" => "true"})
       pending = get_session(conn, :pending_login_token)

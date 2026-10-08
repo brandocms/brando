@@ -29,11 +29,13 @@ defmodule Brando.UserChannel do
       |> Application.spec(:vsn)
       |> to_string()
 
-    if to_string(assigned_user_id) == user_id and Realtime.authorize_account(assigned_user_id) == :ok do
+    if to_string(assigned_user_id) == user_id and BrandoAdmin.AdminSocket.session_valid?(socket) and
+         Realtime.authorize_account(assigned_user_id) == :ok do
       Realtime.subscribe()
       {:ok, %{vsn: vsn}, socket}
     else
-      :error
+      # A bare :error crashed the join instead of refusing it
+      {:error, %{reason: "forbidden"}}
     end
   end
 

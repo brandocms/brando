@@ -17609,3 +17609,13 @@ msgstr "Sendt, men svaret kunne ikke lagres"
 #, elixir-autogen, elixir-format
 msgid "Shows the type, id, URL, status and changed fields of every entry, drafts included, and sends them to URLs the person chooses."
 msgstr "Viser type, id, URL, status og endrede felt for alle oppføringer, også utkast, og sender dem til URL-er personen velger."
+
+#: lib/brando_admin/live/user_logout_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sign out?"
+msgstr "Logge ut?"
+
+#: lib/brando_admin/live/user_logout_live.ex
+#, elixir-autogen, elixir-format
+msgid "You are signed in as %{email}. Signing out ends your session in this browser; your other devices stay signed in."
+msgstr "Du er logget inn som %{email}. Når du logger ut, avsluttes økten i denne nettleseren. Andre enheter forblir innlogget."

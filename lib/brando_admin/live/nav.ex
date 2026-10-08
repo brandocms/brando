@@ -236,9 +236,10 @@ defmodule BrandoAdmin.Nav do
                     </.link>
                   </li>
                   <li>
-                    <.link href="/admin/logout" data-testid="logout" tabindex="0">
-                      {gettext("Log out")}
-                    </.link>
+                    <%!-- A DELETE with the CSRF token: GET /admin/logout only asks --%>
+                    <.form for={%{}} id="logout-form" action="/admin/logout" method="delete">
+                      <button type="submit" data-testid="logout">{gettext("Log out")}</button>
+                    </.form>
                   </li>
                 </ul>
               </section>
