@@ -6,6 +6,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
   use Brando.LiveCase
 
   import Brando.EditSessionEditors, only: [await: 1]
+  import Ecto.Query, only: [from: 2]
 
   alias Brando.Pages.Page
 
@@ -230,11 +231,11 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
 
     test "a blur releases the field for the other editors", c do
       focus(c.a, "title")
-      assert_receive {:active_field, "page[title]", user_id} when user_id == c.me.id
+      assert_receive {:active_field, "page[title]", user_id, _tab} when user_id == c.me.id
       assert_push_event(c.b, "b:set_active_field", %{field: "page[title]"})
 
       blur(c.a)
-      assert_receive {:active_field, nil, user_id} when user_id == c.me.id
+      assert_receive {:active_field, nil, user_id, _tab} when user_id == c.me.id
       assert_push_event(c.b, "b:set_active_field", %{field: nil})
       await(fn -> presence_meta(c.page, c.me).active_field == nil end)
     end
@@ -248,16 +249,61 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       user_id = c.me.id
       assert_push_event(c.b, "b:clear_user_presence", %{user_id: ^user_id}, 2_000)
     end
+
+    test "an image field is locked while its drawer is open, and closing the drawer releases it", c do
+      image = Factory.insert(:image, creator: c.me, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+      Repo.update_all(from(p in Page, where: p.id == ^c.page.id), set: [meta_image_id: image.id])
+      a = open(c.conn, c.page)
+
+      a |> element("#page_meta_image-media button[phx-click*=open_image]") |> render_click()
+      assert_push_event(c.b, "b:set_active_field", %{field: "page[meta_image]"})
+
+      a |> element("#image-drawer .drawer-close-button") |> render_click()
+      assert_push_event(c.b, "b:set_active_field", %{field: nil})
+    end
+
+    # One editor with the entry open in two tabs, each in its own field: the
+    # other editor sees both, and closing one tab releases only its field.
+    test "locks are per tab, and closing a tab releases only its field", c do
+      second_tab = open(c.conn, c.page)
+
+      focus(c.a, "title")
+      assert_push_event(c.b, "b:set_active_field", %{field: "page[title]", tab: first})
+      focus(second_tab, "uri")
+      assert_push_event(c.b, "b:set_active_field", %{field: "page[uri]", tab: second})
+      assert first != second
+
+      kill_live(c.a)
+      assert_push_event(c.b, "b:set_active_field", %{field: nil, tab: ^first}, 2_000)
+      refute_push_event(c.b, "b:set_active_field", %{field: nil, tab: ^second}, 300)
+      refute_push_event(c.b, "b:clear_user_presence", %{}, 100)
+    end
+
+    # Moving to another field updates the tab's presence: a leave and a join
+    # of the same tab. That must not release the field it moved to.
+    test "a tab moving between fields is never released by its own presence update", c do
+      _second_tab = open(c.conn, c.page)
+
+      focus(c.a, "title")
+      assert_push_event(c.b, "b:set_active_field", %{field: "page[title]", tab: tab})
+      focus(c.a, "uri")
+      assert_push_event(c.b, "b:set_active_field", %{field: "page[uri]", tab: ^tab})
+      await(fn -> Enum.any?(presence_metas(c.page, c.me), &(&1.active_field == "page[uri]")) end)
+      settle(c.b)
+
+      refute_push_event(c.b, "b:set_active_field", %{field: nil, tab: ^tab}, 300)
+    end
   end
 
   defp messages, do: self() |> Process.info(:messages) |> elem(1)
 
-  defp presence_meta(page, user) do
+  defp presence_meta(page, user), do: page |> presence_metas(user) |> List.first(%{active_field: :absent})
+
+  defp presence_metas(page, user) do
     "url:/admin/pages/update/#{page.id}"
     |> Brando.Tenant.Topic.scoped()
     |> Brando.presence().list()
-    |> then(&(Map.get(&1, to_string(user.id)) || Map.get(&1, user.id) || %{metas: [%{active_field: :absent}]}))
+    |> then(&(Map.get(&1, to_string(user.id)) || Map.get(&1, user.id) || %{metas: []}))
     |> Map.get(:metas)
-    |> hd()
   end
 end

@@ -103,7 +103,7 @@ export default (app) => ({
     })
 
     this.handleEvent('b:clear_user_presence', ({ user_id }) => {
-      this.releaseField(user_id)
+      this.releaseField(`[data-user-id="${CSS.escape(String(user_id))}"]`)
 
       // Remove block and field presence for this user
       clearUserPresence(this.js(), user_id)
@@ -115,11 +115,16 @@ export default (app) => ({
       this.dirtyFields.set(user_id, fields, label)
     })
 
-    // Another editor moved to an entry field, which is locked for us while
-    // they are in it, or left it (`field` is null), which releases it.
+    // Another editor's tab moved to an entry field, which is locked for us
+    // while they are in it, or left it (`field` is null), which releases it.
+    // Locks are per tab: one editor can be in two fields from two tabs.
     this.handleEvent('b:set_active_field', (opts) => {
+      const tab = opts.tab
+        ? `[data-tab="${CSS.escape(String(opts.tab))}"]`
+        : `[data-user-id="${CSS.escape(String(opts.user_id))}"]`
+
       if (!opts.field) {
-        this.releaseField(opts.user_id)
+        this.releaseField(tab)
         return
       }
 
@@ -132,10 +137,8 @@ export default (app) => ({
       this.follow.seen(opts.user_id, fieldPresence?.closest('.field-wrapper'))
 
       if (fieldPresence) {
-        // see if we find any other presence indicators from this user
-        const otherFieldPresence = document.querySelector(
-          `.field-presence-user[data-user-id="${opts.user_id}"]`
-        )
+        // the field this tab was in before
+        const otherFieldPresence = document.querySelector(`.field-presence-user${tab}`)
 
         if (otherFieldPresence) {
           // if it's presence indicator for the same field, just return
@@ -144,16 +147,12 @@ export default (app) => ({
           if (otherFieldPresenceFor === opts.field) {
             return
           }
-          // Unlock the old field
-          const oldFieldWrapper = otherFieldPresence.closest('.field-wrapper')
-          if (oldFieldWrapper) {
-            this.js().removeClass(oldFieldWrapper, 'field-locked')
-          }
-          otherFieldPresence.remove()
+          this.releaseField(tab)
         }
         // create a new presence indicator
         const presence = document.createElement('div')
         presence.setAttribute('data-user-id', opts.user_id)
+        if (opts.tab) presence.setAttribute('data-tab', opts.tab)
         presence.setAttribute('data-presence-for', opts.field)
         presence.classList.add('field-presence-user')
         presence.style.setProperty('--presence-color', color)
@@ -182,16 +181,17 @@ export default (app) => ({
     })
   },
 
-  // Removes an editor's avatar from the entry field they were in, and
-  // unlocks it.
-  releaseField(userId) {
-    document.querySelectorAll(`.field-presence-user[data-user-id="${userId}"]`)
+  // Removes the avatars matching `selector` (a tab's, or all of a user's)
+  // from the entry fields they were in, and unlocks a field nobody else is
+  // in.
+  releaseField(selector) {
+    document.querySelectorAll(`.field-presence-user${selector}`)
       .forEach(el => {
         const fieldWrapper = el.closest('.field-wrapper')
-        if (fieldWrapper) {
+        el.remove()
+        if (fieldWrapper && !fieldWrapper.querySelector('.field-presence-user')) {
           this.js().removeClass(fieldWrapper, 'field-locked')
         }
-        el.remove()
       })
   },
 

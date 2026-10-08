@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
     <Content.drawer
       id="image-drawer"
       title={gettext("Image details")}
-      close={close_image()}
+      close={close_image(@myself)}
       z={1001}
       narrow
       light
@@ -216,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
       </.form>
       <:footer>
         <span>{gettext("Shared image settings")}</span>
-        <button type="button" class="workspace-button primary" phx-click={close_image()}>{gettext("Done")}</button>
+        <button type="button" class="workspace-button primary" phx-click={close_image(@myself)}>{gettext("Done")}</button>
       </:footer>
     </Content.drawer>
     """
@@ -323,12 +323,16 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
   def reset_image_field(js \\ %JS{}, target) do
     js
     |> JS.push("reset_image_field", target: target)
+    |> JS.push("blur", target: target)
     |> toggle_drawer("#image-drawer")
   end
 
-  def close_image(js \\ %JS{}) do
+  # Done, ×, the backdrop and Escape (`data-modal-close`) all close here. The
+  # blur releases the field for the other editors (`Form.focus_field/2`).
+  def close_image(js \\ %JS{}, target) do
     js
     |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> JS.push("blur", target: target)
     |> toggle_drawer("#image-drawer")
   end
 

@@ -1117,14 +1117,22 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_dirty_fields_info(_, socket), do: {:cont, socket}
 
-  # `field` is nil when the editor left the field, which releases it.
-  defp handle_hooks_active_field_info({:active_field, field, user_id}, socket) do
+  # The field a tab is in; `field` is nil when it left the field, which
+  # releases it. Locks are per tab: our own tab records its field in its
+  # presence meta (for editors who join later), our other tabs are not shown
+  # as locks to us, and another editor's tabs each lock their own field.
+  defp handle_hooks_active_field_info({:active_field, field, user_id, tab}, socket) do
     socket =
-      if user_id == socket.assigns.current_user.id do
-        Brando.presence().update_active_field(socket.assigns.uri.path, user_id, field)
-        socket
-      else
-        push_event(socket, "b:set_active_field", %{user_id: user_id, field: field})
+      cond do
+        tab == BrandoAdmin.Presence.tab() ->
+          Brando.presence().update_active_field(socket.assigns.uri.path, user_id, field)
+          socket
+
+        user_id == socket.assigns.current_user.id ->
+          socket
+
+        true ->
+          push_event(socket, "b:set_active_field", %{user_id: user_id, field: field, tab: tab})
       end
 
     {:halt, socket}

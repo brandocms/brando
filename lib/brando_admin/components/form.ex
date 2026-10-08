@@ -212,6 +212,9 @@ defmodule BrandoAdmin.Components.Form do
   # indicators are event-driven, so a joiner would otherwise not see the
   # field we're editing as locked (triggered from the :editor_joined
   # handler in LiveView.Form alongside ship_field_changes)
+  # An image, video or file field opened its drawer (see `focus_field/2`).
+  def update(%{event: "focus_field", field: field}, socket), do: {:ok, focus_field(socket, field)}
+
   def update(%{event: "reship_active_field"}, socket) do
     entry = socket.assigns[:entry]
     field = socket.assigns[:focused_field]
@@ -1501,7 +1504,7 @@ defmodule BrandoAdmin.Components.Form do
   # A picker SELECT has to commit the FK exactly like an upload does. It used to
   # only assign `edit_image`/`image_changeset`, leaving the id to reach the
   # changeset through the drawer's form submit — which is dispatched by the close
-  # BUTTON (`close_image/1`). Dismissing the drawer any other way (Esc, backdrop,
+  # BUTTON (`close_image/2`). Dismissing the drawer any other way (Esc, backdrop,
   # navigating away) therefore lost the selection silently.
   #
   # Block-level picks are excluded: they carry a `block_target` and commit
@@ -2445,15 +2448,32 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # This editor moved to `field` (an input name): the other editors lock it,
+  # and leaving the field it was in ships what we changed there.
+  defp focus_field(socket, field) do
+    entry = socket.assigns.entry
+    old_field = socket.assigns[:focused_field]
+
+    if entry && entry.id do
+      broadcast_active_field(socket, field)
+
+      # Clear block focus/lock when a regular field gets focus
+      send(self(), :clear_block_focus)
+    end
+
+    socket = assign(socket, :focused_field, field)
+
+    if old_field && old_field != field,
+      do: ship_all_field_changes(socket),
+      else: socket
+  end
+
   # The field this editor is in (an input name, `page[title]`), or `nil`
   # when it left it: the other editors lock and release the field, and the
   # editor's presence carries it for those who join later.
   defp broadcast_active_field(socket, field) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, socket.assigns.entry.id),
-      {:active_field, field, socket.assigns.current_user.id}
-    )
+    %{schema: schema, entry: entry, current_user: user} = socket.assigns
+    BrandoAdmin.Presence.broadcast_active_field(schema, entry.id, field, user.id)
   end
 
   # Tells the other editors which of our changed fields they do not have yet,
@@ -3950,24 +3970,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # Others see the field we are in as locked (`active_field`) until we leave
   # it. Leaving a field ships what we changed; the focus moves first, so a
-  # change another editor made to the field we left applies.
-  def handle_event("focus", %{"field" => field}, socket) do
-    entry = socket.assigns.entry
-    old_field = socket.assigns[:focused_field]
-
-    if entry && entry.id do
-      broadcast_active_field(socket, field)
-
-      # Clear block focus/lock when a regular field gets focus
-      send(self(), :clear_block_focus)
-    end
-
-    socket = assign(socket, :focused_field, field)
-
-    if old_field && old_field != field,
-      do: {:noreply, ship_all_field_changes(socket)},
-      else: {:noreply, socket}
-  end
+  # change another editor made to the field we left applies. An image,
+  # video or file field is "in" while its drawer is open: the drawer's close
+  # sends the blur.
+  def handle_event("focus", %{"field" => field}, socket), do: {:noreply, focus_field(socket, field)}
 
   def handle_event("focus", _, socket) do
     {:noreply, socket}

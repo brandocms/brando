@@ -131,7 +131,7 @@ defmodule BrandoAdmin.Hooks do
     else
       # Another of the user's sessions is still here, perhaps in a different
       # place (the admin form or the website).
-      {:halt, assign_uri_presence(socket, presence)}
+      {:halt, socket |> assign_uri_presence(presence) |> release_closed_tabs(presence)}
     end
   end
 
@@ -163,21 +163,34 @@ defmodule BrandoAdmin.Hooks do
           # find the meta with the latest last_active value
           latest_meta = Enum.max_by(metas, &Map.get(&1, :last_active))
 
-          updated_socket =
-            if Map.get(latest_meta, :active_field) do
-              push_event(updated_socket, "b:set_active_field", %{
-                user_id: presence.user.id,
-                field: latest_meta.active_field
-              })
-            else
-              updated_socket
-            end
-
           updated_socket
+          |> push_active_fields(presence, metas)
           |> assign_uri_presence(presence)
           |> replay_dirty_fields(presence, latest_meta)
       end
     )
+  end
+
+  # The fields another editor's tabs are in, for a form that just opened.
+  defp push_active_fields(%{assigns: %{current_user: %{id: user_id}}} = socket, %{user: %{id: user_id}}, _metas),
+    do: socket
+
+  defp push_active_fields(socket, presence, metas) do
+    for %{active_field: field} = meta when is_binary(field) <- metas, reduce: socket do
+      socket -> push_event(socket, "b:set_active_field", %{user_id: presence.user.id, field: field, tab: meta[:tab]})
+    end
+  end
+
+  # A tab of a user who still has others here closed: its field lock goes,
+  # theirs stay. Updating a tab's meta (moving to another field) is a leave
+  # and a join of the same tab, which is still among `metas`, so this never
+  # undoes the field it moved to.
+  defp release_closed_tabs(socket, presence) do
+    open = MapSet.new(presence.metas, &Map.get(&1, :tab))
+
+    for %{tab: tab} <- Map.get(presence, :left, []), tab != nil, not MapSet.member?(open, tab), reduce: socket do
+      socket -> push_event(socket, "b:set_active_field", %{user_id: presence.user.id, field: nil, tab: tab})
+    end
   end
 
   defp replay_dirty_fields(%{assigns: %{current_user: %{id: user_id}}} = socket, %{user: %{id: user_id}}, _meta),

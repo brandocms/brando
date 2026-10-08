@@ -1544,11 +1544,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     field_name = if open?, do: "#{field.form.name}[#{field.field}]"
 
     if entry_id && current_user do
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        Brando.Tenant.Topic.entry("active_field", field.form.data.__struct__, entry_id),
-        {:active_field, field_name, current_user.id}
-      )
+      BrandoAdmin.Presence.broadcast_active_field(field.form.data.__struct__, entry_id, field_name, current_user.id)
     end
 
     socket

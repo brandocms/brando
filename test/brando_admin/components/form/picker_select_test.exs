@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form.PickerSelectTest do
   # An UPLOAD commits the FK immediately through `commit_entry_field_asset/4`.
   # A SELECT only assigned `edit_image` / `image_changeset`; the id reached the
   # entry changeset solely through the drawer's form submit, which is dispatched
-  # by the close BUTTON (`close_image/1`). Dismiss the drawer any other way —
+  # by the close BUTTON (`close_image/2`). Dismiss the drawer any other way —
   # Esc, the backdrop, navigating away — and the selection was silently lost.
   #
   # Esc/backdrop are client-side, so what is asserted here is the invariant that

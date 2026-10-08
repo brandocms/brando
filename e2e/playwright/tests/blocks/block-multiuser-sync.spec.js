@@ -450,6 +450,22 @@ test.describe('Multi-user block sync', () => {
     await expect(aLocks).toHaveCount(1, { timeout: 5000 })
     await secondUserPage.goto('/admin')
     await expect(aLocks).toHaveCount(0, { timeout: 10000 })
+
+    // Locks are per tab: A in two tabs, in two fields, locks both for B.
+    // Closing one tab releases only its field.
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+    const aSecondTab = await page.context().newPage()
+    await aSecondTab.goto(entryUrl)
+    await syncLV(aSecondTab)
+
+    await aTitle.click()
+    await aSecondTab.getByLabel('URI').click()
+    await expect(bLocks).toHaveCount(2, { timeout: 5000 })
+
+    await aSecondTab.close()
+    await expect(bLocks).toHaveCount(1, { timeout: 10000 })
+    await expect(bLocks.getByLabel('Title', { exact: true })).toBeAttached()
   })
 
   test("A's child delete syncs to B immediately, no blur needed", async ({

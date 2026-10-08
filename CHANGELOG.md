@@ -1673,7 +1673,11 @@ production dump.
   the field someone is in waits until they leave it, and applies unless
   they typed. Leaving a field, a rich text field included, unlocks it for
   the others; before, it stayed locked until the editor focused another
-  field or left the entry.
+  field or left the entry. An image, video or file field is locked while
+  its drawer is open and unlocked when it closes (Done, ×, the backdrop or
+  Escape), and a multi-select when its options close. Locks belong to a
+  browser tab: someone with the entry open in two tabs locks a field in
+  each, and closing one tab unlocks only its field.
 
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is

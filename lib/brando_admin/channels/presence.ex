@@ -1,6 +1,32 @@
 defmodule BrandoAdmin.Presence do
   @moduledoc false
 
+  @doc """
+  The browser tab this process serves. An admin LiveView and its components
+  run in one process per tab (a reconnect is a new process, so a new tab),
+  and entry field locks belong to a tab, not to its user: one user can have
+  the entry open in two tabs, in two fields.
+  """
+  def tab do
+    self()
+    |> :erlang.term_to_binary()
+    |> then(&:crypto.hash(:sha256, &1))
+    |> binary_part(0, 12)
+    |> Base.url_encode64(padding: false)
+  end
+
+  @doc """
+  Tells the other editors of an entry which field this tab is in (an input
+  name, `page[title]`), or that it left it (`nil`), which releases the field.
+  """
+  def broadcast_active_field(schema, entry_id, field, user_id) do
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      Brando.Tenant.Topic.entry("active_field", schema, entry_id),
+      {:active_field, field, user_id, tab()}
+    )
+  end
+
   defmodule LobbyFetcher do
     @moduledoc false
 
@@ -168,7 +194,9 @@ defmodule BrandoAdmin.Presence do
             :error -> []
           end
 
-        user_data = %{user: presence.user, metas: metas}
+        # `metas` are the user's sessions still here, `left` the ones that
+        # went. An update of a meta is a leave and a join of the same tab.
+        user_data = %{user: presence.user, metas: metas, left: Map.get(presence, :metas, [])}
 
         Phoenix.PubSub.local_broadcast(
           pubsub_server,
@@ -225,7 +253,8 @@ defmodule BrandoAdmin.Presence do
             %{
               last_active: timestamp,
               active_field: nil,
-              dirty_fields: []
+              dirty_fields: [],
+              tab: BrandoAdmin.Presence.tab()
             },
             meta
           )

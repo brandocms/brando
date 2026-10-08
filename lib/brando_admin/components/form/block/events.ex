@@ -722,11 +722,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     current_user_id = socket.assigns.current_user_id
     entry = socket.assigns.entry
 
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      Brando.Tenant.Topic.entry("active_field", entry.__struct__, entry.id),
-      {:active_field, field_name, current_user_id}
-    )
+    BrandoAdmin.Presence.broadcast_active_field(entry.__struct__, entry.id, field_name, current_user_id)
 
     {:halt, socket}
   end
