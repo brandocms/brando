@@ -7,6 +7,30 @@ Apply it alongside existing components and the screen's functional requirements.
 The measurements below are starting points from Utilities, not a mandate to
 restyle every existing screen.
 
+Read the sections your screen needs. Every admin change uses the first group;
+the second covers particular components and screens.
+
+- Foundations: [Reference](#reference) (the Utilities example) ·
+  [Task and hierarchy](#start-with-the-task-and-hierarchy) ·
+  [Spacing](#make-spacing-a-system) ·
+  [Controls and native selects](#keep-controls-compact-and-predictable) ·
+  [Typography and colour](#use-typography-and-color-to-establish-hierarchy) ·
+  [Copy](#write-factual-useful-copy) ·
+  [Metadata](#present-metadata-as-information) ·
+  [Verify the rendered result](#verify-the-rendered-result)
+- Components and screens: [Tab views](#tab-views) ·
+  [AI actions](#ai-actions-and-suggestions) ·
+  [Confirmations, alerts and toasts](#confirmations-alerts-and-toasts) ·
+  [Text diffs](#shared-text-diffs) · [External references](#external-references) ·
+  [Workspaces and form sections](#shared-workspaces-and-form-sections) ·
+  [Listings and editors](#listing-and-editor-refinement-checks) ·
+  [Entry heading and settings screens](#entry-editor-heading-and-settings-screens) ·
+  [Dashboard](#dashboard) · [Pending subform sweep](#pending-subform-sweep) ·
+  [Inline subform tables](#inline-subform-tables) · [Icons](#icons) ·
+  [Modals](#approved-modal-direction) ·
+  [Dropdowns, identifiers and entry panels](#shared-dropdowns-and-entry-panels) ·
+  [Gallery grid](#gallery-grid-contact-sheet) · [Transformer cards](#transformer-cards)
+
 ## Reference
 
 The Utilities page is a worked example. Its main content shows the approved
@@ -113,6 +137,18 @@ Use consistent icons from the existing icon system. A disclosure chevron should
 have a consistent size, stroke, alignment, and open state. Omit decorative arrows
 that add no information. Keep visible keyboard focus, accessible names for
 icon-only controls, and understandable loading and disabled states.
+
+### Native selects
+
+Form fields use the existing admin select component. A small native select on
+a configuration screen takes the shared `admin-select` treatment in
+`assets/css/components/Form/Input/Select.css`, rather than browser-default
+chrome or styling of its own: the surrounding inputs' height, font, radius and
+focus ring, a small chevron inset from the right edge, and padding for long
+translated labels. Check the closed control, the open options, keyboard
+selection and the narrow layout in the browser, with screenshots, and read
+the option labels on screen in Norwegian: status names and field labels show
+their translations, not humanised English.
 
 ## Tab views
 
