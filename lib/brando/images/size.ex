@@ -15,6 +15,10 @@ defmodule Brando.Images.Size do
 
     * `size` - the geometry: `"700"` (a width), `"x400"` (a height) or
       `"400x400"`, optionally with an ImageMagick flag such as `>`. Required.
+      The image is fitted inside the geometry, keeping its proportions, and a
+      smaller original is enlarged; a width alone is fitted inside a square of
+      that width. Processing reads past the flags: `"400x400>"` is processed
+      like `"400x400"`, and `"50%"` is 50 pixels, not half.
     * `quality` - an integer from 1 to 100. Processing uses 100 without one.
     * `crop` - crop to the geometry around the image's focal point.
     * `ratio` - an aspect ratio such as `"3/2"`. A cropped size that gives only
