@@ -48,6 +48,7 @@ defmodule Brando.SEO.SharePreviewTest do
 
   describe "values" do
     setup do
+      preserve_cache(:seo)
       Brando.Cache.SEO.set()
       :ok
     end

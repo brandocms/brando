@@ -6,7 +6,7 @@
         included: ["lib/", "src/", "web/", "apps/", "test/"],
         excluded: [~r"/_build/", ~r"/deps/"]
       },
-      requires: [],
+      requires: ["credo/checks/*.ex"],
       check_for_updates: true,
       #
       # You can customize the parameters of any check by adding a second element
@@ -114,7 +114,10 @@
         {ExSlop.Check.Readability.ObviousComment, [additional_keywords: []]},
         {ExSlop.Check.Readability.StepComment, []},
         {ExSlop.Check.Readability.NarratorComment, []},
-        {ExSlop.Check.Readability.UnaliasedModuleUse, []}
+        {ExSlop.Check.Readability.UnaliasedModuleUse, []},
+
+        # Brando's own checks (credo/checks)
+        {Brando.Credo.Check.TestCacheRestore, []}
       ]
     }
   ]

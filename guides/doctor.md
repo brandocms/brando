@@ -10,9 +10,9 @@ do about each one.
 
 ```
 $ mix brando.doctor
-Brando 0.55.0-dev · Phoenix 1.8.15 · LiveView 1.2.12
+Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.12
 
-✓ Versions                   Elixir 1.20.3 · OTP 28
+✓ Versions                   Brando 0.55.0-dev (git 12c2289, branch main) · Elixir 1.20.3 · OTP 28
 ✓ Migrations                 up to date
 ✓ Oban queues                6 queues, 0 stuck
 ✓ Configuration              URL, mailer and media settings in place
@@ -47,6 +47,7 @@ stopped, so it can run beside a running server and no job runs while it looks.
 | `--verbose` (`-v`) | Lists what each check found: the pending migrations, the stale modules, the files and lines of deprecated calls |
 | `--json` | Prints the report as JSON for scripts (see below) |
 | `--strict` | Fails on warnings as well as errors |
+| `--offline` | Does not ask Brando's git remote for its latest commit (see below) |
 
 The task exits with status 1 when a check finds an error, so CI can run it;
 with only warnings it exits 0, unless `--strict` is given. A skipped check
@@ -54,12 +55,41 @@ never fails.
 
 <!-- usage-rules:end -->
 
+## Which Brando is running
+
+The header and the Versions check name Brando's version and where it came
+from, so you can tell whether a fix is live:
+
+| Source | Shown as |
+| --- | --- |
+| A git dependency | `git 12c2289, branch main`: the locked commit, and its branch or tag. `--verbose` lists the full commit and the repository |
+| A Hex package | `Hex` |
+| A path dependency | `path ../brando`, relative to the application |
+| Brando's own repository | `this checkout` |
+
+The source is recorded when Brando is compiled, from what Mix gives the
+dependency, so it is the code that runs, also in a release where there is no
+`mix.lock`. Mix recompiles a git or Hex dependency from scratch when its lock
+entry changes.
+
+For a git dependency that follows a branch, `mix brando.doctor` also runs
+`git ls-remote` against the repository. When the branch is now at another
+commit, the Versions line says so (`main is now at a1b2c3d`) and `--verbose`
+suggests `mix deps.update brando`. This is a note, not a warning. The lookup
+gives up silently after three seconds, without network or for a repository
+that asks for credentials; `--offline` skips it. A tag or a pinned `ref:` is
+not looked up, and the admin never makes the call.
+
 `--json` prints:
 
 ```json
 {
   "status": "warning",
-  "versions": {"brando": "0.55.0", "elixir": "1.20.3", "otp": "28", "phoenix": "1.8.15", "live_view": "1.2.12"},
+  "versions": {
+    "brando": "0.55.0",
+    "brando_source": {"type": "git", "url": "https://github.com/brandocms/brando.git", "commit": "12c2289e98fa058a8168720b802c13b42a2c21b4", "branch": "main", "tag": null, "ref": null},
+    "elixir": "1.20.3", "otp": "28", "phoenix": "1.8.15", "live_view": "1.2.12"
+  },
   "counts": {"ok": 9, "warning": 3, "error": 0, "skipped": 0},
   "checks": [
     {"id": "migrations", "label": "Migrations", "status": "ok", "summary": "up to date", "fix": null, "items": ["54 run"]}
@@ -68,13 +98,15 @@ never fails.
 ```
 
 `status` is `ok`, `warning`, `error` or `skipped`; `items` is what
-`--verbose` lists. The ids are stable; the labels and summaries are prose.
+`--verbose` lists. `brando_source.type` is `git`, `hex` (with `version`),
+`path` (with `path`), `checkout` or `unknown`. The ids are stable; the labels
+and summaries are prose.
 
 ## What is checked
 
 | Check | Looks at |
 | --- | --- |
-| Versions | Elixir, OTP, Phoenix and LiveView against the versions this Brando supports |
+| Versions | Brando's version and source, and Elixir, OTP, Phoenix and LiveView against the versions this Brando supports |
 | Migrations | Public migrations not run (Brando's upgrade migrations included), tenant migrations not run in each environment, pending copies that differ from Brando's templates (as `mix brando.migrations.check`), and upgrade migrations Brando added since they were copied |
 | Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events`, `webhooks` and `search_index` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |
@@ -97,7 +129,8 @@ details name the environment.
 card. They run in the background when the page opens, so the page itself does
 not wait; "Run again" repeats them. Each row shows what was found, its status,
 the fix, and a link to the screen that fixes it where there is one. The
-details under a row are what `--verbose` prints.
+details under a row are what `--verbose` prints. The Versions row starts with
+the running Brando and its source.
 
 A release has no source tree, so in production the checks that read the
 project's files (admin assets and deprecations) are skipped and say so.

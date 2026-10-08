@@ -11,6 +11,9 @@ Paths are repository-relative. The parent changeset lives in
 `lib/brando_admin/live_view/form.ex` facade installs hooks through its compiler.
 For form declarations, use `guides/blueprint_forms.md` instead.
 
+`components/form.ex` is several thousand lines. Before reading it, find the
+area in [the section map](form-map.md) and grep for the names it lists.
+
 ## Find the state owner before changing delivery
 
 - Ordinary subforms update the parent changeset. Transformers own a stream and
@@ -38,8 +41,9 @@ For form declarations, use `guides/blueprint_forms.md` instead.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the
-  append-changeset and identity rules already in AGENTS.md rather than inventing
-  a second nested-form protocol.
+  append-changeset pattern in `docs/ecto-changeset-patterns.md` and the
+  component identity rules in AGENTS.md rather than inventing a second
+  nested-form protocol.
 
 ## Recovery and verification
 

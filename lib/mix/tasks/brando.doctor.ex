@@ -9,6 +9,7 @@ defmodule Mix.Tasks.Brando.Doctor do
       mix brando.doctor --verbose
       mix brando.doctor --json
       mix brando.doctor --strict
+      mix brando.doctor --offline
 
   It checks versions, pending migrations, Oban, required configuration, the
   admin's BrandoJS, image configs, module versions, the sitemap and
@@ -22,6 +23,12 @@ defmodule Mix.Tasks.Brando.Doctor do
     * `--verbose` lists what each check found.
     * `--json` prints the report as JSON, for scripts.
     * `--strict` fails on warnings too.
+    * `--offline` does not ask Brando's git remote for its latest commit.
+
+  The header and the Versions check name where Brando came from: a git commit
+  and branch, Hex, a local path, or this checkout. For a git branch, the
+  doctor runs `git ls-remote` (at most three seconds, and silent when it
+  fails) and notes when the branch has moved past the locked commit.
 
   Exits with status 1 when a check finds an error (or a warning, with
   `--strict`), so CI can run it. See the [System check guide](doctor.md).
@@ -32,7 +39,7 @@ defmodule Mix.Tasks.Brando.Doctor do
   alias Brando.Doctor
   alias Brando.Doctor.Report
 
-  @switches [verbose: :boolean, json: :boolean, strict: :boolean]
+  @switches [verbose: :boolean, json: :boolean, strict: :boolean, offline: :boolean]
   @aliases [v: :verbose]
 
   @impl Mix.Task
@@ -42,7 +49,7 @@ defmodule Mix.Tasks.Brando.Doctor do
     oban = start_quietly()
     Gettext.put_locale(Brando.Gettext, "en")
 
-    results = Doctor.run(mode: :mix, oban: oban, locale: "en", source?: true)
+    results = Doctor.run(mode: :mix, oban: oban, locale: "en", source?: true, offline?: opts[:offline] == true)
     versions = Doctor.versions()
 
     if opts[:json] do

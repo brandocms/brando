@@ -148,6 +148,11 @@ jobs:
       - name: Run strict Blueprint code analysis
         run: mix credo --strict lib/brando/blueprint.ex lib/brando/blueprint
 
+      # Brando's own checks (credo/checks). The glob, not the directory: Credo
+      # finds no files for a bare `test` argument.
+      - name: Check that tests put back the caches they change
+        run: mix credo --strict --checks Brando.Credo.Check.TestCacheRestore "test/**/*_test.exs"
+
       # Back to zero. The 251-module cycle this gate used to tolerate was not
       # the Blueprint DSL after all — it was a handful of accidental
       # compile-time calls, the last of which was a single struct literal in a

@@ -2,6 +2,8 @@ defmodule Brando.Test.Support do
   @moduledoc false
   import ExUnit.Assertions
 
+  alias Brando.Cache
+
   def assert_attr(target, attr, value) do
     assert Floki.attribute(target, attr) == value
     target
@@ -37,6 +39,28 @@ defmodule Brando.Test.Support do
       end
     end)
   end
+
+  @doc """
+  Puts the `Brando.Cache` entries under `keys` back as they were when the test
+  exits, or removes them if they were empty.
+
+  The cache outlives the test's database sandbox. Without this, a value a test
+  writes (directly, or through a context function that refreshes the cache)
+  is read by whichever test runs next. Call it in `setup`, before the test
+  writes: `preserve_cache([:identity, :seo])`. The `TestCacheRestore` Credo
+  check accepts it as the restore.
+  """
+  def preserve_cache(keys) do
+    for key <- List.wrap(keys) do
+      cached = Cache.get(key)
+      ExUnit.Callbacks.on_exit(fn -> restore_cache(key, cached) end)
+    end
+
+    :ok
+  end
+
+  defp restore_cache(key, nil), do: Cache.del(key)
+  defp restore_cache(key, cached), do: Cache.put(key, cached, :infinite)
 
   @doc """
   Recursively strips __spark_metadata__ from structs for comparison in tests.

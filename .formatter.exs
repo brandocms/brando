@@ -212,7 +212,7 @@ definition_locals_without_parens = [
   inputs: [
     "{mix,.formatter}.exs",
     "priv/*/seeds.exs",
-    "{config,lib,test}/**/*.{ex,exs,heex}"
+    "{config,lib,test,credo}/**/*.{ex,exs,heex}"
   ]
   # subdirectories: ["priv/*/migrations", "priv/templates/brando.upgrade/migrations"]
 ]

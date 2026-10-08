@@ -24,6 +24,7 @@ defmodule Brando.Doctor do
   alias Brando.Doctor.Checks
   alias Brando.Doctor.Context
   alias Brando.Doctor.Result
+  alias Brando.Doctor.Source
 
   @default_checks [
     Checks.Versions,
@@ -154,11 +155,15 @@ defmodule Brando.Doctor do
     end
   end
 
-  @doc "The versions the doctor reports in its header."
-  @spec versions() :: %{atom() => String.t() | nil}
+  @doc """
+  The versions the doctor reports in its header, with where Brando came from
+  as `:brando_source` (`Brando.Doctor.Source`).
+  """
+  @spec versions() :: %{atom() => String.t() | Source.t() | nil}
   def versions do
     %{
       brando: Brando.version(),
+      brando_source: Source.current(),
       elixir: System.version(),
       otp: System.otp_release(),
       phoenix: app_version(:phoenix),

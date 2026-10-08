@@ -6,6 +6,11 @@ defmodule Brando.QueryTest do
   alias Brando.Factory
   alias Brando.Pages.Page
 
+  # The cache tests fill the query cache with rows the sandbox rolls back
+  setup do
+    on_exit(fn -> Cachex.clear(:query) end)
+  end
+
   defmodule Context do
     use Brando.Query
 

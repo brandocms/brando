@@ -32,6 +32,9 @@ defmodule Brando.MarkdownSources.SyncTest do
       for {key, value} <- [markdown_sources: old, markdown_sources_provider: old_provider] do
         if value, do: Application.put_env(:brando, key, value), else: Application.delete_env(:brando, key)
       end
+
+      # A test clears the query cache and refills it with rows the sandbox rolls back
+      Cachex.clear(:query)
     end)
 
     source = Repo.insert!(%Source{name: "Docs", connection: "docs", ref: "refs/heads/main", path: "guides/start.md"})

@@ -51,6 +51,14 @@ defmodule Mix.Tasks.Brando.DoctorTest do
              Jason.decode!(output())
   end
 
+  test "--json names where Brando came from, and --offline is accepted" do
+    only([Healthy])
+    Task.run(["--json", "--offline"])
+
+    assert %{"versions" => %{"brando" => version, "brando_source" => %{"type" => "checkout"}}} = Jason.decode!(output())
+    assert version == Brando.version()
+  end
+
   test "--verbose lists the items" do
     only([Warns])
     Task.run(["--verbose"])

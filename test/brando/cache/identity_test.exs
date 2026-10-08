@@ -3,6 +3,10 @@ defmodule Brando.Cache.IdentityTest do
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 
+  setup do
+    preserve_cache(:identity)
+  end
+
   test "get and update" do
     identity = Brando.Cache.Identity.get("en")
     assert Map.get(identity, :name) == "Organization name"

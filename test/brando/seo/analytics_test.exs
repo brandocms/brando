@@ -13,6 +13,7 @@ defmodule Brando.SEO.AnalyticsTest do
 
   setup do
     previous = Application.get_env(:brando, Analytics)
+    preserve_cache(:seo)
     Brando.Cache.SEO.set()
 
     on_exit(fn ->

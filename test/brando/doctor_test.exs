@@ -42,6 +42,7 @@ defmodule Brando.DoctorTest do
     test "runs in the given locale" do
       [result] = Doctor.run(checks: [Brando.Doctor.Checks.Versions], locale: "no")
       assert result.label == "Versjoner"
+      assert result.summary =~ "(denne arbeidskopien)"
     end
 
     test "Brando's checks run without crashing in a standalone application" do
@@ -107,6 +108,16 @@ defmodule Brando.DoctorTest do
       assert text =~ "· one thing"
       assert text =~ "· a"
       refute text =~ "Details:"
+    end
+
+    test "the header names where Brando came from" do
+      source = %{type: :git, url: "https://x/brando.git", commit: "12c2289e98fa", branch: "main", tag: nil, ref: nil}
+
+      assert Report.header(Map.put(@versions, :brando_source, source)) ==
+               "Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.12"
+
+      assert %{"versions" => %{"brando_source" => %{"type" => "git", "commit" => "12c2289e98fa", "branch" => "main"}}} =
+               Report.json([], Map.put(@versions, :brando_source, source))
     end
 
     test "all passing" do

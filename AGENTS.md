@@ -5,7 +5,7 @@
 - Before pushing: `mix check` (CI's fast gates; the pre-push hook runs `--fast`, `SKIP_CHECK=1` bypasses)
 - Wait for CI: `scripts/ci-wait <PR>` (background; silent until one summary line)
 - Start e2e project server (for use with MCP): `cd e2e && ./run_e2e.sh` - the server starts on port 4444
-- Run end to end tests: `cd e2e && source .envrc && ./test_e2e.sh --reset` (user will ask Claude to run these)
+- End to end tests: the whole E2E suite green is the bar for done (CI runs it on every PR). While working, run the single specs that cover your change (below); for the whole suite locally, `cd e2e && source .envrc && ./test_e2e_parallel.sh 2 --reset`
 - E2E login credentials: email `admin@brandocms.com`, password `brandocms`
 - E2E test workflow:
   - **CRITICAL**: Always `source .envrc` in the `e2e/` folder before running any e2e commands
@@ -32,85 +32,32 @@
   - Warnings: `mix credo suggest --format json --all --only warning`
   - Check single check example: `mix credo --format json --all --checks Credo.Check.Refactor.LongQuoteBlocks`
 
-## Core Principles
-- If any of my requests are not clear, ask me to clarify.
-- If you have better suggestions, feel free to suggest them.
+## Scope
+- Ask when a request is ambiguous or leaves a product decision open, rather than guessing.
+- Keep a change to its task: fix bugs and optimise without changing behaviour or unrelated code, and propose the rest.
+
+## Reviewing
+- Review a change (yours before pushing, or a PR) against [CODING_STANDARDS.md](CODING_STANDARDS.md): tests, field sync, `:has()`, UI.
 
 ## Admin UI design
+- **Admin screens** follow the [Admin UI design guide](docs/admin-ui-design.md). Read its index first, then only the sections the screen needs; its Utilities example is the reference alongside existing components.
+- **Scope `:has()` to a row, card or modal**, whose subject cannot contain the block editor. A `:has()` on an ancestor of the editor (`body`, `#brando-main`, the layout's `.content`) is re-checked for every node LiveView inserts, and one took a heavy entry from 8s to 61s. Page-level state comes from the server as a class; open widgets style from their trigger's `aria-expanded`. Details and how to verify: CODING_STANDARDS.md.
 
-When creating or refining admin screens, read the [Admin UI design guide](docs/admin-ui-design.md).
-It records the approved visual direction, spacing and control proportions, plain
-copy, settings and metadata layouts, the global paragraph-margin pitfall, and
-browser verification with screenshots. Use its linked Utilities example as a
-reference alongside existing components.
+## Subsystem skills and docs
+Load only what the change touches:
+- **Blocks** (block state, ops, refs, vars, containers, block changesets): [brando-blocks](.claude/skills/brando-blocks/SKILL.md). Read it before touching block state.
+- **Uploads and media fields** (asset browser, pickers, UploadManager): [brando-uploads](.claude/skills/brando-uploads/SKILL.md); architecture and transports in `docs/UPLOADER.md`.
+- **Admin form state** (parent/component state, transformers, save collection, recovery): [brando-admin-forms](.claude/skills/brando-admin-forms/SKILL.md). Before reading the 7,000-line `components/form.ex`, find the area in its [section map](.claude/skills/brando-admin-forms/form-map.md).
+- **Live preview** (caches, transport, iframe recovery): [brando-live-preview](.claude/skills/brando-live-preview/SKILL.md).
+- **Deploying** (Florist releases, server layout, where assets and media live): [florist-deploy](.claude/skills/florist-deploy/SKILL.md).
+- **Changesets with associations or embeds** (`put_assoc`, copied structs, adding rows to a LiveView form): [Ecto changeset patterns](docs/ecto-changeset-patterns.md).
+- **Blueprint DSL**: `guides/blueprints.md` and the guides it links; authorization: `guides/authorization.md`; tenant job context: `Brando.Tenant.Job`. Before adding a skill, read [the skill audit](docs/agent-skill-audit.md).
 
-### Dropdowns
-
-Reuse the existing admin select component for form fields. For a small native
-select on a configuration screen, use the shared `admin-select` treatment in
-`assets/css/components/Form/Input/Select.css`; do not leave browser-default
-chrome or invent screen-specific dropdown styling. Match the surrounding input
-height, font, radius and focus treatment, with a small chevron inset from the
-right edge and enough padding for long translated labels. Verify the closed
-control, open options, keyboard selection and narrow layout in the browser, and
-capture screenshots. Check actual translated option labels as well as Gettext
-wrappers; status names and field labels must not fall back to humanized English.
-
-### `:has()` must never sit on an ancestor of the block editor
-
-A `:has()` whose subject is an element containing the entry form is re-evaluated
-for every node LiveView inserts below it. The block editor inserts tens of
-thousands, so the cost is quadratic and lands on pages that the rule was never
-written for.
-
-This regressed in `e8e3777fa`, which styled *listings* with
-
-```css
-:is(.admin-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) { … }
-```
-
-`#brando-main > .content` is the shared layout container, so opening an entry
-with 155 rich-text editors went from **8s to 61s** — the socket dropped mid-load
-("Mainframe connection was dropped") because the main thread never yielded.
-Deleting every `:has()` rule at runtime brought the same page back to 4.9s.
-
-The rules:
-
-- **Derive page-level state on the server, not in CSS.** The container above is
-  marked by `BrandoAdmin.LiveView.Listing` (`:admin_workspace?` → a class in
-  `layouts/live.html.heex`).
-- **Never key on `body:has(…)` or `#brando-main:has(…)`.** Mirror the state as a
-  class where it is toggled — see `body.sidebar-hidden` in `live/nav.ex`.
-- **For open/closed widgets, style from the trigger's own `aria-expanded`**
-  rather than `:has(.dropdown-content:not(.hidden))` on their common parent.
-  `floatingDropdowns.js` already maintains the attribute.
-- `:has()` scoped *inside* a row, card or modal is fine — the subject must not
-  contain the editor.
-
-Verify with the block editor, not a listing: open the heaviest entry available
-and time it. A few seconds is normal; tens of seconds means a selector is being
-re-checked against the whole document.
-
-## Subsystem skills
-
-Load only the skill needed for the state boundary being changed:
-
-- [Admin forms](.claude/skills/brando-admin-forms/SKILL.md): parent/component state collection, transformer delivery, and recovery.
-- [Live preview](.claude/skills/brando-live-preview/SKILL.md): cached assigns, transport choices, and iframe recovery.
-
-The existing block-state and upload contracts below still apply. DSL usage belongs
-in `guides/blueprints.md` and the guides it links to (`blueprint_fields.md`,
-`blueprint_traits.md`, `blueprint_listings.md`, `blueprint_forms.md`), authorization in `guides/authorization.md`, and tenant
-job context in `Brando.Tenant.Job`. The [skill necessity audit](docs/agent-skill-audit.md)
-records why the other candidates in #2701 do not need standalone skills.
-
-## LiveView, Phoenix and Ecto (+ Forms & Changesets)
-
-### LiveView Component Patterns
-- **Stable Component IDs**: live_component `id` props must be stable (not nil or derived from rebuilt form internals). LiveView raises for a nil ID. Changing a valid ID (including a freshly generated random UID) creates a new component identity and CID.
-- **Form Index for DOM IDs**: Use `form.index` (not database ID) for DOM element identification in nested forms. New records don't have database IDs yet.
-- **CID Stability**: When a component remounts, its `@myself` CID changes. Any stored references to the old CID become invalid.
-- **Constant Options in Templates**: Never call functions that return constant lists directly in HEEx templates (e.g., `opts={[options: my_options()]}`). Instead, assign constants once in `mount/1` using `assign_new/3` and reference via assigns (e.g., `opts={[options: @my_options]}`). This makes the dependency explicit and avoids rebuilding constants when a component is invoked. A zero-assign-dependency expression in HEEx is normally skipped during tracked patches; it does not run on every patch merely because it is a function call.
+## LiveView components
+- **Stable component IDs**: a live_component `id` must be stable (not nil, not derived from rebuilt form internals). LiveView raises for a nil ID; a changed ID, a fresh random UID included, mounts a new component with a new CID.
+- **`form.index` for DOM IDs** in nested forms: new records have no database ID yet.
+- **CID stability**: a remounted component gets a new `@myself`; stored references to the old CID go dead.
+- **Constants in templates**: assign a constant list once in `mount/1` with `assign_new/3` and reference the assign (`opts={[options: @my_options]}`) rather than calling `my_options()` in HEEx. The gain is an explicit dependency and no rebuild per component invocation; a call with no assign dependencies is already skipped in tracked patches.
 - **Derived assigns in function components are always "changed"**: a function
   component's assigns hold only what the caller passed, so `assign(assigns, :uid, …)`
   marks `:uid` changed on every render and re-sends every expression reading it.
@@ -119,92 +66,14 @@ records why the other candidates in #2701 do not need standalone skills.
   (320 KB per keystroke at 115 blocks). Use `assign_derived/3` and `nested_block_form/1`
   in `Block.Render`, or pass precomputed values from the LiveComponent.
 - **Sticky JS for persistent client-side decorations**: DOM state that must survive
-  LiveView patches (field presence, etc.) MUST go through the hook's `this.js()`
-  commands (`addClass`/`setAttribute`/… → `DOM.putSticky`) — plain
+  LiveView patches (field presence, etc.) goes through the hook's `this.js()`
+  commands (`addClass`/`setAttribute`/… → `DOM.putSticky`); plain
   `classList`/`setAttribute` mutations are wiped on the next morphdom pass of that
-  element. Inline styles and injected child nodes are NOT sticky-covered: express
+  element. Inline styles and injected child nodes are not sticky-covered: express
   them in CSS keyed on a sticky data attribute (see `assets/src/Presence/fieldPresence.js`
-  + the presence palette in `Block.css`). Transient state (drag hover, dropdown open)
+  and the presence palette in `Block.css`). Transient state (drag hover, dropdown open)
   is fine as plain mutations.
 
-### Block Editor: single-owner state & ops (Phase 3 architecture)
-
-<!-- The full Phase 3 single-owner/ops architecture (reducer ops, the
-     `assign_block_form/2` chokepoint, store materialization, `replace_form`,
-     op-snapshot sync, delete-undo replay) lives in the brando-blocks skill:
-     .claude/skills/brando-blocks/SKILL.md — read it before touching block state. -->
-
-### Media asset fields, browsers, and uploads
-
-<!-- The asset browser / picker / UploadManager contracts live in the
-     brando-uploads skill: .claude/skills/brando-uploads/SKILL.md.
-     Architecture and transport matrix: docs/UPLOADER.md. -->
-
-### Ecto Changeset Patterns
-- **put_assoc handles FK automatically**: Don't mix `put_change(:gallery_id, nil)` with `put_assoc(:gallery, ...)`. Let `put_assoc` manage the foreign key.
-- **on_replace for belongs_to**: Use `:nilify` when you need to disassociate (set FK to nil). Default `:raise` prevents any association changes.
-- **NotLoaded associations**: Always check for `%Ecto.Association.NotLoaded{}` before passing associations to `put_assoc`. NotLoaded structs are truthy but cause changeset errors.
-- **Marking structs as new**: When copying a SINGLE struct for insertion, set `__meta__.state` to `:built` so Ecto knows it's a new record. **Note**: This does NOT work for `put_assoc` with multiple nil-ID structs - use maps instead (see below).
-
-```elixir
-# Mark as new record (not loaded with nil ID)
-struct
-|> Map.merge(%{id: nil, parent_id: nil})
-|> put_in([Access.key(:__meta__), Access.key(:state)], :built)
-```
-
-- **put_assoc with multiple new records**: When passing multiple new records to `put_assoc`, use maps (not changesets from nil-ID structs). Ecto creates distinct insert changesets for each map.
-
-```elixir
-# ❌ BAD: Multiple changesets from nil-ID structs - all have same nil ID
-objects
-|> Enum.map(fn obj ->
-  if is_nil(obj.id), do: Ecto.Changeset.change(obj), else: ...
-end)
-|> then(&Ecto.Changeset.put_assoc(parent, :objects, &1))
-
-# ✅ GOOD: Maps for new records - each is distinct
-objects
-|> Enum.map(fn obj ->
-  if is_nil(obj.id) do
-    %{field1: obj.field1, field2: obj.field2}
-  else
-    Ecto.Changeset.change(obj, %{...})
-  end
-end)
-|> then(&Ecto.Changeset.put_assoc(parent, :objects, &1))
-```
-
-- **Avoiding duplicate primary key warnings**: When using `apply_changes()` followed by another changeset call, don't pass embedded associations with nil IDs to the next changeset — clear them first so Ecto treats params as fresh inserts. See [Ecto #3514](https://github.com/elixir-ecto/ecto/issues/3514).
-
-### Dynamic Associations in LiveView (The "Append Changeset" Pattern)
-- **Goal**: Add new child records (e.g., table rows) without losing existing form state or causing "Duplicate PK" errors.
-- **Anti-Pattern**: Converting existing changesets to maps/params. This wipes out pending user input.
-- **Pattern**:
-  1. **Get State**: `current = Ecto.Changeset.get_assoc(parent_changeset, :items)`
-  2. **Create New**: `new_item_cs = change(%Item{}) |> Map.put(:action, :insert)`
-  3. **Append**: `put_assoc(parent_changeset, :items, current ++ [new_item_cs])`
-  * **Note**: If `new_item_cs` has its own nested items (e.g. `vars`), pass them as **MAPS** to `put_assoc` inside the changeset config, to avoid "Duplicate PK" errors (see "put_assoc with multiple new records" above).
-- **Validation compatibility**: In your validate handler, continue to strip non-persisted structs from `data` before casting. The `params` (populated by hidden inputs from the new changeset) will correctly recreate the new item.
-
-<!-- Block-specific Ecto patterns (NotLoaded guards, reusing changesets from get_assoc,
-     validate_block base selection) are documented in the brando-blocks skill:
-     .claude/skills/brando-blocks/SKILL.md §11 "Common Pitfalls" -->
-
-## Code Style Guidelines
-- Prefer higher-order functions and recursion over imperative loops.
-- Prefer using aliases over imports.
-- Import only what's needed with `import Ecto.Query, only: [from: 2]`
-- Arrange Blueprint files with attributes, assets, relations, listings, forms
-
-## Documentation and Quality
-- **Cautious Refactoring**: Propose bug fixes or optimizations without changing behavior or unrelated code.
-
-## Deployment (Florist)
-
-<!-- Florist deployment flow, server directory layout, blue/green, and the
-     priv/static + media implications live in the florist-deploy skill:
-     .claude/skills/florist-deploy/SKILL.md -->
-
-<!-- Content Refs Architecture is documented in the brando-blocks skill:
-     .claude/skills/brando-blocks/SKILL.md §4 "Schema Quick Reference" -->
+## Code style
+- Prefer aliases over imports, and import only what's needed: `import Ecto.Query, only: [from: 2]`.
+- Arrange Blueprint files as attributes, assets, relations, listings, forms.

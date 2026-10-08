@@ -10,7 +10,7 @@ user-invocable: true
 
 # Deployment (Florist)
 
-Brando projects are deployed using [Florist](https://github.com/brandocms/florist) (`/Users/trond/dev/elixir/florist`), a zero-downtime deployment tool for Elixir applications.
+Brando projects are deployed using Florist, a zero-downtime deployment tool for Elixir applications. Its source is the private repository [brandocms/florist](https://github.com/brandocms/florist); a local clone, where there is one, sits next to the main brando checkout as `../florist`. Read the code there when this summary is not enough.
 
 ### Deployment flow
 

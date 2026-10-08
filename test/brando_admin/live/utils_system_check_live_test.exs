@@ -57,5 +57,8 @@ defmodule BrandoAdmin.UtilsSystemCheckLiveTest do
     for id <- ~w(versions migrations oban configuration image_configs modules sitemap json_ld alt_text) do
       assert has_element?(view, "li[data-check=#{id}]")
     end
+
+    # Which Brando is running, and from where
+    assert has_element?(view, "li[data-check=versions] p", "Brando #{Brando.version()} (this checkout)")
   end
 end
