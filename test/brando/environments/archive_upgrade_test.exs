@@ -121,6 +121,10 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     archive = "#{@live}_archive_#{Calendar.strftime(taken_at, "%Y%m%d%H%M%S")}"
     copy_schema(@live, archive)
 
+    # The test database's own migrations ran before the archive was taken,
+    # however recently it was built (CI builds it just before the run)
+    query!("UPDATE schema_migrations SET inserted_at = $1", [NaiveDateTime.add(taken_at, -86_400)])
+
     # The upgrade, as `mix brando.migrate` runs it
     copied = copy_2xx(directory)
     migrate(directory, :up)
@@ -384,9 +388,67 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
     for schema <- schemas, do: assert(ArchiveUpgrade.missing(schema, @live) == [])
 
-    modules = for _ <- 1..(2 * length(replays)), do: assert_receive({:replaying, module}) && module
+    modules =
+      for _ <- 1..(2 * length(replays)) do
+        assert_receive {:replaying, module}
+        module
+      end
+
     assert length(Enum.uniq(modules)) == length(modules)
     refute Enum.any?(modules, &Code.ensure_loaded?/1)
+  end
+
+  describe "planning looks only at what ran since the archive was taken" do
+    test "a version from before it, whose file is long gone, is no reason to refuse", %{archive: archive, copied: copied} do
+      taken_at = ArchiveUpgrade.taken_at(archive)
+
+      # The test database's own versions have no file in the migrations
+      # directory here either
+      assert length(rows("SELECT version FROM schema_migrations")) > length(copied)
+
+      # Squashed or deleted years ago, and one loaded from a structure.sql
+      # dump, which records no time
+      query!("INSERT INTO schema_migrations (version, inserted_at) VALUES ($1, $2), ($3, NULL)", [
+        19_990_101_000_000,
+        ~N[1999-01-01 10:00:00],
+        19_990_102_000_000
+      ])
+
+      # One second before the archive was taken
+      query!("INSERT INTO schema_migrations (version, inserted_at) VALUES ($1, $2)", [
+        20_990_101_000_000,
+        NaiveDateTime.add(taken_at, -1)
+      ])
+
+      assert {:ok, replays} = ArchiveUpgrade.plan(archive)
+      assert length(replays) == 7
+    end
+
+    test "a version from the second it was taken counts as since", %{archive: archive} do
+      query!("INSERT INTO schema_migrations (version, inserted_at) VALUES ($1, $2)", [
+        20_990_101_000_000,
+        ArchiveUpgrade.taken_at(archive)
+      ])
+
+      assert {:error, {:archive_behind, {:migrations, ["20990101000000 (no migration file)"]}}} =
+               ArchiveUpgrade.plan(archive)
+    end
+
+    test "an older archive misses more", %{archive: archive, copied: copied} do
+      # Taken before brando_210 ran: only 210, 211 and 212 were missed
+      versions = Map.new(copied, fn {version, file} -> {number(file), version} end)
+      taken_at = ArchiveUpgrade.taken_at(archive)
+
+      ran_at = fn number ->
+        if number < 210, do: NaiveDateTime.add(taken_at, -60), else: NaiveDateTime.add(taken_at, 60)
+      end
+
+      for {number, version} <- versions,
+          do: query!("UPDATE schema_migrations SET inserted_at = $1 WHERE version = $2", [ran_at.(number), version])
+
+      assert {:ok, replays} = ArchiveUpgrade.plan(archive)
+      assert Enum.map(replays, &number(&1.name <> ".exs")) == [210, 211, 212]
+    end
   end
 
   describe "planning refuses an archive it cannot account for" do

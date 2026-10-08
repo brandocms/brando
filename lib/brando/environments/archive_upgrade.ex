@@ -24,6 +24,10 @@ defmodule Brando.Environments.ArchiveUpgrade do
            and cannot be replayed (Brando's older ones, or the application's
            own), a version without a file, or a missing migrations directory.
 
+       Versions recorded before the archive was taken, or with no time (as
+       loaded from a structure dump), are not looked at, so migration files
+       deleted or squashed since do not matter.
+
     2. Replays the missed migrations in the restored schema only
        (`replay/2`), oldest first, from Brando's current templates. Each
        is recorded in the environment's own `schema_migrations`.
@@ -136,8 +140,9 @@ defmodule Brando.Environments.ArchiveUpgrade do
     end
   end
 
-  # Public migrations that ran at or after `taken_at`, oldest first.
-  # `schema_migrations` keeps whole seconds.
+  # Public migrations that ran at or after `taken_at`, oldest first. Ecto
+  # records `inserted_at` in UTC, as the archive's name is, to the second;
+  # a version without one (loaded from a structure dump) is older.
   defp ran_since(taken_at) do
     "SELECT version, inserted_at FROM #{migration_source()} WHERE inserted_at >= $1 ORDER BY version"
     |> query!([taken_at])
