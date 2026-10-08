@@ -229,6 +229,14 @@ defmodule Brando.Search do
   @spec rebuilt_at() :: DateTime.t() | nil
   defdelegate rebuilt_at, to: Indexer
 
+  @doc """
+  Forgets when the index in schema `prefix` was rebuilt: a new environment
+  copies its tables' structure from `public`, comment included, but none of
+  the documents. `Brando.Environments` calls it after that copy.
+  """
+  @spec forget_rebuilt(String.t()) :: :ok
+  defdelegate forget_rebuilt(prefix), to: Indexer
+
   @doc "How many documents the current site and environment's index holds, or nil without the table."
   @spec count() :: non_neg_integer() | nil
   def count do

@@ -90,6 +90,24 @@ defmodule Brando.Search.Indexer do
   end
 
   @doc """
+  Forgets when the index in schema `prefix` was rebuilt. A new environment's
+  tables are copied from `public` without their rows, but with the comment
+  that holds the time; its empty index was never rebuilt. A failure is logged.
+  """
+  @spec forget_rebuilt(String.t()) :: :ok
+  def forget_rebuilt(prefix) do
+    table = table(prefix)
+
+    with {:ok, %{rows: [[true]]}} <-
+           Repo.repo().query("SELECT to_regclass($1) IS NOT NULL", [table], savepoint()),
+         {:error, error} <- Repo.repo().query("COMMENT ON TABLE #{table} IS NULL", [], savepoint()) do
+      Logger.warning("[Brando.Search] Could not clear when #{prefix}'s index was rebuilt: " <> Exception.message(error))
+    end
+
+    :ok
+  end
+
+  @doc """
   When the current site and environment's index was last rebuilt in full, or
   nil if it never was here (or the table is missing).
   """
@@ -288,17 +306,14 @@ defmodule Brando.Search.Indexer do
     :ok
   end
 
-  # The table in the current site and environment's schema
-  defp table do
-    case Brando.Tenant.current_prefix() do
-      nil ->
-        "search_documents"
+  # The table in the current site and environment's schema, or in `prefix`
+  defp table(prefix \\ Brando.Tenant.current_prefix())
+  defp table(nil), do: "search_documents"
 
-      prefix ->
-        if Brando.Tenant.valid_prefix?(prefix),
-          do: ~s("#{prefix}".search_documents),
-          else: raise(ArgumentError, "invalid tenant prefix")
-    end
+  defp table(prefix) do
+    if Brando.Tenant.valid_prefix?(prefix),
+      do: ~s("#{prefix}".search_documents),
+      else: raise(ArgumentError, "invalid tenant prefix")
   end
 
   defp savepoint, do: ContentEvents.savepoint()
