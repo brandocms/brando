@@ -67,6 +67,24 @@
   }
 }
 
+/* The kind of actor behind a change that no person made by hand: AI, MCP,
+   Automatic. A label, not a call to AI, so it keeps the admin's badge look
+   (docs/admin-ui-design.md, "AI actions"). */
+.activity-kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--brando-badge-bg);
+  color: var(--brando-badge-ink);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+
 .activity-revision {
   padding: 0;
   border: 0;
@@ -109,9 +127,11 @@ button.activity-revision {
     select.admin-select { width: auto; max-width: 220px; }
   }
 
+  /* The search has the first row to itself; the five filters and the
+     count share the second, in English and Norwegian alike. */
   .activity-search {
     position: relative;
-    flex: 1 1 220px;
+    flex: 1 1 100%;
 
     [data-icon] {
       position: absolute;
@@ -212,6 +232,13 @@ button.activity-revision {
     min-width: 0;
 
     small { font-size: 11px; color: var(--activity-muted); }
+  }
+
+  .activity-person-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
   }
 
   .activity-event {
@@ -401,6 +428,8 @@ button.activity-revision {
       font-size: 11px;
       color: var(--activity-muted);
     }
+
+    .activity-approver { font-size: 12px; color: var(--activity-muted); }
   }
 
   .activity-compare-link {

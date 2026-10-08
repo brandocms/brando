@@ -71,4 +71,52 @@ test.describe('Activity log', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('activity-mobile.png'), fullPage: true })
   })
+
+  // Changes by a person, the Assistant, Claude Code over MCP, scheduled
+  // publishing and the trash purge (the `activity-actors` fixture), filtered
+  // by who made them, in Norwegian.
+  test('filters by the kind of actor and by MCP client, and links to the proposal', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    expect((await page.request.post('/e2e/setup_fixtures/activity-actors')).ok()).toBe(true)
+    expect((await page.request.post('/e2e/setup_fixtures/admin-language-no')).ok()).toBe(true)
+
+    await page.goto('/admin/config/activity')
+    await syncLV(page)
+
+    const rows = page.locator('.activity-row')
+    const actor = page.getByRole('combobox', { name: 'Utført av' })
+    await expect(rows).toHaveCount(9)
+
+    await actor.selectOption({ label: 'Tilkoblede verktøy (MCP)' })
+    await expect(page).toHaveURL(/actor=mcp$/)
+    await expect(rows).toHaveCount(1)
+    await expect(rows.locator('.activity-kind')).toHaveAttribute('data-kind', 'mcp')
+
+    await actor.selectOption({ label: 'Claude Code via MCP' })
+    await expect(page).toHaveURL(/actor=mcp%3AClaude\+Code/)
+    await expect(rows).toHaveCount(1)
+
+    await actor.selectOption({ label: 'Automatiske jobber' })
+    await expect(page).toHaveURL(/actor=task/)
+    await expect(rows).toHaveCount(2)
+    await expect(rows.locator('.activity-kind[data-kind=task]')).toHaveCount(2)
+
+    await actor.selectOption({ label: 'Personer' })
+    await expect(rows).toHaveCount(5)
+    await expect(page.locator('.activity-kind')).toHaveCount(0)
+
+    await actor.selectOption({ label: 'Assistent' })
+    await expect(page).toHaveURL(/actor=assistant/)
+    await expect(rows).toHaveCount(1)
+    await expect(rows.locator('.activity-kind')).toHaveAttribute('data-kind', 'assistant')
+
+    await expect(actor).toHaveValue('assistant')
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.waitForTimeout(350)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+
+    await rows.getByRole('link', { name: 'Åpne forslaget' }).click()
+    await expect(page).toHaveURL(/\/admin\/assistant\/connected\/[0-9a-f-]{36}$/)
+  })
 })

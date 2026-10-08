@@ -117,7 +117,8 @@ lists them apart:
   like the Assistant itself. Without a configured model the Assistant has no
   conversation, but its menu item still appears while proposals wait.
 - **Activity** records an applied proposal from MCP with the tool as its
-  source, "Claude Code via MCP", and the person who approved it underneath.
+  source, "Claude Code" with an MCP badge, the proposal, and the person who
+  approved it underneath, who can open the proposal from there.
 
 Each proposal records its origin: `"assistant"`, or `"mcp"` with the tool's
 name: over stdio the MCP client's `clientInfo` name, through the remote

@@ -171,4 +171,52 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawerTest do
     assert html =~ "Show older activity"
     refute html =~ "Store current editor state"
   end
+
+  test "an agent's change shows the kind of actor, who approved it and, to them, its proposal" do
+    user = %Brando.Users.User{id: 7, name: "Ola Hansen"}
+    proposal_id = Ecto.UUID.generate()
+
+    event = %Brando.Activity.Event{
+      id: 3,
+      action: :updated,
+      source: :mcp,
+      user: user,
+      approver_id: 7,
+      approver: user,
+      proposal_id: proposal_id,
+      schema: "Elixir.Brando.Pages.Page",
+      entry_id: 1,
+      revision: 2,
+      details: %{"client" => "Claude Code"},
+      fields: ["title"],
+      inserted_at: DateTime.utc_now()
+    }
+
+    render = fn viewer ->
+      render_component(&RevisionsDrawer.render/1, %{
+        id: "revisions-drawer",
+        close: %JS{},
+        form_cid: "form-target",
+        myself: "drawer-target",
+        preview_revision: nil,
+        revision_data: AsyncResult.ok(%{revisions: [], has_more: false}),
+        schema_version: 2,
+        show_publish_at: nil,
+        status: :open,
+        tab: :activity,
+        activity: %{events: [event], states: %{}, viewer: viewer, has_more: false},
+        comparison: nil
+      })
+    end
+
+    html = render.(%{user_id: 7, assistant?: true})
+    assert html =~ "by Claude Code"
+    assert html =~ ~s(<span class="activity-kind" data-kind="mcp">MCP</span>)
+    assert html =~ "Approved by Ola Hansen"
+    assert html =~ ~s(href="/admin/assistant/connected/#{proposal_id}")
+
+    # Only the person who applied it can open the proposal
+    refute render.(%{user_id: 8, assistant?: true}) =~ "/admin/assistant/connected/"
+    refute render.(%{user_id: 7, assistant?: false}) =~ "/admin/assistant/connected/"
+  end
 end

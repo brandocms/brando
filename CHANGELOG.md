@@ -144,6 +144,13 @@ production dump.
   `mix brando.migrate`; until then the entry editor's Notes panel stays empty
   and saves carry on without it.
 
+- **The activity log has two new columns.** `brando_216` adds
+  `proposal_id` and `approver_id` to `activity_events` in every environment.
+  Run `mix brando.gen.migrations` and `mix brando.migrate`; until then,
+  Configuration → Activity fails with a missing-column error and new events
+  are dropped with a warning. Earlier changes by the Assistant or a connected
+  tool get their user as the approver.
+
 - **Content proposals have two new columns.** `origin` and `client` record
   where a proposal came from (the Assistant, or a tool connected over MCP).
   Run `mix brando.gen.migrations` and `mix brando.migrate` for `brando_207`;
@@ -926,6 +933,16 @@ production dump.
   like revisions, and adding, resolving and reopening them shows in the
   entry's activity. Anyone who may update an entry may write notes on it.
   See `Brando.Notes`.
+
+- **Agents in Activity.** Activity marks who made each change by kind: a
+  person, the Assistant (AI), a tool connected over MCP (MCP, with its name)
+  or an automatic job (scheduled publishing and the system). A change from a
+  proposal records the proposal and the person who approved and applied it,
+  and that person gets a link to the proposal; undoing it is recorded against
+  the same proposal. Filter the log by kind of actor or by MCP client; the
+  entry's history shows the same badge and approver.
+  `Brando.Activity.actor_kind/1`, `with_proposal/5` and the `:actor`,
+  `:client` and `:proposal_id` filters. See the activity guide.
 
 - **Review proposals from connected tools.** Proposals a coding agent such
   as Claude Code prepares through BrandoMCP have no conversation; the

@@ -959,6 +959,11 @@ msgstr "Et valg fra forhåndsdefinerte alternativer"
 msgid "A configured responsive image"
 msgstr "Et konfigurert responsivt bilde"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "A connected tool"
+msgstr "Et tilkoblet verktøy"
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A date and time value"
@@ -1148,11 +1153,6 @@ msgstr "En testhendelse ble sendt."
 msgid "A third — 4 of 12 units"
 msgstr "En tredjedel – 4 av 12 enheter"
 
-#: lib/brando_admin/components/activity.ex
-#, elixir-autogen
-msgid "A tool via MCP"
-msgstr "Et verktøy via MCP"
-
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "A translation is created as an unpublished copy of this entry, which becomes its source: structure, media and shared values follow this entry."
@@ -1179,6 +1179,11 @@ msgstr[1] "%{count} webhooks ble satt på pause"
 #, elixir-autogen, elixir-format
 msgid "ACCESS"
 msgstr "TILGANG"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "AI"
+msgstr "KI"
 
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
@@ -1713,6 +1718,11 @@ msgstr "Alle handlinger"
 #, elixir-autogen, elixir-format
 msgid "All activity"
 msgstr "All aktivitet"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All actors"
+msgstr "Alle aktører"
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -2304,6 +2314,16 @@ msgstr "Auto"
 #, elixir-autogen, elixir-format
 msgid "Auto — fits its content"
 msgstr "Auto – tilpasser seg innholdet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr "Automatisk"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic jobs"
+msgstr "Automatiske jobber"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
@@ -3866,6 +3886,11 @@ msgstr "Tilkoblede dokumenter"
 #, elixir-autogen, elixir-format
 msgid "Connected over MCP"
 msgstr "Koblet til over MCP"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Connected tools (MCP)"
+msgstr "Tilkoblede verktøy (MCP)"
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -8830,10 +8855,20 @@ msgid "Lowest score"
 msgstr "Lavest poengsum"
 
 #: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "MCP"
+msgstr "MCP"
+
+#: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "MCP endpoint"
 msgstr "MCP-endepunkt"
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Made by"
+msgstr "Utført av"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -10830,6 +10865,12 @@ msgstr "Åpne lenke i nytt vindu/fane"
 msgid "Open preview in new window"
 msgstr "Åpne forhåndsvisning i nytt vindu"
 
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open proposal"
+msgstr "Åpne forslaget"
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Open saved version"
@@ -11264,6 +11305,11 @@ msgstr "Venter"
 #, elixir-autogen, elixir-format
 msgid "Pending operations"
 msgstr "Ventende operasjoner"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "People"
+msgstr "Personer"
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -12411,6 +12457,11 @@ msgstr "Fjernede blokktrær, bevart som de var. Gjenoppretting legger treet tilb
 #, elixir-autogen, elixir-format
 msgid "Removed by undoing the import that created it"
 msgstr "Fjernet da importen som opprettet den ble angret"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed by undoing the proposal that created it"
+msgstr "Fjernet da forslaget som opprettet den ble angret"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -14047,6 +14098,11 @@ msgstr "Velg et passord i stedet"
 #, elixir-autogen, elixir-format
 msgid "Set back by undoing an import"
 msgstr "Satt tilbake da en import ble angret"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set back by undoing the proposal"
+msgstr "Satt tilbake da forslaget ble angret"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -16811,6 +16867,11 @@ msgstr "Angre forslaget? Hver oppføring går tilbake til slik den var, og nye o
 msgid "Undone"
 msgstr "Angret"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Undone by %{name}"
+msgstr "Angret av %{name}"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Undone: the entries are back to how they were."
@@ -18318,9 +18379,9 @@ msgid "breadcrumbs"
 msgstr "brødsmulesti"
 
 #: lib/brando_admin/components/activity.ex
-#, elixir-autogen
-msgid "by %{client} via MCP"
-msgstr "av %{client} via MCP"
+#, elixir-autogen, elixir-format
+msgid "by %{client}"
+msgstr "av %{client}"
 
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/components/two_factor.ex
@@ -18331,6 +18392,11 @@ msgstr "av %{name}"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
+msgid "by a connected tool"
+msgstr "av et tilkoblet verktøy"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
 msgid "by a content transfer"
 msgstr "av en innholdsoverføring"
 
@@ -18338,11 +18404,6 @@ msgstr "av en innholdsoverføring"
 #, elixir-autogen, elixir-format
 msgid "by a deleted user"
 msgstr "av en slettet bruker"
-
-#: lib/brando_admin/components/activity.ex
-#, elixir-autogen
-msgid "by a tool via MCP"
-msgstr "av et verktøy via MCP"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format

@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.Sites.ActivityLive do
   @moduledoc """
   Configuration → Activity: who created, changed, published, trashed,
-  restored and deleted content, and when (`Brando.Activity`). Filters live in
+  restored and deleted content, and when (`Brando.Activity`): a person, the
+  Assistant, a tool connected over MCP or an automatic job, with the person
+  who approved an agent's change and a link to its proposal. Filters live in
   the URL, so a filtered view can be shared. Compare shows what a change did,
   from the revisions it saved.
 
@@ -38,6 +40,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
          |> assign(:limit, @page_size)
          |> assign(:comparison, nil)
          |> assign(:readable, readable_schemas())
+         |> assign(:viewer, Events.viewer(socket.assigns.current_user))
          |> assign_options()}
       else
         {:ok, redirect(socket, to: "/admin/access-denied")}
@@ -82,6 +85,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   defp assign_options(socket) do
     socket
     |> assign(:people, Activity.users())
+    |> assign(:actor_options, Events.actor_options(Activity.clients()))
     |> assign(:types, Activity.schemas() |> Enum.map(&{Events.type_label(&1) || inspect(&1), to_string(&1)}))
     |> assign(:actions, Events.action_options())
     |> assign(:periods, [
@@ -108,6 +112,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
     filters = %{
       "q" => params["q"] || "",
       "user" => params["user"] || "",
+      "actor" => params["actor"] || "",
       "type" => params["type"] || "",
       "action" => params["action"] || "",
       "period" => if(params["period"] in @periods, do: params["period"], else: "7")
@@ -164,14 +169,26 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   end
 
   defp query_filters(filters, readable) do
-    %{
+    filters["actor"]
+    |> parse_actor()
+    |> Map.merge(%{
       q: filters["q"],
       user_id: parse_id(filters["user"]),
       schema: filters["type"],
       action: parse_action(filters["action"]),
       since: since(filters["period"]),
       schema_in: readable
-    }
+    })
+  end
+
+  # A kind of actor (`Brando.Activity.actor_kind/1`), or one MCP client: `mcp:Claude Code`
+  defp parse_actor("mcp:" <> client) when client != "", do: %{actor: :mcp, client: client}
+
+  defp parse_actor(value) do
+    case Enum.find(Activity.actor_kinds(), &(to_string(&1) == value)) do
+      nil -> %{}
+      kind -> %{actor: kind}
+    end
   end
 
   defp parse_id(""), do: nil
@@ -193,7 +210,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   def handle_event("filter", params, socket) do
     query =
       params
-      |> Map.take(~w(q user type action period))
+      |> Map.take(~w(q user actor type action period))
       |> Enum.reject(fn {key, value} -> value == "" or (key == "period" and value == "7") end)
 
     {:noreply, push_patch(socket, to: "/admin/config/activity?" <> URI.encode_query(query))}
@@ -305,6 +322,15 @@ defmodule BrandoAdmin.Sites.ActivityLive do
           </select>
         </label>
         <label>
+          <span class="sr-only">{gettext("Made by")}</span>
+          <select name="actor" class="admin-select">
+            <option value="">{gettext("All actors")}</option>
+            <option :for={{label, value} <- @actor_options} value={value} selected={@filters["actor"] == value}>
+              {label}
+            </option>
+          </select>
+        </label>
+        <label>
           <span class="sr-only">{gettext("Content type")}</span>
           <select name="type" class="admin-select">
             <option value="">{gettext("All content types")}</option>
@@ -347,7 +373,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
           {Events.day_label(date)} <span>{Events.short_date(date)}</span>
         </h2>
         <ol class="activity-list">
-          <.item :for={item <- items} item={item} states={@states} />
+          <.item :for={item <- items} item={item} states={@states} viewer={@viewer} />
         </ol>
       </section>
 
@@ -492,13 +518,15 @@ defmodule BrandoAdmin.Sites.ActivityLive do
 
   attr :item, :any, required: true
   attr :states, :map, required: true
+  attr :viewer, :map, required: true
 
   defp item(%{item: {:event, event}} = assigns) do
     assigns =
       assign(assigns,
         event: event,
         compare?: not is_nil(Comparison.revisions(event)) and not is_nil(Events.entry_path(event, assigns.states)),
-        trash_path: Events.trash_path(event, assigns.states)
+        trash_path: Events.trash_path(event, assigns.states),
+        proposal_path: Events.proposal_path(event, assigns.viewer)
       )
 
     ~H"""
@@ -523,6 +551,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
           {gettext("Compare")}
         </button>
         <.link :if={@trash_path} navigate={@trash_path} class="utils-button">{gettext("Open trash")}</.link>
+        <.link :if={@proposal_path} navigate={@proposal_path} class="utils-button">{gettext("Open proposal")}</.link>
         <span :if={@event.revision} class="activity-revision">
           {gettext("Revision #%{revision}", revision: @event.revision)}
         </span>

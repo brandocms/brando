@@ -140,8 +140,9 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       tokens = connect!(conn, tenant)
       call_tool(tenant, tokens["access_token"], "list_content_types")
 
-      {:ok, _view, html} = live(conn, "/admin/config/activity")
-      assert html =~ "Test Client via MCP"
+      {:ok, view, html} = live(conn, "/admin/config/activity")
+      assert has_element?(view, ".activity-person-line", "Test Client")
+      assert has_element?(view, ".activity-person-line .activity-kind[data-kind=mcp]")
       assert html =~ "list_content_types"
       assert html =~ "Connected over MCP"
     end

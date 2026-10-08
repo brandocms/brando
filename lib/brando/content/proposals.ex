@@ -2028,7 +2028,8 @@ defmodule Brando.Content.Proposals do
   @spec undo(Ecto.UUID.t(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
   def undo(id, actor) do
     {source, details} = activity_source(id, actor)
-    Brando.Activity.with_source(source, details, fn -> do_undo(id, actor) end)
+
+    Brando.Activity.with_proposal(source, Map.put(details, "undo_proposal", true), id, actor, fn -> do_undo(id, actor) end)
   end
 
   defp do_undo(id, actor) do
@@ -2196,11 +2197,12 @@ defmodule Brando.Content.Proposals do
   @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
   def apply(id, version, actor, opts \\ []) do
     {source, details} = activity_source(id, actor)
-    Brando.Activity.with_source(source, details, fn -> do_apply(id, version, actor, opts) end)
+    Brando.Activity.with_proposal(source, details, id, actor, fn -> do_apply(id, version, actor, opts) end)
   end
 
   # The activity log says who prepared the change: the Assistant, or a tool
-  # connected over MCP, by name when it is known. The person is the reviewer.
+  # connected over MCP, by name when it is known; which proposal it came
+  # from; and the reviewer who approved and applied it (or undid it).
   defp activity_source(id, actor) do
     case Error.protect(fn -> record!(id, actor) end) do
       {:ok, %Record{origin: "mcp", client: nil}} -> {:mcp, %{}}
