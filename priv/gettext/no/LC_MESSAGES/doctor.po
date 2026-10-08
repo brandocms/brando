@@ -827,3 +827,13 @@ msgstr[1] "%{count} avviker (lag dem på nytt)"
 #, elixir-autogen, elixir-format
 msgid "run mix brando.images.adopt, or Utilities → Recreate changed images, which records them without recreating them"
 msgstr "kjør mix brando.images.adopt, eller Verktøy → Lag endrede bilder på nytt, som lagrer dem uten å lage dem på nytt"
+
+#: lib/brando/doctor/checks/modules.ex
+#, elixir-autogen, elixir-format
+msgid "they hold refs or vars their module no longer defines: resolve them under Block modules, or with mix brando.modules resolve --uid UID --user ID"
+msgstr "de har referanser eller variabler som modulen ikke lenger definerer: løs dem under Blokkmoduler, eller med mix brando.modules resolve --uid UID --user ID"
+
+#: lib/brando/doctor/checks/modules.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve blocks"
+msgstr "Løs blokker"

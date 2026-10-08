@@ -1510,4 +1510,88 @@ for {roots, index} <-
   |> E2eProject.Repo.insert!()
 end
 
+# The blocks above were inserted as they are, not synced with their modules:
+# sync them, as a module save does, so they are on their module's version.
+require Ecto.Query
+
+for module_id <- E2eProject.Repo.all(Ecto.Query.from(m in Brando.Content.Module, select: m.id)) do
+  Brando.Content.Blocks.refresh_module_in_blocks(module_id)
+end
+
+# Blocks a module save could not bring up to date (Brando.Content.StaleBlocks):
+# Kulturslider is on version 3, which no longer defines the `link` variable
+# that two blocks on version 1 still hold. Version 3 has `cta` (a link) and
+# `caption` instead. tests/configuration/stale-blocks.spec.js resolves them.
+slider_var = fn key, type, label, attrs ->
+  struct(
+    %Brando.Content.Var{key: key, type: type, label: label, placement: :content, creator_id: user.id},
+    attrs
+  )
+end
+
+slider_title = fn text ->
+  %Brando.Content.Ref{
+    uid: Brando.Utils.generate_uid(),
+    name: "title",
+    description: "",
+    data: %Brando.Villain.Blocks.HeaderBlock{
+      type: "header",
+      data: %Brando.Villain.Blocks.HeaderBlock.Data{level: 2, text: text}
+    }
+  }
+end
+
+kulturslider =
+  %Brando.Content.Module{
+    uid: "kulturslider",
+    class: "kulturslider",
+    name: "Kulturslider",
+    namespace: "general",
+    help_text: "Upcoming events",
+    code: "<section class=\"kulturslider\">{% ref refs.title %}<p>{{ caption }}</p></section>",
+    version: 3,
+    sequence: 0,
+    refs: [slider_title.("Title")],
+    vars: [
+      slider_var.("caption", :text, "Caption", %{}),
+      slider_var.("cta", :link, "Call to action", %{link_type: :url})
+    ]
+  }
+  |> E2eProject.Repo.insert!()
+
+slider_block = fn {text, link_text, url}, sequence ->
+  %Brando.Pages.Page.Blocks{
+    sequence: sequence,
+    block: %Brando.Content.Block{
+      type: :module,
+      uid: Brando.Utils.generate_uid(),
+      module_id: kulturslider.id,
+      module_version: 1,
+      source: Brando.Pages.Page.Blocks,
+      creator_id: user.id,
+      sequence: sequence,
+      refs: [slider_title.(text)],
+      vars: [
+        slider_var.("caption", :text, "Caption", %{sequence: 0}),
+        slider_var.("cta", :link, "Call to action", %{link_type: :url, sequence: 1}),
+        slider_var.("link", :link, "Link", %{link_type: :url, link_text: link_text, value: url, sequence: 2})
+      ]
+    }
+  }
+end
+
+%Brando.Pages.Page{
+  title: "Kulturkalender",
+  uri: "kulturkalender",
+  language: :en,
+  status: :published,
+  template: "default.html",
+  creator_id: user.id,
+  entry_blocks: [
+    slider_block.({"Konserter", "Les mer", "https://by.no/kultur/konserter"}, 0),
+    slider_block.({"Utstillinger", "Billetter", "https://by.no/kultur/utstillinger"}, 1)
+  ]
+}
+|> E2eProject.Repo.insert!()
+
 if Brando.Authorization.enabled?(), do: Brando.Authorization.Migration.run()

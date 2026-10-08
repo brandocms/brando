@@ -18754,3 +18754,404 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "Could not build structured data: %{reason}"
 msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "The blocks changed after you reviewed them. Review them again."
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "%{kind} %{key} → %{target}: %{reason}."
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Before resolving blocks on older versions of %{module}"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Block #%{id} could not be saved: %{errors}"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Could not store a revision of %{entry}: %{reason}"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "No module with id %{id}."
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "No module with uid %{uid}."
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "It cannot be saved as it is: %{errors}"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "It cannot be updated: %{error}"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a %{from} reference cannot hold the content of a %{to} reference"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a %{from} variable cannot become a %{to} variable"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "the module has no %{kind} %{key}"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "it already has that name"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "another leftover in this block is moved into %{key}"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "%{key} holds content of another type; drop that first"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "its text has more than one line"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "“%{value}” is not one of its options"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to change this module."
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to change %{entry}."
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Reference"
+msgstr ""
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Variable"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brought %{count} block up to date."
+msgid_plural "Brought %{count} blocks up to date."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks on older versions"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks that a module save could not bring up to date. They hold references or variables their module no longer defines; choose what happens to them, module by module."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "All blocks are on their module's current version."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block on an older version than %{version}"
+msgid_plural "%{count} blocks on older versions than %{version}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block of %{module} is on an older version than the module's version %{version}. A module save keeps what the module no longer defines, so the block cannot be brought up to date until that is dropped or moved."
+msgid_plural "%{count} blocks of %{module} are on older versions than the module's version %{version}. A module save keeps what the module no longer defines, so the blocks cannot be brought up to date until that is dropped or moved."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of the entry was stored first; History can restore it."
+msgid_plural "A revision of each entry was stored first; History can restore them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "All blocks of %{module} are on version %{version}."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Left over"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "References and variables the module no longer defines. What you choose here applies to every block, unless a block below says otherwise."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "in %{count} block"
+msgid_plural "in %{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The module's %{key} is now a %{type} reference."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What happens to %{key}"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not in any entry"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing left over. Resolving re-syncs it with the module."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "In this block"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What happens to %{key} in this block"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "As above"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This changes %{count} entry. A revision of it is stored first, so History can restore it."
+msgid_plural "This changes %{count} entries. A revision of each is stored first, so History can restore them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What will be lost"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "replaced in %{target}: %{value}"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "and %{count} more"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing that holds a value is dropped or replaced."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block stays on its older version: it still holds something you chose to keep."
+msgid_plural "%{count} blocks stay on older versions: they still hold something you chose to keep."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Change choices"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve %{count} block?"
+msgid_plural "Resolve %{count} blocks?"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve %{count} block"
+msgid_plural "Resolve %{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Keep for now"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drop"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "not compatible"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "keep for now"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "drop"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "move to %{target}"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{from} → %{to}"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{from}"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} choice cannot be made: see the blocks marked below."
+msgid_plural "%{count} choices cannot be made: see the blocks marked below."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose what happens to what is left over."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolving changes %{count} block in %{entries}; %{stamped} will be up to date."
+msgid_plural "Resolving changes %{count} blocks in %{entries}; %{stamped} will be up to date."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Re-sync %{count} block with nothing left over"
+msgid_plural "Re-sync %{count} blocks with nothing left over"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drop %{key} in %{count} block"
+msgid_plural "Drop %{key} in %{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move %{key} to %{target} in %{count} block"
+msgid_plural "Move %{key} to %{target} in %{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing that holds a value is dropped or replaced. A revision of each entry is stored first."
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} value is dropped or replaced. A revision of each entry is stored first, so History can restore it."
+msgid_plural "%{count} values are dropped or replaced. A revision of each entry is stored first, so History can restore them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Block #%{id}"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve blocks"
+msgstr ""
+
+#: lib/brando_admin/components/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block on an older version"
+msgid_plural "%{count} blocks on older versions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "It holds references or variables this module no longer defines, so saving the module cannot bring it up to date."
+msgid_plural "They hold references or variables this module no longer defines, so saving the module cannot bring them up to date."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Brought %{count} %{module} block up to date"
+msgid_plural "Brought %{count} %{module} blocks up to date"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped %{keys}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{keys}"
+msgstr ""

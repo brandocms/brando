@@ -47,6 +47,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
          |> assign(:sketch, %{status: nil, available?: Brando.Content.ModuleSketch.available?()})
          |> assign(:active_tab, :template)
          |> assign_entry(entry_id)
+         |> assign_stale_blocks()
          |> assign_definition_file()
          |> assign_current_user(token)
          |> assign_form()
@@ -79,6 +80,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
 
         <BrandoAdmin.Components.DefinitionFile.notice file={@definition_file} />
+        <BrandoAdmin.Components.StaleBlocks.notice :if={!@shared_library?} count={@stale_blocks} module_id={@entry.id} />
         <.tab_bar active_tab={@active_tab} form={@form} />
 
         <div :if={@shared_library?} class="module-version-note">
@@ -564,7 +566,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       {:ok, entry} ->
         send(self(), {:toast, gettext("Module updated")})
         # This save may have put the module out of step with its file
-        socket = assign_definition_file(socket, fresh: true)
+        socket = socket |> assign(:entry, entry) |> assign_stale_blocks() |> assign_definition_file(fresh: true)
 
         redirected_socket =
           case socket.assigns.save_redirect_target do
@@ -673,6 +675,12 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   defp assign_current_user(socket, token) do
     assign(socket, :current_user, Brando.Users.get_user_by_session_token(token))
   end
+
+  # Blocks a save could not bring up to date; the notice links to resolving them.
+  defp assign_stale_blocks(%{assigns: %{shared_library?: true}} = socket), do: assign(socket, :stale_blocks, 0)
+
+  defp assign_stale_blocks(socket),
+    do: assign(socket, :stale_blocks, ContentBlocks.count_stale_blocks(socket.assigns.entry))
 
   defp assign_definition_file(socket, opts \\ []) do
     file = if !socket.assigns.shared_library?, do: Brando.Content.Definition.Watcher.file(socket.assigns.entry.uid, opts)

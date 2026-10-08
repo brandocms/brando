@@ -492,6 +492,38 @@ mix brando.modules refresh --uid acme-hero --user 1
 If saving the new lockfile fails after commit, export into a new directory before
 the next edit. The CLI reports this separately from an import rollback.
 
+## Blocks left on an older version
+
+A module save migrates every block that uses it, but never deletes what the
+editor typed: a ref or var the new version no longer defines (a renamed or
+removed one) stays in the block, and so does a ref whose type changed. Such a
+block keeps its old `module_version` and stays stale, which `mix brando.doctor`
+counts. A refresh re-renders it; it cannot bring it up to date.
+
+Resolve the leftovers in the admin, from the module's screen (Block modules →
+the module → **Resolve blocks**, or the system check's link), or with the
+`resolve` command. Each leftover is dropped or mapped onto a ref or var the
+module defines now, in every block at once, with exceptions per block in the
+admin. A var keeps its value when it moves to the same type, from string to
+text, from single-line text to string, or from string or text to HTML; a select
+value must be one of the target's options. A ref moves to a ref of a compatible
+type. Anything else is refused, with the reason.
+
+```sh
+# what the blocks hold (a dry run)
+mix brando.modules resolve --uid kulturslider --user 1
+# drop `link`, move the old `title` ref onto `heading`
+mix brando.modules resolve --uid kulturslider --user 1 --drop link --map title=heading
+mix brando.modules resolve --uid kulturslider --user 1 --drop link --map title=heading --apply
+```
+
+Write `ref:KEY` or `var:KEY` when a ref and a var share a key. Resolving stores
+a revision of every entry it changes first (History can restore it), re-syncs
+the blocks with the module, stamps their version, renders them and their
+entries, records the change in Activity, and moves editors who have an entry
+open onto the new rows. It needs the right to update the module and every
+entry. `Brando.Content.StaleBlocks` is the API both use.
+
 ## Calling the API
 
 ```elixir

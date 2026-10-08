@@ -47,7 +47,7 @@ defmodule BrandoAdmin.UtilsSystemCheckLiveTest do
     {:ok, view, _html} = live(conn, "/admin/config/utils")
     render_async(view)
 
-    assert has_element?(view, "li[data-check=modules] a[href$='/config/content/modules']", "Open modules")
+    assert has_element?(view, "li[data-check=modules] a[href$='/config/content/modules/stale-blocks']", "Resolve blocks")
   end
 
   test "Brando's own checks render", %{conn: conn} do

@@ -3,7 +3,9 @@ defmodule Brando.Doctor.Checks.Modules do
   Blocks on outdated module versions: blocks whose `module_version` is behind
   their module's, found as `Brando.Content.Blocks.list_stale_block_ids/2`
   finds them. They still render, but may hold refs or vars the module no
-  longer defines.
+  longer defines. The fix is resolving those (`Brando.Content.StaleBlocks`),
+  in the admin or with `mix brando.modules resolve`; a refresh alone does
+  not.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -44,8 +46,12 @@ defmodule Brando.Doctor.Checks.Modules do
             "%{count} blocks on outdated module versions",
             blocks
           ),
-          fix: dgettext("doctor", "refresh the modules: mix brando.modules refresh --uid UID --user ID"),
-          link: {BrandoAdmin.Content.ModuleListLive, dgettext("doctor", "Open modules")},
+          fix:
+            dgettext(
+              "doctor",
+              "they hold refs or vars their module no longer defines: resolve them under Block modules, or with mix brando.modules resolve --uid UID --user ID"
+            ),
+          link: {"/admin/config/content/modules/stale-blocks", dgettext("doctor", "Resolve blocks")},
           items:
             Enum.map(stale, fn {label, name, uid, count} ->
               Context.label_item(

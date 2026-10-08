@@ -117,6 +117,7 @@
 @import "./views/config/ScheduledPublishing.css";
 @import "./views/config/SEO.css";
 @import "./views/config/Utils.css";
+@import "./views/config/StaleBlocks.css";
 @import "./views/config/Activity.css";
 @import "./views/config/Integrations.css";
 @import "./views/config/MCP.css";

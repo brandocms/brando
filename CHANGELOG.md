@@ -738,6 +738,25 @@ production dump.
 
 #### Features
 
+- **Blocks on older module versions can be resolved.** A module save keeps
+  refs and vars the new version no longer defines, and leaves the blocks
+  holding them on their old version, so `mix brando.doctor` warned about them
+  for good: `mix brando.modules refresh` re-rendered them and left them stale.
+  Block modules → the module → **Resolve blocks** (linked from the system
+  check, and from a notice on the module's screen) lists those blocks with
+  their entries, versions and the leftover values, and drops each leftover or
+  moves it onto a ref or var the module defines now, in every block at once,
+  with exceptions per block. A value moves only between compatible types;
+  other mappings are refused with the reason. A review lists what is lost
+  before the confirmation. Resolving stores a revision of each entry first,
+  re-syncs, stamps and renders the blocks, records the change in Activity and
+  moves editors who have an entry open onto the new rows; it needs the right
+  to update the module and the entries. `mix brando.modules resolve --uid UID`
+  does the same from the terminal (a dry run until `--apply`, with `--drop
+  KEY` and `--map OLD=NEW`), and `refresh` now says what keeps blocks stale
+  and points there. See `Brando.Content.StaleBlocks` and "Blocks left on an
+  older version" in the module definitions guide.
+
 - **Documentation for coding agents.** `usage-rules.md` is now generated
   from the guides by `mix brando.docs.agents`, which copies the regions
   marked `<!-- usage-rules:start -->` … `<!-- usage-rules:end -->` under a

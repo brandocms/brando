@@ -63,17 +63,23 @@ defmodule Brando.Doctor do
   @doc """
   Runs `checks` (default: `checks/0`) and returns their results in order.
 
-  The rest of `opts` builds the `Brando.Doctor.Context`. A check that raises
+  `:sandbox` is a LiveView's SQL sandbox metadata, for the admin's checks in
+  a test. The rest of `opts` builds the `Brando.Doctor.Context`. A check that raises
   or takes longer than a minute is reported as an error rather than stopping
   the others.
   """
   @spec run(keyword()) :: [Result.t()]
   def run(opts \\ []) do
     {checks, opts} = Keyword.pop_lazy(opts, :checks, &checks/0)
+    {sandbox, opts} = Keyword.pop(opts, :sandbox)
     context = Context.new(opts)
 
     checks
-    |> Task.async_stream(&run_check(&1, context),
+    |> Task.async_stream(
+      fn check ->
+        allow_sandbox(sandbox)
+        run_check(check, context)
+      end,
       ordered: true,
       timeout: @timeout,
       on_timeout: :kill_task,
@@ -198,6 +204,12 @@ defmodule Brando.Doctor do
   rescue
     _ -> inspect(check)
   end
+
+  # In a test, the admin's checks read the test's SQL sandbox. Its
+  # connections are not inherited by tasks in the sandbox's `:auto` mode, so
+  # each check's task joins it (`:sandbox`, the LiveView's sandbox metadata).
+  defp allow_sandbox(nil), do: :ok
+  defp allow_sandbox(sandbox), do: Phoenix.Ecto.SQL.Sandbox.allow(sandbox, Ecto.Adapters.SQL.Sandbox)
 
   defp with_prefix(nil, fun), do: fun.()
   defp with_prefix(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)

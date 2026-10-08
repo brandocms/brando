@@ -26,7 +26,8 @@ defmodule Brando.Content.Usage do
           url: String.t() | nil,
           type: String.t(),
           cover: String.t() | nil,
-          status: atom() | nil
+          status: atom() | nil,
+          language: atom() | nil
         }
 
   @kinds [:image, :video, :gallery, :file, :form]
@@ -121,7 +122,8 @@ defmodule Brando.Content.Usage do
       url: admin_url(schema, id),
       type: type,
       cover: identifier && identifier.cover,
-      status: identifier && identifier.status
+      status: identifier && identifier.status,
+      language: identifier && identifier.language
     }
   end
 

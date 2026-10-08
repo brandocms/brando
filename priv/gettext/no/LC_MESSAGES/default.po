@@ -18749,3 +18749,404 @@ msgstr[1] "%{count} bilder laget på nytt"
 #, elixir-autogen, elixir-format
 msgid "Could not build structured data: %{reason}"
 msgstr "Kunne ikke lage strukturerte data: %{reason}"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "The blocks changed after you reviewed them. Review them again."
+msgstr "Blokkene ble endret etter at du gikk gjennom dem. Gå gjennom dem på nytt."
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "%{kind} %{key} → %{target}: %{reason}."
+msgstr "%{kind} %{key} → %{target}: %{reason}."
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Before resolving blocks on older versions of %{module}"
+msgstr "Før blokker på eldre versjoner av %{module} ble løst"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Block #%{id} could not be saved: %{errors}"
+msgstr "Blokk #%{id} kunne ikke lagres: %{errors}"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Could not store a revision of %{entry}: %{reason}"
+msgstr "Kunne ikke lagre en revisjon av %{entry}: %{reason}"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "No module with id %{id}."
+msgstr "Ingen modul med id %{id}."
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "No module with uid %{uid}."
+msgstr "Ingen modul med uid %{uid}."
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "It cannot be saved as it is: %{errors}"
+msgstr "Den kan ikke lagres slik den er: %{errors}"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "It cannot be updated: %{error}"
+msgstr "Den kan ikke oppdateres: %{error}"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a %{from} reference cannot hold the content of a %{to} reference"
+msgstr "en %{from}-referanse kan ikke holde innholdet i en %{to}-referanse"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a %{from} variable cannot become a %{to} variable"
+msgstr "en %{from}-variabel kan ikke bli en %{to}-variabel"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "the module has no %{kind} %{key}"
+msgstr "modulen har ingen %{kind} %{key}"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "it already has that name"
+msgstr "den har allerede det navnet"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "another leftover in this block is moved into %{key}"
+msgstr "noe annet som er til overs i denne blokken, flyttes til %{key}"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "%{key} holds content of another type; drop that first"
+msgstr "%{key} har innhold av en annen type; forkast det først"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "its text has more than one line"
+msgstr "teksten har mer enn én linje"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "“%{value}” is not one of its options"
+msgstr "«%{value}» er ikke et av valgene"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to change this module."
+msgstr "Du har ikke tilgang til å endre denne modulen."
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to change %{entry}."
+msgstr "Du har ikke tilgang til å endre %{entry}."
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Reference"
+msgstr "Referanse"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Variable"
+msgstr "Variabel"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brought %{count} block up to date."
+msgid_plural "Brought %{count} blocks up to date."
+msgstr[0] "Oppdaterte %{count} blokk."
+msgstr[1] "Oppdaterte %{count} blokker."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks on older versions"
+msgstr "Blokker på eldre versjoner"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks that a module save could not bring up to date. They hold references or variables their module no longer defines; choose what happens to them, module by module."
+msgstr "Blokker som en lagring av modulen ikke kunne oppdatere. De har referanser eller variabler som modulen ikke lenger definerer; velg hva som skal skje med dem, modul for modul."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "All blocks are on their module's current version."
+msgstr "Alle blokker er på modulens gjeldende versjon."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block on an older version than %{version}"
+msgid_plural "%{count} blocks on older versions than %{version}"
+msgstr[0] "%{count} blokk på en eldre versjon enn %{version}"
+msgstr[1] "%{count} blokker på eldre versjoner enn %{version}"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block of %{module} is on an older version than the module's version %{version}. A module save keeps what the module no longer defines, so the block cannot be brought up to date until that is dropped or moved."
+msgid_plural "%{count} blocks of %{module} are on older versions than the module's version %{version}. A module save keeps what the module no longer defines, so the blocks cannot be brought up to date until that is dropped or moved."
+msgstr[0] "%{count} blokk av %{module} er på en eldre versjon enn modulens versjon %{version}. En lagring av modulen beholder det modulen ikke lenger definerer, så blokken kan ikke oppdateres før det er forkastet eller flyttet."
+msgstr[1] "%{count} blokker av %{module} er på eldre versjoner enn modulens versjon %{version}. En lagring av modulen beholder det modulen ikke lenger definerer, så blokkene kan ikke oppdateres før det er forkastet eller flyttet."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of the entry was stored first; History can restore it."
+msgid_plural "A revision of each entry was stored first; History can restore them."
+msgstr[0] "En revisjon av oppføringen ble lagret først; Historikk kan gjenopprette den."
+msgstr[1] "En revisjon av hver oppføring ble lagret først; Historikk kan gjenopprette dem."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "All blocks of %{module} are on version %{version}."
+msgstr "Alle blokker av %{module} er på versjon %{version}."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Left over"
+msgstr "Til overs"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "References and variables the module no longer defines. What you choose here applies to every block, unless a block below says otherwise."
+msgstr "Referanser og variabler som modulen ikke lenger definerer. Det du velger her, gjelder alle blokker, med mindre en blokk under sier noe annet."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "in %{count} block"
+msgid_plural "in %{count} blocks"
+msgstr[0] "i %{count} blokk"
+msgstr[1] "i %{count} blokker"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The module's %{key} is now a %{type} reference."
+msgstr "Modulens %{key} er nå en %{type}-referanse."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What happens to %{key}"
+msgstr "Hva som skjer med %{key}"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not in any entry"
+msgstr "Ikke i noen oppføring"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing left over. Resolving re-syncs it with the module."
+msgstr "Ingenting til overs. Den synkroniseres på nytt med modulen."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "In this block"
+msgstr "I denne blokken"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What happens to %{key} in this block"
+msgstr "Hva som skjer med %{key} i denne blokken"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "As above"
+msgstr "Som over"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review"
+msgstr "Gjennomgang"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This changes %{count} entry. A revision of it is stored first, so History can restore it."
+msgid_plural "This changes %{count} entries. A revision of each is stored first, so History can restore them."
+msgstr[0] "Dette endrer %{count} oppføring. En revisjon av den lagres først, så Historikk kan gjenopprette den."
+msgstr[1] "Dette endrer %{count} oppføringer. En revisjon av hver lagres først, så Historikk kan gjenopprette dem."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What will be lost"
+msgstr "Dette går tapt"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "replaced in %{target}: %{value}"
+msgstr "erstattes i %{target}: %{value}"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "and %{count} more"
+msgstr "og %{count} til"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing that holds a value is dropped or replaced."
+msgstr "Ingenting med en verdi forkastes eller erstattes."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block stays on its older version: it still holds something you chose to keep."
+msgid_plural "%{count} blocks stay on older versions: they still hold something you chose to keep."
+msgstr[0] "%{count} blokk blir værende på sin eldre versjon: den har fortsatt noe du valgte å beholde."
+msgstr[1] "%{count} blokker blir værende på eldre versjoner: de har fortsatt noe du valgte å beholde."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Change choices"
+msgstr "Endre valg"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve %{count} block?"
+msgid_plural "Resolve %{count} blocks?"
+msgstr[0] "Løse %{count} blokk?"
+msgstr[1] "Løse %{count} blokker?"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve %{count} block"
+msgid_plural "Resolve %{count} blocks"
+msgstr[0] "Løs %{count} blokk"
+msgstr[1] "Løs %{count} blokker"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Keep for now"
+msgstr "Behold inntil videre"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drop"
+msgstr "Forkast"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to"
+msgstr "Flytt til"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "not compatible"
+msgstr "passer ikke"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "keep for now"
+msgstr "behold inntil videre"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "drop"
+msgstr "forkast"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "move to %{target}"
+msgstr "flytt til %{target}"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{from} → %{to}"
+msgstr "Versjon %{from} → %{to}"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{from}"
+msgstr "Versjon %{from}"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} choice cannot be made: see the blocks marked below."
+msgid_plural "%{count} choices cannot be made: see the blocks marked below."
+msgstr[0] "%{count} valg kan ikke gjøres: se blokken som er merket under."
+msgstr[1] "%{count} valg kan ikke gjøres: se blokkene som er merket under."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose what happens to what is left over."
+msgstr "Velg hva som skal skje med det som er til overs."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolving changes %{count} block in %{entries}; %{stamped} will be up to date."
+msgid_plural "Resolving changes %{count} blocks in %{entries}; %{stamped} will be up to date."
+msgstr[0] "Dette endrer %{count} blokk i %{entries}; %{stamped} blir oppdatert."
+msgstr[1] "Dette endrer %{count} blokker i %{entries}; %{stamped} blir oppdatert."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Re-sync %{count} block with nothing left over"
+msgid_plural "Re-sync %{count} blocks with nothing left over"
+msgstr[0] "Synkroniser %{count} blokk uten noe til overs"
+msgstr[1] "Synkroniser %{count} blokker uten noe til overs"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drop %{key} in %{count} block"
+msgid_plural "Drop %{key} in %{count} blocks"
+msgstr[0] "Forkast %{key} i %{count} blokk"
+msgstr[1] "Forkast %{key} i %{count} blokker"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move %{key} to %{target} in %{count} block"
+msgid_plural "Move %{key} to %{target} in %{count} blocks"
+msgstr[0] "Flytt %{key} til %{target} i %{count} blokk"
+msgstr[1] "Flytt %{key} til %{target} i %{count} blokker"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing that holds a value is dropped or replaced. A revision of each entry is stored first."
+msgstr "Ingenting med en verdi forkastes eller erstattes. En revisjon av hver oppføring lagres først."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} value is dropped or replaced. A revision of each entry is stored first, so History can restore it."
+msgid_plural "%{count} values are dropped or replaced. A revision of each entry is stored first, so History can restore them."
+msgstr[0] "%{count} verdi forkastes eller erstattes. En revisjon av hver oppføring lagres først, så Historikk kan gjenopprette den."
+msgstr[1] "%{count} verdier forkastes eller erstattes. En revisjon av hver oppføring lagres først, så Historikk kan gjenopprette dem."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Block #%{id}"
+msgstr "Blokk #%{id}"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve blocks"
+msgstr "Løs blokker"
+
+#: lib/brando_admin/components/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block on an older version"
+msgid_plural "%{count} blocks on older versions"
+msgstr[0] "%{count} blokk på en eldre versjon"
+msgstr[1] "%{count} blokker på eldre versjoner"
+
+#: lib/brando_admin/components/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "It holds references or variables this module no longer defines, so saving the module cannot bring it up to date."
+msgid_plural "They hold references or variables this module no longer defines, so saving the module cannot bring them up to date."
+msgstr[0] "Den har referanser eller variabler som denne modulen ikke lenger definerer, så en lagring av modulen kan ikke oppdatere den."
+msgstr[1] "De har referanser eller variabler som denne modulen ikke lenger definerer, så en lagring av modulen kan ikke oppdatere dem."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Brought %{count} %{module} block up to date"
+msgid_plural "Brought %{count} %{module} blocks up to date"
+msgstr[0] "Oppdaterte %{count} %{module}-blokk"
+msgstr[1] "Oppdaterte %{count} %{module}-blokker"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped %{keys}"
+msgstr "Forkastet %{keys}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{keys}"
+msgstr "Flyttet %{keys}"
