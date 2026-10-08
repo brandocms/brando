@@ -5,6 +5,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Factory
+  alias Brando.ImageFileFixtures
   alias Brando.Images.Image
   alias Brando.Images.Processing
   alias Brando.Worker
@@ -85,6 +86,44 @@ defmodule Brando.Images.ImageMaintenanceTest do
       refute unchanged.id in queued_ids
       refute removed.id in queued_ids
     end)
+  end
+
+  test "recreating changed sizes adopts unrecorded images that match and recreates the rest", %{user: user} do
+    current = Processing.current_fingerprint("default")
+
+    for target <- Repo.all(from i in Image, where: not is_nil(i.config_target), distinct: true, select: i.config_target) do
+      Repo.update_all(from(i in Image, where: i.config_target == ^target),
+        set: [config_fingerprint: Processing.current_fingerprint(target)]
+      )
+    end
+
+    matching = ImageFileFixtures.unrecorded_image("job-match")
+
+    differing =
+      ImageFileFixtures.unrecorded_image("job-differ", sizes: Map.delete(ImageFileFixtures.standard_sizes(), "xlarge"))
+
+    changed = Factory.insert(:image, config_fingerprint: "0123456789ab")
+
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Processing.topic())
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _} =
+               %{task: "recreate_changed_sizes", user_id: user.id, batch_size: 2}
+               |> Worker.ImageMaintenance.new()
+               |> Oban.insert()
+
+      Oban.drain_queue(queue: :default, with_recursion: true)
+
+      queued_ids = Enum.map(all_enqueued(worker: Worker.ImageProcessor), & &1.args["image_id"])
+      assert Enum.sort(queued_ids) == Enum.sort([differing.id, changed.id])
+    end)
+
+    assert Repo.get!(Image, matching.id).config_fingerprint == current
+    assert Repo.get!(Image, differing.id).config_fingerprint == nil
+
+    # The counts add up over the batches.
+    assert_received {:image_maintenance, %{task: "recreate_changed_sizes", state: :running}}
+    assert_received {:image_maintenance, %{task: "recreate_changed_sizes", state: :done, adopted: 1, recreated: 2}}
   end
 
   test "processing stores the fingerprint of the config it used", %{user: user} do

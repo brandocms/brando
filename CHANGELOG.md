@@ -10,7 +10,11 @@ projects still on 0.53 run `mix brando.migrate54` followed by
 removed in 0.56; see "How long source migrations ship" in `UPGRADE.md`.
 Then copy the Brando migrations added since `brando_130` with
 `mix brando.gen.migrations`, review them, run `mix ecto.migrate`, and finish
-with `mix brando.entries.resave` and `mix brando.identifiers.sync`. The full
+with `mix brando.entries.resave` and `mix brando.identifiers.sync`. Run
+`mix brando.images.adopt` once too: images processed before 0.55 have no
+record of the config they were made with, and it records it for those whose
+files already match, so **Recreate changed images** only recreates the rest
+(see [Media](guides/media.md#images-made-before-fingerprints)). The full
 ordered workflow, including Blueprint snapshot handling and Gettext recovery,
 is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 Sites still on 0.51 (the `legacy` branch, with the Vue admin) have no
@@ -951,7 +955,11 @@ production dump.
   sizes and formats it was made with, and Utilities counts the images whose
   config has changed and offers **Recreate changed images** next to
   **Recreate image sizes**. Run `mix brando.gen.migrations` for `brando_197`.
-  Images processed before it have no fingerprint and count as changed once.
+  Images processed before it have no fingerprint. `mix brando.images.adopt`
+  records the current one for those whose files already match their config
+  (formats, size keys, files and their pixel dimensions, read from the
+  headers; not quality), and **Recreate changed images** does the same before
+  recreating only the rest. `mix brando.doctor` counts both as a dry run.
 
 - **Frontend edit mode.** Signed-in admins can edit blocks on the published
   site: an **Edit page** button switches edit mode on, a click on a block opens

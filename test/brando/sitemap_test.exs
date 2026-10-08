@@ -89,4 +89,22 @@ defmodule Brando.SitemapTest do
     assert sitemap =~
              "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\" xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n<url>\n  <loc>http://localhost/index</loc>\n  <lastmod>2023-08-10T12:00:00+02:00</lastmod>\n  <changefreq>weekly</changefreq>\n  <priority>0.7</priority>\n</url>\n</urlset>\n"
   end
+
+  @tag :tmp_dir
+  test "exists? finds a sitemap module that isn't loaded yet, as in a mix task", %{tmp_dir: dir} do
+    # A module on the code path but not loaded, as an application's modules
+    # are when `mix brando.doctor` starts
+    module = :"Elixir.Brando.SitemapTest.Unloaded#{System.unique_integer([:positive])}"
+    [{^module, beam}] = Code.compile_string("defmodule #{inspect(module)} do\nend")
+    File.write!(Path.join(dir, "#{module}.beam"), beam)
+    :code.purge(module)
+    :code.delete(module)
+    :code.purge(module)
+    true = :code.add_patha(String.to_charlist(dir))
+    on_exit(fn -> :code.del_path(String.to_charlist(dir)) end)
+    refute :erlang.module_loaded(module)
+
+    assert Sitemap.exists?(module)
+    refute Sitemap.exists?(:"Elixir.Brando.SitemapTest.NoSuchModule")
+  end
 end

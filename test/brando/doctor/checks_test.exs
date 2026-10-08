@@ -8,6 +8,7 @@ defmodule Brando.Doctor.ChecksTest do
   alias Brando.Doctor.Context
   alias Brando.Doctor.Result
   alias Brando.Factory
+  alias Brando.ImageFileFixtures
   alias Brando.Images.Image
   alias Brando.Images.Processing
 
@@ -304,9 +305,114 @@ defmodule Brando.Doctor.ChecksTest do
 
       result = Checks.ImageConfigs.run(context())
       assert result.status == :warning
-      assert result.summary == "1 config changed since its images were made (2 images)"
-      assert result.items == ["default: 2 images"]
+
+      # Factory images have five sizes where the config has six.
+      assert result.summary ==
+               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs (recreate it)"
+
+      assert result.items == ["default: 1 image", "default: 1 image without recorded settings"]
       assert {"#utils-image-sizes", _label} = result.link
+      assert result.fix == "Utilities → Recreate changed images"
+    end
+  end
+
+  describe "ImageConfigs, images made before configs were recorded" do
+    setup do
+      Brando.Repo.update_all(from(i in Image, where: not is_nil(i.config_target)),
+        set: [config_fingerprint: "0123456789ab"]
+      )
+
+      for target <- Brando.Repo.all(from i in Image, distinct: true, select: i.config_target), target do
+        Brando.Repo.update_all(from(i in Image, where: i.config_target == ^target),
+          set: [config_fingerprint: Processing.current_fingerprint(target)]
+        )
+      end
+
+      :ok
+    end
+
+    test "all of them match: adopt them" do
+      for n <- 1..3, do: ImageFileFixtures.unrecorded_image("doctor-match-#{n}")
+
+      result = Checks.ImageConfigs.run(context())
+      assert result.status == :warning
+
+      assert result.summary ==
+               "3 images were made before Brando recorded their settings: all already match (mix brando.images.adopt records that)"
+
+      assert result.fix =~ "mix brando.images.adopt"
+      refute result.summary =~ "config changed"
+      # Only a dry run.
+      assert Brando.Repo.aggregate(from(i in Image, where: is_nil(i.config_fingerprint)), :count) == 3
+    end
+
+    test "some differ" do
+      ImageFileFixtures.unrecorded_image("doctor-some-1")
+      ImageFileFixtures.unrecorded_image("doctor-some-2")
+      ImageFileFixtures.unrecorded_image("doctor-some-3", formats: [:jpg, :webp])
+
+      result = Checks.ImageConfigs.run(context())
+
+      assert result.summary ==
+               "3 images were made before Brando recorded their settings: 2 already match (mix brando.images.adopt records that), 1 differs (recreate it)"
+
+      assert result.fix == "Utilities → Recreate changed images"
+    end
+
+    test "none match" do
+      Factory.insert(:image, config_fingerprint: nil, path: "image/3.jpg")
+      Factory.insert(:image, config_fingerprint: nil, path: "image/4.jpg")
+
+      result = Checks.ImageConfigs.run(context())
+      assert result.summary == "2 images were made before Brando recorded their settings: none match (recreate them)"
+      assert result.items == ["default: 2 images without recorded settings"]
+      assert result.fix == "Utilities → Recreate changed images"
+    end
+
+    test "none left to record" do
+      assert %Result{status: :ok, summary: "all images match their settings"} = Checks.ImageConfigs.run(context())
+    end
+
+    test "compared by records only, a match is likely" do
+      result =
+        Checks.ImageConfigs.evaluate([
+          {nil, %{changed: %{}, unrecorded: %{"default" => 10}, matching: %{"default" => 7}, check: :records}}
+        ])
+
+      assert result.summary ==
+               "10 images were made before Brando recorded their settings: 7 likely match (mix brando.images.adopt checks and records that), 3 differ (recreate them)"
+    end
+
+    test "each environment is checked against its own images and media" do
+      put_test_env(:tenancy_mode, :multi)
+      prefixes = ["tenant_adoption_one", "tenant_adoption_two"]
+
+      for prefix <- prefixes do
+        Repo.query!(~s(CREATE SCHEMA "#{prefix}"))
+        Repo.query!(~s|CREATE TABLE "#{prefix}"."images" (LIKE public."images" INCLUDING ALL)|)
+      end
+
+      on_exit(fn -> Brando.Tenant.put_prefix(nil) end)
+
+      Brando.Tenant.with_prefix("tenant_adoption_one", fn -> ImageFileFixtures.unrecorded_image("doctor-env-one") end)
+
+      Brando.Tenant.with_prefix("tenant_adoption_two", fn ->
+        # Environments of a site share its media folder: another name.
+        ImageFileFixtures.unrecorded_image("doctor-env-two", write: [])
+      end)
+
+      result =
+        Checks.ImageConfigs.run(
+          context(environments: [{"adoption/one", "tenant_adoption_one"}, {"adoption/two", "tenant_adoption_two"}])
+        )
+
+      assert result.summary ==
+               "2 images were made before Brando recorded their settings: 1 already matches (mix brando.images.adopt records that), 1 differs (recreate it)"
+
+      assert result.items == [
+               "[adoption/one] default: 1 image without recorded settings",
+               "[adoption/two] default: 1 image without recorded settings"
+             ]
     end
   end
 

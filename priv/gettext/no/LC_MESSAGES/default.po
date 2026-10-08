@@ -18695,3 +18695,17 @@ msgid "Notes, %{count} open"
 msgid_plural "Notes, %{count} open"
 msgstr[0] "Notater, %{count} åpent"
 msgstr[1] "Notater, %{count} åpne"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image already matched its settings"
+msgid_plural "%{count} images already matched their settings"
+msgstr[0] "%{count} bilde samsvarte allerede med innstillingene"
+msgstr[1] "%{count} bilder samsvarte allerede med innstillingene"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image recreated"
+msgid_plural "%{count} images recreated"
+msgstr[0] "%{count} bilde laget på nytt"
+msgstr[1] "%{count} bilder laget på nytt"

@@ -766,3 +766,64 @@ msgstr "ingen %{queues}-kø"
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image was made before Brando recorded its settings"
+msgid_plural "%{count} images were made before Brando recorded their settings"
+msgstr[0] "%{count} bilde ble laget før Brando lagret innstillingene sine"
+msgstr[1] "%{count} bilder ble laget før Brando lagret innstillingene sine"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{target}: %{count} image without recorded settings"
+msgid_plural "%{target}: %{count} images without recorded settings"
+msgstr[0] "%{target}: %{count} bilde uten lagrede innstillinger"
+msgstr[1] "%{target}: %{count} bilder uten lagrede innstillinger"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "it already matches (mix brando.images.adopt records that)"
+msgid_plural "all already match (mix brando.images.adopt records that)"
+msgstr[0] "det samsvarer allerede (mix brando.images.adopt lagrer det)"
+msgstr[1] "alle samsvarer allerede (mix brando.images.adopt lagrer det)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "it likely matches (mix brando.images.adopt checks and records that)"
+msgid_plural "all likely match (mix brando.images.adopt checks and records that)"
+msgstr[0] "det samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
+msgstr[1] "alle samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "it differs (recreate it)"
+msgid_plural "none match (recreate them)"
+msgstr[0] "det avviker (lag det på nytt)"
+msgstr[1] "ingen samsvarer (lag dem på nytt)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} likely matches (mix brando.images.adopt checks and records that)"
+msgid_plural "%{count} likely match (mix brando.images.adopt checks and records that)"
+msgstr[0] "%{count} samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
+msgstr[1] "%{count} samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} already matches (mix brando.images.adopt records that)"
+msgid_plural "%{count} already match (mix brando.images.adopt records that)"
+msgstr[0] "%{count} samsvarer allerede (mix brando.images.adopt lagrer det)"
+msgstr[1] "%{count} samsvarer allerede (mix brando.images.adopt lagrer det)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} differs (recreate it)"
+msgid_plural "%{count} differ (recreate them)"
+msgstr[0] "%{count} avviker (lag det på nytt)"
+msgstr[1] "%{count} avviker (lag dem på nytt)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "run mix brando.images.adopt, or Utilities → Recreate changed images, which records them without recreating them"
+msgstr "kjør mix brando.images.adopt, eller Verktøy → Lag endrede bilder på nytt, som lagrer dem uten å lage dem på nytt"

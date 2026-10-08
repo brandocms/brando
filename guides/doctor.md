@@ -79,7 +79,7 @@ never fails.
 | Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events`, `webhooks` and `search_index` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |
 | Admin assets | The `@brandocms/brandojs` version in `assets/backend/.yalc` (or the checkout it links to) against Brando's |
-| Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates |
+| Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ |
 | Modules | Blocks behind their module's version, per module |
 | Sitemap | A sitemap module, and a sitemap generated within two days |
 | robots.txt | `/robots.txt` routed to Brando, and no static file in front of it |
