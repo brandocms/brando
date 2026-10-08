@@ -116,6 +116,9 @@ defmodule BrandoAdmin.CommandPaletteLive do
           aria-label={gettext("Results")}
           data-query={@query}
         >
+          <p :if={@query != "" and nothing_found?(@groups)} class="command-palette-empty" role="status">
+            {gettext("No titles match “%{query}”", query: @query)}
+          </p>
           <div
             :for={group <- @groups}
             id={"command-palette-group-#{group.key}"}
@@ -128,9 +131,6 @@ defmodule BrandoAdmin.CommandPaletteLive do
             </div>
             <.item :for={item <- group.items} item={item} />
           </div>
-          <p :if={@groups == [] and @query != ""} class="command-palette-empty" role="status">
-            {gettext("Nothing matches “%{query}”", query: @query)}
-          </p>
         </div>
         <footer class="command-palette-footer" aria-hidden="true">
           <span class="command-palette-hint"><kbd>↑</kbd><kbd>↓</kbd>{gettext("move")}</span>
@@ -199,6 +199,9 @@ defmodule BrandoAdmin.CommandPaletteLive do
     </.link>
     """
   end
+
+  # Only the row to the search page: no title, action or setting matches
+  defp nothing_found?(groups), do: Enum.all?(groups, fn group -> Enum.all?(group.items, &(&1.kind == :search)) end)
 
   defp status_label(:published), do: gettext("Published")
   defp status_label(:draft), do: gettext("Draft")

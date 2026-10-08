@@ -33,7 +33,7 @@ test("a user without access to a content type doesn't see its entries or its cre
   await page.keyboard.press('ControlOrMeta+k')
   await page.locator('#command-palette-input').fill('lighthouse')
   await expect(page.locator('#command-palette-results')).toHaveAttribute('data-query', 'lighthouse')
-  await expect(page.locator('#command-palette-group-entries').getByRole('option')).toHaveCount(2)
+  await expect(page.locator('#command-palette-group-entries [role=option].is-entry')).toHaveCount(2)
 
   // The editor may read, create and edit pages, and nothing about projects
   const response = await fetch(e2eUrl('/e2e/authorization/author'), {
@@ -52,7 +52,7 @@ test("a user without access to a content type doesn't see its entries or its cre
 
   await input.fill('lighthouse')
   await expect(results).toHaveAttribute('data-query', 'lighthouse')
-  const entries = secondUserPage.locator('#command-palette-group-entries').getByRole('option')
+  const entries = secondUserPage.locator('#command-palette-group-entries [role=option].is-entry')
   await expect(entries).toHaveCount(1)
   await expect(entries.first()).toHaveAttribute('href', `/admin/pages/update/${lighthousePage.id}`)
   await expect(results.locator('a[href^="/admin/projects/"]')).toHaveCount(0)

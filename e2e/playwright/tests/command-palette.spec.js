@@ -74,8 +74,10 @@ test('opens from the sidebar, finds an entry by title and opens it with enter', 
   await expect(input(page)).toBeFocused()
 
   await search(page, 'sommerro')
-  const entries = group(page, 'entries').getByRole('option')
+  // The entries, then the row that opens the search page
+  const entries = group(page, 'entries').locator('[role=option].is-entry')
   await expect(entries).toHaveCount(2)
+  await expect(group(page, 'entries').getByRole('option').last()).toHaveAttribute('href', '/admin/search?q=sommerro')
   // An exact title before one that starts with the query
   await expect(entries.nth(0)).toHaveAttribute('href', `/admin/projects/projects/update/${exact.id}`)
   await expect(entries.nth(0)).toHaveAttribute('aria-selected', 'true')

@@ -22,6 +22,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> set_admin_locale()
        |> assign_info()
        |> assign(:loose_blocks, Brando.Content.BlockAudit.count_loose())
+       |> assign_search_index()
        |> assign_image_tasks()
        |> assign_authorization_tools(params)
        |> start_system_check()}
@@ -43,6 +44,16 @@ defmodule BrandoAdmin.Sites.UtilsLive do
       end
 
     assign(socket, :sitemap_last_updated, sitemap_last_updated)
+  end
+
+  # The search index of this site and environment: how many documents it
+  # holds, and a rebuild's progress, which its job broadcasts.
+  defp assign_search_index(socket) do
+    if connected?(socket) and !socket.assigns[:search_index],
+      do: Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Search.topic())
+
+    state = if Brando.Search.rebuild_running?(), do: :queued, else: :idle
+    assign(socket, :search_index, %{state: state, done: 0, total: 0, count: Brando.Search.count()})
   end
 
   defp assign_image_tasks(socket) do
@@ -122,6 +133,36 @@ defmodule BrandoAdmin.Sites.UtilsLive do
             <button type="button" class="utils-button" phx-click="sync_identifiers" phx-disable-with={gettext("Syncing…")}>{gettext(
               "Sync identifiers"
             )}</button>
+          </article>
+          <article id="utils-search-index">
+            <div>
+              <h3>{gettext("Search index")}</h3><p>
+                {gettext(
+                  "Index every entry again for the admin search. Saving keeps it up to date; rebuild after upgrading or importing content."
+                )}
+              </p>
+              <small :if={@search_index.state == :queued} role="status">{gettext("Waiting to start")}</small>
+              <small :if={@search_index.state == :running} role="status">
+                {gettext("Indexing… %{done} of %{total} entries", done: @search_index.done, total: @search_index.total)}
+              </small>
+              <small :if={@search_index.state == :failed} role="status">
+                {gettext("The rebuild failed. Check the application logs.")}
+              </small>
+              <small :if={@search_index.state in [:idle, :done] and is_integer(@search_index.count)} role="status">
+                {ngettext("%{count} entry in the index", "%{count} entries in the index", @search_index.count)}
+              </small>
+              <small :if={@search_index.state in [:idle, :done] and is_nil(@search_index.count)} class="utils-empty-status">
+                {gettext("Not set up: the brando_212 migration has not run")}
+              </small>
+            </div>
+            <button
+              type="button"
+              class="utils-button"
+              phx-click="rebuild_search_index"
+              disabled={@search_index.state in [:queued, :running] or is_nil(@search_index.count)}
+            >
+              {gettext("Rebuild search index")}
+            </button>
           </article>
           <article id="utils-loose-blocks">
             <div>
@@ -268,6 +309,21 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     send(self(), {:toast, gettext("Identifiers synced.")})
 
     {:noreply, socket}
+  end
+
+  def handle_event("rebuild_search_index", _, socket) do
+    case Brando.Search.queue_rebuild(socket.assigns.current_user) do
+      {:ok, _job} ->
+        {:noreply, update(socket, :search_index, &queued/1)}
+
+      {:error, :already_running} ->
+        send(self(), {:toast, gettext("This is already running.")})
+        {:noreply, update(socket, :search_index, &queued/1)}
+
+      {:error, _reason} ->
+        send(self(), {:toast, gettext("The operation could not be completed. Check the application logs and try again.")})
+        {:noreply, socket}
+    end
   end
 
   def handle_event("generate_sitemap", _, socket) do
@@ -447,6 +503,23 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   defp authorization_event(_, _, socket), do: {:noreply, socket}
+
+  # A job that already ran (Oban's inline testing mode) has reported by now
+  defp queued(%{state: state} = index) when state in [:idle, :done, :failed], do: %{index | state: :queued}
+  defp queued(index), do: index
+
+  def handle_info({:search_index, %{state: :done, done: count}}, socket) do
+    send(
+      self(),
+      {:toast, ngettext("Search index rebuilt: %{count} entry.", "Search index rebuilt: %{count} entries.", count)}
+    )
+
+    {:noreply, assign(socket, :search_index, %{state: :done, done: count, total: count, count: Brando.Search.count()})}
+  end
+
+  def handle_info({:search_index, %{state: state, done: done, total: total}}, socket) do
+    {:noreply, update(socket, :search_index, &%{&1 | state: state, done: done, total: total})}
+  end
 
   def handle_async(:system_check, {:ok, results}, socket) do
     {:noreply, assign(socket, system_check: results, system_check_failed: false)}
