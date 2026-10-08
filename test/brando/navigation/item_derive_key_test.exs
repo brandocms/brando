@@ -34,7 +34,9 @@ defmodule Brando.Navigation.ItemDeriveKeyTest do
       Brando.Repo.insert!(%Brando.Content.Identifier{
         title: "[Side/NO] Innsikt",
         schema: Brando.Pages.Page,
-        entry_id: 1,
+        # Not 1: (entry_id, schema) is unique, and an async test's first page
+        # is entry 1 too, so the insert would wait out that test's transaction.
+        entry_id: 900_000_000 + System.unique_integer([:positive]),
         status: :published
       })
 

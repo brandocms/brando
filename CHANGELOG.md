@@ -1573,6 +1573,14 @@ production dump.
 
 #### Fixes
 
+- **Activating a revision loaded as a working copy keeps the working copy.**
+  Loading a revision into the editor replaces its unsaved changes, but the
+  entry's edit session still held them: when the revision was activated
+  they were carried back over it, and a later save wrote them. The editor
+  now leaves the session marking what it replaced, so a write of the working
+  copy keeps only what others changed after it was loaded, and its block
+  fields no longer rejoin the session with the replaced changes.
+
 - **Pages emit their Article again.** A page's structured data type
   (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as
   well, so the Article took the page's `@id` and the graph kept only the page.

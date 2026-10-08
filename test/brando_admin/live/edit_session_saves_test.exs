@@ -42,17 +42,22 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   defp save_write(view), do: view |> form("#page_form_form") |> render_submit()
 
   # "Save and continue editing": the editor stays open after the save.
-  defp stay(view) do
-    cid =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.find("[data-phx-component]")
-      |> Enum.filter(&(Floki.find(&1, "#page_form-el") != []))
-      |> Enum.map(&(&1 |> Floki.attribute("data-phx-component") |> hd() |> String.to_integer()))
-      |> Enum.max()
+  defp stay(view), do: view |> with_target(form_cid(view)) |> render_hook("save_redirect_target", %{})
 
-    view |> with_target(cid) |> render_hook("save_redirect_target", %{})
+  # The Form component's id, to send it the events its buttons send.
+  defp form_cid(view), do: cid_of(view, "#page_form-el")
+
+  # The innermost component holding `selector`.
+  defp cid_of(view, selector) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find("[data-phx-component]")
+    |> Enum.filter(&(Floki.find(&1, selector) != []))
+    |> Enum.min_by(&(&1 |> Floki.raw_html() |> byte_size()))
+    |> Floki.attribute("data-phx-component")
+    |> hd()
+    |> String.to_integer()
   end
 
   defp insert_block(view, c, sequence) do
@@ -471,8 +476,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     set.(a, "abc")
     await(fn -> shown.(b) == "abc" end)
     set.(b, "abcB")
-    await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abcB" end)
-    Process.sleep(100)
+    # A's form shows B's change: setting it back is a change, not a no-op
+    await(fn -> shown.(a) == "abcB" end)
     set.(a, "abc")
 
     await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abc" end)
@@ -543,5 +548,78 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
     await(fn -> shown_text(b, first) == "<p>Identity 0</p>" end)
     assert shown_text(b, second) == "<p>B, unsaved</p>"
+  end
+
+  # The revisions drawer's preview loads a revision as an unsaved working
+  # copy, replacing the editor's unsaved changes. Those stayed in the edit
+  # session as unsaved work: a replica rejoined with them when the session
+  # stopped, or the session, still running for others, carried them back
+  # over the revision when it was activated or saved.
+  describe "a revision loaded as a working copy" do
+    setup c do
+      previous = Application.get_env(:brando, EditSession, [])
+      on_exit(fn -> Application.put_env(:brando, EditSession, previous) end)
+
+      [first, second | _] = c.uids
+      Map.merge(c, %{first: first, second: second})
+    end
+
+    defp revisions(page),
+      do: Repo.one(from(r in Brando.Revisions.Revision, where: r.entry_id == ^page.id, select: max(r.revision)))
+
+    # Revision: the working copy, stored from the editor's unsaved state.
+    # Then an edit the preview discards, and the preview.
+    defp load_working_copy(a, c) do
+      drawer = cid_of(a, "#page_form-revisions-drawer-tab-activity")
+      type(a, c.first, "<p>Working-copy block</p>")
+      a |> with_target(form_cid(a)) |> render_hook("store_revision", %{})
+      await(fn -> revisions(c.identity) != nil end)
+      revision = revisions(c.identity)
+
+      type(a, c.first, "<p>Discard this block</p>")
+      a |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision})
+      await(fn -> shown_text(a, c.first) == "<p>Working-copy block</p>" end)
+      {drawer, revision}
+    end
+
+    # the block fields mount again from the written entry
+    defp await_remount(a, c) do
+      await(fn -> shown_text(a, c.first) != nil end)
+      Process.sleep(300)
+    end
+
+    for grace <- [0, 30_000] do
+      test "activating it keeps the working copy, not the edits it replaced (grace #{grace} ms)", c do
+        Application.put_env(:brando, EditSession, grace_period: unquote(grace))
+        a = open(c.conn, c.identity)
+        {drawer, revision} = load_working_copy(a, c)
+
+        a |> with_target(drawer) |> render_hook("activate_revision", %{"value" => revision})
+        await(fn -> Map.new(texts(c.identity))[c.first] == "<p>Working-copy block</p>" end)
+        await_remount(a, c)
+
+        assert shown_text(a, c.first) == "<p>Working-copy block</p>"
+        refute inspect(session_state(c.identity).diffs) =~ "Discard this block"
+      end
+    end
+
+    test "another editor's work after the preview loaded is kept when it is activated", c do
+      Application.put_env(:brando, EditSession, grace_period: 30_000)
+      a = open(c.conn, c.identity)
+      b = open(c.other_conn, c.identity)
+      {drawer, revision} = load_working_copy(a, c)
+
+      type(b, c.second, "<p>B, after the preview</p>")
+      await(fn -> inspect(session_state(c.identity).diffs) =~ "B, after the preview" end)
+
+      a |> with_target(drawer) |> render_hook("activate_revision", %{"value" => revision})
+      await(fn -> Map.new(texts(c.identity))[c.first] == "<p>Working-copy block</p>" end)
+      await_remount(a, c)
+
+      await(fn -> shown_text(b, c.first) == "<p>Working-copy block</p>" end)
+      assert shown_text(b, c.second) == "<p>B, after the preview</p>"
+      assert shown_text(a, c.first) == "<p>Working-copy block</p>"
+      assert shown_text(a, c.second) == "<p>B, after the preview</p>"
+    end
   end
 end

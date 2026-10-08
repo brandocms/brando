@@ -484,6 +484,26 @@ defmodule Brando.EditSessionTest do
 
     # Round 3 #6: a rejoin carries what the editor holds onto the session's
     # state, and had no read-only check.
+    # An editor that loads a revision as a working copy replaces its unsaved
+    # changes. Writing that copy must not carry them back.
+    test "rows an editor writes after detaching replace what the session held, keeping later ops" do
+      ref = new_ref()
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      EditSession.submit(info.session, @field, anchor("a", "replaced by the working copy"), 1)
+      {other, _} = editor(ref)
+      assert {%{diffs: %{"a" => _}}, 1} = session_state(ref)
+
+      EditSession.detach(info.session, @field)
+      send(other, {:local, anchor("b", "after the detach")})
+      wait_until(fn -> elem(session_state(ref), 1) == 2 end)
+
+      # the working copy is written: the rows are what this editor showed
+      {:ok, _} = EditSession.rebase(info.session, @field, rows(), :carry)
+      {state, _rev} = session_state(ref)
+      refute Map.has_key?(state.diffs, "a")
+      assert state.diffs["b"]["block"]["anchor"] == "after the detach"
+    end
+
     test "a read-only editor brings none of what it holds into the session, joining or rejoining" do
       ref = new_ref()
       {:ok, held} = Ops.apply_op(rows(), anchor("b", "held by a read-only editor"))
