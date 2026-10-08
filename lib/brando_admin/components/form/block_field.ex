@@ -942,7 +942,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # on unattached, so the copy takes new uids, derived from the old ones.
   defp rescue_payloads(socket, rescues, %Ops{} = new, worked) do
     old = socket.assigns.block_ops
-    Map.new(rescues, &{&1.group, rescue_payload(socket, old, new, &1.group, &1.uids, worked)})
+    Map.new(rescues, &{&1.group, rescue_payload(socket, old, new, &1, worked)})
   end
 
   # What brings back the blocks `uids` under `group`: under the nearest
@@ -952,7 +952,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # as `-kept` shells holding only the way to them: a child block is made
   # for its parent (a multi module's entry, a container's child) and would
   # not read, or render, as a root of its own.
-  defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, group, uids, worked) do
+  defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, %{group: group, uids: uids, kept: kept}, worked) do
     whole =
       uids
       |> Enum.filter(&Ops.known?(old, &1))
@@ -971,7 +971,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     with true <- whole != [] and Ops.known?(old, group),
          %{} = block <- rescue_tree(socket, old, group, whole) do
       surviving = old |> ancestors(group) |> Enum.find(&Ops.known?(new, &1))
-      place_rescued(socket, old, group, block, surviving)
+      place_rescued(socket, old, group, block, surviving, kept)
     else
       _ -> nil
     end
@@ -1001,10 +1001,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  defp place_rescued(_socket, _old, group, block, parent) when is_binary(parent), do: {:child, parent, block, group}
+  defp place_rescued(_socket, _old, _group, block, parent, kept) when is_binary(parent),
+    do: {:child, parent, block, kept}
 
-  defp place_rescued(socket, old, group, block, nil) do
-    with %{} = entry_block <- rescued_params(socket, old, group), do: {:root, Map.put(entry_block, "block", block), group}
+  defp place_rescued(socket, old, group, block, nil, kept) do
+    with %{} = entry_block <- rescued_params(socket, old, group), do: {:root, Map.put(entry_block, "block", block), kept}
   end
 
   defp rescued_block(socket, old, uid) do
@@ -1043,10 +1044,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp reinsert_payload(socket, nil), do: {socket, false}
 
-  # A copy of the group that is already there (an insert of an editor asked
-  # before, landing late) is not made twice.
+  # The copy takes the uid the session chose for this rescue. Already there,
+  # it is an insert of an editor asked before, landing late: not made twice.
   defp reinsert_payload(socket, payload) do
-    if Ops.known?(socket.assigns.block_ops, kept_uid(nil, elem(payload, tuple_size(payload) - 1))),
+    if Ops.known?(socket.assigns.block_ops, elem(payload, tuple_size(payload) - 1)),
       do: {socket, true},
       else: do_reinsert_payload(socket, payload)
   end
@@ -1135,22 +1136,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp strip_row_ids(list) when is_list(list), do: Enum.map(list, &strip_row_ids/1)
   defp strip_row_ids(value), do: value
 
-  # The block comes back under a new uid, `<uid>-kept`: the removed rows
-  # can still hold the old one. A copy that is already there is not made
-  # again (`reinsert/2`): a rescue brings a group back once. Its refs, whose
-  # uids are unique as well, get new ones. Nothing else changes: a `"uid"`
-  # inside a ref's data is the data's own.
-  defp kept_uid(_ops, uid), do: uid <> "-kept"
+  # The block comes back under a new uid, the one the session chose
+  # (`<uid>-kept`, or `-kept-2` and on when that is taken): the removed rows
+  # can still hold the old one. The blocks under it take the same suffix. A
+  # copy that is already there is not made again (`reinsert_payload/2`): a
+  # rescue brings a group back once. Its refs, whose uids are unique as
+  # well, get new ones. Nothing else changes: a `"uid"` inside a ref's data
+  # is the data's own.
+  defp rename_copy(%{"uid" => uid} = block, kept), do: rename_block(block, String.replace_prefix(kept, uid, ""))
 
-  defp rename_block(%{} = block, ops) do
+  defp rename_block(%{} = block, suffix) do
     block
-    |> Map.update("uid", nil, &kept_uid(ops, &1))
+    |> Map.update("uid", nil, &(&1 <> suffix))
     |> Map.update("refs", [], fn refs -> Enum.map(refs, &Map.put(&1, "uid", Brando.Utils.generate_uid())) end)
-    |> Map.update("children", [], fn children -> Enum.map(children, &rename_block(&1, ops)) end)
+    |> Map.update("children", [], fn children -> Enum.map(children, &rename_block(&1, suffix)) end)
   end
 
-  defp reinsert(socket, {:root, params, _bottom}) do
-    params = Map.update!(params, "block", &rename_block(&1, socket.assigns.block_ops))
+  defp reinsert(socket, {:root, params, kept}) do
+    params = Map.update!(params, "block", &rename_copy(&1, kept))
     uid = params["block"]["uid"]
 
     form =
@@ -1169,8 +1172,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # Under a block that is still there: its root shows it once it has it.
-  defp reinsert(socket, {:child, parent, block, _bottom}) do
-    block = rename_block(block, socket.assigns.block_ops)
+  defp reinsert(socket, {:child, parent, block, kept}) do
+    block = rename_copy(block, kept)
     uid = block["uid"]
     socket = apply_block_op(socket, {:insert_child, parent, uid, :end, block}, :replay)
 

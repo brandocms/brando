@@ -500,7 +500,16 @@ defmodule Brando.EditSession do
     rescues =
       conflicts
       |> Enum.group_by(&removed_top(held, new, &1))
-      |> Enum.map(fn {group, uids} -> %{group: group, uids: uids, rescuer: pid, owners: [pid], orphan?: false} end)
+      |> Enum.map(fn {group, uids} ->
+        %{
+          group: group,
+          kept: kept_uid(session, field, held, new, group),
+          uids: uids,
+          rescuer: pid,
+          owners: [pid],
+          orphan?: false
+        }
+      end)
 
     Map.put(info(session, field, pid, false), :rescues, rescues)
   end
@@ -550,7 +559,7 @@ defmodule Brando.EditSession do
   #
   # Unsaved work in blocks a write removed is brought back by one editor
   # still here: the blocks under one removed block (`group`, the top-most
-  # one the write removed) all at once, as one copy, `<group>-kept`, so two
+  # one the write removed) all at once, as one copy (`kept_uid/5`), so two
   # editors' work in two children of one container comes back in one copy
   # of the container. One who changed them is asked first, else any editor
   # still here (the ones who did have left: `orphan?`). Never one whose
@@ -560,7 +569,7 @@ defmodule Brando.EditSession do
   #
   # Every editor computes what it would bring back; the one asked inserts
   # it and says so (`rescued/3`). The group is brought back when the
-  # session has `<group>-kept`, whoever's insert put it there. If the one
+  # session has the copy's uid, whoever's insert put it there. If the one
   # asked has not brought it back within `rescue_timeout`, or leaves, the
   # next is asked (`:rescue`); with nobody left, the session waits once
   # more for a late insert before it reports the work lost. Every editor
@@ -580,7 +589,14 @@ defmodule Brando.EditSession do
       orphan? = Enum.any?(uids, fn uid -> not Enum.any?(owners, &touched?.(&1, uid)) end)
       own_able = Enum.filter(owners, &(&1 in able))
 
-      pending = %{group: group, kept: group <> "-kept", uids: uids, owners: owners, orphan?: orphan?, present: here}
+      pending = %{
+        group: group,
+        kept: kept_uid(session, field, old, new, group),
+        uids: uids,
+        owners: owners,
+        orphan?: orphan?,
+        present: here
+      }
 
       case own_able ++ (able -- own_able) do
         [] ->
@@ -594,6 +610,27 @@ defmodule Brando.EditSession do
       end
     end)
     |> then(fn {session, rescues} -> {session, Enum.reverse(rescues)} end)
+  end
+
+  # The uid the group's copy takes, chosen here so every editor asked
+  # inserts the same one, and only it settles the rescue: `<group>-kept`,
+  # or `<group>-kept-2` and on when that is taken (an earlier copy of the
+  # group, still there after the group came back, or one a rescue still
+  # waits for). The blocks under the group take the same suffix, so none of
+  # theirs is taken either.
+  defp kept_uid(session, field, old, new, group) do
+    claimed = for {{^field, _group}, %{kept: kept}} <- session.rescues, into: MapSet.new(), do: kept
+    uids = [group | if(match?(%Ops{}, old), do: Ops.descendants(old, group), else: [])]
+    taken? = fn uid -> uid in claimed or (match?(%Ops{}, new) and Ops.known?(new, uid)) end
+
+    1
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(fn
+      1 -> "-kept"
+      n -> "-kept-#{n}"
+    end)
+    |> Enum.find(fn suffix -> not Enum.any?(uids, &taken?.(&1 <> suffix)) end)
+    |> then(&(group <> &1))
   end
 
   # The top-most block above `uid` (or `uid`) that the write removed.

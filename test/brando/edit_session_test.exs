@@ -785,6 +785,42 @@ defmodule Brando.EditSessionTest do
       assert Enum.sort(owners) == Enum.sort([p1, p2])
       assert rescuer in [p1, p2]
     end
+
+    # The review's Z probe: a proposal removed "b", "b" was brought back as
+    # "b-kept", the proposal was undone so "b" returned while "b-kept"
+    # stayed, and the editor worked in "b" again before another write
+    # removed it. The earlier copy settled the new rescue at once, nothing
+    # was inserted, the new work was lost and everyone heard it was back.
+    test "a group removed again while its earlier copy is still there gets a copy of its own" do
+      {_ref, session, p1, p2} = removed_with_work()
+      send(p1, {:local, {:insert, "b-kept", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, _}}}
+
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{group: "b", kept: "b-kept-2", rescuer: ^p1}]}}
+
+      # any op settles nothing while the new copy is missing
+      send(p2, {:local, anchor("a", "unrelated")})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p2, _}}}
+      refute_receive {:edit_session, @field, %{kind: :rescued}}, 100
+
+      send(p1, {:local, {:insert, "b-kept-2", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}
+    end
+
+    test "a copy whose blocks would take a uid an earlier copy has takes the next suffix" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {p1, info} = editor(ref)
+      {_watcher, _} = editor(ref, rows(), read_only: true)
+      # an earlier copy of "a1" is here; "a" itself has none
+      send(p1, {:local, {:insert, "a1-kept", :end, %{}}})
+      send(p1, {:local, {:update, "a1", %{"description" => "p1"}}})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, 2}}}
+
+      {:ok, _} = EditSession.rebase(info.session, @field, Ops.from_entry_blocks([entry_block("b", 2, 20)]), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{group: "a", kept: "a-kept-2"}]}}
+    end
   end
 
   # The flake hunt: an editor whose session was killed rejoins as soon as

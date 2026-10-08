@@ -13,6 +13,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   alias Brando.EditSession
   alias Brando.Pages.Page
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.BlockField.Ops
 
   @block_field "page_form-blocks-blocks"
 
@@ -394,6 +395,32 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> Map.new(texts(c.identity))[kept] == "<p>B's unsaved work</p>" end)
     refute Map.has_key?(Map.new(texts(c.identity)), second)
     assert length(rows(c.identity)) == 3
+  end
+
+  # Review of #3055: the block came back after its rescue (the proposal was
+  # undone) while the first copy stayed, and work in it was then removed
+  # again. The first copy settled the second rescue, so nothing was
+  # inserted and the new work was lost.
+  test "a block removed again while its first copy is still there comes back as a second copy", c do
+    [_first, second | _] = c.uids
+    b = open(c.other_conn, c.identity)
+    type(b, second, "<p>First work</p>")
+
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+    await(fn -> shown_text(b, second <> "-kept") == "<p>First work</p>" end)
+
+    {:ok, _} = Proposals.undo(proposal.id, c.user)
+    await(fn -> Ops.known?(session_state(c.identity), second) end)
+    type(b, second, "<p>Second work</p>")
+
+    {:ok, again} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(again.id, again.version, c.user)
+    {:ok, _} = Proposals.apply(again.id, again.version, c.user)
+
+    await(fn -> shown_text(b, second <> "-kept-2") == "<p>Second work</p>" end)
+    assert shown_text(b, second <> "-kept") == "<p>First work</p>"
   end
 
   # #5: a change to a block another editor had just deleted was rejected by
