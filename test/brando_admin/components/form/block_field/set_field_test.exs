@@ -346,6 +346,75 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     assert Enum.find(merged, &(&1["image_id"] == 1))["id"] == 9
   end
 
+  # Follow-up, round 2: content identities took precedence over a row's id,
+  # so two objects showing one image were one item.
+  describe "a gallery showing one image twice" do
+    defp gallery do
+      %Brando.Galleries.Gallery{
+        id: 9,
+        gallery_objects: [
+          %Brando.Galleries.GalleryObject{id: 1, image_id: 5, sequence: 0, config: %{"caption" => "first"}},
+          %Brando.Galleries.GalleryObject{id: 2, image_id: 5, sequence: 1, config: %{"caption" => "second"}}
+        ]
+      }
+    end
+
+    test "editing the second copy changes the second copy" do
+      g = gallery()
+      before = Changeset.change(g)
+      [first, second] = g.gallery_objects
+
+      now =
+        Changeset.put_assoc(before, :gallery_objects, [
+          Changeset.change(first),
+          Changeset.change(second, config: %{"caption" => "second, edited"})
+        ])
+
+      {:ok, op} = Ops.field_op(before, now, "g")
+      assert {:set_field, "g", [{:at, "gallery_objects", {"id", 2}, _}, {:map, "config", _}, "caption"], _, nil} = op
+      {:ok, state} = Ops.apply_op(Ops.new(["g"]), op)
+
+      assert [%{"id" => 1}, %{"id" => 2, "config" => %{"caption" => "second, edited"}}] =
+               state.diffs["g"]["gallery_objects"]
+    end
+
+    test "another editor's second copy of an image is kept beside mine" do
+      before = [%{"id" => 1, "image_id" => 5}]
+      mine = before ++ [%{"image_id" => 7}]
+      theirs = before ++ [%{"image_id" => 5, "config" => %{"caption" => "their copy"}}]
+
+      assert Ops.merge_list(before, mine, theirs, "gallery_objects") == [
+               %{"id" => 1, "image_id" => 5},
+               %{"image_id" => 5, "config" => %{"caption" => "their copy"}},
+               %{"image_id" => 7}
+             ]
+    end
+
+    test "a list naming two new items alike is set whole" do
+      before = Changeset.change(%Brando.Galleries.Gallery{id: 9, gallery_objects: []})
+
+      now =
+        Changeset.put_assoc(before, :gallery_objects, [
+          %Brando.Galleries.GalleryObject{image_id: 5, sequence: 0},
+          %Brando.Galleries.GalleryObject{image_id: 5, sequence: 1}
+        ])
+
+      assert {:ok, {:set_field, "g", ["gallery_objects"], [_, _], nil}} = Ops.field_op(before, now, "g")
+    end
+  end
+
+  test "select options with the same value twice are set whole", c do
+    [_intro, multi] = rows(c.work)
+    alpha = hd(multi.block.children)
+    before = Changeset.change(alpha)
+    twice = [%{"label" => "One", "value" => "1"}, %{"label" => "Also one", "value" => "1"}]
+    params = before |> Params.snapshot() |> put_at(["vars", "0", "options"], twice)
+    changed = Block.block_changeset(alpha, params, c.user.id)
+
+    assert {:ok, {:set_field, _, [{:at, "vars", _, _}, "options"], [_, _], nil}} =
+             Ops.field_op(before, changed, alpha.uid)
+  end
+
   # Round 4: the field the event names was dropped as an echo when the
   # editor set it back to its value from before another editor changed it.
   test "the input the event names is never an echo, even set back after another editor's change" do

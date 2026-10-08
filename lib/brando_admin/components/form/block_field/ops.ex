@@ -1186,8 +1186,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     old_identities = Enum.map(old, &identity(&1, key))
 
     cond do
-      # items without identities: the list, as this editor has it
-      :none in identities or :none in old_identities ->
+      # items without identities, or two named alike (an image twice in a
+      # gallery): the list, as this editor has it
+      :none in identities or :none in old_identities or repeated?(identities) or repeated?(old_identities) ->
         [{raw ++ [key], Enum.reverse([key | acc]), new}]
 
       # items added, removed or moved: what changed, to merge with others'
@@ -1235,17 +1236,17 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # (a var), its sync uid (a table row). An item with none of them cannot be
   # named, and its list is set whole.
   #
-  # Two lists name their items by what they hold instead, so an item is
-  # named from the moment it is picked or typed, before any save gives it a
-  # row, and by the same name after: a select var's option by its value
-  # (an embed, it never has an id), a gallery object by its image or video
-  # (named by that before a save and after it, where an id would only come
-  # with the save). Nothing is stored for it.
+  # Two lists name an item without a row (or without one yet) by what it
+  # holds, so it is named from the moment it is picked or typed, before any
+  # save: a select var's option by its value (an embed, it never has an
+  # id), a new gallery object by its image or video. A row's id comes
+  # first, so two objects showing one image stay two; a list in which two
+  # items are named alike is set whole (`repeated?/1`). Nothing is stored.
   @content_identities %{"options" => ~w(value), "gallery_objects" => ~w(image_id video_id)}
   @row_identities ~w(id uid key sync_uid)
 
   defp identity(%{} = item, key) when not is_struct(item) do
-    Enum.find_value(Map.get(@content_identities, key, []) ++ @row_identities, :none, fn name ->
+    Enum.find_value(@row_identities ++ Map.get(@content_identities, key, []), :none, fn name ->
       case Map.get(item, name) do
         value when value not in [nil, ""] -> {name, value}
         _ -> nil
@@ -1256,6 +1257,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp identity(_item, _key), do: :none
 
   defp identity_map({key, value}), do: %{key => value}
+
+  defp repeated?(identities), do: length(Enum.uniq(identities)) != length(identities)
 
   defp set_fields(state, uid, changes) do
     if known?(state, uid) do
@@ -1385,8 +1388,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   Items are the same row when their first identity (of `id`, `uid`, `key`
   and `sync_uid`, in that order) is the same. In a list under `key`
-  `"options"` (a select var's) an item is named by its `value`, and under
-  `"gallery_objects"` by its `image_id` or `video_id`.
+  `"options"` (a select var's) an item without those is named by its
+  `value`, and under `"gallery_objects"` by its `image_id` or `video_id`.
 
   ## Examples
 

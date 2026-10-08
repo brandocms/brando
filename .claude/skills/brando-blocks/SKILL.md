@@ -642,9 +642,10 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   (never by index). A list that gained, lost or reordered items goes as `{:list, before,
   after}`, which the reducer merges by identity with the list as it is now
   (`Ops.merge_list/3`), so two editors each adding an item both keep it; a list whose
-  items have no identity is set whole, last arrival wins. A select var's `options` are named
-  by their `value` and `gallery_objects` by their `image_id`/`video_id` (`identity/2`), so
-  items picked or typed before any save merge too; nothing extra is stored for them. Within a
+  items have no identity, or two items named alike, is set whole, last arrival wins. A row's
+  `id` comes first; an item without one is named by what it holds: a select var's option by
+  its `value`, a new gallery object by its `image_id`/`video_id` (`identity/2`). Nothing
+  extra is stored. Within a
   second of a `replace_form` the event can carry the browser's old values for what that
   change touched: `@replaced` keeps the form before AND the one that replaced it, and a
   leaf is dropped only where the two differ and the event sets it back to the old value
