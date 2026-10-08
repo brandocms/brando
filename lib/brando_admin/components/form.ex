@@ -2393,6 +2393,18 @@ defmodule BrandoAdmin.Components.Form do
     |> mark_local(edited)
   end
 
+  # What a `validate` changed is this editor's edit; a recovered form is not
+  # one, except in the fields typed into while the tab was offline.
+  defp settle_edit(false = _recovery?, socket, changeset, edit) do
+    %{previous: previous, echoed: echoed, target: target, entry_params: entry_params} = edit
+    {changeset, take_local_edit(socket, previous, changeset, echoed, target, entry_params), []}
+  end
+
+  defp settle_edit(true = _recovery?, socket, changeset, %{previous: previous, params: params}) do
+    offline = offline_fields(socket, params)
+    {keep_received(socket, previous, changeset, offline), socket, offline}
+  end
+
   # A recovered form keeps what the other editors sent this tab since it
   # loaded, except in the fields typed into while it was offline.
   defp keep_received(socket, previous, changeset, offline) do
@@ -7570,12 +7582,8 @@ defmodule BrandoAdmin.Components.Form do
     {changeset, echoed} = cast_entry_edit(socket, entry_or_default, entry_params, target)
     changeset = Map.put(changeset, :action, :validate)
 
-    offline = if recovery?, do: offline_fields(socket, params), else: []
-
-    {changeset, socket} =
-      if recovery?,
-        do: {keep_received(socket, previous, changeset, offline), socket},
-        else: {changeset, take_local_edit(socket, previous, changeset, echoed, target, entry_params)}
+    edit = %{previous: previous, echoed: echoed, target: target, params: params, entry_params: entry_params}
+    {changeset, socket, offline} = settle_edit(recovery?, socket, changeset, edit)
 
     # The recomputed form is assigned before the `_target` branch, and that
     # placement is load-bearing. Form *recovery* pushes this same event with a
