@@ -27,9 +27,16 @@ defmodule Brando.Images.Size do
 
       A geometry may end in ImageMagick's `>` ("only shrink larger images"),
       as in `"400x400>"`. That is what processing does for every size, so `>`
-      changes nothing. The other ImageMagick flags (`<`, `^`, `!`, `%`) are
-      read past as well: `"x400^"` is processed like `"x400"`, and `"50%"` is
-      50 pixels, not half.
+      changes nothing. The other ImageMagick flags fail the config, with what
+      to use instead:
+      * `^` (fill the box): `"crop" => true`;
+      * `!` (exact dimensions): `"crop" => true`, with a `"ratio"` when the
+        size gives one dimension;
+      * `%` (a share of the original): a width in pixels, since a `srcset`
+        needs fixed widths;
+      * `<` (only enlarge): nothing, since sizes only shrink.
+
+      So does any other character after the numbers.
     * `quality` - an integer from 1 to 100. Processing uses 100 without one.
     * `crop` - cut the image to exactly the geometry's width and height,
       around its focal point. When the original is smaller than the geometry
@@ -71,11 +78,17 @@ defmodule Brando.Images.Size do
 
   @fields ~w(size quality crop ratio)
   @orientations ~w(portrait landscape)
-  # ImageMagick geometry flags, read past when the numbers are read. `>` (only
-  # shrink) is what processing always does. What the others should do is
-  # undecided; `geometry/1`, which checks a geometry when the config is
-  # normalized, is where a flag would be rejected.
+  # ImageMagick geometry flags, read past when the numbers are read, so a
+  # config from before they were checked still processes as it did.
   @geometry_flags ["^", "!", ">", "<", "%"]
+  # `>` (only shrink) is what processing does for every size, so a config may
+  # keep it. These fail the config, with what to write instead.
+  @unsupported_flags [
+    {"^", ~s(to fill the geometry, use "crop" => true)},
+    {"!", ~s(for exact dimensions, use "crop" => true, with a "ratio" when the size gives one dimension)},
+    {"%", ~s(give a width in pixels, such as "700", since a srcset needs fixed widths)},
+    {"<", "sizes only shrink, so remove it"}
+  ]
 
   @presets %{
     standard: %{
@@ -141,6 +154,9 @@ defmodule Brando.Images.Size do
 
   @doc """
   Parses a size's geometry into `{width, height}`, either of which may be nil.
+
+  Reads past ImageMagick flags, which a config is checked for when it is
+  normalized, so processing and rendering read any stored geometry.
   """
   @spec dimensions(String.t()) :: {:ok, {pos_integer() | nil, pos_integer() | nil}} | :error
   def dimensions(geometry) when is_binary(geometry) do
@@ -234,12 +250,27 @@ defmodule Brando.Images.Size do
 
   defp geometry(nil), do: {:error, ~s(has no "size")}
 
-  defp geometry(geometry) do
-    case dimensions(geometry) do
-      {:ok, dimensions} -> {:ok, dimensions}
-      :error -> {:error, ~s(has an invalid "size" #{inspect(geometry)}, expected a geometry such as "700" or "400x400>")}
+  defp geometry(geometry) when is_binary(geometry) do
+    base = String.replace_suffix(geometry, ">", "")
+
+    case Enum.find(@unsupported_flags, fn {flag, _instead} -> String.contains?(geometry, flag) end) do
+      {flag, instead} ->
+        {:error,
+         ~s(has the "size" #{inspect(geometry)} with the ImageMagick flag "#{flag}", which isn't supported: #{instead})}
+
+      nil ->
+        with false <- String.contains?(base, ">"), {:ok, dimensions} <- dimensions(base) do
+          {:ok, dimensions}
+        else
+          _invalid -> invalid_geometry(geometry)
+        end
     end
   end
+
+  defp geometry(geometry), do: invalid_geometry(geometry)
+
+  defp invalid_geometry(geometry),
+    do: {:error, ~s(has an invalid "size" #{inspect(geometry)}, expected a geometry such as "700" or "400x400>")}
 
   defp quality(nil), do: {:ok, nil}
   defp quality(quality) when is_integer(quality) and quality in 1..100, do: {:ok, quality}

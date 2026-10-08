@@ -76,7 +76,10 @@ original 600 pixels wide, `"1400"` gives a 600-pixel file. A cropped size is
 cut to exactly its geometry around the focal point, or, from an original
 smaller than the geometry, to the largest part of it with the geometry's
 proportions. A trailing `>` ("only shrink") is accepted and changes nothing.
-See `Brando.Images.Size`.
+The other ImageMagick flags fail the config with what to write instead:
+`"crop" => true` for `^`, `"crop" => true` with a `"ratio"` for `!`, a width
+in pixels for `%`, and nothing for `<`, since sizes only shrink. See
+`Brando.Images.Size`.
 
 A `srcset` names each size's width, as in `{"large", "1400w"}`. When the
 image's width and height are known, a rendered `srcset` gives each size the

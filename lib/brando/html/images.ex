@@ -978,8 +978,9 @@ defmodule Brando.HTML.Images do
     Kernel./(w, h)
   end
 
-  # ImageMagick geometry flags (`400x400>`, `300x300^`) don't change the ratio,
-  # so strip them. A geometry without both dimensions has no ratio to report.
+  # A trailing `>` (`400x400>`) doesn't change the ratio, so strip it, and any
+  # flag from before configs were checked for them. A geometry without both
+  # dimensions has no ratio to report.
   defp calc_ratio(%{"size" => size}) do
     size
     |> String.replace(~r/[^\dx]/, "")

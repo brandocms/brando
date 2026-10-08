@@ -109,6 +109,37 @@ defmodule Brando.Blueprint.AssetConfigTest do
     assert is_nil(changeset.changes.optional_gallery)
   end
 
+  test "an ImageMagick flag other than > fails the Blueprint with what to use instead" do
+    for {geometry, instead} <- [
+          {"400x400^", ~s(use "crop" => true)},
+          {"400x300!", ~s(use "crop" => true, with a "ratio")},
+          {"50%", "give a width in pixels"},
+          {"700<", "sizes only shrink"}
+        ] do
+      message =
+        ~r/:sizes\["hero"\] has the "size" #{Regex.escape(inspect(geometry))} with the ImageMagick flag .*#{Regex.escape(instead)}/
+
+      assert_raise BlueprintError, message, fn ->
+        compile_blueprint(
+          quote do
+            assets do
+              asset :cover, :image, cfg: %{sizes: %{"hero" => %{"size" => unquote(geometry)}}}
+            end
+          end
+        )
+      end
+    end
+
+    # ">" is what every size does, so it stays.
+    compile_blueprint(
+      quote do
+        assets do
+          asset :cover, :image, cfg: %{sizes: %{"thumb" => %{"size" => "400x400>", "crop" => true}}}
+        end
+      end
+    )
+  end
+
   test "rejects invalid static config fields during Blueprint compilation" do
     assert_raise BlueprintError, ~r/:size_limit expected a positive integer/, fn ->
       compile_blueprint(

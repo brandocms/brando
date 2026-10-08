@@ -158,6 +158,16 @@ production dump.
   its own `srcset` no longer inherits a default `srcset` naming sizes it lacks:
   that srcset is dropped instead of rendering broken URLs.
 
+- **Image sizes with an ImageMagick flag other than `>` no longer compile.**
+  Brando read past the flags, so `"400x400^"` was processed like `"400x400"`
+  and `"50%"` as 50 pixels. A size using `^`, `!`, `%` or `<` now raises a
+  `BlueprintError` naming the size and what to write instead: `"crop" =>
+  true` for `^`, `"crop" => true` with a `"ratio"` for `!`, a width in pixels
+  for `%` (a `srcset` needs fixed widths), and nothing for `<`, since sizes
+  only shrink. A trailing `>`, as in `"400x400>"`, stays valid and changes
+  nothing. Configs from a function or the `default_config` setting are
+  checked when they are first read, as before.
+
 - **Video uploads are opt-in.** `default_video_upload_strategy` now defaults
   to `:none`, and a video field without its own `upload_strategy` follows it
   instead of uploading to the server. A site that never set it loses its

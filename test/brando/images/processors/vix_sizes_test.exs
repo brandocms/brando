@@ -52,9 +52,6 @@ defmodule Brando.Images.Processor.VixSizesTest do
     {%{"size" => "400x400>"},
      %{landscape: {400, 267}, portrait: {267, 400}, square: {400, 400}, small: {300, 200}, small_portrait: {200, 300}}},
     {%{"size" => "1400>"}, %{landscape: {1200, 800}, portrait: {800, 1200}, phone: {1400, 1867}}},
-    # The other flags are read past: "^" changes nothing, "%" is pixels.
-    {%{"size" => "x400^"}, %{landscape: {600, 400}, portrait: {267, 400}, square: {400, 400}, small: {300, 200}}},
-    {%{"size" => "50%"}, %{landscape: {50, 33}, portrait: {50, 75}, square: {50, 50}, small: {50, 33}}},
     # Cropped to the geometry around the focal point; a smaller original
     # gives the largest crop of the geometry's proportions it holds.
     {%{"size" => "400x400", "crop" => true},
