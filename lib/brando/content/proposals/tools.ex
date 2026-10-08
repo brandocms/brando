@@ -294,8 +294,8 @@ defmodule Brando.Content.Proposals.Tools do
     %{content_types: types}
   end
 
-  defp run("describe_content_type", args, _context) do
-    schema = schema!(args["content_type"])
+  defp run("describe_content_type", args, %{actor: actor}) do
+    schema = readable_schema!(args["content_type"], actor)
 
     attributes =
       for %{name: name, type: type, opts: opts} <- Brando.Blueprint.Attributes.__attributes__(schema),
@@ -419,8 +419,8 @@ defmodule Brando.Content.Proposals.Tools do
     end)
   end
 
-  defp run("list_modules", args, _context) do
-    schema = schema!(args["content_type"])
+  defp run("list_modules", args, %{actor: actor}) do
+    schema = readable_schema!(args["content_type"], actor)
     field = args["field"] || "blocks"
 
     unless Enum.any?(schema.__blocks_fields__(), &(to_string(&1.name) == field)),
@@ -445,7 +445,8 @@ defmodule Brando.Content.Proposals.Tools do
     %{modules: modules}
   end
 
-  defp run("describe_module", args, _context) do
+  defp run("describe_module", args, %{actor: actor}) do
+    editor!(actor)
     {origin, id} = Content.SharedLibrary.reference(args["module"])
     module = Content.fetch_module(id, origin) || Error.fail!("Unknown module #{inspect(args["module"])}.")
     description = describe_module(module, origin)
@@ -530,7 +531,8 @@ defmodule Brando.Content.Proposals.Tools do
     }
   end
 
-  defp run("list_selection_options", args, _context) do
+  defp run("list_selection_options", args, %{actor: actor}) do
+    editor!(actor)
     {origin, id} = Content.SharedLibrary.reference(args["module"])
     module = Content.fetch_module(id, origin) || Error.fail!("Unknown module #{inspect(args["module"])}.")
 
@@ -1094,6 +1096,25 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   defp var_value(var, _), do: shorten(var.value)
+
+  # A content type the actor may read, described as unknown otherwise, so a
+  # tool tells nothing about types the actor cannot see.
+  defp readable_schema!(name, actor) do
+    schema = schema!(name)
+
+    if Brando.Authorization.Boundary.authorize(actor, :read, schema) == :ok,
+      do: schema,
+      else: Error.fail!("Unknown content type #{inspect(name)}. Use list_content_types.")
+  end
+
+  # Modules belong to the block fields of content types: only someone who
+  # may edit one of those (`list_content_types`) may read them.
+  defp editor!(actor) do
+    editable? =
+      Enum.any?(Catalog.editable_schemas(), &(Brando.Authorization.Boundary.authorize(actor, :update, &1) == :ok))
+
+    unless editable?, do: Error.fail!("There are no modules you can use.")
+  end
 
   defp schema!(name) do
     case Codec.schema(name) do
