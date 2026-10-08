@@ -52,15 +52,22 @@ path to MCP in Brando: BrandoMCP's own transport is stdio, for development
    sign-in and its metadata answer 404 as a missing route does.
 
 Turning it on or off needs **Connected AI tools → Manage** (the admin and
-superuser roles without group authorization), asks for the password or a code
+superuser roles without group authorization). Configuration → Integrations
+opens for people who may manage webhooks or connected AI tools, and shows each
+of those rows only to those who may manage it. Turning it on or off asks for the password or a code
 when the session has not given one lately, and is recorded in Activity.
 
 ## Let someone connect
 
 - With group authorization, grant **Connected AI tools → Connect**
   (`brando.mcp.connect`) to a group. No preset includes it, and the Content
-  assistant permission does not imply it. Reviewing the proposals a tool makes
-  takes **Content assistant → Use**, as for the Assistant's own.
+  assistant permission does not imply it.
+- **Connect lets a person propose; reviewing takes the Assistant.** A tool
+  connected by someone with only Connect can read content and prepare
+  proposals, but the proposals are reviewed, applied or discarded in the
+  Assistant, under **From connected tools**, which takes **Content
+  assistant → Use**. Give people who connect tools both, or someone else
+  cannot see what they proposed.
 - Without group authorization, people with the admin or superuser role can
   connect (for a site, their role on that site).
 - The person needs two-factor authentication (an authenticator app or a
@@ -189,6 +196,11 @@ Rate limits count per node, like the sign-in throttle (`Brando.RateLimit`).
   (RFC 8707). Codes last a minute and work once. Access tokens last an hour;
   refresh tokens 30 days, and each works once: a refresh returns a new pair.
   Tokens and codes are random and stored as SHA-256 hashes.
+- **Refreshing twice disconnects.** Each refresh token works exactly once.
+  If a client sends the same refresh token twice, even in two requests at
+  the same moment, Brando treats the second as a stolen token and revokes
+  the whole connection; the person connects the tool again. MCP clients
+  refresh one request at a time, so this only bites a client that does not.
 
 ## Threat model
 
@@ -288,8 +300,9 @@ And the attacks the review asked about:
 - **Timing.** Tokens and codes are found by their hash, and client ids,
   redirect URIs, resources and PKCE values are compared in constant time.
 - **Refresh token reuse.** A refresh token works once. The exchange locks
-  its row; a second use, by the thief or the client, revokes the whole
-  connection. A reused code does the same to the connection it made.
+  its row; a second use, by the thief or the client itself (two refreshes at
+  once included), revokes the whole connection. A reused code does the same
+  to the connection it made.
 - **Revocation latency.** None: there is no token cache. Every request reads
   the token, the connection, the person, two-factor authentication, the
   permission and the switch from the database.

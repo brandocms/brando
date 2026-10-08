@@ -546,9 +546,9 @@ defmodule BrandoAdmin.Menu do
   end
 
   # Without group authorization, for administrators; with it, the
-  # `brando.webhooks.manage` permission decides (`filter_authorized/2`).
+  # `brando.webhooks.manage` or `brando.mcp.manage` permission decides.
   defp integrations_menu_item(user) do
-    if Brando.Authorization.enabled?() or match?(%{role: role} when role in [:admin, :superuser], user),
+    if user && BrandoAdmin.Sites.IntegrationsLive.can_open?(user),
       do: %{name: gettext("Integrations"), url: "/admin/config/integrations", icon: "plug"}
   end
 

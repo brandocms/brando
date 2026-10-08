@@ -4,22 +4,42 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
   reads data from, in one settings list — what each does for the site on the
   left, its action on the right. Plausible and Search Console are set in the
   application's configuration and shown in Content SEO; webhooks are managed
-  here (`BrandoAdmin.Sites.WebhooksLive`).
+  here (`BrandoAdmin.Sites.WebhooksLive`), and so are connected AI tools
+  (`BrandoAdmin.Sites.MCPLive`).
+
+  The page is for those who may manage webhooks or connected AI tools
+  (`can_open?/1`), and each of those rows only shows to those who may manage
+  it. The Plausible and Search Console rows show to anyone who can open it.
   """
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.MCP
   alias Brando.SEO.Analytics
   alias Brando.Webhooks
   alias BrandoAdmin.Components.Workspace
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
 
-  def __authorization__, do: {:manage, :webhooks}
+  # Either of two permissions opens the page, which one requirement cannot
+  # say: the route asks for backend access, and `mount/3` for the rest.
+  def __authorization__, do: {:access, :backend}
+
+  @doc """
+  Whether `user` may open Integrations in the current site environment: they
+  may manage webhooks (`brando.webhooks.manage`) or connected AI tools
+  (`brando.mcp.manage`). Without group authorization, the admin and
+  superuser roles.
+  """
+  def can_open?(user), do: Webhooks.can_manage?(user) or MCP.can_manage_here?(user)
 
   def mount(_params, _session, socket) do
-    if Webhooks.can_manage?(socket.assigns.current_user) do
-      if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), Webhooks.topic())
+    user = socket.assigns.current_user
+    tenant = MCP.tenant(socket.assigns[:current_site], socket.assigns[:current_environment])
+    webhooks? = Webhooks.can_manage?(user)
+
+    if webhooks? or MCP.can_manage?(user, tenant) do
+      if connected?(socket) and webhooks?, do: Phoenix.PubSub.subscribe(Brando.pubsub(), Webhooks.topic())
 
       {:ok,
        socket
@@ -27,21 +47,22 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
        |> assign(:page_title, gettext("Integrations"))
        |> assign(:plausible?, Analytics.Plausible.configured?())
        |> assign(:search_console?, Analytics.SearchConsole.configured?())
-       |> assign_mcp()
+       |> assign(:webhooks?, webhooks?)
+       |> assign_mcp(tenant)
        |> assign_webhooks()}
     else
       {:ok, redirect(socket, to: "/admin/access-denied")}
     end
   end
 
-  defp assign_webhooks(socket), do: assign(socket, :webhooks, Webhooks.summary())
+  # Webhooks, for those who may manage them
+  defp assign_webhooks(%{assigns: %{webhooks?: true}} = socket), do: assign(socket, :webhooks, Webhooks.summary())
+  defp assign_webhooks(socket), do: assign(socket, :webhooks, nil)
 
   # Connected AI tools (`Brando.MCP`), for those who may manage them
-  defp assign_mcp(socket) do
-    tenant = Brando.MCP.tenant(socket.assigns[:current_site], socket.assigns[:current_environment])
-
-    if Brando.MCP.can_manage?(socket.assigns.current_user, tenant) do
-      assign(socket, :mcp, %{enabled?: Brando.MCP.enabled?(tenant), count: length(Brando.MCP.list_grants(tenant))})
+  defp assign_mcp(socket, tenant) do
+    if MCP.can_manage?(socket.assigns.current_user, tenant) do
+      assign(socket, :mcp, %{enabled?: MCP.enabled?(tenant), count: length(MCP.list_grants(tenant))})
     else
       assign(socket, :mcp, nil)
     end
@@ -86,7 +107,10 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
     Enum.reject(rows(assigns), &on?(&1, assigns))
   end
 
-  defp rows(assigns), do: [:plausible, :search_console, :webhooks] ++ if(assigns.mcp, do: [:mcp], else: [])
+  defp rows(assigns) do
+    [:plausible, :search_console] ++
+      if(assigns.webhooks, do: [:webhooks], else: []) ++ if(assigns.mcp, do: [:mcp], else: [])
+  end
 
   defp on?(:plausible, assigns), do: assigns.plausible?
   defp on?(:search_console, assigns), do: assigns.search_console?
@@ -95,7 +119,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
 
   attr :row, :atom, required: true
   attr :on, :boolean, default: false
-  attr :webhooks, :map, required: true
+  attr :webhooks, :map, default: nil
   attr :mcp, :map, default: nil
 
   defp row(%{row: :plausible} = assigns) do

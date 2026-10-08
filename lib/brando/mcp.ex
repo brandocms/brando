@@ -319,6 +319,22 @@ defmodule Brando.MCP do
   def can_manage?(%User{} = user, tenant), do: active?(user) and permitted?(user, tenant, :manage)
   def can_manage?(_user, _tenant), do: false
 
+  @doc """
+  Whether `user` may manage connections in the current admin context, for
+  presentation such as the menu: `brando.mcp.manage` in the current
+  authorization scope with group authorization, the admin or superuser role
+  without. Screens and actions check `can_manage?/2` for their tenant.
+  """
+  @spec can_manage_here?(User.t() | nil) :: boolean()
+  def can_manage_here?(%User{} = user) do
+    active?(user) and
+      if Engine.enabled?(),
+        do: Brando.Authorization.Boundary.authorize(user, :manage, :mcp) == :ok,
+        else: user.role in [:admin, :superuser]
+  end
+
+  def can_manage_here?(_user), do: false
+
   defp active?(%User{active: true, deleted_at: nil}), do: true
   defp active?(_user), do: false
 
