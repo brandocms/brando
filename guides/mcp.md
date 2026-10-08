@@ -35,6 +35,24 @@ path to MCP in Brando: BrandoMCP's own transport is stdio, for development
    `/admin/mcp/authorize`. Run `mix brando.gen.migrations` and
    `mix ecto.migrate` for `brando_213`, which creates its tables.
 
+   Optionally, plug `Brando.MCP.BodyLimit` into the endpoint just before
+   `Plug.Parsers`. The endpoint's parser reads a request body before the
+   router sees it (up to its own `:length`, often several megabytes); the
+   plug refuses a POST to `/mcp` without a `Content-Length` (411) or over
+   `max_request_bytes` (413) before anything reads it:
+
+   ```elixir
+   plug Brando.MCP.BodyLimit
+
+   plug Plug.Parsers,
+     parsers: [:urlencoded, {:multipart, length: 100_000_000}, :json],
+     pass: ["*/*"],
+     json_decoder: Phoenix.json_library()
+   ```
+
+   Without it, the MCP endpoint applies the same limit from the same header
+   itself, before it looks at the token, but after the parser has run.
+
 2. Make sure the endpoint's URL (`config :my_app, MyAppWeb.Endpoint, url:
    […]`) is the public `https` address. The MCP URL, the OAuth issuer and the
    token audience are all made from it, and production refuses to turn the
@@ -47,9 +65,11 @@ path to MCP in Brando: BrandoMCP's own transport is stdio, for development
    - with tenancy: `https://example.com/mcp/<site>/<environment>`, one per
      site environment, each turned on by itself.
 
-   **Turn off** stops every connection at once. The connections are kept, and
-   work again when it is turned back on. While it is off, the endpoint, its
-   sign-in and its metadata answer 404 as a missing route does.
+   **Turn off** is a kill switch: it disconnects every connected app of the
+   site environment at once (the confirmation says how many), and people
+   connect them again once it is back on. While it is off, the endpoint, its
+   sign-in and its metadata answer 404 as a missing route does (see
+   requirement 1 below).
 
 Turning it on or off needs **Connected AI tools → Manage** (the admin and
 superuser roles without group authorization). Configuration → Integrations
@@ -149,12 +169,26 @@ Activity**.
   lists everyone's connections to this site environment. **Revoke** ends one.
 - **The tool:** the OAuth revocation endpoint (RFC 7009) ends the connection.
 
-A revoked connection's tokens stop working on the next request. Turning
-two-factor authentication off, an administrator's two-factor reset, and
-deactivating or deleting the user revoke all of that person's connections.
-Taking the permission away, or turning the endpoint off, stops the next call
-without revoking: the connections work again if the permission or the switch
-comes back.
+A revoked connection's tokens stop working on the next request. Brando
+revokes all of a person's connections when:
+
+- their password changes: by them, through a reset link, or set by an
+  administrator;
+- they, or an administrator, log them out everywhere ("Log out other
+  sessions" on the Security page too);
+- two-factor authentication is turned off, reset by an administrator, or
+  their last passkey goes;
+- the account is deactivated or deleted.
+
+Turning the endpoint off revokes every connection to that site environment.
+Taking the Connect permission away stops the next call (a plain 403)
+without revoking: the connections work again if the permission comes back.
+
+A connection also expires 90 days after consent (`grant_days`), however
+often it is refreshed: its refresh token is refused with `invalid_grant`,
+Connected apps marks it as expired, and the person connects the tool again.
+The nightly `Brando.Worker.ActivityPurger` removes tokens and codes that
+nothing can use any more (`Brando.MCP.prune/0`).
 
 ## Configuration
 
@@ -162,6 +196,7 @@ comes back.
 config :brando, Brando.MCP,
   access_token_minutes: 60,
   refresh_token_days: 30,
+  grant_days: 90,                 # a connection's lifetime from consent
   requests_per_minute: 60,        # per connection
   user_requests_per_minute: 120,  # per person, over all their connections
   token_requests_per_minute: 30,  # per address, at the token and revocation endpoints
@@ -195,12 +230,19 @@ Rate limits count per node, like the sign-in throttle (`Brando.RateLimit`).
 - **Tokens.** The code flow with PKCE (S256 only) and resource indicators
   (RFC 8707). Codes last a minute and work once. Access tokens last an hour;
   refresh tokens 30 days, and each works once: a refresh returns a new pair.
-  Tokens and codes are random and stored as SHA-256 hashes.
-- **Refreshing twice disconnects.** Each refresh token works exactly once.
-  If a client sends the same refresh token twice, even in two requests at
-  the same moment, Brando treats the second as a stolen token and revokes
-  the whole connection; the person connects the tool again. MCP clients
-  refresh one request at a time, so this only bites a client that does not.
+  Neither outlives the connection's 90 days. Tokens and codes are random and
+  stored as SHA-256 hashes.
+- **Refreshing twice at once.** A client that sends the same refresh token
+  twice within ten seconds, while the pair the first request returned is
+  unused, gets that same pair again (kept encrypted with `Brando.Crypto` for
+  those ten seconds). Any other second use of a refresh token, later or after
+  its successor was used, is treated as theft and revokes the whole
+  connection; the person connects the tool again.
+- **The consent screen never redirects by itself.** A request that is wrong
+  (an unsupported `response_type`, no S256 challenge, an unknown scope, a
+  `state` over 1024 bytes) is shown on an error page. Only a click on
+  Allow, Cancel, or "Back to …" on that page sends the person to the
+  client's redirect URI, and only once the client's document lists it.
 
 ## Threat model
 
@@ -224,9 +266,16 @@ What the endpoint does about each requirement in
 
 1. **Off by default.** No route exists until the application calls
    `mcp_routes()`. Mounted, each site environment is off until turned on;
-   while off, every MCP, OAuth and metadata path raises
-   `Phoenix.Router.NoRouteError`, rendered by the application exactly as an
-   unknown path is, before the token, the origin or the body is looked at.
+   while off, every MCP, OAuth and metadata path, and the consent screen
+   before the admin pipeline touches the session, raises
+   `Phoenix.Router.NoRouteError` before the token, the origin or the body is
+   looked at. The application renders that exactly as it renders any path
+   no route matches, with no cookie or header of the endpoint's own. One
+   difference remains in applications whose router ends in `page_routes()`:
+   there, an unknown `GET` path goes to the page catch-all, through the
+   browser pipeline, while a disabled MCP `GET` path does not. Both answer
+   404; their headers can differ. The endpoint's other paths are `POST`
+   only, which the catch-all never matches.
 2. **Only OAuth 2.1 with PKCE, through the normal login, with 2FA.** No API
    keys or static tokens: the only credential is an access token from the
    code flow. PKCE is required and S256 only (a missing or `plain` method is
@@ -237,7 +286,9 @@ What the endpoint does about each requirement in
    the tools as them, so it never has more than they have in the admin;
    permission, two-factor authentication, account and switch are checked on
    every request. Access tokens last an hour; refresh tokens rotate, and a
-   reused one revokes the connection. Connected apps lists and revokes them.
+   reused one revokes the connection; a connection lasts at most 90 days.
+   Connected apps lists and revokes them, and a password change or "log out
+   everywhere" revokes them all.
 4. **Read and propose only.** A fixed list of the registry's tools, none of
    which approves, applies or deletes; `prepare_proposal` stores a proposal
    that only a person's click in the admin applies (the Assistant's version
@@ -258,8 +309,10 @@ What the endpoint does about each requirement in
    screen. No tool calls a model, so there is no cost limit to keep.
 8. **Transport hygiene.** HTTPS in production (the endpoint will not turn on
    without it). A browser `Origin` other than the site's own (or a configured
-   one) gets 403. No CORS headers at all. Requests over 512 KB get 413;
-   results are bounded as in the Assistant. Tokens are read from the
+   one) gets 403. No CORS headers at all. A POST without a `Content-Length`
+   gets 411, and one over 512 KB gets 413, read from the header before the
+   token is looked at (`Brando.MCP.BodyLimit` refuses it before the
+   endpoint's parser too); results are bounded as in the Assistant. Tokens are read from the
    `Authorization` header only, never the query string.
 9. **Security review.** This section, and the tests for the flow, token
    scope, revocation and cross-tenant access in `test/brando/mcp/`.
@@ -274,8 +327,9 @@ And the attacks the review asked about:
   client's own document lists: exactly, or for a loopback `http` address on
   any port. Only `https` and loopback `http` are accepted, without
   fragments. A client or redirect URI that does not check out gets an error
-  page, never a redirect. The authorize step forwards only to Brando's own
-  consent screen.
+  page, never a redirect; so does any other mistake in the request, until the
+  person clicks. The authorize step forwards only to Brando's own consent
+  screen.
 - **Consent CSRF and clickjacking.** The consent screen is a LiveView: its
   socket carries the session's CSRF token, and Allow is an event on it, not
   a link. The page sends `frame-ancestors 'none'` and `X-Frame-Options:
@@ -290,7 +344,10 @@ And the attacks the review asked about:
 - **Client registration abuse.** There is no registration endpoint. Client
   documents are fetched only for a signed-in person who may connect, at most
   30 checks a minute, through the webhooks' address guard (public addresses,
-  `https`, no redirects, five seconds, 5 KB) and are never stored. A client's
+  `https` on port 443, two seconds per DNS lookup, no redirects, five
+  seconds, 5 KB) and are never stored. A `client_id` on the site's own host,
+  or its media or CDN host, is refused: a file uploaded there could pose as
+  a client. A client's
   name is its own claim: the consent screen shows the host that published it
   and the redirect host, and warns about loopback addresses.
 - **Tokens in logs, Activity and URLs.** Tokens never appear in a URL (codes
@@ -300,16 +357,21 @@ And the attacks the review asked about:
 - **Timing.** Tokens and codes are found by their hash, and client ids,
   redirect URIs, resources and PKCE values are compared in constant time.
 - **Refresh token reuse.** A refresh token works once. The exchange locks
-  its row; a second use, by the thief or the client itself (two refreshes at
-  once included), revokes the whole connection. A reused code does the same
-  to the connection it made.
+  its row; a second use revokes the whole connection, except within ten
+  seconds while the first answer's refresh token is unused, when the same
+  answer is returned (a client refreshing twice at once). A reused code
+  revokes the connection it made.
 - **Revocation latency.** None: there is no token cache. Every request reads
   the token, the connection, the person, two-factor authentication, the
   permission and the switch from the database.
 - **Two-factor authentication turned off after connecting.** Turning it off
   (or an administrator's reset, or losing the last passkey) revokes the
   person's connections; any other way it disappears, the next request is
-  refused.
+  refused. A changed password and "log out everywhere" revoke them too.
+- **Reading what the person cannot.** The tools that describe content types
+  and modules answer only for content types the person may read (and
+  modules only for someone who may edit a content type), for the Assistant
+  and for connected tools alike.
 - **Prompt injection.** A tool following instructions from content can only
   read what the person can read and prepare proposals; a person reviews
   every change before it is applied.

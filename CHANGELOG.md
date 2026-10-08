@@ -62,7 +62,9 @@ production dump.
   calls `mcp_routes()`, and each site environment stays off until an
   administrator turns it on. Projects that still mount BrandoMCP's old
   `plug BrandoMCP` route must remove it; `mcp_routes()` is the only network
-  path to MCP. See [Connected AI tools](guides/mcp.md).
+  path to MCP. `Brando.MCP.BodyLimit`, optional, refuses an oversized MCP
+  request before `Plug.Parsers` reads it. See
+  [Connected AI tools](guides/mcp.md).
 
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
@@ -744,9 +746,11 @@ production dump.
   checked on every call; every tool call is in Activity with the person, the
   client and the token's row id, and is rate limited per connection and per
   person. Security → Connected apps lists and disconnects a person's
-  connections; administrators see and revoke everyone's. Turning two-factor
-  authentication off and deactivating a user revoke their connections. The
-  threat model is in [Connected AI tools](guides/mcp.md).
+  connections; administrators see and revoke everyone's, and turning the
+  endpoint off disconnects them all. A password change, "log out
+  everywhere", turning two-factor authentication off and deactivating a user
+  revoke a person's connections, and every connection expires 90 days after
+  consent. The threat model is in [Connected AI tools](guides/mcp.md).
 
 - **Content events and outbound webhooks.** Every change Activity records
   for an entry becomes a content event (`entry.created`, `entry.updated`,
