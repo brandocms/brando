@@ -12,6 +12,7 @@ defmodule Brando.Migrations.FixAssignedGalleryLoopsTest do
   # Modules 20, 21 and 23 from smartwatt, as brando_136 left them.
   @fixtures Path.expand("../../fixtures/gallery_loops", __DIR__)
   @modules ~w(integration_compatibility info_slider logo_marquee)
+  @tenant "tenant_acme_staging"
 
   setup_all do
     [{module, _bytecode}] = Code.compile_file(@migration)
@@ -106,26 +107,28 @@ defmodule Brando.Migrations.FixAssignedGalleryLoopsTest do
     end
   end
 
-  test "rewrites stored module code", %{migration: migration} do
+  test "rewrites stored module code in public and every environment", %{migration: migration} do
+    Brando.MigrationTemplates.create_environment(@tenant, ["content_modules"])
+
     ids =
-      Map.new(@modules, fn name ->
+      for schema <- ["public", @tenant], name <- @modules, into: %{} do
         %{rows: [[id]]} =
           Repo.query!(
             """
-            INSERT INTO content_modules (uid, class, code, inserted_at, updated_at)
+            INSERT INTO "#{schema}".content_modules (uid, class, code, inserted_at, updated_at)
             VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id
             """,
             [Brando.Utils.generate_uid(), name, fixture(name)]
           )
 
-        {name, id}
-      end)
+        {{schema, name}, id}
+      end
 
     for _run <- 1..2 do
       Ecto.Migrator.up(Repo, System.unique_integer([:positive]), migration, log: false, migration_lock: false)
 
-      for {name, id} <- ids do
-        %{rows: [[code]]} = Repo.query!("SELECT code FROM content_modules WHERE id = $1", [id])
+      for {{schema, name}, id} <- ids do
+        %{rows: [[code]]} = Repo.query!(~s(SELECT code FROM "#{schema}".content_modules WHERE id = $1), [id])
         assert code == fixture(name <> ".fixed")
       end
     end

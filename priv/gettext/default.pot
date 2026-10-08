@@ -4926,6 +4926,41 @@ msgstr ""
 msgid "No recovery archive exists for this site."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "This archive is older than migrations Brando cannot run in it again: %{names}. Nothing was restored."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "This archive could not be brought up to date with the live environment. It lacks %{missing}. Nothing was restored."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando cannot tell when this archive was taken, so it cannot bring it up to date. Nothing was restored."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Bringing this archive up to date failed in %{name}. Nothing was restored."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restoring the archive. This can take a while."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando cannot find the migrations directory %{path}, so it cannot tell whether this archive is up to date. Nothing was restored."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restoring the archive failed: %{reason}. Nothing was restored."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex:401
 #, elixir-autogen, elixir-format
 msgid "No recovery archives exist for this site."

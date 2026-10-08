@@ -4922,6 +4922,41 @@ msgstr "Ingen operasjoner er registrert for dette nettstedet."
 msgid "No recovery archive exists for this site."
 msgstr "Det finnes ikke noe gjenopprettingsarkiv for dette nettstedet."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "This archive is older than migrations Brando cannot run in it again: %{names}. Nothing was restored."
+msgstr "Dette arkivet er eldre enn migreringer Brando ikke kan kjøre i det på nytt: %{names}. Ingenting ble gjenopprettet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "This archive could not be brought up to date with the live environment. It lacks %{missing}. Nothing was restored."
+msgstr "Dette arkivet kunne ikke oppdateres til samme struktur som live-miljøet. Det mangler %{missing}. Ingenting ble gjenopprettet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando cannot tell when this archive was taken, so it cannot bring it up to date. Nothing was restored."
+msgstr "Brando kan ikke se når dette arkivet ble tatt, og kan derfor ikke oppdatere det. Ingenting ble gjenopprettet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Bringing this archive up to date failed in %{name}. Nothing was restored."
+msgstr "Oppdateringen av dette arkivet feilet i %{name}. Ingenting ble gjenopprettet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restoring the archive. This can take a while."
+msgstr "Gjenoppretter arkivet. Dette kan ta litt tid."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando cannot find the migrations directory %{path}, so it cannot tell whether this archive is up to date. Nothing was restored."
+msgstr "Brando finner ikke migreringsmappen %{path}, og kan derfor ikke se om dette arkivet er oppdatert. Ingenting ble gjenopprettet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restoring the archive failed: %{reason}. Nothing was restored."
+msgstr "Gjenopprettingen av arkivet feilet: %{reason}. Ingenting ble gjenopprettet."
+
 #: lib/brando_admin/live/sites/environment_live.ex:401
 #, elixir-autogen, elixir-format
 msgid "No recovery archives exist for this site."

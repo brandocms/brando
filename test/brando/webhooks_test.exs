@@ -671,28 +671,27 @@ defmodule Brando.WebhooksTest do
       @behaviour Brando.Environments.SchemaCloner
 
       # Stands in for pg_dump: the tables webhooks use, with their rows. When
-      # the :break_webhooks predicate says so, the target gets a webhooks
-      # table that cannot be paused (no paused_reason column).
+      # the :break_webhooks predicate says so, the target's webhooks cannot be
+      # paused: a trigger refuses every update. (The table itself is whole, or
+      # a restore would be refused for lacking what the live environment has
+      # before it got to pausing them.)
       @impl true
       def clone_schema(source, target) do
         :ok = Brando.Environments.Schema.create(target)
 
-        if broken?(source, target) do
-          Brando.Repo.repo().query!(~s|CREATE TABLE "#{target}".webhooks (id bigserial PRIMARY KEY, active boolean)|)
-
-          Brando.Repo.repo().query!(
-            ~s|INSERT INTO "#{target}".webhooks (id, active) SELECT id, active FROM "#{source}".webhooks|
-          )
-        end
-
-        tables =
-          if broken?(source, target),
-            do: ["webhook_deliveries", "activity_events"],
-            else: ["webhooks", "webhook_deliveries", "activity_events"]
-
-        for table <- tables do
+        for table <- ["webhooks", "webhook_deliveries", "activity_events"] do
           Brando.Repo.repo().query!(~s|CREATE TABLE "#{target}".#{table} (LIKE "#{source}".#{table} INCLUDING ALL)|)
           Brando.Repo.repo().query!(~s|INSERT INTO "#{target}".#{table} SELECT * FROM "#{source}".#{table}|)
+        end
+
+        if broken?(source, target) do
+          Brando.Repo.repo().query!(
+            ~s|CREATE FUNCTION "#{target}".refuse() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$|
+          )
+
+          Brando.Repo.repo().query!(
+            ~s|CREATE TRIGGER refuse BEFORE UPDATE ON "#{target}".webhooks FOR EACH ROW EXECUTE FUNCTION "#{target}".refuse()|
+          )
         end
 
         :ok

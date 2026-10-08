@@ -170,6 +170,45 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     refute has_element?(view, "#environment-job-#{job.id}")
   end
 
+  defmodule RaisingSchemaCloner do
+    @behaviour Brando.Environments.SchemaCloner
+
+    @impl true
+    def clone_schema(_source_prefix, target_prefix) do
+      :ok = Schema.create(target_prefix)
+      raise "the clone broke halfway"
+    end
+  end
+
+  @tag :capture_log
+  test "a restore that fails says so, and leaves nothing behind", %{
+    conn: conn,
+    site: site,
+    production: production,
+    current_user: user
+  } do
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview-restore"})
+    assert {:ok, _} = Environments.copy_environment(production, preview)
+    put_test_env(:environment_schema_cloner, RaisingSchemaCloner)
+    Brando.endpoint().subscribe("user:#{user.id}")
+
+    {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+    view
+    |> element("button[phx-click=rollback]:not([phx-value-schema])")
+    |> render_click()
+
+    # The restore runs in its own task, which reports back to the page
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}, 5_000
+    assert render(view)
+    refute Enum.any?(Registry.list_environments(site), &String.starts_with?(&1.key, "rollback"))
+
+    assert BrandoIntegration.Repo.query!(
+             "SELECT count(*) FROM pg_namespace WHERE nspname LIKE 'tenant_acme-environment-live_rollback%'"
+           ).rows ==
+             [[0]]
+  end
+
   test "editors cannot invoke environment lifecycle events", %{site: site} do
     editor =
       Brando.Factory.insert(:random_user,

@@ -42,12 +42,21 @@ defmodule Brando.Repo.Migrations.Brando212AddSearchDocuments do
     end
   end
 
+  # Every site environment, or only the one named by the migrator's prefix:
+  # `Brando.Environments.ArchiveUpgrade` runs this again in an archive
+  # restored from before it ran.
   defp prefixes do
-    %{rows: rows} =
-      repo().query!(
-        "SELECT nspname FROM pg_namespace WHERE nspname = 'public' OR nspname ~ '^tenant_[a-z0-9-]+_[a-z0-9-]+$'"
-      )
+    case prefix() do
+      "tenant_" <> _ = environment ->
+        [environment]
 
-    Enum.map(rows, &hd/1)
+      _ ->
+        %{rows: rows} =
+          repo().query!(
+            "SELECT nspname FROM pg_namespace WHERE nspname = 'public' OR nspname ~ '^tenant_[a-z0-9-]+_[a-z0-9-]+$'"
+          )
+
+        Enum.map(rows, &hd/1)
+    end
   end
 end

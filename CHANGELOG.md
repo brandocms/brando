@@ -8,15 +8,51 @@ projects still on 0.53 run `mix brando.migrate54` followed by
 `mix brando.migrate55`. Both tasks rewrite source only and are safe to rerun.
 `mix brando.migrate54` and the deprecated Blueprint syntax it rewrites are
 removed in 0.56; see "How long source migrations ship" in `UPGRADE.md`.
-Then copy the Brando migrations added since `brando_130` with
-`mix brando.gen.migrations`, review them, run `mix ecto.migrate`, and finish
-with `mix brando.entries.resave` and `mix brando.identifiers.sync`. Run
-`mix brando.images.adopt` once too: images processed before 0.55 have no
-record of the config they were made with, and it records it for those whose
-files already match, so **Recreate changed images** only recreates the rest
-(see [Media](guides/media.md#images-made-before-fingerprints)). The full
-ordered workflow, including Blueprint snapshot handling and Gettext recovery,
-is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
+For a version jump, `mix igniter.upgrade brando` calls
+`mix brando.upgrade FROM TO`, which runs `mix brando.migrate55` and then
+copies the missing migrations. Without `FROM TO`, `mix brando.upgrade` only
+points to `mix brando.gen.migrations`, and with the same version twice it does
+nothing.
+
+Then bring the database up to date. A project already on a 0.55 development
+build has no source tasks to run and starts here:
+
+1. `mix brando.gen.migrations` copies the Brando migrations the project does
+   not have yet (for a 0.53 or 0.54 project, everything since `brando_130`).
+2. `mix brando.gen.blueprint_migration --all` plans the columns that
+   `trait :meta` and `trait :creator` now add to application schemas.
+3. Review the migrations. `mix brando.migrations.check` lists Brando copies
+   that have not run yet and differ from Brando's current templates.
+4. `mix brando.migrate` runs them. Brando migrations whose notes below say
+   "in every environment" change `public` and every environment schema in the
+   same run.
+5. `mix brando.migrate --tenants`, when the app has named environments, runs
+   the tenant migrations in each environment, including the Blueprint
+   migrations of content stored there.
+6. `mix brando.entries.resave` and `mix brando.identifiers.sync`.
+7. `mix brando.images.adopt`, once: images processed before 0.55 have no
+   record of the config they were made with, and it records it for those
+   whose files already match, so **Recreate changed images** only recreates
+   the rest (see [Media](guides/media.md#images-made-before-fingerprints)).
+
+Then the steps particular to some features, each described under Breaking:
+rebuild the search index in each environment, add the `Brando.Plug.Markdown`
+and `Brando.Plug.IndexNow` endpoint plugs, and, in an application that sets
+`config :brando, Oban` itself, add the `content_events`, `webhooks` and
+`search_index` queues and the webhook delivery purger to its crontab.
+`mix brando.doctor` reports migrations that have not
+run and queues that are missing.
+
+There are no migrations numbered `brando_206` or `brando_208`: both numbers
+were reserved and never needed, so the gap is not a missed migration.
+
+Environment archives are not migrated. Restoring one taken before a
+`brando_2xx` migration that changes every environment runs that migration in
+the restored environment; an archive that cannot be brought up to date is
+refused, and nothing is restored.
+
+The full ordered workflow, including Blueprint snapshot handling and Gettext
+recovery, is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 Sites still on 0.51 (the `legacy` branch, with the Vue admin) have no
 automated path; [Migrating from 0.51](guides/migrating_from_051.md) is the
 ordered port, with the traps of replaying the migration chain on a
@@ -29,8 +65,9 @@ production dump.
   `meta_max_snippet` to `pages`, in every environment. Every application
   schema with `trait :meta` gets the two snippet columns too: run
   `mix brando.gen.migrations` and `mix brando.gen.blueprint_migration --all`,
-  then `mix ecto.migrate`; until then, loading SEO settings or those schemas
-  fails with a missing-column error. Nothing changes in robots.txt or the
+  then `mix brando.migrate` (and `mix brando.migrate --tenants` with named
+  environments); until then, loading SEO settings or those schemas fails with
+  a missing-column error. Nothing changes in robots.txt or the
   page head until an editor sets the new options.
 
 - **Modules have a `markdown_code` column, and IndexNow a table.**
@@ -50,7 +87,7 @@ production dump.
 
 - **The admin search needs a table and an Oban queue.** `brando_212` creates
   `search_documents` in every environment. Run `mix brando.gen.migrations`
-  and `mix ecto.migrate`, then rebuild the index once in each environment
+  and `mix brando.migrate`, then rebuild the index once in each environment
   from Configuration → Utilities → Search index ("Rebuild search index");
   from then on, saving keeps it up to date. Until the migration runs, the
   search page says search is not set up and saves carry on without it.
@@ -61,7 +98,7 @@ production dump.
 
 - **Connected AI tools need four tables.** `brando_213` creates
   `mcp_settings`, `mcp_grants`, `mcp_tokens` and `mcp_authorization_codes`
-  in `public`. Run `mix brando.gen.migrations` and `mix ecto.migrate`. The
+  in `public`. Run `mix brando.gen.migrations` and `mix brando.migrate`. The
   remote MCP endpoint itself is opt-in: nothing is mounted until the router
   calls `mcp_routes()`, and each site environment stays off until an
   administrator turns it on. Projects that still mount BrandoMCP's old
@@ -72,7 +109,7 @@ production dump.
 
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
-  `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
+  `mix brando.gen.migrations` and `mix brando.migrate`; until then, content
   events find no webhooks and saves carry on without them. Brando's default
   Oban configuration has the new `content_events` and `webhooks` queues. **An
   application that sets `config :brando, Oban` itself must declare both
@@ -103,12 +140,12 @@ production dump.
 
 - **Notes need two tables.** `brando_203` creates `entry_notes` and
   `note_mentions` in every environment. Run `mix brando.gen.migrations` and
-  `mix ecto.migrate`; until then the entry editor's Notes panel stays empty
+  `mix brando.migrate`; until then the entry editor's Notes panel stays empty
   and saves carry on without it.
 
 - **Content proposals have two new columns.** `origin` and `client` record
   where a proposal came from (the Assistant, or a tool connected over MCP).
-  Run `mix brando.gen.migrations` and `mix ecto.migrate` for `brando_207`;
+  Run `mix brando.gen.migrations` and `mix brando.migrate` for `brando_207`;
   until then, loading proposals fails with a missing-column error.
 
 - **Passkeys and session details.** `brando_205` creates `users_passkeys` and
@@ -119,7 +156,7 @@ production dump.
 - **Two-factor authentication adds four tables.** `brando_204` creates
   `users_security`, `users_recovery_codes`, `users_security_events` and
   `users_security_policy` in `public`. Run `mix brando.gen.migrations` and
-  `mix ecto.migrate`; until then, logging in fails with a missing-table error.
+  `mix brando.migrate`; until then, logging in fails with a missing-table error.
   Applications with their own `:shared_tables` need no change; Brando lists
   the new tables itself. Behind a reverse proxy that is not on the same
   server, list it in `config :brando, :trusted_proxies` (loopback is trusted
@@ -130,15 +167,16 @@ production dump.
 
 - **Users have two new columns.** `job_title` and `same_as` back the user
   form's Job title and Profile links. Run `mix brando.gen.migrations` and
-  `mix ecto.migrate` for `brando_202`; until then, loading users fails with a
+  `mix brando.migrate` for `brando_202`; until then, loading users fails with a
   missing-column error.
 
 - **`trait :meta` adds two columns.** Every schema with the meta trait now has
   `meta_canonical_url` and `content_modified_at`. Run `mix brando.gen.migrations`
   for Brando's pages (`brando_201`) and
   `mix brando.gen.blueprint_migration --all` for the application blueprints
-  with `trait :meta`, then `mix ecto.migrate`; until then, queries on those
-  schemas fail with a missing-column error. Both migrations start
+  with `trait :meta`, then `mix brando.migrate` (and
+  `mix brando.migrate --tenants` with named environments); until then, queries
+  on those schemas fail with a missing-column error. Both migrations start
   `content_modified_at` from each row's last edit.
 
 - **Admin icons are Lucide.** Heroicons and `assets/css/heroicons.css` are
@@ -244,8 +282,9 @@ production dump.
 - **`trait :creator` adds two columns.** Every schema with the creator trait now
   has `updated_by_id` and `edited_at`. Run `mix brando.gen.migrations` for
   Brando's tables and `mix brando.gen.blueprint_migration --all` for the
-  application blueprints, then `mix ecto.migrate`; until then, queries on those
-  schemas fail with a missing-column error.
+  application blueprints, then `mix brando.migrate` (and
+  `mix brando.migrate --tenants` with named environments); until then, queries
+  on those schemas fail with a missing-column error.
 
 - **Video Type Migration**: The deprecated `Brando.Type.Video` has been replaced with `Brando.Videos.Video`. The video schema has been updated:
   - `source` field renamed to `type` (enum: `:upload`, `:external_file`, `:vimeo`, `:youtube`)
@@ -704,7 +743,7 @@ production dump.
   live preview, media fields, Florist deploys) ship in
   `usage-rules/skills/`: `mix brando.install` copies them to
   `.claude/skills/` and links the usage rules from `AGENTS.md`, and a
-  versioned `mix brando.upgrade` adds them when missing, never replacing
+  versioned `mix brando.upgrade FROM TO` adds them when missing, never replacing
   edited copies.
 - **AI crawler policy.** Configuration → SEO lists the crawlers AI products
   send, grouped by purpose (AI search, fetches for a user, model training),
@@ -1469,7 +1508,7 @@ production dump.
     recognising a re-import as the same lineage needs the versioned envelope and
     conflict handling still to be built.
 
-  Requires `brando_167`. Run `mix brando.upgrade && mix ecto.migrate`. Existing
+  Requires `brando_167`. Run `mix brando.gen.migrations` and `mix brando.migrate`. Existing
   modules are given a `uid`, and existing blocks are backfilled as current, so
   upgrading does not flag a site as stale on day one.
 
@@ -1639,7 +1678,8 @@ production dump.
   (7 October 2026) imports `@codemirror/streamparser` without declaring it, so
   `mix brando.assets.setup` failed to resolve it in new projects. The backend
   `package.json` pins `@codemirror/language` to 6.12.4 through
-  `pnpm.overrides`, and `mix brando.upgrade` adds the pin to existing projects.
+  `pnpm.overrides`, and `mix brando.gen.backend --upgrade` adds the pin to
+  existing projects.
 
 - **Listings with two or more alternates render again.** The alternates
   column keyed its rows on identifiers built in memory, whose `id` is nil, and
@@ -2976,7 +3016,7 @@ production dump.
 - `brando_151`: Adds `json_ld_type` (string, default "WebPage") to `pages`.
 - `brando_152`: Adds `breadcrumbs` (jsonb, default `[]`) to `pages`.
 - `brando_153`: Upgrades the Oban schema to v14 (required by Oban 2.23). Run
-  `mix brando.upgrade && mix ecto.migrate` to bring in the migration.
+  `mix brando.gen.migrations` and `mix brando.migrate` to bring in the migration.
 
   **BREAKING (only if you deploy with the bundled `fabfile.py` / Fabric):** the v14
   Oban migration runs `ALTER TYPE oban_job_state ...`, which Postgres only permits the

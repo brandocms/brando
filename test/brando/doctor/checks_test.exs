@@ -96,6 +96,19 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.status == :warning
       assert result.fix =~ "mix brando.gen.migrations"
     end
+
+    test "a gap in Brando's numbering is not a missing migration" do
+      # 206 and 208 were reserved and never used
+      migrations = tmp_dir("migrations")
+
+      for {_format, "../brando.upgrade/migrations/" <> _, target} <- Mix.Brando.Install.Templates.manifest(),
+          do: File.write!(Path.join(migrations, Path.basename(target)), "")
+
+      copied = migrations |> File.ls!() |> Enum.map(&String.replace(&1, ~r/^\d+_/, ""))
+      refute Enum.any?(copied, &String.starts_with?(&1, ["brando_206_", "brando_208_"]))
+      assert Enum.any?(copied, &String.starts_with?(&1, "brando_207_"))
+      assert Checks.Migrations.missing_templates(migrations) == []
+    end
   end
 
   describe "Oban" do

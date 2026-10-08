@@ -4,46 +4,32 @@ defmodule Brando.Migrations.Brando212AddSearchDocumentsTest do
   use ExUnit.Case
   use Brando.ConnCase
 
-  alias BrandoIntegration.Repo
+  import Brando.MigrationTemplates
 
-  @template Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations/brando_212_add_search_documents.exs")
+  @template "brando_212_add_search_documents.exs"
+  @tenant "tenant_acme_staging"
 
-  defp run_template do
-    [{module, _bytecode}] = Code.compile_file(@template)
+  test "creates the search index table in public and every environment, as the schema and the indexer use it" do
+    expected_columns = column_definitions("public", "search_documents")
+    expected_indexes = indexes("public", "search_documents")
+    query!("DROP TABLE public.search_documents")
+    create_environment(@tenant)
 
-    try do
-      Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false, migration_lock: false)
-    after
-      :code.purge(module)
-      :code.delete(module)
+    version = up(@template)
+
+    for schema <- ["public", @tenant] do
+      assert column_definitions(schema, "search_documents") == expected_columns
+      assert indexes(schema, "search_documents") == expected_indexes
+      assert Enum.any?(indexes(schema, "search_documents"), &(&1 =~ "USING gin (document)"))
+
+      fields = Brando.Search.Document.__schema__(:fields) |> Enum.map(&to_string/1)
+      assert Enum.sort(["document" | fields]) == columns(schema, "search_documents")
     end
-  end
 
-  defp columns do
-    Repo.query!(
-      "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'search_documents'"
-    ).rows
-    |> Enum.sort()
-  end
+    down(@template, version)
 
-  defp indexes do
-    Repo.query!("SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'search_documents'").rows
-    |> List.flatten()
-    |> Enum.sort()
-  end
-
-  test "creates the search index table as the schema and the indexer use it" do
-    expected_columns = columns()
-    expected_indexes = indexes()
-    Repo.query!("DROP TABLE public.search_documents")
-
-    run_template()
-
-    assert columns() == expected_columns
-    assert indexes() == expected_indexes
-    assert Enum.any?(indexes(), &(&1 =~ "USING gin (document)"))
-
-    fields = Brando.Search.Document.__schema__(:fields) |> Enum.map(&to_string/1)
-    assert Enum.sort(["document" | fields]) == expected_columns |> Enum.map(&hd/1) |> Enum.sort()
+    for schema <- ["public", @tenant] do
+      refute table?(schema, "search_documents")
+    end
   end
 end

@@ -98,7 +98,9 @@ if Code.ensure_loaded?(Igniter) do
            run `mix brando.gen.blueprint_migration MyApp.Domain.Schema`.
         5. Review every generated `up/0` and `down/0`, test rollback/forward,
            and commit the source, migrations, and snapshots together.
-        6. Run `mix ecto.migrate` only after that review.
+        6. Only after that review, run `mix brando.migrate`, followed by
+           `mix brando.migrate --tenants` when the application has named
+           environments.
         7. After the database migration, run `mix brando.entries.resave` and
            `mix brando.identifiers.sync`.
         8. Run `mix brando.check.image_texts` to find module, container and

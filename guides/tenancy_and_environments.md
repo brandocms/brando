@@ -298,20 +298,31 @@ also that `execute/1` does not receive the migration prefix the way
 
 `Brando.Tenant.SharedTables` is the single source of truth. Registry,
 authentication, session, and migration-history tables stay in `public`
-permanently, as do authorization, the content assistant's conversations and
-proposals, content transfer receipts, and Markdown webhook deliveries, along
-with every `oban_*` table, since Oban is configured against `public`:
+permanently, as do authorization, which shared library items each site
+enables, entry drafts, the content assistant's guidance, conversations and
+proposals, content transfer receipts, form submissions, Markdown webhook
+deliveries and connected AI tools (MCP), along with every `oban_*` table, since
+Oban is configured against `public`:
 
 ```text
 sites  sites_previews  environments  environment_operation_logs
 site_asset_sets  ssg_builds  uploads_pending_intents  schema_migrations
-users  users_tokens  user_tokens  user_sites
+site_enabled_modules  site_enabled_containers  site_enabled_palettes
+users  users_tokens  user_tokens  user_sites  users_passkeys
+users_security  users_recovery_codes  users_security_events  users_security_policy
 authorization_groups  authorization_group_permissions  authorization_user_groups
-authorization_legacy_mappings  authorization_audit_events
-ai_conversations  ai_messages  ai_runs  content_proposals  content_proposal_receipts
-content_transfer_receipts  markdown_webhook_deliveries
+authorization_legacy_mappings  authorization_audit_events  entry_drafts
+ai_conversations  ai_messages  ai_runs  ai_guidance_versions
+content_proposals  content_proposal_receipts  content_transfer_receipts
+forms_submissions  markdown_webhook_deliveries
+mcp_settings  mcp_grants  mcp_tokens  mcp_authorization_codes
 oban_*
 ```
+
+Environments provisioned before a table joined this list may hold an empty
+copy of it (or, after `mix brando.migrate_to_tenant`, a copy of its rows).
+Brando never reads those copies: the schemas for these tables are pinned to
+`public`. They can be left, or dropped by hand.
 
 `Brando.Tenant.SharedTables.list/0` returns the current list.
 
@@ -698,6 +709,33 @@ promotion as a separate decision:
 
 {:ok, _live} = Brando.Environments.set_live(restored, creator: current_user)
 ```
+
+Some of Brando's upgrade migrations change every environment schema in the run
+that migrates `public`, but they leave archives alone: an archive is a snapshot.
+An archive taken before such a migration ran therefore lacks what it added.
+Rollback brings it up to date as it restores it:
+
+- Before anything is created, it accounts for every public migration that ran
+  after the archive was taken (from `schema_migrations` and the timestamp in
+  the archive's name), by finding its file under the migrations directory.
+  Brando's `brando_2xx` ones that change every environment are run again in the
+  restored schema only, and recorded in its `schema_migrations`. Ones that only
+  change `public` are left alone. Anything else refuses the restore with
+  `{:error, {:archive_behind, reason}}`: a migration that changes the
+  environments and cannot be run again (Brando's older ones, or the
+  application's own), a version without a file, or a migrations directory that
+  is not there. An application that keeps its migrations elsewhere, or in more
+  than one directory, sets `config :brando, :public_migrations_path` to a path
+  or a list of paths.
+- After the tenant migrations, the restored schema must have every table and
+  column (with its type, nullability and default), index, foreign key and
+  unique constraint the live environment has. If it does not, the restore is
+  undone and returns `{:error, {:archive_behind, {:structure, missing}}}`.
+
+Either way, a refused or failed restore, including one where a step raises,
+leaves no environment, schema or log entry behind, and the archive is
+unchanged. The admin runs a restore in a task of its own, so closing the page
+does not stop it halfway.
 
 Only non-live environments can be deleted:
 

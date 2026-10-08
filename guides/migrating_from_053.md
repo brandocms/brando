@@ -297,11 +297,16 @@ commit after the Florist deployment has been proven.
 
 ## 3. Generate and review database migrations
 
-First copy every missing Brando-owned migration:
+A project already on a 0.55 development build skips the source tasks above and
+starts here, to pick up the migrations added since it last upgraded. First copy
+every missing Brando-owned migration:
 
 ```shell
 mix brando.gen.migrations
 ```
+
+There are no `brando_206` or `brando_208` migrations: both numbers were
+reserved and never needed, so the gap is not a missed migration.
 
 The Igniter migration-file command does not start the application or touch the
 database. It allocates monotonically increasing Ecto versions and preserves
@@ -378,8 +383,16 @@ Before touching a shared database:
 Only then run:
 
 ```shell
-mix ecto.migrate
+mix brando.migrate
+# With named environments, after public migrations:
+mix brando.migrate --tenants
 ```
+
+`mix brando.migrate` runs the public migrations. Brando's own migrations that
+work "in every environment" (their notes in the CHANGELOG say so) change
+`public` and every environment schema in that run. `--tenants` then runs the
+tenant migrations in each environment, including the Blueprint migrations of
+content stored there; tenant discovery needs the public migrations first.
 
 ## 4. Repair derived data
 
@@ -399,6 +412,21 @@ images only recreates the ones that differ. Try it with `--dry-run` first; see
 
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.
+
+Some 0.55 features need a step of their own; the CHANGELOG's Breaking notes
+describe each:
+
+- Rebuild the admin search index once in each environment, from
+  Configuration → Utilities → Search index. `brando_212` creates the table
+  empty.
+- Add `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
+  endpoint, before the router.
+- An application that sets `config :brando, Oban` itself adds the
+  `content_events`, `webhooks` and `search_index` queues, and
+  `Brando.Worker.WebhookDeliveryPurger` to its crontab.
+
+`mix brando.doctor` reports migrations that have not run, in `public` and in
+each environment, and Oban queues that are missing.
 
 Image alt text, title and credits are now translated maps. Templates that print
 them without the `i18n` filter (`{{ entry.cover.alt | i18n }}`) show the raw map.

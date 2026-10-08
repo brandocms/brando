@@ -21,6 +21,11 @@ next task.
 
 Database migrations follow a different rule. The `brando_NNN` templates are the
 schema history for every site, including fresh installs, and are never pruned.
+Their numbers can have gaps: a number reserved for a migration that was never
+needed stays unused (`brando_206` and `brando_208` in 0.55). Copy the ones a
+project lacks with `mix brando.gen.migrations`, review them, and run them with
+`mix brando.migrate`, followed by `mix brando.migrate --tenants` when the
+application has named environments.
 
 ## 0.52.0
 

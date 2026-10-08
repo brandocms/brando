@@ -35,7 +35,8 @@ path to MCP in Brando: BrandoMCP's own transport is stdio, for development
    `mcp_routes/0` mounts `/mcp`, `/mcp/*`, two
    `/.well-known/oauth-…/mcp…` metadata paths and the consent screen at
    `/admin/mcp/authorize`. Run `mix brando.gen.migrations` and
-   `mix ecto.migrate` for `brando_213`, which creates its tables.
+   `mix brando.migrate` for `brando_213`, which creates its tables in
+   `public`.
 
    Optionally, plug `Brando.MCP.BodyLimit` into the endpoint just before
    `Plug.Parsers`. The endpoint's parser reads a request body before the
