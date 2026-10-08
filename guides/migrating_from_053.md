@@ -424,6 +424,9 @@ describe each:
 - An application that sets `config :brando, Oban` itself adds the
   `content_events`, `webhooks` and `search_index` queues, and
   `Brando.Worker.WebhookDeliveryPurger` to its crontab.
+- With group authorization, grant the Notifications permission
+  (`brando.notifications.manage`) to the groups that should manage
+  notification routes; see [Notifications](notifications.md).
 
 `mix brando.doctor` reports migrations that have not run, in `public` and in
 each environment, and Oban queues that are missing.

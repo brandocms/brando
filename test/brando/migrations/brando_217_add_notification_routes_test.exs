@@ -22,7 +22,11 @@ defmodule Brando.Migrations.Brando217AddNotificationRoutesTest do
         assert {column_definitions(schema, table), indexes(schema, table)} == expected[table]
       end
 
-      assert Enum.any?(indexes(schema, "notification_deliveries"), &(&1 =~ "notification_deliveries_once_per_event_index"))
+      assert Enum.any?(
+               indexes(schema, "notification_deliveries"),
+               &(&1 =~ "notification_deliveries_once_per_event_index")
+             )
+
       assert references(schema, "notification_routes") == [{"creator_id", "public", "users"}]
 
       assert Enum.sort(references(schema, "notification_deliveries")) ==

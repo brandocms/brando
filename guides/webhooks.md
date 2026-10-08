@@ -10,6 +10,9 @@ a search index, a chat channel. Two layers do this.
   to URLs an administrator sets up under Configuration → Integrations →
   Webhooks.
 
+For messages to people rather than systems — a Slack or Teams channel, or
+email — see [Notifications](notifications.md).
+
 <!-- usage-rules:start topic="content-events" -->
 
 ## Events
