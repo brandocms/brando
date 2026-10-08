@@ -1,10 +1,9 @@
 import autosize from 'autosize'
 
 const PRESENCE_THROTTLE_MS = 500
-// Focus-settle delay before shipping on focusout — long enough for the
-// phx-debounce(300) change flush + validate to land, so the op store holds
-// the final keystrokes before the ship reads it.
-const SHIP_SETTLE_MS = 400
+// Focus-settle delay before telling the server focus left the block — long
+// enough for the phx-debounce(300) change flush + validate to land first.
+const SETTLE_MS = 400
 
 export default app => ({
   mounted() {
@@ -40,27 +39,27 @@ export default app => ({
       this.el.addEventListener('focusin', this._handleBlockPresence)
       this.el.addEventListener('pointerdown', this._handleBlockPresence)
 
-      // Ship committed content when focus settles after a focusout. Blur
-      // alone must sync to other editors — the focus-switch trigger in the
-      // form LV only fires when ANOTHER block is focused, which left edits
-      // unshipped on plain blur and on ref-to-ref moves inside one block.
-      // `still_inside` tells the server whether to also drop presence.
+      // Tell the server when focus settles after a focusout: presence clears,
+      // and the block takes the other editors' changes it held back while it
+      // was in use (their edits reach the edit session as they type).
+      // `still_inside` tells the server whether focus only moved inside the
+      // block.
       // Clicking non-focusable UI inside the block (toggles, drag handles,
       // dropdowns) parks focus on <body> — the recent pointer-inside check
       // keeps presence from flapping while the editor is clearly still here.
-      this._handleBlockShip = () => {
-        clearTimeout(this._shipTimer)
+      this._handleBlockSettle = () => {
+        clearTimeout(this._settleTimer)
         const uid = this.el.getAttribute('data-block-uid')
         if (!uid) return
 
-        this._shipTimer = setTimeout(() => {
+        this._settleTimer = setTimeout(() => {
           const active = document.activeElement
           const focusInside = !!(active && active !== document.body && this.el.contains(active))
-          const pointerInside = Date.now() - this._lastPointerInside < SHIP_SETTLE_MS * 2
+          const pointerInside = Date.now() - this._lastPointerInside < SETTLE_MS * 2
           this.pushEvent('block_blurred', { uid, still_inside: focusInside || pointerInside })
-        }, SHIP_SETTLE_MS)
+        }, SETTLE_MS)
       }
-      this.el.addEventListener('focusout', this._handleBlockShip)
+      this.el.addEventListener('focusout', this._handleBlockSettle)
     }
   },
 
@@ -79,9 +78,9 @@ export default app => ({
       this.el.removeEventListener('pointerdown', this._handleBlockPresence)
     }
 
-    if (this._handleBlockShip) {
-      clearTimeout(this._shipTimer)
-      this.el.removeEventListener('focusout', this._handleBlockShip)
+    if (this._handleBlockSettle) {
+      clearTimeout(this._settleTimer)
+      this.el.removeEventListener('focusout', this._handleBlockSettle)
     }
   }
 })

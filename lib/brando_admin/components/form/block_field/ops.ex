@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   render children from their `block_list` (mirrored here via child ops);
   seed forms are uid-keyed mount-time snapshots, never an order source.
   `materialize_root/2` builds save-ready params from the store for save,
-  preview, share, remote sync, restore and the outline alike.
+  preview, share, restore and the outline alike.
 
   ## Semantics
 
@@ -39,7 +39,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     structure, keeping the one-diff-per-uid invariant.
   * Deleting a `:persisted` block records it (and its persisted descendants)
     in `deleted`; `:inserted` blocks just drop. `bin_snapshot/2` captured
-    before the delete + `restore_snapshot/2` undo one, subtree and all.
+    before the delete + `{:restore, snapshot}` undo one, subtree and all.
+
+  ## One reducer, several copies
+
+  The same reducer runs in the entry's `Brando.EditSession` (the authority,
+  which orders every op and gives it a revision) and in every editor's
+  BlockField (a replica that applies the session's broadcast ops). Because
+  `apply_op/2` is pure, applying the same ops in the same order gives the
+  same state everywhere. Ops therefore never depend on anything outside the
+  state: no process, no database, no clock.
   """
 
   alias Ecto.Changeset
@@ -50,8 +59,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             diffs: %{},
             statuses: %{},
             db_ids: %{},
-            deleted: [],
-            deleted_roots: []
+            rel_ids: %{},
+            deleted: []
 
   @type uid :: String.t()
   @type params :: %{optional(String.t()) => term()}
@@ -64,8 +73,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           diffs: %{optional(uid()) => params()},
           statuses: %{optional(uid()) => status()},
           db_ids: %{optional(uid()) => {entry_block_id :: term() | nil, block_id :: term() | nil}},
-          deleted: [uid()],
-          deleted_roots: [uid()]
+          rel_ids: %{optional(uid()) => %{optional({String.t(), String.t()}) => term()}},
+          deleted: [uid()]
         }
 
   @type op ::
@@ -78,6 +87,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           | {:move_to_parent, uid(), new_parent :: uid(), non_neg_integer() | :end}
           | {:remap_slot, uid(), uid() | nil, params()}
           | {:delete, uid()}
+          | {:restore, map()}
+          | {:replace_state, t()}
+          | {:carry, t(), t()}
 
   @doc """
   Build a fresh state from root-block uids (no nesting, no db ids).
@@ -114,7 +126,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         state
         | order: state.order ++ [uid],
           statuses: Map.put(state.statuses, uid, :persisted),
-          db_ids: Map.put(state.db_ids, uid, {entry_block.id, entry_block.block.id})
+          db_ids: Map.put(state.db_ids, uid, {entry_block.id, entry_block.block.id}),
+          rel_ids: put_rel_ids(state.rel_ids, entry_block.block)
       }
 
       register_persisted_children(state, entry_block.block)
@@ -128,7 +141,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         | parents: Map.put(state.parents, child.uid, parent_uid),
           child_order: Map.update(state.child_order, parent_uid, [child.uid], &(&1 ++ [child.uid])),
           statuses: Map.put(state.statuses, child.uid, :persisted),
-          db_ids: Map.put(state.db_ids, child.uid, {nil, child.id})
+          db_ids: Map.put(state.db_ids, child.uid, {nil, child.id}),
+          rel_ids: put_rel_ids(state.rel_ids, child)
       }
 
       register_persisted_children(state, child)
@@ -136,6 +150,73 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   defp register_persisted_children(state, _block_without_loaded_children), do: state
+
+  # The ids of a block's rows, by what names them without an id: a ref by its
+  # uid, a var by its key, a table row by its sync uid. A diff taken while
+  # the block was new names its rows that way, and keeps naming them so when
+  # it is replayed after a save gave them ids (`fill_rel_ids/2`).
+  @rel_identities [{"refs", :uid}, {"vars", :key}, {"table_rows", :sync_uid}]
+
+  defp put_rel_ids(rel_ids, %{uid: uid} = block) do
+    ids =
+      for {key, field} <- @rel_identities,
+          rows = Map.get(block, String.to_existing_atom(key)),
+          is_list(rows),
+          %{id: id} = row when not is_nil(id) <- rows,
+          identity = Map.get(row, field),
+          identity not in [nil, ""],
+          into: %{},
+          do: {{key, to_string(identity)}, id}
+
+    if ids == %{}, do: rel_ids, else: Map.put(rel_ids, uid, ids)
+  end
+
+  @doc """
+  Keep the row ids (`rel_ids`) of `uids` only, and of the blocks with a
+  diff.
+
+  A diff names a block's rows by uid only when they were new, so only a
+  block that has unsaved work, or had it when a save gave its rows ids,
+  needs them. The edit session keeps the rest out of its state: for a long
+  entry they are most of its size.
+  """
+  @spec keep_rel_ids(t(), Enumerable.t()) :: t()
+  def keep_rel_ids(%__MODULE__{} = state, uids \\ []) do
+    keep = state.diffs |> Enum.reject(fn {_uid, diff} -> diff == %{} end) |> Enum.map(&elem(&1, 0)) |> Enum.concat(uids)
+    %{state | rel_ids: Map.take(state.rel_ids, keep)}
+  end
+
+  @doc "The blocks of `state` with unsaved work: inserted, or with a diff."
+  @spec edited(t()) :: [uid()]
+  def edited(%__MODULE__{} = state) do
+    inserted = for {uid, :inserted} <- state.statuses, do: uid
+    diffed = for {uid, diff} <- state.diffs, diff != %{}, do: uid
+    inserted ++ diffed
+  end
+
+  defp fill_rel_ids(block_params, nil), do: block_params
+
+  defp fill_rel_ids(block_params, ids) do
+    Enum.reduce(@rel_identities, block_params, fn {key, field}, params ->
+      case params do
+        %{^key => rows} when is_list(rows) -> Map.put(params, key, Enum.map(rows, &fill_rel_id(&1, key, field, ids)))
+        _ -> params
+      end
+    end)
+  end
+
+  defp fill_rel_id(%{} = row, key, field, ids) do
+    with id when id in [nil, ""] <- Map.get(row, "id"),
+         identity when identity not in [nil, ""] <- Map.get(row, to_string(field)),
+         %{} <- row,
+         rel_id when not is_nil(rel_id) <- Map.get(ids, {key, to_string(identity)}) do
+      Map.put(row, "id", rel_id)
+    else
+      _ -> row
+    end
+  end
+
+  defp fill_rel_id(row, _key, _field, _ids), do: row
 
   @doc """
   Apply a named operation, returning `{:ok, state}` or `{:error, reason}`.
@@ -271,9 +352,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     if known?(state, uid) do
       doomed = [uid | descendants(state, uid)]
       newly_deleted = Enum.filter(doomed, &(state.statuses[&1] == :persisted))
-      # roots are tracked separately: late-join sync replays root deletes as
-      # structural broadcasts, while child deletes travel as snapshot tombstones
-      newly_deleted_roots = Enum.filter(newly_deleted, &(&1 in state.order))
 
       state = detach(state, uid)
 
@@ -285,12 +363,27 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
            diffs: Map.drop(state.diffs, doomed),
            statuses: Map.drop(state.statuses, doomed),
            db_ids: Map.drop(state.db_ids, doomed),
-           deleted: state.deleted ++ newly_deleted,
-           deleted_roots: state.deleted_roots ++ newly_deleted_roots
+           deleted: state.deleted ++ newly_deleted
        }}
     else
       {:error, {:unknown_uid, uid}}
     end
+  end
+
+  # Delete undo: a `bin_snapshot/2` taken before the delete. An op rather than
+  # a direct call so it reaches the session and every other editor in order.
+  def apply_op(%__MODULE__{} = state, {:restore, %{uids: [_ | _], location: _} = snapshot}),
+    do: restore_snapshot(state, snapshot)
+
+  # Applying a recovery copy replaces the field's whole state in one step.
+  def apply_op(%__MODULE__{}, {:replace_state, %__MODULE__{} = state}), do: {:ok, state}
+
+  # A recovery copy (or any state built on `base`) applied to a field others
+  # share: its changes are carried onto what the field holds now, so their
+  # unsaved work stays (`carry/3`).
+  def apply_op(%__MODULE__{} = state, {:carry, %__MODULE__{} = carried, %__MODULE__{} = base}) do
+    {state, _conflicts} = carry(carried, base, state)
+    {:ok, state}
   end
 
   def apply_op(%__MODULE__{}, op), do: {:error, {:unknown_op, op}}
@@ -321,100 +414,26 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
-  @doc """
-  A self-contained content+structure snapshot of `uid`'s subtree, for
-  shipping to other editors over PubSub.
-
-  Carries param diffs (never changesets/forms — payloads stay tiny and
-  node-portable), the parent links and per-parent child order for the
-  subtree, plus the DFS uid order so receivers can apply parents before
-  children. Also ships the sender's `deleted` tombstones — snapshots can
-  attach remotely inserted children but could never express a remote CHILD
-  delete without them (root deletes travel as structural broadcasts).
-  Apply with `apply_remote_snapshot/3`.
-  """
-  @spec subtree_snapshot(t(), uid()) :: map()
-  def subtree_snapshot(%__MODULE__{} = state, uid) do
+  # Content + structure of `uid`'s subtree: param diffs (never changesets or
+  # forms), parent links and per-parent child order, plus the DFS uid order so
+  # a restore can apply parents before children.
+  defp subtree_snapshot(%__MODULE__{} = state, uid) do
     uids = [uid | descendants(state, uid)]
 
     %{
       uids: uids,
       diffs: Map.take(state.diffs, uids),
       parents: Map.take(state.parents, uids),
-      child_order: Map.take(state.child_order, uids),
-      deleted: state.deleted
+      child_order: Map.take(state.child_order, uids)
     }
-  end
-
-  @doc """
-  Apply a remote editor's `subtree_snapshot/2` to this state.
-
-  Known uids get their diffs replaced; unknown uids are attached under
-  their shipped parent (this is how remotely inserted children reach
-  editors that never received a structural broadcast for them); shipped
-  child orders are applied next; finally the sender's `deleted` tombstones
-  remove any of OUR known children the sender deleted. Tombstones only
-  apply to child uids — root deletes travel as structural broadcasts, and
-  a stale tombstone must never kill a root the remote editor undeleted.
-  The snapshot's top uid must be known unless it arrives with a known
-  parent — remote ROOT inserts travel as structural broadcasts before any
-  content ships for them.
-  """
-  @spec apply_remote_snapshot(t(), uid(), map()) :: {:ok, t()} | {:error, term()}
-  def apply_remote_snapshot(%__MODULE__{} = state, _uid, %{uids: uids} = snapshot) do
-    diffs = Map.get(snapshot, :diffs, %{})
-    parents = Map.get(snapshot, :parents, %{})
-    child_order = Map.get(snapshot, :child_order, %{})
-    tombstones = Map.get(snapshot, :deleted, [])
-
-    with {:ok, state} <- apply_snapshot_uids(state, uids, diffs, parents),
-         {:ok, state} <- apply_snapshot_child_order(state, child_order) do
-      {:ok, apply_child_tombstones(state, tombstones)}
-    end
-  end
-
-  defp apply_snapshot_uids(state, uids, diffs, parents) do
-    Enum.reduce_while(uids, {:ok, state}, fn u, {:ok, state} ->
-      case apply_snapshot_uid(state, u, Map.get(diffs, u, %{}), parents) do
-        {:ok, state} -> {:cont, {:ok, state}}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
-  end
-
-  defp apply_snapshot_uid(state, u, diff, parents) do
-    cond do
-      known?(state, u) -> apply_op(state, {:update, u, diff})
-      parents[u] && known?(state, parents[u]) -> apply_op(state, {:insert_child, parents[u], u, :end, diff})
-      true -> {:error, {:unknown_uid, u}}
-    end
-  end
-
-  defp apply_snapshot_child_order(state, child_order) do
-    child_order
-    |> Enum.filter(fn {parent_uid, _} -> known?(state, parent_uid) end)
-    |> Enum.reduce({:ok, state}, fn {parent_uid, order}, {:ok, state} ->
-      apply_op(state, {:reorder_children, parent_uid, order})
-    end)
-  end
-
-  defp apply_child_tombstones(state, tombstones) do
-    Enum.reduce(tombstones, state, fn u, state ->
-      if known?(state, u) and Map.has_key?(state.parents, u) do
-        {:ok, state} = apply_op(state, {:delete, u})
-        state
-      else
-        state
-      end
-    end)
   end
 
   @doc """
   A restorable-bin snapshot of `uid`'s subtree — capture BEFORE applying
   `{:delete, uid}`, restore with `restore_snapshot/2`.
 
-  Extends `subtree_snapshot/2` with everything a delete destroys that a
-  remote-sync snapshot doesn't need: per-uid statuses and db ids (so a
+  Carries the subtree's diffs and structure plus everything a delete
+  destroys: per-uid statuses and db ids (so a
   restored persisted block keeps matching its rows at save instead of
   re-inserting them) and the block's location — `{:root, index}` or
   `{:child, parent_uid, index}` — so the restore can reattach it where
@@ -464,7 +483,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       iex> {:ok, state} = Ops.apply_op(state, {:delete, "a"})
       iex> state.deleted
       ["a"]
-      iex> {:ok, restored} = Ops.restore_snapshot(state, snapshot)
+      iex> {:ok, restored} = Ops.apply_op(state, {:restore, snapshot})
       iex> {restored.order, restored.deleted}
       {["a", "b"], []}
 
@@ -487,8 +506,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             diffs: Map.merge(state.diffs, snapshot.diffs),
             statuses: Map.merge(state.statuses, snapshot.statuses),
             db_ids: Map.merge(state.db_ids, snapshot.db_ids),
-            deleted: Enum.reject(state.deleted, &(&1 in uids)),
-            deleted_roots: Enum.reject(state.deleted_roots, &(&1 in uids))
+            deleted: Enum.reject(state.deleted, &(&1 in uids))
         }
 
         {:ok, reattach(state, uid, location)}
@@ -599,6 +617,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> Map.drop(["sequence", "rendered_html", "rendered_at"])
     |> put_children(children)
     |> put_new_id(block_id)
+    |> fill_rel_ids(Map.get(state.rel_ids, uid))
   end
 
   # ALWAYS emit "children" — the tree is authoritative, including emptiness
@@ -608,8 +627,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # under the old one. An empty list over loaded-empty data is a no-op cast.
   defp put_children(params, children), do: Map.put(params, "children", children)
 
+  # A diff can carry `"id" => nil` (the snapshot of a block that was new when
+  # it was taken, replayed after a save gave it a row): the row's id wins.
   defp put_new_id(params, nil), do: params
-  defp put_new_id(params, id), do: Map.put_new(params, "id", id)
+
+  defp put_new_id(params, id) do
+    case params do
+      %{"id" => existing} when existing not in [nil, ""] -> params
+      _ -> Map.put(params, "id", id)
+    end
+  end
 
   @doc """
   Convert a changeset's changes into a string-keyed params map, recursively.
@@ -723,6 +750,223 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       %Ecto.Association.BelongsTo{owner_key: owner_key} -> Map.delete(params, to_string(owner_key))
       _ -> params
     end
+  end
+
+  ## Sessions and replicas
+
+  @doc """
+  What a base state says about the database rows it was loaded from: the
+  structure and the db ids, nothing else.
+
+  Two editors that loaded the same rows get equal signatures, so the edit
+  session uses this to tell whether a joining editor's rows are the ones its
+  own state was built on.
+  """
+  @spec signature(t()) :: term()
+  def signature(%__MODULE__{} = state), do: {state.order, state.parents, state.child_order, state.db_ids}
+
+  @doc """
+  Whether `state` holds nothing that differs from `base`: no diffs, no
+  inserted or deleted blocks and the same structure.
+  """
+  @spec pristine?(t(), t()) :: boolean()
+  def pristine?(%__MODULE__{} = state, %__MODULE__{} = base) do
+    state.deleted == [] and Enum.all?(state.diffs, fn {_uid, diff} -> diff == %{} end) and
+      signature(state) == signature(base) and state.statuses == base.statuses
+  end
+
+  @doc """
+  The roots whose mounted forms no longer show `after` correctly, given that
+  they showed `before`: roots present in both whose subtree's diffs,
+  structure, statuses or db ids changed. Roots that appeared or disappeared
+  are not included; the caller handles them from `order`.
+
+  `uids` narrows the comparison to the blocks an op names, when known.
+  """
+  @spec changed_roots(t(), t(), [uid()] | :all) :: [uid()]
+  def changed_roots(%__MODULE__{} = before, %__MODULE__{} = after_state, uids \\ :all) do
+    candidates =
+      case uids do
+        :all -> after_state.order
+        uids -> uids |> Enum.filter(&known?(after_state, &1)) |> Enum.map(&root_of(after_state, &1)) |> Enum.uniq()
+      end
+
+    Enum.filter(candidates, fn root ->
+      root in before.order and subtree_view(before, root) != subtree_view(after_state, root)
+    end)
+  end
+
+  defp subtree_view(state, root) do
+    uids = [root | descendants(state, root)]
+
+    {uids, Map.take(state.diffs, uids), Map.take(state.child_order, uids), Map.take(state.statuses, uids),
+     Map.take(state.db_ids, uids)}
+  end
+
+  @doc """
+  Carry the unsaved work in `state` onto `new_base`, the rows as someone
+  else just saved them (an Assistant proposal, an activated revision, a save
+  made outside the session).
+
+  `state` was built on `old_base`. What the editors did since is expressed
+  again as ordinary ops against the new rows: their deletes, their new
+  blocks (with whole subtrees), their field changes and, if they moved
+  blocks, their order. Blocks the other writer added keep their place
+  among their neighbours. Field changes merge as diffs do: an editor's
+  changed fields win, fields they did not touch take the new values.
+
+  Returns `{state, conflicts}`. A conflict is unsaved work on a block the
+  other writer deleted; it cannot be replayed onto rows that no longer
+  exist, so it is reported (the editor's recovery copy keeps it).
+  """
+  @spec carry(t(), t(), t()) :: {t(), [uid()]}
+  def carry(%__MODULE__{} = state, %__MODULE__{} = old_base, %__MODULE__{} = new_base) do
+    acc = {new_base, []}
+    acc = Enum.reduce(state.deleted, acc, &carry_delete/2)
+    acc = state |> inserted_tops() |> Enum.reduce(acc, &carry_insert(&1, &2, state))
+
+    acc =
+      state.diffs
+      |> Enum.filter(fn {uid, diff} -> diff != %{} and state.statuses[uid] == :persisted end)
+      |> Enum.sort_by(fn {uid, _} -> depth(state, uid) end)
+      |> Enum.reduce(acc, &carry_update(&1, &2, state))
+
+    acc = state |> moved_children(old_base) |> Enum.reduce(acc, &carry_move(&1, &2, state))
+
+    {carried, conflicts} = acc
+    carried = carry_order(carried, state, old_base, new_base)
+    {carried, Enum.reverse(conflicts)}
+  end
+
+  # Persisted blocks the editors moved to another parent.
+  defp moved_children(state, old_base) do
+    state.parents
+    |> Enum.filter(fn {uid, parent} ->
+      state.statuses[uid] == :persisted and Map.has_key?(old_base.statuses, uid) and old_base.parents[uid] != parent
+    end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sort_by(&depth(state, &1))
+  end
+
+  defp carry_move(uid, {acc, conflicts}, state) do
+    parent = state.parents[uid]
+
+    case known?(acc, uid) and known?(acc, parent) and apply_op(acc, {:move_to_parent, uid, parent, :end}) do
+      {:ok, acc} -> {acc, conflicts}
+      _ -> {acc, [uid | conflicts]}
+    end
+  end
+
+  defp carry_delete(uid, {acc, conflicts}) do
+    if known?(acc, uid), do: {carry_apply(acc, {:delete, uid}), conflicts}, else: {acc, conflicts}
+  end
+
+  defp carry_apply(acc, op) do
+    case apply_op(acc, op) do
+      {:ok, acc} -> acc
+      {:error, _reason} -> acc
+    end
+  end
+
+  # The top of every subtree an editor added: an inserted block whose parent
+  # (if any) is not itself inserted. Its descendants travel inside it.
+  defp inserted_tops(state) do
+    roots = Enum.filter(state.order, &(state.statuses[&1] == :inserted))
+
+    children =
+      state.parents
+      |> Enum.filter(fn {uid, parent} -> state.statuses[uid] == :inserted and state.statuses[parent] != :inserted end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.sort_by(&depth(state, &1))
+
+    roots ++ children
+  end
+
+  defp carry_insert(uid, {acc, conflicts}, state) do
+    cond do
+      known?(acc, uid) ->
+        {acc, conflicts}
+
+      uid in state.order ->
+        {:ok, params} = materialize_root(state, uid)
+        {carry_apply(acc, {:insert, uid, :end, Map.delete(params, "sequence")}), conflicts}
+
+      known?(acc, state.parents[uid]) ->
+        {:ok, params} = materialize_child(state, uid)
+        at = state.child_order |> Map.get(state.parents[uid], []) |> Enum.find_index(&(&1 == uid))
+        {carry_apply(acc, {:insert_child, state.parents[uid], uid, at || :end, params}), conflicts}
+
+      true ->
+        {acc, [uid | conflicts]}
+    end
+  end
+
+  defp carry_update({uid, diff}, {acc, conflicts}, _state) do
+    if known?(acc, uid) do
+      # Children store deltas that merge, roots cumulative diffs that
+      # replace. Either way the new base holds no diff for the uid, so the
+      # editor's diff is what it ends up with.
+      {carry_apply(acc, {:update, uid, diff}), conflicts}
+    else
+      {acc, [uid | conflicts]}
+    end
+  end
+
+  defp depth(state, uid) do
+    case state.parents[uid] do
+      nil -> 0
+      parent -> 1 + depth(state, parent)
+    end
+  end
+
+  defp carry_order(carried, state, old_base, new_base) do
+    order = merged_order(carried.order, state.order, old_base.order, new_base.order)
+    {:ok, carried} = apply_op(carried, {:reorder, order})
+
+    carried.child_order
+    |> Map.keys()
+    |> Enum.reduce(carried, fn parent, acc ->
+      current = Map.get(acc.child_order, parent, [])
+
+      merged =
+        merged_order(
+          current,
+          Map.get(state.child_order, parent, []),
+          Map.get(old_base.child_order, parent, []),
+          Map.get(new_base.child_order, parent, [])
+        )
+
+      {:ok, acc} = apply_op(acc, {:reorder_children, parent, merged})
+      acc
+    end)
+  end
+
+  # One list of siblings, three opinions. If the editors kept the old relative
+  # order of the blocks both sides know, the other writer's order wins and the
+  # editors' new blocks follow the neighbour they were put after. If the
+  # editors moved blocks themselves, their order wins and the other writer's
+  # new blocks follow their neighbour in the new rows.
+  defp merged_order(present, editor, old, new) do
+    present_set = MapSet.new(present)
+    shared = Enum.filter(old, &(&1 in editor and &1 in new))
+    editors_moved? = Enum.filter(editor, &(&1 in shared)) != shared
+
+    {primary, secondary} = if editors_moved?, do: {editor, new}, else: {new, editor}
+
+    base = Enum.filter(primary, &MapSet.member?(present_set, &1))
+
+    secondary
+    |> Enum.with_index()
+    |> Enum.reject(fn {uid, _} -> uid in base or not MapSet.member?(present_set, uid) end)
+    |> Enum.reduce(base, fn {uid, index}, acc ->
+      anchor = secondary |> Enum.take(index) |> Enum.reverse() |> Enum.find(&(&1 in acc))
+
+      case anchor do
+        nil -> [uid | acc]
+        anchor -> List.insert_at(acc, Enum.find_index(acc, &(&1 == anchor)) + 1, uid)
+      end
+    end)
+    |> then(&(&1 ++ Enum.reject(present, fn uid -> uid in &1 end)))
   end
 
   ## State plumbing

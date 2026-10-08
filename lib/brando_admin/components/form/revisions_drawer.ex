@@ -465,10 +465,13 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
            revision_number
          ) do
       {:ok, {_revision, {_revision_id, decoded_entry}}} ->
+        # A previewed revision is this editor's alone: its blocks leave the
+        # entry's edit session until it is saved.
         send_update(BrandoAdmin.Components.Form,
           id: socket.assigns.form_id,
           action: :update_entry_hard_reset,
-          updated_entry: decoded_entry
+          updated_entry: decoded_entry,
+          detached: true
         )
 
         {:noreply, assign(socket, :preview_revision, revision_number)}

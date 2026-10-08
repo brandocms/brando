@@ -17,6 +17,12 @@ config :logger, level: :warning
 config :brando, :sql_sandbox_serial_preloads, true
 config :e2e_project, sql_sandbox: true
 
+# Each test runs in its own rolled-back sandbox, but entry ids repeat across
+# tests (the seeded pages). An edit session that outlived its test would hand
+# its unsaved state to the next test that opens the same entry, so sessions
+# stop as soon as their last editor leaves.
+config :brando, Brando.EditSession, grace_period: 0
+
 # Override pool settings for e2e tests - need more connections for
 # browser tests with LiveView (HTTP + WebSocket + sandbox per test)
 # CI keeps the historical pool size. Local runs default lower so multiple

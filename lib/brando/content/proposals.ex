@@ -2521,6 +2521,10 @@ defmodule Brando.Content.Proposals do
     action = if match?({:new, _}, target), do: :created, else: :updated
     schema = entry.__struct__
 
+    # Editors with the entry open get the applied blocks as ordinary ops,
+    # their own unsaved work kept, instead of a stale editor.
+    if action == :updated, do: Brando.EditSession.sync_saved(entry)
+
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(schema)}"),

@@ -734,6 +734,31 @@ production dump.
   archive, pauses the copy's webhooks; they resume when that environment
   goes live. See [Webhooks and content events](guides/webhooks.md).
 
+- **One edit session per open entry.** When several people edit an entry's
+  blocks, a process per entry (`Brando.EditSession`, after Livebook's
+  session) now puts their changes in one order. Each editor's block store is
+  a replica: its own changes apply at once and go to the session, which
+  numbers them and sends them to everyone, so all editors end up with the
+  same blocks. Changes arrive as people type instead of when they leave a
+  block, someone opening the entry sees the unsaved work at once, and save,
+  live preview and recovery copies read the session. After a save the
+  session continues from the saved rows, keeping what others typed while it
+  ran. An Assistant proposal applied while the entry is open, or a revision
+  activated in another tab, comes into open editors as changes instead of
+  needing a reload, and their unsaved work is kept. The session stops 30
+  seconds after its last editor leaves (`config :brando, Brando.EditSession,
+  grace_period: …`). If it crashes, the editors seed a new one from what
+  they hold, and everyone's unsaved work is merged into it. Applying a
+  recovery copy keeps other editors' unsaved work. If another save removes a
+  block you have unsaved changes in, it comes back at the end as a new block
+  with your changes (inside the container it was in, if that was removed
+  too), and you are told. A save that an Assistant proposal or another
+  write overtakes collects the blocks again, so it keeps what that write
+  added; editors follow such writes only once they have committed. People
+  who may view but not update the entry follow along without sending
+  changes. Two people editing the same block still resolve as "last change
+  wins" for now.
+
 - **Notes on entries.** Editors can leave each other notes in the entry
   editor, in a panel docked beside the content: on the entry, a block (the
   note button in its toolbar), a field (a button beside its label) or text

@@ -1162,10 +1162,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     old_uid = socket.assigns[:current_focused_block_uid]
 
     if entry_id do
-      # If switching blocks, blur the old one — trigger data shipping
       if old_uid && old_uid != uid do
-        send(self(), {:ship_block_data, old_uid, current_user_id})
-
         PubSub.broadcast(
           Brando.pubsub(),
           Topic.entry("block_presence", socket.assigns.schema, entry_id),
@@ -1173,7 +1170,6 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         )
       end
 
-      # Focus new block
       PubSub.broadcast(
         Brando.pubsub(),
         Topic.entry("block_presence", socket.assigns.schema, entry_id),
@@ -1181,124 +1177,77 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       )
     end
 
+    if old_uid != uid, do: send_to_block_fields(socket, event: "local_focus", uid: uid)
+
     {:halt, assign(socket, :current_focused_block_uid, uid)}
   end
 
-  # Fired by the Block JS hook when focus settles after a focusout. Blur alone
-  # must ship — the focus-switch path above only fires when ANOTHER block is
-  # focused, which left edits unshipped on plain blur and on ref-to-ref moves
-  # inside one block. `still_inside` distinguishes moving between refs in the
-  # same block (ship content, keep presence) from leaving the block entirely
-  # (ship + presence blur).
+  # Fired by the Block JS hook when focus settles after a focusout.
+  # `still_inside` distinguishes moving between refs in the same block (keep
+  # presence) from leaving the block entirely (presence blur, and the block
+  # takes the other editors' changes it held back while it was in use).
   defp handle_hooks_block_focused_event("block_blurred", %{"uid" => uid} = params, socket) do
-    entry_id = socket.assigns[:entry_id]
-    current_user_id = socket.assigns.current_user.id
-    still_inside = Map.get(params, "still_inside", false)
-
-    if entry_id do
-      send(self(), {:ship_block_data, uid, current_user_id})
-
-      unless still_inside do
-        PubSub.broadcast(
-          Brando.pubsub(),
-          Topic.entry("block_presence", socket.assigns.schema, entry_id),
-          {:block_blur, %{uid: uid, user_id: current_user_id}}
-        )
-      end
+    if Map.get(params, "still_inside", false) or socket.assigns[:current_focused_block_uid] != uid do
+      {:halt, socket}
+    else
+      {:halt, clear_block_focus(socket)}
     end
-
-    socket =
-      if !still_inside and socket.assigns[:current_focused_block_uid] == uid do
-        assign(socket, :current_focused_block_uid, nil)
-      else
-        socket
-      end
-
-    {:halt, socket}
   end
 
   defp handle_hooks_block_focused_event(_, _, socket), do: {:cont, socket}
 
-  # Force-ship the currently focused block (triggered before save)
-  defp handle_hooks_block_sync_info(:force_ship_focused_block, socket) do
+  defp clear_block_focus(socket) do
     current_uid = socket.assigns[:current_focused_block_uid]
     entry_id = socket.assigns[:entry_id]
-    current_user_id = socket.assigns.current_user.id
 
-    if current_uid && entry_id do
-      send(self(), {:ship_block_data, current_uid, current_user_id})
+    if current_uid do
+      if entry_id do
+        PubSub.broadcast(
+          Brando.pubsub(),
+          Topic.entry("block_presence", socket.assigns.schema, entry_id),
+          {:block_blur, %{uid: current_uid, user_id: socket.assigns.current_user.id}}
+        )
+      end
 
-      PubSub.broadcast(
-        Brando.pubsub(),
-        Topic.entry("block_presence", socket.assigns.schema, entry_id),
-        {:block_blur, %{uid: current_uid, user_id: current_user_id}}
-      )
+      send_to_block_fields(socket, event: "local_focus", uid: nil)
     end
 
-    {:halt, assign(socket, :current_focused_block_uid, nil)}
+    assign(socket, :current_focused_block_uid, nil)
   end
 
-  # Block sync — routes {:ship_block_data, ...} and structural PubSub messages to BlockFields
-  defp handle_hooks_block_sync_info({:ship_block_data, uid, _user_id}, socket) do
-    send_to_block_fields(socket, event: "fetch_block_for_shipping", uid: uid)
+  # An entry field took the focus, or a save started: no block is in use.
+  defp handle_hooks_block_sync_info(:clear_block_focus, socket) do
+    {:halt, clear_block_focus(socket)}
+  end
+
+  # The entry's edit session (`Brando.EditSession`) broadcast an op or a
+  # rebase for one block field, or rejected one of ours. The field's
+  # BlockField applies it to its replica.
+  defp handle_hooks_block_sync_info({:edit_session, field, message}, socket) do
+    send_to_block_field(socket, field, event: "edit_session", message: message)
     {:halt, socket}
   end
 
-  # Always forwarded — BlockField decides whether to apply or defer. A shipped
-  # snapshot must never be silently dropped: when we're focused on the same
-  # root, BlockField parks it as pending and applies it on our blur (dropping
-  # it meant our next blur re-shipped stale state over the remote edit).
-  defp handle_hooks_block_sync_info({:block_ops_shipped, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
-      send_to_block_fields(socket,
-        event: "apply_remote_block_ops",
-        uid: msg.uid,
-        snapshot: msg.snapshot,
-        user_id: msg.user_id,
-        focused_uid: socket.assigns[:current_focused_block_uid]
-      )
-    end
+  # The session a BlockField replicates died (BlockField put the monitor).
+  defp handle_hooks_block_sync_info({:DOWN, ref, :process, _pid, _reason}, socket) do
+    case Process.delete({:brando_edit_session_monitor, ref}) do
+      nil ->
+        {:cont, socket}
 
-    {:halt, socket}
+      component_id ->
+        send_update(BrandoAdmin.Components.Form.BlockField, id: component_id, event: "edit_session_down")
+        {:halt, socket}
+    end
   end
 
-  defp handle_hooks_block_sync_info({:block_added, %{user_id: user_id} = msg}, socket) do
+  # Another editor opened the entry. Blocks need nothing from us — the edit
+  # session gives the joiner its state — but unsaved ENTRY FIELD changes
+  # (title, slug, ...) ship through the regular field-sync path, and our
+  # current block focus is re-broadcast: lock indicators are event-driven, so
+  # a joiner would otherwise not see the block we're editing as locked until
+  # our next focus event happens to fire.
+  defp handle_hooks_block_sync_info({:editor_joined, %{user_id: user_id}}, socket) do
     if user_id != socket.assigns.current_user.id do
-      send_to_block_fields(socket,
-        event: "remote_block_added",
-        uid: msg.uid,
-        module_id: msg.module_id,
-        module_origin: Map.get(msg, :module_origin, :local),
-        sequence: msg.sequence,
-        user_id: msg.user_id
-      )
-    end
-
-    {:halt, socket}
-  end
-
-  defp handle_hooks_block_sync_info({:block_deleted, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
-      send_to_block_fields(socket, event: "remote_block_deleted", uid: msg.uid)
-    end
-
-    {:halt, socket}
-  end
-
-  # A late joiner asks connected editors for their unsaved state. Blocks
-  # replay from the op store; unsaved ENTRY FIELD changes (title, slug, ...)
-  # ship through the regular field-sync path — without this, a joiner only
-  # sees fields as they were in the database. Our current block focus is
-  # re-broadcast too: lock indicators are event-driven, so a joiner would
-  # otherwise not see the block we're editing as locked until our next
-  # focus event happens to fire.
-  defp handle_hooks_block_sync_info({:blocks_sync_request, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
-      send_to_block_fields(socket,
-        event: "remote_sync_requested",
-        origin_block_field: msg.block_field
-      )
-
       if schema = socket.assigns[:schema] do
         singular = schema.__naming__().singular
 
@@ -1323,26 +1272,6 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
           {:block_focus, %{uid: focused_uid, user_id: socket.assigns.current_user.id}}
         )
       end
-    end
-
-    {:halt, socket}
-  end
-
-  defp handle_hooks_block_sync_info({:block_restored, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
-      send_to_block_fields(socket,
-        event: "remote_block_restored",
-        snapshot: msg.snapshot,
-        origin_block_field: msg.block_field
-      )
-    end
-
-    {:halt, socket}
-  end
-
-  defp handle_hooks_block_sync_info({:blocks_reordered, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
-      send_to_block_fields(socket, event: "remote_blocks_reordered", block_list: msg.block_list)
     end
 
     {:halt, socket}
@@ -1387,17 +1316,16 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     schema = socket.assigns[:schema]
 
     if schema && function_exported?(schema, :__blocks_fields__, 0) do
-      singular = schema.__naming__().singular
-      form_id = "#{singular}_form"
-
       for %{name: field} <- schema.__blocks_fields__() do
-        block_field_id = "#{form_id}-blocks-#{field}"
-
-        send_update(
-          BrandoAdmin.Components.Form.BlockField,
-          [{:id, block_field_id} | opts]
-        )
+        send_to_block_field(socket, field, opts)
       end
+    end
+  end
+
+  defp send_to_block_field(socket, field, opts) do
+    if schema = socket.assigns[:schema] do
+      block_field_id = "#{schema.__naming__().singular}_form-blocks-#{field}"
+      send_update(BrandoAdmin.Components.Form.BlockField, [{:id, block_field_id} | opts])
     end
   end
 

@@ -417,6 +417,27 @@ defmodule Brando.Content.TransferTest do
     assert blocks(c.target, c.user) == []
   end
 
+  # The entry's open editors follow an import and its recovery, instead of
+  # saving their stale blocks over it (#2992).
+  test "an import and its recovery move the destination's open editors onto the new rows", c do
+    alias Brando.EditSession
+    alias BrandoAdmin.Components.Form.BlockField.Ops
+
+    ref = EditSession.ref_for(c.target)
+    Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+    rows = Ops.from_entry_blocks([])
+    {:ok, _} = EditSession.join(ref, :blocks, {rows, rows})
+
+    assert {:ok, receipt} = Transfer.apply(preview(c, export(c)), c.user)
+    [copied] = blocks(c.target, c.user)
+    assert_receive {:edit_session, :blocks, %{kind: :rebase, state: state}}, 2_000
+    assert state.order == [copied.uid]
+
+    assert {:ok, _} = Transfer.restore(receipt.id, c.user)
+    assert_receive {:edit_session, :blocks, %{kind: :rebase, state: state}}, 2_000
+    assert state.order == []
+  end
+
   test "retry is idempotent; separately reviewed append is intentional", c do
     archive = export(c)
     plan = preview(c, archive, "append")

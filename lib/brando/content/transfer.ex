@@ -600,6 +600,8 @@ defmodule Brando.Content.Transfer do
           )
 
       updated = Repo.update!(cs)
+      # open editors move onto it once the transaction commits
+      Brando.EditSession.sync_saved(updated)
       Activity.imported(updated, actor, :update, label, Activity.changed_fields(cs))
       available
     end)
@@ -971,6 +973,7 @@ defmodule Brando.Content.Transfer do
       do: Error.fail!(dgettext("content_transfer", "Recovery is no longer authorized."))
 
     updated = Repo.update!(cs)
+    Brando.EditSession.sync_saved(updated)
 
     Activity.with_source(:import, fn ->
       Activity.with_batch(receipt.id, fn ->

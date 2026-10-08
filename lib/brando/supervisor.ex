@@ -55,6 +55,9 @@ defmodule Brando.Supervisor do
     # before the cache does.
     children = children ++ Brando.Sites.FourOhFour.Flusher.children()
 
+    # One process per entry being edited (see its moduledoc)
+    children = children ++ Brando.EditSession.children()
+
     # Dev only, and only when configured: see its moduledoc
     children = children ++ Brando.Content.Definition.Watcher.children()
 

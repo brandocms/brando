@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
+  alias Brando.EditSession
   alias Brando.Images
   alias Brando.LivePreview
   alias Brando.Villain
@@ -101,6 +102,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry_load_status, nil)
      |> assign(:dirty_fields, [])
      |> assign(:synced_values, %{})
+     |> assign(:blocks_detached?, false)
      |> assign(:hidden_block_fields, [])
      |> assign(:server_owned_assets, %{})
      |> assign(:draft, nil)
@@ -197,7 +199,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # Re-broadcast our focused field for a late joiner — field presence
   # indicators are event-driven, so a joiner would otherwise not see the
-  # field we're editing as locked (triggered from the blocks_sync_request
+  # field we're editing as locked (triggered from the :editor_joined
   # handler in LiveView.Form alongside ship_field_changes)
   def update(%{event: "reship_active_field"}, socket) do
     entry = socket.assigns[:entry]
@@ -818,11 +820,16 @@ defmodule BrandoAdmin.Components.Form do
     |> update(socket)
   end
 
-  def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry}, socket) do
+  def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry} = message, socket) do
     send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], 1000)
     send(self(), {:progress_popup, "Setting new block map..."})
 
+    # The block fields are mounted again from `updated_entry`. A previewed
+    # revision stays out of the entry's edit session until it is saved.
+    if Map.get(message, :detached, false), do: leave_edit_session(socket)
+
     socket
+    |> assign(:blocks_detached?, Map.get(message, :detached, false))
     |> assign(:entry, updated_entry)
     |> assign_refreshed_form()
     |> assign(:block_map, [])
@@ -859,6 +866,34 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> put_form(to_form(new_changeset, []))
      |> force_svelte_remounts()}
+  end
+
+  # A block field read its rows again because someone else wrote them (the
+  # edit session moved onto them, see `Brando.EditSession`). The entry this
+  # form saves from follows, so the save matches the rows by id instead of
+  # replacing rows that no longer exist.
+  #
+  # A save that has collected its blocks but not written them yet collected
+  # them from the old rows: written against the new ones, it would delete
+  # whatever the other write added (`recollect_blocks/2`).
+  def update(%{event: "entry_blocks_reloaded", block_field: field, entry_blocks: entry_blocks}, socket) do
+    socket = recollect_blocks(socket, field)
+
+    assoc = :"entry_#{field}"
+    form = socket.assigns.form
+    changeset = %{form.source | data: Map.put(form.source.data, assoc, entry_blocks)}
+
+    block_map =
+      Enum.map(socket.assigns.block_map, fn
+        {^field, module, _blocks, opts} -> {field, module, entry_blocks, opts}
+        other -> other
+      end)
+
+    {:ok,
+     socket
+     |> assign(:entry, socket.assigns.entry && Map.put(socket.assigns.entry, assoc, entry_blocks))
+     |> assign(:block_map, block_map)
+     |> put_form(to_form(changeset, []))}
   end
 
   def update(%{event: "set_block_map"}, socket) do
@@ -1103,7 +1138,7 @@ defmodule BrandoAdmin.Components.Form do
       true ->
         case Translation.restore_changeset(socket) do
           {:ok, changeset, socket} ->
-            {:ok, apply_restored_changeset(socket, changeset)}
+            {:ok, apply_restored_changeset(socket, changeset, :translation)}
 
           :error ->
             send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
@@ -3025,6 +3060,7 @@ defmodule BrandoAdmin.Components.Form do
             live_preview_cache_key={@live_preview_cache_key}
             source_locked={Translation.locked?(@translation)}
             source_url={Translation.source_url(@translation)}
+            session_detached?={@blocks_detached?}
           />
 
           <Primitives.submit_button
@@ -3492,7 +3528,7 @@ defmodule BrandoAdmin.Components.Form do
       )
 
       # Clear block focus/lock when a regular field gets focus
-      send(self(), :force_ship_focused_block)
+      send(self(), :clear_block_focus)
     end
 
     # Ship all field changeset diffs on blur
@@ -3690,8 +3726,6 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("save", _params, %{assigns: %{has_blocks?: true}} = socket) do
     # has blocks, but not all blocks have been received
-    # Force-ship the currently focused block before collecting for save
-    send(self(), :force_ship_focused_block)
     fetch_transformer_data(socket, :save)
     send(self(), {:progress_popup, "Saving..."})
 
@@ -4603,7 +4637,6 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("store_revision", _, socket) do
-    send(self(), :force_ship_focused_block)
     send(self(), {:toast, gettext("Saving a revision...")})
 
     socket =
@@ -4894,6 +4927,12 @@ defmodule BrandoAdmin.Components.Form do
   defp redirect_after_save_with_blocks(socket, entry, stale?, save) do
     %{schema: schema, mutation_type: mutation_type} = save
 
+    # Leaving the editor: the block fields that would hand the saved rows to
+    # the edit session are going away, so the form does it. Without it the
+    # others' sessions keep this save's new blocks as unsaved, and their next
+    # save inserts them again.
+    if save.save_redirect_target in [:listing, :new], do: EditSession.saved(entry)
+
     maybe_redirected_socket =
       case save.save_redirect_target do
         :self ->
@@ -4931,6 +4970,9 @@ defmodule BrandoAdmin.Components.Form do
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
+    # A saved revision preview is the entry now: its blocks rejoin the
+    # entry's edit session.
+    |> assign(:blocks_detached?, false)
     |> reload_all_blocks(:changed)
     |> refresh_translation(stale?)
     |> push_patch(to: update_url)
@@ -4950,9 +4992,20 @@ defmodule BrandoAdmin.Components.Form do
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
+    # A saved revision preview is the entry now: its blocks rejoin the
+    # entry's edit session.
+    |> assign(:blocks_detached?, false)
     |> reload_all_blocks(:changed)
     |> refresh_translation(stale?)
   end
+
+  defp leave_edit_session(%{assigns: %{entry: %{id: id} = entry, form_blueprint: blueprint}}) when not is_nil(id) do
+    if session = EditSession.whereis(EditSession.ref_for(entry)) do
+      for %{name: field} <- blueprint.blocks, do: EditSession.leave(session, field)
+    end
+  end
+
+  defp leave_edit_session(_socket), do: :ok
 
   defp maybe_refresh_revisions(socket, schema) do
     if schema.has_trait(Brando.Trait.Revisioned) do
@@ -4980,10 +5033,16 @@ defmodule BrandoAdmin.Components.Form do
     if FrontendEditor.frontend?(socket),
       do: FrontendEditor.save_failed(socket, {:invalid, changeset |> traverse_errors(& &1) |> Map.keys()})
 
+    # The next save reads the blocks again rather than writing the ones this
+    # save collected: another editor's save may have written some of them
+    # since (a retry after two overlapping saves).
     {:noreply,
      socket
      |> assign(:processing, false)
      |> assign(:minor_save?, false)
+     |> assign(:all_blocks_received?, false)
+     |> clear_blocks_root_changesets()
+     |> reset_transformer_changesets()
      |> put_form(to_form(changeset, []))
      |> push_errors(changeset, save.form_blueprint, save.schema)}
   end
@@ -5242,6 +5301,20 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # All collected: the blocks are dropped, and the write that follows (the
+  # `b:submit` already on its way) collects them again first. Still
+  # collecting: the field that moved on is asked again.
+  defp recollect_blocks(%{assigns: %{all_blocks_received?: true}} = socket, _field),
+    do: socket |> assign(:all_blocks_received?, false) |> clear_blocks_root_changesets()
+
+  defp recollect_blocks(%{assigns: %{processing: true, block_changesets: collected}} = socket, field)
+       when is_map_key(collected, field) and not is_nil(:erlang.map_get(field, collected)) do
+    send_update(BlockField, id: "#{socket.assigns.id}-blocks-#{field}", event: "fetch_root_blocks", tag: :save)
+    assign(socket, :block_changesets, Map.put(collected, field, nil))
+  end
+
+  defp recollect_blocks(socket, _field), do: socket
+
   # Reset the per-field accumulator between provide_root_blocks rounds.
   # (BlockFields materialize their answer from the op store, so there is no
   # per-component gather state left to clear.)
@@ -5336,13 +5409,19 @@ defmodule BrandoAdmin.Components.Form do
   # Puts a changeset built on the saved entry — a recovery copy, or a
   # translation's pending version — into the form as unsaved changes: the main
   # form, every block field and every transformer.
-  defp apply_restored_changeset(socket, changeset) do
+  #
+  # `source` is `:translation` when the form loads a pending version on open:
+  # an editor who joins a translation others already work in finds the
+  # version, and their work, in the edit session, and the block fields keep
+  # it rather than load the version over it.
+  defp apply_restored_changeset(socket, changeset, source \\ :recovery_copy) do
     form = to_form(changeset)
 
     for field <- socket.assigns.form_blueprint.blocks do
       send_update(BlockField,
         id: "#{socket.assigns.id}-blocks-#{field.name}",
         event: "restore_draft",
+        source: source,
         entry_blocks: Map.get(changeset.data, :"entry_#{field.name}") || [],
         changesets: get_assoc(changeset, :"entry_#{field.name}")
       )
