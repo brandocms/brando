@@ -127,6 +127,54 @@ defmodule Brando.Images.AdoptionTest do
       assert Adoption.check(image, config()) == :match
     end
 
+    test "files processing makes now match: widths kept, nothing enlarged" do
+      # A portrait is as wide as its size, and a 300×200 original is never
+      # enlarged: its square thumb is the largest square it holds.
+      portrait = %{
+        "micro" => {25, 33},
+        "thumb" => {400, 400},
+        "small" => {700, 933},
+        "medium" => {900, 1200},
+        "large" => {900, 1200},
+        "xlarge" => {900, 1200}
+      }
+
+      small = %{
+        "micro" => {25, 17},
+        "thumb" => {200, 200},
+        "small" => {300, 200},
+        "medium" => {300, 200},
+        "large" => {300, 200},
+        "xlarge" => {300, 200}
+      }
+
+      assert Adoption.check(unrecorded("now-portrait", original: {900, 1200}, sizes: portrait), config()) == :match
+      assert Adoption.check(unrecorded("now-small", original: {300, 200}, sizes: small), config()) == :match
+    end
+
+    test "files from the first libvips processor match: a width fitted in a square, enlarged" do
+      portrait = %{
+        "micro" => {19, 25},
+        "thumb" => {400, 400},
+        "small" => {525, 700},
+        "medium" => {825, 1100},
+        "large" => {1275, 1700},
+        "xlarge" => {1575, 2100}
+      }
+
+      small = %{
+        "micro" => {25, 17},
+        "thumb" => {400, 400},
+        "small" => {700, 467},
+        "medium" => {1100, 733},
+        "large" => {1700, 1133},
+        "xlarge" => {2100, 1400}
+      }
+
+      assert Adoption.check(unrecorded("vix-portrait", original: {900, 1200}, sizes: portrait), config()) == :match
+      assert Adoption.check(unrecorded("vix-small", original: {300, 200}, sizes: small), config()) == :match
+    end
+
     test "an original rotated by its EXIF orientation matches" do
       # Stored as 800×600, the dimensions before rotation, and processed
       # upright, as 600×800.

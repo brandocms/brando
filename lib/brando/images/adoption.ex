@@ -18,11 +18,19 @@ defmodule Brando.Images.Adoption do
       is the original's own type, and a GIF's is WebP);
     * its `sizes` have exactly the config's size keys;
     * each size exists in each format in the media folder;
-    * each size's pixel dimensions, read from the file's header, are what its
-      spec gives for the original: scaled to fit the geometry, or cropped to
-      it when the size crops, within a pixel for rounding. Sizes made by the
-      older sharp-based processor (fit to the width, never enlarged) match
-      too, as do originals rotated by their EXIF orientation.
+    * each size's pixel dimensions, read from the file's header, are what one
+      of Brando's processors made of the original with its spec, within a
+      pixel for rounding:
+      * today's: scaled to the width, the height or to fit the box, or
+        cropped to the geometry, and never enlarged (see
+        `Brando.Images.Size`);
+      * the first libvips processor, on the 0.55 line from March to October
+        2026 before its release: fitted a width alone inside a square of that
+        width, and enlarged smaller originals, cropped or not;
+      * the sharp-based processor of 0.54 and earlier: fitted to the width
+        and never enlarged an uncropped size.
+
+      Originals rotated by their EXIF orientation match too.
 
   Quality and other encoder settings are not in a file's header, so a size
   whose `"quality"` changed while its geometry didn't is adopted with the
@@ -316,16 +324,21 @@ defmodule Brando.Images.Adoption do
 
   defp fits?(_spec, _original, _actual), do: false
 
-  # Resized to cover the crop, then cut to it. Processing enlarges a smaller
-  # original to cover it; the older processor kept such an original's size.
-  defp cropped?(spec, {width, height}, actual) do
-    {crop_width, crop_height} = Sizing.get_crop_dimensions_from_cfg(spec)
-    close?(actual, {crop_width, crop_height}) or close?(actual, {min(crop_width, width), min(crop_height, height)})
+  # Resized to cover the crop, then cut to it. Processing cuts the largest
+  # crop a smaller original holds, at the crop's proportions; the first
+  # libvips processor enlarged the original to cover the crop instead. A
+  # crop cut down to a smaller original's size is accepted as before.
+  defp cropped?(spec, {width, height} = original, actual) do
+    {crop_width, crop_height} = crop = Sizing.get_crop_dimensions_from_cfg(spec)
+
+    close?(actual, Sizing.fit_crop(crop, original)) or close?(actual, crop) or
+      close?(actual, {min(crop_width, width), min(crop_height, height)})
   end
 
-  # Scaled to fit the geometry, keeping the aspect ratio. Processing (libvips
-  # thumbnail) fits a width-only geometry into a square and enlarges smaller
-  # originals; the older processor fit the width alone and never enlarged.
+  # Scaled to the geometry, keeping the aspect ratio. Processing scales to a
+  # width or a height alone, or fits a box, and never enlarges, as sharp did;
+  # the first libvips processor fitted a width alone into a square and
+  # enlarged smaller originals.
   defp scaled?({box_width, box_height}, {width, height} = original, actual) do
     scales =
       Enum.reject(

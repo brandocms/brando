@@ -7,7 +7,8 @@ defmodule Brando.ImageFileFixtures do
   alias Brando.Factory
 
   # The test config's "default" target: the standard sizes and `formats:
-  # [:original]`. What processing makes of an 800×600 original with them.
+  # [:original]`. What the first libvips processor (0.55 before its release)
+  # made of an 800×600 original with them, enlarging it for the larger sizes.
   @sizes %{
     "micro" => {25, 19},
     "thumb" => {400, 400},

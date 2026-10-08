@@ -49,6 +49,38 @@ defmodule Brando.Images.Processing.SizingTest do
     new_cp = add_crop_dimensions(cp)
     assert new_cp.crop_height == 500
     assert new_cp.crop_width == 500
+
+    # Not enlarged: the largest 1:1 crop a 300×200 original holds.
+    small = add_crop_dimensions(%{cp | original_width: 300, original_height: 200})
+    assert {small.crop_width, small.crop_height} == {200, 200}
+  end
+
+  test "fit_crop keeps a crop that fits and shrinks one that doesn't to the original" do
+    assert fit_crop({400, 400}, {1200, 800}) == {400, 400}
+    assert fit_crop({800, 800}, {1200, 800}) == {800, 800}
+    assert fit_crop({400, 400}, {300, 200}) == {200, 200}
+    assert fit_crop({1100, 1000}, {1200, 800}) == {880, 800}
+    assert fit_crop({600, 338}, {200, 300}) == {200, 113}
+  end
+
+  test "processed_dimensions is what each size makes of an original" do
+    portrait = {3000, 4000}
+    small = {600, 400}
+
+    for {size_cfg, expected_portrait, expected_small} <- [
+          {%{"size" => "700"}, {700, 933}, {600, 400}},
+          {%{"size" => "1400>"}, {1400, 1867}, {600, 400}},
+          {%{"size" => "x400"}, {300, 400}, {600, 400}},
+          {%{"size" => "700x400"}, {300, 400}, {600, 400}},
+          {%{"size" => "300x300"}, {225, 300}, {300, 200}},
+          {%{"size" => "400x400>", "crop" => true}, {400, 400}, {400, 400}},
+          {%{"size" => "800x800", "crop" => true}, {800, 800}, {400, 400}},
+          {%{"size" => "x300", "crop" => true, "ratio" => "3/2"}, {450, 300}, {450, 300}},
+          {%{"portrait" => %{"size" => "x400"}, "landscape" => %{"size" => "700"}}, {300, 400}, {600, 400}}
+        ] do
+      assert processed_dimensions(size_cfg, portrait) == expected_portrait, inspect(size_cfg)
+      assert processed_dimensions(size_cfg, small) == expected_small, inspect(size_cfg)
+    end
   end
 
   test "add_resize_dimensions" do
@@ -130,7 +162,7 @@ defmodule Brando.Images.Processing.SizingTest do
            }
   end
 
-  test "add_anchor smaller width than crop" do
+  test "add_anchor on an original narrower than the crop cuts the largest crop it holds" do
     focal = %{x: 100, y: 100}
     size_cfg = %{"crop" => true, "quality" => 70, "size" => "50x200"}
 
@@ -142,11 +174,11 @@ defmodule Brando.Images.Processing.SizingTest do
       |> cv(size_cfg, focal)
 
     assert res == %Brando.Images.ConversionParameters{
-             anchor: %{x: 0, y: 1050},
+             anchor: %{x: 0, y: 420},
              crop: true,
-             crop_height: 200,
-             crop_values: %{height: 200, left: 0, top: 1050, width: 50},
-             crop_width: 50,
+             crop_height: 80,
+             crop_values: %{height: 80, left: 0, top: 420, width: 20},
+             crop_width: 20,
              focal_point: %{x: 100, y: 100},
              format: nil,
              image_id: nil,
@@ -158,12 +190,12 @@ defmodule Brando.Images.Processing.SizingTest do
              original_height: 500,
              original_width: 20,
              quality: 70,
-             resize_height: 1250,
-             resize_values: %{height: 1250, width: 50},
-             resize_width: 50,
+             resize_height: 500,
+             resize_values: %{height: 500, width: 20},
+             resize_width: 20,
              size_cfg: %{"crop" => true, "quality" => 70, "size" => "50x200"},
              size_key: nil,
-             transformed_focal_point: %{x: 50, y: 1250}
+             transformed_focal_point: %{x: 20, y: 500}
            }
   end
 

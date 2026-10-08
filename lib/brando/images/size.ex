@@ -13,14 +13,29 @@ defmodule Brando.Images.Size do
 
   ## Fields
 
-    * `size` - the geometry: `"700"` (a width), `"x400"` (a height) or
-      `"400x400"`, optionally with an ImageMagick flag such as `>`. Required.
-      The image is fitted inside the geometry, keeping its proportions, and a
-      smaller original is enlarged; a width alone is fitted inside a square of
-      that width. Processing reads past the flags: `"400x400>"` is processed
-      like `"400x400"`, and `"50%"` is 50 pixels, not half.
+    * `size` - the geometry. Required.
+      * `"700"` or `"700x"` is a width: the image is made 700 pixels wide and
+        its height follows its proportions, whether it is a portrait or a
+        landscape.
+      * `"x400"` is a height: 400 pixels tall, the width following.
+      * `"700x400"` is a box: the image is fitted inside it, keeping its
+        proportions, so one side meets the box and the other may fall short.
+
+      A size is never made larger than the original. An original narrower
+      than `"1400"` keeps its own size, so that size's file is as wide as the
+      original, not 1400 pixels.
+
+      A geometry may end in ImageMagick's `>` ("only shrink larger images"),
+      as in `"400x400>"`. That is what processing does for every size, so `>`
+      changes nothing. The other ImageMagick flags (`<`, `^`, `!`, `%`) are
+      read past as well: `"x400^"` is processed like `"x400"`, and `"50%"` is
+      50 pixels, not half.
     * `quality` - an integer from 1 to 100. Processing uses 100 without one.
-    * `crop` - crop to the geometry around the image's focal point.
+    * `crop` - cut the image to exactly the geometry's width and height,
+      around its focal point. When the original is smaller than the geometry
+      the size isn't enlarged either: it is the largest part of the original
+      with the geometry's proportions, so a 300×200 original cropped to
+      `"400x400"` gives 200×200.
     * `ratio` - an aspect ratio such as `"3/2"`. A cropped size that gives only
       a width or a height needs one to know the other.
 
@@ -56,7 +71,10 @@ defmodule Brando.Images.Size do
 
   @fields ~w(size quality crop ratio)
   @orientations ~w(portrait landscape)
-  # ImageMagick geometry flags. Processing strips them before reading the numbers.
+  # ImageMagick geometry flags, read past when the numbers are read. `>` (only
+  # shrink) is what processing always does. What the others should do is
+  # undecided; `geometry/1`, which checks a geometry when the config is
+  # normalized, is where a flag would be rejected.
   @geometry_flags ["^", "!", ">", "<", "%"]
 
   @presets %{

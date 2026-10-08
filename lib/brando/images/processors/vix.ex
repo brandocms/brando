@@ -15,8 +15,9 @@ defmodule Brando.Images.Processor.Vix do
   @doc """
   Process image conversion without cropping.
 
-  Resizes the source image to fit within the given dimensions while preserving
-  aspect ratio. Output format and quality are applied according to the conversion parameters.
+  Scales the source image to the given width, the given height, or to fit
+  inside both, preserving its aspect ratio, and never enlarges it. Output
+  format and quality are applied according to the conversion parameters.
   """
   def process_image(%Images.ConversionParameters{
         image_id: image_id,
@@ -39,7 +40,7 @@ defmodule Brando.Images.Processor.Vix do
 
     with {:ok, img} <- open_image(image_src_path),
          {box_width, box_height} = fit_box(img, width, height),
-         {:ok, resized} <- Image.thumbnail(img, box_width, crop: :none, height: box_height),
+         {:ok, resized} <- Image.thumbnail(img, box_width, crop: :none, height: box_height, resize: :down),
          :ok <- write_image(resized, image_dest_path, format, quality) do
       {:ok,
        %Images.TransformResult{
@@ -94,9 +95,10 @@ defmodule Brando.Images.Processor.Vix do
 
     # Fitting inside the size that covers the crop can come out a pixel short
     # of it, as libvips rounds. A pixel of room keeps both sides at least as
-    # large; the crop then takes the exact size.
+    # large; the crop then takes the exact size. Sizing never asks for more
+    # than the original, so only shrinking keeps that pixel from enlarging it.
     with {:ok, img} <- open_image(image_src_path),
-         {:ok, resized} <- Image.thumbnail(img, resize_w + 1, height: resize_h + 1),
+         {:ok, resized} <- Image.thumbnail(img, resize_w + 1, height: resize_h + 1, resize: :down),
          {:ok, cropped} <- crop_image(resized, crop_values) do
       write_image(cropped, image_dest_path, format, quality)
 
@@ -232,10 +234,11 @@ defmodule Brando.Images.Processor.Vix do
   end
 
   # libvips fits a thumbnail inside width × height, and needs a width. A
-  # geometry that gives only a height ("x400") gets a width the image can't
-  # reach at that height, so the height alone decides. The bound holds for
-  # either orientation, since thumbnail turns the image upright first.
-  defp fit_box(_img, width, nil), do: {width, width}
+  # geometry that gives one side gets, for the other, a length the image
+  # can't reach at that side, so the given side alone decides: "700" is 700
+  # wide, "x400" 400 tall. The bound holds for either orientation, since
+  # thumbnail turns the image upright first.
+  defp fit_box(img, width, nil), do: {width, beyond(img, width)}
   defp fit_box(img, nil, height), do: {beyond(img, height), height}
   defp fit_box(_img, width, height), do: {width, height}
 
