@@ -32,7 +32,7 @@ defmodule Brando.Content.ModuleSet do
   relations do
     relation :module_set_modules, :has_many,
       module: Brando.Content.ModuleSetModule,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       sort_param: :sort_module_set_module_ids,
       on_replace: :delete_if_exists,
       cast: true

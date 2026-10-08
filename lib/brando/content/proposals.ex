@@ -542,7 +542,7 @@ defmodule Brando.Content.Proposals do
     case Repo.one(
            from(t in Brando.Content.TableTemplate,
              where: t.id == ^id,
-             preload: [vars: ^from(v in Brando.Content.Var, order_by: [asc: v.sequence])]
+             preload: [vars: ^from(v in Brando.Content.Var, order_by: [asc: v.sequence, asc: v.id])]
            )
          ) do
       %{vars: vars} -> vars

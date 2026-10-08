@@ -349,7 +349,7 @@ defmodule Brando.Pages do
   query :list, Fragment do
     fn query ->
       from q in query,
-        order_by: [asc: q.parent_key, asc: q.sequence, asc: q.language]
+        order_by: [asc: q.parent_key, asc: q.sequence, asc: q.language, asc: q.id]
     end
   end
 
@@ -461,7 +461,7 @@ defmodule Brando.Pages do
       Fragment
       |> where([p], p.parent_key == ^parent_key)
       |> exclude_deleted()
-      |> order_by([p], [:sequence, :key])
+      |> order_by([p], [:sequence, :key, :id])
 
     query =
       if exclude_lang do
@@ -667,6 +667,6 @@ defmodule Brando.Pages do
   defp build_fragments_query do
     from f in Fragment,
       where: is_nil(f.deleted_at),
-      order_by: [asc: f.sequence, asc: f.key]
+      order_by: [asc: f.sequence, asc: f.key, asc: f.id]
   end
 end

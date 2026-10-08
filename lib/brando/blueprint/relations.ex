@@ -71,7 +71,7 @@ defmodule Brando.Blueprint.Relations do
 
       relation :article_contributors, :has_many,
         module: Articles.ArticleContributor,
-        preload_order: [asc: :sequence],
+        preload_order: [asc: :sequence, asc: :id],
         on_replace: :delete_if_exists,
         cast: true
 

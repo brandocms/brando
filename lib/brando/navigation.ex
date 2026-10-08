@@ -158,7 +158,7 @@ defmodule Brando.Navigation do
   def list_items do
     items =
       Item
-      |> order_by([p], asc: p.menu_id, asc: p.sequence)
+      |> order_by([p], asc: p.menu_id, asc: p.sequence, asc: p.id)
       |> Brando.Repo.all()
 
     {:ok, items}

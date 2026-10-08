@@ -411,7 +411,7 @@ defmodule Brando.Blueprint.Forms do
   ```
   relation :project_categories, :has_many,
     module: Projects.ProjectCategory,
-    preload_order: [{:asc, :sequence}],
+    preload_order: [{:asc, :sequence}, {:asc, :id}],
     sort_param: :sort_category_ids,
     drop_param: :drop_category_ids,
     on_replace: :delete_if_exists,

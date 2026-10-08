@@ -65,7 +65,7 @@ defmodule Brando.Blueprint.RelationPreloads do
 
   defp sequenced_order(module) do
     if Code.ensure_loaded?(module) and function_exported?(module, :has_trait, 1) and module.has_trait(:sequenced) do
-      [asc: :sequence]
+      [asc: :sequence, asc: :id]
     end
   end
 

@@ -438,7 +438,7 @@ defmodule Brando.Content.Proposals.Tools do
 
     modules =
       (BlockSlots.modules(set) ++ multi_modules(set))
-      |> Enum.sort_by(& &1.sequence)
+      |> Enum.sort_by(&{&1.sequence, &1.id})
       |> Enum.map(fn module ->
         %{
           module: "local:#{module.id}",

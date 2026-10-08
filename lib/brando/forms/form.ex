@@ -72,7 +72,7 @@ defmodule Brando.Forms.Form do
       drop_param: :drop_fields_ids,
       sort_param: :sort_fields_ids,
       on_replace: :delete,
-      preload_order: [asc: :sequence]
+      preload_order: [asc: :sequence, asc: :id]
 
     relation :recipients, :embeds_many,
       module: Recipient,

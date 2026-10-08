@@ -39,7 +39,7 @@ defmodule Brando.Content.BlockPreloads do
           [
             {entry_assoc_name,
              from(j in join_schema,
-               order_by: [asc: :sequence],
+               order_by: [asc: :sequence, asc: :id],
                preload: [
                  block: [
                    :parent,
