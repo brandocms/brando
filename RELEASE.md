@@ -6,7 +6,7 @@
      Bump version in `assets/package.json`
      Bump Brando version in installation template: `priv/templates/brando.install/mix.exs`
   2. Update translations:
-     `$ mix gettext.extract && mix gettext.merge priv/gettext`
+     `$ mix gettext.extract --merge` (see TRANSLATIONS.md)
   3. `$ mix test`
   4. `$ cd e2e && ./test_e2e.sh`
   5.  Commit with `Release X.X.X`
