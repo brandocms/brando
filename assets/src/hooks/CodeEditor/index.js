@@ -61,7 +61,7 @@ export default (app) => ({
           EditorView.theme({
             '&': {
               fontSize: '13px',
-              border: '1px solid #c0c0c0',
+              border: '1px solid var(--brando-input-border)',
             },
             '.cm-content': {
               fontFamily: 'Mono',

@@ -12,7 +12,6 @@ assets/css/components/Content/List.css 24
 assets/css/components/Content/SelectedRows.css 6
 assets/css/components/Dialog.css 6
 assets/css/components/FloatingDropdown.css 4
-assets/css/components/Form/Input/Blocks/Block.css 54
 assets/css/components/FrontendEditor.css 15
 assets/css/components/Modal.css 14
 assets/css/components/TabSwitch.css 4
