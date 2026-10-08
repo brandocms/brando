@@ -85,17 +85,27 @@ test_database() {
         do: Code.eval_file("priv/repo/seeds.exs")'
 }
 
+# pnpm can leave a workspace file behind, which then captures later installs.
+remove_stray_workspace() {
+  if [ -f "$1/pnpm-workspace.yaml" ] && ! git ls-files --error-unmatch "$1/pnpm-workspace.yaml" >/dev/null 2>&1; then
+    rm -f "$1/pnpm-workspace.yaml"
+  fi
+}
+
 # pnpm 12 breaks these installs; CI pins 10 and installs a frozen lockfile.
+# @brandocms/europacss pins a dependency to an SSH Git remote; like CI, fetch
+# it over HTTPS (for this command only), so no GitHub SSH key is needed.
 pnpm_install() {
-  local dir="$1"
-  # pnpm can leave a workspace file behind, which then captures later installs.
-  if [ -f "$dir/pnpm-workspace.yaml" ] && ! git ls-files --error-unmatch "$dir/pnpm-workspace.yaml" >/dev/null 2>&1; then
-    rm -f "$dir/pnpm-workspace.yaml"
-  fi
-  (cd "$dir" && CI=true tool npx -y pnpm@10 install --frozen-lockfile)
-  if [ -f "$dir/pnpm-workspace.yaml" ] && ! git ls-files --error-unmatch "$dir/pnpm-workspace.yaml" >/dev/null 2>&1; then
-    rm -f "$dir/pnpm-workspace.yaml"
-  fi
+  local dir="$1" status
+  remove_stray_workspace "$dir"
+  (
+    cd "$dir" &&
+      CI=true GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0='url.https://github.com/.insteadOf' \
+        GIT_CONFIG_VALUE_0='git@github.com:' tool npx -y pnpm@10 install --frozen-lockfile
+  )
+  status=$?
+  remove_stray_workspace "$dir"
+  return "$status"
 }
 
 backend_build() {

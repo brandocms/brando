@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# Waits for every check on a pull request to finish, then prints one line and
+# exits 0 when all passed (or were skipped), 1 otherwise. It prints nothing
+# while waiting, so run it in the background and read the line when it exits.
+#
+#   scripts/ci-wait 3066
+#   scripts/ci-wait 3066 --repo brandocms/brando
+#
+# Reads checks through `gh pr checks` (GraphQL) and falls back to the REST API
+# when that fails; transient errors are retried until the timeout.
+#
+#   CI_WAIT_INTERVAL  seconds between polls (default 30)
+#   CI_WAIT_TIMEOUT   minutes before giving up (default 120)
+set -uo pipefail
+
+usage() { echo "usage: scripts/ci-wait <PR number> [--repo owner/name]" >&2; exit 1; }
+
+pr=""
+repo="${CI_WAIT_REPO:-}"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --repo) [ $# -ge 2 ] || usage; repo="$2"; shift 2 ;;
+    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *[!0-9]*|'') usage ;;
+    *) pr="$1"; shift ;;
+  esac
+done
+[ -n "$pr" ] || usage
+
+for bin in gh jq; do
+  command -v "$bin" >/dev/null 2>&1 || { echo "PR $pr: ci-wait needs $bin on PATH" >&2; exit 1; }
+done
+
+if [ -z "$repo" ]; then
+  repo="$(git -C "$(dirname "$0")" remote get-url origin 2>/dev/null |
+    sed -E 's#^.*github\.com[:/]##; s#\.git$##')"
+  case "$repo" in */*) ;; *) repo="brandocms/brando" ;; esac
+fi
+
+interval="${CI_WAIT_INTERVAL:-30}"
+deadline=$((SECONDS + ${CI_WAIT_TIMEOUT:-120} * 60))
+err="$(mktemp "${TMPDIR:-/tmp}/ci-wait.XXXXXX")"
+trap 'rm -f "$err"' EXIT
+
+# Both fetchers print the checks as JSON, [{name, bucket, link}], where
+# bucket is pass, fail, pending, skipping or cancel (as `gh pr checks`).
+# `gh pr checks` exits non-zero while checks are pending or failing, so its
+# output is judged by whether it parses, not by its status.
+fetch_graphql() {
+  local out
+  out="$(gh pr checks "$pr" --repo "$repo" --json name,bucket,link 2>"$err")"
+  if jq -e 'type == "array"' >/dev/null 2>&1 <<<"$out"; then
+    printf '%s' "$out"
+  elif grep -qi 'no checks reported' "$err"; then
+    printf '[]'
+  else
+    return 1
+  fi
+}
+
+fetch_rest() {
+  local sha runs statuses
+  sha="$(gh api "repos/$repo/pulls/$pr" --jq .head.sha 2>>"$err")" || return 1
+  runs="$(gh api "repos/$repo/commits/$sha/check-runs?per_page=100" 2>>"$err")" || return 1
+  statuses="$(gh api "repos/$repo/commits/$sha/status" 2>>"$err")" || return 1
+  jq -n --argjson runs "$runs" --argjson statuses "$statuses" '
+    [($runs.check_runs[] | {
+        name,
+        link: .html_url,
+        bucket: (if .status != "completed" then "pending"
+          elif .conclusion == "success" or .conclusion == "neutral" then "pass"
+          elif .conclusion == "skipped" then "skipping"
+          elif .conclusion == "cancelled" then "cancel"
+          else "fail" end)
+      }),
+     ($statuses.statuses[] | {
+        name: .context,
+        link: .target_url,
+        bucket: (if .state == "pending" then "pending"
+          elif .state == "success" then "pass"
+          else "fail" end)
+      })]'
+}
+
+not_found() {
+  grep -qiE 'could not resolve to a pullrequest|HTTP 404|no pull requests found' "$err"
+}
+
+report() {
+  local checks="$1" total failed skipped runs
+  total="$(jq length <<<"$checks")"
+  skipped="$(jq '[.[] | select(.bucket == "skipping")] | length' <<<"$checks")"
+  failed="$(jq -r '[.[] | select(.bucket == "fail" or .bucket == "cancel") | .name] | join(", ")' <<<"$checks")"
+  if [ -z "$failed" ]; then
+    if [ "$skipped" -gt 0 ]; then
+      echo "PR $pr: all $total checks green ($skipped skipped)"
+    else
+      echo "PR $pr: all $total checks green"
+    fi
+    exit 0
+  fi
+  # One URL per workflow run (job links end in /job/<id>).
+  runs="$(jq -r '[.[] | select(.bucket == "fail" or .bucket == "cancel") | .link // empty
+    | sub("/job/[0-9]+$"; "")] | unique | join(" ")' <<<"$checks")"
+  echo "PR $pr: FAILED: $failed${runs:+ — $runs}"
+  exit 1
+}
+
+confirmed=false
+while :; do
+  : >"$err"
+  if checks="$(fetch_graphql)" || checks="$(fetch_rest)"; then
+    total="$(jq length <<<"$checks")"
+    pending="$(jq '[.[] | select(.bucket == "pending")] | length' <<<"$checks")"
+    if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ]; then
+      # Right after a push the PR can still point at the previous commit, whose
+      # checks are done. Seeing the same finished state twice rules that out.
+      [ "$confirmed" = true ] && report "$checks"
+      confirmed=true
+      sleep 15
+      continue
+    fi
+    confirmed=false
+  elif not_found; then
+    echo "PR $pr: not found in $repo"
+    exit 1
+  fi
+
+  if [ "$SECONDS" -ge "$deadline" ]; then
+    if [ -n "${checks:-}" ]; then
+      waiting="$(jq -r '[.[] | select(.bucket == "pending") | .name] | join(", ")' <<<"$checks" 2>/dev/null)"
+    fi
+    echo "PR $pr: gave up after ${CI_WAIT_TIMEOUT:-120} min; ${waiting:+still pending: $waiting}$(head -c 200 "$err" | tr '\n' ' ')"
+    exit 1
+  fi
+  sleep "$interval"
+done
