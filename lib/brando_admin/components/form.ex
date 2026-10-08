@@ -6942,19 +6942,18 @@ defmodule BrandoAdmin.Components.Form do
 
     fn ->
       entry = apply_changes(changeset)
-
-      Enum.flat_map(context_fields, fn
-        :blocks ->
-          case render_ai_blocks_context(changeset, block_map) do
-            value when value in [nil, ""] -> []
-            value -> [{:blocks, value}]
-          end
-
-        field ->
-          Brando.AI.Context.for_entry(entry, [field])
-      end)
+      Enum.flat_map(context_fields, &ai_context_value(&1, entry, changeset, block_map))
     end
   end
+
+  defp ai_context_value(:blocks, _entry, changeset, block_map) do
+    case render_ai_blocks_context(changeset, block_map) do
+      value when value in [nil, ""] -> []
+      value -> [{:blocks, value}]
+    end
+  end
+
+  defp ai_context_value(field, entry, _changeset, _block_map), do: Brando.AI.Context.for_entry(entry, [field])
 
   # Each block field's text, cut to the length `Brando.AI.Context` gives a
   # saved entry's blocks.
@@ -6972,14 +6971,12 @@ defmodule BrandoAdmin.Components.Form do
         Changeset.get_field(rendered_changeset, rendered_field_name)
     end)
     |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.map(
-      &(&1
-        |> HtmlSanitizeEx.strip_tags()
-        |> String.trim()
-        |> String.slice(0, Brando.AI.Context.block_text_length()))
-    )
-    |> Enum.join("\n\n")
+    |> Enum.map_join("\n\n", &block_context_text/1)
     |> String.trim()
+  end
+
+  defp block_context_text(html) do
+    html |> HtmlSanitizeEx.strip_tags() |> String.trim() |> String.slice(0, Brando.AI.Context.block_text_length())
   end
 
   defp parse_form_field_name(field_name, singular) do
