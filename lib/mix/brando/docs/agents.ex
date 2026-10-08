@@ -57,6 +57,8 @@ defmodule Mix.Brando.Docs.Agents do
     {"i18n", "Languages and translations", "content languages, localized routes, hreflang and Gettext."},
     {"querying", "Querying",
      "writing a context with `Brando.Query`: filters, matches, pagination, caching and mutations."},
+    {"testing", "Testing a Brando project",
+     "factories for any blueprint, rendering blocks, admin form tests, users with rights, and recorded AI calls (cassettes)."},
     {"deployment", "Deployment and system checks", "deploying with Florist and checking a site with `mix brando.doctor`."}
   ]
   @topic_keys Enum.map(@topics, &elem(&1, 0))
