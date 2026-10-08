@@ -61,8 +61,14 @@ defmodule BrandoAdmin.Sites.ActivityLive do
     if Brando.Authorization.enabled?() do
       readable = Enum.filter(Activity.schemas(), &BrandoAdmin.Authorization.allowed?(:read, &1))
 
-      if BrandoAdmin.Authorization.allowed?(:manage, :webhooks),
-        do: [Brando.Webhooks.Webhook | readable],
+      readable =
+        if BrandoAdmin.Authorization.allowed?(:manage, :webhooks),
+          do: [Brando.Webhooks.Webhook | readable],
+          else: readable
+
+      # Connected AI tools: connections, their tool calls and the switch
+      if BrandoAdmin.Authorization.allowed?(:manage, :mcp),
+        do: [Brando.MCP.Grant, Brando.MCP.Setting | readable],
         else: readable
     end
   end

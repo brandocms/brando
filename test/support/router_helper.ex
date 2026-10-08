@@ -235,6 +235,7 @@ defmodule BrandoIntegrationWeb.Router do
   end
 
   form_routes()
+  mcp_routes()
 
   scope "/coming-soon" do
     get "/", BrandoIntegration.LockdownController, :index

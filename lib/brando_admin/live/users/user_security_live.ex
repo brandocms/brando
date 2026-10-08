@@ -20,7 +20,11 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
   alias BrandoAdmin.Toast
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
-  on_mount({BrandoAdmin.Reauth, events: ~w(open_setup new_passkey remove_passkey revoke_session revoke_other_sessions)})
+
+  on_mount(
+    {BrandoAdmin.Reauth,
+     events: ~w(open_setup new_passkey remove_passkey revoke_session revoke_other_sessions revoke_connected_app)}
+  )
 
   def render(assigns) do
     ~H"""
@@ -220,6 +224,55 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
         </ul>
       </section>
 
+      <section :if={@mcp?} class="workspace-panel security-panel" id="connected-apps-panel" data-testid="connected-apps">
+        <header class="workspace-panel-heading">
+          <div>
+            <h2>{gettext("Connected apps")}</h2>
+            <p>
+              {gettext(
+                "AI tools you let read content and propose changes as you, over MCP. Disconnecting one stops it at once."
+              )}
+            </p>
+          </div>
+        </header>
+        <p :if={@connected_apps == []} class="security-empty-row">{gettext("No apps are connected.")}</p>
+        <ul :if={@connected_apps != []} class="security-items" data-testid="connected-app-list">
+          <li :for={grant <- @connected_apps} class="security-item" data-testid="connected-app" data-id={grant.id}>
+            <.icon name="plug" class="security-item-icon" />
+            <div class="security-item-text">
+              <span class="security-item-title">
+                {grant.client_name} <span class="workspace-badge">{URI.parse(grant.client_id).host}</span>
+              </span>
+              <span class="security-item-meta">
+                {[
+                  grant.site && "#{grant.site.name} · #{grant.environment.name}",
+                  gettext("connected %{date}", date: date(grant.inserted_at)),
+                  if(grant.last_used_at,
+                    do: gettext("last used %{date}", date: date(grant.last_used_at)),
+                    else: gettext("not used yet")
+                  )
+                ]
+                |> Enum.filter(& &1)
+                |> Enum.join(" · ")}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="workspace-button quiet"
+              phx-click="revoke_connected_app"
+              phx-value-id={grant.id}
+              data-testid="connected-app-revoke"
+              data-confirm-title={gettext("Disconnect %{client}?", client: grant.client_name)}
+              data-confirm={gettext("It stops working at once. You can connect it again from the app.")}
+              data-confirm-ok={gettext("Disconnect")}
+              data-confirm-destructive
+            >
+              {gettext("Disconnect")}
+            </button>
+          </li>
+        </ul>
+      </section>
+
       <section class="workspace-panel security-panel">
         <header class="workspace-panel-heading">
           <div>
@@ -353,7 +406,9 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
       sessions: Users.list_sessions(user),
       codes_left: TwoFactor.recovery_codes_left(user),
       required?: TwoFactor.required?(user),
-      events: SecurityLog.list(user, 10)
+      events: SecurityLog.list(user, 10),
+      mcp?: Brando.MCP.mounted?(),
+      connected_apps: Brando.MCP.list_user_grants(user)
     )
   end
 
@@ -395,6 +450,17 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
     %{current_user: user, session_id: session_id, meta: meta} = socket.assigns
     :ok = Users.log_out_everywhere(user, user, except_id: session_id, meta: meta)
     Toast.send_to(user, gettext("Your other sessions were logged out."))
+    {:noreply, load_state(socket)}
+  end
+
+  def handle_event("revoke_connected_app", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+
+    case Brando.MCP.revoke(id, user, "user") do
+      :ok -> Toast.send_to(user, gettext("The app was disconnected."))
+      {:error, _} -> :ok
+    end
+
     {:noreply, load_state(socket)}
   end
 

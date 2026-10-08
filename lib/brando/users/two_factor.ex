@@ -381,6 +381,8 @@ defmodule Brando.Users.TwoFactor do
          :ok <- check(Passkeys.any?(user) or not required?(user), :required),
          :ok <- confirm(user, proof, opts[:meta]) do
       clear(user)
+      # Connected tools need two-factor authentication
+      unless enabled?(user), do: Brando.MCP.revoke_user_grants(user, "two_factor_off")
       SecurityLog.record(:two_factor_disabled, user, meta: opts[:meta])
       Users.notify_security(user, :two_factor_disabled)
       :ok
@@ -408,6 +410,7 @@ defmodule Brando.Users.TwoFactor do
       delete_recovery_codes(user)
       Throttle.clear(user)
       Users.revoke_sessions(user)
+      Brando.MCP.revoke_user_grants(user, "two_factor_off")
       SecurityLog.record(:two_factor_reset, user, actor: actor, meta: opts[:meta])
       Users.notify_security(user, :two_factor_reset)
       {:ok, user}

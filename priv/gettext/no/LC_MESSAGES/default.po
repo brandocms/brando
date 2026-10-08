@@ -17741,6 +17741,76 @@ msgid "Access for %{crawler}"
 msgstr "Tilgang for %{crawler}"
 
 #: lib/brando_admin/components/crawler_policy.ex
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#: lib/brando_admin/live/sites/integrations_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected AI tools"
+msgstr "Tilkoblede AI-verktøy"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Published by %{host}. Brando cannot check that the name is true: allow it only if you started this in %{client}."
+msgstr "Publisert av %{host}. Brando kan ikke sjekke at navnet stemmer: tillat det bare hvis du startet dette i %{client}."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "As"
+msgstr "Som"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Returns to"
+msgstr "Sender deg tilbake til"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
+msgstr "Et program på denne datamaskinen. Ethvert program her kan gi seg ut for å være hva som helst: tillat det bare hvis du startet det selv."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "It can"
+msgstr "Det kan"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Read the content types, entries, modules and media you can edit in this site"
+msgstr "Lese innholdstypene, oppføringene, modulene og mediene du kan redigere på dette nettstedet"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Propose changes. You review and approve them in Brando, under Assistant → From connected tools"
+msgstr "Foreslå endringer. Du går gjennom og godkjenner dem i Brando, under Assistent → Fra tilkoblede verktøy"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "It cannot"
+msgstr "Det kan ikke"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save, publish or delete anything"
+msgstr "Lagre, publisere eller slette noe"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reach other sites or environments"
+msgstr "Nå andre nettsteder eller miljøer"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "You can disconnect it at any time, under Security → Connected apps."
+msgstr "Du kan koble det fra når som helst, under Sikkerhet → Tilkoblede apper."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connecting..."
+msgstr "Kobler til..."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "Allow"
 msgstr "Tillat"
@@ -17933,6 +18003,130 @@ msgid "Tells Bing, Copilot, Yandex and the search engines that use Bing's index 
 msgstr "Sier fra til Bing, Copilot, Yandex og søkemotorene som bruker Bings indeks når oppføringer publiseres, endres, avpubliseres eller slettes, så de besøker sidene igjen snart. Google er ikke med."
 
 #: lib/brando_admin/live/sites/seo_live.ex
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "This app cannot be connected"
+msgstr "Denne appen kan ikke kobles til"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not allowed"
+msgstr "Ikke tillatt"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "App"
+msgstr "App"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Go to the dashboard"
+msgstr "Gå til dashbordet"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "This request cannot be used"
+msgstr "Denne forespørselen kan ikke brukes"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was connected. Start again from the app."
+msgstr "Ingenting ble koblet til. Start på nytt fra appen."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connect an app"
+msgstr "Koble til en app"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connect %{client}?"
+msgstr "Koble til %{client}?"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is not allowed to connect AI tools to this site. An administrator can give you the permission."
+msgstr "Kontoen din har ikke lov til å koble AI-verktøy til dette nettstedet. En administrator kan gi deg tillatelsen."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connecting AI tools needs two-factor authentication, which is off for your account."
+msgstr "Å koble til AI-verktøy krever tofaktorautentisering, som er slått av for kontoen din."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your account cannot connect AI tools."
+msgstr "Kontoen din kan ikke koble til AI-verktøy."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn it on under Security, then start again from the app."
+msgstr "Slå det på under Sikkerhet, og start på nytt fra appen."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was connected."
+msgstr "Ingenting ble koblet til."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "The app did not identify itself in a way Brando accepts."
+msgstr "Appen identifiserte seg ikke på en måte Brando godtar."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando could not read the app's description from its website. Try again in a moment."
+msgstr "Brando kunne ikke lese appens beskrivelse fra nettstedet dens. Prøv igjen om litt."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "The app asked to send you back to an address it has not declared."
+msgstr "Appen ba om å sende deg tilbake til en adresse den ikke har oppgitt."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Wait a minute, then start again from the app."
+msgstr "For mange forsøk. Vent et minutt, og start på nytt fra appen."
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "This MCP endpoint does not exist or is turned off."
+msgstr "Dette MCP-endepunktet finnes ikke eller er slått av."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Let people connect Claude, ChatGPT and other MCP clients to this site, to read content and propose changes they approve here."
+msgstr "La folk koble Claude, ChatGPT og andre MCP-klienter til dette nettstedet, for å lese innhold og foreslå endringer de godkjenner her."
+
+#: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "MCP endpoint"
+msgstr "MCP-endepunkt"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "People with the Connected AI tools permission and two-factor authentication can connect. Turning it off stops every connection at once; they work again when it is back on."
+msgstr "Personer med tillatelsen Tilkoblede AI-verktøy og tofaktorautentisering kan koble til. Slår du det av, stanser alle tilkoblinger med en gang; de virker igjen når det er på igjen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Off: the endpoint, its sign-in and its metadata answer as if they did not exist. Nothing reaches this site over MCP."
+msgstr "Av: endepunktet, innloggingen og metadataene svarer som om de ikke fantes. Ingenting når dette nettstedet over MCP."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn the MCP endpoint on?"
+msgstr "Slå på MCP-endepunktet?"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "People who may connect AI tools can then let them read this site's content and propose changes, as themselves."
+msgstr "Personer som kan koble til AI-verktøy, kan da la dem lese innholdet på dette nettstedet og foreslå endringer, som seg selv."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Turn on"
 msgstr "Slå på"
@@ -18140,3 +18334,231 @@ msgstr "Følger %{name}"
 #, elixir-autogen, elixir-format
 msgid "Stop following"
 msgstr "Slutt å følge"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn the MCP endpoint off?"
+msgstr "Slå av MCP-endepunktet?"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every connected tool stops working at once. The connections stay, and work again when you turn it back on."
+msgstr "Alle tilkoblede verktøy slutter å virke med en gang. Tilkoblingene blir stående, og virker igjen når du slår det på igjen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Server URL"
+msgstr "Server-URL"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paste this into the app as the MCP server's URL."
+msgstr "Lim dette inn i appen som MCP-serverens URL."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not available in this installation"
+msgstr "Ikke tilgjengelig i denne installasjonen"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
+msgstr "En utvikler må først legge til mcp_routes() i applikasjonens router. Se MCP-veiledningen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Needs https"
+msgstr "Krever https"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's address must use https before the endpoint can be turned on."
+msgstr "Nettstedets adresse må bruke https før endepunktet kan slås på."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connections"
+msgstr "Tilkoblinger"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tools people have connected to this site. Revoking one stops it at once."
+msgstr "Verktøy folk har koblet til dette nettstedet. Trekker du tilbake ett, stanser det med en gang."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "No connections"
+msgstr "Ingen tilkoblinger"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "When someone connects an app, it is listed here with who connected it."
+msgstr "Når noen kobler til en app, vises den her sammen med hvem som koblet den til."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last used"
+msgstr "Sist brukt"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not used yet"
+msgstr "Ikke brukt ennå"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke %{client}?"
+msgstr "Trekke tilbake %{client}?"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "It stops working at once. %{name} can connect it again."
+msgstr "Det slutter å virke med en gang. %{name} kan koble det til igjen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The connection was revoked."
+msgstr "Tilkoblingen ble trukket tilbake."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "That connection is gone already."
+msgstr "Den tilkoblingen er allerede borte."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The MCP endpoint is on."
+msgstr "MCP-endepunktet er på."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The MCP endpoint is off."
+msgstr "MCP-endepunktet er av."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The MCP endpoint could not be changed."
+msgstr "MCP-endepunktet kunne ikke endres."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected apps"
+msgstr "Tilkoblede apper"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "AI tools you let read content and propose changes as you, over MCP. Disconnecting one stops it at once."
+msgstr "AI-verktøy du lar lese innhold og foreslå endringer som deg, over MCP. Kobler du fra ett, stanser det med en gang."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "No apps are connected."
+msgstr "Ingen apper er tilkoblet."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "connected %{date}"
+msgstr "tilkoblet %{date}"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect %{client}?"
+msgstr "Koble fra %{client}?"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "It stops working at once. You can connect it again from the app."
+msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect"
+msgstr "Koble fra"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "The app was disconnected."
+msgstr "Appen ble koblet fra."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Claude, ChatGPT and other MCP clients read content and propose changes, as the person who connected them."
+msgstr "Claude, ChatGPT og andre MCP-klienter leser innhold og foreslår endringer, som personen som koblet dem til."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Used a tool"
+msgstr "Brukte et verktøy"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Connected app"
+msgstr "Tilkoblet app"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "As %{name}"
+msgstr "Som %{name}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "%{tool}, which failed"
+msgstr "%{tool}, som feilet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Connected over MCP"
+msgstr "Koblet til over MCP"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnected: a used token was presented again"
+msgstr "Koblet fra: et token som allerede var brukt, ble brukt igjen"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnected"
+msgstr "Koblet fra"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Turned the MCP endpoint on"
+msgstr "Slo på MCP-endepunktet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Turned the MCP endpoint off"
+msgstr "Slo av MCP-endepunktet"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Connected %{client}"
+msgstr "Koblet til %{client}"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnected %{client}: a used token was presented again"
+msgstr "Koblet fra %{client}: et token som allerede var brukt, ble brukt igjen"
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnected %{client}"
+msgstr "Koblet fra %{client}"
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connect"
+msgstr "Koble til"
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connect lets a person with two-factor authentication connect Claude, ChatGPT and other MCP clients, which read content and propose changes as them. Manage turns the endpoint on and off, and revokes anyone's connections."
+msgstr "Koble til lar en person med tofaktorautentisering koble til Claude, ChatGPT og andre MCP-klienter, som leser innhold og foreslår endringer som dem. Administrer slår endepunktet av og på, og trekker tilbake hvem som helsts tilkoblinger."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} connection"
+msgid_plural "%{count} connections"
+msgstr[0] "%{count} tilkobling"
+msgstr[1] "%{count} tilkoblinger"

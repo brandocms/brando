@@ -27,6 +27,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
        |> assign(:page_title, gettext("Integrations"))
        |> assign(:plausible?, Analytics.Plausible.configured?())
        |> assign(:search_console?, Analytics.SearchConsole.configured?())
+       |> assign_mcp()
        |> assign_webhooks()}
     else
       {:ok, redirect(socket, to: "/admin/access-denied")}
@@ -34,6 +35,17 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
   end
 
   defp assign_webhooks(socket), do: assign(socket, :webhooks, Webhooks.summary())
+
+  # Connected AI tools (`Brando.MCP`), for those who may manage them
+  defp assign_mcp(socket) do
+    tenant = Brando.MCP.tenant(socket.assigns[:current_site], socket.assigns[:current_environment])
+
+    if Brando.MCP.can_manage?(socket.assigns.current_user, tenant) do
+      assign(socket, :mcp, %{enabled?: Brando.MCP.enabled?(tenant), count: length(Brando.MCP.list_grants(tenant))})
+    else
+      assign(socket, :mcp, nil)
+    end
+  end
 
   def handle_info({Webhooks, _message}, socket), do: {:noreply, assign_webhooks(socket)}
 
@@ -55,11 +67,11 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       <div class="integrations-list" data-testid="integrations-list">
         <section :if={@connected != []} aria-labelledby="integrations-connected">
           <h2 id="integrations-connected" class="integrations-group">{gettext("Connected")}</h2>
-          <.row :for={row <- @connected} row={row} on webhooks={@webhooks} />
+          <.row :for={row <- @connected} row={row} on webhooks={@webhooks} mcp={@mcp} />
         </section>
         <section :if={@not_set_up != []} aria-labelledby="integrations-not-set-up">
           <h2 id="integrations-not-set-up" class="integrations-group">{gettext("Not set up")}</h2>
-          <.row :for={row <- @not_set_up} row={row} on={false} webhooks={@webhooks} />
+          <.row :for={row <- @not_set_up} row={row} on={false} webhooks={@webhooks} mcp={@mcp} />
         </section>
       </div>
     </div>
@@ -67,20 +79,24 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
   end
 
   defp connected_rows(assigns) do
-    Enum.filter([:plausible, :search_console, :webhooks], &on?(&1, assigns))
+    Enum.filter(rows(assigns), &on?(&1, assigns))
   end
 
   defp not_set_up_rows(assigns) do
-    Enum.reject([:plausible, :search_console, :webhooks], &on?(&1, assigns))
+    Enum.reject(rows(assigns), &on?(&1, assigns))
   end
+
+  defp rows(assigns), do: [:plausible, :search_console, :webhooks] ++ if(assigns.mcp, do: [:mcp], else: [])
 
   defp on?(:plausible, assigns), do: assigns.plausible?
   defp on?(:search_console, assigns), do: assigns.search_console?
   defp on?(:webhooks, assigns), do: assigns.webhooks.count > 0
+  defp on?(:mcp, assigns), do: assigns.mcp.enabled?
 
   attr :row, :atom, required: true
   attr :on, :boolean, default: false
   attr :webhooks, :map, required: true
+  attr :mcp, :map, default: nil
 
   defp row(%{row: :plausible} = assigns) do
     ~H"""
@@ -119,6 +135,33 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       </div>
       <div :if={@on} class="integrations-actions">
         <.link navigate="/admin/config/seo?tab=content" class="workspace-button">{gettext("Content SEO")}</.link>
+      </div>
+    </article>
+    """
+  end
+
+  defp row(%{row: :mcp} = assigns) do
+    ~H"""
+    <article class="integrations-row" id="integration-mcp" data-testid="integration-mcp">
+      <span class="integrations-icon" aria-hidden="true"><.icon name="bot" /></span>
+      <div class="integrations-text">
+        <h3>
+          {gettext("Connected AI tools")}
+          <span :if={@on} class="workspace-badge positive">{gettext("On")}</span>
+          <span :if={@mcp.count > 0} class="workspace-badge">
+            {ngettext("%{count} connection", "%{count} connections", @mcp.count)}
+          </span>
+        </h3>
+        <p>
+          {gettext(
+            "Claude, ChatGPT and other MCP clients read content and propose changes, as the person who connected them."
+          )}
+        </p>
+      </div>
+      <div class="integrations-actions">
+        <.link navigate="/admin/config/mcp" class="workspace-button" data-testid="integration-mcp-manage">
+          {if @on, do: gettext("Manage"), else: gettext("Set up")}
+        </.link>
       </div>
     </article>
     """

@@ -62,7 +62,7 @@ defmodule BrandoAdmin.Components.TwoFactor do
   end
 
   defp negative?(action),
-    do: action in [:login_failed, :locked, :two_factor_disabled, :two_factor_reset, :passkey_removed]
+    do: action in [:login_failed, :locked, :two_factor_disabled, :two_factor_reset, :passkey_removed, :mcp_revoked]
 
   @doc "What a security event says, in the admin's language."
   def event_label(%{action: :login, details: %{"method" => "totp"}}),
@@ -106,6 +106,17 @@ defmodule BrandoAdmin.Components.TwoFactor do
 
   def event_label(%{action: :session_revoked}), do: gettext("A session was logged out")
   def event_label(%{action: :sessions_revoked}), do: gettext("Logged out everywhere")
+
+  def event_label(%{action: :mcp_connected, details: %{"client" => client}}),
+    do: gettext("Connected %{client}", client: client)
+
+  def event_label(%{action: :mcp_revoked, details: %{"client" => client, "reason" => reason}})
+      when reason in ["refresh_token_reuse", "code_reuse"],
+      do: gettext("Disconnected %{client}: a used token was presented again", client: client)
+
+  def event_label(%{action: :mcp_revoked, details: %{"client" => client}}),
+    do: gettext("Disconnected %{client}", client: client)
+
   def event_label(%{action: action}), do: to_string(action)
 
   defp event_meta(event) do

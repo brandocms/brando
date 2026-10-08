@@ -22,7 +22,8 @@ defmodule Brando.Activity.Event do
     :reordered,
     :note_added,
     :note_resolved,
-    :note_reopened
+    :note_reopened,
+    :tool_called
   ]
 
   @sources [:admin, :scheduler, :assistant, :mcp, :import, :system]

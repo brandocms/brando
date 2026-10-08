@@ -61,10 +61,15 @@ defmodule Brando.Users do
   mutation :create, User
 
   # A deactivated or deleted account cannot log in, and nor may its open
-  # admin views and sockets go on: its sessions end with it.
+  # admin views and sockets go on: its sessions end with it, and so do the
+  # tools it connected over MCP.
   mutation :update, User do
     fn entry ->
-      if entry.active == false or not is_nil(entry.deleted_at), do: revoke_sessions(entry)
+      if entry.active == false or not is_nil(entry.deleted_at) do
+        revoke_sessions(entry)
+        Brando.MCP.revoke_user_grants(entry, "account_deactivated")
+      end
+
       {:ok, entry}
     end
   end
@@ -72,6 +77,7 @@ defmodule Brando.Users do
   mutation :delete, User do
     fn entry ->
       revoke_sessions(entry)
+      Brando.MCP.revoke_user_grants(entry, "account_deactivated")
       {:ok, entry}
     end
   end

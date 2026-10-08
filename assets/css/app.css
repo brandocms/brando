@@ -119,6 +119,7 @@
 @import "./views/config/Utils.css";
 @import "./views/config/Activity.css";
 @import "./views/config/Integrations.css";
+@import "./views/config/MCP.css";
 @import "./views/config/AssistantGuidance.css";
 @import "./views/config/ContentTransfer.css";
 @import "./views/Assistant.css";

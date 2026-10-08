@@ -280,6 +280,31 @@ defmodule Brando.Activity do
     })
   end
 
+  @doc """
+  Record that the client of the MCP connection `grant` called tool `name`
+  as `user` (`Brando.MCP.Tools`). Options: `:ok` (whether it succeeded),
+  `:token_id` (the access token's row id, never the token) and
+  `:duration_ms`. The arguments are not kept; a proposal the call prepared
+  is in the Assistant. Sends no content event.
+  """
+  def tool_called(%{__struct__: schema, id: id, client_name: client}, user, name, opts \\ []) do
+    insert(%{
+      action: :tool_called,
+      source: :mcp,
+      user_id: user_id(user),
+      schema: to_string(schema),
+      entry_id: id,
+      title: client,
+      details: %{
+        "client" => client,
+        "tool" => name,
+        "ok" => Keyword.get(opts, :ok, true),
+        "token" => Keyword.get(opts, :token_id),
+        "duration_ms" => Keyword.get(opts, :duration_ms)
+      }
+    })
+  end
+
   defp guard(%{__struct__: schema} = _entry, fun), do: guard(schema, fun)
 
   defp guard(schema, fun) when is_atom(schema) do

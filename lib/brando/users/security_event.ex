@@ -20,7 +20,9 @@ defmodule Brando.Users.SecurityEvent do
     :passkey_added,
     :passkey_removed,
     :session_revoked,
-    :sessions_revoked
+    :sessions_revoked,
+    :mcp_connected,
+    :mcp_revoked
   ]
 
   @type t :: %__MODULE__{}

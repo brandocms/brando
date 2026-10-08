@@ -1049,6 +1049,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp action_label(:promote), do: gettext("Promote")
   defp action_label(:reorder), do: gettext("Reorder")
   defp action_label(:manage), do: gettext("Manage")
+  defp action_label(:connect), do: gettext("Connect")
   defp action_label(action), do: action |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
   defp permission_label(catalog, key) do
@@ -1077,6 +1078,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :utilities}), do: gettext("Utilities & caches")
   defp resource_label(%{subject: :activity}), do: gettext("Activity")
   defp resource_label(%{subject: :webhooks}), do: gettext("Webhooks")
+  defp resource_label(%{subject: :mcp}), do: gettext("Connected AI tools")
   defp resource_label(permission), do: permission.label
 
   # What a permission gives that its name does not say
@@ -1084,6 +1086,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
     do:
       gettext(
         "Shows the type, id, URL, status and changed fields of every entry, drafts included, and sends them to URLs the person chooses."
+      )
+
+  defp resource_note(%{subject: :mcp}),
+    do:
+      gettext(
+        "Connect lets a person with two-factor authentication connect Claude, ChatGPT and other MCP clients, which read content and propose changes as them. Manage turns the endpoint on and off, and revokes anyone's connections."
       )
 
   defp resource_note(_permission), do: nil
