@@ -1234,6 +1234,11 @@ msgstr "Godta alle"
 msgid "Accept update"
 msgstr "Godta oppdatering"
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Accepting replaces the field's text, with its formatting, links and footnotes."
+msgstr "Godtar du, erstattes teksten i feltet, med formatering, lenker og fotnoter."
+
 #: lib/brando_admin/components/crawler_policy.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -12739,6 +12744,7 @@ msgid "Reordered"
 msgstr "Endret rekkefølge"
 
 #: lib/brando_admin/components/assets/media_field.ex
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/image_drawer.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
@@ -15694,6 +15700,11 @@ msgstr "Miljøet finnes ikke lenger."
 #, elixir-autogen, elixir-format
 msgid "The fallback image from the SEO settings, as it is shared."
 msgstr "Reservebildet fra SEO-innstillingene, slik det deles."
+
+#: lib/brando_admin/components/form/field_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The field has changed since the suggestion was asked for. Replace it?"
+msgstr "Feltet er endret siden forslaget ble bestilt. Vil du erstatte det?"
 
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format

@@ -25,12 +25,13 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
 
   @doc """
   The input's actions that can run, with their labels translated: `[]` when
-  there are none, or when the input is not in an entry form.
+  there are none, when the input is not in an entry form, or when it is
+  read-only or disabled.
   """
   def available(%{field: field} = assigns) do
     actions = assigns[:ai_actions] || []
 
-    if (actions != [] and assigns[:target]) && assigns[:form_id] do
+    if (actions != [] and assigns[:target]) && assigns[:form_id] && !locked_input?(assigns) do
       schema = field.form.source.data.__struct__
 
       actions
@@ -42,6 +43,27 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
   end
 
   def available(_assigns), do: []
+
+  # A read-only or disabled input: its options as `Fieldset.Field` resolved
+  # them for this user, or the component's own assigns.
+  defp locked_input?(assigns) do
+    assigns[:disabled] == true or assigns[:readonly] == true or locked?(assigns[:opts], assigns[:current_user])
+  end
+
+  @doc """
+  Whether an input's options make it read-only or disabled for `user`:
+  `true`, or `:unless_superuser` for anyone else. Actions are neither offered
+  nor run nor accepted on such an input.
+  """
+  def locked?(opts, user) do
+    Enum.any?([:readonly, :disabled], fn key ->
+      case Keyword.get(opts || [], key) do
+        true -> true
+        :unless_superuser -> not match?(%{role: :superuser}, user)
+        _ -> false
+      end
+    end)
+  end
 
   @doc "The panel's id for `field`; the form sends it the prompt."
   def id(%Phoenix.HTML.FormField{id: id}), do: "#{id}-ai-actions"
@@ -113,46 +135,72 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
     {:ok, assign(socket, proposal: nil, request: 0)}
   end
 
-  # From the form: the prompt for an action an editor chose.
+  # From the form: an action an editor chose. Its prompt is built in the
+  # request's task (`build`), since reading the block editor's content means
+  # rendering it. Each request has its own key, so a cancelled or replaced
+  # one cannot touch the suggestion when it ends.
   @impl true
-  def update(%{run: %{action: action, label: label} = run}, socket) do
+  def update(%{run: run}, socket) do
     request = socket.assigns.request + 1
-    proposal = %{action: action, label: label, max: run[:max], status: :running, text: nil, error: nil}
 
-    socket =
-      socket
-      |> cancel_async(:generate)
-      |> assign(request: request, proposal: proposal)
+    proposal = %{
+      action: run.action,
+      label: run.label,
+      max: run[:max],
+      original: run[:original],
+      warning: run[:warning],
+      status: :running,
+      text: nil,
+      error: nil,
+      conflict: false
+    }
 
-    case run do
-      %{error: reason} ->
-        {:ok, fail(socket, reason)}
+    %{build: build, ai_opts: ai_opts} = run
 
-      %{prompt: prompt, ai_opts: ai_opts} ->
-        {:ok,
-         start_async(
-           socket,
-           :generate,
-           Brando.Tenant.capture_context(fn -> Brando.AI.generate_text(prompt, ai_opts) end)
-         )}
-    end
+    task =
+      Brando.Tenant.capture_context(fn ->
+        with {:ok, prompt} <- build.(), do: Brando.AI.generate_text(prompt, ai_opts)
+      end)
+
+    {:ok,
+     socket
+     |> cancel_request()
+     |> assign(request: request, proposal: proposal)
+     |> start_async({:generate, request}, task)}
   end
+
+  # From the form, after Accept: written, or the field changed since the
+  # action ran and the editor is asked first.
+  def update(%{accept_result: :written}, socket), do: {:ok, assign(socket, :proposal, nil)}
+
+  def update(%{accept_result: :conflict}, %{assigns: %{proposal: %{status: :ready}}} = socket),
+    do: {:ok, update(socket, :proposal, &%{&1 | conflict: true})}
+
+  def update(%{accept_result: _}, socket), do: {:ok, socket}
 
   def update(assigns, socket) do
     {:ok, assign(socket, Map.take(assigns, [:id, :field, :form_target, :form_id, :type]))}
   end
 
-  @impl true
-  def handle_async(:generate, {:ok, {:ok, %{text: text}}}, socket) do
-    text = FieldAction.clean(text)
+  defp cancel_request(socket), do: cancel_async(socket, {:generate, socket.assigns.request})
 
-    if text == "",
-      do: {:noreply, fail(socket, :empty_response)},
-      else: {:noreply, update(socket, :proposal, &%{&1 | status: :ready, text: text})}
+  # Only the current request's result counts, and only while it runs.
+  @impl true
+  def handle_async({:generate, request}, result, %{assigns: %{request: request, proposal: %{status: :running}}} = socket) do
+    {:noreply, finish(socket, result)}
   end
 
-  def handle_async(:generate, {:ok, {:error, reason}}, socket), do: {:noreply, fail(socket, reason)}
-  def handle_async(:generate, {:exit, _reason}, socket), do: {:noreply, fail(socket, :failed)}
+  def handle_async({:generate, _stale}, _result, socket), do: {:noreply, socket}
+
+  defp finish(socket, {:ok, {:ok, %{text: text}}}) do
+    case FieldAction.clean(text, socket.assigns[:type]) do
+      "" -> fail(socket, :empty_response)
+      text -> update(socket, :proposal, &%{&1 | status: :ready, text: text})
+    end
+  end
+
+  defp finish(socket, {:ok, {:error, reason}}), do: fail(socket, reason)
+  defp finish(socket, {:exit, _reason}), do: fail(socket, :failed)
 
   defp fail(socket, reason) do
     update(socket, :proposal, &%{&1 | status: :failed, error: Brando.AI.error_message(reason)})
@@ -167,22 +215,26 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
 
   def handle_event("edit", _params, socket), do: {:noreply, socket}
 
-  def handle_event("accept", _params, %{assigns: %{proposal: %{status: :ready, text: text}}} = socket) do
+  # The form writes it, unless the field changed since the action ran and
+  # the editor has not said to replace it (`replace`).
+  def handle_event("accept", params, %{assigns: %{proposal: %{status: :ready} = proposal}} = socket) do
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,
       event: "accept_field_action",
       field_name: socket.assigns.field.name,
       field: socket.assigns.field.field,
-      text: text
+      text: proposal.text,
+      original: proposal.original,
+      replace: params["replace"] == "true"
     )
 
-    {:noreply, assign(socket, :proposal, nil)}
+    {:noreply, socket}
   end
 
   def handle_event("accept", _params, socket), do: {:noreply, socket}
 
   def handle_event("discard", _params, socket) do
-    {:noreply, socket |> cancel_async(:generate) |> assign(:proposal, nil)}
+    {:noreply, socket |> cancel_request() |> assign(request: socket.assigns.request + 1, proposal: nil)}
   end
 
   @impl true
@@ -218,6 +270,12 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
           </p>
         <% end %>
 
+        <p :if={@proposal.status == :ready && @proposal.warning} class="field-ai-warning" data-testid="field-ai-warning">
+          {@proposal.warning}
+        </p>
+        <p :if={@proposal.conflict} class="field-ai-error" role="alert" data-testid="field-ai-conflict">
+          {gettext("The field has changed since the suggestion was asked for. Replace it?")}
+        </p>
         <p :if={@proposal.status == :failed} class="field-ai-error" role="alert">{@proposal.error}</p>
 
         <div class="ai-proposal-actions">
@@ -226,9 +284,10 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
             type="button"
             class="field-ai-button primary"
             phx-click="accept"
+            phx-value-replace={to_string(@proposal.conflict)}
             phx-target={@myself}
           >
-            {gettext("Accept")}
+            {if @proposal.conflict, do: gettext("Replace"), else: gettext("Accept")}
           </button>
           <button type="button" class="field-ai-button" phx-click="discard" phx-target={@myself}>
             {if @proposal.status == :running, do: gettext("Cancel"), else: gettext("Discard")}

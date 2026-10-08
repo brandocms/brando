@@ -59,11 +59,18 @@ defmodule Brando.AI.FieldAction do
   def available?(%AIAction{} = action), do: Brando.AI.configured?(ai_opts(action))
 
   @doc """
-  A reply as field text: trimmed, without the quotes a model may wrap a short
-  answer in.
+  A reply as text for an input of `type`: trimmed, without the quotes a model
+  may wrap a short answer in. A single-line `:text` input gets one line, its
+  runs of whitespace and line breaks collapsed to a space.
   """
-  @spec clean(String.t()) :: String.t()
-  def clean(text) when is_binary(text) do
+  @spec clean(String.t(), atom() | nil) :: String.t()
+  def clean(text, type \\ nil)
+
+  def clean(text, :text) when is_binary(text) do
+    text |> String.replace(~r/\s+/u, " ") |> clean(nil)
+  end
+
+  def clean(text, _type) when is_binary(text) do
     text = String.trim(text)
 
     case Regex.run(~r/\A(["“”«»'])(.*)(["“”«»'])\z/su, text) do
@@ -74,6 +81,15 @@ defmodule Brando.AI.FieldAction do
         text
     end
   end
+
+  @doc """
+  Whether replacing the rich text `html` with plain paragraphs loses
+  something: formatting, links, headings, lists or footnote markers, anything
+  but paragraphs and line breaks.
+  """
+  @spec formatting_lost?(term()) :: boolean()
+  def formatting_lost?(html) when is_binary(html), do: Regex.match?(~r/<(?!\/?(?:p|br)\b)[a-z]/i, html)
+  def formatting_lost?(_html), do: false
 
   @doc """
   Suggested text as the value of an input of `type`: rich text gets one
@@ -95,5 +111,6 @@ defmodule Brando.AI.FieldAction do
     end)
   end
 
+  def field_value(text, :text), do: clean(text, :text)
   def field_value(text, _type), do: text
 end

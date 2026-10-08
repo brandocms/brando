@@ -124,6 +124,172 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     assert subtitle(view) == "Et hus"
   end
 
+  # A reply that takes a while, so a test can act while it runs.
+  defp replies_slowly(text) do
+    Brando.AIStub.reply(fn prompt ->
+      Process.sleep(300)
+      if prompt =~ "Shorten", do: "Shorter", else: text
+    end)
+  end
+
+  test "cancelling a running request closes the suggestion, and its late end is ignored", %{conn: conn, article: article} do
+    view = open(conn, article)
+    replies_slowly("Too late")
+
+    run(view, "summarize")
+    assert has_element?(view, "#{@suggestion} .ai-proposal[data-status='running']")
+    view |> element("#{@suggestion} button", "Cancel") |> render_click()
+
+    Process.sleep(400)
+    settle(view)
+    assert Process.alive?(view.pid)
+    refute has_element?(view, "#{@suggestion} .ai-proposal")
+    assert subtitle(view) == "Et hus"
+  end
+
+  test "choosing another action while one runs shows only the last", %{conn: conn, article: article} do
+    view = open(conn, article)
+    replies_slowly("A summary")
+
+    run(view, "summarize")
+    run(view, "shorten")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
+    Process.sleep(400)
+    settle(view)
+
+    assert has_element?(view, "#{@suggestion} .ai-proposal[data-status='ready'] .field-ai-action-name", "Shorten")
+    assert has_element?(view, "#{@suggestion} textarea", "Shorter")
+    refute has_element?(view, "#{@suggestion} [role=alert]")
+  end
+
+  test "a request with nothing to read, chosen while another runs, says why", %{conn: conn, article: article} do
+    view = open(conn, article)
+    replies_slowly("A summary")
+
+    run(view, "summarize")
+    view |> form("#article_form_form") |> render_change(%{"article" => %{"subtitle" => ""}})
+    run(view, "shorten")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='failed']")
+    Process.sleep(400)
+    settle(view)
+
+    assert has_element?(view, "#{@suggestion} [role=alert]", "The fields this action reads are empty")
+  end
+
+  test "Accept asks first when the field changed since the action ran", %{conn: conn, article: article} do
+    view = open(conn, article)
+    replies("Shorter")
+
+    run(view, "shorten")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
+
+    # Another editor's change arrives, or this editor types in the field
+    view |> form("#article_form_form") |> render_change(%{"article" => %{"subtitle" => "Et hus, endret"}})
+    view |> element("#{@suggestion} button", "Accept") |> render_click()
+    settle(view)
+
+    assert has_element?(view, "#{@suggestion} [data-testid=field-ai-conflict]")
+    assert subtitle(view) == "Et hus, endret"
+
+    view |> element("#{@suggestion} button", "Replace") |> render_click()
+    settle(view)
+
+    assert subtitle(view) == "Shorter"
+    refute has_element?(view, "#{@suggestion} .ai-proposal")
+  end
+
+  test "gives the model at most the context's length of block text", %{conn: conn, current_user: user} do
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module,
+          name: %{"en" => "Text"},
+          namespace: %{"en" => "Content"},
+          help_text: %{},
+          code: "{% ref refs.body %}",
+          refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}}]
+        ),
+        user
+      )
+
+    {:ok, article} =
+      SyncTest.create_article(
+        %{title: "Lang", slug: "lang", subtitle: "Et hus", language: "no", status: "draft", year: 2020},
+        user
+      )
+
+    block =
+      %Brando.Content.Block{}
+      |> Brando.Content.Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => module.id,
+          "creator_id" => user.id,
+          "source" => to_string(SyncTest.Article.Blocks),
+          "refs" => [
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "name" => "body",
+              "data" => %{"type" => "text", "data" => %{"text" => String.duplicate("ord ", 2_000)}}
+            }
+          ]
+        },
+        user
+      )
+      |> Brando.Repo.insert!()
+
+    struct(SyncTest.Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
+
+    view = open(conn, article)
+    await_selector(view, "#article_form-blocks-blocks-wrapper")
+    replies("Kort")
+
+    run(view, "summarize")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
+
+    assert_received {:prompt, prompt}
+    [_, blocks] = Regex.run(~r/^blocks: (.*)$/m, prompt)
+    assert blocks =~ "ord ord"
+    assert String.length(blocks) <= Brando.AI.Context.block_text_length()
+  end
+
+  describe "a read-only field" do
+    defp open_no_blocks(conn, article) do
+      {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/no-blocks", "article_form")
+      view
+    end
+
+    test "offers no actions to whom it is read-only", %{article: article} do
+      admin = Factory.insert(:random_user, role: :admin, config: %Brando.Users.UserConfig{})
+      view = open_no_blocks(log_in_user(build_conn(), admin), article)
+
+      refute has_element?(view, "button[phx-click='run_field_action']")
+    end
+
+    test "offers them to a superuser, for whom it is not read-only", %{conn: conn, article: article} do
+      view = open_no_blocks(conn, article)
+      assert has_element?(view, "button[phx-click='run_field_action'][phx-value-field='subtitle']")
+    end
+
+    test "is not written by an Accept that reaches the form anyway", %{article: article} do
+      admin = Factory.insert(:random_user, role: :admin, config: %Brando.Users.UserConfig{})
+      view = open_no_blocks(log_in_user(build_conn(), admin), article)
+
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form,
+        id: "article_form",
+        event: "accept_field_action",
+        field_name: "article[subtitle]",
+        field: :subtitle,
+        text: "Written anyway",
+        original: "Et hus",
+        replace: true
+      )
+
+      settle(view)
+      assert subtitle(view) == "Et hus"
+    end
+  end
+
   test "without AI configured, no actions are offered", %{conn: conn, article: article} do
     Application.delete_env(:brando, Brando.AI)
     view = open(conn, article)

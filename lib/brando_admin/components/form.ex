@@ -196,12 +196,22 @@ defmodule BrandoAdmin.Components.Form do
 
   # An editor accepted the suggestion of an AI action on `field`
   # (`FieldActions`): it goes into the field as unsaved input.
-  def update(%{event: "accept_field_action", field_name: name, field: field, text: text}, socket) do
-    with %BlueprintForms.Input{actions: [_ | _], type: type} <-
+  # Not on a read-only or disabled field, and not over a value that changed
+  # since the action ran (another editor's, say) unless the editor said to
+  # replace it.
+  def update(%{event: "accept_field_action", field_name: name, field: field, text: text} = message, socket) do
+    with %BlueprintForms.Input{actions: [_ | _], type: type, opts: opts} <-
            BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+         false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, path, key, string_path} <- parse_form_field_name(name, socket.assigns.singular) do
-      value = Brando.AI.FieldAction.field_value(text, type)
-      {:ok, write_ai_text(socket, path, key, string_path, field, value)}
+      if message[:replace] || get_field(socket.assigns.form.source, field) == message[:original] do
+        send_update(FieldActions, id: FieldActions.id(socket.assigns.form[field]), accept_result: :written)
+        value = Brando.AI.FieldAction.field_value(text, type)
+        {:ok, write_ai_text(socket, path, key, string_path, field, value)}
+      else
+        send_update(FieldActions, id: FieldActions.id(socket.assigns.form[field]), accept_result: :conflict)
+        {:ok, socket}
+      end
     else
       _ -> {:ok, socket}
     end
@@ -4897,13 +4907,14 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("run_field_action", %{"field" => field, "action" => action}, socket) do
     with {:ok, field_atom} <- safe_to_existing_atom(field),
          {:ok, action_atom} <- safe_to_existing_atom(action),
-         %BlueprintForms.Input{actions: actions, type: type} <-
+         %BlueprintForms.Input{actions: actions, type: type, opts: opts} <-
            BlueprintForms.get_field(field_atom, socket.assigns.form_blueprint),
+         false <- FieldActions.locked?(opts, socket.assigns.current_user),
          %BlueprintForms.AIAction{} = ai_action <- Enum.find(actions, &(&1.name == action_atom)),
          true <- Brando.AI.FieldAction.available?(ai_action) do
       send_update(FieldActions,
         id: FieldActions.id(socket.assigns.form[field_atom]),
-        run: field_action_run(socket, ai_action, type)
+        run: field_action_run(socket, field_atom, ai_action, type)
       )
 
       {:noreply, socket}
@@ -6920,25 +6931,36 @@ defmodule BrandoAdmin.Components.Form do
   # `:blocks` keeps its own path: in a form the editor's unsaved state is what
   # should be summarized, not the `rendered_blocks` column the entry was last
   # saved with. Every other field reads the applied changeset headlessly.
-  defp build_ai_context_values(socket, context_fields) do
-    entry = apply_changes(socket.assigns.form.source)
+  defp build_ai_context_values(socket, context_fields), do: ai_context_fun(socket, context_fields).()
 
-    Enum.flat_map(context_fields, fn
-      :blocks ->
-        case render_ai_blocks_context(socket) do
-          value when value in [nil, ""] -> []
-          value -> [{:blocks, value}]
-        end
+  # The same, as a function to call later: it holds the form's changeset and
+  # block map, not the socket, so a task can render the blocks.
+  defp ai_context_fun(socket, context_fields) do
+    changeset = socket.assigns.form.source
+    block_map = if socket.assigns.has_blocks?, do: socket.assigns.block_map
+    context_fields = Brando.AI.Context.normalize_fields(context_fields)
 
-      field ->
-        Brando.AI.Context.for_entry(entry, [field])
-    end)
+    fn ->
+      entry = apply_changes(changeset)
+
+      Enum.flat_map(context_fields, fn
+        :blocks ->
+          case render_ai_blocks_context(changeset, block_map) do
+            value when value in [nil, ""] -> []
+            value -> [{:blocks, value}]
+          end
+
+        field ->
+          Brando.AI.Context.for_entry(entry, [field])
+      end)
+    end
   end
 
-  defp render_ai_blocks_context(%{assigns: %{has_blocks?: false}}), do: nil
+  # Each block field's text, cut to the length `Brando.AI.Context` gives a
+  # saved entry's blocks.
+  defp render_ai_blocks_context(_changeset, nil), do: nil
 
-  defp render_ai_blocks_context(%{assigns: %{form: form, block_map: block_map}}) do
-    changeset = form.source
+  defp render_ai_blocks_context(changeset, block_map) do
     entry_for_blocks = build_entry_for_blocks(changeset, block_map)
     rendered_changeset = render_blocks_for_entry(block_map, changeset, entry_for_blocks)
 
@@ -6950,7 +6972,13 @@ defmodule BrandoAdmin.Components.Form do
         Changeset.get_field(rendered_changeset, rendered_field_name)
     end)
     |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.map_join("\n\n", &HtmlSanitizeEx.strip_tags/1)
+    |> Enum.map(
+      &(&1
+        |> HtmlSanitizeEx.strip_tags()
+        |> String.trim()
+        |> String.slice(0, Brando.AI.Context.block_text_length()))
+    )
+    |> Enum.join("\n\n")
     |> String.trim()
   end
 
@@ -7020,30 +7048,40 @@ defmodule BrandoAdmin.Components.Form do
     |> maybe_force_ai_component_remount(socket.assigns.form_blueprint, field_atom)
   end
 
-  # What the suggestion panel needs to ask the model: the prompt built from
-  # the fields the action reads, in the entry's language. Nothing to read is
-  # an error, not a prompt for the model to make something up from.
-  defp field_action_run(socket, ai_action, type) do
-    run = %{
+  # What the suggestion panel needs to ask the model. The prompt is built in
+  # its task (`build`), from the fields the action reads as the form has them
+  # now; nothing to read is an error, not a prompt for the model to make
+  # something up from. `original` is the field's value now, so Accept can
+  # tell whether it changed since.
+  defp field_action_run(socket, field, ai_action, type) do
+    original = get_field(socket.assigns.form.source, field)
+    context = ai_context_fun(socket, ai_action.from)
+    language = field_action_language(socket)
+
+    build = fn ->
+      case context.() do
+        [] -> {:error, :empty_inputs}
+        values -> {:ok, Brando.AI.FieldAction.prompt(ai_action, values, language: language, type: type)}
+      end
+    end
+
+    %{
       action: ai_action.name,
       label: FieldActions.label(socket.assigns.schema, ai_action),
-      max: ai_action.max
+      max: ai_action.max,
+      original: original,
+      warning: field_action_warning(type, original),
+      build: build,
+      ai_opts: Brando.AI.FieldAction.ai_opts(ai_action)
     }
-
-    case build_ai_context_values(socket, ai_action.from) do
-      [] ->
-        Map.put(run, :error, :empty_inputs)
-
-      context_values ->
-        prompt =
-          Brando.AI.FieldAction.prompt(ai_action, context_values,
-            language: field_action_language(socket),
-            type: type
-          )
-
-        Map.merge(run, %{prompt: prompt, ai_opts: Brando.AI.FieldAction.ai_opts(ai_action)})
-    end
   end
+
+  defp field_action_warning(:rich_text, html) do
+    if Brando.AI.FieldAction.formatting_lost?(html),
+      do: gettext("Accepting replaces the field's text, with its formatting, links and footnotes.")
+  end
+
+  defp field_action_warning(_type, _value), do: nil
 
   # A translatable entry is written in its language, as the form has it now.
   defp field_action_language(%{assigns: %{schema: schema, form: form}}) do

@@ -346,3 +346,10 @@
     min-height: 40px;
   }
 }
+
+/* What accepting costs: rich text losing its formatting. */
+.field-ai-warning {
+  color: var(--brando-attention-ink);
+  font-size: 13px;
+  line-height: 20px;
+}

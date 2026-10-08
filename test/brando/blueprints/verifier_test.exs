@@ -1204,6 +1204,17 @@ defmodule Brando.Blueprint.VerifierTest do
       )
     end
 
+    test "reports an action reading an association" do
+      assert_form_error(
+        ai_actions_blueprint(
+          quote do
+            input :summary, :textarea, ai_actions: [summarize: [prompt: "Summarize.", from: [:title, :items]]]
+          end
+        ),
+        ~r/ai_actions :summarize reading :items in :from, which is not a text or block field/
+      )
+    end
+
     test "reads :blocks only where the schema has a block field" do
       assert_form_error(
         ai_actions_blueprint(
@@ -1229,7 +1240,12 @@ defmodule Brando.Blueprint.VerifierTest do
               form do
                 tab "Content" do
                   fieldset do
-                    input :summary, :textarea, ai_actions: [summarize: [prompt: "Summarize.", from: [:blocks]]]
+                    input :summary, :textarea,
+                      ai_actions: [
+                        summarize: [prompt: "Summarize.", from: [:blocks]],
+                        # A block field by its own name
+                        outline: [prompt: "Outline.", from: [:entry_blocks]]
+                      ]
                   end
                 end
               end

@@ -57,9 +57,29 @@ defmodule Brando.AI.FieldActionTest do
       assert FieldAction.clean("«Et hus ved fjorden»") == "Et hus ved fjorden"
     end
 
+    test "gives a single-line text field one line" do
+      assert FieldAction.clean("  A house\n\nby the   fjord \n", :text) == "A house by the fjord"
+      assert FieldAction.clean("A house\n\nby the fjord", :textarea) == "A house\n\nby the fjord"
+      assert FieldAction.field_value("A house\nby the fjord", :text) == "A house by the fjord"
+    end
+
     test "keeps quotes that belong to the text" do
       assert FieldAction.clean(~s("Home", she said, "is here")) == ~s("Home", she said, "is here")
       assert FieldAction.clean("A house by the fjord") == "A house by the fjord"
+    end
+  end
+
+  describe "formatting_lost?/1" do
+    test "paragraphs and line breaks are kept by plain text" do
+      refute FieldAction.formatting_lost?("<p>One</p><p>Two<br>lines</p>")
+      refute FieldAction.formatting_lost?(nil)
+    end
+
+    test "formatting, links and footnote markers are not" do
+      assert FieldAction.formatting_lost?("<p>One <strong>bold</strong></p>")
+      assert FieldAction.formatting_lost?(~s(<p><a href="/x">link</a></p>))
+      assert FieldAction.formatting_lost?(~s(<p>Text<sup data-footnote="1">1</sup></p>))
+      assert FieldAction.formatting_lost?("<h2>Heading</h2>")
     end
   end
 

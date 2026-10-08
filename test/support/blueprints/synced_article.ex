@@ -141,6 +141,12 @@ defmodule Brando.SyncTest.Article do
         fieldset do
           input :title, :text
           input :slug, :slug, from: :title
+
+          # Read-only but for superusers: its AI action is not offered to
+          # anyone else (FieldActionsLiveTest)
+          input :subtitle, :textarea,
+            readonly: :unless_superuser,
+            ai_actions: [shorten: [prompt: "Shorten the subtitle.", from: :subtitle]]
         end
       end
     end

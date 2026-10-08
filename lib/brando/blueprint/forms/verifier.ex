@@ -76,8 +76,10 @@ defmodule Brando.Blueprint.Forms.Verifier do
     end
   end
 
-  # `ai_actions:` read the fields in `from:`. `:blocks` stands for every block
-  # field, so it needs one, whatever the relation is called.
+  # `ai_actions:` read the fields in `from:`: the schema's own values and its
+  # block fields. `:blocks` stands for every block field, so it needs one,
+  # whatever the relation is called. Associations and embeds are not text to
+  # give a model.
   defp verify_ai_actions(context, form, %{actions: actions} = input) do
     validate_entities(actions, fn action ->
       validate_entities(action.from, &verify_ai_action_source(context, form, input, action, &1))
@@ -86,11 +88,19 @@ defmodule Brando.Blueprint.Forms.Verifier do
 
   defp verify_ai_action_source(context, form, input, action, field) do
     cond do
-      MapSet.member?(context.schema_fields, field) ->
+      ai_readable_field?(context.module, field) ->
         :ok
 
-      field == :blocks and Enum.any?(context.relations, &block_relation?/1) ->
+      Enum.any?(context.relations, &(block_relation?(&1) and (field == :blocks or &1.name == field))) ->
         :ok
+
+      MapSet.member?(context.schema_fields, field) ->
+        error(
+          context,
+          input,
+          [form.name, input.name],
+          "has ai_actions #{inspect(action.name)} reading #{inspect(field)} in :from, which is not a text or block field"
+        )
 
       true ->
         error(
@@ -100,6 +110,11 @@ defmodule Brando.Blueprint.Forms.Verifier do
           "has ai_actions #{inspect(action.name)} reading unknown field #{inspect(field)} in :from"
         )
     end
+  end
+
+  defp ai_readable_field?(module, field) do
+    field in (module.__schema__(:fields) ++ module.__schema__(:virtual_fields)) and
+      field not in module.__schema__(:embeds)
   end
 
   defp block_relation?(relation), do: match?(%Relations.Relation{type: :has_many, opts: %{module: :blocks}}, relation)
