@@ -1692,9 +1692,11 @@ production dump.
   was processed. Processing now also reports on a topic per asset
   (`Brando.Assets.ProcessingStatus`), and each open form follows the images
   it shows in processing, and the videos it shows uploading to or processing
-  at their provider, until they are done. A video field now takes its
-  provider's reports as they come; before, it caught up only when something
-  else re-rendered it, in every editor.
+  at their provider, until they are done, and takes the finished asset into
+  the form and its live preview. A video field now takes its provider's
+  reports as they come; before, it caught up only when something else
+  re-rendered it, in every editor. An image field no longer reads its image
+  from the database on every render while the image is processing.
 
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is

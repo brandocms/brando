@@ -22,8 +22,8 @@ defmodule Brando.Assets.ProcessingStatus do
       a video from uploading to processing)
     * `:done` - processing is over: an image is processed, a video is ready
       or failed for good
-    * `:failed` - an image's processing failed for good; nothing more will
-      come, and the asset is as it was
+    * `:failed` - an image's processing failed for good and the image is as
+      it was; a later pass (the image drawer requeues it) reports again
   """
 
   alias Phoenix.PubSub

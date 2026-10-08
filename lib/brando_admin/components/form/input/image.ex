@@ -152,8 +152,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       image_id != prev_image_id ->
         {assign(socket, :image_id, image_id), image}
 
-      # Image still processing — poll DB for updated status
-      not is_nil(image) and image.status == :unprocessed ->
+      # Image still processing. A form LiveView reports when it is done
+      # (`ProcessingWatch`); anywhere else, poll the database on each update.
+      not is_nil(image) and image.status == :unprocessed and not ProcessingWatch.enabled?() ->
         fetch_image(socket, image_id)
 
       true ->
@@ -183,13 +184,28 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             fresher_status?(from_changeset, image)))
   end
 
-  # A processed copy is not replaced by an unprocessed copy of the same image:
-  # that copy is older, read before processing finished (a subform's image
-  # after `ProcessingWatch` reported it processed). Re-processing an image for
-  # a new focal point changes its focal point too, which is compared above.
+  # Which copy of the same image is newer, when their statuses differ: an
+  # older one was read before the other's processing finished or restarted
+  # (a subform's image after `ProcessingWatch` reported it processed, or a
+  # crop that resets the image to unprocessed). `updated_at` has whole
+  # seconds, so on a tie the processed copy wins: processing finishing in the
+  # same second as the upload is likelier than a reset in the same second as
+  # processing finishing.
   defp fresher_status?(%{status: status}, %{status: status}), do: false
-  defp fresher_status?(%{status: :unprocessed}, %{status: :processed}), do: false
-  defp fresher_status?(_from_changeset, _image), do: true
+
+  defp fresher_status?(from_changeset, image) do
+    case compare_updated(from_changeset, image) do
+      :gt -> true
+      :lt -> false
+      :eq -> from_changeset.status == :processed
+    end
+  end
+
+  defp compare_updated(%{updated_at: %module{} = a}, %{updated_at: %module{} = b})
+       when module in [NaiveDateTime, DateTime],
+       do: module.compare(a, b)
+
+  defp compare_updated(_from_changeset, _image), do: :eq
 
   defp fetch_image(socket, image_id) do
     case Brando.Images.get_image(image_id) do

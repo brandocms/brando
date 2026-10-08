@@ -81,7 +81,19 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   # An image another editor uploaded finished processing (`ProcessingWatch`).
+  # The form takes it into the gallery in its changeset and entry, for the
+  # live preview.
   def update(%{event: "image_processed", image: image}, socket) do
+    if Enum.any?(socket.assigns.gallery_objects, &(&1.image_id == image.id)) and socket.assigns[:field] do
+      send_update(BrandoAdmin.Components.Form,
+        id: entry_form_id(socket),
+        event: "entry_gallery_image_processed",
+        field: socket.assigns.field.field,
+        path: socket.assigns.path,
+        image: image
+      )
+    end
+
     {:ok, socket} = update(%{action: :update_image, updated_image: image, force_validation: true}, socket)
     {:ok, watch_processing(socket)}
   end

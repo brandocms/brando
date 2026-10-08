@@ -36,8 +36,19 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
 
   # The provider reported on the video this field shows, to every editor with
   # the entry open (`ProcessingWatch`): it moved on from uploading, or is ready.
+  # The form takes it into its changeset and entry, for the live preview.
   def update(%{event: "video_processed", video: video}, socket) do
     if socket.assigns.video && socket.assigns.video.id == video.id do
+      field = socket.assigns.field
+
+      send_update(BrandoAdmin.Components.Form,
+        id: socket.assigns.form_id,
+        event: "entry_field_asset_processed",
+        field: field.field,
+        path: Brando.Utils.get_path_from_field_name(field.form.name),
+        asset: video
+      )
+
       {:ok, socket |> assign(:video, video) |> ProcessingWatch.watch(__MODULE__, :video, [video])}
     else
       {:ok, socket}

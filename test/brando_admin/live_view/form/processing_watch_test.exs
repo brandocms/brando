@@ -11,9 +11,13 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
   alias Brando.Factory
 
   alias Brando.Assets.ProcessingStatus
+  alias Brando.MigrationTest.ProjectUpdate1
   alias Brando.Videos.Uploaders.ProviderUpdate
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
+  alias Ecto.Changeset
+  alias Phoenix.Component
   alias Phoenix.LiveView.Socket
 
   setup do
@@ -46,10 +50,18 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
     test "the field takes the report only for the video it shows", %{video: video} do
       ready = %{video | status: :ready, width: 1280, height: 720}
       other = %{ready | id: video.id + 1}
-      socket = %Socket{assigns: %{__changed__: %{}, video: video, id: "page_clip"}}
+      field = Component.to_form(%{}, as: "page")[:clip]
+      socket = %Socket{assigns: %{__changed__: %{}, video: video, id: "page_clip", field: field, form_id: "page_form"}}
 
       assert {:ok, %{assigns: %{video: ^video}}} = Input.Video.update(%{event: "video_processed", video: other}, socket)
+      refute_received {:phoenix, :send_update, _}
+
+      # The form takes it too, into its changeset and entry for the live preview.
       assert {:ok, %{assigns: %{video: ^ready}}} = Input.Video.update(%{event: "video_processed", video: ready}, socket)
+
+      assert_received {:phoenix, :send_update,
+                       {{BrandoAdmin.Components.Form, "page_form"},
+                        %{event: "entry_field_asset_processed", field: :clip, path: [], asset: ^ready}}}
     end
   end
 
@@ -73,7 +85,7 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
       assert socket.assigns.processing_watch == %{}
     end
 
-    test "a failed processing ends the watch without a report", %{image: image} do
+    test "a failed processing keeps the watch, so a later pass still reports", %{image: image} do
       field = {Input.Image, "page_meta_image"}
       socket = follow(socket(), :image, field, [image.id])
 
@@ -81,6 +93,14 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
       socket = handle(socket)
 
       refute_receive {:phoenix, :send_update, _}
+      assert Map.has_key?(socket.assigns.processing_watch, {:image, image.id})
+      assert subscribers(:image, image.id) == [self()]
+
+      # The drawer requeues the image, and this pass succeeds.
+      ProcessingStatus.broadcast(:image, %{image | status: :processed}, :done)
+      socket = handle(socket)
+
+      assert_receive {:phoenix, :send_update, {^field, %{event: "image_processed", image: %{status: :processed}}}}
       assert socket.assigns.processing_watch == %{}
       assert subscribers(:image, image.id) == []
     end
@@ -97,15 +117,96 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
       assert socket.assigns.gallery_objects == [%{image_id: image.id, image: processed}, other]
     end
 
-    test "an image processed before the watch began is reported at once", %{image: image} do
+    test "images processed before the watch began are reported at once, read in one query", %{user: user, image: image} do
+      second = Factory.insert(:image, creator: user, status: :unprocessed)
       {:ok, image} = Brando.Images.update_image(image, %{status: :processed}, :system)
+      {:ok, second} = Brando.Images.update_image(second, %{status: :processed}, :system)
       field = {Input.Image, "page_meta_image"}
+      ref = {Input.Blocks.PictureBlock, "ref"}
 
-      socket = follow(socket(), :image, field, [image.id])
-      handle(socket)
+      # Two components rendering at once, as on opening an entry.
+      socket = socket() |> follow(:image, field, [image.id]) |> follow(:image, ref, [second.id])
+      assert_received :processing_watch_catch_up
+      refute_received :processing_watch_catch_up
 
-      assert_receive {:phoenix, :send_update, {^field, %{event: "image_processed", image: %{status: :processed}}}}
+      queries = count_queries()
+      {:halt, socket} = ProcessingWatch.handle_info(:processing_watch_catch_up, socket)
+      assert queries.() == 1
+
+      assert_received {:phoenix, :send_update, {^field, %{event: "image_processed", image: %{id: id}}}}
+      assert id == image.id
+      assert_received {:phoenix, :send_update, {^ref, %{event: "image_processed", image: %{id: id}}}}
+      assert id == second.id
+      assert socket.assigns.processing_watch == %{}
       assert subscribers(:image, image.id) == []
+    end
+  end
+
+  describe "the form, told an entry gallery's image is processed" do
+    setup %{user: user} do
+      {:ok,
+       stored: Factory.insert(:image, creator: user, status: :unprocessed),
+       added: Factory.insert(:image, creator: user, status: :unprocessed)}
+    end
+
+    test "refreshes stored and unsaved objects in the changeset and the entry", %{
+      user: user,
+      stored: stored,
+      added: added
+    } do
+      object = Ecto.put_meta(%Brando.Galleries.GalleryObject{id: 1, image_id: stored.id, image: stored}, state: :loaded)
+      gallery = Ecto.put_meta(%Brando.Galleries.Gallery{id: 1, gallery_objects: [object]}, state: :loaded)
+      entry = %ProjectUpdate1{photos: gallery}
+      socket = gallery_form_socket(user, entry)
+
+      # Another editor's upload, added to the gallery and not yet saved.
+      {:ok, socket} = Form.update(gallery_delivery(added), socket)
+
+      socket =
+        Enum.reduce([stored, added], socket, fn image, socket ->
+          {:ok, socket} = Form.update(gallery_processed(%{image | status: :processed}), socket)
+          socket
+        end)
+
+      applied = Changeset.apply_changes(socket.assigns.form.source)
+      assert image_status(applied, stored) == :processed
+      assert image_status(applied, added) == :processed
+      assert image_status(socket.assigns.entry, stored) == :processed
+    end
+  end
+
+  describe "an image field given a copy of its image with another status" do
+    setup do
+      processed = %Brando.Images.Image{
+        id: 7,
+        status: :processed,
+        path: "images/a.jpg",
+        width: 400,
+        height: 300,
+        focal: %Brando.Images.Focal{x: 50, y: 50},
+        updated_at: ~N[2026-10-08 12:00:10]
+      }
+
+      {:ok, socket} = Input.Image.mount(%Socket{assigns: %{__changed__: %{}}})
+      socket = Component.assign(socket, image: processed, image_id: 7, focal: {50, 50}, form_id: "page_form")
+      {:ok, processed: processed, socket: socket}
+    end
+
+    test "takes a newer unprocessed copy, as after a crop reset it", %{processed: processed, socket: socket} do
+      reset = %{processed | status: :unprocessed, updated_at: ~N[2026-10-08 12:00:15]}
+      {:ok, socket} = Input.Image.update(%{id: "page_meta_image", field: meta_image_field(reset)}, socket)
+      assert socket.assigns.image.status == :unprocessed
+    end
+
+    test "keeps its processed copy over an older unprocessed one", %{processed: processed, socket: socket} do
+      stale = %{processed | status: :unprocessed, updated_at: ~N[2026-10-08 12:00:05]}
+      {:ok, socket} = Input.Image.update(%{id: "page_meta_image", field: meta_image_field(stale)}, socket)
+      assert socket.assigns.image.status == :processed
+
+      # Read in the same second: the processed copy wins.
+      tie = %{processed | status: :unprocessed}
+      {:ok, socket} = Input.Image.update(%{id: "page_meta_image", field: meta_image_field(tie)}, socket)
+      assert socket.assigns.image.status == :processed
     end
   end
 
@@ -129,7 +230,50 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
     assert ids == MapSet.new()
   end
 
-  defp socket, do: %Socket{assigns: %{__changed__: %{}, processing_watch: %{}}}
+  defp gallery_form_socket(user, entry) do
+    %Socket{}
+    |> Component.assign(:form, Component.to_form(Changeset.change(entry)))
+    |> Component.assign(:entry, entry)
+    |> Component.assign(:schema, ProjectUpdate1)
+    |> Component.assign(:singular, "project")
+    |> Component.assign(:current_user, user)
+    |> Component.assign(:processing_images, [])
+    |> Component.assign(:dirty_fields, [])
+    |> Component.assign(:has_blocks?, false)
+    |> Component.assign(:live_preview_active?, false)
+    |> Component.assign(:updated_entry_assocs, %{})
+  end
+
+  defp gallery_delivery(image),
+    do: %{event: "entry_field_upload_complete", asset_type: :gallery, field: :photos, path: [], asset: image}
+
+  defp gallery_processed(image), do: %{event: "entry_gallery_image_processed", field: :photos, path: [], image: image}
+
+  defp image_status(entry, image) do
+    entry.photos.gallery_objects |> Enum.find(&(&1.image_id == image.id)) |> Map.fetch!(:image) |> Map.fetch!(:status)
+  end
+
+  defp meta_image_field(image) do
+    page = %Brando.Pages.Page{meta_image_id: image.id, meta_image: image}
+    Component.to_form(Changeset.change(page), as: "page")[:meta_image]
+  end
+
+  defp socket, do: %Socket{assigns: %{__changed__: %{}, processing_watch: %{}, processing_catch_up: %{}}}
+
+  # Counts the repo queries this process makes from now on.
+  defp count_queries do
+    owner = self()
+    handler = {__MODULE__, make_ref()}
+    event = Brando.repo().config()[:telemetry_prefix] ++ [:query]
+    :telemetry.attach(handler, event, fn _, _, _, _ -> send(owner, {:query, handler}) end, nil)
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    fn ->
+      :telemetry.detach(handler)
+      count = fn count, again -> receive(do: ({:query, ^handler} -> again.(count + 1, again)), after: (0 -> count)) end
+      count.(0, count)
+    end
+  end
 
   defp follow(socket, kind, target, ids) do
     {:halt, socket} = ProcessingWatch.handle_info({:processing_watch, kind, target, MapSet.new(ids)}, socket)

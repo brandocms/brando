@@ -20,7 +20,9 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatch do
 
   The component replaces its asset only if it still shows the one reported.
   The subscription ends when processing does, when no component shows the
-  asset in processing any more, and with the LiveView.
+  asset in processing any more, and with the LiveView. A failed processing
+  keeps it: the image is still unprocessed, and processing it again (the
+  image drawer requeues it) reports on the same topic.
 
   Components and LiveViews outside the form hooks call `watch/4` too; it does
   nothing there, since nothing would handle the reports.
@@ -41,8 +43,14 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatch do
 
     socket
     |> assign(:processing_watch, %{})
+    |> assign(:processing_catch_up, %{})
     |> attach_hook(:b_form_processing_watch, :handle_info, &handle_info/2)
   end
+
+  @doc """
+  Is the watch running in this process? Only in a connected form LiveView.
+  """
+  def enabled?, do: Process.get(@enabled, false)
 
   @doc """
   Follows the `kind` assets among `assets` that are still processing, for the
@@ -56,7 +64,7 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatch do
   def watch(%{assigns: assigns} = socket, module, kind, assets) when kind in [:image, :video] do
     key = watch_key(kind)
 
-    if connected?(socket) and Process.get(@enabled, false) do
+    if connected?(socket) and enabled?() do
       ids =
         assets
         |> Enum.filter(&ProcessingStatus.processing?(kind, &1))
@@ -82,26 +90,37 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatch do
   end
 
   def handle_info({:asset_processing, kind, asset, state}, socket) do
+    {:halt, report(socket, kind, asset, state)}
+  end
+
+  def handle_info(:processing_watch_catch_up, socket) do
+    {:halt, catch_up(socket)}
+  end
+
+  def handle_info(_message, socket), do: {:cont, socket}
+
+  # A failed image is still unprocessed and still shown so, and a later pass
+  # (the drawer requeues it) reports on the same topic. Its watchers keep
+  # their subscription, as their components keep showing it in processing
+  # and would not ask again.
+  defp report(socket, _kind, _asset, :failed), do: socket
+
+  defp report(socket, kind, asset, state) do
     key = {kind, asset.id}
     targets = Map.get(socket.assigns.processing_watch, key, MapSet.new())
 
-    if state != :failed and MapSet.size(targets) > 0 do
+    if MapSet.size(targets) > 0 do
       asset = loaded(kind, asset)
       Enum.each(targets, &deliver(&1, kind, asset))
     end
 
-    socket =
-      if state == :progress do
-        socket
-      else
-        ProcessingStatus.unsubscribe(kind, asset.id)
-        assign(socket, :processing_watch, Map.delete(socket.assigns.processing_watch, key))
-      end
-
-    {:halt, socket}
+    if state == :done and MapSet.size(targets) > 0 do
+      ProcessingStatus.unsubscribe(kind, asset.id)
+      assign(socket, :processing_watch, Map.delete(socket.assigns.processing_watch, key))
+    else
+      socket
+    end
   end
-
-  def handle_info(_message, socket), do: {:cont, socket}
 
   # `target` now watches exactly `ids`: it leaves the assets it no longer
   # shows in processing, and joins the new ones. A topic is subscribed by the
@@ -117,12 +136,12 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatch do
       |> MapSet.difference(ids)
       |> Enum.reduce(watch, &leave(&2, {kind, &1}, target))
 
-    watch =
-      ids
-      |> MapSet.difference(previous)
-      |> Enum.reduce(watch, &join(&2, {kind, &1}, target))
+    joined = ids |> MapSet.difference(previous) |> Enum.reject(&Map.has_key?(watch, {kind, &1}))
+    watch = ids |> MapSet.difference(previous) |> Enum.reduce(watch, &join(&2, {kind, &1}, target))
 
-    assign(socket, :processing_watch, watch)
+    socket
+    |> assign(:processing_watch, watch)
+    |> queue_catch_up(kind, joined)
   end
 
   defp leave(watch, {kind, id} = key, target) do
@@ -143,37 +162,57 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatch do
 
       :error ->
         ProcessingStatus.subscribe(kind, id)
-        catch_up(kind, id)
         Map.put(watch, key, MapSet.new([target]))
     end
   end
 
-  # The component read the asset before this subscription existed, and a
-  # report sent in between is gone. Read it again: if it has finished, report
-  # it to ourselves as the topic would have.
-  defp catch_up(kind, id) do
-    case fetch(kind, id) do
-      {:ok, asset} ->
-        unless ProcessingStatus.processing?(kind, asset), do: send(self(), {:asset_processing, kind, asset, :done})
+  # A component read its asset before this subscription existed, and a
+  # report sent in between is gone. The new subscriptions are read again
+  # once the components rendering now have all asked: their messages are
+  # already queued ahead of the one sent here, so an entry opening with many
+  # images in processing costs one query per kind, not one per image.
+  defp queue_catch_up(socket, _kind, []), do: socket
 
-      _ ->
-        :ok
-    end
+  defp queue_catch_up(socket, kind, ids) do
+    pending = socket.assigns.processing_catch_up
+    if pending == %{}, do: send(self(), :processing_watch_catch_up)
+    assign(socket, :processing_catch_up, Map.update(pending, kind, ids, &(&1 ++ ids)))
+  end
+
+  defp catch_up(socket) do
+    pending = socket.assigns.processing_catch_up
+    socket = assign(socket, :processing_catch_up, %{})
+
+    Enum.reduce(pending, socket, fn {kind, ids}, socket ->
+      kind
+      |> fetch_all(Enum.filter(ids, &Map.has_key?(socket.assigns.processing_watch, {kind, &1})))
+      |> Enum.reject(&ProcessingStatus.processing?(kind, &1))
+      |> Enum.reduce(socket, &report(&2, kind, &1, :done))
+    end)
   end
 
   # A provider reports the video as it was updated, without the thumbnail and
   # file a video field previews.
   defp loaded(:video, video) do
-    case fetch(:video, video.id) do
-      {:ok, video} -> video
+    case fetch_all(:video, [video.id]) do
+      [video] -> video
       _ -> video
     end
   end
 
   defp loaded(:image, image), do: image
 
-  defp fetch(:image, id), do: Brando.Images.get_image(id)
-  defp fetch(:video, id), do: Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail, :file]})
+  defp fetch_all(_kind, []), do: []
+
+  defp fetch_all(:image, ids) do
+    {:ok, images} = Brando.Images.list_images(%{filter: %{ids: ids}})
+    images
+  end
+
+  defp fetch_all(:video, ids) do
+    {:ok, videos} = Brando.Videos.list_videos(%{filter: %{ids: ids}, preload: [:thumbnail, :file]})
+    videos
+  end
 
   defp deliver({module, id}, :image, image), do: send_update(module, id: id, event: "image_processed", image: image)
   defp deliver({module, id}, :video, video), do: send_update(module, id: id, event: "video_processed", video: video)

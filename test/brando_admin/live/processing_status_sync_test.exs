@@ -56,6 +56,41 @@ defmodule BrandoAdmin.ProcessingStatusSyncTest do
       for view <- [a, b], do: await(fn -> processed?(view, image) end)
     end
 
+    test "the other editor's live preview renders again with the processed image", c do
+      image = unprocessed_image(c.me)
+      page = Factory.insert(:page, creator: c.me, meta_image_id: image.id)
+
+      {b, _html} = live_form(c.other_conn, "/admin/pages/update/#{page.id}")
+      key = open_preview(b)
+      on_exit(fn -> Brando.LivePreview.cleanup_cache(key) end)
+      flush_preview_updates()
+
+      {:ok, _job} = Processing.queue_processing(image, c.me)
+
+      await(fn -> processed?(b, image) end)
+      assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+    end
+
+    test "a field in processing does not read its image on every render", c do
+      image = unprocessed_image(c.me)
+      page = Factory.insert(:page, creator: c.me, meta_image_id: image.id)
+      {b, html} = live_form(c.other_conn, "/admin/pages/update/#{page.id}")
+      assert processing?(b, image)
+
+      queries = count_image_queries(b.pid)
+
+      params =
+        html
+        |> form_params("#page_form_form")
+        |> put_in(["page", "title"], "Typed")
+        |> Map.put("_target", ["page", "title"])
+
+      b |> element("#page_form_form") |> render_change(params)
+
+      assert queries.() == 0
+      assert processing?(b, image)
+    end
+
     test "a field that no longer shows the image stops following it", c do
       image = unprocessed_image(c.me)
       other = Factory.insert(:image, creator: c.me, status: :processed, focal: %Brando.Images.Focal{x: 50, y: 50})
@@ -131,6 +166,45 @@ defmodule BrandoAdmin.ProcessingStatusSyncTest do
 
   defp topic_subscribers(image),
     do: Registry.lookup(Brando.pubsub(), Brando.Assets.ProcessingStatus.topic(:image, image.id)) |> Enum.map(&elem(&1, 0))
+
+  defp open_preview(view) do
+    view |> element("button[phx-click=toggle_preview_targets]") |> render_click()
+    view |> element("button.preview-choice", "Blocks") |> render_click()
+    html = await_selector(view, "iframe[src*='__livepreview']")
+    [key] = Regex.run(~r/__livepreview\?key=([A-Za-z0-9_-]+)/, html, capture: :all_but_first)
+    Brando.endpoint().subscribe("live_preview:#{key}")
+    key
+  end
+
+  defp flush_preview_updates do
+    receive do
+      %Phoenix.Socket.Broadcast{} -> flush_preview_updates()
+    after
+      1_200 -> :ok
+    end
+  end
+
+  # Counts the queries on the images table `pid` makes from now on.
+  defp count_image_queries(pid) do
+    owner = self()
+    handler = {__MODULE__, make_ref()}
+    event = Brando.repo().config()[:telemetry_prefix] ++ [:query]
+
+    :telemetry.attach(
+      handler,
+      event,
+      fn _, _, metadata, _ -> if self() == pid and metadata[:source] == "images", do: send(owner, {:query, handler}) end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    fn ->
+      :telemetry.detach(handler)
+      count = fn count, again -> receive(do: ({:query, ^handler} -> again.(count + 1, again)), after: (0 -> count)) end
+      count.(0, count)
+    end
+  end
 
   defp open(conn, page) do
     {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")

@@ -631,13 +631,13 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # Processing finished for the image an entry field shows (`Input.Image`, from
-  # `BrandoAdmin.LiveView.Form.ProcessingWatch`), and maybe another editor
-  # uploaded it. Not an edit: the field keeps its id, so nothing is marked
-  # dirty, owned or shipped. Only the struct the changeset and the entry carry
-  # is refreshed, so that the field, a later validate and the live preview all
-  # show the processed image. A nested field's struct comes from its subform;
-  # `Input.Image` keeps showing the processed copy it was given.
+  # Processing finished for the image or video an entry field shows
+  # (`Input.Image`, `Input.Video`, from `BrandoAdmin.LiveView.Form.ProcessingWatch`),
+  # and maybe another editor uploaded it. Not an edit: the field keeps its id,
+  # so nothing is marked dirty, owned or shipped. Only the struct the changeset
+  # and the entry carry is refreshed, so that the field, a later validate and
+  # the live preview all show the processed asset. A nested field's struct
+  # comes from its subform; the input keeps showing the copy it was given.
   def update(%{event: "entry_field_asset_processed", field: field, path: [], asset: asset}, socket) do
     relation_key = String.to_existing_atom("#{field}_id")
     changeset = socket.assigns.form.source
@@ -647,14 +647,41 @@ defmodule BrandoAdmin.Components.Form do
        socket
        |> put_form(to_form(put_asset_in_data(changeset, [], field, asset), []))
        |> update_entry_with_relation([field], asset)
-       |> update_entry_assocs([field], asset)
-       |> maybe_invalidate_live_preview_assign([field])}
+       |> refresh_processed_in_preview(field, fn _ -> asset end)}
     else
       {:ok, socket}
     end
   end
 
   def update(%{event: "entry_field_asset_processed"}, socket), do: {:ok, socket}
+
+  # The same for an image in an entry gallery (`Input.Gallery`): its objects
+  # holding the image get the processed copy, in the changeset (stored and
+  # unsaved objects alike) and in the entry.
+  def update(%{event: "entry_gallery_image_processed", field: key, path: [], image: image}, socket) do
+    changeset = socket.assigns.form.source
+    refresh = &refresh_gallery_image(&1, image)
+
+    changeset = %{
+      changeset
+      | data: Map.update!(changeset.data, key, refresh),
+        changes:
+          if(Map.has_key?(changeset.changes, key),
+            do: Map.update!(changeset.changes, key, refresh),
+            else: changeset.changes
+          )
+    }
+
+    entry = socket.assigns.entry
+
+    {:ok,
+     socket
+     |> put_form(to_form(changeset, []))
+     |> assign(:entry, if(entry, do: Map.update!(entry, key, refresh), else: entry))
+     |> refresh_processed_in_preview(key, refresh)}
+  end
+
+  def update(%{event: "entry_gallery_image_processed"}, socket), do: {:ok, socket}
 
   def update(
         %{event: "entry_field_upload_complete", asset_type: :file, field: field, path: path, asset: file},
@@ -1601,6 +1628,57 @@ defmodule BrandoAdmin.Components.Form do
       value: asset.id
     })
   end
+
+  # The live preview renders the changeset with `updated_entry_assocs` merged
+  # over it, so a struct an earlier relation update put there is refreshed
+  # too, and then the preview renders again, as after a validate.
+  defp refresh_processed_in_preview(socket, field, refresh) do
+    assocs = socket.assigns.updated_entry_assocs
+
+    socket
+    |> assign(
+      :updated_entry_assocs,
+      if(Map.has_key?(assocs, field), do: Map.update!(assocs, field, refresh), else: assocs)
+    )
+    |> maybe_invalidate_live_preview_assign([field])
+    |> maybe_fetch_root_blocks(:live_preview_update, 0)
+  end
+
+  defp refresh_gallery_image(%Changeset{} = gallery, image) do
+    changes =
+      case gallery.changes do
+        %{gallery_objects: objects} when is_list(objects) ->
+          %{gallery.changes | gallery_objects: Enum.map(objects, &refresh_object_image(&1, image))}
+
+        changes ->
+          changes
+      end
+
+    %{gallery | data: refresh_gallery_image(gallery.data, image), changes: changes}
+  end
+
+  defp refresh_gallery_image(%{gallery_objects: objects} = gallery, image) when is_list(objects),
+    do: %{gallery | gallery_objects: Enum.map(objects, &refresh_object_image(&1, image))}
+
+  defp refresh_gallery_image(gallery, _image), do: gallery
+
+  defp refresh_object_image(%Changeset{} = object, %{id: id} = image) do
+    if get_field(object, :image_id) == id do
+      changes =
+        case object.changes do
+          %{image: %Changeset{} = change} -> %{object.changes | image: %{change | data: image}}
+          %{image: %{}} -> %{object.changes | image: image}
+          changes -> changes
+        end
+
+      %{object | data: refresh_object_image(object.data, image), changes: changes}
+    else
+      object
+    end
+  end
+
+  defp refresh_object_image(%{image_id: id} = object, %{id: id} = image), do: Map.put(object, :image, image)
+  defp refresh_object_image(object, _image), do: object
 
   # Change tracking re-renders an input only when `@form[field]` changes, and
   # the asset inputs are keyed on the association, not the id. Without the
