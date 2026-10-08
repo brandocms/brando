@@ -55,6 +55,7 @@ defmodule Brando.SupervisorTest do
 
       assert config.queues[:content_events] == [limit: 1]
       assert config.queues[:webhooks] == [limit: 5]
+      assert config.queues[:search_index] == [limit: 2]
     end
   end
 end

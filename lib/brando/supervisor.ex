@@ -95,7 +95,11 @@ defmodule Brando.Supervisor do
           # Webhook deliveries wait on other servers for up to 10 seconds.
           # Each webhook is limited to `Brando.Webhooks.concurrency/0` of
           # these at a time, so one slow receiver cannot hold them all.
-          webhooks: [limit: 5]
+          webhooks: [limit: 5],
+          # The admin search index: one job per changed entry, and rebuilds
+          # from Utilities (`Brando.Search`). Two, so a rebuild does not hold
+          # up the entries saved meanwhile.
+          search_index: [limit: 2]
         ],
         cron: [
           crontab:

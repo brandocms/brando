@@ -1,9 +1,9 @@
 defmodule Brando.ContentEvents do
   @moduledoc """
   Content events: one normalised message for each change to an entry, for
-  anything outside the save that has to react to it — outbound webhooks
-  (`Brando.Webhooks`) and IndexNow (`Brando.IndexNow`) today, the search
-  index next.
+  anything outside the save that has to react to it: outbound webhooks
+  (`Brando.Webhooks`), IndexNow (`Brando.IndexNow`) and the admin search
+  index (`Brando.Search`).
 
   ## Events
 
@@ -33,10 +33,10 @@ defmodule Brando.ContentEvents do
 
   The save inserts an Oban job (`Brando.Worker.ContentEventDispatcher`, on
   the `:content_events` queue); the job hands the event to each subscriber.
-  Brando's default Oban configuration has that queue and `:webhooks`. An
-  application that sets `config :brando, Oban` itself must declare both, or
-  no events and no webhook deliveries ever run; `mix brando.doctor` warns
-  when they are missing.
+  Brando's default Oban configuration has that queue, `:webhooks` and
+  `:search_index`. An application that sets `config :brando, Oban` itself
+  must declare all three, or no events, webhook deliveries or search
+  updates ever run; `mix brando.doctor` warns when they are missing.
   Oban was chosen over PubSub alone because:
 
     * the job is inserted in the save's transaction, so it exists only once
@@ -63,13 +63,14 @@ defmodule Brando.ContentEvents do
   ## Subscribing
 
   A subscriber implements `Brando.ContentEvents.Subscriber` and is listed in
-  the configuration. Brando's own webhooks and IndexNow are always
-  subscribed (unless `config :brando, Brando.Webhooks, enabled: false` or
-  `config :brando, Brando.IndexNow, enabled: false`).
+  the configuration. Brando's own webhooks, IndexNow and search index are
+  always subscribed (unless `config :brando, Brando.Webhooks, enabled: false`,
+  `config :brando, Brando.IndexNow, enabled: false` or
+  `config :brando, Brando.Search, enabled: false`).
 
-      config :brando, Brando.ContentEvents, subscribers: [MyApp.Search]
+      config :brando, Brando.ContentEvents, subscribers: [MyApp.CdnPurge]
 
-      defmodule MyApp.Search do
+      defmodule MyApp.CdnPurge do
         @behaviour Brando.ContentEvents.Subscriber
 
         @impl true
@@ -80,7 +81,7 @@ defmodule Brando.ContentEvents do
           # One job per event: a retried dispatch finds it and adds none
           %{url: url, event_id: event.id}
           |> Brando.Tenant.Job.attach()
-          |> MyApp.Workers.IndexUrl.new(unique: [keys: [:event_id], period: :infinity])
+          |> MyApp.Workers.PurgeUrl.new(unique: [keys: [:event_id], period: :infinity])
           |> Oban.insert()
         end
 
@@ -138,12 +139,16 @@ defmodule Brando.ContentEvents do
   @spec debounce_seconds() :: non_neg_integer()
   def debounce_seconds, do: Keyword.get(config(), :debounce_seconds, @default_debounce)
 
-  @doc "The modules that receive every event: Brando's webhooks and IndexNow, then the configured subscribers."
+  @doc """
+  The modules that receive every event: Brando's webhooks, IndexNow and
+  search index, then the configured subscribers.
+  """
   @spec subscribers() :: [module()]
   def subscribers do
     builtin =
       if(Brando.Webhooks.enabled?(), do: [Brando.Webhooks], else: []) ++
-        if(Brando.IndexNow.available?(), do: [Brando.IndexNow], else: [])
+        if(Brando.IndexNow.available?(), do: [Brando.IndexNow], else: []) ++
+        if(Brando.Search.enabled?(), do: [Brando.Search], else: [])
 
     builtin ++ Keyword.get(config(), :subscribers, [])
   end

@@ -1,9 +1,9 @@
 defmodule Brando.Doctor.Checks.Oban do
   @moduledoc """
   Background jobs: the queues Oban runs, whether Brando's own queues for
-  content events and webhook deliveries are among them, jobs stuck waiting
-  or executing for more than an hour, and jobs discarded in the last 24
-  hours.
+  content events, webhook deliveries and the search index are among them,
+  jobs stuck waiting or executing for more than an hour, and jobs discarded
+  in the last 24 hours.
 
   In the admin the queues are read from the running Oban, so a paused queue
   shows. `mix brando.doctor` starts Oban without queues, so nothing runs while
@@ -20,8 +20,8 @@ defmodule Brando.Doctor.Checks.Oban do
   @discarded_within_seconds 24 * 60 * 60
   @listed 20
   # Queues an application's own `config :brando, Oban` must keep: without
-  # them content events and webhook deliveries wait forever.
-  @required ~w(content_events webhooks)
+  # them content events, webhook deliveries and search updates wait forever.
+  @required ~w(content_events webhooks search_index)
 
   @impl true
   def id, do: "oban"
