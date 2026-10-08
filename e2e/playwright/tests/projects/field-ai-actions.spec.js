@@ -93,13 +93,11 @@ test('an action with nothing to read says so, and AI off hides the actions', asy
   await page.goto('/admin/projects/projects/update/1')
   await syncLV(page)
 
-  // With the title cleared, shortening it has nothing to read
-  const title = page.locator('input[name="project[title]"]')
-  const titleField = page.locator('.field-wrapper', { has: title })
-  await title.fill('')
-  await syncLV(page)
+  // Project 1 has no introduction and no blocks: a title from them has
+  // nothing to read
+  const titleField = page.locator('.field-wrapper', { has: page.locator('input[name="project[title]"]') })
   await titleField.getByRole('button', { name: 'Write with AI' }).click()
-  await page.getByRole('button', { name: 'Shorten' }).click()
+  await page.getByRole('button', { name: 'Suggest a title' }).click()
   await expect(titleField.getByTestId('field-ai-suggestion').getByRole('alert')).toBeVisible()
   await expect(titleField.getByTestId('field-ai-suggestion').getByRole('button', { name: 'Try again' })).toBeVisible()
 
