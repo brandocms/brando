@@ -95,6 +95,12 @@ defmodule Brando.Images.Processing do
   Recreate the sizes of the images whose config has changed since they were
   processed. See `changed_config?/2`.
 
+  Images processed before Brando recorded configs are first adopted when
+  their files already match their config (`Brando.Images.Adoption`), and only
+  the rest are recreated. The run broadcasts how many of each on `topic/0`, as
+  `{:image_maintenance, %{task: "recreate_changed_sizes", state: :running | :done,
+  adopted: n, recreated: n}}`.
+
   Runs in the background like `recreate_sizes_for_images/1`, and neither starts
   while the other is unfinished.
   """
@@ -102,18 +108,48 @@ defmodule Brando.Images.Processing do
   def recreate_sizes_for_changed_images(user), do: start_image_maintenance("recreate_changed_sizes", user)
 
   @doc """
+  The PubSub topic bulk image tasks report their progress on, for the
+  current site and environment.
+  """
+  @spec topic(String.t() | nil) :: String.t()
+  def topic(prefix \\ Brando.Tenant.current_prefix())
+  def topic(nil), do: "brando:image_maintenance"
+  def topic(prefix), do: "brando:image_maintenance:" <> prefix
+
+  @doc """
   The fingerprint of the config images with `config_target` are processed
   with today, or nil when the target no longer resolves to a config.
   """
   @spec current_fingerprint(String.t()) :: String.t() | nil
   def current_fingerprint(config_target) do
+    case current_config(config_target) do
+      {:ok, _config, fingerprint} -> fingerprint
+      :error -> nil
+    end
+  end
+
+  @doc """
+  The config images with `config_target` are processed with today, and its
+  fingerprint, or `:error` when the target no longer resolves to a config.
+  """
+  @spec current_config(String.t()) :: {:ok, ImageConfig.t(), String.t()} | :error
+  def current_config(config_target) do
     {:ok, config} = Images.get_config_for(config_target)
-    ImageConfig.fingerprint(config)
+    {:ok, config, ImageConfig.fingerprint(config)}
   rescue
     # A removed field or module: processing would fail the same way, so there
     # is nothing to recreate these images with.
-    _error -> nil
+    _error -> :error
   end
+
+  @doc """
+  Records the current config of the images processed before Brando recorded
+  configs, where their files already match it, so they aren't recreated.
+  See `Brando.Images.Adoption.adopt_unrecorded/1` for the options and what is
+  checked.
+  """
+  @spec adopt_unrecorded(keyword) :: Brando.Images.Adoption.counts()
+  defdelegate adopt_unrecorded(opts \\ []), to: Brando.Images.Adoption
 
   @doc """
   Was the image processed with a config other than its target's current one?
