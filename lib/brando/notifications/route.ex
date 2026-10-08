@@ -65,11 +65,18 @@ defmodule Brando.Notifications.Route do
     |> validate_required([:name, :kind])
     |> validate_length(:name, max: 120)
     |> validate_length(:url, max: 2000)
-    |> validate_length(:events, min: 1)
+    |> validate_chosen(:events)
     |> validate_subset(:events, @events)
     |> validate_subset(:entry_types, Keyword.get_lazy(opts, :entry_types, &Brando.Webhooks.entry_type_values/0))
     |> validate_recipients(opts)
     |> validate_destination(opts)
+  end
+
+  # At least one, also when the field is left as it was (empty)
+  defp validate_chosen(changeset, field) do
+    if get_field(changeset, field) in [nil, []],
+      do: add_error(changeset, field, "should have at least one item", validation: :length, kind: :min, count: 1),
+      else: changeset
   end
 
   defp validate_recipients(changeset, opts) do
@@ -84,7 +91,7 @@ defmodule Brando.Notifications.Route do
       :email ->
         changeset
         |> put_change(:url, nil)
-        |> validate_length(:recipient_ids, min: 1)
+        |> validate_chosen(:recipient_ids)
 
       kind when kind in [:slack, :teams] ->
         changeset

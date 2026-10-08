@@ -14,6 +14,31 @@ msgstr ""
 
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
+msgid "A daily summary"
+msgstr "Et daglig sammendrag"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "A weekly summary, on Mondays"
+msgstr "Et ukentlig sammendrag, på mandager"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Email notifications"
+msgstr "Varsler på e-post"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Mentions and the notifications an administrator sends you by email."
+msgstr "Omtaler, og varslene en administrator sender deg på e-post."
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "One email for each"
+msgstr "Én e-post for hvert"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
 msgid "Prefers reduced motion"
 msgstr "Foretrekker redusert bevegelse"
 

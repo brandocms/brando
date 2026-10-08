@@ -23,6 +23,11 @@ msgstr ""
 msgid "%{action} is not available for %{resource}"
 msgstr ""
 
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "%{author} mentioned %{names} in a note on %{title}"
+msgstr ""
+
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "%{blocks} blocks · %{entries} entries affected"
@@ -431,6 +436,13 @@ msgid_plural "%{count} results"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} route"
+msgid_plural "%{count} routes"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/form/input/multi_select.ex
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -649,6 +661,11 @@ msgstr ""
 msgid "%{model} is not in the model catalogue Brando reads, so its price and whether it reads images are unknown. Check with your provider before describing many images."
 msgstr ""
 
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} was mentioned in a note on %{title}"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} #%{id} was not found. It may have been deleted."
@@ -682,6 +699,11 @@ msgstr ""
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} is also editing this page on the website"
+msgstr ""
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} mentioned you in %{place}"
 msgstr ""
 
 #: lib/brando/notes/mention_email.ex
@@ -929,9 +951,24 @@ msgstr ""
 msgid "<p>\n  This block has variables, which can influence settings like size and colors,\n  and allow you to add images, files, and text. Adjusting these variables\n  lets you customize and manipulate the block's rendering.\n</p>\n"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "A Slack incoming webhook URL, starting with https://hooks.slack.com/services/. It is stored encrypted and not shown again."
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A URL or content link"
+msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "A background job failed: %{worker}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "A background job is given up, or a webhook is paused after its deliveries kept failing."
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -1102,6 +1139,11 @@ msgid_plural "A revision of each entry was stored first; History can restore the
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "A route sends mentions, scheduled publishing and failed jobs to a Slack or Teams channel, or by email to the people you choose."
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #, elixir-autogen, elixir-format
 msgid "A section holds other blocks, with its own background and spacing."
@@ -1147,6 +1189,11 @@ msgstr ""
 msgid "A test event was sent."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "A test notification was sent."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -1161,6 +1208,11 @@ msgstr ""
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "A version of this page is scheduled to be published. It will replace changes made here."
+msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "A webhook stopped: %{name}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -1339,6 +1391,7 @@ msgstr ""
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #: lib/brando_admin/live/sites/asset_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Active"
@@ -1553,6 +1606,11 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Add reference"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add route"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -1951,6 +2009,16 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "An embedded map"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "An entry is published at its scheduled time."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "An entry is unpublished at its scheduled time."
 msgstr ""
 
 #: lib/brando_admin/live/images/alt_text_live.ex
@@ -3113,6 +3181,7 @@ msgstr ""
 msgid "Check the spelling, try fewer words, or clear the filters."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Check this value."
@@ -3315,6 +3384,7 @@ msgid "Choose another folder to find an image"
 msgstr ""
 
 #: lib/brando/forms/messages.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Choose at least one."
 msgstr ""
@@ -4070,6 +4140,7 @@ msgid "Content type"
 msgstr ""
 
 #: lib/brando_admin/components/content/select_identifier.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -4216,6 +4287,7 @@ msgstr ""
 msgid "Could not change IndexNow"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not connect"
@@ -4525,6 +4597,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create redirect"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create route"
 msgstr ""
 
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -4908,6 +4985,7 @@ msgstr ""
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #: lib/brando_admin/live_view/listing/delete_description.ex
@@ -4982,6 +5060,11 @@ msgstr ""
 msgid "Delete reference %{name}?"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete route"
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Delete selected"
@@ -4995,6 +5078,11 @@ msgstr "Delete this block"
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Delete this image?"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this notification route?"
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -5109,6 +5197,7 @@ msgstr ""
 msgid "Deleted with its delivery log"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Delivered"
@@ -5117,6 +5206,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deliveries show here when content changes, or when you send a test event."
+msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Deliveries to %{host} kept failing for a day, so the webhook was paused."
 msgstr ""
 
 #: lib/brando_admin/components/dashboard.ex
@@ -5130,6 +5224,7 @@ msgid "Delivery"
 msgstr ""
 
 #: lib/brando_admin/live/sites/integrations_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery log"
@@ -5791,6 +5886,7 @@ msgstr ""
 msgid "Duplicating entry..."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Duration"
@@ -5804,6 +5900,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Each gets an email in their own language, or their daily or weekly summary if they chose one in their profile. Notifications about an entry go only to those who may read it."
 msgstr ""
 
 #: lib/brando_admin/components/form/var_layout.ex
@@ -5826,6 +5927,7 @@ msgstr ""
 #: lib/brando_admin/components/form/subform.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -5956,6 +6058,11 @@ msgstr ""
 #: lib/brando_admin/live/content/module_set_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Edit module set"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit notification route"
 msgstr ""
 
 #: lib/brando_admin/live/pages/page_form_live.ex
@@ -6100,12 +6207,18 @@ msgstr ""
 msgid "Editors connect a repository document and choose its update policy in each entry."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Editors' channel"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Element"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/form_fields.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/user_forgot_password_live.ex
 #: lib/brando_admin/live/user_login_live.ex
 #, elixir-autogen, elixir-format
@@ -6115,6 +6228,18 @@ msgstr ""
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Email %{email} a link to choose a new password. The link works once, for %{hours} hours."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Email to %{count} person"
+msgid_plural "Email to %{count} people"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Email to %{names}"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -6448,11 +6573,13 @@ msgid "Estimated from the model's token prices"
 msgstr ""
 
 #: lib/brando_admin/live/sites/activity_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Event"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Events"
@@ -6638,6 +6765,7 @@ msgid "Facebook, LinkedIn"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -6648,6 +6776,11 @@ msgstr ""
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "Failed attempt"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Failed jobs"
 msgstr ""
 
 #: lib/brando/ai.ex
@@ -6764,6 +6897,7 @@ msgstr ""
 msgid "Fill in this field."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Fill this in."
@@ -7218,6 +7352,11 @@ msgstr ""
 #: lib/brando_admin/components/content/list/saved_views.ex
 #, elixir-autogen, elixir-format
 msgid "Give the view a name"
+msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Given up after %{attempt} of %{max} attempts."
 msgstr ""
 
 #: lib/brando_admin/components/shortcut_sheet.ex
@@ -7904,6 +8043,11 @@ msgstr ""
 msgid "In sitemap"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "In summary"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -8077,6 +8221,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
@@ -8340,6 +8485,7 @@ msgstr ""
 msgid "Last checked"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Last delivered %{time}"
@@ -8350,6 +8496,7 @@ msgstr ""
 msgid "Last delivery %{time} to %{webhook}"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Last delivery failed %{time}"
@@ -8383,6 +8530,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-format, elixir-autogen
 msgid "Last seen"
+msgstr ""
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last sent %{time} on %{route}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -8425,6 +8577,7 @@ msgstr ""
 msgid "Leave out"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Leave the user name and password out of the address."
@@ -9189,12 +9342,19 @@ msgstr ""
 msgid "Membership updated."
 msgstr ""
 
+#: lib/brando/notifications/email.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Mentions"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Menu URL"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -9202,6 +9362,11 @@ msgstr ""
 #: lib/brando_admin/live/forms/form_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Messages"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Messages to Slack, Microsoft Teams or email when something happens in this environment."
 msgstr ""
 
 #: lib/brando/seo/checks.ex
@@ -9590,6 +9755,7 @@ msgstr ""
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -9730,6 +9896,11 @@ msgstr ""
 msgid "New note"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "New notification route"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "New order in %{block}"
@@ -9837,6 +10008,7 @@ msgid_plural "No alt text — %{missing} of %{count} images"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "No answer within 10 seconds"
@@ -10096,6 +10268,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "No new permissions."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "No notification routes"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
@@ -10398,6 +10575,11 @@ msgstr ""
 msgid "None chosen sends events for every content type."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "None chosen sends events for every content type. Failed jobs are always sent."
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "None chosen sends events in every language."
@@ -10423,6 +10605,7 @@ msgstr ""
 msgid "None. Nothing is written until a crawler is blocked or a training preference is chosen."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not a valid HTTP response"
@@ -10524,6 +10707,7 @@ msgid "Not saved: this translation's structure, media and shared values follow t
 msgstr ""
 
 #: lib/brando_admin/live/forms/submissions_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not sent"
@@ -10629,6 +10813,11 @@ msgstr ""
 msgid "Nothing is sent while it is paused. Changes made meanwhile are not sent later."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is sent while it is paused. What happens meanwhile is not sent later."
+msgstr ""
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing left over. Resolving re-syncs it with the module."
@@ -10637,6 +10826,11 @@ msgstr ""
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing matches “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing more is sent on it, and its delivery log is removed."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -10665,6 +10859,7 @@ msgid "Nothing selected — use Select to add"
 msgstr ""
 
 #: lib/brando_admin/live/sites/integrations_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing sent yet"
@@ -10725,9 +10920,42 @@ msgstr ""
 msgid "Notification queued"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Notification route"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Notification route settings"
+msgstr ""
+
 #: lib/brando_admin/live/forms/submissions_live.ex
 #, elixir-autogen, elixir-format
 msgid "Notification sent"
+msgstr ""
+
+#: lib/brando/notifications/email.ex
+#: lib/brando_admin/live/sites/integrations_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications are sent as things happen. Pausing stops them until you resume."
+msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications on this route arrive like this."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications show here when they are sent, or when you send a test."
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -10796,6 +11024,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "On"
+msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "On %{place}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -11009,6 +11242,11 @@ msgstr ""
 msgid "Open in new window/tab"
 msgstr ""
 
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Open in the admin"
+msgstr ""
+
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open in the full editor"
@@ -11061,6 +11299,7 @@ msgid "Open structured data"
 msgstr ""
 
 #: lib/brando/notes/mention_email.ex
+#: lib/brando/notifications/email.ex
 #, elixir-autogen, elixir-format
 msgid "Open the entry"
 msgstr ""
@@ -11426,17 +11665,20 @@ msgstr ""
 msgid "Path from the repository root. Use From a folder to add several files at once."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Pause"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Paused after failures"
@@ -11447,9 +11689,19 @@ msgstr ""
 msgid "Paused after its deliveries kept failing"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Paused after its messages kept failing"
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Paused because its deliveries kept failing for a day. Check the receiver, then resume."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because its messages kept failing. Check the webhook URL, then resume."
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -11462,6 +11714,12 @@ msgstr ""
 msgid "Paused because this environment was copied or restored from another one. It resumes when this environment goes live; resume it sooner only if this environment should call this URL."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because this environment was copied or restored from another one. It resumes when this environment goes live; resume it sooner only if this environment should send here."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Paused: copied environment"
@@ -11990,6 +12248,11 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Published as scheduled: %{title}"
+msgstr ""
+
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "Published by %{host}. Brando cannot check that the name is true: allow it only if you started this in %{client}."
@@ -12003,6 +12266,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Published entries with a page of their own, checked for a meta title and description, an image, a URL and copy shared with other entries. Language: %{language}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Published on schedule"
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -12058,6 +12326,7 @@ msgid "Queue copy now"
 msgstr ""
 
 #: lib/brando_admin/live/forms/submissions_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-format, elixir-autogen
@@ -12205,6 +12474,11 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Recently used"
 msgstr "Recently used"
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Recipients"
+msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
@@ -12740,6 +13014,7 @@ msgstr ""
 msgid "Replace"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Replace URL"
@@ -13108,14 +13383,25 @@ msgstr ""
 msgid "Restoring the archive. This can take a while."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Result"
+msgstr ""
+
 #: lib/brando_admin/live/command_palette_live.ex
 #, elixir-autogen, elixir-format
 msgid "Results"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Resume"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resume the route to send on it."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -13143,6 +13429,7 @@ msgstr ""
 msgid "Retry refresh"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-format, elixir-autogen
@@ -13405,6 +13692,11 @@ msgstr ""
 msgid "Rotated the signing secret"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Route"
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Rows can be dragged in this order"
@@ -13552,6 +13844,11 @@ msgstr ""
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save policy"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save route"
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -14211,11 +14508,22 @@ msgstr ""
 msgid "Send reset link"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Send test"
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Send test event"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Send to"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sending"
@@ -14224,6 +14532,16 @@ msgstr ""
 #: lib/brando_admin/live/user_forgot_password_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sending..."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sends a short test message, so you can see where and how notifications arrive."
+msgstr ""
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sends entry titles and people's names to Slack, Microsoft Teams or by email to chosen users, when content is mentioned, published or unpublished on schedule, or a job fails."
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -14246,6 +14564,7 @@ msgstr ""
 msgid "Sent with the form %{form}."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sent, but the answer could not be saved"
@@ -14826,6 +15145,11 @@ msgstr ""
 msgid "Someone"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Someone is mentioned in a note."
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sort"
@@ -15011,6 +15335,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Stops all deliveries and removes the delivery log."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stops all notifications on it and removes its delivery log."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -15244,6 +15573,11 @@ msgstr ""
 msgid "Tell other systems when content is published or changes, with a signed request."
 msgstr ""
 
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tell people in Slack, Microsoft Teams or by email about mentions, scheduled publishing and failed jobs."
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Tells Bing, Copilot, Yandex and the search engines that use Bing's index when entries are published, changed, unpublished or deleted, so they visit those pages again soon. Google doesn't take part."
@@ -15297,6 +15631,16 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Test event"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Test notification"
+msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Test notification from %{site}"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -15359,6 +15703,7 @@ msgstr ""
 msgid "That connection is gone already."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #: lib/brando_admin/reauth.ex
@@ -15376,6 +15721,11 @@ msgstr ""
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "That is not your password."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "That notification route does not exist in this environment."
 msgstr ""
 
 #: lib/brando_admin/controllers/user_session_controller.ex
@@ -15418,9 +15768,25 @@ msgstr ""
 msgid "The MCP endpoint is on."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The URL could not be read; replace it"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The URL is a secret: only its host and last characters are shown."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The URL is not https"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The URL of a Teams workflow that posts to a channel when a webhook request is received. It is stored encrypted and not shown again."
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
@@ -15433,6 +15799,7 @@ msgstr ""
 msgid "The active revision cannot be scheduled."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The address is on a private network"
@@ -15730,6 +16097,7 @@ msgstr ""
 msgid "The frontend packaged with the current release remains active until Florist registers a build."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The host name could not be found"
@@ -15849,6 +16217,16 @@ msgstr ""
 msgid "The notification could not be sent"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The notification route was deleted."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The notification route was saved."
+msgstr ""
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "The operation could not be completed. Check the application logs and try again."
@@ -15949,6 +16327,11 @@ msgstr ""
 msgid "The rebuild failed. Check the application logs."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The recipient is inactive or may not read the entry"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "The reset link could not be sent."
@@ -15967,6 +16350,11 @@ msgstr ""
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "The ring marks its focal point."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The route was paused"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -16222,6 +16610,7 @@ msgstr ""
 msgid "This MCP endpoint does not exist or is turned off."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "This address is on a private or local network, which webhooks may not call."
@@ -16436,6 +16825,7 @@ msgstr ""
 msgid "This group changed while you were editing. Load the latest version before saving. Your draft has been kept."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "This host name could not be found."
@@ -16456,12 +16846,14 @@ msgstr ""
 msgid "This is already running."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "This is not a valid address."
 msgstr ""
 
 #: lib/brando/forms/messages.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "This is too long."
@@ -16578,6 +16970,11 @@ msgstr ""
 msgid "This runs in the background."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site cannot send email"
+msgstr ""
+
 #: lib/brando_admin/live/user_forgot_password_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email right now. Ask an administrator to reset your password."
@@ -16675,6 +17072,7 @@ msgstr ""
 msgid "Ticker symbol"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Time"
@@ -16726,6 +17124,11 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "To"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "To %{name}"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -17221,9 +17624,19 @@ msgstr ""
 msgid "Unpublished"
 msgstr ""
 
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Unpublished as scheduled: %{title}"
+msgstr ""
+
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
 msgid "Unpublished content you can edit will appear here."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unpublished on schedule"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -17562,6 +17975,7 @@ msgstr ""
 msgid "Use an authenticator app, such as 1Password, Google Authenticator or Microsoft Authenticator."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Use an https:// address."
@@ -18025,6 +18439,11 @@ msgstr ""
 msgid "Webhook"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook URL"
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook settings"
@@ -18097,6 +18516,11 @@ msgstr ""
 msgid "What was checked"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "What was sent on every notification route in this environment, newest first."
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "What was sent to every webhook in this environment, newest first."
@@ -18130,6 +18554,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Where to send events, and which ones. The secret to verify them is shown once, after saving."
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where to send notifications, and which ones."
 msgstr ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -18481,6 +18910,21 @@ msgstr ""
 msgid "You get one email at most every ten minutes, with every mention since the last one."
 msgstr ""
 
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
+msgid "You get one summary a day. Change it in your profile."
+msgstr ""
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
+msgid "You get one summary a week. Change it in your profile."
+msgstr ""
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
+msgid "You get this because an administrator added you to a notification route. Choose a daily or weekly summary instead in your profile."
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "You have an unsaved recovery copy for this entry."
@@ -18509,6 +18953,11 @@ msgstr ""
 #: lib/brando_admin/controllers/user_auth.ex
 #, elixir-autogen, elixir-format
 msgid "You must log in to access this page."
+msgstr ""
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
+msgid "You were mentioned in %{place}"
 msgstr ""
 
 #: lib/brando/notes/mention_email.ex
@@ -18563,6 +19012,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your current recovery codes stop working. Enter your password or a code from your app to continue."
 msgstr ""
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
+msgid "Your daily summary: 1 notification"
+msgid_plural "Your daily summary: %{count} notifications"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -18645,6 +19101,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your timezone is"
 msgstr ""
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
+msgid "Your weekly summary: 1 notification"
+msgid_plural "Your weekly summary: %{count} notifications"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/form/image_drawer.ex
 #, elixir-autogen, elixir-format
