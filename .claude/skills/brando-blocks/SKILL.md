@@ -598,15 +598,21 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   `EditSession.rebase/4`, which replays only the ops that arrived during the save and moves
   every replica onto the new rows. Writes outside the editor (Assistant apply, revision
   activation in `Revisions.set_entry_to_revision`, content transfer) call
-  `EditSession.sync_saved/1` (`Ops.carry/3`); a write inside a transaction goes through
-  `EditSession.collecting/1` + `written/1` so the sync runs after commit. If the session
+  `EditSession.sync_saved/1` (`Ops.carry/3`), which waits for the surrounding
+  `Brando.Repo.transaction/2` to commit (`Brando.Repo.after_commit/1`) and is dropped on
+  rollback — never sync from uncommitted rows. A rebase that reloads the Form's rows while a
+  save has collected its blocks but not written them makes the Form collect again
+  (`recollect_blocks/2`): blocks collected from the old rows would delete what the other
+  write added. If the session
   dies, each replica rejoins with what it holds and the session CARRIES that onto its
   state (`Data.join/5` → `{:merged, conflicts}`) — never resend only pending ops. The
   session tracks the last op seq it handled per client and returns it with every
   state/rebase, so `Replica.reset/2` drops pending ops it already folded in. A carry
   conflict (another save removed a block this editor had unsaved work in) comes back to
-  that editor as a new block (`<uid>-kept`) with a toast — keep conflicts explicit, never
-  drop work silently. Applying a recovery copy is a `{:carry, ops, base}` op over the
+  that editor as a new block (`<uid>-kept`, its refs with new uids) with a toast — keep
+  conflicts explicit, never drop work silently. Only the top-most removed block this
+  editor worked in comes back (a child added to a removed container brings the container
+  back with it), and the toast says so only for blocks that did come back. Applying a recovery copy is a `{:carry, ops, base}` op over the
   session state, not a state replacement. Editors without `:update` on the entry join
   read-only (the session refuses their ops). Ops must stay pure: the session and every
   replica must reach the same state from the same ops.

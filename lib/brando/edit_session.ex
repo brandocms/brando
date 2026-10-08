@@ -65,7 +65,6 @@ defmodule Brando.EditSession do
   require Logger
 
   @registry Brando.EditSession.Registry
-  @written_key {__MODULE__, :written}
   @supervisor Brando.EditSession.Supervisor
 
   @type key :: {String.t() | nil, module(), term(), String.t() | nil}
@@ -211,56 +210,13 @@ defmodule Brando.EditSession do
   the change like any other and do not reload.
 
   Call it in the process that wrote the entry, after the write, with the
-  tenant prefix the entry belongs to.
+  tenant prefix the entry belongs to. Inside a `Brando.Repo.transaction/2`
+  it waits until the transaction commits (`Brando.Repo.after_commit/1`), and
+  a rollback drops it: the session must never read rows that may not exist.
   """
   @spec sync_saved(struct()) :: :ok
-  def sync_saved(%_{} = entry), do: rebase_all(entry, :carry)
-
-  @doc """
-  Note that `entry` was written outside the editor. Inside `collecting/1`
-  the entries are synced once the work succeeds (after its transaction has
-  committed); otherwise at once, with `sync_saved/1`.
-  """
-  @spec written(struct()) :: :ok
-  def written(%_{} = entry) do
-    case Process.get(@written_key) do
-      nil -> sync_saved(entry)
-      entries -> Process.put(@written_key, [entry | entries]) && :ok
-    end
-  end
-
-  @doc """
-  Run `fun`, which may write entries in a transaction and report them with
-  `written/1`. When it returns `{:ok, _}` or `:ok`, the open editors of those
-  entries move onto the new rows (`sync_saved/1`); on anything else the
-  writes were rolled back and nothing is synced.
-  """
-  @spec collecting((-> result)) :: result when result: var
-  def collecting(fun) when is_function(fun, 0) do
-    case Process.get(@written_key) do
-      nil ->
-        Process.put(@written_key, [])
-
-        try do
-          result = fun.()
-
-          if match?({:ok, _}, result) or result == :ok do
-            @written_key
-            |> Process.get()
-            |> Enum.reverse()
-            |> Enum.uniq_by(&{&1.__struct__, &1.id})
-            |> Enum.each(&sync_saved/1)
-          end
-
-          result
-        after
-          Process.delete(@written_key)
-        end
-
-      _nested ->
-        fun.()
-    end
-  end
+  def sync_saved(%_{} = entry),
+    do: Brando.Repo.after_commit(Tenant.capture_context(fn -> rebase_all(entry, :carry) end))
 
   @doc """
   This process saved the entry from the state it fetched with `purpose:
@@ -322,7 +278,10 @@ defmodule Brando.EditSession do
   @impl true
   def handle_call({:join, pid, field, base, held, opts}, _from, session) do
     session = track(session, pid, field, opts)
-    held_base = opts[:held_base] || base
+
+    # Someone who may not change the entry brings nothing into the session,
+    # not even through a rejoin with work it holds.
+    {held, held_base} = if opts[:read_only], do: {base, base}, else: {held, opts[:held_base] || base}
 
     case Data.join(session.data, field, base, held, held_base) do
       {result, data} when result in [:seeded, :joined] ->

@@ -403,11 +403,7 @@ defmodule Brando.Content.Transfer do
 
   def applicable?(plan), do: plan.problems == []
 
-  # Imported entries move the open editors onto their new rows once the
-  # import has committed (`Brando.EditSession.written/1`).
-  def apply(plan, actor), do: Brando.EditSession.collecting(fn -> protected_apply(plan, actor) end)
-
-  defp protected_apply(plan, actor) do
+  def apply(plan, actor) do
     with {:ok, result} <- Error.protect(fn -> apply!(plan, actor) end), do: result
   end
 
@@ -604,7 +600,8 @@ defmodule Brando.Content.Transfer do
           )
 
       updated = Repo.update!(cs)
-      Brando.EditSession.written(updated)
+      # open editors move onto it once the transaction commits
+      Brando.EditSession.sync_saved(updated)
       Activity.imported(updated, actor, :update, label, Activity.changed_fields(cs))
       available
     end)
@@ -901,9 +898,7 @@ defmodule Brando.Content.Transfer do
   defp lockable(values) when is_list(values), do: Enum.flat_map(values, &lockable/1)
   defp lockable(_), do: []
 
-  def restore(id, actor), do: Brando.EditSession.collecting(fn -> protected_restore(id, actor) end)
-
-  defp protected_restore(id, actor) do
+  def restore(id, actor) do
     with {:ok, result} <- Error.protect(fn -> restore_in_transaction(id, actor) end) do
       case result do
         {:ok, receipt} -> {:ok, refresh_receipt(receipt, actor)}
@@ -978,7 +973,7 @@ defmodule Brando.Content.Transfer do
       do: Error.fail!(dgettext("content_transfer", "Recovery is no longer authorized."))
 
     updated = Repo.update!(cs)
-    Brando.EditSession.written(updated)
+    Brando.EditSession.sync_saved(updated)
 
     Activity.with_source(:import, fn ->
       Activity.with_batch(receipt.id, fn ->

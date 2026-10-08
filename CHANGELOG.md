@@ -751,9 +751,13 @@ production dump.
   they hold, and everyone's unsaved work is merged into it. Applying a
   recovery copy keeps other editors' unsaved work. If another save removes a
   block you have unsaved changes in, it comes back at the end as a new block
-  with your changes, and you are told. People who may view but not update
-  the entry follow along without sending changes. Two people editing the
-  same block still resolve as "last change wins" for now.
+  with your changes (inside the container it was in, if that was removed
+  too), and you are told. A save that an Assistant proposal or another
+  write overtakes collects the blocks again, so it keeps what that write
+  added; editors follow such writes only once they have committed. People
+  who may view but not update the entry follow along without sending
+  changes. Two people editing the same block still resolve as "last change
+  wins" for now.
 
 - **Notes on entries.** Editors can leave each other notes in the entry
   editor, in a panel docked beside the content: on the entry, a block (the

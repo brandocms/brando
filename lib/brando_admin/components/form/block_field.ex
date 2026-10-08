@@ -841,7 +841,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     old_rows = rows_by_uid(socket.assigns.entry_blocks)
     # Blocks this editor changed that the new rows no longer have: taken
     # from what this editor showed, before it moves on, to bring them back.
-    rescued = rescue_conflicts(socket, replica, Map.get(message, :conflicts, []))
+    rescued = rescue_conflicts(socket, replica, message)
 
     # The rows were written (by another editor's save, or outside the
     # editor): read them, as their content can change while their ids and
@@ -872,18 +872,38 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # rows may live on unattached, so the copy takes new uids, derived from the
   # old ones: if two editors bring the same block back, the second insert is
   # turned away and the first one stands.
-  defp rescue_conflicts(socket, %Replica{} = replica, conflicts) do
+  defp rescue_conflicts(socket, %Replica{} = replica, %{state: %Ops{} = new} = message) do
     old = socket.assigns.block_ops
 
-    for uid <- conflicts,
-        Replica.touched?(replica, uid),
-        Ops.known?(old, uid),
+    # A block comes back inside the removed parents this editor worked in
+    # too (a child added to a container brings the container back), and a
+    # block inside another rescued block comes back with it, as part of its
+    # subtree: only the top-most ones are brought back on their own.
+    candidates =
+      message
+      |> Map.get(:conflicts, [])
+      |> Enum.filter(&(Replica.touched?(replica, &1) and Ops.known?(old, &1)))
+      |> Enum.map(fn uid ->
+        old
+        |> ancestors(uid)
+        |> Enum.take_while(&(Replica.touched?(replica, &1) and not Ops.known?(new, &1)))
+        |> Enum.reduce(uid, fn ancestor, _below -> ancestor end)
+      end)
+      |> Enum.uniq()
+
+    for uid <- candidates,
+        not Enum.any?(ancestors(old, uid), &(&1 in candidates)),
         params = rescued_params(socket, old, uid) do
-      {kept_uid(uid), params}
+      {uid, params}
     end
   end
 
-  defp kept_uid(uid), do: uid <> "-kept"
+  defp ancestors(ops, uid) do
+    case Map.get(ops.parents, uid) do
+      nil -> []
+      parent -> [parent | ancestors(ops, parent)]
+    end
+  end
 
   defp rescued_params(socket, old, uid) do
     params =
@@ -894,7 +914,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         %{"block" => Brando.Drafts.Params.snapshot(child)}
       end
 
-    params |> strip_row_ids() |> rename_uids()
+    strip_row_ids(params)
   rescue
     error ->
       Logger.error("BlockField could not keep a removed block's unsaved work: " <> Exception.message(error))
@@ -909,21 +929,31 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp strip_row_ids(list) when is_list(list), do: Enum.map(list, &strip_row_ids/1)
   defp strip_row_ids(value), do: value
 
-  defp rename_uids(%{} = params) when not is_struct(params) do
-    Map.new(params, fn
-      {"uid", uid} when is_binary(uid) -> {"uid", kept_uid(uid)}
-      {key, value} -> {key, rename_uids(value)}
-    end)
+  # The block comes back under a new uid: the removed rows can still hold
+  # the old one. `<uid>-kept` says where it came from, unless that is taken
+  # too (it was kept once before). Its refs, whose uids are unique as well,
+  # get new ones. Nothing else changes: a `"uid"` inside a ref's data is
+  # the data's own.
+  defp kept_uid(ops, uid) do
+    kept = uid <> "-kept"
+    if Ops.known?(ops, kept), do: Brando.Utils.generate_uid(), else: kept
   end
 
-  defp rename_uids(list) when is_list(list), do: Enum.map(list, &rename_uids/1)
-  defp rename_uids(value), do: value
+  defp rename_block(%{} = block, ops) do
+    block
+    |> Map.update("uid", nil, &kept_uid(ops, &1))
+    |> Map.update("refs", [], fn refs -> Enum.map(refs, &Map.put(&1, "uid", Brando.Utils.generate_uid())) end)
+    |> Map.update("children", [], fn children -> Enum.map(children, &rename_block(&1, ops)) end)
+  end
 
   defp reinsert_rescued(socket, []), do: socket
 
   defp reinsert_rescued(socket, rescued) do
-    socket =
-      Enum.reduce(rescued, socket, fn {uid, params}, socket ->
+    {socket, kept} =
+      Enum.reduce(rescued, {socket, 0}, fn {_uid, params}, {socket, kept} ->
+        params = Map.update!(params, "block", &rename_block(&1, socket.assigns.block_ops))
+        uid = params["block"]["uid"]
+
         form =
           socket
           |> materialize_base_struct(uid)
@@ -931,18 +961,33 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           |> without_params()
           |> to_form(as: "entry_block", id: "entry_block_form-#{uid}")
 
-        socket
-        |> put_seed_form(uid, form)
-        |> apply_block_op({:insert, uid, :end, params}, :replay)
+        socket =
+          socket
+          |> put_seed_form(uid, form)
+          |> apply_block_op({:insert, uid, :end, params}, :replay)
+
+        if Ops.known?(socket.assigns.block_ops, uid),
+          do: {socket, kept + 1},
+          else: {update(socket, :seed_forms, &Map.delete(&1, uid)), kept}
       end)
 
-    send(
-      self(),
-      {:toast,
-       gettext(
-         "A block you had unsaved changes in was removed by another save. It is back at the end, as a new block, with your changes."
-       )}
-    )
+    if kept > 0 do
+      send(
+        self(),
+        {:toast,
+         gettext(
+           "A block you had unsaved changes in was removed by another save. It is back at the end, as a new block, with your changes."
+         )}
+      )
+    end
+
+    if kept < length(rescued) do
+      send(
+        self(),
+        {:toast,
+         gettext("A block you had unsaved changes in was removed by another save, and could not be brought back.")}
+      )
+    end
 
     socket
   end

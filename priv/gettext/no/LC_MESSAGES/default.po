@@ -18114,3 +18114,8 @@ msgstr "En blokk du hadde ulagrede endringer i, ble fjernet av en annen lagring.
 #, elixir-autogen, elixir-format
 msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "A block you had unsaved changes in was removed by another save, and could not be brought back."
+msgstr "En blokk du hadde ulagrede endringer i, ble fjernet av en annen lagring, og kunne ikke hentes tilbake."
+

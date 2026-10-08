@@ -9,6 +9,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.DeleteBlock
+  alias Brando.Content.Proposals.InsertBlock
   alias Brando.EditSession
   alias Brando.Pages.Page
   alias BrandoAdmin.Components.Form.BlockField
@@ -281,6 +282,109 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
     assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
     await(fn -> not (render(b) =~ ~s(data-block-uid="#{second}")) end)
+  end
+
+  # Round 3 #3: a container with a child added in it, removed by an outside
+  # write. The child was brought back on its own first, then registered as
+  # the existing child of the container brought back after it, which
+  # overwrote its content and left the container without it. Every `"uid"`
+  # in the params was renamed, those inside ref data too.
+  test "a removed container with a new child comes back whole, its refs' data untouched", c do
+    c = Brando.ProposalFixtures.multi_context(c)
+    b = open(c.other_conn, c.work)
+
+    Phoenix.LiveView.send_update(b.pid, BrandoAdmin.Components.Form.Block,
+      id: "block-#{c.multi_uid}",
+      event: "insert_block",
+      sequence: 3,
+      module_id: c.project_module.id,
+      type: :module_entry
+    )
+
+    await(fn -> length(session_state(c.work).child_order[c.multi_uid] || []) == 4 end)
+    [child] = session_state(c.work).child_order[c.multi_uid] -- c.child_uids
+    refs = session_state(c.work).diffs[child]["refs"]
+
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.work.id}, block_uid: c.multi_uid}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+    kept = c.multi_uid <> "-kept"
+    await(fn -> session_state(c.work).statuses[kept] == :inserted end)
+    state = session_state(c.work)
+
+    # one block back, the container, holding its children and the new one
+    assert state.order -- [c.intro_uid] == [kept]
+    assert state.child_order[kept] == Enum.map(c.child_uids ++ [child], &(&1 <> "-kept"))
+    kept_child = state.diffs[child <> "-kept"]
+    assert kept_child["module_id"] == c.project_module.id
+    # the refs are new rows (their uids are unique), with the same data
+    texts = &Enum.map(&1, fn ref -> {ref["name"], get_in(ref, ["data", "data", "text"])} end)
+    assert texts.(kept_child["refs"]) == texts.(refs)
+    assert Enum.all?(kept_child["refs"], &(&1["uid"] not in Enum.map(refs, fn ref -> ref["uid"] end)))
+  end
+
+  # Round 3 #2: an Assistant proposal applied between a save collecting its
+  # blocks and writing them. The rebase gave the form the new rows, the
+  # save's blocks lacked the new one, and the write deleted it.
+  test "an outside write between a save's collect and its write keeps its new block", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    stay(a)
+    type(a, first, "<p>A's edit</p>")
+    save_read(a)
+
+    op = %InsertBlock{
+      target: {Page, c.identity.id},
+      module: c.case_module.id,
+      placement: {:after, first},
+      values: %{heading: "From the assistant"}
+    }
+
+    {:ok, proposal} = Proposals.propose([op], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+    inserted = c.identity |> rows() |> Enum.at(1)
+    await(fn -> render(a) =~ ~s(data-block-uid="#{inserted.block.uid}") end)
+
+    # the write the first submit asked for collects the blocks again first
+    save_read(a)
+    save_write(a)
+
+    await(fn ->
+      row = c.identity |> rows() |> Enum.find(&(&1.block.uid == first))
+      hd(row.block.refs).data.data.text == "<p>A's edit</p>"
+    end)
+
+    assert Enum.any?(rows(c.identity), &(&1.block.uid == inserted.block.uid))
+    assert length(rows(c.identity)) == 4
+  end
+
+  # Round 3 #4: undoing a proposal restored a revision inside a transaction
+  # and synced the open editors at once, from rows that were not committed
+  # and, rolled back, never existed.
+  test "an outside write reaches open editors only once its transaction commits", c do
+    _b = open(c.other_conn, c.identity)
+    ref = EditSession.ref(Page, c.identity.id, c.identity.language)
+    Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+    page = Repo.get!(Page, c.identity.id)
+
+    {:error, :rolled_back} =
+      Brando.Repo.transaction(fn ->
+        EditSession.sync_saved(page)
+        Brando.Repo.rollback(:rolled_back)
+      end)
+
+    refute_receive {:edit_session, _, %{kind: :rebase}}, 300
+
+    {:ok, :committed} =
+      Brando.Repo.transaction(fn ->
+        EditSession.sync_saved(page)
+        refute_receive {:edit_session, _, %{kind: :rebase}}, 100
+        :committed
+      end)
+
+    assert_receive {:edit_session, _, %{kind: :rebase}}, 2_000
   end
 
   # #10: refreshing a root for another editor's change also rewrote its seed

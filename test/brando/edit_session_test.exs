@@ -441,6 +441,44 @@ defmodule Brando.EditSessionTest do
       assert {_state, 0} = session_state(ref)
     end
 
+    # Round 3 #6: a rejoin carries what the editor holds onto the session's
+    # state, and had no read-only check.
+    test "a read-only editor brings none of what it holds into the session, joining or rejoining" do
+      ref = new_ref()
+      {:ok, held} = Ops.apply_op(rows(), anchor("b", "held by a read-only editor"))
+
+      # seeding a new session
+      {:ok, _} = EditSession.join(ref, @field, {rows(), held}, read_only: true)
+      assert {state, 0} = session_state(ref)
+      assert state.diffs == %{}
+
+      # rejoining a known one
+      {:ok, _} = EditSession.join(ref, @field, {rows(), held}, read_only: true)
+      assert {state, 0} = session_state(ref)
+      assert state.diffs == %{}
+    end
+
+    test "a save mark lives 30 seconds, and a save slower than that still rebases" do
+      base = rows()
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      {:ok, data} = Data.apply_op(data, @field, {:insert, "n", :end, %{}})
+      data = Data.mark_save(data, @field, :saver, 0)
+      assert Data.expire(data, 30_000).fields[@field].marks != %{}
+      assert Data.expire(data, 30_001).fields[@field].marks == %{}
+
+      saved =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11)]),
+          entry_block("b", 2, 20),
+          entry_block("n", 3, 30)
+        ])
+
+      {:ok, data, []} = Data.rebase(Data.expire(data, 60_000), @field, saved, {:client, :saver})
+      state = Data.state(data, @field)
+      assert state.order == ["a", "b", "n"]
+      assert state.statuses["n"] == :persisted
+    end
+
     test "the session keeps row ids only for blocks with unsaved work" do
       with_refs = fn uid, eb_id, block_id, refs ->
         %{id: eb_id, block: %{uid: uid, id: block_id, children: [], refs: refs}}
@@ -503,20 +541,6 @@ defmodule Brando.EditSessionTest do
       state = Data.state(data, @field)
       assert state.statuses["saved"] == :persisted
       assert state.diffs["a"]["block"]["anchor"] == "after the read"
-    end
-
-    test "writes collected in a transaction reach the session only when it succeeds" do
-      page = %Brando.Pages.Page{id: System.unique_integer([:positive]), language: "en"}
-
-      assert {:error, :rolled_back} =
-               EditSession.collecting(fn ->
-                 EditSession.written(page)
-                 assert Process.get({EditSession, :written}) == [page]
-                 {:error, :rolled_back}
-               end)
-
-      assert Process.get({EditSession, :written}) == nil
-      assert {:ok, :done} = EditSession.collecting(fn -> {:ok, :done} end)
     end
   end
 

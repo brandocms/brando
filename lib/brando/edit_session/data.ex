@@ -33,8 +33,10 @@ defmodule Brando.EditSession.Data do
   require Logger
 
   # A save that has not rebased within this time has failed or been
-  # abandoned. Its mark stops pinning the log.
-  @mark_ttl_ms 120_000
+  # abandoned. Its mark stops pinning the log. Checked every
+  # `@mark_check_ms`, so a mark lives at most a minute. A save slower than
+  # that still rebases, as a carry onto the rows it wrote (`rebase/5`).
+  @mark_ttl_ms 30_000
 
   defstruct epoch: nil, fields: %{}
 

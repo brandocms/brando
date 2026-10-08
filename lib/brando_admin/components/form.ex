@@ -872,7 +872,13 @@ defmodule BrandoAdmin.Components.Form do
   # edit session moved onto them, see `Brando.EditSession`). The entry this
   # form saves from follows, so the save matches the rows by id instead of
   # replacing rows that no longer exist.
+  #
+  # A save that has collected its blocks but not written them yet collected
+  # them from the old rows: written against the new ones, it would delete
+  # whatever the other write added (`recollect_blocks/2`).
   def update(%{event: "entry_blocks_reloaded", block_field: field, entry_blocks: entry_blocks}, socket) do
+    socket = recollect_blocks(socket, field)
+
     assoc = :"entry_#{field}"
     form = socket.assigns.form
     changeset = %{form.source | data: Map.put(form.source.data, assoc, entry_blocks)}
@@ -5294,6 +5300,20 @@ defmodule BrandoAdmin.Components.Form do
       socket
     end
   end
+
+  # All collected: the blocks are dropped, and the write that follows (the
+  # `b:submit` already on its way) collects them again first. Still
+  # collecting: the field that moved on is asked again.
+  defp recollect_blocks(%{assigns: %{all_blocks_received?: true}} = socket, _field),
+    do: socket |> assign(:all_blocks_received?, false) |> clear_blocks_root_changesets()
+
+  defp recollect_blocks(%{assigns: %{processing: true, block_changesets: collected}} = socket, field)
+       when is_map_key(collected, field) and not is_nil(:erlang.map_get(field, collected)) do
+    send_update(BlockField, id: "#{socket.assigns.id}-blocks-#{field}", event: "fetch_root_blocks", tag: :save)
+    assign(socket, :block_changesets, Map.put(collected, field, nil))
+  end
+
+  defp recollect_blocks(socket, _field), do: socket
 
   # Reset the per-field accumulator between provide_root_blocks rounds.
   # (BlockFields materialize their answer from the op store, so there is no

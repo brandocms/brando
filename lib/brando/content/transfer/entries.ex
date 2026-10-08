@@ -738,7 +738,7 @@ defmodule Brando.Content.Transfer.Entries do
     {cs, available} = claim_galleries(cs, item.data, bindings, actor, available)
     cs = if item.mode == "create", do: Changeset.put_change(cs, :id, reserved_ids[item.source["key"]]), else: cs
     entry = if item.mode == "create", do: Repo.insert!(cs), else: Repo.update!(cs)
-    if item.mode != "create", do: Brando.EditSession.written(entry)
+    if item.mode != "create", do: Brando.EditSession.sync_saved(entry)
 
     if is_nil(Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)),
       do: Brando.Content.create_identifier(entry.__struct__, entry)
