@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.LiveView.Form.ProcessingWatch
   alias Ecto.Changeset
 
   # prop base_form, :any
@@ -90,7 +91,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   def update(%{event: "image_processed", image: image}, socket) do
     if socket.assigns.image && socket.assigns.image.id == image.id do
-      {:ok, assign(socket, :image, image) |> assign(image_display_assigns(image))}
+      {:ok,
+       socket
+       |> assign(:image, image)
+       |> assign(image_display_assigns(image))
+       |> ProcessingWatch.watch(__MODULE__, :image, [image])}
     else
       {:ok, socket}
     end
@@ -122,7 +127,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> assign_new(:compact, fn -> true end)
       |> Block.assign_ref_association(assigns.ref_form, :image, :image_id, &Brando.Images.get_image/1)
 
-    {:ok, assign(socket, image_display_assigns(socket.assigns.image))}
+    # Another editor's upload reaches this ref with its id while the image is
+    # still processing; follow it until it is done.
+    {:ok,
+     socket
+     |> assign(image_display_assigns(socket.assigns.image))
+     |> ProcessingWatch.watch(__MODULE__, :image, [socket.assigns.image])}
   end
 
   defp handle_image_complete(socket, image) do

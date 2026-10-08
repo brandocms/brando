@@ -631,6 +631,31 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # Processing finished for the image an entry field shows (`Input.Image`, from
+  # `BrandoAdmin.LiveView.Form.ProcessingWatch`), and maybe another editor
+  # uploaded it. Not an edit: the field keeps its id, so nothing is marked
+  # dirty, owned or shipped. Only the struct the changeset and the entry carry
+  # is refreshed, so that the field, a later validate and the live preview all
+  # show the processed image. A nested field's struct comes from its subform;
+  # `Input.Image` keeps showing the processed copy it was given.
+  def update(%{event: "entry_field_asset_processed", field: field, path: [], asset: asset}, socket) do
+    relation_key = String.to_existing_atom("#{field}_id")
+    changeset = socket.assigns.form.source
+
+    if to_string(get_field(changeset, relation_key)) == to_string(asset.id) do
+      {:ok,
+       socket
+       |> put_form(to_form(put_asset_in_data(changeset, [], field, asset), []))
+       |> update_entry_with_relation([field], asset)
+       |> update_entry_assocs([field], asset)
+       |> maybe_invalidate_live_preview_assign([field])}
+    else
+      {:ok, socket}
+    end
+  end
+
+  def update(%{event: "entry_field_asset_processed"}, socket), do: {:ok, socket}
+
   def update(
         %{event: "entry_field_upload_complete", asset_type: :file, field: field, path: path, asset: file},
         socket

@@ -70,6 +70,12 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
      |> attach_hook(:b_form_images, :handle_info, &handle_hooks_image_info/2)}
   end
 
+  # Every editor's fields, refs and vars follow the assets they show in
+  # processing, whoever uploaded them.
+  def on_mount({:hooks_processing_watch, _schema}, _params, _session, socket) do
+    {:cont, BrandoAdmin.LiveView.Form.ProcessingWatch.attach(socket)}
+  end
+
   def on_mount({:hooks_asset_delivery, _schema}, _params, _session, socket) do
     {:cont, attach_hook(socket, :b_form_asset_delivery, :handle_info, &handle_asset_delivery_info/2)}
   end

@@ -21,6 +21,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
+  alias BrandoAdmin.LiveView.Form.ProcessingWatch
 
   # prop form, :form
   # prop field, :atom
@@ -79,6 +80,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok, assign(socket, :gallery_objects, updated_gallery_objects)}
   end
 
+  # An image another editor uploaded finished processing (`ProcessingWatch`).
+  def update(%{event: "image_processed", image: image}, socket) do
+    {:ok, socket} = update(%{action: :update_image, updated_image: image, force_validation: true}, socket)
+    {:ok, watch_processing(socket)}
+  end
+
   def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
     # Skip notify_picker since the VideoPicker already knows about this video
     {:ok, add_gallery_media(socket, :video, to_string(video_id), notify_picker: false)}
@@ -115,7 +122,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> assign(:video_upload_limit, MediaField.upload_limit(video_config))
      |> assign_new(:config_modal, fn -> nil end)
      |> assign(:video_upload_enabled?, Uploads.video_upload_available?(video_config))
-     |> assign_value()}
+     |> assign_value()
+     |> watch_processing()}
+  end
+
+  defp watch_processing(socket) do
+    images = Enum.map(socket.assigns.gallery_objects, &Map.get(&1, :image))
+    ProcessingWatch.watch(socket, __MODULE__, :image, images)
   end
 
   defp initial_layout(:list), do: :list

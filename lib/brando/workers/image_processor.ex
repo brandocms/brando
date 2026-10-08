@@ -3,6 +3,7 @@ defmodule Brando.Worker.ImageProcessor do
   use Oban.Worker, queue: :image_processing, max_attempts: 5
 
   alias Brando.Assets.CompletedCallback
+  alias Brando.Assets.ProcessingStatus
   alias Brando.Images
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Type.ImageConfig
@@ -64,6 +65,7 @@ defmodule Brando.Worker.ImageProcessor do
     with {:ok, image} <- Images.update_image(image, image_params, user) do
       CompletedCallback.run(config, image, user)
       Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
+      ProcessingStatus.broadcast(:image, image, :done)
       broadcast_status(image, field_full_path, :updated)
     end
   end
@@ -96,8 +98,12 @@ defmodule Brando.Worker.ImageProcessor do
 
   defp broadcast_processing_error(image_id, field_full_path) do
     case Images.get_image(image_id) do
-      {:ok, image} -> broadcast_status(image, field_full_path, :error)
-      _error -> :noop
+      {:ok, image} ->
+        ProcessingStatus.broadcast(:image, image, :failed)
+        broadcast_status(image, field_full_path, :error)
+
+      _error ->
+        :noop
     end
   end
 
