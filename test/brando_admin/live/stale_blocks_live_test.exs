@@ -177,16 +177,4 @@ defmodule BrandoAdmin.StaleBlocksLiveTest do
   end
 
   defp form_params_from_html(html), do: form_params(html, "form")
-
-  defp cid_of(view, selector) do
-    view
-    |> render()
-    |> Floki.parse_document!()
-    |> Floki.find("[data-phx-component]")
-    |> Enum.filter(&(Floki.find(&1, selector) != []))
-    |> Enum.min_by(&(&1 |> Floki.raw_html() |> byte_size()))
-    |> Floki.attribute("data-phx-component")
-    |> hd()
-    |> String.to_integer()
-  end
 end

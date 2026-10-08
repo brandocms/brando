@@ -48,19 +48,6 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   # The Form component's id, to send it the events its buttons send.
   defp form_cid(view), do: cid_of(view, "#page_form-el")
 
-  # The innermost component holding `selector`.
-  defp cid_of(view, selector) do
-    view
-    |> render()
-    |> Floki.parse_document!()
-    |> Floki.find("[data-phx-component]")
-    |> Enum.filter(&(Floki.find(&1, selector) != []))
-    |> Enum.min_by(&(&1 |> Floki.raw_html() |> byte_size()))
-    |> Floki.attribute("data-phx-component")
-    |> hd()
-    |> String.to_integer()
-  end
-
   defp insert_block(view, c, sequence) do
     Phoenix.LiveView.send_update(view.pid, BlockField,
       id: @block_field,
