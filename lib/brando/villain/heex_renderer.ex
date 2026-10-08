@@ -74,11 +74,31 @@ defmodule Brando.Villain.HeexRenderer do
         module_name
 
       :miss ->
-        module_name = compile_module!(id, code_string)
+        module_name = compile_once!(id, code_string)
         :ets.insert(@ets_table, {key, module_name})
         module_name
     end
   end
+
+  # Two processes meeting the same new template at once (two editors of one
+  # entry rendering the block they share) would both `Module.create/3` it, and
+  # the second raises "cannot define module … because it is currently being
+  # defined". The module name includes the code's hash, so a loaded module of
+  # that name is this template: one process compiles it, the others wait for
+  # the lock and use it.
+  defp compile_once!(id, code_string) do
+    module_name = module_name_for(id, code_string)
+
+    :global.trans(
+      {{__MODULE__, module_name}, self()},
+      fn ->
+        if compiled?(module_name), do: module_name, else: compile_module!(id, code_string)
+      end,
+      [node()]
+    )
+  end
+
+  defp compiled?(module_name), do: Code.ensure_loaded?(module_name) and function_exported?(module_name, :render, 1)
 
   @doc """
   Compile (or fetch from cache) and render a HEEx template to an HTML string.

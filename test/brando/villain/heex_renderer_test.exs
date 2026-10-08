@@ -36,6 +36,19 @@ defmodule Brando.Villain.HeexRendererTest do
       refute mod1 == mod2
     end
 
+    test "processes meeting the same new template at once all get the one module" do
+      code = "<p>race #{System.unique_integer([:positive])}</p>"
+      HeexRenderer.invalidate("test_cache_race")
+
+      modules =
+        1..16
+        |> Enum.map(fn _ -> Task.async(fn -> HeexRenderer.get_or_compile!("test_cache_race", code) end) end)
+        |> Task.await_many(30_000)
+
+      assert [module] = Enum.uniq(modules)
+      assert module.render(%{__changed__: %{}}) |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary() =~ "race"
+    end
+
     test "cached code versions for the same id keep their own render function" do
       HeexRenderer.invalidate("test_cache_versions")
 
