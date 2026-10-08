@@ -370,9 +370,11 @@ defmodule Brando.SearchTest do
 
         assert {:ok, 1} = Search.rebuild()
         assert Brando.Repo.aggregate(Document, :count) == 1
+        assert %DateTime{} = Search.rebuilt_at()
       end)
 
       assert search("sommerro") == ["Sommerro public"]
+      assert Search.rebuilt_at() == nil
 
       assert Repo.query!(~s|SELECT title FROM "#{@prefix}".search_documents|).rows == [["Sommerro tenant"]]
     end
@@ -397,6 +399,38 @@ defmodule Brando.SearchTest do
       assert_received {:search_index, %{state: :running}}
       assert_received {:search_index, %{state: :done, done: count, total: count}}
       refute Search.rebuild_running?()
+    end
+
+    test "records when it finished, and saves do not count", %{user: user} do
+      page = Factory.insert(:page, title: "Saved", creator: user)
+      assert Search.rebuilt_at() == nil
+
+      :ok = Search.index_entry(Page, page.id)
+      assert Search.rebuilt_at() == nil
+
+      started = DateTime.utc_now(:second)
+      assert {:ok, _count} = Search.rebuild()
+      rebuilt_at = Search.rebuilt_at()
+      assert DateTime.compare(rebuilt_at, started) in [:eq, :gt]
+      assert DateTime.diff(DateTime.utc_now(), rebuilt_at) < 60
+
+      # Kept with the table, not in Oban's jobs, so pruning them loses nothing
+      assert %{rows: [[comment]]} = Repo.query!("SELECT obj_description('search_documents'::regclass, 'pg_class')")
+      assert comment == Jason.encode!(%{"rebuilt_at" => DateTime.to_iso8601(rebuilt_at)})
+
+      :ok = Search.index_entry(Page, page.id)
+      assert Search.rebuilt_at() == rebuilt_at
+    end
+
+    test "a comment Brando did not write, or no table, is never rebuilt" do
+      Repo.query!("COMMENT ON TABLE search_documents IS 'Kept by the DBA'")
+      assert Search.rebuilt_at() == nil
+
+      :ok = Search.Indexer.mark_rebuilt(~U[2026-10-01 08:30:00.123456Z])
+      assert Search.rebuilt_at() == ~U[2026-10-01 08:30:00Z]
+
+      Repo.query!("ALTER TABLE search_documents RENAME TO search_documents_away")
+      assert Search.rebuilt_at() == nil
     end
 
     test "the rebuild job reports a failure" do
