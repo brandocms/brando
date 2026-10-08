@@ -31,13 +31,14 @@
   .brando-form .subform { border: 1px solid var(--brando-line-subform); border-radius: 8px; background: var(--brando-surface-subform); box-shadow: none; padding: 16px; }
   .subform > .label-wrapper { margin-bottom: 16px; }
   .subform > .label-wrapper label { font-size: 15px; color: var(--brando-ink); }
-  /* Inline subforms are tables with their own rows (SubformTable.css) */
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) { border-color: var(--brando-line-subform); background: var(--brando-surface); border-radius: 6px; }
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields { gap: 16px; align-items: flex-end; }
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields > .brando-input { margin: 0; min-width: 0; }
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields .field-wrapper { margin: 0; }
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-tools button { min-height: 26px; padding: 5px; background: var(--brando-surface-selected); color: var(--brando-accent); }
-  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-tools button:hover { background: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected)); }
+  /* Inline subforms are tables with their own rows (SubformTable.css), and
+     listings lists of rows (Subform.css): these rules are for the others. */
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) { border-color: var(--brando-line-subform); background: var(--brando-surface); border-radius: 6px; }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-fields { gap: 16px; align-items: flex-end; }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-fields > .brando-input { margin: 0; min-width: 0; }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-fields .field-wrapper { margin: 0; }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-tools button { min-height: 26px; padding: 5px; background: var(--brando-surface-selected); color: var(--brando-accent); }
+  .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-tools button:hover { background: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected)); }
   /* A button in a media group takes the group's size and corners. */
   .brando-form button.primary:not(.media-button), .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
   .brando-form button.primary:not(.media-button, .submit-button) { background: var(--workspace-accent); border-color: var(--workspace-accent); color: var(--brando-surface); }
@@ -83,8 +84,8 @@
     .form-content > .form-tabs { flex-wrap: wrap; gap: 8px; }
     .form-content > .form-tabs .form-tab-builtins { width: auto; margin-left: auto; }
     .brando-form .subform { padding: 12px; }
-    .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields { flex-wrap: wrap; }
-    .brando-form .subform-entry:not(.subform-table-body > *, .vars-row) .subform-fields > .brando-input { flex-basis: 100%; }
+    .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-fields { flex-wrap: wrap; }
+    .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-fields > .brando-input { flex-basis: 100%; }
   }
   @media (pointer: coarse) { .brando-form button.primary, .brando-form button.secondary, .form-tab-customs button, .add-entry-button { min-height: 40px; } }
 }
@@ -329,6 +330,14 @@
   .seo-structured-data-table > thead > tr > th:last-child,
   .seo-structured-data-table > tbody > tr > td:last-child { width: 1%; text-align: right; }
   .seo-structured-data-meta { margin: 0; padding: 12px 18px 16px; color: var(--workspace-muted); font-size: 12px; }
+  /* Under the stats: how many were checked of each type, then, quieter, the
+     types with a mapping that are left out and why */
+  .seo-structured-data-types { display: flex; flex-wrap: wrap; margin: 12px 0 0; padding: 0; list-style: none; color: var(--workspace-muted); font-size: 12px; line-height: 18px; }
+  .seo-structured-data-types li + li::before { content: "·"; margin: 0 8px; color: var(--brando-faint); }
+  .seo-structured-data-types strong { color: var(--workspace-ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .seo-structured-data-unchecked { margin-top: 8px; color: var(--workspace-muted); font-size: 12px; line-height: 18px; }
+  .seo-structured-data-unchecked h3 { margin: 0; color: inherit; font-size: inherit; font-weight: 500; line-height: inherit; }
+  .seo-structured-data-unchecked ul { margin: 0; padding: 0; list-style: none; }
 
   /* The table scrolls inside its region. Without containment its width —
      long URLs, the traffic columns — propagates up and widens the page. */

@@ -849,8 +849,9 @@ get no column. Media inputs in an inline row are compact.
 
 ### Listing style
 
-For longer collections, `style :listing` shows each entry as a one-line
-summary with an **Edit** button:
+For longer collections, `style :listing` shows the entries as one list, a
+row per entry with its summary, an **Edit** button and a remove button, and
+the fields of the entry being edited open under its row:
 
 ```elixir
 inputs_for :prices do
@@ -873,6 +874,8 @@ end
 
 The `listing` function component receives `@entry`, with pending changes
 applied. Keep the summary short: what tells this entry from its neighbours.
+A `<strong>` is the row's name and a `<small>` the line under it; a
+`<span class="badge">` beside the name marks a kind or type.
 New entries open for editing, and validation errors open the entries that
 have them. A collapsed entry keeps its fields in the form, so unsaved values
 are still submitted. **Done** collapses the editor; save the parent form to

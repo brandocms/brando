@@ -3115,6 +3115,11 @@ msgstr "Kontrolleres som e-postadresse; kan besvares"
 msgid "Checked in %{ms} ms. Kept for ten minutes; Run again checks again."
 msgstr "Sjekket på %{ms} ms. Beholdes i ti minutter; Kjør igjen sjekker på nytt."
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checked per content type"
+msgstr "Sjekket per innholdstype"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checked the fields of %{type}"
@@ -8207,6 +8212,11 @@ msgstr "Sist innlogget"
 msgid "Last page edit"
 msgstr "Siste sideredigering"
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last rebuilt: %{date}"
+msgstr "Sist bygget på nytt: %{date}"
+
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-format, elixir-autogen
 msgid "Last seen"
@@ -8430,6 +8440,11 @@ msgstr "Lenket fil fra %{host}"
 #, elixir-autogen, elixir-format
 msgid "Linked to %{page}"
 msgstr "Koblet til %{page}"
+
+#: lib/brando/sites/identity.ex
+#, elixir-autogen, elixir-format
+msgid "Linked to a page"
+msgstr "Koblet til en side"
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
@@ -9459,6 +9474,11 @@ msgstr "Aldri"
 #, elixir-autogen, elixir-format
 msgid "Never logged in"
 msgstr "Aldri innlogget"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Never rebuilt"
+msgstr "Aldri bygget på nytt"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -18588,6 +18608,11 @@ msgstr "er ikke ditt nåværende passord"
 msgid "it already has that name"
 msgstr "den har allerede det navnet"
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "its context module %{context} is not loaded"
+msgstr "kontekstmodulen %{context} er ikke lastet"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "its text has more than one line"
@@ -18712,10 +18737,20 @@ msgstr[1] "nye oppføringer"
 msgid "no"
 msgstr "nei"
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "no %{function} function in %{context}"
+msgstr "ingen %{function}-funksjon i %{context}"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "no deletions"
 msgstr "ingen slettinger"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "no page of its own"
+msgstr "ingen egen side"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format

@@ -89,7 +89,8 @@ production dump.
   `search_documents` in every environment. Run `mix brando.gen.migrations`
   and `mix brando.migrate`, then rebuild the index once in each environment
   from Configuration → Utilities → Search index ("Rebuild search index");
-  from then on, saving keeps it up to date. Until the migration runs, the
+  from then on, saving keeps it up to date. The card says when the index was
+  last rebuilt, or "Never rebuilt" until it is. Until the migration runs, the
   search page says search is not set up and saves carry on without it.
   Brando's default Oban configuration has the new `search_index` queue. **An
   application that sets `config :brando, Oban` itself must add it

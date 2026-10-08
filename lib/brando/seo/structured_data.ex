@@ -14,8 +14,12 @@ defmodule Brando.SEO.StructuredData do
   thousands of entries would otherwise load every block. The drawer shows
   them.
 
+  The result counts the entries checked per content type (`per_schema`).
+  `unchecked/0` lists the blueprints with a mapping that are left out, and
+  why.
+
   The result is cached for ten minutes per language; `refresh: true` runs
-  it again.
+  it again. A cached result from before `per_schema` existed is run again.
   """
 
   alias Brando.JSONLD.Graph
@@ -34,6 +38,7 @@ defmodule Brando.SEO.StructuredData do
     @type t :: %__MODULE__{}
     defstruct language: nil,
               checked: 0,
+              per_schema: [],
               with_errors: 0,
               with_warnings: 0,
               rows: [],
@@ -46,7 +51,30 @@ defmodule Brando.SEO.StructuredData do
   def schemas do
     :include_brando
     |> Brando.Blueprint.list_blueprints()
+    |> Enum.uniq()
     |> Enum.filter(&checkable?/1)
+  end
+
+  @typedoc """
+  Why a blueprint with a JSON-LD mapping is not checked: it has no page of
+  its own (`absolute_url`), its context module is not loaded, or the context
+  has no `list_<plural>/1`.
+  """
+  @type skip_reason :: :no_page | :context_not_loaded | :no_list_function
+
+  @doc "Blueprints with a `json_ld_schema` that are not checked, each with why."
+  @spec unchecked() :: [{module(), skip_reason()}]
+  def unchecked do
+    :include_brando
+    |> Brando.Blueprint.list_blueprints()
+    |> Enum.uniq()
+    |> Enum.filter(&Graph.has_json_ld?/1)
+    |> Enum.flat_map(fn schema ->
+      case skip_reason(schema) do
+        nil -> []
+        reason -> [{schema, reason}]
+      end
+    end)
   end
 
   @doc """
@@ -65,7 +93,7 @@ defmodule Brando.SEO.StructuredData do
     key = {:seo_structured_data, language, schemas}
 
     case !opts[:refresh] && Brando.Cache.get(key) do
-      %Result{} = cached ->
+      %Result{} = cached when is_map_key(cached, :per_schema) ->
         cached
 
       _ ->
@@ -80,7 +108,9 @@ defmodule Brando.SEO.StructuredData do
   def check(language, schemas) do
     started = System.monotonic_time(:millisecond)
 
-    checked = Enum.flat_map(schemas, &check_schema(&1, language))
+    checked = Enum.map(schemas, &{&1, check_schema(&1, language)})
+    per_schema = Enum.map(checked, fn {schema, rows} -> {schema, length(rows)} end)
+    checked = Enum.flat_map(checked, &elem(&1, 1))
 
     rows =
       checked |> Enum.filter(&(&1.errors > 0 or &1.warnings > 0)) |> Enum.sort_by(&{-&1.errors, -&1.warnings, &1.title})
@@ -88,6 +118,7 @@ defmodule Brando.SEO.StructuredData do
     %Result{
       language: language,
       checked: length(checked),
+      per_schema: per_schema,
       with_errors: Enum.count(rows, &(&1.errors > 0)),
       with_warnings: Enum.count(rows, &(&1.errors == 0 and &1.warnings > 0)),
       rows: rows,
@@ -96,15 +127,22 @@ defmodule Brando.SEO.StructuredData do
     }
   end
 
-  defp checkable?(schema) do
-    Code.ensure_loaded?(schema) and function_exported?(schema, :__has_absolute_url__, 0) and
-      schema.__has_absolute_url__() and Graph.has_json_ld?(schema) and listable?(schema)
+  defp checkable?(schema), do: Graph.has_json_ld?(schema) and is_nil(skip_reason(schema))
+
+  defp skip_reason(schema) do
+    context = schema.__modules__().context
+
+    cond do
+      not (function_exported?(schema, :__has_absolute_url__, 0) and schema.__has_absolute_url__()) -> :no_page
+      not Code.ensure_loaded?(context) -> :context_not_loaded
+      not function_exported?(context, list_function(schema), 1) -> :no_list_function
+      true -> nil
+    end
   end
 
-  defp listable?(schema) do
-    context = schema.__modules__().context
-    Code.ensure_loaded?(context) and function_exported?(context, :"list_#{schema.__naming__().plural}", 1)
-  end
+  @doc "The context function a blueprint's entries are read with, `list_<plural>`."
+  @spec list_function(module()) :: atom()
+  def list_function(schema), do: :"list_#{schema.__naming__().plural}"
 
   # Entries are read without relations, then loaded a page at a time with
   # everything their mapping may read (`Inspector.preloads/2`): one query per
@@ -140,13 +178,12 @@ defmodule Brando.SEO.StructuredData do
 
   defp entries(schema, language) do
     context = schema.__modules__().context
-    plural = schema.__naming__().plural
 
     args = %{}
     args = if schema.has_trait(Brando.Trait.Status), do: Map.put(args, :status, :published), else: args
     args = if schema.has_trait(Brando.Trait.Translatable), do: Map.put(args, :language, language), else: args
 
-    case apply(context, :"list_#{plural}", [args]) do
+    case apply(context, list_function(schema), [args]) do
       {:ok, entries} -> entries
       _ -> []
     end

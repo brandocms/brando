@@ -55,8 +55,74 @@ defmodule Brando.Search.Indexer do
       savepoint()
     )
 
+    mark_rebuilt(DateTime.utc_now())
     progress.(total, total)
     {:ok, written}
+  end
+
+  ## When it was last rebuilt
+
+  # The time of the last full rebuild is kept in the comment on the
+  # `search_documents` table of the site and environment. It lives and dies
+  # with the table: an environment copied with its content brings it along with
+  # the documents, and Oban pruning the rebuild's job does not lose it.
+
+  @doc """
+  Records `at` as the time the current site and environment's index was last
+  rebuilt in full, in the comment on its `search_documents` table. A failure
+  (the database user does not own the table, say) is logged; the rebuild
+  still counts.
+  """
+  @spec mark_rebuilt(DateTime.t()) :: :ok
+  def mark_rebuilt(%DateTime{} = at) do
+    # Only digits and `-:TZ`, so it is safe as a literal; COMMENT takes no parameters.
+    stamp = at |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+    comment = Jason.encode!(%{"rebuilt_at" => stamp})
+
+    case Repo.repo().query("COMMENT ON TABLE #{table()} IS '#{comment}'", [], savepoint()) do
+      {:ok, _} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("[Brando.Search] Could not record when the index was rebuilt: " <> Exception.message(error))
+        :ok
+    end
+  end
+
+  @doc """
+  Forgets when the index in schema `prefix` was rebuilt. A new environment's
+  tables are copied from `public` without their rows, but with the comment
+  that holds the time; its empty index was never rebuilt. A failure is logged.
+  """
+  @spec forget_rebuilt(String.t()) :: :ok
+  def forget_rebuilt(prefix) do
+    table = table(prefix)
+
+    with {:ok, %{rows: [[true]]}} <-
+           Repo.repo().query("SELECT to_regclass($1) IS NOT NULL", [table], savepoint()),
+         {:error, error} <- Repo.repo().query("COMMENT ON TABLE #{table} IS NULL", [], savepoint()) do
+      Logger.warning("[Brando.Search] Could not clear when #{prefix}'s index was rebuilt: " <> Exception.message(error))
+    end
+
+    :ok
+  end
+
+  @doc """
+  When the current site and environment's index was last rebuilt in full, or
+  nil if it never was here (or the table is missing).
+  """
+  @spec rebuilt_at() :: DateTime.t() | nil
+  def rebuilt_at do
+    %{rows: [[comment]]} =
+      Repo.repo().query!("SELECT obj_description(to_regclass($1), 'pg_class')", [table()], savepoint())
+
+    with comment when is_binary(comment) <- comment,
+         {:ok, %{"rebuilt_at" => stamp}} when is_binary(stamp) <- Jason.decode(comment),
+         {:ok, at, _offset} <- DateTime.from_iso8601(stamp) do
+      at
+    else
+      _ -> nil
+    end
   end
 
   defp rebuild_schema(schema, after_id, done, total, progress) do
@@ -240,17 +306,14 @@ defmodule Brando.Search.Indexer do
     :ok
   end
 
-  # The table in the current site and environment's schema
-  defp table do
-    case Brando.Tenant.current_prefix() do
-      nil ->
-        "search_documents"
+  # The table in the current site and environment's schema, or in `prefix`
+  defp table(prefix \\ Brando.Tenant.current_prefix())
+  defp table(nil), do: "search_documents"
 
-      prefix ->
-        if Brando.Tenant.valid_prefix?(prefix),
-          do: ~s("#{prefix}".search_documents),
-          else: raise(ArgumentError, "invalid tenant prefix")
-    end
+  defp table(prefix) do
+    if Brando.Tenant.valid_prefix?(prefix),
+      do: ~s("#{prefix}".search_documents),
+      else: raise(ArgumentError, "invalid tenant prefix")
   end
 
   defp savepoint, do: ContentEvents.savepoint()
