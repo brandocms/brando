@@ -154,6 +154,8 @@ export default function installShortcuts(app) {
 
   window.addEventListener('keydown', event => {
     if (event.defaultPrevented || event.isComposing || event.repeat) return
+    // Admin screens only: not the login page or frontend edit mode
+    if (!document.getElementById('brando-main')) return
     const el = target(event)
     if (
       isTextTarget(el) ||
