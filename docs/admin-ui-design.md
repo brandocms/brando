@@ -796,6 +796,11 @@ make Related entries look different from the other identifier contexts.
 Action, sort, bulk-selection and block menus share `%admin_dropdown_panel` in
 `FloatingDropdown.css`: white surface, muted border, light shadow, compact rows
 and separators. Keep only positioning and trigger styling in the component.
+An action menu on the `Brando.FloatingDropdown` hook (the entry toolbar's More,
+the media Replace and More menus) takes a menu button's keys: opening it
+focuses its first action (ArrowUp on the trigger, the last), ArrowDown and
+ArrowUp move and wrap, Home and End jump, Enter and Space choose, Escape closes
+and returns the focus, and Tab leaves. Its items stay plain buttons.
 Bulk selection uses a light fixed bar above presence avatars, with a count and
 an explicit Actions button. Listing title links reveal an arrow on hover/focus.
 Shortcut badges are compact and muted, with a shared right edge inside each menu.
