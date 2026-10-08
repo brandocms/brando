@@ -54,7 +54,7 @@ defmodule Brando.Content.Module do
   persist_identifier false
 
   @derived_fields ~w(
-    id uid type name sequence namespace help_text multi color class code refs vars svg deleted_at
+    id uid type name sequence namespace help_text multi color class code markdown_code refs vars svg deleted_at
     version version_note source_module_id source_version acknowledged_version library_origin
     override_id
   )a
@@ -80,6 +80,8 @@ defmodule Brando.Content.Module do
     attribute :class, :string, required: true
     attribute :code, :text, required: true
     attribute :svg, :text
+    # A Liquid template for the module's Markdown, see `Brando.Villain.Markdown`.
+    attribute :markdown_code, :text
     attribute :multi, :boolean
     attribute :color, :enum, values: [:blue, :emerald, :pink, :peach], default: :blue
 

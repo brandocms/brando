@@ -69,7 +69,7 @@ test('a renamed region keeps its content through remap, collaboration, recovery 
   await refDialog.getByLabel('Template name').fill('related')
   await refDialog.getByRole('button', { name: 'Done', exact: true }).click()
   await page.getByRole('tab', { name: /^Template/ }).click()
-  await page.locator('.cm-content:visible').click()
+  await page.locator('#module_code-code .cm-content').click()
   await page.keyboard.press('ControlOrMeta+a')
   await page.keyboard.insertText('<aside>{% ref refs.related %}</aside>')
   await page.getByTestId('submit').click()

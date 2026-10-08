@@ -17810,6 +17810,16 @@ msgstr ""
 msgid "The most characters search engines and AI answers may quote from this page. Empty leaves it to them; 0 means none."
 msgstr ""
 
+#: lib/brando_admin/live/content/module_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown template"
+msgstr ""
+
+#: lib/brando_admin/live/content/module_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Optional. Used for the Markdown version of entries, which AI tools and search engines can read. The same refs and variables apply, and refs are given as Markdown. Empty turns this module's HTML into Markdown."
+msgstr ""
+
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgctxt "crawler access"

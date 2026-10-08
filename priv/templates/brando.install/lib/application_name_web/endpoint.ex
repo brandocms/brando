@@ -61,6 +61,8 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug Brando.Plug.LivePreview
+  # Entries as Markdown at their URL + .md, or for Accept: text/markdown.
+  plug Brando.Plug.Markdown
   plug Brando.Plug.Health
   plug <%= application_module %>Web.Router
 end

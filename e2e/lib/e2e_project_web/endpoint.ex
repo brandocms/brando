@@ -88,6 +88,8 @@ defmodule E2eProjectWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug Brando.Plug.LivePreview
+  # Entries as Markdown at their URL + .md, or for Accept: text/markdown.
+  plug Brando.Plug.Markdown
   plug E2eProjectWeb.Router
 
   if Application.compile_env(:e2e_project, :sql_sandbox) do

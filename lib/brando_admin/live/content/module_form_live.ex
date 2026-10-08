@@ -104,6 +104,17 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
               </div>
               <.stripped_refs_warning refs={@stripped_refs} />
             </div>
+            <div class="code module-markdown-code">
+              <Input.code
+                field={@form[:markdown_code]}
+                label={gettext("Markdown template")}
+                instructions={
+                  gettext(
+                    "Optional. Used for the Markdown version of entries, which AI tools and search engines can read. The same refs and variables apply, and refs are given as Markdown. Empty turns this module's HTML into Markdown."
+                  )
+                }
+              />
+            </div>
           </section>
 
           <.live_component

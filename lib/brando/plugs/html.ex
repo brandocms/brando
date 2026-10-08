@@ -165,6 +165,7 @@ defmodule Brando.Plug.HTML do
     conn
     |> assign(:json_ld_entities, existing ++ List.wrap(entity))
     |> put_json_ld_page(data, entity)
+    |> put_page_entry(data)
   end
 
   # A person's own page is their profile: a `ProfilePage` about the Person.
@@ -314,7 +315,19 @@ defmodule Brando.Plug.HTML do
     conn
     |> maybe_put_entry_canonical(entry)
     |> put_robots(Brando.Trait.Meta.robots_directives(entry))
+    |> put_page_entry(entry)
   end
+
+  # The entry the page is about, for its Markdown version (`Brando.Plug.Markdown`).
+  defp put_page_entry(conn, %{__struct__: _} = entry), do: put_private(conn, :brando_page_entry, entry)
+  defp put_page_entry(conn, _data), do: conn
+
+  @doc """
+  The entry this page is about, as passed to `put_meta/3`, `put_hreflang/2`
+  or `put_json_ld/3`.
+  """
+  @spec get_page_entry(conn) :: struct() | nil
+  def get_page_entry(conn), do: conn.private[:brando_page_entry]
 
   @doc """
   Adds directives to the page's robots meta tag, after any the page already

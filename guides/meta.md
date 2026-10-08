@@ -167,6 +167,12 @@ not. `put_meta/3` and `put_hreflang/2` pick them up from the entry; directives
 the page set itself (`put_meta(conn, "robots", "noarchive")`, or
 `put_robots(conn, ["noarchive"])`) are kept in the same tag.
 
+## Markdown alternate
+
+When the entry has a [Markdown version](markdown_alternates.md),
+`render_hreflangs` adds
+`<link rel="alternate" type="text/markdown" href="…/entry.md">`.
+
 ## Check the rendered result
 
 Open the **page source** for a published post. Verify one `<title>`, matching

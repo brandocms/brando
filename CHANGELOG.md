@@ -29,6 +29,16 @@ production dump.
   fails with a missing-column error. Nothing changes in robots.txt or the
   page head until an editor sets the new options.
 
+- **Modules have a `markdown_code` column.** It holds a module's optional
+  Markdown template. `brando_211` adds it to `content_modules` in every
+  environment; run it with `brando_210`.
+
+- **Markdown alternates need a plug.** Add `plug Brando.Plug.Markdown` to the
+  endpoint, before the router (after `Brando.Plug.LivePreview`), to serve
+  entries as Markdown at their URL + `.md`. Without it, the page head still
+  names the Markdown URL, and requests for it are not found. See
+  [Markdown alternates](guides/markdown_alternates.md).
+
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
   `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
@@ -649,6 +659,18 @@ production dump.
   **Snippet length**, written as the page's robots meta tag (`nosnippet`,
   `max-snippet:N`). They are what keeps a page's text out of Google's AI
   Overviews. `put_robots/2` adds directives of your own to the same tag.
+- **Markdown alternates.** An entry's page is also served as Markdown, at its
+  URL with `.md` appended and for `Accept: text/markdown`, with
+  `Vary: Accept`, an `ETag` and a canonical `Link` header, and named in the
+  head with `<link rel="alternate" type="text/markdown">`. Only entries the
+  page's controller loads, published and not scheduled, are served. On for
+  blueprints with a URL, blocks and `trait :meta`; turn it off with
+  `trait :meta, markdown: false`. `Brando.Villain.Markdown` renders the
+  blocks: a module's HTML becomes Markdown, refs written plainly (pictures as
+  images, videos and files as links), or a module can have a **Markdown
+  template** of its own in the module editor. See
+  [Markdown alternates](guides/markdown_alternates.md).
+
 
 - **Content events and outbound webhooks.** Every change Activity records
   for an entry becomes a content event (`entry.created`, `entry.updated`,

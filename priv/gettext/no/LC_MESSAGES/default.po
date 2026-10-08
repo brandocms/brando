@@ -17805,6 +17805,16 @@ msgstr "Ingen grense"
 msgid "The most characters search engines and AI answers may quote from this page. Empty leaves it to them; 0 means none."
 msgstr "Flest tegn søkemotorer og AI-svar kan sitere fra denne siden. Tomt overlater det til dem; 0 betyr ingen."
 
+#: lib/brando_admin/live/content/module_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown template"
+msgstr "Markdown-mal"
+
+#: lib/brando_admin/live/content/module_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Optional. Used for the Markdown version of entries, which AI tools and search engines can read. The same refs and variables apply, and refs are given as Markdown. Empty turns this module's HTML into Markdown."
+msgstr "Valgfritt. Brukes til Markdown-versjonen av oppføringer, som AI-verktøy og søkemotorer kan lese. De samme referansene og variablene gjelder, og referansene gis som Markdown. Tomt gjør modulens HTML om til Markdown."
+
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgctxt "crawler access"
