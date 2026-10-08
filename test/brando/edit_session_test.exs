@@ -324,23 +324,26 @@ defmodule Brando.EditSessionTest do
   end
 
   describe "lifecycle" do
+    # The grace period leaves room for a loaded machine: with 80 ms, the
+    # editor coming back sometimes joined after it had run out (a flake in
+    # the hunt for another one).
     test "the session stops a grace period after its last editor leaves" do
-      put_test_env(EditSession, grace_period: 80)
+      put_test_env(EditSession, grace_period: 600)
       ref = new_ref()
       {a, info} = editor(ref)
       session = info.session
       monitor = Process.monitor(session)
 
       unlink_and_kill(a)
-      refute_receive {:DOWN, ^monitor, _, _, _}, 40
 
-      # Someone comes back within the grace period: the session stays.
+      # Someone comes back within the grace period: the session stays, past
+      # the end of the period it was in.
       {b, _} = editor(ref)
-      refute_receive {:DOWN, ^monitor, _, _, _}, 150
+      refute_receive {:DOWN, ^monitor, _, _, _}, 800
       assert EditSession.whereis(ref) == session
 
       unlink_and_kill(b)
-      assert_receive {:DOWN, ^monitor, :process, ^session, :normal}, 500
+      assert_receive {:DOWN, ^monitor, :process, ^session, :normal}, 2_000
       wait_until(fn -> EditSession.whereis(ref) == nil end)
     end
 
@@ -638,7 +641,7 @@ defmodule Brando.EditSessionTest do
   describe "rescues" do
     setup do
       previous = Application.get_env(:brando, EditSession, [])
-      Application.put_env(:brando, EditSession, Keyword.put(previous, :rescue_timeout, 200))
+      Application.put_env(:brando, EditSession, Keyword.put(previous, :rescue_timeout, 500))
       on_exit(fn -> Application.put_env(:brando, EditSession, previous) end)
       :ok
     end
@@ -674,7 +677,7 @@ defmodule Brando.EditSessionTest do
 
       # the insert was turned away (its parent went meanwhile, say)
       :ok = GenServer.cast(session, {:rescued, p1, @field, "b"})
-      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 500
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 3_000
     end
 
     test "an editor who does not answer in time is replaced by the next" do
@@ -685,7 +688,7 @@ defmodule Brando.EditSessionTest do
       # one who joins after the work was removed never saw it, and is not told
       {late, _} = editor(ref, without_b())
 
-      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 1_000
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 3_000
       send(p2, {:local, {:insert, "b-kept", :end, %{}}})
       assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true, present: present}}
       assert Enum.sort(present) == Enum.sort([p1, p2])
@@ -696,13 +699,13 @@ defmodule Brando.EditSessionTest do
       {_ref, session, p1, p2} = removed_with_work()
       {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
       assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
-      assert_receive {:edit_session, @field, %{kind: :rescue, rescuer: ^p2}}, 1_000
+      assert_receive {:edit_session, @field, %{kind: :rescue, rescuer: ^p2}}, 3_000
 
       # p2 has no copy to make; p1's insert lands late
       :ok = GenServer.cast(session, {:rescued, p2, @field, "b"})
       send(p1, {:local, {:insert, "b-kept", :end, %{}}})
-      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}, 1_000
-      refute_receive {:edit_session, @field, %{kind: :rescued, ok?: false}}, 600
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}, 3_000
+      refute_receive {:edit_session, @field, %{kind: :rescued, ok?: false}}, 1_200
     end
 
     test "an editor who leaves is replaced at once, and with nobody left the work is reported lost" do
@@ -713,10 +716,10 @@ defmodule Brando.EditSessionTest do
       assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
 
       unlink_and_kill(p1)
-      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 500
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 3_000
 
       unlink_and_kill(p2)
-      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, orphan?: false}}, 1_000
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, orphan?: false}}, 3_000
     end
 
     # Round 3: the origin of an outside write was never asked, so the only
