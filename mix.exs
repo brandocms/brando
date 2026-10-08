@@ -178,7 +178,9 @@ defmodule Brando.Mixfile do
       "ecto.seed": ["run priv/repo/seeds.exs"],
       # ExDoc writes its own llms.txt; ours replaces it with one that describes
       # each guide, and adds llms-full.txt.
-      docs: ["docs", "brando.docs.agents --only llms"]
+      docs: ["docs", "brando.docs.agents --only llms"],
+      # CI's fast gates, each in the MIX_ENV CI uses; see scripts/check.
+      check: "cmd scripts/check"
     ]
   end
 

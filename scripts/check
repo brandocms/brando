@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# Runs CI's fast gates locally, in CI's order, and stops at the first failure.
+#
+#   mix check            all gates (the alias runs this script)
+#   mix check --fast     skip `mix docs`, the slowest gate (the pre-push hook)
+#   mix check --verbose  stream each step's output instead of only on failure
+#
+# Each step runs in the MIX_ENV CI uses for it (test, or docs for `mix docs`),
+# so nothing compiles in dev. Credo runs CI's Blueprint gate, then --strict on
+# the Elixir files changed against origin/main (CHECK_BASE overrides the ref),
+# reporting only findings on lines the branch added or changed.
+#
+# Not covered: the unit and E2E suites, the Elixir 1.18/1.19 builds and the
+# Igniter installer smoke (scripts/igniter_smoke.sh).
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+
+fast=false
+verbose=false
+for arg in "$@"; do
+  case "$arg" in
+    --fast) fast=true ;;
+    --verbose|-v) verbose=true ;;
+    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "check: unknown option $arg" >&2; exit 2 ;;
+  esac
+done
+
+# `mix check` puts mix on PATH; the pre-push hook and direct runs may not have
+# it, so fall back to mise (the maintainer's Mac and this repo's Linux boxes).
+if command -v mix >/dev/null 2>&1; then
+  mix_cmd=(mix)
+elif command -v mise >/dev/null 2>&1; then
+  mix_cmd=(mise exec -- mix)
+elif [ -x "$HOME/.local/bin/mise" ]; then
+  mix_cmd=("$HOME/.local/bin/mise" exec -- mix)
+else
+  echo "check: mix not found on PATH, and no mise to run it with" >&2
+  exit 1
+fi
+
+log="$(mktemp "${TMPDIR:-/tmp}/brando-check.XXXXXX")"
+trap 'rm -f "$log" "$log".*' EXIT
+
+# run_step NAME COMMAND... — runs COMMAND, prints one line, stops on failure.
+run_step() {
+  local name="$1" started=$SECONDS status
+  shift
+  if [ "$verbose" = true ]; then
+    echo "check: $name: $*"
+    "$@" 2>&1 | tee "$log"
+    status=${PIPESTATUS[0]}
+  else
+    "$@" > "$log" 2>&1
+    status=$?
+  fi
+
+  if [ "$status" -eq 0 ]; then
+    printf 'check: %-28s ok (%ss)\n' "$name" "$((SECONDS - started))"
+  else
+    [ "$verbose" = true ] || cat "$log"
+    echo "check: FAILED at \"$name\" (exit $status): $*" >&2
+    exit 1
+  fi
+}
+
+mix_in() {
+  local env="$1"
+  shift
+  MIX_ENV="$env" "${mix_cmd[@]}" "$@"
+}
+
+# Credo --strict on the Elixir files changed since the merge base, keeping
+# only findings on added or changed lines. Pre-existing findings in a touched
+# file are counted but don't fail the check: CI doesn't gate them either.
+credo_changed() {
+  local base_ref="${CHECK_BASE:-origin/main}" base files changed findings new old
+  if ! base="$(git merge-base "$base_ref" HEAD 2>/dev/null)"; then
+    echo "No $base_ref to compare against; skipped (set CHECK_BASE to a ref)."
+    return 0
+  fi
+
+  files="$log.files"
+  changed="$log.lines"
+  findings="$log.credo"
+  {
+    git diff --name-only --diff-filter=AMR "$base" --
+    git ls-files --others --exclude-standard
+  } | grep -E '^(lib|test)/.*\.exs?$' | sort -u > "$files"
+
+  if [ ! -s "$files" ]; then
+    echo "No changed Elixir files under lib/ or test/."
+    return 0
+  fi
+
+  # "path:line" for every added line; "path:*" for untracked files.
+  # shellcheck disable=SC2046
+  git diff -U0 --no-color --diff-filter=AMR "$base" -- $(cat "$files") | awk '
+    /^\+\+\+ / { file = substr($0, 7); next }
+    /^@@ / {
+      split(substr($3, 2), range, ",")
+      count = (range[2] == "") ? 1 : range[2]
+      for (i = 0; i < count; i++) print file ":" (range[1] + i)
+    }' > "$changed"
+  git ls-files --others --exclude-standard | sed 's/$/:*/' >> "$changed"
+
+  # shellcheck disable=SC2046
+  mix_in test credo --strict --format oneline --mute-exit-status $(cat "$files") > "$findings" 2>&1 || {
+    cat "$findings"
+    return 1
+  }
+
+  awk -v changed="$changed" '
+    BEGIN { while ((getline line < changed) > 0) touched[line] = 1 }
+    /^\[/ {
+      split($3, loc, ":")
+      if ((loc[1] ":*") in touched || (loc[1] ":" loc[2]) in touched) print
+      else old++
+    }
+    END { if (old) printf "%d pre-existing finding(s) in changed files, not on changed lines (not blocking).\n", old > "/dev/stderr" }
+  ' "$findings" > "$log.new" 2> "$log.old"
+
+  new="$(grep -c '^\[' "$log.new")"
+  old="$(cat "$log.old")"
+  [ -n "$old" ] && echo "$old"
+  if [ "$new" -gt 0 ]; then
+    cat "$log.new"
+    echo "$new credo finding(s) on lines this branch changed."
+    return 1
+  fi
+  echo "No credo findings on changed lines in $(wc -l < "$files" | tr -d ' ') file(s)."
+}
+
+# Order follows .github/workflows/ci.yml: the quality job, then the colour and
+# E2E path checks, then the docs job.
+run_step "format" mix_in test format --check-formatted
+run_step "compile (warnings as errors)" mix_in test compile --all-warnings --warnings-as-errors
+run_step "usage-rules.md up to date" mix_in test brando.docs.agents --check
+run_step "credo (Blueprint)" mix_in test credo --strict lib/brando/blueprint.ex lib/brando/blueprint
+run_step "credo (changed lines)" credo_changed
+run_step "xref compile cycles" mix_in test xref graph --format cycles --label compile-connected --fail-above 0
+run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
+run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
+
+if [ "$fast" = true ]; then
+  echo "check: docs skipped (--fast)"
+else
+  run_step "docs (warnings as errors)" mix_in docs docs --warnings-as-errors
+fi
+
+echo "check: all gates passed"
