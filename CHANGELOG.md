@@ -44,6 +44,17 @@ production dump.
   `403` answers. See [Markdown alternates](guides/markdown_alternates.md) and
   [IndexNow](guides/identity_and_seo.md#indexnow).
 
+- **The admin search needs a table and an Oban queue.** `brando_212` creates
+  `search_documents` in every environment. Run `mix brando.gen.migrations`
+  and `mix ecto.migrate`, then rebuild the index once in each environment
+  from Configuration → Utilities → Search index ("Rebuild search index");
+  from then on, saving keeps it up to date. Until the migration runs, the
+  search page says search is not set up and saves carry on without it.
+  Brando's default Oban configuration has the new `search_index` queue. **An
+  application that sets `config :brando, Oban` itself must add it
+  (`search_index: [limit: 2]`), or the index is never updated**;
+  `mix brando.doctor` warns when it is missing. See `Brando.Search`.
+
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
   `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
@@ -690,6 +701,22 @@ production dump.
   template** of its own in the module editor. See
   [Markdown alternates](guides/markdown_alternates.md).
 
+
+- **Admin search.** `/admin/search` finds every entry the user may read by
+  its title, slug, meta description, text fields and the text of all its
+  blocks (rich text, headings, lists, table cells, picture and gallery
+  texts, container children and module variables), ranked by an exact
+  title, then titles starting with the query, then relevance, with
+  published entries first among equals. It has filters for content type,
+  language and status, shows a highlighted snippet per result, and pages of
+  twenty. The command palette's entries end with a "See all results" row
+  that opens it, and phones and tablets get a search button in the top
+  right corner to open the palette, where the sidebar is hidden. The index
+  is one Postgres full-text table per environment (`norwegian`, `english` or
+  `simple` text search per language, no extension needed), kept up to date
+  from content events on the new `search_index` queue, so saves do not wait
+  for it. On 10,000 entries a search takes 2–40 ms, and about 80 ms for a
+  word on every entry. See `Brando.Search`.
 
 - **Content events and outbound webhooks.** Every change Activity records
   for an entry becomes a content event (`entry.created`, `entry.updated`,

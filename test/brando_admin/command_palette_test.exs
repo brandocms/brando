@@ -181,12 +181,24 @@ defmodule BrandoAdmin.CommandPaletteTest do
       page("Sommerro")
       assert groups = CommandPalette.results(c.context, "somm")
       assert [:entries, :actions] = Enum.map(groups, & &1.key)
-      assert [%{label: "Sommerro"}] = hd(groups).items
+      # The entries end with the way to the search page
+      assert [%{label: "Sommerro"}, %{kind: :search, url: "/admin/search?q=somm"}] = hd(groups).items
       # The best entry is a page, so "Create page…" is offered
       assert Enum.any?(Enum.at(groups, 1).items, &(&1.label == "Create page…"))
 
-      assert [%{key: :settings, items: [%{label: "SEO", url: "/admin/config/seo"}]}] =
-               CommandPalette.results(c.context, "seo")
+      # No title matches: the search page's row goes last, after the setting
+      assert [
+               %{key: :settings, items: [%{label: "SEO", url: "/admin/config/seo"}]},
+               %{key: :entries, items: [%{kind: :search}]}
+             ] = CommandPalette.results(c.context, "seo")
+    end
+
+    test "the search page's row carries the query, encoded", c do
+      assert %{url: "/admin/search?q=fish+%26+chips", label: label} = CommandPalette.search_all("fish & chips")
+      assert label =~ "fish & chips"
+
+      assert [%{key: :entries, items: [%{id: "palette-search-all"}]}] =
+               CommandPalette.results(c.context, "zzqx nothing")
     end
 
     test "> lists commands only", c do
@@ -205,7 +217,7 @@ defmodule BrandoAdmin.CommandPaletteTest do
       Factory.insert(:image, path: "images/site/other.jpg")
 
       context = %{c.context | assets: [images: "/admin/assets/images"]}
-      [%{items: actions}] = CommandPalette.results(context, "sommerro")
+      [%{key: :actions, items: actions}, %{key: :entries}] = CommandPalette.results(context, "sommerro")
       assert %{count: 2, url: url} = Enum.find(actions, &(&1.id == "palette-assets-images"))
       assert url == "/admin/assets/images?filter%3Afolder_id=all&filter%3Apath=sommerro"
     end
@@ -220,7 +232,7 @@ defmodule BrandoAdmin.CommandPaletteTest do
       Factory.insert(:image, path: "images/hidden/sommerro-3.jpg", folder_id: hidden)
 
       context = %{c.context | assets: [images: "/admin/assets/images"]}
-      [%{items: actions}] = CommandPalette.results(context, "sommerro")
+      [%{key: :actions, items: actions}, %{key: :entries}] = CommandPalette.results(context, "sommerro")
       assert %{count: 1} = Enum.find(actions, &(&1.id == "palette-assets-images"))
 
       Repo.delete_all(from(i in Brando.Images.Image, where: i.folder_id == ^nested.id))

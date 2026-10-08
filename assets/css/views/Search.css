@@ -1,0 +1,400 @@
+/* The search page (BrandoAdmin.SearchLive): a heading, one toolbar with the
+   query and the filters, and the results as joined identifier rows like the
+   palette's entries and the listings, each with its snippet, then the count
+   and the pages in a shaded footer. */
+
+.search-workspace {
+  max-width: 1120px;
+  padding: 38px 0 64px;
+  color: var(--brando-ink);
+  font-size: 14px;
+  line-height: 1.55;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  h1,
+  h2,
+  p,
+  ol {
+    margin: 0;
+    padding: 0;
+  }
+
+  :is(a, input, select):focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: 2px;
+  }
+}
+
+.search-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+
+  h1 {
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+
+  p {
+    color: var(--brando-muted);
+    font-size: 13px;
+  }
+}
+
+/* The query and the filters share one surface */
+.search-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 12px;
+  border: 1px solid var(--brando-line);
+  border-radius: 10px;
+  background: var(--brando-surface-shaded);
+
+  label {
+    display: block;
+    margin: 0;
+  }
+
+  .search-query {
+    position: relative;
+    flex: 1 1 280px;
+
+    [data-icon] {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      width: 16px;
+      height: 16px;
+      color: var(--brando-muted);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    input {
+      width: 100%;
+      height: 40px;
+      margin: 0;
+      padding: 0 12px 0 36px;
+      border: 1px solid var(--brando-input-border);
+      border-radius: var(--brando-input-radius);
+      background: var(--brando-surface);
+      color: var(--brando-ink);
+      font: 14px/20px "Main", sans-serif;
+
+      &::-webkit-search-cancel-button {
+        cursor: pointer;
+      }
+    }
+  }
+
+  .search-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    select.admin-select {
+      width: auto;
+      max-width: 240px;
+    }
+  }
+}
+
+/* One outline around the rows, hairlines between them */
+.search-list {
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--brando-line);
+  border-radius: 6px 6px 0 0;
+  background: var(--brando-surface);
+}
+
+.search-row + .search-row {
+  border-top: 1px solid var(--brando-line);
+}
+
+.search-row-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  color: var(--brando-ink);
+  text-decoration: none;
+
+  &:is(a):hover {
+    background: var(--brando-surface-hover);
+
+    .search-title {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-thickness: 1px;
+    }
+  }
+
+  &:is(a):focus-visible {
+    outline-offset: -2px;
+  }
+
+  /* A row the user may read but not edit */
+  &:not(a) .search-title {
+    color: var(--brando-muted);
+  }
+}
+
+.search-cover {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--brando-badge-bg);
+  color: var(--brando-muted);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  > [data-icon] {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.search-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.search-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  min-width: 0;
+}
+
+.search-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.search-meta {
+  display: inline-flex;
+  flex: none;
+  gap: 5px;
+  color: var(--brando-muted);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+
+  > span + span::before {
+    content: "·";
+    margin-right: 5px;
+  }
+}
+
+.search-snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--brando-muted);
+  font-size: 13px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+
+  mark {
+    padding: 0 1px;
+    border-radius: 2px;
+    background: var(--brando-surface-selected);
+    color: var(--brando-ink);
+    font-weight: 500;
+  }
+}
+
+/* The status dot and its label, as the palette shows them */
+.search-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  padding-top: 2px;
+  color: var(--brando-muted);
+  font-size: 13px;
+  line-height: 18px;
+
+  > span {
+    text-box: trim-both cap alphabetic;
+  }
+
+  > i {
+    width: 1cap;
+    min-width: 7px;
+    height: 1cap;
+    min-height: 7px;
+    border-radius: 50%;
+    background: var(--brando-status-draft);
+  }
+
+  &[data-status="published"] > i { background: var(--brando-status-published); }
+  &[data-status="pending"] > i { background: var(--brando-status-pending); }
+  &[data-status="disabled"] > i { background: var(--brando-status-disabled); }
+}
+
+/* The count and the pages, on a table footer's shaded surface */
+.search-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--brando-line);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  background: var(--brando-surface-shaded);
+  color: var(--brando-muted);
+  font-size: 12px;
+  line-height: 18px;
+
+  .search-count {
+    margin-right: auto;
+    color: var(--brando-ink);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.search-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--brando-ink);
+    border-radius: 50%;
+    color: var(--brando-ink);
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
+    font-variant-numeric: tabular-nums;
+    transition: background-color 200ms ease;
+
+    &:hover {
+      background: var(--brando-surface-subform);
+    }
+
+    &[aria-current="page"] {
+      background: var(--brando-ink);
+      color: var(--brando-surface);
+    }
+
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .search-page-gap {
+    width: 20px;
+    font-size: 13px;
+    text-align: center;
+  }
+}
+
+.search-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 32px 24px;
+  border: 1px solid var(--brando-line);
+  border-radius: 10px;
+  background: var(--brando-surface);
+  text-align: center;
+
+  h2 {
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    color: var(--brando-muted);
+    font-size: 13px;
+  }
+}
+
+@media (pointer: coarse) {
+  .search-pages a {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 800px) {
+  .search-workspace {
+    padding-top: 24px;
+  }
+
+  .search-toolbar {
+    padding: 10px;
+
+    .search-query {
+      flex-basis: 100%;
+    }
+
+    .search-filters {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+
+      select.admin-select {
+        width: 100%;
+        max-width: none;
+      }
+    }
+  }
+
+  /* The status moves under the title, beside the type */
+  .search-row-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px 12px;
+    padding: 12px;
+  }
+
+  .search-cover {
+    grid-row: span 2;
+    width: 40px;
+    height: 30px;
+  }
+
+  .search-status {
+    grid-column: 2;
+    padding-top: 0;
+  }
+}

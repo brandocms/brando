@@ -10,10 +10,18 @@ defmodule BrandoAdmin.CommandPalette do
   asset tables.
 
   A query is matched against entry titles: an exact title first, then titles
-  that start with it, then titles that contain it. Published entries come
+  that start with it, then titles that contain it. The entries end with a
+  row that opens the search page (`BrandoAdmin.SearchLive`), which searches
+  their content as well. Published entries come
   before pending ones and drafts, then entries in the user's content language.
   An entry is listed only when the user may read and edit it, exactly as the
-  dashboard decides, so every row opens. A query starting with `>` lists
+  dashboard decides, so every row opens.
+
+  Titles are matched in `content_identifiers`, not in the search index
+  (`Brando.Search`): the palette finds text inside a title, which a
+  full-text index cannot, and on 10,000 entries it answers in 2–5 ms, where
+  the index takes up to 75 ms for a word every title shares
+  (`e2e/bench/search_bench.exs`). A query starting with `>` lists
   commands only: actions and settings.
 
   Recent places are kept by the browser (see `assets/src/hooks/CommandPalette`)
@@ -121,17 +129,37 @@ defmodule BrandoAdmin.CommandPalette do
         Enum.take(create_matches(context, term, entries), 3) ++
         Enum.filter(context.utilities, &matches?(&1, term))
 
-    [
-      group(:entries, gettext("Entries"), entries),
-      group(:actions, gettext("Actions"), Enum.take(actions, @action_limit)),
-      group(
-        :settings,
-        gettext("Settings"),
-        Enum.take(Enum.filter(context.settings, &matches?(&1, term)), @setting_limit)
-      ),
-      group(:recent, gettext("Recent"), recent_items(context, recent, term, opts[:current_path]) |> Enum.take(3))
-    ]
-    |> reject_empty()
+    others =
+      reject_empty([
+        group(:actions, gettext("Actions"), Enum.take(actions, @action_limit)),
+        group(
+          :settings,
+          gettext("Settings"),
+          Enum.take(Enum.filter(context.settings, &matches?(&1, term)), @setting_limit)
+        ),
+        group(:recent, gettext("Recent"), recent_items(context, recent, term, opts[:current_path]) |> Enum.take(3))
+      ])
+
+    # "See all results" ends the entries; when no title matches, the group
+    # holds only that row and goes last, so the first row stays a match.
+    case entries do
+      [] -> others ++ [group(:entries, gettext("Entries"), [search_all(term)])]
+      entries -> [group(:entries, gettext("Entries"), entries ++ [search_all(term)]) | others]
+    end
+  end
+
+  @doc """
+  The row that opens the search page (`/admin/search`) for `term`: every
+  entry whose title or content matches, not just the titles listed here.
+  """
+  def search_all(term) do
+    %{
+      id: "palette-search-all",
+      kind: :search,
+      label: gettext("See all results for “%{query}”", query: term),
+      url: "/admin/search?" <> URI.encode_query(%{"q" => term}),
+      icon: "text-search"
+    }
   end
 
   defp group(key, label, items), do: %{key: key, label: label, items: items}
@@ -154,8 +182,8 @@ defmodule BrandoAdmin.CommandPalette do
     end
   end
 
-  # The user's authorization scope and tenant, as the listings read them.
-  defp in_scope(user, fun) do
+  @doc "Runs `fun` in the user's authorization scope and tenant, as the listings read them."
+  def in_scope(user, fun) do
     scope = Boundary.actor_scope(user)
     Boundary.with_scope(scope, fn -> Brando.Tenant.with_prefix(scope.prefix || Brando.Tenant.current_prefix(), fun) end)
   end
@@ -228,13 +256,8 @@ defmodule BrandoAdmin.CommandPalette do
       ]
   end
 
-  # Content types with an editor of their own.
-  defp searchable_schemas do
-    :include_brando
-    |> Brando.Content.Identifier.Registry.list_persistent_identifier_modules()
-    |> Enum.filter(&function_exported?(&1, :__admin_route__, 2))
-    |> Enum.uniq()
-  end
+  # Content types with an editor of their own: the ones the search index has.
+  defp searchable_schemas, do: Brando.Search.searchable_schemas()
 
   # The identifiers whose entry still exists and the user may open, in order.
   # Source records are loaded with one query per content type in the batch.
@@ -454,6 +477,8 @@ defmodule BrandoAdmin.CommandPalette do
       Enum.map(
         [
           {"utils-identifiers", gettext("Sync identifiers"), "fingerprint", "/admin/config/utils#utils-identifiers"},
+          {"utils-search-index", gettext("Rebuild search index"), "text-search",
+           "/admin/config/utils#utils-search-index"},
           {"utils-loose-blocks", gettext("Review loose blocks"), "blocks", "/admin/config/utils/loose-blocks"},
           {"utils-sitemap", gettext("Generate sitemap"), "map", "/admin/config/utils#utils-sitemap"},
           {"utils-image-sizes", gettext("Recreate image sizes"), "images", "/admin/config/utils#utils-image-sizes"},
@@ -596,17 +621,20 @@ defmodule BrandoAdmin.CommandPalette do
 
   ## Permissions
 
-  # One authorization snapshot per search: with groups, every check would
-  # otherwise read the user's groups again.
-  defp permissions(user) do
+  @doc """
+  One authorization snapshot for a search, to pass to `allowed?/3`: with
+  groups, every check would otherwise read the user's groups again.
+  """
+  def permissions(user) do
     if Brando.Authorization.enabled?(),
       do: {:groups, Brando.Authorization.snapshot(Boundary.current_scope() || Scope.current(user))},
       else: {:legacy, user}
   end
 
-  defp allowed?({:groups, snapshot}, action, subject), do: Brando.Authorization.can?(snapshot, action, subject)
+  @doc "Whether `permissions/1` allow `action` on an entry or a content type."
+  def allowed?({:groups, snapshot}, action, subject), do: Brando.Authorization.can?(snapshot, action, subject)
 
-  defp allowed?({:legacy, user}, action, subject) do
+  def allowed?({:legacy, user}, action, subject) do
     subject = if is_atom(subject), do: struct(subject), else: subject
     Module.concat(Brando.authorization(), Can).can?(user, action, subject) == {:ok, :authorized}
   end

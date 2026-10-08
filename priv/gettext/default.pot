@@ -15757,7 +15757,7 @@ msgstr ""
 msgid "Results"
 msgstr ""
 
-#: lib/brando_admin/live/command_palette_live.ex
+#: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing matches “%{query}”"
 msgstr ""
@@ -17986,5 +17986,126 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "one URL"
 msgid_plural "%{count} URLs"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "See all results for “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "Rebuild search index"
+msgstr ""
+
+#: lib/brando_admin/live/command_palette_live.ex
+#, elixir-autogen, elixir-format
+msgid "No titles match “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Best match"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search: %{query}"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every entry you can read, by its title, address and content."
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search for"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search titles and content"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Any status"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search all content"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Type a word or a phrase. Put a phrase in quotes, or a minus before a word to leave it out."
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search is not set up here"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "The search index needs its migration. Ask an administrator to run it."
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Check the spelling, try fewer words, or clear the filters."
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} result"
+msgid_plural "%{count} results"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search index"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Index every entry again for the admin search. Saving keeps it up to date; rebuild after upgrading or importing content."
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting to start"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Indexing… %{done} of %{total} entries"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "The rebuild failed. Check the application logs."
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} entry in the index"
+msgid_plural "%{count} entries in the index"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not set up: the brando_212 migration has not run"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search index rebuilt: %{count} entry."
+msgid_plural "Search index rebuilt: %{count} entries."
 msgstr[0] ""
 msgstr[1] ""
