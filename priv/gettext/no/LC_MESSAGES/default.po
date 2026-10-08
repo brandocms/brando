@@ -19150,3 +19150,18 @@ msgstr "Forkastet %{keys}"
 #, elixir-autogen, elixir-format
 msgid "Moved %{keys}"
 msgstr "Flyttet %{keys}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open %{url} in a new tab"
+msgstr "Åpne %{url} i en ny fane"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Preview the saved page"
+msgstr "Forhåndsvis den lagrede siden"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This page cannot be previewed."
+msgstr "Denne siden kan ikke forhåndsvises."

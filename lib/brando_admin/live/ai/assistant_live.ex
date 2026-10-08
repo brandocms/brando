@@ -872,8 +872,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <p>{gettext("The changes are saved. Pages are re-rendered in the background.")}</p>
         <ul class="assistant-receipt">
           <li :for={item <- @review}>
-            <.link :if={item[:saved_url]} navigate={item.saved_url}>{item.title}</.link>
-            <span :if={!item[:saved_url]}>{item.title}</span>
+            <.link :if={item[:saved_url] || item[:admin_url]} navigate={item[:saved_url] || item.admin_url}>
+              {item.title}
+            </.link>
+            <span :if={!(item[:saved_url] || item[:admin_url])}>{item.title}</span>
             <span class="assistant-badge">{receipt_badge(item, @receipt)}</span>
           </li>
         </ul>
@@ -915,16 +917,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <header>
               <span class="assistant-card-type">{entry.content_type}</span>
               <span class={["assistant-badge", "is-#{entry.action}"]}>
-                {if entry.action == :create, do: gettext("Create"), else: gettext("Update")}
+                {action_label(entry.action)}
               </span>
             </header>
             <h4>
               <.link :if={entry.admin_url} navigate={entry.admin_url}>{entry.title}</.link>
               <span :if={!entry.admin_url}>{entry.title}</span>
             </h4>
-            <p :if={entry.url} class="assistant-card-url">{entry.url}</p>
             <button
-              :if={entry.preview? and is_nil(@receipt)}
+              :if={entry.preview? and @under_review? and entry.action != :source}
               type="button"
               class="assistant-button assistant-card-preview"
               phx-click="preview"
@@ -997,9 +998,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           </div>
 
           <footer>
-            <span :if={entry.live?} class="assistant-live"><.icon name="globe" />{gettext("Live page")}</span>
-            <span :if={entry.action == :create} class="assistant-draft"><.icon name="lock" />{gettext("New draft")}</span>
-            <span :if={entry.action == :update and !entry.live?} class="assistant-draft">{gettext("Not published")}</span>
+            <.address entry={entry} />
           </footer>
         </article>
       </div>
@@ -1038,6 +1037,66 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  attr :entry, :map, required: true
+
+  # Where the entry is on the site: the published page, opened in a new tab,
+  # or, for a draft, its preview. The address is the saved entry's, so after
+  # apply it is the page as it now is.
+  defp address(assigns) do
+    address = assigns.entry[:address]
+    published? = if address, do: address.published?, else: assigns.entry.live?
+    url = address && address.published? && address.url
+    {url_start, url_end} = if url, do: split_url(url), else: {nil, nil}
+
+    assigns =
+      assign(assigns,
+        published?: published?,
+        url: url,
+        url_start: url_start,
+        url_end: url_end,
+        preview?: assigns.entry.preview? and not is_nil(assigns.entry[:saved_target] || assigns.entry.admin_url)
+      )
+
+    ~H"""
+    <span :if={@published?} class="assistant-live"><.icon name="globe" />{gettext("Live page")}</span>
+    <a
+      :if={@url}
+      class="assistant-address"
+      href={@url}
+      target="_blank"
+      rel="noopener"
+      title={@url}
+      aria-label={gettext("Open %{url} in a new tab", url: @url)}
+    >
+      <span class="assistant-address-start">{@url_start}</span><span class="assistant-address-end">{@url_end}</span>
+      <.icon name="external-link" />
+    </a>
+    <span :if={!@published? and @entry.action == :create and !@entry[:saved_target]} class="assistant-draft">
+      <.icon name="lock" />{gettext("New draft")}
+    </span>
+    <span :if={!@published? and (@entry.action != :create or @entry[:saved_target])} class="assistant-draft">
+      <.icon name="lock" />{gettext("Not published")}
+    </span>
+    <button
+      :if={!@published? and @preview?}
+      type="button"
+      class="assistant-link-button assistant-saved-preview"
+      phx-click="preview_saved"
+      phx-value-key={@entry.key}
+    >
+      {gettext("Preview the saved page")}<.icon name="external-link" />
+    </button>
+    """
+  end
+
+  # Shown as an address bar shows it, without the scheme (the link and its
+  # title keep the whole URL). A long one is cut in the middle: the host and
+  # the end of the path are what identify it.
+  defp split_url(url) do
+    text = String.replace(url, ~r{^https?://}, "")
+    String.split_at(text, max(String.length(text) - 18, 0))
+  end
+
   attr :preview, :map, required: true
   attr :review, :list, required: true
   attr :media, :map, required: true
@@ -1060,6 +1119,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <nav class="assistant-preview-tabs" aria-label={gettext("Entries in this proposal")}>
         <button
           :for={entry <- @review}
+          :if={entry.action != :source}
           type="button"
           phx-click="preview"
           phx-value-key={entry.key}
@@ -1675,6 +1735,22 @@ defmodule BrandoAdmin.AI.AssistantLive do
     {:noreply, render_preview(socket, Map.put(preview, :key, key))}
   end
 
+  # A draft has no public page: its card opens the saved entry's preview in
+  # a new tab, as the entry form's standalone preview does.
+  def handle_event("preview_saved", %{"key" => key}, socket) do
+    with %{} = entry <- Enum.find(socket.assigns.review, &(&1.key == key)),
+         {schema, id} when is_integer(id) <- entry[:saved_target] || entry.target,
+         {:ok, cache_key} <- Proposals.Preview.render_saved(schema, id, socket.assigns.current_user) do
+      {:noreply, push_event(socket, "b:open_window", %{url: "/__livepreview?key=#{cache_key}&mode=standalone"})}
+    else
+      {:error, message} when is_binary(message) ->
+        {:noreply, put_toast(socket, :error, gettext("The page could not be rendered: %{message}", message: message))}
+
+      _ ->
+        {:noreply, put_toast(socket, :error, gettext("This page cannot be previewed."))}
+    end
+  end
+
   def handle_event("preview_version", %{"version" => version}, socket) when version in ~w(before proposed),
     do: {:noreply, render_preview(socket, %{socket.assigns.preview | version: version})}
 
@@ -1842,12 +1918,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
     cond do
       item.key in (receipt.mappings["published"] || []) -> gettext("Published")
       item.action == :create -> gettext("Created as draft")
+      item.action == :source -> gettext("Unchanged")
       true -> gettext("Updated")
     end
   end
 
+  defp action_label(:create), do: gettext("Create")
+  # Blocks are copied from it; it is not changed.
+  defp action_label(:source), do: gettext("Source")
+  defp action_label(_action), do: gettext("Update")
+
   # New entries and drafts can be published as the proposal is applied.
-  defp publishable?(entry), do: entry.action == :create or entry.status == "draft"
+  defp publishable?(entry), do: entry.action == :create or (entry.action == :update and entry.status == "draft")
 
   # Entries still holding placeholders stay drafts, whatever was ticked.
   defp publishing(%{publish: publish, review: review}) do
@@ -1986,13 +2068,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
     Enum.map(review, fn entry ->
       case receipt.after[entry.key] do
         %{"schema" => schema, "id" => id} ->
-          Map.put(entry, :saved_url, saved_url(schema, id))
+          entry
+          |> Map.put(:saved_url, saved_url(schema, id))
+          |> with_created_address(schema, id)
 
         _ ->
           entry
       end
     end)
   end
+
+  # A new entry has an address once it is saved.
+  defp with_created_address(%{action: :create} = entry, schema, id) do
+    case Brando.Content.Proposals.Codec.schema(schema) do
+      {:ok, module} -> Map.merge(entry, %{saved_target: {module, id}, address: Review.address(module, id)})
+      :error -> entry
+    end
+  end
+
+  defp with_created_address(entry, _schema, _id), do: entry
 
   defp saved_url(schema, id) do
     case Brando.Content.Proposals.Codec.schema(schema) do

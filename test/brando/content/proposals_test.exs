@@ -1253,16 +1253,22 @@ defmodule Brando.Content.ProposalsTest do
 
       assert {:ok, proposal} = Proposals.propose(ops, c.user)
       assert proposal.problems == []
-      assert %{updates: 2, inserted_blocks: 2} = proposal.effects
+      # Work is only copied from: it is not an updated entry.
+      assert %{updates: 1, inserted_blocks: 2} = proposal.effects
+      assert Proposals.sources(proposal.operations) == [{Page, c.work.id}]
 
       cards = Review.entries(proposal)
       work = Enum.find(cards, &(&1.target == {Page, c.work.id}))
       identity = Enum.find(cards, &(&1.target == {Page, c.identity.id}))
+      assert work.action == :source
+      assert identity.action == :update
       assert [%{type: :copy_out}, %{type: :copy_out}] = work.changes
       assert [%{type: :order, items: items}] = identity.changes
       assert Enum.count(items, & &1.copy?) == 2
 
-      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert {:ok, receipt} = approve_and_apply(proposal, c.user)
+      # The source is read, not saved: undo leaves it alone.
+      assert Map.keys(receipt.after) == [Proposals.Proposal.key({Page, c.identity.id})]
       [_intro_copy | rest] = load(c.identity, c.user).entry_blocks
       assert [%{block: copied} | _] = Enum.reverse(rest)
       assert copied.uid == copy

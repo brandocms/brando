@@ -82,6 +82,7 @@ defmodule Brando.Content.Proposals.Review do
       content_type: Brando.Blueprint.get_singular(schema),
       title: fields["title"] || fields["name"] || ref,
       url: nil,
+      address: nil,
       admin_url: nil,
       status: "draft",
       live?: false,
@@ -102,10 +103,12 @@ defmodule Brando.Content.Proposals.Review do
     %{
       key: Proposal.key(target),
       target: target,
-      action: :update,
+      # An entry blocks are only copied from is read, not changed.
+      action: if(target in Brando.Content.Proposals.sources(proposal.operations), do: :source, else: :update),
       content_type: Brando.Blueprint.get_singular(schema),
       title: described.title,
       url: blank(described.url),
+      address: address(schema, id),
       admin_url: admin_url(schema, id),
       status: to_string(Map.get(entry, :status) || ""),
       live?: target in (proposal.effects[:live] || []),
@@ -118,6 +121,39 @@ defmodule Brando.Content.Proposals.Review do
       placeholders: placeholders(target, schema, proposal),
       problems: problems(proposal, target)
     }
+  end
+
+  @doc """
+  Where entry `id` of `schema` is on the site now: `url`, its public address
+  with the site's host, as its canonical link gives it and in the entry's own
+  language (`nil` when it has no page of its own), and whether it is
+  `published?`. `nil` when the entry is gone.
+
+  It is read from the saved entry, not the proposal's baseline: after apply,
+  the card links to the page as it is.
+  """
+  @spec address(module(), integer()) :: %{url: String.t() | nil, published?: boolean()} | nil
+  def address(schema, id) do
+    case Brando.Repo.get(schema, id) do
+      nil ->
+        nil
+
+      entry ->
+        preloads =
+          if function_exported?(schema, :__absolute_url_preloads__, 0),
+            do: schema.__absolute_url_preloads__(),
+            else: []
+
+        entry = Brando.Repo.preload(entry, preloads)
+        %{url: Brando.Blueprint.URL.resolve(entry, :with_host), published?: published?(entry)}
+    end
+  rescue
+    _ -> nil
+  end
+
+  # An entry without a status is always public.
+  defp published?(entry) do
+    if entry.__struct__.has_trait(Brando.Trait.Status), do: Map.get(entry, :status) == :published, else: true
   end
 
   @placeholder ~r/\[\[(.+?)\]\]/s
