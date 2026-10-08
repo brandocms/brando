@@ -47,6 +47,29 @@ defmodule BrandoAdmin.SessionSocketsTest do
     ref
   end
 
+  # A transport that, told to disconnect, at once tries to connect again
+  # with its old token, as the browser does, and reports how that went
+  defp reconnecting_transport(socket_id, token) do
+    test = self()
+
+    pid =
+      spawn(fn ->
+        @endpoint.subscribe(socket_id)
+        send(test, {:subscribed, self()})
+
+        receive do
+          %Phoenix.Socket.Broadcast{event: "disconnect"} ->
+            send(test, :told)
+            result = if match?({:ok, _}, Users.verify_socket_token(token)), do: :ok, else: :error
+            send(test, {:reconnected, result})
+        end
+      end)
+
+    assert_receive {:subscribed, ^pid}
+    on_exit(fn -> Process.exit(pid, :kill) end)
+    pid
+  end
+
   # Two sessions of `user`, each with its admin socket connected
   defp two_sessions(user) do
     for _ <- 1..2 do
@@ -235,6 +258,111 @@ defmodule BrandoAdmin.SessionSocketsTest do
 
       assert_disconnected(a)
       assert_connected(b)
+    end
+  end
+
+  describe "inside a transaction" do
+    # A socket told before the commit reconnects at once, still finds the
+    # session, and is never told again.
+    test "the disconnect waits for the commit, and a reconnect then is refused", %{current_user: admin} do
+      user = user()
+      put_test_env(:authorization_mode, :groups)
+      # Gives the editor its group, and with it the way in
+      {:ok, _} = Brando.Authorization.Migration.run()
+      session = Users.generate_user_session_token(user)
+      token = socket_token(user, session)
+      assert {:ok, socket} = connect_admin(token)
+      reconnecting_transport(socket.id, token)
+
+      # Deactivating runs in Brando.Authorization.Boundary's transaction,
+      # here inside one more
+      {:ok, _} =
+        Brando.Repo.transaction(fn ->
+          assert {:ok, _} = Users.set_active(user.id, false, admin)
+          refute_receive :told, 50
+        end)
+
+      assert_receive :told
+      assert_receive {:reconnected, :error}
+      assert :error = connect_admin(token)
+      refute Users.session_valid?(Users.token_id(session), user.id)
+    end
+
+    test "a rolled back revocation disconnects nothing" do
+      user = user()
+      [a] = Enum.take(two_sessions(user), 1)
+
+      {:error, :undone} =
+        Brando.Repo.transaction(fn ->
+          :ok = Users.revoke_session(user, a.id)
+          Brando.Repo.rollback(:undone)
+        end)
+
+      assert_connected(a)
+    end
+
+    test "handing content on disconnects the sessions it deletes", %{current_user: admin} do
+      user = user()
+      [a, b] = two_sessions(user)
+
+      assert {:ok, %{"users_tokens" => 2}} = Users.transfer_user_content(user.id, admin.id)
+
+      assert_disconnected(a)
+      assert_disconnected(b)
+    end
+  end
+
+  describe "the admin socket's channels" do
+    test "refuse a join once the session is gone, told or not" do
+      user = user()
+      session = Users.generate_user_session_token(user)
+      assert {:ok, socket} = connect_admin(socket_token(user, session))
+      assert {:ok, _, _} = Phoenix.ChannelTest.subscribe_and_join(socket, Brando.UserChannel, "user:#{user.id}")
+
+      # Ended between the socket's connect and its subscribing to its id
+      Repo.delete_all(from(t in Users.UserToken, where: t.token == ^session))
+
+      assert {:error, %{reason: "forbidden"}} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, Brando.UserChannel, "user:#{user.id}")
+
+      assert {:error, %{reason: "forbidden"}} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, Brando.LobbyChannel, "lobby", %{"url" => "/admin"})
+
+      assert {:error, %{reason: "forbidden"}} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:key")
+    end
+  end
+
+  describe "socket ids" do
+    test "hold no session token, and the ids from before still disconnect" do
+      user = user()
+      session = Users.generate_user_session_token(user)
+      assert {:ok, socket} = connect_admin(socket_token(user, session))
+
+      state = :erlang.term_to_binary({socket.id, socket.assigns})
+      assert :binary.match(state, session) == :nomatch
+      assert :binary.match(state, Base.url_encode64(session)) == :nomatch
+      assert socket.id == Users.live_socket_id(session)
+      refute socket.id == Users.legacy_live_socket_id(session)
+
+      # A tab opened before the upgrade goes by the raw id
+      legacy = transport(Users.legacy_live_socket_id(session))
+      current = transport(socket.id)
+      :ok = Users.revoke_session(user, Users.token_id(session))
+
+      assert_receive {:DOWN, ^legacy, :process, _pid, :disconnected}
+      assert_receive {:DOWN, ^current, :process, _pid, :disconnected}
+    end
+
+    test "a session from before the upgrade gets the hashed id on its next request", %{conn: conn} do
+      token = get_session(conn, :user_token)
+
+      conn =
+        conn
+        |> put_session(:live_socket_id, Users.legacy_live_socket_id(token))
+        |> get("/admin/logout")
+
+      assert get_session(conn, :live_socket_id) == Users.live_socket_id(token)
     end
   end
 

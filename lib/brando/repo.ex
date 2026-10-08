@@ -124,8 +124,53 @@ defmodule Brando.Repo do
     repo().update_all(queryable, updates, put_prefix(opts, queryable))
   end
 
-  def transaction(fun, opts \\ []) do
-    repo().transaction(fun, opts)
+  @after_commit :brando_repo_after_commit
+
+  @doc """
+  Runs `fun_or_multi` in a transaction, as `c:Ecto.Repo.transaction/2`.
+
+  The outermost one also runs what `after_commit/1` held back during it,
+  once it has committed, and drops it when it rolls back. Inside a
+  transaction begun on the repo itself, `after_commit/1` cannot wait, and
+  runs its work at once.
+  """
+  def transaction(fun_or_multi, opts \\ []) do
+    # Inside another: only the outermost commits. One begun without this
+    # function leaves after_commit/1 to run its work at once.
+    if Process.get(@after_commit) || repo().in_transaction?() do
+      repo().transaction(fun_or_multi, opts)
+    else
+      Process.put(@after_commit, [])
+
+      {result, held} =
+        try do
+          result = repo().transaction(fun_or_multi, opts)
+          {result, Process.get(@after_commit)}
+        after
+          Process.delete(@after_commit)
+        end
+
+      if elem(result, 0) == :ok, do: held |> Enum.reverse() |> Enum.each(& &1.())
+      result
+    end
+  end
+
+  @doc """
+  Runs `fun` once the transaction around the caller has committed (one
+  started with `transaction/2`), or at once outside one. Rolled back, it
+  never runs.
+
+  For what others must only learn of once it is true — a broadcast that
+  sends them to read the database again, say.
+  """
+  @spec after_commit((-> any())) :: :ok
+  def after_commit(fun) when is_function(fun, 0) do
+    case Process.get(@after_commit) do
+      nil -> fun.()
+      held -> Process.put(@after_commit, [fun | held])
+    end
+
+    :ok
   end
 
   def rollback(reason) do

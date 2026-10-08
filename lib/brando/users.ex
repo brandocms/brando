@@ -319,7 +319,7 @@ defmodule Brando.Users do
           disconnect_session(token)
 
         context in UserToken.pending_contexts() ->
-          Phoenix.PubSub.broadcast(Brando.pubsub(), pending_login_topic(id), {:pending_login_ended, id})
+          announce_pending_ended(id)
 
         true ->
           :ok
@@ -327,6 +327,13 @@ defmodule Brando.Users do
     end
 
     :ok
+  end
+
+  # Once committed, like disconnect_session/1
+  defp announce_pending_ended(id) do
+    Repo.after_commit(fn ->
+      Phoenix.PubSub.broadcast(Brando.pubsub(), pending_login_topic(id), {:pending_login_ended, id})
+    end)
   end
 
   @doc """
@@ -455,19 +462,49 @@ defmodule Brando.Users do
   The id of the sockets of the session `token`: its LiveViews (the login
   puts the id in the session) and its admin socket
   (`BrandoAdmin.AdminSocket`). `disconnect_session/1` broadcasts
-  `"disconnect"` to it. It stays on the server: the page never sees it.
+  `"disconnect"` to it.
+
+  It is made from a SHA-256 hash of the token, so the token itself is in no
+  socket's state, and no crash report that prints one.
   """
   @spec live_socket_id(binary()) :: String.t()
-  def live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
+  def live_socket_id(token) when is_binary(token),
+    do: "users_sessions:" <> Base.url_encode64(:crypto.hash(:sha256, token), padding: false)
+
+  # The id before it was hashed, still in the session cookies of tabs
+  # opened before the upgrade. TODO: remove in 0.56, with its broadcast in
+  # disconnect_session/1 and its rewrite in BrandoAdmin.UserAuth.
+  @doc false
+  def legacy_live_socket_id(token) when is_binary(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
   @doc """
   Disconnects every socket of the session `token` — its LiveViews and its
   admin socket — and no other session's. Call it once the session's token
-  is deleted: the sockets try to reconnect, and are turned away.
+  is deleted: the sockets try to reconnect, and are turned away. Inside a
+  transaction (`Brando.Repo.transaction/2`) it waits for the commit, since a
+  socket reconnecting before then would still find the session.
   """
-  @spec disconnect_session(binary()) :: :ok | {:error, term()}
-  def disconnect_session(token) when is_binary(token),
-    do: Brando.endpoint().broadcast(live_socket_id(token), "disconnect", %{})
+  @spec disconnect_session(binary()) :: :ok
+  def disconnect_session(token) when is_binary(token) do
+    Repo.after_commit(fn ->
+      endpoint = Brando.endpoint()
+      endpoint.broadcast(live_socket_id(token), "disconnect", %{})
+      # Tabs opened before the id was hashed. TODO: remove in 0.56
+      endpoint.broadcast(legacy_live_socket_id(token), "disconnect", %{})
+    end)
+  end
+
+  @doc """
+  Whether `user_id`'s session with the token row id `session_id` is still
+  valid (`verify_socket_token/1`). The admin socket's channels check it as
+  they join: a session that ended between the socket's connect and its
+  subscribing to `live_socket_id/1` would otherwise keep it.
+  """
+  @spec session_valid?(integer() | nil, integer() | nil) :: boolean()
+  def session_valid?(session_id, user_id) when is_integer(session_id) and is_integer(user_id),
+    do: Repo.repo().exists?(UserToken.verify_session_id_query(session_id, user_id))
+
+  def session_valid?(_session_id, _user_id), do: false
 
   @socket_token_salt "brando_admin_socket"
   @socket_token_max_age 86_400
@@ -844,7 +881,8 @@ defmodule Brando.Users do
   """
   @spec transfer_user_content(integer(), integer()) :: {:ok, map()} | {:error, any()}
   def transfer_user_content(from_user_id, to_user_id) do
-    Brando.repo().transaction(fn ->
+    # Brando.Repo's: the sessions it ends are disconnected once it commits
+    Repo.transaction(fn ->
       refs = get_user_foreign_key_references()
 
       Enum.reduce(refs, %{}, fn {table, column}, acc ->
@@ -854,8 +892,17 @@ defmodule Brando.Users do
     end)
   end
 
+  # The user's sessions end, and their sockets are told (`announce_deleted/1`)
+  defp transfer_or_delete_ref("users_tokens", "user_id", from_user_id, _to_user_id) do
+    {num_rows, tokens} =
+      Repo.delete_all(from(t in UserToken, where: t.user_id == ^from_user_id, select: {t.context, t.token, t.id}))
+
+    announce_deleted(tokens)
+    num_rows
+  end
+
   defp transfer_or_delete_ref(table, "user_id", from_user_id, _to_user_id)
-       when table in ["users_tokens", "users_security", "users_recovery_codes", "users_passkeys"] do
+       when table in ["users_security", "users_recovery_codes", "users_passkeys"] do
     %{num_rows: num_rows} =
       Ecto.Adapters.SQL.query!(
         Brando.repo(),
@@ -897,9 +944,6 @@ defmodule Brando.Users do
       with {:ok, user} <- get_user(user_id),
            :ok <- Brando.Authorization.Boundary.authorize(actor, :delete, user),
            :ok <- protect_account(user),
-           # The transfer deletes the tokens without a word to the sessions'
-           # sockets: end the sessions properly first.
-           :ok <- revoke_sessions(user),
            {:ok, _counts} <- transfer_user_content(user_id, transfer_to_user_id) do
         delete_user(user_id, actor)
       end
