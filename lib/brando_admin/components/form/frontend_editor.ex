@@ -214,6 +214,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             for={@form}
             phx-target={@myself}
             phx-submit="save"
+            data-save-event="save_form"
             phx-change="validate"
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />

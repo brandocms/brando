@@ -25,7 +25,15 @@ const focusedInput = () => {
 export const formPayload = form =>
   new URLSearchParams(Array.from(new FormData(form)).filter(([, value]) => typeof value === 'string')).toString()
 
+// A form that takes its fields as an event names it (`data-save-event`,
+// the entry form). Any other form the save button belongs to is submitted.
 export default function saveForm(hook, form) {
+  const event = form.dataset.saveEvent
+  if (!event) {
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    return
+  }
+
   focusedInput()?.dispatchEvent(new Event('blur'))
-  hook.pushEventTo(form, 'save_form', { form: formPayload(form) })
+  hook.pushEventTo(form, event, { form: formPayload(form) })
 }
