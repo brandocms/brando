@@ -1136,6 +1136,161 @@ defmodule Brando.Blueprint.VerifierTest do
     assert_form_error(blueprint.(nil), ~r/listing style requires a listing function component/)
   end
 
+  describe "ai_actions" do
+    defp ai_actions_blueprint(input) do
+      quote do
+        attributes do
+          attribute :title, :string
+          attribute :summary, :text
+          attribute :year, :integer
+        end
+
+        relations do
+          relation :items, :has_many, module: Brando.Blueprint.VerifierTest.MediaItem
+        end
+
+        forms do
+          form do
+            tab "Content" do
+              fieldset do
+                unquote(input)
+              end
+            end
+          end
+        end
+      end
+    end
+
+    test "builds each action on the input, and keeps it out of the input's options" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(
+            quote do
+              input :summary, :textarea,
+                label: "Summary",
+                ai_actions: [
+                  summarize: [prompt: "Summarize.", from: :title, max: 160, tone: "plain", label: "Summarize"],
+                  translate: [prompt: "Translate.", from: [:title, :summary], language: "en", model: :fast]
+                ]
+            end
+          )
+        )
+
+      assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+
+      assert %{opts: [label: "Summary"], actions: [summarize, translate]} =
+               Brando.Blueprint.Forms.get_field(:summary, module.__form__())
+
+      assert %Brando.Blueprint.Forms.AIAction{
+               name: :summarize,
+               prompt: "Summarize.",
+               from: [:title],
+               max: 160,
+               tone: "plain",
+               label: "Summarize"
+             } = summarize
+
+      assert %{name: :translate, from: [:title, :summary], language: "en", model: :fast} = translate
+    end
+
+    test "reports an action reading an unknown field" do
+      assert_form_error(
+        ai_actions_blueprint(
+          quote do
+            input :summary, :textarea, ai_actions: [summarize: [prompt: "Summarize.", from: [:title, :body]]]
+          end
+        ),
+        ~r/ai_actions :summarize reading unknown field :body in :from/
+      )
+    end
+
+    test "reads :blocks only where the schema has a block field" do
+      assert_form_error(
+        ai_actions_blueprint(
+          quote do
+            input :summary, :textarea, ai_actions: [summarize: [prompt: "Summarize.", from: [:blocks]]]
+          end
+        ),
+        ~r/reading unknown field :blocks/
+      )
+
+      module =
+        compile_blueprint(
+          quote do
+            attributes do
+              attribute :summary, :text
+            end
+
+            relations do
+              relation :entry_blocks, :has_many, module: :blocks
+            end
+
+            forms do
+              form do
+                tab "Content" do
+                  fieldset do
+                    input :summary, :textarea, ai_actions: [summarize: [prompt: "Summarize.", from: [:blocks]]]
+                  end
+                end
+              end
+            end
+          end
+        )
+
+      assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+    end
+
+    for {name, input, message} <- [
+          {"a missing prompt", quote(do: input(:summary, :textarea, ai_actions: [summarize: [from: [:title]]])),
+           ~r/ai_actions :summarize: required :prompt option not found/},
+          {"a blank prompt",
+           quote(do: input(:summary, :textarea, ai_actions: [summarize: [prompt: " ", from: [:title]]])),
+           ~r/prompt must not be empty/},
+          {"no fields to read", quote(do: input(:summary, :textarea, ai_actions: [summarize: [prompt: "S", from: []]])),
+           ~r/from must name at least one field/},
+          {"a length that is not a positive integer",
+           quote(do: input(:summary, :textarea, ai_actions: [summarize: [prompt: "S", from: [:title], max: 0]])),
+           ~r/invalid value for :max option: expected positive integer/},
+          {"an unknown option",
+           quote(do: input(:summary, :textarea, ai_actions: [summarize: [prompt: "S", from: [:title], lenght: 3]])),
+           ~r/unknown options \[:lenght\]/},
+          {"options that are not a keyword list", quote(do: input(:summary, :textarea, ai_actions: [:summarize])),
+           ~r/ai_actions must be a keyword list/},
+          {"an action declared twice",
+           quote(
+             do:
+               input(:summary, :textarea,
+                 ai_actions: [summarize: [prompt: "S", from: [:title]], summarize: [prompt: "T", from: [:title]]]
+               )
+           ), ~r/declares the action :summarize more than once/},
+          {"an input type without text",
+           quote(do: input(:year, :number, ai_actions: [count: [prompt: "S", from: [:title]]])),
+           ~r/ai_actions work on :text, :textarea, :rich_text inputs, not :number/}
+        ] do
+      @input input
+      @message message
+      test "rejects #{name} when the Blueprint compiles" do
+        assert_raise Spark.Error.DslError, @message, fn ->
+          compile_blueprint(ai_actions_blueprint(@input))
+        end
+      end
+    end
+
+    test "reports actions in a subform" do
+      assert_form_error(
+        ai_actions_blueprint(
+          quote do
+            inputs_for :items do
+              cardinality :many
+              input :title, :text, ai_actions: [shorten: [prompt: "Shorten.", from: [:title]]]
+            end
+          end
+        ),
+        ~r/ai_actions work only on top-level inputs/
+      )
+    end
+  end
+
   defp first_subform(module) do
     module.__form__().tabs
     |> hd()
