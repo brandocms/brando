@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, keepDuplicateUploads } from '../../utils'
+import { syncLV, confirmUploadFolder, keepDuplicateUploads, routeLiveSocket, dropConnection, restoreConnection } from '../../utils'
 
 // The fields another editor is in are locked for us until they leave them:
 // rich text, a multi-select's options, and an image, video or file field
@@ -105,14 +105,12 @@ test.describe('Field locks', () => {
     }
   })
 
-  // What B types while disconnected is B's newest edit: the reconnect keeps
-  // it, and A, who holds the older title, gets it. A lost connection (sleep,
-  // a network change) rejoins with a new process and recovers the form,
-  // which is what this drives. It drops the socket through LiveSocket rather
-  // than `goOffline`: the browser's offline emulation closes the socket with
-  // code 1000, which LiveView answers with a page reload.
+  // What B types while the connection is lost (sleep, a network change) is
+  // B's newest edit: LiveView rejoins with a new process and recovers the
+  // form, and A, who holds the older title, gets B's.
   test('typing done offline survives the reconnect', async ({ page, secondUserPage }) => {
     const path = await openProject(page)
+    await routeLiveSocket(secondUserPage)
     await secondUserPage.goto(path)
     await syncLV(secondUserPage)
 
@@ -123,11 +121,9 @@ test.describe('Field locks', () => {
     await aTitle.blur()
     await expect(bTitle).toHaveValue('Test Project Beta, A', { timeout: 5000 })
 
-    await secondUserPage.evaluate(() => window.liveSocket.disconnect())
-    await expect(secondUserPage.locator('.phx-connected').first()).toBeHidden({ timeout: 15000 })
+    await dropConnection(secondUserPage)
     await bTitle.fill('Test Project Beta, typed offline')
-    await secondUserPage.evaluate(() => window.liveSocket.connect())
-    await syncLV(secondUserPage, 30000)
+    await restoreConnection(secondUserPage)
 
     await expect(bTitle).toHaveValue('Test Project Beta, typed offline')
     await expect(aTitle).toHaveValue('Test Project Beta, typed offline', { timeout: 10000 })

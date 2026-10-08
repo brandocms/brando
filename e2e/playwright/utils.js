@@ -53,7 +53,11 @@ const awaitBlockShip = async page => {
   await syncLV(page)
 }
 
-// Cut the network under the browser, the way a lost connection does.
+// Take the browser offline. NOT a lost connection, for LiveView: step 2 below
+// closes the socket from the page, the server answers that close with code
+// 1000, and LiveView reloads the page on a clean close, so nothing rejoins
+// and no form is recovered. For a lost connection, which rejoins with a new
+// process and recovers the forms, use `dropConnection`.
 //
 // Two steps, and both are needed:
 //
@@ -91,6 +95,45 @@ const goOffline = async page => {
 // here tells it to, which is what makes the round trip a real one.
 const goOnline = async page => {
   await page.context().setOffline(false)
+  await syncLV(page, 30000)
+}
+
+// A lost connection, the way sleep or a network change loses it: the socket
+// dies without a clean close, LiveSocket keeps retrying, and the retries are
+// refused until `restoreConnection`. LiveView then rejoins with a new server
+// process, recovers the forms, and its hooks get `disconnected()` and
+// `reconnected()`.
+//
+// Closing the socket from the page cannot do this: the server answers the
+// close with code 1000, and LiveView reloads the page on a clean close (as
+// it does under `goOffline`). So the page's LiveView socket goes through
+// Playwright, which can close the page's side with a code of its own. Call
+// `routeLiveSocket` before the page loads.
+const liveConnection = page => (page.__liveConnection ??= { refused: false, sockets: new Set() })
+
+const routeLiveSocket = async page => {
+  const live = liveConnection(page)
+  await page.routeWebSocket(/\/live\/websocket/, ws => {
+    if (live.refused) return ws.close({ code: 4001, reason: 'e2e: connection lost' })
+    const server = ws.connectToServer()
+    live.sockets.add({ ws, server })
+  })
+}
+
+const dropConnection = async page => {
+  const live = liveConnection(page)
+  live.refused = true
+  for (const { ws, server } of live.sockets) {
+    await ws.close({ code: 4001, reason: 'e2e: connection lost' })
+    await server.close()
+  }
+  live.sockets.clear()
+  await expect(page.locator('.phx-connected').first()).toBeHidden({ timeout: 15000 })
+}
+
+// Let LiveSocket's retries through again (see `dropConnection`).
+const restoreConnection = async page => {
+  liveConnection(page).refused = false
   await syncLV(page, 30000)
 }
 
@@ -393,6 +436,9 @@ module.exports = {
   awaitBlockShip,
   goOffline,
   goOnline,
+  routeLiveSocket,
+  dropConnection,
+  restoreConnection,
   evalLV,
   evalPlug,
   attributeMutations,
