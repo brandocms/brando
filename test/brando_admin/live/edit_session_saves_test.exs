@@ -13,15 +13,16 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   alias Brando.EditSession
   alias Brando.Pages.Page
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.BlockField.Ops
 
   @block_field "page_form-blocks-blocks"
 
-  setup do
+  setup %{current_user: me} do
     c = Brando.ProposalFixtures.context()
     other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
     other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
     uids = c.identity |> rows() |> Enum.map(& &1.block.uid)
-    Map.merge(c, %{other: other, other_conn: other_conn, uids: uids})
+    Map.merge(c, %{me: me, other: other, other_conn: other_conn, uids: uids})
   end
 
   defp texts(page), do: Enum.map(rows(page), &{&1.block.uid, hd(&1.block.refs).data.data.text})
@@ -36,7 +37,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   # state is read here), the second writes.
   defp save_read(view) do
     view |> form("#page_form_form") |> render_submit()
-    assert_push_event(view, "b:submit", %{}, 2_000)
+    assert_push_event(view, "b:submit", %{}, 5_000)
   end
 
   defp save_write(view), do: view |> form("#page_form_form") |> render_submit()
@@ -135,7 +136,6 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> session_state(c.identity).statuses[new] == :persisted end)
     save_write(b)
     assert block_count(new) == 1
-
     type(b, new, "<p>B retries</p>")
     save_read(b)
     save_write(b)
@@ -143,6 +143,99 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> Map.new(texts(c.identity))[new] == "<p>B retries</p>" end)
     assert block_count(new) == 1
     assert length(rows(c.identity)) == 4
+  end
+
+  # The save button and ⌘S push the form's fields (`save_form`) instead of
+  # submitting the form, so the focused input keeps typing during a save.
+  test "a save pushed as form fields saves like a submit", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    stay(a)
+    type(a, first, "<p>Saved by a pushed save</p>")
+    form = a |> render() |> form_params("#page_form_form") |> put_in(["page", "title"], "Pushed")
+    cid = form_cid(a)
+
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => Plug.Conn.Query.encode(form)})
+    assert_push_event(a, "b:submit", %{}, 2_000)
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => Plug.Conn.Query.encode(form)})
+
+    await(fn -> Repo.get!(Page, c.identity.id).title == "Pushed" end)
+    assert Map.new(texts(c.identity))[first] == "<p>Saved by a pushed save</p>"
+  end
+
+  # Follow-up, round 2: a save whose new URL opens the redirect prompt left
+  # the edit session on the old rows, its mark pinning the op log, until the
+  # prompt was answered.
+  test "a save that asks about a redirect moves the session on at once", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    stay(a)
+    type(a, first, "<p>Saved with a new URL</p>")
+    a |> form("#page_form_form") |> render_change(%{"page" => %{"uri" => "moved-on"}, "_target" => ["page", "uri"]})
+    save_read(a)
+    save_write(a)
+    assert render(a) =~ "moved-on"
+
+    session = EditSession.whereis(EditSession.ref(Page, c.identity.id, c.identity.language))
+    await(fn -> :sys.get_state(session).data.fields[:blocks].marks == %{} end)
+    assert session_state(c.identity).diffs[first] in [nil, %{}]
+    assert shown_text(b, first) == "<p>Saved with a new URL</p>"
+  end
+
+  # Follow-up, round 2: the save button and then ⌘S (or ⌘S twice) before
+  # the first answered wrote the entry twice.
+  test "two quick saves write once", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    stay(a)
+    type(a, first, "<p>Saved once</p>")
+    cid = form_cid(a)
+    form = a |> render() |> form_params("#page_form_form") |> Plug.Conn.Query.encode()
+
+    revisions = fn ->
+      Repo.one(from(r in Brando.Revisions.Revision, where: r.entry_id == ^c.identity.id, select: count()))
+    end
+
+    before = revisions.()
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => form})
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => form})
+
+    # every b:submit is answered, as the browser does, with its token
+    answered =
+      Enum.reduce_while(1..4, 0, fn _, answered ->
+        receive do
+          {ref, {:push_event, "b:submit", %{token: token}}} when is_reference(ref) ->
+            a |> with_target(cid) |> render_hook("save_form", %{"form" => form, "token" => token})
+            {:cont, answered + 1}
+        after
+          1_000 -> {:halt, answered}
+        end
+      end)
+
+    assert answered == 1
+    assert revisions.() - before == 1
+    assert Map.new(texts(c.identity))[first] == "<p>Saved once</p>"
+
+    # a b:submit answered after its save wrote is ignored
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => form, "token" => 12_345})
+    refute_receive {_, {:push_event, "b:submit", _}}, 300
+    assert revisions.() - before == 1
+  end
+
+  # Follow-up: a save's mark is cleared when the save is done, not after a
+  # fixed time. A save that fails lets go of it at once.
+  test "a save that fails lets the session forget what it read", c do
+    a = open(c.conn, c.identity)
+    stay(a)
+    session = EditSession.whereis(EditSession.ref(Page, c.identity.id, c.identity.language))
+    marked? = fn -> Map.has_key?(:sys.get_state(session).data.fields[:blocks].marks, a.pid) end
+
+    a |> form("#page_form_form") |> render_change(%{"page" => %{"title" => ""}, "_target" => ["page", "title"]})
+    save_read(a)
+    assert marked?.()
+    save_write(a)
+    await(fn -> not marked?.() end)
   end
 
   # A keystroke on a block that was new when a save read the state, landing
@@ -304,6 +397,32 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(rows(c.identity)) == 3
   end
 
+  # Review of #3055: the block came back after its rescue (the proposal was
+  # undone) while the first copy stayed, and work in it was then removed
+  # again. The first copy settled the second rescue, so nothing was
+  # inserted and the new work was lost.
+  test "a block removed again while its first copy is still there comes back as a second copy", c do
+    [_first, second | _] = c.uids
+    b = open(c.other_conn, c.identity)
+    type(b, second, "<p>First work</p>")
+
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+    await(fn -> shown_text(b, second <> "-kept") == "<p>First work</p>" end)
+
+    {:ok, _} = Proposals.undo(proposal.id, c.user)
+    await(fn -> Ops.known?(session_state(c.identity), second) end)
+    type(b, second, "<p>Second work</p>")
+
+    {:ok, again} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(again.id, again.version, c.user)
+    {:ok, _} = Proposals.apply(again.id, again.version, c.user)
+
+    await(fn -> shown_text(b, second <> "-kept-2") == "<p>Second work</p>" end)
+    assert shown_text(b, second <> "-kept") == "<p>First work</p>"
+  end
+
   # #5: a change to a block another editor had just deleted was rejected by
   # the session without a word to the editor who made it.
   test "a change to a block another editor just deleted is reported to its author", c do
@@ -363,6 +482,167 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     texts = &Enum.map(&1, fn ref -> {ref["name"], get_in(ref, ["data", "data", "text"])} end)
     assert texts.(kept_child["refs"]) == texts.(refs)
     assert Enum.all?(kept_child["refs"], &(&1["uid"] not in Enum.map(refs, fn ref -> ref["uid"] end)))
+  end
+
+  # Round 3: activating a revision from one's own drawer, with unsaved work
+  # in a block the revision lacks. The write came from the editor's own
+  # process, which was never asked to bring the work back: it was lost
+  # without a word.
+  test "work in a block an activated revision lacks comes back for the editor who activated it", c do
+    entry = Page |> Repo.get!(c.identity.id) |> Repo.preload(Brando.Blueprint.preloads_for(Page))
+    {:ok, _} = Brando.Revisions.create_revision(entry, c.user)
+    revision = revisions(c.identity)
+
+    # a block the revision does not have, saved, then changed and not saved
+    a = open(c.conn, c.identity)
+    stay(a)
+    insert_block(a, c, 0)
+    await(fn -> new_uid(a, c.uids) != nil end)
+    new = new_uid(a, c.uids)
+    save_read(a)
+    save_write(a)
+    await(fn -> block_count(new) == 1 and session_state(c.identity).statuses[new] == :persisted end)
+    type(a, new, "<p>Unsaved, in a block the revision lacks</p>")
+    await(fn -> session_state(c.identity).diffs[new] not in [nil, %{}] end)
+
+    Brando.endpoint().subscribe("user:#{c.me.id}")
+    drawer = cid_of(a, "#page_form-revisions-drawer-tab-activity")
+    a |> with_target(drawer) |> render_hook("activate_revision", %{"value" => revision})
+
+    kept = new <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end, 300)
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+  end
+
+  # Follow-up, round 2: two editors' work in two children of one removed
+  # container. Each brought back its own copy of the container under one
+  # uid, and the session turned the second away: one editor's work was lost.
+  test "work two editors had in two children of a removed container comes back in one copy", c do
+    c = Brando.ProposalFixtures.multi_context(c)
+    [x, y | _] = c.child_uids
+    a = open(c.conn, c.work)
+    b = open(c.other_conn, c.work)
+    Brando.endpoint().subscribe("user:#{c.me.id}")
+    Brando.endpoint().subscribe("user:#{c.other.id}")
+
+    set_child(a, x, ["child_block", "refs", "0", "data", "data", "text"], "<p>A's child work</p>")
+    set_child(b, y, ["child_block", "refs", "0", "data", "data", "text"], "<p>B's child work</p>")
+    await(fn -> session_state(c.work).diffs[x] != nil and session_state(c.work).diffs[y] != nil end)
+    delete_outside(c, c.multi_uid)
+
+    shell = c.multi_uid <> "-kept"
+    await(fn -> session_state(c.work).statuses[shell] == :inserted end)
+    state = session_state(c.work)
+    assert state.order == [c.intro_uid, shell]
+    assert state.child_order[shell] == [x <> "-kept", y <> "-kept"]
+    assert kept_text(state, x <> "-kept") == "<p>A's child work</p>"
+    assert kept_text(state, y <> "-kept") == "<p>B's child work</p>"
+
+    # each of them is told their work is back
+    assert_receive %Phoenix.Socket.Broadcast{topic: "user:" <> a_id, event: "toast"}, 2_000
+    assert_receive %Phoenix.Socket.Broadcast{topic: "user:" <> b_id, event: "toast"}, 2_000
+    assert Enum.sort([a_id, b_id]) == Enum.sort([to_string(c.me.id), to_string(c.other.id)])
+  end
+
+  # Follow-up: the editor whose unsaved work a removed block held had left,
+  # and nobody brought it back. An editor still here does now, and every
+  # editor still here is told.
+  test "work an editor who has left had in a removed block comes back, and the others hear of it", c do
+    [_first, second | _] = c.uids
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    type(b, second, "<p>B's work, B gone</p>")
+    await(fn -> shown_text(a, second) == "<p>B's work, B gone</p>" end)
+    kill_live(b)
+
+    Brando.endpoint().subscribe("user:#{c.me.id}")
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+    kept = second <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end)
+    await(fn -> shown_text(a, kept) == "<p>B's work, B gone</p>" end)
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+  end
+
+  # Two editors in one block that another write removes: one of them brings
+  # it back, not both.
+  test "a removed block two editors worked in comes back once", c do
+    [_first, second | _] = c.uids
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    type(a, second, "<p>A</p>")
+    await(fn -> shown_text(b, second) == "<p>A</p>" end)
+    type(b, second, "<p>A and B</p>")
+    await(fn -> shown_text(a, second) == "<p>A and B</p>" end)
+
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+    await(fn -> session_state(c.identity).statuses[second <> "-kept"] == :inserted end)
+    Process.sleep(300)
+    assert length(session_state(c.identity).order) == 3
+  end
+
+  # Follow-up: a child with unsaved work, removed by another write, came
+  # back as a root block of its own: a multi module's entry outside its
+  # module. It now goes back where it was.
+  describe "a removed child with unsaved work" do
+    setup c do
+      c = Brando.ProposalFixtures.multi_context(c)
+      [alpha | _] = c.child_uids
+      b = open(c.other_conn, c.work)
+      set_child(b, alpha, ["child_block", "refs", "0", "data", "data", "text"], "<p>Alpha, by B</p>")
+      await(fn -> inspect(session_state(c.work).diffs[alpha]) =~ "Alpha, by B" end)
+      Map.merge(c, %{alpha: alpha, b: b})
+    end
+
+    defp delete_outside(c, uid) do
+      {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.work.id}, block_uid: uid}], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+    end
+
+    defp kept_text(state, uid),
+      do: get_in(state.diffs, [uid, "refs"]) |> Enum.find(&(&1["name"] == "info")) |> get_in(["data", "data", "text"])
+
+    test "comes back under its parent, when the parent is still there", c do
+      delete_outside(c, c.alpha)
+      kept = c.alpha <> "-kept"
+      await(fn -> session_state(c.work).statuses[kept] == :inserted end)
+
+      state = session_state(c.work)
+      assert state.parents[kept] == c.multi_uid
+      assert state.child_order[c.multi_uid] == tl(c.child_uids) ++ [kept]
+      refute kept in state.order
+      assert kept_text(state, kept) == "<p>Alpha, by B</p>"
+
+      stay(c.b)
+      save_read(c.b)
+      save_write(c.b)
+
+      # a container with its children: give a loaded test run time
+      await(
+        fn ->
+          c.work |> rows() |> Enum.find(&(&1.block.uid == c.multi_uid)) |> then(&(length(&1.block.children) == 3))
+        end,
+        500
+      )
+    end
+
+    test "comes back inside its removed parent, kept around it alone, when the parent went too", c do
+      delete_outside(c, c.multi_uid)
+      kept = c.alpha <> "-kept"
+      shell = c.multi_uid <> "-kept"
+      await(fn -> session_state(c.work).statuses[kept] == :inserted end)
+
+      state = session_state(c.work)
+      assert state.order == [c.intro_uid, shell]
+      assert state.child_order[shell] == [kept]
+      assert kept_text(state, kept) == "<p>Alpha, by B</p>"
+    end
   end
 
   # Round 3 #2: an Assistant proposal applied between a save collecting its
@@ -482,6 +762,37 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
     await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abc" end)
     await(fn -> shown.(b) == "abc" end)
+  end
+
+  # Follow-up, round 2: a toggle set back, or a backspace to the text from
+  # before, within a second of another editor's change to the same field.
+  for {name, path, theirs, mine} <- [
+        {"a toggle set back", ["entry_block", "block", "active"], "false", "true"},
+        {"a backspace to the text before", ["entry_block", "block", "refs", "0", "data", "data", "text"], "<p>B's</p>",
+         "<p>Identity 0</p>"}
+      ] do
+    test "#{name} right after another editor changed the field is kept", c do
+      [first | _] = c.uids
+      path = unquote(path)
+      a = open(c.conn, c.identity)
+      b = open(c.other_conn, c.identity)
+      selector = "#entry_block_form-#{first}"
+
+      set = fn view, value ->
+        params = view |> render() |> form_params(selector) |> put_in(path, value) |> Map.put("_target", path)
+        view |> element(selector) |> render_change(params)
+      end
+
+      shown = fn view -> view |> render() |> form_params(selector) |> get_in(path) end
+      before = shown.(a)
+
+      set.(b, unquote(theirs))
+      await(fn -> shown.(a) == unquote(theirs) end)
+      set.(a, unquote(mine))
+      assert unquote(mine) == before
+
+      await(fn -> shown.(b) == unquote(mine) end)
+    end
   end
 
   # #10: refreshing a root for another editor's change also rewrote its seed

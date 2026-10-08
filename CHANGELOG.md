@@ -1585,6 +1585,18 @@ production dump.
 
 #### Fixes
 
+- **Nothing typed or changed in a shared entry is lost on the way to a
+  save.** The save button and ⌘S no longer submit the form, which took the
+  focus from the field being typed in and ignored every key until the save
+  was done. A save slower than 30 seconds no longer shows what it saved as
+  unsaved changes. Unsaved work in a block another write removes comes back
+  also when the editor who did it has left (the others are told), and a
+  child block comes back in its parent, or inside its removed parents, not
+  as a root; work two editors had in one removed container comes back in
+  one copy. Two editors adding a select option or a gallery image each
+  both keep theirs, and a gallery showing one image twice keeps both
+  copies apart. Pressing Save and ⌘S together saves once.
+
 - **Saving a revision loaded as a working copy writes it.** The revisions
   drawer loaded a revision by making it the form's saved data, so the form
   held no changes and Save wrote nothing, while the editor showed the

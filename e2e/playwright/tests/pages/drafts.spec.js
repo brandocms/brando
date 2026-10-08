@@ -290,4 +290,43 @@ test.describe('Entry recovery copies', () => {
     expect(locks.form).toBe(0)
     expect(locks.capture).toBeGreaterThan(0)
   })
+
+  // ⌘S used to push the save from the form's hook element, which locked the
+  // form around the block fields (see the capture test above). It is pushed
+  // from its own element, and the input being typed in keeps the focus.
+  test('⌘S locks only its own element and keeps the focus in the field', async ({ page }) => {
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    const title = page.getByLabel('Title', { exact: true })
+    await title.fill('Saved without locking the form')
+    await page.getByLabel('URI').fill('saved-without-locking')
+    await expect(page).toHaveURL(/\/create/)
+    await page.getByTestId('split-dropdown-button').click()
+    await page.getByRole('button', { name: /Save and continue editing/ }).click()
+    await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
+    await syncLV(page)
+
+    await page.evaluate(() => {
+      const form = document.querySelector('[phx-hook="Brando.Form"]')
+      window.saveLocks = { form: 0, source: 0 }
+      new MutationObserver(records => {
+        for (const { target } of records) {
+          if (!target.hasAttribute('data-phx-ref-lock')) continue
+          if (target === form) window.saveLocks.form += 1
+          if (target.matches('[data-save-source]')) window.saveLocks.source += 1
+        }
+      }).observe(form, { attributes: true, attributeFilter: ['data-phx-ref-lock'], subtree: true })
+    })
+    await title.click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('ControlOrMeta+s')
+    await page.keyboard.type(', still typing', { delay: 40 })
+    await syncLV(page)
+    await expect(page.getByTestId('submit').first()).toBeEnabled({ timeout: 15000 })
+    await expect(title).toBeFocused()
+    await expect(title).toHaveValue('Saved without locking the form, still typing')
+    const locks = await page.evaluate(() => window.saveLocks)
+    expect(locks.form).toBe(0)
+    expect(locks.source).toBeGreaterThan(0)
+  })
 })

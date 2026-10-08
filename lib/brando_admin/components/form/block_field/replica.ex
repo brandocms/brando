@@ -30,7 +30,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
             seq: 0,
             confirmed: nil,
             pending: [],
-            touched: MapSet.new(),
             read_only: false
 
   @type t :: %__MODULE__{
@@ -42,7 +41,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
           seq: non_neg_integer(),
           confirmed: Ops.t() | nil,
           pending: [{non_neg_integer(), Ops.op()}],
-          touched: MapSet.t(),
           read_only: boolean()
         }
 
@@ -73,24 +71,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
   @spec local(t(), Ops.op()) :: {t(), non_neg_integer()}
   def local(%__MODULE__{} = replica, op) do
     seq = replica.seq + 1
-    touched = op |> op_uids() |> Enum.reduce(replica.touched, &MapSet.put(&2, &1))
-    {%{replica | seq: seq, pending: replica.pending ++ [{seq, op}], touched: touched}, seq}
+    {%{replica | seq: seq, pending: replica.pending ++ [{seq, op}]}, seq}
   end
-
-  # The blocks an op changes, to know later whose work a lost block held.
-  defp op_uids({kind, uid, _}) when kind in [:update, :move], do: [uid]
-  defp op_uids({:insert, uid, _at, _params}), do: [uid]
-  defp op_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
-  defp op_uids({:set_fields, uid, _changes, _rev}), do: [uid]
-  defp op_uids({:insert_child, parent, uid, _at, _params}), do: [parent, uid]
-  defp op_uids({:move_to_parent, uid, parent, _at}), do: [uid, parent]
-  defp op_uids({:remap_slot, uid, _destination, _params}), do: [uid]
-  defp op_uids({:reorder_children, parent, _uids}), do: [parent]
-  defp op_uids(_op), do: []
-
-  @doc "Whether this editor changed the block `uid` (as far as this replica knows)."
-  @spec touched?(t(), String.t()) :: boolean()
-  def touched?(%__MODULE__{touched: touched}, uid), do: MapSet.member?(touched, uid)
 
   @doc """
   An op broadcast by the session.

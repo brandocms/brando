@@ -1,5 +1,6 @@
 import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
+import saveForm from './saveForm'
 import locateBlock from './locateBlock'
 import dirtyFields from '../../Presence/dirtyFields'
 import follow from '../../Presence/follow'
@@ -238,8 +239,15 @@ export default (app) => ({
     if (!(ev.metaKey || ev.ctrlKey) || ev.altKey || (ev.key || '').toLowerCase() !== 's') return
     ev.preventDefault()
 
-    const submit = () =>
-      this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    // The entry form saves without a form submit, which would take the focus
+    // from what is being typed in, and says in the same push whether to stay
+    // (`saveForm.js`).
+    if (this.$form.dataset.saveEvent) {
+      saveForm(this, this.$form, { stay: !ev.shiftKey })
+      return
+    }
+
+    const submit = () => saveForm(this, this.$form)
 
     if (ev.shiftKey) {
       submit()

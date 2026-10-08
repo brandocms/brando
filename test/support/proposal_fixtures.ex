@@ -175,13 +175,18 @@ defmodule Brando.ProposalFixtures do
         "sequence" => sequence,
         "creator_id" => user.id,
         "source" => to_string(Page.Blocks),
-        "refs" => refs,
-        "vars" => vars
+        # In the order given: rows with the same sequence come back in any
+        # order, and a test that reads `refs.0` read the wrong ref now and
+        # then.
+        "refs" => in_sequence(refs),
+        "vars" => in_sequence(vars)
       },
       user
     )
     |> Repo.insert!()
   end
+
+  defp in_sequence(rows), do: Enum.with_index(rows, fn row, n -> Map.put_new(row, "sequence", n) end)
 
   def page!(user, title, module) do
     page = Factory.insert(:page, creator: user, title: title, uri: String.downcase(title))

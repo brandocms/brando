@@ -421,7 +421,7 @@ jobs:
         working-directory: brando/e2e
         run: |
           source .envrc
-          node --test ../test/javascript/tiptap.test.mjs ../test/javascript/pending_inputs.test.mjs
+          node --test ../test/javascript/*.test.mjs
           cd playwright
           pnpm exec playwright test --config tiptap.config.js
 

@@ -98,9 +98,13 @@ defmodule Brando.EditSession do
   @spec whereis(ref() | key()) :: pid() | nil
   def whereis(%{key: key}), do: whereis(key)
 
+  # A session that died stays registered until the Registry has handled its
+  # exit, which can be after its editors have handled theirs and come back
+  # to join: a dead pid is no session. (Registering a new one replaces the
+  # stale entry, as `Registry` does for a dead process.)
   def whereis(key) do
     case Registry.lookup(@registry, key) do
-      [{pid, _}] -> pid
+      [{pid, _}] -> if Process.alive?(pid), do: pid
       [] -> nil
     end
   end
@@ -190,11 +194,16 @@ defmodule Brando.EditSession do
   `purpose: :save` (only the ops after that are replayed), `{:after, rev}`
   for a given revision, and `:carry` when the rows were written outside the
   session.
+
+  `replica: true` when the caller is the field's replica, which moves on
+  with the reply and never sees the broadcast: it is not asked to bring
+  back removed work then (any other caller, `sync_saved/1` from the
+  editor's own process, is).
   """
-  @spec rebase(pid(), term(), Ops.t(), :own_save | {:after, non_neg_integer()} | :carry) ::
+  @spec rebase(pid(), term(), Ops.t(), :own_save | {:after, non_neg_integer()} | :carry, keyword()) ::
           {:ok, map()} | {:error, term()}
-  def rebase(session, field, %Ops{} = base, mode) do
-    GenServer.call(session, {:rebase, self(), field, base, mode})
+  def rebase(session, field, %Ops{} = base, mode, opts \\ []) do
+    GenServer.call(session, {:rebase, self(), field, base, mode, opts})
   catch
     :exit, _ -> {:error, :no_session}
   end
@@ -241,6 +250,29 @@ defmodule Brando.EditSession do
   @spec saved(struct()) :: :ok
   def saved(%_{} = entry), do: rebase_all(entry, :own_save)
 
+  @doc """
+  This process is done bringing back the blocks of `group`, as the session
+  asked: after the insert it cast, or without one. The session checks its
+  state for the copy and tells every editor, or asks the next one.
+  """
+  @spec rescued(pid(), term(), String.t()) :: :ok
+  def rescued(session, field, group), do: GenServer.cast(session, {:rescued, self(), field, group})
+
+  @doc """
+  This process's save of `entry`, from the state it fetched with `purpose:
+  :save`, failed: the session stops keeping the ops that arrived since for
+  its rebase.
+  """
+  @spec save_failed(struct()) :: :ok
+  def save_failed(%_{id: id} = entry) when not is_nil(id) do
+    case whereis(ref_for(entry)) do
+      pid when is_pid(pid) -> GenServer.cast(pid, {:save_failed, self()})
+      _ -> :ok
+    end
+  end
+
+  def save_failed(_entry), do: :ok
+
   defp rebase_all(%schema{id: id} = entry, mode) do
     with pid when is_pid(pid) <- whereis(ref_for(entry)),
          true <- schema.has_trait(Brando.Trait.Blocks) do
@@ -283,6 +315,12 @@ defmodule Brando.EditSession do
        topic: topic,
        data: Data.new(System.unique_integer([:positive, :monotonic])),
        clients: %{},
+       # the blocks each editor changed (`Ops.op_uids/1`), kept after they
+       # leave: whose work a block another write removes holds
+       touched: %{},
+       # blocks with unsaved work a write removed, waiting for the editor
+       # asked to bring them back (`assign_rescues/6`)
+       rescues: %{},
        # editors that left to show something else (`detach/2`), monitored so
        # their marks go when they do
        detached: %{},
@@ -317,7 +355,7 @@ defmodule Brando.EditSession do
     end
   end
 
-  def handle_call({:rebase, pid, field, base, mode}, _from, session) do
+  def handle_call({:rebase, pid, field, base, mode, opts}, _from, session) do
     mode =
       case {mode, detached?(session, field, pid)} do
         # this editor wrote what it showed in place of the session's state
@@ -328,7 +366,8 @@ defmodule Brando.EditSession do
       end
 
     reason = if mode == :carry, do: :external, else: :saved
-    session = do_rebase(session, field, base, mode, pid, reason)
+    exclude = if opts[:replica], do: pid
+    session = do_rebase(session, field, base, mode, pid, reason, exclude)
     {:reply, {:ok, info(session, field, pid, false)}, session}
   end
 
@@ -341,7 +380,8 @@ defmodule Brando.EditSession do
 
     case result do
       {:ok, data} ->
-        session = %{session | data: data}
+        uids = MapSet.new(Ops.op_uids(op))
+        session = %{session | data: data, touched: Map.update(session.touched, pid, uids, &MapSet.union(&1, uids))}
 
         broadcast(session, field, %{
           kind: :op,
@@ -351,7 +391,8 @@ defmodule Brando.EditSession do
           origin: {pid, seq}
         })
 
-        {:noreply, session}
+        # an insert that brings back removed work settles its rescue
+        {:noreply, if(session.rescues == %{}, do: session, else: settle_rescues(session, field))}
 
       {:error, reason} ->
         Logger.warning("[EditSession] rejected #{inspect(elem(op, 0))} for #{inspect(field)}: #{inspect(reason)}")
@@ -372,6 +413,19 @@ defmodule Brando.EditSession do
       end
 
     handle_cast({:leave, pid, field}, session)
+  end
+
+  def handle_cast({:save_failed, pid}, session), do: {:noreply, %{session | data: Data.release(session.data, pid)}}
+
+  # The editor asked says it is done. The insert it cast came first, so the
+  # state says whether it worked: if not, the next editor is asked.
+  def handle_cast({:rescued, pid, field, group}, session) do
+    session = settle_rescues(session, field)
+
+    case session.rescues do
+      %{{^field, ^group} => %{rescuer: ^pid}} -> {:noreply, reassign_rescue(session, field, group)}
+      _ -> {:noreply, session}
+    end
   end
 
   def handle_cast({:leave, pid, field}, session) do
@@ -402,6 +456,13 @@ defmodule Brando.EditSession do
     {:noreply, session |> remove_client(pid) |> maybe_schedule_stop()}
   end
 
+  def handle_info({:rescue_timeout, field, group, token}, session) do
+    case session.rescues do
+      %{{^field, ^group} => %{token: ^token}} -> {:noreply, reassign_rescue(session, field, group)}
+      _ -> {:noreply, session}
+    end
+  end
+
   def handle_info({:stop_if_idle, token}, %{stop_timer: {token, _}, clients: clients} = session)
       when map_size(clients) == 0,
       do: {:stop, :normal, session}
@@ -420,16 +481,44 @@ defmodule Brando.EditSession do
   defp merge_held(session, field, held, held_base, pid) do
     case Data.merge_held(session.data, field, held, held_base) do
       {:joined, _data} ->
-        session
+        {session, []}
 
       {{:merged, conflicts}, data} ->
+        # Work only the joiner held: only it can bring it back, from the
+        # join's reply (`joiner_info/5`).
         session = %{session | data: data}
-        broadcast_state(session, field, pid, :joined, conflicts)
-        session
+        broadcast_state(session, field, pid, :joined, conflicts, [])
+        {session, conflicts}
     end
   end
 
-  defp do_rebase(session, field, base, mode, origin, reason) do
+  # The join's reply, with the joiner's own work the session could not take
+  # (`rescues`, for it alone): its blocks another write removed meanwhile.
+  defp joiner_info(session, field, pid, held, conflicts) do
+    new = Data.state(session.data, field)
+
+    rescues =
+      conflicts
+      |> Enum.group_by(&removed_top(held, new, &1))
+      |> Enum.map(fn {group, uids} ->
+        %{
+          group: group,
+          kept: kept_uid(session, field, held, new, group),
+          uids: uids,
+          rescuer: pid,
+          owners: [pid],
+          orphan?: false
+        }
+      end)
+
+    Map.put(info(session, field, pid, false), :rescues, rescues)
+  end
+
+  # `exclude`: an editor whose replica moves on with the reply of the call
+  # that caused this rebase (a join, the replica's own rebase), and never
+  # sees the broadcast.
+  defp do_rebase(session, field, base, mode, origin, reason, exclude) do
+    old = Data.state(session.data, field)
     {:ok, data, conflicts} = Data.rebase(session.data, field, base, mode, now())
     session = %{session | data: data}
 
@@ -437,14 +526,15 @@ defmodule Brando.EditSession do
       Logger.warning("[EditSession] unsaved work on #{inspect(conflicts)} could not be carried onto the new rows")
     end
 
-    broadcast_state(session, field, origin, reason, conflicts)
+    {session, rescues} = assign_rescues(session, field, old, Data.state(data, field), conflicts, exclude)
+    broadcast_state(session, field, origin, reason, conflicts, rescues)
     session
   end
 
   # The field's whole state, for every replica: after a rebase, or when a
   # joiner carried work onto it. `seqs` tells each replica which of its
   # pending ops the state already holds.
-  defp broadcast_state(session, field, origin, reason, conflicts) do
+  defp broadcast_state(session, field, origin, reason, conflicts, rescues) do
     data = session.data
     entry = Map.fetch!(data.fields, field)
 
@@ -457,8 +547,170 @@ defmodule Brando.EditSession do
       seqs: entry.seqs,
       origin: origin,
       reason: reason,
-      conflicts: conflicts
+      conflicts: conflicts,
+      rescues: rescues,
+      worked: worked(session)
     })
+  end
+
+  defp worked(session), do: session.touched |> Map.values() |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+
+  ## Rescues
+  #
+  # Unsaved work in blocks a write removed is brought back by one editor
+  # still here: the blocks under one removed block (`group`, the top-most
+  # one the write removed) all at once, as one copy (`kept_uid/5`), so two
+  # editors' work in two children of one container comes back in one copy
+  # of the container. One who changed them is asked first, else any editor
+  # still here (the ones who did have left: `orphan?`). Never one whose
+  # replica moved on with the reply of the call that caused the rebase (a
+  # join, or the replica's own rebase: `exclude`), nor one that is going
+  # away.
+  #
+  # Every editor computes what it would bring back; the one asked inserts
+  # it and says so (`rescued/3`). The group is brought back when the
+  # session has the copy's uid, whoever's insert put it there. If the one
+  # asked has not brought it back within `rescue_timeout`, or leaves, the
+  # next is asked (`:rescue`); with nobody left, the session waits once
+  # more for a late insert before it reports the work lost. Every editor
+  # that was here when the work was removed hears how it went.
+
+  defp assign_rescues(session, _field, _old, _new, [], _exclude), do: {session, []}
+
+  defp assign_rescues(session, field, old, new, conflicts, exclude) do
+    here = session.clients |> Map.keys() |> Enum.filter(&Process.alive?/1) |> Enum.sort()
+    able = Enum.reject(here, &(&1 == exclude or session.clients[&1].read_only))
+    touched? = fn pid, uid -> MapSet.member?(Map.get(session.touched, pid, MapSet.new()), uid) end
+
+    conflicts
+    |> Enum.group_by(&removed_top(old, new, &1))
+    |> Enum.reduce({session, []}, fn {group, uids}, {session, rescues} ->
+      owners = Enum.filter(here, fn pid -> Enum.any?(uids, &touched?.(pid, &1)) end)
+      orphan? = Enum.any?(uids, fn uid -> not Enum.any?(owners, &touched?.(&1, uid)) end)
+      own_able = Enum.filter(owners, &(&1 in able))
+
+      pending = %{
+        group: group,
+        kept: kept_uid(session, field, old, new, group),
+        uids: uids,
+        owners: owners,
+        orphan?: orphan?,
+        present: here
+      }
+
+      case own_able ++ (able -- own_able) do
+        [] ->
+          # nobody can bring it back: those it concerns are told at once
+          rescued_broadcast(session, field, pending, false)
+          {session, rescues}
+
+        [rescuer | waiting] ->
+          pending = Map.put(pending, :rescuer, rescuer)
+          {put_rescue(session, field, pending, waiting), [pending | rescues]}
+      end
+    end)
+    |> then(fn {session, rescues} -> {session, Enum.reverse(rescues)} end)
+  end
+
+  # The uid the group's copy takes, chosen here so every editor asked
+  # inserts the same one, and only it settles the rescue: `<group>-kept`,
+  # or `<group>-kept-2` and on when that is taken (an earlier copy of the
+  # group, still there after the group came back, or one a rescue still
+  # waits for). The blocks under the group take the same suffix, so none of
+  # theirs is taken either.
+  defp kept_uid(session, field, old, new, group) do
+    claimed = for {{^field, _group}, %{kept: kept}} <- session.rescues, into: MapSet.new(), do: kept
+    uids = [group | if(match?(%Ops{}, old), do: Ops.descendants(old, group), else: [])]
+    taken? = fn uid -> uid in claimed or (match?(%Ops{}, new) and Ops.known?(new, uid)) end
+
+    1
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(fn
+      1 -> "-kept"
+      n -> "-kept-#{n}"
+    end)
+    |> Enum.find(fn suffix -> not Enum.any?(uids, &taken?.(&1 <> suffix)) end)
+    |> then(&(group <> &1))
+  end
+
+  # The top-most block above `uid` (or `uid`) that the write removed.
+  defp removed_top(%Ops{} = old, %Ops{} = new, uid) do
+    case Map.get(old.parents, uid) do
+      nil -> uid
+      parent -> if Ops.known?(new, parent), do: uid, else: removed_top(old, new, parent)
+    end
+  end
+
+  defp removed_top(_old, _new, uid), do: uid
+
+  defp put_rescue(session, field, pending, waiting) do
+    token = make_ref()
+    Process.send_after(self(), {:rescue_timeout, field, pending.group, token}, rescue_timeout())
+    pending = Map.merge(pending, %{waiting: waiting, token: token, lost?: false})
+    %{session | rescues: Map.put(session.rescues, {field, pending.group}, pending)}
+  end
+
+  # The copy is in the state: the group is back, whoever put it there.
+  defp settle_rescues(session, field) do
+    state = Data.state(session.data, field)
+
+    session.rescues
+    |> Enum.filter(fn {{f, _group}, pending} -> (f == field and state) && Ops.known?(state, pending.kept) end)
+    |> Enum.reduce(session, fn {key, pending}, session ->
+      rescued_broadcast(session, field, pending, true)
+      %{session | rescues: Map.delete(session.rescues, key)}
+    end)
+  end
+
+  # The one asked did not bring the group back: ask the next one still
+  # here. With nobody left, wait once more for an insert still on its way,
+  # then report the work lost.
+  defp reassign_rescue(session, field, group) do
+    case Map.fetch(session.rescues, {field, group}) do
+      :error ->
+        session
+
+      {:ok, %{lost?: true} = pending} ->
+        rescued_broadcast(session, field, pending, false)
+        %{session | rescues: Map.delete(session.rescues, {field, group})}
+
+      {:ok, pending} ->
+        waiting = Enum.filter(pending.waiting, &(Map.has_key?(session.clients, &1) and Process.alive?(&1)))
+
+        case waiting do
+          [rescuer | rest] ->
+            broadcast(session, field, %{kind: :rescue, epoch: session.data.epoch, group: group, rescuer: rescuer})
+            put_rescue(session, field, %{Map.drop(pending, [:waiting, :token]) | rescuer: rescuer}, rest)
+
+          [] ->
+            session
+            |> put_rescue(field, Map.drop(pending, [:waiting, :token]), [])
+            |> update_in([Access.key(:rescues), {field, group}], &%{&1 | lost?: true})
+        end
+    end
+  end
+
+  defp rescued_broadcast(session, field, pending, ok?) do
+    broadcast(session, field, %{
+      kind: :rescued,
+      epoch: session.data.epoch,
+      group: pending.group,
+      uids: pending.uids,
+      owners: pending.owners,
+      present: pending.present,
+      orphan?: pending.orphan?,
+      ok?: ok?
+    })
+  end
+
+  defp reassign_rescues_of(session, pid) do
+    session.rescues
+    |> Enum.filter(fn {_key, pending} -> pending.rescuer == pid end)
+    |> Enum.reduce(session, fn {{field, group}, _}, session -> reassign_rescue(session, field, group) end)
+  end
+
+  defp rescue_timeout do
+    :brando |> Application.get_env(__MODULE__, []) |> Keyword.get(:rescue_timeout, 5_000)
   end
 
   defp info(session, field, pid, seeded?) do
@@ -500,13 +752,13 @@ defmodule Brando.EditSession do
   # with the rows it wrote: they replace what the session held when it
   # left, even when only their content changed (equal rows would join).
   defp do_join(session, pid, field, base, held, opts, :wrote_working_copy) do
-    session =
+    {session, conflicts} =
       session
       # the rows were written: every replica reads them again
-      |> do_rebase(field, base, {:client, {:detached, pid}}, pid, :saved)
+      |> do_rebase(field, base, {:client, {:detached, pid}}, pid, :saved, pid)
       |> merge_held(field, held, opts[:held_base] || base, pid)
 
-    {{:ok, info(session, field, pid, false)}, session}
+    {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
   end
 
   defp do_join(session, pid, field, base, held, opts, _how) do
@@ -522,16 +774,16 @@ defmodule Brando.EditSession do
 
       {{:merged, conflicts}, data} ->
         session = %{session | data: data}
-        broadcast_state(session, field, pid, :joined, conflicts)
-        {{:ok, info(session, field, pid, false)}, session}
+        broadcast_state(session, field, pid, :joined, conflicts, [])
+        {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
 
       {:mismatch, data} when rebase? ->
-        session =
+        {session, conflicts} =
           %{session | data: data}
-          |> do_rebase(field, base, :carry, pid, :joined)
+          |> do_rebase(field, base, :carry, pid, :joined, pid)
           |> merge_held(field, held, held_base, pid)
 
-        {{:ok, info(session, field, pid, false)}, session}
+        {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
 
       {:mismatch, data} ->
         {{:error, :base_mismatch}, %{session | data: data}}
@@ -547,7 +799,7 @@ defmodule Brando.EditSession do
 
       {client, clients} ->
         Process.demonitor(client.ref, [:flush])
-        %{session | clients: clients, data: Data.drop_client(session.data, pid)}
+        reassign_rescues_of(%{session | clients: clients, data: Data.drop_client(session.data, pid)}, pid)
     end
   end
 

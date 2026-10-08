@@ -305,10 +305,10 @@ test.describe('Field presence', () => {
   // session, replayed after the save gave it rows, named those rows by uid
   // only, and the next save failed or wrote a duplicate.
   //
-  // LiveView blurs the focused input while a form submit is in flight
-  // (`submitForm` → `blurActiveElement`), so a key that lands in that moment
-  // is lost, on main as well. The test holds the editor, the other editor
-  // and the saved row to what the typist's own field ends up showing.
+  // The save no longer goes through a form submit, which blurred the focused
+  // input and made every input read-only until the server answered: keys
+  // typed in that gap went nowhere. Under a slow connection the save takes
+  // two round trips, so nothing typed during it may be lost.
   test('typing, saving with the keyboard and typing on in a new block keeps it all', async ({ page, secondUserPage }) => {
     const url = await createPage(page, 'Presence Save While Typing', ['HEEx Parity'])
     await open(page, url)
@@ -318,20 +318,26 @@ test.describe('Field presence', () => {
     await expect(page.locator('.entry-block')).toHaveCount(2, { timeout: 15000 })
     await expect(secondUserPage.locator('.entry-block')).toHaveCount(2, { timeout: 15000 })
 
-    await headline(page, 1).click()
-    await page.keyboard.press('ControlOrMeta+a')
-    await page.keyboard.type('Before the save', { delay: 20 })
-    await page.keyboard.press('ControlOrMeta+s')
-    await page.keyboard.type(', and after it', { delay: 20 })
-    // the save has given the new block its row
-    await expect(block(page, 1)).toHaveAttribute('data-id', /\d+/, { timeout: 15000 })
-    await headline(page, 1).click()
-    await page.keyboard.press('End')
-    await page.keyboard.type(', and more', { delay: 20 })
-    await awaitBlockDebounce(page)
+    await page.evaluate(() => window.liveSocket.enableLatencySim(250))
+    try {
+      await headline(page, 1).click()
+      await page.keyboard.press('ControlOrMeta+a')
+      await page.keyboard.type('Before the save', { delay: 20 })
+      await page.keyboard.press('ControlOrMeta+s')
+      // typed through the whole save: two round trips at 250 ms each way
+      await page.keyboard.type(', and after it, all through the save', { delay: 80 })
+      await expect(headline(page, 1)).toBeFocused()
+      // the save has given the new block its row
+      await expect(block(page, 1)).toHaveAttribute('data-id', /\d+/, { timeout: 15000 })
+      await page.keyboard.type(', and more', { delay: 20 })
+      await awaitBlockDebounce(page)
+      await page.waitForTimeout(800)
+    } finally {
+      await page.evaluate(() => window.liveSocket.disableLatencySim())
+    }
 
-    const typed = await headline(page, 1).inputValue()
-    expect(typed).toMatch(/^Before the save.*and more$/)
+    const typed = 'Before the save, and after it, all through the save, and more'
+    await expect(headline(page, 1)).toHaveValue(typed)
     await expect(headline(secondUserPage, 1)).toHaveValue(typed, { timeout: 10000 })
 
     await save(page)

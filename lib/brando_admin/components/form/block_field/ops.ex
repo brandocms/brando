@@ -452,6 +452,21 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   @doc """
+  The blocks an op changes: whose work a block holds, should another write
+  remove it (`Brando.EditSession` keeps this per editor).
+  """
+  @spec op_uids(op()) :: [uid()]
+  def op_uids({kind, uid, _}) when kind in [:update, :move], do: [uid]
+  def op_uids({:insert, uid, _at, _params}), do: [uid]
+  def op_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
+  def op_uids({:set_fields, uid, _changes, _rev}), do: [uid]
+  def op_uids({:insert_child, parent, uid, _at, _params}), do: [parent, uid]
+  def op_uids({:move_to_parent, uid, parent, _at}), do: [uid, parent]
+  def op_uids({:remap_slot, uid, _destination, _params}), do: [uid]
+  def op_uids({:reorder_children, parent, _uids}), do: [parent]
+  def op_uids(_op), do: []
+
+  @doc """
   Whether `uid` is a block the state knows about (any nesting level).
   """
   @spec known?(t(), uid()) :: boolean()
@@ -1167,12 +1182,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   defp key_changes(key, old, new, raw, acc, _level) when is_list(old) and is_list(new) do
-    identities = Enum.map(new, &identity/1)
-    old_identities = Enum.map(old, &identity/1)
+    identities = Enum.map(new, &identity(&1, key))
+    old_identities = Enum.map(old, &identity(&1, key))
 
     cond do
-      # items without identities: the list, as this editor has it
-      :none in identities or :none in old_identities ->
+      # items without identities, or two named alike (an image twice in a
+      # gallery): the list, as this editor has it
+      :none in identities or :none in old_identities or repeated?(identities) or repeated?(old_identities) ->
         [{raw ++ [key], Enum.reverse([key | acc]), new}]
 
       # items added, removed or moved: what changed, to merge with others'
@@ -1217,10 +1233,20 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp drop_artifacts(other), do: other
 
   # What names a list item whatever its index: its row id, its uid, its key
-  # (a var), its sync uid (a table row). An item with none of them (an
-  # embed's list) cannot be named, and its list is set whole.
-  defp identity(%{} = item) when not is_struct(item) do
-    Enum.find_value(~w(id uid key sync_uid), :none, fn name ->
+  # (a var), its sync uid (a table row). An item with none of them cannot be
+  # named, and its list is set whole.
+  #
+  # Two lists name an item without a row (or without one yet) by what it
+  # holds, so it is named from the moment it is picked or typed, before any
+  # save: a select var's option by its value (an embed, it never has an
+  # id), a new gallery object by its image or video. A row's id comes
+  # first, so two objects showing one image stay two; a list in which two
+  # items are named alike is set whole (`repeated?/1`). Nothing is stored.
+  @content_identities %{"options" => ~w(value), "gallery_objects" => ~w(image_id video_id)}
+  @row_identities ~w(id uid key sync_uid)
+
+  defp identity(%{} = item, key) when not is_struct(item) do
+    Enum.find_value(@row_identities ++ Map.get(@content_identities, key, []), :none, fn name ->
       case Map.get(item, name) do
         value when value not in [nil, ""] -> {name, value}
         _ -> nil
@@ -1228,9 +1254,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end)
   end
 
-  defp identity(_item), do: :none
+  defp identity(_item, _key), do: :none
 
   defp identity_map({key, value}), do: %{key => value}
+
+  defp repeated?(identities), do: length(Enum.uniq(identities)) != length(identities)
 
   defp set_fields(state, uid, changes) do
     if known?(state, uid) do
@@ -1292,7 +1320,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         _ -> before
       end
 
-    Map.put(map, key, merge_list(before, after_list, current))
+    Map.put(map, key, merge_list(before, after_list, current, key))
   end
 
   defp put_path(map, [key], value) when is_binary(key), do: Map.put(as_map(map), key, value)
@@ -1359,7 +1387,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   order wins over a reorder someone else made meanwhile.
 
   Items are the same row when their first identity (of `id`, `uid`, `key`
-  and `sync_uid`, in that order) is the same.
+  and `sync_uid`, in that order) is the same. In a list under `key`
+  `"options"` (a select var's) an item without those is named by its
+  `value`, and under `"gallery_objects"` by its `image_id` or `video_id`.
 
   ## Examples
 
@@ -1371,12 +1401,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       ["a", "b", "d", "c"]
 
   """
-  @spec merge_list([map()], [map()], [map()]) :: [map()]
-  def merge_list(before, after_list, current) do
+  @spec merge_list([map()], [map()], [map()], String.t() | nil) :: [map()]
+  def merge_list(before, after_list, current, key \\ nil) do
+    same_row? = &same_row?(&1, &2, key)
+
     kept =
       Enum.flat_map(after_list, fn item ->
-        was = Enum.find(before, &same_row?(&1, item))
-        now = Enum.find(current, &same_row?(&1, item))
+        was = Enum.find(before, &same_row?.(&1, item))
+        now = Enum.find(current, &same_row?.(&1, item))
 
         cond do
           # added by this editor, or changed by it: its version
@@ -1390,24 +1422,24 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
     current
     |> Enum.with_index()
-    |> Enum.reject(fn {item, _} -> Enum.any?(before, &same_row?(&1, item)) or Enum.any?(kept, &same_row?(&1, item)) end)
+    |> Enum.reject(fn {item, _} -> Enum.any?(before, &same_row?.(&1, item)) or Enum.any?(kept, &same_row?.(&1, item)) end)
     |> Enum.reduce(kept, fn {item, index}, merged ->
       preceding = current |> Enum.take(index) |> Enum.reverse()
-      at = Enum.find_value(preceding, 0, fn prev -> (i = Enum.find_index(merged, &same_row?(&1, prev))) && i + 1 end)
+      at = Enum.find_value(preceding, 0, fn prev -> (i = Enum.find_index(merged, &same_row?.(&1, prev))) && i + 1 end)
       List.insert_at(merged, at, item)
     end)
   end
 
-  # One identity per item, the first it has of id, uid, key and sync uid:
-  # two rows that happen to share a key are not the same row.
-  defp same_row?(%{} = a, %{} = b) do
-    case {identity(a), identity(b)} do
+  # One identity per item, the first it has (`identity/2`): two rows that
+  # happen to share a key are not the same row.
+  defp same_row?(%{} = a, %{} = b, key) do
+    case {identity(a, key), identity(b, key)} do
       {{name, x}, {name, y}} -> to_string(x) == to_string(y)
       _ -> false
     end
   end
 
-  defp same_row?(_a, _b), do: false
+  defp same_row?(_a, _b, _key), do: false
 
   defp as_map(%{} = map), do: map
   defp as_map(_), do: %{}

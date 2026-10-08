@@ -108,3 +108,29 @@ test('entries are inserted between rows, removed, and saved in order', async ({ 
   await expect(titleOf(rows(page).nth(1))).toHaveValue('Second')
   await expect(titleOf(rows(page).nth(2))).toHaveValue('Third')
 })
+
+// The colour picker holds a change back for a moment while it is dragged.
+// A save pressed in that moment used to read the colour from before; it now
+// asks the picker for it first (assets/src/hooks/Form/pendingChange.js).
+test('a colour picked just before saving is saved', async ({ page }) => {
+  await page.goto('/admin/projects/clients/create')
+  await syncLV(page)
+  await page.getByRole('textbox', { name: 'Name' }).fill('Colour client')
+  await openInlineFields(page)
+  await addRow(page)
+
+  await rows(page).first().locator('.circle-and-hex').click()
+  const area = page.locator('.picker_sl').last()
+  await expect(area).toBeVisible()
+  const box = await area.boundingBox()
+  await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.3)
+  // saved at once, inside the picker's moment
+  await page.keyboard.press('ControlOrMeta+s')
+
+  await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
+  await syncLV(page)
+  await page.reload()
+  await syncLV(page)
+  await openInlineFields(page)
+  await expect(rows(page).first().locator('input[type="hidden"][name$="[color]"]')).toHaveValue(/^#[0-9a-f]{6}$/i)
+})

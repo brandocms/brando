@@ -157,6 +157,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
         data-entry-id={@entry_id}
       >
         <span id={"#{@id}-draft-capture"} data-draft-capture phx-target={@myself} hidden></span>
+        <span id={"#{@id}-save-source"} data-save-source phx-target={@myself} hidden></span>
         <div class="form-content">
           <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" upload_in_form? />
@@ -214,6 +215,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             for={@form}
             phx-target={@myself}
             phx-submit="save"
+            data-save-event="save_form"
             phx-change="validate"
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />

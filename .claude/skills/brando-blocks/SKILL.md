@@ -620,9 +620,29 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   state/rebase, so `Replica.reset/2` drops pending ops it already folded in. A carry
   conflict (another save removed a block this editor had unsaved work in) comes back to
   that editor as a new block (`<uid>-kept`, its refs with new uids) with a toast — keep
-  conflicts explicit, never drop work silently. Only the top-most removed block this
+  conflicts explicit, never drop work silently. The session groups the conflicts by the
+  top-most block the write removed (`group`) and asks ONE editor per group to bring back
+  everything under it as one copy, `<group>-kept` (`rescues` in the rebase message): an
+  editor here who changed them (it keeps each editor's changed uids, `Ops.op_uids/1`, also
+  after they leave), else any editor here (`orphan?`). Excluded: a dead process, and the
+  caller whose replica moves on with the reply (a join, the replica's own
+  `EditSession.rebase(..., replica: true)`) — but NOT the process behind `sync_saved/1`,
+  whose block fields see the broadcast (activating a revision from one's own drawer).
+  Every replica computes its payload; the rescuer inserts, then calls
+  `EditSession.rescued/3`; the session confirms from its state (the copy is there,
+  whoever's insert put it there), broadcasts `:rescued`, and each editor toasts for its
+  own work (`owners`) or, if it was there at the removal (`present`), an orphan's. No copy
+  after the ack, no answer within `rescue_timeout`, or the rescuer leaving: the next is
+  asked (`:rescue`); with nobody left the session waits once more for a late insert, then
+  reports failure; with nobody able at all, failure is reported at once. A copy is never
+  made twice (no fresh uids). Work only a rejoining editor held comes back from the join's
+  reply (`rescues` in `info`). Only the top-most removed block this
   editor worked in comes back (a child added to a removed container brings the container
-  back with it), and the toast says so only for blocks that did come back. Applying a recovery copy is a `{:carry, ops, base}` op over the
+  back with it), and the toast says so only for blocks that did come back. A rescued child
+  goes back under its nearest ancestor that is still there (`{:insert_child, ...}`); removed
+  ancestors in between come back as `-kept` shells holding only the path to it, and with no
+  surviving ancestor the top shell is a root — a child is never brought back as a root on
+  its own. Applying a recovery copy is a `{:carry, ops, base}` op over the
   session state, not a state replacement. Editors without `:update` on the entry join
   read-only (the session refuses their ops). Ops must stay pure: the session and every
   replica must reach the same state from the same ops.
@@ -634,7 +654,10 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   (never by index). A list that gained, lost or reordered items goes as `{:list, before,
   after}`, which the reducer merges by identity with the list as it is now
   (`Ops.merge_list/3`), so two editors each adding an item both keep it; a list whose
-  items have no identity (a var's options) is set whole, last arrival wins. Within a
+  items have no identity, or two items named alike, is set whole, last arrival wins. A row's
+  `id` comes first; an item without one is named by what it holds: a select var's option by
+  its `value`, a new gallery object by its `image_id`/`video_id` (`identity/2`). Nothing
+  extra is stored. Within a
   second of a `replace_form` the event can carry the browser's old values for what that
   change touched: `@replaced` keeps the form before AND the one that replaced it, and a
   leaf is dropped only where the two differ and the event sets it back to the old value

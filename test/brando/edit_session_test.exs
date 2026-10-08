@@ -324,23 +324,26 @@ defmodule Brando.EditSessionTest do
   end
 
   describe "lifecycle" do
+    # The grace period leaves room for a loaded machine: with 80 ms, the
+    # editor coming back sometimes joined after it had run out (a flake in
+    # the hunt for another one).
     test "the session stops a grace period after its last editor leaves" do
-      put_test_env(EditSession, grace_period: 80)
+      put_test_env(EditSession, grace_period: 600)
       ref = new_ref()
       {a, info} = editor(ref)
       session = info.session
       monitor = Process.monitor(session)
 
       unlink_and_kill(a)
-      refute_receive {:DOWN, ^monitor, _, _, _}, 40
 
-      # Someone comes back within the grace period: the session stays.
+      # Someone comes back within the grace period: the session stays, past
+      # the end of the period it was in.
       {b, _} = editor(ref)
-      refute_receive {:DOWN, ^monitor, _, _, _}, 150
+      refute_receive {:DOWN, ^monitor, _, _, _}, 800
       assert EditSession.whereis(ref) == session
 
       unlink_and_kill(b)
-      assert_receive {:DOWN, ^monitor, :process, ^session, :normal}, 500
+      assert_receive {:DOWN, ^monitor, :process, ^session, :normal}, 2_000
       wait_until(fn -> EditSession.whereis(ref) == nil end)
     end
 
@@ -519,25 +522,51 @@ defmodule Brando.EditSessionTest do
       assert state.diffs == %{}
     end
 
-    test "a save mark lives 30 seconds, and a save slower than that still rebases" do
+    # Follow-up: a save slower than the mark's 30 seconds rebased as a carry,
+    # which showed what it had saved as unsaved changes.
+    test "a slow save keeps its mark until it is done, and its saved changes are not unsaved" do
       base = rows()
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
-      {:ok, data} = Data.apply_op(data, @field, {:insert, "n", :end, %{}})
+      {:ok, data} = Data.apply_op(data, @field, anchor("b", "saved by the slow save"))
       data = Data.mark_save(data, @field, :saver, 0)
-      assert Data.expire(data, 30_000).fields[@field].marks != %{}
-      assert Data.expire(data, 30_001).fields[@field].marks == %{}
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "typed while it ran"))
 
-      saved =
-        Ops.from_entry_blocks([
-          entry_block("a", 1, 10, [child("a1", 11)]),
-          entry_block("b", 2, 20),
-          entry_block("n", 3, 30)
-        ])
+      # two minutes later, the save is still running
+      data = Data.expire(data, 2 * 60_000)
+      assert Map.has_key?(data.fields[@field].marks, :saver)
 
-      {:ok, data, []} = Data.rebase(Data.expire(data, 60_000), @field, saved, {:client, :saver})
+      saved = Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11)]), entry_block("b", 2, 20)])
+      {:ok, data, []} = Data.rebase(data, @field, saved, {:client, :saver}, 2 * 60_000)
       state = Data.state(data, @field)
-      assert state.order == ["a", "b", "n"]
-      assert state.statuses["n"] == :persisted
+      refute Map.has_key?(state.diffs, "b")
+      assert state.diffs["a"]["block"]["anchor"] == "typed while it ran"
+      assert data.fields[@field].marks == %{}
+    end
+
+    test "a failed save releases its mark, and one nothing clears expires after 15 minutes" do
+      base = rows()
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      data = data |> Data.mark_save(@field, :failed, 0) |> Data.mark_save(@field, :forgotten, 0)
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "after the marks"))
+
+      data = Data.release(data, :failed)
+      assert Map.keys(data.fields[@field].marks) == [:forgotten]
+      assert [_] = data.fields[@field].log
+
+      assert Data.expire(data, 15 * 60_000).fields[@field].marks != %{}
+      data = Data.expire(data, 15 * 60_000 + 1)
+      assert data.fields[@field].marks == %{}
+      assert data.fields[@field].log == []
+    end
+
+    test "a save that failed tells the session" do
+      ref = new_ref()
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      {:ok, _} = EditSession.fetch(info.session, @field, purpose: :save)
+      assert Map.has_key?(:sys.get_state(info.session).data.fields[@field].marks, self())
+
+      EditSession.save_failed(%Brando.Pages.Page{id: elem(ref.key, 2), language: nil})
+      wait_until(fn -> :sys.get_state(info.session).data.fields[@field].marks == %{} end)
     end
 
     test "the session keeps row ids only for blocks with unsaved work" do
@@ -579,7 +608,7 @@ defmodule Brando.EditSessionTest do
       {:ok, data} = Data.apply_op(data, @field, anchor("b", "x"))
       assert [_] = data.fields[@field].log
 
-      data = Data.expire(data, 10 * 60_000)
+      data = Data.expire(data, 16 * 60_000)
       assert data.fields[@field].marks == %{}
       assert data.fields[@field].log == []
     end
@@ -602,6 +631,219 @@ defmodule Brando.EditSessionTest do
       state = Data.state(data, @field)
       assert state.statuses["saved"] == :persisted
       assert state.diffs["a"]["block"]["anchor"] == "after the read"
+    end
+  end
+
+  # Follow-up, round 2: who brings back unsaved work in blocks a write
+  # removed. The session asks one editor per removed block, never the one
+  # whose own write or join caused the rebase, and asks the next one if it
+  # does not answer or leaves.
+  describe "rescues" do
+    setup do
+      previous = Application.get_env(:brando, EditSession, [])
+      Application.put_env(:brando, EditSession, Keyword.put(previous, :rescue_timeout, 500))
+      on_exit(fn -> Application.put_env(:brando, EditSession, previous) end)
+      :ok
+    end
+
+    defp without_b, do: Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11)])])
+
+    # `p1` worked in "b", `p2` is here too; then the rows lose "b".
+    defp removed_with_work do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {p1, info} = editor(ref)
+      {p2, _} = editor(ref)
+      send(p1, {:local, anchor("b", "p1's work")})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, _}}}
+      {ref, info.session, p1, p2}
+    end
+
+    test "the editor who worked in the block is asked, and everyone hears once the copy is there" do
+      {_ref, session, p1, _p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [pending]}}
+      assert %{group: "b", kept: "b-kept", uids: ["b"], rescuer: ^p1, owners: [^p1], orphan?: false} = pending
+
+      send(p1, {:local, {:insert, "b-kept", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true, owners: [^p1], orphan?: false}}
+    end
+
+    test "an editor who says it is done without the copy there is replaced by the next" do
+      {_ref, session, p1, p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+
+      # the insert was turned away (its parent went meanwhile, say)
+      :ok = GenServer.cast(session, {:rescued, p1, @field, "b"})
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 3_000
+    end
+
+    test "an editor who does not answer in time is replaced by the next" do
+      {ref, session, p1, p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+
+      # one who joins after the work was removed never saw it, and is not told
+      {late, _} = editor(ref, without_b())
+
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 3_000
+      send(p2, {:local, {:insert, "b-kept", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true, present: present}}
+      assert Enum.sort(present) == Enum.sort([p1, p2])
+      refute late in present
+    end
+
+    test "a slow editor's copy landing after the next was asked counts, and no failure follows" do
+      {_ref, session, p1, p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+      assert_receive {:edit_session, @field, %{kind: :rescue, rescuer: ^p2}}, 3_000
+
+      # p2 has no copy to make; p1's insert lands late
+      :ok = GenServer.cast(session, {:rescued, p2, @field, "b"})
+      send(p1, {:local, {:insert, "b-kept", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}, 3_000
+      refute_receive {:edit_session, @field, %{kind: :rescued, ok?: false}}, 1_200
+    end
+
+    test "an editor who leaves is replaced at once, and with nobody left the work is reported lost" do
+      {ref, session, p1, p2} = removed_with_work()
+      # one who may only look keeps the session open, and cannot be asked
+      {_watcher, _} = editor(ref, rows(), read_only: true)
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+
+      unlink_and_kill(p1)
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 3_000
+
+      unlink_and_kill(p2)
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, orphan?: false}}, 3_000
+    end
+
+    # Round 3: the origin of an outside write was never asked, so the only
+    # editor, activating a revision from its own drawer, lost its work in a
+    # block the revision lacks without a word.
+    test "an editor whose own process wrote outside the editor is asked too" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      EditSession.submit(info.session, @field, anchor("b", "my work"), 1)
+      assert_receive {:edit_session, @field, %{kind: :op}}
+      me = self()
+
+      # what `sync_saved/1` does from the same process after the write
+      {:ok, _} = EditSession.rebase(info.session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{group: "b", rescuer: ^me}]}}
+    end
+
+    test "when nobody can bring the work back, those it concerns are told at once" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      EditSession.submit(info.session, @field, anchor("b", "my work"), 1)
+      assert_receive {:edit_session, @field, %{kind: :op}}
+      me = self()
+
+      # the replica's own rebase: it moves on with the reply, and is the only editor
+      {:ok, _} = EditSession.rebase(info.session, @field, without_b(), :carry, replica: true)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: []}}
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, owners: [^me]}}
+    end
+
+    test "the editor whose join removed the block is never asked: its replica moved on with the reply" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {other, _} = editor(ref)
+      {gone, _} = editor(ref)
+      send(gone, {:local, anchor("b", "work of an editor who left")})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^gone, _}}}
+      unlink_and_kill(gone)
+
+      # a joiner whose newer rows lack "b"
+      {joiner, _} = editor(ref, without_b(), rebase: true)
+      assert_receive {:edit_session, @field, %{kind: :rebase, origin: ^joiner, rescues: [pending]}}, 1_000
+      assert %{group: "b", rescuer: ^other, orphan?: true} = pending
+    end
+
+    test "work in two children of one removed block is one group, brought back by one editor" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      two = Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]), entry_block("b", 2, 20)])
+      {p1, info} = editor(ref, two)
+      {p2, _} = editor(ref, two)
+      send(p1, {:local, {:update, "a1", %{"description" => "p1"}}})
+      send(p2, {:local, {:update, "a2", %{"description" => "p2"}}})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, _}}}
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p2, _}}}
+
+      {:ok, _} = EditSession.rebase(info.session, @field, Ops.from_entry_blocks([entry_block("b", 2, 20)]), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [pending]}}
+      assert %{group: "a", rescuer: rescuer, owners: owners} = pending
+      assert Enum.sort(pending.uids) == ["a1", "a2"]
+      assert Enum.sort(owners) == Enum.sort([p1, p2])
+      assert rescuer in [p1, p2]
+    end
+
+    # The review's Z probe: a proposal removed "b", "b" was brought back as
+    # "b-kept", the proposal was undone so "b" returned while "b-kept"
+    # stayed, and the editor worked in "b" again before another write
+    # removed it. The earlier copy settled the new rescue at once, nothing
+    # was inserted, the new work was lost and everyone heard it was back.
+    test "a group removed again while its earlier copy is still there gets a copy of its own" do
+      {_ref, session, p1, p2} = removed_with_work()
+      send(p1, {:local, {:insert, "b-kept", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, _}}}
+
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{group: "b", kept: "b-kept-2", rescuer: ^p1}]}}
+
+      # any op settles nothing while the new copy is missing
+      send(p2, {:local, anchor("a", "unrelated")})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p2, _}}}
+      refute_receive {:edit_session, @field, %{kind: :rescued}}, 100
+
+      send(p1, {:local, {:insert, "b-kept-2", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}
+    end
+
+    test "a copy whose blocks would take a uid an earlier copy has takes the next suffix" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {p1, info} = editor(ref)
+      {_watcher, _} = editor(ref, rows(), read_only: true)
+      # an earlier copy of "a1" is here; "a" itself has none
+      send(p1, {:local, {:insert, "a1-kept", :end, %{}}})
+      send(p1, {:local, {:update, "a1", %{"description" => "p1"}}})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, 2}}}
+
+      {:ok, _} = EditSession.rebase(info.session, @field, Ops.from_entry_blocks([entry_block("b", 2, 20)]), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{group: "a", kept: "a-kept-2"}]}}
+    end
+  end
+
+  # The flake hunt: an editor whose session was killed rejoins as soon as
+  # its :DOWN arrives, which can be before the Registry has dropped the dead
+  # session. The lookup returned the dead pid, the join's retry did too,
+  # and the LiveView crashed.
+  test "a session killed a moment ago is replaced, even before the registry has noticed" do
+    ref = new_ref()
+    {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+    partition = Module.concat(Brando.EditSession.Registry, "PIDPartition0")
+    assert is_pid(Process.whereis(partition))
+
+    # the registry cannot clean up while it is suspended
+    :sys.suspend(partition)
+
+    try do
+      Process.exit(info.session, :kill)
+      wait_until(fn -> not Process.alive?(info.session) end)
+      assert EditSession.whereis(ref) == nil
+      assert {:ok, rejoined} = EditSession.join(ref, @field, {rows(), rows()})
+      assert rejoined.session != info.session
+    after
+      :sys.resume(partition)
     end
   end
 

@@ -1,6 +1,6 @@
 import { Dom } from '@brandocms/jupiter'
 import Picker from 'vanilla-picker/csp'
-import debounce from 'lodash.debounce'
+import pendingChange, { FLUSH_EVENT } from '../Form/pendingChange'
 
 export default app => ({
   mounted() {
@@ -27,10 +27,22 @@ export default app => ({
 
     observer.observe(this.el, { attributes: true })
     this.initialize()
+
+    // A save asks for the colour picked in the last moments
+    // (`Form/pendingChange.js`).
+    this.onFlush = () => this.change?.flush()
+    document.addEventListener(FLUSH_EVENT, this.onFlush)
+  },
+
+  destroyed() {
+    document.removeEventListener(FLUSH_EVENT, this.onFlush)
+    this.change?.cancel()
+    this.picker?.destroy()
   },
 
   initialize() {
     if (this.picker) {
+      this.change?.flush()
       this.picker.destroy()
     }
 
@@ -66,7 +78,7 @@ export default app => ({
       color: initialColor,
       alpha: opacity,
 
-      onChange: debounce(color => {
+      onChange: (this.change = pendingChange(color => {
         let processedColor = color.printHex(opacity)
         if (processedColor.length === 9 && processedColor.slice(-2) === 'ff') {
           processedColor = processedColor.slice(0, -2)
@@ -82,7 +94,7 @@ export default app => ({
         }
 
         this.lastColor = processedColor
-      }, 100),
+      }, 100)),
 
       onOpen: function () {
         this._colorToSplotch = {}
