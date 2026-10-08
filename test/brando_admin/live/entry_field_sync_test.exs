@@ -156,6 +156,22 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     assert_both(c, %{"title" => "Om oss, B"})
   end
 
+  # B's block field joins the edit session a moment after its form loads,
+  # so its join can reach A after B has shipped. A, holding B's title for
+  # the field it is in, must not send B the title its form still shows.
+  test "an editor who joins late is sent the held value, not the one on screen", c do
+    focus(c.a, "title")
+
+    edit(c.b, "title", "Om oss, B")
+    settle(c.a)
+    send(c.a.pid, {:editor_joined, %{user_id: c.other.id}})
+    settle(c.a)
+    settle(c.b)
+    blur(c.a)
+
+    assert_both(c, %{"title" => "Om oss, B"})
+  end
+
   test "what was typed in a focused field wins over a change that arrived meanwhile", c do
     focus(c.a, "title")
 
@@ -186,20 +202,24 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     end)
   end
 
-  test "an editor who joins gets the unsaved fields, and the others keep theirs", c do
+  # A's title reaches the joiner from B as well; the other editors are not
+  # sent values they already hold.
+  test "an editor who joins gets the unsaved fields", c do
     edit(c.a, "title", "Om oss, A")
     await_shown(c.b, "title", "Om oss, A")
     focus(c.b, "uri")
     type(c.b, "uri", "om-oss-b")
 
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", Page, c.page.id))
     third = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
     joiner = open(log_in_user(Phoenix.ConnTest.build_conn(), third), c.page)
 
     await_shown(joiner, "title", "Om oss, A")
     await_shown(joiner, "uri", "om-oss-b")
-    settle(c.a)
-    assert shown(c.a, "uri") == "om-oss"
-    assert shown(c.b, "uri") == "om-oss-b"
+    assert_both(c, %{"title" => "Om oss, A", "uri" => "om-oss-b"})
+
+    to_everyone = for {:fields_shipped, %{to: nil, changes: changes}} <- messages(), change <- changes, do: change.field
+    assert to_everyone == [:uri]
   end
 
   describe "field locks" do
@@ -229,6 +249,8 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       assert_push_event(c.b, "b:clear_user_presence", %{user_id: ^user_id}, 2_000)
     end
   end
+
+  defp messages, do: self() |> Process.info(:messages) |> elem(1)
 
   defp presence_meta(page, user) do
     "url:/admin/pages/update/#{page.id}"

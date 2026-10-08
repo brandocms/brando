@@ -197,9 +197,11 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{event: "draft_timeout", capture_id: id}, socket), do: {:ok, Drafts.timeout(socket, id)}
 
-  # Another editor opened the entry (`:editor_joined` in LiveView.Form).
+  # Another editor opened the entry (`:editor_joined` in LiveView.Form): what
+  # we changed goes to everyone as usual, and the joiner also gets the
+  # unsaved values we hold.
   def update(%{event: "ship_field_changes", to: user_id}, socket) do
-    {:ok, ship_fields_to(socket, user_id)}
+    {:ok, socket |> ship_all_field_changes() |> ship_fields_to(user_id)}
   end
 
   def update(%{event: "ship_field_changes"}, socket) do
@@ -2191,25 +2193,23 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # A joining editor loaded the saved entry. It gets every unsaved value this
-  # editor has, its own or received, addressed to it alone: the editors who
-  # already have them would otherwise take back values they have since
-  # changed.
+  # A joining editor loaded the saved entry. It gets every unsaved value the
+  # editors hold, as we know them (`synced_values`, which our own changes
+  # have just joined), addressed to it alone: the editors who already have
+  # them would otherwise take back values they have since changed. A change
+  # held for the field we are in goes as the others have it, not as our
+  # form still shows it.
   defp ship_fields_to(socket, user_id) do
     entry = socket.assigns[:entry]
 
     if entry && entry.id do
-      changeset = socket.assigns.form.source
-      {_fields, belongs_to} = sync_fields(changeset.data.__struct__)
+      {_fields, belongs_to} = sync_fields(socket.assigns.schema)
 
       changes =
         socket
         |> synced_values()
-        |> Map.keys()
-        |> MapSet.new()
-        |> MapSet.union(unshipped_fields(socket))
         |> Enum.sort()
-        |> Enum.flat_map(&List.wrap(field_change(changeset, &1, belongs_to)))
+        |> Enum.map(fn {field, value} -> %{field: field, value: value, assoc?: field in belongs_to} end)
 
       if changes != [], do: broadcast_field_changes(socket, entry.id, changes, user_id)
     end
