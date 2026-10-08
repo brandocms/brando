@@ -1592,8 +1592,10 @@ production dump.
   unsaved changes. Unsaved work in a block another write removes comes back
   also when the editor who did it has left (the others are told), and a
   child block comes back in its parent, or inside its removed parents, not
-  as a root. Two editors adding a select option or a gallery image each
-  both keep theirs.
+  as a root; work two editors had in one removed container comes back in
+  one copy. Two editors adding a select option or a gallery image each
+  both keep theirs, and a gallery showing one image twice keeps both
+  copies apart. Pressing Save and ⌘S together saves once.
 
 - **Saving a revision loaded as a working copy writes it.** The revisions
   drawer loaded a revision by making it the form's saved data, so the form
