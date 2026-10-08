@@ -298,6 +298,9 @@ defmodule Brando.EditSession do
        topic: topic,
        data: Data.new(System.unique_integer([:positive, :monotonic])),
        clients: %{},
+       # the blocks each editor changed (`Ops.op_uids/1`), kept after they
+       # leave: whose work a block another write removes holds
+       touched: %{},
        # editors that left to show something else (`detach/2`), monitored so
        # their marks go when they do
        detached: %{},
@@ -356,7 +359,8 @@ defmodule Brando.EditSession do
 
     case result do
       {:ok, data} ->
-        session = %{session | data: data}
+        uids = MapSet.new(Ops.op_uids(op))
+        session = %{session | data: data, touched: Map.update(session.touched, pid, uids, &MapSet.union(&1, uids))}
 
         broadcast(session, field, %{
           kind: :op,
@@ -465,6 +469,8 @@ defmodule Brando.EditSession do
     data = session.data
     entry = Map.fetch!(data.fields, field)
 
+    {rescuers, orphans} = rescuers(session, conflicts)
+
     broadcast(session, field, %{
       kind: :rebase,
       epoch: data.epoch,
@@ -474,8 +480,32 @@ defmodule Brando.EditSession do
       seqs: entry.seqs,
       origin: origin,
       reason: reason,
-      conflicts: conflicts
+      conflicts: conflicts,
+      rescuers: rescuers,
+      orphans: orphans,
+      worked: session.touched |> Map.values() |> Enum.reduce(MapSet.new(), &MapSet.union/2)
     })
+  end
+
+  # Who brings back each removed block that held unsaved work: an editor
+  # still here who changed it, else, when the editors who did have left,
+  # one who is still here (`orphans`), so no work goes without a word. One
+  # editor each, never two copies. A read-only editor cannot.
+  defp rescuers(session, conflicts) do
+    present =
+      session.clients
+      |> Enum.reject(fn {_pid, client} -> client.read_only end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.sort()
+
+    Enum.reduce(conflicts, {%{}, []}, fn uid, {rescuers, orphans} ->
+      case Enum.find(present, &MapSet.member?(Map.get(session.touched, &1, MapSet.new()), uid)) do
+        nil when present == [] -> {rescuers, orphans}
+        nil -> {Map.put(rescuers, uid, hd(present)), [uid | orphans]}
+        pid -> {Map.put(rescuers, uid, pid), orphans}
+      end
+    end)
+    |> then(fn {rescuers, orphans} -> {rescuers, Enum.reverse(orphans)} end)
   end
 
   defp info(session, field, pid, seeded?) do

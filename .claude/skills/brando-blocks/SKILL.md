@@ -620,7 +620,11 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   state/rebase, so `Replica.reset/2` drops pending ops it already folded in. A carry
   conflict (another save removed a block this editor had unsaved work in) comes back to
   that editor as a new block (`<uid>-kept`, its refs with new uids) with a toast — keep
-  conflicts explicit, never drop work silently. Only the top-most removed block this
+  conflicts explicit, never drop work silently. The session decides who brings each one
+  back (`rescuers` in the rebase message): an editor still here who changed it (it keeps
+  each editor's changed uids, `Ops.op_uids/1`, also after they leave), else any editor
+  still here when the ones who did have left (`orphans`, and every editor gets a toast) —
+  one editor per block, never two copies. Only the top-most removed block this
   editor worked in comes back (a child added to a removed container brings the container
   back with it), and the toast says so only for blocks that did come back. A rescued child
   goes back under its nearest ancestor that is still there (`{:insert_child, ...}`); removed

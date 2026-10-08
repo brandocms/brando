@@ -16,12 +16,12 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
   @block_field "page_form-blocks-blocks"
 
-  setup do
+  setup %{current_user: me} do
     c = Brando.ProposalFixtures.context()
     other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
     other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
     uids = c.identity |> rows() |> Enum.map(& &1.block.uid)
-    Map.merge(c, %{other: other, other_conn: other_conn, uids: uids})
+    Map.merge(c, %{me: me, other: other, other_conn: other_conn, uids: uids})
   end
 
   defp texts(page), do: Enum.map(rows(page), &{&1.block.uid, hd(&1.block.refs).data.data.text})
@@ -377,6 +377,48 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     texts = &Enum.map(&1, fn ref -> {ref["name"], get_in(ref, ["data", "data", "text"])} end)
     assert texts.(kept_child["refs"]) == texts.(refs)
     assert Enum.all?(kept_child["refs"], &(&1["uid"] not in Enum.map(refs, fn ref -> ref["uid"] end)))
+  end
+
+  # Follow-up: the editor whose unsaved work a removed block held had left,
+  # and nobody brought it back. An editor still here does now, and every
+  # editor still here is told.
+  test "work an editor who has left had in a removed block comes back, and the others hear of it", c do
+    [_first, second | _] = c.uids
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    type(b, second, "<p>B's work, B gone</p>")
+    await(fn -> shown_text(a, second) == "<p>B's work, B gone</p>" end)
+    kill_live(b)
+
+    Brando.endpoint().subscribe("user:#{c.me.id}")
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+    kept = second <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end)
+    await(fn -> shown_text(a, kept) == "<p>B's work, B gone</p>" end)
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+  end
+
+  # Two editors in one block that another write removes: one of them brings
+  # it back, not both.
+  test "a removed block two editors worked in comes back once", c do
+    [_first, second | _] = c.uids
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    type(a, second, "<p>A</p>")
+    await(fn -> shown_text(b, second) == "<p>A</p>" end)
+    type(b, second, "<p>A and B</p>")
+    await(fn -> shown_text(a, second) == "<p>A and B</p>" end)
+
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+    await(fn -> session_state(c.identity).statuses[second <> "-kept"] == :inserted end)
+    Process.sleep(300)
+    assert length(session_state(c.identity).order) == 3
   end
 
   # Follow-up: a child with unsaved work, removed by another write, came

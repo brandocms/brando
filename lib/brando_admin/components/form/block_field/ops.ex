@@ -452,6 +452,21 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   @doc """
+  The blocks an op changes: whose work a block holds, should another write
+  remove it (`Brando.EditSession` keeps this per editor).
+  """
+  @spec op_uids(op()) :: [uid()]
+  def op_uids({kind, uid, _}) when kind in [:update, :move], do: [uid]
+  def op_uids({:insert, uid, _at, _params}), do: [uid]
+  def op_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
+  def op_uids({:set_fields, uid, _changes, _rev}), do: [uid]
+  def op_uids({:insert_child, parent, uid, _at, _params}), do: [parent, uid]
+  def op_uids({:move_to_parent, uid, parent, _at}), do: [uid, parent]
+  def op_uids({:remap_slot, uid, _destination, _params}), do: [uid]
+  def op_uids({:reorder_children, parent, _uids}), do: [parent]
+  def op_uids(_op), do: []
+
+  @doc """
   Whether `uid` is a block the state knows about (any nesting level).
   """
   @spec known?(t(), uid()) :: boolean()
