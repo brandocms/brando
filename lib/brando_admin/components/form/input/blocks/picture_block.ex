@@ -215,12 +215,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               configure={JS.push("open_block_config", target: @target, value: %{uid: @uid})}
             >
               <:actions :if={@image}>
+                <%!-- In a narrow card it keeps only its icon (MediaField.css) --%>
                 <button
-                  class="media-button edit-image-btn"
+                  class="media-button edit-image-btn media-button--collapsible-block"
                   type="button"
+                  title={gettext("Edit/Crop")}
                   phx-click={JS.push("open_image_editor", target: @myself) |> open_image_editor_drawer()}
                 >
-                  <.icon name="scissors" />{gettext("Edit/Crop")}
+                  <.icon name="scissors" /><span class="media-button-label">{gettext("Edit/Crop")}</span>
                 </button>
               </:actions>
             </MediaField.field>

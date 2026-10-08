@@ -2066,3 +2066,74 @@ button.btn-palette {
   text-transform: none;
   white-space: nowrap;
 }
+
+/* ---------------------------------------------------------------- media variables in narrow cells
+
+   An image, file, video or gallery variable is one line: label, thumbnail,
+   name and details, then its Add/Change menu. In a half or third of a row on
+   a phone, or in the module editor's preview, that line is narrower than its
+   parts, and the menu was drawn over the details and out of the cell. The
+   cell is a container, so the line breaks where the cell is narrow, wherever
+   it sits: first the menu goes under the details and the details under the
+   name, then the label goes above the field.
+
+   A variable sized `auto` takes its width from its content, which an
+   inline-size container cannot, so it keeps the one line. EuropaCSS claims
+   `@container` for its own shorthand, so the rule is written `@Container`
+   (see MediaField.css). */
+.block .block-vars .variable:is(.file, .image, .video, .gallery)[data-size]:not([data-size="auto"]) {
+  container: media-var / inline-size;
+}
+
+@Container media-var (max-width: 379px) {
+  .block .block-vars .variable:is(.file, .image, .video) .media-field {
+    flex-wrap: wrap;
+
+    .media-field-content {
+      flex: 1 1 100%;
+    }
+
+    .media-field-copy {
+      flex-wrap: wrap;
+      column-gap: 8px;
+      row-gap: 0;
+    }
+
+    .media-field-name {
+      flex: 0 1 auto;
+    }
+
+    .media-field-meta {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  /* The menu sits under the details, past the thumbnail */
+  .block .block-vars .variable:is(.image, .video) .media-field > .media-action-menu {
+    margin-left: 46px;
+  }
+
+  .block .block-vars .variable.file .media-field > .media-action-menu {
+    margin-left: 30px;
+  }
+}
+
+@Container media-var (max-width: 239px) {
+  .block .block-vars .variable:is(.file, .image, .video, .gallery) .brando-input .field-wrapper {
+    > .label-wrapper {
+      max-width: none;
+    }
+
+    > .field-base {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+  }
+
+  /* Under the label there is no room to spare beside the menu */
+  .block .block-vars .variable:is(.file, .image, .video) .media-field > .media-action-menu {
+    margin-left: 0;
+  }
+}
