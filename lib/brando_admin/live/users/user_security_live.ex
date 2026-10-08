@@ -236,7 +236,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
           </div>
         </header>
         <p :if={@connected_apps == []} class="security-empty-row">{gettext("No apps are connected.")}</p>
-        <ul :if={@connected_apps != []} class="security-items" data-testid="connected-app-list">
+        <ul :if={@connected_apps != []} class="security-items security-connected-apps" data-testid="connected-app-list">
           <li :for={grant <- @connected_apps} class="security-item" data-testid="connected-app" data-id={grant.id}>
             <.icon name="plug" class="security-item-icon" />
             <div class="security-item-text">

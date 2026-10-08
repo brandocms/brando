@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
         <section aria-labelledby="mcp-endpoint-heading">
           <h2 id="mcp-endpoint-heading" class="integrations-group">{gettext("MCP endpoint")}</h2>
           <article class="integrations-row" id="mcp-switch" data-testid="mcp-switch" data-enabled={to_string(@enabled?)}>
-            <span class="integrations-icon" aria-hidden="true"><.icon name="plug" /></span>
+            <span class="integrations-icon" aria-hidden="true"><.icon name="bot" /></span>
             <div class="integrations-text">
               <h3>
                 {site_label(@tenant)}
@@ -162,8 +162,12 @@ defmodule BrandoAdmin.Sites.MCPLive do
                   {grant.user && grant.user.name}
                   <small>{grant.user && grant.user.email}</small>
                 </td>
-                <td><time datetime={DateTime.to_iso8601(grant.inserted_at)}>{date(grant.inserted_at)}</time></td>
-                <td>{if grant.last_used_at, do: date(grant.last_used_at), else: gettext("Not used yet")}</td>
+                <td data-label={gettext("Connected")}>
+                  <time datetime={DateTime.to_iso8601(grant.inserted_at)}>{date(grant.inserted_at)}</time>
+                </td>
+                <td data-label={gettext("Last used")}>
+                  {if grant.last_used_at, do: date(grant.last_used_at), else: gettext("Not used yet")}
+                </td>
                 <td class="row-actions">
                   <button
                     type="button"

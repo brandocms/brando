@@ -25,7 +25,8 @@
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding: 20px;
     border-bottom: 1px solid var(--brando-line);
     h3 { margin-bottom: 8px; font-size: 13px; }
-    ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--brando-ink); font-size: 13px; line-height: 1.5; }
+    ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; list-style: disc; color: var(--brando-ink); font-size: 13px; line-height: 1.5; }
+    li::marker { color: var(--brando-muted); }
   }
 
   .mcp-consent-footer {
@@ -53,8 +54,25 @@
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
   }
   .mcp-grants { margin-top: 24px; }
+
+  /* On a phone each connection is a block: who and when, then Revoke */
+  @media (max-width: 700px) {
+    .mcp-grants-table {
+      > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      > tbody > tr {
+        display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 16px;
+        border-bottom: 1px solid var(--brando-line);
+      }
+      > tbody > tr:last-child { border-bottom: 0; }
+      > tbody > tr > td, > tbody > tr > td:first-child, > tbody > tr > td:last-child { display: block; padding: 0; border: 0; }
+      > tbody > tr > td.row-actions { grid-column: 2; grid-row: 1 / span 4; width: auto; align-self: start; }
+      > tbody > tr > td[data-label] { color: var(--brando-muted); font-size: 12px; }
+      > tbody > tr > td[data-label]::before { content: attr(data-label) ": "; }
+    }
+  }
 }
 
-.admin-workspace.security-workspace .security-empty-row {
-  padding: 16px 20px; color: var(--brando-muted); font-size: 12px;
+.admin-workspace.security-workspace {
+  .security-empty-row { padding: 16px 20px; color: var(--brando-muted); font-size: 12px; }
+  .security-connected-apps .security-item:first-child { border-top: 0; }
 }
