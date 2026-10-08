@@ -251,7 +251,8 @@ defmodule Brando.MigrationTemplates do
     %{
       "pages" => ~w(meta_canonical_url content_modified_at meta_nosnippet meta_max_snippet),
       "sites_seos" => ~w(crawler_policy),
-      "content_modules" => ~w(markdown_code)
+      "content_modules" => ~w(markdown_code),
+      "activity_events" => ~w(proposal_id approver_id)
     }
   end
 

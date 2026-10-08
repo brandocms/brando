@@ -4,7 +4,11 @@ defmodule Brando.Activity.Event do
   what (`action`), to which entry (`schema`, `entry_id`, with its `title` and
   `language` as they were), which fields changed, and the revision the change
   saved. Events that belong to one operation, such as a content import, share
-  a `batch_id`. See `Brando.Activity`.
+  a `batch_id`.
+
+  A change an agent prepared (`source` `:assistant` or `:mcp`) names the
+  content proposal it came from (`proposal_id`) and the user who approved
+  and applied it (`approver`). See `Brando.Activity`.
   """
   use Ecto.Schema
 
@@ -42,6 +46,8 @@ defmodule Brando.Activity.Event do
     field :revision, :integer
     field :details, :map, default: %{}
     field :batch_id, Ecto.UUID
+    field :proposal_id, Ecto.UUID
+    belongs_to :approver, Brando.Users.User
 
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
