@@ -31,6 +31,10 @@ defmodule Brando.Authorization.Catalog do
      [:installation]},
     {:utilities, "brando.utilities", "Utilities & caches", "Settings", [:read, :update], [:standalone, :site]},
     {:activity, "brando.activity", "Activity", "Settings", [:read], [:standalone, :site]},
+    # Managing webhooks shows content metadata (type, id, URL, status,
+    # changed field names) for every content type, drafts included: the
+    # payload goes to a URL the manager chooses (guides/webhooks.md).
+    {:webhooks, "brando.webhooks", "Webhooks", "Settings", [:manage], [:standalone, :site]},
     {:assistant, "brando.assistant", "Content assistant", "Content", [:use, :configure], [:standalone, :site]}
   ]
 

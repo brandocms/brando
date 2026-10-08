@@ -372,6 +372,7 @@ defmodule BrandoAdmin.Menu do
                     url: "/admin/config/scheduled_publishing"
                   },
                   activity_menu_item(current_user),
+                  integrations_menu_item(current_user),
                   if(Brando.Authorization.enabled?() or match?(%{role: :superuser}, current_user),
                     do: %{name: gettext("Permissions"), url: "/admin/groups", icon: "shield-check"}
                   ),
@@ -542,6 +543,13 @@ defmodule BrandoAdmin.Menu do
   defp activity_menu_item(user) do
     if Brando.Authorization.enabled?() or match?(%{role: role} when role in [:admin, :superuser], user),
       do: %{name: gettext("Activity"), url: "/admin/config/activity", icon: "activity"}
+  end
+
+  # Without group authorization, for administrators; with it, the
+  # `brando.webhooks.manage` permission decides (`filter_authorized/2`).
+  defp integrations_menu_item(user) do
+    if Brando.Authorization.enabled?() or match?(%{role: role} when role in [:admin, :superuser], user),
+      do: %{name: gettext("Integrations"), url: "/admin/config/integrations", icon: "plug"}
   end
 
   defp environments_menu_item do

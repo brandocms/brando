@@ -17068,3 +17068,544 @@ msgstr "Viser %{shown} av %{count} oppføringer med problemer, flest feil først
 #, elixir-autogen, elixir-format
 msgid "Checked in %{ms} ms. Kept for ten minutes; Run again checks again."
 msgstr "Sjekket på %{ms} ms. Beholdes i ti minutter; Kjør igjen sjekker på nytt."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A new secret replaces this one at once; update the receiver straight after."
+msgstr "En ny hemmelighet erstatter denne med én gang; oppdater mottakeren rett etterpå."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A test event was sent."
+msgstr "En testhendelse ble sendt."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A webhook tells another system — a static site build, a cache, a search index — when content is published or changes."
+msgstr "En webhook forteller et annet system – et statisk nettstedsbygg, en hurtigbuffer, en søkeindeks – når innhold publiseres eller endres."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add webhook"
+msgstr "Legg til webhook"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "All events"
+msgstr "Alle hendelser"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "An https address on the public internet. Redirects are not followed."
+msgstr "En https-adresse på det åpne internettet. Videresendinger følges ikke."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Check this value."
+msgstr "Sjekk denne verdien."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected"
+msgstr "Tilkoblet"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Copy the signing secret now"
+msgstr "Kopier signeringshemmeligheten nå"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not connect"
+msgstr "Fikk ikke kontakt"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create webhook"
+msgstr "Opprett webhook"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this webhook?"
+msgstr "Slette denne webhooken?"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete webhook"
+msgstr "Slett webhook"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted with its delivery log"
+msgstr "Slettet sammen med leveringsloggen"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delivered"
+msgstr "Levert"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deliveries show here when content changes, or when you send a test event."
+msgstr "Leveringer vises her når innhold endres, eller når du sender en testhendelse."
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Deliveries to %{names} failed for a day. Check the receiver, then resume it."
+msgstr "Leveringer til %{names} har feilet i et døgn. Sjekk mottakeren, og gjenoppta den så."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delivery log"
+msgstr "Leveringslogg"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Varighet"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit webhook"
+msgstr "Rediger webhook"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ends in %{hint}."
+msgstr "Slutter på %{hint}."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr "Hendelse"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr "Hendelser"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Events are sent as content changes. Pausing stops them until you resume."
+msgstr "Hendelser sendes når innhold endres. Pause stopper dem til du gjenopptar."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fill this in."
+msgstr "Fyll ut dette."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Integrations"
+msgstr "Integrasjoner"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "It is shown only this once. The receiver uses it to check the Brando-Signature header of every request."
+msgstr "Den vises bare denne ene gangen. Mottakeren bruker den til å sjekke Brando-Signature-headeren i hver forespørsel."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last delivered %{time}"
+msgstr "Sist levert %{time}"
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last delivery %{time} to %{webhook}"
+msgstr "Siste levering %{time} til %{webhook}"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last delivery failed %{time}"
+msgstr "Siste levering feilet %{time}"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the user name and password out of the address."
+msgstr "Utelat brukernavn og passord fra adressen."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Manage"
+msgstr "Administrer"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "New webhook"
+msgstr "Ny webhook"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "No answer within 10 seconds"
+msgstr "Ikke svar innen 10 sekunder"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "No webhooks"
+msgstr "Ingen webhooks"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "None chosen sends events for every content type."
+msgstr "Velger du ingen, sendes hendelser for alle innholdstyper."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "None chosen sends events in every language."
+msgstr "Velger du ingen, sendes hendelser på alle språk."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not a valid HTTP response"
+msgstr "Ikke et gyldig HTTP-svar"
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not set up"
+msgstr "Ikke satt opp"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is sent while it is paused. Changes made meanwhile are not sent later."
+msgstr "Ingenting sendes mens den er satt på pause. Endringer i mellomtiden sendes ikke senere."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing more is sent to it, and its delivery log is removed."
+msgstr "Ingenting mer sendes til den, og leveringsloggen fjernes."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing sent yet"
+msgstr "Ingenting sendt ennå"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only these"
+msgstr "Bare disse"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Pause"
+msgstr "Sett på pause"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "På pause"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused after failures"
+msgstr "På pause etter feil"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Paused after its deliveries kept failing"
+msgstr "Satt på pause fordi leveringene fortsatte å feile"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because its deliveries kept failing for a day. Check the receiver, then resume."
+msgstr "Satt på pause fordi leveringene feilet i et døgn. Sjekk mottakeren, og gjenoppta så."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because this environment was copied or restored from another one. It resumes when this environment goes live; resume it sooner only if this environment should call this URL."
+msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet fra et annet. Den gjenopptas når dette miljøet blir live; gjenoppta den før bare hvis dette miljøet skal kalle denne URL-en."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: copied environment"
+msgstr "På pause: kopiert miljø"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redeliver"
+msgstr "Lever på nytt"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Response"
+msgstr "Svar"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restored"
+msgstr "Gjenopprettet"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resume"
+msgstr "Gjenoppta"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resume the webhook to send to it."
+msgstr "Gjenoppta webhooken for å sende til den."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Resumed"
+msgstr "Gjenopptatt"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Review webhooks"
+msgstr "Se webhooks"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rotate secret"
+msgstr "Bytt hemmelighet"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rotate the secret?"
+msgstr "Bytte hemmeligheten?"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rotated %{date}."
+msgstr "Byttet %{date}."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Rotated the signing secret"
+msgstr "Byttet signeringshemmeligheten"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save webhook"
+msgstr "Lagre webhook"
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Searches, clicks and impressions per entry, in Content SEO."
+msgstr "Søk, klikk og visninger per oppføring, i innholds-SEO."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Searches, clicks and impressions per entry, in Content SEO. A developer sets it up in the site's configuration."
+msgstr "Søk, klikk og visninger per oppføring, i innholds-SEO. En utvikler setter det opp i nettstedets konfigurasjon."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Send test event"
+msgstr "Send testhendelse"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sending"
+msgstr "Sender"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Sends to %{host}"
+msgstr "Sender til %{host}"
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Services this site sends content to or reads data from."
+msgstr "Tjenester dette nettstedet sender innhold til eller henter data fra."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shop cache"
+msgstr "Butikkens hurtigbuffer"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Signed requests to other systems when content changes in this environment."
+msgstr "Signerte forespørsler til andre systemer når innhold endres i dette miljøet."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Signing secret"
+msgstr "Signeringshemmelighet"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stops all deliveries and removes the delivery log."
+msgstr "Stopper alle leveringer og fjerner leveringsloggen."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tell other systems when content is published or changes, with a signed request."
+msgstr "Gi andre systemer beskjed når innhold publiseres eller endres, med en signert forespørsel."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Test event"
+msgstr "Testhendelse"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "That webhook does not exist in this environment."
+msgstr "Den webhooken finnes ikke i dette miljøet."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The URL is not https"
+msgstr "URL-en er ikke https"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The address is on a private network"
+msgstr "Adressen er på et privat nettverk"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The current secret stops working at once. Deliveries fail to verify until the receiver has the new one."
+msgstr "Den nåværende hemmeligheten slutter å virke med én gang. Leveringer kan ikke verifiseres før mottakeren har den nye."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery was sent again."
+msgstr "Leveringen ble sendt på nytt."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The host name could not be found"
+msgstr "Vertsnavnet ble ikke funnet"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The secret could not be read; rotate it"
+msgstr "Hemmeligheten kunne ikke leses; bytt den"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook was deleted."
+msgstr "Webhooken ble slettet."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook was paused"
+msgstr "Webhooken var satt på pause"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook was saved."
+msgstr "Webhooken ble lagret."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This address is on a private or local network, which webhooks may not call."
+msgstr "Denne adressen er på et privat eller lokalt nettverk, som webhooks ikke kan kalle."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This host name could not be found."
+msgstr "Fant ikke dette vertsnavnet."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This is not a valid address."
+msgstr "Dette er ikke en gyldig adresse."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Tid"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use an https:// address."
+msgstr "Bruk en https://-adresse."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Visitors per entry, in Content SEO."
+msgstr "Besøkende per oppføring, i innholds-SEO."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "Visitors per entry, in Content SEO. A developer sets it up in the site's configuration."
+msgstr "Besøkende per oppføring, i innholds-SEO. En utvikler setter det opp i nettstedets konfigurasjon."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook"
+msgstr "Webhook"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook settings"
+msgstr "Innstillinger for webhook"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Webhooks"
+msgstr "Webhooks"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "What was sent to every webhook in this environment, newest first."
+msgstr "Det som er sendt til alle webhooks i dette miljøet, nyeste først."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where to send events, and which ones. The secret to verify them is shown once, after saving."
+msgstr "Hvor hendelser skal sendes, og hvilke. Hemmeligheten som verifiserer dem vises én gang, etter lagring."
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "retrying"
+msgstr "prøver igjen"
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} failed in 24 h"
+msgid_plural "%{count} failed in 24 h"
+msgstr[0] "%{count} feilet siste døgn"
+msgstr[1] "%{count} feilet siste døgn"
+
+#: lib/brando_admin/live/sites/integrations_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} webhook"
+msgid_plural "%{count} webhooks"
+msgstr[0] "%{count} webhook"
+msgstr[1] "%{count} webhooks"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "A webhook was paused"
+msgid_plural "%{count} webhooks were paused"
+msgstr[0] "En webhook ble satt på pause"
+msgstr[1] "%{count} webhooks ble satt på pause"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Paused because this environment was copied or restored"
+msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Resumed when this environment went live"
+msgstr "Gjenopptatt da dette miljøet ble live"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace URL"
+msgstr "Bytt URL"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The path is hidden, as it may hold a key. Replace the URL to change it."
+msgstr "Stien er skjult, siden den kan inneholde en nøkkel. Bytt URL-en for å endre den."
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery stopped with an error"
+msgstr "Leveringen stoppet med en feil"
+
+#: lib/brando_admin/live/sites/webhooks_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sent, but the answer could not be saved"
+msgstr "Sendt, men svaret kunne ikke lagres"
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shows the type, id, URL, status and changed fields of every entry, drafts included, and sends them to URLs the person chooses."
+msgstr "Viser type, id, URL, status og endrede felt for alle oppføringer, også utkast, og sender dem til URL-er personen velger."

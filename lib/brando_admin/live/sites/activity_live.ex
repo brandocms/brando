@@ -55,11 +55,16 @@ defmodule BrandoAdmin.Sites.ActivityLive do
     Brando.Authorization.enabled?() or match?(%{role: role} when role in [:admin, :superuser], user)
   end
 
-  # Events of schemas the user may not read stay out of the log.
+  # Events of schemas the user may not read stay out of the log; changes to
+  # webhooks show to those who manage them.
   defp readable_schemas do
-    if Brando.Authorization.enabled?(),
-      do: Enum.filter(Activity.schemas(), &BrandoAdmin.Authorization.allowed?(:read, &1)),
-      else: nil
+    if Brando.Authorization.enabled?() do
+      readable = Enum.filter(Activity.schemas(), &BrandoAdmin.Authorization.allowed?(:read, &1))
+
+      if BrandoAdmin.Authorization.allowed?(:manage, :webhooks),
+        do: [Brando.Webhooks.Webhook | readable],
+        else: readable
+    end
   end
 
   defp assign_options(socket) do

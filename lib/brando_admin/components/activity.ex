@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Activity do
   alias BrandoAdmin.Components.TextDiff
 
   @trash_days 30
+  @webhook "Elixir.Brando.Webhooks.Webhook"
 
   ## Data
 
@@ -164,6 +165,9 @@ defmodule BrandoAdmin.Components.Activity do
   defp tone(:note_resolved), do: "is-note"
   defp tone(:note_reopened), do: "is-note"
   defp tone(_), do: "is-neutral"
+
+  defp setting_label(@webhook), do: gettext("Webhook")
+  defp setting_label(_schema), do: nil
 
   @doc "A content type's name in the admin's language."
   def type_label(nil), do: nil
@@ -368,9 +372,11 @@ defmodule BrandoAdmin.Components.Activity do
     assigns =
       assign(assigns,
         path: entry_path(assigns.event, assigns.states),
-        gone?: assigns.event.entry_id && is_nil(assigns.states[{assigns.event.schema, assigns.event.entry_id}]),
+        gone?:
+          assigns.event.schema != @webhook && assigns.event.entry_id &&
+            is_nil(assigns.states[{assigns.event.schema, assigns.event.entry_id}]),
         title: assigns.event.title || plural_label(schema) || assigns.event.schema,
-        type: if(assigns.event.entry_id, do: type_label(schema)),
+        type: if(assigns.event.entry_id, do: type_label(schema) || setting_label(assigns.event.schema)),
         language: assigns.event.language && String.upcase(assigns.event.language)
       )
 
@@ -398,6 +404,30 @@ defmodule BrandoAdmin.Components.Activity do
     fields = fields_phrase(schema(event.schema), event.fields || [])
     event |> lines(fields, states) |> Enum.reject(&is_nil/1)
   end
+
+  # Webhooks (`Brando.Webhooks`) are settings, not entries
+  defp lines(%{schema: @webhook, details: %{"webhook" => "secret_rotated"}}, _fields, _states),
+    do: [gettext("Rotated the signing secret")]
+
+  defp lines(%{schema: @webhook, details: %{"webhook" => "paused", "reason" => "failures"}}, _fields, _states),
+    do: [gettext("Paused after its deliveries kept failing")]
+
+  defp lines(%{schema: @webhook, details: %{"webhook" => "paused", "reason" => "environment_copy"}}, _fields, _states),
+    do: [gettext("Paused because this environment was copied or restored")]
+
+  defp lines(%{schema: @webhook, details: %{"webhook" => "resumed", "reason" => "went_live"}}, _fields, _states),
+    do: [gettext("Resumed when this environment went live")]
+
+  defp lines(%{schema: @webhook, details: %{"webhook" => "paused"}}, _fields, _states), do: [gettext("Paused")]
+  defp lines(%{schema: @webhook, details: %{"webhook" => "resumed"}}, _fields, _states), do: [gettext("Resumed")]
+
+  defp lines(%{schema: @webhook, action: :created, details: %{"url_host" => host}}, _fields, _states),
+    do: [gettext("Sends to %{host}", host: host)]
+
+  defp lines(%{schema: @webhook, action: :deleted}, _fields, _states),
+    do: [gettext("Deleted with its delivery log")]
+
+  defp lines(%{schema: @webhook}, fields, _states), do: [fields && fields_line(fields)]
 
   defp lines(%{action: :created} = event, _fields, _states), do: [status_saved(event.details)]
 

@@ -230,11 +230,24 @@ defmodule Brando.Activity do
   def import_undone(entry, user, :delete),
     do: guard(entry, fn -> record(:deleted, entry, user, details: %{"undo_import" => true}) end)
 
-  @doc "Record `action` on `entry`. Options: `:fields`, `:revision`, `:details`."
+  @doc """
+  Record `action` on `entry`. Options: `:fields`, `:revision`, `:details`.
+
+  The change is also announced to `Brando.ContentEvents`, which turns it
+  into a content event (`entry.updated` and so on) for webhooks and other
+  subscribers.
+  """
   def record(action, entry, user, opts \\ []) do
+    source = source(user)
+    result = record_event(action, entry, user, source, opts)
+    Brando.ContentEvents.activity_recorded(action, entry, source, opts)
+    result
+  end
+
+  defp record_event(action, entry, user, source, opts) do
     insert(%{
       action: action,
-      source: source(user),
+      source: source,
       user_id: user_id(user),
       schema: to_string(entry.__struct__),
       entry_id: entry.id,
@@ -242,6 +255,26 @@ defmodule Brando.Activity do
       language: language(entry),
       fields: Keyword.get(opts, :fields, []),
       revision: Keyword.get(opts, :revision),
+      details: Map.merge(source_details(), Keyword.get(opts, :details, %{})),
+      batch_id: Process.get(@batch_key)
+    })
+  end
+
+  @doc """
+  Record `action` (`:created`, `:updated` or `:deleted`) on a setting that is
+  not a Blueprint entry, such as a webhook. `title` names it in the log;
+  `details` say what changed, never secrets. Sends no content event.
+  """
+  def setting_changed(action, %{__struct__: schema, id: id}, title, user, opts \\ [])
+      when action in [:created, :updated, :deleted] do
+    insert(%{
+      action: action,
+      source: source(user),
+      user_id: user_id(user),
+      schema: to_string(schema),
+      entry_id: id,
+      title: title,
+      fields: Keyword.get(opts, :fields, []),
       details: Map.merge(source_details(), Keyword.get(opts, :details, %{})),
       batch_id: Process.get(@batch_key)
     })

@@ -76,6 +76,9 @@ config :brando, Oban,
   repo: BrandoIntegration.Repo,
   testing: :inline
 
+# Webhook URLs are looked up in a stub, not real DNS (test/support).
+config :brando, Brando.Webhooks, resolver: {Brando.WebhookTestResolver, :resolve}
+
 # 404 counts stay in the buffer until a test flushes them: a periodic flush
 # would write from a process outside the test's sandbox.
 config :brando, Brando.Sites.FourOhFour, flush_interval: false

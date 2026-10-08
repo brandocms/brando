@@ -203,6 +203,12 @@ defmodule Brando.Router do
       live "/identity", BrandoAdmin.Sites.IdentityLive
       live "/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
       live "/activity", BrandoAdmin.Sites.ActivityLive
+      live "/integrations", BrandoAdmin.Sites.IntegrationsLive
+      live "/webhooks", BrandoAdmin.Sites.WebhooksLive, :index
+      live "/webhooks/new", BrandoAdmin.Sites.WebhooksLive, :new
+      live "/webhooks/deliveries", BrandoAdmin.Sites.WebhooksLive, :deliveries
+      live "/webhooks/:id/edit", BrandoAdmin.Sites.WebhooksLive, :edit
+      live "/webhooks/:id/deliveries", BrandoAdmin.Sites.WebhooksLive, :deliveries
       live "/seo", BrandoAdmin.Sites.SEOLive
       live "/utils", BrandoAdmin.Sites.UtilsLive
       live "/utils/loose-blocks", BrandoAdmin.Sites.BlockAuditLive

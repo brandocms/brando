@@ -39,6 +39,7 @@ defmodule Brando.SupervisorTest do
       assert Brando.Worker.MediaOrphanCleanup in workers
       assert Brando.Worker.FormSubmissionPurger in workers
       assert Brando.Worker.NotFoundPurger in workers
+      assert Brando.Worker.WebhookDeliveryPurger in workers
     end
 
     test "gives every queue Brando serializes a limit" do
@@ -47,6 +48,13 @@ defmodule Brando.SupervisorTest do
       for queue <- [:default, :environment_operations, :ssg_builds, :image_processing, :upload_reaping] do
         assert config.queues[queue] == [limit: 1]
       end
+    end
+
+    test "runs content events in order and limits webhook deliveries" do
+      config = Oban.Config.new(Brando.Supervisor.oban_config())
+
+      assert config.queues[:content_events] == [limit: 1]
+      assert config.queues[:webhooks] == [limit: 5]
     end
   end
 end
