@@ -24,8 +24,8 @@ defmodule Brando.Publisher do
   Create jobs for the publisher worker when the changeset changed the entry's
   `publish_at` or `unpublish_at`: one that publishes the entry at
   `publish_at`, and one that deactivates it at `unpublish_at`. A date that
-  changed replaces the entry's earlier job for it, whoever scheduled that one,
-  and a cleared `unpublish_at` cancels its job.
+  changed replaces the entry's earlier job for it, whoever scheduled that one;
+  a date cleared or moved into the past cancels it.
   """
   @spec schedule_publishing(entry, changeset, user) :: {:ok, entry}
   def schedule_publishing(entry, changeset, user) do
@@ -33,34 +33,25 @@ defmodule Brando.Publisher do
     schedule_unpublish(entry, changeset, user)
   end
 
-  defp schedule_publish(
-         %{id: id, publish_at: publish_at, __struct__: schema} = entry,
-         %{changes: %{publish_at: _}},
-         user
-       )
-       when not is_nil(publish_at) do
-    if DateTime.before?(publish_at, DateTime.utc_now()) do
-      # the publishing date is in the past, just leave it
-      {:ok, entry}
-    else
-      args =
-        TenantJob.attach(%{schema: schema, id: id, user_id: user_id(user), status: :published})
+  # Any change to publish_at drops the entry's earlier publishing job, a date
+  # cleared or moved into the past included; only a future date queues one.
+  defp schedule_publish(%{id: id, __struct__: schema} = entry, %{changes: %{publish_at: _}}, user) do
+    delete_status_jobs(schema, id, @publish_status)
 
-      entry_identifier = Identifier.identifier_for(entry)
-
-      delete_status_jobs(schema, id, @publish_status)
-
-      args
+    with %DateTime{} = publish_at <- Map.get(entry, :publish_at),
+         true <- DateTime.after?(publish_at, DateTime.utc_now()) do
+      %{schema: schema, id: id, user_id: user_id(user), status: :published}
+      |> TenantJob.attach()
       |> Worker.EntryPublisher.new(
         replace_args: true,
         scheduled_at: publish_at,
         tags: [:publisher, :status],
-        meta: %{identifier: job_identifier(entry_identifier)}
+        meta: %{identifier: job_identifier(Identifier.identifier_for(entry))}
       )
       |> Oban.insert()
-
-      {:ok, entry}
     end
+
+    {:ok, entry}
   end
 
   defp schedule_publish(entry, _, _), do: {:ok, entry}
@@ -321,6 +312,114 @@ defmodule Brando.Publisher do
   end
 
   defp override_for_unpublish_at(changeset), do: changeset
+
+  @waiting_states ~w(available scheduled executing retryable)
+
+  @doc """
+  The publisher's jobs that have yet to run (or are running) in the current
+  environment, by time, filtered in the query.
+
+  Options: `:kinds`, any of `:publish`, `:unpublish` and `:revision` (all
+  by default); `:from` and `:to`, a window on `scheduled_at` (`to` not
+  included).
+
+  Unlike `list_jobs/0` it checks no permissions: callers load the entries and
+  check those, as `BrandoAdmin.Schedule` and the dashboard do.
+  """
+  def waiting_jobs(opts \\ []) do
+    kinds = Keyword.get(opts, :kinds, [:publish, :unpublish, :revision])
+    context = TenantJob.context_fragment()
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
+            fragment("? @> ?", j.args, ^context),
+        order_by: [asc: j.scheduled_at, asc: j.id]
+
+    query
+    |> where_kinds(kinds)
+    |> where_window(Keyword.get(opts, :from), Keyword.get(opts, :to))
+    |> Repo.all()
+  end
+
+  defp where_kinds(query, kinds) do
+    kind =
+      Enum.reduce(kinds, dynamic(false), fn
+        :publish, acc -> dynamic([j], ^acc or fragment("?->>'status' = ?", j.args, @publish_status))
+        :unpublish, acc -> dynamic([j], ^acc or fragment("?->>'status' = ?", j.args, @unpublish_status))
+        :revision, acc -> dynamic([j], ^acc or fragment("? \\? 'revision'", j.args))
+      end)
+
+    from j in query, where: ^kind
+  end
+
+  defp where_window(query, nil, nil), do: query
+  defp where_window(query, from, nil), do: from(j in query, where: j.scheduled_at >= ^from)
+  defp where_window(query, nil, to), do: from(j in query, where: j.scheduled_at < ^to)
+  defp where_window(query, from, to), do: from(j in query, where: j.scheduled_at >= ^from and j.scheduled_at < ^to)
+
+  @sweep_grace_seconds 300
+
+  @doc """
+  Catch up on dates no job will act on, in the current environment: publish
+  pending entries whose `publish_at` has passed, and deactivate published or
+  pending entries whose `unpublish_at` has passed, through each entry's
+  context like the jobs do. Dates arrive without jobs when an environment is
+  cloned or an archive restored, and a lost job leaves one behind. Only dates
+  more than five minutes old are taken, so the jobs run first; an entry it
+  has handled no longer matches, so running it again does nothing. Both
+  dates are indexed. Returns how many entries it changed.
+
+  `Brando.Worker.ScheduledPublishingSweep` runs it every ten minutes in every
+  active environment.
+  """
+  def sweep(now \\ DateTime.utc_now()) do
+    before = DateTime.add(now, -@sweep_grace_seconds)
+
+    Brando.Activity.with_source(:scheduler, fn ->
+      sweepable_schemas()
+      |> Enum.map(fn schema ->
+        due(schema, :publish_at, [:pending], before)
+        |> Enum.concat(due(schema, :unpublish_at, [:published, :pending], before))
+        |> Enum.uniq_by(& &1.id)
+        |> Enum.count(&(sweep_entry(schema, &1, now) == :ok))
+      end)
+      |> Enum.sum()
+    end)
+  end
+
+  @doc "Content types with dates to keep: the trait, a status and a context."
+  def sweepable_schemas do
+    :include_brando
+    |> Brando.Blueprint.list_blueprints()
+    |> Enum.uniq()
+    |> Enum.filter(fn schema ->
+      function_exported?(schema, :has_trait, 1) and schema.has_trait(Brando.Trait.ScheduledPublishing) and
+        :status in schema.__schema__(:fields) and function_exported?(schema, :__modules__, 0)
+    end)
+  end
+
+  defp due(schema, field, statuses, before) do
+    query = from e in schema, where: e.status in ^statuses and field(e, ^field) <= ^before
+
+    query =
+      if :deleted_at in schema.__schema__(:fields), do: from(e in query, where: is_nil(e.deleted_at)), else: query
+
+    Repo.all(query)
+  end
+
+  # An expiry that has passed wins over a publish that has
+  defp sweep_entry(schema, entry, now) do
+    expired? = match?(%DateTime{}, Map.get(entry, :unpublish_at)) and not DateTime.after?(entry.unpublish_at, now)
+    params = %{status: if(expired?, do: @unpublish_status, else: @publish_status)}
+    context = schema.__modules__().context
+
+    case apply(context, :"update_#{schema.__naming__().singular}", [entry.id, params, :system]) do
+      {:ok, _} -> :ok
+      error -> error
+    end
+  end
 
   def list_jobs do
     context = TenantJob.context_fragment()

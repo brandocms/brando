@@ -118,11 +118,14 @@ defmodule Brando.Worker.EntryPublisher do
     end
   end
 
-  # A publish waits for its publish_at and is dropped once the entry has
-  # expired; an expiry waits for its unpublish_at and only ends an entry
-  # that is published or about to be.
+  # A publish waits for its publish_at, publishes only a pending entry (one
+  # set back to draft stays a draft) and is dropped once the entry has
+  # expired; an expiry waits for its unpublish_at and only ends an entry that
+  # is published or about to be.
   defp due?(entry, "published", now),
-    do: not after?(Map.get(entry, :publish_at), now) and not passed?(Map.get(entry, :unpublish_at), now)
+    do:
+      Map.get(entry, :status) == :pending and not after?(Map.get(entry, :publish_at), now) and
+        not passed?(Map.get(entry, :unpublish_at), now)
 
   defp due?(entry, _status, now),
     do: passed?(Map.get(entry, :unpublish_at), now) and Map.get(entry, :status) in [:published, :pending]

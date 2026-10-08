@@ -9,7 +9,8 @@ defmodule Brando.Trait.ScheduledPublishing do
 
   `unpublish_at` is when the entry expires: `Brando.Publisher` schedules a job
   that deactivates it then, the same status change as deactivating it by hand.
-  It has to come after `publish_at`; clearing it cancels the job.
+  It has to come after `publish_at`; clearing it cancels the job. Publishing
+  the entry again after it expired clears the expiry that has passed.
   """
   use Brando.Trait
   use Gettext, backend: Brando.Gettext
@@ -24,9 +25,28 @@ defmodule Brando.Trait.ScheduledPublishing do
   @impl true
   def changeset_mutator(_module, _config, changeset, _user, _opts) do
     changeset
+    |> clear_passed_unpublish_at()
     |> validate_unpublish_at()
     |> prepare_changes(&stamp_publish_at/1)
   end
+
+  # Publishing an entry again after it expired: the expiry that ended it is
+  # over, and kept it would show as planned and fail the next save that
+  # touches a date. A new expiry set in the same change is kept.
+  defp clear_passed_unpublish_at(%{changes: %{status: status} = changes} = changeset)
+       when status in [:published, :pending] and not is_map_key(changes, :unpublish_at) do
+    case get_field(changeset, :unpublish_at) do
+      %DateTime{} = unpublish_at ->
+        if DateTime.after?(unpublish_at, DateTime.utc_now()),
+          do: changeset,
+          else: put_change(changeset, :unpublish_at, nil)
+
+      _ ->
+        changeset
+    end
+  end
+
+  defp clear_passed_unpublish_at(changeset), do: changeset
 
   # Status changed to :published, but no publish_at set = set to utc_now
   @doc false

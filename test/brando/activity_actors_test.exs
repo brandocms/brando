@@ -119,6 +119,8 @@ defmodule Brando.ActivityActorsTest do
 
   test "scheduled publishing is an automatic job, for the user who scheduled it", %{user: user} do
     page = create_page(user)
+    # Waiting to be published, as scheduling leaves it
+    Brando.Repo.update_all(Ecto.Query.from(p in Page, where: p.id == ^page.id), set: [status: :pending])
 
     assert :ok =
              perform_job(Brando.Worker.EntryPublisher, %{
