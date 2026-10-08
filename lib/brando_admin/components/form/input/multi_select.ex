@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   alias Brando.Exception.BlueprintError
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Options
@@ -135,6 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 id={"#{@field.id}-select-modal-filter"}
                 phx-hook="Brando.SelectFilter"
                 data-filter-target={"##{@field.id}-options"}
+                data-target=".multiselect-option"
               >
                 <div class="field-wrapper">
                   <div class="label-wrapper">
@@ -163,40 +165,55 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               </div>
             <% end %>
 
-            <div class="select-modal-wrapper">
+            <%!-- Options and the selection as identifier rows (Identifier.css):
+                  a checkbox, the status dot when there is one, the label and
+                  its language. A row is a checkbox button, so Space and Enter
+                  toggle it; Brando.SelectFilter hides rows by `data-label`. --%>
+            <div
+              id={"#{@field.id}-picker"}
+              class="select-modal-wrapper multiselect-picker"
+              phx-hook="Brando.MultiSelectPicker"
+            >
               <%= if @open do %>
                 <div class="select-modal">
-                  <div id={"#{@field.id}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
-                    <h2 class="titlecase">{gettext("Available options")}</h2>
-                    <%= if Enum.empty?(@input_options) do %>
-                      {gettext("No options found")}
-                    <% end %>
-                    <div class="no-results">{gettext("No matching options")}</div>
+                  <h2 id={"#{@field.id}-options-heading"} class="multiselect-heading">
+                    {gettext("Available options")}
+                  </h2>
+                  <p :if={Enum.empty?(@input_options)} class="multiselect-empty">{gettext("No options found")}</p>
+                  <div
+                    :if={@input_options != []}
+                    id={"#{@field.id}-options"}
+                    class="identifier-list multiselect-list"
+                    role="group"
+                    aria-labelledby={"#{@field.id}-options-heading"}
+                    phx-hook="Brando.RememberScrollPosition"
+                  >
                     <%!-- NOTE: no :key here — LV 1.2 keyed :for does not re-render an
                     existing item when only external assigns (@selected_values) change,
                     which broke selected-state updates while the modal stays open. --%>
-                    <.option_button
+                    <.option_row
                       :for={opt <- @input_options}
+                      id_prefix={"#{@field.id}-option"}
                       opt={opt}
                       selected?={option_selected?(opt, @selected_values)}
                       click={JS.dispatch("b:option:toggle-selected") |> JS.push("select_option", target: @myself)}
                     />
+                    <div class="no-results">{gettext("No matching options")}</div>
                   </div>
                 </div>
-                <div class="selected-labels">
-                  <h2 class="titlecase">
+                <div class="multiselect-chosen">
+                  <h2 id={"#{@field.id}-chosen-heading"} class="multiselect-heading">
                     {gettext("Currently selected")}
                     <span :if={@selected_options != []} class="count-badge">{@count_label |> raw}</span>
                   </h2>
-                  <.labels
-                    :let={opt}
+                  <.chosen_rows
+                    id_prefix={"#{@field.id}-chosen"}
                     selected_options={@selected_options}
                     input_options={@input_options}
                     relation_type={@relation_type}
                     relation_key={@relation_key}
-                  >
-                    <.get_label opt={opt} target={@myself} deletable />
-                  </.labels>
+                    target={@myself}
+                  />
                 </div>
               <% end %>
             </div>
@@ -862,27 +879,164 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
-  def option_button(assigns) do
-    assigns =
-      assigns
-      |> assign(:label, extract_label(assigns.opt))
-      |> assign(:value, extract_value(assigns.opt))
+  attr :opt, :any, required: true
+  attr :id_prefix, :string, required: true
+  attr :selected?, :boolean, default: false
+  attr :click, :any, required: true
+
+  # One available option: a checkbox row. `option-selected` is toggled on
+  # click for an immediate response (buildApplication.js) and reconciled by
+  # the next patch, so the row shows `selected` XOR `option-selected`.
+  def option_row(assigns) do
+    assigns = assign(assigns, :row, option_view(assigns.opt, assigns.id_prefix))
 
     ~H"""
     <button
       type="button"
-      class={[
-        "options-option",
-        @selected? && "option-selected"
-      ]}
-      data-label={@label}
-      value={@value}
+      role="checkbox"
+      aria-checked={to_string(@selected?)}
+      aria-labelledby={"#{@row.id}-label"}
+      aria-describedby={described_by(@row)}
+      class={["identifier", "selectable", "multiselect-option", @selected? && "selected"]}
+      data-label={@row.label}
+      value={@row.value}
       phx-click={@click}
     >
-      <.get_label opt={@opt} />
+      <span class="identifier-check" aria-hidden="true"><.icon name="check" /></span>
+      <.option_copy row={@row} />
     </button>
     """
   end
+
+  attr :id_prefix, :string, required: true
+  attr :selected_options, :list, required: true
+  attr :input_options, :list, required: true
+  attr :relation_type, :any, required: true
+  attr :relation_key, :atom, required: true
+  attr :target, :any, required: true
+
+  # The selection, in its order, as the same rows with a remove button.
+  def chosen_rows(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :rows,
+        assigns.selected_options
+        |> Enum.reject(&marked_as_deleted?/1)
+        |> Enum.map(fn opt ->
+          view =
+            opt
+            |> get_opt(assigns.input_options, assigns.relation_key, assigns.relation_type)
+            |> option_view(assigns.id_prefix)
+
+          # A selected value whose option is gone still needs its own value
+          # for the remove button, and an id of its own.
+          if view.value in [nil, ""],
+            do: %{view | value: to_string(extract_value(opt)), id: "#{assigns.id_prefix}-#{maybe_slug(opt)}"},
+            else: view
+        end)
+      )
+
+    ~H"""
+    <p :if={@rows == []} class="multiselect-empty">{gettext("None selected")}</p>
+    <div :if={@rows != []} class="identifier-list multiselect-list" role="list">
+      <div :for={row <- @rows} class="identifier multiselect-chosen-row" role="listitem" data-label={row.label}>
+        <.option_copy row={row} />
+        <span class="identifier-remove remove">
+          <button
+            type="button"
+            aria-label={gettext("Remove")}
+            aria-describedby={"#{row.id}-label"}
+            value={row.value}
+            phx-click={
+              JS.add_class("removing", to: {:closest, ".multiselect-chosen-row"}) |> JS.push("select_option", target: @target)
+            }
+          >
+            <.icon name="x" />
+          </button>
+        </span>
+      </div>
+    </div>
+    """
+  end
+
+  attr :row, :map, required: true
+
+  defp option_copy(assigns) do
+    ~H"""
+    <span class="identifier-copy">
+      <span class="identifier-title">
+        <span
+          :if={@row.status}
+          class="identifier-status"
+          data-status={@row.status}
+          title={IdentifierRow.status_label(@row.status)}
+        >
+          <i aria-hidden="true"></i><span id={"#{@row.id}-status"} class="visually-hidden">{IdentifierRow.status_label(
+            @row.status
+          )}</span>
+        </span>
+        <span id={"#{@row.id}-label"}>{@row.label}</span>
+      </span>
+      <span :if={@row.details != []} id={"#{@row.id}-details"} class="identifier-details">
+        <span :for={detail <- @row.details}>{detail}</span>
+      </span>
+    </span>
+    """
+  end
+
+  # The status and the language, read after the label.
+  defp described_by(row) do
+    [row.status && "#{row.id}-status", row.details != [] && "#{row.id}-details"]
+    |> Enum.filter(& &1)
+    |> Enum.join(" ")
+    |> case do
+      "" -> nil
+      ids -> ids
+    end
+  end
+
+  defp marked_as_deleted?(%Changeset{} = changeset), do: Changeset.get_change(changeset, :marked_as_deleted) == true
+  defp marked_as_deleted?(_), do: false
+
+  # What a row shows for any shape of option: a plain label/value map, an
+  # entry precomputed by `precompute_option/1`, a selected association
+  # changeset or a raw entry. The language is its only secondary line: every
+  # option of a relation has the same content type, so that is left out.
+  defp option_view(nil, id_prefix) do
+    %{id: "#{id_prefix}-missing", value: nil, label: gettext("Missing option"), status: nil, details: []}
+  end
+
+  defp option_view(%Changeset{data: entry}, id_prefix), do: option_view(entry, id_prefix)
+
+  defp option_view(%{label: label} = opt, id_prefix) do
+    value = to_string(extract_value(opt))
+    entry = Map.get(opt, :entry)
+    language = Map.get(opt, :language) || (is_map(entry) && Map.get(entry, :language)) || nil
+
+    %{
+      id: "#{id_prefix}-#{maybe_slug(value)}",
+      value: value,
+      label: label,
+      status: Map.get(opt, :status),
+      details: language_details(language)
+    }
+  end
+
+  defp option_view(%{__struct__: module, id: id} = entry, id_prefix) do
+    identifier = module.__identifier__(entry, skip_cover: true)
+
+    %{
+      id: "#{id_prefix}-#{id}",
+      value: to_string(id),
+      label: identifier.title,
+      status: identifier.status,
+      details: language_details(Map.get(entry, :language))
+    }
+  end
+
+  defp language_details(language) when language in [nil, "", false], do: []
+  defp language_details(language), do: [language |> to_string() |> String.upcase()]
 
   def selected_label(%{relation_type: relation_type} = assigns)
       when relation_type in [:has_many, {:subform, :has_many}] do
@@ -959,38 +1113,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp extract_value(%{id: value}), do: value
   defp extract_value(value), do: value
 
-  defp extract_label(%{label: label}), do: label
-
-  defp extract_label(entry) do
-    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
-    identifier.title
-  end
-
+  # The labels under the field, in the order chosen.
   defp get_label(%{opt: %{entry: _, status: _}} = assigns) do
-    assigns =
-      assigns
-      |> assign_new(:deletable, fn -> false end)
-      |> assign_new(:target, fn -> nil end)
-
     ~H"""
     <span class="status-label"><.status_circle status={@opt.status} /> {@opt.label}</span>
-    <%= if @deletable do %>
-      <button
-        class="delete tiny"
-        aria-label={gettext("Remove")}
-        type="button"
-        value={@opt.value}
-        phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
-      >
-        <.icon name="x" />
-      </button>
-    <% end %>
     """
   end
 
   defp get_label(%{opt: %{label: _}} = assigns) do
-    assigns = assign_new(assigns, :deletable, fn -> false end)
-
     ~H"""
     — {@opt.label}
     """
@@ -1002,56 +1132,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
-  defp get_label(%{opt: %Changeset{} = changeset} = assigns) do
-    entry = changeset.data
-    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
-
-    assigns =
-      assigns
-      |> assign(:entry_id, entry.id)
-      |> assign(:identifier, identifier)
-      |> assign_new(:deletable, fn -> false end)
-      |> assign_new(:target, fn -> nil end)
-
-    ~H"""
-    <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
-    <%= if @deletable do %>
-      <button
-        class="delete tiny"
-        aria-label={gettext("Remove")}
-        type="button"
-        value={@entry_id}
-        phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
-      >
-        <.icon name="x" />
-      </button>
-    <% end %>
-    """
-  end
+  defp get_label(%{opt: %Changeset{data: entry}} = assigns), do: get_label(%{assigns | opt: entry})
 
   defp get_label(%{opt: entry} = assigns) do
-    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
-
-    assigns =
-      assigns
-      |> assign(:entry_id, entry.id)
-      |> assign(:identifier, identifier)
-      |> assign_new(:deletable, fn -> false end)
-      |> assign_new(:target, fn -> nil end)
+    assigns = assign(assigns, :identifier, entry.__struct__.__identifier__(entry, skip_cover: true))
 
     ~H"""
     <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
-    <%= if @deletable do %>
-      <button
-        class="delete tiny"
-        aria-label={gettext("Remove")}
-        type="button"
-        value={@entry_id}
-        phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
-      >
-        <.icon name="x" />
-      </button>
-    <% end %>
     """
   end
 

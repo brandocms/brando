@@ -70,8 +70,8 @@ test('creates project', async ({ page }, testInfo) => {
     .locator('#project_project_categories-field-base')
     .getByRole('button', { name: 'Select' })
     .click()
-  await page.getByRole('button', { name: 'Design' }).click()
-  await page.getByRole('button', { name: 'Strategy' }).click()
+  await page.getByRole('checkbox', { name: 'Design', exact: true }).click()
+  await page.getByRole('checkbox', { name: 'Strategy', exact: true }).click()
   await page.getByRole('button', { name: 'OK' }).click()
   await page
     .locator('#project_client_id-field-base')

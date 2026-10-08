@@ -333,12 +333,6 @@ button.link-preview { text-align: left; }
 .modal .entry-picker-filter { background: var(--brando-surface); padding-bottom: 12px; margin-bottom: 8px; }
 .entry-picker-filter .filter-clear > span { width: 14px; height: 14px; }
 
-@media (max-width: 600px) {
-  .select-modal-wrapper { grid-template-columns: minmax(0, 1fr); }
-  .select-modal-wrapper .select-modal { border-right: 0; border-bottom: 1px solid var(--brando-line); padding: 0 0 16px; }
-  .select-modal-wrapper .selected-labels { padding: 0; }
-}
-
 /* Gallery object configuration. The form renders inside the modal body, so its
    footer cancels the body padding and sticks to the bottom edge itself. */
 .modal .gallery-object-config { display: flex; flex-direction: column; }

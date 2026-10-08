@@ -74,7 +74,7 @@ test('create a simple text module', async ({ page }) => {
   const extensions = refModal.locator('[id$="extensions-field-wrapper"]')
   await extensions.getByRole('button', { name: 'Select', exact: true }).click()
   const options = page.getByRole('dialog', { name: 'Select options', exact: true })
-  await options.getByRole('button', { name: /Color$/ }).click()
+  await options.getByRole('checkbox', { name: /Color$/ }).click()
   await options.getByRole('button', { name: 'OK', exact: true }).click()
   // `open` on <details> is client state, so a patch arriving after the summary
   // click re-renders the element closed and the presets never appear. Let the

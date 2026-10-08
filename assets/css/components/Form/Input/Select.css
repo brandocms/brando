@@ -43,64 +43,108 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   margin-top: 0 !important;
 }
 
+/* The multi-select dialog: the options and the selection side by side as
+   joined identifier rows (Identifier.css). An option is a checkbox row; a
+   selected one has a remove button. They stack on a phone. */
 .select-modal-wrapper {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px;
+  gap: 24px;
+  align-items: start;
 
-  .select-modal {
-    border-right: 1px solid var(--brando-input-border);
-    padding-right: 20px;
-  }
-
-  .selected-labels {
-    padding-left: 5px;
-
-    /* Inside the modal, selected labels mirror the option rows on the left
-       (.options-option) instead of the compact pill used under the field */
-    .selected-label {
-      width: 100%;
-      align-items: center;
-      margin-bottom: 2px;
-      min-height: 44px;
-      padding: 8px 10px 8px 14px;
-      line-height: 20px;
-      border-radius: 8px;
-      background-color: color-mix(in srgb, var(--brando-ink) 7%, transparent);
-      @font mono;
-
-      &:hover { background-color: color-mix(in srgb, var(--brando-ink) 7%, transparent); }
-
-      .selected-label-text {
-        flex: 1;
-        font-size: 13px;
-        font-weight: 500;
-      }
-
-      button.delete.tiny {
-        flex: 0 0 28px;
-        width: 28px;
-        min-width: 28px;
-        height: 28px;
-        min-height: 28px;
-        margin: 0 0 0 auto;
-        padding: 7px;
-        border: 0;
-        border-radius: 4px;
-        background: transparent;
-        color: var(--brando-muted);
-        display: grid;
-        place-items: center;
-        :is(svg, [data-icon]) { width: 14px; height: 14px; margin: 0; }
-        &:hover { background: var(--brando-line); color: var(--brando-ink); }
-        &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
-      }
-    }
-  }
+  > * { min-width: 0; }
 
   form {
     width: 100%;
   }
+}
+
+.multiselect-picker {
+  .multiselect-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 22px;
+    margin: 0 0 8px;
+    color: var(--brando-ink);
+    font: 500 13px/20px "Main", sans-serif;
+    letter-spacing: 0;
+    text-transform: none;
+
+    .count-badge { margin-left: 0; }
+  }
+
+  .multiselect-list {
+    max-height: min(440px, 52vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+
+    /* The list scrolls; its rows must not shrink to fit it. */
+    > .identifier {
+      flex: none;
+      flex-wrap: nowrap;
+      height: auto;
+      min-height: 44px;
+      padding: 7px 12px;
+    }
+  }
+
+  .identifier-copy { gap: 1px; }
+
+  .identifier-title {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* The dot before the label, as in the identifier rows */
+  .identifier-status { margin-right: 0.4em; }
+
+  /* The check shows on a selected row only. A click flips `option-selected`
+     at once (buildApplication.js) until the server's answer replaces it. */
+  .multiselect-option {
+    .identifier-check > [data-icon] { visibility: hidden; }
+
+    &.selected .identifier-check > [data-icon],
+    &.option-selected:not(.selected) .identifier-check > [data-icon] { visibility: visible; }
+
+    &.option-selected:not(.selected) { background: var(--brando-surface-selected); }
+
+    &.option-selected:not(.selected) .identifier-check {
+      border-color: var(--brando-accent);
+      background: var(--brando-accent);
+      color: var(--brando-ink-inverse);
+    }
+
+    &.selected.option-selected { background: var(--brando-surface); }
+
+    &.selected.option-selected .identifier-check {
+      border-color: color-mix(in srgb, var(--brando-muted) 75%, transparent);
+      background: var(--brando-surface);
+
+      > [data-icon] { visibility: hidden; }
+    }
+  }
+
+  .multiselect-chosen-row.removing {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .multiselect-empty {
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+    color: var(--brando-muted);
+    font-size: 13px;
+    line-height: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .select-modal-wrapper { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .multiselect-picker .multiselect-list { max-height: 44vh; }
 }
 
 .selected-labels {
