@@ -53,6 +53,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias BrandoAdmin.Components.Form.Input.Select
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.NotesDrawer
   alias BrandoAdmin.Components.Form.Preview
@@ -989,6 +990,21 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{action: :event_tag_received, tag: tag}, socket) do
     {:ok, event_tag_received(socket, tag)}
+  end
+
+  # A subform's add, insert, remove or reorder, applied to this form's own
+  # changeset — always the latest — rather than to the copy the subform last
+  # rendered with. Two quick adds both land. See `SubformHelpers.apply_op/2`.
+  def update(%{action: :update_entries, field: field, op: op}, socket) do
+    changeset = socket.assigns.form.source
+
+    case changeset |> SubformHelpers.current_entries(field) |> SubformHelpers.apply_op(op) do
+      :stale ->
+        {:ok, socket}
+
+      entries ->
+        update(%{action: :update_changeset, changeset: SubformHelpers.put_entries(changeset, field, entries)}, socket)
+    end
   end
 
   def update(

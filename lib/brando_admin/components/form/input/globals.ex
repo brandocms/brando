@@ -85,8 +85,6 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def handle_event("add_subentry", _, socket) do
-    changeset = socket.assigns.field.form.source
-
     default = %Brando.Content.Var{
       type: :boolean,
       label: "Label",
@@ -94,22 +92,9 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
       value: true
     }
 
-    field_name = socket.assigns.subform.name
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    current_globals = Ecto.Changeset.get_field(changeset, field_name) || []
-    updated_field = current_globals ++ List.wrap(default)
-    updated_changeset = Ecto.Changeset.put_change(changeset, field_name, updated_field)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
+    # Appended to the form's latest list, pending input kept, so two quick
+    # adds both land (`SubformHelpers.send_op/3`).
+    BrandoAdmin.Components.Form.Input.SubformHelpers.append_subentries(socket, default)
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do

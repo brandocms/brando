@@ -153,4 +153,48 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
 
     assert persisted_values(stale)["one"] == "orig1"
   end
+
+  describe "apply_op/2, applied by the form to its latest list" do
+    # The form applies a subform's operation to its own changeset, which may
+    # already hold an earlier click's result the subform has not seen yet.
+
+    test "adds are cumulative: a second add lands after the first" do
+      assert ~w(a b) |> SubformHelpers.apply_op({:append, "c"}) |> SubformHelpers.apply_op({:append, "d"}) ==
+               ~w(a b c d)
+
+      assert SubformHelpers.apply_op(~w(a b), {:insert, 1, "x"}) == ~w(a x b)
+      assert SubformHelpers.apply_op(~w(a b), {:insert, 9, "x"}) == ~w(a b x)
+    end
+
+    test "a removal applies only to the list the editor saw" do
+      assert SubformHelpers.apply_op(~w(a b c), {:delete, 1, 3}) == ~w(a c)
+
+      # a double click on ×: the second click names a list that is gone, and
+      # must not remove the row that moved into its place
+      assert SubformHelpers.apply_op(~w(a c), {:delete, 1, 3}) == :stale
+      assert SubformHelpers.apply_op(~w(a b), {:delete, 2, 2}) == :stale
+    end
+
+    test "a reorder applies only to the list the editor saw, and never drops a row" do
+      assert SubformHelpers.apply_op(~w(a b c), {:reorder, [2, 0, 1], 3, false}) == ~w(c a b)
+      assert SubformHelpers.apply_op(~w(a b c d), {:reorder, [2, 0, 1], 3, false}) == :stale
+      assert SubformHelpers.apply_op(~w(a b c), {:reorder, [0, 0, 1], 3, false}) == :stale
+    end
+
+    test "a reorder of a sequenced relation numbers the rows", %{pending: pending} do
+      entries = SubformHelpers.current_entries(pending, :vars)
+      reordered = SubformHelpers.apply_op(entries, {:reorder, [1, 0], 2, true})
+
+      assert Enum.map(reordered, &Changeset.get_field(&1, :key)) == ["two", "one"]
+      assert Enum.map(reordered, &Changeset.get_field(&1, :sequence)) == [0, 1]
+      # the pending edit rides along
+      assert Enum.at(reordered, 1).changes[:value] == "PENDING"
+    end
+
+    test "a replacement and a function both work on the latest list" do
+      assert SubformHelpers.apply_op(~w(a b), {:replace, 1, "B"}) == ~w(a B)
+      assert SubformHelpers.apply_op(~w(a), {:replace, 1, "B"}) == :stale
+      assert SubformHelpers.apply_op(~w(a b), {:update, &Enum.reverse/1}) == ~w(b a)
+    end
+  end
 end

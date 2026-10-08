@@ -143,4 +143,36 @@ defmodule BrandoAdmin.NavigationLiveTest do
     refute Map.has_key?(site_menu(), "brando")
     assert Map.keys(site_menu()) |> Enum.sort() == ["documentation", "guides"]
   end
+
+  # Two clicks on "Add entry" that both reach the server before the form has
+  # re-rendered the subform. Each click is handled by the subform with the
+  # form as it last rendered it; when each built the whole changeset from
+  # that copy, the second overwrote the first and one row was lost. The LiveView is
+  # held while both clicks are queued, so they are handled back to back,
+  # ahead of the form's update from the first.
+  test "two quick clicks on Add entry add two rows", %{conn: conn, menu: menu} do
+    view = open(conn, menu)
+    refute has_element?(view, "input[name='menu[items][3][key]']")
+
+    add = view |> element("#menu_form_form button", "Add entry") |> render()
+    [_, cid] = Regex.run(~r/&quot;target&quot;:(\d+)/, add)
+
+    click = fn ref ->
+      %Phoenix.Socket.Message{
+        topic: "lv:" <> view.id,
+        event: "event",
+        ref: ref,
+        payload: %{"type" => "click", "event" => "add_subentry", "value" => %{}, "cid" => String.to_integer(cid)}
+      }
+    end
+
+    :sys.suspend(view.pid)
+    send(view.pid, click.("add-race-1"))
+    send(view.pid, click.("add-race-2"))
+    :sys.resume(view.pid)
+
+    assert has_element?(view, "input[name='menu[items][3][key]']")
+    assert has_element?(view, "input[name='menu[items][4][key]']")
+    refute has_element?(view, "input[name='menu[items][5][key]']")
+  end
 end

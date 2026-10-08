@@ -18,8 +18,8 @@ async function openInlineFields(page) {
 }
 
 // Waits for the row itself: the click's reply comes before the form sends
-// the subform its new rows, so a second click any sooner adds to the old
-// list and one of the two rows is lost.
+// the subform its new rows. (Two quick adds both land; see the double click
+// test below.)
 async function addRow(page) {
   const count = await rows(page).count()
   await table(page).getByRole('button', { name: 'Add entry' }).click()
@@ -133,4 +133,36 @@ test('a colour picked just before saving is saved', async ({ page }) => {
   await syncLV(page)
   await openInlineFields(page)
   await expect(rows(page).first().locator('input[type="hidden"][name$="[color]"]')).toHaveValue(/^#[0-9a-f]{6}$/i)
+})
+
+// Two quick clicks on Add entry. LiveView's client drops a click on a button
+// whose previous click is still unanswered, so a double click's second click
+// lands just after the first one's reply, before the form has sent the subform
+// its new row (the server answers the click first and updates the form after).
+// Each add must build on the form's latest rows, not on the copy the subform
+// last rendered with, or one of the two is lost.
+async function doubleAdd(page) {
+  await table(page).getByRole('button', { name: 'Add entry' }).evaluate(button => new Promise(resolve => {
+    const observer = new MutationObserver(() => {
+      if (button.hasAttribute('data-phx-ref-src')) return
+      observer.disconnect()
+      button.click()
+      resolve()
+    })
+    observer.observe(button, { attributes: true, attributeFilter: ['data-phx-ref-src'] })
+    button.click()
+  }))
+  await syncLV(page)
+}
+
+test('a double click on Add entry adds two rows', async ({ page }) => {
+  await page.goto('/admin/projects/clients/create')
+  await syncLV(page)
+  await openInlineFields(page)
+
+  await expect(table(page).locator('.subform-empty')).toBeVisible()
+  await doubleAdd(page)
+  await expect(rows(page)).toHaveCount(2)
+  await doubleAdd(page)
+  await expect(rows(page)).toHaveCount(4)
 })
