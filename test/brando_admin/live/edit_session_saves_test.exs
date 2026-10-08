@@ -144,6 +144,24 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(rows(c.identity)) == 4
   end
 
+  # The save button and ⌘S push the form's fields (`save_form`) instead of
+  # submitting the form, so the focused input keeps typing during a save.
+  test "a save pushed as form fields saves like a submit", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    stay(a)
+    type(a, first, "<p>Saved by a pushed save</p>")
+    form = a |> render() |> form_params("#page_form_form") |> put_in(["page", "title"], "Pushed")
+    cid = form_cid(a)
+
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => Plug.Conn.Query.encode(form)})
+    assert_push_event(a, "b:submit", %{}, 2_000)
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => Plug.Conn.Query.encode(form)})
+
+    await(fn -> Repo.get!(Page, c.identity.id).title == "Pushed" end)
+    assert Map.new(texts(c.identity))[first] == "<p>Saved by a pushed save</p>"
+  end
+
   # Follow-up: a save's mark is cleared when the save is done, not after a
   # fixed time. A save that fails lets go of it at once.
   test "a save that fails lets the session forget what it read", c do

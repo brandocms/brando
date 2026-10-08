@@ -3534,6 +3534,12 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # The save button and ⌘S push the form's fields rather than submit it, so
+  # the focused input keeps the focus and what is typed while the save runs
+  # (assets/src/hooks/Form/saveForm.js).
+  def handle_event("save_form", %{"form" => form}, socket) when is_binary(form),
+    do: handle_event("save", Plug.Conn.Query.decode(form), socket)
+
   def handle_event("commit_tiptap", %{"form" => form, "target" => target}, socket)
       when is_binary(form) and is_list(target),
       do: handle_event("validate", Map.put(Plug.Conn.Query.decode(form), "_target", target), socket)
