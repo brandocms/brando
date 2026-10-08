@@ -37,7 +37,8 @@ function editor(t) {
     liveSocket: { isConnected: () => connected },
     pushEventTo: (_el, event, payload) => sent.push({ event, ...payload }),
     handleEvent: (name, fn) => handlers.set(name, fn),
-    js: () => ({ addClass() {}, removeClass() {} }),
+    // Captures are pushed from their own element with `js().push`.
+    js: () => ({ addClass() {}, removeClass() {}, push: (_el, event, { value }) => sent.push({ event, ...value }) }),
   }
   const recovery = draftRecovery(hook)
   const emit = (name, data = {}) => handlers.get(`b:draft-${name}`)({ id: 'page_form', ...data })
@@ -51,6 +52,8 @@ function editor(t) {
     tick: ms => t.mock.timers.tick(ms),
     input: () => listeners.get('input')({ target: { closest: () => main } }),
     submit: () => listeners.get('submit')({ target: main }),
+    // the save button and ⌘S save without a form submit (saveForm.js)
+    save: () => listeners.get('brando:save')({ target: main }),
     ack: (request = sent.at(-1)) => emit('saved', request),
     disconnect() { connected = false; recovery.disconnected() },
     reconnect() { connected = true; recovery.reconnected() },
@@ -145,6 +148,18 @@ test('successful Save cancels outstanding capture work and ignores its late repl
   e.input()
   e.tick(3000)
   e.submit()
+  e.emit('reset', { clean: true })
+  e.ack()
+  assert.equal(e.pending(), false)
+  e.tick(60000)
+  assert.equal(e.sent.length, 1)
+})
+
+test('a save from the button or ⌘S, without a form submit, also cancels capture work', t => {
+  const e = editor(t)
+  e.input()
+  e.tick(3000)
+  e.save()
   e.emit('reset', { clean: true })
   e.ack()
   assert.equal(e.pending(), false)
