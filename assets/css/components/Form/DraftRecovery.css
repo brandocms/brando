@@ -408,7 +408,7 @@
     color: var(--brando-muted);
     font: 13px/20px "Main", sans-serif;
     cursor: pointer;
-    input { appearance: auto; width: 16px; height: 16px; margin: 0; accent-color: var(--brando-accent); cursor: pointer; }
+    input { appearance: auto; width: 16px; height: 16px; margin: 0; cursor: pointer; }
     input:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
   }
   .draft-content-preview[data-show-unchanged="false"] {

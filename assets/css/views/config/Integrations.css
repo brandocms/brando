@@ -91,7 +91,7 @@
     border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface);
     font-size: 13px; cursor: pointer;
     &:hover { background: var(--brando-surface-hover); }
-    input { flex: none; margin: 0; accent-color: var(--brando-accent); }
+    input { flex: none; margin: 0; }
     > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
     code { color: var(--brando-muted); font-size: 11px; }
   }

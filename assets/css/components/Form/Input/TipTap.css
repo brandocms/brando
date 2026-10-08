@@ -282,7 +282,7 @@
 .tiptap-link-fields { display: flex; flex-direction: column; gap: 14px; }
 .tiptap-link-field { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
 .tiptap-link-fields select, .tiptap-link-fields input.text, .tiptap-link-destination input.text { width: 100%; min-height: 40px; box-sizing: border-box; border: 1px solid var(--brando-line); border-radius: 4px; padding: 8px 10px; background: var(--brando-surface); color: var(--brando-ink); font-size: 14px; }
-.tiptap-link-check { display: flex; align-items: center; gap: 8px; font-size: 13px; input { accent-color: var(--brando-accent); } }
+.tiptap-link-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .tiptap-link-error { margin: 0; padding: 16px 24px; color: var(--brando-error-ink); font-size: 13px; &:empty { display: none; } }
 .tiptap-link-warning { margin: 0; padding: 12px 24px; background: var(--brando-attention); color: var(--brando-attention-ink); font-size: 13px; flex-shrink: 0; }
 @media (max-width: 700px) { .tiptap-link-url-workspace { grid-template-columns: 1fr; } .tiptap-link-fields input.text, .tiptap-link-destination input.text { font-size: 16px; } }

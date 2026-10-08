@@ -110,7 +110,7 @@
   .markdown-source-field input, .markdown-source-field select { border-radius: 5px; color: var(--workspace-ink); }
   .markdown-source-field :disabled { background-color: var(--brando-surface-shaded); color: var(--brando-faint); cursor: not-allowed; }
   .markdown-source-checkbox { font-size: 13px; line-height: 20px; margin: 0; align-items: flex-start; }
-  input[type="checkbox"] { flex: 0 0 15px; width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--workspace-accent); }
+  input[type="checkbox"] { flex: 0 0 15px; width: 15px; height: 15px; margin: 2px 0 0; }
   .markdown-source-actions { padding-top: 8px; }
   .markdown-source-row .markdown-source-actions { padding-top: 0; }
   .markdown-source-meta { gap: 16px 24px; margin: 0; }

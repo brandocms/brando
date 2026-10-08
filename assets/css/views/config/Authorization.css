@@ -149,7 +149,7 @@
   .authorization-row-toggle[aria-checked='true'] .authorization-row-check { border-color: var(--access-accent); background: var(--access-accent); color: var(--brando-ink-inverse); }
   .authorization-row-toggle[aria-checked='mixed'] .authorization-row-check { border-color: var(--access-accent); background: var(--access-selected); color: var(--access-accent); }
   .authorization-cell { display: flex; align-items: center; justify-content: center; padding: 10px 6px; min-height: 44px; min-width: 44px; cursor: pointer; }
-  .authorization-cell input { margin: 0; width: 15px; height: 15px; accent-color: var(--access-accent); cursor: pointer; }
+  .authorization-cell input { margin: 0; width: 15px; height: 15px; cursor: pointer; }
   .authorization-cell:has(:disabled), .authorization-cell input:disabled { cursor: not-allowed; }
   .authorization-unavailable { color: var(--brando-faint); }
   .access-mobile-label { display: none; }
