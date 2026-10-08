@@ -199,6 +199,16 @@ defmodule BrandoAdmin.CommandPaletteTest do
       assert Enum.any?(actions, &(&1.label == "Create page…"))
     end
 
+    test "Keyboard shortcuts is a command, offered empty, with > and by name", c do
+      shortcuts = &Enum.find(Enum.flat_map(&1, fn group -> group.items end), fn item -> item.id == "palette-keyboard-shortcuts" end)
+
+      assert %{kind: :command, command: "shortcuts", icon: "keyboard"} = shortcuts.(CommandPalette.results(c.context, ""))
+      assert shortcuts.(CommandPalette.results(c.context, ">"))
+      assert shortcuts.(CommandPalette.results(c.context, "> keyboard"))
+      assert shortcuts.(CommandPalette.results(c.context, "shortcuts"))
+      refute shortcuts.(CommandPalette.results(c.context, "sommerro"))
+    end
+
     test "recent places are kept to eight", c do
       recent = for n <- 1..12, do: %{"path" => "/admin/pages/update/#{n}", "title" => "Page #{n}"}
       assert [%{key: :recent, items: places} | _] = CommandPalette.results(c.context, "", recent)

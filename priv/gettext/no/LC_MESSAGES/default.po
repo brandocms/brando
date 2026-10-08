@@ -1417,6 +1417,11 @@ msgstr "Legg til et medlem"
 msgid "Add a meta image or a cover image so shares get a picture."
 msgstr "Legg til et metabilde eller forsidebilde, så delinger får et bilde."
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Add a note on the selected text"
+msgstr "Legg til et notat på den markerte teksten"
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add a passkey"
@@ -1847,6 +1852,7 @@ msgstr "Er også nevnt i robots-teksten over, som også gjelder."
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex
 #: lib/brando_admin/components/form/input/gallery.ex
+#: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Alt"
 msgstr "Alt"
@@ -2455,6 +2461,11 @@ msgstr[1] "%{count} blokker slettet"
 msgid "Block description"
 msgstr "Beskrivelse av blokk"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Block editor"
+msgstr "Blokkredigering"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Block field"
@@ -2558,6 +2569,7 @@ msgstr "Blå"
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Bold"
 msgstr "Fet"
@@ -3501,6 +3513,7 @@ msgstr "Klikk"
 #: lib/brando_admin/components/form/input/multi_select.ex
 #: lib/brando_admin/components/form/input/select.ex
 #: lib/brando_admin/components/layouts/root.html.heex
+#: lib/brando_admin/components/shortcut_sheet.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/files/file_list_live.ex
@@ -3508,6 +3521,11 @@ msgstr "Klikk"
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Lukk"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Close a dialog or menu"
+msgstr "Lukk en dialog eller meny"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -3625,6 +3643,11 @@ msgstr "Fargeinnstillinger"
 #, elixir-autogen, elixir-format
 msgid "Colors (JSON)"
 msgstr "Farger (JSON)"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Command"
+msgstr "Kommando"
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
@@ -4052,6 +4075,11 @@ msgstr "Fortsett uten omdirigering"
 msgid "Continue without restoring"
 msgstr "Fortsett uten å gjenopprette"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Control"
+msgstr "Kontroll"
+
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex
 #, elixir-autogen, elixir-format
 msgid "Control how the image loads in this reference."
@@ -4367,6 +4395,11 @@ msgstr "Opprett en oversettelse"
 msgid "Create a video from URL or choose another folder"
 msgstr "Opprett en video fra URL eller velg en annen mappe"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Create an entry"
+msgstr "Opprett en oppføring"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create and edit content across entries. Nothing changes until you apply it."
@@ -4607,6 +4640,11 @@ msgstr "Forhåndsvisning av beskjæring"
 #, elixir-autogen, elixir-format
 msgid "Crop settings"
 msgstr "Beskjæring"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Ctrl"
+msgstr "Ctrl"
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
@@ -5380,6 +5418,11 @@ msgstr "Ferdig"
 msgid "Done: %{ok} drawn, %{failed} failed."
 msgstr "Ferdig: %{ok} tegnet, %{failed} feilet."
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Down arrow"
+msgstr "Pil ned"
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Download"
@@ -6099,6 +6142,11 @@ msgstr "Slutter på %{hint}."
 msgid "Ensure the URL is correct and fully formatted. This will enable a seamless integration and accurate display of the map in your content."
 msgstr "Sørg for at URL-en er riktig og fullstendig formatert. Dette vil muliggjøre en sømløs integrasjon og nøyaktig visning av kartet i innholdet ditt."
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Enter"
+msgstr "Enter"
+
 #: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a date."
@@ -6207,6 +6255,11 @@ msgstr "Oppføring #%{id}"
 #, elixir-autogen, elixir-format
 msgid "Entry ID"
 msgstr "Oppførings-ID"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Entry editor"
+msgstr "Oppføringsredigering"
 
 #: lib/brando_admin/components/form/draft_preview.ex
 #: lib/brando_admin/components/form/draft_preview_structure.ex
@@ -6336,6 +6389,11 @@ msgstr "Feil ved lagring av skjema. Rett merkede felt og send inn på nytt<br><b
 #, elixir-autogen, elixir-format
 msgid "Errors"
 msgstr "Feil"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Escape"
+msgstr "Escape"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -6710,6 +6768,11 @@ msgstr "Filtrér valg"
 #, elixir-autogen, elixir-format
 msgid "Filter options…"
 msgstr "Filtrér valg …"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Filter the list"
+msgstr "Filtrer listen"
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -7105,6 +7168,11 @@ msgstr "Delbar link"
 msgid "GitHub connections are configured by a developer in the project's runtime.exs. Ask them to add a repository and enable it for this environment. The connection will then appear here."
 msgstr "GitHub-tilkoblinger settes opp av en utvikler i prosjektets runtime.exs. Be utvikleren legge til et repositorium og aktivere det for dette miljøet. Tilkoblingen vil da vises her."
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Global"
+msgstr "Overalt"
+
 #: lib/brando_admin/live/sites/global_set_list_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
@@ -7133,6 +7201,36 @@ msgstr "Globaler"
 #, elixir-autogen, elixir-format
 msgid "Go back <a href=\"/\">to the main page</a>"
 msgstr "Gå tilbake <a href=\"/\">til hovedsiden</a>"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Go to Assistant"
+msgstr "Gå til Assistent"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Go to Configuration"
+msgstr "Gå til Konfigurasjon"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Go to Dashboard"
+msgstr "Gå til Dashbord"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Go to Images"
+msgstr "Gå til Bilder"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Go to Search"
+msgstr "Gå til Søk"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Go to Users"
+msgstr "Gå til Brukere"
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -7878,6 +7976,11 @@ msgstr "Sett inn rad"
 msgid "Insert row"
 msgstr "Sett inn rad"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Insert the marked module"
+msgstr "Sett inn den markerte modulen"
+
 #: lib/brando_admin/components/form/input/vars.ex
 #, elixir-autogen, elixir-format
 msgid "Insert variable"
@@ -8031,6 +8134,7 @@ msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Italic"
 msgstr "Kursiv"
@@ -8123,6 +8227,13 @@ msgstr "Nøkkel"
 #, elixir-autogen, elixir-format
 msgid "Key file"
 msgstr "Nøkkelfil"
+
+#: lib/brando_admin/command_palette.ex
+#: lib/brando_admin/components/shortcut_sheet.ex
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Keyboard shortcuts"
+msgstr "Hurtigtaster"
 
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
@@ -8490,6 +8601,11 @@ msgstr "Listet %{type}"
 #, elixir-autogen, elixir-format
 msgid "Listed entries"
 msgstr "Listet oppføringer"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Listing"
+msgstr "Liste"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -9289,6 +9405,16 @@ msgstr "Flytt disse"
 msgid "Move this content to an empty region"
 msgstr "Flytt dette innholdet til en tom region"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Move through a menu or list"
+msgstr "Flytt i en meny eller liste"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Move through the module picker's results"
+msgstr "Flytt mellom treffene i modulvelgeren"
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Move to"
@@ -9298,6 +9424,11 @@ msgstr "Flytt til"
 #, elixir-autogen, elixir-format
 msgid "Move to the Configure modal"
 msgstr "Flytt til konfigurasjonsvinduet"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Move to the rich text toolbar"
+msgstr "Gå til verktøylinjen for rik tekst"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -10825,6 +10956,11 @@ msgstr "Åpne lenke"
 msgid "Open link in new window/tab"
 msgstr "Åpne lenke i nytt vindu/fane"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Open or close the live preview"
+msgstr "Åpne eller lukk direkte forhåndsvisning"
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Open preview in new window"
@@ -10909,6 +11045,11 @@ msgstr "Operasjon"
 #, elixir-autogen, elixir-format
 msgid "Operation log"
 msgstr "Operasjonslogg"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Option"
+msgstr "Tilvalg"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -13243,11 +13384,13 @@ msgid "Save access"
 msgstr "Lagre tilgang"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Save and close"
 msgstr "Lagre og lukk"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Save and continue editing"
 msgstr "Lagre og redigér videre"
@@ -13540,6 +13683,7 @@ msgstr "Søk i %{provider}"
 msgid "Search all content"
 msgstr "Søk i alt innhold"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #, elixir-autogen, elixir-format
 msgid "Search and commands"
@@ -14227,10 +14371,20 @@ msgstr "Delte innpakninger for grupper av blokker."
 msgid "Sharing image"
 msgstr "Delingsbilde"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Shift"
+msgstr "Skift"
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Shop cache"
 msgstr "Butikkens hurtigbuffer"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Shortcuts typed without a modifier key, such as ? and G then D. Turn them off if they get in the way of a screen reader or speech input. Saved in this browser."
+msgstr "Hurtigtaster uten modifikatortast, som ? og G deretter D. Slå dem av hvis de kommer i veien for en skjermleser eller taleinndata. Lagres i denne nettleseren."
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
@@ -14261,6 +14415,11 @@ msgstr "Vis i editoren"
 #, elixir-autogen, elixir-format
 msgid "Show instructions"
 msgstr "Vis instruksjoner"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Show keyboard shortcuts"
+msgstr "Vis hurtigtaster"
 
 #: lib/brando_admin/live/forms/submissions_live.ex
 #, elixir-autogen, elixir-format
@@ -14396,6 +14555,11 @@ msgstr "Enkeltvalg"
 #, elixir-autogen, elixir-format
 msgid "Single file"
 msgstr "Enkeltfil"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Single-key shortcuts"
+msgstr "Hurtigtaster med én tast"
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -16961,6 +17125,11 @@ msgstr "Ubrukt innhold"
 msgid "Up"
 msgstr "Opp"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Up arrow"
+msgstr "Pil opp"
+
 #: lib/brando_admin/components/assets/media_field.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{size}"
@@ -18628,6 +18797,11 @@ msgstr "jpg"
 msgid "keep for now"
 msgstr "behold inntil videre"
 
+#: lib/brando_admin/command_palette.ex
+#, elixir-autogen, elixir-format
+msgid "keys"
+msgstr "taster"
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "language"
@@ -18836,6 +19010,7 @@ msgstr "åpne i ny fane"
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/structured_data.ex
+#: lib/brando_admin/components/shortcut_sheet.ex
 #: lib/brando_admin/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "or"
@@ -18932,6 +19107,11 @@ msgstr "oppføringens felter"
 #, elixir-autogen, elixir-format
 msgid "the module has no %{kind} %{key}"
 msgstr "modulen har ingen %{kind} %{key}"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "then"
+msgstr "deretter"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format

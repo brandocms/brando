@@ -12,6 +12,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.CommandPalette
+  alias BrandoAdmin.Components.ShortcutSheet
 
   on_mount {BrandoAdmin.UserAuth, :mount_current_user}
   on_mount {Brando.Tenant.LiveView, :default}
@@ -144,6 +145,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
         </footer>
       </dialog>
     </div>
+    <ShortcutSheet.render />
     """
   end
 
@@ -175,6 +177,28 @@ defmodule BrandoAdmin.CommandPaletteLive do
       </span>
       <kbd class="command-palette-enter" aria-hidden="true">↵</kbd>
     </.link>
+    """
+  end
+
+  defp item(%{item: %{kind: :command}} = assigns) do
+    ~H"""
+    <button
+      id={@item.id}
+      type="button"
+      class="command-palette-item is-command"
+      role="option"
+      aria-selected="false"
+      tabindex="-1"
+      data-palette-item
+      data-palette-command={@item.command}
+    >
+      <.icon name={@item.icon} class="command-palette-icon" />
+      <span class="command-palette-copy">
+        <span class="command-palette-label">{@item.label}</span>
+      </span>
+      <kbd class="command-palette-shortcut" aria-hidden="true">?</kbd>
+      <kbd class="command-palette-enter" aria-hidden="true">↵</kbd>
+    </button>
     """
   end
 

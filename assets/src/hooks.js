@@ -28,6 +28,7 @@ import ListingHook from './hooks/Listing'
 import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
+import ShortcutSheetHook from './hooks/ShortcutSheet'
 import MultiSelectPickerHook from './hooks/MultiSelectPicker'
 import PasskeyHook from './hooks/Passkey'
 import WebhookSecretHook from './hooks/WebhookSecret'
@@ -82,6 +83,7 @@ export default (app) => {
     'Brando.Block': BlockHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.CommandPalette': CommandPaletteHook(app),
+    'Brando.ShortcutSheet': ShortcutSheetHook(app),
     'Brando.ColorPicker': ColorPickerHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),
     'Brando.DatePicker': DatePickerHook(app),

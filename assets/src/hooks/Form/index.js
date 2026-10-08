@@ -1,6 +1,7 @@
 import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
 import saveForm from './saveForm'
+import { matches } from '../../shortcuts/registry'
 import locateBlock from './locateBlock'
 import dirtyFields from '../../Presence/dirtyFields'
 import follow from '../../Presence/follow'
@@ -286,8 +287,10 @@ export default (app) => ({
 
   // ⇧⌘S saves and closes, ⌘S saves and stays. Ctrl stands in for ⌘ off a
   // Mac, and the key is compared in lower case so Caps Lock doesn't matter.
+  // ⌘S saves and stays, ⇧⌘S saves and closes (`save` and `save-close` in
+  // the shortcut registry, which the shortcut sheet lists).
   submitListener(ev) {
-    if (!(ev.metaKey || ev.ctrlKey) || ev.altKey || (ev.key || '').toLowerCase() !== 's') return
+    if (!matches('save', ev) && !matches('save-close', ev)) return
     ev.preventDefault()
 
     // The entry form saves without a form submit, which would take the focus

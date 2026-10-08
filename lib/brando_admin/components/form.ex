@@ -3424,6 +3424,7 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 :if={@has_live_preview? && length(@live_preview_targets) == 1}
                 phx-click={JS.push("open_live_preview", target: @myself)}
+                data-toggle-preview={JS.push("open_live_preview", target: @myself)}
                 class={["live-preview-toggle form-tool-preview", @live_preview_active? && "active"]}
                 type="button"
                 aria-label={gettext("Live preview")}
@@ -3442,6 +3443,7 @@ defmodule BrandoAdmin.Components.Form do
                   id={"#{@id}-preview-trigger"}
                   type="button"
                   class={["live-preview-toggle preview-chooser-trigger", @live_preview_active? && "active"]}
+                  data-toggle-preview={JS.push("open_live_preview", target: @myself)}
                   phx-click="toggle_preview_targets"
                   phx-target={@myself}
                   aria-label={gettext("Live preview")}

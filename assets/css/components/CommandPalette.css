@@ -255,6 +255,30 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* A command row ("Keyboard shortcuts") is a button: no button chrome. */
+  &.is-command {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+
+    &:hover {
+      background: var(--brando-surface-hover);
+    }
+
+    &.is-active {
+      background: var(--brando-surface-selected);
+    }
+  }
+
+  /* The command's own shortcut, quiet at the row's end */
+  .command-palette-shortcut {
+    flex: none;
+    color: var(--brando-faint);
+  }
+
   /* Only the selected row shows the key that opens it. */
   .command-palette-enter {
     display: none;

@@ -262,6 +262,19 @@ defmodule BrandoAdmin.Nav do
                     </.link>
                   </li>
                   <li>
+                    <%!-- The shortcut sheet (BrandoAdmin.Components.ShortcutSheet),
+                          for people who don't know `?` --%>
+                    <button
+                      type="button"
+                      data-testid="keyboard-shortcuts"
+                      aria-haspopup="dialog"
+                      aria-controls="shortcut-sheet"
+                      phx-click={JS.dispatch("brando:shortcuts:open", to: "#shortcut-sheet")}
+                    >
+                      {gettext("Keyboard shortcuts")}
+                    </button>
+                  </li>
+                  <li>
                     <%!-- A DELETE with the CSRF token: GET /admin/logout only asks --%>
                     <.form for={%{}} id="logout-form" action="/admin/logout" method="delete">
                       <button type="submit" data-testid="logout">{gettext("Log out")}</button>
@@ -278,7 +291,8 @@ defmodule BrandoAdmin.Nav do
                     <h3>{section.name}</h3>
                     <div class="line"></div>
                   </header>
-                  <dl :for={item <- section.items}>
+                  <%!-- `data-menu-key`: the "go to" shortcuts find Configuration by it --%>
+                  <dl :for={item <- section.items} data-menu-key={item[:key]}>
                     <%!-- Opens the command palette (BrandoAdmin.CommandPaletteLive),
                           for people who don't use the shortcut. Never current. --%>
                     <dt :if={item[:search]}>
