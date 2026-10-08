@@ -168,7 +168,12 @@ for (const role of ['reader', 'author', 'publisher', 'none']) {
 test('creates an expiring shared preview through the authorized editor flow', async ({ page }) => {
   await page.goto('/admin/pages/update/1')
   await syncLV(page)
+  // Share is in the toolbar's More menu, which closes as it shares.
+  const more = page.getByRole('button', { name: 'More', exact: true })
+  await more.click()
+  await expect(more).toHaveAttribute('aria-expanded', 'true')
   await page.getByRole('button', { name: 'Share preview', exact: true }).click()
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
   const dialog = page.getByRole('dialog', { name: 'Get shareable link' })
   await expect(dialog).toBeVisible()
   const url = await dialog.getByRole('link', { name: 'OPEN LINK' }).getAttribute('href')

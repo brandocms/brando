@@ -2726,9 +2726,17 @@ defmodule BrandoAdmin.Components.Form do
             entry_id={@entry_id}
           />
 
+          <%!-- Leaves the viewport when the toolbar below it sticks; the Form
+                hook then gives the bar its page-coloured band (`is-stuck`). --%>
+          <div :if={@layout == :entry} class="form-tabs-sentinel" aria-hidden="true"></div>
           <div
             :if={@layout == :entry or length(@tabs) > 1 or @has_meta? or @has_revisioning?}
-            class={["form-tabs", @layout == :settings && "form-tabs--plain"]}
+            id={"#{@id}-toolbar"}
+            class={[
+              "form-tabs",
+              @layout == :settings && "form-tabs--plain",
+              @layout == :entry && "form-tabs--split"
+            ]}
           >
             <nav
               class={["form-tab-customs pill-tabs", @layout == :entry && "pill-tabs--small"]}
@@ -2794,25 +2802,16 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 :if={notes?(@layout, @entry_id)}
                 id={"#{@id}-notes-toggle"}
-                class="form-tool-notes"
+                class="form-tool-notes form-tool-icon"
                 phx-click={JS.dispatch("brando:notes:toggle")}
                 type="button"
                 aria-controls={"#{@id}-notes"}
                 aria-expanded="false"
+                aria-label={notes_label(@notes_open_count)}
+                title={notes_label(@notes_open_count)}
               >
                 <.icon name="message-square" class="s" />
-                <span class="tab-text">{gettext("Notes")}</span>
-                <span :if={@notes_open_count > 0} class="form-tool-count">{@notes_open_count}</span>
-              </button>
-              <button
-                :if={@has_alternates?}
-                class="form-tool-language"
-                phx-click={toggle_drawer("##{@id}-alternates-drawer")}
-                type="button"
-                aria-haspopup="dialog"
-              >
-                <.icon name="languages" class="s" />
-                <span class="tab-text">{gettext("Languages")}</span>
+                <span :if={@notes_open_count > 0} class="form-tool-count" aria-hidden="true">{@notes_open_count}</span>
               </button>
               <button
                 :if={@has_live_preview? && length(@live_preview_targets) == 1}
@@ -2899,21 +2898,13 @@ defmodule BrandoAdmin.Components.Form do
                   </button>
                 </div>
               </div>
-              <button
-                :if={@has_live_preview? && BrandoAdmin.Authorization.allowed?(:export, @schema)}
-                class="form-tool-share"
-                phx-click={JS.push("share_link", target: @myself)}
-                type="button"
-                aria-label={gettext("Share preview")}
-                aria-busy={to_string(@sharing_preview?)}
-                disabled={@sharing_preview?}
-              >
-                <%!-- Spins from the click until the link is ready, which
-                      takes a moment while the blocks are gathered. --%>
-                <span class="form-tool-share-spinner" aria-hidden="true"></span>
-                <.icon name="external-link" class="s" />
-                <span class="tab-text">{gettext("Share")}</span>
-              </button>
+              <.toolbar_more
+                id={@id}
+                target={@myself}
+                languages?={@has_alternates?}
+                share?={@has_live_preview? && BrandoAdmin.Authorization.allowed?(:export, @schema)}
+                sharing?={@sharing_preview?}
+              />
               <div class="split-dropdown form-tool-save">
                 <%!-- Saves and closes, like the bottom button and ⇧⌘S; the menu
                       beside it has "save and continue editing". --%>
@@ -3211,6 +3202,71 @@ defmodule BrandoAdmin.Components.Form do
 
   # Notes belong to a saved entry, in the entry editor (not settings screens).
   defp notes?(layout, entry_id), do: layout == :entry and not is_nil(entry_id)
+
+  defp notes_label(0), do: gettext("Notes")
+  defp notes_label(count), do: ngettext("Notes, %{count} open", "Notes, %{count} open", count)
+
+  attr :id, :string, required: true
+  attr :target, :any, required: true
+  attr :languages?, :any, required: true
+  attr :share?, :any, required: true
+  attr :sharing?, :boolean, required: true
+
+  # The entry toolbar's "⋯" menu: the tools an editor reaches for now and
+  # then. Each item does what its toolbar button did; a form with none of
+  # them has no menu. `Brando.FloatingDropdown` opens it in the top layer,
+  # keeps the trigger's `aria-expanded`, closes it on Escape or a choice and
+  # gives the focus back to the trigger.
+  defp toolbar_more(assigns) do
+    ~H"""
+    <div
+      :if={@languages? || @share?}
+      id={"#{@id}-more"}
+      class="form-tool-more"
+      phx-hook="Brando.FloatingDropdown"
+      data-placement="bottom-end"
+    >
+      <button
+        id={"#{@id}-more-trigger"}
+        type="button"
+        class="form-tool-more-trigger form-tool-icon"
+        popovertarget={"#{@id}-more-menu"}
+        aria-expanded="false"
+        aria-label={gettext("More")}
+        title={gettext("More")}
+        aria-busy={to_string(@sharing?)}
+      >
+        <%!-- Sharing takes a moment while the blocks are gathered; the menu
+              has closed by then, so its trigger spins until the link is ready. --%>
+        <span class="form-tool-share-spinner" aria-hidden="true"></span>
+        <.icon name="ellipsis" class="s" />
+      </button>
+      <div id={"#{@id}-more-menu"} class="form-tool-more-menu" popover="auto">
+        <button
+          :if={@languages?}
+          type="button"
+          class="form-tool-language"
+          phx-click={toggle_drawer("##{@id}-alternates-drawer")}
+          aria-haspopup="dialog"
+        >
+          <.icon name="languages" />
+          <span>{gettext("Languages")}</span>
+        </button>
+        <button
+          :if={@share?}
+          type="button"
+          class="form-tool-share"
+          phx-click={JS.push("share_link", target: @target)}
+          aria-busy={to_string(@sharing?)}
+          disabled={@sharing?}
+        >
+          <.icon name="external-link" />
+          <span>{gettext("Share preview")}</span>
+        </button>
+      </div>
+    </div>
+    """
+  end
 
   attr :presences, :list
   attr :id, :string, required: true

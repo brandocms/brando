@@ -18673,3 +18673,15 @@ msgstr "Rundt 155 tegn. Lengre beskrivelser kuttes i søkeresultatene."
 #, elixir-autogen, elixir-format
 msgid "Shown when this entry is shared, in place of its cover image."
 msgstr "Vises når oppføringen deles, i stedet for coverbildet."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "More"
+msgstr "Mer"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Notes, %{count} open"
+msgid_plural "Notes, %{count} open"
+msgstr[0] "Notater, %{count} åpent"
+msgstr[1] "Notater, %{count} åpne"

@@ -756,6 +756,174 @@
   }
 }
 
+/**
+ * The entry editor's toolbar, split (approved October 2026): the sections as
+ * pill tabs straight on the page, the tools in their own white group at the
+ * right, on one row. When the bar is narrower than both, the tabs scroll in
+ * their track down to 240px, then the tools take a row of their own.
+ *
+ * Content scrolling under the stuck bar would show between the two groups,
+ * so it sits on a band of the page colour, faded at its foot. `is-stuck`
+ * comes from the Form hook, which watches `.form-tabs-sentinel` above the
+ * bar; it goes through LiveView's sticky JS, so patches keep it.
+ */
+.form-tabs-sentinel {
+  height: 1px;
+  margin-bottom: -1px;
+  pointer-events: none;
+}
+
+.form-tabs.form-tabs--split {
+  gap: 8px 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -5px -16px -12px;
+    z-index: -1;
+    background-color: var(--brando-surface-page);
+    mask-image: linear-gradient(to bottom, black calc(100% - 12px), transparent);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  &.is-stuck::before {
+    opacity: 1;
+  }
+
+  > .form-tab-customs {
+    flex: 1 1 240px;
+    max-width: max-content;
+  }
+
+  > .form-tab-builtins {
+    flex: 0 1 auto;
+    gap: 4px;
+    max-width: 100%;
+    margin-left: auto;
+    padding: 5px;
+    border: 1px solid var(--brando-line);
+    border-radius: 12px;
+    background-color: var(--brando-surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 3%, transparent);
+  }
+
+  /* The editors present take only their avatars' width, overlapping when
+     there are several; each avatar names its editor. */
+  .form-tab-builtins .page-presences {
+    flex: none;
+    flex-wrap: nowrap;
+    column-gap: 0;
+    margin: 0 4px 0 0;
+
+    > .user-presence + .user-presence {
+      margin-left: -6px;
+    }
+  }
+
+  .form-tab-builtins .presence-count {
+    display: none;
+  }
+
+  /* An icon-only tool (Notes, More): square, named by its aria-label and
+     title. */
+  .form-tab-builtins .form-tool-icon {
+    position: relative;
+    width: 30px;
+    padding: 0;
+  }
+
+  /* Under 1366px the labels carry Preview and Save without their icons, and
+     the tabs close up a little, so Norwegian labels and a few editors still
+     fit one row at 1280. */
+  @media (max-width: 1365px) {
+    > .form-tab-customs > button {
+      padding-inline: 9px;
+    }
+
+    .form-tab-builtins :is(button.form-tool-preview, .preview-chooser-trigger, .form-tool-save-button) > [data-icon]:not(.dropdown-chevron) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    > .form-tab-customs {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
+
+    > .form-tab-builtins {
+      flex: 1 1 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::before {
+      transition: none;
+    }
+  }
+}
+
+/* The "⋯" menu: Languages and Share, in the top layer
+   (`Brando.FloatingDropdown` places it). */
+.form-tabs .form-tab-builtins > .form-tool-more {
+  position: relative;
+  display: flex;
+
+  > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    margin: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--brando-ink);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    [data-icon] {
+      display: block;
+      flex: none;
+      width: 15px;
+      height: 15px;
+      color: var(--brando-muted);
+    }
+
+    &:hover,
+    &[aria-expanded="true"] {
+      background-color: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.form-tool-more-menu {
+  @extend %admin_dropdown_panel;
+  position: fixed;
+  inset: auto;
+  min-width: 200px;
+
+  &:not(:popover-open) {
+    display: none;
+  }
+
+  > button > [data-icon] {
+    color: var(--brando-muted);
+  }
+}
+
 /* The entry's save state, beside Save: "Saved 23:20", "Unsaved changes".
    The recovery storage's own status is the title, and read out. */
 .draft-save-state {
@@ -1107,11 +1275,12 @@ html.not-mac .shortcut-other { display: inline; }
 .form-header:not(.brando-form .form-header) { @space margin-top sm; @space margin-bottom sm; }
 .form-header-badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 5px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
 
-/* Sharing takes a moment while the blocks are gathered: the share button
-   spins in place of its icon until the link is ready. */
-.form-tabs .form-tab-builtins .form-tool-share {
+/* Sharing takes a moment while the blocks are gathered: the More menu has
+   closed by then, so its trigger spins in place of its icon until the link
+   is ready. */
+.form-tabs .form-tab-builtins .form-tool-more-trigger {
   .form-tool-share-spinner { display: none; width: 14px; height: 14px; border: 1.5px solid var(--brando-line); border-top-color: var(--brando-accent); border-radius: 50%; animation: form-tool-share-spin 900ms linear infinite; }
-  &[aria-busy="true"] { cursor: progress; opacity: 1; }
+  &[aria-busy="true"] { cursor: progress; }
   &[aria-busy="true"] .form-tool-share-spinner { display: inline-block; }
   &[aria-busy="true"] > [data-icon] { display: none; }
 }
