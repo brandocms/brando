@@ -389,7 +389,13 @@ identifiers:
 ```shell
 mix brando.entries.resave
 mix brando.identifiers.sync
+mix brando.images.adopt
 ```
+
+`mix brando.images.adopt` records which config each image was made with, for
+the images whose files already match it, so Utilities → Recreate changed
+images only recreates the ones that differ. Try it with `--dry-run` first; see
+[Media](media.md#images-made-before-fingerprints).
 
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.

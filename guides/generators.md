@@ -460,6 +460,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.migrate54` / `brando.migrate55` | Migrates application source from Brando 0.53 to 0.54 / 0.54 to 0.55 |
 | `brando.gen.tenant_migration` | Tenant migration source; see the tenancy guide |
 | `brando.doctor` | Read-only checks of versions, migrations, configuration, assets and content; see [System check](doctor.md) |
+| `brando.images.adopt` | Records the config of images made before 0.55 whose files already match it, so they aren't recreated; `--dry-run` counts only. See [Media](media.md#images-made-before-fingerprints) |
 
 <!-- usage-rules:start topic="generators" -->
 

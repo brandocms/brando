@@ -90,10 +90,38 @@ When a config replaces `sizes` without its own `srcset`, the inherited default
 Changing size definitions does not regenerate existing images by itself. Each
 processed image records a fingerprint of the sizes and formats it was made
 with, and **Utilities → Image sizes** counts the images whose config has changed
-since; **Recreate changed images** reprocesses only those. Images processed
-before Brando stored fingerprints count as changed once. Confirm the new size
+since; **Recreate changed images** reprocesses only those. Confirm the new size
 paths exist before rendering them. A requested size absent from `image.sizes`
 is a configuration/processing error, not a fallback image.
+
+### Images made before fingerprints
+
+Images processed before Brando stored fingerprints (0.54 and earlier) have
+none, and count as changed until they are either recreated or adopted.
+Adopting checks an image's stored files against its current config, reading
+only their headers, and records the config's fingerprint when they match:
+
+```shell
+mix brando.images.adopt --dry-run   # count only
+mix brando.images.adopt             # record the ones that match
+mix brando.images.adopt --verbose   # and say why the others differ
+```
+
+An image matches when its formats are the ones its config produces, its
+sizes have exactly the config's size keys, every size exists in every format
+in the media folder, and each size's pixel dimensions are what its geometry
+gives for the original (scaled to fit, or cropped), within a pixel. Files from
+the older sharp-based processor, which fit sizes to their width and never
+enlarged, match too. Quality and other encoder settings are not in a file's
+header and are not compared, nor is a crop's focal point: if a config changed
+only those, use **Recreate image sizes**. Images on the CDN without a local
+copy (`keep_local_copy: false`) can't be checked and are left as they are.
+
+The task covers every environment of every active site and is safe to run
+again. **Recreate changed images** adopts the same way before recreating, so
+from the admin only the images that differ are recreated; it reports how many
+of each. `mix brando.doctor` shows the split as a dry run. See
+`Brando.Images.Adoption`.
 
 <!-- usage-rules:start topic="media" -->
 
