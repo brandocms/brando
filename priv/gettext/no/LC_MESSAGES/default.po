@@ -17619,3 +17619,367 @@ msgstr "Logge ut?"
 #, elixir-autogen, elixir-format
 msgid "You are signed in as %{email}. Signing out ends your session in this browser; your other devices stay signed in."
 msgstr "Du er logget inn som %{email}. Når du logger ut, avsluttes økten i denne nettleseren. Andre enheter forblir innlogget."
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "AI search"
+msgstr "AI-søk"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Fetches for a user"
+msgstr "Henting for en bruker"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Model training"
+msgstr "Modelltrening"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "ChatGPT search results"
+msgstr "Søkeresultater i ChatGPT"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Claude search results"
+msgstr "Søkeresultater i Claude"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Perplexity search results"
+msgstr "Søkeresultater i Perplexity"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Pages a ChatGPT user asks for. May not follow robots.txt"
+msgstr "Sider en ChatGPT-bruker ber om. Følger kanskje ikke robots.txt"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Pages a Claude user asks for"
+msgstr "Sider en Claude-bruker ber om"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Pages a Perplexity user asks for. Usually ignores robots.txt"
+msgstr "Sider en Perplexity-bruker ber om. Ser som regel bort fra robots.txt"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training OpenAI's models"
+msgstr "Trening av OpenAIs modeller"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training Anthropic's models"
+msgstr "Trening av Anthropics modeller"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Gemini training and grounding; not AI Overviews"
+msgstr "Trening og forankring av Gemini; ikke AI-oversikter"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training Apple Intelligence; uses what Applebot fetched"
+msgstr "Trening av Apple Intelligence; bruker det Applebot har hentet"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training Meta's models"
+msgstr "Trening av Metas modeller"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Amazon's services, including model training"
+msgstr "Amazons tjenester, også modelltrening"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Common Crawl's open dataset, widely used for training"
+msgstr "Common Crawls åpne datasett, mye brukt til trening"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training ByteDance's models"
+msgstr "Trening av ByteDances modeller"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Written to robots.txt with Content Signals. Search crawlers like Googlebot and Bingbot are always allowed."
+msgstr "Skrives til robots.txt med Content Signals. Søkeroboter som Googlebot og Bingbot er alltid tillatt."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "View robots.txt"
+msgstr "Vis robots.txt"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "AI crawlers"
+msgstr "AI-roboter"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Crawler"
+msgstr "Robot"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Purpose"
+msgstr "Formål"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Also named in the robots text above, which applies as well."
+msgstr "Er også nevnt i robots-teksten over, som også gjelder."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Access for %{crawler}"
+msgstr "Tilgang for %{crawler}"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Allow"
+msgstr "Tillat"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Use for model training"
+msgstr "Bruk til modelltrening"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "The ai-train content signal, for every crawler, including ones not listed. Blocking a training crawler above stops it fetching pages; this states how any collected content may be used."
+msgstr "Innholdssignalet ai-train, for alle roboter, også de som ikke står i listen. Å blokkere en treningsrobot over hindrer den i å hente sider; dette sier hvordan innhold som er samlet inn, kan brukes."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "No preference"
+msgstr "Ingen preferanse"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Don't allow"
+msgstr "Ikke tillat"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Lines written to robots.txt"
+msgstr "Linjer som skrives til robots.txt"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "None. Nothing is written until a crawler is blocked or a training preference is chosen."
+msgstr "Ingen. Ingenting skrives før en robot blokkeres eller en preferanse for trening er valgt."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Google's AI Overviews come from Googlebot, not Google-Extended. They follow each entry's No snippet and Snippet length settings in its meta properties."
+msgstr "Googles AI-oversikter kommer fra Googlebot, ikke Google-Extended. De følger innstillingene Ingen tekstutdrag og Lengde på tekstutdrag i hver oppførings metaegenskaper."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No snippet"
+msgstr "Ingen tekstutdrag"
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Search engines show no text from this page under its title, and Google leaves it out of AI Overviews and AI Mode."
+msgstr "Søkemotorer viser ingen tekst fra denne siden under tittelen, og Google utelater den fra AI-oversikter og AI-modus."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Snippet length"
+msgstr "Lengde på tekstutdrag"
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Ingen grense"
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The most characters search engines and AI answers may quote from this page. Empty leaves it to them; 0 means none."
+msgstr "Flest tegn søkemotorer og AI-svar kan sitere fra denne siden. Tomt overlater det til dem; 0 betyr ingen."
+
+#: lib/brando_admin/live/content/module_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown template"
+msgstr "Markdown-mal"
+
+#: lib/brando_admin/live/content/module_form_live.ex
+#, elixir-autogen, elixir-format
+msgid "Optional. Used for the Markdown version of entries, which AI tools and search engines can read. The same refs and variables apply, and refs are given as Markdown. Empty turns this module's HTML into Markdown."
+msgstr "Valgfritt. Brukes til Markdown-versjonen av oppføringer, som AI-verktøy og søkemotorer kan lese. De samme referansene og variablene gjelder, og referansene gis som Markdown. Tomt gjør modulens HTML om til Markdown."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgctxt "crawler access"
+msgid "Allow"
+msgstr "Tillat"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgctxt "crawler access"
+msgid "Block"
+msgstr "Blokker"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Search result"
+msgstr "Søkeresultat"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No title"
+msgstr "Ingen tittel"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No description. Search engines pick text from the page."
+msgstr "Ingen beskrivelse. Søkemotorer velger tekst fra siden."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Facebook, LinkedIn"
+msgstr "Facebook, LinkedIn"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "X"
+msgstr "X"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No image"
+msgstr "Ikke noe bilde"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown version"
+msgstr "Markdown-versjon"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Save the entry to see its Markdown version."
+msgstr "Lagre oppføringen for å se Markdown-versjonen."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Reading the entry…"
+msgstr "Leser oppføringen …"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "This content type has no Markdown version."
+msgstr "Denne innholdstypen har ingen Markdown-versjon."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "This entry has no address of its own, so no Markdown version."
+msgstr "Denne oppføringen har ingen egen adresse, og dermed ingen Markdown-versjon."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Served once the entry is published. This is the last saved version."
+msgstr "Vises når oppføringen er publisert. Dette er sist lagrede versjon."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No sharing image. Platforms show a small card without one."
+msgstr "Ikke noe delingsbilde. Uten det viser plattformene et lite kort."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The meta image, as it is shared."
+msgstr "Metabildet, slik det deles."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The fallback image from the SEO settings, as it is shared."
+msgstr "Reservebildet fra SEO-innstillingene, slik det deles."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The image this content type shares, as it is shared."
+msgstr "Bildet denne innholdstypen deler, slik det deles."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The ring marks its focal point."
+msgstr "Ringen viser fokuspunktet."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "How this entry's page looks when it is found in search, shared, or read by AI tools as Markdown. The cards follow your edits; the address and the Markdown follow the last save."
+msgstr "Slik ser siden til denne oppføringen ut når den blir funnet i søk, delt eller lest av AI-verktøy som Markdown. Kortene følger endringene dine; adressen og Markdown-teksten følger siste lagring."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Previews"
+msgstr "Forhåndsvisninger"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow"
+msgstr "IndexNow"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tells Bing, Copilot, Yandex and the search engines that use Bing's index when entries are published, changed, unpublished or deleted, so they visit those pages again soon. Google doesn't take part."
+msgstr "Sier fra til Bing, Copilot, Yandex og søkemotorene som bruker Bings indeks når oppføringer publiseres, endres, avpubliseres eller slettes, så de besøker sidene igjen snart. Google er ikke med."
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on"
+msgstr "Slå på"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Off in this deployment's configuration"
+msgstr "Av i konfigurasjonen for denne installasjonen"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "On, but this environment is not live, so it doesn't submit"
+msgstr "På, men dette miljøet er ikke live, så det sender ingenting"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last submission"
+msgstr "Siste innsending"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing submitted yet"
+msgstr "Ingenting sendt ennå"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Key file"
+msgstr "Nøkkelfil"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow is on"
+msgstr "IndexNow er på"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow is off"
+msgstr "IndexNow er av"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change IndexNow"
+msgstr "Kunne ikke endre IndexNow"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "one URL"
+msgid_plural "%{count} URLs"
+msgstr[0] "én URL"
+msgstr[1] "%{count} URL-er"

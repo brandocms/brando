@@ -5,24 +5,21 @@ defmodule Brando.SEOController do
   use BrandoAdmin, :controller
 
   alias Brando.Cache
+  alias Brando.SEO.Robots
   alias Plug.Conn
 
-  @default_robots """
-  User-agent: *
-  Disallow: /admin/
+  @doc """
+  Serves `robots.txt`: the editors' robots text, the AI crawler policy and
+  the sitemap. See `Brando.SEO.Robots`.
   """
-
-  @doc false
   def robots(%{assigns: %{language: language}} = conn, _) do
-    seo = Cache.SEO.get(language)
-
     robots =
-      seo
-      |> Map.get(:robots)
-      |> Kernel.||(@default_robots)
-      |> add_sitemap(sitemap_url())
+      language
+      |> Cache.SEO.get()
+      |> Robots.render(sitemap_url())
 
     conn
+    |> Conn.put_resp_content_type("text/plain")
     |> Conn.resp(200, robots)
     |> Conn.send_resp()
   end
@@ -31,15 +28,7 @@ defmodule Brando.SEOController do
   Names the sitemap at the end of `robots`, unless there is none or the
   editors' text already names one.
   """
-  def add_sitemap(robots, nil), do: robots
-
-  def add_sitemap(robots, url) do
-    if robots =~ ~r/^\s*sitemap\s*:/im do
-      robots
-    else
-      String.trim_trailing(robots) <> "\n\nSitemap: #{url}\n"
-    end
-  end
+  defdelegate add_sitemap(robots, url), to: Robots
 
   # Only once one has been generated: a fresh install has the module but
   # waits for the nightly job, and a crawler sent to a 404 learns nothing

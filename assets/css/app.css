@@ -104,6 +104,7 @@
 @import "./components/MediaWorkspace.css";
 @import "./components/EditorWorkspace.css";
 @import "./components/Form/StructuredData.css";
+@import "./components/Form/MetaPreviews.css";
 @import "./components/MarkdownSources.css";
 @import "./components/ModuleFiles.css";
 @import "./components/DefinitionFile.css";
@@ -113,6 +114,7 @@
 @import "./views/config/FrontendAssets.css";
 @import "./views/config/Globals.css";
 @import "./views/config/ScheduledPublishing.css";
+@import "./views/config/SEO.css";
 @import "./views/config/Utils.css";
 @import "./views/config/Activity.css";
 @import "./views/config/Integrations.css";

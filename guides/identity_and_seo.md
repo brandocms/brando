@@ -139,12 +139,79 @@ arbitrary block templates or rebuild a static deployment. Rebuild those outputs
 when they embed settings at build time.
 
 The generated `page_routes()` exposes `/robots.txt`. It returns the current
-language's configured robots text, or a default that disallows `/admin/`. Include
-the sitemap line explicitly. It does not add an environment-specific crawl block
+language's configured robots text, or a default that disallows `/admin/`, then
+the AI crawler policy below, then a `Sitemap:` line once a sitemap has been
+generated (unless the robots text names one). It does not add an environment-specific crawl block
 for you; inspect the intended deployment and configure its policy explicitly.
 The base URL field does not reconfigure Phoenix's endpoint or your DNS. Set the
 endpoint URL correctly
 for canonical URLs, metadata, and [sitemap generation](sitemaps.md).
+
+### AI crawlers and Content Signals
+
+**Crawlers and AI**, under Indexing, lists the crawlers AI products send
+(`Brando.SEO.Crawlers`), grouped by purpose: building an AI search index
+(OAI-SearchBot, Claude-SearchBot, PerplexityBot), fetching a page a user asked
+for (ChatGPT-User, Claude-User, Perplexity-User) and collecting pages for model
+training (GPTBot, ClaudeBot, Google-Extended, Applebot-Extended,
+meta-externalagent, Amazonbot, CCBot, Bytespider). Each is allowed or blocked.
+Traditional search crawlers are not listed and are never blocked here.
+
+**Use for model training** sets the `ai-train`
+[content signal](https://contentsignals.org) for every crawler, including ones
+not listed: no preference, allow or don't allow.
+
+`Brando.SEO.Robots` writes the choices after the robots text, between
+`# BEGIN Brando AI crawler policy` and `# END Brando AI crawler policy`: a
+`Disallow: /` group for each blocked crawler, then the Content Signals policy
+text and a `Content-Signal:` line in a `User-agent: *` group of its own:
+
+```text
+User-agent: GPTBot
+Disallow: /
+
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+```
+
+`ai-input` is `no` only when every AI search and user-fetch crawler is blocked.
+The robots text is never changed; the block is added when robots.txt is served.
+Nothing is added until a crawler is blocked or a training preference chosen,
+so a site that never opens the setting serves what it did before. **View
+robots.txt** opens the result. The policy is stored per language, like the
+robots text, in the SEO entry's `crawler_policy`.
+
+Blocking is a request: the user-fetch crawlers say robots.txt may not apply to
+them. Google's AI Overviews use Googlebot, not `Google-Extended`; keep a page
+out of them with the entry's **No snippet** and **Snippet length** settings
+([Page metadata](meta.md#snippet-limits)).
+
+### IndexNow
+
+[IndexNow](https://www.indexnow.org) tells search engines that a page has
+appeared, changed or gone, so they visit it soon instead of waiting for
+their next crawl. Bing and the search engines and AI products that use its
+index (Copilot, DuckDuckGo, Yandex and others) take part; Google doesn't.
+
+**IndexNow**, under the SEO settings, turns it on for the site. That creates
+the site's key, served at `/<key>.txt` (`Brando.Plug.IndexNow`, in the
+endpoint before the router). From then on an entry's URL is submitted when
+the entry is published, saved while published, unpublished or deleted, by
+`Brando.IndexNow`, a [content event](webhooks.md) subscriber. Each language
+version is its own entry and is submitted when it changes. URLs are gathered
+for a minute and sent as one request per host, at most 10,000 URLs a request,
+by `Brando.Worker.IndexNowSubmission` on the `:webhooks` queue. The panel
+shows the last submission and the answer: `200` or `202` is accepted, `403`
+means the key file could not be read, `422` that a URL is not on the key's
+host.
+
+It is off by default. Only the live environment submits, so a staging copy
+never does. Without tenancy the deployment is the site; on a server that is
+not the public one, turn IndexNow off in its configuration:
+
+```elixir
+config :brando, Brando.IndexNow, enabled: false
+```
 
 ## Add a manual redirect
 

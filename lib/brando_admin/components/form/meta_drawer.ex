@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.MetaPreviews
   alias BrandoAdmin.Components.Form.StructuredData
   alias Phoenix.LiveView.JS
 
@@ -26,6 +27,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
       |> assign(:meta_description_opts, meta_description_opts)
       |> assign(:schema, schema)
       |> assign(:structured_data?, structured_data?(schema))
+      |> assign(:tabs, tabs(structured_data?(schema)))
       |> assign(:entry_id, Brando.Utils.try_path(assigns, [:form, :source, :data, :id]))
 
     ~H"""
@@ -39,28 +41,26 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
       narrow
     >
       <:info>
-        <nav :if={@structured_data?} class="pill-tabs pill-tabs--small meta-drawer-tabs" aria-label={gettext("Meta sections")}>
+        <nav class="pill-tabs pill-tabs--small meta-drawer-tabs" aria-label={gettext("Meta sections")}>
           <button
-            id={"#{@id}-tab-meta"}
+            :for={{tab, label} <- @tabs}
+            id={"#{@id}-tab-#{tab}"}
             type="button"
-            aria-pressed="true"
-            phx-click={show_meta_tags(@id)}
+            aria-pressed={to_string(tab == "meta")}
+            data-testid={"meta-tab-#{tab}"}
+            phx-click={show_tab(@id, tab, @tabs)}
           >
-            {gettext("Meta tags")}
-          </button>
-          <button
-            id={"#{@id}-tab-structured-data"}
-            type="button"
-            aria-pressed="false"
-            data-testid="meta-tab-structured-data"
-            phx-click={show_structured_data(@id)}
-          >
-            {gettext("Structured data")}
+            {label}
           </button>
         </nav>
         <p id={"#{@id}-meta-info"}>
           {gettext(
             "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own meta image which will override your entry's cover image, if it has one."
+          )}
+        </p>
+        <p id={"#{@id}-previews-info"} hidden>
+          {gettext(
+            "How this entry's page looks when it is found in search, shared, or read by AI tools as Markdown. The cards follow your edits; the address and the Markdown follow the last save."
           )}
         </p>
         <p :if={@structured_data?} id={"#{@id}-structured-data-info"} hidden>
@@ -69,6 +69,15 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           )}
         </p>
       </:info>
+      <div id={"#{@id}-previews-pane"} class="meta-drawer-previews" hidden>
+        <.live_component
+          module={MetaPreviews}
+          id={"#{@id}-previews"}
+          form={@form}
+          schema={@schema}
+          entry_id={@entry_id}
+        />
+      </div>
       <div
         :if={@structured_data?}
         id={"#{@id}-structured-data-pane"}
@@ -112,6 +121,31 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
         </div>
 
         <div class="brando-input">
+          <Input.toggle
+            field={@form[:meta_nosnippet]}
+            label={gettext("No snippet")}
+            instructions={
+              gettext(
+                "Search engines show no text from this page under its title, and Google leaves it out of AI Overviews and AI Mode."
+              )
+            }
+          />
+        </div>
+
+        <div class="brando-input">
+          <Input.number
+            field={@form[:meta_max_snippet]}
+            label={gettext("Snippet length")}
+            placeholder={gettext("No limit")}
+            instructions={
+              gettext(
+                "The most characters search engines and AI answers may quote from this page. Empty leaves it to them; 0 means none."
+              )
+            }
+          />
+        </div>
+
+        <div class="brando-input">
           <.live_component
             module={Input.Image}
             id={"#{@form.id}-meta-image"}
@@ -130,30 +164,43 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
   defp structured_data?(schema) when is_atom(schema) and not is_nil(schema), do: Brando.JSONLD.Graph.has_json_ld?(schema)
   defp structured_data?(_schema), do: false
 
-  # Tabs switch on the client: the panes stay mounted, so the meta fields keep
-  # their input. The commands are sticky, so they survive the form's patches.
-  defp show_meta_tags(id) do
-    %JS{}
-    |> JS.show(to: "##{id}-meta-fields")
-    |> JS.show(to: "##{id}-meta-info")
-    |> JS.hide(to: "##{id}-structured-data-pane")
-    |> JS.hide(to: "##{id}-structured-data-info")
-    |> JS.set_attribute({"aria-pressed", "true"}, to: "##{id}-tab-meta")
-    |> JS.set_attribute({"aria-pressed", "false"}, to: "##{id}-tab-structured-data")
-    |> JS.remove_class("structured-data-open", to: "##{id}")
+  defp tabs(structured_data?) do
+    [{"meta", gettext("Meta tags")}, {"previews", gettext("Previews")}] ++
+      if(structured_data?, do: [{"structured-data", gettext("Structured data")}], else: [])
   end
 
-  defp show_structured_data(id) do
-    %JS{}
-    |> JS.hide(to: "##{id}-meta-fields")
-    |> JS.hide(to: "##{id}-meta-info")
-    |> JS.show(to: "##{id}-structured-data-pane")
-    |> JS.show(to: "##{id}-structured-data-info")
-    |> JS.set_attribute({"aria-pressed", "false"}, to: "##{id}-tab-meta")
-    |> JS.set_attribute({"aria-pressed", "true"}, to: "##{id}-tab-structured-data")
-    |> JS.add_class("structured-data-open", to: "##{id}")
-    |> JS.push("load", target: "##{id}-structured-data")
+  # Tabs switch on the client: the panes stay mounted, so the meta fields keep
+  # their input. The commands are sticky, so they survive the form's patches.
+  # Previews and Structured data widen the drawer and load on opening.
+  defp show_tab(id, tab, tabs) do
+    tabs
+    |> Enum.reduce(%JS{}, fn {other, _label}, js ->
+      if other == tab do
+        js
+        |> JS.show(to: "##{pane_id(id, other)}")
+        |> JS.show(to: "##{id}-#{other}-info")
+        |> JS.set_attribute({"aria-pressed", "true"}, to: "##{id}-tab-#{other}")
+      else
+        js
+        |> JS.hide(to: "##{pane_id(id, other)}")
+        |> JS.hide(to: "##{id}-#{other}-info")
+        |> JS.set_attribute({"aria-pressed", "false"}, to: "##{id}-tab-#{other}")
+      end
+    end)
+    |> JS.remove_class("structured-data-open previews-open", to: "##{id}")
+    |> open_tab(id, tab)
   end
+
+  defp open_tab(js, _id, "meta"), do: js
+
+  defp open_tab(js, id, tab) do
+    js
+    |> JS.add_class("#{tab}-open", to: "##{id}")
+    |> JS.push("load", target: "##{id}-#{tab}")
+  end
+
+  defp pane_id(id, "meta"), do: "#{id}-meta-fields"
+  defp pane_id(id, tab), do: "#{id}-#{tab}-pane"
 
   defp get_input_opts(%{blueprint: nil} = assigns, field), do: maybe_attach_ai_fallback([], assigns, field)
 

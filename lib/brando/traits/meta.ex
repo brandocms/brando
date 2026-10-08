@@ -8,6 +8,13 @@ defmodule Brando.Trait.Meta do
   elsewhere or duplicated across entries. It must be an absolute `http(s)`
   URL; empty keeps the entry's own address.
 
+  `meta_nosnippet` and `meta_max_snippet` limit the text search engines and
+  AI answers may quote from the page, written as the page's robots meta tag
+  (`nosnippet`, `max-snippet:N`). They are what keeps a page's text out of
+  Google's AI Overviews; `Google-Extended` in robots.txt does not.
+  `meta_max_snippet` is a number of characters, `0` for none; empty leaves it
+  to the search engine.
+
   It also adds `content_modified_at`, which `Brando.Trait.Meta.ContentModified`
   moves only on substantive edits. Read it through
   `Brando.Blueprint.Value.modified_at/1`.
@@ -31,7 +38,26 @@ defmodule Brando.Trait.Meta do
         do: [],
         else: [meta_canonical_url: "must start with https://"]
     end)
+    |> Changeset.validate_number(:meta_max_snippet, greater_than_or_equal_to: 0)
   end
+
+  @doc """
+  The robots meta directives for `entry`'s snippet settings, in the order
+  they are written.
+
+      iex> Brando.Trait.Meta.robots_directives(%{meta_nosnippet: true, meta_max_snippet: 50})
+      ["nosnippet"]
+
+      iex> Brando.Trait.Meta.robots_directives(%{meta_nosnippet: false, meta_max_snippet: 120})
+      ["max-snippet:120"]
+
+      iex> Brando.Trait.Meta.robots_directives(%{title: "No meta trait"})
+      []
+  """
+  @spec robots_directives(map()) :: [String.t()]
+  def robots_directives(%{meta_nosnippet: true}), do: ["nosnippet"]
+  def robots_directives(%{meta_max_snippet: max}) when is_integer(max) and max >= 0, do: ["max-snippet:#{max}"]
+  def robots_directives(_entry), do: []
 
   @doc """
   Whether `url` is an absolute `http`/`https` URL with a host.

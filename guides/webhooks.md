@@ -35,12 +35,14 @@ internal records) send no events, and neither do changes to users.
 
 ## Subscribing in code
 
-IndexNow, a search index or your own integration subscribes with a module:
+Brando's webhooks and [IndexNow](identity_and_seo.md#indexnow)
+(`Brando.IndexNow`) are subscribers. A search index or your own integration
+subscribes with a module:
 
 ```elixir
-config :brando, Brando.ContentEvents, subscribers: [MyApp.IndexNow]
+config :brando, Brando.ContentEvents, subscribers: [MyApp.Search]
 
-defmodule MyApp.IndexNow do
+defmodule MyApp.Search do
   @behaviour Brando.ContentEvents.Subscriber
 
   @impl true
@@ -48,7 +50,7 @@ defmodule MyApp.IndexNow do
     %{url: url, event_id: event.id}
     |> Brando.Tenant.Job.attach()
     # One job per event: a retried dispatch finds it and adds none
-    |> MyApp.Workers.SubmitUrl.new(unique: [keys: [:event_id], period: :infinity])
+    |> MyApp.Workers.IndexUrl.new(unique: [keys: [:event_id], period: :infinity])
     |> Oban.insert()
   end
 

@@ -94,4 +94,69 @@ defmodule BrandoAdmin.SEOSettingsLiveTest do
     assert redirect.status == 301
     assert Plug.Conn.get_resp_header(redirect, "location") == ["/new/redirect"]
   end
+
+  test "the AI crawler policy is saved with the form and written into robots.txt", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+    render_async(view)
+
+    # Everything is allowed to start with, and nothing is written.
+    assert has_element?(view, ~s(#seo-crawlers tr[data-crawler="GPTBot"] input[value="allow"][checked]))
+    assert has_element?(view, ~s(#seo-crawlers tr[data-crawler="Bytespider"] input[value="allow"][checked]))
+    refute has_element?(view, "#seo-crawlers .seo-crawler-lines pre")
+
+    view
+    |> form("#seo_form_form", %{
+      "seo" => %{
+        "robots" => "User-agent: *\nDisallow: /secret\n\nUser-agent: CCBot\nDisallow: /archive/",
+        "crawler_policy" => %{"crawlers" => %{"GPTBot" => "block", "CCBot" => "block"}, "ai_train" => "no"}
+      }
+    })
+    |> render_change()
+
+    # The lines that will be written follow the choices before saving, and a
+    # crawler the custom text names too says so.
+    assert view |> element("#seo-crawlers .seo-crawler-lines pre") |> render() =~ "User-agent: GPTBot"
+    assert has_element?(view, ~s(#seo-crawlers tr[data-crawler="CCBot"] .seo-crawler-purpose small))
+    refute has_element?(view, ~s(#seo-crawlers tr[data-crawler="GPTBot"] .seo-crawler-purpose small))
+
+    view |> form("#seo_form_form") |> render_submit()
+
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
+    assert seo.crawler_policy["crawlers"]["GPTBot"] == "block"
+    assert seo.crawler_policy["ai_train"] == "no"
+
+    robots = get(build_conn(), "/robots.txt")
+    assert ["text/plain" <> _] = Plug.Conn.get_resp_header(robots, "content-type")
+
+    assert String.starts_with?(
+             robots.resp_body,
+             "User-agent: *\nDisallow: /secret\n\nUser-agent: CCBot\nDisallow: /archive/"
+           )
+
+    assert robots.resp_body =~ "User-agent: GPTBot\nDisallow: /"
+    assert robots.resp_body =~ "Content-Signal: search=yes, ai-input=yes, ai-train=no"
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+    assert has_element?(view, ~s(#seo-crawlers tr[data-crawler="GPTBot"] input[value="block"][checked]))
+    assert has_element?(view, ~s(#seo-crawlers .seo-crawler-signal input[value="no"][checked]))
+  end
+
+  test "IndexNow is off until turned on, then shows its key file and last submission", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+
+    refute has_element?(view, "#seo-indexnow a[href$='.txt']")
+    view |> element("[data-testid=indexnow-toggle]") |> render_click()
+
+    %{key: key, enabled: true} = Brando.IndexNow.settings()
+    assert has_element?(view, ~s(#seo-indexnow a[href$="/#{key}.txt"]))
+
+    Req.Test.stub(Brando.IndexNow, &Plug.Conn.send_resp(&1, 202, ""))
+    :ok = Brando.IndexNow.submit(["http://localhost/about"])
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+    assert view |> element("[data-testid=indexnow-response]") |> render() =~ "202 Accepted"
+
+    view |> element("[data-testid=indexnow-toggle]") |> render_click()
+    refute Brando.IndexNow.settings().enabled
+  end
 end

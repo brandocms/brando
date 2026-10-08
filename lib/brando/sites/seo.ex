@@ -38,6 +38,9 @@ defmodule Brando.Sites.SEO do
     # `%{"MyApp.Projects.Project" => ["title", "blocks"]}`. Picked in the
     # Content SEO tab rather than the form, so it is not declared as an input.
     attribute :ai_context_fields, :map
+    # The AI crawler policy written into robots.txt, see `Brando.SEO.Robots`:
+    # `%{"crawlers" => %{"GPTBot" => "block"}, "ai_train" => "no"}`.
+    attribute :crawler_policy, :map
   end
 
   assets do
@@ -103,6 +106,12 @@ defmodule Brando.Sites.SEO do
 
         fieldset do
           size :full
+          label t("Crawlers and AI")
+          component &__MODULE__.crawler_policy/1
+        end
+
+        fieldset do
+          size :full
 
           inputs_for :redirects do
             label t("Redirects")
@@ -156,6 +165,9 @@ defmodule Brando.Sites.SEO do
     </figure>
     """
   end
+
+  @doc false
+  def crawler_policy(assigns), do: BrandoAdmin.Components.CrawlerPolicy.render(assigns)
 
   def redirect(socket, _entry, _) do
     Brando.routes().admin_live_path(socket, BrandoAdmin.Sites.SEOLive)

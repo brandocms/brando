@@ -47,6 +47,7 @@ defmodule Brando.Meta.HTML do
       |> maybe_put_meta_image(seo.fallback_meta_image)
       |> maybe_add_see_also()
       |> maybe_add_custom_meta()
+      |> put_robots_meta()
       |> put_x_card()
       |> get_meta()
 
@@ -75,6 +76,19 @@ defmodule Brando.Meta.HTML do
     |> put_present_meta_if_missing("twitter:description", get_meta(conn, "og:description"))
     |> put_present_meta_if_missing("twitter:image", image)
     |> put_present_meta_if_missing("twitter:site", x_handle(conn))
+  end
+
+  # The entry's snippet limits join any robots directives the page or the
+  # identity's custom metas already set, in one tag.
+  defp put_robots_meta(conn) do
+    case get_robots(conn) do
+      [] ->
+        conn
+
+      directives ->
+        existing = conn |> get_meta("robots") |> List.wrap() |> Enum.reject(&(&1 in [nil, ""]))
+        put_meta(conn, "robots", Enum.join(existing ++ directives, ", "), replace: true)
+    end
   end
 
   defp put_present_meta_if_missing(conn, _key, value) when value in [nil, ""], do: conn

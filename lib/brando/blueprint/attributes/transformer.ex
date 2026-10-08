@@ -66,6 +66,8 @@ defmodule Brando.Blueprint.Attributes.Transformer do
       :meta_title,
       :meta_description,
       :meta_canonical_url,
+      :meta_nosnippet,
+      :meta_max_snippet,
       :content_modified_at
     ]
 

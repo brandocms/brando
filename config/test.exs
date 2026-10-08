@@ -79,6 +79,9 @@ config :brando, Oban,
 # Webhook URLs are looked up in a stub, not real DNS (test/support).
 config :brando, Brando.Webhooks, resolver: {Brando.WebhookTestResolver, :resolve}
 
+# IndexNow submissions go to a stub.
+config :brando, Brando.IndexNow, req_options: [plug: {Req.Test, Brando.IndexNow}]
+
 # 404 counts stay in the buffer until a test flushes them: a periodic flush
 # would write from a process outside the test's sandbox.
 config :brando, Brando.Sites.FourOhFour, flush_interval: false

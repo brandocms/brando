@@ -20,6 +20,30 @@ production dump.
 
 #### Breaking
 
+- **SEO settings, pages and `trait :meta` have new columns.** `brando_210`
+  adds `crawler_policy` to `sites_seos` and `meta_nosnippet` and
+  `meta_max_snippet` to `pages`, in every environment. Every application
+  schema with `trait :meta` gets the two snippet columns too: run
+  `mix brando.gen.migrations` and `mix brando.gen.blueprint_migration --all`,
+  then `mix ecto.migrate`; until then, loading SEO settings or those schemas
+  fails with a missing-column error. Nothing changes in robots.txt or the
+  page head until an editor sets the new options.
+
+- **Modules have a `markdown_code` column, and IndexNow a table.**
+  `brando_211` adds `markdown_code` (a module's optional Markdown template)
+  to `content_modules` and creates `sites_indexnow` in every environment;
+  run it with `brando_210`. Until then, loading modules fails with a
+  missing-column error.
+
+- **Markdown alternates and IndexNow need two plugs.** Add
+  `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
+  endpoint, before the router (after `Brando.Plug.LivePreview`). The first
+  serves entries as Markdown at their URL + `.md`; without it, the page head
+  still names the Markdown URL, and requests for it are not found. The
+  second serves the IndexNow key file; without it, turning IndexNow on gets
+  `403` answers. See [Markdown alternates](guides/markdown_alternates.md) and
+  [IndexNow](guides/identity_and_seo.md#indexnow).
+
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
   `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
@@ -626,6 +650,46 @@ production dump.
   Not yet done: associating a field's `help-text` instructions with its control.
 
 #### Features
+
+- **AI crawler policy.** Configuration → SEO lists the crawlers AI products
+  send, grouped by purpose (AI search, fetches for a user, model training),
+  each with Allow / Block, and a setting for the `ai-train` content signal.
+  `robots.txt` gets a generated block after the editors' own lines, which are
+  never rewritten: a `Disallow: /` group per blocked crawler and a
+  `Content-Signal:` line ([contentsignals.org](https://contentsignals.org)).
+  Nothing is written until a crawler is blocked or a training preference is
+  chosen. robots.txt is now served as `text/plain`. See
+  [Identity, SEO settings, and redirects](guides/identity_and_seo.md#ai-crawlers-and-content-signals).
+- **Snippet limits per entry.** The meta drawer has **No snippet** and
+  **Snippet length**, written as the page's robots meta tag (`nosnippet`,
+  `max-snippet:N`). They are what keeps a page's text out of Google's AI
+  Overviews. `put_robots/2` adds directives of your own to the same tag.
+- **IndexNow.** Configuration → SEO can turn on IndexNow, which tells Bing,
+  Copilot, Yandex and the other search engines that use Bing's index when an
+  entry is published, updated while published, unpublished or deleted
+  (Google doesn't take part). It is a content event subscriber
+  (`Brando.IndexNow`): URLs are gathered for a minute and sent as one request
+  per host, by `Brando.Worker.IndexNowSubmission` on the existing `:webhooks`
+  queue, so no new queue is needed. The site's key is served at
+  `/<key>.txt`; the last submission and its answer show under the toggle.
+  Off by default, and only the live environment submits; turn it off for a
+  whole deployment with `config :brando, Brando.IndexNow, enabled: false`.
+- **Previews in the meta drawer.** A Previews tab shows the entry as a
+  search result, an Open Graph card and an X card, following the form as it
+  is edited, with the image that is shared, cut the way it is shared and a
+  ring on its focal point, and the start of the entry's Markdown version.
+- **Markdown alternates.** An entry's page is also served as Markdown, at its
+  URL with `.md` appended and for `Accept: text/markdown`, with
+  `Vary: Accept`, an `ETag` and a canonical `Link` header, and named in the
+  head with `<link rel="alternate" type="text/markdown">`. Only entries the
+  page's controller loads, published and not scheduled, are served. On for
+  blueprints with a URL, blocks and `trait :meta`; turn it off with
+  `trait :meta, markdown: false`. `Brando.Villain.Markdown` renders the
+  blocks: a module's HTML becomes Markdown, refs written plainly (pictures as
+  images, videos and files as links), or a module can have a **Markdown
+  template** of its own in the module editor. See
+  [Markdown alternates](guides/markdown_alternates.md).
+
 
 - **Content events and outbound webhooks.** Every change Activity records
   for an entry becomes a content event (`entry.created`, `entry.updated`,

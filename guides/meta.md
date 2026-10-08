@@ -148,6 +148,43 @@ For a page that is not an entry, set one yourself:
 put_canonical(conn, "https://example.com/original-article")
 ```
 
+## Snippet limits
+
+`trait :meta` adds **No snippet** (`meta_nosnippet`) and **Snippet length**
+(`meta_max_snippet`, in characters) to the meta drawer. They limit the text
+search engines and AI answers may quote from the page, and are written as the
+page's robots meta tag:
+
+```html
+<meta name="robots" content="nosnippet">
+<meta name="robots" content="max-snippet:120">
+```
+
+No snippet wins over a length; a length of `0` also means no snippet; empty
+leaves it to the search engine. They are what keeps a page's text out of
+Google's AI Overviews and AI Mode, which `Google-Extended` in robots.txt does
+not. `put_meta/3` and `put_hreflang/2` pick them up from the entry; directives
+the page set itself (`put_meta(conn, "robots", "noarchive")`, or
+`put_robots(conn, ["noarchive"])`) are kept in the same tag.
+
+## Markdown alternate
+
+When the entry has a [Markdown version](markdown_alternates.md),
+`render_hreflangs` adds
+`<link rel="alternate" type="text/markdown" href="…/entry.md">`.
+
+## Previews in the meta drawer
+
+The meta drawer's **Previews** tab shows the page as a search result, as an
+Open Graph card (Facebook, LinkedIn) and as an X card, with the values
+`render_meta` would write: the `meta_schema` first, then the SEO settings'
+fallbacks. The cards follow the form as it is edited. The image is the one
+`og:image` names, in the size that is shared (`:largest`); when that size is
+cropped, as the meta image's is, Brando cut it around the image's focal point,
+and the card shows that file cut to the card's shape the way the platform
+does, with a ring where the focal point lands (`Brando.SEO.SharePreview`).
+The tab also shows the [Markdown version](markdown_alternates.md).
+
 ## Check the rendered result
 
 Open the **page source** for a published post. Verify one `<title>`, matching

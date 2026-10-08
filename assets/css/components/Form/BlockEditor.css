@@ -219,6 +219,15 @@
       border-radius: 0 0 10px 10px;
     }
 
+    /* The Markdown template is optional and usually short. */
+    &.module-markdown-code {
+      margin-top: 24px;
+
+      .cm-editor {
+        min-height: 180px;
+      }
+    }
+
     .module-code-lint {
       margin-top: 12px;
 

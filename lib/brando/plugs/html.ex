@@ -165,6 +165,7 @@ defmodule Brando.Plug.HTML do
     conn
     |> assign(:json_ld_entities, existing ++ List.wrap(entity))
     |> put_json_ld_page(data, entity)
+    |> put_page_entry(data)
   end
 
   # A person's own page is their profile: a `ProfilePage` about the Person.
@@ -245,7 +246,7 @@ defmodule Brando.Plug.HTML do
 
         conn
         |> put_private(:brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
-        |> maybe_put_entry_canonical(entry)
+        |> put_entry_page(entry)
     end
   end
 
@@ -308,6 +309,44 @@ defmodule Brando.Plug.HTML do
   defp maybe_put_entry_canonical(conn, %{meta_canonical_url: url}), do: put_canonical(conn, url)
   defp maybe_put_entry_canonical(conn, _entry), do: conn
 
+  # What an entry with `Brando.Trait.Meta` says about its own page: the
+  # canonical override and the snippet limits for the robots meta tag.
+  defp put_entry_page(conn, entry) do
+    conn
+    |> maybe_put_entry_canonical(entry)
+    |> put_robots(Brando.Trait.Meta.robots_directives(entry))
+    |> put_page_entry(entry)
+  end
+
+  # The entry the page is about, for its Markdown version (`Brando.Plug.Markdown`).
+  defp put_page_entry(conn, %{__struct__: _} = entry), do: put_private(conn, :brando_page_entry, entry)
+  defp put_page_entry(conn, _data), do: conn
+
+  @doc """
+  The entry this page is about, as passed to `put_meta/3`, `put_hreflang/2`
+  or `put_json_ld/3`.
+  """
+  @spec get_page_entry(conn) :: struct() | nil
+  def get_page_entry(conn), do: conn.private[:brando_page_entry]
+
+  @doc """
+  Adds directives to the page's robots meta tag, after any the page already
+  has, such as `put_robots(conn, ["noarchive"])`. `put_meta/3` and
+  `put_hreflang/2` add an entry's snippet limits (`nosnippet`,
+  `max-snippet:N`) from `Brando.Trait.Meta`.
+  """
+  @spec put_robots(conn, [String.t()]) :: conn
+  def put_robots(conn, []), do: conn
+
+  def put_robots(conn, directives) when is_list(directives) do
+    existing = conn.private[:brando_robots] || []
+    put_private(conn, :brando_robots, Enum.uniq(existing ++ directives))
+  end
+
+  @doc "The robots meta directives added with `put_robots/2`."
+  @spec get_robots(conn) :: [String.t()]
+  def get_robots(conn), do: conn.private[:brando_robots] || []
+
   @doc """
   Put META data in conn
   """
@@ -322,7 +361,7 @@ defmodule Brando.Plug.HTML do
 
     conn
     |> put_private(:brando_meta, merged_meta)
-    |> maybe_put_entry_canonical(data)
+    |> put_entry_page(data)
   end
 
   def put_meta(conn, key, data, opts) when is_binary(key) do

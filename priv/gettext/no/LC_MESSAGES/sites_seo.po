@@ -86,3 +86,6 @@ msgstr "Nettstedets adresse, brukt i strukturerte data og for å finne nettstede
 
 msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."
 msgstr "Fra kan bruke parametere, som <code>/work/:slug</code>. Avslutt med <code>$</code> for å treffe bare den stien, ikke lengre stier som begynner med den."
+
+msgid "Crawlers and AI"
+msgstr "Roboter og AI"

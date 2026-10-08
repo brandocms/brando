@@ -59,7 +59,7 @@ defmodule Brando.Content.ModuleDiff do
 
   # `class` sits with `code` rather than with the metadata: both feed the rendered
   # markup and neither touches a block's stored instance data.
-  @render_fields ~w(code class)a
+  @render_fields ~w(code markdown_code class)a
 
   # Fields that change what a block's stored instance data *means*, rather than
   # how it looks. `multi` decides whether a block owns child entries,
