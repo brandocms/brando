@@ -270,10 +270,10 @@ if Code.ensure_loaded?(Igniter) do
            `mix compile --warnings-as-errors`. Recompiling matters: the tenancy
            mode is read from compiled config, so every later step needs it.
 
-        2. Run `mix brando.upgrade`, review the generated public migrations,
-           then apply them with `mix brando.migrate`. This is what gives
-           `public` the content tables that each new environment is cloned
-           from.
+        2. Run `mix brando.gen.migrations`, review the generated public
+           migrations, then apply them with `mix brando.migrate`. This is what
+           gives `public` the content tables that each new environment is
+           cloned from.
 
         3. Declare any cross-site tables of your own. Everything else in
            `public` is treated as tenant content, so an undeclared table is

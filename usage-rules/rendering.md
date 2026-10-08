@@ -290,8 +290,8 @@ linked to the others as a [synchronized translation](deps/brando/guides/i18n.md)
 decides which fields there are, and each translation words them in its own
 language.
 
-Run `mix brando.gen.migrations` for `brando_194`, `brando_195` and `brando_196`
-to add the tables.
+Run `mix brando.gen.migrations` and `mix brando.migrate` for `brando_194`,
+`brando_195` and `brando_196` to add the tables.
 
 ### In a block
 

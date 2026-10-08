@@ -72,6 +72,10 @@ derived data and Gettext, are in
 [Migrating from 0.53 or 0.54](guides/migrating_from_053.md). Breaking changes
 are listed in the [changelog](https://github.com/brandocms/brando/blob/main/CHANGELOG.md).
 
+Projects already on 0.55 pick up new Brando migrations with
+`mix brando.gen.migrations`, then run them with `mix brando.migrate`, followed
+by `mix brando.migrate --tenants` when they have named environments.
+
 ## Documentation
 
 Start with the [guide index](guides/overview.md). It suggests what to read for

@@ -141,7 +141,7 @@ the drawer, and upload folder drawers that failed to reopen after being closed.
 
 ## Implementation and installation
 
-- Run `mix brando.upgrade`, then `mix ecto.migrate` in the consuming application.
+- Run `mix brando.gen.migrations`, then `mix brando.migrate` in the consuming application.
   Migration **168** creates `public.entry_drafts`; its explicit scope separates
   tenant environments. `DraftPurger` runs daily through Oban. Active copies expire
   after 30 days; resolved/discarded copies after 7 days. Configure

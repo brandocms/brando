@@ -282,9 +282,9 @@ This runs through the following steps, in this order:
 > development database. Make sure that is the data you want on the server.
 >
 > When migrating an existing site, the clean way is to prepare locally first:
-> pull the old server's dump down, restore it locally, run `mix ecto.migrate`
-> so the schema matches the release you are about to deploy, and only then
-> bootstrap. Step 9 then ships the migrated production data for you.
+> pull the old server's dump down, restore it locally, run `mix brando.migrate`
+> (and `mix brando.migrate --tenants` with named environments) so the schema
+> matches the release you are about to deploy, and only then bootstrap. Step 9 then ships the migrated production data for you.
 >
 > If you bootstrap with dev data by mistake, replace it afterwards:
 >
