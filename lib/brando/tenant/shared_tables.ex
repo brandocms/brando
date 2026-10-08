@@ -23,11 +23,13 @@ defmodule Brando.Tenant.SharedTables do
     authorization_legacy_mappings
     authorization_audit_events
     ai_conversations
+    ai_guidance_versions
     ai_messages
     ai_runs
     content_proposal_receipts
     content_proposals
     content_transfer_receipts
+    entry_drafts
     environments
     markdown_webhook_deliveries
     environment_operation_logs
@@ -39,6 +41,9 @@ defmodule Brando.Tenant.SharedTables do
     schema_migrations
     site_asset_sets
     ssg_builds
+    site_enabled_containers
+    site_enabled_modules
+    site_enabled_palettes
     sites
     sites_previews
     uploads_pending_intents

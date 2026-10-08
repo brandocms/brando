@@ -298,7 +298,8 @@ also that `execute/1` does not receive the migration prefix the way
 
 `Brando.Tenant.SharedTables` is the single source of truth. Registry,
 authentication, session, and migration-history tables stay in `public`
-permanently, as do authorization, the content assistant's conversations and
+permanently, as do authorization, which shared library items each site
+enables, entry drafts, the content assistant's guidance, conversations and
 proposals, content transfer receipts, form submissions, Markdown webhook
 deliveries and connected AI tools (MCP), along with every `oban_*` table, since
 Oban is configured against `public`:
@@ -306,15 +307,22 @@ Oban is configured against `public`:
 ```text
 sites  sites_previews  environments  environment_operation_logs
 site_asset_sets  ssg_builds  uploads_pending_intents  schema_migrations
+site_enabled_modules  site_enabled_containers  site_enabled_palettes
 users  users_tokens  user_tokens  user_sites  users_passkeys
 users_security  users_recovery_codes  users_security_events  users_security_policy
 authorization_groups  authorization_group_permissions  authorization_user_groups
-authorization_legacy_mappings  authorization_audit_events
-ai_conversations  ai_messages  ai_runs  content_proposals  content_proposal_receipts
-content_transfer_receipts  forms_submissions  markdown_webhook_deliveries
+authorization_legacy_mappings  authorization_audit_events  entry_drafts
+ai_conversations  ai_messages  ai_runs  ai_guidance_versions
+content_proposals  content_proposal_receipts  content_transfer_receipts
+forms_submissions  markdown_webhook_deliveries
 mcp_settings  mcp_grants  mcp_tokens  mcp_authorization_codes
 oban_*
 ```
+
+Environments provisioned before a table joined this list may hold an empty
+copy of it (or, after `mix brando.migrate_to_tenant`, a copy of its rows).
+Brando never reads those copies: the schemas for these tables are pinned to
+`public`. They can be left, or dropped by hand.
 
 `Brando.Tenant.SharedTables.list/0` returns the current list.
 
