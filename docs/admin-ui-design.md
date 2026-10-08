@@ -822,8 +822,13 @@ Narrow layouts stack the same information without horizontal scrolling.
 
 Related-entry pickers reuse `Entries.entry_picker` and `Brando.SelectFilter`.
 The filter control is client-owned; selection patches must retain its query
-and reapply it to the updated results. Selected multiselect rows share the
-available options' height, and only their square remove control responds to hover.
+and reapply it to the updated results. The multi-select dialog lists its
+options and its selection in the same joined rows, without covers: an option
+is a checkbox (`role="checkbox"`, toggled by a click, Space or Enter) with the
+status dot when it has one and its language below; a selected one has the
+square remove button, in the order chosen. The two columns stack on a phone.
+Selected rows share the available options' height, and only their remove
+control responds to hover.
 Search fields with a custom clear control suppress the browser's native clear
 button. Image refs use a fixed thumbnail width (180px on desktop, 96px on mobile)
 and automatic height to preserve the loaded image's proportions. Keep metadata

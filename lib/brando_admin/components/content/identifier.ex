@@ -57,10 +57,11 @@ defmodule BrandoAdmin.Components.Content.Identifier do
     """
   end
 
-  defp status_label(:published), do: gettext("Published")
-  defp status_label(:draft), do: gettext("Draft")
-  defp status_label(:pending), do: gettext("Pending")
-  defp status_label(:disabled), do: gettext("Disabled")
-  defp status_label(:deleted), do: gettext("Deleted")
-  defp status_label(_), do: gettext("Not set")
+  @doc "The status's name, for screen readers and the dot's tooltip."
+  def status_label(:published), do: gettext("Published")
+  def status_label(:draft), do: gettext("Draft")
+  def status_label(:pending), do: gettext("Pending")
+  def status_label(:disabled), do: gettext("Disabled")
+  def status_label(:deleted), do: gettext("Deleted")
+  def status_label(_), do: gettext("Not set")
 end

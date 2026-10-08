@@ -99,11 +99,11 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
 
     // Select categories in order: A, B, C
-    await page.getByRole('button', { name: 'Category A' }).click()
+    await page.getByRole('checkbox', { name: 'Category A' }).click()
     await syncLV(page)
-    await page.getByRole('button', { name: 'Category B' }).click()
+    await page.getByRole('checkbox', { name: 'Category B' }).click()
     await syncLV(page)
-    await page.getByRole('button', { name: 'Category C' }).click()
+    await page.getByRole('checkbox', { name: 'Category C' }).click()
     await syncLV(page)
 
     // Close modal
@@ -219,17 +219,17 @@ test.describe('Multi-select reordering', () => {
       .getByRole('button', { name: 'Select' })
       .click()
     await syncLV(page)
-    await page.getByRole('button', { name: 'Category A' }).click()
+    await page.getByRole('checkbox', { name: 'Category A' }).click()
     await syncLV(page)
-    await page.getByRole('button', { name: 'Category B' }).click()
+    await page.getByRole('checkbox', { name: 'Category B' }).click()
     await syncLV(page)
-    await page.getByRole('button', { name: 'Category C' }).click()
+    await page.getByRole('checkbox', { name: 'Category C' }).click()
     await syncLV(page)
 
     // Reset the value, then select ONE option
     await page.getByRole('button', { name: 'Reset value' }).click()
     await syncLV(page)
-    await page.getByRole('button', { name: 'Category B' }).click()
+    await page.getByRole('checkbox', { name: 'Category B' }).click()
     await syncLV(page)
 
     // Close modal — only Category B should remain selected
@@ -264,7 +264,7 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
     await page.getByRole('button', { name: 'Reset value' }).click()
     await syncLV(page)
-    await page.getByRole('button', { name: 'Category C' }).click()
+    await page.getByRole('checkbox', { name: 'Category C' }).click()
     await syncLV(page)
     await page.getByRole('button', { name: 'OK' }).click()
     await syncLV(page)

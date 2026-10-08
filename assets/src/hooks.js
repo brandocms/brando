@@ -28,6 +28,7 @@ import ListingHook from './hooks/Listing'
 import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
+import MultiSelectPickerHook from './hooks/MultiSelectPicker'
 import PasskeyHook from './hooks/Passkey'
 import WebhookSecretHook from './hooks/WebhookSecret'
 import BlockSlotHook from './hooks/BlockSlot'
@@ -99,6 +100,7 @@ export default (app) => {
     'Brando.FrontendEditBridge': FrontendEditBridgeHook(app),
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
+    'Brando.MultiSelectPicker': MultiSelectPickerHook(app),
     'Brando.Passkey': PasskeyHook(app),
     'Brando.WebhookSecret': WebhookSecretHook(app),
     'Brando.BlockSlot': BlockSlotHook(app),
