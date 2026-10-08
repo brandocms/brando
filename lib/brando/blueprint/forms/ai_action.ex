@@ -19,7 +19,7 @@ defmodule Brando.Blueprint.Forms.AIAction do
 
   The options are checked when the Blueprint compiles: `build/2` here, as the
   input is built, and the fields named in `from:` in
-  `Brando.Blueprint.Forms.Verifier`, once the schema exists.
+  the forms verifier, once the schema exists.
   """
   defstruct name: nil,
             label: nil,

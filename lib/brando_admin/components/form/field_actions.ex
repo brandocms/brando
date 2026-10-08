@@ -251,5 +251,5 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
   defp rows(text, :text), do: min(max(div(String.length(text), 90) + 1, 2), 4)
   defp rows(text, _type), do: min(max(div(String.length(text), 80) + 1 + count_breaks(text), 3), 12)
 
-  defp count_breaks(text), do: text |> String.graphemes() |> Enum.count(&(&1 == "\n"))
+  defp count_breaks(text), do: length(String.split(text, "\n")) - 1
 end
