@@ -195,7 +195,8 @@ section.alert.danger {
 
 .blocks-welcome {
   box-sizing: border-box;
-  max-width: 520px;
+  container: blocks-welcome / inline-size;
+  max-width: 800px;
   margin: 16px auto 0;
   padding: 26px;
   border: 1px solid var(--brando-line);
@@ -293,7 +294,8 @@ section.alert.danger {
     }
   }
 
-  /* Up to four small square tiles in a row, two to a row on a phone. */
+  /* Up to four tiles in a row, wide enough for a name like "Tekst |
+     Oppsummeringsliste"; two to a row where four don't fit (see below). */
   .blocks-welcome-modules {
     display: flex;
     flex-wrap: wrap;
@@ -309,9 +311,10 @@ section.alert.danger {
     justify-content: center;
     gap: 4px;
     box-sizing: border-box;
-    width: 94px;
+    flex: 0 1 176px;
+    min-width: 0;
     min-height: 84px;
-    padding: 12px 6px 10px;
+    padding: 12px 8px 10px;
     border: 1px solid var(--brando-line);
     border-radius: 8px;
     background: var(--brando-surface);
@@ -349,11 +352,14 @@ section.alert.danger {
     }
   }
 
+  /* Lines break between words, evened out; a word wider than the tile is
+     the only thing ever split. */
   .blocks-welcome-module-name {
     max-width: 100%;
     font-size: 12.5px;
     line-height: 16px;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    text-wrap: balance;
   }
 
   .blocks-welcome-module-count {
@@ -449,16 +455,25 @@ section.alert.danger {
   @media (max-width: 599px) {
     max-width: none;
     padding: 22px 16px;
-
-    .blocks-welcome-modules {
-      max-width: calc(2 * 94px + 10px);
-    }
   }
 
   @media (pointer: coarse) {
     .blocks-welcome-action {
       min-height: 40px;
     }
+  }
+}
+
+/* Where four tiles don't fit side by side, two to a row (never three and
+   one). EuropaCSS claims `@container`, so it is written `@Container`; see
+   Gallery.css. */
+@Container blocks-welcome (max-width: 733px) {
+  .blocks-welcome .blocks-welcome-modules {
+    max-width: calc(2 * 176px + 10px);
+  }
+
+  .blocks-welcome .blocks-welcome-module {
+    flex-basis: calc(50% - 5px);
   }
 }
 

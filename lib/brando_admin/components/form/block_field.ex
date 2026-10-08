@@ -1819,6 +1819,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> then(&if(&1 == "", do: nil, else: &1))
   end
 
+  # A tile's name, as the module picker shows it. Names often lead with a
+  # group ("Tekst | Oppsummeringsliste"): a no-break space keeps the bar with
+  # the group, so a name that wraps breaks after it, not before.
+  defp starting_module_name(module) do
+    module.name
+    |> ModulePicker.translate()
+    |> String.replace(" | ", "\u00A0| ")
+  end
+
   defp field_note_slots(socket) do
     Enum.map(socket.assigns.block_ops.order, fn uid ->
       {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, uid)
@@ -2794,7 +2803,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 >
                   {tile.container.name}
                 </span>
-                <span class="blocks-welcome-module-name">{ModulePicker.translate(tile.module.name)}</span>
+                <span class="blocks-welcome-module-name">{starting_module_name(tile.module)}</span>
                 <small
                   :if={tile.count}
                   id={"#{@id}-starting-#{index}-count"}
