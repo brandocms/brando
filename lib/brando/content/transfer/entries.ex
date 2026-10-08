@@ -743,10 +743,10 @@ defmodule Brando.Content.Transfer.Entries do
     if is_nil(Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)),
       do: Brando.Content.create_identifier(entry.__struct__, entry)
 
-    if Map.has_key?(cs.changes, :publish_at) do
-      cancel_status_jobs(entry)
-      {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
-    end
+    if Map.has_key?(cs.changes, :publish_at), do: cancel_status_jobs(entry)
+
+    if Map.has_key?(cs.changes, :publish_at) or Map.has_key?(cs.changes, :unpublish_at),
+      do: {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
 
     saved = %{item | entry: EntryCodec.preload(entry)}
     bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, [saved], plan.supplied, :persist))

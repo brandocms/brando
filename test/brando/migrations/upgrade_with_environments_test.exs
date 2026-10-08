@@ -22,6 +22,7 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
   # The schemas that read the environment tables the 2xx migrations change
   @environment_schemas [
     Brando.Pages.Page,
+    Brando.Pages.Fragment,
     Brando.Content.Module,
     Brando.Sites.SEO,
     Brando.Sites.NotFoundHit,
@@ -64,7 +65,7 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
   } do
     # Reserved and never used; the upgrade runs across the gaps
     numbers = Enum.map(files, &number/1)
-    assert Enum.to_list(200..213) -- numbers == [206, 208]
+    assert Enum.to_list(200..214) -- numbers == [206, 208]
 
     expected_tables = table_set("public", environment_tables())
     expected_columns = column_set("public", environment_columns())

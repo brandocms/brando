@@ -68,7 +68,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Utils
   alias Ecto.Changeset
 
-  @protected_fields ~w(id status publish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
+  @protected_fields ~w(id status publish_at unpublish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
   @text_vars [:string, :text, :html]
   @media_kinds %{image: "picture", video: "video", gallery: "gallery", file: "file"}
 

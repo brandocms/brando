@@ -55,6 +55,7 @@ defmodule Brando.Content.Transfer.Labels do
   defp label("meta_description"), do: dgettext("content_transfer", "SEO description")
   defp label("has_url"), do: dgettext("content_transfer", "Public URL")
   defp label("publish_at"), do: dgettext("content_transfer", "Publication date")
+  defp label("unpublish_at"), do: dgettext("content_transfer", "Expiry date")
   defp label("sequence"), do: dgettext("content_transfer", "Order")
   defp label("title"), do: dgettext("content_transfer", "Title")
   defp label("name"), do: dgettext("content_transfer", "Name")

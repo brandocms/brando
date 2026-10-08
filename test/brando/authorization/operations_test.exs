@@ -29,6 +29,15 @@ defmodule Brando.Authorization.OperationsTest do
     assert published.status == :published
   end
 
+  test "an expiry takes the rights to schedule and to publish", c do
+    unpublish_at = DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
+    grant(c, ["brando.admin.access", "brando.pages.read", "brando.pages.update", "brando.pages.schedule"])
+    assert {:error, :forbidden} = Pages.update_page(c.page.id, %{unpublish_at: unpublish_at}, c.user)
+    assert Repo.get!(Page, c.page.id).unpublish_at == nil
+
+    assert {:ok, %{unpublish_at: ^unpublish_at}} = Pages.update_page(c.page.id, %{unpublish_at: unpublish_at}, c.editor)
+  end
+
   test "the legacy tuple adapter follows group authority after cutover", c do
     assert {:error, :unauthorized} =
              BrandoIntegration.Authorization.Can.can?(%{c.user | role: :superuser}, :update, c.page)

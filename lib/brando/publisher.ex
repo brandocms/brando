@@ -13,21 +13,32 @@ defmodule Brando.Publisher do
   alias Brando.Worker
   alias Ecto.Changeset
 
+  @publish_status "published"
+  @unpublish_status "disabled"
+
   @type entry :: map()
   @type changeset :: Changeset.t()
   @type user :: User.t()
 
   @doc """
-  Create a job for the publisher worker if we have a publish_at
-  field in the entry struct, and it has been changed in changeset
+  Create jobs for the publisher worker when the changeset changed the entry's
+  `publish_at` or `unpublish_at`: one that publishes the entry at
+  `publish_at`, and one that deactivates it at `unpublish_at`. A date that
+  changed replaces the entry's earlier job for it, whoever scheduled that one,
+  and a cleared `unpublish_at` cancels its job.
   """
   @spec schedule_publishing(entry, changeset, user) :: {:ok, entry}
-  def schedule_publishing(
-        %{id: id, publish_at: publish_at, __struct__: schema} = entry,
-        %{changes: %{publish_at: _}},
-        user
-      )
-      when not is_nil(publish_at) do
+  def schedule_publishing(entry, changeset, user) do
+    {:ok, entry} = schedule_publish(entry, changeset, user)
+    schedule_unpublish(entry, changeset, user)
+  end
+
+  defp schedule_publish(
+         %{id: id, publish_at: publish_at, __struct__: schema} = entry,
+         %{changes: %{publish_at: _}},
+         user
+       )
+       when not is_nil(publish_at) do
     if DateTime.before?(publish_at, DateTime.utc_now()) do
       # the publishing date is in the past, just leave it
       {:ok, entry}
@@ -37,10 +48,7 @@ defmodule Brando.Publisher do
 
       entry_identifier = Identifier.identifier_for(entry)
 
-      Repo.delete_all(
-        from j in Oban.Job,
-          where: fragment("? @> ?", j.args, ^args)
-      )
+      delete_status_jobs(schema, id, @publish_status)
 
       args
       |> Worker.EntryPublisher.new(
@@ -55,7 +63,53 @@ defmodule Brando.Publisher do
     end
   end
 
-  def schedule_publishing(entry, _, _), do: {:ok, entry}
+  defp schedule_publish(entry, _, _), do: {:ok, entry}
+
+  defp schedule_unpublish(%{id: id, __struct__: schema} = entry, %{changes: %{unpublish_at: _}}, user) do
+    delete_status_jobs(schema, id, @unpublish_status)
+
+    case Map.get(entry, :unpublish_at) do
+      %DateTime{} = unpublish_at ->
+        if DateTime.after?(unpublish_at, DateTime.utc_now()) do
+          %{schema: schema, id: id, user_id: user_id(user), status: @unpublish_status}
+          |> TenantJob.attach()
+          |> Worker.EntryPublisher.new(
+            scheduled_at: unpublish_at,
+            tags: [:publisher, :unpublish],
+            meta: %{identifier: job_identifier(Identifier.identifier_for(entry))}
+          )
+          |> Oban.insert()
+        end
+
+      nil ->
+        :ok
+    end
+
+    {:ok, entry}
+  end
+
+  defp schedule_unpublish(entry, _, _), do: {:ok, entry}
+
+  # The entry's jobs that set `status`, by anyone, except one that is running:
+  # it checks the entry's dates itself.
+  defp delete_status_jobs(schema, id, status) do
+    args = Map.merge(%{"schema" => to_string(schema), "id" => id, "status" => status}, TenantJob.context_fragment())
+
+    Repo.delete_all(
+      from j in Oban.Job,
+        where:
+          j.worker == ^inspect(Worker.EntryPublisher) and
+            j.state != "executing" and
+            fragment("? @> ?", j.args, ^args)
+    )
+  end
+
+  @doc "The status an entry gets when its `unpublish_at` passes."
+  def unpublish_status, do: String.to_existing_atom(@unpublish_status)
+
+  @doc "Whether `job` deactivates an entry at its `unpublish_at`."
+  def unpublish_job?(%Oban.Job{args: %{"status" => @unpublish_status}}), do: true
+  def unpublish_job?(_job), do: false
 
   @doc "Schedule a historical revision for restoration and publication."
   def schedule_revision(schema, id, revision_number, publish_at, user) do
@@ -211,8 +265,20 @@ defmodule Brando.Publisher do
 
   defp job_identifier(identifier), do: identifier
 
+  @doc """
+  Adjust the status for the dates the changeset sets: a pending entry whose
+  `publish_at` is cleared or has passed is published, a future `publish_at`
+  makes a published entry pending, and an `unpublish_at` set to a time that
+  has passed deactivates a published or pending entry at once.
+  """
+  def maybe_override_status(changeset) do
+    changeset
+    |> override_for_publish_at()
+    |> override_for_unpublish_at()
+  end
+
   # if we have no publish_at but status = pending -- set status published
-  def maybe_override_status(%{changes: %{publish_at: nil}} = changeset) do
+  defp override_for_publish_at(%{changes: %{publish_at: nil}} = changeset) do
     status = Changeset.get_field(changeset, :status)
 
     if status == :pending do
@@ -222,7 +288,7 @@ defmodule Brando.Publisher do
     end
   end
 
-  def maybe_override_status(%{changes: %{publish_at: publish_at}} = changeset) when not is_nil(publish_at) do
+  defp override_for_publish_at(%{changes: %{publish_at: publish_at}} = changeset) when not is_nil(publish_at) do
     status = Changeset.get_field(changeset, :status)
 
     if DateTime.after?(publish_at, DateTime.utc_now()) do
@@ -241,9 +307,20 @@ defmodule Brando.Publisher do
     end
   end
 
-  def maybe_override_status(changeset) do
+  defp override_for_publish_at(changeset) do
     changeset
   end
+
+  defp override_for_unpublish_at(%{changes: %{unpublish_at: %DateTime{} = unpublish_at}} = changeset) do
+    if DateTime.after?(unpublish_at, DateTime.utc_now()) or
+         Changeset.get_field(changeset, :status) not in [:published, :pending] do
+      changeset
+    else
+      Changeset.put_change(changeset, :status, unpublish_status())
+    end
+  end
+
+  defp override_for_unpublish_at(changeset), do: changeset
 
   def list_jobs do
     context = TenantJob.context_fragment()
