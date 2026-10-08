@@ -208,9 +208,14 @@ code {
   padding: 2px;
 }
 
+/* The admin column and its <main> are flex items, whose minimum width is
+   their content's by default: one long line of code or a row of tabs then
+   widened the whole page past a phone's width. At zero, wide content scrolls
+   in its own box (code editors, tab tracks) instead. */
 #admin {
   display: flex;
   flex-grow: 1;
+  min-width: 0;
 }
 
 .avatar img {

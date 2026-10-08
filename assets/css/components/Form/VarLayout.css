@@ -31,11 +31,18 @@
 
 .var-layout-panel-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: 12px 18px;
   padding: 18px 20px 16px;
   border-bottom: 1px solid var(--brando-line);
+
+  /* The heading takes the row; on a phone the surface tabs go under it */
+  > div:first-child {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
 
   h2 {
     font-size: 18px;
@@ -521,9 +528,17 @@
 
 /* The preview sits on the editor's own ground so the card inside it reads as a
    block on a page, not as another panel. */
+/* The preview keeps the narrowest width the module editor gives it beside
+   the layout, and scrolls sideways inside its frame on a phone: squeezed
+   further, half-width fields overlap and no longer show what editors see. */
 .var-layout-preview-scroll {
   padding: 18px;
+  overflow-x: auto;
   background-color: var(--brando-surface-page);
+
+  > .var-preview-block {
+    min-width: 400px;
+  }
 }
 
 /* Everything inside is the block editor's own markup, so Block.css styles it —

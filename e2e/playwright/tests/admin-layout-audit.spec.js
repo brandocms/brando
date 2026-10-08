@@ -140,3 +140,41 @@ test('page text and select controls match and toolbar dropdown chevrons are iden
   await noOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('page-editor-mobile.png'), fullPage: true })
 })
+
+test('the module editor fits a phone on every tab', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/config/content/modules')
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Gallery with Controls' }).first().click()
+  await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/update\/\d+$/)
+  await syncLV(page)
+
+  // A template line longer than the screen scrolls inside the code editor
+  const scroller = page.locator('#module_code-code .cm-scroller')
+  await expect(scroller).toBeVisible()
+  expect(await scroller.evaluate(e => e.scrollWidth > e.clientWidth)).toBe(true)
+  await noOverflow(page)
+
+  for (const tab of ['overview', 'variables', 'references', 'datasource']) {
+    await page.locator(`[phx-value-tab="${tab}"]`).click()
+    await expect(page.locator(`.module-panel[data-tab="${tab}"]`)).toBeVisible()
+    await noOverflow(page)
+  }
+
+  // The surface tabs go under the layout's heading instead of squeezing it
+  await page.locator('[phx-value-tab="variables"]').click()
+  await expect(page.locator('.var-layout-panel-head .pill-tabs')).toBeVisible()
+  const heading = await page.locator('.var-layout-panel-head h2').first().boundingBox()
+  const surfaces = await page.locator('.var-layout-panel-head .pill-tabs').boundingBox()
+  expect(surfaces.y).toBeGreaterThan(heading.y + heading.height)
+  await page.screenshot({ path: testInfo.outputPath('module-editor-variables-mobile.png'), fullPage: true })
+
+  // A module with blocks on older versions shows its notice above the tabs
+  await page.goto('/admin/config/content/modules')
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Kulturslider' }).first().click()
+  await syncLV(page)
+  await expect(page.locator('.stale-blocks-notice')).toBeVisible()
+  await noOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('module-editor-notice-mobile.png'), fullPage: true })
+})

@@ -1306,7 +1306,7 @@ html.not-mac .shortcut-other { display: inline; }
 
 /* A hand-written form's heading (the module editor) at the size of the
    workspace headings. Blueprint forms head themselves with EntryHeader.css. */
-.form-header h1 { display: flex; align-items: center; gap: 12px; font-size: 32px; font-weight: 500; line-height: 1.2; letter-spacing: -.035em; color: var(--brando-ink); }
+.form-header h1 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 32px; font-weight: 500; line-height: 1.2; letter-spacing: -.035em; color: var(--brando-ink); }
 .form-header:not(.brando-form .form-header) { @space margin-top sm; @space margin-bottom sm; }
 .form-header-badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 5px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
 
