@@ -21,7 +21,7 @@ Brando 0.55.0-dev · Phoenix 1.8.15 · LiveView 1.2.12
 ! Image configs              2 configs changed since their images were made (14 images)
                              Utilities → Recreate changed images
 ! Modules                    4 blocks on outdated module versions
-                             refresh the modules: mix brando.modules refresh --uid UID --user ID
+                             they hold refs or vars their module no longer defines: resolve them under Block modules, or with mix brando.modules resolve --uid UID --user ID
 ✗ Sitemap                    not generated
                              Utilities → Generate sitemap
 ✓ robots.txt                 served from SEO settings

@@ -453,7 +453,10 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.status == :warning
       assert result.summary == "2 blocks on outdated module versions"
       assert result.items == ["Hero (hero-doctor): 2 blocks"]
-      assert {BrandoAdmin.Content.ModuleListLive, _} = result.link
+      # the fix is resolving the leftovers, not a refresh
+      assert {"/admin/config/content/modules/stale-blocks", _} = result.link
+      assert result.fix =~ "mix brando.modules resolve --uid UID"
+      refute result.fix =~ "refresh"
     end
   end
 
