@@ -54,6 +54,10 @@ config :brando, Brando.IndexNow,
   endpoint: "http://localhost:#{e2e_port}/e2e/webhook-receiver/indexnow",
   req_options: []
 
+# The E2E MCP client's metadata document comes from the test suite, not the
+# internet (Brando.MCP.ClientMetadata).
+config :brando, Brando.MCP, client_metadata_fetcher: {E2eProject.MCPClient, :fetch}
+
 # Email sent while the tests run (form notifications, password reset links)
 # is kept in Swoosh's in-memory mailbox, where `/e2e/password-reset/mailbox`
 # reads it back for the browser.
