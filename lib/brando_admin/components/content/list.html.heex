@@ -25,6 +25,10 @@
       toggle_boolean_filter={JS.push("toggle_boolean_filter", target: @myself)}
       update_select_filter={JS.push("update_select_filter", target: @myself)}
       reset_filters={JS.push("reset_filters", target: @myself)}
+      saved_views?={@saved_views?}
+      uri={@uri}
+      params={@params}
+      current_user={@current_user}
     />
 
     {render_slot(@column_header)}

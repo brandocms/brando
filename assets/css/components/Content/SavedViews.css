@@ -1,0 +1,188 @@
+/* The listing toolbar's Views menu (`Content.List.SavedViews`). The trigger
+   takes the sort button's box: 38px high, the workspace line and a 5px
+   radius. The menu is the shared dropdown panel in the top layer
+   (`Brando.FloatingDropdown` places it). */
+.saved-views {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.saved-views-dropdown {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.saved-views-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 38px;
+  min-height: 38px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--workspace-line, var(--brando-line));
+  border-radius: 5px;
+  background: var(--brando-surface);
+  color: var(--brando-muted);
+  font: 12px/20px "Main", sans-serif;
+  text-transform: none;
+  cursor: pointer;
+
+  > [data-icon] {
+    display: block;
+    flex: none;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover,
+  &[aria-expanded="true"] {
+    background: var(--brando-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: 2px;
+  }
+}
+
+.saved-views-label {
+  overflow: hidden;
+  max-width: 200px;
+  color: var(--brando-ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-views-changed {
+  flex: none;
+  color: var(--brando-muted);
+  font-size: 11px;
+}
+
+.saved-views-menu {
+  @extend %admin_dropdown_panel;
+  position: fixed;
+  inset: auto;
+  min-width: 240px;
+  max-width: min(360px, calc(100vw - 16px));
+
+  &:not(:popover-open) {
+    display: none;
+  }
+
+  > button > [data-icon] {
+    color: var(--brando-muted);
+  }
+
+  > .saved-views-delete,
+  > .saved-views-delete > [data-icon] {
+    color: var(--brando-error-ink);
+  }
+}
+
+/* Over `.admin-workspace p`, which takes paragraphs' padding */
+.saved-views-menu > .saved-views-heading {
+  margin: 0;
+  padding: 6px 10px 4px;
+  color: var(--brando-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.saved-views-option {
+  .saved-views-check {
+    visibility: hidden;
+  }
+
+  &[aria-current="true"] .saved-views-check {
+    visibility: visible;
+    color: var(--brando-accent);
+  }
+
+  .saved-views-name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .badge {
+    flex: none;
+    margin: 0;
+    font-size: 10px;
+    line-height: 16px;
+  }
+}
+
+.saved-views-menu > .saved-views-empty {
+  margin: 0;
+  padding: 4px 10px 8px;
+  color: var(--brando-muted);
+}
+
+.saved-views-separator {
+  display: block;
+  height: 1px;
+  margin: 3px -3px;
+  background: var(--brando-line);
+}
+
+/* The name dialog: one field and the share choice */
+.saved-views-form {
+  display: grid;
+  gap: 16px;
+}
+
+.saved-views-field {
+  display: grid;
+  gap: 8px;
+
+  label {
+    margin: 0;
+    color: var(--brando-ink);
+    font: 500 13px/18px "Main", sans-serif;
+  }
+
+  input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 40px;
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
+    font: 14px/20px "Main", sans-serif;
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.saved-views-error {
+  margin: 0;
+  color: var(--brando-error-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.saved-views-share {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--brando-ink);
+  font-size: 13px;
+  line-height: 18px;
+  cursor: pointer;
+
+  input {
+    flex: none;
+    margin: 2px 0 0;
+  }
+}
