@@ -3115,6 +3115,11 @@ msgstr ""
 msgid "Checked in %{ms} ms. Kept for ten minutes; Run again checks again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checked per content type"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checked the fields of %{type}"
@@ -8207,6 +8212,11 @@ msgstr ""
 msgid "Last page edit"
 msgstr ""
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last rebuilt: %{date}"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-format, elixir-autogen
 msgid "Last seen"
@@ -8429,6 +8439,11 @@ msgstr ""
 #: lib/brando/sites/identity.ex
 #, elixir-autogen, elixir-format
 msgid "Linked to %{page}"
+msgstr ""
+
+#: lib/brando/sites/identity.ex
+#, elixir-autogen, elixir-format
+msgid "Linked to a page"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -9459,6 +9474,11 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Never logged in"
 msgstr "Never logged in"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Never rebuilt"
+msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -18586,6 +18606,11 @@ msgstr ""
 msgid "it already has that name"
 msgstr ""
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "its context module %{context} is not loaded"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "its text has more than one line"
@@ -18710,9 +18735,19 @@ msgstr[1] ""
 msgid "no"
 msgstr ""
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "no %{function} function in %{context}"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "no deletions"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "no page of its own"
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex
