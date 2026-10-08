@@ -27,7 +27,7 @@ defmodule BrandoAdmin.Images.AltTextLiveTest do
   end
 
   test "estimates the cost, describes the images in every language, and saves what is accepted", %{conn: conn} do
-    Brando.AIStub.configure(shared: true)
+    Brando.AIStub.configure()
     Brando.AIStub.reply(~s({"en": "A lighthouse on a rocky shore", "no": "Et fyr på en steinete strand"}))
     first = insert_image(%{path: "images/alt-live/first.jpg"})
     second = insert_image(%{path: "images/alt-live/second.jpg"})

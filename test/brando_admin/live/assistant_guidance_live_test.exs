@@ -6,7 +6,7 @@ defmodule BrandoAdmin.AssistantGuidanceLiveTest do
   alias Brando.AIStub
 
   setup do
-    AIStub.configure(shared: true)
+    AIStub.configure()
     :ok
   end
 
