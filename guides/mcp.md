@@ -387,7 +387,11 @@ And the attacks the review asked about:
 - **Reading what the person cannot.** The tools that describe content types
   and modules answer only for content types the person may read (and
   modules only for someone who may edit a content type), for the Assistant
-  and for connected tools alike.
+  and for connected tools alike. Entries they name are filtered the same
+  way: `list_selection_options` lists only the entries the person may read,
+  whatever the module's datasource returns, and `entry_outline` gives no
+  title for an entry the outlined one chooses or links to that the person
+  may not read, and leaves out such language versions.
 - **Prompt injection.** A tool following instructions from content can only
   read what the person can read and prepare proposals; a person reviews
   every change before it is applied.

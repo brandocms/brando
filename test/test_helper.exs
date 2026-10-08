@@ -260,6 +260,8 @@ defmodule BrandoIntegration.ModuleWithDatasource do
     plural: "modules_with_datasource",
     gettext_module: Brando.Gettext
 
+  require Ecto.Query
+
   attributes do
     attribute :title, :string
   end
@@ -287,6 +289,21 @@ defmodule BrandoIntegration.ModuleWithDatasource do
     datasource :chosen_pages do
       type :selection
       list(fn _schema, language, _vars -> Brando.Content.list_identifiers([Brando.Pages.Page], %{language: language}) end)
+      get(fn identifiers -> {:ok, identifiers} end)
+    end
+
+    # Pages' identifiers straight from the table, as a site's own datasource
+    # may list them, without the admin's read filter.
+    datasource :page_identifiers do
+      type :selection
+
+      list(fn _schema, _language, _vars ->
+        {:ok,
+         Brando.Repo.all(
+           Ecto.Query.from(i in Brando.Content.Identifier, where: i.schema == ^Brando.Pages.Page, order_by: i.id)
+         )}
+      end)
+
       get(fn identifiers -> {:ok, identifiers} end)
     end
   end
