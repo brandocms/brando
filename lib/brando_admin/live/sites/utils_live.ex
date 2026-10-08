@@ -26,6 +26,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> subscribe_image_tasks()
        |> assign_image_tasks()
        |> assign_authorization_tools(params)
+       |> assign(:doctor_sandbox, sandbox_owner(socket))
        |> start_system_check()}
     else
       {:ok, assign(socket, :socket_connected, false)}
@@ -382,15 +383,23 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, socket}
   end
 
+  # In a test, the checks' tasks join the page's SQL sandbox (`Brando.Doctor.run/1`).
+  defp sandbox_owner(socket) do
+    if Application.get_env(Brando.otp_app(), :sql_sandbox, false), do: get_connect_info(socket, :user_agent)
+  end
+
   # The checks query and read files, so they run beside the page rather than
   # holding up its first render
   defp start_system_check(socket) do
     prefix = Brando.Tenant.current_prefix()
     locale = Gettext.get_locale(Brando.Gettext)
+    sandbox = socket.assigns.doctor_sandbox
 
     socket
     |> assign(system_check: nil, system_check_failed: false)
-    |> start_async(:system_check, fn -> Brando.Doctor.run(mode: :admin, prefix: prefix, locale: locale) end)
+    |> start_async(:system_check, fn ->
+      Brando.Doctor.run(mode: :admin, prefix: prefix, locale: locale, sandbox: sandbox)
+    end)
   end
 
   defp assign_authorization_tools(socket, params) do

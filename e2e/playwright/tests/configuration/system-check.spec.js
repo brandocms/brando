@@ -32,7 +32,7 @@ test('Utilities runs the system check beside the page and links fixes', async ({
   await expect(card.locator('li[data-check="admin_assets"]')).toHaveAttribute('data-status', 'ok')
   await expect(card.locator('li[data-check="deprecations"]')).toHaveAttribute('data-status', 'ok')
 
-  // The E2E app has no sitemap module, and its seeded blocks predate module versions.
+  // The E2E app has no sitemap module, and two seeded Kulturslider blocks are on an older version.
   await expect(card.locator('li[data-check="sitemap"]')).toHaveAttribute('data-status', 'warning')
   const modules = card.locator('li[data-check="modules"]')
   await expect(modules).toHaveAttribute('data-status', 'warning')
@@ -48,5 +48,5 @@ test('Utilities runs the system check beside the page and links fixes', async ({
 
   // The fix is a link, not an action
   await modules.locator('a.utils-button').click()
-  await expect(page).toHaveURL(/\/admin\/config\/content\/modules$/)
+  await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/stale-blocks$/)
 })
