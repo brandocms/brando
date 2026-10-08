@@ -173,6 +173,18 @@ When the entry has a [Markdown version](markdown_alternates.md),
 `render_hreflangs` adds
 `<link rel="alternate" type="text/markdown" href="…/entry.md">`.
 
+## Previews in the meta drawer
+
+The meta drawer's **Previews** tab shows the page as a search result, as an
+Open Graph card (Facebook, LinkedIn) and as an X card, with the values
+`render_meta` would write: the `meta_schema` first, then the SEO settings'
+fallbacks. The cards follow the form as it is edited. The image is the one
+`og:image` names, in the size that is shared (`:largest`); when that size is
+cropped, as the meta image's is, Brando cut it around the image's focal point,
+and the card shows that file cut to the card's shape the way the platform
+does, with a ring where the focal point lands (`Brando.SEO.SharePreview`).
+The tab also shows the [Markdown version](markdown_alternates.md).
+
 ## Check the rendered result
 
 Open the **page source** for a published post. Verify one `<title>`, matching

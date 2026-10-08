@@ -659,6 +659,10 @@ production dump.
   **Snippet length**, written as the page's robots meta tag (`nosnippet`,
   `max-snippet:N`). They are what keeps a page's text out of Google's AI
   Overviews. `put_robots/2` adds directives of your own to the same tag.
+- **Previews in the meta drawer.** A Previews tab shows the entry as a
+  search result, an Open Graph card and an X card, following the form as it
+  is edited, with the image that is shared, cut the way it is shared and a
+  ring on its focal point, and the start of the entry's Markdown version.
 - **Markdown alternates.** An entry's page is also served as Markdown, at its
   URL with `.md` appended and for `Accept: text/markdown`, with
   `Vary: Accept`, an `ETag` and a canonical `Link` header, and named in the

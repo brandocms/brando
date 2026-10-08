@@ -17826,3 +17826,98 @@ msgstr "Tillat"
 msgctxt "crawler access"
 msgid "Block"
 msgstr "Blokker"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Search result"
+msgstr "Søkeresultat"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No title"
+msgstr "Ingen tittel"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No description. Search engines pick text from the page."
+msgstr "Ingen beskrivelse. Søkemotorer velger tekst fra siden."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Facebook, LinkedIn"
+msgstr "Facebook, LinkedIn"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "X"
+msgstr "X"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No image"
+msgstr "Ikke noe bilde"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown version"
+msgstr "Markdown-versjon"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Save the entry to see its Markdown version."
+msgstr "Lagre oppføringen for å se Markdown-versjonen."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Reading the entry…"
+msgstr "Leser oppføringen …"
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "This content type has no Markdown version."
+msgstr "Denne innholdstypen har ingen Markdown-versjon."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "This entry has no address of its own, so no Markdown version."
+msgstr "Denne oppføringen har ingen egen adresse, og dermed ingen Markdown-versjon."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Served once the entry is published. This is the last saved version."
+msgstr "Vises når oppføringen er publisert. Dette er sist lagrede versjon."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No sharing image. Platforms show a small card without one."
+msgstr "Ikke noe delingsbilde. Uten det viser plattformene et lite kort."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The meta image, as it is shared."
+msgstr "Metabildet, slik det deles."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The fallback image from the SEO settings, as it is shared."
+msgstr "Reservebildet fra SEO-innstillingene, slik det deles."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The image this content type shares, as it is shared."
+msgstr "Bildet denne innholdstypen deler, slik det deles."
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The ring marks its focal point."
+msgstr "Ringen viser fokuspunktet."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "How this entry's page looks when it is found in search, shared, or read by AI tools as Markdown. The cards follow your edits; the address and the Markdown follow the last save."
+msgstr "Slik ser siden til denne oppføringen ut når den blir funnet i søk, delt eller lest av AI-verktøy som Markdown. Kortene følger endringene dine; adressen og Markdown-teksten følger siste lagring."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Previews"
+msgstr "Forhåndsvisninger"

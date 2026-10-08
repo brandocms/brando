@@ -17831,3 +17831,98 @@ msgstr ""
 msgctxt "crawler access"
 msgid "Block"
 msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Search result"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No title"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No description. Search engines pick text from the page."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Facebook, LinkedIn"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "X"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No image"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown version"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Save the entry to see its Markdown version."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Reading the entry…"
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "This content type has no Markdown version."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "This entry has no address of its own, so no Markdown version."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "Served once the entry is published. This is the last saved version."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "No sharing image. Platforms show a small card without one."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The meta image, as it is shared."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The fallback image from the SEO settings, as it is shared."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The image this content type shares, as it is shared."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_previews.ex
+#, elixir-autogen, elixir-format
+msgid "The ring marks its focal point."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "How this entry's page looks when it is found in search, shared, or read by AI tools as Markdown. The cards follow your edits; the address and the Markdown follow the last save."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Previews"
+msgstr ""

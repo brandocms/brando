@@ -140,6 +140,7 @@
    Block is the one choice tinted red, so a blocked crawler stands out. */
 .seo-segmented {
   display: inline-flex;
+  flex-shrink: 0;
   border: 1px solid var(--brando-line);
   border-radius: 5px;
   background: var(--brando-surface);

@@ -14,6 +14,9 @@ The HTML page names it in its head (`render_hreflangs`):
 <link rel="alternate" type="text/markdown" href="https://example.com/projects/sommerro.md">
 ```
 
+The meta drawer's **Previews** tab shows the Markdown path and the start of
+the Markdown, from the last save.
+
 ## Which entries
 
 A blueprint has a Markdown version when it has a URL of its own

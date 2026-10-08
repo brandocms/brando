@@ -43,7 +43,15 @@ defmodule Brando.Villain.Markdown.HTML do
   @doc "Markdown for a list of MDEx block nodes."
   @spec render([struct()] | MDEx.Document.t()) :: String.t()
   def render(%MDEx.Document{nodes: []}), do: ""
-  def render(%MDEx.Document{} = document), do: document |> MDEx.to_markdown!(@render_options) |> String.trim()
+
+  def render(%MDEx.Document{} = document) do
+    document
+    |> MDEx.to_markdown!(@render_options)
+    |> String.trim()
+    # The writer escapes every `!`; only one before `[` starts an image.
+    |> String.replace(~r/\\!(?!\[)/, "!")
+  end
+
   def render(nodes) when is_list(nodes), do: render(%MDEx.Document{nodes: nodes})
 
   @doc "The MDEx document for parsed HTML nodes."

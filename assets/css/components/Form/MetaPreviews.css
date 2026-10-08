@@ -1,0 +1,213 @@
+/* The Previews tab of an entry's Meta drawer (components/form/meta_previews.ex):
+   the search result, the Open Graph and X cards, and the Markdown version. */
+
+/* The drawer widens while its Previews tab is open, as for Structured data. */
+.drawer.media-workspace-drawer.editor-workspace-drawer.narrow.previews-open {
+  width: min(1180px, 100vw);
+}
+
+.meta-previews {
+  display: grid;
+  gap: 16px;
+  color: var(--brando-ink);
+  font: 14px/20px "Main", sans-serif;
+
+  p { margin: 0; padding: 0; }
+  :is(a, [tabindex]):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
+}
+
+.meta-previews-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.meta-preview-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--brando-line);
+  border-radius: 8px;
+  background: var(--brando-surface);
+}
+
+.meta-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  color: var(--brando-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+
+  [data-icon] { width: 14px; height: 14px; }
+}
+
+/* Search result */
+.meta-preview-site {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--brando-ink);
+  font-size: 13px;
+
+  span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+.meta-preview-favicon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--brando-accent);
+}
+
+.meta-preview-search-title {
+  color: var(--brando-accent);
+  font-size: 19px;
+  line-height: 26px;
+  overflow-wrap: anywhere;
+}
+
+.meta-preview-search-description {
+  color: var(--brando-muted);
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+/* Shared image, cut to the card's shape */
+.meta-preview-image {
+  position: relative;
+  overflow: hidden;
+  background: var(--brando-surface-selected);
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+}
+
+.meta-preview-image--og { aspect-ratio: 1.91; }
+.meta-preview-image--x { aspect-ratio: 2; border-radius: 12px; }
+
+.meta-preview-focal {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+
+  circle {
+    fill: none;
+    stroke: var(--brando-surface);
+    stroke-width: 2;
+    filter: drop-shadow(0 0 1px var(--brando-overlay));
+  }
+}
+
+.meta-preview-no-image {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--brando-muted);
+  font-size: 12px;
+}
+
+/* Open Graph: the image runs to the card's edges, the text sits on a grey
+   strip under it, as Facebook and LinkedIn show it. */
+.meta-preview-og {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--brando-surface-shaded);
+
+  .meta-preview-label { margin: 0; padding: 12px 16px; background: var(--brando-surface); }
+}
+
+.meta-preview-og-text {
+  display: grid;
+  gap: 2px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--brando-line);
+
+  span { color: var(--brando-muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+  strong { font-size: 15px; font-weight: 500; line-height: 21px; overflow-wrap: anywhere; }
+}
+
+/* X: a rounded image with the site's host over its corner */
+.meta-preview-x-media { position: relative; }
+
+.meta-preview-x-host {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--brando-overlay);
+  color: var(--brando-surface);
+  font-size: 12px;
+}
+
+.meta-preview-x-title { color: var(--brando-muted); font-size: 13px; overflow-wrap: anywhere; }
+
+/* Markdown version */
+.meta-preview-markdown {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+
+  .meta-preview-label { display: block; margin: 0; }
+}
+
+.meta-preview-markdown-path {
+  color: var(--brando-ink);
+  font-family: theme(typography.families.mono);
+  font-size: 12px;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; text-underline-offset: 3px; }
+}
+
+.meta-preview-markdown-text {
+  margin: 0;
+  padding: 16px 20px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--brando-line);
+  border-radius: 8px;
+  background: var(--brando-surface-shaded);
+  color: var(--brando-ink);
+  font-family: theme(typography.families.mono);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  &[data-truncated="true"]::after { content: "\2026"; display: block; color: var(--brando-muted); }
+}
+
+.meta-preview-empty,
+.meta-preview-note {
+  color: var(--brando-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+@media (max-width: 760px) {
+  .meta-previews-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Drawers give a toggle's track a faint tint meant for dark surfaces; on the
+   meta drawer's white an unchecked No snippet would read as no control. */
+.drawer.editor-workspace-drawer .meta-drawer-fields .switch input:not(:checked) + .slider {
+  background-color: var(--brando-line);
+}

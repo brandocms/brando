@@ -206,6 +206,11 @@ defmodule Brando.Villain.MarkdownTest do
       assert HTML.to_markdown(html) == "![A](https://cdn.example.com/a.jpg)"
     end
 
+    test "an exclamation mark is only escaped where it would start an image" do
+      assert HTML.to_markdown("<h1>Welcome!</h1><p>Not an image: ![x](y)</p>") ==
+               "# Welcome!\n\nNot an image: !\\[x\\](y)"
+    end
+
     test "already written Markdown passes through" do
       assert HTML.to_markdown("<div><p>Intro</p><brando-markdown>## Kept\n\n- *as is*</brando-markdown></div>") ==
                "Intro\n\n## Kept\n\n- *as is*"
