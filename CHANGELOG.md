@@ -1677,7 +1677,11 @@ production dump.
   its drawer is open and unlocked when it closes (Done, ×, the backdrop or
   Escape), and a multi-select when its options close. Locks belong to a
   browser tab: someone with the entry open in two tabs locks a field in
-  each, and closing one tab unlocks only its field.
+  each, and closing one tab unlocks only its field. Two editors who leave
+  one field at once end with the same value. AI text and other values the
+  form fills in reach the other editors at once, an editor who opens an
+  entry without block fields gets the others' unsaved values, and a
+  reconnect no longer sends the browser's old values over newer ones.
 
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is
