@@ -10,29 +10,29 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/files/file.ex:40
+#: lib/brando/files/file.ex
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr "Filnavn"
 
-#: lib/brando/files/file.ex:83
+#: lib/brando/files/file.ex
 #, elixir-autogen, elixir-format
-msgid "file"
-msgstr "fil"
+msgid "Not in use"
+msgstr "Ikke i bruk"
 
-#: lib/brando/files/file.ex:84
-#, elixir-autogen, elixir-format
-msgid "files"
-msgstr "filer"
-
-#: lib/brando/files/file.ex:42
+#: lib/brando/files/file.ex
 #, elixir-autogen, elixir-format
 msgid "Replace file"
 msgstr "Erstatt fil"
 
-#: lib/brando/files/file.ex:41
+#: lib/brando/files/file.ex
 #, elixir-autogen, elixir-format
-msgid "Not in use"
-msgstr "Ikke i bruk"
+msgid "file"
+msgstr "fil"
+
+#: lib/brando/files/file.ex
+#, elixir-autogen, elixir-format
+msgid "files"
+msgstr "filer"

@@ -158,6 +158,24 @@ jobs:
       - name: Reject compile-connected dependency cycles
         run: mix xref graph --format cycles --label compile-connected --fail-above 0
 
+      # `--check-up-to-date` only compares the POT files, so extract and merge
+      # for real and require a clean tree: every string in the code is in the
+      # POT and PO files, and no message whose call was removed is left over.
+      # The Norwegian translations themselves are checked by
+      # test/brando/gettext_test.exs. See TRANSLATIONS.md.
+      - name: Reject out-of-date Gettext catalogues
+        run: |
+          mix gettext.extract --merge > /dev/null
+          if [ -n "$(git status --porcelain --untracked-files=all -- priv/gettext)" ]; then
+            git status --short -- priv/gettext
+            git diff -- priv/gettext
+            echo "::error::The Gettext catalogues are out of date. Run mix gettext.extract --merge, translate the new Norwegian entries and commit priv/gettext."
+            exit 1
+          fi
+
+      - name: Check the Gettext merge driver
+        run: python3 scripts/gettext-merge-driver --self-test
+
   docs:
     name: Published documentation
     runs-on: ubuntu-latest

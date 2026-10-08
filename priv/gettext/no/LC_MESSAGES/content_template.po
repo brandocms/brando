@@ -10,24 +10,24 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/content/template.ex:66
+#: lib/brando/content/template.ex
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr "Blokker"
 
-#: lib/brando/content/template.ex:68
+#: lib/brando/content/template.ex
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/content/template.ex:41
+#: lib/brando/content/template.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/content/template.ex:42
+#: lib/brando/content/template.ex
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr "Kategori"

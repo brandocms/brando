@@ -10,13 +10,14 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/content/module_set_module.ex:36
+#: lib/brando/content/module_set_module.ex
 #, elixir-autogen, elixir-format
 msgid "module set"
 msgstr ""
 
-#: lib/brando/content/module_set_module.ex:37
+#: lib/brando/content/module_set_module.ex
 #, elixir-autogen, elixir-format
 msgid "module sets"
 msgstr ""

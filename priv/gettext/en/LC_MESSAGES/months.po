@@ -9,10 +9,20 @@
 msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
-"Language: en"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "month_1"
 msgstr "January"
+
+msgid "month_10"
+msgstr "October"
+
+msgid "month_11"
+msgstr "November"
+
+msgid "month_12"
+msgstr "December"
 
 msgid "month_2"
 msgstr "February"
@@ -37,12 +47,3 @@ msgstr "August"
 
 msgid "month_9"
 msgstr "September"
-
-msgid "month_10"
-msgstr "October"
-
-msgid "month_11"
-msgstr "November"
-
-msgid "month_12"
-msgstr "December"

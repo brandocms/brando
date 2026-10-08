@@ -10,23 +10,24 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/navigation/menu.ex:92
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:94
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Link"
 msgstr ""
 
-#: lib/brando/navigation/item.ex:45
+#: lib/brando/navigation/item.ex
 #, elixir-autogen, elixir-format
 msgid "menu item"
 msgstr ""
 
-#: lib/brando/navigation/item.ex:46
+#: lib/brando/navigation/item.ex
 #, elixir-autogen, elixir-format
 msgid "menu items"
 msgstr ""

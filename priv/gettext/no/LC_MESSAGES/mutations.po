@@ -10,13 +10,13 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "create"
 msgstr "Ny %{singular} opprettet"
 
-msgid "update"
-msgstr "%{singular} oppdatert"
-
 msgid "delete"
 msgstr "%{singular} slettet"
+
+msgid "update"
+msgstr "%{singular} oppdatert"

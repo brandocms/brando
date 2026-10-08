@@ -8,111 +8,111 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/forms/messages.ex:88
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "A required box is not ticked"
 msgstr "En påkrevd avkrysningsboks er ikke krysset av"
 
-#: lib/brando/forms/messages.ex:87
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "A required field is empty"
 msgstr "Et påkrevd felt er tomt"
 
-#: lib/brando/forms/messages.ex:86
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Field errors"
 msgstr "Feil i felt"
 
-#: lib/brando/forms/messages.ex:57
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Messages"
 msgstr "Meldinger"
 
-#: lib/brando/forms/messages.ex:89
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "No choice is ticked"
 msgstr "Ingen valg er krysset av"
 
-#: lib/brando/forms/messages.ex:92
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Not a date"
 msgstr "Ikke en dato"
 
-#: lib/brando/forms/messages.ex:91
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Not a number"
 msgstr "Ikke et tall"
 
-#: lib/brando/forms/messages.ex:90
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Not an email address"
 msgstr "Ikke en e-postadresse"
 
-#: lib/brando/forms/messages.ex:93
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Not one of the choices"
 msgstr "Ikke ett av valgene"
 
-#: lib/brando/forms/messages.ex:69
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Not sent"
 msgstr "Ikke sendt"
 
-#: lib/brando/forms/messages.ex:60
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Sending"
 msgstr "Sending"
 
-#: lib/brando/forms/messages.ex:64
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Sent"
 msgstr "Sendt"
 
-#: lib/brando/forms/messages.ex:65
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Shown in place of a form once it has been sent."
 msgstr "Vises i stedet for et skjema når det er sendt."
 
-#: lib/brando/forms/messages.ex:70
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Shown when a form could not be sent, and no field says why."
 msgstr "Vises når et skjema ikke kunne sendes, og ingen felt sier hvorfor."
 
-#: lib/brando/forms/messages.ex:75
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Shown when a visitor sends too many forms in a short time."
 msgstr "Vises når en besøkende sender for mange skjemaer på kort tid."
 
-#: lib/brando/forms/messages.ex:80
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Shown when the Turnstile check does not let a submission through."
 msgstr "Vises når Turnstile-sjekken ikke slipper en innsending gjennom."
 
-#: lib/brando/forms/messages.ex:79
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Spam check failed"
 msgstr "Spamsjekken feilet"
 
-#: lib/brando/forms/messages.ex:61
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Submit button"
 msgstr "Sendeknapp"
 
-#: lib/brando/forms/messages.ex:94
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Too long"
 msgstr "For langt"
 
-#: lib/brando/forms/messages.ex:74
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Too many submissions"
 msgstr "For mange innsendinger"
 
-#: lib/brando/forms/messages.ex:48
-#: lib/brando/forms/messages.ex:49
+#: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "form messages"
 msgstr "skjemameldinger"

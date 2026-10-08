@@ -1,3 +1,6 @@
+msgid "all"
+msgstr ""
+
 ## This file is a PO Template file.
 ##
 ## "msgid"s here are often extracted from source code.
@@ -8,9 +11,6 @@
 ## date. Leave "msgstr"s empty as changing them here as no
 ## effect: edit them in PO (.po) files instead.
 msgid "selection"
-msgstr ""
-
-msgid "all"
 msgstr ""
 
 msgid "single"

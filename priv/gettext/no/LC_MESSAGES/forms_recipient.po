@@ -8,20 +8,21 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/forms/form.ex:193
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Blind copy"
 msgstr "Blindkopi"
 
-#: lib/brando/forms/form.ex:192
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-post"
 
-#: lib/brando/forms/form.ex:191
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"

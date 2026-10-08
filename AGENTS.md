@@ -24,6 +24,7 @@
   - Unit only: `mix test --cover`
   - Unit + E2E merged: `mix test --cover --export-coverage unit`, then an E2E run with `BRANDO_E2E_COVER=1` (the server exports `cover/e2e.coverdata` on shutdown), then `mix test.coverage` in the Brando root
   - lcov for Codecov (after the above): `MIX_ENV=test mix run --no-start .github/scripts/coverage_lcov.exs` writes `cover/lcov.info`
+- Translations: add strings in code, run `mix gettext.extract --merge` (never add or remove catalogue entries by hand), translate the new Norwegian entries; see [TRANSLATIONS.md](TRANSLATIONS.md), which also covers the merge driver for rebases.
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`

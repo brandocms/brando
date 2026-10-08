@@ -10,8 +10,8 @@
 msgid "create"
 msgstr ""
 
-msgid "update"
+msgid "delete"
 msgstr ""
 
-msgid "delete"
+msgid "update"
 msgstr ""
