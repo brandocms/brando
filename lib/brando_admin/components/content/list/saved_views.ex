@@ -63,8 +63,14 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
       :modified?,
       selected != nil and current != Params.sanitize(selected.params, assigns.listing, assigns.schema)
     )
-    |> assign(:can_manage?, selected != nil and ListingViews.can_manage?(assigns.current_user, selected))
+    |> assign(:can_manage?, can_manage?(selected, assigns.current_user, assigns.moderator?))
   end
+
+  # As `ListingViews.can_manage?/2`, with the permission looked up once;
+  # the context checks it again on every change.
+  defp can_manage?(nil, _user, _moderator?), do: false
+  defp can_manage?(%View{creator_id: id}, %{id: id}, _moderator?), do: true
+  defp can_manage?(%View{shared: shared}, _user, moderator?), do: shared and moderator?
 
   defp default_id(user, schema, listing) do
     case ListingViews.default_view(user, schema, listing) do
