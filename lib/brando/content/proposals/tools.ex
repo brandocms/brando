@@ -20,6 +20,7 @@ defmodule Brando.Content.Proposals.Tools do
   """
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content
   alias Brando.Content.BlockSlots
   alias Brando.Content.Proposals
@@ -374,7 +375,14 @@ defmodule Brando.Content.Proposals.Tools do
       end
 
     assets = entry_assets(schema, entry)
-    dimensions = dimensions(roots |> Map.values() |> List.flatten(), Map.values(assets))
+    blocks = roots |> Map.values() |> List.flatten()
+
+    # Entries the blocks choose or link to are named only when the actor may
+    # read them; `details/2` finds the readable ones under `:identifiers`.
+    dimensions =
+      blocks
+      |> dimensions(Map.values(assets))
+      |> Map.put(:identifiers, blocks |> linked_identifier_ids() |> readable_identifiers(actor))
 
     head =
       %{
@@ -394,7 +402,7 @@ defmodule Brando.Content.Proposals.Tools do
           ),
         media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end)
       }
-      |> put_present(:languages, languages(entry))
+      |> put_present(:languages, languages(entry, actor))
 
     Enum.find_value(@outline_budgets, fn budget ->
       {blocks, described} =
@@ -544,6 +552,7 @@ defmodule Brando.Content.Proposals.Tools do
     options =
       module
       |> Proposals.selection_options(args["language"])
+      |> readable_options(actor)
       |> Enum.filter(&String.contains?(String.downcase(option_title(&1)), query))
 
     %{
@@ -760,6 +769,55 @@ defmodule Brando.Content.Proposals.Tools do
   defp plain(%{} = text), do: text["en"] || text |> Map.values() |> List.first()
   defp plain(text), do: text
 
+  # A datasource lists whatever its code queries, whoever asks. Keep the
+  # options the actor may read; an option's id is the identifier it chooses.
+  defp readable_options(options, actor) do
+    readable = options |> Enum.map(&Map.get(&1, :id)) |> readable_identifiers(actor)
+    Enum.filter(options, &readable?(readable, Map.get(&1, :id)))
+  end
+
+  # The identifiers among `ids` that `actor` may read, filtered as search and
+  # the admin's pickers filter them (`Boundary.identifiers/1`), in the
+  # actor's scope. Without group authorization, all of them.
+  defp readable_identifiers(ids, actor) do
+    ids = ids |> Enum.filter(&is_integer/1) |> Enum.uniq()
+
+    cond do
+      not Brando.Authorization.enabled?() ->
+        :all
+
+      ids == [] ->
+        MapSet.new()
+
+      true ->
+        Boundary.with_scope(Boundary.actor_scope(actor), fn ->
+          from(i in Brando.Content.Identifier, where: i.id in ^ids, select: i.id)
+          |> Boundary.identifiers()
+          |> Brando.Repo.all()
+          |> MapSet.new()
+        end)
+    end
+  end
+
+  defp readable?(:all, _id), do: true
+  defp readable?(%MapSet{} = readable, id), do: MapSet.member?(readable, id)
+  defp readable?(_readable, _id), do: false
+
+  # The identifiers that blocks, their table rows and their children choose
+  # (a datasource selection) or link to (link variables).
+  defp linked_identifier_ids(blocks) do
+    Enum.flat_map(blocks, fn block ->
+      vars = loaded(Map.get(block, :vars)) ++ Enum.flat_map(loaded(Map.get(block, :table_rows)), &loaded(&1.vars))
+
+      Enum.map(loaded(Map.get(block, :block_identifiers)), & &1.identifier_id) ++
+        for(%{type: :link, identifier_id: id} <- vars, is_integer(id), do: id) ++
+        linked_identifier_ids(loaded(Map.get(block, :children)))
+    end)
+  end
+
+  defp loaded(list) when is_list(list), do: list
+  defp loaded(_not_loaded), do: []
+
   # Datasources usually list identifiers; a custom one may list its own maps.
   defp selection_option(%Brando.Content.Identifier{} = identifier) do
     %{
@@ -928,44 +986,74 @@ defmodule Brando.Content.Proposals.Tools do
       media: ref_media(block.refs, dimensions),
       values: var_values(block.vars, dimensions)
     }
-    |> put_present(:table, table_rows(block))
-    |> put_present(:selection, selection(block))
+    |> put_present(:table, table_rows(block, dimensions))
+    |> put_present(:selection, selection(block, dimensions))
     |> put_present(:anchor, block.anchor)
     |> put_present(:description, block.description)
     |> put_present(:settings, ref_settings(block.refs))
     |> put_present(:refs_off, for(%{active: false, name: name} <- block.refs, do: name))
   end
 
-  defp table_rows(%{table_rows: rows}) when is_list(rows),
-    do: Enum.map(rows, fn row -> Map.new(row.vars || [], &{&1.key, var_value(&1, %{})}) end)
+  defp table_rows(%{table_rows: rows}, dimensions) when is_list(rows),
+    do:
+      Enum.map(rows, fn row -> Map.new(row.vars || [], &{&1.key, var_value(&1, Map.take(dimensions, [:identifiers]))}) end)
 
-  defp table_rows(_block), do: nil
+  defp table_rows(_block, _dimensions), do: nil
 
-  defp selection(%{block_identifiers: [_ | _] = chosen}),
-    do: Enum.map(chosen, &%{identifier_id: &1.identifier_id, title: &1.identifier && &1.identifier.title})
+  # A chosen entry the actor may not read keeps its place, without its title.
+  defp selection(%{block_identifiers: [_ | _] = chosen}, dimensions) do
+    Enum.map(chosen, fn %{identifier_id: id} = chosen ->
+      if readable?(dimensions[:identifiers], id),
+        do: %{identifier_id: id, title: chosen.identifier && chosen.identifier.title},
+        else: %{identifier_id: id}
+    end)
+  end
 
-  defp selection(_block), do: nil
+  defp selection(_block, _dimensions), do: nil
 
   defp ref_settings(refs),
     do: for(ref <- refs, current = RefConfig.current(ref), current != %{}, into: %{}, do: {ref.name, current})
 
-  # Other language versions, and whether they follow this entry by sync.
-  defp languages(entry) do
+  # Other language versions the actor may read, and whether they follow this
+  # entry by sync.
+  defp languages(entry, actor) do
     case Brando.Content.Proposals.Languages.versions(entry) do
       {_role, []} ->
         nil
 
       {role, versions} ->
-        %{
-          role: role && to_string(role),
-          versions: versions,
-          note:
-            if(role == :source,
-              do:
-                "Synchronized versions get this entry's structure and media when a proposal is applied, with its new text to translate; change them only for other things.",
-              else: "Change another language version only when the editor asks; it is its own entry."
-            )
-        }
+        language_versions(role, readable_versions(entry, versions, actor))
+    end
+  end
+
+  defp language_versions(_role, []), do: nil
+
+  defp language_versions(role, versions) do
+    %{
+      role: role && to_string(role),
+      versions: versions,
+      note:
+        if(role == :source,
+          do:
+            "Synchronized versions get this entry's structure and media when a proposal is applied, with its new text to translate; change them only for other things.",
+          else: "Change another language version only when the editor asks; it is its own entry."
+        )
+    }
+  end
+
+  defp readable_versions(%schema{}, versions, actor) do
+    if Brando.Authorization.enabled?() do
+      ids = Enum.map(versions, & &1.id)
+
+      readable =
+        from(e in schema, where: e.id in ^ids, select: e.id)
+        |> Catalog.scoped_query(schema, actor, :read)
+        |> Brando.Repo.all()
+        |> MapSet.new()
+
+      Enum.filter(versions, &MapSet.member?(readable, &1.id))
+    else
+      versions
     end
   end
 
@@ -1075,9 +1163,10 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp var_value(%{type: :boolean} = var, _), do: var.value_boolean
 
-  # A link names the entry it points to; the editor knows a project by its title.
-  defp var_value(%{type: :link, identifier: %{title: title}} = var, _) when is_binary(title),
-    do: %{entry: shorten(title), content_type: Codec.content_type(var.identifier.schema), id: var.identifier.entry_id}
+  # A link names the entry it points to; the editor knows a project by its
+  # title. Of an entry the actor may not read, it says only that.
+  defp var_value(%{type: :link, identifier_id: id} = var, dimensions) when is_integer(id),
+    do: link_value(var, readable?(dimensions[:identifiers], id))
 
   defp var_value(%{type: kind} = var, dimensions) when kind in [:image, :video] do
     case Map.get(var, :"#{kind}_id") do
@@ -1096,6 +1185,13 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   defp var_value(var, _), do: shorten(var.value)
+
+  defp link_value(_var, false), do: %{unreadable: true}
+
+  defp link_value(%{identifier: %{title: title} = identifier}, true) when is_binary(title),
+    do: %{entry: shorten(title), content_type: Codec.content_type(identifier.schema), id: identifier.entry_id}
+
+  defp link_value(var, true), do: shorten(var.value)
 
   # A content type the actor may read, described as unknown otherwise, so a
   # tool tells nothing about types the actor cannot see.
