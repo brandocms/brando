@@ -15,6 +15,7 @@
   - **Individual tests** (server already running): `cd e2e/playwright && pnpm playwright test tests/path/to/test.spec.js`
   - **Start server manually**: `cd e2e && source .envrc && MIX_ENV=e2e PORT=4444 mix phx.server`
   - **Seeding**: `cd e2e && source .envrc && BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs`
+  - **Screenshots**: use `e2e/scripts/server.sh`, `e2e/scripts/shoot.mjs` and `scripts/pr-shots` (see "Screenshot tools" in the [Admin UI design guide](docs/admin-ui-design.md)); never `pkill` a server or seed with SQL.
   - **E2E migrations**: `e2e/priv/repo/migrations` is a **symlink** to `priv/repo/migrations/`. The e2e project shares the same test migration file as unit tests. Any schema changes to the monolithic test migration file automatically apply to both.
 - Test coverage (Elixir's built-in `:cover`; CI runs it weekly via `.github/workflows/coverage.yml`):
   - Unit only: `mix test --cover`
