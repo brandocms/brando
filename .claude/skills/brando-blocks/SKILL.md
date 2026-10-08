@@ -616,6 +616,34 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   session state, not a state replacement. Editors without `:update` on the entry join
   read-only (the session refuses their ops). Ops must stay pure: the session and every
   replica must reach the same state from the same ops.
+- **An event sends the fields it changed**: `Block.assign_block_form/2` compares the
+  block's form before and after (`Ops.field_op/5`) and emits `{:set_field, uid, path,
+  value, rev}` for one changed leaf, `{:set_fields, uid, [{path, value}], rev}` for
+  several, nothing for none — never the whole diff, so another editor's in-flight change
+  to a different field survives. List items are named by `id`/`uid`/`key`/`sync_uid`
+  (never by index). A list that gained, lost or reordered items goes as `{:list, before,
+  after}`, which the reducer merges by identity with the list as it is now
+  (`Ops.merge_list/3`), so two editors each adding an item both keep it; a list whose
+  items have no identity (a var's options) is set whole, last arrival wins. Within a
+  second of a `replace_form` the event can carry the browser's old values for what that
+  change touched: `@replaced` keeps the form before AND the one that replaced it, and a
+  leaf is dropped only where the two differ and the event sets it back to the old value
+  — never drop a field the remote change did not touch (a backspace, a toggle set back),
+  nor the event's own `_target` field (`assign_block_form/3`'s `target:`), which is a
+  deliberate change even when it restores the old value.
+  A field op made while its rows were new names them by uid; the reducer
+  matches uid- and id-named items through `rel_ids`, so both land on one row. `{:update,
+  ...}` remains only for forms that cannot be compared. Last arrival wins per field. The
+  replica's pending ops keep this editor's value until the session confirms it. Other
+  editors' changes refresh a root even while it is in use (`remount_js: :skip_focused`);
+  the input with the focus keeps its value (LiveView, and
+  `Presence/pendingInputs.js` for rich text's hidden input) and takes another editor's
+  value when the editor leaves it, if they did not type since. Server answers to this
+  editor's own earlier keystrokes are never noted (`test/javascript/pending_inputs.test.mjs`).
+- **Order is fractional keys in the session** (`BlockField.FractionalKey`, `Ops.keys`):
+  local inserts and moves are rewritten to `{:key, key}` positions (`Ops.keyed/2`) so
+  two inserts at one place both land there. Saves still write the integer `sequence`
+  from list order; there is no key column.
 - **Delete undo is store replay**: local deletes stash `Ops.bin_snapshot/2` (structure +
   diffs + statuses + db ids + location) BEFORE the delete op; undo replays it as a
   `{:restore, snapshot}` op — restored roots mount fresh from a re-materialized seed form,

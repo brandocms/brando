@@ -47,7 +47,7 @@ export default app => ({
   },
 
   locked() {
-    return !!this.el.closest('.block-locked, [data-presence-locked="true"], .field-locked') || this.el.dataset.tiptapReadonly === 'true'
+    return !!this.el.closest('[data-presence-locked="true"], .field-locked') || this.el.dataset.tiptapReadonly === 'true'
   },
 
   activate(event, action) {
@@ -291,6 +291,10 @@ export default app => ({
     this.el.addEventListener('brando:tiptap:clear', this._clearListener)
     this.el.addEventListener('brando:tiptap:ai', this._aiListener)
     this.el.addEventListener('brando:tiptap:activate', this._activateListener)
+    // Another editor's value, taken when this editor left (see
+    // initializeLiveSocket.js): show what the input now holds.
+    this._syncListener = () => this.replaceContent()
+    this.el.addEventListener('brando:tiptap:sync', this._syncListener)
     this.el.addEventListener('compositionend', this._compositionEnd)
     this._lockObserver = new MutationObserver(() => this.updateEditable())
     this.observeEditable()
@@ -352,6 +356,7 @@ export default app => ({
     this.el.removeEventListener('brando:tiptap:clear', this._clearListener)
     this.el.removeEventListener('brando:tiptap:ai', this._aiListener)
     this.el.removeEventListener('brando:tiptap:activate', this._activateListener)
+    this.el.removeEventListener('brando:tiptap:sync', this._syncListener)
     this.el.removeEventListener('compositionend', this._compositionEnd)
     this._handlers.forEach(ref => this.removeHandleEvent?.(ref))
     const index = app.components.indexOf(this)

@@ -169,6 +169,42 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(row.block.refs) == 1
   end
 
+  # #1 (field ops): the same with a save that closes the editor. B's ops on
+  # the new block, replayed onto the saved rows, named its ref by uid; the
+  # next keystroke named it by id, and B's save inserted a second, nameless
+  # ref.
+  test "typing in a new block while another editor saves and closes, then saving, keeps one ref", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    new = added_block(a, b, c)
+
+    type(b, new, "<p>B first</p>")
+    await(fn -> shown_text(a, new) == "<p>B first</p>" end)
+
+    save_read(a)
+    type(b, new, "<p>B typed during A's save</p>")
+    # the keystroke reaches the session before A's save writes
+    await(fn -> inspect(session_state(c.identity).diffs[new]) =~ "during A's save" end)
+    save_write(a)
+
+    # B's form has the saved rows' ids: its next keystroke names the ref by
+    # id, where the replayed one named it by uid
+    await(fn ->
+      ref_id =
+        b |> render() |> form_params("#entry_block_form-#{new}") |> get_in(["entry_block", "block", "refs", "0", "id"])
+
+      ref_id not in [nil, ""]
+    end)
+
+    type(b, new, "<p>B after the save</p>")
+    save_read(b)
+    save_write(b)
+    await(fn -> Map.new(texts(c.identity))[new] == "<p>B after the save</p>" end)
+
+    [row] = Enum.filter(rows(c.identity), &(&1.block.uid == new))
+    assert length(row.block.refs) == 1
+  end
+
   test "an editor who types in a new block during their own save, then saves again, keeps it all", c do
     a = open(c.conn, c.identity)
     stay(a)
@@ -385,6 +421,62 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       end)
 
     assert_receive {:edit_session, _, %{kind: :rebase}}, 2_000
+  end
+
+  # Round 3 #1 (field ops): A backspaced in one field while B typed in
+  # another field of the same block, and A's edit was taken for an echo of
+  # the form before B's change, and dropped.
+  test "a backspace right after another editor typed elsewhere in the block is kept", c do
+    [first | _] = c.uids
+    desc = ["entry_block", "block", "description"]
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+
+    set = fn view, path, value ->
+      selector = "#entry_block_form-#{first}"
+      params = view |> render() |> form_params(selector) |> put_in(path, value) |> Map.put("_target", path)
+      view |> element(selector) |> render_change(params)
+    end
+
+    shown = fn view, path -> view |> render() |> form_params("#entry_block_form-#{first}") |> get_in(path) end
+
+    set.(a, desc, "abc")
+    await(fn -> shown.(b, desc) == "abc" end)
+    set.(b, text_path(), "<p>B typing</p>")
+    await(fn -> shown.(a, text_path()) == "<p>B typing</p>" end)
+    set.(a, desc, "abcd")
+    set.(a, desc, "abc")
+
+    await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abc" end)
+    await(fn -> shown.(b, desc) == "abc" end)
+    assert shown.(a, text_path()) == "<p>B typing</p>"
+  end
+
+  # Round 4: A set the field B had just changed back to A's old value, and it
+  # was taken for an echo of the form before B's change.
+  test "setting a field back right after another editor changed it is kept", c do
+    [first | _] = c.uids
+    desc = ["entry_block", "block", "description"]
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+
+    set = fn view, value ->
+      selector = "#entry_block_form-#{first}"
+      params = view |> render() |> form_params(selector) |> put_in(desc, value) |> Map.put("_target", desc)
+      view |> element(selector) |> render_change(params)
+    end
+
+    shown = fn view -> view |> render() |> form_params("#entry_block_form-#{first}") |> get_in(desc) end
+
+    set.(a, "abc")
+    await(fn -> shown.(b) == "abc" end)
+    set.(b, "abcB")
+    await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abcB" end)
+    Process.sleep(100)
+    set.(a, "abc")
+
+    await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abc" end)
+    await(fn -> shown.(b) == "abc" end)
   end
 
   # #10: refreshing a root for another editor's change also rewrote its seed

@@ -148,8 +148,12 @@ export default (hooks, enableDebug = false) => {
   window.addEventListener('phx:b:component:remount_block', ({ detail }) => {
     const blockEl = document.querySelector(`[data-block-uid="${detail.uid}"]`)
     if (blockEl) {
+      // `skip_focused`: another editor changed a block this editor works in.
+      // The widget with the focus keeps what is being typed into it.
+      const active = document.activeElement
       app.components
         .filter((cmp) => blockEl.contains(cmp.el))
+        .filter((cmp) => !(detail.skip_focused && active && cmp.el.contains(active)))
         .forEach((cmp) => cmp.remount())
     }
   })

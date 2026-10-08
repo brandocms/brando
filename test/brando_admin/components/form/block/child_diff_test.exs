@@ -100,11 +100,12 @@ defmodule BrandoAdmin.Components.Form.Block.ChildDiffTest do
 
     socket = socket_for(Changeset.change(child), entry_block.entry, user)
 
+    # A keystroke goes to the store as the one field it changed.
     {socket, op1} = validate(socket, "description", %{"description" => "abc"})
-    assert {:update, "childY", %{"description" => "abc"}} = op1
+    assert {:set_field, "childY", ["description"], "abc", nil} = op1
 
     {_socket, op2} = validate(socket, "anchor", %{"description" => "abc", "anchor" => "z"})
-    assert {:update, "childY", _} = op2
+    assert {:set_field, "childY", ["anchor"], "z", nil} = op2
 
     # the op store is what save materializes from — both edits must be in it
     ops =

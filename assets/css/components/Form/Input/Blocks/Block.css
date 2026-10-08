@@ -2546,86 +2546,112 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
   }
 }
 
-/* Block presence glow — shows when another user is editing a block.
-   Static 2px ring stays on the block; the pulsing outer glow lives on a
-   pseudo-element and animates opacity (GPU-composited) rather than box-shadow,
-   which would force a full-block main-thread repaint every frame. */
-.block.block-presence-active {
-  box-shadow: 0 0 0 2px var(--presence-color, rgba(77, 144, 254, 0.6));
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: 0 0 7px 2px var(--presence-color-strong, rgba(77, 144, 254, 0.8));
-    opacity: 0;
-    pointer-events: none;
-    will-change: opacity;
-    animation: presence-pulse 2s ease-in-out infinite alternate;
-  }
-}
-
-/* Presence palette for block locks and unsaved-field marks — keyed off the
-   sticky data-presence-color-index attribute set through LiveView's JS
+/* Presence palette for field presence and unsaved-field marks — keyed off
+   the sticky data-presence-color-index attribute set through LiveView's JS
    commands (inline styles are not covered by the sticky mechanism,
    attributes are). Order matches PRESENCE_COLORS in
-   assets/src/Presence/blockLocks.js. */
-:is(.block, [data-dirty-by])[data-presence-color-index="0"] {
+   assets/src/Presence/fieldPresence.js. */
+[data-presence-color-index="0"] {
   --presence-color: rgba(77, 144, 254, 0.6);
   --presence-color-strong: rgba(77, 144, 254, 0.8);
+  --presence-ink: var(--brando-presence-0);
 }
 
-:is(.block, [data-dirty-by])[data-presence-color-index="1"] {
+[data-presence-color-index="1"] {
   --presence-color: rgba(72, 199, 142, 0.6);
   --presence-color-strong: rgba(72, 199, 142, 0.8);
+  --presence-ink: var(--brando-presence-1);
 }
 
-:is(.block, [data-dirty-by])[data-presence-color-index="2"] {
+[data-presence-color-index="2"] {
   --presence-color: rgba(245, 166, 35, 0.6);
   --presence-color-strong: rgba(245, 166, 35, 0.8);
+  --presence-ink: var(--brando-presence-2);
 }
 
-:is(.block, [data-dirty-by])[data-presence-color-index="3"] {
+[data-presence-color-index="3"] {
   --presence-color: rgba(168, 85, 247, 0.6);
   --presence-color-strong: rgba(168, 85, 247, 0.8);
+  --presence-ink: var(--brando-presence-3);
 }
 
-:is(.block, [data-dirty-by])[data-presence-color-index="4"] {
+[data-presence-color-index="4"] {
   --presence-color: rgba(239, 68, 68, 0.6);
   --presence-color-strong: rgba(239, 68, 68, 0.8);
+  --presence-ink: var(--brando-presence-4);
 }
 
-:is(.block, [data-dirty-by])[data-presence-color-index="5"] {
+[data-presence-color-index="5"] {
   --presence-color: rgba(20, 184, 166, 0.6);
   --presence-color-strong: rgba(20, 184, 166, 0.8);
+  --presence-ink: var(--brando-presence-5);
 }
 
-/* Block locked — another user is actively editing */
-.block.block-locked {
-  .block-content {
+/* Field presence: another editor is in this field of the block. Nothing is
+   locked — two editors can work in one block — the field takes their colour
+   and first name, and the block's toolbar says "Name · Field". All of it is
+   keyed off sticky attributes set by assets/src/Presence/fieldPresence.js. */
+/* A form field: the control takes the ring, the name sits at the right of
+   its label. A ref: the whole ref takes the ring, the name sits on its top
+   edge. Custom properties inherit, so the ring's colour reaches the control. */
+.field-wrapper[data-field-presence-user] {
+  position: relative;
+
+  > .field-base {
+    border-radius: 6px;
+    box-shadow: 0 0 0 2px var(--presence-ink, var(--brando-accent));
+  }
+
+  &::after {
+    content: attr(data-presence-name);
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--presence-ink, var(--brando-accent));
+    color: var(--brando-surface);
+    font: 500 11px/18px "Main", sans-serif;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
     pointer-events: none;
-    opacity: 0.6;
   }
+}
 
-  .block-toolbar {
-    pointer-events: auto;
-  }
+.block.ref_block[data-field-presence-user] {
+  box-shadow: 0 0 0 2px var(--presence-ink, var(--brando-accent));
+}
 
-  /* lock icon lives in CSS (an injected DOM node would be discarded by
-     LiveView patches), colored via the presence custom property */
-  .block-description::before {
-    content: "";
-    display: inline-block;
-    vertical-align: -2px;
-    width: 14px;
-    height: 14px;
-    margin-right: 7px;
-    flex-shrink: 0;
-    background-color: var(--presence-color, rgba(77, 144, 254, 0.6));
-    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>');
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-position: center;
-  }
+.block-toolbar[data-presence-tag]::after {
+  content: attr(data-presence-tag);
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--presence-ink, var(--brando-accent));
+  color: var(--brando-surface);
+  font: 500 11px/18px "Main", sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.block-toolbar[data-presence-label]::after {
+  content: attr(data-presence-label);
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  margin-left: 12px;
+  padding: 0 8px 0 18px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 9px 50%, var(--presence-ink, var(--brando-accent)) 4px, transparent 4.5px),
+    var(--brando-badge-bg);
+  color: var(--brando-ink);
+  font: 12px/22px "Main", sans-serif;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
 }

@@ -1,4 +1,4 @@
-import { getPresenceColorIndex } from './blockLocks'
+import { getPresenceColorIndex } from './fieldPresence'
 
 // Other editors' unsaved entry fields, marked on each field's presence label
 // (`[data-field-presence]`) with sticky attributes, so LiveView patches keep

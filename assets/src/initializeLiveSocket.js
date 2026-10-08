@@ -1,5 +1,6 @@
 import { LiveSocket } from 'phoenix_live_view'
 import { Socket } from 'phoenix'
+import pendingInputs from './Presence/pendingInputs'
 
 // Classes SortableJS owns at runtime, on elements that live inside the
 // LiveView-rendered tree.
@@ -24,6 +25,26 @@ const SORTABLE_RUNTIME_CLASSES = [
   'sortable-drag',
 ]
 
+// Block inputs while another editor's changes arrive (field presence,
+// #2992): see `Presence/pendingInputs.js`.
+const pending = pendingInputs()
+
+document.addEventListener('input', ({ target }) => pending.typed(target), true)
+
+document.addEventListener(
+  'focusout',
+  ({ target }) => {
+    // after LiveView has flushed the field's own debounced change
+    if (target?.closest?.('[data-block-uid]')) {
+      const widget = target.closest('[phx-hook]') || target
+      setTimeout(() => {
+        if (!widget.contains(document.activeElement)) pending.left(widget)
+      }, 0)
+    }
+  },
+  true
+)
+
 export default (hooks) => {
   let csrfToken = document
     .querySelector("meta[name='csrf-token']")
@@ -37,6 +58,7 @@ export default (hooks) => {
         for (const className of SORTABLE_RUNTIME_CLASSES) {
           if (from.classList.contains(className)) to.classList.add(className)
         }
+        if (from.tagName === 'INPUT' || from.tagName === 'TEXTAREA') pending.patching(from, to)
       },
     },
     metadata: {

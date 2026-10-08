@@ -524,6 +524,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
 
     socket
+    |> assign(:replaced, {socket.assigns[:form], form, System.monotonic_time(:millisecond)})
     |> assign(:form, form)
     |> assign_selected_identifiers()
     |> assign_hidden_block_fields()
@@ -1157,6 +1158,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   # patch — pushed from the Block so the event and the patch share one frame
   defp maybe_push_remount(socket, %{remount_js: true}) do
     push_event(socket, "b:component:remount_block", %{uid: socket.assigns.uid})
+  end
+
+  # Another editor's change to a block this editor works in: the widget with
+  # the focus keeps what is being typed.
+  defp maybe_push_remount(socket, %{remount_js: :skip_focused}) do
+    push_event(socket, "b:component:remount_block", %{uid: socket.assigns.uid, skip_focused: true})
   end
 
   defp maybe_push_remount(socket, _msg), do: socket
@@ -2293,13 +2300,47 @@ defmodule BrandoAdmin.Components.Form.Block do
   Exceptions that intentionally assign `:form` directly: live-preview
   render stamping (`rendered_html`/`rendered_at` only — materialization
   strips render artifacts anyway).
+
+  What reaches the edit session is the fields the event changed
+  (`Ops.field_op/5`), so someone working in another field of the block
+  keeps their change. `target:` is the input a `validate_block` event
+  names (`_target`).
   """
-  def assign_block_form(socket, form) do
+  def assign_block_form(socket, form, opts \\ []) do
+    op = form_op(socket, form, opts[:target])
+
     socket
     |> assign(:form, form)
     |> assign_hidden_block_fields()
-    |> emit_block_op({:update, socket.assigns.uid, Ops.block_diff_params(form.source)})
+    |> emit_block_op(op)
     |> assign_unused_collections()
+  end
+
+  # How long after another editor's change replaced this block's form an
+  # event can still carry the values the browser showed before it.
+  @stale_ms 1_000
+
+  defp form_op(socket, form, target) do
+    uid = socket.assigns.uid
+
+    with %{source: %Changeset{} = before} <- socket.assigns[:form],
+         {:ok, op} <- Ops.field_op(before, form.source, uid, replaced(socket), target) do
+      op
+    else
+      _ -> {:update, uid, Ops.block_diff_params(form.source)}
+    end
+  end
+
+  # The form before the last replace and the one that replaced it: the
+  # fields where they differ are the ones the other editor's change touched.
+  defp replaced(socket) do
+    case socket.assigns[:replaced] do
+      {%{source: %Changeset{} = stale}, %{source: %Changeset{} = replacing}, at} ->
+        if System.monotonic_time(:millisecond) - at < @stale_ms, do: {stale, replacing}
+
+      _ ->
+        nil
+    end
   end
 
   @doc """
@@ -2308,6 +2349,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   Works from any nesting level — the BlockField component id is derived from
   `form_id` + `block_field`, which every block receives.
   """
+  def emit_block_op(socket, nil), do: socket
+
   def emit_block_op(socket, op) do
     send_update(BlockField,
       id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",

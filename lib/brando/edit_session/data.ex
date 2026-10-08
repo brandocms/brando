@@ -243,7 +243,7 @@ defmodule Brando.EditSession.Data do
           entry.log
           |> Enum.filter(fn {op_rev, _op} -> op_rev > rev end)
           |> Enum.reverse()
-          |> Enum.reduce(new_base, &replay/2)
+          |> Enum.reduce(Ops.adopt_keys(new_base, entry.state), &replay/2)
 
         {state, [], entry.marks |> Map.delete(client) |> expire_marks(now)}
 

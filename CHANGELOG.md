@@ -756,8 +756,22 @@ production dump.
   write overtakes collects the blocks again, so it keeps what that write
   added; editors follow such writes only once they have committed. People
   who may view but not update the entry follow along without sending
-  changes. Two people editing the same block still resolve as "last change
-  wins" for now.
+  changes.
+
+- **Field presence and follow mode.** Two people can work in one block: a
+  keystroke, or any change in a block, reaches the edit session as the
+  fields it changed, and the last change to a field wins, so each keeps
+  their own field. Items two people add to or remove from one list (a
+  block's refs, a table's rows) are all kept. Blocks are no
+  longer locked while someone is in them; the field another editor is in
+  shows their colour and first name, and the block's toolbar says "Ingrid ·
+  Caption". The value someone is typing stays theirs until the session has
+  it, so nothing flickers back, and a field someone else typed in last shows
+  their value once you leave it. Click another editor's avatar to follow
+  them: the editor scrolls to the field they move to until you scroll or
+  click. Blocks added at the same place by two people at once both stay, in
+  the same order for everyone (the session orders blocks by fractional keys;
+  saves still write the usual sequence).
 
 - **Notes on entries.** Editors can leave each other notes in the entry
   editor, in a panel docked beside the content: on the entry, a block (the

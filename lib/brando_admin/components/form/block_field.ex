@@ -41,10 +41,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   unsaved work included, instead of asking the others for it.
 
   Another editor's op refreshes the affected root through the
-  `replace_form` cascade, coalesced per root. A root this editor is working
-  in is refreshed when they leave it (`@local_focus`), so their own form is
-  never replaced under their typing; concurrent edits to one root resolve as
-  the last op wins.
+  `replace_form` cascade, coalesced per root. A keystroke is one field
+  (`{:set_field, ...}`), so two editors can work in one block: a root this
+  editor is in is refreshed too, without re-booting the focused widget, and
+  once more when they leave the field (`@local_focus`). New and moved blocks
+  name their place with fractional keys (`Ops.keyed/2`).
 
   Save, live preview and recovery copies read the session's state, and a
   save hands the saved rows back (`EditSession.rebase/4`) so every replica
@@ -614,18 +615,31 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, flush_remote_refresh(assign(socket, :remote_refresh_scheduled?, false))}
   end
 
-  # Where this editor works (root block uid or nil). Roots it leaves get
-  # the refreshes that waited for it.
-  def update(%{event: "local_focus", uid: uid}, socket) do
+  # Where this editor works: a block (its root's uid is kept) and a field in
+  # it, or nil. Other editors' changes reach a root while it is in use, but
+  # the input with the focus keeps what is being typed into it; when the
+  # editor moves to another field or leaves, the root is shown once more so
+  # that input catches up too.
+  def update(%{event: "local_focus", uid: uid} = message, socket) do
     ops = socket.assigns.block_ops
     root = if uid && Ops.known?(ops, uid), do: Ops.root_of(ops, uid)
-    previous = socket.assigns[:local_focus]
-    socket = assign(socket, :local_focus, root)
+    field = Map.get(message, :field)
+    previous = {socket.assigns[:local_focus], socket.assigns[:local_focus_field]}
+    socket = assign(socket, local_focus: root, local_focus_field: field)
 
-    if previous && previous != root && MapSet.member?(socket.assigns.deferred_roots, previous) do
-      {:ok, socket |> update(:deferred_roots, &MapSet.delete(&1, previous)) |> refresh_roots([previous])}
-    else
-      {:ok, socket}
+    case previous do
+      {previous_root, previous_field}
+      when not is_nil(previous_root) and {previous_root, previous_field} != {root, field} ->
+        if MapSet.member?(socket.assigns.deferred_roots, previous_root),
+          do:
+            {:ok,
+             socket
+             |> update(:deferred_roots, &MapSet.delete(&1, previous_root))
+             |> refresh_roots([previous_root], :force)},
+          else: {:ok, socket}
+
+      _ ->
+        {:ok, socket}
     end
   end
 
@@ -666,6 +680,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:blocks_changed?, false)
     |> assign(:edit_session, nil)
     |> assign(:local_focus, nil)
+    |> assign(:local_focus_field, nil)
+    |> assign(:refreshed_at, %{})
     |> assign(:deferred_roots, MapSet.new())
     |> assign(:remote_refresh, MapSet.new())
     |> assign(:remote_refresh_scheduled?, false)
@@ -781,6 +797,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     socket
   end
+
+  # In a shared session a new or moved block names its place by the keys of
+  # the neighbours it was put between (`Ops.keyed/2`), so it lands there
+  # whatever the others did first.
+  # A field op carries the revision the editor saw.
+  defp keyed(%{assigns: %{edit_session: %Replica{rev: rev}}}, {:set_field, uid, path, value, nil}),
+    do: {:set_field, uid, path, value, rev}
+
+  defp keyed(%{assigns: %{edit_session: %Replica{rev: rev}}}, {:set_fields, uid, changes, nil}),
+    do: {:set_fields, uid, changes, rev}
+
+  defp keyed(%{assigns: %{edit_session: %Replica{}, block_ops: ops}}, op), do: Ops.keyed(ops, op)
+  defp keyed(_socket, op), do: op
 
   # Someone who may not change the entry follows the others but sends nothing.
   defp submit_to_session(%{assigns: %{edit_session: %Replica{read_only: true}}} = socket, _op), do: socket
@@ -994,7 +1023,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # An op turned away because another editor removed its block.
   defp report_rejection(socket, op, {:unknown_uid, _uid})
-       when elem(op, 0) in [:update, :insert_child, :reorder_children] do
+       when elem(op, 0) in [:update, :set_field, :set_fields, :insert_child, :reorder_children] do
     send(self(), {:toast, gettext("Another editor removed the block you were changing.")})
     socket
   end
@@ -1123,6 +1152,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The uids an op names, to narrow `Ops.changed_roots/3`. Ops that move or
   # remove blocks compare every root.
   defp hint_uids({:update, uid, _params}), do: [uid]
+  defp hint_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
+  defp hint_uids({:set_fields, uid, _changes, _rev}), do: [uid]
   defp hint_uids({:insert_child, parent_uid, _uid, _at, _params}), do: [parent_uid]
   defp hint_uids({:reorder_children, parent_uid, _uids}), do: [parent_uid]
   defp hint_uids({:move, _uid, _at}), do: []
@@ -1143,15 +1174,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # A root in use is refreshed as well — two editors can work in one block —
+  # without re-booting the widget that has the focus (its input is the
+  # editor's while they type). It is noted, to be shown once more when the
+  # editor leaves the field.
   defp flush_remote_refresh(socket) do
     roots = socket.assigns.remote_refresh
     focus = socket.assigns.local_focus
-    {deferred, now} = Enum.split_with(roots, &(&1 == focus))
+    {in_use, others} = Enum.split_with(roots, &(&1 == focus))
 
     socket
     |> assign(:remote_refresh, MapSet.new())
-    |> update(:deferred_roots, &MapSet.union(&1, MapSet.new(deferred)))
-    |> refresh_roots(now)
+    |> update(:deferred_roots, &MapSet.union(&1, MapSet.new(in_use)))
+    |> refresh_roots(others)
+    |> refresh_roots(in_use, :skip_focused)
     |> refresh_preview_after_remote()
   end
 
@@ -1164,11 +1200,38 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp refresh_preview_after_remote(socket), do: socket
 
-  defp refresh_roots(socket, roots) do
+  # `:force` renders the root even when the store holds what was rendered
+  # last: the input the editor just left kept their own value while they
+  # typed, and only a render puts the session's value into it.
+  defp refresh_roots(socket, roots, remount \\ true) do
+    now = System.monotonic_time(:millisecond)
+
     roots
     |> Enum.filter(&(&1 in socket.assigns.block_ops.order))
-    |> Enum.reduce(socket, &replace_root_from_store(&2, &1))
+    |> Enum.reduce(socket, fn root, socket ->
+      socket
+      |> replace_root_from_store(root, remount)
+      |> update(:refreshed_at, &Map.put(&1, root, now))
+    end)
   end
+
+  # A keystroke sent while another editor's change to the same root was on
+  # its way to the browser carries that root's other inputs as they were.
+  # The op is the one field and the store is right, but the block's own form
+  # took the old values: show the root from the store again. Only a keystroke
+  # that arrives within a round trip of the refresh can have crossed it.
+  defp recheck_after_race(socket, op) when elem(op, 0) in [:set_field, :set_fields, :update] do
+    uid = elem(op, 1)
+    ops = socket.assigns.block_ops
+    root = Ops.known?(ops, uid) && Ops.root_of(ops, uid)
+    refreshed_at = (socket.assigns[:refreshed_at] || %{})[root]
+
+    if refreshed_at && System.monotonic_time(:millisecond) - refreshed_at < 300,
+      do: queue_refresh(socket, [root]),
+      else: socket
+  end
+
+  defp recheck_after_race(socket, _op), do: socket
 
   # A root's form built from the store. The params it was cast from are
   # dropped: a form reads a field from `params` before `data`, so a mounted
@@ -1411,10 +1474,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # re-render every root's shell (AGENTS.md: derived assigns) — so it is left
   # alone, except in frontend edit mode, where a root mounts again whenever
   # the selection moves to it.
-  defp replace_root_from_store(socket, root_uid) do
+  defp replace_root_from_store(socket, root_uid, remount \\ true) do
     form = materialized_form(socket, socket.assigns.block_ops, root_uid)
 
-    send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: form, remount_js: true)
+    {form, remount} =
+      if remount == :force,
+        do: {%{form | options: Keyword.put(form.options, :rendered_at, System.unique_integer())}, true},
+        else: {form, remount}
+
+    send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: form, remount_js: remount)
     if socket.assigns.focus, do: put_seed_form(socket, root_uid, form), else: socket
   end
 
@@ -1433,6 +1501,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        do: refuse_structure(socket, elem(op, 0))
 
   defp apply_block_op(socket, op, mode) do
+    op = keyed(socket, op)
+
     case Ops.apply_op(socket.assigns.block_ops, op) do
       {:ok, ops_state} ->
         send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty")
@@ -1443,6 +1513,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign_ops(ops_state)
         |> assign(:blocks_changed?, true)
         |> submit_to_session(op)
+        |> recheck_after_race(op)
 
       {:error, reason} ->
         Logger.error(

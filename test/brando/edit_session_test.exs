@@ -182,6 +182,47 @@ defmodule Brando.EditSessionTest do
       assert replica.pending == []
     end
 
+    test "a field this editor set keeps its value until the session confirms it" do
+      path = ["block", "anchor"]
+      replica = Replica.new(%{}, %{session: self(), epoch: 1, rev: 0, state: rows()}, nil)
+      shown = fn replica -> get_in(Replica.displayed(replica).diffs, ["b" | path]) end
+
+      # Our keystroke is in flight when another editor's value for the same
+      # field arrives first: we keep showing ours, no flicker back.
+      {replica, 1} = Replica.local(replica, {:set_field, "b", path, "mine", 0})
+      remote = {:set_field, "b", path, "theirs", 0}
+      {:remote, replica, displayed} = Replica.receive_op(replica, %{epoch: 1, rev: 1, op: remote, origin: {:other, 1}})
+      assert get_in(displayed.diffs, ["b" | path]) == "mine"
+
+      # The session applied ours after theirs: ours is the last to arrive.
+      {:own, replica} =
+        Replica.receive_op(replica, %{epoch: 1, rev: 2, op: {:set_field, "b", path, "mine", 0}, origin: {self(), 1}})
+
+      assert shown.(replica) == "mine"
+
+      # A later value from the other editor wins.
+      {:remote, replica, _} =
+        Replica.receive_op(replica, %{epoch: 1, rev: 3, op: {:set_field, "b", path, "later", 2}, origin: {:other, 2}})
+
+      assert shown.(replica) == "later"
+    end
+
+    test "two editors in different fields of one block both keep theirs, in the session" do
+      ref = new_ref()
+      {a, _} = editor(ref)
+      {b, _} = editor(ref)
+
+      send(a, {:local, {:set_field, "b", ["block", "anchor"], "by A", 0}})
+      send(b, {:local, {:set_field, "b", ["block", "description"], "by B", 0}})
+      send(a, {:local, {:set_field, "b", ["block", "description"], "A, later", 0}})
+
+      {shown_a, state} = settled(a, ref)
+      {shown_b, ^state} = settled(b, ref)
+      assert shown_a == state and shown_b == state
+      assert state.diffs["b"]["block"]["anchor"] == "by A"
+      assert state.diffs["b"]["block"]["description"] in ["by B", "A, later"]
+    end
+
     test "a gap in revisions asks for the session's state" do
       replica = Replica.new(%{}, %{session: self(), epoch: 1, rev: 0, state: rows()}, nil)
       assert Replica.receive_op(replica, %{epoch: 1, rev: 2, op: {:move, "a", 1}, origin: nil}) == :resync
