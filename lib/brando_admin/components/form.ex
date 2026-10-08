@@ -2443,6 +2443,10 @@ defmodule BrandoAdmin.Components.Form do
   # fill fields nobody else holds and lose to every real edit. Otherwise a
   # value restored in a tab that was alone would be in nobody else's form,
   # and their save would revert it.
+  #
+  # A recovered value whose field has a newer clock known (the others sent
+  # it with their join reply, but no value: they saved since) is older than
+  # the saved entry, and the field goes back to the saved value.
   defp share_recovered(socket, offline, entry_params) do
     socket = socket |> mark_local(offline) |> ship_all_field_changes()
     entry = socket.assigns[:entry]
@@ -2453,13 +2457,16 @@ defmodule BrandoAdmin.Components.Form do
       {fields, belongs_to} = sync_fields(socket)
       tab = BrandoAdmin.Presence.tab()
 
-      changes =
+      recovered =
         for field <- fields,
             Map.has_key?(entry_params, Atom.to_string(field)),
             not Map.has_key?(synced, field),
             %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
             value != Map.get(changeset.data, field),
             do: Map.put(change, :clock, {0, tab})
+
+      {outdated, changes} = Enum.split_with(recovered, &(clock(socket, &1.field) > &1.clock))
+      socket = restore_saved(socket, Enum.map(outdated, & &1.field))
 
       if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
 
@@ -2605,10 +2612,33 @@ defmodule BrandoAdmin.Components.Form do
 
   defp field_clocks(socket), do: socket.assigns[:field_clocks] || %{}
 
+  # Fields back to the saved value, as the entry loaded, like a change from
+  # another editor: the browser's old value for them is an echo from then on.
+  defp restore_saved(socket, []), do: socket
+
+  defp restore_saved(socket, fields) do
+    data = socket.assigns.form.source.data
+    {_fields, belongs_to} = sync_fields(socket)
+
+    restored =
+      for field <- fields, field not in belongs_to, do: %{field: field, value: Map.get(data, field), assoc?: false}
+
+    apply_remote(socket, restored)
+  end
+
   # The clocks a joining tab is sent with the values: each field's newest.
+  # A field this tab shipped from its recovered form (`{0, tab}`) that has a
+  # newer clock but came without a value was saved since by the editor who
+  # sent the clock: it goes back to the saved value (`share_recovered/3`).
   defp merge_clocks(socket, clocks) when is_map(clocks) and map_size(clocks) > 0 do
-    merged = Map.merge(field_clocks(socket), clocks, fn _field, ours, theirs -> max(ours, theirs) end)
-    assign(socket, :field_clocks, merged)
+    ours = field_clocks(socket)
+    recovered = {0, BrandoAdmin.Presence.tab()}
+    outdated = for {field, theirs} <- clocks, Map.get(ours, field) == recovered, theirs > recovered, do: field
+    merged = Map.merge(ours, clocks, fn _field, ours, theirs -> max(ours, theirs) end)
+
+    socket
+    |> assign(:field_clocks, merged)
+    |> restore_saved(outdated)
   end
 
   defp merge_clocks(socket, _clocks), do: socket

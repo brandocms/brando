@@ -381,6 +381,41 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     await_shown(a, "title", "Om oss, B")
   end
 
+  # A shipped "X" and lost its connection; B then saved "Y". A's recovered
+  # "X" is older than B's save, whichever reaches A first: B's join reply
+  # (a clock, no value, since B saved) or A's recovered form.
+  for order <- [:reply_first, :recovery_first] do
+    test "a recovered value older than another editor's save goes back to the save (#{order})", c do
+      edit(c.a, "title", "Om oss, X")
+      await_shown(c.b, "title", "Om oss, X")
+      recovered = c.a |> render() |> form_params("#page_form_form") |> Map.put("_target", ["image_editor_upload"])
+      kill_live(c.a)
+
+      edit(c.b, "title", "Om oss, Y")
+      save_and_stay(c.b)
+      await(fn -> saved_title(c.page) == "Om oss, Y" end)
+
+      a =
+        case unquote(order) do
+          :reply_first ->
+            a = open(c.conn, c.page)
+            settle(c.b) && settle(a)
+            a |> form() |> render_hook("recover_form", recovered)
+            a
+
+          :recovery_first ->
+            :sys.suspend(c.b.pid)
+            a = open(c.conn, c.page)
+            a |> form() |> render_hook("recover_form", recovered)
+            :sys.resume(c.b.pid)
+            a
+        end
+
+      assert_both(%{a: a, b: c.b}, %{"title" => "Om oss, Y"})
+      refute shown(a, "title") == "Om oss, X"
+    end
+  end
+
   describe "field locks" do
     setup c do
       Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("active_field", Page, c.page.id))
