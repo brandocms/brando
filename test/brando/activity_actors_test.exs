@@ -114,7 +114,7 @@ defmodule Brando.ActivityActorsTest do
     apply_proposal(page, user, :assistant)
     {:ok, _} = Pages.update_page(page.id, %{meta_description: "By the sea"}, user)
 
-    assert %{source: :admin, proposal_id: nil, approver_id: nil} = List.last(events(page))
+    assert [_created, _applied, %{source: :admin, proposal_id: nil, approver_id: nil}] = events(page)
   end
 
   test "scheduled publishing is an automatic job, for the user who scheduled it", %{user: user} do
