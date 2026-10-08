@@ -845,6 +845,20 @@ msgid_plural "%{count} entries"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry published as scheduled"
+msgid_plural "%{count} entries published as scheduled"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry unpublished as scheduled"
+msgid_plural "%{count} entries unpublished as scheduled"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "1 error"
@@ -863,6 +877,21 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 item"
 msgid_plural "%{count} items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 mention"
+msgid_plural "%{count} mentions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/notifications/email.ex
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 notification"
+msgid_plural "%{count} notifications"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -8051,11 +8080,6 @@ msgstr ""
 msgid "In sitemap"
 msgstr ""
 
-#: lib/brando_admin/live/sites/notifications_live.ex
-#, elixir-autogen, elixir-format
-msgid "In summary"
-msgstr ""
-
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -11037,11 +11061,6 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "On"
-msgstr ""
-
-#: lib/brando/notifications/message.ex
-#, elixir-autogen, elixir-format
-msgid "On %{place}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -14573,6 +14592,11 @@ msgstr ""
 msgid "Sent"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sent in one message with others"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with every submission and never shown to visitors."
@@ -17974,6 +17998,11 @@ msgstr "Uploads to this field go to this folder"
 msgid "Use %{action} to upload a video with this provider."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use a Slack incoming webhook URL, on hooks.slack.com."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Use a name without spaces; it must be unique on this page."
@@ -18042,6 +18071,11 @@ msgid "Use the %{count} I attached"
 msgid_plural "Use the %{count} I attached"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the URL of a Teams workflow, on logic.azure.com or api.powerplatform.com."
+msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -18425,6 +18459,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for review"
+msgstr ""
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the next email"
 msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -18932,6 +18971,11 @@ msgstr ""
 
 #: lib/brando/notifications/email.ex
 #, elixir-autogen, elixir-format
+msgid "You get one email at most every ten minutes, with everything since the last one. Choose a daily or weekly summary instead in your profile."
+msgstr ""
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
 msgid "You get one summary a day. Change it in your profile."
 msgstr ""
 
@@ -19176,6 +19220,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "and %{count} more"
 msgstr ""
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "and 1 more"
+msgid_plural "and %{count} more"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format

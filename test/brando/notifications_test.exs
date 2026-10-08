@@ -186,7 +186,7 @@ defmodule Brando.NotificationsTest do
     test "Slack gets a text fallback and blocks, with Slack's markup escaped" do
       body = Message.slack(@mention)
 
-      assert body["text"] == "Ingrid mentioned Trond, Ann in a note on Spring <launch> & more"
+      assert body["text"] == "Ingrid mentioned Trond, Ann in a note on Spring &lt;launch&gt; &amp; more"
 
       assert [
                %{"type" => "section", "text" => %{"type" => "mrkdwn", "text" => text}},
@@ -194,7 +194,8 @@ defmodule Brando.NotificationsTest do
              ] = body["blocks"]
 
       assert text =~ "*Ingrid mentioned Trond, Ann in a note on Spring &lt;launch&gt; &amp; more*"
-      assert text =~ "On Hero · Page · EN"
+      assert text =~ "Page · EN"
+      refute text =~ "Hero"
       assert text =~ "<https://example.com/admin/pages/update/1|Open in the admin>"
       assert Jason.encode!(body)
     end
@@ -607,7 +608,8 @@ defmodule Brando.NotificationsTest do
 
       assert :ok = Notes.deliver_mentions(reader.id)
 
-      assert_email_sent(fn email -> email.subject == "Your daily summary: 1 notification" end)
+      # One notification: a single email
+      assert_email_sent(fn email -> email.subject == "Published as scheduled: Spring launch" end)
       assert [%{state: "succeeded"}] = deliveries(route)
     end
 
@@ -639,8 +641,9 @@ defmodule Brando.NotificationsTest do
     test "a copy's routes are paused, its log cleared, and resumed when it goes live", %{user: user, prefix: prefix} do
       {route, manual} =
         Brando.Tenant.with_prefix(prefix, fn ->
-          route = route!(user, %{"kind" => "email", "recipient_ids" => [user.id]})
-          manual = route!(user, %{"name" => "Off", "kind" => "email", "recipient_ids" => [user.id]})
+          receiver = WebhookReceiver.start()
+          route = slack_route!(user, receiver)
+          manual = slack_route!(user, receiver, %{"name" => "Off"})
           {:ok, _} = Routing.pause(manual, user)
 
           Repo.insert!(%Delivery{route_id: route.id, event: "test", notification: %{}, state: "succeeded"},
@@ -685,5 +688,204 @@ defmodule Brando.NotificationsTest do
 
     assert Routing.purge_deliveries() == 1
     assert [%{state: "digest"}] = Repo.all(from(d in Delivery, where: d.route_id == ^route.id))
+  end
+
+  describe "who may get email" do
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      prefix = "tenant_notify-b_production"
+
+      {:ok, site} =
+        Brando.Tenant.Registry.create_site(%{
+          name: "Notify B",
+          key: "notify-b",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      Repo.query!(~s|CREATE SCHEMA "#{prefix}"|)
+
+      for table <- ~w(notification_routes notification_deliveries) do
+        Repo.query!(~s|CREATE TABLE "#{prefix}".#{table} (LIKE public.#{table} INCLUDING ALL)|)
+      end
+
+      {:ok, site: site, prefix: prefix}
+    end
+
+    test "only members of the site are offered, saved and sent to", %{user: user, site: site, prefix: prefix} do
+      member = Factory.insert(:random_user, role: :user, name: "Member")
+      outsider = Factory.insert(:random_user, role: :user, name: "Outsider")
+      {:ok, _} = Brando.Tenant.Access.grant(member, site, :editor)
+
+      Brando.Tenant.with_prefix(prefix, fn ->
+        ids = Enum.map(Routing.recipient_options(), & &1.id)
+        assert member.id in ids
+        refute outsider.id in ids
+
+        assert {:error, changeset} =
+                 Routing.create_route(
+                   %{"name" => "Desk", "kind" => "email", "events" => ["failed_job"], "recipient_ids" => [outsider.id]},
+                   user
+                 )
+
+        assert changeset.errors[:recipient_ids]
+
+        route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [member.id]})
+        delivery = %Delivery{route_id: route.id, recipient_id: member.id, event: "failed_job"}
+        assert Brando.Notifications.Recipient.may_see?(member, delivery, route)
+
+        # No longer on the site: nothing more is sent, about entries or not
+        :ok = Brando.Tenant.Access.revoke(member, site)
+        refute Brando.Notifications.Recipient.may_see?(member, delivery, route)
+        refute Brando.Notifications.Recipient.may_see?(outsider, delivery, %{route | recipient_ids: [outsider.id]})
+      end)
+    end
+  end
+
+  describe "hardening" do
+    test "Teams text cannot make links or emphasis, and the Slack fallback is escaped" do
+      n = %{
+        "event" => "scheduled_publish",
+        "entry" => %{"title" => "[Log in](https://evil.example.com) *now* _here_ `x` #1"}
+      }
+
+      [%{"content" => %{"body" => [title | _]}}] = Message.teams(n)["attachments"]
+
+      assert title["text"] ==
+               ~S"Published as scheduled: \[Log in\]\(https://evil.example.com\) \*now\* \_here\_ \`x\` \#1"
+
+      assert Message.slack(Map.put(n, "entry", %{"title" => "<https://evil|click>"}))["text"] ==
+               "Published as scheduled: &lt;https://evil|click&gt;"
+    end
+
+    test "webhook URLs are limited to Slack's and Teams' hosts", %{user: user} do
+      assert {:error, changeset} =
+               Routing.create_route(
+                 %{"name" => "Desk", "kind" => "slack", "events" => ["mention"], "url" => "https://hooks.example.com/x"},
+                 user
+               )
+
+      assert {_, opts} = changeset.errors[:url]
+      assert opts[:reason] == :host_not_allowed
+
+      assert %Route{} =
+               route!(user, %{
+                 "kind" => "slack",
+                 "events" => ["mention"],
+                 "url" => "https://hooks.slack.com/services/T0/B0/x"
+               })
+
+      assert %Route{} =
+               route!(user, %{
+                 "kind" => "teams",
+                 "events" => ["mention"],
+                 "url" => "https://prod-01.westeurope.logic.azure.com/workflows/abc"
+               })
+
+      refute Route.allowed_host?(:teams, "https://hooks.slack.com/services/x")
+      refute Route.allowed_host?(:slack, "https://hooks.slack.com.evil.example.com/x")
+    end
+
+    test "a route switched to email keeps no webhook URL", %{user: user} do
+      receiver = WebhookReceiver.start()
+      route = slack_route!(user, receiver)
+      {:ok, email} = Routing.update_route(route, %{"kind" => "email", "recipient_ids" => [user.id]}, user)
+
+      assert %{url_ciphertext: nil, url_hint: nil} = Repo.reload!(email)
+    end
+
+    test "failed jobs are notified once per worker in the interval, by the delivery log", %{user: user} do
+      receiver = WebhookReceiver.start()
+      route = slack_route!(user, receiver, %{"events" => ["failed_job"]})
+      job = %{"worker" => "MyApp.Worker.Sync", "attempt" => 3, "max_attempts" => 3}
+
+      assert :ok = Routing.job_failed(job)
+      assert :ok = Routing.job_failed(job)
+      assert :ok = Routing.job_failed(%{job | "worker" => "MyApp.Worker.Other"})
+      assert length(deliveries(route)) == 2
+
+      put_test_env(Brando.Notifications, failed_job_interval: 0)
+      assert :ok = Routing.job_failed(job)
+      assert length(deliveries(route)) == 3
+    end
+
+    test "a burst of the same event on a Slack route goes out as one message", %{user: user} do
+      receiver = WebhookReceiver.start()
+      route = slack_route!(user, receiver)
+      pages = for n <- 1..3, do: create_page(user, %{title: "Launch #{n}"})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Brando.Activity.with_source(:scheduler, fn ->
+          for page <- pages, do: {:ok, _} = Pages.update_page(page.id, %{status: :published}, user)
+        end)
+
+        Oban.drain_queue(queue: :content_events)
+      end)
+
+      [first, second, third] = route |> deliveries() |> Enum.sort_by(& &1.id)
+      args = &%{"delivery" => &1.id, "route" => route.id}
+
+      assert :ok = NotificationDelivery.deliver(%Oban.Job{args: args.(first), attempt: 1, max_attempts: 10})
+      body = Jason.decode!(next_request().body)
+      assert body["text"] == "3 entries published as scheduled"
+      text = hd(body["blocks"])["text"]["text"]
+      assert text =~ "Launch 1"
+      assert text =~ "Launch 3"
+
+      assert %{state: "succeeded", grouped_into_id: id} = Repo.reload!(third)
+      assert id == first.id
+
+      assert {:cancel, _} =
+               NotificationDelivery.deliver(%Oban.Job{args: args.(second), attempt: 1, max_attempts: 10})
+
+      refute_receive {:webhook_request, _}, 100
+    end
+
+    test "email without a summary waits for the ten-minute batch", %{user: user} do
+      reader = Factory.insert(:random_user)
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      assert :ok = Routing.job_failed(%{"worker" => "MyApp.A", "attempt" => 1, "max_attempts" => 1})
+      assert_email_sent(fn email -> email.subject == "A background job failed: MyApp.A" end)
+
+      # Within ten minutes: they wait, and go out together
+      assert :ok = Routing.job_failed(%{"worker" => "MyApp.B", "attempt" => 1, "max_attempts" => 1})
+      assert :ok = Routing.job_failed(%{"worker" => "MyApp.C", "attempt" => 1, "max_attempts" => 1})
+      assert_no_email_sent()
+      assert {:snooze, _} = Notes.deliver_mentions(reader.id)
+
+      assert :ok = Notes.deliver_mentions(reader.id, DateTime.add(DateTime.utc_now(), 601, :second))
+
+      assert_email_sent(fn email ->
+        assert email.subject == "2 notifications"
+        assert email.text_body =~ "MyApp.B"
+        assert email.text_body =~ "MyApp.C"
+      end)
+
+      assert route |> deliveries() |> Enum.map(& &1.state) |> Enum.uniq() == ["succeeded"]
+    end
+
+    test "what waits is dropped when the route is paused or no longer names the user", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      other = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id, other.id]})
+
+      assert :ok = Routing.job_failed(%{"worker" => "MyApp.A", "attempt" => 1, "max_attempts" => 1})
+      assert route |> deliveries() |> Enum.map(& &1.state) == ["digest", "digest"]
+
+      {:ok, route} = Routing.update_route(route, %{"recipient_ids" => [other.id]}, user)
+      later = DateTime.add(DateTime.utc_now(), 8 * 86_400, :second)
+      assert :ok = Notes.deliver_mentions(reader.id, later)
+      assert_no_email_sent()
+
+      {:ok, _} = Routing.pause(route, user)
+      assert :ok = Notes.deliver_mentions(other.id, later)
+      assert_no_email_sent()
+
+      assert route |> deliveries() |> Enum.map(&{&1.state, &1.error}) |> Enum.uniq() ==
+               [{"cancelled", "recipient_unavailable"}]
+    end
   end
 end

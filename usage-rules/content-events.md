@@ -60,17 +60,25 @@ Brando's webhooks do this with a unique index, so a retry never queues a
 delivery twice.
 
 The dispatcher runs on the `:content_events` queue, deliveries on
-`:webhooks`, and updates to the admin search index on `:search_index`.
-Brando's default Oban configuration has all three. **An application that
-sets `config :brando, Oban` itself must declare them, or no events, webhook
-deliveries or search updates ever run**: the jobs are queued and wait
+`:webhooks`, updates to the admin search index on `:search_index`, and
+[notifications](deps/brando/guides/notifications.md) on `:notifications`. Brando's default Oban
+configuration has all four. **An application that sets `config :brando, Oban`
+itself must declare them, or no events, webhook deliveries, search updates or
+notifications ever run**: the jobs are queued and wait
 forever. `mix brando.doctor` (and the system check under Configuration →
 Utilities) warns when they are missing.
 
 <!-- usage-rules:no-compile -->
 ```elixir
 config :brando, Oban,
-  queues: [default: [limit: 1], content_events: [limit: 1], webhooks: [limit: 5], search_index: [limit: 2], ...],
+  queues: [
+    default: [limit: 1],
+    content_events: [limit: 1],
+    webhooks: [limit: 5],
+    search_index: [limit: 2],
+    notifications: [limit: 2],
+    ...
+  ],
   # also schedule the delivery log's cleanup
   cron: [crontab: [{"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}, ...]]
 ```

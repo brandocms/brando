@@ -43,6 +43,7 @@ defmodule BrandoIntegration.Repo.Migrations.AddNotificationRoutes do
       add :error, :text
       add :duration_ms, :integer
       add :test, :boolean, null: false, default: false
+      add :grouped_into_id, :bigint
       add :started_at, :utc_datetime_usec
       add :completed_at, :utc_datetime_usec
 

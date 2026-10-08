@@ -10,8 +10,8 @@ defmodule Brando.Notifications.Message do
     * `"site"` and `"environment"`, the keys it happened in;
     * `"entry"` — `%{"title", "type", "language", "admin_url"}` for an event
       about an entry, else nil;
-    * for a mention, `"author"`, `"mentioned"` (names) and `"anchor"`, where
-      in the entry the note is; never the note's text;
+    * for a mention, `"author"` and `"mentioned"` (names); never the note's
+      text, nor the text it is anchored to;
     * for a failed job, `"job"` (`"worker"`, `"queue"`, `"attempt"`,
       `"max_attempts"`, `"error"`), or `"webhook"` (`"name"`, `"host"`,
       `"admin_url"`) for a webhook delivery that failed for good.
@@ -23,6 +23,8 @@ defmodule Brando.Notifications.Message do
   """
   use Gettext, backend: Brando.Gettext
 
+  @burst_lines 10
+
   @type content :: %{
           title: String.t(),
           text: String.t() | nil,
@@ -31,9 +33,33 @@ defmodule Brando.Notifications.Message do
           context: String.t() | nil
         }
 
-  @doc "The notification's words in `language`."
-  @spec content(map(), String.t() | atom() | nil) :: content()
-  def content(notification, language \\ nil) do
+  @doc """
+  The notification's words in `language`. Several notifications of the same
+  event (a burst on one route) are worded as one: a count, and a line for
+  each, at most ten.
+  """
+  @spec content(map() | [map()], String.t() | atom() | nil) :: content()
+  def content(notification, language \\ nil)
+
+  def content([notification], language), do: content(notification, language)
+
+  def content([first | _] = notifications, language) do
+    Gettext.with_locale(Brando.Gettext, to_string(language || default_language()), fn ->
+      lines = Enum.map(notifications, fn n -> n |> words() |> elem(0) end)
+      {shown, rest} = Enum.split(lines, @burst_lines)
+      more = if rest != [], do: [ngettext("and 1 more", "and %{count} more", length(rest))], else: []
+
+      %{
+        title: burst_title(first["event"], length(notifications)),
+        text: Enum.join(Enum.map(shown, &("• " <> &1)) ++ more, "\n"),
+        link: nil,
+        link_label: gettext("Open in the admin"),
+        context: context(first)
+      }
+    end)
+  end
+
+  def content(notification, language) do
     Gettext.with_locale(Brando.Gettext, to_string(language || default_language()), fn ->
       {title, text, link} = words(notification)
 
@@ -46,6 +72,16 @@ defmodule Brando.Notifications.Message do
       }
     end)
   end
+
+  defp burst_title("mention", count), do: ngettext("1 mention", "%{count} mentions", count)
+
+  defp burst_title("scheduled_publish", count),
+    do: ngettext("1 entry published as scheduled", "%{count} entries published as scheduled", count)
+
+  defp burst_title("scheduled_unpublish", count),
+    do: ngettext("1 entry unpublished as scheduled", "%{count} entries unpublished as scheduled", count)
+
+  defp burst_title(_event, count), do: ngettext("1 notification", "%{count} notifications", count)
 
   @doc "The language Slack and Teams messages are written in: the site's default admin language."
   def default_language, do: to_string(Brando.config(:default_admin_language) || "en")
@@ -64,8 +100,7 @@ defmodule Brando.Notifications.Message do
           ),
         else: gettext("%{names} was mentioned in a note on %{title}", names: names, title: entry["title"])
 
-    text = if n["anchor"] not in [nil, ""], do: gettext("On %{place}", place: n["anchor"])
-    {title, join([text, entry_details(entry)]), entry["admin_url"]}
+    {title, entry_details(entry), entry["admin_url"]}
   end
 
   defp words(%{"event" => "scheduled_publish"} = n) do
@@ -127,7 +162,7 @@ defmodule Brando.Notifications.Message do
   notifications, and blocks — the title in bold with its text and link, and
   a context line with the site and environment.
   """
-  @spec slack(map()) :: map()
+  @spec slack(map() | [map()]) :: map()
   def slack(notification) do
     c = content(notification)
 
@@ -142,7 +177,7 @@ defmodule Brando.Notifications.Message do
         else: []
 
     %{
-      "text" => c.title,
+      "text" => slack_escape(c.title),
       "blocks" => [%{"type" => "section", "text" => %{"type" => "mrkdwn", "text" => lines}} | context]
     }
   end
@@ -162,15 +197,28 @@ defmodule Brando.Notifications.Message do
   Adaptive Card — the title, its text, the context line, and a button to
   open the entry in the admin.
   """
-  @spec teams(map()) :: map()
+  @spec teams(map() | [map()]) :: map()
   def teams(notification) do
     c = content(notification)
 
     body =
       [
-        %{"type" => "TextBlock", "text" => c.title, "weight" => "Bolder", "size" => "Medium", "wrap" => true},
-        c.text && %{"type" => "TextBlock", "text" => c.text, "wrap" => true},
-        c.context && %{"type" => "TextBlock", "text" => c.context, "isSubtle" => true, "size" => "Small", "wrap" => true}
+        %{
+          "type" => "TextBlock",
+          "text" => teams_escape(c.title),
+          "weight" => "Bolder",
+          "size" => "Medium",
+          "wrap" => true
+        },
+        c.text && %{"type" => "TextBlock", "text" => teams_escape(c.text), "wrap" => true},
+        c.context &&
+          %{
+            "type" => "TextBlock",
+            "text" => teams_escape(c.context),
+            "isSubtle" => true,
+            "size" => "Small",
+            "wrap" => true
+          }
       ]
       |> Enum.reject(&is_nil/1)
 
@@ -194,4 +242,11 @@ defmodule Brando.Notifications.Message do
       ]
     }
   end
+
+  # TextBlocks render Markdown: a title or a name must not make a link,
+  # emphasis or a heading, so those characters are escaped with a backslash.
+  @teams_markdown ~r/[\\`*_\[\]()#]/
+
+  @doc "Escapes what a Teams TextBlock reads as Markdown: backslash, backtick, `*`, `_`, brackets, parentheses, `#`."
+  def teams_escape(text), do: Regex.replace(@teams_markdown, text, "\\\\\\0")
 end

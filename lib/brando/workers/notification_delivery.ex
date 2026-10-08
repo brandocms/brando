@@ -5,9 +5,14 @@ defmodule Brando.Worker.NotificationDelivery do
   or emails it to one of the route's recipients.
 
   Before each attempt the route must still be active and, for Slack and
-  Teams, its URL must still resolve to public addresses only
-  (`Brando.Webhooks.URLGuard`); an email recipient must still be active and
-  allowed to read the entry. A failed attempt is retried with exponential
+  Teams, its URL must still be on an allowed host and resolve to public
+  addresses only (`Brando.Webhooks.URLGuard`); an email recipient must still
+  be on the route, active, a member of the site and allowed to read the
+  entry.
+
+  A Slack or Teams delivery takes the other pending deliveries of the same
+  event on its route along, and sends them as one message
+  (`Brando.Notifications.Message`); they take its state. A failed attempt is retried with exponential
   backoff, 30 seconds doubling up to an hour, 10 attempts over about three
   hours; a test notification is tried once. When the last attempt fails, the
   delivery is marked failed, and a Slack or Teams route is paused.
@@ -15,7 +20,7 @@ defmodule Brando.Worker.NotificationDelivery do
   Its own failures are never notified as failed jobs, so a broken route
   cannot notify itself in a loop.
   """
-  use Oban.Worker, queue: :webhooks, max_attempts: 10
+  use Oban.Worker, queue: :notifications, max_attempts: 10
 
   import Ecto.Query, only: [from: 2]
 
@@ -80,6 +85,8 @@ defmodule Brando.Worker.NotificationDelivery do
   defp ensure_unfinished(%Delivery{state: state}) when state in ["succeeded", "failed", "cancelled", "digest"],
     do: {:cancel, :already_finished}
 
+  defp ensure_unfinished(%Delivery{grouped_into_id: id}) when is_integer(id), do: {:cancel, :grouped}
+
   defp ensure_unfinished(_delivery), do: :ok
 
   defp ensure_active(%Route{active: true}, _delivery), do: :ok
@@ -96,7 +103,7 @@ defmodule Brando.Worker.NotificationDelivery do
   defp attempt(%Route{kind: :email} = route, delivery, job) do
     user = delivery.recipient_id && Repo.get(Brando.Users.User, delivery.recipient_id)
 
-    if user && Recipient.may_see?(user, delivery) do
+    if user && Recipient.may_see?(user, delivery, route) do
       started = System.monotonic_time(:millisecond)
 
       result =
@@ -125,8 +132,10 @@ defmodule Brando.Worker.NotificationDelivery do
 
   defp attempt(%Route{kind: kind} = route, delivery, job) when kind in [:slack, :teams] do
     with {:ok, url} <- Routing.url(route),
+         :ok <- allowed_host(kind, url),
          {:ok, target} <- URLGuard.resolve(url) do
-      body = delivery.notification |> payload(kind) |> Jason.encode!()
+      group = group(route, delivery)
+      body = [delivery | group] |> Enum.map(& &1.notification) |> payload(kind) |> Jason.encode!()
       headers = [{"content-type", "application/json"}, {"user-agent", "Brando-Notifications"}]
 
       target
@@ -136,7 +145,8 @@ defmodule Brando.Worker.NotificationDelivery do
     else
       # The URL now points somewhere it may not, or cannot be read: trying
       # again won't help.
-      {:error, reason} when reason in [:private_address, :https_required, :scheme_not_allowed, :url_unreadable] ->
+      {:error, reason}
+      when reason in [:private_address, :https_required, :scheme_not_allowed, :url_unreadable, :host_not_allowed] ->
         fail(route, delivery, %{status: nil, body: "", error: reason, duration_ms: 0}, final?: true)
         {:cancel, reason}
 
@@ -145,7 +155,29 @@ defmodule Brando.Worker.NotificationDelivery do
     end
   end
 
-  @doc "The request body for a Slack or Teams route."
+  defp allowed_host(kind, url), do: if(Route.allowed_host?(kind, url), do: :ok, else: {:error, :host_not_allowed})
+
+  # The pending deliveries of the same event on the route join this one, and
+  # those that joined it on an earlier attempt stay with it. A test is sent
+  # alone.
+  defp group(_route, %Delivery{test: true}), do: []
+
+  defp group(route, delivery) do
+    since = DateTime.add(DateTime.utc_now(), -3600, :second)
+
+    Repo.update_all(
+      from(d in Delivery,
+        where:
+          d.route_id == ^route.id and d.event == ^delivery.event and d.state == "pending" and d.test == false and
+            d.id != ^delivery.id and is_nil(d.grouped_into_id) and d.inserted_at > ^since
+      ),
+      set: [grouped_into_id: delivery.id, state: "sending", started_at: DateTime.utc_now()]
+    )
+
+    Repo.all(from(d in Delivery, where: d.grouped_into_id == ^delivery.id, order_by: [asc: d.inserted_at, asc: d.id]))
+  end
+
+  @doc "The request body for a Slack or Teams route: one notification, or several as one message."
   def payload(notification, :slack), do: Message.slack(notification)
   def payload(notification, :teams), do: Message.teams(notification)
 
@@ -218,6 +250,13 @@ defmodule Brando.Worker.NotificationDelivery do
          :error <- write(delivery, Map.merge(changes, %{response_body: nil, error: "result_not_recorded"})) do
       Logger.error("[Brando.Notifications] Could not record delivery ##{delivery.id}")
     end
+
+    # The deliveries sent with it take its state
+    safely(fn ->
+      Repo.update_all(from(d in Delivery, where: d.grouped_into_id == ^delivery.id),
+        set: changes |> Map.drop([:attempts]) |> Map.to_list()
+      )
+    end)
 
     safely(fn -> Routing.broadcast({:delivery, delivery.route_id}) end)
   end

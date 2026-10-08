@@ -46,7 +46,6 @@ defmodule Brando.Notes do
 
   @mark_attribute "data-brando-note"
   @mention_token ~r/<@(\d+)>/
-  @email_interval 600
 
   ## Reading
 
@@ -621,16 +620,9 @@ defmodule Brando.Notes do
     end
   end
 
-  @doc "Seconds until `user_id` may get the next mention email: 0, or what is left of ten minutes since the last."
-  def seconds_until_next_email(user_id, now) do
-    last =
-      Repo.one(from(m in Mention, where: m.user_id == ^user_id and not is_nil(m.emailed_at), select: max(m.emailed_at)))
-
-    case last do
-      nil -> 0
-      last -> max(0, @email_interval - DateTime.diff(now, last, :second))
-    end
-  end
+  @doc "Seconds until `user_id` may get their next email: 0, or what is left of ten minutes since the last one."
+  def seconds_until_next_email(user_id, now),
+    do: Brando.Notifications.Digest.seconds_until_next_email(user_id, now)
 
   defp send_pending_mentions(user_id, now) do
     user = Repo.get(User, user_id)

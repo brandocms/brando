@@ -88,9 +88,12 @@ defmodule Brando.Notifications.Route do
 
   defp validate_destination(changeset, opts) do
     case get_field(changeset, :kind) do
+      # A webhook URL left over from Slack or Teams is not kept
       :email ->
         changeset
         |> put_change(:url, nil)
+        |> put_change(:url_ciphertext, nil)
+        |> put_change(:url_hint, nil)
         |> validate_chosen(:recipient_ids)
 
       kind when kind in [:slack, :teams] ->
@@ -120,7 +123,7 @@ defmodule Brando.Notifications.Route do
             else: URLGuard.validate(url)
 
         case check do
-          {:ok, _target} -> changeset
+          {:ok, _target} -> validate_host(changeset, get_field(changeset, :kind), url)
           {:error, reason} -> add_error(changeset, :url, Brando.Webhooks.Webhook.url_error(reason), reason: reason)
         end
 
@@ -128,6 +131,50 @@ defmodule Brando.Notifications.Route do
         changeset
     end
   end
+
+  defp validate_host(changeset, kind, url) do
+    if allowed_host?(kind, url),
+      do: changeset,
+      else: add_error(changeset, :url, "is not a #{kind} webhook URL", reason: :host_not_allowed, kind: kind)
+  end
+
+  @default_hosts [
+    slack: ["hooks.slack.com"],
+    # Workflows ("When a Teams webhook request is received"), and the older
+    # Office 365 connectors
+    teams: ["logic.azure.com", "api.powerplatform.com", "webhook.office.com"]
+  ]
+
+  @doc """
+  The hosts (and their subdomains) a Slack or Teams route may post to, so
+  managing routes cannot post anywhere:
+
+      config :brando, Brando.Notifications,
+        hosts: [slack: ["hooks.slack.com"], teams: ["logic.azure.com", "api.powerplatform.com"]]
+
+  Loopback addresses are allowed too where `Brando.Webhooks.URLGuard`
+  allows them (development and tests).
+  """
+  def hosts(kind) do
+    configured = Keyword.get(Brando.config(Brando.Notifications) || [], :hosts, [])
+    Keyword.get(configured, kind, Keyword.fetch!(@default_hosts, kind))
+  end
+
+  @doc "Whether `url` is on a host a `kind` route may post to (see `hosts/1`)."
+  def allowed_host?(kind, url) when kind in [:slack, :teams] and is_binary(url) do
+    case URI.new(url) do
+      {:ok, %URI{host: host}} when is_binary(host) ->
+        host = String.downcase(host)
+
+        (URLGuard.allow_localhost?() and host in ["localhost", "127.0.0.1", "::1", "[::1]"]) or
+          Enum.any?(hosts(kind), &(host == &1 or String.ends_with?(host, "." <> &1)))
+
+      _ ->
+        false
+    end
+  end
+
+  def allowed_host?(_kind, _url), do: false
 
   @doc """
   Whether `route` sends `event` about an entry of `entry_type`. An event

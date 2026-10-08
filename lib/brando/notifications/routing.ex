@@ -10,7 +10,9 @@ defmodule Brando.Notifications.Routing do
 
     * a destination: a Slack incoming webhook URL, a Microsoft Teams
       incoming webhook URL (a Workflows flow, "Post to a channel when a
-      webhook request is received"), or email to chosen users;
+      webhook request is received"), or email to chosen users, who must be
+      members of the site (`Brando.Notifications.Recipient`). Webhook URLs
+      must be on Slack's or Teams' hosts (`Brando.Notifications.Route.hosts/1`);
     * the events it sends, at least one:
       * `mention` — someone was mentioned in a note (`Brando.Notes`);
       * `scheduled_publish` — scheduled publishing published an entry;
@@ -27,23 +29,29 @@ defmodule Brando.Notifications.Routing do
 
   A notification names the entry by its title and content type, with a link
   to it in the admin; a mention names its author and the people mentioned,
-  never the note's text. Slack gets blocks, Teams an Adaptive Card, both in
-  the site's default admin language; see `Brando.Notifications.Message`.
-  Email goes to each recipient in their own language, when they are active
-  and may read the entry.
+  never the note's text nor the text it is anchored to. Slack gets blocks,
+  Teams an Adaptive Card, both in the site's default admin language, with
+  their markup escaped; see `Brando.Notifications.Message`. Email goes to
+  each recipient in their own language, while they are on the route, active,
+  members of the site and allowed to read the entry.
 
   Each message is a delivery (`Brando.Notifications.Delivery`) sent by an
-  Oban job on the `:webhooks` queue (`Brando.Worker.NotificationDelivery`),
-  with retries for about three hours, and recorded in the route's delivery
-  log, like webhook deliveries. A Slack or Teams route whose delivery failed
+  Oban job on the `:notifications` queue
+  (`Brando.Worker.NotificationDelivery`), with retries for about three hours,
+  and recorded in the route's delivery log, like webhook deliveries. A Slack
+  or Teams message waits `burst_seconds` (default 10), and goes out together
+  with the others of the same event queued on the route meanwhile ("12
+  entries published as scheduled"). Email waits for the recipient's next
+  email: at most one every ten minutes, with everything since the last, or
+  their daily or weekly summary. A Slack or Teams route whose delivery failed
   every attempt is paused. Only `https` URLs on public addresses are called,
   checked again before every delivery (`Brando.Webhooks.URLGuard`). The log
   keeps `Brando.Webhooks.retention_days/0` of deliveries.
 
-  ## Email digests
+  ## Email summaries
 
   A user can choose, in their profile, one email a day or a week instead of
-  single emails (`Brando.Notifications.Digest`). The digest collects their
+  an email every ten minutes at most (`Brando.Notifications.Digest`). The digest collects their
   mentions and the notifications routed to them by email since the last one,
   and goes out at `digest_hour` in the site's time zone (Mondays for the
   weekly one). It reuses the mention emails' batching: one job per user and
@@ -77,6 +85,10 @@ defmodule Brando.Notifications.Routing do
         failed_jobs: true,
         # at most one failed-job notification per worker in this many seconds
         failed_job_interval: 600,
+        # how long a Slack or Teams message waits for others like it
+        burst_seconds: 10,
+        # the hosts Slack and Teams routes may post to
+        hosts: [slack: ["hooks.slack.com"], teams: ["logic.azure.com", "api.powerplatform.com"]],
         # when digests go out, in Brando.timezone()
         digest_hour: 8
   """
@@ -91,7 +103,6 @@ defmodule Brando.Notifications.Routing do
   alias Brando.Notifications.Route
   alias Brando.Repo
   alias Brando.Tenant.Job, as: TenantJob
-  alias Brando.Users.User
   alias Brando.Worker.NotificationDelivery
 
   require Logger
@@ -105,6 +116,13 @@ defmodule Brando.Notifications.Routing do
 
   @doc "Whether jobs Oban discards are notified."
   def failed_jobs?, do: enabled?() and Keyword.get(config(), :failed_jobs, true)
+
+  @doc """
+  How long a Slack or Teams message waits before it is sent, in seconds, so
+  that a burst of the same event on a route (twelve entries published at
+  nine) goes out as one message.
+  """
+  def burst_seconds, do: Keyword.get(config(), :burst_seconds, 10)
 
   @doc "At most one failed-job notification per worker and environment in this many seconds."
   def failed_job_interval, do: Keyword.get(config(), :failed_job_interval, 600)
@@ -130,16 +148,8 @@ defmodule Brando.Notifications.Routing do
 
   ## Choices
 
-  @doc "The users an email route can send to: active accounts, by name."
-  def recipient_options do
-    Repo.all(
-      from(u in User,
-        where: u.active == true and is_nil(u.deleted_at),
-        order_by: [asc: u.name, asc: u.id],
-        select: %{id: u.id, name: u.name, email: u.email}
-      )
-    )
-  end
+  @doc "The users an email route can send to: active accounts that may enter this site, by name."
+  def recipient_options, do: Brando.Notifications.Recipient.options()
 
   defp form_opts(opts) do
     Keyword.put_new_lazy(opts, :recipient_ids, fn -> Enum.map(recipient_options(), & &1.id) end)
@@ -319,15 +329,14 @@ defmodule Brando.Notifications.Routing do
   A note on `entry` mentioned `mentioned` (users): goes to the routes that
   send `mention`. Never fails the note.
   """
-  def mention_created(note, schema, entry, author, mentioned) do
+  def mention_created(_note, schema, entry, author, mentioned) do
     if enabled?() and mentioned != [] do
       notification =
         base("mention")
         |> Map.merge(%{
           "entry" => entry_info(schema, entry),
           "author" => author && author.name,
-          "mentioned" => Enum.map(mentioned, & &1.name),
-          "anchor" => note.anchor_label
+          "mentioned" => Enum.map(mentioned, & &1.name)
         })
 
       notify("mention", notification,
@@ -376,10 +385,30 @@ defmodule Brando.Notifications.Routing do
   `"attempt"`, `"max_attempts"`, `"error"` and `"id"`.
   """
   def job_failed(job) when is_map(job) do
-    notification = Map.put(base("failed_job"), "job", Map.take(job, ~w(worker queue attempt max_attempts error id)))
-    notify("failed_job", notification, event_id: Ecto.UUID.generate())
+    if recently_notified?(job["worker"]) do
+      :ok
+    else
+      notification = Map.put(base("failed_job"), "job", Map.take(job, ~w(worker queue attempt max_attempts error id)))
+      notify("failed_job", notification, event_id: Ecto.UUID.generate())
+    end
   rescue
     error in Postgrex.Error -> missing_table(error, __STACKTRACE__)
+  end
+
+  # At most one failed-job notification per worker in `failed_job_interval/0`,
+  # counted from the delivery log (Oban's uniqueness alone ends when the
+  # pruner removes the finished dispatch job).
+  defp recently_notified?(worker) do
+    since = DateTime.add(DateTime.utc_now(), -failed_job_interval(), :second)
+
+    from(d in Delivery,
+      where:
+        d.event == "failed_job" and d.inserted_at > ^since and
+          fragment("?->'job'->>'worker' = ?", d.notification, ^to_string(worker)),
+      select: true,
+      limit: 1
+    )
+    |> Repo.one(savepoint()) == true
   end
 
   # An environment that has not run the `brando_217` migration has no routes
@@ -473,7 +502,6 @@ defmodule Brando.Notifications.Routing do
 
   defp queue_one(route, event, notification, entry_type, opts) do
     recipient_id = opts[:recipient_id]
-    digest? = recipient_id && Digest.period(recipient_id) != :off
 
     attrs = %{
       route_id: route.id,
@@ -484,7 +512,9 @@ defmodule Brando.Notifications.Routing do
       entry_type: entry_type,
       entry_id: opts[:entry_id],
       notification: notification,
-      state: if(digest?, do: "digest", else: "pending")
+      # Email waits for the recipient's next email: within ten minutes, or
+      # their daily or weekly summary
+      state: if(recipient_id, do: "digest", else: "pending")
     }
 
     in_transaction(fn ->
@@ -500,7 +530,7 @@ defmodule Brando.Notifications.Routing do
       |> case do
         {:ok, %Delivery{id: nil} = existing} -> {:ok, existing}
         {:ok, %Delivery{state: "digest"} = delivery} -> digest(delivery)
-        {:ok, delivery} -> enqueue(delivery)
+        {:ok, delivery} -> enqueue(delivery, schedule_in: burst_seconds())
         {:error, reason} -> {:error, reason}
       end
     end)
@@ -533,10 +563,10 @@ defmodule Brando.Notifications.Routing do
 
   defp savepoint, do: Brando.ContentEvents.savepoint()
 
-  defp enqueue(%Delivery{} = delivery) do
+  defp enqueue(%Delivery{} = delivery, opts \\ []) do
     %{"delivery" => delivery.id, "route" => delivery.route_id}
     |> TenantJob.attach()
-    |> NotificationDelivery.new()
+    |> NotificationDelivery.new(opts)
     |> Oban.insert()
     |> case do
       {:ok, _job} -> {:ok, delivery}

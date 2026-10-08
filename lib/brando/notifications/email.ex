@@ -29,9 +29,10 @@ defmodule Brando.Notifications.Email do
   @doc """
   The digest for `user`: `notifications`, and `mentions` as
   `Brando.Notes.MentionEmail` takes them (`:author`, `:entry_title`,
-  `:anchor`, `:text`, `:url`). `period` is `:daily` or `:weekly`.
+  `:anchor`, `:text`, `:url`). `period` is `:daily` or `:weekly`, or
+  `:batch` for what collected in the ten minutes since the last email.
   """
-  @spec digest(map(), [map()], [map()], :daily | :weekly) :: Swoosh.Email.t()
+  @spec digest(map(), [map()], [map()], :daily | :weekly | :batch) :: Swoosh.Email.t()
   def digest(user, notifications, mentions, period) do
     language = language(user)
     items = Enum.map(notifications, &Message.content(&1, language))
@@ -43,6 +44,7 @@ defmodule Brando.Notifications.Email do
 
       subject =
         case period do
+          :batch -> ngettext("1 notification", "%{count} notifications", count)
           :weekly -> ngettext("Your weekly summary: 1 notification", "Your weekly summary: %{count} notifications", count)
           _ -> ngettext("Your daily summary: 1 notification", "Your daily summary: %{count} notifications", count)
         end
@@ -78,6 +80,12 @@ defmodule Brando.Notifications.Email do
     do:
       gettext(
         "You get this because an administrator added you to a notification route. Choose a daily or weekly summary instead in your profile."
+      )
+
+  defp footer(:batch),
+    do:
+      gettext(
+        "You get one email at most every ten minutes, with everything since the last one. Choose a daily or weekly summary instead in your profile."
       )
 
   defp footer(:daily), do: gettext("You get one summary a day. Change it in your profile.")

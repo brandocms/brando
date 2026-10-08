@@ -24,17 +24,17 @@ msgstr ""
 
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
+msgid "As they come, at most one email every ten minutes"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
 msgid "Email notifications"
 msgstr ""
 
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Mentions and the notifications an administrator sends you by email."
-msgstr ""
-
-#: lib/brando/users/user.ex
-#, elixir-autogen, elixir-format
-msgid "One email for each"
 msgstr ""
 
 #: lib/brando/users/user.ex

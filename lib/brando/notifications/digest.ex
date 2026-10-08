@@ -22,10 +22,12 @@ defmodule Brando.Notifications.Digest do
   alias Brando.Notes
   alias Brando.Notifications.Delivery
   alias Brando.Notifications.Email
+  alias Brando.Notifications.Recipient
   alias Brando.Repo
   alias Brando.Users.User
 
   @periods [:off, :daily, :weekly]
+  @email_interval 600
   @limit 200
 
   @doc "The choices for the profile: `:off`, `:daily` and `:weekly`."
@@ -81,7 +83,7 @@ defmodule Brando.Notifications.Digest do
   def schedule(user_id, now \\ DateTime.utc_now()) do
     delay =
       case period(user_id) do
-        :off -> Notes.seconds_until_next_email(user_id, now)
+        :off -> seconds_until_next_email(user_id, now)
         period -> max(DateTime.diff(next_at(period, now), now, :second), 0)
       end
 
@@ -117,16 +119,52 @@ defmodule Brando.Notifications.Digest do
   defp send_when_due(_user_id, _period, [], [], _now), do: :ok
 
   defp send_when_due(user_id, period, waiting, mentions, now) do
-    due = due_at(period, waiting, mentions)
+    due =
+      if period == :off,
+        do: DateTime.add(now, seconds_until_next_email(user_id, now), :second),
+        else: due_at(period, waiting, mentions)
 
     if DateTime.compare(now, due) == :lt,
       do: {:snooze, max(DateTime.diff(due, now, :second), 1)},
       else: send_digest(user_id, period, waiting, mentions, now)
   end
 
-  # The first digest time after the oldest item. Turned off: now.
-  defp due_at(:off, _waiting, _mentions), do: ~U[1970-01-01 00:00:00Z]
+  @doc """
+  Seconds until `user_id` may get their next email without a summary: 0, or
+  what is left of ten minutes since the last one (a mention email or a
+  notification email).
+  """
+  def seconds_until_next_email(user_id, now) do
+    case last_email_at(user_id) do
+      nil -> 0
+      last -> max(0, @email_interval - DateTime.diff(now, last, :second))
+    end
+  end
 
+  defp last_email_at(user_id) do
+    mentions =
+      Repo.one(
+        from(m in Brando.Notes.Mention,
+          where: m.user_id == ^user_id and not is_nil(m.emailed_at),
+          select: max(m.emailed_at)
+        )
+      )
+
+    [mentions, last_notification_email(user_id)] |> Enum.reject(&is_nil/1) |> Enum.max(DateTime, fn -> nil end)
+  end
+
+  defp last_notification_email(user_id) do
+    Repo.one(
+      from(d in Delivery,
+        where: d.recipient_id == ^user_id and d.state == "succeeded" and d.test == false,
+        select: max(d.completed_at)
+      )
+    )
+  rescue
+    error in Postgrex.Error -> if error.postgres[:code] == :undefined_table, do: nil, else: reraise(error, __STACKTRACE__)
+  end
+
+  # The first digest time after the oldest item
   defp due_at(period, waiting, mentions) do
     oldest =
       (Enum.map(waiting, & &1.inserted_at) ++ Enum.map(mentions, & &1.inserted_at))
@@ -140,7 +178,8 @@ defmodule Brando.Notifications.Digest do
       from(d in Delivery,
         where: d.recipient_id == ^user_id and d.state == "digest",
         order_by: [asc: d.inserted_at, asc: d.id],
-        limit: @limit
+        limit: @limit,
+        preload: :route
       )
     )
   rescue
@@ -152,29 +191,35 @@ defmodule Brando.Notifications.Digest do
     user = Repo.get(User, user_id)
 
     if is_nil(user) or not user.active or not is_nil(user.deleted_at) do
-      finish(waiting, mentions, "cancelled", now)
+      finish(waiting, mentions, "cancelled", now, "recipient_unavailable")
     else
-      {readable, unreadable} = Enum.split_with(waiting, &Brando.Notifications.Recipient.may_see?(user, &1))
+      # Only while the route is active and still names the user
+      {readable, unreadable} = Enum.split_with(waiting, &Recipient.may_see?(user, &1, &1.route))
       notifications = Enum.map(readable, & &1.notification)
       mention_items = Notes.mention_email_items(mentions)
 
-      send_email(user, notifications, mention_items, if(period == :weekly, do: :weekly, else: :daily))
-      finish(unreadable, [], "cancelled", now)
+      send_email(user, notifications, mention_items, if(period == :off, do: :batch, else: period))
+      finish(unreadable, [], "cancelled", now, "recipient_unavailable")
       finish(readable, mentions, "succeeded", now)
     end
   end
 
   defp send_email(_user, [], [], _period), do: :ok
 
+  defp send_email(user, [notification], [], :batch) do
+    {:ok, _job} = user |> Email.single(notification) |> Brando.Mailer.deliver_later()
+    :ok
+  end
+
   defp send_email(user, notifications, mention_items, period) do
     {:ok, _job} = user |> Email.digest(notifications, mention_items, period) |> Brando.Mailer.deliver_later()
     :ok
   end
 
-  defp finish(deliveries, mentions, state, now) do
+  defp finish(deliveries, mentions, state, now, error \\ nil) do
     if deliveries != [] do
       ids = Enum.map(deliveries, & &1.id)
-      Repo.update_all(from(d in Delivery, where: d.id in ^ids), set: [state: state, completed_at: now])
+      Repo.update_all(from(d in Delivery, where: d.id in ^ids), set: [state: state, completed_at: now, error: error])
       Enum.each(deliveries |> Enum.map(& &1.route_id) |> Enum.uniq(), &broadcast/1)
     end
 

@@ -845,6 +845,20 @@ msgid_plural "%{count} entries"
 msgstr[0] "1 rad"
 msgstr[1] "%{count} rader"
 
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry published as scheduled"
+msgid_plural "%{count} entries published as scheduled"
+msgstr[0] "1 oppføring publisert som planlagt"
+msgstr[1] "%{count} oppføringer publisert som planlagt"
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry unpublished as scheduled"
+msgid_plural "%{count} entries unpublished as scheduled"
+msgstr[0] "1 oppføring avpublisert som planlagt"
+msgstr[1] "%{count} oppføringer avpublisert som planlagt"
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "1 error"
@@ -865,6 +879,21 @@ msgid "1 item"
 msgid_plural "%{count} items"
 msgstr[0] "1 element"
 msgstr[1] "%{count} elementer"
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 mention"
+msgid_plural "%{count} mentions"
+msgstr[0] "1 omtale"
+msgstr[1] "%{count} omtaler"
+
+#: lib/brando/notifications/email.ex
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "1 notification"
+msgid_plural "%{count} notifications"
+msgstr[0] "1 varsel"
+msgstr[1] "%{count} varsler"
 
 #: lib/brando/galleries/gallery.ex
 #: lib/brando_admin/components/form/input/gallery_objects.ex
@@ -8051,11 +8080,6 @@ msgstr "I biblioteket"
 msgid "In sitemap"
 msgstr "I nettstedskartet"
 
-#: lib/brando_admin/live/sites/notifications_live.ex
-#, elixir-autogen, elixir-format
-msgid "In summary"
-msgstr "I sammendrag"
-
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -11038,11 +11062,6 @@ msgstr "Frakoblet — de siste endringene er ikke lagret i gjenopprettingskopien
 #, elixir-autogen, elixir-format
 msgid "On"
 msgstr "På"
-
-#: lib/brando/notifications/message.ex
-#, elixir-autogen, elixir-format
-msgid "On %{place}"
-msgstr "På %{place}"
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
@@ -14573,6 +14592,11 @@ msgstr "Sender til %{host}"
 msgid "Sent"
 msgstr "Sendt"
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sent in one message with others"
+msgstr "Sendt i én melding sammen med andre"
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with every submission and never shown to visitors."
@@ -17976,6 +18000,11 @@ msgstr "Opplastinger i dette feltet havner i denne mappen"
 msgid "Use %{action} to upload a video with this provider."
 msgstr "Bruk %{action} for å laste opp en video med denne leverandøren."
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use a Slack incoming webhook URL, on hooks.slack.com."
+msgstr "Bruk en innkommende webhook-URL fra Slack, på hooks.slack.com."
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Use a name without spaces; it must be unique on this page."
@@ -18044,6 +18073,11 @@ msgid "Use the %{count} I attached"
 msgid_plural "Use the %{count} I attached"
 msgstr[0] "Bruk %{count} valgt"
 msgstr[1] "Bruk %{count} valgte"
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the URL of a Teams workflow, on logic.azure.com or api.powerplatform.com."
+msgstr "Bruk URL-en til en arbeidsflyt i Teams, på logic.azure.com eller api.powerplatform.com."
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -18428,6 +18462,11 @@ msgstr "Venter på en koblet oversettelse"
 #, elixir-autogen, elixir-format
 msgid "Waiting for review"
 msgstr "Venter på gjennomgang"
+
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the next email"
+msgstr "Venter på neste e-post"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -18934,6 +18973,11 @@ msgstr "Du får høyst én e-post hvert tiende minutt, med alle omtaler siden fo
 
 #: lib/brando/notifications/email.ex
 #, elixir-autogen, elixir-format
+msgid "You get one email at most every ten minutes, with everything since the last one. Choose a daily or weekly summary instead in your profile."
+msgstr "Du får høyst én e-post hvert tiende minutt, med alt siden forrige. Velg et daglig eller ukentlig sammendrag i stedet i profilen din."
+
+#: lib/brando/notifications/email.ex
+#, elixir-autogen, elixir-format
 msgid "You get one summary a day. Change it in your profile."
 msgstr "Du får ett sammendrag om dagen. Endre det i profilen din."
 
@@ -19178,6 +19222,13 @@ msgstr "og"
 #, elixir-autogen, elixir-format
 msgid "and %{count} more"
 msgstr "og %{count} til"
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "and 1 more"
+msgid_plural "and %{count} more"
+msgstr[0] "og 1 til"
+msgstr[1] "og %{count} til"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format

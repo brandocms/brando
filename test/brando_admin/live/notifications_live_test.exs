@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Sites.NotificationsLiveTest do
     :ok
   end
 
-  @slack_url "https://hooks.example.com/services/T000/B000/topsecretkey"
+  @slack_url "https://hooks.slack.com/services/T000/B000/topsecretkey"
 
   # A session that last gave its password `minutes` ago
   defp confirmed_ago(conn, minutes) do
@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Sites.NotificationsLiveTest do
       html = render(view)
       refute html =~ "topsecretkey"
       refute inspect(:sys.get_state(view.pid)) =~ "topsecretkey"
-      assert has_element?(view, "[data-testid=notification-url-masked]", "hooks.example.com/…tkey")
+      assert has_element?(view, "[data-testid=notification-url-masked]", "hooks.slack.com/…tkey")
 
       {:ok, _view, html} = live(conn, "/admin/config/notifications/#{route.id}/edit")
       refute html =~ "topsecretkey"
@@ -156,10 +156,10 @@ defmodule BrandoAdmin.Sites.NotificationsLiveTest do
       refute has_element?(view, "#route-url[value]")
 
       view
-      |> form("#notification-route-form", route: %{url: "https://hooks.example.com/services/T1/B1/newkey"})
+      |> form("#notification-route-form", route: %{url: "https://hooks.slack.com/services/T1/B1/newkey"})
       |> render_submit()
 
-      assert Routing.url(Repo.get!(Route, route.id)) == {:ok, "https://hooks.example.com/services/T1/B1/newkey"}
+      assert Routing.url(Repo.get!(Route, route.id)) == {:ok, "https://hooks.slack.com/services/T1/B1/newkey"}
     end
 
     test "pausing, resuming and deleting", %{conn: conn, current_user: user} do

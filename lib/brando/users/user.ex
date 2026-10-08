@@ -222,7 +222,7 @@ defmodule Brando.Users.User do
               label: t("Email notifications", UserConfig),
               instructions: t("Mentions and the notifications an administrator sends you by email.", UserConfig),
               options: [
-                %{label: t("One email for each", UserConfig), value: :off},
+                %{label: t("As they come, at most one email every ten minutes", UserConfig), value: :off},
                 %{label: t("A daily summary", UserConfig), value: :daily},
                 %{label: t("A weekly summary, on Mondays", UserConfig), value: :weekly}
               ]

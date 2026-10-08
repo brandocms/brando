@@ -6,9 +6,14 @@ defmodule Brando.Notifications.Delivery do
   built from it when it is sent, in the recipient's language for email.
 
   States: `pending` (queued), `sending`, `retrying` (failed, will be tried
-  again), `succeeded`, `failed` (gave up), `cancelled` (the route was paused
-  or deleted, or the recipient may no longer have it) and `digest` (waiting
-  for the recipient's email digest).
+  again), `succeeded`, `failed` (gave up), `cancelled` (the route was paused,
+  or the recipient may no longer have it) and `digest` (waiting for the
+  recipient's next email, or their summary).
+
+  Several Slack or Teams deliveries of the same event on a route, queued
+  within `Brando.Notifications.Routing.burst_seconds/0` of each other, go
+  out as one message: the others name it in `grouped_into_id` and take its
+  state.
   """
   use Ecto.Schema
 
@@ -32,6 +37,7 @@ defmodule Brando.Notifications.Delivery do
     field :error, :string
     field :duration_ms, :integer
     field :test, :boolean, default: false
+    field :grouped_into_id, :integer
     field :started_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
 

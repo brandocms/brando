@@ -145,11 +145,11 @@ defmodule Brando.Doctor.ChecksTest do
   end
 
   describe "Oban" do
-    @queues for name <- ~w(default content_events webhooks search_index),
+    @queues for name <- ~w(default content_events webhooks search_index notifications),
                 do: %{queue: name, limit: 1, paused: false, live: false}
 
     test "configured queues and no stuck or discarded jobs" do
-      assert %Result{status: :ok, summary: "4 queues, 0 stuck"} =
+      assert %Result{status: :ok, summary: "5 queues, 0 stuck"} =
                Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: []})
     end
 
@@ -157,12 +157,12 @@ defmodule Brando.Doctor.ChecksTest do
       queues = Enum.reject(@queues, &(&1.queue == "webhooks"))
       result = Checks.Oban.evaluate(%{testing: nil, queues: queues, stuck: [], discarded: []})
       assert result.status == :warning
-      assert result.summary == "3 queues, 0 stuck · no webhooks queue"
+      assert result.summary == "4 queues, 0 stuck · no webhooks queue"
       assert result.fix =~ "webhooks: [limit: …]"
 
       queues = [%{queue: "default", limit: 1, paused: false, live: false}]
       result = Checks.Oban.evaluate(%{testing: nil, queues: queues, stuck: [], discarded: []})
-      assert result.summary =~ "no content_events, webhooks, search_index queue"
+      assert result.summary =~ "no content_events, webhooks, search_index, notifications queue"
 
       # Not when jobs run inline
       assert %Result{status: :ok} = Checks.Oban.evaluate(%{testing: :inline, queues: queues, stuck: [], discarded: []})
@@ -174,12 +174,13 @@ defmodule Brando.Doctor.ChecksTest do
         %{queue: "content_events", limit: 1, paused: false, live: true},
         %{queue: "webhooks", limit: 5, paused: false, live: true},
         %{queue: "search_index", limit: 2, paused: false, live: true},
+        %{queue: "notifications", limit: 2, paused: false, live: true},
         %{queue: "mail", limit: 2, paused: true, live: true}
       ]
 
       result = Checks.Oban.evaluate(%{testing: nil, queues: queues, stuck: [], discarded: []})
       assert result.status == :warning
-      assert result.summary == "4 running, 0 stuck · 1 paused"
+      assert result.summary == "5 running, 0 stuck · 1 paused"
     end
 
     test "no queues is an error, unless jobs run inline" do
@@ -204,10 +205,12 @@ defmodule Brando.Doctor.ChecksTest do
       insert.(%{state: "discarded", discarded_at: usec(DateTime.add(@now, -3 * 86_400, :second))})
 
       result =
-        Checks.Oban.run(context(oban: [queues: [default: 1, content_events: 1, webhooks: 5, search_index: 2]]))
+        Checks.Oban.run(
+          context(oban: [queues: [default: 1, content_events: 1, webhooks: 5, search_index: 2, notifications: 2]])
+        )
 
       assert result.status == :warning
-      assert result.summary == "4 queues, 1 stuck, 1 discarded in 24 h"
+      assert result.summary == "5 queues, 1 stuck, 1 discarded in 24 h"
       assert Enum.any?(result.items, &(&1 =~ "##{stuck.id} MyApp.Worker (available"))
 
       assert Enum.any?(

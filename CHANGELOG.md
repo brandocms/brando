@@ -112,7 +112,10 @@ production dump.
   `notification_routes` and `notification_deliveries` in every environment.
   Run `mix brando.gen.migrations` and `mix brando.migrate`; until then, there
   are no notification routes and saves, notes and jobs carry on without them.
-  Deliveries use the `webhooks` queue. Add the Notifications permission
+  Brando's default Oban configuration has the new `notifications` queue. **An
+  application that sets `config :brando, Oban` itself must add it
+  (`notifications: [limit: 2]`), or no notification is sent**;
+  `mix brando.doctor` warns when it is missing. Add the Notifications permission
   (`brando.notifications.manage`) to the groups that should manage routes;
   no existing group gets it. See [Notifications](guides/notifications.md).
 
@@ -774,9 +777,13 @@ production dump.
   optionally for some content types only. Slack gets blocks and Teams an
   Adaptive Card, with a link to the entry in the admin; each message is sent
   through Oban with retries and listed in a delivery log. Webhook URLs are
-  stored encrypted and shown only by host and last characters. In their
-  profile, users can choose a daily or weekly email summary of their mentions
-  and notifications instead of single emails. Copying an environment pauses
+  stored encrypted, shown only by host and last characters, and limited to
+  Slack's and Teams' hosts; email goes only to members of the site. A burst
+  of the same event on a Slack or Teams route is one message, and email comes
+  at most every ten minutes. In their profile, users can choose a daily or
+  weekly email summary of their mentions and notifications instead. A failed
+  or cancelled message can be sent again from the log, and the dashboard says
+  when a route was paused after failures. Copying an environment pauses
   its routes, as it does webhooks. See [Notifications](guides/notifications.md).
 
 - **Blocks on older module versions can be resolved.** A module save keeps

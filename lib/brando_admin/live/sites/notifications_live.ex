@@ -749,6 +749,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
     ~H"""
     <span>{@title}</span>
     <small :if={@recipient}>{gettext("To %{name}", name: @recipient.name)}</small>
+    <small :if={@delivery.grouped_into_id}>{gettext("Sent in one message with others")}</small>
     """
   end
 
@@ -774,7 +775,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
   defp state_label("retrying"), do: gettext("Retrying")
   defp state_label("failed"), do: gettext("Failed")
   defp state_label("cancelled"), do: gettext("Not sent")
-  defp state_label("digest"), do: gettext("In summary")
+  defp state_label("digest"), do: gettext("Waiting for the next email")
   defp state_label(state), do: state
 
   defp error_text("timeout"), do: gettext("No answer within 10 seconds")
@@ -810,9 +811,15 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
     case Keyword.get(opts, :reason) || Keyword.get(opts, :validation) do
       :required -> gettext("Fill this in.")
       :length -> length_error(opts)
+      :host_not_allowed -> host_error(Keyword.get(opts, :kind))
       reason -> url_error(reason)
     end
   end
+
+  defp host_error(:teams),
+    do: gettext("Use the URL of a Teams workflow, on logic.azure.com or api.powerplatform.com.")
+
+  defp host_error(_slack), do: gettext("Use a Slack incoming webhook URL, on hooks.slack.com.")
 
   defp url_error(reason) when reason in [:https_required, :scheme_not_allowed], do: gettext("Use an https:// address.")
   defp url_error(:credentials_in_url), do: gettext("Leave the user name and password out of the address.")

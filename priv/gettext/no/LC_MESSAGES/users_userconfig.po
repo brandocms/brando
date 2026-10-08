@@ -24,6 +24,11 @@ msgstr "Et ukentlig sammendrag, på mandager"
 
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
+msgid "As they come, at most one email every ten minutes"
+msgstr "Etter hvert, høyst én e-post hvert tiende minutt"
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
 msgid "Email notifications"
 msgstr "Varsler på e-post"
 
@@ -31,11 +36,6 @@ msgstr "Varsler på e-post"
 #, elixir-autogen, elixir-format
 msgid "Mentions and the notifications an administrator sends you by email."
 msgstr "Omtaler, og varslene en administrator sender deg på e-post."
-
-#: lib/brando/users/user.ex
-#, elixir-autogen, elixir-format
-msgid "One email for each"
-msgstr "Én e-post for hvert"
 
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format

@@ -102,6 +102,9 @@ defmodule Brando.Supervisor do
           # Each webhook is limited to `Brando.Webhooks.concurrency/0` of
           # these at a time, so one slow receiver cannot hold them all.
           webhooks: [limit: 5],
+          # Slack, Teams and email notifications (`Brando.Notifications.Routing`),
+          # apart from webhooks so a burst of them does not hold deliveries up.
+          notifications: [limit: 2],
           # The admin search index: one job per changed entry, and rebuilds
           # from Utilities (`Brando.Search`). Two, so a rebuild does not hold
           # up the entries saved meanwhile.

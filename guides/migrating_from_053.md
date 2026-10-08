@@ -422,7 +422,7 @@ describe each:
 - Add `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router.
 - An application that sets `config :brando, Oban` itself adds the
-  `content_events`, `webhooks` and `search_index` queues, and
+  `content_events`, `webhooks`, `search_index` and `notifications` queues, and
   `Brando.Worker.WebhookDeliveryPurger` to its crontab.
 - With group authorization, grant the Notifications permission
   (`brando.notifications.manage`) to the groups that should manage
