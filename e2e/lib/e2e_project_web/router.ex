@@ -63,6 +63,7 @@ defmodule E2eProjectWeb.Router do
       post "/authorization-sites/:action", E2EAuthorizationController, :run
       post "/webhook-receiver/:inbox", E2EWebhookReceiverController, :receive_delivery
       get "/webhook-receiver/:inbox", E2EWebhookReceiverController, :list
+      post "/mcp/:action", E2EFixtureController, :mcp
     end
   end
 
@@ -102,6 +103,10 @@ defmodule E2eProjectWeb.Router do
       live "/price_categories/update/:entry_id", PriceCategoryFormLive, :update
     end
   end
+
+  # The remote MCP endpoint, off until turned on under Configuration →
+  # Integrations (Brando.MCP).
+  mcp_routes()
 
   scope "/coming-soon", E2eProjectWeb do
     get "/", LockdownController, :index

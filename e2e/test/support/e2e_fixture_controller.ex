@@ -723,6 +723,52 @@ defmodule E2EFixtureController do
     json(conn, %{sessions: count})
   end
 
+  # The remote MCP endpoint (Brando.MCP): an administrator with two-factor
+  # authentication who may connect tools, and the switch.
+  def mcp(conn, %{"action" => "user"}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    email = "mcp-#{System.unique_integer([:positive])}@brandocms.com"
+    password = "mcp connect password"
+
+    {:ok, user} =
+      Brando.Users.create_user(
+        %{
+          name: "MCP Admin",
+          email: email,
+          password: password,
+          password_confirmation: password,
+          language: conn.params["language"] || "en",
+          role: :admin,
+          active: true,
+          config: %{reset_password_on_first_login: false}
+        },
+        :system
+      )
+
+    secret = Brando.Users.TwoFactor.new_secret()
+    {:ok, _codes} = Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret), proof: password)
+    import Ecto.Query, only: [from: 2]
+    Brando.Repo.update_all(from(s in Brando.Users.Security, where: s.user_id == ^user.id), set: [totp_last_step: nil])
+
+    json(conn, %{
+      id: user.id,
+      email: email,
+      password: password,
+      secret: Base.encode32(secret, padding: false),
+      client_id: E2eProject.MCPClient.client_id()
+    })
+  end
+
+  def mcp(conn, %{"action" => "enable"}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    {:ok, admin} = Brando.Users.get_user(%{matches: %{email: "admin@brandocms.com"}})
+    tenant = Brando.MCP.tenant(nil, nil)
+    :ok = Brando.MCP.set_enabled(tenant, true, admin)
+    json(conn, %{resource: Brando.MCP.resource(tenant)})
+  end
+
   def image_creator(conn, %{"image_id" => image_id}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

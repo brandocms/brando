@@ -842,9 +842,23 @@ changed with [#2996](https://github.com/brandocms/brando/issues/2996):
   to a local coding agent, as a named user, and refuses production and
   releases ([brando_mcp#3](https://github.com/brandocms/brando_mcp/pull/3)).
   BrandoMCP's HTTP Plug and listener are removed.
-- **Planned remote endpoint.** An OAuth 2.1 endpoint for users with the
-  `:connect_mcp` permission and 2FA, off by default, with the security
-  requirements in #2996. It is the only planned network path.
+- **Remote endpoint (8 October 2026).** Brando hosts it itself
+  (`Brando.MCP`, `mcp_routes/0`), calling `Proposals.Tools` directly, so
+  there is still one tool implementation and no dependency on BrandoMCP. It
+  is off by default per site and environment, and answers 404 as a missing
+  route until turned on. Streamable HTTP, JSON responses, both the
+  `2026-07-28` and the `2025-xx` protocol eras. OAuth 2.1 with PKCE (S256),
+  resource indicators, Client ID Metadata Documents (no dynamic
+  registration), hashed opaque tokens, rotating refresh tokens with reuse
+  detection, and revocation. Only people with `brando.mcp.connect` (the
+  `:connect_mcp` of #2996) and two-factor authentication can connect, through
+  the admin login and a consent screen that asks to confirm. Tokens are
+  bound to one site environment and checked against the person's account,
+  permission and two-factor authentication on every call. The tools are the
+  read and propose set, without the conversation-only ones; every call is in
+  Activity. People revoke their own connections under Security → Connected
+  apps, administrators everyone's under Configuration. It is the only
+  network path; the threat model is in `guides/mcp.md`.
 - **Review stays in the admin.** Both paths read and propose only. Their
   proposals have no conversation; each records its origin (`mcp`, with the
   client's name) and is reviewed, applied or rejected in the Assistant under

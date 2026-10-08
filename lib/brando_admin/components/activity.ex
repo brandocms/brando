@@ -16,6 +16,9 @@ defmodule BrandoAdmin.Components.Activity do
 
   @trash_days 30
   @webhook "Elixir.Brando.Webhooks.Webhook"
+  # Connected AI tools (`Brando.MCP`): a connection, and the endpoint's switch
+  @mcp_grant "Elixir.Brando.MCP.Grant"
+  @mcp_setting "Elixir.Brando.MCP.Setting"
 
   ## Data
 
@@ -131,6 +134,7 @@ defmodule BrandoAdmin.Components.Activity do
   def action_label(%{action: :note_added}), do: gettext("Added a note")
   def action_label(%{action: :note_resolved}), do: gettext("Resolved a note")
   def action_label(%{action: :note_reopened}), do: gettext("Reopened a note")
+  def action_label(%{action: :tool_called}), do: gettext("Used a tool")
 
   @doc "The filter options for actions: `[{label, value}]`."
   def action_options do
@@ -148,7 +152,8 @@ defmodule BrandoAdmin.Components.Activity do
       {gettext("Reordered"), "reordered"},
       {gettext("Added a note"), "note_added"},
       {gettext("Resolved a note"), "note_resolved"},
-      {gettext("Reopened a note"), "note_reopened"}
+      {gettext("Reopened a note"), "note_reopened"},
+      {gettext("Used a tool"), "tool_called"}
     ]
   end
 
@@ -167,6 +172,8 @@ defmodule BrandoAdmin.Components.Activity do
   defp tone(_), do: "is-neutral"
 
   defp setting_label(@webhook), do: gettext("Webhook")
+  defp setting_label(@mcp_grant), do: gettext("Connected app")
+  defp setting_label(@mcp_setting), do: gettext("MCP endpoint")
   defp setting_label(_schema), do: nil
 
   @doc "A content type's name in the admin's language."
@@ -328,6 +335,10 @@ defmodule BrandoAdmin.Components.Activity do
   defp source(%{source: :assistant} = event),
     do: %{icon: "sparkles", label: gettext("Assistant"), caption: by(event, :assistant)}
 
+  # A tool's own call, as the person who connected it
+  defp source(%{source: :mcp, action: :tool_called} = event),
+    do: %{icon: "plug", label: mcp_label(event), caption: by(event, :mcp)}
+
   defp source(%{source: :mcp} = event),
     do: %{icon: "plug", label: mcp_label(event), caption: by(event, :assistant)}
 
@@ -343,6 +354,7 @@ defmodule BrandoAdmin.Components.Activity do
   defp by(%{user: user}, :scheduler), do: gettext("Set by %{name}", name: user.name)
   defp by(%{user: user}, :assistant), do: gettext("Approved by %{name}", name: user.name)
   defp by(%{user: user}, :import), do: gettext("Run by %{name}", name: user.name)
+  defp by(%{user: user}, :mcp), do: gettext("As %{name}", name: user.name)
 
   defp mcp_label(%{details: %{"client" => client}}) when is_binary(client),
     do: gettext("%{client} via MCP", client: client)
@@ -373,7 +385,7 @@ defmodule BrandoAdmin.Components.Activity do
       assign(assigns,
         path: entry_path(assigns.event, assigns.states),
         gone?:
-          assigns.event.schema != @webhook && assigns.event.entry_id &&
+          assigns.event.schema not in [@webhook, @mcp_grant, @mcp_setting] && assigns.event.entry_id &&
             is_nil(assigns.states[{assigns.event.schema, assigns.event.entry_id}]),
         title: assigns.event.title || plural_label(schema) || assigns.event.schema,
         type: if(assigns.event.entry_id, do: type_label(schema) || setting_label(assigns.event.schema)),
@@ -428,6 +440,38 @@ defmodule BrandoAdmin.Components.Activity do
     do: [gettext("Deleted with its delivery log")]
 
   defp lines(%{schema: @webhook}, fields, _states), do: [fields && fields_line(fields)]
+
+  defp lines(%{schema: @mcp_grant, action: :tool_called, details: %{"tool" => tool, "ok" => false}}, _fields, _states),
+    do: [gettext("%{tool}, which failed", tool: tool)]
+
+  defp lines(%{schema: @mcp_grant, action: :tool_called, details: %{"tool" => tool}}, _fields, _states), do: [tool]
+
+  defp lines(%{schema: @mcp_grant, details: %{"mcp" => "connected"}}, _fields, _states),
+    do: [gettext("Connected over MCP")]
+
+  defp lines(%{schema: @mcp_grant, details: %{"mcp" => "revoked", "reason" => reason}}, _fields, _states)
+       when reason in ["refresh_token_reuse", "code_reuse"],
+       do: [gettext("Disconnected: a used token was presented again")]
+
+  defp lines(%{schema: @mcp_grant, details: %{"mcp" => "revoked"}}, _fields, _states), do: [gettext("Disconnected")]
+
+  defp lines(%{schema: @mcp_setting, details: %{"mcp" => "enabled"}}, _fields, _states),
+    do: [gettext("Turned the MCP endpoint on")]
+
+  defp lines(%{schema: @mcp_setting, details: %{"mcp" => "disabled", "revoked" => count}}, _fields, _states)
+       when is_integer(count) and count > 0,
+       do: [
+         ngettext(
+           "Turned the MCP endpoint off and disconnected %{count} app",
+           "Turned the MCP endpoint off and disconnected %{count} apps",
+           count
+         )
+       ]
+
+  defp lines(%{schema: @mcp_setting, details: %{"mcp" => "disabled"}}, _fields, _states),
+    do: [gettext("Turned the MCP endpoint off")]
+
+  defp lines(%{schema: schema}, _fields, _states) when schema in [@mcp_grant, @mcp_setting], do: []
 
   defp lines(%{action: :created} = event, _fields, _states), do: [status_saved(event.details)]
 

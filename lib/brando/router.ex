@@ -61,6 +61,77 @@ defmodule Brando.Router do
     end
   end
 
+  @doc """
+  The remote MCP endpoint (`Brando.MCP`), its OAuth endpoints and metadata,
+  and the consent screen. Mounting them lets an administrator turn the
+  endpoint on per site environment, under Configuration → Integrations;
+  until then every one of them answers 404. Without this call there is no
+  network path to MCP at all.
+
+  Add it after `admin_routes/3`, whose admin pipeline the consent screen
+  uses, and before the scope that calls `page_routes/1`, whose catch-all
+  would otherwise take `/mcp`:
+
+      admin_routes do
+        # …
+      end
+
+      mcp_routes()
+
+      scope "/" do
+        pipe_through :browser
+        page_routes()
+      end
+
+  It mounts `/mcp` and `/mcp/*`, `/.well-known/oauth-protected-resource/mcp…`,
+  `/.well-known/oauth-authorization-server/mcp…` and `/admin/mcp/authorize`,
+  outside the browser pipeline: the endpoint takes bearer tokens, not the
+  session.
+  """
+  defmacro mcp_routes do
+    quote do
+      @doc false
+      def __brando_mcp_routes__, do: true
+
+      mcp_sandbox_hooks =
+        if Module.get_attribute(__MODULE__, :sql_sandbox),
+          do: [{BrandoAdmin.Mounts.LiveAcceptance, {:default, nil}}],
+          else: []
+
+      pipeline :brando_mcp_consent_check do
+        plug Brando.MCP.ConsentPlug, :check
+      end
+
+      pipeline :brando_mcp_consent do
+        plug Brando.MCP.ConsentPlug, :guard
+      end
+
+      scope "/" do
+        match :*, "/.well-known/oauth-protected-resource/mcp", Brando.MCP.HTTP, :resource_metadata
+        match :*, "/.well-known/oauth-protected-resource/mcp/*tenant", Brando.MCP.HTTP, :resource_metadata
+        match :*, "/.well-known/oauth-authorization-server/mcp", Brando.MCP.HTTP, :server_metadata
+        match :*, "/.well-known/oauth-authorization-server/mcp/*tenant", Brando.MCP.HTTP, :server_metadata
+        match :*, "/mcp", Brando.MCP.HTTP, :endpoint
+        match :*, "/mcp/*path", Brando.MCP.HTTP, :dispatch
+      end
+
+      scope "/admin/mcp", as: :admin_mcp do
+        pipe_through [:brando_mcp_consent_check, :admin, :brando_root_layout, :brando_mcp_consent]
+
+        live_session :brando_mcp_consent,
+          on_mount:
+            mcp_sandbox_hooks ++
+              [
+                {BrandoAdmin.UserAuth, :ensure_authenticated},
+                {Brando.Tenant.LiveView, :default},
+                {BrandoAdmin.Authorization, :default}
+              ] do
+          live "/authorize", BrandoAdmin.MCP.ConsentLive
+        end
+      end
+    end
+  end
+
   defmacro admin_routes(path \\ "/admin", options \\ [], do: block) do
     quote do
       import BrandoAdmin.UserAuth
@@ -219,6 +290,7 @@ defmodule Brando.Router do
       live "/webhooks/deliveries", BrandoAdmin.Sites.WebhooksLive, :deliveries
       live "/webhooks/:id/edit", BrandoAdmin.Sites.WebhooksLive, :edit
       live "/webhooks/:id/deliveries", BrandoAdmin.Sites.WebhooksLive, :deliveries
+      live "/mcp", BrandoAdmin.Sites.MCPLive
       live "/seo", BrandoAdmin.Sites.SEOLive
       live "/utils", BrandoAdmin.Sites.UtilsLive
       live "/utils/loose-blocks", BrandoAdmin.Sites.BlockAuditLive

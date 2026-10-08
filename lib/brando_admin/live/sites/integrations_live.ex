@@ -4,22 +4,42 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
   reads data from, in one settings list — what each does for the site on the
   left, its action on the right. Plausible and Search Console are set in the
   application's configuration and shown in Content SEO; webhooks are managed
-  here (`BrandoAdmin.Sites.WebhooksLive`).
+  here (`BrandoAdmin.Sites.WebhooksLive`), and so are connected AI tools
+  (`BrandoAdmin.Sites.MCPLive`).
+
+  The page is for those who may manage webhooks or connected AI tools
+  (`can_open?/1`), and each of those rows only shows to those who may manage
+  it. The Plausible and Search Console rows show to anyone who can open it.
   """
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.MCP
   alias Brando.SEO.Analytics
   alias Brando.Webhooks
   alias BrandoAdmin.Components.Workspace
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
 
-  def __authorization__, do: {:manage, :webhooks}
+  # Either of two permissions opens the page, which one requirement cannot
+  # say: the route asks for backend access, and `mount/3` for the rest.
+  def __authorization__, do: {:access, :backend}
+
+  @doc """
+  Whether `user` may open Integrations in the current site environment: they
+  may manage webhooks (`brando.webhooks.manage`) or connected AI tools
+  (`brando.mcp.manage`). Without group authorization, the admin and
+  superuser roles.
+  """
+  def can_open?(user), do: Webhooks.can_manage?(user) or MCP.can_manage_here?(user)
 
   def mount(_params, _session, socket) do
-    if Webhooks.can_manage?(socket.assigns.current_user) do
-      if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), Webhooks.topic())
+    user = socket.assigns.current_user
+    tenant = MCP.tenant(socket.assigns[:current_site], socket.assigns[:current_environment])
+    webhooks? = Webhooks.can_manage?(user)
+
+    if webhooks? or MCP.can_manage?(user, tenant) do
+      if connected?(socket) and webhooks?, do: Phoenix.PubSub.subscribe(Brando.pubsub(), Webhooks.topic())
 
       {:ok,
        socket
@@ -27,13 +47,26 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
        |> assign(:page_title, gettext("Integrations"))
        |> assign(:plausible?, Analytics.Plausible.configured?())
        |> assign(:search_console?, Analytics.SearchConsole.configured?())
+       |> assign(:webhooks?, webhooks?)
+       |> assign_mcp(tenant)
        |> assign_webhooks()}
     else
       {:ok, redirect(socket, to: "/admin/access-denied")}
     end
   end
 
-  defp assign_webhooks(socket), do: assign(socket, :webhooks, Webhooks.summary())
+  # Webhooks, for those who may manage them
+  defp assign_webhooks(%{assigns: %{webhooks?: true}} = socket), do: assign(socket, :webhooks, Webhooks.summary())
+  defp assign_webhooks(socket), do: assign(socket, :webhooks, nil)
+
+  # Connected AI tools (`Brando.MCP`), for those who may manage them
+  defp assign_mcp(socket, tenant) do
+    if MCP.can_manage?(socket.assigns.current_user, tenant) do
+      assign(socket, :mcp, %{enabled?: MCP.enabled?(tenant), count: length(MCP.list_grants(tenant))})
+    else
+      assign(socket, :mcp, nil)
+    end
+  end
 
   def handle_info({Webhooks, _message}, socket), do: {:noreply, assign_webhooks(socket)}
 
@@ -55,11 +88,11 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       <div class="integrations-list" data-testid="integrations-list">
         <section :if={@connected != []} aria-labelledby="integrations-connected">
           <h2 id="integrations-connected" class="integrations-group">{gettext("Connected")}</h2>
-          <.row :for={row <- @connected} row={row} on webhooks={@webhooks} />
+          <.row :for={row <- @connected} row={row} on webhooks={@webhooks} mcp={@mcp} />
         </section>
         <section :if={@not_set_up != []} aria-labelledby="integrations-not-set-up">
           <h2 id="integrations-not-set-up" class="integrations-group">{gettext("Not set up")}</h2>
-          <.row :for={row <- @not_set_up} row={row} on={false} webhooks={@webhooks} />
+          <.row :for={row <- @not_set_up} row={row} on={false} webhooks={@webhooks} mcp={@mcp} />
         </section>
       </div>
     </div>
@@ -67,20 +100,27 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
   end
 
   defp connected_rows(assigns) do
-    Enum.filter([:plausible, :search_console, :webhooks], &on?(&1, assigns))
+    Enum.filter(rows(assigns), &on?(&1, assigns))
   end
 
   defp not_set_up_rows(assigns) do
-    Enum.reject([:plausible, :search_console, :webhooks], &on?(&1, assigns))
+    Enum.reject(rows(assigns), &on?(&1, assigns))
+  end
+
+  defp rows(assigns) do
+    [:plausible, :search_console] ++
+      if(assigns.webhooks, do: [:webhooks], else: []) ++ if(assigns.mcp, do: [:mcp], else: [])
   end
 
   defp on?(:plausible, assigns), do: assigns.plausible?
   defp on?(:search_console, assigns), do: assigns.search_console?
   defp on?(:webhooks, assigns), do: assigns.webhooks.count > 0
+  defp on?(:mcp, assigns), do: assigns.mcp.enabled?
 
   attr :row, :atom, required: true
   attr :on, :boolean, default: false
-  attr :webhooks, :map, required: true
+  attr :webhooks, :map, default: nil
+  attr :mcp, :map, default: nil
 
   defp row(%{row: :plausible} = assigns) do
     ~H"""
@@ -119,6 +159,33 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       </div>
       <div :if={@on} class="integrations-actions">
         <.link navigate="/admin/config/seo?tab=content" class="workspace-button">{gettext("Content SEO")}</.link>
+      </div>
+    </article>
+    """
+  end
+
+  defp row(%{row: :mcp} = assigns) do
+    ~H"""
+    <article class="integrations-row" id="integration-mcp" data-testid="integration-mcp">
+      <span class="integrations-icon" aria-hidden="true"><.icon name="bot" /></span>
+      <div class="integrations-text">
+        <h3>
+          {gettext("Connected AI tools")}
+          <span :if={@on} class="workspace-badge positive">{gettext("On")}</span>
+          <span :if={@mcp.count > 0} class="workspace-badge">
+            {ngettext("%{count} connection", "%{count} connections", @mcp.count)}
+          </span>
+        </h3>
+        <p>
+          {gettext(
+            "Claude, ChatGPT and other MCP clients read content and propose changes, as the person who connected them."
+          )}
+        </p>
+      </div>
+      <div class="integrations-actions">
+        <.link navigate="/admin/config/mcp" class="workspace-button" data-testid="integration-mcp-manage">
+          {if @on, do: gettext("Manage"), else: gettext("Set up")}
+        </.link>
       </div>
     </article>
     """

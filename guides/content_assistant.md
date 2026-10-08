@@ -57,7 +57,7 @@ may publish.
 
 - **The model runs in the Brando backend.** It reaches Brando only through the
   tools in `Brando.Content.Proposals.Tools`, called in-process as the editor.
-  There is no MCP endpoint, route or port. The model can search and read
+  The Assistant uses no MCP endpoint, route or port. The model can search and read
   entries, modules and media, and prepare a proposal. It cannot approve or
   apply anything.
 - **Proposals are stored and versioned.** Each proposal records its
@@ -82,10 +82,12 @@ may publish.
 
 ## Proposals from connected tools
 
-A coding agent such as Claude Code can prepare proposals too, through
-BrandoMCP: `mix brando.mcp` serves the same tools over stdio in development,
-as a named Brando user (see the BrandoMCP README). Its proposals belong to
-that user but to no conversation, so the Assistant lists them apart:
+Tools connected over MCP can prepare proposals too: Claude, ChatGPT or Claude
+Code through the remote endpoint, once an administrator turns it on and the
+person connects them ([Connected AI tools](mcp.md)), and a coding agent in
+development through BrandoMCP's stdio server (`mix brando.mcp`, as a named
+Brando user; see the BrandoMCP README). Their proposals belong to that user
+but to no conversation, so the Assistant lists them apart:
 
 - **From connected tools** sits beside the conversation's title, with the
   number of proposals waiting for review. It opens a list of them in place of
@@ -107,7 +109,8 @@ that user but to no conversation, so the Assistant lists them apart:
   source, "Claude Code via MCP", and the person who approved it underneath.
 
 Each proposal records its origin: `"assistant"`, or `"mcp"` with the tool's
-name when the MCP client gives one (its `clientInfo` name). A tool call that
+name: over stdio the MCP client's `clientInfo` name, through the remote
+endpoint the name in the client's metadata document. A tool call that
 reaches `Proposals.Tools` without a conversation is recorded as MCP unless
 the caller names its origin in the `Context`:
 

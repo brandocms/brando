@@ -65,6 +65,7 @@ defmodule Brando.Mixfile do
           "guides/revisions.md",
           "guides/activity.md",
           "guides/webhooks.md",
+          "guides/mcp.md",
           "guides/scheduled_publishing.md",
           "guides/media.md",
           "guides/videos.md",
@@ -115,6 +116,7 @@ defmodule Brando.Mixfile do
             "guides/revisions.md",
             "guides/activity.md",
             "guides/webhooks.md",
+            "guides/mcp.md",
             "guides/scheduled_publishing.md"
           ],
           Media: [

@@ -35,6 +35,11 @@ defmodule Brando.Authorization.Catalog do
     # changed field names) for every content type, drafts included: the
     # payload goes to a URL the manager chooses (guides/webhooks.md).
     {:webhooks, "brando.webhooks", "Webhooks", "Settings", [:manage], [:standalone, :site]},
+    # Connecting a tool over MCP (`Brando.MCP`): `connect` lets a person with
+    # two-factor authentication connect Claude, ChatGPT and the like to read
+    # content and propose changes as them; `manage` turns the endpoint on and
+    # sees and revokes everyone's connections. No preset grants `connect`.
+    {:mcp, "brando.mcp", "Connected AI tools", "Settings", [:connect, :manage], [:standalone, :site]},
     {:assistant, "brando.assistant", "Content assistant", "Content", [:use, :configure], [:standalone, :site]}
   ]
 
@@ -154,6 +159,8 @@ defmodule Brando.Authorization.Catalog do
     |> Enum.map(& &1.key)
   end
 
+  # Connecting tools over MCP is granted to people one group at a time.
+  defp in_preset?(_preset, %{subject: :mcp, action: :connect}), do: false
   defp in_preset?(:admin, permission), do: permission.delegable
 
   defp in_preset?(:editor, permission) do

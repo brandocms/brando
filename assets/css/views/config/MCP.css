@@ -1,0 +1,78 @@
+/* Connected AI tools (Brando.MCP): the consent screen a client sends a
+   person to, the switch and connections under Configuration, and the
+   Connected apps panel on the security page. */
+.admin-workspace.mcp-consent-workspace {
+  max-width: 760px;
+
+  .mcp-consent .workspace-panel-heading h2 { font-size: 16px; }
+  .mcp-consent .workspace-panel-heading p { max-width: 560px; line-height: 1.5; }
+
+  .mcp-consent-facts {
+    display: grid; gap: 16px; margin: 0; padding: 20px;
+    border-bottom: 1px solid var(--brando-line);
+    > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 16px; }
+    dt { margin: 0; color: var(--brando-muted); font-size: 12px; line-height: 20px; }
+    dd { display: grid; gap: 4px; margin: 0; font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+    code { font-family: theme(typography.families.mono); font-size: 12px; }
+  }
+
+  .mcp-consent-warning {
+    padding: 8px 12px; border-radius: 6px;
+    background: var(--brando-note); color: var(--brando-note-ink); font-size: 12px; line-height: 1.5;
+  }
+
+  .mcp-consent-scope {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding: 20px;
+    border-bottom: 1px solid var(--brando-line);
+    h3 { margin-bottom: 8px; font-size: 13px; }
+    ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; list-style: disc; color: var(--brando-ink); font-size: 13px; line-height: 1.5; }
+    li::marker { color: var(--brando-muted); }
+  }
+
+  .mcp-consent-footer {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px;
+    background: var(--brando-surface-shaded); border-radius: 0 0 6px 6px;
+    > p { color: var(--brando-muted); font-size: 12px; line-height: 1.5; }
+  }
+
+  .mcp-consent-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+  @media (max-width: 600px) {
+    .mcp-consent-facts > div { grid-template-columns: minmax(0, 1fr); }
+    .mcp-consent-scope { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .mcp-consent-actions { width: 100%; margin-left: 0; }
+    .mcp-consent-actions > * { flex: 1 1 auto; }
+  }
+}
+
+.admin-workspace.mcp-workspace {
+  .mcp-url { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .mcp-url input {
+    flex: 1 1 320px; min-width: 0; height: 40px; padding: 0 12px;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface-shaded);
+    color: var(--brando-ink); font-family: theme(typography.families.mono); font-size: 13px;
+    &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
+  }
+  .mcp-grants { margin-top: 24px; }
+
+  /* On a phone each connection is a block: who and when, then Revoke */
+  @media (max-width: 700px) {
+    .mcp-grants-table {
+      > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      > tbody > tr {
+        display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 16px;
+        border-bottom: 1px solid var(--brando-line);
+      }
+      > tbody > tr:last-child { border-bottom: 0; }
+      > tbody > tr > td, > tbody > tr > td:first-child, > tbody > tr > td:last-child { display: block; padding: 0; border: 0; }
+      > tbody > tr > td.row-actions { grid-column: 2; grid-row: 1 / span 4; width: auto; align-self: start; }
+      > tbody > tr > td[data-label] { color: var(--brando-muted); font-size: 12px; }
+      > tbody > tr > td[data-label]::before { content: attr(data-label) ": "; }
+    }
+  }
+}
+
+.admin-workspace.security-workspace {
+  .security-empty-row { padding: 16px 20px; color: var(--brando-muted); font-size: 12px; }
+  .security-connected-apps .security-item:first-child { border-top: 0; }
+}

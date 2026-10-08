@@ -1,7 +1,9 @@
 defmodule Brando.Worker.ActivityPurger do
   @moduledoc """
   Removes activity events older than `Brando.Activity.retention_days/0`, in
-  every active environment, and sign-in security events as old.
+  every active environment, and sign-in security events as old. Also prunes
+  the tokens and codes of connected AI tools that nothing can use any more
+  (`Brando.MCP.prune/0`).
   """
   use Oban.Worker, queue: :default, max_attempts: 2
 
@@ -21,6 +23,9 @@ defmodule Brando.Worker.ActivityPurger do
     # The sign-in security log is shared by every site, so it is purged once
     security = Brando.Users.SecurityLog.purge()
     Logger.info("==> [CRON] Deleted #{security} security events older than #{Brando.Activity.retention_days()} days")
+
+    mcp = Brando.MCP.prune()
+    Logger.info("==> [CRON] Deleted #{mcp} unusable MCP tokens and codes")
     :ok
   end
 

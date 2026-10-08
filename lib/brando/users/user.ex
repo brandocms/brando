@@ -369,7 +369,11 @@ defmodule Brando.Users.User do
     <div :if={persisted?(@form)} class="user-password-access">
       <div class="user-password-access-text">
         <span class="user-password-access-label">{gettext("Password")}</span>
-        <p :if={@own?}>{gettext("Changing your password asks for the current one, and logs out your other sessions.")}</p>
+        <p :if={@own?}>
+          {gettext(
+            "Changing your password asks for the current one, logs out your other sessions and disconnects your connected apps."
+          )}
+        </p>
         <p :if={!@own? and @can_reset?}>
           {gettext("Email %{email} a link to choose a new password. The link works once, for %{hours} hours.",
             email: @user.email,

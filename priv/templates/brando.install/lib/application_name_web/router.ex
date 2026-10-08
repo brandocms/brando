@@ -59,6 +59,11 @@ defmodule <%= application_module %>Web.Router do
     # live "/projects/update/:entry_id", <%= application_module %>Admin.Projects.ProjectUpdateLive
   end
 
+  # The remote MCP endpoint (guides/mcp.md): lets people connect Claude,
+  # ChatGPT and other MCP clients to read content and propose changes. Off
+  # until an administrator turns it on under Configuration → Integrations.
+  # mcp_routes()
+
   scope "/coming-soon", <%= application_module %>Web do
     get "/", LockdownController, :index
     post "/", LockdownController, :post_password

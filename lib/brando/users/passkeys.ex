@@ -353,7 +353,13 @@ defmodule Brando.Users.Passkeys do
     with %Passkey{} = passkey <- Repo.get_by(Passkey, id: passkey_id, user_id: user_id),
          false <- last_factor?(user) and TwoFactor.required?(user) do
       Repo.delete!(passkey)
-      unless TwoFactor.enabled?(user), do: TwoFactor.delete_recovery_codes(user)
+
+      unless TwoFactor.enabled?(user) do
+        TwoFactor.delete_recovery_codes(user)
+        # Connected tools need two-factor authentication
+        Brando.MCP.revoke_user_grants(user, "two_factor_off")
+      end
+
       SecurityLog.record(:passkey_removed, user, meta: opts[:meta], details: %{"name" => passkey.name})
       Brando.Users.notify_security(user, :passkey_removed, %{name: passkey.name})
       :ok

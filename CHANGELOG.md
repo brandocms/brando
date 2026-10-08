@@ -55,6 +55,17 @@ production dump.
   (`search_index: [limit: 2]`), or the index is never updated**;
   `mix brando.doctor` warns when it is missing. See `Brando.Search`.
 
+- **Connected AI tools need four tables.** `brando_213` creates
+  `mcp_settings`, `mcp_grants`, `mcp_tokens` and `mcp_authorization_codes`
+  in `public`. Run `mix brando.gen.migrations` and `mix ecto.migrate`. The
+  remote MCP endpoint itself is opt-in: nothing is mounted until the router
+  calls `mcp_routes()`, and each site environment stays off until an
+  administrator turns it on. Projects that still mount BrandoMCP's old
+  `plug BrandoMCP` route must remove it; `mcp_routes()` is the only network
+  path to MCP. `Brando.MCP.BodyLimit`, optional, refuses an oversized MCP
+  request before `Plug.Parsers` reads it. See
+  [Connected AI tools](guides/mcp.md).
+
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
   `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
@@ -717,6 +728,29 @@ production dump.
   from content events on the new `search_index` queue, so saves do not wait
   for it. On 10,000 entries a search takes 2–40 ms, and about 80 ms for a
   word on every entry. See `Brando.Search`.
+
+- **Connected AI tools: a remote MCP endpoint.** People with the new
+  **Connected AI tools → Connect** permission (`brando.mcp.connect`, in no
+  preset) and two-factor authentication can connect Claude, ChatGPT, Claude
+  Code, VS Code and other MCP clients to a site environment, to read content
+  and prepare proposals they review and apply in the Assistant under "From
+  connected tools". Mount it with `mcp_routes()` and turn it on per site
+  environment under Configuration → Integrations → Connected AI tools
+  (`brando.mcp.manage`); while off, every route answers 404. Streamable HTTP
+  for both MCP protocol eras (`2026-07-28` and `2025-xx`), OAuth 2.1 with
+  PKCE (S256 only), resource indicators and Client ID Metadata Documents,
+  hashed one-hour access tokens and rotating refresh tokens with reuse
+  detection, revocation, and a consent screen that names the client, its
+  host, the redirect host and the site environment and asks to confirm. The
+  person's account, two-factor authentication, permission and the switch are
+  checked on every call; every tool call is in Activity with the person, the
+  client and the token's row id, and is rate limited per connection and per
+  person. Security → Connected apps lists and disconnects a person's
+  connections; administrators see and revoke everyone's, and turning the
+  endpoint off disconnects them all. A password change, "log out
+  everywhere", turning two-factor authentication off and deactivating a user
+  revoke a person's connections, and every connection expires 90 days after
+  consent. The threat model is in [Connected AI tools](guides/mcp.md).
 
 - **Content events and outbound webhooks.** Every change Activity records
   for an entry becomes a content event (`entry.created`, `entry.updated`,
