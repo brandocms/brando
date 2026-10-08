@@ -47,4 +47,12 @@ defmodule BrandoAdmin.AdminSocket do
   # The session's `Brando.Users.live_socket_id/1`
   @impl true
   def id(socket), do: socket.assigns.socket_id
+
+  @doc """
+  Whether the session the socket connected with is still valid. The
+  channels check it as they join: the socket only subscribes to its id
+  after `connect/2`, so a session ended in between would go unnoticed.
+  """
+  @spec session_valid?(Phoenix.Socket.t()) :: boolean()
+  def session_valid?(socket), do: Brando.Users.session_valid?(socket.assigns[:session_id], socket.assigns[:user_id])
 end
