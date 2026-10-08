@@ -1,6 +1,8 @@
 main {
   position: relative;
   width: 100%;
+  /* See `#admin` in app.css: content does not set the page's width */
+  min-width: 0;
   min-height: 100vh;
   background-color: var(--brando-surface);
   color: var(--brando-ink);
