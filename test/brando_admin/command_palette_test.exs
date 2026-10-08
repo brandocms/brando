@@ -200,7 +200,8 @@ defmodule BrandoAdmin.CommandPaletteTest do
     end
 
     test "Keyboard shortcuts is a command, offered empty, with > and by name", c do
-      shortcuts = &Enum.find(Enum.flat_map(&1, fn group -> group.items end), fn item -> item.id == "palette-keyboard-shortcuts" end)
+      shortcuts =
+        &Enum.find(Enum.flat_map(&1, fn group -> group.items end), fn item -> item.id == "palette-keyboard-shortcuts" end)
 
       assert %{kind: :command, command: "shortcuts", icon: "keyboard"} = shortcuts.(CommandPalette.results(c.context, ""))
       assert shortcuts.(CommandPalette.results(c.context, ">"))

@@ -11,7 +11,10 @@ defmodule BrandoAdmin.Components.ShortcutSheetTest do
   # The ids and groups in the registry the sheet's rows are drawn from
   defp registry do
     source = File.read!(@registry)
-    ids = ~r/\{ id: '([a-z-]+)', group: '([a-z]+)'/ |> Regex.scan(source) |> Enum.map(fn [_, id, group] -> {id, group} end)
+
+    ids =
+      ~r/\{ id: '([a-z-]+)', group: '([a-z]+)'/ |> Regex.scan(source) |> Enum.map(fn [_, id, group] -> {id, group} end)
+
     [_, groups] = Regex.run(~r/export const GROUPS = \[([^\]]+)\]/, source)
     {ids, ~r/'([a-z]+)'/ |> Regex.scan(groups) |> Enum.map(&List.last/1)}
   end
