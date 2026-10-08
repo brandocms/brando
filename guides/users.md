@@ -362,6 +362,26 @@ shared by every site, so this log is separate from the content activity log.
 The user's Security page shows their latest events; it is kept as long as the
 activity log (`retention_days`).
 
+**Configuration → Activity → Security** lists everyone's events, filtered by
+person, event and period: when, who, what happened, who else did it (an
+administrator resetting two-factor authentication), the IP address and the
+browser. It shows what the Security page shows and nothing more from an
+event's details; codes, secrets and tokens are never logged.
+
+Who sees it:
+
+- Without group authorization, administrators and superusers.
+- With [group authorization](authorization.md), the **Security log** permission
+  (`brando.security_log.read`), together with **Activity** to open the page.
+  New administrator groups get it; existing groups need it granted.
+- With several sites (`tenancy_mode: :multi`), only superusers, whatever the
+  grant. Users and their events are shared by every site and do not say which
+  site a sign-in was for, so an administrator of one site would otherwise follow
+  people who work on other sites.
+
+The server checks this on every load, so a filtered link does not open the log
+for someone who may not see it.
+
 ## Deactivate without transferring ownership
 
 Choose **Disable user**, or call:

@@ -65,6 +65,10 @@ content types the reader may read. New administrator groups get the permission;
 existing groups need it granted. Anyone who can edit an entry can read its own
 history in the editor.
 
+A **Security** view beside the content log lists every user's sign-ins and
+changes to their sign-in settings, for those who may see it; see
+[the security log](users.md#security-log).
+
 The trash listing uses the log to show who moved each entry there.
 
 ## Configuration

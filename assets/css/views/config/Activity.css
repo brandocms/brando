@@ -264,6 +264,39 @@ button.activity-revision {
     min-height: 30px;
   }
 
+  /* Configuration → Activity's views (pill tabs, TabSwitch.css) */
+  .activity-views { margin-bottom: 16px; }
+
+  /* The security log: the content log's rows, with the address and browser
+     on the right where content rows have their links. */
+  .security-log-row {
+    .activity-action {
+      align-items: flex-start;
+      white-space: normal;
+
+      i { margin-top: 0.42em; }
+      &.is-security i { background: var(--brando-status-published); }
+      &.is-negative i { background: var(--brando-status-disabled); }
+    }
+  }
+
+  .security-log-origin {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    padding-top: 3px;
+    color: var(--activity-muted);
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: right;
+  }
+
+  .security-log-ip {
+    font-family: theme(typography.families.mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
   .activity-more {
     display: flex;
     align-items: center;
@@ -304,6 +337,15 @@ button.activity-revision {
       min-height: 0;
 
       &:empty { display: none; }
+    }
+
+    .security-log-origin {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 4px 10px;
+      padding-top: 0;
+      text-align: left;
     }
   }
 }

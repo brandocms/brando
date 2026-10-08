@@ -1077,6 +1077,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :shared_library}), do: gettext("Shared content library")
   defp resource_label(%{subject: :utilities}), do: gettext("Utilities & caches")
   defp resource_label(%{subject: :activity}), do: gettext("Activity")
+  defp resource_label(%{subject: :security_log}), do: gettext("Security log")
   defp resource_label(%{subject: :webhooks}), do: gettext("Webhooks")
   defp resource_label(%{subject: :mcp}), do: gettext("Connected AI tools")
   defp resource_label(permission), do: permission.label
@@ -1092,6 +1093,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
     do:
       gettext(
         "Connect lets a person with two-factor authentication connect Claude, ChatGPT and other MCP clients, which read content and propose changes as them. Manage turns the endpoint on and off, and revokes anyone's connections."
+      )
+
+  defp resource_note(%{subject: :security_log}),
+    do:
+      gettext(
+        "Shows every user's sign-ins, failed attempts and changes to their sign-in settings, with IP addresses and browsers, under Activity. With several sites, only superusers see it."
       )
 
   defp resource_note(_permission), do: nil

@@ -31,6 +31,10 @@ defmodule Brando.Authorization.Catalog do
      [:installation]},
     {:utilities, "brando.utilities", "Utilities & caches", "Settings", [:read, :update], [:standalone, :site]},
     {:activity, "brando.activity", "Activity", "Settings", [:read], [:standalone, :site]},
+    # Everyone's sign-ins, failed attempts and changes to passwords and
+    # two-factor settings, with IP addresses (`Brando.Users.SecurityLog`). With
+    # several sites only superusers see them, whatever the grant.
+    {:security_log, "brando.security_log", "Security log", "Access", [:read], [:standalone, :site]},
     # Managing webhooks shows content metadata (type, id, URL, status,
     # changed field names) for every content type, drafts included: the
     # payload goes to a URL the manager chooses (guides/webhooks.md).
