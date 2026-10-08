@@ -700,7 +700,10 @@ figcaption.tiny {
     color: var(--brando-ink-inverse);
   }
 
-  .switch .slider {
+  /* A faint track for the dark drawer. The white workspace drawers (Meta,
+     image, video) keep the admin's own off colour, or an unchecked switch
+     shows only its knob. */
+  &:not(.media-workspace-drawer) .switch .slider {
     background-color: color-mix(in srgb, var(--brando-ink-inverse) 12%, transparent);
   }
 }
