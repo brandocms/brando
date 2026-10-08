@@ -111,19 +111,7 @@ test('a block in a container opens alone, and other blocks of the entry open in 
   await expect(editor.locator('.base-block.focus-ancestor')).toHaveCount(0)
 })
 
-test('a shared fragment says where its changes show', async ({ page }) => {
-  await startEditing(page)
-  await headline(page, 'Shared notice text').hover()
-  await shot(page, '07-fragment-hover')
-
-  const editor = await openBlock(page, 'Shared notice text')
-  await expect(editor.getByTestId('frontend-edit-shared')).toBeVisible()
-  expect(await adminUrl(editor)).toContain('/admin/pages/fragments/update/')
-  await shot(page, '08-fragment')
-
-  await headlineInput(editor).fill('Shared notice, edited')
-  await expect(headline(page, 'Shared notice, edited')).toBeVisible({ timeout: 10000 })
-})
+// A shared fragment's notice and full-editor link: frontend_edit_live_test.exs
 
 test('leaving a block with unsaved changes asks first', async ({ page }) => {
   await startEditing(page)

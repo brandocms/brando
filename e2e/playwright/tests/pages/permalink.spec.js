@@ -32,43 +32,8 @@ async function changeUrl(page, uri, mode = 'listing') {
   return dialog
 }
 
-test('offers a redirect after saving a page and shows the confirmed rule in SEO', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 1000 })
-  await createPage(page)
-  const dialog = await changeUrl(page, 'our-studio')
-  await expect(page.locator('.progress-popup')).toHaveCount(0)
-  await page.screenshot({ path: testInfo.outputPath('permalink-confirmation.png') })
-  await dialog.getByRole('button', { name: 'Create redirect', exact: true }).click()
-  await expect(page).toHaveURL(/\/admin\/pages$/)
-  const response = await page.request.get('/about-our-studio', { maxRedirects: 0 })
-  expect(response.status()).toBe(301)
-  expect(response.headers().location).toBe('/our-studio')
-  await page.getByText('Configuration', { exact: true }).click()
-  await page.getByRole('link', { name: 'SEO', exact: true }).click()
-  await syncLV(page)
-  const from = page.locator('input[name="seo[redirects][0][from]"]')
-  await expect(from).toHaveValue('/about\\-our\\-studio$')
-  await expect(page.locator('input[name="seo[redirects][0][to]"]')).toHaveValue('/our-studio')
-  await from.scrollIntoViewIfNeeded()
-  await expect(page.locator('.progress-popup')).toHaveCount(0)
-  await page.screenshot({ path: testInfo.outputPath('permalink-created.png') })
-})
-
-test('dismissal continues editing and uses the saved URL for the next change', async ({ page }) => {
-  await createPage(page)
-  const editUrl = page.url()
-  const dialog = await changeUrl(page, 'our-studio', 'self')
-  await dialog.getByRole('button', { name: 'Continue without redirect' }).click()
-  await expect(dialog).not.toBeVisible()
-  await expect(page).toHaveURL(editUrl)
-  await expect(page.getByTestId('submit')).toBeEnabled()
-  await page.getByLabel('URI', { exact: true }).fill('studio')
-  await page.getByTestId('submit').click()
-  await expect(dialog).toBeVisible()
-  await expect(dialog.getByLabel('From', { exact: true })).toHaveValue('/our-studio')
-  await dialog.getByRole('button', { name: 'Continue without redirect' }).click()
-  await expect(page).toHaveURL(/\/admin\/pages$/)
-})
+// Offering, creating and declining the redirect, and what the site and SEO
+// show afterwards, are LiveView tests in permalink_live_test.exs.
 
 test('escape dismisses the prompt and completes Save and create new', async ({ page }) => {
   await createPage(page)
@@ -77,34 +42,6 @@ test('escape dismisses the prompt and completes Save and create new', async ({ p
   await page.keyboard.press('Escape')
   await expect(dialog).not.toBeVisible()
   await expect(page).toHaveURL(/\/admin\/pages\/create$/)
-})
-
-test('renaming back removes the destination redirect even when the new redirect is declined', async ({ page }) => {
-  await createPage(page)
-  const dialog = await changeUrl(page, 'our-studio', 'self')
-  await dialog.getByRole('button', { name: 'Create redirect', exact: true }).click()
-  await expect(dialog).not.toBeVisible()
-  await expect(page.getByTestId('submit')).toBeEnabled()
-  const oldResponse = await page.request.get('/about-our-studio', { maxRedirects: 0 })
-  expect(oldResponse.status()).toBe(301)
-  expect(oldResponse.headers().location).toBe('/our-studio')
-
-  await page.getByLabel('URI', { exact: true }).fill('about-our-studio')
-  await page.getByTestId('submit').click()
-  await expect(dialog).toBeVisible()
-  await expect(dialog.getByLabel('From', { exact: true })).toHaveValue('/our-studio')
-  await expect(dialog.getByLabel('To', { exact: true })).toHaveValue('/about-our-studio')
-  await dialog.getByRole('button', { name: 'Continue without redirect' }).click()
-  await expect(page).toHaveURL(/\/admin\/pages$/)
-  const savedResponse = await page.request.get('/about-our-studio', { maxRedirects: 0 })
-  expect(savedResponse.status()).toBe(200)
-  const declinedResponse = await page.request.get('/our-studio', { maxRedirects: 0 })
-  expect(declinedResponse.status()).toBe(404)
-
-  await page.getByText('Configuration', { exact: true }).click()
-  await page.getByRole('link', { name: 'SEO', exact: true }).click()
-  await syncLV(page)
-  await expect(page.locator('input[name^="seo[redirects]"][name$="[from]"]')).toHaveCount(0)
 })
 
 test('plain forms prompt on slug changes and preserve continue-editing saves', async ({ page }) => {

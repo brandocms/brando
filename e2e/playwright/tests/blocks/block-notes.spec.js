@@ -164,43 +164,6 @@ test.describe('Notes', () => {
     await expect(secondUserPage.locator('.form-tool-notes')).toContainText('3')
   })
 
-  test('notes are kept when a revision is restored, and a deleted block leaves its note detached', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 1000 })
-    await createPage(page, 'Notes and revisions', 'notes-and-revisions')
-
-    await headerBlock(page).locator('[data-block-note]').first().click()
-    await composer(page).getByRole('textbox').fill('Keep this heading')
-    await composer(page).getByRole('button', { name: 'Add note' }).click()
-    await syncLV(page)
-    await expect(thread(page, 'Keep this heading')).toBeVisible()
-
-    // Delete the block and save: the note stays, detached
-    const header = headerBlock(page)
-    await header.locator('.block-action-dropdown > .block-action').first().click()
-    await header.locator('.block-action-dropdown-content button', { hasText: 'Delete' }).first().click()
-    await syncLV(page)
-    await saveAndContinue(page)
-    await openNotes(page)
-    await expect(thread(page, 'Keep this heading').locator('.note-state.is-detached')).toBeVisible()
-    await expect(thread(page, 'Keep this heading').locator('.note-anchor-link')).not.toHaveAttribute('data-block-uid')
-
-    // Restore the revision that still had the block: the note is attached again
-    await page.getByRole('button', { name: 'History', exact: true }).click()
-    const drawer = page.locator('[id$="-revisions-drawer"]')
-    await expect(drawer).toBeVisible()
-    await drawer.getByRole('tab', { name: /Activity/ }).click()
-    await expect(drawer.locator('.activity-timeline')).toContainText('Added a note')
-    await drawer.getByRole('tab', { name: /Revisions/ }).click()
-    const revision = drawer.locator('#revision-line-0')
-    await revision.getByTestId('circle-dropdown-button').click()
-    await revision.getByRole('button', { name: 'Activate revision' }).click()
-    await page.getByRole('button', { name: 'OK' }).click()
-    await syncLV(page)
-    await drawer.getByRole('button', { name: 'Close' }).click()
-
-    await expect(page.locator('.header-block textarea').first()).toHaveValue('The pool hall', { timeout: 15000 })
-    await expect(thread(page, 'Keep this heading')).toHaveCount(1)
-    await expect(thread(page, 'Keep this heading').locator('.note-state.is-detached')).toHaveCount(0)
-    await expect(headerBlock(page).locator('[data-block-note]').first()).toHaveAttribute('data-note-count', '1')
-  })
+  // A note survives its block's deletion detached, and a restored revision
+  // attaches it again: notes_test.exs and notes_drawer_live_test.exs.
 })

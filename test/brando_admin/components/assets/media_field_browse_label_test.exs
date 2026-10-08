@@ -35,6 +35,24 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldBrowseLabelTest do
     assert render(:image, image) =~ "Select image"
   end
 
+  # Was a browser test (admin-panel-refinements.spec.js) on an empty field
+  # of a Norwegian admin.
+  test "a Norwegian image field offers Velg bilde, filled or empty" do
+    image = %Brando.Images.Image{
+      id: 1,
+      status: :processed,
+      path: "images/a.jpg",
+      width: 10,
+      height: 10,
+      alt: %{},
+      sizes: %{"small" => "images/small/a.jpg", "xlarge" => "images/xlarge/a.jpg"}
+    }
+
+    Gettext.with_locale(Brando.Gettext, "no", fn ->
+      for asset <- [image, nil], do: assert(render(:image, asset) =~ "Velg bilde")
+    end)
+  end
+
   test "a video field offers Select video, filled or empty" do
     video = %Brando.Videos.Video{id: 1, type: :external_file, title: "Listing", source_url: "https://example.com/a.mp4"}
 

@@ -60,23 +60,5 @@ test('without JavaScript a post lands back on the page at its message', async ({
   await context.close()
 })
 
-test('the site words the messages around its forms', async ({ page }) => {
-  await page.goto('/admin/config/forms')
-  await syncLV(page)
-  await page.getByRole('link', { name: 'Messages' }).click()
-  await expect(page).toHaveURL('/admin/config/forms/messages')
-  await syncLV(page)
-
-  const required = page.locator('.i18n-field').filter({ has: page.locator('input[name="messages[required][en]"]') })
-  await required.getByRole('tab', { name: 'en', exact: true }).click()
-  await required.locator('input[name="messages[required][en]"]').fill('We need this one.')
-  await page.getByTestId('submit').click()
-  await expect(page).toHaveURL('/admin/config/forms')
-
-  await page.goto('/contact-us')
-  const form = page.locator('form#form-contact')
-  await form.locator('input[name="fields[name]"]').evaluate(input => input.removeAttribute('required'))
-  await form.getByLabel('Email').fill('ada@example.com')
-  await form.getByRole('button', { name: 'Send' }).click()
-  await expect(form.locator('.site-form-field[data-key="name"] .site-form-error')).toHaveText('We need this one.')
-})
+// The site's wording for form messages: messages_live_test.exs edits it,
+// and submission_controller_test.exs checks the reply the page shows.

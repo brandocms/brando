@@ -288,8 +288,11 @@ defmodule BrandoAdmin.Users.GroupsLiveTest do
     {:ok, view, _} = live(conn, "/admin/groups")
     render_click(view, "select", %{"id" => to_string(group.id)})
     view |> form("#group-permissions", search: "View") |> render_change()
+    refute has_element?(view, "input[name='permissions[brando.pages.update]']")
     view |> element("button[phx-value-resource='brando.pages']") |> render_click()
     view |> form("#group-permissions", search: "") |> render_change()
+    # Some of the row, not all of it
+    assert has_element?(view, "button[phx-value-resource='brando.pages'][aria-checked=mixed]")
     assert has_element?(view, "input[name='permissions[brando.pages.read]'][checked]")
     assert has_element?(view, "input[name='permissions[brando.pages.publish]'][checked]")
     assert has_element?(view, "input[name='permissions[brando.admin.access]'][checked]")

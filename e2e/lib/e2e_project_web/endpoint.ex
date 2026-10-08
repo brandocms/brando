@@ -16,6 +16,12 @@ defmodule E2eProjectWeb.Endpoint do
     # so the next test (or a retry of the same one) is served content that no
     # longer exists. Both caches only memoize database reads, so emptying them
     # when a test checks out its sandbox is always safe.
+    #
+    # The block clipboard is per user, and every test signs in as the same
+    # seeded users, so a block copied in one test was offered for pasting in
+    # the next (empty-block-field.spec.js saw a paste button it never asked
+    # for). What it holds is built from the previous test's rolled-back rows,
+    # so it is dropped at checkout too.
     plug :clear_query_caches_on_checkout
 
     # The Playwright fixture checks each test's sandbox back in at teardown
@@ -101,9 +107,22 @@ defmodule E2eProjectWeb.Endpoint do
          ) do
       Cachex.clear(:query)
       Cachex.clear(:four_oh_four)
+      clear_block_clipboards()
       conn
     end
 
     defp clear_query_caches_on_checkout(conn, _opts), do: conn
+
+    # Keys as `BrandoAdmin.Components.Form.BlockField` stores them, plain or
+    # under a tenant prefix (`Brando.Tenant.cache_key/2`).
+    defp clear_block_clipboards do
+      {:ok, keys} = Cachex.keys(:cache)
+
+      for key <- keys, block_clipboard?(key), do: Cachex.del(:cache, key)
+    end
+
+    defp block_clipboard?({:block_clipboard, _user_id}), do: true
+    defp block_clipboard?({:tenant, _prefix, {:block_clipboard, _user_id}}), do: true
+    defp block_clipboard?(_key), do: false
   end
 end

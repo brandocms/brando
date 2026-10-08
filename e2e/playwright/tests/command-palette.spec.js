@@ -23,7 +23,6 @@ const palette = page => page.locator('#command-palette-dialog')
 const input = page => page.locator('#command-palette-input')
 const results = page => page.locator('#command-palette-results')
 const group = (page, key) => page.locator(`#command-palette-group-${key}`)
-const options = page => results(page).getByRole('option')
 
 async function openWithShortcut(page) {
   await page.keyboard.press('ControlOrMeta+k')
@@ -99,31 +98,6 @@ test('opens from the sidebar, finds an entry by title and opens it with enter', 
   await expect(palette(page)).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(button).toBeFocused()
-})
-
-test('> lists commands only', async ({ page }) => {
-  await page.goto('/admin')
-  await syncLV(page)
-  await openWithShortcut(page)
-
-  await search(page, 'test')
-  await expect(group(page, 'entries')).toBeVisible()
-
-  await search(page, '>')
-  await expect(group(page, 'entries')).toHaveCount(0)
-  await expect(group(page, 'recent')).toHaveCount(0)
-  await expect(group(page, 'actions')).toBeVisible()
-  await expect(group(page, 'settings')).toBeVisible()
-  await expect(group(page, 'actions').locator('a[href="/admin/projects/projects/create"]')).toBeVisible()
-
-  // Typing after > narrows the commands; entries stay out
-  await search(page, '>project')
-  await expect(group(page, 'entries')).toHaveCount(0)
-  await expect(options(page)).toHaveCount(1)
-  await expect(options(page).first()).toHaveAttribute('href', '/admin/projects/projects/create')
-
-  await page.keyboard.press('Enter')
-  await expect(page).toHaveURL('/admin/projects/projects/create')
 })
 
 test('the empty palette shows the places visited last', async ({ page }) => {

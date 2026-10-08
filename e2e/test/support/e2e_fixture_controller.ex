@@ -1128,9 +1128,6 @@ defmodule E2EFixtureController do
           |> Brando.Repo.update!()
         end)
 
-      "unsupported" ->
-        draft |> Ecto.Changeset.change(format_version: 999) |> Brando.Repo.update!()
-
       "change-module" ->
         [row | _] = draft.payload["blocks"]["blocks"]
         {:ok, _} = Brando.Content.update_module(row["block"]["module_id"], %{refs: [], vars: []}, user)

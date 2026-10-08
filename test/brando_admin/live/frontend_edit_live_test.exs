@@ -146,6 +146,8 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
     %{block: block} = fragment_with_block(user, module)
     {view, _html} = editor(conn, block.uid, "fragment_form")
     assert has_element?(view, "[data-testid=frontend-edit-shared]")
+    # The full editor it opens is the fragment's own
+    assert has_element?(view, ".frontend-editor-open[href^='/admin/pages/fragments/update/']")
   end
 
   defp page_id(view) do

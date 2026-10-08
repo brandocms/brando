@@ -149,6 +149,44 @@ defmodule Brando.JSONLDRenderTest do
     Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
   end
 
+  # Was a browser test (pages/breadcrumbs.spec.js) reading a child page's
+  # JSON-LD: the page controller puts the page's stored breadcrumbs.
+  test "a child page's stored breadcrumbs render as its BreadcrumbList, referenced by the WebPage" do
+    user = Brando.Factory.insert(:random_user)
+    attrs = %{language: "en", template: "default.html", status: :published}
+    {:ok, parent} = Brando.Pages.create_page(Map.merge(attrs, %{title: "Services", uri: "services"}), user)
+
+    {:ok, child} =
+      Brando.Pages.create_page(
+        Map.merge(attrs, %{title: "Design", uri: "services/design", parent_id: parent.id}),
+        user
+      )
+
+    mock_conn =
+      %Plug.Conn{}
+      |> Brando.Plug.I18n.put_locale(skip_session: true)
+      |> Brando.Plug.HTML.put_breadcrumbs(child)
+
+    assigns = %{mock_conn: mock_conn}
+
+    graph =
+      ~H"""
+      <.render_json_ld conn={@mock_conn} />
+      """
+      |> rendered_to_string()
+      |> extract_graph()
+
+    items = find_entity(graph, "BreadcrumbList")["itemListElement"]
+
+    assert Enum.map(items, &{&1["name"], &1["position"]}) == [
+             {Brando.config(:app_name), 1},
+             {"Services", 2},
+             {"Design", 3}
+           ]
+
+    assert find_entity(graph, "WebPage")["breadcrumb"]["@id"] =~ "#breadcrumb"
+  end
+
   test "render json ld @graph with breadcrumbs" do
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
 
