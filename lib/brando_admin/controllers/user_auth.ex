@@ -166,8 +166,27 @@ defmodule BrandoAdmin.UserAuth do
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Users.get_user_by_session_token(user_token)
-    if user, do: Users.touch_session(user_token)
-    assign(conn, :current_user, user)
+
+    if user do
+      Users.touch_session(user_token)
+
+      conn
+      |> put_live_socket_id(user_token)
+      |> assign(:current_user, user)
+    else
+      assign(conn, :current_user, user)
+    end
+  end
+
+  # A session from before the id was hashed holds the raw one: the next
+  # request rewrites it. TODO: remove in 0.56, with
+  # Brando.Users.legacy_live_socket_id/1.
+  defp put_live_socket_id(conn, token) do
+    live_socket_id = Users.live_socket_id(token)
+
+    if get_session(conn, :live_socket_id) == live_socket_id,
+      do: conn,
+      else: put_session(conn, :live_socket_id, live_socket_id)
   end
 
   @doc """

@@ -41,7 +41,10 @@ production dump.
   names the session, and the socket shares the session's id with its
   LiveViews: ending a session (signing out, revoking it, a password change or
   reset, a two-factor reset, deactivating or deleting the user) disconnects
-  both, and the old token no longer connects. `Brando.Users.build_token/1`
+  both, and the old token no longer connects. The session's socket id
+  (`live_socket_id`) is now made from a hash of its token; a session from
+  before the upgrade gets the new id on its next request.
+  `Brando.Users.build_token/1`
   and `verify_token/1` are deprecated, and `BrandoAdmin.AdminSocket` no
   longer accepts their tokens; use `build_socket_token/2` and
   `verify_socket_token/1`. Open admin tabs pick up a new token when their

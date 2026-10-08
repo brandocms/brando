@@ -103,8 +103,9 @@ changing the password does (see below).
 
 A session's sockets are its LiveViews and its admin socket
 (`BrandoAdmin.AdminSocket`: presence, notifications and live preview). They
-share one id per session, `Brando.Users.live_socket_id/1`, and
-`Brando.Users.disconnect_session/1` closes them. Whatever ends a session —
+share one id per session, `Brando.Users.live_socket_id/1`, made from a
+hash of the session token, and `Brando.Users.disconnect_session/1` closes
+them, once the transaction that ended the session has committed. Whatever ends a session —
 signing out, revoking it on the Security page, logging out everywhere, a
 password change or reset, a two-factor reset, deactivating or deleting the
 account — disconnects them, and the user's other sessions keep theirs. The
