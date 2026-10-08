@@ -95,6 +95,19 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
                Repo.all(from e in SecurityEvent, where: e.user_id == ^user.id and e.action == :login)
     end
 
+    test "a code goes on to where the user was going", %{user: user, secret: secret} do
+      conn = get(anonymous(), "/admin/users")
+      assert redirected_to(conn) == "/admin/login"
+
+      conn = conn |> next() |> log_in(user)
+      assert redirected_to(conn) == "/admin/login/two-factor"
+
+      conn =
+        conn |> next() |> post("/admin/login/two-factor", %{"two_factor" => %{"code" => TwoFactor.current_code(secret)}})
+
+      assert redirected_to(conn) == "/admin/users"
+    end
+
     test "the code screen asks in the user's language", %{user: user} do
       Repo.update_all(from(u in Brando.Users.User, where: u.id == ^user.id), set: [language: "no"])
       conn = log_in(anonymous(), user)
@@ -227,6 +240,12 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
 
       assert Phoenix.Flash.get(known.assigns.flash, :error) == Phoenix.Flash.get(unknown.assigns.flash, :error)
       assert Phoenix.Flash.get(known.assigns.flash, :error) =~ "Too many attempts"
+
+      # Locked, the right password gets the same answer and no session
+      right = log_in(anonymous(), user)
+      assert redirected_to(right) == "/admin/login"
+      refute get_session(right, :user_token)
+      assert Phoenix.Flash.get(right.assigns.flash, :error) == Phoenix.Flash.get(known.assigns.flash, :error)
     end
 
     test "too many from one address are refused before the password is checked" do
@@ -255,7 +274,9 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
 
     test "a user without it sets it up before they get a session" do
       user = user()
-      conn = log_in(anonymous(), user, %{"remember_me" => "true"})
+      # They were on their way to the users page
+      conn = get(anonymous(), "/admin/users")
+      conn = conn |> next() |> log_in(user, %{"remember_me" => "true"})
 
       assert redirected_to(conn) == "/admin/login/two-factor/setup"
       refute get_session(conn, :user_token)
@@ -280,7 +301,7 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       assert TwoFactor.enabled?(user)
 
       conn = conn |> next() |> post("/admin/login/two-factor/complete")
-      assert redirected_to(conn) == "/admin"
+      assert redirected_to(conn) == "/admin/users"
       assert get_session(conn, :user_token)
       assert conn.resp_cookies[@remember_me]
     end

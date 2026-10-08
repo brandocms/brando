@@ -33,11 +33,10 @@ defmodule BrandoAdmin.PasswordResetLiveTest do
           {:ok, view, _html} = live(anonymous(), "/admin/reset-password")
           html = view |> form("#reset_password_form", user: %{email: email}) |> render_submit()
 
-          html
-          |> Floki.parse_document!()
-          |> Floki.find("#reset_password_sent .alert")
-          |> Floki.text()
-          |> String.replace(email, "")
+          reply = html |> Floki.parse_document!() |> Floki.find("#reset_password_sent .alert") |> Floki.text()
+          # The reply names the address it was given
+          assert reply =~ email
+          String.replace(reply, email, "")
         end
 
       assert [same, same] = replies
@@ -57,6 +56,8 @@ defmodule BrandoAdmin.PasswordResetLiveTest do
     test "sets it, logs the user out everywhere and uses up the link", %{user: user, token: token} do
       session = Users.generate_user_session_token(user)
       {:ok, view, _html} = live(anonymous(), "/admin/reset-password/#{token}")
+      # The form says whose password it changes
+      assert has_element?(view, "#new_password_form", user.email)
 
       html =
         view

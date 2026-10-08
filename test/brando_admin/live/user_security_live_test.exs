@@ -39,6 +39,7 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
 
       html = view |> element("[data-testid=two-factor-setup]") |> render_click()
       secret = secret_from(html)
+      assert has_element?(view, "#two-factor-setup-modal .two-factor-qr svg")
 
       html =
         view
@@ -63,6 +64,7 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
       html = view |> element("[data-testid=recovery-codes-done]") |> render_click()
       refute html =~ ~s(data-testid="recovery-code")
       assert html =~ "Two-factor authentication turned on"
+      assert has_element?(view, "[data-testid=security-events] [data-action=two_factor_enabled]")
     end
 
     test "turning it off asks for the password or a code", %{conn: conn, current_user: user} do
@@ -103,7 +105,18 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
       |> render_submit()
 
     assert html =~ "That is not your password"
+    # The code is spent with the attempt, so the field starts over
+    assert has_element?(view, "[data-testid=two-factor-setup-code]")
+    refute has_element?(view, "[data-testid=two-factor-setup-code][value]:not([value=''])")
     refute TwoFactor.enabled?(user)
+  end
+
+  test "a used recovery code leaves one fewer", %{conn: conn, current_user: user} do
+    {_secret, [code | _]} = enable(user, conn)
+    {:ok, _} = TwoFactor.verify(user, String.upcase(code))
+
+    {:ok, view, _html} = live(conn, "/admin/users/security")
+    assert has_element?(view, "[data-testid=recovery-codes-left]", "9 unused codes left")
   end
 
   describe "sessions" do
@@ -138,9 +151,18 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
 
       {:ok, view, _html} = live(conn, "/admin/users/update/#{user.id}")
       assert await_selector(view, "[data-testid=reset-two-factor]")
+      assert has_element?(view, "[data-testid=user-two-factor-status]", "On")
 
       view |> element("[data-testid=reset-two-factor]") |> render_click()
       refute TwoFactor.enabled?(user)
+
+      # The form reloads, showing it off
+      path = "/admin/users/update/#{user.id}"
+      assert_redirect(view, path)
+      {:ok, view, _html} = live(conn, path)
+      assert await_selector(view, "[data-testid=user-two-factor-status]")
+      assert has_element?(view, "[data-testid=user-two-factor-status]", "Off")
+      refute has_element?(view, "[data-testid=reset-two-factor]")
 
       assert [%{actor_id: actor_id}] =
                BrandoIntegration.Repo.all(
@@ -173,6 +195,11 @@ defmodule BrandoAdmin.UserSecurityLiveTest do
       |> render_submit()
 
       assert %{two_factor: :selected, two_factor_roles: ["editor"]} = SecurityPolicy.get()
+
+      {:ok, reloaded, _html} = live(conn, "/admin/users/sign-in-policy")
+      assert has_element?(reloaded, "[data-testid=policy-selected][checked]")
+      assert has_element?(reloaded, "[data-testid=policy-option-editor][checked]")
+
       enable(admin, conn)
 
       view |> form("#sign-in-policy-form", policy: %{two_factor: "everyone"}) |> render_submit()
