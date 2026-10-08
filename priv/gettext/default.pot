@@ -18714,3 +18714,8 @@ msgid "%{count} image recreated"
 msgid_plural "%{count} images recreated"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/form/structured_data.ex
+#, elixir-autogen, elixir-format
+msgid "Could not build structured data: %{reason}"
+msgstr ""

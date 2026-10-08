@@ -43,13 +43,23 @@ defmodule Brando.SEO.StructuredDataTest do
       sku: "K-1",
       price: Decimal.new("249"),
       in_stock: true,
-      cover: %Brando.Images.Image{path: "images/k.jpg", sizes: %{"xlarge" => "images/xlarge/k.jpg"}, width: 9, height: 9}
+      # Its key as well as the image, as a row from the database has: the
+      # check loads relations for a page of entries at a time, and Ecto keys
+      # an already loaded image by it.
+      cover_id: 101,
+      cover: %Brando.Images.Image{
+        id: 101,
+        path: "images/k.jpg",
+        sizes: %{"xlarge" => "images/xlarge/k.jpg"},
+        width: 9,
+        height: 9
+      }
     }
 
     # No image (recommended) and no price (required by the offer)
     incomplete = %Brando.JSONLDTest.Product{id: 2, title: "Teapot", slug: "teapot", summary: "Steeps tea.", sku: "T-1"}
     # Only the image is missing
-    imageless = %{complete | id: 3, title: "Mug", slug: "mug", cover: nil}
+    imageless = %{complete | id: 3, title: "Mug", slug: "mug", cover_id: nil, cover: nil}
 
     put_test_env(Brando.JSONLDTest, products: [complete, incomplete, imageless])
     result = StructuredData.check("en", [Brando.JSONLDTest.Product])
@@ -91,5 +101,56 @@ defmodule Brando.SEO.StructuredDataTest do
 
     assert StructuredData.run("en", schemas: [Brando.Pages.Page]) == first
     assert StructuredData.run("en", schemas: [Brando.Pages.Page], refresh: true).checked == 2
+  end
+
+  describe "a mapping that reads a relation" do
+    alias Brando.Content.Var
+    alias Brando.JSONLDTest.Shelf
+
+    setup do
+      page = Factory.insert(:page)
+
+      for key <- ["oak", "pine"] do
+        Brando.Repo.insert!(%Var{type: :string, key: key, label: %{"en" => key}, page_id: page.id})
+      end
+
+      %{page: page}
+    end
+
+    # The context lists entries without their relations. The check loads the
+    # blueprint's relations a page of entries at a time; before, the field
+    # function enumerated a relation that wasn't loaded and the whole check
+    # failed.
+    test "loads the relations the mapping reads", %{page: page} do
+      put_test_env(Brando.JSONLDTest, shelves: [%Shelf{id: page.id, title: "Wood", slug: "wood"}])
+
+      result = StructuredData.check("en", [Shelf])
+      assert result.checked == 1
+      refute Enum.any?(result.rows, &Enum.any?(&1.issues, fn issue -> issue[:kind] == :build_failed end))
+    end
+
+    test "an entry whose graph can't be built is that entry's error, and the rest are still checked", %{page: page} do
+      shelves = [
+        %Shelf{id: page.id, title: "Wood", slug: "wood"},
+        %Shelf{id: page.id + 1, title: "Broken", slug: "broken"},
+        %Shelf{id: page.id + 2, title: "Steel", slug: "steel"}
+      ]
+
+      put_test_env(Brando.JSONLDTest, shelves: shelves)
+
+      result = StructuredData.check("en", [Shelf])
+
+      assert result.checked == 3
+      assert result.with_errors == 1
+
+      assert [%{id: id, title: "Broken", errors: 1, url: "/shelves/broken", issues: [issue]}] =
+               Enum.filter(result.rows, &(&1.errors > 0))
+
+      assert id == page.id + 1
+      assert %{level: :error, kind: :build_failed, reason: "the shelf has no description"} = issue
+
+      assert BrandoAdmin.Components.Form.StructuredData.describe_issue(issue) ==
+               "Could not build structured data: the shelf has no description"
+    end
   end
 end

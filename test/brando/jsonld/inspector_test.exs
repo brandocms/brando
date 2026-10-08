@@ -188,4 +188,41 @@ defmodule Brando.JSONLD.InspectorTest do
     hidden = post(cover_video: nil, entry_blocks: [%{block: %Block{active: false, refs: [], vars: [var], children: []}}])
     assert Brando.JSONLD.Videos.from_entry(Post, hidden) == []
   end
+
+  describe "a mapping that reads a relation" do
+    # A site's field function may enumerate a relation (`keywords/1` listing
+    # an entry's categories). The Structured data tab loads the entry with
+    # the blueprint's relations, as its form does; before, it loaded only
+    # what probing the mapping found, and the field function raised on the
+    # relation that wasn't loaded.
+    alias Brando.JSONLDTest.Shelf
+
+    setup do
+      page = Brando.Factory.insert(:page)
+
+      for key <- ["oak", "pine"] do
+        Brando.Repo.insert!(%Var{type: :string, key: key, label: %{"en" => key}, page_id: page.id})
+      end
+
+      shelves = [
+        %Shelf{id: page.id, title: "Wood", slug: "wood"},
+        %Shelf{id: page.id + 1, title: "Broken", slug: "broken"}
+      ]
+
+      Brando.Test.Support.put_test_env(Brando.JSONLDTest, shelves: shelves)
+      %{page: page}
+    end
+
+    test "loads the blueprint's relations, so a field function can enumerate one", %{page: page} do
+      assert :vars in Inspector.preloads(Shelf)
+
+      assert {:ok, inspection, entry} = Inspector.inspect_entry(Shelf, page.id)
+      assert Enum.map(entry.vars, & &1.key) |> Enum.sort() == ["oak", "pine"]
+      assert inspection.json =~ ~r/"description":"(oak, pine|pine, oak)"/
+    end
+
+    test "an entry whose field function raises is an error, not a crash", %{page: page} do
+      assert {:error, {:build_failed, "the shelf has no description"}} = Inspector.inspect_entry(Shelf, page.id + 1)
+    end
+  end
 end
