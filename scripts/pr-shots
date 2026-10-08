@@ -1,0 +1,133 @@
+#!/usr/bin/env node
+// Publishes before/after screenshots for a PR description through the
+// orphan `pr-screenshots` branch, and prints the markdown table to paste.
+//
+//   scripts/pr-shots <shots-dir> <name> [--worktree <path>] [--push]
+//
+// <shots-dir> holds before/ and after/ with PNGs named <shot>-<locale>-<width>.png
+// (what e2e/scripts/shoot.mjs writes). They are copied to <worktree>/<name>/before
+// and <worktree>/<name>/after, where <worktree> is a checkout of the
+// pr-screenshots branch (--worktree, or BRANDO_PR_SCREENSHOTS). Make one with
+//   git worktree add <path> pr-screenshots
+//
+// The table goes to stdout, grouped by width and locale, with before and after
+// paired by file name; progress goes to stderr. Images link to
+// https://raw.githubusercontent.com/brandocms/brando/pr-screenshots/<name>/…,
+// so they only render once the branch is pushed. Nothing is committed or
+// pushed unless --push is given; then the copied folder is committed as
+// "Screenshots for <name>" and pushed to origin pr-screenshots.
+//
+// Options: --repo <owner/name> (default brandocms/brando), --branch <name>
+// (default pr-screenshots).
+import { spawnSync } from 'node:child_process'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import path from 'node:path'
+
+const LABELS = ['before', 'after']
+const LOCALE_ORDER = ['en', 'no']
+
+const fail = message => {
+  console.error(message)
+  process.exit(1)
+}
+
+const args = process.argv.slice(2)
+const positional = []
+const opts = { repo: 'brandocms/brando', branch: 'pr-screenshots', worktree: process.env.BRANDO_PR_SCREENSHOTS }
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i]
+  if (arg === '--push') opts.push = true
+  else if (arg === '--help' || arg === '-h') opts.help = true
+  else if (['--worktree', '--repo', '--branch'].includes(arg)) {
+    if (args[i + 1] === undefined) fail(`${arg} needs a value`)
+    opts[arg.slice(2)] = args[++i]
+  } else if (arg.startsWith('--')) fail(`Unknown option ${arg}`)
+  else positional.push(arg)
+}
+
+if (opts.help || positional.length !== 2) {
+  console.error('usage: scripts/pr-shots <shots-dir> <name> [--worktree <path>] [--push]\n(see the comment at the top of this script)')
+  process.exit(opts.help ? 0 : 2)
+}
+
+const [shotsDir, name] = positional
+if (!/^[\w.-]+$/.test(name)) fail(`The name becomes a folder and URL segment: use letters, digits, - _ . (got ${name})`)
+if (!opts.worktree) fail('Where is the pr-screenshots checkout? Pass --worktree <path> or set BRANDO_PR_SCREENSHOTS.')
+
+const worktree = path.resolve(opts.worktree)
+const git = (...gitArgs) => spawnSync('git', ['-C', worktree, ...gitArgs], { encoding: 'utf8' })
+if (!existsSync(worktree)) fail(`${worktree} does not exist. Create it with: git worktree add ${worktree} ${opts.branch}`)
+const branch = git('symbolic-ref', '--short', 'HEAD')
+if (branch.status === 0 && branch.stdout.trim() !== opts.branch) {
+  fail(`${worktree} is on ${branch.stdout.trim()}, not ${opts.branch}.`)
+}
+if (branch.status !== 0 && opts.push) fail(`${worktree} is not a git checkout, so it cannot be pushed.`)
+
+const pngs = dir => existsSync(dir)
+  ? readdirSync(dir).filter(file => file.endsWith('.png') && !file.endsWith('.failed.png') && statSync(path.join(dir, file)).isFile()).sort()
+  : []
+
+const found = Object.fromEntries(LABELS.map(label => [label, pngs(path.join(path.resolve(shotsDir), label))]))
+const labels = LABELS.filter(label => found[label].length)
+if (!labels.length) fail(`No PNGs in ${path.resolve(shotsDir)}/before or /after.`)
+
+for (const label of labels) {
+  const target = path.join(worktree, name, label)
+  mkdirSync(target, { recursive: true })
+  for (const file of found[label]) copyFileSync(path.join(shotsDir, label, file), path.join(target, file))
+  console.error(`Copied ${found[label].length} ${label} image(s) to ${target}`)
+}
+
+// Pair by file name, grouped by width (widest first) and locale.
+const parse = file => {
+  const match = file.match(/^(.+)-([a-z]{2})-(\d+)\.png$/)
+  return match ? { shot: match[1], locale: match[2], width: Number(match[3]) } : { shot: file.replace(/\.png$/, ''), locale: null, width: null }
+}
+const groups = new Map()
+for (const file of [...new Set(labels.flatMap(label => found[label]))].sort()) {
+  const { shot, locale, width } = parse(file)
+  const key = width ? `${width}|${locale}` : 'other'
+  if (!groups.has(key)) groups.set(key, { width, locale, rows: [] })
+  groups.get(key).rows.push({ shot, file })
+}
+const localeRank = locale => (LOCALE_ORDER.includes(locale) ? LOCALE_ORDER.indexOf(locale) : LOCALE_ORDER.length)
+const ordered = [...groups.values()].sort((a, b) =>
+  (a.width === null) - (b.width === null) || (b.width ?? 0) - (a.width ?? 0) || localeRank(a.locale) - localeRank(b.locale) || String(a.locale).localeCompare(String(b.locale)))
+
+const url = (label, file) => `https://raw.githubusercontent.com/${opts.repo}/${opts.branch}/${name}/${label}/${encodeURIComponent(file)}`
+const title = label => label[0].toUpperCase() + label.slice(1)
+const lines = []
+for (const group of ordered) {
+  lines.push(group.width ? `#### ${group.width} px, ${group.locale}` : '#### Other', '')
+  lines.push(`| | ${labels.map(title).join(' | ')} |`, `| --- | ${labels.map(() => '---').join(' | ')} |`)
+  for (const { shot, file } of group.rows) {
+    const cells = labels.map(label => (found[label].includes(file) ? `![${shot} ${label}](${url(label, file)})` : '(none)'))
+    lines.push(`| ${shot} | ${cells.join(' | ')} |`)
+  }
+  lines.push('')
+}
+console.log(lines.join('\n').trimEnd())
+
+if (!opts.push) {
+  console.error(`\nNot committed. The images render once ${opts.branch} is pushed: rerun with --push, or`)
+  console.error(`  git -C ${worktree} add -- ${name} && git -C ${worktree} commit -m "Screenshots for ${name}" && git -C ${worktree} push origin ${opts.branch}`)
+  process.exit(0)
+}
+
+const run = (...gitArgs) => {
+  const result = git(...gitArgs)
+  if (result.status !== 0) fail(`git ${gitArgs.join(' ')} failed:\n${result.stderr || result.stdout}`)
+  return result
+}
+run('add', '--', name)
+if (git('diff', '--cached', '--quiet', '--', name).status !== 0) {
+  run('commit', '-m', `Screenshots for ${name}`, '--', name)
+} else {
+  console.error('Nothing new to commit.')
+}
+if (git('push', 'origin', `HEAD:${opts.branch}`).status !== 0) {
+  console.error(`Push rejected, rebasing on origin/${opts.branch} and retrying`)
+  run('pull', '--rebase', 'origin', opts.branch)
+  run('push', 'origin', `HEAD:${opts.branch}`)
+}
+console.error(`Pushed ${name} to ${opts.branch}.`)
