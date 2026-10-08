@@ -85,6 +85,18 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
       assert subscribers(:image, image.id) == []
     end
 
+    test "an entry gallery takes the processed image into its object", %{image: image} do
+      processed = %{image | status: :processed}
+      other = %{image_id: image.id + 1, image: %{image | id: image.id + 1}}
+
+      socket = %Socket{
+        assigns: %{__changed__: %{}, id: "page_photos", gallery_objects: [%{image_id: image.id, image: image}, other]}
+      }
+
+      assert {:ok, socket} = Input.Gallery.update(%{event: "image_processed", image: processed}, socket)
+      assert socket.assigns.gallery_objects == [%{image_id: image.id, image: processed}, other]
+    end
+
     test "an image processed before the watch began is reported at once", %{image: image} do
       {:ok, image} = Brando.Images.update_image(image, %{status: :processed}, :system)
       field = {Input.Image, "page_meta_image"}
