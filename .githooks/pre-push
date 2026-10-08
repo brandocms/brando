@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Runs `mix check --fast` (CI's fast gates, without docs) before a push.
+#
+#   SKIP_CHECK=1 git push ...    push without running it
+#
+# Enabled per clone by `git config core.hooksPath .githooks`, which
+# scripts/worktree-setup does. It checks the working tree, not the pushed
+# commits, so commit or set aside unrelated changes first.
+[ "${SKIP_CHECK:-}" = 1 ] && exit 0
+
+# Deleting a remote branch pushes nothing to check.
+pushing=false
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case "$local_sha" in *[!0]*) pushing=true ;; esac
+done
+[ "$pushing" = true ] || exit 0
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+[ -x scripts/check ] || exit 0
+
+if ! scripts/check --fast; then
+  echo "pre-push: mix check --fast failed. Fix it, or push anyway with SKIP_CHECK=1." >&2
+  exit 1
+fi
