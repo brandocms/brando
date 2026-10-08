@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Schedule do
   @moduledoc """
   What is planned for entries in a stretch of time, for the dashboard's
-  "Expiring soon" panel:
+  "Expiring soon" panel and the calendar (`BrandoAdmin.CalendarLive`):
 
     * `:publish` — a pending entry's `publish_at`
     * `:revision` — a revision scheduled to be restored and published
@@ -14,14 +14,20 @@ defmodule BrandoAdmin.Schedule do
   open the entry (`path`) and move it to another time (`movable?`): publishing
   takes the right to schedule, an expiry or a revision also the right to
   publish.
+
+  `reschedule/3` moves an item, through the same code path as changing the
+  date where it is set: the entry's context update for `publish_at` and
+  `unpublish_at`, as the entry form saves them, and
+  `Brando.Publisher.schedule_revision/5` for a revision, as the revisions
+  drawer does.
   """
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Blueprint
-  alias Brando.ContentEvents.Event
   alias Brando.Content.Identifier.Queries, as: IdentifierQueries
+  alias Brando.ContentEvents.Event
   alias Brando.Publisher
   alias Brando.Repo
   alias BrandoAdmin.CommandPalette
@@ -54,6 +60,20 @@ defmodule BrandoAdmin.Schedule do
   end
 
   @doc """
+  The schedulable content types the user may read: `%{key, schema, label,
+  icon}`, `key` being the type's public name (`"pages.page"`).
+  """
+  def types(user) do
+    permissions = CommandPalette.permissions(user)
+
+    schemas()
+    |> Enum.filter(&CommandPalette.allowed?(permissions, :read, &1))
+    |> Enum.map(&%{key: Event.entry_type(&1), schema: &1, label: Blueprint.get_plural(&1), icon: Blueprint.get_icon(&1)})
+    |> Enum.reject(&is_nil(&1.key))
+    |> Enum.sort_by(&String.downcase(&1.label))
+  end
+
+  @doc """
   The items from `from` up to `to` (UTC) the user may read, by time.
 
   Options: `:schemas`, the content types to look in (every schedulable type
@@ -72,6 +92,45 @@ defmodule BrandoAdmin.Schedule do
       |> Enum.flat_map(&item(&1, permissions))
       |> Enum.sort_by(&{DateTime.to_unix(&1.at), &1.title, &1.id})
     end)
+  end
+
+  @doc "The item with `id` the user may read, among those from `from` up to `to`."
+  def get(user, id, from, to, opts \\ []), do: user |> items(from, to, opts) |> Enum.find(&(&1.id == id))
+
+  @doc """
+  Move `item` to `at` (UTC) as `user`, returning `{:ok, item}` with the new
+  time, or `{:error, reason}`: `:forbidden`, `:in_the_past`, a changeset with
+  the entry's own errors (an expiry before publishing), or the publisher's
+  reason for a revision.
+  """
+  def reschedule(user, %{movable?: true} = item, %DateTime{} = at) do
+    at = DateTime.truncate(at, :second)
+
+    if DateTime.after?(at, DateTime.utc_now()),
+      do: CommandPalette.in_scope(user, fn -> move(user, item, at) end),
+      else: {:error, :in_the_past}
+  end
+
+  def reschedule(_user, _item, _at), do: {:error, :forbidden}
+
+  defp move(user, %{kind: :revision} = item, at) do
+    case Publisher.schedule_revision(item.schema, item.entry_id, item.revision, at, user) do
+      {:ok, _job} -> {:ok, %{item | at: at}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp move(user, %{kind: kind} = item, at) do
+    field = if kind == :publish, do: :publish_at, else: :unpublish_at
+    schema = item.schema
+    context = schema.__modules__().context
+    singular = schema.__naming__().singular
+
+    with {:ok, entry} <- apply(context, :"get_#{singular}", [%{matches: %{id: item.entry_id}}]),
+         changeset = schema.changeset(entry, %{field => at}, user, nil, []),
+         {:ok, _entry} <- apply(context, :"update_#{singular}", [changeset, user]) do
+      {:ok, %{item | at: at}}
+    end
   end
 
   # What each kind finds, before permissions: `{kind, entry, at, revision}`

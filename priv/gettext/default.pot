@@ -319,6 +319,7 @@ msgstr[1] ""
 #: lib/brando/content/stale_blocks.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
@@ -1851,6 +1852,7 @@ msgstr ""
 msgid "All content"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
@@ -2936,6 +2938,17 @@ msgstr ""
 msgid "Caches cleared!"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#: lib/brando_admin/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar view"
+msgstr ""
+
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Can be removed"
@@ -2963,6 +2976,7 @@ msgstr ""
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/content/module_form_live.ex
 #: lib/brando_admin/live/images/image_list_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -3332,6 +3346,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a connection"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a day and time that has not passed."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
@@ -4177,6 +4196,7 @@ msgid "Content transfer"
 msgstr ""
 
 #: lib/brando_admin/components/content/select_identifier.ex
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
@@ -4953,6 +4973,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Datetime"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Day"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -6753,6 +6778,7 @@ msgid "Expired: connect it again from the app"
 msgstr ""
 
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Expires"
 msgstr ""
@@ -9620,6 +9646,11 @@ msgstr ""
 msgid "Modules imported"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Month"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Moonwalk"
@@ -9675,6 +9706,11 @@ msgstr ""
 msgid "Mostly from %{referrer}"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move"
+msgstr ""
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Move %{key} to %{target} in %{count} block"
@@ -9717,6 +9753,11 @@ msgstr ""
 msgid "Move to"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to another day"
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Move to the Configure modal"
@@ -9725,6 +9766,21 @@ msgstr ""
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Move to the rich text toolbar"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to…"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move “%{title}” to another day"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move “%{title}”?"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -10023,10 +10079,20 @@ msgstr ""
 msgid "Newest first. Open a submission to read all of it."
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Next page"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Next week"
 msgstr ""
 
 #: lib/brando/content/stale_blocks.ex
@@ -10746,6 +10812,11 @@ msgstr ""
 msgid "Not in use anywhere yet."
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not moved"
+msgstr ""
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not provided"
@@ -10886,6 +10957,16 @@ msgstr ""
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing hidden."
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is planned this month."
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is planned this week."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -12147,10 +12228,20 @@ msgstr ""
 msgid "Previous build archived"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Previous page"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Previous week"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -12353,6 +12444,11 @@ msgstr ""
 msgid "Published on schedule"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publishes"
+msgstr ""
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/menu.ex
@@ -12360,9 +12456,19 @@ msgstr ""
 msgid "Publishing"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing moves from %{from} to %{to}."
+msgstr ""
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
 msgid "Publishing queue"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing, scheduled revisions and expiries you can read, in %{timezone} time."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -13672,6 +13778,11 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Revision error"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revision is published"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -16109,6 +16220,11 @@ msgstr ""
 msgid "The entry cannot be saved until these fields are fixed: %{fields}"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry could not be moved. Reload the calendar and try again."
+msgstr ""
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
@@ -16148,6 +16264,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The environment no longer exists."
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "The expiry moves from %{from} to %{to}."
 msgstr ""
 
 #: lib/brando_admin/components/form/meta_previews.ex
@@ -16473,6 +16594,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The scheduled operation no longer exists."
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "The scheduled revision moves from %{from} to %{to}."
 msgstr ""
 
 #: lib/brando_admin/live/search_live.ex
@@ -17260,6 +17386,7 @@ msgid "To embed a map in your content, please follow these steps:"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -18591,6 +18718,11 @@ msgstr ""
 msgid "Webhooks"
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Week"
+msgstr ""
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "What happens to %{key}"
@@ -18619,6 +18751,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "What the editor sees above the field"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "What the icons mean"
 msgstr ""
 
 #: lib/brando_admin/live/forms/inbox_live.ex
@@ -19080,6 +19217,11 @@ msgstr ""
 #: lib/brando/upload.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "You may not reschedule this entry."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -20080,6 +20222,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
+msgstr ""
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” moved to %{date}"
 msgstr ""
 
 #: lib/brando/content/stale_blocks.ex

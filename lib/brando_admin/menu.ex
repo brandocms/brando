@@ -337,6 +337,11 @@ defmodule BrandoAdmin.Menu do
               icon: "layout-dashboard",
               url: "/admin"
             },
+            %{
+              name: gettext("Calendar"),
+              icon: "calendar-days",
+              url: "/admin/calendar"
+            },
             assistant_menu_item(current_user),
             sites_menu_item(current_user),
             %{

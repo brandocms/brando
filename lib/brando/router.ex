@@ -238,6 +238,8 @@ defmodule Brando.Router do
           live "/frontend-edit", BrandoAdmin.FrontendEdit.EditorLive
           # Every entry the user may read, by title and content (Brando.Search)
           live "/search", BrandoAdmin.SearchLive
+          # Publishing, scheduled revisions and expiries by day (BrandoAdmin.Schedule)
+          live "/calendar", BrandoAdmin.CalendarLive
           # brando routes
           live "/sites", BrandoAdmin.Sites.SiteLive
           live "/assets/images", BrandoAdmin.Images.ImageListLive
