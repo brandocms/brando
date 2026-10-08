@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
     name: :input,
     args: [:name, :type, {:optional, :opts}],
     target: Forms.Input,
+    transform: {__MODULE__, :transform_input, []},
     schema: [
       opts: [
         type: :keyword_list,
@@ -291,6 +292,19 @@ defmodule Brando.Blueprint.Forms.Dsl do
     sections: [@root],
     transformers: [],
     verifiers: [Brando.Blueprint.Forms.Verifier]
+
+  # `ai_actions:` become `Forms.AIAction` structs on the input, so a bad option
+  # is a compile error and the admin reads checked structs. The option is
+  # dropped from `opts`, which input components receive.
+  @doc false
+  def transform_input(%Forms.Input{opts: opts} = input) do
+    opts = opts || []
+
+    case Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions)) do
+      {:ok, actions} -> {:ok, %{input | actions: actions, opts: Keyword.delete(opts, :ai_actions)}}
+      {:error, message} -> {:error, message}
+    end
+  end
 
   @doc false
   def transform_form(%Forms.Form{tabs: tabs} = form) do

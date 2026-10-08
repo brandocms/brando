@@ -4,5 +4,6 @@ defmodule Brando.Blueprint.Forms.Input do
             name: nil,
             type: nil,
             component: nil,
+            actions: [],
             opts: []
 end
