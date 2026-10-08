@@ -125,6 +125,25 @@ defmodule Brando.Content.Proposals do
   defp op_targets(%CopyBlock{target: target, to_target: to}) when not is_nil(to), do: [target, to]
   defp op_targets(op), do: [Map.get(op, :target)]
 
+  @doc """
+  The entries `operations` only copy blocks from. They are read, to copy
+  from, and locked while the proposal is applied, but not changed or saved.
+  """
+  @spec sources([struct()]) :: [Proposal.target()]
+  def sources(operations) do
+    changed = operations |> Enum.flat_map(&changed_targets/1) |> MapSet.new()
+
+    for %CopyBlock{target: target, to_target: to} <- operations,
+        not is_nil(to),
+        not MapSet.member?(changed, target),
+        uniq: true,
+        do: target
+  end
+
+  defp changed_targets(%CopyBlock{to_target: to}) when not is_nil(to), do: [to]
+  defp changed_targets(%CreateEntry{ref: ref}), do: [{:new, ref}]
+  defp changed_targets(op), do: [Map.get(op, :target)]
+
   defp freeze(%CreateEntry{} = op), do: %{op | ref: to_string(op.ref), fields: stringify(op.fields)}
   defp freeze(%SetFields{} = op), do: %{op | target: target(op.target), fields: stringify(op.fields)}
 
@@ -1056,7 +1075,14 @@ defmodule Brando.Content.Proposals do
   defp problem(code, message), do: %{code: code, message: message}
 
   defp effects(proposal) do
-    existing = for {{schema, _} = target, entry} <- proposal.targets, schema != :new, do: {target, entry}
+    sources = sources(proposal.operations)
+
+    existing =
+      for {{schema, _} = target, entry} <- proposal.targets,
+          schema != :new,
+          target not in sources,
+          do: {target, entry}
+
     inserted = for %{__struct__: kind, uid: uid} <- proposal.operations, kind in [InsertBlock, CopyBlock], do: uid
     deleted = for %DeleteBlock{} = op <- proposal.operations, do: {op.target, op.block_uid}
 
@@ -2278,7 +2304,7 @@ defmodule Brando.Content.Proposals do
       problems: Enum.map(record.problems, &decode_problem/1)
     }
 
-    effects = decode_effects(record.effects, Map.keys(proposal.targets))
+    effects = decode_effects(record.effects, Map.keys(proposal.targets), sources(operations))
     with_record(%{proposal | effects: effects}, record)
   end
 
@@ -2329,19 +2355,24 @@ defmodule Brando.Content.Proposals do
     }
   end
 
+  # Effects stored since entries only copied from stopped counting as updated
+  # say so; the counts of older ones are corrected as they are read.
   defp encode_effects(effects) do
-    Map.new(effects, fn
+    effects
+    |> Map.new(fn
       {:live, targets} -> {"live", Enum.map(targets, &Proposal.key/1)}
       {key, value} -> {to_string(key), value}
     end)
+    |> Map.put("sources_excluded", true)
   end
 
-  defp decode_effects(effects, targets) do
-    live = Enum.filter(targets, &(Proposal.key(&1) in (effects["live"] || [])))
+  defp decode_effects(effects, targets, sources) do
+    stale = if effects["sources_excluded"], do: [], else: Enum.filter(sources, &(&1 in targets))
+    live = Enum.filter(targets -- stale, &(Proposal.key(&1) in (effects["live"] || [])))
 
     %{
       creates: effects["creates"],
-      updates: effects["updates"],
+      updates: effects["updates"] && max(effects["updates"] - length(stale), 0),
       inserted_blocks: effects["inserted_blocks"],
       updated_blocks: effects["updated_blocks"],
       moved_blocks: effects["moved_blocks"] || 0,
@@ -2396,11 +2427,16 @@ defmodule Brando.Content.Proposals do
     # The revision each entry is at now: undo restores it.
     revisions = Map.new(entries, fn {target, entry} -> {target, revision_before(target, entry, user)} end)
 
+    # An entry blocks are only copied from is not saved, unless it is
+    # published as the proposal is applied.
+    unchanged = Enum.reject(sources(proposal.operations), &(Proposal.key(&1) in publish))
+
     # Create first: later stages resolve `{:new, ref}` to the saved id.
     # Otherwise entries are saved in the order the operations name them.
     saved =
       proposal
       |> materialize!(entries, user)
+      |> Enum.reject(fn {target, _cs} -> target in unchanged end)
       |> Enum.map(fn {target, cs} ->
         if Proposal.key(target) in publish,
           do: {target, Changeset.put_change(cs, :status, :published)},

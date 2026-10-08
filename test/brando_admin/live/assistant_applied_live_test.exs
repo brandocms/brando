@@ -51,20 +51,21 @@ defmodule BrandoAdmin.AssistantAppliedLiveTest do
   defp new_items(items),
     do: Enum.filter(items, &("is-new" in (&1 |> Floki.attribute("class") |> Enum.flat_map(fn c -> String.split(c) end))))
 
+  # Identity's first block, copied to the top of Work.
+  defp copy_to_work(c) do
+    %Proposals.CopyBlock{
+      target: {Page, c.identity.id},
+      block_uid: first_uid(c, c.identity),
+      to_target: {Page, c.work.id},
+      to_field: "blocks",
+      placement: {:before, c.intro_uid}
+    }
+  end
+
   defp first_uid(c, page), do: hd(Catalog.load!(Page, page.id, c.current_user).entry_blocks).block.uid
 
   describe "a copy from another entry" do
-    setup c do
-      op = %Proposals.CopyBlock{
-        target: {Page, c.identity.id},
-        block_uid: first_uid(c, c.identity),
-        to_target: {Page, c.work.id},
-        to_field: "blocks",
-        placement: {:before, c.intro_uid}
-      }
-
-      Map.put(c, :ops, [op])
-    end
+    setup c, do: Map.put(c, :ops, [copy_to_work(c)])
 
     test "is shown once after apply, after undo, and when the entry changes after undo", c do
       {view, path} = open(c, c.ops)
@@ -87,6 +88,79 @@ defmodule BrandoAdmin.AssistantAppliedLiveTest do
       Brando.Repo.delete!(intro)
       assert names(order(reload(path, c), c, c.work)) == names(reviewed)
     end
+  end
+
+  describe "the entry a block is copied from" do
+    setup c, do: Map.put(c, :ops, [copy_to_work(c)])
+
+    test "is a source: not counted, not previewed and not saved", c do
+      {view, path} = open(c, c.ops)
+      source = card(c.identity)
+
+      assert has_element?(view, ".assistant-counts", "1 updated entry")
+      assert has_element?(view, source <> " .assistant-badge.is-source", "Source")
+      assert has_element?(view, source <> " .assistant-placement", "The original stays here.")
+      refute has_element?(view, source <> " .assistant-card-preview")
+      assert has_element?(view, card(c.work) <> " .assistant-card-preview")
+      assert has_element?(view, "button.assistant-apply", "Apply 1 entry change")
+
+      before = Brando.Repo.get!(Page, c.identity.id)
+      apply!(view)
+
+      assert Brando.Repo.get!(Page, c.identity.id).updated_at == before.updated_at
+      assert has_element?(view, ".assistant-receipt li", "Unchanged")
+      assert has_element?(view, ".assistant-counts", "1 updated entry")
+      assert has_element?(view, source <> " .assistant-badge.is-source")
+
+      undo!(view)
+      assert has_element?(view, ".assistant-counts", "1 updated entry")
+      assert length(Catalog.load!(Page, c.work.id, c.current_user).entry_blocks) == 2
+      assert length(order(reload(path, c), c, c.work)) == 3
+    end
+
+    test "a proposal stored before sources were left out is counted the same", c do
+      {view, path} = open(c, c.ops)
+      assert has_element?(view, ".assistant-counts", "1 updated entry")
+
+      [record] = Brando.Repo.all(Proposals.Record)
+      identity = Proposals.Proposal.key({Page, c.identity.id})
+      work = Proposals.Proposal.key({Page, c.work.id})
+
+      old = record.effects |> Map.delete("sources_excluded") |> Map.merge(%{"updates" => 2, "live" => [identity, work]})
+      record |> Ecto.Changeset.change(effects: old) |> Brando.Repo.update!()
+
+      view = reload(path, c)
+      assert has_element?(view, ".assistant-counts", "1 updated entry")
+      assert has_element?(view, "button.assistant-apply", "Apply 1 entry change · affects 1 live page")
+    end
+
+    test "a connected tool is told one entry is updated", c do
+      context = %Proposals.Tools.Context{actor: c.current_user, origin: :mcp, client: "Claude Code"}
+
+      op = %{
+        "op" => "copy_block",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "block_uid" => first_uid(c, c.identity),
+        "to" => %{"content_type" => "Brando.Pages.Page", "id" => c.work.id},
+        "placement" => %{"before" => c.intro_uid}
+      }
+
+      assert {:ok, %{applicable: true, effects: effects}} =
+               Proposals.Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => [op]}, context)
+
+      assert effects.updates == 1
+      assert effects.live == ["Brando.Pages.Page:#{c.work.id}"]
+    end
+  end
+
+  test "an undone proposal offers no preview of changes that are gone", c do
+    {view, _} = open(c, [%Proposals.SetFields{target: {Page, c.work.id}, fields: %{"title" => "Work, renamed"}}])
+    assert has_element?(view, ".assistant-card-preview")
+
+    apply!(view)
+    refute has_element?(view, ".assistant-card-preview")
+    undo!(view)
+    refute has_element?(view, ".assistant-card-preview")
   end
 
   test "a copy in the same entry is shown once after apply", c do

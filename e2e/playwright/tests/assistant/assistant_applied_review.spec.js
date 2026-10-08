@@ -48,13 +48,26 @@ test('an applied proposal shows what it applied, and each card links to its page
     await expect(branding.locator('.assistant-draft')).toBeVisible()
   }
 
+  // Identity is only copied from: a source, not an updated entry.
+  const source = cards.nth(0)
+  const expectSource = async () => {
+    await expect(source.locator('.assistant-badge.is-source')).toBeVisible()
+    await expect(source.locator('.assistant-card-preview')).toHaveCount(0)
+    await expect(review.locator('.assistant-counts strong').first()).toHaveText('3')
+  }
+
   await expectOrder()
   await expectAddresses()
+  await expectSource()
+  await expect(strategy.locator('.assistant-card-preview')).toBeVisible()
 
   await review.locator('button.assistant-apply').click()
   await expect(review.locator('.assistant-feedback.is-success')).toBeVisible({ timeout: 20000 })
   await expectOrder()
   await expectAddresses()
+  await expectSource()
+  // Nothing is left to preview once the changes are saved.
+  await expect(review.locator('.assistant-card-preview')).toHaveCount(0)
 
   // Coming back to it shows the same.
   await page.reload()

@@ -872,8 +872,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <p>{gettext("The changes are saved. Pages are re-rendered in the background.")}</p>
         <ul class="assistant-receipt">
           <li :for={item <- @review}>
-            <.link :if={item[:saved_url]} navigate={item.saved_url}>{item.title}</.link>
-            <span :if={!item[:saved_url]}>{item.title}</span>
+            <.link :if={item[:saved_url] || item[:admin_url]} navigate={item[:saved_url] || item.admin_url}>
+              {item.title}
+            </.link>
+            <span :if={!(item[:saved_url] || item[:admin_url])}>{item.title}</span>
             <span class="assistant-badge">{receipt_badge(item, @receipt)}</span>
           </li>
         </ul>
@@ -915,7 +917,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <header>
               <span class="assistant-card-type">{entry.content_type}</span>
               <span class={["assistant-badge", "is-#{entry.action}"]}>
-                {if entry.action == :create, do: gettext("Create"), else: gettext("Update")}
+                {action_label(entry.action)}
               </span>
             </header>
             <h4>
@@ -923,7 +925,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
               <span :if={!entry.admin_url}>{entry.title}</span>
             </h4>
             <button
-              :if={entry.preview? and is_nil(@receipt)}
+              :if={entry.preview? and @under_review? and entry.action != :source}
               type="button"
               class="assistant-button assistant-card-preview"
               phx-click="preview"
@@ -1072,7 +1074,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <span :if={!@published? and @entry.action == :create and !@entry[:saved_target]} class="assistant-draft">
       <.icon name="lock" />{gettext("New draft")}
     </span>
-    <span :if={!@published? and (@entry.action == :update or @entry[:saved_target])} class="assistant-draft">
+    <span :if={!@published? and (@entry.action != :create or @entry[:saved_target])} class="assistant-draft">
       <.icon name="lock" />{gettext("Not published")}
     </span>
     <button
@@ -1117,6 +1119,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <nav class="assistant-preview-tabs" aria-label={gettext("Entries in this proposal")}>
         <button
           :for={entry <- @review}
+          :if={entry.action != :source}
           type="button"
           phx-click="preview"
           phx-value-key={entry.key}
@@ -1915,12 +1918,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
     cond do
       item.key in (receipt.mappings["published"] || []) -> gettext("Published")
       item.action == :create -> gettext("Created as draft")
+      item.action == :source -> gettext("Unchanged")
       true -> gettext("Updated")
     end
   end
 
+  defp action_label(:create), do: gettext("Create")
+  # Blocks are copied from it; it is not changed.
+  defp action_label(:source), do: gettext("Source")
+  defp action_label(_action), do: gettext("Update")
+
   # New entries and drafts can be published as the proposal is applied.
-  defp publishable?(entry), do: entry.action == :create or entry.status == "draft"
+  defp publishable?(entry), do: entry.action == :create or (entry.action == :update and entry.status == "draft")
 
   # Entries still holding placeholders stay drafts, whatever was ticked.
   defp publishing(%{publish: publish, review: review}) do

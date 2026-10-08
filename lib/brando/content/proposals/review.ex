@@ -103,7 +103,8 @@ defmodule Brando.Content.Proposals.Review do
     %{
       key: Proposal.key(target),
       target: target,
-      action: :update,
+      # An entry blocks are only copied from is read, not changed.
+      action: if(target in Brando.Content.Proposals.sources(proposal.operations), do: :source, else: :update),
       content_type: Brando.Blueprint.get_singular(schema),
       title: described.title,
       url: blank(described.url),
