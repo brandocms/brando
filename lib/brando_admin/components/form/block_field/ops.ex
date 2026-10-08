@@ -1070,9 +1070,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   """
   @spec field_op(Changeset.t(), Changeset.t(), uid(), Changeset.t() | nil) :: {:ok, op() | nil} | :error
   def field_op(%Changeset{} = previous, %Changeset{} = changeset, uid, stale \\ nil) do
-    before = previous |> snapshot_params() |> drop_artifacts()
-    now = changeset |> snapshot_params() |> drop_artifacts()
-    stale = stale && stale |> snapshot_params() |> drop_artifacts()
+    before = fields_snapshot(previous)
+    now = fields_snapshot(changeset)
+    stale = stale && fields_snapshot(stale)
 
     changes =
       before
@@ -1087,6 +1087,32 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   rescue
     _ -> :error
   end
+
+  # The block's own fields. Its children are left out before the snapshot
+  # (they are other blocks, with their own forms): on a block with many
+  # children the snapshot is otherwise most of a keystroke's cost.
+  defp fields_snapshot(changeset), do: changeset |> without_children() |> snapshot_params() |> drop_artifacts()
+
+  defp without_children(%Changeset{changes: changes, data: data} = changeset) do
+    changes =
+      case Map.delete(changes, :children) do
+        %{block: %Changeset{} = block} = changes -> %{changes | block: without_children(block)}
+        changes -> changes
+      end
+
+    %{changeset | changes: changes, data: data_without_children(data)}
+  end
+
+  defp data_without_children(%{children: _} = data),
+    do: %{
+      data
+      | children: %Ecto.Association.NotLoaded{__field__: :children, __owner__: data.__struct__, __cardinality__: :many}
+    }
+
+  defp data_without_children(%{block: %{} = block} = data) when not is_struct(block, Ecto.Association.NotLoaded),
+    do: %{data | block: data_without_children(block)}
+
+  defp data_without_children(data), do: data
 
   # {path as the form names it (keys and indexes), field path, value} for
   # every leaf that differs.
