@@ -6,7 +6,9 @@ import { readFile } from 'node:fs/promises'
 // submitting the form (`assets/src/hooks/Form/saveForm.js`). Loaded as the
 // other hook tests load unbundled, dependency-free source.
 const source = await readFile(new URL('../../assets/src/hooks/Form/saveForm.js', import.meta.url), 'utf8')
-const { default: saveForm } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)
+const { default: saveForm, PHX_PRIVATE, PHX_HAS_SUBMITTED } = await import(
+  `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
+)
 
 function setup(t, { saveEvent = 'save_form', active = null } = {}) {
   const pushed = []
@@ -85,4 +87,25 @@ test('a form that takes no save event is submitted', t => {
   saveForm(s.hook, s.form)
   assert.deepEqual(s.pushed, [])
   assert.deepEqual(s.dispatched.map(event => event.type), ['submit'])
+})
+
+// Marking inputs submitted writes LiveView's private DOM keys, which are
+// internals: this fails when a LiveView upgrade renames them.
+test("the keys it marks inputs submitted with are LiveView's own", async () => {
+  const candidates = [
+    '../../deps/phoenix_live_view/priv/static/phoenix_live_view.esm.js',
+    '../../e2e/deps/phoenix_live_view/priv/static/phoenix_live_view.esm.js',
+    '../../assets/node_modules/phoenix_live_view/priv/static/phoenix_live_view.esm.js',
+  ]
+
+  let liveView = null
+  for (const path of candidates) {
+    liveView = await readFile(new URL(path, import.meta.url), 'utf8').catch(() => null)
+    if (liveView) break
+  }
+
+  assert.ok(liveView, 'phoenix_live_view.esm.js not found: install the deps first')
+  assert.match(liveView, new RegExp(`var PHX_PRIVATE = "${PHX_PRIVATE}";`))
+  assert.match(liveView, new RegExp(`var PHX_HAS_SUBMITTED = "${PHX_HAS_SUBMITTED}";`))
+  assert.match(liveView, /isUsedInput\(el\) \{\s+return [^}]*PHX_HAS_SUBMITTED/)
 })

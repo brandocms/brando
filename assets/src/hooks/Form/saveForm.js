@@ -24,8 +24,11 @@
 // fields nests their own locks and drops blocks (see `draftRecovery.js`).
 
 // LiveView's private DOM keys (`DOM.putPrivate`), as its submit sets them.
-const PHX_PRIVATE = 'phxPrivate'
-const PHX_HAS_SUBMITTED = 'phx-has-submitted'
+// They are LiveView internals, not API: check them on every LiveView
+// upgrade. `test/javascript/save_form.test.mjs` reads LiveView's own source
+// and fails when they change.
+export const PHX_PRIVATE = 'phxPrivate'
+export const PHX_HAS_SUBMITTED = 'phx-has-submitted'
 
 const markSubmitted = el => {
   el[PHX_PRIVATE] = { ...(el[PHX_PRIVATE] || {}), [PHX_HAS_SUBMITTED]: true }
