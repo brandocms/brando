@@ -208,21 +208,54 @@ test.describe('Field presence', () => {
     await open(page, url)
     await open(secondUserPage, url)
 
-    // A follows B.
+    // A follows B: B's avatar is pressed, a frame in B's colour runs round
+    // the editing area and a chip under the toolbar names B.
     const avatar = page.locator('.page-presences [data-follow-user]')
+    const frame = page.getByTestId('follow-frame')
+    const chip = page.getByTestId('follow-chip')
+    const follow = async () => {
+      await avatar.click()
+      await expect(avatar).toHaveAttribute('aria-pressed', 'true')
+      await expect(frame).toBeVisible()
+      await expect(chip).toBeVisible()
+    }
+    const stopped = async () => {
+      await expect(avatar).toHaveAttribute('aria-pressed', 'false')
+      await expect(frame).toBeHidden()
+      await expect(chip).toBeHidden()
+    }
+
     await expect(avatar).toHaveCount(1)
+    await follow()
+    await expect(frame).toHaveAttribute('data-presence-color-index', await avatar.getAttribute('data-presence-color-index'))
+    await expect(chip).toHaveAttribute('data-presence-color-index', await avatar.getAttribute('data-presence-color-index'))
+    // The frame takes no clicks, and the chip sits under the toolbar, outside it.
+    await expect(frame).toHaveCSS('pointer-events', 'none')
+    const toolbar = await page.locator('.form-content > .form-tabs').boundingBox()
+    const chipBox = await chip.boundingBox()
+    expect(chipBox.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height)
+    // The toolbar has no follow pill and no "2 editing" any more.
+    await expect(page.locator('.form-content > .form-tabs').getByTestId('follow-chip')).toHaveCount(0)
+    await expect(page.locator('.form-content > .form-tabs .presence-count')).toHaveCount(0)
+
+    // Escape, the chip's × and the avatar again each stop following.
+    await page.keyboard.press('Escape')
+    await stopped()
+    await follow()
+    await chip.getByTestId('follow-stop').click()
+    await stopped()
+    await follow()
     await avatar.click()
-    await expect(avatar).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.locator('.follow-bar')).toBeVisible()
+    await stopped()
 
     // B goes to the last block: A's view follows.
+    await follow()
     await headline(secondUserPage, 4).click()
     await expect(headline(page, 4)).toBeInViewport({ timeout: 5000 })
 
     // A scrolls: following stops.
     await page.mouse.wheel(0, -300)
-    await expect(page.locator('.follow-bar')).toBeHidden()
-    await expect(avatar).toHaveAttribute('aria-pressed', 'false')
+    await stopped()
     await page.waitForTimeout(500)
     const scrolled = await page.evaluate(() => window.scrollY)
 
@@ -230,6 +263,34 @@ test.describe('Field presence', () => {
     await headline(secondUserPage, 0).click()
     await page.waitForTimeout(1000)
     expect(await page.evaluate(() => window.scrollY)).toBe(scrolled)
+  })
+
+  test('following on a phone: the chip stays clear of the toolbar and stops following', async ({
+    page,
+    secondUserPage,
+  }) => {
+    const url = await createPage(page, 'Presence Follow Phone', ['HEEx Parity', 'Styled Header', 'HEEx Parity'])
+    await page.setViewportSize({ width: 390, height: 844 })
+    await open(page, url)
+    await open(secondUserPage, url)
+
+    const avatar = page.locator('.page-presences [data-follow-user]')
+    const chip = page.getByTestId('follow-chip')
+    await avatar.click()
+    await expect(page.getByTestId('follow-frame')).toBeVisible()
+    await expect(chip).toBeInViewport({ ratio: 1 })
+
+    await headline(secondUserPage, 2).click()
+    await expect(headline(page, 2)).toBeInViewport({ timeout: 5000 })
+    const toolbar = await page.locator('.form-content > .form-tabs').boundingBox()
+    const chipBox = await chip.boundingBox()
+    expect(chipBox.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height)
+    expect(chipBox.x).toBeGreaterThanOrEqual(0)
+    expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(390)
+
+    await chip.getByTestId('follow-stop').click()
+    await expect(avatar).toHaveAttribute('aria-pressed', 'false')
+    await expect(chip).toBeHidden()
   })
 
   // #2992 review: a field op on a block that was new when the save read the

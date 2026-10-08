@@ -550,8 +550,9 @@ The toolbar under it is split (approved October 2026) and keeps to one row.
 On the left, straight on the page, the sections and drawers (Content, Meta,
 History, Scheduled publishing) as `.pill-tabs--small`. On the right, in their
 own white group with the bar's border, radius and surface: the editors
-present as compact overlapping avatars, the save state ("Saved 23:20",
-"Unsaved changes", with the recovery status as its title), Notes as an icon with a badge counting open notes,
+present as compact overlapping avatars (the count of editors is in their
+tooltip), the save state ("Saved 23:20", "Unsaved changes", with the recovery
+status as its title), Notes as an icon with a badge counting open notes,
 Preview with its label and menu, a "⋯" More menu (Languages, Share preview;
 an item that doesn't apply is left out, and an empty menu isn't drawn) and
 Save and close with its options. Under 1366px Preview and Save drop their
@@ -563,6 +564,13 @@ When the bar sticks, content scrolling under it would show between the two
 groups, so the stuck bar sits on a band of the page colour, faded at its
 foot. The Form hook watches a sentinel above the bar with an
 IntersectionObserver and sets `is-stuck` through sticky JS; no `:has()`.
+
+Following another editor (click their avatar) draws a 2px frame in their
+presence colour round the editing area, fixed to its edges on screen, and a
+chip under the toolbar, "Following Ingrid ×". The frame takes no clicks;
+the chip's ×, Escape, the avatar again, or your own scroll or click stop
+following. The followed avatar has a double ring. Nothing about following
+sits in the toolbar.
 
 A singleton settings screen (Identity, SEO) passes `layout={:settings}` to
 the form and puts `Workspace.header` above it: the eyebrow "Configuration",

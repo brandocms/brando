@@ -2686,6 +2686,7 @@ defmodule BrandoAdmin.Components.Form do
       >
         <%!-- Recovery captures are pushed from this empty element, see `draftRecovery.js` --%>
         <span id={"#{@id}-draft-capture"} data-draft-capture phx-target={@myself} hidden></span>
+        <.follow_frame id={@id} />
         <div class={["form-content", @live_preview_active? && "with-live-preview"]}>
           <EntryHeader.header
             :if={@layout == :entry}
@@ -2785,10 +2786,10 @@ defmodule BrandoAdmin.Components.Form do
               </button>
             </nav>
 
-            <.form_presences :if={@layout != :entry} presences={@presences} id={@id} current_user={@current_user} />
+            <.form_presences :if={@layout != :entry} presences={@presences} current_user={@current_user} />
 
             <div :if={@layout == :entry} class="form-tab-builtins">
-              <.form_presences presences={@presences} id={@id} current_user={@current_user} />
+              <.form_presences presences={@presences} current_user={@current_user} />
               <.live_component
                 module={DraftRecoveryComponent}
                 id={DraftRecoveryComponent.status_id(@id)}
@@ -3269,15 +3270,14 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   attr :presences, :list
-  attr :id, :string, required: true
   attr :current_user, :map, required: true
 
   # The editors present, each ringed in the colour their field presence has
   # (`data-presence-color-index`, by position, as fieldPresence.js counts it).
   # Another editor's avatar is a button: it follows
   # where they work (the `Brando.Form` hook scrolls to the block and field
-  # they move to, until this editor scrolls or clicks). The follow bar is
-  # the client's (`phx-update="ignore"`), which fills in the name.
+  # they move to, until this editor scrolls or clicks), shown by
+  # `follow_frame/1`. The count of editors is in each avatar's tooltip.
   def form_presences(assigns) do
     assigns = assign(assigns, :count, map_size(assigns.presences))
 
@@ -3289,6 +3289,7 @@ defmodule BrandoAdmin.Components.Form do
           class={["user-presence visible", user[:frontend?] && "is-frontend"]}
           data-presence-user-id={user.id}
           data-presence-color-index={rem(index, 6)}
+          title={presence_title(user, @count)}
         >
           <.presence_avatar user={user} />
         </div>
@@ -3302,24 +3303,36 @@ defmodule BrandoAdmin.Components.Form do
           data-follow-user={user.id}
           aria-pressed="false"
           aria-label={gettext("Follow %{name}", name: user.name)}
+          title={presence_title(user, @count)}
         >
           <.presence_avatar user={user} />
         </button>
       <% end %>
     </div>
-    <span :if={@count > 1} class="presence-count">
-      {ngettext("%{count} editing", "%{count} editing", @count)}
-    </span>
-    <div
-      id={"#{@id}-follow-bar"}
-      class="follow-bar"
-      phx-update="ignore"
-      hidden
-      data-label={gettext("Following %{name}", name: "%{name}")}
-    >
+    """
+  end
+
+  attr :id, :string, required: true
+
+  # Follow mode (`assets/src/Presence/follow.js`): while this editor follows
+  # another one, a frame in that editor's presence colour runs round the
+  # editing area, and a chip under the toolbar names them, with × to stop.
+  # Neither takes a click but the chip. Shown and coloured with sticky
+  # attributes (`is-following`, `data-presence-color-index`); the name is the
+  # client's, in an ignored span.
+  defp follow_frame(assigns) do
+    ~H"""
+    <div class="follow-frame" data-testid="follow-frame" aria-hidden="true"></div>
+    <div class="follow-chip" data-testid="follow-chip">
       <.icon name="eye" />
-      <span class="follow-bar-label"></span>
-      <button type="button" class="follow-bar-stop" aria-label={gettext("Stop following")}>
+      <span
+        id={"#{@id}-follow-label"}
+        class="follow-chip-label"
+        phx-update="ignore"
+        aria-live="polite"
+        data-label={gettext("Following %{name}", name: "%{name}")}
+      ></span>
+      <button type="button" class="follow-chip-stop" data-testid="follow-stop" aria-label={gettext("Stop following")}>
         <.icon name="x" />
       </button>
     </div>
@@ -3346,6 +3359,12 @@ defmodule BrandoAdmin.Components.Form do
   # Someone editing from the website (frontend edit mode) says so.
   defp presence_label(%{frontend?: true, name: name}), do: gettext("%{name} · editing on the website", name: name)
   defp presence_label(user), do: user.name
+
+  # An avatar's tooltip: who it is, and how many are here when there are several.
+  defp presence_title(user, count) when count > 1,
+    do: presence_label(user) <> " · " <> ngettext("%{count} editing", "%{count} editing", count)
+
+  defp presence_title(user, _count), do: presence_label(user)
 
   def form_tabs(assigns) do
     ~H"""
