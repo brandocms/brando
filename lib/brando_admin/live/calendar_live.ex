@@ -199,6 +199,18 @@ defmodule BrandoAdmin.CalendarLive do
 
       {:noreply, socket |> assign(:moving, nil) |> load()}
     else
+      {:error, :changed} = error ->
+        # Someone changed it since the calendar was read: show what is planned now
+        {:noreply,
+         socket
+         |> assign(:moving, nil)
+         |> load()
+         |> push_event("b:alert", %{
+           type: "warning",
+           title: escape(gettext("Not moved")),
+           message: escape(move_error(error))
+         })}
+
       error ->
         {:noreply,
          push_event(socket, "b:alert", %{
@@ -214,6 +226,9 @@ defmodule BrandoAdmin.CalendarLive do
   end
 
   defp move_error({:error, :in_the_past}), do: gettext("Choose a day and time that has not passed.")
+
+  defp move_error({:error, :changed}),
+    do: gettext("It was changed since the calendar was loaded. The calendar now shows what is planned.")
 
   defp move_error({:error, %Ecto.Changeset{errors: errors}}) when errors != [] do
     Enum.map_join(errors, " ", fn {_field, {message, opts}} ->

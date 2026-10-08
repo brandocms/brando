@@ -174,6 +174,51 @@ defmodule BrandoAdmin.CalendarLiveTest do
       assert Repo.get!(Page, expiring.id).unpublish_at == at(day(6))
     end
 
+    test "a move from a stale calendar is refused, and the calendar shows what is planned now", %{
+      conn: conn,
+      current_user: user
+    } do
+      scheduled = page(user, "Autumn campaign", status: :pending, publish_at: at(day()))
+      expiring = page(user, "Job post", status: :published, publish_at: at(day(-5)), unpublish_at: at(day(1)))
+      {:ok, view, _html} = live(conn, month_path(day()))
+      {:ok, other_view, _html} = live(conn, month_path(day()))
+
+      # Meanwhile, someone else publishes the first by hand and clears the second's expiry
+      published_at = DateTime.utc_now() |> DateTime.truncate(:second)
+      {:ok, _} = Brando.Pages.update_page(scheduled.id, %{status: :published, publish_at: published_at}, user)
+      {:ok, _} = Brando.Pages.update_page(expiring.id, %{unpublish_at: nil}, user)
+
+      render_hook(view, "move", %{"item" => item_id(:publish, scheduled), "date" => Date.to_iso8601(day(4))})
+      assert_push_event(view, "b:alert", %{type: "warning", message: message})
+      assert message =~ "changed since the calendar was loaded"
+
+      # Still live, not taken back to pending by a future date
+      assert %{status: :published, publish_at: ^published_at} = Repo.get!(Page, scheduled.id)
+      refute has_element?(view, "#calendar-item-#{item_id(:publish, scheduled)}")
+
+      render_hook(other_view, "move", %{"item" => item_id(:expire, expiring), "date" => Date.to_iso8601(day(4))})
+      assert_push_event(other_view, "b:alert", %{type: "warning"})
+      assert Repo.get!(Page, expiring.id).unpublish_at == nil
+    end
+
+    test "a cancelled scheduled revision is not scheduled again from a stale calendar", %{
+      conn: conn,
+      current_user: user
+    } do
+      {:ok, original} = Brando.Pages.create_page(Factory.params_for(:page, title: "Revision source", vars: []), user)
+      {:ok, _} = Brando.Pages.update_page(original.id, %{title: "Changed"}, user)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _job} = Brando.Publisher.schedule_revision(Page, original.id, 0, at(day(3), ~T[07:00:00]), user)
+        {:ok, view, _html} = live(conn, month_path(day()))
+        :ok = Brando.Publisher.cancel_scheduled_revision(Page, original.id, 0)
+
+        render_hook(view, "move", %{"item" => "revision-pages_page-#{original.id}-0", "date" => Date.to_iso8601(day(5))})
+        assert_push_event(view, "b:alert", %{type: "warning"})
+        assert Brando.Publisher.waiting_jobs(kinds: [:revision]) == []
+      end)
+    end
+
     @tag :capture_log
     test "a move the entry refuses leaves it, and says why", %{conn: conn, current_user: user} do
       expiring = page(user, "Job post", status: :pending, publish_at: at(day(1)), unpublish_at: at(day(4)))

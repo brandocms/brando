@@ -16,7 +16,12 @@ defmodule BrandoAdmin.ScheduleTest do
   defp at(seconds), do: DateTime.utc_now() |> DateTime.add(seconds) |> DateTime.truncate(:second)
 
   defp scheduled_revision(user, publish_at) do
-    {:ok, page} = Pages.create_page(Factory.params_for(:page, title: "Original", vars: []), user)
+    {:ok, page} =
+      Pages.create_page(
+        Factory.params_for(:page, title: "Original", uri: "r-#{System.unique_integer([:positive])}", vars: []),
+        user
+      )
+
     {:ok, _} = Pages.update_page(page.id, %{title: "Changed"}, user)
 
     {:ok, _job} =
@@ -49,6 +54,54 @@ defmodule BrandoAdmin.ScheduleTest do
     assert {:error, :in_the_past} = Schedule.reschedule(user, item, at(-60))
     assert {:error, :forbidden} = Schedule.reschedule(user, %{item | movable?: false}, at(7200))
     assert Repo.get!(Page, page.id).publish_at == item.at
+  end
+
+  # Queries for a month: a fixed number, however much is planned
+  defp queries(fun) do
+    owner = self()
+    handler = "schedule-queries-#{System.unique_integer([:positive])}"
+
+    :telemetry.attach(
+      handler,
+      Brando.repo().config()[:telemetry_prefix] ++ [:query],
+      fn _, _, _, _ -> send(owner, :query) end,
+      nil
+    )
+
+    try do
+      fun.()
+      count_queries(0)
+    after
+      :telemetry.detach(handler)
+    end
+  end
+
+  defp count_queries(count) do
+    receive do
+      :query -> count_queries(count + 1)
+    after
+      0 -> count
+    end
+  end
+
+  defp plan(user, count) do
+    for n <- 1..count do
+      Factory.insert(:page, status: :pending, publish_at: at(3600 + n), creator: user)
+      Factory.insert(:page, status: :published, unpublish_at: at(7200 + n), creator: user)
+      scheduled_revision(user, at(10_800 + n))
+    end
+  end
+
+  test "a month costs the same number of queries with one item of each kind or many", %{user: user} do
+    month = fn -> Schedule.items(user, at(0), at(30 * 86_400)) end
+
+    plan(user, 1)
+    few = queries(month)
+    assert length(month.()) == 3
+
+    plan(user, 4)
+    assert length(month.()) == 15
+    assert queries(month) == few
   end
 
   test "deleted entries and entries without a plan are left out", %{user: user} do

@@ -33,7 +33,6 @@ defmodule BrandoAdmin.Schedule do
   alias BrandoAdmin.CommandPalette
 
   @kinds [:publish, :revision, :expire]
-  @waiting ~w(scheduled available retryable)
 
   @type item :: %{
           id: String.t(),
@@ -107,9 +106,11 @@ defmodule BrandoAdmin.Schedule do
 
   @doc """
   Move `item` to `at` (UTC) as `user`, returning `{:ok, item}` with the new
-  time, or `{:error, reason}`: `:forbidden`, `:in_the_past`, a changeset with
-  the entry's own errors (an expiry before publishing), or the publisher's
-  reason for a revision.
+  time, or `{:error, reason}`: `:forbidden`, `:in_the_past`, `:changed` when
+  the item is no longer planned as `item` says (the entry was published,
+  unscheduled or moved since it was read), a changeset with the entry's own
+  errors (an expiry before publishing), or the publisher's reason for a
+  revision.
   """
   def reschedule(user, %{movable?: true} = item, %DateTime{} = at) do
     at = DateTime.truncate(at, :second)
@@ -121,10 +122,18 @@ defmodule BrandoAdmin.Schedule do
 
   def reschedule(_user, _item, _at), do: {:error, :forbidden}
 
+  # The item as the calendar showed it must still be what is planned: the
+  # entry may have been published, unscheduled or moved since, by someone
+  # else or by a job, and a move made from the old picture would undo that
+  # (a future publish_at takes a published entry offline again).
   defp move(user, %{kind: :revision} = item, at) do
-    case Publisher.schedule_revision(item.schema, item.entry_id, item.revision, at, user) do
-      {:ok, _job} -> {:ok, %{item | at: at}}
-      {:error, reason} -> {:error, reason}
+    if current?(item) do
+      case Publisher.schedule_revision(item.schema, item.entry_id, item.revision, at, user) do
+        {:ok, _job} -> {:ok, %{item | at: at}}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:error, :changed}
     end
   end
 
@@ -135,10 +144,36 @@ defmodule BrandoAdmin.Schedule do
     singular = schema.__naming__().singular
 
     with {:ok, entry} <- apply(context, :"get_#{singular}", [%{matches: %{id: item.entry_id}}]),
+         true <- planned?(entry, kind, item.at) || {:error, :changed},
          changeset = schema.changeset(entry, %{field => at}, user, nil, []),
          {:ok, _entry} <- apply(context, :"update_#{singular}", [changeset, user]) do
       {:ok, %{item | at: at}}
+    else
+      {:error, {_, :not_found}} -> {:error, :changed}
+      other -> other
     end
+  end
+
+  defp planned?(entry, kind, item_at) do
+    {field, statuses} = if kind == :publish, do: {:publish_at, [:pending]}, else: {:unpublish_at, [:published, :pending]}
+
+    with nil <- Map.get(entry, :deleted_at),
+         true <- entry.status in statuses,
+         %DateTime{} = at <- Map.get(entry, field) do
+      DateTime.compare(at, item_at) == :eq
+    else
+      _ -> false
+    end
+  end
+
+  # The revision still has its waiting job, at the time shown
+  defp current?(item) do
+    [kinds: [:revision], from: item.at, to: DateTime.add(item.at, 1)]
+    |> Publisher.waiting_jobs()
+    |> Enum.any?(
+      &(&1.args["schema"] == to_string(item.schema) and &1.args["id"] == item.entry_id and
+          &1.args["revision"] == item.revision)
+    )
   end
 
   # What each kind finds, before permissions: `{kind, entry, at, revision}`
@@ -154,28 +189,39 @@ defmodule BrandoAdmin.Schedule do
         do: {:expire, entry, entry.unpublish_at, nil}
   end
 
+  # The waiting revision jobs in the window, filtered in the query, and their
+  # entries loaded in one query per content type
   defp found(:revision, schemas, from, to) do
-    {:ok, jobs} = Publisher.list_jobs()
     names = Map.new(schemas, &{to_string(&1), &1})
 
+    jobs =
+      [kinds: [:revision], from: from, to: to]
+      |> Publisher.waiting_jobs()
+      |> Enum.filter(&Map.has_key?(names, &1.args["schema"]))
+
+    entries =
+      jobs
+      |> Enum.group_by(&names[&1.args["schema"]], & &1.args["id"])
+      |> Map.new(fn {schema, ids} ->
+        {schema, Map.new(Repo.all(live(from(e in schema, where: e.id in ^ids))), &{&1.id, &1})}
+      end)
+
     for %{args: %{"revision" => revision, "schema" => name, "id" => id}} = job <- jobs,
-        job.state in @waiting,
-        schema = names[name],
-        not is_nil(schema),
-        not DateTime.before?(job.scheduled_at, from),
-        DateTime.before?(job.scheduled_at, to),
-        entry = Repo.get(schema, id),
+        entry = get_in(entries, [names[name], id]),
         not is_nil(entry),
-        is_nil(Map.get(entry, :deleted_at)),
         do: {:revision, entry, job.scheduled_at, revision}
   end
 
   defp window(schema, field, statuses, from, to) do
-    query =
+    live(
       from e in schema,
         where: e.status in ^statuses and field(e, ^field) >= ^from and field(e, ^field) < ^to,
         order_by: [asc: field(e, ^field), asc: e.id]
+    )
+  end
 
+  # Not in the trash
+  defp live(%Ecto.Query{from: %{source: {_, schema}}} = query) do
     if :deleted_at in schema.__schema__(:fields),
       do: from(e in query, where: is_nil(e.deleted_at)),
       else: query

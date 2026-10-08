@@ -8422,6 +8422,11 @@ msgstr ""
 msgid "It stops working at once. You can connect it again from the app."
 msgstr ""
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/shortcut_sheet.ex

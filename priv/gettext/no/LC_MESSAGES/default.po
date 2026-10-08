@@ -8422,6 +8422,11 @@ msgstr "Det slutter å virke med en gang. %{name} kan koble det til igjen."
 msgid "It stops working at once. You can connect it again from the app."
 msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
+msgstr "Den ble endret etter at kalenderen ble lastet inn. Kalenderen viser nå det som er planlagt."
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/shortcut_sheet.ex
