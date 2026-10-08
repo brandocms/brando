@@ -46,6 +46,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
   alias BrandoAdmin.Components.Form.Drafts
   alias BrandoAdmin.Components.Form.EntryHeader
+  alias BrandoAdmin.Components.Form.FieldActions
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
   alias BrandoAdmin.Components.Form.FrontendEditor
@@ -191,6 +192,19 @@ defmodule BrandoAdmin.Components.Form do
     end
 
     {:ok, socket}
+  end
+
+  # An editor accepted the suggestion of an AI action on `field`
+  # (`FieldActions`): it goes into the field as unsaved input.
+  def update(%{event: "accept_field_action", field_name: name, field: field, text: text}, socket) do
+    with %BlueprintForms.Input{actions: [_ | _], type: type} <-
+           BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+         {:ok, path, key, string_path} <- parse_form_field_name(name, socket.assigns.singular) do
+      value = Brando.AI.FieldAction.field_value(text, type)
+      {:ok, write_ai_text(socket, path, key, string_path, field, value)}
+    else
+      _ -> {:ok, socket}
+    end
   end
 
   def update(%{event: "draft_part", capture_id: id, kind: kind, field: field, data: data}, socket),
@@ -4869,19 +4883,32 @@ defmodule BrandoAdmin.Components.Form do
          {:ok, path, key, string_path} <-
            parse_form_field_name(field_name, socket.assigns.singular),
          {:ok, %{text: generated_text}} <- Brando.AI.generate_text(prompt, ai_opts) do
-      updated_socket =
-        socket
-        |> update_changeset(path, key, generated_text)
-        |> maybe_send_ai_update_to_blocks(string_path, generated_text)
-        |> maybe_invalidate_live_preview_assign(string_path, :string_path)
-        |> maybe_fetch_root_blocks(:live_preview_update, 0)
-        |> maybe_force_ai_component_remount(socket.assigns.form_blueprint, field_atom)
-
-      {:noreply, updated_socket}
+      {:noreply, write_ai_text(socket, path, key, string_path, field_atom, generated_text)}
     else
       {:error, reason} ->
         send(self(), {:toast, ai_error_message(reason)})
         {:noreply, socket}
+    end
+  end
+
+  # An AI action declared on the field (`ai_actions:`): the prompt is built
+  # here, from the unsaved form, and the field's suggestion panel asks the
+  # model and shows the reply until the editor accepts or discards it.
+  def handle_event("run_field_action", %{"field" => field, "action" => action}, socket) do
+    with {:ok, field_atom} <- safe_to_existing_atom(field),
+         {:ok, action_atom} <- safe_to_existing_atom(action),
+         %BlueprintForms.Input{actions: actions, type: type} <-
+           BlueprintForms.get_field(field_atom, socket.assigns.form_blueprint),
+         %BlueprintForms.AIAction{} = ai_action <- Enum.find(actions, &(&1.name == action_atom)),
+         true <- Brando.AI.FieldAction.available?(ai_action) do
+      send_update(FieldActions,
+        id: FieldActions.id(socket.assigns.form[field_atom]),
+        run: field_action_run(socket, ai_action, type)
+      )
+
+      {:noreply, socket}
+    else
+      _ -> {:noreply, socket}
     end
   end
 
@@ -6979,6 +7006,52 @@ defmodule BrandoAdmin.Components.Form do
     else
       access_path = string_path_to_access_path(string_path)
       send_updated_entry_field_to_blocks(socket, access_path, generated_text, hd(string_path))
+    end
+  end
+
+  # Text from AI written into a field as if typed: shipped to the other
+  # editors, passed to the blocks that read the field and to the preview.
+  defp write_ai_text(socket, path, key, string_path, field_atom, text) do
+    socket
+    |> update_changeset(path, key, text)
+    |> maybe_send_ai_update_to_blocks(string_path, text)
+    |> maybe_invalidate_live_preview_assign(string_path, :string_path)
+    |> maybe_fetch_root_blocks(:live_preview_update, 0)
+    |> maybe_force_ai_component_remount(socket.assigns.form_blueprint, field_atom)
+  end
+
+  # What the suggestion panel needs to ask the model: the prompt built from
+  # the fields the action reads, in the entry's language. Nothing to read is
+  # an error, not a prompt for the model to make something up from.
+  defp field_action_run(socket, ai_action, type) do
+    run = %{
+      action: ai_action.name,
+      label: FieldActions.label(socket.assigns.schema, ai_action),
+      max: ai_action.max
+    }
+
+    case build_ai_context_values(socket, ai_action.from) do
+      [] ->
+        Map.put(run, :error, :empty_inputs)
+
+      context_values ->
+        prompt =
+          Brando.AI.FieldAction.prompt(ai_action, context_values,
+            language: field_action_language(socket),
+            type: type
+          )
+
+        Map.merge(run, %{prompt: prompt, ai_opts: Brando.AI.FieldAction.ai_opts(ai_action)})
+    end
+  end
+
+  # A translatable entry is written in its language, as the form has it now.
+  defp field_action_language(%{assigns: %{schema: schema, form: form}}) do
+    if schema.has_trait(Brando.Trait.Translatable) do
+      case get_field(form.source, :language) do
+        language when language not in [nil, ""] -> to_string(language)
+        _ -> nil
+      end
     end
   end
 

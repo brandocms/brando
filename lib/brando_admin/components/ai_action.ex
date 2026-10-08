@@ -28,7 +28,7 @@ defmodule BrandoAdmin.Components.AIAction do
   attr :variant, :atom, values: [:secondary, :primary], default: :secondary
   attr :busy, :boolean, default: false
   attr :class, :any, default: nil
-  attr :rest, :global, include: ~w(disabled target rel title)
+  attr :rest, :global, include: ~w(disabled target rel title popovertarget)
   slot :inner_block
 
   def button(%{href: href} = assigns) when is_binary(href) do

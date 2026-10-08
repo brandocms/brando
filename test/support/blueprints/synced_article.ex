@@ -104,7 +104,20 @@ defmodule Brando.SyncTest.Article do
         fieldset do
           input :title, :text
           input :slug, :slug, from: :title
-          input :subtitle, :textarea
+          # Two AI actions (FieldActionsLiveTest); they show only where
+          # Brando.AI is configured.
+          input :subtitle, :textarea,
+            ai_actions: [
+              summarize: [
+                label: "Summarize the article",
+                prompt: "Summarize the article for a listing.",
+                from: [:title, :blocks],
+                max: 160,
+                tone: "plain and factual"
+              ],
+              shorten: [prompt: "Shorten the subtitle.", from: :subtitle]
+            ]
+
           input :year, :number
           input :featured, :toggle
         end
