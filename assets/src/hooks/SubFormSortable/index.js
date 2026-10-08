@@ -31,7 +31,9 @@ export default app => ({
   },
 
   setOrder(sortable) {
-    const sortedArray = sortable.toArray().map(Number)
+    // Rows are named by their keys (`SubformHelpers.row_key/1`), not their
+    // positions, which move under a drag that crosses another change.
+    const sortedArray = sortable.toArray()
     if (this.embeds) {
       this.pushEventTo(
         this.el,

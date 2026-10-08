@@ -630,7 +630,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
                 type="button"
                 class="form-field-option-remove"
                 aria-label={gettext("Remove option %{value}", value: value)}
-                phx-click={JS.push("remove_option", value: %{uid: @entry.uid, index: index}, target: @target)}
+                phx-click={JS.push("remove_option", value: %{uid: @entry.uid, value: value}, target: @target)}
               >
                 <.icon name="x" />
               </button>
@@ -664,41 +664,27 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
 
   def handle_event("add_field", %{"type" => type}, socket) do
     type = to_type(type)
-    entries = current_entries(socket)
-    key = free_key(entries, default_key(type))
-    field = new_field(type, key)
+    uid = Brando.Utils.generate_uid()
 
+    # The key is chosen against the form's latest fields, so two quick adds
+    # get two different keys.
     {:noreply,
      socket
-     |> assign(:open_uid, field.uid)
-     |> put_fields(entries ++ [field |> Changeset.change() |> Map.put(:action, :insert)])}
+     |> assign(:open_uid, uid)
+     |> put_fields(fn entries ->
+       field = %{new_field(type, free_key(entries, default_key(type))) | uid: uid}
+       entries ++ [field |> Changeset.change() |> Map.put(:action, :insert)]
+     end)}
   end
 
   def handle_event("duplicate_field", %{"uid" => uid}, socket) do
-    entries = current_entries(socket)
-
-    case Enum.find_index(entries, &(Changeset.get_field(&1, :uid) == uid)) do
-      nil ->
-        {:noreply, socket}
-
-      index ->
-        %Field{} = original = entries |> Enum.at(index) |> Changeset.apply_changes()
-
-        copy =
-          %{
-            original
-            | id: nil,
-              form_id: nil,
-              uid: Brando.Utils.generate_uid(),
-              key: free_key(entries, "#{original.key}_copy"),
-              sequence: nil
-          }
-          |> Ecto.put_meta(state: :built)
-          |> Changeset.change()
-          |> Map.put(:action, :insert)
-
-        {:noreply, put_fields(socket, List.insert_at(entries, index + 1, copy))}
-    end
+    {:noreply,
+     put_fields(socket, fn entries ->
+       case Enum.find_index(entries, &(Changeset.get_field(&1, :uid) == uid)) do
+         nil -> entries
+         index -> List.insert_at(entries, index + 1, duplicate(entries, index))
+       end
+     end)}
   end
 
   def handle_event("toggle_required", %{"uid" => uid}, socket) do
@@ -739,19 +725,19 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
     placed = for row <- rows, {uid, position} <- Enum.with_index(row), into: %{}, do: {uid, position == 0}
 
     order = List.flatten(rows)
-    entries = current_entries(socket)
-    by_uid = Map.new(entries, &{Changeset.get_field(&1, :uid), &1})
 
     # Fields the canvas does not show (hidden ones) keep their place at the end.
-    reordered =
-      Enum.flat_map(order, fn uid ->
-        case by_uid[uid] do
-          nil -> []
-          entry -> [Changeset.change(entry, %{new_row: Map.fetch!(placed, uid)})]
-        end
-      end) ++ Enum.reject(entries, &(Changeset.get_field(&1, :uid) in order))
+    {:noreply,
+     put_fields(socket, fn entries ->
+       by_uid = Map.new(entries, &{Changeset.get_field(&1, :uid), &1})
 
-    {:noreply, put_fields(socket, reordered)}
+       Enum.flat_map(order, fn uid ->
+         case by_uid[uid] do
+           nil -> []
+           entry -> [Changeset.change(entry, %{new_row: Map.fetch!(placed, uid)})]
+         end
+       end) ++ Enum.reject(entries, &(Changeset.get_field(&1, :uid) in order))
+     end)}
   end
 
   def handle_event("add_option", %{"uid" => uid}, socket) do
@@ -765,14 +751,15 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
      end)}
   end
 
-  def handle_event("remove_option", %{"uid" => uid, "index" => index}, socket) do
+  # By value, not position: a double click on × would otherwise remove the
+  # option that moved into the first one's place.
+  def handle_event("remove_option", %{"uid" => uid, "value" => value}, socket) do
     {:noreply,
      update_field(socket, uid, fn changeset ->
        values = Changeset.get_field(changeset, :option_values) || []
-       value = Enum.at(values, index)
        labels = Changeset.get_field(changeset, :option_labels) || %{}
 
-       %{option_values: List.delete_at(values, index), option_labels: Map.delete(labels, value)}
+       %{option_values: List.delete(values, value), option_labels: Map.delete(labels, value)}
      end)}
   end
 
@@ -782,32 +769,38 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
 
   # -- changeset plumbing -----------------------------------------------------
 
-  defp current_entries(socket), do: SubformHelpers.current_entries(socket.assigns.field.form.source, :fields)
-
   defp update_field(socket, uid, fun) do
-    entries =
-      socket
-      |> current_entries()
-      |> Enum.map(fn changeset ->
-        if Changeset.get_field(changeset, :uid) == uid,
-          do: Changeset.change(changeset, fun.(changeset)),
-          else: changeset
-      end)
-
-    put_fields(socket, entries)
+    put_fields(socket, &Enum.map(&1, fn changeset -> change_field(changeset, uid, fun) end))
   end
 
-  # The Form owns the changeset; it re-renders this component with the result.
-  defp put_fields(socket, entries) do
-    changeset = socket.assigns.field.form.source
-    module = changeset.data.__struct__
+  defp change_field(changeset, uid, fun) do
+    if Changeset.get_field(changeset, :uid) == uid,
+      do: Changeset.change(changeset, fun.(changeset)),
+      else: changeset
+  end
 
-    Phoenix.LiveView.send_update(BrandoAdmin.Components.Form,
-      id: "#{module.__naming__().singular}_form",
-      action: :update_changeset,
-      changeset: SubformHelpers.put_entries(changeset, :fields, entries)
-    )
+  defp duplicate(entries, index) do
+    %Field{} = original = entries |> Enum.at(index) |> Changeset.apply_changes()
 
+    %{
+      original
+      | id: nil,
+        form_id: nil,
+        uid: Brando.Utils.generate_uid(),
+        key: free_key(entries, "#{original.key}_copy"),
+        sequence: nil
+    }
+    |> Ecto.put_meta(state: :built)
+    |> Changeset.change()
+    |> Map.put(:action, :insert)
+  end
+
+  # The Form owns the changeset; `fun` rebuilds its latest list of fields, not
+  # the copy this component last rendered with, so quick changes in a row
+  # (two adds, an option added twice) all land. It re-renders this component
+  # with the result.
+  defp put_fields(socket, fun) do
+    {:noreply, socket} = SubformHelpers.send_op(socket, {:update, fun}, field: :fields)
     socket
   end
 

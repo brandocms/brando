@@ -27,6 +27,13 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     {:ok, assign(socket, :advanced, false)}
   end
 
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:row_keys, SubformHelpers.row_keys(assigns.field.form.source, assigns.subform.name))}
+  end
+
   def render(assigns) do
     ~H"""
     <fieldset>
@@ -54,14 +61,20 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
               <div class="subform-empty">&rarr; {gettext("No associated entries")}</div>
             <% end %>
             <Primitives.inputs_for_poly :let={var} field={@field}>
-              <div class="subform-entry flex-row" data-id={var.index}>
+              <div class="subform-entry flex-row" data-id={Enum.at(@row_keys, var.index)}>
+                <input
+                  :if={SubformHelpers.new_key?(Enum.at(@row_keys, var.index))}
+                  type="hidden"
+                  name={var[:_key].name}
+                  value={Enum.at(@row_keys, var.index)}
+                />
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">
                     <.icon name="move" />
                   </button>
                   <button
                     phx-click={JS.push("remove_subentry", target: @myself)}
-                    phx-value-index={var.index}
+                    phx-value-key={Enum.at(@row_keys, var.index)}
                     type="button"
                     class="subform-delete"
                   >
@@ -109,8 +122,8 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     SubformHelpers.append_subentries(socket, default)
   end
 
-  def handle_event("remove_subentry", %{"index" => index}, socket) do
-    BrandoAdmin.Components.Form.Input.SubformHelpers.remove_subentry(socket, index)
+  def handle_event("remove_subentry", %{"key" => key}, socket) do
+    SubformHelpers.remove_subentry(socket, key)
   end
 
   def handle_event("force_validate", _, socket) do

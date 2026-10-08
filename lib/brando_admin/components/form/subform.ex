@@ -19,26 +19,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # prop instructions, :string
   # prop placeholder, :string
 
-  def update(%{action: :update_changeset, index: index, updated_changeset: updated_changeset}, socket) do
-    field_name = socket.assigns.subform.name
-    changeset = socket.assigns.field.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    related_entries =
-      changeset
-      |> SubformHelpers.current_entries(field_name)
-      |> List.replace_at(index, updated_changeset)
-
-    updated_master_changeset = SubformHelpers.put_entries(changeset, field_name, related_entries)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_master_changeset,
-      force_validation: false
-    )
-
+  # A row's own field (a multi select in it) changed: replace that row in the
+  # form's latest list, not in the copy this subform last rendered with.
+  def update(%{action: :update_changeset, key: key, updated_changeset: updated_changeset}, socket) do
+    {:noreply, socket} = SubformHelpers.send_op(socket, {:replace, key, updated_changeset})
     {:ok, socket}
   end
 
@@ -145,10 +129,21 @@ defmodule BrandoAdmin.Components.Form.Subform do
                     ]}
                   >
                     <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
+                    <input
+                      :if={SubformHelpers.new_row_key(sub_form)}
+                      type="hidden"
+                      name={sub_form[:_key].name}
+                      value={SubformHelpers.new_row_key(sub_form)}
+                    />
                     <div class="subform-tools">
                       <.subentry_insert
                         :if={@table? && @subform.add_entry}
-                        on_click={JS.push("insert_subentry", value: %{index: sub_form.index}, target: @myself)}
+                        on_click={
+                          JS.push("insert_subentry",
+                            value: %{index: sub_form.index, key: SubformHelpers.row_key(sub_form)},
+                            target: @myself
+                          )
+                        }
                       />
                       <.subentry_sequence :if={@sequenced?} />
                       <.subentry_remove
@@ -317,113 +312,28 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:noreply, update(socket, :open_entries, &Map.put(&1, to_string(index), open))}
   end
 
+  # Adds, removals and reorders go to the form as operations on its latest
+  # changeset (`SubformHelpers.send_op/3`): building them here, on the copy
+  # this component last rendered with, lost a row when "Add entry" was
+  # clicked twice before the form re-rendered it.
   def handle_event("add_subentry", _, socket) do
-    changeset = socket.assigns.field.form.source
-
-    # nilify all unloaded assocs
-    field_name = socket.assigns.subform.name
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    updated_field =
-      changeset
-      |> SubformHelpers.current_entries(field_name)
-      |> Kernel.++([new_entry(socket)])
-
-    updated_changeset = SubformHelpers.put_entries(changeset, field_name, updated_field)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
-    {:noreply, socket}
+    SubformHelpers.append_subentries(socket, new_entry(socket))
   end
 
-  def handle_event("insert_subentry", %{"index" => index}, socket) do
-    changeset = socket.assigns.field.form.source
-    field_name = socket.assigns.subform.name
-    module = changeset.data.__struct__
-
-    related_entries =
-      changeset
-      |> SubformHelpers.current_entries(field_name)
-      |> List.insert_at(index, new_entry(socket))
-
-    send_update(BrandoAdmin.Components.Form,
-      id: "#{module.__naming__().singular}_form",
-      action: :update_changeset,
-      changeset: SubformHelpers.put_entries(changeset, field_name, related_entries),
-      force_validation: true
-    )
-
-    {:noreply, socket}
+  def handle_event("insert_subentry", %{"index" => index} = params, socket) do
+    SubformHelpers.insert_subentry(socket, params["key"], index, new_entry(socket))
   end
 
-  def handle_event("remove_subentry", %{"index" => index}, socket) do
-    field_name = socket.assigns.subform.name
-    changeset = socket.assigns.field.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    related_entries =
-      changeset
-      |> SubformHelpers.current_entries(field_name)
-      |> List.delete_at(index)
-
-    updated_changeset = SubformHelpers.put_entries(changeset, field_name, related_entries)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: false
-    )
-
-    {:noreply, socket}
+  def handle_event("remove_subentry", %{"key" => key}, socket) do
+    SubformHelpers.remove_subentry(socket, key)
   end
 
   def handle_event("force_validate", _, socket) do
     {:noreply, push_event(socket, "b:validate", %{})}
   end
 
-  def handle_event("sequenced_subform", %{"ids" => order_indices} = event_params, socket) do
-    field_name = socket.assigns.subform.name
-    changeset = socket.assigns.field.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-    embed? = event_params["embeds"]
-
-    related_entries = get_change_or_field(changeset, field_name)
-
-    sorted_related_entries =
-      order_indices
-      |> Enum.map(&Enum.at(related_entries, &1))
-      |> Enum.with_index()
-      |> Enum.map(fn {entry, idx} ->
-        if embed? do
-          entry
-        else
-          Changeset.change(entry, %{sequence: idx})
-        end
-      end)
-
-    updated_changeset =
-      if embed? do
-        Changeset.put_embed(changeset, field_name, sorted_related_entries)
-      else
-        Changeset.put_assoc(changeset, field_name, sorted_related_entries)
-      end
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
+  def handle_event("sequenced_subform", %{"ids" => keys} = event_params, socket) do
+    SubformHelpers.sequenced_subform(socket, keys, sequence: !event_params["embeds"])
   end
 
   # How the relation is sequenced, whether it embeds, and the names of its
@@ -493,11 +403,5 @@ defmodule BrandoAdmin.Components.Form.Subform do
     key = to_string(form[:_persistent_id].value)
     has_errors? = form.source.action not in [nil, :ignore] && !form.source.valid?
     has_errors? || Map.get(open_entries, key, is_nil(form.data.id))
-  end
-
-  defp get_change_or_field(changeset, field) do
-    with nil <- Changeset.get_change(changeset, field) do
-      Changeset.get_field(changeset, field, [])
-    end
   end
 end

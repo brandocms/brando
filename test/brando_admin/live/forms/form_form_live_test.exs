@@ -240,4 +240,37 @@ defmodule BrandoAdmin.Forms.FormFormLiveTest do
     assert render(view) =~ "form-fields-designer"
     refute target.id |> load() |> Map.fetch!(:fields) |> Enum.find(&(&1.key == "name")) |> Map.fetch!(:required)
   end
+
+  # A saved field the editor removes stays in the changeset, marked for
+  # removal; the next add wrote it back and took the LiveView down.
+  test "a field can be added after a saved one is removed", %{conn: conn, form: form} do
+    {view, _html} = open(conn, form.id)
+    message = Enum.find(form.fields, &(&1.key == "message"))
+    index = Enum.find_index(form.fields, &(&1.uid == message.uid))
+
+    view |> element("#form_form_form") |> render_change(%{"form" => %{"drop_fields_ids" => ["#{index}"]}})
+    assert rows(settle(view)) == [["name", "email"]]
+
+    view |> element(".form-fields-quick-add button", "Dropdown") |> render_click()
+    assert rows(settle(view)) == [["name", "email"], ["select"]]
+
+    save(view)
+    assert form.id |> load() |> Map.fetch!(:fields) |> Enum.map(& &1.key) == ["name", "email", "select"]
+  end
+
+  # Both clicks of a double click on an option's × reach the server before
+  # it has re-rendered the list. By position, the second removed the option
+  # that moved into the first one's place.
+  test "a double click on an option's × removes that option only", %{conn: conn, form: form} do
+    {view, _html} = open(conn, form.id)
+    view |> element(".form-fields-quick-add button", "Dropdown") |> render_click()
+    await_selector(view, ".modal.visible .form-field-options")
+
+    view
+    |> element(".modal.visible .form-field-option-remove[aria-label='Remove option option_1']")
+    |> then(&queue_clicks(view, &1))
+
+    refute has_element?(view, ".modal.visible .form-field-option-remove[aria-label='Remove option option_1']")
+    assert has_element?(view, ".modal.visible .form-field-option-remove[aria-label='Remove option option_2']")
+  end
 end

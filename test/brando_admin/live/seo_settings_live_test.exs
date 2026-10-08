@@ -159,4 +159,31 @@ defmodule BrandoAdmin.SEOSettingsLiveTest do
     view |> element("[data-testid=indexnow-toggle]") |> render_click()
     refute Brando.IndexNow.settings().enabled
   end
+
+  # A redirect starts from a map of attributes (`default %{…}`). It is given
+  # a key as it is added, like any new row, so a removal or a reorder that
+  # names it works before the form is next validated.
+  test "a new redirect has a key at once and can be removed by it straight away", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+    render_async(view)
+
+    add = element(view, "#seo_form_form button", "Add entry")
+    render_click(add)
+    settle(view)
+
+    [key] =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute("input[name='seo[redirects][0][_key]']", "value")
+
+    assert "new-" <> _ = key
+    assert has_element?(view, "input[name='seo[redirects][0][from]'][value='/example/:slug']")
+
+    [_, cid] = Regex.run(~r/&quot;target&quot;:(\d+)/, render(add))
+    view |> with_target(String.to_integer(cid)) |> render_hook("remove_subentry", %{"key" => key})
+    settle(view)
+
+    refute has_element?(view, "input[name='seo[redirects][0][from]']")
+  end
 end

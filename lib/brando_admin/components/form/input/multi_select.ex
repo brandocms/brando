@@ -1497,7 +1497,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     if subform_id do
       send_update(BrandoAdmin.Components.Form.Subform,
         id: subform_id,
-        index: form.index,
+        key: BrandoAdmin.Components.Form.Input.SubformHelpers.row_key(form),
         action: :update_changeset,
         updated_changeset: updated_changeset
       )

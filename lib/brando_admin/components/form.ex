@@ -53,6 +53,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias BrandoAdmin.Components.Form.Input.Select
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.NotesDrawer
   alias BrandoAdmin.Components.Form.Preview
@@ -989,6 +990,42 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{action: :event_tag_received, tag: tag}, socket) do
     {:ok, event_tag_received(socket, tag)}
+  end
+
+  # A subform's add, insert, remove or reorder, applied to this form's own
+  # changeset — always the latest — rather than to the copy the subform last
+  # rendered with. Two quick adds both land. See `SubformHelpers.apply_op/2`.
+  #
+  # Whatever a change in the form does besides, this does too, without asking
+  # the browser for its fields (which could be a row behind): the other
+  # editors learn the field is changed, the blocks that read it get its rows,
+  # and the live preview and the website editor follow it.
+  def update(%{action: :update_entries, field: field, op: op}, socket) do
+    changeset = socket.assigns.form.source
+
+    case changeset |> SubformHelpers.current_entries(field) |> SubformHelpers.apply_op(op) do
+      :stale ->
+        {:ok, socket}
+
+      entries ->
+        updated = SubformHelpers.put_entries(changeset, field, entries)
+
+        socket =
+          socket
+          |> put_form(to_form(updated, []))
+          |> Drafts.dirty()
+          |> broadcast_dirty_fields()
+          |> send_updated_entry_field_to_blocks(
+            [Access.key(field)],
+            updated |> apply_changes() |> Map.get(field),
+            to_string(field)
+          )
+          |> tap(&FrontendEditor.field_changed/1)
+          |> maybe_invalidate_live_preview_assign([field])
+          |> maybe_fetch_root_blocks(:live_preview_update, 0)
+
+        {:ok, socket}
+    end
   end
 
   def update(

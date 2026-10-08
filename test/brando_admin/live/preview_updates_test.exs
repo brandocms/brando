@@ -75,4 +75,18 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
       assert LivePreview.get_cache(key) == {:ok, html}
     end
   end
+
+  # An added row changes the entry without a round trip through the browser,
+  # so the form refreshes the open preview itself.
+  test "adding a page variable updates the open preview", %{conn: conn, page: page} do
+    {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+    key = open_preview(view)
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    refute_receive %Phoenix.Socket.Broadcast{event: "update"}, 100
+
+    view |> element("#page_vars-add-entry") |> render_click()
+    settle(view)
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+  end
 end
