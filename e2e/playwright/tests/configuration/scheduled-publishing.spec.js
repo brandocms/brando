@@ -18,7 +18,8 @@ test('selects a future publishing date and manages the publishing queue', async 
   await expect(drawer).toBeVisible()
 
   const publishAtInput = drawer.locator('input[name="page[publish_at]"]')
-  const datePickerInput = drawer.locator('input').filter({ visible: true })
+  // The drawer has two pickers: Publish at and Expires
+  const datePickerInput = drawer.locator('[id$="_publish_at-datetimepicker"] input').filter({ visible: true })
   const publishAtDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
   const publishAtDay = publishAtDate.toLocaleDateString('en-US', {
     month: 'long',

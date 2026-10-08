@@ -4200,6 +4200,11 @@ msgstr ""
 
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
+msgid "Content you can edit that expires in the next 14 days will appear here."
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
 msgid "Content you have access to will appear here after it is edited."
 msgstr ""
 
@@ -6747,6 +6752,26 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Expired: connect it again from the app"
+msgstr ""
+
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Expires"
+msgstr ""
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Expires %{date}"
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Expiring soon"
+msgstr ""
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expiry"
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
@@ -9786,6 +9811,11 @@ msgstr ""
 msgid "Multiple choice"
 msgstr ""
 
+#: lib/brando/traits/scheduled_publishing.ex
+#, elixir-autogen, elixir-format
+msgid "Must be after the publishing date"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #: lib/brando_admin/components/form/input/gallery/video_config.ex
@@ -10834,6 +10864,11 @@ msgid "Notes, %{count} open"
 msgid_plural "Notes, %{count} open"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing expires soon"
+msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
@@ -16092,6 +16127,11 @@ msgstr ""
 msgid "The entry has no resolvable URL; check its slug and the blueprint's absolute_url."
 msgstr ""
 
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The entry is deactivated at this time. Leave blank to keep it published."
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "The entry no longer exists"
@@ -17762,6 +17802,7 @@ msgstr ""
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
+#: lib/brando_admin/schedule.ex
 #: lib/brando_admin/search.ex
 #, elixir-autogen, elixir-format
 msgid "Untitled"

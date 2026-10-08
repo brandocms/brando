@@ -926,7 +926,8 @@ Several traits change the listing without any listing declaration:
   appear.
 * `trait :creator`: a column with the creator and last editor.
 * `trait :scheduled_publishing`: pending entries with a publish time show a
-  clock instead of a status dot.
+  clock instead of a status dot, and an entry that expires shows
+  "Expires 12 Oct" under its status.
 * `trait :blocks`: the **Re-render** action.
 
 See [Traits](blueprint_traits.md) for what each trait adds to the schema.

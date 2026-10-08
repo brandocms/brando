@@ -30,6 +30,13 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
       <div class="brando-input">
         <Input.datetime field={@form[:publish_at]} label={gettext("Publish at")} />
       </div>
+      <div class="brando-input">
+        <Input.datetime
+          field={@form[:unpublish_at]}
+          label={gettext("Expires")}
+          instructions={gettext("The entry is deactivated at this time. Leave blank to keep it published.")}
+        />
+      </div>
     </Content.drawer>
     """
   end

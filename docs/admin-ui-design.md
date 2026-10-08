@@ -700,8 +700,9 @@ entries are cards in an auto-fill grid: the identifier's cover (or the content
 type's icon on a grey field) at 16:10, the title, the content type with its
 icon and language, then the status, when it changed and the last editor's
 avatar. The title's link is stretched over the card, so the whole card opens
-the entry. Drafts and scheduled publishing sit in a 300px side column of white
-panels with a count; a scheduled entry shows a small date tile. Under 1240px
+the entry. Drafts, scheduled publishing and "Expiring soon" (the next 14
+days) sit in a 300px side column of white panels with a count; a scheduled or
+expiring entry shows a small date tile. Under 1240px
 the side column moves below the cards; on phones a card becomes a row with a
 square cover. No content-type shortcuts: the sidebar already lists them.
 

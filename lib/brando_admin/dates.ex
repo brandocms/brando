@@ -9,6 +9,8 @@ defmodule BrandoAdmin.Dates do
     * `long/1` — `28. sep. 2026 kl. 18:40` (`28 Sep 2026, 18:40`), where
       there is room
     * `full/1` — the whole timestamp, with seconds, for a title attribute
+    * `day/1` — `12 Oct` (`12. okt.`), the year added when it is not this
+      one, for a date beside other information
 
   `time/1` renders a `<time>` with the machine-readable value and `full/1` as
   its title. Naive datetimes are taken as UTC, as Ecto stores them.
@@ -55,8 +57,25 @@ defmodule BrandoAdmin.Dates do
       else: Datetime.format_datetime(datetime, "%-d. %B %Y kl. %H:%M:%S", locale())
   end
 
+  @doc "`12 Oct` or `12. okt.`, with the year when it is not this one: `12 Oct 2027`"
+  def day(nil), do: ""
+
+  def day(datetime) do
+    locale = locale()
+    local = local(datetime)
+    month = month_abbreviation(local.month, locale)
+    this_year? = local.year == DateTime.now!(Brando.timezone()).year
+
+    case {locale, this_year?} do
+      {"en", true} -> "#{local.day} #{month}"
+      {"en", false} -> "#{local.day} #{month} #{local.year}"
+      {_, true} -> "#{local.day}. #{month}"
+      {_, false} -> "#{local.day}. #{month} #{local.year}"
+    end
+  end
+
   attr :at, :any, required: true
-  attr :format, :atom, default: :short, values: [:short, :long]
+  attr :format, :atom, default: :short, values: [:short, :long, :day]
   attr :class, :any, default: nil
 
   @doc "A `<time>` in the `format` given, with the full timestamp on hover."
@@ -68,6 +87,7 @@ defmodule BrandoAdmin.Dates do
 
   defp format(datetime, :short), do: short(datetime)
   defp format(datetime, :long), do: long(datetime)
+  defp format(datetime, :day), do: day(datetime)
 
   defp iso(%NaiveDateTime{} = datetime), do: NaiveDateTime.to_iso8601(datetime) <> "Z"
   defp iso(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)

@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Dashboard do
   @moduledoc """
   A reusable, scope-aware starting point for the admin: recently updated
-  entries as cards with their cover, and drafts and scheduled publishing in a
-  side column.
+  entries as cards with their cover, and drafts, scheduled publishing and
+  what expires in the next two weeks in a side column.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
@@ -164,6 +164,31 @@ defmodule BrandoAdmin.Components.Dashboard do
                 <div>
                   <.link navigate={entry.path}>{entry.title}</.link>
                   <small>{entry.type} · <BrandoAdmin.Dates.time at={entry.scheduled_at} format={:long} /></small>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section
+            class="workspace-panel dashboard-panel"
+            aria-labelledby="dashboard-expiring-heading"
+            data-testid="dashboard-expiring"
+          >
+            <header class="dashboard-panel-heading">
+              <h2 id="dashboard-expiring-heading">{gettext("Expiring soon")}</h2>
+              <span :if={@overview.expiring != []} class="dashboard-count">{length(@overview.expiring)}</span>
+            </header>
+            <Workspace.empty
+              :if={@overview.expiring == []}
+              title={gettext("Nothing expires soon")}
+              description={gettext("Content you can edit that expires in the next 14 days will appear here.")}
+            />
+            <div class="dashboard-entry-list">
+              <article :for={entry <- @overview.expiring} class="dashboard-entry">
+                <.date_tile at={entry.at} />
+                <div>
+                  <.link navigate={entry.path}>{entry.title}</.link>
+                  <small>{entry.type} · <BrandoAdmin.Dates.time at={entry.at} format={:long} /></small>
                 </div>
               </article>
             </div>

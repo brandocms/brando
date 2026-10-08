@@ -70,7 +70,11 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
               <tr :for={job <- @jobs}>
                 <td class="publishing-entry">
                   <strong>{job.meta["identifier"]["title"]}</strong>
-                  <small>{gettext("Entry #%{id}", id: job.args["id"])}</small>
+                  <small>
+                    {gettext("Entry #%{id}", id: job.args["id"])}<span :if={Publisher.unpublish_job?(job)}> · {gettext(
+                      "Expiry"
+                    )}</span>
+                  </small>
                 </td>
                 <td>
                   <span class={[

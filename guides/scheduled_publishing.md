@@ -1,6 +1,6 @@
 # Scheduled publishing
 
-<!-- llms-description: Publish an entry or an approved revision at a set time, cancel a schedule, and follow the jobs that run it. -->
+<!-- llms-description: Publish an entry or an approved revision at a set time, let an entry expire, cancel a schedule, and follow the jobs that run it. -->
 
 Choose what should be published before choosing a time:
 
@@ -8,6 +8,7 @@ Choose what should be published before choosing a time:
 | --- | --- | --- |
 | Entry `publish_at` | Publish the entry's then-current saved content | An article that editors can keep refining until release |
 | Scheduled revision | Restore a specific inactive snapshot and force published status | An approved campaign version that must not drift with later edits |
+| Entry `unpublish_at` | Deactivate the entry | A campaign, job post or event that has to end on time |
 
 The schema needs `trait :scheduled_publishing` and `trait :status`; revision
 scheduling also needs `trait :revisioned`. Pages and fragments already have them.
@@ -60,10 +61,42 @@ alone does not remove an already queued job. Also, clearing the date on a pendin
 entry changes its status to published unless you explicitly choose another
 status. Cancellation and the content edit are separate operations.
 
-Changing a future date replaces jobs matching that entry, actor, and target
-status. Do not assume it removes schedules created by a different actor; verify
-the queue and cancel superseded jobs. Cancelling a job that has already executed
-cannot undo its publication.
+Changing a future date replaces the entry's waiting publication job, whoever
+scheduled it. A job that was already running when the date moved checks the
+entry when it runs and does nothing if the entry's `publish_at` is still more
+than a minute ahead. Cancelling a job that has already executed cannot undo its
+publication.
+
+## Let an entry expire
+
+**Expires** in the same drawer sets `unpublish_at`. When it comes, the entry is
+deactivated (status `:disabled`) through the context's update, the same change
+as choosing Deactivated by hand: Activity records it as unpublished, and the
+`entry.unpublished` content event goes to webhooks, IndexNow and the search
+index, with the actor `"scheduler"`. The listing shows "Expires 12 Oct" under
+the entry's status, and the dashboard lists what expires in the next 14 days.
+
+```elixir
+{:ok, page} = Brando.Pages.update_page(page, %{
+  unpublish_at: DateTime.add(DateTime.utc_now(), 14, :day)
+}, current_user)
+```
+
+- It has to come after `publish_at`; the save is refused otherwise.
+- Changing it replaces the job, and clearing it (`unpublish_at: nil`) cancels it.
+- A time that has already passed deactivates a published or pending entry at
+  once.
+- At its time the job deactivates the entry only if it is still published or
+  pending and its `unpublish_at` has come; an entry unpublished by hand, or
+  given a later date, is left alone. A publication job finds an entry whose
+  expiry has passed and does not publish it.
+- Setting or clearing an expiry takes both the **schedule** and the **publish**
+  permission.
+- Restoring a revision, scheduled or not, keeps the expiry the entry has: it
+  is not part of the revision's content.
+
+The expired entry keeps its `unpublish_at`, so it shows when it ended. Clear it
+or set a new one when publishing the entry again.
 
 ## Schedule an approved revision
 

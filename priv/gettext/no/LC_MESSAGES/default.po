@@ -4200,6 +4200,11 @@ msgstr "Innholdet beholdes i CMS-et. Eierskapet overføres til den valgte bruker
 
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
+msgid "Content you can edit that expires in the next 14 days will appear here."
+msgstr "Innhold du kan redigere som utløper de neste 14 dagene, vises her."
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
 msgid "Content you have access to will appear here after it is edited."
 msgstr "Innhold du har tilgang til, vises her når det er redigert."
 
@@ -6748,6 +6753,26 @@ msgstr "Utløpt"
 #, elixir-autogen, elixir-format
 msgid "Expired: connect it again from the app"
 msgstr "Utløpt: koble den til igjen fra appen"
+
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Expires"
+msgstr "Utløper"
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Expires %{date}"
+msgstr "Utløper %{date}"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Expiring soon"
+msgstr "Utløper snart"
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expiry"
+msgstr "Utløp"
 
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -9786,6 +9811,11 @@ msgstr "Multi"
 msgid "Multiple choice"
 msgstr "Flervalg"
 
+#: lib/brando/traits/scheduled_publishing.ex
+#, elixir-autogen, elixir-format
+msgid "Must be after the publishing date"
+msgstr "Må være etter publiseringstidspunktet"
+
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #: lib/brando_admin/components/form/input/gallery/video_config.ex
@@ -10834,6 +10864,11 @@ msgid "Notes, %{count} open"
 msgid_plural "Notes, %{count} open"
 msgstr[0] "Notater, %{count} åpent"
 msgstr[1] "Notater, %{count} åpne"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing expires soon"
+msgstr "Ingenting utløper snart"
 
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
@@ -16092,6 +16127,11 @@ msgstr "Feltene i oppføringen som en generert beskrivelse skrives ut fra. Blokk
 msgid "The entry has no resolvable URL; check its slug and the blueprint's absolute_url."
 msgstr "Oppføringen har ingen gyldig URL; sjekk slug og blueprintens absolute_url."
 
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The entry is deactivated at this time. Leave blank to keep it published."
+msgstr "Oppføringen deaktiveres på dette tidspunktet. La feltet stå tomt for å holde den publisert."
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "The entry no longer exists"
@@ -17764,6 +17804,7 @@ msgstr "Innhold som ikke støttes, ble gjort om til tekst. Fotnoter fra en annen
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
+#: lib/brando_admin/schedule.ex
 #: lib/brando_admin/search.ex
 #, elixir-autogen, elixir-format
 msgid "Untitled"

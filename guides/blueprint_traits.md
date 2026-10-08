@@ -168,11 +168,13 @@ adds a **History** drawer to the form. See [Revisions](revisions.md).
 
 ### Scheduled publishing
 
-`trait :scheduled_publishing` adds `attribute :publish_at, :datetime`. An entry
-with status `:pending` and a `publish_at` is published at that time, and the
-form gets a scheduling drawer. An entry published without a `publish_at` gets
-the time it was saved, whether the admin form, the context or a job saved it.
-See [Scheduled publishing](scheduled_publishing.md).
+`trait :scheduled_publishing` adds `attribute :publish_at, :datetime` and
+`attribute :unpublish_at, :datetime`. An entry with status `:pending` and a
+`publish_at` is published at that time, a published one with an
+`unpublish_at` is deactivated then, and the form gets a scheduling drawer
+with both. An entry published without a `publish_at` gets the time it was
+saved, whether the admin form, the context or a job saved it. See
+[Scheduled publishing](scheduled_publishing.md).
 
 ### Permalink redirects
 
