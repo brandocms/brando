@@ -141,6 +141,17 @@ defmodule Brando.Images.Processing do
   """
   @spec changed_config_targets() :: %{String.t() => pos_integer}
   def changed_config_targets do
+    %{changed: changed, unrecorded: unrecorded} = config_breakdown()
+    Map.merge(changed, unrecorded, fn _target, a, b -> a + b end)
+  end
+
+  @doc """
+  The images `changed_config_targets/0` counts, split in two, by config target:
+  `changed` were made with a config that has since changed; `unrecorded` were
+  made before Brando recorded configs, so whether theirs changed isn't known.
+  """
+  @spec config_breakdown() :: %{changed: %{String.t() => pos_integer}, unrecorded: %{String.t() => pos_integer}}
+  def config_breakdown do
     query =
       from i in Image,
         where: is_nil(i.deleted_at) and not is_nil(i.config_target),
@@ -155,10 +166,12 @@ defmodule Brando.Images.Processing do
       |> Enum.uniq()
       |> Map.new(&{&1, current_fingerprint(&1)})
 
-    Enum.reduce(rows, %{}, fn {config_target, fingerprint, count}, changed ->
-      if changed_config?(%{config_fingerprint: fingerprint}, current[config_target]),
-        do: Map.update(changed, config_target, count, &(&1 + count)),
-        else: changed
+    Enum.reduce(rows, %{changed: %{}, unrecorded: %{}}, fn {config_target, fingerprint, count}, acc ->
+      cond do
+        not changed_config?(%{config_fingerprint: fingerprint}, current[config_target]) -> acc
+        is_nil(fingerprint) -> update_in(acc, [:unrecorded, config_target], &((&1 || 0) + count))
+        true -> update_in(acc, [:changed, config_target], &((&1 || 0) + count))
+      end
     end)
   end
 

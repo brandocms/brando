@@ -304,9 +304,23 @@ defmodule Brando.Doctor.ChecksTest do
 
       result = Checks.ImageConfigs.run(context())
       assert result.status == :warning
-      assert result.summary == "1 config changed since its images were made (2 images)"
-      assert result.items == ["default: 2 images"]
+
+      assert result.summary ==
+               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings"
+
+      assert result.items == ["default: 1 image", "default: 1 image without recorded settings"]
       assert {"#utils-image-sizes", _label} = result.link
+    end
+
+    test "images made before configs were recorded are not reported as changed configs" do
+      Brando.Repo.update_all(from(i in Image, where: not is_nil(i.config_target)), set: [config_fingerprint: nil])
+      Factory.insert(:image, config_fingerprint: nil, path: "image/3.jpg")
+
+      result = Checks.ImageConfigs.run(context())
+      assert result.status == :warning
+      refute result.summary =~ "config changed"
+      assert result.summary =~ "made before Brando recorded"
+      assert result.fix =~ "once"
     end
   end
 

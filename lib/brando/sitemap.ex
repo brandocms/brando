@@ -110,9 +110,10 @@ defmodule Brando.Sitemap do
   @doc """
   Check if sitemap exists
   """
-  def exists? do
-    sitemap_module = Brando.web_module(Sitemap)
-    function_exported?(sitemap_module, :__info__, 1)
+  def exists?(module \\ Brando.web_module(Sitemap)) do
+    # `function_exported?/3` is false for a module that isn't loaded yet,
+    # which is every module in a mix task: load it first.
+    Code.ensure_loaded?(module)
   end
 
   @doc """

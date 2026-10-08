@@ -766,3 +766,22 @@ msgstr "ingen %{queues}-kø"
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image was made before Brando recorded its settings"
+msgid_plural "%{count} images were made before Brando recorded their settings"
+msgstr[0] "%{count} bilde ble laget før Brando lagret innstillingene sine"
+msgstr[1] "%{count} bilder ble laget før Brando lagret innstillingene sine"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{target}: %{count} image without recorded settings"
+msgid_plural "%{target}: %{count} images without recorded settings"
+msgstr[0] "%{target}: %{count} bilde uten lagrede innstillinger"
+msgstr[1] "%{target}: %{count} bilder uten lagrede innstillinger"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Utilities → Recreate changed images, once, to be sure they match"
+msgstr "Verktøy → Lag endrede bilder på nytt, én gang, for å være sikker på at de stemmer"
