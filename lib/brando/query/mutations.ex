@@ -466,10 +466,16 @@ defmodule Brando.Query.Mutations do
   defp drop_fields(%{id: _} = entry) do
     entry
     |> Utils.nilify_fields([:id, :inserted_at, :updated_at])
+    |> drop_expiry()
     |> restamp_content_modified()
   end
 
   defp drop_fields(entry), do: entry
+
+  # A copy is a draft with no jobs of its own; an expiry it carried would
+  # never run. It gets one of its own when it is scheduled.
+  defp drop_expiry(%{unpublish_at: _} = entry), do: %{entry | unpublish_at: nil}
+  defp drop_expiry(entry), do: entry
 
   # A copy is new content as of now, like any other insert.
   defp restamp_content_modified(%{content_modified_at: _} = entry),

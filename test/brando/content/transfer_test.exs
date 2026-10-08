@@ -340,6 +340,53 @@ defmodule Brando.Content.TransferTest do
     end)
   end
 
+  test "the expiry follows the publication policy, like the publishing date", c do
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      expires = DateTime.add(now, 86_400)
+
+      c.source
+      |> Changeset.change(status: :published, publish_at: DateTime.add(now, -86_400), unpublish_at: expires)
+      |> Repo.update!()
+
+      archive = entry_archive(c)
+      [entry] = archive.bundle["entries"]
+      assert entry["data"]["attributes"]["unpublish_at"]
+
+      # Updating a live entry keeps its own (no) expiry: nothing takes it offline
+      live = c.target |> Changeset.change(status: :published, publish_at: DateTime.add(now, -3600)) |> Repo.update!()
+      targets = %{entry["key"] => %{"mode" => "update", "id" => live.id, "attributes" => %{"uri" => live.uri}}}
+      assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+      assert plan.problems == []
+      assert {:ok, _} = Transfer.apply(plan, c.user)
+      assert %{status: :published, unpublish_at: nil} = Repo.get!(Page, live.id)
+
+      # A new draft has none
+      targets = %{entry["key"] => %{"attributes" => %{"uri" => "expiry-draft"}}}
+      assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+      assert {:ok, receipt} = Transfer.apply(plan, c.user)
+      assert %{status: :draft, unpublish_at: nil} = Repo.get!(Page, receipt.after[entry["key"]]["id"])
+
+      # Taken from the source, it comes with its job
+      targets = %{entry["key"] => %{"attributes" => %{"uri" => "expiry-source"}, "publication" => "source"}}
+      assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+      assert plan.problems == []
+      assert {:ok, receipt} = Transfer.apply(plan, c.user)
+      id = receipt.after[entry["key"]]["id"]
+      assert %{status: :published, unpublish_at: ^expires} = Repo.get!(Page, id)
+
+      assert [job] =
+               Repo.all(
+                 from j in Oban.Job,
+                   where:
+                     j.worker == "Brando.Worker.EntryPublisher" and
+                       fragment("? @> ?", j.args, ^%{"id" => id, "status" => "disabled"})
+               )
+
+      assert DateTime.compare(job.scheduled_at, expires) == :eq
+    end)
+  end
+
   test "unique keys are checked across incoming entries before apply", c do
     archive = entry_archive(c, [%{schema: Page, id: c.source.id}, %{schema: Page, id: c.target.id}])
     targets = Map.new(archive.bundle["entries"], &{&1["key"], %{"attributes" => %{"uri" => "same-new-key"}}})

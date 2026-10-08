@@ -133,7 +133,9 @@ defmodule Brando.Supervisor do
               # Delete 404 log rows past their retention period
               {"25 5 * * *", Brando.Worker.NotFoundPurger},
               # Delete webhook deliveries past their retention period
-              {"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}
+              {"35 5 * * *", Brando.Worker.WebhookDeliveryPurger},
+              # Publish and expire entries whose dates passed with no job (clones, restores)
+              {"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}
             ] ++ extra_oban_cron_jobs(),
           timezone: "Etc/UTC"
         ],

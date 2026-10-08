@@ -126,6 +126,133 @@ defmodule Brando.PublisherUnpublishTest do
     end
   end
 
+  describe "stale publishing jobs" do
+    defp publish_jobs(page) do
+      BrandoIntegration.Repo.all(
+        from j in Oban.Job,
+          where:
+            j.worker == "Brando.Worker.EntryPublisher" and fragment("?->>'status' = 'published'", j.args) and
+              fragment("(?->>'id')::int", j.args) == ^page.id
+      )
+    end
+
+    test "clearing publish_at or moving it into the past drops the publishing job", %{user: user} do
+      page = create_page(user, %{status: :pending, publish_at: at(3600)})
+      assert [_job] = publish_jobs(page)
+
+      {:ok, _} = update_page(page, %{publish_at: nil, status: :draft}, user)
+      assert publish_jobs(page) == []
+
+      {:ok, _} = update_page(page, %{publish_at: at(3600), status: :pending}, user)
+      assert [_job] = publish_jobs(page)
+      {:ok, _} = update_page(page, %{publish_at: at(-60), status: :draft}, user)
+      assert publish_jobs(page) == []
+    end
+
+    test "a publishing job left behind does not publish an entry set back to draft", %{user: user} do
+      page = create_page(user, %{status: :pending, publish_at: at(3600)})
+      [job] = publish_jobs(page)
+      {:ok, _} = update_page(page, %{status: :draft}, user)
+
+      # It runs at its time all the same
+      {1, _} = BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [publish_at: at(-5)])
+      assert :ok = EntryPublisher.perform(job)
+      assert Repo.get!(Page, page.id).status == :draft
+    end
+  end
+
+  describe "an expiry that has passed" do
+    test "is cleared when the entry is published again", %{user: user} do
+      page = create_page(user, %{publish_at: at(-7200)})
+      {:ok, expired} = Pages.update_page(page.id, %{unpublish_at: at(-60)}, user)
+      assert expired.status == :disabled
+
+      {:ok, republished} = update_page(expired, %{status: :published}, user)
+      assert republished.status == :published
+      assert republished.unpublish_at == nil
+
+      # and a save of another field afterwards has nothing to trip over
+      assert {:ok, _} = update_page(republished, %{title: "Renamed"}, user)
+    end
+
+    test "a new expiry set as the entry is published again is kept", %{user: user} do
+      page = create_page(user, %{publish_at: at(-7200)})
+      {:ok, expired} = Pages.update_page(page.id, %{unpublish_at: at(-60)}, user)
+      later = at(3600)
+
+      {:ok, republished} = update_page(expired, %{status: :published, unpublish_at: later}, user)
+      assert republished.unpublish_at == later
+      assert [_job] = unpublish_jobs(republished)
+    end
+  end
+
+  describe "copies" do
+    test "a duplicate, or a translation, starts without the expiry", %{user: user} do
+      page = create_page(user, %{unpublish_at: at(3600)})
+      {:ok, copy} = Oban.Testing.with_testing_mode(:manual, fn -> Pages.duplicate_page(page.id, user) end)
+
+      assert copy.status == :draft
+      assert copy.unpublish_at == nil
+      assert Repo.get!(Page, page.id).unpublish_at != nil
+    end
+  end
+
+  describe "the sweep" do
+    # Dates without jobs, as an environment clone or an archive restore leaves them
+    defp without_jobs(page, set) do
+      {1, _} = BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: set)
+
+      BrandoIntegration.Repo.delete_all(
+        from j in Oban.Job,
+          where: j.worker == "Brando.Worker.EntryPublisher" and fragment("? @> ?", j.args, ^%{"id" => page.id})
+      )
+    end
+
+    test "publishes and deactivates entries whose dates passed with no job, once", %{user: user} do
+      pending = create_page(user, %{status: :draft})
+      without_jobs(pending, status: :pending, publish_at: at(-3600))
+      expiring = create_page(user)
+      without_jobs(expiring, unpublish_at: at(-3600))
+      expired_pending = create_page(user, %{status: :draft})
+      without_jobs(expired_pending, status: :pending, publish_at: at(-7200), unpublish_at: at(-3600))
+      # Not yet: the jobs get a few minutes first
+      recent = create_page(user, %{status: :draft})
+      without_jobs(recent, status: :pending, publish_at: at(-60))
+      later = create_page(user)
+      without_jobs(later, unpublish_at: at(3600))
+      collected()
+
+      assert Brando.Publisher.sweep() == 3
+
+      assert Repo.get!(Page, pending.id).status == :published
+      assert Repo.get!(Page, expiring.id).status == :disabled
+      assert Repo.get!(Page, expired_pending.id).status == :disabled
+      assert Repo.get!(Page, recent.id).status == :pending
+      assert Repo.get!(Page, later.id).status == :published
+
+      # The pending entry that expired was never live: an update, not an unpublish
+      assert collected() |> Enum.map(&{&1.entry_id, &1.type}) |> Enum.sort() ==
+               Enum.sort([
+                 {pending.id, "entry.published"},
+                 {expiring.id, "entry.unpublished"},
+                 {expired_pending.id, "entry.updated"}
+               ])
+
+      assert collected() == []
+
+      # Again: nothing left to do
+      assert Brando.Publisher.sweep() == 0
+    end
+
+    test "the cron worker runs it", %{user: user} do
+      pending = create_page(user, %{status: :draft})
+      without_jobs(pending, status: :pending, publish_at: at(-3600))
+
+      assert :ok = perform_job(Brando.Worker.ScheduledPublishingSweep, %{})
+      assert Repo.get!(Page, pending.id).status == :published
+    end
+  end
+
   describe "the job" do
     test "deactivates the entry when unpublish_at has passed, like a manual unpublish", %{user: user} do
       page = create_page(user)
