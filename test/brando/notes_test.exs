@@ -323,6 +323,25 @@ defmodule Brando.NotesTest do
       assert is_nil(Repo.get!(Note, note.id).detached_at)
     end
 
+    test "restoring a revision that still had the block attaches its note again", %{author: author, page: page} do
+      insert_block(page, author, "blockA", "<p>Hello</p>")
+
+      {:ok, _} =
+        Brando.Revisions.create_revision(Repo.preload(page, Brando.Content.BlockPreloads.for_schema(Page)), author)
+
+      {note, _} = thread!(page, author, %{"body" => "Keep this heading", "block_uid" => "blockA"})
+
+      # Deleting a block in the editor unlinks it from the entry
+      Repo.delete_all(from(eb in Page.Blocks, where: eb.entry_id == ^page.id))
+      :ok = Notes.entry_saved(Page, page)
+      assert Repo.get!(Note, note.id).detached_at
+
+      {:ok, _} = Brando.Revisions.set_entry_to_revision(Page, page.id, 0, author)
+      assert is_nil(Repo.get!(Note, note.id).detached_at)
+      assert [%{action: :note_added} = added] = events(page, [:note_added])
+      assert BrandoAdmin.Components.Activity.action_label(added) == "Added a note"
+    end
+
     test "a note whose marked text is deleted becomes a note on its block, marked text removed", %{
       author: author,
       page: page
