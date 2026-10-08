@@ -42,7 +42,7 @@ export default (app) => ({
     const formEl = this.el.closest('.brando-form')
     if (formEl) {
       flushInput(this.field)
-      this.pushEventTo(formEl, 'blur', {})
+      this.pushEventTo(formEl, 'blur', { field: this.field.getAttribute('name') })
     }
   },
 

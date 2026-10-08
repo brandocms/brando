@@ -121,7 +121,7 @@ export default app => ({
           if (this.el.dataset.footnotes === 'true' || this.el.closest('.block-slot-drawer')) this.commitInput()
           else this._input.dispatchEvent(new Event('blur'))
           const entryForm = this.el.dataset.tiptapType === 'rich_text' && !this.el.closest('[data-block-uid]') && this.el.closest('.brando-form')
-          if (entryForm) this.pushEventTo(entryForm, 'blur', {})
+          if (entryForm) this.pushEventTo(entryForm, 'blur', { field: this._field })
         },
         onToggleLink: onToggle('link'), onToggleButton: onToggle('button'),
         footnotes: this.el.dataset.footnotes === 'true', footnoteLabels: readFootnoteLabels(this.el),
