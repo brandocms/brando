@@ -11,6 +11,7 @@
 #
 #   CI_WAIT_INTERVAL  seconds between polls (default 30)
 #   CI_WAIT_TIMEOUT   minutes before giving up (default 120)
+#   CI_WAIT_CONFIRM   seconds before re-reading a finished state (default 15)
 set -uo pipefail
 
 usage() { echo "usage: scripts/ci-wait <PR number> [--repo owner/name]" >&2; exit 1; }
@@ -117,7 +118,7 @@ while :; do
       # checks are done. Seeing the same finished state twice rules that out.
       [ "$confirmed" = true ] && report "$checks"
       confirmed=true
-      sleep 15
+      sleep "${CI_WAIT_CONFIRM:-15}"
       continue
     fi
     confirmed=false
@@ -127,10 +128,9 @@ while :; do
   fi
 
   if [ "$SECONDS" -ge "$deadline" ]; then
-    if [ -n "${checks:-}" ]; then
-      waiting="$(jq -r '[.[] | select(.bucket == "pending") | .name] | join(", ")' <<<"$checks" 2>/dev/null)"
-    fi
-    echo "PR $pr: gave up after ${CI_WAIT_TIMEOUT:-120} min; ${waiting:+still pending: $waiting}$(head -c 200 "$err" | tr '\n' ' ')"
+    waiting="$(jq -r '[.[] | select(.bucket == "pending") | .name] | join(", ")' <<<"${checks:-[]}" 2>/dev/null)"
+    last_error="$(head -c 200 "$err" | tr '\n' ' ' | sed 's/ *$//')"
+    echo "PR $pr: gave up after ${CI_WAIT_TIMEOUT:-120} min${waiting:+; still pending: $waiting}${last_error:+; $last_error}"
     exit 1
   fi
   sleep "$interval"
