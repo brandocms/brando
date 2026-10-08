@@ -126,40 +126,8 @@ test('keeps filtered grants and unsaved changes through navigation and keyboard 
   await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeDisabled()
 })
 
-test('selects a permission row with mixed state, keyboard support and search boundaries', async ({ page }) => {
-  await page.goto('/admin/groups')
-  await syncLV(page)
-  await page.getByRole('button', { name: 'New group', exact: true }).click()
-  await expect(page.getByLabel('Group name', { exact: true })).toHaveValue('')
-  await page.getByLabel('Group name', { exact: true }).fill('Row reviewers')
-  await page.getByLabel('Backend: Access', { exact: true }).check()
-  const toggle = page.getByRole('checkbox', { name: 'All permissions for Pages', exact: true })
-  const checkboxes = page.locator('input[name^="permissions[brando.pages."]')
-  await expect(toggle).toHaveAttribute('aria-checked', 'false')
-  await toggle.click()
-  await expect(toggle).toHaveAttribute('aria-checked', 'true')
-  await expect(page.locator('input[name^="permissions[brando.pages."]:checked')).toHaveCount(await checkboxes.count())
-  await page.getByLabel('Pages: Edit', { exact: true }).uncheck()
-  await expect(toggle).toHaveAttribute('aria-checked', 'mixed')
-  await toggle.focus()
-  await page.keyboard.press('Space')
-  await expect(toggle).toHaveAttribute('aria-checked', 'true')
-  await toggle.click()
-  await expect(page.locator('input[name^="permissions[brando.pages."]:checked')).toHaveCount(0)
-  await expect(page.getByLabel('Backend: Access', { exact: true })).toBeChecked()
-
-  await page.getByLabel('Find a permission', { exact: true }).fill('View')
-  await expect(page.getByLabel('Pages: Edit', { exact: true })).toHaveCount(0)
-  await toggle.click()
-  await page.getByLabel('Find a permission', { exact: true }).fill('')
-  await expect(toggle).toHaveAttribute('aria-checked', 'mixed')
-  await expect(page.getByLabel('Pages: View', { exact: true })).toBeChecked()
-  await expect(page.getByLabel('Pages: Publish', { exact: true })).not.toBeChecked()
-  await page.getByRole('button', { name: 'Review changes', exact: true }).click()
-  await expect(page.locator('.authorization-review')).toContainText('2 permissions added')
-  await page.getByRole('button', { name: 'Confirm & save' }).click()
-  await expect(page.getByRole('status')).toContainText('Group saved')
-})
+// Selecting a whole permission row, its mixed state and the search's
+// boundaries: groups_live_test.exs
 
 for (const role of ['reader', 'author', 'publisher', 'none']) {
   test(`${role} gets the expected routes and cannot forge listing mutations`, async ({ page, secondUserPage, sandboxUserAgent }) => {
