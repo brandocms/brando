@@ -957,6 +957,11 @@ msgstr ""
 msgid "A configured responsive image"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "A connected tool"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A date and time value"
@@ -1146,11 +1151,6 @@ msgstr ""
 msgid "A third — 4 of 12 units"
 msgstr ""
 
-#: lib/brando_admin/components/activity.ex
-#, elixir-autogen
-msgid "A tool via MCP"
-msgstr ""
-
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "A translation is created as an unpublished copy of this entry, which becomes its source: structure, media and shared values follow this entry."
@@ -1176,6 +1176,11 @@ msgstr[1] ""
 #: lib/brando_admin/controllers/access_denied_controller.ex
 #, elixir-autogen, elixir-format
 msgid "ACCESS"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "AI"
 msgstr ""
 
 #: lib/brando_admin/components/crawler_policy.ex
@@ -1710,6 +1715,11 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "All activity"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "All actors"
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -2301,6 +2311,16 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Auto — fits its content"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic jobs"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
@@ -3863,6 +3883,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Connected over MCP"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Connected tools (MCP)"
 msgstr ""
 
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -8828,9 +8853,19 @@ msgid "Lowest score"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "MCP"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "MCP endpoint"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Made by"
 msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -10828,6 +10863,12 @@ msgstr ""
 msgid "Open preview in new window"
 msgstr ""
 
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open proposal"
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Open saved version"
@@ -11261,6 +11302,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Pending operations"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "People"
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
@@ -12408,6 +12454,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Removed by undoing the import that created it"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed by undoing the proposal that created it"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -14044,6 +14095,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Set back by undoing an import"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set back by undoing the proposal"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -16807,6 +16863,11 @@ msgstr ""
 msgid "Undone"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Undone by %{name}"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Undone: the entries are back to how they were."
@@ -18314,8 +18375,8 @@ msgid "breadcrumbs"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
-#, elixir-autogen
-msgid "by %{client} via MCP"
+#, elixir-autogen, elixir-format
+msgid "by %{client}"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -18327,17 +18388,17 @@ msgstr ""
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
+msgid "by a connected tool"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
 msgid "by a content transfer"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "by a deleted user"
-msgstr ""
-
-#: lib/brando_admin/components/activity.ex
-#, elixir-autogen
-msgid "by a tool via MCP"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex

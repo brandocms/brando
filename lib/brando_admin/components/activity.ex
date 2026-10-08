@@ -1,9 +1,9 @@
 defmodule BrandoAdmin.Components.Activity do
   @moduledoc """
   The pieces of an activity event shared by Configuration → Activity and an
-  entry's history: what happened (`action/1`), who did it (`person/1`), the
-  entry it happened to (`entry/1`) and the details line (`details/1`). See
-  `Brando.Activity`.
+  entry's history: what happened (`action/1`), who did it (`person/1`, with
+  the kind of actor as a badge, `kind_badge/1`), the entry it happened to
+  (`entry/1`) and the details line (`details/1`). See `Brando.Activity`.
   """
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
@@ -157,6 +157,44 @@ defmodule BrandoAdmin.Components.Activity do
     ]
   end
 
+  @doc "The badge for a kind of actor (`Brando.Activity.actor_kind/1`); a person's change has none."
+  def kind_label(:assistant), do: gettext("AI")
+  def kind_label(:mcp), do: gettext("MCP")
+  def kind_label(:task), do: gettext("Automatic")
+  def kind_label(_kind), do: nil
+
+  @doc """
+  The filter options for who made a change: `[{label, value}]`, a kind of
+  actor, and each MCP client in `clients` as `mcp:<name>`.
+  """
+  def actor_options(clients) do
+    [
+      {gettext("People"), "person"},
+      {gettext("Assistant"), "assistant"},
+      {gettext("Connected tools (MCP)"), "mcp"}
+    ] ++
+      Enum.map(clients, &{gettext("%{client} via MCP", client: &1), "mcp:" <> &1}) ++
+      [{gettext("Automatic jobs"), "task"}]
+  end
+
+  @doc """
+  Who is looking, for links only they can follow: their id, and whether they
+  may use the Assistant, where a proposal is reviewed.
+  """
+  def viewer(%{id: id} = user), do: %{user_id: id, assistant?: Brando.AI.Agent.allowed?(user)}
+  def viewer(_user), do: %{user_id: nil, assistant?: false}
+
+  @doc """
+  Where the proposal a change came from is reviewed: for the user who
+  applied it, while they may use the Assistant. A conversation's proposal
+  opens in its conversation.
+  """
+  def proposal_path(%{proposal_id: id, approver_id: approver_id}, %{user_id: approver_id, assistant?: true})
+      when is_binary(id) and is_integer(approver_id),
+      do: "/admin/assistant/connected/#{id}"
+
+  def proposal_path(_event, _viewer), do: nil
+
   defp tone(:published), do: "is-published"
   defp tone(:created), do: "is-created"
   defp tone(:duplicated), do: "is-created"
@@ -266,7 +304,10 @@ defmodule BrandoAdmin.Components.Activity do
   attr :event, :map, required: true
   attr :compact, :boolean, default: false
 
-  @doc "Who did it: the person, or the source with the person behind it underneath."
+  @doc """
+  Who did it: the person, or the source with its kind and the person behind
+  it (who approved it, set it or ran it) underneath.
+  """
   def person(assigns) do
     assigns = assign(assigns, :source, source(assigns.event))
 
@@ -275,7 +316,8 @@ defmodule BrandoAdmin.Components.Activity do
       <%= if @source do %>
         <span class="activity-avatar is-source" aria-hidden="true"><.icon name={@source.icon} /></span>
         <span class="activity-person-name">
-          {@source.label}<small :if={@source.caption}>{@source.caption}</small>
+          <span class="activity-person-line">{@source.label}<.kind_badge event={@event} /></span>
+          <small :if={@source.caption}>{@source.caption}</small>
         </span>
       <% else %>
         <.avatar user={@event.user} />
@@ -294,6 +336,18 @@ defmodule BrandoAdmin.Components.Activity do
     ~H"""
     <span :if={@source} class="activity-avatar is-source" aria-hidden="true"><.icon name={@source.icon} /></span>
     <.avatar :if={!@source} user={@event.user} />
+    """
+  end
+
+  attr :event, :map, required: true
+
+  @doc "The kind of actor behind an event, as a small badge: AI, MCP or Automatic. Nothing for a person."
+  def kind_badge(assigns) do
+    kind = Brando.Activity.actor_kind(assigns.event)
+    assigns = assign(assigns, kind: kind, label: kind_label(kind))
+
+    ~H"""
+    <span :if={@label} class="activity-kind" data-kind={@kind}>{@label}</span>
     """
   end
 
@@ -333,14 +387,14 @@ defmodule BrandoAdmin.Components.Activity do
     do: %{icon: "clock", label: gettext("Scheduled publishing"), caption: by(event, :scheduler)}
 
   defp source(%{source: :assistant} = event),
-    do: %{icon: "sparkles", label: gettext("Assistant"), caption: by(event, :assistant)}
+    do: %{icon: "sparkles", label: gettext("Assistant"), caption: approved_by(event)}
 
   # A tool's own call, as the person who connected it
   defp source(%{source: :mcp, action: :tool_called} = event),
     do: %{icon: "plug", label: mcp_label(event), caption: by(event, :mcp)}
 
   defp source(%{source: :mcp} = event),
-    do: %{icon: "plug", label: mcp_label(event), caption: by(event, :assistant)}
+    do: %{icon: "plug", label: mcp_label(event), caption: approved_by(event)}
 
   defp source(%{source: :import} = event),
     do: %{icon: "download", label: gettext("Content transfer"), caption: by(event, :import)}
@@ -350,25 +404,34 @@ defmodule BrandoAdmin.Components.Activity do
   defp source(%{user: nil}), do: %{icon: "user", label: gettext("Deleted user"), caption: nil}
   defp source(_), do: nil
 
+  # Without an approver (a user since removed), the person it was made as
+  defp approved_by(event), do: approver_label(event) || by(event, :assistant)
+
+  @doc "Who approved and applied an agent's change, or undid it: `Approved by Ola Hansen`. `nil` for no one."
+  def approver_label(%{approver: %{name: name}, details: %{"undo_proposal" => true}}),
+    do: gettext("Undone by %{name}", name: name)
+
+  def approver_label(%{approver: %{name: name}}), do: gettext("Approved by %{name}", name: name)
+  def approver_label(_event), do: nil
+
   defp by(%{user: nil}, _), do: nil
   defp by(%{user: user}, :scheduler), do: gettext("Set by %{name}", name: user.name)
   defp by(%{user: user}, :assistant), do: gettext("Approved by %{name}", name: user.name)
   defp by(%{user: user}, :import), do: gettext("Run by %{name}", name: user.name)
   defp by(%{user: user}, :mcp), do: gettext("As %{name}", name: user.name)
 
-  defp mcp_label(%{details: %{"client" => client}}) when is_binary(client),
-    do: gettext("%{client} via MCP", client: client)
-
-  defp mcp_label(_event), do: gettext("A tool via MCP")
+  # The badge says MCP
+  defp mcp_label(%{details: %{"client" => client}}) when is_binary(client), do: client
+  defp mcp_label(_event), do: gettext("A connected tool")
 
   @doc "The person, or the source, as a short phrase for the entry history: `by Ola Hansen`."
   def by_phrase(%{source: :scheduler}), do: gettext("by scheduled publishing")
   def by_phrase(%{source: :assistant}), do: gettext("by the assistant")
 
   def by_phrase(%{source: :mcp, details: %{"client" => client}}) when is_binary(client),
-    do: gettext("by %{client} via MCP", client: client)
+    do: gettext("by %{client}", client: client)
 
-  def by_phrase(%{source: :mcp}), do: gettext("by a tool via MCP")
+  def by_phrase(%{source: :mcp}), do: gettext("by a connected tool")
   def by_phrase(%{source: :import}), do: gettext("by a content transfer")
   def by_phrase(%{source: :system, user: nil}), do: gettext("by the system")
   def by_phrase(%{user: nil}), do: gettext("by a deleted user")
@@ -505,6 +568,12 @@ defmodule BrandoAdmin.Components.Activity do
 
   defp lines(%{action: :deleted, details: %{"purged" => true}}, _fields, _states),
     do: [gettext("Removed from the trash after %{days} days", days: @trash_days)]
+
+  defp lines(%{action: :deleted, details: %{"undo_proposal" => true}}, _fields, _states),
+    do: [gettext("Removed by undoing the proposal that created it")]
+
+  defp lines(%{details: %{"undo_proposal" => true}}, _fields, _states),
+    do: [gettext("Set back by undoing the proposal")]
 
   defp lines(%{action: :deleted, details: %{"undo_import" => true}}, _fields, _states),
     do: [gettext("Removed by undoing the import that created it")]

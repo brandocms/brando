@@ -544,10 +544,11 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     assign(socket, :activity, %{
       events: shown,
       states: Events.states(shown),
+      viewer: Events.viewer(socket.assigns.current_user),
       has_more: length(events) > limit
     })
   rescue
-    _ -> assign(socket, :activity, %{events: [], states: %{}, has_more: false})
+    _ -> assign(socket, :activity, %{events: [], states: %{}, viewer: Events.viewer(nil), has_more: false})
   end
 
   defp revision_count(%AsyncResult{ok?: true, result: %{revisions: revisions, has_more: true}}),
@@ -592,10 +593,11 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
       <li :for={event <- @activity.events} id={"#{@id}-#{event.id}"}>
         <Events.marker event={event} />
         <div>
-          <p><Events.action event={event} /> {Events.by_phrase(event)}</p>
+          <p><Events.action event={event} /> {Events.by_phrase(event)} <Events.kind_badge event={event} /></p>
           <Events.details event={event} states={@activity.states} />
           <p class="activity-meta">
             <time datetime={DateTime.to_iso8601(event.inserted_at)}>{Events.when_label(event.inserted_at)}</time>
+            <span :if={Events.approver_label(event)} class="activity-approver">{Events.approver_label(event)}</span>
             <button
               :if={event.revision && event.action != :deleted}
               type="button"
@@ -621,6 +623,13 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
             >
               {gettext("Compare with #%{revision}", revision: elem(Comparison.revisions(event), 0))}
             </button>
+            <.link
+              :if={Events.proposal_path(event, @activity[:viewer])}
+              navigate={Events.proposal_path(event, @activity[:viewer])}
+              class="activity-compare-link"
+            >
+              {gettext("Open proposal")}
+            </.link>
           </p>
         </div>
       </li>

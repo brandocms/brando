@@ -306,6 +306,35 @@ defmodule Brando.MCP.EndpointTest do
       assert %{origin: "mcp", client: "Test Client", status: "pending"} = proposal
     end
 
+    test "a proposal prepared over the endpoint and applied in the admin names the client, the proposal and the approver",
+         %{tenant: tenant, token: token} = c do
+      op = %{
+        "op" => "set_fields",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "fields" => %{"title" => "Identity, from MCP"}
+      }
+
+      %{"result" => %{"structuredContent" => %{"proposal_id" => id}}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => "Retitle", "operations" => [op]})
+
+      # Preparing writes no content: only the call itself is in Activity
+      assert Repo.all(from e in Event, where: e.schema == ^to_string(Page)) == []
+
+      assert [%{source: :mcp, proposal_id: nil, approver_id: nil}] =
+               Repo.all(from e in Event, where: e.action == :tool_called)
+
+      MCP.in_tenant(tenant, fn ->
+        assert {:ok, _} = Proposals.approve(id, 1, c.current_user)
+        assert {:ok, _} = Proposals.apply(id, 1, c.current_user)
+      end)
+
+      [event] = Repo.all(from e in Event, where: e.action == :updated)
+
+      assert %{source: :mcp, details: %{"client" => "Test Client"}, proposal_id: ^id} = event
+      assert event.approver_id == c.current_user.id
+      assert Brando.Activity.actor_kind(event) == :mcp
+    end
+
     test "tools the endpoint does not offer are unknown", %{tenant: tenant, token: token} do
       for name <- ["attach_folder", "list_attachments", "apply_proposal"] do
         assert %{"error" => %{"code" => -32_602}} = call_tool(tenant, token, name, %{})
