@@ -154,8 +154,10 @@ defmodule Brando.Environments.ArchiveUpgrade do
 
   @doc """
   What `reference` has that `prefix` lacks: tables (`"pages"`), columns, or
-  columns of another type (`"pages.meta_nosnippet"`), and indexes
-  (`"pages_uri_index"`). Shared tables are left out; extra tables and
+  columns of another type (`"pages.meta_nosnippet"`), and indexes, by
+  what they cover rather than their names, which some migrations make from
+  the schema's (`"index on pages (uri)"`). Shared tables are left out; extra
+  tables and
   columns in `prefix` are fine.
   """
   @spec missing(String.t(), String.t()) :: [String.t()]
@@ -184,12 +186,20 @@ defmodule Brando.Environments.ArchiveUpgrade do
       |> Enum.group_by(&hd/1, fn [_table, column, type] -> {column, type} end)
 
     indexes =
-      "SELECT tablename, indexname FROM pg_indexes WHERE schemaname = $1"
+      "SELECT tablename, indexdef FROM pg_indexes WHERE schemaname = $1"
       |> query!([schema])
-      |> Enum.reject(fn [table, _index] -> SharedTables.member?(table) end)
-      |> MapSet.new(fn [_table, index] -> index end)
+      |> Enum.reject(fn [table, _definition] -> SharedTables.member?(table) end)
+      |> MapSet.new(fn [table, definition] -> index(schema, table, definition) end)
 
     %{columns: columns, indexes: indexes}
+  end
+
+  # `CREATE UNIQUE INDEX name ON schema.pages USING btree (uri)` is
+  # `"unique index on pages (uri)"`, whatever the schema
+  defp index(schema, table, definition) do
+    [_, unique, covers] = Regex.run(~r/^CREATE (UNIQUE )?INDEX \S+ ON \S+ (?:USING btree )?(.*)$/s, definition)
+    covers = covers |> String.replace(~s("#{schema}".), "") |> String.replace("#{schema}.", "")
+    "#{String.downcase(unique)}index on #{table} #{covers}"
   end
 
   defp query!(sql, params), do: Ecto.Adapters.SQL.query!(Brando.Repo.repo(), sql, params).rows

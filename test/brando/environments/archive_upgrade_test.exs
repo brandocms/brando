@@ -222,6 +222,22 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     assert rollbacks(site) == []
   end
 
+  test "compares indexes by what they cover, not by their names", %{archive: archive} do
+    other = "tenant_acme_other"
+    copy_schema(@live, other)
+    assert ArchiveUpgrade.missing(other, @live) == []
+
+    # Tenant migrations name some indexes after the schema
+    query!(~s{CREATE INDEX "#{@live}_pages_title_index" ON "#{@live}".pages (title)})
+    assert ArchiveUpgrade.missing(other, @live) == ["index on pages (title)"]
+
+    query!(~s{CREATE INDEX "#{other}_pages_title_index" ON "#{other}".pages (title)})
+    assert ArchiveUpgrade.missing(other, @live) == []
+
+    assert "sites_indexnow" in ArchiveUpgrade.missing(archive, @live)
+    assert "pages.meta_canonical_url" in ArchiveUpgrade.missing(archive, @live)
+  end
+
   test "takes the archive's age from its name" do
     assert ArchiveUpgrade.taken_at("tenant_acme_production_archive_20261008123456") == ~N[2026-10-08 12:34:56]
     assert ArchiveUpgrade.taken_at("tenant_acme_production_archive_20261008123456_0a1b2c3d") == ~N[2026-10-08 12:34:56]
