@@ -37,7 +37,9 @@ defmodule Brando.Search do
   `rebuild/1`, run by `Brando.Worker.SearchIndexRebuild` from Configuration
   → Utilities, indexes every entry of the current site and environment again
   and removes documents nothing has. Run it once after upgrading, and after
-  changing what an identifier or text field holds.
+  changing what an identifier or text field holds. When it finishes it records
+  the time in the comment on the `search_documents` table (`rebuilt_at/0`),
+  which Utilities shows; saves do not change it.
 
   ## Configuration
 
@@ -218,6 +220,22 @@ defmodule Brando.Search do
 
     Repo.one(query) == true
   end
+
+  @doc """
+  When the current site and environment's index was last rebuilt in full
+  (`rebuild/1`), or nil if it never was. Saves index one entry at a time and
+  do not count.
+  """
+  @spec rebuilt_at() :: DateTime.t() | nil
+  defdelegate rebuilt_at, to: Indexer
+
+  @doc """
+  Forgets when the index in schema `prefix` was rebuilt: a new environment
+  copies its tables' structure from `public`, comment included, but none of
+  the documents. `Brando.Environments` calls it after that copy.
+  """
+  @spec forget_rebuilt(String.t()) :: :ok
+  defdelegate forget_rebuilt(prefix), to: Indexer
 
   @doc "How many documents the current site and environment's index holds, or nil without the table."
   @spec count() :: non_neg_integer() | nil

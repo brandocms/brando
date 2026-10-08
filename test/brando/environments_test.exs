@@ -49,6 +49,24 @@ defmodule Brando.EnvironmentsTest do
     end
   end
 
+  # Like pg_dump without rows: the search index table comes with its comment.
+  defmodule SearchIndexStructureCloner do
+    @behaviour Brando.Environments.StructureCloner
+
+    @impl true
+    def clone_structure("public", target_prefix) do
+      repo = Brando.Repo.repo()
+
+      repo.query!(~s|CREATE TABLE "#{target_prefix}".search_documents (LIKE public.search_documents INCLUDING ALL)|)
+
+      %{rows: [[comment]]} =
+        repo.query!("SELECT obj_description('public.search_documents'::regclass, 'pg_class')")
+
+      repo.query!(~s|COMMENT ON TABLE "#{target_prefix}".search_documents IS '#{comment}'|)
+      :ok
+    end
+  end
+
   defmodule RecoveringSchemaCloner do
     @behaviour Brando.Environments.SchemaCloner
 
@@ -112,6 +130,17 @@ defmodule Brando.EnvironmentsTest do
              operation_logs(site)
 
     assert environment_id == environment.id
+  end
+
+  test "a new environment's search index was never rebuilt, whatever public's was", %{site: site} do
+    put_test_env(:tenant_structure_cloner, SearchIndexStructureCloner)
+    Tenant.with_prefix(nil, fn -> Brando.Search.Indexer.mark_rebuilt(~U[2026-10-01 08:30:00Z]) end)
+
+    assert {:ok, environment} = Environments.create_environment(site, %{name: "Fresh", key: "fresh", live: false})
+
+    prefix = Tenant.prefix(site, environment)
+    assert Tenant.with_prefix(prefix, &Brando.Search.rebuilt_at/0) == nil
+    assert Tenant.with_prefix(nil, &Brando.Search.rebuilt_at/0) == ~U[2026-10-01 08:30:00Z]
   end
 
   test "compensates the registry and schema when migrations fail", %{site: site} do

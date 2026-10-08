@@ -18330,6 +18330,16 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
+msgid "Last rebuilt: %{date}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Never rebuilt"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
 msgid "Search index rebuilt: %{count} entry."
 msgid_plural "Search index rebuilt: %{count} entries."
 msgstr[0] ""

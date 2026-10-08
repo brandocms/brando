@@ -792,7 +792,9 @@ defmodule Brando.Environments do
   defp do_clone_structure(environment, prefix) do
     case structure_cloner().clone_structure(@public_prefix, prefix) do
       :ok ->
-        :ok
+        # The structure brings public's table comments, not its rows: the
+        # empty search index here was never rebuilt.
+        Brando.Search.forget_rebuilt(prefix)
 
       {:error, reason} ->
         Schema.drop(prefix)
