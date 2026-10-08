@@ -44,6 +44,9 @@ defmodule Brando.Authorization.Catalog do
     # content and propose changes as them; `manage` turns the endpoint on and
     # sees and revokes everyone's connections. No preset grants `connect`.
     {:mcp, "brando.mcp", "Connected AI tools", "Settings", [:connect, :manage], [:standalone, :site]},
+    # Renaming, updating and deleting the listing views other people share
+    # (`Brando.ListingViews`). Everyone manages their own views without it.
+    {:listing_views, "brando.listing_views", "Shared listing views", "Settings", [:manage], [:standalone, :site]},
     {:assistant, "brando.assistant", "Content assistant", "Content", [:use, :configure], [:standalone, :site]}
   ]
 

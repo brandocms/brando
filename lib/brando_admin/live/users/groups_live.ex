@@ -1080,6 +1080,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :security_log}), do: gettext("Security log")
   defp resource_label(%{subject: :webhooks}), do: gettext("Webhooks")
   defp resource_label(%{subject: :mcp}), do: gettext("Connected AI tools")
+  defp resource_label(%{subject: :listing_views}), do: gettext("Shared listing views")
   defp resource_label(permission), do: permission.label
 
   # What a permission gives that its name does not say
@@ -1094,6 +1095,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
       gettext(
         "Connect lets a person with two-factor authentication connect Claude, ChatGPT and other MCP clients, which read content and propose changes as them. Manage turns the endpoint on and off, and revokes anyone's connections."
       )
+
+  defp resource_note(%{subject: :listing_views}),
+    do: gettext("Rename, update and delete the listing views other people share. Everyone manages their own without it.")
 
   defp resource_note(%{subject: :security_log}),
     do:
