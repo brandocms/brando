@@ -32,6 +32,8 @@ defmodule Brando.Blueprint.ErrorTranslator do
     "meta_title" => "Meta title",
     "meta_description" => "Meta description",
     "meta_canonical_url" => "Canonical URL",
+    "meta_nosnippet" => "No snippet",
+    "meta_max_snippet" => "Snippet length",
     "meta_image" => "Meta image",
     "meta_image_id" => "Meta image"
   }

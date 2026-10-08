@@ -20,6 +20,15 @@ production dump.
 
 #### Breaking
 
+- **SEO settings, pages and `trait :meta` have new columns.** `brando_210`
+  adds `crawler_policy` to `sites_seos` and `meta_nosnippet` and
+  `meta_max_snippet` to `pages`, in every environment. Every application
+  schema with `trait :meta` gets the two snippet columns too: run
+  `mix brando.gen.migrations` and `mix brando.gen.blueprint_migration --all`,
+  then `mix ecto.migrate`; until then, loading SEO settings or those schemas
+  fails with a missing-column error. Nothing changes in robots.txt or the
+  page head until an editor sets the new options.
+
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
   `mix brando.gen.migrations` and `mix ecto.migrate`; until then, content
@@ -626,6 +635,20 @@ production dump.
   Not yet done: associating a field's `help-text` instructions with its control.
 
 #### Features
+
+- **AI crawler policy.** Configuration → SEO lists the crawlers AI products
+  send, grouped by purpose (AI search, fetches for a user, model training),
+  each with Allow / Block, and a setting for the `ai-train` content signal.
+  `robots.txt` gets a generated block after the editors' own lines, which are
+  never rewritten: a `Disallow: /` group per blocked crawler and a
+  `Content-Signal:` line ([contentsignals.org](https://contentsignals.org)).
+  Nothing is written until a crawler is blocked or a training preference is
+  chosen. robots.txt is now served as `text/plain`. See
+  [Identity, SEO settings, and redirects](guides/identity_and_seo.md#ai-crawlers-and-content-signals).
+- **Snippet limits per entry.** The meta drawer has **No snippet** and
+  **Snippet length**, written as the page's robots meta tag (`nosnippet`,
+  `max-snippet:N`). They are what keeps a page's text out of Google's AI
+  Overviews. `put_robots/2` adds directives of your own to the same tag.
 
 - **Content events and outbound webhooks.** Every change Activity records
   for an entry becomes a content event (`entry.created`, `entry.updated`,

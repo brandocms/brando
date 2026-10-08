@@ -8,6 +8,8 @@ defmodule Brando.Trait.Meta.Compiler do
         attribute :meta_title, :text
         attribute :meta_description, :text
         attribute :meta_canonical_url, :text
+        attribute :meta_nosnippet, :boolean, default: false
+        attribute :meta_max_snippet, :integer
         attribute :content_modified_at, :datetime
       end
 

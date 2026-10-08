@@ -112,6 +112,31 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
         </div>
 
         <div class="brando-input">
+          <Input.toggle
+            field={@form[:meta_nosnippet]}
+            label={gettext("No snippet")}
+            instructions={
+              gettext(
+                "Search engines show no text from this page under its title, and Google leaves it out of AI Overviews and AI Mode."
+              )
+            }
+          />
+        </div>
+
+        <div class="brando-input">
+          <Input.number
+            field={@form[:meta_max_snippet]}
+            label={gettext("Snippet length")}
+            placeholder={gettext("No limit")}
+            instructions={
+              gettext(
+                "The most characters search engines and AI answers may quote from this page. Empty leaves it to them; 0 means none."
+              )
+            }
+          />
+        </div>
+
+        <div class="brando-input">
           <.live_component
             module={Input.Image}
             id={"#{@form.id}-meta-image"}

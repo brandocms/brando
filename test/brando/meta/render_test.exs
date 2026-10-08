@@ -261,6 +261,64 @@ defmodule Brando.MetaRenderTest do
     end
   end
 
+  describe "snippet limits" do
+    test "nosnippet is written as the robots meta tag" do
+      conn =
+        %Plug.Conn{assigns: %{language: "en"}}
+        |> Brando.Plug.HTML.put_meta(Brando.Pages.Page, %{title: "Quiet", meta_nosnippet: true, meta_max_snippet: 40})
+
+      assert metas(conn)["robots"] == "nosnippet"
+    end
+
+    test "max-snippet is written when there is no nosnippet, 0 included" do
+      for {max, expected} <- [{120, "max-snippet:120"}, {0, "max-snippet:0"}] do
+        conn =
+          %Plug.Conn{assigns: %{language: "en"}}
+          |> Brando.Plug.HTML.put_meta(Brando.Pages.Page, %{title: "Short", meta_nosnippet: false, meta_max_snippet: max})
+
+        assert metas(conn)["robots"] == expected
+      end
+    end
+
+    test "no limits writes no robots tag" do
+      conn =
+        Brando.Plug.HTML.put_meta(%Plug.Conn{assigns: %{language: "en"}}, Brando.Pages.Page, %{
+          title: "Open",
+          meta_nosnippet: false,
+          meta_max_snippet: nil
+        })
+
+      refute Map.has_key?(metas(conn), "robots")
+    end
+
+    test "joins robots directives the page set itself, from put_hreflang too" do
+      entry = %Brando.Pages.Page{
+        id: 1,
+        uri: "quiet",
+        language: :en,
+        status: :published,
+        has_url: true,
+        meta_nosnippet: true,
+        alternate_entries: []
+      }
+
+      conn =
+        %Plug.Conn{assigns: %{language: "en"}}
+        |> Brando.Plug.HTML.put_meta("robots", "noarchive")
+        |> Brando.Plug.HTML.put_hreflang(entry)
+
+      assert metas(conn)["robots"] == "noarchive, nosnippet"
+    end
+
+    test "max-snippet must not be negative" do
+      user = Factory.insert(:random_user)
+      page = %Brando.Pages.Page{id: 1, creator_id: user.id}
+
+      changeset = Brando.Pages.Page.changeset(page, %{meta_max_snippet: -1}, user)
+      assert {_, _} = changeset.errors[:meta_max_snippet]
+    end
+  end
+
   defp metas(conn) do
     assigns = %{conn: conn}
 

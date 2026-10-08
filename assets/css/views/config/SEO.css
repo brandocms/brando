@@ -1,0 +1,187 @@
+/* Configuration → SEO: the AI crawler policy (components/crawler_policy.ex). */
+
+.seo-crawlers {
+  /* The settings form floats its legends; start under this one. */
+  clear: both;
+  display: grid;
+  gap: 16px;
+  color: var(--brando-ink);
+  font-size: 13px;
+  line-height: 20px;
+
+  p { margin: 0; padding: 0; }
+
+  .seo-crawlers-intro {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--brando-muted);
+  }
+
+  .seo-crawlers-view {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 5px 12px;
+    border: 1px solid var(--brando-line);
+    border-radius: 5px;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .seo-crawlers-view:hover { background: var(--brando-surface-hover); }
+  :is(a, input, summary, [tabindex]):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
+
+  .seo-crawler-table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+    background: var(--brando-surface);
+  }
+
+  .seo-crawler-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+
+    :is(th, td) { padding: 10px 12px; border: 0; text-align: left; vertical-align: middle; }
+    :is(th, td):first-child { padding-left: 16px; }
+    :is(th, td):last-child { padding-right: 16px; }
+
+    thead th {
+      background: var(--brando-surface-shaded);
+      border-bottom: 1px solid var(--brando-line);
+      color: var(--brando-muted);
+      font-size: 12px;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    tbody tr + tr td { border-top: 1px solid var(--brando-line); }
+    tbody + tbody .seo-crawler-group th { border-top: 1px solid var(--brando-line); }
+
+    .seo-crawler-group th {
+      padding-top: 14px;
+      padding-bottom: 6px;
+      color: var(--brando-muted);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .seo-crawler-group + tr td { border-top: 0; }
+  }
+
+  .seo-crawler-name { white-space: nowrap; }
+  .seo-crawler-name strong { font-weight: 500; }
+  .seo-crawler-name span { color: var(--brando-muted); }
+  .seo-crawler-purpose { color: var(--brando-muted); }
+  .seo-crawler-purpose small { display: block; margin-top: 2px; color: var(--brando-note-ink); font-size: 12px; }
+  .seo-crawler-access { width: 1%; white-space: nowrap; }
+
+  .seo-crawler-signal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+    background: var(--brando-surface);
+  }
+
+  .seo-crawler-signal h4 { margin: 0; font-size: 13px; font-weight: 500; line-height: 20px; }
+  .seo-crawler-signal p { margin-top: 4px; color: var(--brando-muted); font-size: 12px; line-height: 18px; }
+
+  .seo-crawler-lines summary { cursor: pointer; color: var(--brando-ink); font-size: 12px; }
+  .seo-crawler-lines pre {
+    margin: 8px 0 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+    background: var(--brando-surface-shaded);
+    font-family: theme(typography.families.mono);
+    font-size: 12px;
+    line-height: 18px;
+    white-space: pre;
+  }
+  .seo-crawler-lines p { margin-top: 8px; color: var(--brando-muted); font-size: 12px; }
+
+  .seo-crawlers-note { color: var(--brando-muted); font-size: 12px; line-height: 18px; }
+
+  @media (max-width: 600px) {
+    .seo-crawlers-intro { flex-direction: column; }
+    .seo-crawler-signal { flex-direction: column; align-items: flex-start; }
+
+    .seo-crawler-table {
+      thead { display: none; }
+      tbody, tr, td, th { display: block; }
+      tbody tr:not(.seo-crawler-group) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 16px; }
+      tbody tr:not(.seo-crawler-group) td { padding: 0; border: 0; }
+      tbody tr + tr:not(.seo-crawler-group) { border-top: 1px solid var(--brando-line); }
+      tbody tr + tr td { border-top: 0; }
+      .seo-crawler-name { grid-column: 1; grid-row: 1; white-space: normal; }
+      .seo-crawler-purpose { grid-column: 1 / -1; grid-row: 2; }
+      .seo-crawler-access { grid-column: 2; grid-row: 1; width: auto; }
+    }
+  }
+}
+
+/* A small segmented control of radios: one outline, the chosen option filled.
+   Block is the one choice tinted red, so a blocked crawler stands out. */
+.seo-segmented {
+  display: inline-flex;
+  border: 1px solid var(--brando-line);
+  border-radius: 5px;
+  background: var(--brando-surface);
+  overflow: hidden;
+
+  label {
+    position: relative;
+    display: flex;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  label + label { border-left: 1px solid var(--brando-line); }
+
+  input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  span {
+    display: block;
+    padding: 3px 10px;
+    color: var(--brando-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    white-space: nowrap;
+  }
+
+  label:hover span { background: var(--brando-surface-hover); }
+  input:checked + span { background: var(--brando-surface-selected); color: var(--brando-accent); font-weight: 500; }
+  label[data-value="block"] input:checked + span,
+  label[data-value="no"] input:checked + span {
+    background: color-mix(in srgb, var(--brando-status-disabled) 12%, var(--brando-surface));
+    color: color-mix(in srgb, var(--brando-status-disabled) 75%, var(--brando-ink));
+  }
+  input:focus-visible + span { outline: 2px solid var(--brando-accent); outline-offset: -2px; }
+
+  @media (pointer: coarse) { span { padding: 10px 14px; } }
+}

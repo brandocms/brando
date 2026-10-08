@@ -148,6 +148,25 @@ For a page that is not an entry, set one yourself:
 put_canonical(conn, "https://example.com/original-article")
 ```
 
+## Snippet limits
+
+`trait :meta` adds **No snippet** (`meta_nosnippet`) and **Snippet length**
+(`meta_max_snippet`, in characters) to the meta drawer. They limit the text
+search engines and AI answers may quote from the page, and are written as the
+page's robots meta tag:
+
+```html
+<meta name="robots" content="nosnippet">
+<meta name="robots" content="max-snippet:120">
+```
+
+No snippet wins over a length; a length of `0` also means no snippet; empty
+leaves it to the search engine. They are what keeps a page's text out of
+Google's AI Overviews and AI Mode, which `Google-Extended` in robots.txt does
+not. `put_meta/3` and `put_hreflang/2` pick them up from the entry; directives
+the page set itself (`put_meta(conn, "robots", "noarchive")`, or
+`put_robots(conn, ["noarchive"])`) are kept in the same tag.
+
 ## Check the rendered result
 
 Open the **page source** for a published post. Verify one `<title>`, matching

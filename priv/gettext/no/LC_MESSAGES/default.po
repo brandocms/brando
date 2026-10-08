@@ -17619,3 +17619,200 @@ msgstr "Logge ut?"
 #, elixir-autogen, elixir-format
 msgid "You are signed in as %{email}. Signing out ends your session in this browser; your other devices stay signed in."
 msgstr "Du er logget inn som %{email}. Når du logger ut, avsluttes økten i denne nettleseren. Andre enheter forblir innlogget."
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "AI search"
+msgstr "AI-søk"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Fetches for a user"
+msgstr "Henting for en bruker"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Model training"
+msgstr "Modelltrening"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "ChatGPT search results"
+msgstr "Søkeresultater i ChatGPT"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Claude search results"
+msgstr "Søkeresultater i Claude"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Perplexity search results"
+msgstr "Søkeresultater i Perplexity"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Pages a ChatGPT user asks for. May not follow robots.txt"
+msgstr "Sider en ChatGPT-bruker ber om. Følger kanskje ikke robots.txt"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Pages a Claude user asks for"
+msgstr "Sider en Claude-bruker ber om"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Pages a Perplexity user asks for. Usually ignores robots.txt"
+msgstr "Sider en Perplexity-bruker ber om. Ser som regel bort fra robots.txt"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training OpenAI's models"
+msgstr "Trening av OpenAIs modeller"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training Anthropic's models"
+msgstr "Trening av Anthropics modeller"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Gemini training and grounding; not AI Overviews"
+msgstr "Trening og forankring av Gemini; ikke AI-oversikter"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training Apple Intelligence; uses what Applebot fetched"
+msgstr "Trening av Apple Intelligence; bruker det Applebot har hentet"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training Meta's models"
+msgstr "Trening av Metas modeller"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Amazon's services, including model training"
+msgstr "Amazons tjenester, også modelltrening"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Common Crawl's open dataset, widely used for training"
+msgstr "Common Crawls åpne datasett, mye brukt til trening"
+
+#: lib/brando/seo/crawlers.ex
+#, elixir-autogen, elixir-format
+msgid "Training ByteDance's models"
+msgstr "Trening av ByteDances modeller"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Written to robots.txt with Content Signals. Search crawlers like Googlebot and Bingbot are always allowed."
+msgstr "Skrives til robots.txt med Content Signals. Søkeroboter som Googlebot og Bingbot er alltid tillatt."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "View robots.txt"
+msgstr "Vis robots.txt"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "AI crawlers"
+msgstr "AI-roboter"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Crawler"
+msgstr "Robot"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Purpose"
+msgstr "Formål"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Also named in the robots text above, which applies as well."
+msgstr "Er også nevnt i robots-teksten over, som også gjelder."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Access for %{crawler}"
+msgstr "Tilgang for %{crawler}"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Allow"
+msgstr "Tillat"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Use for model training"
+msgstr "Bruk til modelltrening"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "The ai-train content signal, for every crawler, including ones not listed. Blocking a training crawler above stops it fetching pages; this states how any collected content may be used."
+msgstr "Innholdssignalet ai-train, for alle roboter, også de som ikke står i listen. Å blokkere en treningsrobot over hindrer den i å hente sider; dette sier hvordan innhold som er samlet inn, kan brukes."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "No preference"
+msgstr "Ingen preferanse"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Don't allow"
+msgstr "Ikke tillat"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Lines written to robots.txt"
+msgstr "Linjer som skrives til robots.txt"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "None. Nothing is written until a crawler is blocked or a training preference is chosen."
+msgstr "Ingen. Ingenting skrives før en robot blokkeres eller en preferanse for trening er valgt."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgid "Google's AI Overviews come from Googlebot, not Google-Extended. They follow each entry's No snippet and Snippet length settings in its meta properties."
+msgstr "Googles AI-oversikter kommer fra Googlebot, ikke Google-Extended. De følger innstillingene Ingen tekstutdrag og Lengde på tekstutdrag i hver oppførings metaegenskaper."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No snippet"
+msgstr "Ingen tekstutdrag"
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Search engines show no text from this page under its title, and Google leaves it out of AI Overviews and AI Mode."
+msgstr "Søkemotorer viser ingen tekst fra denne siden under tittelen, og Google utelater den fra AI-oversikter og AI-modus."
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Snippet length"
+msgstr "Lengde på tekstutdrag"
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Ingen grense"
+
+#: lib/brando_admin/components/form/meta_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The most characters search engines and AI answers may quote from this page. Empty leaves it to them; 0 means none."
+msgstr "Flest tegn søkemotorer og AI-svar kan sitere fra denne siden. Tomt overlater det til dem; 0 betyr ingen."
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgctxt "crawler access"
+msgid "Allow"
+msgstr "Tillat"
+
+#: lib/brando_admin/components/crawler_policy.ex
+#, elixir-autogen, elixir-format
+msgctxt "crawler access"
+msgid "Block"
+msgstr "Blokker"

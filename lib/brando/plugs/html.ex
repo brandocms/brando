@@ -245,7 +245,7 @@ defmodule Brando.Plug.HTML do
 
         conn
         |> put_private(:brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
-        |> maybe_put_entry_canonical(entry)
+        |> put_entry_page(entry)
     end
   end
 
@@ -308,6 +308,32 @@ defmodule Brando.Plug.HTML do
   defp maybe_put_entry_canonical(conn, %{meta_canonical_url: url}), do: put_canonical(conn, url)
   defp maybe_put_entry_canonical(conn, _entry), do: conn
 
+  # What an entry with `Brando.Trait.Meta` says about its own page: the
+  # canonical override and the snippet limits for the robots meta tag.
+  defp put_entry_page(conn, entry) do
+    conn
+    |> maybe_put_entry_canonical(entry)
+    |> put_robots(Brando.Trait.Meta.robots_directives(entry))
+  end
+
+  @doc """
+  Adds directives to the page's robots meta tag, after any the page already
+  has, such as `put_robots(conn, ["noarchive"])`. `put_meta/3` and
+  `put_hreflang/2` add an entry's snippet limits (`nosnippet`,
+  `max-snippet:N`) from `Brando.Trait.Meta`.
+  """
+  @spec put_robots(conn, [String.t()]) :: conn
+  def put_robots(conn, []), do: conn
+
+  def put_robots(conn, directives) when is_list(directives) do
+    existing = conn.private[:brando_robots] || []
+    put_private(conn, :brando_robots, Enum.uniq(existing ++ directives))
+  end
+
+  @doc "The robots meta directives added with `put_robots/2`."
+  @spec get_robots(conn) :: [String.t()]
+  def get_robots(conn), do: conn.private[:brando_robots] || []
+
   @doc """
   Put META data in conn
   """
@@ -322,7 +348,7 @@ defmodule Brando.Plug.HTML do
 
     conn
     |> put_private(:brando_meta, merged_meta)
-    |> maybe_put_entry_canonical(data)
+    |> put_entry_page(data)
   end
 
   def put_meta(conn, key, data, opts) when is_binary(key) do

@@ -85,3 +85,6 @@ msgstr ""
 
 msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."
 msgstr ""
+
+msgid "Crawlers and AI"
+msgstr ""
