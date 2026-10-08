@@ -710,6 +710,24 @@ promotion as a separate decision:
 {:ok, _live} = Brando.Environments.set_live(restored, creator: current_user)
 ```
 
+Some of Brando's upgrade migrations change every environment schema in the run
+that migrates `public`, but they leave archives alone: an archive is a snapshot.
+An archive taken before such a migration ran therefore lacks what it added.
+Rollback brings it up to date as it restores it:
+
+- Before anything is created, it lists the public migrations that change every
+  environment and ran after the archive was taken (from `schema_migrations`
+  and the timestamp in the archive's name). Brando's `brando_2xx` ones are run
+  again in the restored schema only, and recorded in its `schema_migrations`.
+  Any other, such as Brando's older ones or the application's own, refuses the
+  restore with `{:error, {:archive_behind, {:migrations, names}}}`.
+- After the tenant migrations, the restored schema must have every table,
+  column and index the live environment has. If it does not, the restore is
+  undone and returns `{:error, {:archive_behind, {:structure, missing}}}`.
+
+Either way, a refused or failed restore leaves no environment, schema or log
+entry behind, and the archive is unchanged.
+
 Only non-live environments can be deleted:
 
 ```elixir

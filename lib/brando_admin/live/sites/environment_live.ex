@@ -800,5 +800,26 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp operation_error(:environment_not_found), do: gettext("The environment no longer exists.")
   defp operation_error(:job_not_found), do: gettext("The scheduled operation no longer exists.")
   defp operation_error(:no_archives), do: gettext("No recovery archive exists for this site.")
+
+  defp operation_error({:archive_behind, {:migrations, names}}),
+    do:
+      gettext(
+        "This archive is older than migrations Brando cannot run in it again: %{names}. Nothing was restored.",
+        names: Enum.join(names, ", ")
+      )
+
+  defp operation_error({:archive_behind, {:structure, missing}}),
+    do:
+      gettext(
+        "This archive could not be brought up to date with the live environment. It lacks %{missing}. Nothing was restored.",
+        missing: Enum.join(missing, ", ")
+      )
+
+  defp operation_error({:archive_behind, :unknown_age}),
+    do: gettext("Brando cannot tell when this archive was taken, so it cannot bring it up to date. Nothing was restored.")
+
+  defp operation_error({:archive_upgrade_failed, {name, _reason}}),
+    do: gettext("Bringing this archive up to date failed in %{name}. Nothing was restored.", name: name)
+
   defp operation_error(reason), do: gettext("Environment operation failed: %{reason}", reason: inspect(reason))
 end

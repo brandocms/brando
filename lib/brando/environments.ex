@@ -10,6 +10,7 @@ defmodule Brando.Environments do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Environments.ArchiveUpgrade
   alias Brando.Environments.Environment
   alias Brando.Environments.OperationLog
   alias Brando.Environments.Schema
@@ -310,6 +311,11 @@ defmodule Brando.Environments do
   Defaults to the newest archive. Pass `:archive_schema` to restore a specific
   one; it is resolved against this site's own archives, so a schema belonging to
   another site is rejected rather than restored.
+
+  An archive taken before a Brando upgrade migration that changes every
+  environment is brought up to date as it is restored, or refused with
+  `{:error, {:archive_behind, details}}` and nothing restored; see
+  `Brando.Environments.ArchiveUpgrade`.
   """
   @spec rollback(Site.t(), keyword()) :: {:ok, Environment.t()} | {:error, term()}
   def rollback(site, opts \\ [])
@@ -558,7 +564,19 @@ defmodule Brando.Environments do
     end
   end
 
+  # An archive taken before an upgrade migration that changes every
+  # environment lacks what it added: those migrations are replayed in the
+  # restored schema, and the result is compared with the live environment.
+  # One that cannot be brought up to date is refused before anything is
+  # created, or removed again (see `Brando.Environments.ArchiveUpgrade`).
   defp restore_archive(site, archive, opts) do
+    case ArchiveUpgrade.plan(archive.schema) do
+      {:ok, replays} -> restore_archive(site, archive, replays, opts)
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp restore_archive(site, archive, replays, opts) do
     environment_key = next_rollback_key(site)
 
     attrs = %{
@@ -570,7 +588,9 @@ defmodule Brando.Environments do
     with {:ok, environment} <- Registry.create_environment(site, attrs),
          prefix = Tenant.prefix(site, environment),
          :ok <- clone_archive_or_compensate(environment, archive.schema, prefix),
+         :ok <- replay_or_compensate(environment, prefix, replays),
          {:ok, _versions} <- migrate_or_compensate(site, environment, prefix),
+         :ok <- up_to_date_or_compensate(site, environment, prefix),
          :ok <- pause_webhooks_or_compensate(environment, prefix, opts) do
       log_operation!(site.id, :rollback,
         target_environment_id: environment.id,
@@ -597,6 +617,35 @@ defmodule Brando.Environments do
         Schema.drop(prefix)
         Registry.delete_environment(environment)
         {:error, {:archive_restore_failed, reason}}
+    end
+  end
+
+  defp replay_or_compensate(environment, prefix, replays) do
+    case ArchiveUpgrade.replay(replays, prefix) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Schema.drop(prefix)
+        Registry.delete_environment(environment)
+        {:error, {:archive_upgrade_failed, reason}}
+    end
+  end
+
+  # Compared with the live environment, the restored one must have every
+  # table, column and index. Without a live environment there is nothing to
+  # compare with.
+  defp up_to_date_or_compensate(site, environment, prefix) do
+    reference = Enum.find(Registry.list_environments(site), &(&1.live and &1.id != environment.id))
+
+    case reference && ArchiveUpgrade.missing(prefix, Tenant.prefix(site, reference)) do
+      missing when missing in [nil, []] ->
+        :ok
+
+      missing ->
+        Schema.drop(prefix)
+        Registry.delete_environment(environment)
+        {:error, {:archive_behind, {:structure, missing}}}
     end
   end
 

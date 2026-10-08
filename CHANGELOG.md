@@ -46,6 +46,11 @@ run and queues that are missing.
 There are no migrations numbered `brando_206` or `brando_208`: both numbers
 were reserved and never needed, so the gap is not a missed migration.
 
+Environment archives are not migrated. Restoring one taken before a
+`brando_2xx` migration that changes every environment runs that migration in
+the restored environment; an archive that cannot be brought up to date is
+refused, and nothing is restored.
+
 The full ordered workflow, including Blueprint snapshot handling and Gettext
 recovery, is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 Sites still on 0.51 (the `legacy` branch, with the Vue admin) have no

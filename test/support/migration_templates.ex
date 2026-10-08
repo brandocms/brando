@@ -64,8 +64,25 @@ defmodule Brando.MigrationTemplates do
   """
   def create_environment(prefix, tables \\ []) do
     query!(~s(CREATE SCHEMA "#{prefix}"))
-    Enum.each(tables, &query!(~s{CREATE TABLE "#{prefix}"."#{&1}" (LIKE public."#{&1}" INCLUDING ALL)}))
+    Enum.each(tables, &copy_table("public", prefix, &1))
     prefix
+  end
+
+  @doc """
+  Copies a table's columns, defaults, checks and indexes, under their own
+  names as pg_dump keeps them (`LIKE ... INCLUDING INDEXES` renames them).
+  """
+  def copy_table(source, target, table) do
+    query!(
+      ~s{CREATE TABLE "#{target}"."#{table}" (LIKE "#{source}"."#{table}" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING IDENTITY INCLUDING GENERATED)}
+    )
+
+    for [definition] <- rows("SELECT indexdef FROM pg_indexes WHERE schemaname = $1 AND tablename = $2", [source, table]) do
+      definition
+      |> String.replace(~s( ON "#{source}".), ~s( ON "#{target}".))
+      |> String.replace(" ON #{source}.", ~s( ON "#{target}".))
+      |> query!()
+    end
   end
 
   def query!(sql, params \\ []), do: Repo.query!(sql, params)
@@ -125,11 +142,157 @@ defmodule Brando.MigrationTemplates do
     |> Enum.sort()
   end
 
+  # A database from before the brando_2xx migrations
+
+  @doc "What the 2xx migrations add in every environment: tables"
+  def environment_tables,
+    do: ~w(sites_not_found_hits entry_notes note_mentions webhooks webhook_deliveries sites_indexnow search_documents)
+
+  @doc "What the 2xx migrations add in every environment: columns by table"
+  def environment_columns do
+    %{
+      "pages" => ~w(meta_canonical_url content_modified_at meta_nosnippet meta_max_snippet),
+      "sites_seos" => ~w(crawler_policy),
+      "content_modules" => ~w(markdown_code)
+    }
+  end
+
+  @doc "What the 2xx migrations add in `public` only: tables"
+  def public_tables do
+    ~w(users_security users_recovery_codes users_security_events users_security_policy users_passkeys
+       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes)
+  end
+
+  @doc "What the 2xx migrations add in `public` only: columns by table"
+  def public_columns do
+    %{
+      "users" => ~w(job_title same_as),
+      "users_tokens" => ~w(ip user_agent last_used_at confirmed_at),
+      "content_proposals" => ~w(origin client)
+    }
+  end
+
+  @doc "Rolls `public` back to before the 2xx migrations"
+  def roll_back_2xx do
+    query!("DROP TABLE #{Enum.join(environment_tables() ++ public_tables(), ", ")}")
+
+    for {table, names} <- Map.merge(environment_columns(), public_columns()) do
+      query!(~s(ALTER TABLE "#{table}" ) <> Enum.map_join(names, ", ", &"DROP COLUMN #{&1}"))
+    end
+  end
+
+  @doc """
+  Copies the 2xx templates into `directory` under the versions
+  `mix brando.gen.migrations` gives them, and returns `{version, file}`
+  """
+  def copy_2xx(directory) do
+    for {_format, "../brando.upgrade/migrations/" <> file, target} <- Mix.Brando.Install.Templates.manifest(),
+        file =~ ~r/^brando_2\d\d_/ do
+      File.cp!(path(file), Path.join(directory, Path.basename(target)))
+      {target |> Path.basename() |> Integer.parse() |> elem(0), file}
+    end
+  end
+
+  @doc """
+  Runs a migrations directory as `mix brando.migrate` does, then unloads the
+  migration modules so the next run compiles them afresh
+  """
+  def migrate(directory, direction) do
+    versions =
+      Ecto.Migrator.run(Repo, [directory], direction, all: true, log: false, migration_lock: false)
+
+    for file <- Path.wildcard(Path.join(directory, "*.exs")),
+        [_, module] <- [Regex.run(~r/defmodule (\S+) do/, File.read!(file))] do
+      module = Module.concat([module])
+      :code.purge(module)
+      :code.delete(module)
+    end
+
+    versions
+  end
+
+  @gallery_loop """
+  {% assign images = refs.slider.gallery.gallery_objects %}
+  {% for image in images %}{% picture image %}{% endfor %}
+  """
+
+  @doc """
+  An environment as provisioning makes it (every non-shared table of
+  `public`), with a page and a module whose gallery loop brando_200 fixes.
+  Returns their ids.
+  """
+  def provision(prefix) do
+    {:ok, tables} = Brando.Environments.StructureCloner.Postgres.tenant_tables("public")
+    create_environment(prefix, tables)
+
+    [[page_id]] =
+      rows("""
+      INSERT INTO "#{prefix}".pages (uri, language, title, template, edited_at, inserted_at, updated_at)
+      VALUES ('about', 'en', 'About #{prefix}', 'default.html', '2026-01-01 10:00:00', '2025-01-01 10:00:00', '2026-05-01 10:00:00')
+      RETURNING id
+      """)
+
+    [[module_id]] =
+      rows(
+        """
+        INSERT INTO "#{prefix}".content_modules (uid, class, code, inserted_at, updated_at)
+        VALUES ($1, 'slider', $2, NOW(), NOW()) RETURNING id
+        """,
+        [Brando.Utils.generate_uid(), @gallery_loop]
+      )
+
+    %{page: page_id, module: module_id}
+  end
+
+  @doc "Copies every table of `source`, with its rows, into a new `target` schema"
+  def copy_schema(source, target) do
+    query!(~s(CREATE SCHEMA "#{target}"))
+
+    for table <- tables(source) do
+      copy_table(source, target, table)
+      query!(~s{INSERT INTO "#{target}"."#{table}" SELECT * FROM "#{source}"."#{table}"})
+    end
+
+    :ok
+  end
+
+  @doc "`{columns, indexes, references}` of each table"
+  def table_set(schema, tables),
+    do: Map.new(tables, &{&1, {column_definitions(schema, &1), indexes(schema, &1), references(schema, &1)}})
+
+  @doc "The definitions of the named columns, by table"
+  def column_set(schema, columns) do
+    for {table, names} <- columns,
+        do: {table, schema |> column_definitions(table) |> Enum.filter(&(elem(&1, 0) in names))},
+        into: %{}
+  end
+
   defp unqualify(nil, _schema), do: nil
 
   defp unqualify(sql, schema) do
     sql
     |> String.replace(~s("#{schema}".), "")
     |> String.replace("#{schema}.", "")
+  end
+
+  defmodule InProcessMigrator do
+    @moduledoc false
+    # `Ecto.Migrator.up/4` runs a migration in a task, on a connection of its
+    # own. Inside the sandbox, while `Brando.Environments` holds the one
+    # connection for a site's lock, it never gets one; this runs the
+    # migration in the calling process instead.
+
+    def up(repo, version, module, opts) do
+      config = repo.config()
+
+      {:ok, :ok} =
+        repo.transaction(fn ->
+          Ecto.Migration.Runner.run(repo, config, version, module, :forward, :up, :up, opts)
+          Ecto.Migration.SchemaMigration.up(repo, config, version, opts)
+          :ok
+        end)
+
+      :ok
+    end
   end
 end
