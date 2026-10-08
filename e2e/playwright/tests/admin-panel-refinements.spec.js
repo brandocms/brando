@@ -230,15 +230,7 @@ test('block rich text keeps its toolbar below the form controls', async ({ page 
   }
 })
 
-test('Norwegian image fields use the short selection label', async ({ page }, testInfo) => {
-  const entry = await project(page)
-  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
-  await page.goto(`/admin/projects/projects/update/${entry.id}`)
-  await syncLV(page)
-  const field = page.locator('#project_listing_image-media')
-  await expect(field.getByRole('button', { name: 'Velg bilde', exact: true })).toBeVisible()
-  await field.screenshot({ path: testInfo.outputPath('image-field-norwegian.png') })
-})
+// The Norwegian image field label: media_field_browse_label_test.exs
 
 test('revision metadata is readable in Norwegian at desktop and mobile widths', async ({ page }, testInfo) => {
   expect((await page.request.post('/e2e/setup_fixtures/revision-panel')).ok()).toBe(true)

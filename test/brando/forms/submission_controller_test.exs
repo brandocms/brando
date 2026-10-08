@@ -47,6 +47,16 @@ defmodule Brando.Forms.SubmissionControllerTest do
     assert Forms.count_submissions("contact") == 0
   end
 
+  # Was a browser test (forms/form-submissions.spec.js): the site's own
+  # wording reaches the visitor, who sees what this reply says.
+  test "a JSON request words the errors as the site does", %{conn: conn, user: user} do
+    {:ok, messages} = Forms.ensure_messages(user)
+    {:ok, _} = Forms.update_messages(messages.id, %{"required" => %{"en" => "We need this one."}}, user)
+
+    conn = post_form(conn, %{"email" => ""}, @json)
+    assert %{"ok" => false, "errors" => %{"email" => ["We need this one."]}} = json_response(conn, 422)
+  end
+
   test "a plain post goes back to the page, to the form's message", %{conn: conn} do
     referer = [{"referer", "http://www.example.com/contact?x=1#top"}]
 
