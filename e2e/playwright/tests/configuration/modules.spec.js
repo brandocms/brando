@@ -104,19 +104,7 @@ test('create a simple text module', async ({ page }) => {
 // A `{% ref %}` inside `{% if %}`/`{% unless %}`/`{% for %}`/`{% hide %}` never
 // gets an input in the block editor, because those regions are stripped before
 // the code is split into slots. The editor says so instead of staying silent.
-test('warns when a ref sits inside a conditional, and clears once it is declared at the top level', async ({ page }) => {
-  await openNewModule(page)
-
-  const lint = page.locator('.module-code-lint')
-  await expect(lint).toHaveCount(0)
-
-  await replaceModuleCode(page, '{% if show %}{% ref refs.text %}{% endif %}')
-  await expect(lint).toContainText('Reference text sits inside a conditional')
-  await expect(lint).toContainText('headless_ref refs.text')
-
-  await replaceModuleCode(page, '{% headless_ref refs.text %}{% if refs.text.active %}shown{% endif %}')
-  await expect(lint).toHaveCount(0)
-})
+// The ref-in-conditional lint: var_label_translations_test.exs
 
 test('create, edit, duplicate, persist and delete refs and vars', async ({ page }) => {
   await openNewModule(page)

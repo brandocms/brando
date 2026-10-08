@@ -44,4 +44,23 @@ defmodule BrandoAdmin.VarLabelTranslationsTest do
     assert [%{label: %{"en" => "Width", "no" => "Bredde"}}] =
              Repo.preload(Repo.get!(Module, module.id), :vars, force: true).vars
   end
+
+  # The lint was a browser test in configuration/modules.spec.js; typing
+  # into CodeMirror only writes the code textarea this changes.
+  test "the editor warns when a ref sits inside a conditional, until it is declared at the top level",
+       %{conn: conn, module: module} do
+    {:ok, view, _html} = live(conn, "/admin/config/content/modules/update/#{module.id}")
+    refute has_element?(view, ".module-code-lint")
+
+    change_code(view, "{% if show %}{% ref refs.text %}{% endif %}")
+    assert has_element?(view, ".module-code-lint", "Reference text sits inside a conditional")
+    assert has_element?(view, ".module-code-lint", "headless_ref refs.text")
+
+    change_code(view, "{% headless_ref refs.text %}{% if refs.text.active %}shown{% endif %}")
+    refute has_element?(view, ".module-code-lint")
+  end
+
+  defp change_code(view, code) do
+    view |> form("#module_form-el form.main-form", %{"module" => %{"code" => code}}) |> render_change()
+  end
 end
