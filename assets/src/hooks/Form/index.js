@@ -103,15 +103,7 @@ export default (app) => ({
     })
 
     this.handleEvent('b:clear_user_presence', ({ user_id }) => {
-      // Remove all field presence indicators and unlock fields for this user
-      document.querySelectorAll(`.field-presence-user[data-user-id="${user_id}"]`)
-        .forEach(el => {
-          const fieldWrapper = el.closest('.field-wrapper')
-          if (fieldWrapper) {
-            this.js().removeClass(fieldWrapper, 'field-locked')
-          }
-          el.remove()
-        })
+      this.releaseField(user_id)
 
       // Remove block and field presence for this user
       clearUserPresence(this.js(), user_id)
@@ -123,7 +115,14 @@ export default (app) => ({
       this.dirtyFields.set(user_id, fields, label)
     })
 
+    // Another editor moved to an entry field, which is locked for us while
+    // they are in it, or left it (`field` is null), which releases it.
     this.handleEvent('b:set_active_field', (opts) => {
+      if (!opts.field) {
+        this.releaseField(opts.user_id)
+        return
+      }
+
       const color = getPresenceColor(opts.user_id)
 
       const fieldPresence = document.querySelector(
@@ -181,6 +180,19 @@ export default (app) => ({
         }
       }
     })
+  },
+
+  // Removes an editor's avatar from the entry field they were in, and
+  // unlocks it.
+  releaseField(userId) {
+    document.querySelectorAll(`.field-presence-user[data-user-id="${userId}"]`)
+      .forEach(el => {
+        const fieldWrapper = el.closest('.field-wrapper')
+        if (fieldWrapper) {
+          this.js().removeClass(fieldWrapper, 'field-locked')
+        }
+        el.remove()
+      })
   },
 
   updated() {

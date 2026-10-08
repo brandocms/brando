@@ -113,9 +113,15 @@ export default app => ({
         // or Add is answered first and the late change re-casts the form from
         // params that predate it. LiveView sends a pending debounce on the
         // input's blur event, and does nothing when none is pending.
+        //
+        // An entry's rich text field then tells the form it was left, as
+        // `FieldBase` does for other inputs: that ships it to the other
+        // editors and releases the field they see locked.
         onBlur: () => {
           if (this.el.dataset.footnotes === 'true' || this.el.closest('.block-slot-drawer')) this.commitInput()
           else this._input.dispatchEvent(new Event('blur'))
+          const entryForm = this.el.dataset.tiptapType === 'rich_text' && !this.el.closest('[data-block-uid]') && this.el.closest('.brando-form')
+          if (entryForm) this.pushEventTo(entryForm, 'blur', {})
         },
         onToggleLink: onToggle('link'), onToggleButton: onToggle('button'),
         footnotes: this.el.dataset.footnotes === 'true', footnoteLabels: readFootnoteLabels(this.el),

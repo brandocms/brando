@@ -393,6 +393,65 @@ test.describe('Multi-user block sync', () => {
     await expect(lockedWrapper.getByLabel('Title', { exact: true })).toBeAttached()
   })
 
+  // Each editor ships the entry fields it changed, a title set back to the
+  // saved one included, and leaving a field releases it. The blurs come
+  // straight after the typing, inside the input's debounce: the blur must
+  // not overtake the last keystrokes.
+  test('entry field edits and reverts reach the other editor, and leaving a field releases it', async ({
+    page,
+    secondUserPage,
+  }) => {
+    const entryUrl = await createEntryWithTwoHeaders(page, 'Multiuser Fields', 'multiuser-fields')
+
+    await page.goto(entryUrl)
+    await syncLV(page)
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+
+    const aTitle = page.getByLabel('Title', { exact: true })
+    const bTitle = secondUserPage.getByLabel('Title', { exact: true })
+    const aUri = page.getByLabel('URI')
+    const bUri = secondUserPage.getByLabel('URI')
+    const bLocks = secondUserPage.locator('.field-wrapper.field-locked')
+    const aLocks = page.locator('.field-wrapper.field-locked')
+
+    // A edits the title and leaves it
+    await aTitle.click()
+    await expect(bLocks).toHaveCount(1, { timeout: 5000 })
+    await aTitle.fill('Multiuser Fields, A')
+    await aTitle.blur()
+    await expect(bTitle).toHaveValue('Multiuser Fields, A', { timeout: 5000 })
+    await expect(bLocks).toHaveCount(0, { timeout: 5000 })
+
+    // B sets it back to the saved title and leaves it
+    await bTitle.click()
+    await expect(aLocks).toHaveCount(1, { timeout: 5000 })
+    await bTitle.fill('Multiuser Fields')
+    await bTitle.blur()
+    await expect(aTitle).toHaveValue('Multiuser Fields', { timeout: 5000 })
+    await expect(aLocks).toHaveCount(0, { timeout: 5000 })
+
+    // A edits the URI: B's title stays
+    await aUri.click()
+    await aUri.fill('multiuser-fields-a')
+    await aUri.blur()
+    await expect(bUri).toHaveValue('multiuser-fields-a', { timeout: 5000 })
+    await syncLV(page)
+    await syncLV(secondUserPage)
+
+    for (const p of [page, secondUserPage]) {
+      await expect(p.getByLabel('Title', { exact: true })).toHaveValue('Multiuser Fields')
+      await expect(p.getByLabel('URI')).toHaveValue('multiuser-fields-a')
+      await expect(p.locator('.field-wrapper.field-locked')).toHaveCount(0)
+    }
+
+    // A field B is in is released when B leaves the entry
+    await bTitle.click()
+    await expect(aLocks).toHaveCount(1, { timeout: 5000 })
+    await secondUserPage.goto('/admin')
+    await expect(aLocks).toHaveCount(0, { timeout: 10000 })
+  })
+
   test("A's child delete syncs to B immediately, no blur needed", async ({
     page,
     secondUserPage,

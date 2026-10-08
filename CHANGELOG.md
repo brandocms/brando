@@ -1662,6 +1662,19 @@ production dump.
 
 #### Fixes
 
+- **Two editors in an entry's fields keep each other's changes, and a
+  field is unlocked when its editor leaves it.** Each editor now sends the
+  entry fields (title, URI and the other fields, not blocks) they changed
+  since they last sent, a field set back to its saved value included, and
+  never a value they only hold. A title set back to the saved one used to
+  stay as the other editor's own text on their screen, and their next field
+  sent the old title back to everyone. Leaving a field straight after typing
+  in it no longer sends the field before the last keystrokes. A change to
+  the field someone is in waits until they leave it, and applies unless
+  they typed. Leaving a field, a rich text field included, unlocks it for
+  the others; before, it stayed locked until the editor focused another
+  field or left the entry.
+
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is
   now fitted to the height. A cropped size could come out a pixel or two
