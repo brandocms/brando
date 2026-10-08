@@ -8,16 +8,46 @@
 // in that time went nowhere. The edit session already keeps what is typed
 // while a save runs, so the inputs can stay as they are.
 //
-// The focused input's pending debounced change is flushed first, so the
-// save includes the last keystrokes: LiveView sends a pending debounce on
-// the input's blur event, which is dispatched without moving the focus. A
-// rich text editor has the focus in its editor, not its hidden input.
+// What a submit did besides is done here:
+// * the focused input's pending debounced change is flushed first, so the
+//   save includes the last keystrokes (`flushFocused`);
+// * every input is marked submitted, so the form's errors show for fields
+//   the editor never touched (LiveView's `used_input?`);
+// * `brando:save` is dispatched on the form, for the recovery copy's save
+//   generation (`draftRecovery.js`).
+//
+// The push goes from an empty element beside the form (`data-save-source`),
+// not from the element of the hook that calls it: a hook push locks its
+// element until the reply, and a lock on the element around the block
+// fields nests their own locks and drops blocks (see `draftRecovery.js`).
 
+// LiveView's private DOM keys (`DOM.putPrivate`), as its submit sets them.
+const PHX_PRIVATE = 'phxPrivate'
+const PHX_HAS_SUBMITTED = 'phx-has-submitted'
+
+const markSubmitted = el => {
+  el[PHX_PRIVATE] = { ...(el[PHX_PRIVATE] || {}), [PHX_HAS_SUBMITTED]: true }
+}
+
+// The input that holds what the focused element edits: the element itself,
+// or the hidden input or textarea of the widget around it (a rich text
+// editor, a code editor) that LiveView sends.
 const focusedInput = () => {
   const active = document.activeElement
   if (!active || active === document.body) return null
   if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') return active
-  return active.closest?.('[phx-hook="Brando.TipTap"]')?.querySelector('.tiptap-text') || null
+  return active.closest?.('[phx-hook]')?.querySelector('input[phx-debounce], textarea[phx-debounce], .tiptap-text') || null
+}
+
+// LiveView sends a pending debounce on the input's blur event. It is
+// dispatched without moving the focus, and marked, so the field presence
+// handlers that also listen for blur (`FieldBase`) leave it alone.
+export const flushFocused = () => {
+  const input = focusedInput()
+  if (!input) return
+  const event = new Event('blur')
+  event.brandoFlush = true
+  input.dispatchEvent(event)
 }
 
 // The form's fields as LiveView would send them, files left out (uploads
@@ -25,15 +55,29 @@ const focusedInput = () => {
 export const formPayload = form =>
   new URLSearchParams(Array.from(new FormData(form)).filter(([, value]) => typeof value === 'string')).toString()
 
+const saveSource = form =>
+  form.closest('[phx-hook="Brando.Form"], .brando-form')?.querySelector('[data-save-source]') || null
+
 // A form that takes its fields as an event names it (`data-save-event`,
 // the entry form). Any other form the save button belongs to is submitted.
-export default function saveForm(hook, form) {
+// `token`: the `b:submit` this save answers. `stay`: save and continue
+// editing (⌘S), sent with the save rather than in a push of its own.
+export default function saveForm(hook, form, { token, stay } = {}) {
   const event = form.dataset.saveEvent
   if (!event) {
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     return
   }
 
-  focusedInput()?.dispatchEvent(new Event('blur'))
-  hook.pushEventTo(form, event, { form: formPayload(form) })
+  flushFocused()
+  markSubmitted(form)
+  Array.from(form.elements).forEach(markSubmitted)
+  form.dispatchEvent(new CustomEvent('brando:save', { bubbles: true }))
+
+  const value = { form: formPayload(form) }
+  if (token !== undefined) value.token = token
+  if (stay) value.stay = true
+  const source = saveSource(form)
+  if (source) hook.js().push(source, event, { value })
+  else hook.pushEventTo(form, event, value)
 }

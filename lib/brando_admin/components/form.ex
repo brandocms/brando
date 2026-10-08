@@ -2298,10 +2298,16 @@ defmodule BrandoAdmin.Components.Form do
     transformers_ready? = !Enum.any?(Map.values(socket.assigns.transformer_changesets), &is_nil/1)
 
     if blocks_ready? && transformers_ready? do
+      # The write that answers this `b:submit` carries its token; a save
+      # that wrote already leaves a later one stale (`"save_form"`).
+      token = System.unique_integer([:positive])
+
       socket
       |> assign(:all_blocks_received?, true)
       |> assign(:all_transformers_received?, true)
-      |> push_event("b:submit", %{})
+      |> assign(:save_collecting_since, nil)
+      |> assign(:save_token, token)
+      |> push_event("b:submit", %{token: token})
     else
       socket
       |> assign_received(:all_blocks_received?, blocks_ready?)
@@ -2686,6 +2692,8 @@ defmodule BrandoAdmin.Components.Form do
       >
         <%!-- Recovery captures are pushed from this empty element, see `draftRecovery.js` --%>
         <span id={"#{@id}-draft-capture"} data-draft-capture phx-target={@myself} hidden></span>
+        <%!-- Saves are pushed from this one, see `saveForm.js` --%>
+        <span id={"#{@id}-save-source"} data-save-source phx-target={@myself} hidden></span>
         <.follow_frame id={@id} />
         <div class={["form-content", @live_preview_active? && "with-live-preview"]}>
           <EntryHeader.header
@@ -3538,6 +3546,20 @@ defmodule BrandoAdmin.Components.Form do
   # The save button and ⌘S push the form's fields rather than submit it, so
   # the focused input keeps the focus and what is typed while the save runs
   # (assets/src/hooks/Form/saveForm.js).
+  #
+  # The second half of a save carries the token its `b:submit` came with: a
+  # token the form no longer holds is a save that already wrote (two quick
+  # saves, a button press and ⌘S), and is ignored.
+  # ⌘S says to stay with the save, rather than in a push of its own.
+  def handle_event("save_form", %{"stay" => true} = params, socket),
+    do: handle_event("save_form", Map.delete(params, "stay"), assign(socket, :save_redirect_target, :self))
+
+  def handle_event("save_form", %{"form" => form, "token" => token}, socket) when is_binary(form) do
+    if token == socket.assigns[:save_token],
+      do: handle_event("save", Plug.Conn.Query.decode(form), socket),
+      else: {:noreply, socket}
+  end
+
   def handle_event("save_form", %{"form" => form}, socket) when is_binary(form),
     do: handle_event("save", Plug.Conn.Query.decode(form), socket)
 
@@ -3773,7 +3795,16 @@ defmodule BrandoAdmin.Components.Form do
 
     case Drafts.check_save(socket) do
       {:error, socket} ->
-        {:noreply, socket}
+        # The save stops here: the session stops keeping what it read, and
+        # the next save collects the blocks again.
+        if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
+
+        {:noreply,
+         socket
+         |> assign(:processing, false)
+         |> assign(:all_blocks_received?, false)
+         |> assign(:save_token, nil)
+         |> clear_blocks_root_changesets()}
 
       :ok ->
         {:noreply, result} = handle_event("save", params, assign(socket, :draft_save_checked?, true))
@@ -3820,6 +3851,7 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
+    socket = assign(socket, :save_token, nil)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -3887,18 +3919,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("save", _params, %{assigns: %{has_blocks?: true}} = socket) do
-    # has blocks, but not all blocks have been received
-    fetch_transformer_data(socket, :save)
-    send(self(), {:progress_popup, "Saving..."})
-
-    # A form that declares none of the schema's block fields has no BlockField
-    # to answer, so `fetch_root_blocks/3` handles the tag itself and returns the
-    # socket carrying the submit. Dropping that socket left the save hanging.
-    {:noreply,
-     socket
-     |> ship_all_field_changes()
-     |> assign(:processing, true)
-     |> fetch_root_blocks(:save, 150)}
+    if collecting_save?(socket), do: {:noreply, socket}, else: collect_for_save(socket)
   end
 
   def handle_event(
@@ -5457,6 +5478,35 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # A save asks every block field for its blocks, then writes once they all
+  # answered (`event_tag_received/2`). A second save while the first is
+  # collecting (a button press and ⌘S) is the same save. A collection that
+  # never finishes stops counting after a while, so a save can be tried
+  # again.
+  @save_collect_ms 10_000
+
+  defp collecting_save?(socket) do
+    case socket.assigns[:save_collecting_since] do
+      nil -> false
+      since -> System.monotonic_time(:millisecond) - since < @save_collect_ms
+    end
+  end
+
+  defp collect_for_save(socket) do
+    fetch_transformer_data(socket, :save)
+    send(self(), {:progress_popup, "Saving..."})
+
+    # A form that declares none of the schema's block fields has no BlockField
+    # to answer, so `fetch_root_blocks/3` handles the tag itself and returns the
+    # socket carrying the submit. Dropping that socket left the save hanging.
+    {:noreply,
+     socket
+     |> ship_all_field_changes()
+     |> assign(:processing, true)
+     |> assign(:save_collecting_since, System.monotonic_time(:millisecond))
+     |> fetch_root_blocks(:save, 150)}
+  end
+
   # All collected: the blocks are dropped, and the write that follows (the
   # `b:submit` already on its way) collects them again first. Still
   # collecting: the field that moved on is asked again.
@@ -5539,6 +5589,10 @@ defmodule BrandoAdmin.Components.Form do
                 "The entry was saved, but an existing redirect on its new URL could not be removed. Please check the SEO redirect settings."
               )
           end
+
+        # The entry is saved: the edit session moves onto it now, not when
+        # the prompt is answered, which may be never.
+        EditSession.saved(saved)
 
         socket
         |> assign(:processing, false)

@@ -27,8 +27,10 @@ export default (app) => ({
     }
   },
 
-  handleBlur() {
-    if (this.el.closest('[data-block-uid]')) return
+  // A save flushes the focused input's pending change with a synthetic blur
+  // (`Form/saveForm.js`); the editor is still in the field.
+  handleBlur(event) {
+    if (event?.brandoFlush || this.el.closest('[data-block-uid]')) return
     const formEl = this.el.closest('.brando-form')
     if (formEl) {
       this.pushEventTo(formEl, 'blur', {})

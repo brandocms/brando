@@ -118,7 +118,9 @@ export default function draftRecovery(hook) {
   }
   hook.el.addEventListener('input', onInput, true)
   hook.el.addEventListener('change', onInput, true)
+  // A save from the save button or ⌘S is not a form submit (`saveForm.js`).
   hook.el.addEventListener('submit', onSubmit, true)
+  hook.el.addEventListener('brando:save', onSubmit, true)
   hook.el.addEventListener('click', copyContent)
   window.addEventListener('beforeunload', beforeUnload)
   window.addEventListener('click', beforeNavigate, true)
@@ -161,6 +163,7 @@ export default function draftRecovery(hook) {
       hook.el.removeEventListener('input', onInput, true)
       hook.el.removeEventListener('change', onInput, true)
       hook.el.removeEventListener('submit', onSubmit, true)
+      hook.el.removeEventListener('brando:save', onSubmit, true)
       hook.el.removeEventListener('click', copyContent)
       window.removeEventListener('beforeunload', beforeUnload)
       window.removeEventListener('click', beforeNavigate, true)

@@ -162,6 +162,66 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert Map.new(texts(c.identity))[first] == "<p>Saved by a pushed save</p>"
   end
 
+  # Follow-up, round 2: a save whose new URL opens the redirect prompt left
+  # the edit session on the old rows, its mark pinning the op log, until the
+  # prompt was answered.
+  test "a save that asks about a redirect moves the session on at once", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    stay(a)
+    type(a, first, "<p>Saved with a new URL</p>")
+    a |> form("#page_form_form") |> render_change(%{"page" => %{"uri" => "moved-on"}, "_target" => ["page", "uri"]})
+    save_read(a)
+    save_write(a)
+    assert render(a) =~ "moved-on"
+
+    session = EditSession.whereis(EditSession.ref(Page, c.identity.id, c.identity.language))
+    await(fn -> :sys.get_state(session).data.fields[:blocks].marks == %{} end)
+    assert session_state(c.identity).diffs[first] in [nil, %{}]
+    assert shown_text(b, first) == "<p>Saved with a new URL</p>"
+  end
+
+  # Follow-up, round 2: the save button and then ⌘S (or ⌘S twice) before
+  # the first answered wrote the entry twice.
+  test "two quick saves write once", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    stay(a)
+    type(a, first, "<p>Saved once</p>")
+    cid = form_cid(a)
+    form = a |> render() |> form_params("#page_form_form") |> Plug.Conn.Query.encode()
+
+    revisions = fn ->
+      Repo.one(from(r in Brando.Revisions.Revision, where: r.entry_id == ^c.identity.id, select: count()))
+    end
+
+    before = revisions.()
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => form})
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => form})
+
+    # every b:submit is answered, as the browser does, with its token
+    answered =
+      Enum.reduce_while(1..4, 0, fn _, answered ->
+        receive do
+          {ref, {:push_event, "b:submit", %{token: token}}} when is_reference(ref) ->
+            a |> with_target(cid) |> render_hook("save_form", %{"form" => form, "token" => token})
+            {:cont, answered + 1}
+        after
+          1_000 -> {:halt, answered}
+        end
+      end)
+
+    assert answered == 1
+    assert revisions.() - before == 1
+    assert Map.new(texts(c.identity))[first] == "<p>Saved once</p>"
+
+    # a b:submit answered after its save wrote is ignored
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => form, "token" => 12_345})
+    refute_receive {_, {:push_event, "b:submit", _}}, 300
+    assert revisions.() - before == 1
+  end
+
   # Follow-up: a save's mark is cleared when the save is done, not after a
   # fixed time. A save that fails lets go of it at once.
   test "a save that fails lets the session forget what it read", c do

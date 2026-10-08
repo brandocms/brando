@@ -27,7 +27,9 @@ export default app => ({
       this.submitForm()
     })
 
-    this.handleEvent('b:submit', () => this.submitWhenReleased(Date.now()))
+    // The write carries the token of the `b:submit` it answers: one that
+    // arrives after its save already wrote is ignored by the server.
+    this.handleEvent('b:submit', ({ token } = {}) => this.submitWhenReleased(Date.now(), token))
   },
 
   destroyed() {
@@ -45,20 +47,20 @@ export default app => ({
     )
   },
 
-  submitWhenReleased(startedAt) {
+  submitWhenReleased(startedAt, token) {
     if (this.isSubmitting() && Date.now() - startedAt < RELEASE_TIMEOUT_MS) {
-      this._releaseTimer = setTimeout(() => this.submitWhenReleased(startedAt), RELEASE_POLL_MS)
+      this._releaseTimer = setTimeout(() => this.submitWhenReleased(startedAt, token), RELEASE_POLL_MS)
       return
     }
 
     // Past the deadline we submit anyway: a dropped submit leaves the form
     // locked, so a best-effort attempt beats giving up silently.
     this._releaseTimer = null
-    this.submitForm()
+    this.submitForm(token)
   },
 
   // Not a form submit: see `../Form/saveForm.js`.
-  submitForm() {
-    saveForm(this, this.$form)
+  submitForm(token) {
+    saveForm(this, this.$form, { token })
   }
 })
