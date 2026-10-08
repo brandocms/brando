@@ -1616,6 +1616,17 @@ production dump.
   config, so `mix brando.images.adopt` and **Recreate changed images** don't
   recreate them for this.
 
+- **A `srcset` says how wide each file really is.** The `w` widths in an
+  image config's `srcset` were printed as written, so a 600-pixel original
+  rendered its `"1400"` size as `1400w` although the file is 600 wide, and
+  several sizes as different widths of the same picture. When the image's
+  width and height are known, each width is now lowered to the size's real
+  one, and sizes that end up equally wide are listed once: 400, 700, 1100 and
+  1400 for a 600-pixel original render `400w` and `600w`. Media query
+  sources do the same. An image's width and height are now recorded as it is
+  shown, turned by its EXIF orientation; images uploaded earlier get them
+  when they are next processed.
+
 - **Nothing typed or changed in a shared entry is lost on the way to a
   save.** The save button and ⌘S no longer submit the form, which took the
   focus from the field being typed in and ignored every key until the save

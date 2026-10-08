@@ -119,14 +119,12 @@ defmodule Brando.Images.Operations.Sizing do
 
   # The processor turns the image upright by its EXIF orientation before
   # resizing, and the focal point is set on the upright image, so crops and
-  # the orientation pick are worked out on its upright dimensions. An image's
-  # recorded dimensions are those of the file as stored.
+  # the orientation pick are worked out on its upright dimensions. Images
+  # uploaded before Brando recorded those have the stored file's.
   defp upright(dimensions, img_path) do
-    with {:ok, img} <- Image.open(img_path),
-         {:ok, orientation} when orientation in 5..8 <- Vix.Vips.Image.header_value(img, "orientation") do
-      {Image.height(img), Image.width(img)}
-    else
-      _ -> dimensions
+    case Image.open(img_path) do
+      {:ok, img} -> if Images.Utils.rotated?(img), do: Images.Utils.upright_dimensions(img), else: dimensions
+      {:error, _reason} -> dimensions
     end
   end
 

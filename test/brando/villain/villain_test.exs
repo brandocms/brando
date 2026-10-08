@@ -211,7 +211,8 @@ defmodule Brando.VillainTest do
     assert parsed =~ "Module code with Test value and refs:"
     assert parsed =~ "This is a headline"
     assert parsed =~ "<picture"
-    assert parsed =~ "/media/image/large/1.jpg"
+    # The fixture original is 300 wide, so every size is too: one candidate.
+    assert parsed =~ ~s(srcset="/media/image/small/1.jpg 300w")
   end
 
   test "parse with container block", %{user: user} do
@@ -411,7 +412,7 @@ defmodule Brando.VillainTest do
     assert parsed =~ "Child module with Child value"
     assert parsed =~ "Custom headline text"
     assert parsed =~ "<picture"
-    assert parsed =~ "/media/image/medium/1.jpg" || parsed =~ image.path
+    assert parsed =~ "/media/image/small/1.jpg 300w" || parsed =~ image.path
   end
 
   test "multi modules dispatch each child through its own template adapter", %{user: user} do

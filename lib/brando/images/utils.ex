@@ -93,6 +93,28 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
+  Whether an opened image is stored on its side: its EXIF orientation turns
+  it a quarter, so it is shown, and processed, with width and height swapped.
+  """
+  @spec rotated?(Vix.Vips.Image.t()) :: boolean()
+  def rotated?(img) do
+    case Vix.Vips.Image.header_value(img, "orientation") do
+      {:ok, orientation} when orientation in 5..8 -> true
+      _ -> false
+    end
+  end
+
+  @doc """
+  An opened image's `{width, height}` as it is shown: turned by its EXIF
+  orientation, as browsers and image processing turn it.
+  """
+  @spec upright_dimensions(Vix.Vips.Image.t()) :: {pos_integer(), pos_integer()}
+  def upright_dimensions(img) do
+    {width, height} = {Vix.Vips.Image.width(img), Vix.Vips.Image.height(img)}
+    if rotated?(img), do: {height, width}, else: {width, height}
+  end
+
+  @doc """
   Splits `file` with `split_path/1`, adds `size` to the path before
   concatenating it with the filename.
 

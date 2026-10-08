@@ -50,9 +50,15 @@ original 600 pixels wide, `"1400"` gives a 600-pixel file. A cropped size is
 cut to exactly its geometry around the focal point, or, from an original
 smaller than the geometry, to the largest part of it with the geometry's
 proportions. A trailing `>` ("only shrink") is accepted and changes nothing.
-`srcset` widths are written by hand and are not checked against the files, so
-`{"large", "1400w"}` is declared 1400 wide even when the original is
-narrower. See `Brando.Images.Size`.
+See `Brando.Images.Size`.
+
+A `srcset` names each size's width, as in `{"large", "1400w"}`. When the
+image's width and height are known, a rendered `srcset` gives each size the
+width its file really has, and lists sizes that end up equally wide once,
+under the one declared smallest: a 600-pixel original with sizes of 400, 700,
+1100 and 1400 renders `400w` and a single `600w`. Images are recorded upright
+(turned by their EXIF orientation), as they are shown; ones uploaded before
+0.55 get upright dimensions when they are next processed.
 
 ### Render responsive images
 

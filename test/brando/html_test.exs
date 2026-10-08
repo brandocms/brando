@@ -451,7 +451,9 @@ defmodule Brando.HTMLTest do
   end
 
   test "picture_tag" do
+    # An original larger than every size, so the srcset is as declared.
     user = Factory.build(:user)
+    user = %{user | avatar: %{user.avatar | width: 3000, height: 2000}}
     srcset = {Brando.Users.User, :avatar}
 
     opts = [
@@ -653,8 +655,8 @@ defmodule Brando.HTMLTest do
 
     assert doc
            |> Floki.find("picture > img")
-           |> assert_attr("height", ["200"])
-           |> assert_attr("width", ["300"])
+           |> assert_attr("height", ["2000"])
+           |> assert_attr("width", ["3000"])
            |> assert_attr("alt", [""])
 
     assert doc
@@ -760,10 +762,10 @@ defmodule Brando.HTMLTest do
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
            |> assert_attr("data-src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%273000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
            |> assert_attr("src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%273000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
 
     # ---
@@ -805,10 +807,10 @@ defmodule Brando.HTMLTest do
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
            |> assert_attr("data-src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%273000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
            |> assert_attr("src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%273000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
 
     [source_webp, source_jpeg] = Floki.find(doc, "source")
@@ -889,10 +891,10 @@ defmodule Brando.HTMLTest do
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
            |> assert_attr("data-src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%273000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
            |> assert_attr("src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%273000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
 
     # ---
@@ -1283,7 +1285,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "get_srcset" do
-    img_field = Factory.build(:image)
+    img_field = large_image()
     img_cfg = Factory.build(:image_cfg)
 
     assert_raise ArgumentError, fn ->
@@ -1298,8 +1300,9 @@ defmodule Brando.HTMLTest do
 
     img_cfg = Factory.build(:image_cfg, srcset: srcset)
 
+    # "medium" is 250 wide for a landscape, whatever the srcset says.
     assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg) ==
-             {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
+             {false, "image/small/1.jpg 300w, image/medium/1.jpg 250w, image/large/1.jpg 700w"}
 
     assert Brando.HTML.Images.get_srcset(img_field, srcset, [], :svg) ==
              {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
@@ -1310,7 +1313,7 @@ defmodule Brando.HTMLTest do
   # `String.replace/3` a list (two keys).
   describe "get_srcset with a keyed image config struct" do
     test "uses the `:default` key" do
-      img_field = Factory.build(:image)
+      img_field = large_image()
       img_cfg = Factory.build(:image_cfg, srcset: %{default: [{"small", "300w"}, {"large", "700w"}]})
 
       assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg) ==
@@ -1346,7 +1349,7 @@ defmodule Brando.HTMLTest do
     srcset = [{"small", "300w"}, {"large", "700w"}]
 
     img_field =
-      Factory.build(:image,
+      large_image(
         path: "image/NTECH 12, Keynote.jpg",
         sizes: %{
           "small" => "image/small/NTECH 12, Keynote.jpg",
@@ -1439,7 +1442,7 @@ defmodule Brando.HTMLTest do
   # A `:gallery` asset's config is `%{image: ImageConfig, video: VideoConfig}`
   # rather than an image config, so reading `:srcset` straight off it raised.
   test "get_srcset reads a gallery asset's image config" do
-    img_field = Factory.build(:image)
+    img_field = large_image()
     expected = "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"
 
     assert Brando.HTML.Images.get_srcset(img_field, {SrcsetAssets, :cover}, [], :svg) ==
@@ -1450,7 +1453,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "get_srcset reads a keyed srcset from a gallery asset's image config" do
-    img_field = Factory.build(:image)
+    img_field = large_image()
     expected = "image/small/1.jpg 300w, image/large/1.jpg 700w"
 
     assert Brando.HTML.Images.get_srcset(img_field, {SrcsetAssets, :keyed_cover, :default}, [], :svg) ==
@@ -1461,7 +1464,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "get_srcset accepts a gallery asset through the string form" do
-    img_field = Factory.build(:image)
+    img_field = large_image()
 
     assert Brando.HTML.Images.get_srcset(
              img_field,
@@ -1589,7 +1592,8 @@ defmodule Brando.HTMLTest do
       srcset: %{default: [{"small", "300w"}, {"thumb", "400w"}]}
     }
 
-    assert {1.0, srcset} = Brando.HTML.Images.get_srcset(user.avatar, cfg, prefix: media_url())
+    avatar = %{user.avatar | width: 3000, height: 2000}
+    assert {1.0, srcset} = Brando.HTML.Images.get_srcset(avatar, cfg, prefix: media_url())
     assert srcset =~ "/thumb/27i97a.jpeg 400w"
   end
 
@@ -1603,4 +1607,87 @@ defmodule Brando.HTMLTest do
 
     assert {false, _srcset} = Brando.HTML.Images.get_srcset(user.avatar, cfg, prefix: media_url())
   end
+
+  describe "srcset widths" do
+    @widths_cfg %Brando.Type.ImageConfig{
+      sizes: %{
+        "s400" => %{"size" => "400"},
+        "s700" => %{"size" => "700"},
+        "s1100" => %{"size" => "1100"},
+        "s1400" => %{"size" => "1400"},
+        "crop" => %{"size" => "800", "crop" => true, "ratio" => "3/2"},
+        "oriented" => %{"portrait" => %{"size" => "x700"}, "landscape" => %{"size" => "1100"}}
+      },
+      srcset: [{"s400", "400w"}, {"s700", "700w"}, {"s1100", "1100w"}, {"s1400", "1400w"}]
+    }
+
+    defp sized_image(width, height) do
+      keys = ~w(s400 s700 s1100 s1400 crop oriented)
+      Factory.build(:image, width: width, height: height, sizes: Map.new(keys, &{&1, "image/#{&1}/1.jpg"}))
+    end
+
+    defp srcset(image, srcset \\ nil) do
+      cfg = if srcset, do: %{@widths_cfg | srcset: srcset}, else: @widths_cfg
+      {_ratio, rendered} = Brando.HTML.Images.get_srcset(image, cfg, [])
+      rendered
+    end
+
+    test "a size wider than the original is declared as wide as it, once" do
+      assert srcset(sized_image(600, 400)) == "image/s400/1.jpg 400w, image/s700/1.jpg 600w"
+    end
+
+    test "the one kept is the one declared smallest, whatever the order" do
+      reversed = [{"s1400", "1400w"}, {"s1100", "1100w"}, {"s700", "700w"}, {"s400", "400w"}]
+      assert srcset(sized_image(600, 400), reversed) == "image/s700/1.jpg 600w, image/s400/1.jpg 400w"
+    end
+
+    test "a larger original is as declared" do
+      assert srcset(sized_image(3000, 2000)) ==
+               "image/s400/1.jpg 400w, image/s700/1.jpg 700w, image/s1100/1.jpg 1100w, image/s1400/1.jpg 1400w"
+    end
+
+    test "without the original's dimensions, as declared" do
+      expected = "image/s400/1.jpg 400w, image/s700/1.jpg 700w, image/s1100/1.jpg 1100w, image/s1400/1.jpg 1400w"
+      assert srcset(sized_image(nil, nil)) == expected
+      assert srcset(%{sized_image(600, 400) | height: nil}) == expected
+    end
+
+    test "a cropped size is as wide as its crop of the original" do
+      # 800×533 from a large original; the largest 3:2 crop of a 600×400 one.
+      assert srcset(sized_image(3000, 2000), [{"crop", "800w"}]) == "image/crop/1.jpg 800w"
+      assert srcset(sized_image(600, 400), [{"crop", "800w"}]) == "image/crop/1.jpg 600w"
+      assert srcset(sized_image(300, 600), [{"crop", "800w"}]) == "image/crop/1.jpg 300w"
+    end
+
+    test "a size by orientation is as wide as the original's orientation makes it" do
+      # A portrait 1200×1800 is 700 tall, so 467 wide; a landscape is 1100 wide.
+      assert srcset(sized_image(1200, 1800), [{"oriented", "1100w"}]) == "image/oriented/1.jpg 467w"
+      assert srcset(sized_image(1800, 1200), [{"oriented", "1100w"}]) == "image/oriented/1.jpg 1100w"
+    end
+
+    test "descriptors other than a width, and an author's narrower width, are kept" do
+      assert srcset(sized_image(600, 400), [{"s400", "1x"}, {"s1400", "2x"}]) ==
+               "image/s400/1.jpg 1x, image/s1400/1.jpg 2x"
+
+      assert srcset(sized_image(3000, 2000), [{"s1400", "900w"}]) == "image/s1400/1.jpg 900w"
+    end
+
+    test "media query sources are fitted by the image's own config" do
+      # No config target: the default sizes, where "small" is 700 and "large" 1700.
+      image =
+        Factory.build(:image,
+          width: 600,
+          height: 400,
+          config_target: nil,
+          sizes: %{"small" => "image/small/1.jpg", "large" => "image/large/1.jpg"}
+        )
+
+      assert Brando.HTML.Images.get_mq(image, [{"(max-width: 760px)", [{"small", "700w"}, {"large", "1700w"}]}], []) ==
+               [{"(max-width: 760px)", "image/small/1.jpg 600w"}]
+    end
+  end
+
+  # The factory image is 300 wide; larger than every size, a srcset is as
+  # declared.
+  defp large_image(attrs \\ []), do: Factory.build(:image, Keyword.merge([width: 3000, height: 2000], attrs))
 end
