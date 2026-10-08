@@ -1079,6 +1079,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :activity}), do: gettext("Activity")
   defp resource_label(%{subject: :security_log}), do: gettext("Security log")
   defp resource_label(%{subject: :webhooks}), do: gettext("Webhooks")
+  defp resource_label(%{subject: :notifications}), do: gettext("Notifications")
   defp resource_label(%{subject: :mcp}), do: gettext("Connected AI tools")
   defp resource_label(%{subject: :listing_views}), do: gettext("Shared listing views")
   defp resource_label(permission), do: permission.label
@@ -1088,6 +1089,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
     do:
       gettext(
         "Shows the type, id, URL, status and changed fields of every entry, drafts included, and sends them to URLs the person chooses."
+      )
+
+  defp resource_note(%{subject: :notifications}),
+    do:
+      gettext(
+        "Sends entry titles and people's names to Slack, Microsoft Teams or by email to chosen users, when content is mentioned, published or unpublished on schedule, or a job fails."
       )
 
   defp resource_note(%{subject: :mcp}),

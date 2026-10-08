@@ -546,7 +546,8 @@ defmodule BrandoAdmin.Menu do
   end
 
   # Without group authorization, for administrators; with it, the
-  # `brando.webhooks.manage` or `brando.mcp.manage` permission decides.
+  # `brando.webhooks.manage`, `brando.notifications.manage` or
+  # `brando.mcp.manage` permission decides.
   defp integrations_menu_item(user) do
     if user && BrandoAdmin.Sites.IntegrationsLive.can_open?(user),
       do: %{name: gettext("Integrations"), url: "/admin/config/integrations", icon: "plug"}

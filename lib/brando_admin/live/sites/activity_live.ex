@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   end
 
   # Events of schemas the user may not read stay out of the log; changes to
-  # webhooks show to those who manage them.
+  # webhooks and notification routes show to those who manage them.
   defp readable_schemas do
     if Brando.Authorization.enabled?() do
       readable = Enum.filter(Activity.schemas(), &BrandoAdmin.Authorization.allowed?(:read, &1))
@@ -73,6 +73,11 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       readable =
         if BrandoAdmin.Authorization.allowed?(:manage, :webhooks),
           do: [Brando.Webhooks.Webhook | readable],
+          else: readable
+
+      readable =
+        if BrandoAdmin.Authorization.allowed?(:manage, :notifications),
+          do: [Brando.Notifications.Route | readable],
           else: readable
 
       # Connected AI tools: connections, their tool calls and the switch

@@ -94,7 +94,12 @@
     input { flex: none; margin: 0; }
     > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
     code { color: var(--brando-muted); font-size: 11px; }
+    small { color: var(--brando-muted); font-size: 12px; }
   }
+  /* A choice with a line under its label: recipients, notification events */
+  .webhook-choice:has(small) { align-items: flex-start; }
+  .webhook-choice:has(small) > span { flex-direction: column; gap: 2px; }
+  .webhook-choice:has(small) input { margin-top: 2px; }
   .webhook-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
   .webhook-form-footer {
     display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px;
@@ -113,6 +118,7 @@
     .webhook-response { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .webhook-duration { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .webhook-muted { color: var(--brando-muted); }
+    td > span + small { display: block; color: var(--brando-muted); }
     time { white-space: nowrap; }
   }
 
