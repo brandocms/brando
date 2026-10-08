@@ -171,6 +171,8 @@ own CMS templates while preserving your Phoenix PageHTML and layouts. Templates
 under `priv/templates/brando.gen.site` override packaged defaults. No page or
 account is created by this source generator.
 
+<!-- usage-rules:start -->
+
 ## Run setup
 
 ```sh
@@ -188,6 +190,8 @@ account and `--base-url` and `--description` for the seeded site identity.
 `--source PATH` hands a Brando JavaScript source to asset setup. The sections below describe the same
 steps as individual tasks, which is what to reach for when you want to control
 them separately.
+
+<!-- usage-rules:end -->
 
 ## Build assets
 
@@ -258,6 +262,8 @@ For `single`/`multi`, provision the site/environment after public migrations and
 initialize content inside that environment as described in the tenancy guide.
 Group authorization remains an explicit setup in [Authorization](authorization.md).
 
+<!-- usage-rules:start -->
+
 ## Generate a content type
 
 ```sh
@@ -279,6 +285,8 @@ command reads compiled metadata, extends its context using AST edits, and adds
 admin list/form modules and routes. Multiple resources can share a context.
 Existing custom queries remain in place; conflicting functions and owned files
 are reported. Add a navigation entry and review the authorization policy explicitly.
+
+<!-- usage-rules:end -->
 
 Public rendering requires an explicit route choice:
 
@@ -423,7 +431,11 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.tenant_migration` | Tenant migration source; see the tenancy guide |
 | `brando.doctor` | Read-only checks of versions, migrations, configuration, assets and content; see [System check](doctor.md) |
 
+<!-- usage-rules:start -->
+
 For setup failures, fix the first compiler, migration or asset error before
 continuing. After an upgrade, `mix brando.doctor` lists what is still out of
 date (see [System check](doctor.md)). Do not mark a migration applied to skip an error. Keep historical
 migrations and snapshots in version control.
+
+<!-- usage-rules:end -->

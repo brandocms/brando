@@ -1,10 +1,14 @@
 # Attributes, relations, and assets
 
+<!-- llms-description: Attributes, relations and assets: field types and options, uniqueness, constraints and media fields. -->
+
 A Blueprint's fields come from three sections. `attributes` declares columns,
 `relations` declares associations and embeds, and `assets` declares images,
 files, videos and galleries. Each becomes an Ecto field or association, takes
 part in the generated `changeset/5`, and goes into the
 [migration snapshot](blueprint_migrations.md) when it is stored.
+
+<!-- usage-rules:start -->
 
 ```elixir
 attributes do
@@ -27,6 +31,8 @@ Each section may appear more than once; traits use that to add fields. A
 field name may be declared once across all three. After changing stored
 fields, generate a migration as described in
 [Blueprint migrations](blueprint_migrations.md).
+
+<!-- usage-rules:end -->
 
 ## Attributes
 
@@ -101,6 +107,23 @@ exception: their options are passed to the type unchecked. Use the root
 [`trait :timestamped`](blueprint_traits.md#timestamped) does, become Ecto's
 `timestamps()` and take no options.
 
+<!-- usage-rules:start -->
+
+### Rules
+
+* Attribute types: `:string`, `:text`, `:slug`, `:integer`, `:float`,
+  `:decimal`, `:boolean`, `:map`, `:id`, `:date`, `:time`, `:datetime` (UTC),
+  `:naive_datetime`, `:uuid`, `:status`, `:enum`, `:language`, `:i18n_string`,
+  `{:array, type}`, or an `Ecto.Type` module. A bare `:array` is rejected, and
+  `:file` does not compile; use a [file asset](#assets).
+* A `:slug` attribute does not slugify itself; the form's
+  [`:slug` input](blueprint_forms.md#slugs) builds the value.
+* `required: true` validates presence in the changeset only; add `null: false`
+  for a `NOT NULL` column.
+* `default:` is both the new struct's value and the column default.
+* Unknown options fail the compilation. Declare the primary key with the root
+  `primary_key` declaration, not `primary_key: true` on an attribute.
+
 ### Enums
 
 ```elixir
@@ -114,6 +137,8 @@ keyword list of atoms to strings, or a keyword list of atoms to integers. The
 first two are stored as text, the third as an integer. `embed_as:`
 (`:values` or `:dumped`) is passed to `Ecto.Enum`. The application uses atoms;
 the database stores what each atom maps to.
+
+<!-- usage-rules:end -->
 
 ### Languages
 
@@ -161,11 +186,14 @@ attribute :language, :language, languages: Brando.RuntimeConfig.get(:admin_langu
 
 `Brando.config/1` works too.
 
+<!-- usage-rules:start -->
+
 ## Uniqueness
 
 `unique:` on an attribute adds a unique constraint to the changeset and a
 unique index to the migration.
 
+<!-- usage-rules:no-compile -->
 ```elixir
 # Unique across the table
 attribute :key, :string, unique: true
@@ -182,6 +210,8 @@ The keyword form takes:
 * `prevent_collision:`: see below.
 
 A virtual field cannot be unique.
+
+<!-- usage-rules:end -->
 
 ### Preventing collisions
 
@@ -314,6 +344,8 @@ as the constraint they are for.
 relation :name, type, options
 ```
 
+<!-- usage-rules:start -->
+
 Every relation needs `module:`. The types:
 
 * `:belongs_to`: a foreign key on this table.
@@ -330,6 +362,8 @@ Two special forms use `:has_many`:
   [Block relations](#block-relations).
 * `relation :alternates, :has_many, module: :alternates`: translation links,
   added by `trait :translatable`. Don't declare it yourself.
+
+<!-- usage-rules:end -->
 
 ### Belongs to
 
@@ -393,12 +427,16 @@ relation :variants, :has_many,
   preload_order: [asc: :sequence]
 ```
 
+<!-- usage-rules:start -->
+
 A `has_one` or `has_many` is only cast with `cast: true`. Without it the
 changeset ignores the relation's params, which is right when entries are
 managed elsewhere. With it, `cast_assoc` calls the related schema's
 changeset with the current user; for `has_many`, each entry's position
 becomes its `sequence`. A form or API that sends an empty value (`nil`,
 `""`, `[]`, `%{}` or a list of blank IDs) clears the collection.
+
+<!-- usage-rules:end -->
 
 * `required: true`: requires at least one entry, with `required_message:`.
   Needs `cast: true`.
@@ -471,6 +509,8 @@ join schema, `<Schema>.<Name>Identifier`, and its table,
 `constraints:` to limit the count and the [`:entries`
 input](blueprint_forms.md#related-entries) to edit it.
 
+<!-- usage-rules:start -->
+
 ### Block relations
 
 ```elixir
@@ -490,6 +530,8 @@ block fields under different names. Blocks are cast by the block editor, not
 by `cast:`; don't set it. Add `trait :blocks` and a
 [`blocks` editor](blueprint_forms.md#block-editors). See
 [Block editor](block_editor.md).
+
+<!-- usage-rules:end -->
 
 #### Requiring blocks
 
@@ -543,6 +585,8 @@ with their gallery objects, alternates, identifiers, and block fields with
 `has_many` honours its `preload_order`. The admin form
 uses this list when it has no [custom query](blueprint_forms.md#loading-the-entry).
 
+<!-- usage-rules:start -->
+
 ## Assets
 
 ```elixir
@@ -560,6 +604,8 @@ An asset is a `belongs_to` to Brando's media tables: `:image` to
 column is `<name>_id`, and the migration deletes with `:nilify_all`, so
 deleting the media leaves the entry without it. Images, files and videos are
 set by ID like a foreign key; galleries are cast with their objects.
+
+<!-- usage-rules:end -->
 
 Options:
 
@@ -580,6 +626,8 @@ Options:
 Unknown options fail the compilation. For rendering and upload recipes, see
 [Images, files, and galleries](media.md) and [Videos](videos.md).
 
+<!-- usage-rules:start -->
+
 ### Asset configuration
 
 `cfg:` takes:
@@ -592,6 +640,8 @@ Unknown options fail the compilation. For rendering and upload recipes, see
   whenever the config is read and merged like a map. Use it for config that
   depends on runtime state.
 * `:config_target` (files): the stored file's `config_target` decides.
+
+<!-- usage-rules:end -->
 
 The defaults come from `config :brando, Brando.Images, default_config: ...`
 (and `Brando.Files`, `Brando.Videos`), or Brando's built-in defaults. Literal
@@ -617,11 +667,30 @@ non-positive `size_limit`, empty MIME lists, unknown formats or strategies,
 malformed sizes, and a `srcset` naming a size that does not exist. Function
 configs are checked when they are first read.
 
+<!-- usage-rules:start -->
+
 An image config's `sizes` replaces the default sizes; name the
 `{:standard, %{...}}` preset to extend them, as described in
 [Images, files, and galleries](media.md#configure-a-cover-image). When the
 replacement has no `srcset`, the default `srcset` is kept only if all its
 sizes still exist.
+
+```elixir
+assets do
+  asset :cover, :image,
+    cfg: %{
+      upload_path: "images/products/covers",
+      default_size: "large",
+      sizes: %{
+        "thumb" => %{"size" => "400x400>", "crop" => true, "quality" => 80},
+        "large" => %{"size" => "1400", "quality" => 80}
+      },
+      srcset: %{default: [{"thumb", "400w"}, {"large", "1400w"}]}
+    }
+end
+```
+
+<!-- usage-rules:end -->
 
 A gallery takes `image:` and `video:` configs:
 

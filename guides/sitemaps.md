@@ -7,6 +7,8 @@ search results; the generator does not infer publication or language rules.
 This guide assumes a migrated consumer, a writable media directory, an accurate
 public endpoint URL, and published pages with working URL definitions.
 
+<!-- usage-rules:start -->
+
 ## Declare public URLs
 
 Run `mix brando.gen.sitemap` to generate the module (it needs Igniter), then list
@@ -53,6 +55,8 @@ resolver uses each entry’s language and URI, including the homepage. Add anoth
 and any preloads its URL definition needs. Every `loc` must be an absolute,
 publicly reachable URL rather than an admin or preview route.
 
+<!-- usage-rules:end -->
+
 `url/1` constructs a `Sitemapper.URL`. A naive `lastmod` is interpreted as UTC
 and converted to Brando's timezone; a `DateTime` already has a zone and is retained.
 Use a content timestamp that really represents modification, not the time the
@@ -62,6 +66,8 @@ edits move, falling back to `edited_at` and `updated_at`. Select those fields.
 JSON-LD's `dateModified` should read the same value; see
 [JSON-LD](jsonld.md#datemodified).
 
+<!-- usage-rules:start -->
+
 ## Generate and inspect
 
 In a local consumer shell:
@@ -69,6 +75,8 @@ In a local consumer shell:
 ```elixir
 {:ok, _files} = Brando.Sitemap.generate_sitemap(gzip: false)
 ```
+
+<!-- usage-rules:end -->
 
 Generation runs the streams inside a repo transaction, creates a `sitemaps`
 directory under the current media root, and writes an index plus numbered URL
@@ -101,6 +109,8 @@ generated. Fix it in the query: add `filter: Schema.__url_filter__()` (keeping
 the filter's fields in `select`) and return Blueprint structs, so those entries
 are never loaded.
 
+<!-- usage-rules:start -->
+
 ## Keep it current
 
 The default Oban cron runs the sitemap generator at **02:00 UTC**.
@@ -108,6 +118,8 @@ It generates for each active site's live environment, or once for a classic
 installation. This is different from the site's display timezone. An application
 Oban override replaces the default configuration; re-declare the cron if you
 want it to remain scheduled.
+
+<!-- usage-rules:end -->
 
 Generation writes under the tenant-aware media root. Named environments of a
 site share media storage, so manually generating from Staging can replace that

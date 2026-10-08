@@ -1,4 +1,4 @@
-## Villain Text Styles
+# Text styles
 
 Text blocks support configurable style presets through `styles`, an embedded schema.
 

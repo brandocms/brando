@@ -11,6 +11,8 @@ a writable media directory, a running image-processing queue, and the consumer's
 compiled admin assets. Run a [Blueprint migration](blueprint_migrations.md) after
 adding the asset fields.
 
+<!-- usage-rules:start -->
+
 ## Configure a cover image
 
 In the Blueprint's `assets` section:
@@ -33,6 +35,8 @@ asset :cover, :image,
   }
 ```
 
+<!-- usage-rules:end -->
+
 Add `input :cover, :image, label: t("Cover")` inside a form fieldset. Upload a
 landscape image, wait for processing, select a focal point in the image editor,
 and inspect the square thumbnail. `crop: true` uses the configured geometry and
@@ -52,6 +56,8 @@ MIME limits apply to incoming uploads, while `formats` controls processed output
 For SVG, use an explicitly allowed MIME type and inspect its rendering separately
 from raster variants.
 
+<!-- usage-rules:start -->
+
 To use application defaults instead, declare `cfg: :default` and configure
 `default_config` under `Brando.Images`.
 
@@ -62,6 +68,8 @@ too. A Blueprint's literal config is checked when it compiles: a mistyped key
 such as `"crp"`, an unreadable geometry, or a `srcset` naming a size that isn't
 in `sizes` fails the build with the field and the size it is about. Configs
 from a function or `config_target` are checked when they are first read.
+
+<!-- usage-rules:end -->
 
 `sizes` replaces the default list rather than merging with it. To start from
 the standard list (micro, thumb, small, medium, large and xlarge) instead of
@@ -86,6 +94,8 @@ since; **Recreate changed images** reprocesses only those. Images processed
 before Brando stored fingerprints count as changed once. Confirm the new size
 paths exist before rendering them. A requested size absent from `image.sizes`
 is a configuration/processing error, not a fallback image.
+
+<!-- usage-rules:start -->
 
 ## Render responsive images
 
@@ -117,6 +127,8 @@ the layout. Do not label a 700-pixel rendition `1400w`. For below-the-fold image
 integration; verify that integration before depending on deferred `data-srcset`
 attributes. The example above works without that deferred-loading behavior.
 
+<!-- usage-rules:end -->
+
 The image's alt text is the default; `alt: "..."` overrides it for this placement,
 and `alt: ""` marks a decorative image. An image's alt text, title and credits
 are kept per content language: the component renders the request's language
@@ -137,6 +149,8 @@ as HTML, so only pass trusted editorial content.
 A nil image renders nothing. An **unloaded** association renders a diagnostic:
 fix the preload rather than hiding it with a CSS rule.
 
+<!-- usage-rules:start -->
+
 A template in the database that prints an image text directly shows the raw
 map. Add the `i18n` filter, which prints the page's language with the default
 as fallback and leaves plain strings alone:
@@ -149,6 +163,8 @@ as fallback and leaves plain strings alone:
 container and menu templates that print `alt`, `title` or `credits` without
 the filter, in every active site and environment. It changes nothing and
 matches by name, so check each finding.
+
+<!-- usage-rules:end -->
 
 For a plain URL, use
 `Brando.Utils.img_url(image, "large", prefix: Brando.Utils.media_url())`.
@@ -200,6 +216,8 @@ asset. A `required: true` asset must remain present for a valid publishable entr
 A rejected MIME type or size should leave the previous selection in place; test
 that state as well as the successful upload.
 
+<!-- usage-rules:start -->
+
 ## Add an ordered mixed gallery
 
 A gallery has its own row and ordered `gallery_objects`; each object points to
@@ -228,6 +246,8 @@ Unlike an image field, a gallery's `sizes` are merged into the default sizes
 rather than replacing them: the gallery above keeps the default sizes and
 changes `"large"`.
 
+<!-- usage-rules:end -->
+
 Add `input :gallery, :gallery, label: t("Gallery")`. Insert an image and a video,
 change their order, edit their per-use metadata, and save/reopen the product.
 A legacy flat gallery config is interpreted as image configuration; it does not
@@ -235,6 +255,8 @@ configure videos. Gallery block refs also expose `allowed_types` to limit the
 picker to images, videos, or both. For hosted/transcoded video, configure one of
 the supported strategies in [Videos](videos.md); choosing a provider also requires
 its credentials and webhook integration.
+
+<!-- usage-rules:start -->
 
 Preload and resolve the gallery before passing it to the template:
 
@@ -245,6 +267,8 @@ entry = Brando.Repo.preload(entry,
 media = Brando.Villain.Parser.gallery_media(entry.gallery)
 conn = Plug.Conn.assign(conn, :gallery_media, media)
 ```
+
+<!-- usage-rules:end -->
 
 ```heex
 <div :if={@gallery_media != []} class="product-gallery">

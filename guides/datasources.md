@@ -10,6 +10,8 @@ This example adds related page cards to an existing application Blueprint. It
 assumes working [modules and blocks](block_editor.md), persisted page identifiers,
 and a running content-rendering queue.
 
+<!-- usage-rules:start -->
+
 ## Declare automatic and selected pages
 
 Inside the Blueprint:
@@ -72,11 +74,15 @@ choices are not a substitute for publication checks when the module later render
 If `get` queries the IDs itself, an SQL `IN` condition does not preserve the
 editor's order; reconstruct it or use the helper above.
 
+<!-- usage-rules:end -->
+
 ## Connect a module and render cards
 
 In the module editor, enable its datasource, choose the Blueprint, then select
 `recent_pages` or `selected_pages`. Insert the module into a page. For a selection,
 choose two pages and drag them into the desired order.
+
+<!-- usage-rules:start -->
 
 A HEEx module template can render those entries:
 
@@ -101,6 +107,8 @@ The equivalent Liquid template uses `entries`:
 </ul>
 {% endif %}
 ```
+
+<!-- usage-rules:end -->
 
 Save, reload, and inspect the rendered page. Reorder the selection and verify the
 public output follows it. Unpublish a selected page and confirm your renderer
@@ -212,6 +220,8 @@ stored rendering, previews, or background invalidation. If you cache dynamic
 output yourself, include every relevant tenant, language, and route input in its
 cache key. Never cache per-user content as a shared page render.
 
+<!-- usage-rules:start -->
+
 ## Keep dependent pages fresh
 
 Context mutations and sequencing invalidate datasources registered on the changed
@@ -231,6 +241,8 @@ Add the same callback to create/delete when they change the result, or register
 the datasource on the schema whose mutations actually drive it. The invalidation
 helper returns `{:ok, entry}` for chaining. Direct repo/SQL imports bypass this
 boundary; invalidate affected datasources once the import is complete.
+
+<!-- usage-rules:end -->
 
 Verify after the queue drains: edit a listed entry, change a joined dependency,
 reorder selected entries, and inspect stored page output in both languages.

@@ -1,5 +1,7 @@
 # Migrating from Brando 0.51
 
+<!-- llms-description: Port a site from Brando 0.51, the legacy branch with the Vue admin, to 0.55. -->
+
 This guide is for sites still on Brando 0.51, the `legacy` branch. These sites
 have the Vue 2 + GraphQL admin, plain Ecto schemas (`use Brando.Schema`,
 `villain :data`, `belongs_to :image_series`) and Waffle or embedded media. It

@@ -9,6 +9,8 @@ context.
 Field declarations are in [Attributes, relations, and assets](blueprint_fields.md);
 recipes for media inputs are in [Images, files, and galleries](media.md).
 
+<!-- usage-rules:start -->
+
 ## A complete example
 
 ```elixir
@@ -65,6 +67,10 @@ def category_options(_form, _opts), do: MyApp.Articles.list_categories!(%{order:
 def default_link(_entry, _asset), do: %{}
 ```
 
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start -->
+
 ## The form LiveView
 
 ```elixir
@@ -93,6 +99,8 @@ end
 `@entry_id` (from the route's `entry_id` param, `nil` on create),
 `@current_user` and `@presences`, and sets up presence, locking and sync for
 the entry.
+
+<!-- usage-rules:end -->
 
 Give `BrandoAdmin.Components.Form`:
 
@@ -172,11 +180,15 @@ query &__MODULE__.form_query/1
 def form_query(id), do: %{matches: %{id: id}, preload: [:category, :cover]}
 ```
 
+<!-- usage-rules:start -->
+
 With either form, the automatic preloads are off: list every association the
 form shows, including asset fields, galleries and `alternate_entries` for
 translatable schemas. The ID is the route parameter, a string, until a new
 entry is first saved. Brando always adds `with_deleted: true`, so a
 soft-deleted entry can still be opened.
+
+<!-- usage-rules:end -->
 
 ### Named forms
 
@@ -278,9 +290,13 @@ Fieldset options are written inside the block:
 input :title, :text, label: t("Title"), instructions: t("Shown in listings")
 ```
 
+<!-- usage-rules:start -->
+
 `input` takes the field name, a type, and options. The name must be a schema
 field, a virtual field, an association or an embed of the Blueprint, and
 appear once in the form.
+
+<!-- usage-rules:end -->
 
 ### Common options
 
@@ -302,10 +318,16 @@ Every input type reads these:
 * `hidden` and `show_if`: see [Showing a field depending on
   another](#showing-a-field-depending-on-another).
 
+<!-- usage-rules:start -->
+
 Options are not checked when the Blueprint compiles; a misspelled option is
 ignored.
 
+<!-- usage-rules:end -->
+
 ### Showing a field depending on another
+
+<!-- usage-rules:start -->
 
 `show_if:` shows an input only while another field has one of the given
 values. `hidden:` does the opposite, and also takes `true` or a function:
@@ -316,17 +338,23 @@ values. `hidden:` does the opposite, and also takes `true` or a function:
 * `hidden: &__MODULE__.hide_quote?/1`, which receives the form and hides the
   input while it returns `true`.
 
+<!-- usage-rules:end -->
+
 ```elixir
 input :kind, :radios, options: [%{label: t("Web link"), value: :url}, %{label: t("PDF"), value: :pdf}]
 input :url, :text, show_if: {:kind, :url}
 input :file, :file, show_if: {:kind, [:pdf, :audio]}
 ```
 
+<!-- usage-rules:start -->
+
 Atoms and strings compare equal, so `{:kind, :url}` matches the param
 `"url"`; other values must match exactly, so `{:count, 1}` does not match the
 param `"1"`. The field in a tuple is checked when the Blueprint compiles.
 `show_if` takes tuples only; a function there is ignored and the input always
 shows. Use `hidden:` for a function.
+
+<!-- usage-rules:end -->
 
 The rules work the same in top-level fieldsets, subform rows and transformer
 entries, where the field is one of the row's own. A hidden input is not
@@ -391,6 +419,8 @@ the slug themselves on a new entry:
 
 ### Options
 
+<!-- usage-rules:start -->
+
 `:radios`, `:select` and `:multi_select` take `options:`:
 
 * a list of `%{label: ..., value: ...}` maps. Labels are translated through
@@ -409,6 +439,8 @@ def category_options(_form, _opts), do: MyApp.Articles.list_categories!(%{order:
 
 Options are maps or entries; `{label, value}` tuples are not supported in
 forms.
+
+<!-- usage-rules:end -->
 
 Select and multi-select cache their options. A function runs when the input
 mounts, when the picker opens, and on an explicit refresh, not on every
@@ -458,6 +490,8 @@ input :article_categories, :multi_select,
   resetable: true
 ```
 
+<!-- usage-rules:start -->
+
 `:multi_select` picks several values. It works with two kinds of field:
 
 * an array attribute, such as `{:array, :string}`, storing the chosen values;
@@ -470,6 +504,8 @@ To let editors reorder the chosen entries, give the join schema
 `trait :sequenced` and the relation `sort_param:` and `drop_param:`.
 `many_to_many`, `belongs_to`, `has_one` and embedded fields are not
 supported; use a join schema.
+
+<!-- usage-rules:end -->
 
 It also reads `options_depends_on`, `resetable`, `filter`, `narrow` and
 `wrapped_labels: true` (labels wrap instead of being cut off). `form: {Module,
@@ -690,6 +726,8 @@ input :meta_description, :textarea,
   ai: [prompt: "Write a succinct meta description", context: [:title, :blocks]]
 ```
 
+<!-- usage-rules:start -->
+
 ## Block editors
 
 ```elixir
@@ -724,6 +762,8 @@ form, not in a tab, and renders below the tabs. The schema needs
 
 `label` and `palette_namespace` are accepted and not used. See the
 [Block editor](block_editor.md) guide.
+
+<!-- usage-rules:end -->
 
 ## Subforms
 
@@ -784,6 +824,21 @@ relation's `sort_param:` and `drop_param:`, and default to
 
 What a subform input cannot do: generate with `ai:`, use `update_relation:`
 on a select, take `:unless_superuser`, or carry footnotes.
+
+<!-- usage-rules:start -->
+
+### Rules
+
+* Write subform options inside the `inputs_for` block; `inputs_for :links,
+  label: "Links" do` drops the whole subform.
+* `cardinality :many` for `has_many`, `embeds_many`, `many_to_many` and
+  `entries`; `:one` (the default) for `belongs_to`, `has_one` and
+  `embeds_one`.
+* A `:many` subform needs a `default`, and its relation needs `cast: true`
+  unless it is an embed.
+* A subform holds only `input`s: no nested subforms and no block editors.
+
+<!-- usage-rules:end -->
 
 ### Regular and inline
 

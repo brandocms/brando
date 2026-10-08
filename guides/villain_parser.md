@@ -1,5 +1,7 @@
 # Villain parser
 
+<!-- usage-rules:start -->
+
 The parser turns block data into HTML. `mix brando.install` generates one for
 your project:
 
@@ -22,8 +24,12 @@ Brando's default implementation, and marks each one `defoverridable`. An empty
 parser module is therefore a complete one — you override only what you want to
 render differently.
 
+<!-- usage-rules:end -->
+
 See the [Block editor](block_editor.md) guide for how modules, refs and vars fit
 together; this guide is about the rendering step at the end of that pipeline.
+
+<!-- usage-rules:start -->
 
 ## When it runs
 
@@ -41,6 +47,8 @@ in a module template calls the ref's block type.
 Because output is persisted, **changing your parser does not change existing
 entries** until they are re-rendered. `mix brando.entries.resave` re-renders
 everything.
+
+<!-- usage-rules:end -->
 
 ## Callbacks
 
@@ -86,6 +94,8 @@ at the bottom.
 the editor can produce them: `blockquote/2`, `datatable/2`, `divider/2`,
 `list/2`, `table/2`, `timeline/2`, `datasource/2`.
 
+<!-- usage-rules:start -->
+
 ### What the media callbacks receive
 
 The media callbacks do **not** get the raw block data. Before dispatch, the
@@ -101,6 +111,8 @@ onto it, so the callback gets one struct carrying everything:
 
 Every other callback receives its block's own `Data` struct (for `blocks/2`,
 with the extra keys described above).
+
+<!-- usage-rules:end -->
 
 ### opts
 
@@ -139,6 +151,8 @@ defmodule MyApp.Villain.Parser do
 end
 ```
 
+<!-- usage-rules:start -->
+
 To build on the default rather than replace it, call it explicitly:
 
 ```elixir
@@ -163,6 +177,8 @@ Calling `Brando.Villain.Parser.render_caption/1` directly gets you Brando's
 implementation, not yours — silently. This is the rule Brando's own
 implementations follow internally, and it is what
 `test/brando/villain/parser/dispatch_test.exs` guards.
+
+<!-- usage-rules:end -->
 
 ## Galleries
 

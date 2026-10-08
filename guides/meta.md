@@ -8,6 +8,8 @@ set it deliberately so the browser tab and sharing title agree.
 This example assumes a `MyApp.News.Post` Blueprint with `title`, `summary`, and
 `language`, `trait :meta` for the editable metadata fields, and a public controller.
 
+<!-- usage-rules:start -->
+
 ## Define the metadata schema
 
 Inside the Blueprint:
@@ -31,6 +33,8 @@ summary, not the entry struct. A target may be a single key or a list of keys
 sharing the same value. Declare each target once unless duplicate tags are
 intentional; listing two title callbacks is not a fallback mechanism.
 
+<!-- usage-rules:end -->
+
 `fallback/1` tries values in order; `fallback/2` tries paths on the supplied data:
 
 ```elixir
@@ -41,6 +45,8 @@ Brando.Blueprint.Value.fallback(%{meta_title: nil, title: "Our story"}, [:meta_t
 #=> "Our story"
 ```
 
+<!-- usage-rules:start -->
+
 Fallback skips `nil`, not every falsey-looking value: an empty string remains a
 value. If your import stores blank strings and you want defaults, normalize them
 before metadata extraction. Use `try_path(entry, [:association, :field])` for
@@ -50,6 +56,10 @@ A callback returning nil is omitted. Reading a missing key is also omitted;
 other exceptions propagate so a broken callback stays visible. The locale helper
 expects a string: `"en"` becomes `"en_US"`, and `"no"`/`"nb"` become `"nb_NO"`.
 Read the entry's `language`, not Ecto's `__meta__` storage metadata.
+
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start -->
 
 ## Put values on the connection
 
@@ -88,6 +98,10 @@ the identity's prefix/postfix; use `skip_prefix: true` and/or `skip_postfix: tru
 when the supplied title already includes them. `put_meta/3` supplies metadata,
 including Open Graph, without setting the document title on its own.
 
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start -->
+
 ## Render the head once
 
 If the layout already uses `<Brando.HTML.head conn={@conn}>`, it renders metadata,
@@ -104,6 +118,8 @@ set beside it. In a custom head, the minimal equivalent for title and metadata i
 </head>
 ```
 
+<!-- usage-rules:end -->
+
 Metadata rendering fills absent title, description, and image values from the
 current language's SEO record. It supplies site name, type, and current URL, and
 includes identity custom metadata and links. `og:*` keys use `property`; other
@@ -111,9 +127,13 @@ keys use `name`. Image records are turned into absolute image URLs with type and
 dimensions; a URL string is accepted too. Preload `:meta_image` and configure real
 image sizes/CDN delivery before relying on that output.
 
+<!-- usage-rules:start -->
+
 Without a language assign, `render_meta` renders no tags. Without a configured
 fallback, absent values stay absent. Neither case should be mistaken for an
 application crash or proof that your page schema ran.
+
+<!-- usage-rules:end -->
 
 ### X cards
 

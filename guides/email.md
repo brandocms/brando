@@ -1,5 +1,7 @@
 # Email
 
+<!-- llms-description: How Brando sends password and form email through the application's own Swoosh mailer. -->
+
 Brando sends its email — password reset links and "your password was changed"
 notices to admin users (see [User accounts and sessions](users.md#reset-a-forgotten-password)),
 and the notifications and confirmations of a form submission (see the

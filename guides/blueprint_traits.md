@@ -1,9 +1,12 @@
 # Traits
 
+<!-- usage-rules:start -->
+
 A trait adds a capability to a Blueprint: fields, changeset steps, save
 hooks, and the admin features that come with them. Declare traits at the top
 of the Blueprint body:
 
+<!-- usage-rules:no-compile -->
 ```elixir
 trait :creator
 trait :status
@@ -29,6 +32,8 @@ The shorthand and the module, `trait Brando.Trait.Status`, register the same
 trait. The shorthand also keeps the Blueprint from compiling against the
 trait's runtime module, so prefer it.
 
+<!-- usage-rules:end -->
+
 To ask a schema about its traits:
 
 * `has_trait/1` takes the module, or the underscored last part of its name:
@@ -43,6 +48,8 @@ To ask a schema about its traits:
 
 ## Built-in traits
 
+<!-- usage-rules:start -->
+
 ### Status
 
 `trait :status` adds `attribute :status, :status, required: true`. The status
@@ -54,6 +61,8 @@ In the admin, listings get status buttons and a status menu on each row. The
 form gets no status input by itself: add `input :status, :status`. Drafts are
 validated more loosely; see [Drafts](blueprints.md#drafts). See
 [Content status, deletion, and ordering](content_lifecycle.md).
+
+<!-- usage-rules:end -->
 
 ### Timestamped
 
@@ -216,6 +225,8 @@ These serve Brando's own schemas, and are available to applications:
   itself.
 * `:watch_language`: does nothing yet.
 
+<!-- usage-rules:start -->
+
 ## When trait hooks run
 
 A trait acts at three points:
@@ -227,6 +238,8 @@ A trait acts at three points:
 * **Admin save**: `before_save/2` and `after_save/3` run when the admin form
   saves an entry, and when a revision or proposal is applied. Saves through
   the context's `create_*` and `update_*` functions do not call them.
+
+<!-- usage-rules:end -->
 
 Use the save hooks only for work that belongs to editing in the admin. Work
 that every save needs belongs in `changeset_mutator`, deferred to the write

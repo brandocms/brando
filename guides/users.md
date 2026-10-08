@@ -1,5 +1,7 @@
 # User accounts and sessions
 
+<!-- llms-description: Admin accounts: creating editors, sign-in and sessions, password resets, two-factor, passkeys, lockout and deactivation. -->
+
 Authentication establishes who signed in; [authorization](authorization.md)
 determines what that account can do. A successful password check is not proof of
 permission to edit pages, manage users, or enter a site.

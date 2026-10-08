@@ -1,5 +1,7 @@
 # Navigation
 
+<!-- llms-description: Menus addressed by key and language: building one, loading and rendering it, nesting and ordering items. -->
+
 A menu is addressed by **key and language**. Its ordered items contain link vars,
 which can hold literal URLs or point to an entry's identifier. Use an identifier
 for CMS pages so a later permalink change can be reflected in the menu.
@@ -15,6 +17,8 @@ to `main`, language to English, and status to published. Add an item with key
 `about`. In its Link field, choose an entry link and select the About page. Use
 **About us** as the link text, or leave the override blank to use the identifier
 title. Save and reopen the menu to verify the selection and ordering survived.
+
+<!-- usage-rules:start -->
 
 For a seed or import, the equivalent literal-link menu is:
 
@@ -46,10 +50,14 @@ For an entry-backed link, replace `link_type: :url` and `value` with
 that distinction. `link_text: nil` lets the renderer use the identifier title; a non-nil
 `link_text` overrides it. `link_target_blank: true` opens a new tab.
 
+<!-- usage-rules:end -->
+
 Create a separate `main` menu in Norwegian, pointing to the translated page.
 Changing the menu's language does not translate its items or switch their
 identifier targets. A missing translation should have a deliberate empty state;
 there is no automatic fallback to the English menu.
+
+<!-- usage-rules:start -->
 
 ## Load and render it
 
@@ -95,6 +103,8 @@ with `data-link-active`. Use `splat={false}` if a link should match only its exa
 path rather than descendant URLs. Style the active attribute and preserve a
 visible keyboard focus indicator. The component supplies an ordinary anchor;
 it does not implement a dropdown interaction for you.
+
+<!-- usage-rules:end -->
 
 ## Nested items and ordering
 

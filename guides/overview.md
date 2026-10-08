@@ -5,6 +5,8 @@ admin forms, and structured content. These guides cover the developing **0.55**
 API on the `main` branch. Use documentation from your application's Brando
 version when maintaining an older installation.
 
+<!-- usage-rules:start -->
+
 ## Start with your task
 
 | I want to… | Start here | Then read |
@@ -20,6 +22,8 @@ version when maintaining an older installation.
 | Delete, restore, or reorder content | [Content lifecycle](content_lifecycle.md) | [Querying](querying.md) |
 | Manage accounts and editing permissions | [Users and sessions](users.md) | [Authorization](authorization.md) |
 | Configure environments or publish a static build | [Sites and environments](tenancy_and_environments.md) | [Deployment](deployment.md) |
+
+<!-- usage-rules:end -->
 
 ## Your first working site
 

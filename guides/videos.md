@@ -1,6 +1,8 @@
-## Videos
+# Videos
 
 Brando supports video fields with multiple upload strategies for different hosting providers.
+
+<!-- usage-rules:start -->
 
 ### Video Fields in Blueprints
 
@@ -33,7 +35,7 @@ Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature ver
 plug BrandoWeb.Plugs.MuxWebhook,
   mount: ["api", "videos", "mux", "webhook"]
 
-plug Plug.Parsers, #...
+# Your existing `plug Plug.Parsers, ...` follows here
 ```
 
 #### Bunny Stream
@@ -42,7 +44,7 @@ plug Plug.Parsers, #...
 plug BrandoWeb.Plugs.BunnyWebhook,
   mount: ["api", "videos", "bunny", "webhook"]
 
-plug Plug.Parsers, #...
+# Your existing `plug Plug.Parsers, ...` follows here
 ```
 
 #### Cloudflare Stream
@@ -51,7 +53,7 @@ plug Plug.Parsers, #...
 plug BrandoWeb.Plugs.CloudflareStreamWebhook,
   mount: ["api", "videos", "cloudflare", "webhook"]
 
-plug Plug.Parsers, #...
+# Your existing `plug Plug.Parsers, ...` follows here
 ```
 
 #### Vimeo
@@ -110,6 +112,8 @@ A provider strategy only offers the "Upload file" button when
 | `:cloudflare` | `account_id`, `api_token`, `webhook_secret` |
 | `:vimeo`      | `access_token` |
 
+<!-- usage-rules:end -->
+
 The webhook secret is required because an upload without it starts and never
 completes. Vimeo is the exception: it has no webhooks, and its uploads are
 polled instead. Bunny signs its webhooks with the library Read-Only API key, so it
@@ -141,6 +145,8 @@ that legitimately have no credentials. To fail the boot instead:
 config :brando, :strict_video_provider_config, true
 ```
 
+<!-- usage-rules:start -->
+
 ### Mux Configuration
 
 For Mux uploads, you need to configure your credentials:
@@ -152,6 +158,8 @@ config :brando, Brando.Videos.Uploaders.Mux,
   access_token_secret: System.get_env("MUX_TOKEN_SECRET"),
   webhook_secret: System.get_env("MUX_WEBHOOK_SECRET")
 ```
+
+<!-- usage-rules:end -->
 
 #### Mux Provider Settings
 
@@ -562,7 +570,7 @@ Full list of `Brando.Type.VideoConfig` options:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `upload_strategy` | atom | `:local` | Where to upload videos |
+| `upload_strategy` | atom or nil | `nil` | Where to upload videos; `nil` follows `default_video_upload_strategy` |
 | `upload_path` | string | `"videos/default"` | Path for local uploads |
 | `cdn` | `Brando.CDN.Config` or nil | `nil` | Required enabled/direct config for `:s3` |
 | `allowed_mimetypes` | list | `["video/mp4", ...]` | Accepted video formats |
