@@ -181,6 +181,14 @@
   .media-field-split > .media-button--collapsible-narrow { padding-inline: 8px; }
   .media-button--collapsible-narrow > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+/* A ref's card is as wide as its column. On a phone its segmented actions
+   (Configure, Edit/Crop, Replace) were wider than the card; there Edit/Crop
+   keeps only its scissors, with the label as its accessible name and title. */
+.media-field--block { container: media-block / inline-size; }
+@Container media-block (max-width: 319px) {
+  .media-field-split > .media-button--collapsible-block { padding-inline: 8px; }
+  .media-button--collapsible-block > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 .media-field-drop > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .media-field-drop-destination { font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
 .media-field > .media-field-drop { padding: 16px; }

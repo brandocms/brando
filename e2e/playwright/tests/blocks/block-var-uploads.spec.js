@@ -59,3 +59,34 @@ for (const type of ['image', 'file']) {
     await expect(field.locator('.media-field-menu').getByRole('button', { name: `Select ${type}`, exact: true })).toBeVisible()
   })
 }
+
+// Half-width media variables are one line on a desktop. In a phone's half of
+// a row the menu goes under the details and the label above the field, so
+// the Add button never covers the details or leaves its cell.
+test('half-width media variables keep their Add button clear of their details', async ({ page }) => {
+  await createVarPage(page, 'Var Narrow Layout Test')
+  const layout = () =>
+    page.evaluate(() =>
+      ['image', 'file'].map(type => {
+        const field = document.querySelector(`.media-field[data-kind="block_var"][id$="-${type}-media"]`)
+        const cell = field.closest('.variable').getBoundingClientRect()
+        const button = field.querySelector('.media-action-menu > .media-button').getBoundingClientRect()
+        const copy = field.querySelector('.media-field-copy').getBoundingClientRect()
+        const overlaps = button.left < copy.right && copy.left < button.right && button.top < copy.bottom && copy.top < button.bottom
+        return { type, overlaps, inside: button.right <= cell.right + 0.5, below: button.top >= copy.bottom - 0.5 }
+      })
+    )
+
+  for (const field of await layout()) {
+    expect(field.overlaps, field.type).toBe(false)
+    expect(field.inside, field.type).toBe(true)
+    expect(field.below, field.type).toBe(false)
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(async () => (await layout()).every(field => field.below)).toBe(true)
+  for (const field of await layout()) {
+    expect(field.overlaps, field.type).toBe(false)
+    expect(field.inside, field.type).toBe(true)
+  }
+})
