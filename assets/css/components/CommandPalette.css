@@ -397,3 +397,44 @@
     outline-offset: 2px;
   }
 }
+
+/* Phones and tablets, where the sidebar is hidden: a round search button in
+   the top right corner opens the palette. */
+.mobile-search {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .mobile-search {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    z-index: 9;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--brando-line);
+    border-radius: 50%;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-ink) 10%, transparent);
+    cursor: pointer;
+
+    [data-icon] {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+    }
+  }
+}

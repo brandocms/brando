@@ -119,6 +119,20 @@ defmodule BrandoAdmin.Nav do
           /><path d="M6 5.5h4.5v1H6zM6 2h4.5v1H6z" />
         </svg>
       </button>
+      <%!-- The sidebar, and its search row, is hidden on narrow screens:
+            this opens the command palette there. --%>
+      <button
+        :if={@current_user}
+        type="button"
+        id="mobile-search"
+        class="mobile-search"
+        aria-label={gettext("Search")}
+        aria-haspopup="dialog"
+        aria-controls="command-palette-dialog"
+        phx-click={JS.dispatch("brando:command-palette:open", to: "#command-palette")}
+      >
+        <.icon name="search" />
+      </button>
       <div
         class="sidebar"
         id="sidebar"
