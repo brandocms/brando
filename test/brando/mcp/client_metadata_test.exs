@@ -1,7 +1,7 @@
 defmodule Brando.MCP.ClientMetadataTest do
   # Client ID Metadata Documents: what a client's document must say, and
   # where a client may send the person back to.
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Brando.MCP.ClientMetadata
 
@@ -24,6 +24,8 @@ defmodule Brando.MCP.ClientMetadataTest do
           "https://user:pw@client.example/c.json",
           "https://client.example/c.json?x=1",
           "https://client.example/c.json#x",
+          "https://client.example:8443/c.json",
+          "https://client.example:80/c.json",
           "https://client.example/a/../c.json",
           "client",
           nil,
@@ -31,6 +33,17 @@ defmodule Brando.MCP.ClientMetadataTest do
         ] do
       refute ClientMetadata.valid_client_id?(bad), inspect(bad)
     end
+  end
+
+  test "the site's own host, and its media and CDN hosts, are never clients" do
+    own = URI.parse(Brando.MCP.base_url()).host
+    refute ClientMetadata.valid_client_id?("https://#{own}/media/client.json")
+    assert ClientMetadata.valid_client_id?("https://client.example:443/oauth/client.json")
+
+    original = Application.get_env(:brando, :media_url)
+    Application.put_env(:brando, :media_url, "https://media.example.com/media")
+    on_exit(fn -> Application.put_env(:brando, :media_url, original) end)
+    refute ClientMetadata.valid_client_id?("https://media.example.com/media/client.json")
   end
 
   test "a document names itself, the client and its redirect URIs" do

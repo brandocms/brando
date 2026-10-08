@@ -9,9 +9,10 @@ defmodule Brando.MCP.ClientMetadata do
 
   The document is fetched only for a signed-in person who may connect, when
   the consent screen opens: never for an anonymous request. The fetch goes
-  through `Brando.Webhooks.URLGuard` (`https`, public addresses only, the
-  checked address connected to with the host name kept for TLS), follows no
-  redirects, gives up after five seconds and reads at most 5 KB. A valid
+  through `Brando.Webhooks.URLGuard` (`https` on port 443, public addresses
+  only, the checked address connected to with the host name kept for TLS),
+  with two seconds for each DNS lookup, follows no redirects, gives up after
+  five seconds and reads at most 5 KB. A valid
   document is cached for five minutes.
 
   A document is refused unless it is a JSON object whose `client_id` is the
@@ -40,16 +41,18 @@ defmodule Brando.MCP.ClientMetadata do
         }
 
   @doc """
-  Checks the shape of `client_id` without fetching it: an `https` URL with a
-  host and a path other than `/`, no credentials, query, fragment or dot
-  segments, at most 512 bytes.
+  Checks the shape of `client_id` without fetching it: an `https` URL on the
+  default port, with a host and a path other than `/`, no credentials,
+  query, fragment or dot segments, at most 512 bytes. Its host may not be
+  the site's own, nor its media or CDN host.
   """
   @spec valid_client_id?(term()) :: boolean()
   def valid_client_id?(client_id) when is_binary(client_id) and byte_size(client_id) <= 512 do
     case URI.new(client_id) do
-      {:ok, %URI{scheme: "https", host: host, path: "/" <> rest = path, userinfo: nil, query: nil, fragment: nil}}
+      {:ok,
+       %URI{scheme: "https", host: host, port: 443, path: "/" <> rest = path, userinfo: nil, query: nil, fragment: nil}}
       when is_binary(host) and host != "" and rest != "" ->
-        not Enum.any?(String.split(path, "/"), &(&1 in [".", ".."]))
+        not Enum.any?(String.split(path, "/"), &(&1 in [".", ".."])) and not own_host?(host)
 
       _ ->
         false
@@ -57,6 +60,38 @@ defmodule Brando.MCP.ClientMetadata do
   end
 
   def valid_client_id?(_client_id), do: false
+
+  # A client's document on the site's own host, or its media or CDN host,
+  # could be a file someone uploaded: never a client.
+  defp own_host?(host) do
+    host = host |> String.downcase() |> String.trim_trailing(".")
+    host in own_hosts()
+  end
+
+  defp own_hosts do
+    media = [Brando.config(:media_url)] ++ Enum.map([Brando.Images, Brando.Files, Brando.Videos], &cdn_url/1)
+
+    [Brando.MCP.base_url() | media]
+    |> Enum.flat_map(fn
+      url when is_binary(url) ->
+        case URI.parse(url) do
+          %URI{host: host} when is_binary(host) and host != "" -> [String.downcase(host)]
+          _ -> []
+        end
+
+      _ ->
+        []
+    end)
+  end
+
+  defp cdn_url(module) do
+    case Brando.CDN.config(module) do
+      %{enabled: true, media_url: url} -> url
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  end
 
   @doc """
   The client behind `client_id`: from the cache, or fetched and validated.
@@ -202,7 +237,7 @@ defmodule Brando.MCP.ClientMetadata do
   end
 
   defp http_get(client_id) do
-    with {:ok, target} <- URLGuard.resolve(client_id),
+    with {:ok, target} <- URLGuard.resolve(client_id, resolver: &resolve/1),
          {:ok, body} <- request(target) do
       {:ok, body}
     else
@@ -235,6 +270,21 @@ defmodule Brando.MCP.ClientMetadata do
       receive_response(conn, ref, %{status: nil, body: [], size: 0}, deadline)
     else
       _ -> {:error, :unreachable}
+    end
+  end
+
+  # The URL guard's lookup, with a time limit on each family
+  @dns_timeout 2_000
+  defp resolve(host) do
+    addresses =
+      for family <- [:inet, :inet6],
+          {:ok, list} <- [:inet.getaddrs(host, family, @dns_timeout)],
+          address <- list,
+          do: address
+
+    case Enum.uniq(addresses) do
+      [] -> {:error, :nxdomain}
+      addresses -> {:ok, addresses}
     end
   end
 
