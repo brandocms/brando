@@ -26,6 +26,13 @@ defmodule E2EFixtureController do
         "norwegian-admin-user" ->
           create_norwegian_admin_user()
 
+        # The E2E admin itself in Norwegian, so it still sees what it owns
+        # (assistant proposals, drafts). Rolled back with the sandbox.
+        "admin-language-no" ->
+          get_admin_user()
+          |> Ecto.Changeset.change(language: :no)
+          |> Brando.Repo.update!()
+
         "revision-panel" ->
           create_revision_panel()
 
