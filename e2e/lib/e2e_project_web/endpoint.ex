@@ -22,6 +22,11 @@ defmodule E2eProjectWeb.Endpoint do
     # the next (empty-block-field.spec.js saw a paste button it never asked
     # for). What it holds is built from the previous test's rolled-back rows,
     # so it is dropped at checkout too.
+    #
+    # Recorded 404s are buffered in `:four_oh_four` until a reader flushes them
+    # into its own sandbox (e2e.exs turns the periodic flush off), so a test's
+    # misses never reach the next test's "Missing redirects" or 404 log.
+    # Flushed rows are the test's and roll back with it.
     plug :clear_query_caches_on_checkout
 
     # The Playwright fixture checks each test's sandbox back in at teardown

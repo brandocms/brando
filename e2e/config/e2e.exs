@@ -23,6 +23,14 @@ config :e2e_project, sql_sandbox: true
 # stop as soon as their last editor leaves.
 config :brando, Brando.EditSession, grace_period: 0
 
+# Recorded 404s wait in a buffer (the `:four_oh_four` cache) until they are
+# written to `sites_not_found_hits`. The periodic flusher runs outside every
+# test's sandbox, so a flush between a test's request and its read would
+# take the hits into a transaction nobody sees. Without it, the reader
+# flushes into its own test's sandbox (`Brando.Sites.FourOhFour.list/0`), and
+# the endpoint empties the buffer when a test checks out its sandbox.
+config :brando, Brando.Sites.FourOhFour, flush_interval: false
+
 # Override pool settings for e2e tests - need more connections for
 # browser tests with LiveView (HTTP + WebSocket + sandbox per test)
 # CI keeps the historical pool size. Local runs default lower so multiple

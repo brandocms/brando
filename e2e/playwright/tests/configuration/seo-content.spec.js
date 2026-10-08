@@ -84,3 +84,45 @@ test('the content SEO tab audits published pages', async ({ page }, testInfo) =>
   await expect(page).toHaveURL('/admin/config/seo?tab=settings')
   await expect(page.locator('textarea[name="seo[robots]"]')).toBeVisible()
 })
+
+// A 404 whose last segment is an entry's slug is offered as a redirect. On a
+// phone each suggestion stacks (URL, hits and destination, the button at the
+// right) instead of holding the page wider than the screen.
+test('a missing URL that matches an entry is suggested as a redirect, stacked on a phone', async ({ page }, testInfo) => {
+  const factory = await page.request.post('/__e2e/db/factory', {
+    data: {
+      schema: 'Brando.Pages.Page',
+      attributes: { title: 'Harbour walks', uri: 'harbour-walks', language: 'en', status: 'published' },
+      creator_id: 1,
+      fields: ['id']
+    }
+  })
+  expect(factory.ok(), await factory.text()).toBeTruthy()
+
+  const missing = await page.goto('/old-guides/harbour-walks')
+  expect(missing.status()).toBe(404)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/config/seo?tab=content')
+  await syncLV(page)
+
+  const row = page.locator('.seo-redirects-table tbody tr').filter({ hasText: '/old-guides/harbour-walks' })
+  await expect(row).toHaveCount(1, { timeout: 15000 })
+  await row.scrollIntoViewIfNeeded()
+
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await expect(page.locator('.seo-redirects-table thead')).toHaveCSS('position', 'absolute')
+  await expect(row).toHaveCSS('display', 'grid')
+
+  // URL, hits and destination are stacked on the left, the action beside them.
+  const url = await row.locator('.seo-redirect-url').boundingBox()
+  const hits = await row.locator('.seo-redirect-hits').boundingBox()
+  const to = await row.locator('.seo-redirect-to').boundingBox()
+  const action = await row.locator('.seo-redirect-action button').boundingBox()
+  expect(hits.y).toBeGreaterThanOrEqual(url.y + url.height - 1)
+  expect(to.y).toBeGreaterThanOrEqual(hits.y + hits.height - 1)
+  expect(action.x).toBeGreaterThanOrEqual(url.x + url.width - 1)
+  await expect(row.locator('.seo-redirect-action button')).toBeInViewport({ ratio: 1 })
+
+  await row.screenshot({ path: testInfo.outputPath('seo-missing-redirect-mobile.png') })
+})
