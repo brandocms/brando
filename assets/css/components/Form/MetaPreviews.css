@@ -23,6 +23,12 @@
   align-items: start;
 }
 
+.meta-previews-column {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
 .meta-preview-card {
   display: grid;
   gap: 8px;
@@ -202,6 +208,9 @@
   line-height: 18px;
 }
 
+/* One column: the cards in their reading order, the Markdown last. */
 @media (max-width: 760px) {
   .meta-previews-grid { grid-template-columns: minmax(0, 1fr); }
+  .meta-previews-column { display: contents; }
+  .meta-preview-markdown { order: 1; }
 }

@@ -110,43 +110,49 @@ defmodule BrandoAdmin.Components.Form.MetaPreviews do
 
     ~H"""
     <div id={@id} class="meta-previews">
+      <%!-- Two columns that stack independently: the short search result
+            and the Markdown at the left, the two share cards at the right. --%>
       <div class="meta-previews-grid">
-        <section class="meta-preview-card meta-preview-search" data-testid="meta-preview-search">
-          <h4 class="meta-preview-label"><.icon name="search" />{gettext("Search result")}</h4>
-          <div class="meta-preview-site">
-            <span class="meta-preview-favicon" aria-hidden="true"></span>
-            <span>{@crumbs}</span>
-          </div>
-          <p class="meta-preview-search-title">
-            {SharePreview.truncate(@values.search_title, :title) || gettext("No title")}
-          </p>
-          <p class="meta-preview-search-description">
-            {SharePreview.truncate(@values.description, :description) ||
-              gettext("No description. Search engines pick text from the page.")}
-          </p>
-        </section>
+        <div class="meta-previews-column">
+          <section class="meta-preview-card meta-preview-search" data-testid="meta-preview-search">
+            <h4 class="meta-preview-label"><.icon name="search" />{gettext("Search result")}</h4>
+            <div class="meta-preview-site">
+              <span class="meta-preview-favicon" aria-hidden="true"></span>
+              <span>{@crumbs}</span>
+            </div>
+            <p class="meta-preview-search-title">
+              {SharePreview.truncate(@values.search_title, :title) || gettext("No title")}
+            </p>
+            <p class="meta-preview-search-description">
+              {SharePreview.truncate(@values.description, :description) ||
+                gettext("No description. Search engines pick text from the page.")}
+            </p>
+          </section>
 
-        <section class="meta-preview-card meta-preview-og" data-testid="meta-preview-open-graph">
-          <h4 class="meta-preview-label"><.icon name="share-2" />{gettext("Facebook, LinkedIn")}</h4>
-          <.share_image frame={@open_graph} kind="og" />
-          <div class="meta-preview-og-text">
-            <span>{@host}</span>
-            <strong>{@values.title || gettext("No title")}</strong>
-          </div>
-        </section>
+          <section class="meta-preview-markdown" data-testid="meta-preview-markdown">
+            <.markdown loaded={@loaded} entry_id={@entry_id} />
+          </section>
+        </div>
 
-        <section class="meta-preview-markdown" data-testid="meta-preview-markdown">
-          <.markdown loaded={@loaded} entry_id={@entry_id} />
-        </section>
+        <div class="meta-previews-column">
+          <section class="meta-preview-card meta-preview-og" data-testid="meta-preview-open-graph">
+            <h4 class="meta-preview-label"><.icon name="share-2" />{gettext("Facebook, LinkedIn")}</h4>
+            <.share_image frame={@open_graph} kind="og" />
+            <div class="meta-preview-og-text">
+              <span>{@host}</span>
+              <strong>{@values.title || gettext("No title")}</strong>
+            </div>
+          </section>
 
-        <section class="meta-preview-card meta-preview-x" data-testid="meta-preview-x">
-          <h4 class="meta-preview-label"><.icon name="at-sign" />{gettext("X")}</h4>
-          <div class="meta-preview-x-media">
-            <.share_image frame={@x} kind="x" />
-            <span class="meta-preview-x-host">{@host}</span>
-          </div>
-          <p class="meta-preview-x-title">{@values.title || gettext("No title")}</p>
-        </section>
+          <section class="meta-preview-card meta-preview-x" data-testid="meta-preview-x">
+            <h4 class="meta-preview-label"><.icon name="at-sign" />{gettext("X")}</h4>
+            <div class="meta-preview-x-media">
+              <.share_image frame={@x} kind="x" />
+              <span class="meta-preview-x-host">{@host}</span>
+            </div>
+            <p class="meta-preview-x-title">{@values.title || gettext("No title")}</p>
+          </section>
+        </div>
       </div>
 
       <p class="meta-preview-note">
