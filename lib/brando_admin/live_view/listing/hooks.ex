@@ -486,6 +486,11 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
   defp attach_listing_info_hooks(socket, _) do
     attach_hook(socket, :b_listing_infos, :handle_info, fn
+      # The person's default view, which the list already shows: its URL
+      # takes the place of the bare one (`Content.List`)
+      {:open_listing_view, url}, socket ->
+        {:halt, push_patch(socket, to: url, replace: true)}
+
       {schema, [:entries, :updated], []}, socket ->
         send_update(BrandoAdmin.Components.Content.List,
           id: "content_listing_#{schema}_default",

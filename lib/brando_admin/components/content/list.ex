@@ -5,6 +5,8 @@ defmodule BrandoAdmin.Components.Content.List do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Blueprint.Listings
+  alias Brando.ListingViews
+  alias Brando.ListingViews.View, as: ListingView
   alias Brando.Query
   alias Brando.Trait.Creator
   alias Brando.Trait.Sequenced
@@ -13,6 +15,7 @@ defmodule BrandoAdmin.Components.Content.List do
   alias Brando.Trait.Translatable
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content.List.Row
+  alias BrandoAdmin.Components.Content.List.SavedViews
 
   NimbleCSV.define(Brando.CSVParser, separator: "\t", escape: "\"")
 
@@ -37,6 +40,8 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   def update(assigns, socket) do
+    assigns = maybe_open_default_view(assigns, socket)
+
     {:ok,
      socket
      |> assign_defaults(assigns)
@@ -52,20 +57,24 @@ defmodule BrandoAdmin.Components.Content.List do
       current_params
       |> Map.drop(drop_fields)
       |> Map.merge(extra_params)
+
+    push_patch(socket, to: listing_url(uri.path, new_params))
+  end
+
+  @doc """
+  The listing at `path` with `params` in its query, empty values left out,
+  and `:`, `[` and `]` left readable.
+  """
+  def listing_url(path, params) do
+    query =
+      params
       |> Enum.filter(fn {_k, v} -> v != "" end)
       |> Plug.Conn.Query.encode()
       |> String.replace("%3A", ":")
       |> String.replace("%5B", "[")
       |> String.replace("%5D", "]")
 
-    to =
-      if String.length(new_params) > 0 do
-        uri.path <> "?" <> new_params
-      else
-        uri.path
-      end
-
-    push_patch(socket, to: to)
+    if String.length(query) > 0, do: path <> "?" <> query, else: path
   end
 
   def handle_event("close_translation_dialog", _, socket) do
@@ -327,6 +336,45 @@ defmodule BrandoAdmin.Components.Content.List do
      })}
   end
 
+  # A listing opened as the menu links to it, without parameters or with
+  # only its own query, opens with the person's default view
+  # (`Brando.ListingViews`), once, when it connects: its URL is replaced with
+  # the view's, and this render already shows it. A listing the person has
+  # emptied themselves stays empty.
+  defp maybe_open_default_view(%{schema: schema, uri: %URI{} = uri, current_user: user} = assigns, socket) do
+    with false <- Map.has_key?(socket.assigns, :listing),
+         true <- connected?(socket) and Map.get(assigns, :saved_views, true) and listing_view?(socket.view),
+         %{} = listing <- Enum.find(schema.__listings__(), &(&1.name == Map.get(assigns, :listing, :default))),
+         true <- as_linked?(uri, listing),
+         %ListingView{} = view <- ListingViews.default_view(user, schema, listing.name) do
+      url = SavedViews.view_url(uri.path, view, listing, schema)
+      send(self(), {:open_listing_view, url})
+      %URI{query: query} = URI.parse(url)
+
+      assigns
+      |> Map.put(:uri, %{uri | query: query})
+      |> Map.put(:params, URI.decode_query(query || ""))
+    else
+      _ -> assigns
+    end
+  end
+
+  defp maybe_open_default_view(assigns, _socket), do: assigns
+
+  defp as_linked?(%URI{query: query}, _listing) when query in [nil, ""], do: true
+
+  defp as_linked?(%URI{query: query}, %{query: listing_query}) when is_map(listing_query) do
+    URI.decode_query(query) == URI.decode_query(BrandoAdmin.Menu.encode_listing_query(listing_query))
+  end
+
+  defp as_linked?(_uri, _listing), do: false
+
+  # Only the listing LiveViews handle the message that patches the URL
+  defp listing_view?(view) do
+    Code.ensure_loaded?(view) and function_exported?(view, :__authorization_resource__, 0) and
+      match?({:listing, _}, view.__authorization_resource__())
+  end
+
   defp assign_defaults(socket, assigns) do
     schema = assigns.schema
     context = schema.__modules__().context
@@ -344,6 +392,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:column_header, Map.get(assigns, :column_header, []))
       |> assign(:empty_title, Map.get(assigns, :empty_title))
       |> assign(:empty_description, Map.get(assigns, :empty_description))
+      |> assign(:saved_views?, Map.get(assigns, :saved_views, true))
       |> assign_new(:schema, fn -> schema end)
       |> assign_new(:context, fn -> context end)
       |> assign_new(:singular, fn -> singular end)
@@ -374,13 +423,16 @@ defmodule BrandoAdmin.Components.Content.List do
     assign_new(socket, :active_filter, fn -> List.first(filters) end)
   end
 
+  # From the URL each time: a saved view or the browser's back button can
+  # change the sort as well as the sort menu.
   defp assign_sort(%{assigns: %{listing: %{sorts: sorts}, params: params}} = socket) do
-    assign_new(socket, :active_sort, fn ->
+    active_sort =
       case params["sort"] && Enum.find(sorts, &(to_string(&1.key) == params["sort"])) do
         nil -> find_active_sort(sorts, List.first(sorts), get_in(params, ["order"]))
         sort -> sort
       end
-    end)
+
+    assign(socket, :active_sort, active_sort)
   end
 
   defp find_active_sort(sorts, default_sort, param_order) do
@@ -1180,6 +1232,17 @@ defmodule BrandoAdmin.Components.Content.List do
           sortable?={@sortable?}
           schema={@schema}
           on_update={@update_sort}
+        />
+        <.live_component
+          :if={@saved_views?}
+          module={SavedViews}
+          id={"listing-#{@listing.name}-views"}
+          schema={@schema}
+          listing={@listing}
+          uri={@uri}
+          params={@params}
+          current_user={@current_user}
+          active_sort={@active_sort}
         />
       </div>
     </div>

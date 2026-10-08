@@ -214,6 +214,9 @@ The rest are optional:
   Without `empty_title`, the listing says "No matching entries found".
 * a `:column_header` slot, rendered between the tools bar and the rows, for
   column headings.
+* `saved_views`: `false` leaves out the toolbar's [Views menu](#saved-views),
+  for a screen whose state the listing's URL does not hold, such as the media
+  libraries' folders. Default `true`.
 
 ```heex
 <.live_component
@@ -689,6 +692,28 @@ Listings are always paginated. `limit` sets the page size (default 25; `0`
 for everything on one page). Below the rows, editors can switch between 25,
 50 and all entries per page, whatever `limit` says, and move between pages.
 The page and page size are kept in the URL.
+
+## Saved views
+
+The toolbar's Views menu keeps what the listing's URL holds, its filters,
+status, sort and page size (not the page), under a name
+(`Brando.ListingViews`). A view is the editor's own, or shared with everyone
+who can open the listing: read access to its schema. Applying one patches the
+URL to the view's parameters and `view=<id>`, so the back button returns to
+the list as it was, and the menu shows when the list has moved away from the
+view since. A sort is saved by its key (`sort=<key>`).
+
+Editors update, rename, share and delete their own views. Someone else's
+shared view takes the `brando.listing_views.manage` permission with group
+authorization ("Shared listing views" under Settings), the admin or
+superuser role without. Each editor can pick one view, theirs or a shared
+one, to open the listing with: opened without parameters, or by the menu's
+link, the listing shows that view. A listing the editor empties stays empty.
+
+Views are stored per site environment, by schema and listing name. A view
+outlives the listing as it was saved: a filter, select option, sort or status
+the listing no longer declares is left out when it is applied, so renaming a
+filter's `key` drops it from saved views.
 
 ## Row actions
 

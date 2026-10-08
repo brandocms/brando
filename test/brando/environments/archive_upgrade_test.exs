@@ -178,7 +178,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     copied: copied
   } do
     loops = Enum.map(loops(copied), &elem(&1, 0))
-    assert length(loops) == 8
+    assert length(loops) == 9
 
     assert {:ok, %Environment{live: false} = restored} = Environments.rollback(site, archive_schema: archive)
     prefix = Tenant.prefix(site, restored)
@@ -216,7 +216,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
     # Every 2xx migration that loops over the environments can run in one;
     # the ones that only change public are left alone
-    assert length(copied) == 13
+    assert length(copied) == 14
     assert Enum.map(replays, & &1.name) == for({_, file} <- loops(copied), do: Path.basename(file, ".exs"))
 
     public = fingerprint("public")
@@ -421,7 +421,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
       ])
 
       assert {:ok, replays} = ArchiveUpgrade.plan(archive)
-      assert length(replays) == 8
+      assert length(replays) == 9
     end
 
     test "a version from the second it was taken counts as since", %{archive: archive} do
@@ -435,7 +435,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     end
 
     test "an older archive misses more", %{archive: archive, copied: copied} do
-      # Taken before brando_210 ran: only 210, 211, 212 and 216 were missed
+      # Taken before brando_210 ran: 210, 211, 212, 215 and 216 were missed
       versions = Map.new(copied, fn {version, file} -> {number(file), version} end)
       taken_at = ArchiveUpgrade.taken_at(archive)
 
@@ -447,7 +447,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
           do: query!("UPDATE schema_migrations SET inserted_at = $1 WHERE version = $2", [ran_at.(number), version])
 
       assert {:ok, replays} = ArchiveUpgrade.plan(archive)
-      assert Enum.map(replays, &number(&1.name <> ".exs")) == [210, 211, 212, 216]
+      assert Enum.map(replays, &number(&1.name <> ".exs")) == [210, 211, 212, 215, 216]
     end
   end
 
@@ -480,7 +480,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
           do: File.rename!(file, Path.join([directory, "brando", Path.basename(file)]))
 
       assert {:ok, replays} = ArchiveUpgrade.plan(archive)
-      assert length(replays) == 8
+      assert length(replays) == 9
     end
   end
 
@@ -504,7 +504,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
     # brando_212 was rolled back and not recorded; the others ran
     replayed = List.flatten(rows(~s(SELECT version FROM "#{prefix}".schema_migrations)))
-    assert length(replayed) == 7
+    assert length(replayed) == 8
   end
 
   describe "comparing with the live environment" do
@@ -546,7 +546,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
           File.read!(template) =~ ~r/case prefix\(\) do/,
           do: template
 
-    assert length(hooked) == 8
+    assert length(hooked) == 9
 
     for template <- hooked do
       {:ok, ast} = template |> File.read!() |> Code.string_to_quoted()

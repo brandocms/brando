@@ -746,6 +746,20 @@ production dump.
 
 #### Features
 
+- **Saved listing views.** The listing toolbar has a Views menu: an editor
+  saves the listing's filters, status, sort and page size under a name, for
+  themselves or shared with everyone who can open the listing, and gets back
+  to them in one click. Applying a view changes the URL, so the back button
+  returns to the list as it was. The menu updates, renames, shares and
+  deletes the view in use (one's own, or a shared one with the new
+  **Shared listing views** permission, the admin role without groups) and
+  sets a view to open the listing with. A filter or sort a view names that
+  the listing no longer has is left out. `brando_215` creates
+  `listing_views` and `listing_view_defaults` in every environment; until it
+  runs, the menu lists no views and saving one is refused. The image, file and video libraries have no
+  menu; another listing can leave it out with `saved_views={false}`. See
+  `Brando.ListingViews` and "Saved views" in the listings guide.
+
 - **Blocks on older module versions can be resolved.** A module save keeps
   refs and vars the new version no longer defines, and leaves the blocks
   holding them on their old version, so `mix brando.doctor` warned about them
