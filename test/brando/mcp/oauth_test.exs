@@ -531,8 +531,44 @@ defmodule Brando.MCP.OAuthTest do
       assert second == first
       assert %Grant{revoked_at: nil} = Repo.one!(Grant)
       assert rpc(tenant, first["access_token"], "ping").status == 200
-      # The pair is kept encrypted, never in the clear
+      # Not in the database at all, only in the cache, encrypted
       refute inspect(Repo.all(Token)) =~ first["refresh_token"]
+      refute :successor_ciphertext in Token.__schema__(:fields)
+      [rotated] = Repo.all(from t in Token, where: not is_nil(t.rotated_at))
+      assert {:ok, ciphertext} = Cachex.get(:cache, Brando.MCP.OAuth.replay_key(rotated))
+      refute ciphertext =~ first["refresh_token"]
+    end
+
+    test "the pair is held for ten seconds at most", %{tenant: tenant, tokens: tokens} do
+      refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+      [rotated] = Repo.all(from t in Token, where: not is_nil(t.rotated_at))
+      key = Brando.MCP.OAuth.replay_key(rotated)
+      assert {:ok, ttl} = Cachex.ttl(:cache, key)
+      assert ttl > 0 and ttl <= 10_000
+
+      # Gone (as after ten seconds, or on another node): reuse, so the connection ends
+      Cachex.del(:cache, key)
+      assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
+      assert %Grant{revoked_reason: "refresh_token_reuse"} = Repo.one!(Grant)
+    end
+
+    test "nothing of the pair reaches the query log", %{tenant: tenant, tokens: tokens} do
+      Logger.configure(level: :debug)
+      on_exit(fn -> Logger.configure(level: :error) end)
+
+      log =
+        ExUnit.CaptureLog.capture_log([level: :debug], fn ->
+          first = refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+          second = refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+          send(self(), {:pair, first, second})
+        end)
+
+      assert_received {:pair, first, second}
+      assert first == second
+      assert log =~ "mcp_tokens"
+      refute log =~ first["refresh_token"]
+      refute log =~ first["access_token"]
+      refute log =~ tokens["refresh_token"]
     end
 
     test "but not once its successor was used", %{tenant: tenant, tokens: tokens} do

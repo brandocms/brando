@@ -4,10 +4,10 @@ defmodule Brando.MCP.Token do
   of the token is stored; the token itself is shown to the client once.
 
   A refresh token is used once: `rotated_at` marks it, and using it again
-  revokes the whole grant (reuse detection). For ten seconds after it is
-  exchanged it keeps the pair it was exchanged for, encrypted with
-  `Brando.Crypto` (`successor_ciphertext`), so a client that refreshes twice
-  at once gets the same pair again while that pair is unused.
+  revokes the whole grant (reuse detection). `successor` is the refresh
+  token it was exchanged for: for ten seconds, a client that refreshes twice
+  at once gets the same pair again while that successor is unused (the pair
+  itself is held in the node's cache, never here; see `Brando.MCP.OAuth`).
   """
   use Ecto.Schema
 
@@ -22,7 +22,6 @@ defmodule Brando.MCP.Token do
     field :expires_at, :utc_datetime_usec
     field :rotated_at, :utc_datetime_usec
     belongs_to :successor, __MODULE__
-    field :successor_ciphertext, :string, redact: true
     field :revoked_at, :utc_datetime_usec
     field :last_used_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec, updated_at: false)

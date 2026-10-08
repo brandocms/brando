@@ -309,8 +309,7 @@ defmodule Brando.MCP do
   @doc """
   Removes what no request can use any more: the tokens of revoked or
   expired connections and expired tokens, authorization codes past their
-  minute, and the pairs refresh tokens keep for a concurrent refresh past
-  their grace period. Run nightly by `Brando.Worker.ActivityPurger`.
+  minute. Run nightly by `Brando.Worker.ActivityPurger`.
   Returns how many rows went.
   """
   @spec prune() :: non_neg_integer()
@@ -324,9 +323,6 @@ defmodule Brando.MCP do
 
       {tokens, _} = Repo.delete_all(from(t in Token, where: t.grant_id in subquery(dead_grants) or t.expires_at < ^now))
       {codes, _} = Repo.delete_all(from(c in AuthorizationCode, where: c.expires_at < ^now))
-
-      from(t in Token, where: not is_nil(t.successor_ciphertext) and t.rotated_at < ^DateTime.add(now, -60, :second))
-      |> Repo.update_all(set: [successor_ciphertext: nil])
 
       tokens + codes
     else

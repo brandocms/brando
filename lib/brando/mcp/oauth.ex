@@ -371,26 +371,12 @@ defmodule Brando.MCP.OAuth do
         now = DateTime.utc_now()
 
         # Tokens past their time are of no use, and only rotated refresh
-        # tokens still within theirs are kept, to notice reuse. The pair a
-        # rotated token keeps for a concurrent refresh is kept for the grace
-        # period only.
+        # tokens still within theirs are kept, to notice reuse.
         from(t in Token, where: t.grant_id == ^grant.id and t.expires_at < ^now) |> Repo.delete_all()
 
-        from(t in Token,
-          where: t.grant_id == ^grant.id and not is_nil(t.successor_ciphertext) and t.rotated_at < ^grace_start(now)
-        )
-        |> Repo.update_all(set: [successor_ciphertext: nil])
-
         {response, successor_id} = issue_tokens(grant)
-
-        token
-        |> Ecto.Changeset.change(
-          rotated_at: now,
-          successor_id: successor_id,
-          successor_ciphertext: Brando.Crypto.encrypt(Jason.encode!(response), successor_context(token))
-        )
-        |> Repo.update!()
-
+        token |> Ecto.Changeset.change(rotated_at: now, successor_id: successor_id) |> Repo.update!()
+        Repo.after_commit(fn -> hold_for_replay(token, response) end)
         response
 
       {:replay, response} ->
@@ -435,15 +421,38 @@ defmodule Brando.MCP.OAuth do
     with true <- DateTime.compare(token.rotated_at, grace_start(DateTime.utc_now())) == :gt,
          true <- bound_to?(grant, tenant) and allowed?(grant.user_id, tenant),
          %Token{rotated_at: nil, revoked_at: nil} <- token.successor_id && Repo.get(Token, token.successor_id),
-         {:ok, json} <- Brando.Crypto.decrypt(token.successor_ciphertext, successor_context(token)) do
-      {:replay, Jason.decode!(json)}
+         {:ok, response} <- held_for_replay(token) do
+      {:replay, response}
     else
       _ -> {:revoke, grant.id, "refresh_token_reuse"}
     end
   end
 
   defp grace_start(now), do: DateTime.add(now, -@refresh_grace_seconds, :second)
-  defp successor_context(token), do: "mcp.refresh_successor:#{token.id}"
+  # The pair a refresh returned, held for the grace period in the node's
+  # cache, encrypted for the token it replaced. Never in the database, so
+  # it is in no table, backup or query log. With several nodes the grace
+  # only works on the node that rotated the token: elsewhere there is no
+  # entry, and a second use is treated as reuse, which is the safe side.
+  defp hold_for_replay(token, response) do
+    ciphertext = Brando.Crypto.encrypt(Jason.encode!(response), replay_context(token))
+    Cachex.put(:cache, replay_key(token), ciphertext, expire: @refresh_grace_seconds * 1000)
+  end
+
+  defp held_for_replay(token) do
+    with {:ok, ciphertext} when is_binary(ciphertext) <- Cachex.get(:cache, replay_key(token)),
+         {:ok, json} <- Brando.Crypto.decrypt(ciphertext, replay_context(token)) do
+      {:ok, Jason.decode!(json)}
+    else
+      _ -> :error
+    end
+  end
+
+  @doc "The cache key of the pair the refresh token `token` was exchanged for, held for the grace period."
+  @spec replay_key(map()) :: term()
+  def replay_key(%{id: id}), do: {__MODULE__, :replay, id}
+
+  defp replay_context(token), do: "mcp.refresh_replay:#{token.id}"
 
   defp bound_to?(grant, tenant), do: secure_equal?(grant.resource, MCP.resource(tenant)) and same_tenant?(grant, tenant)
 
@@ -609,6 +618,7 @@ defmodule Brando.MCP.OAuth do
 
   defp random(prefix), do: prefix <> Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
 
-  @doc false
+  @doc "The SHA-256 hash a token or code is stored and looked up by."
+  @spec hash(binary()) :: binary()
   def hash(token), do: :crypto.hash(:sha256, token)
 end
