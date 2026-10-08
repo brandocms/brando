@@ -195,28 +195,22 @@ defmodule Brando.Notifications.Routing do
 
   @doc "Change a route. Its URL changes only when a new one is given."
   def update_route(%Route{} = route, attrs, user, opts \\ []) do
-    with :ok <- authorize(user) do
-      changeset = Route.changeset(route, attrs, form_opts(opts))
+    with :ok <- authorize(user),
+         changeset = Route.changeset(route, attrs, form_opts(opts)),
+         {:ok, updated} <- Repo.transaction(fn -> save_route(changeset) end) do
+      fields = changeset.changes |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort()
+      if fields != [], do: Activity.setting_changed(:updated, updated, updated.name, user, fields: fields)
+      broadcast(:changed)
+      {:ok, updated}
+    end
+  end
 
-      fn ->
-        with {:ok, updated} <- Repo.update(changeset),
-             {:ok, updated} <- store_url(updated, Ecto.Changeset.get_change(changeset, :url)) do
-          updated
-        else
-          {:error, changeset} -> Repo.rollback(changeset)
-        end
-      end
-      |> Repo.transaction()
-      |> case do
-        {:ok, updated} ->
-          fields = changeset.changes |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort()
-          if fields != [], do: Activity.setting_changed(:updated, updated, updated.name, user, fields: fields)
-          broadcast(:changed)
-          {:ok, updated}
-
-        {:error, _} = error ->
-          error
-      end
+  defp save_route(changeset) do
+    with {:ok, updated} <- Repo.update(changeset),
+         {:ok, updated} <- store_url(updated, Ecto.Changeset.get_change(changeset, :url)) do
+      updated
+    else
+      {:error, changeset} -> Repo.rollback(changeset)
     end
   end
 
@@ -404,13 +398,13 @@ defmodule Brando.Notifications.Routing do
     }
   end
 
-  @doc false
-  def entry_info(schema, entry_id, language \\ nil)
+  # The entry as a notification names it: title, type, language and admin link
+  defp entry_info(schema, entry_id, language \\ nil)
 
-  def entry_info(nil, _id, _language), do: nil
-  def entry_info(_schema, nil, _language), do: nil
+  defp entry_info(nil, _id, _language), do: nil
+  defp entry_info(_schema, nil, _language), do: nil
 
-  def entry_info(schema, entry_id, _language) when is_integer(entry_id) do
+  defp entry_info(schema, entry_id, _language) when is_integer(entry_id) do
     case Repo.get(schema, entry_id, Brando.ContentEvents.savepoint()) do
       nil -> %{"title" => "##{entry_id}", "type" => type_label(schema), "admin_url" => nil}
       entry -> entry_info(schema, entry)
@@ -419,7 +413,7 @@ defmodule Brando.Notifications.Routing do
     _ -> nil
   end
 
-  def entry_info(schema, %{id: id} = entry, _language) do
+  defp entry_info(schema, %{id: id} = entry, _language) do
     %{
       "title" => Brando.Notes.entry_title(schema, entry),
       "type" => type_label(schema),
@@ -448,12 +442,11 @@ defmodule Brando.Notifications.Routing do
 
   ## Queueing
 
-  @doc false
   # Every active route that sends `event` (for this content type) gets a
   # delivery: one for a Slack or Teams route, one per recipient for email.
   # Returns `{:error, _}` when one could not be queued, so a content event
   # is dispatched again; deliveries already queued for it are not repeated.
-  def notify(event, notification, opts) do
+  defp notify(event, notification, opts) do
     entry_type = Event.entry_type(opts[:schema])
 
     from(r in Route, where: r.active == true)
@@ -561,27 +554,22 @@ defmodule Brando.Notifications.Routing do
       notification = Map.put(base("test"), "admin_url", admin_url("/admin/config/notifications/#{route.id}/deliveries"))
       recipients = if route.kind == :email, do: route.recipient_ids, else: [nil]
 
-      Enum.reduce_while(recipients, {:ok, []}, fn recipient_id, {:ok, acc} ->
-        %Delivery{}
-        |> Ecto.Changeset.change(%{
-          route_id: route.id,
-          event: "test",
-          recipient_id: recipient_id,
-          notification: notification,
-          test: true
-        })
-        |> Repo.insert()
-        |> case do
-          {:ok, delivery} ->
-            case enqueue(delivery) do
-              {:ok, delivery} -> {:cont, {:ok, [delivery | acc]}}
-              error -> {:halt, error}
-            end
+      Enum.reduce_while(recipients, {:ok, []}, &queue_test(route, &1, notification, &2))
+    end
+  end
 
-          error ->
-            {:halt, error}
-        end
-      end)
+  defp queue_test(route, recipient_id, notification, {:ok, queued}) do
+    case queue_test(route, recipient_id, notification) do
+      {:ok, delivery} -> {:cont, {:ok, [delivery | queued]}}
+      error -> {:halt, error}
+    end
+  end
+
+  defp queue_test(route, recipient_id, notification) do
+    attrs = %{route_id: route.id, event: "test", recipient_id: recipient_id, notification: notification, test: true}
+
+    with {:ok, delivery} <- %Delivery{} |> Ecto.Changeset.change(attrs) |> Repo.insert() do
+      enqueue(delivery)
     end
   end
 

@@ -621,7 +621,7 @@ defmodule Brando.Notes do
     end
   end
 
-  @doc false
+  @doc "Seconds until `user_id` may get the next mention email: 0, or what is left of ten minutes since the last."
   def seconds_until_next_email(user_id, now) do
     last =
       Repo.one(from(m in Mention, where: m.user_id == ^user_id and not is_nil(m.emailed_at), select: max(m.emailed_at)))
@@ -654,7 +654,7 @@ defmodule Brando.Notes do
     end
   end
 
-  @doc false
+  @doc "Marks `mentions` as emailed at `now`."
   def mark_emailed([], _now), do: :ok
 
   def mark_emailed(mentions, now) do
@@ -663,9 +663,11 @@ defmodule Brando.Notes do
     :ok
   end
 
-  @doc false
-  # The mentions as `Brando.Notes.MentionEmail` lists them, oldest first,
-  # leaving out those whose entry is gone.
+  @doc """
+  `mentions` (newest first, as `mentions_for/2` returns them) as
+  `Brando.Notes.MentionEmail` lists them: oldest first, leaving out those
+  whose entry is gone.
+  """
   def mention_email_items(mentions), do: mentions |> Enum.reverse() |> Enum.flat_map(&email_item/1)
 
   defp email_item(%Mention{note: note}) do

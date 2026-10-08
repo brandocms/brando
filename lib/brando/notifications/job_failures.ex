@@ -29,7 +29,7 @@ defmodule Brando.Notifications.JobFailures do
     :telemetry.attach_many(@handler, [[:oban, :job, :exception], [:oban, :job, :stop]], &__MODULE__.handle_event/4, nil)
   end
 
-  @doc false
+  @doc "The telemetry handler: queues a dispatch for a discarded job. Never raises."
   def handle_event(_event, _measurements, %{state: :discard, job: %Oban.Job{} = job} = meta, _config) do
     if Brando.Notifications.Routing.failed_jobs?() and job.worker not in @ignored do
       job |> args(meta) |> queue()
@@ -78,7 +78,7 @@ defmodule Brando.Notifications.JobFailures do
     end
   end
 
-  @doc false
+  @doc "The first line of an error, at most 200 characters."
   def error_line(nil), do: nil
 
   def error_line(error) do

@@ -158,16 +158,17 @@ defmodule Brando.Notifications.Digest do
       notifications = Enum.map(readable, & &1.notification)
       mention_items = Notes.mention_email_items(mentions)
 
-      if notifications != [] or mention_items != [] do
-        {:ok, _job} =
-          user
-          |> Email.digest(notifications, mention_items, if(period == :weekly, do: :weekly, else: :daily))
-          |> Brando.Mailer.deliver_later()
-      end
-
+      send_email(user, notifications, mention_items, if(period == :weekly, do: :weekly, else: :daily))
       finish(unreadable, [], "cancelled", now)
       finish(readable, mentions, "succeeded", now)
     end
+  end
+
+  defp send_email(_user, [], [], _period), do: :ok
+
+  defp send_email(user, notifications, mention_items, period) do
+    {:ok, _job} = user |> Email.digest(notifications, mention_items, period) |> Brando.Mailer.deliver_later()
+    :ok
   end
 
   defp finish(deliveries, mentions, state, now) do

@@ -266,13 +266,12 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
     Enum.filter(type_labels(), fn {_label, value} -> value in readable end)
   end
 
-  @doc false
-  def event_label("mention"), do: gettext("Mentions")
-  def event_label("scheduled_publish"), do: gettext("Published on schedule")
-  def event_label("scheduled_unpublish"), do: gettext("Unpublished on schedule")
-  def event_label("failed_job"), do: gettext("Failed jobs")
-  def event_label("test"), do: gettext("Test notification")
-  def event_label(other), do: other
+  defp event_label("mention"), do: gettext("Mentions")
+  defp event_label("scheduled_publish"), do: gettext("Published on schedule")
+  defp event_label("scheduled_unpublish"), do: gettext("Unpublished on schedule")
+  defp event_label("failed_job"), do: gettext("Failed jobs")
+  defp event_label("test"), do: gettext("Test notification")
+  defp event_label(other), do: other
 
   defp event_hint("mention"), do: gettext("Someone is mentioned in a note.")
   defp event_hint("scheduled_publish"), do: gettext("An entry is published at its scheduled time.")
@@ -281,11 +280,10 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
   defp event_hint("failed_job"),
     do: gettext("A background job is given up, or a webhook is paused after its deliveries kept failing.")
 
-  @doc false
-  def kind_label(:slack), do: "Slack"
-  def kind_label(:teams), do: "Microsoft Teams"
-  def kind_label(:email), do: gettext("Email")
-  def kind_label(other), do: to_string(other)
+  defp kind_label(:slack), do: "Slack"
+  defp kind_label(:teams), do: "Microsoft Teams"
+  defp kind_label(:email), do: gettext("Email")
+  defp kind_label(other), do: to_string(other)
 
   defp kind_icon(:email), do: "mail"
   defp kind_icon(_), do: "message-square"
@@ -786,16 +784,21 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
 
   defp field_error(opts) do
     case Keyword.get(opts, :reason) || Keyword.get(opts, :validation) do
-      reason when reason in [:https_required, :scheme_not_allowed] -> gettext("Use an https:// address.")
-      :credentials_in_url -> gettext("Leave the user name and password out of the address.")
-      :unresolvable -> gettext("This host name could not be found.")
-      :private_address -> gettext("This address is on a private or local network, which webhooks may not call.")
-      :invalid_url -> gettext("This is not a valid address.")
       :required -> gettext("Fill this in.")
       :length -> length_error(opts)
-      _ -> gettext("Check this value.")
+      reason -> url_error(reason)
     end
   end
+
+  defp url_error(reason) when reason in [:https_required, :scheme_not_allowed], do: gettext("Use an https:// address.")
+  defp url_error(:credentials_in_url), do: gettext("Leave the user name and password out of the address.")
+  defp url_error(:unresolvable), do: gettext("This host name could not be found.")
+
+  defp url_error(:private_address),
+    do: gettext("This address is on a private or local network, which webhooks may not call.")
+
+  defp url_error(:invalid_url), do: gettext("This is not a valid address.")
+  defp url_error(_), do: gettext("Check this value.")
 
   defp length_error(opts) do
     if Keyword.get(opts, :kind) == :min, do: gettext("Choose at least one."), else: gettext("This is too long.")
@@ -835,8 +838,8 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
 
     case names do
       [] -> gettext("Email")
-      names when length(names) <= 3 -> gettext("Email to %{names}", names: Enum.join(names, ", "))
-      names -> ngettext("Email to %{count} person", "Email to %{count} people", length(names))
+      [_, _, _, _ | _] -> ngettext("Email to %{count} person", "Email to %{count} people", length(names))
+      names -> gettext("Email to %{names}", names: Enum.join(names, ", "))
     end
   end
 

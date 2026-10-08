@@ -37,23 +37,7 @@ defmodule Brando.Notifications.Email do
     items = Enum.map(notifications, &Message.content(&1, language))
 
     Gettext.with_locale(Brando.Gettext, language, fn ->
-      mention_items =
-        Enum.map(mentions, fn mention ->
-          place =
-            if mention.anchor in [nil, ""], do: mention.entry_title, else: "#{mention.entry_title} · #{mention.anchor}"
-
-          %{
-            title:
-              if(mention.author,
-                do: gettext("%{name} mentioned you in %{place}", name: mention.author, place: place),
-                else: gettext("You were mentioned in %{place}", place: place)
-              ),
-            text: mention.text,
-            link: mention.url,
-            link_label: gettext("Open the entry"),
-            context: nil
-          }
-        end)
+      mention_items = Enum.map(mentions, &mention_item/1)
 
       count = length(items) + length(mention_items)
 
@@ -75,6 +59,17 @@ defmodule Brando.Notifications.Email do
       |> Mailer.new()
       |> Layout.put_body(language: language, preheader: subject, html: digest_html(assigns), text: digest_text(assigns))
     end)
+  end
+
+  defp mention_item(mention) do
+    place = if mention.anchor in [nil, ""], do: mention.entry_title, else: "#{mention.entry_title} · #{mention.anchor}"
+
+    title =
+      if mention.author,
+        do: gettext("%{name} mentioned you in %{place}", name: mention.author, place: place),
+        else: gettext("You were mentioned in %{place}", place: place)
+
+    %{title: title, text: mention.text, link: mention.url, link_label: gettext("Open the entry"), context: nil}
   end
 
   defp language(user), do: to_string(user.language || Brando.config(:default_admin_language) || "en")
