@@ -83,6 +83,7 @@ Guide: `deps/brando/guides/doctor.md`
 | `--verbose` (`-v`) | Lists what each check found: the pending migrations, the stale modules, the files and lines of deprecated calls |
 | `--json` | Prints the report as JSON for scripts (see below) |
 | `--strict` | Fails on warnings as well as errors |
+| `--offline` | Does not ask Brando's git remote for its latest commit (see below) |
 
 The task exits with status 1 when a check finds an error, so CI can run it;
 with only warnings it exits 0, unless `--strict` is given. A skipped check

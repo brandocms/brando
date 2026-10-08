@@ -5,6 +5,7 @@ defmodule Brando.Doctor.Report do
 
   alias Brando.Doctor
   alias Brando.Doctor.Result
+  alias Brando.Doctor.Source
 
   @column 29
 
@@ -25,10 +26,19 @@ defmodule Brando.Doctor.Report do
     ]
   end
 
-  @doc "The header line: Brando, Phoenix and LiveView versions."
+  @doc """
+  The header line: Brando's version and source, Phoenix and LiveView
+  versions.
+  """
   def header(versions) do
+    brando =
+      case Source.describe(versions[:brando_source]) do
+        nil -> "Brando #{versions.brando}"
+        source -> "Brando #{versions.brando} (#{source})"
+      end
+
     [
-      "Brando #{versions.brando}",
+      brando,
       versions.phoenix && "Phoenix #{versions.phoenix}",
       versions.live_view && "LiveView #{versions.live_view}"
     ]
@@ -81,7 +91,12 @@ defmodule Brando.Doctor.Report do
 
       %{
         "status" => "warning",
-        "versions" => %{"brando" => "0.55.0", "elixir" => "1.20.3", …},
+        "versions" => %{
+          "brando" => "0.55.0",
+          "brando_source" => %{"type" => "git", "commit" => "12c2289…", "branch" => "main", …},
+          "elixir" => "1.20.3",
+          …
+        },
         "counts" => %{"ok" => 8, "warning" => 3, "error" => 0, "skipped" => 1},
         "checks" => [
           %{"id" => "migrations", "label" => "Migrations", "status" => "ok",
@@ -93,7 +108,7 @@ defmodule Brando.Doctor.Report do
   def json(results, versions) do
     %{
       "status" => to_string(Doctor.status(results)),
-      "versions" => Map.new(versions, fn {key, value} -> {to_string(key), value} end),
+      "versions" => Map.new(versions, fn {key, value} -> {to_string(key), json_value(value)} end),
       "counts" => Map.new(Doctor.counts(results), fn {key, value} -> {to_string(key), value} end),
       "checks" =>
         Enum.map(results, fn result ->
@@ -108,4 +123,8 @@ defmodule Brando.Doctor.Report do
         end)
     }
   end
+
+  defp json_value(%{} = map), do: Map.new(map, fn {key, value} -> {to_string(key), json_value(value)} end)
+  defp json_value(value) when is_atom(value) and not is_nil(value) and not is_boolean(value), do: to_string(value)
+  defp json_value(value), do: value
 end

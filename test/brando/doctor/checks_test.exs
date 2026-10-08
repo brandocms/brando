@@ -28,8 +28,40 @@ defmodule Brando.Doctor.ChecksTest do
     @requirements %{elixir: "~> 1.18", otp: 27, phoenix: "1.8.15", live_view: "1.2.12"}
     @versions %{brando: "0.55.0", elixir: "1.20.3", otp: "28", phoenix: "1.8.15", live_view: "1.2.12"}
 
+    @git %{
+      type: :git,
+      url: "https://github.com/brandocms/brando.git",
+      commit: "12c2289e98fa058a8168720b802c13b42a2c21b4",
+      branch: "main",
+      tag: nil,
+      ref: nil
+    }
+
     test "supported versions pass" do
-      assert %Result{status: :ok, summary: "Elixir 1.20.3 · OTP 28"} = Checks.Versions.evaluate(@versions, @requirements)
+      assert %Result{status: :ok, summary: "Brando 0.55.0 · Elixir 1.20.3 · OTP 28"} =
+               Checks.Versions.evaluate(@versions, @requirements)
+    end
+
+    test "names where Brando came from" do
+      result = Checks.Versions.evaluate(Map.put(@versions, :brando_source, @git), @requirements)
+      assert result.summary == "Brando 0.55.0 (git 12c2289, branch main) · Elixir 1.20.3 · OTP 28"
+
+      assert "commit 12c2289e98fa058a8168720b802c13b42a2c21b4 from https://github.com/brandocms/brando.git" in result.items
+
+      hex = Checks.Versions.evaluate(Map.put(@versions, :brando_source, %{type: :hex, version: "0.55.0"}), @requirements)
+      assert hex.summary =~ "Brando 0.55.0 (Hex)"
+    end
+
+    test "notes a branch that has moved past the locked commit, without warning" do
+      versions = Map.put(@versions, :brando_source, @git)
+
+      result = Checks.Versions.evaluate(versions, @requirements, "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")
+      assert result.status == :ok
+      assert result.summary =~ "Brando 0.55.0 (git 12c2289, branch main; main is now at a1b2c3d)"
+      assert Enum.any?(result.items, &(&1 =~ "mix deps.update brando"))
+
+      unmoved = Checks.Versions.evaluate(versions, @requirements, @git.commit)
+      refute unmoved.summary =~ "now at"
     end
 
     test "an unsupported version is an error that names it" do
@@ -42,7 +74,8 @@ defmodule Brando.Doctor.ChecksTest do
     test "the requirements come from Brando's mix.exs" do
       assert %{elixir: "~> " <> _, phoenix: phoenix, live_view: live_view} = Checks.Versions.requirements()
       assert phoenix && live_view
-      assert %Result{status: :ok} = Checks.Versions.run(context())
+      assert %Result{status: :ok, summary: summary} = Checks.Versions.run(context())
+      assert summary =~ "Brando #{Brando.version()} (this checkout)"
     end
   end
 

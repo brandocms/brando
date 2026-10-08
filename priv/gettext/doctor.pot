@@ -11,6 +11,11 @@
 msgid ""
 msgstr ""
 
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "%{branch} is now at %{commit}"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "%{context} CDN incomplete"
@@ -330,6 +335,11 @@ msgstr ""
 msgid "Generate sitemap"
 msgstr ""
 
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "Hex"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "Image configs"
@@ -530,6 +540,11 @@ msgstr ""
 msgid "check the errors of the discarded jobs"
 msgstr ""
 
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "commit %{commit} from %{url}"
+msgstr ""
+
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "could not run"
@@ -573,6 +588,21 @@ msgstr ""
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
 msgid "generated %{at}"
+msgstr ""
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "git %{commit}"
+msgstr ""
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "git %{commit}, branch %{branch}"
+msgstr ""
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "git %{commit}, tag %{tag}"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -723,6 +753,11 @@ msgstr ""
 msgid "not served by Brando"
 msgstr ""
 
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "path %{path}"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "queue %{queue}, limit %{limit}"
@@ -808,9 +843,24 @@ msgstr ""
 msgid "testing mode, jobs run inline"
 msgstr ""
 
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "the default branch"
+msgstr ""
+
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "the locked commit is not the latest on %{branch} (%{commit}): mix deps.update brando"
+msgstr ""
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "they hold refs or vars their module no longer defines: resolve them under Block modules, or with mix brando.modules resolve --uid UID --user ID"
+msgstr ""
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "this checkout"
 msgstr ""
 
 #: lib/brando/doctor.ex

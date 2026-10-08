@@ -12,6 +12,11 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "%{branch} is now at %{commit}"
+msgstr "%{branch} er nå på %{commit}"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "%{context} CDN incomplete"
@@ -331,6 +336,11 @@ msgstr "GET /robots.txt går til %{plug}"
 msgid "Generate sitemap"
 msgstr "Generer nettstedskart"
 
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "Hex"
+msgstr "Hex"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "Image configs"
@@ -531,6 +541,11 @@ msgstr "sjekk at den nattlige SitemapGenerator-jobben kjører, eller Verktøy �
 msgid "check the errors of the discarded jobs"
 msgstr "se feilene til de forkastede jobbene"
 
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "commit %{commit} from %{url}"
+msgstr "commit %{commit} fra %{url}"
+
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "could not run"
@@ -575,6 +590,21 @@ msgstr "generert for %{age} siden"
 #, elixir-autogen, elixir-format
 msgid "generated %{at}"
 msgstr "generert %{at}"
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "git %{commit}"
+msgstr "git %{commit}"
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "git %{commit}, branch %{branch}"
+msgstr "git %{commit}, gren %{branch}"
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "git %{commit}, tag %{tag}"
+msgstr "git %{commit}, tagg %{tag}"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -724,6 +754,11 @@ msgstr "ikke generert"
 msgid "not served by Brando"
 msgstr "serveres ikke av Brando"
 
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "path %{path}"
+msgstr "sti %{path}"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "queue %{queue}, limit %{limit}"
@@ -809,10 +844,25 @@ msgstr "hoppet over i en release: trenger prosjektets kildefiler"
 msgid "testing mode, jobs run inline"
 msgstr "testmodus, jobber kjøres direkte"
 
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "the default branch"
+msgstr "standardgrenen"
+
+#: lib/brando/doctor/checks/versions.ex
+#, elixir-autogen, elixir-format
+msgid "the locked commit is not the latest on %{branch} (%{commit}): mix deps.update brando"
+msgstr "den låste commiten er ikke den nyeste på %{branch} (%{commit}): mix deps.update brando"
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "they hold refs or vars their module no longer defines: resolve them under Block modules, or with mix brando.modules resolve --uid UID --user ID"
 msgstr "de har referanser eller variabler som modulen ikke lenger definerer: løs dem under Blokkmoduler, eller med mix brando.modules resolve --uid UID --user ID"
+
+#: lib/brando/doctor/source.ex
+#, elixir-autogen, elixir-format
+msgid "this checkout"
+msgstr "denne arbeidskopien"
 
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format

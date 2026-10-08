@@ -14,6 +14,9 @@ defmodule Brando.Doctor.Context do
     * `:oban` — the application's Oban configuration. The mix task starts Oban
       without queues so nothing runs; this is what it would run with.
     * `:now` — the time to measure ages against.
+    * `:offline?` — whether checks must not reach the network. The Versions
+      check asks a git remote for its latest commit only from the terminal,
+      and not with `mix brando.doctor --offline`.
   """
 
   alias Brando.Tenant
@@ -26,7 +29,8 @@ defmodule Brando.Doctor.Context do
           environments: [{String.t() | nil, String.t() | nil}],
           locale: String.t(),
           oban: keyword(),
-          now: DateTime.t()
+          now: DateTime.t(),
+          offline?: boolean()
         }
 
   defstruct mode: :mix,
@@ -36,7 +40,8 @@ defmodule Brando.Doctor.Context do
             environments: [{nil, nil}],
             locale: "en",
             oban: [],
-            now: nil
+            now: nil,
+            offline?: false
 
   @doc "Builds a context; every field can be given in `opts`."
   @spec new(keyword()) :: t()
@@ -52,7 +57,8 @@ defmodule Brando.Doctor.Context do
       environments: Keyword.get_lazy(opts, :environments, fn -> environments(mode, prefix) end),
       locale: Keyword.get_lazy(opts, :locale, fn -> Gettext.get_locale(Brando.Gettext) end),
       oban: Keyword.get_lazy(opts, :oban, &oban_config/0),
-      now: Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
+      now: Keyword.get_lazy(opts, :now, &DateTime.utc_now/0),
+      offline?: Keyword.get(opts, :offline?, false)
     }
   end
 
