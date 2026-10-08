@@ -17,6 +17,8 @@ The HTML page names it in its head (`render_hreflangs`):
 The meta drawer's **Previews** tab shows the Markdown path and the start of
 the Markdown, from the last save.
 
+<!-- usage-rules:start topic="seo" -->
+
 ## Which entries
 
 A blueprint has a Markdown version when it has a URL of its own
@@ -59,6 +61,8 @@ plug Brando.Plug.Markdown, except: ["/admin", "/api", "/docs"]
 ```
 
 The default is `["/admin", "/api"]`.
+
+<!-- usage-rules:end -->
 
 ## The response
 

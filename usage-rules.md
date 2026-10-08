@@ -814,9 +814,9 @@ Load a topic's rules before working in that area:
 - `brando:datasources` (`deps/brando/usage-rules/datasources.md`): feeding a module entries from a query or an editor's selection, and keeping them fresh.
 - `brando:live-preview` (`deps/brando/usage-rules/live-preview.md`): configuring preview targets, their assigns and refreshes.
 - `brando:media` (`deps/brando/usage-rules/media.md`): image sizes and srcsets, rendering media, galleries, video providers and their webhooks.
-- `brando:seo` (`deps/brando/usage-rules/seo.md`): site identity, robots.txt, page metadata, JSON-LD and sitemaps.
+- `brando:seo` (`deps/brando/usage-rules/seo.md`): site identity, robots.txt and the AI crawler policy, IndexNow, page metadata, JSON-LD, sitemaps and Markdown alternates.
 - `brando:content-events` (`deps/brando/usage-rules/content-events.md`): reacting to content changes in code, webhooks, and the admin search index.
-- `brando:assistant-mcp` (`deps/brando/usage-rules/assistant-mcp.md`): configuring the assistant's model and guidance, proposals, and connecting a coding agent through MCP.
+- `brando:assistant-mcp` (`deps/brando/usage-rules/assistant-mcp.md`): configuring the assistant's model and guidance, proposals, and connecting AI tools over MCP: the remote endpoint and `mix brando.mcp`.
 - `brando:tenancy` (`deps/brando/usage-rules/tenancy.md`): sites and environments, tenant migrations, static builds, groups, policies and permission checks.
 - `brando:i18n` (`deps/brando/usage-rules/i18n.md`): content languages, localized routes, hreflang and Gettext.
 - `brando:querying` (`deps/brando/usage-rules/querying.md`): writing a context with `Brando.Query`: filters, matches, pagination, caching and mutations.

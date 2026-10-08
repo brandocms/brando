@@ -188,6 +188,8 @@ User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=no
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 `ai-input` is `no` only when every AI search and user-fetch crawler is blocked.
 The robots text is never changed; the block is added when robots.txt is served.
 Nothing is added until a crawler is blocked or a training preference chosen,
@@ -199,6 +201,8 @@ Blocking is a request: the user-fetch crawlers say robots.txt may not apply to
 them. Google's AI Overviews use Googlebot, not `Google-Extended`; keep a page
 out of them with the entry's **No snippet** and **Snippet length** settings
 ([Page metadata](meta.md#snippet-limits)).
+
+<!-- usage-rules:end -->
 
 ### IndexNow
 
