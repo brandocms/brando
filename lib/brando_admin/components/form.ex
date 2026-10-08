@@ -998,8 +998,8 @@ defmodule BrandoAdmin.Components.Form do
   #
   # Whatever a change in the form does besides, this does too, without asking
   # the browser for its fields (which could be a row behind): the other
-  # editors learn the field is changed, and the live preview and the website
-  # editor follow it.
+  # editors learn the field is changed, the blocks that read it get its rows,
+  # and the live preview and the website editor follow it.
   def update(%{action: :update_entries, field: field, op: op}, socket) do
     changeset = socket.assigns.form.source
 
@@ -1008,11 +1008,18 @@ defmodule BrandoAdmin.Components.Form do
         {:ok, socket}
 
       entries ->
+        updated = SubformHelpers.put_entries(changeset, field, entries)
+
         socket =
           socket
-          |> put_form(to_form(SubformHelpers.put_entries(changeset, field, entries), []))
+          |> put_form(to_form(updated, []))
           |> Drafts.dirty()
           |> broadcast_dirty_fields()
+          |> send_updated_entry_field_to_blocks(
+            [Access.key(field)],
+            updated |> apply_changes() |> Map.get(field),
+            to_string(field)
+          )
           |> tap(&FrontendEditor.field_changed/1)
           |> maybe_invalidate_live_preview_assign([field])
           |> maybe_fetch_root_blocks(:live_preview_update, 0)

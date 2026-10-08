@@ -106,16 +106,33 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
 
   @doc """
   A row to add: a changeset of `entry` (a struct or a changeset) with a key
-  of its own. A map of attributes is left as it is.
+  of its own. See `new_row/3` for a map of attributes.
   """
   def new_row(%Changeset{} = changeset),
     do: %{changeset | params: Map.put(changeset.params || %{}, @key, "new-" <> Brando.Utils.generate_uid())}
 
   def new_row(%_{} = entry), do: entry |> Changeset.change() |> new_row()
 
-  # A map is the new row's attributes, cast by `put_assoc`/`put_embed`; it has
-  # nowhere to keep a key until the form is next validated.
-  def new_row(attrs), do: attrs
+  @doc """
+  A row to add to the relation `field_name` of `changeset`. A map of
+  attributes (a subform's `default %{…}`) becomes a changeset of the
+  related schema first, as `put_assoc`/`put_embed` would make it, so it has
+  somewhere to keep its key.
+  """
+  def new_row(%Changeset{} = changeset, field_name, %{} = attrs) when not is_struct(attrs) do
+    changeset
+    |> related(field_name)
+    |> struct()
+    |> Changeset.change(attrs)
+    |> new_row()
+  end
+
+  def new_row(_changeset, _field_name, entry), do: new_row(entry)
+
+  defp related(%Changeset{data: %module{}}, field_name) do
+    %{related: related} = module.__schema__(:association, field_name) || module.__schema__(:embed, field_name)
+    related
+  end
 
   @doc "Removes the row with `key` from the subform field."
   def remove_subentry(socket, key), do: send_op(socket, {:delete, key})
@@ -126,7 +143,7 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
 
   @doc "Appends entries to the subform field, keeping pending sibling input."
   def append_subentries(socket, new_entries) do
-    send_op(socket, {:append, Enum.map(List.wrap(new_entries), &new_row/1)})
+    send_op(socket, {:append, Enum.map(List.wrap(new_entries), &new_row_for(socket, &1))})
   end
 
   @doc """
@@ -135,8 +152,11 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
   """
   def insert_subentry(socket, key, index, new_entry) do
     index = if is_binary(index), do: String.to_integer(index), else: index
-    send_op(socket, {:insert, blank_to_nil(key), index, new_row(new_entry)})
+    send_op(socket, {:insert, blank_to_nil(key), index, new_row_for(socket, new_entry)})
   end
+
+  defp new_row_for(socket, entry),
+    do: new_row(socket.assigns.field.form.source, socket.assigns.subform.name, entry)
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(key), do: key

@@ -198,4 +198,35 @@ defmodule BrandoAdmin.NavigationLiveTest do
     assert_receive {:dirty_fields, fields, _user_id}, 1_000
     assert "menu[items]" in fields
   end
+
+  # Blocks that read an entry field are sent it when it changes. A list
+  # change reaches the form without the browser's change event, so the form
+  # sends the new rows itself. A block registers for the fields it reads; the
+  # LiveView's own messages are traced to see what the form sends it.
+  test "blocks that read the items are sent the new rows after an add", %{conn: conn, menu: menu} do
+    view = open(conn, menu)
+    consumer = {BrandoAdmin.Components.Form.Block, "items-reader"}
+
+    send(
+      view.pid,
+      {:phoenix, :send_update,
+       {{BrandoAdmin.Components.Form, "menu_form"},
+        %{event: "register_block_wanting_entry", block_ref: consumer, fields: ["items"]}}}
+    )
+
+    settle(view)
+    :erlang.trace(view.pid, true, [:send])
+
+    view |> element("#menu_form_form button", "Add entry") |> render_click()
+    settle(view)
+
+    assert_receive {:trace, _, :send,
+                    {:phoenix, :send_update,
+                     {^consumer, %{event: "update_entry_field", path: [_key], change: [_, _, _, %Item{}] = items}}}, _},
+                   1_000
+
+    assert Enum.map(items, & &1.key) == ["brando", "documentation", "guides", nil]
+  after
+    :erlang.trace(:all, false, [:send])
+  end
 end

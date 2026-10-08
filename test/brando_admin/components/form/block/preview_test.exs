@@ -29,6 +29,12 @@ defmodule BrandoAdmin.Components.Form.Block.PreviewTest do
     assert updated.assigns.entry.title == "After"
     assert updated.assigns.form == :unchanged
 
+    # A list change (a row added to a subform) arrives as the field's rows
+    assert {:ok, listed} =
+             Block.update(%{event: "update_entry_field", path: [Access.key(:items)], change: [%{key: "a"}]}, updated)
+
+    assert listed.assigns.entry.items == [%{key: "a"}]
+
     assert {:ok, replaced} = Block.update(%{event: "replace_entry", entry: %{title: "Replaced"}}, updated)
     assert replaced.assigns.entry.title == "Replaced"
     assert replaced.assigns.form == :unchanged
