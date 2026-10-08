@@ -31,6 +31,10 @@ defmodule Brando.Tenant.SharedTables do
     environments
     markdown_webhook_deliveries
     environment_operation_logs
+    mcp_authorization_codes
+    mcp_grants
+    mcp_settings
+    mcp_tokens
     forms_submissions
     schema_migrations
     site_asset_sets

@@ -299,17 +299,20 @@ also that `execute/1` does not receive the migration prefix the way
 `Brando.Tenant.SharedTables` is the single source of truth. Registry,
 authentication, session, and migration-history tables stay in `public`
 permanently, as do authorization, the content assistant's conversations and
-proposals, content transfer receipts, and Markdown webhook deliveries, along
-with every `oban_*` table, since Oban is configured against `public`:
+proposals, content transfer receipts, form submissions, Markdown webhook
+deliveries and connected AI tools (MCP), along with every `oban_*` table, since
+Oban is configured against `public`:
 
 ```text
 sites  sites_previews  environments  environment_operation_logs
 site_asset_sets  ssg_builds  uploads_pending_intents  schema_migrations
-users  users_tokens  user_tokens  user_sites
+users  users_tokens  user_tokens  user_sites  users_passkeys
+users_security  users_recovery_codes  users_security_events  users_security_policy
 authorization_groups  authorization_group_permissions  authorization_user_groups
 authorization_legacy_mappings  authorization_audit_events
 ai_conversations  ai_messages  ai_runs  content_proposals  content_proposal_receipts
-content_transfer_receipts  markdown_webhook_deliveries
+content_transfer_receipts  forms_submissions  markdown_webhook_deliveries
+mcp_settings  mcp_grants  mcp_tokens  mcp_authorization_codes
 oban_*
 ```
 

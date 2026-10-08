@@ -43,6 +43,8 @@ defmodule Brando.Migrations.Brando213AddMCPConnectionsTest do
     for {table, schema} <- @tables do
       assert columns(table) == expected[table]
       assert expected[table] == schema.__schema__(:fields) |> Enum.map(&to_string/1) |> Enum.sort()
+      # Never cloned into an environment, nor copied into one by migrate_to_tenant
+      assert Brando.Tenant.SharedTables.member?(table)
     end
   end
 end
