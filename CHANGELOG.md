@@ -1681,7 +1681,9 @@ production dump.
   one field at once end with the same value. AI text and other values the
   form fills in reach the other editors at once, an editor who opens an
   entry without block fields gets the others' unsaved values, and a
-  reconnect no longer sends the browser's old values over newer ones.
+  reconnect no longer sends the browser's old values over newer ones, while
+  what was typed during it still wins. An edit made after a save or a
+  reload wins over the edits before it.
 
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is
