@@ -36,7 +36,7 @@ defmodule Brando.ListingViews do
       |> visible(listing, user)
       |> order_by([v], asc: fragment("lower(?)", v.name), asc: v.id)
       |> preload(:creator)
-      |> Repo.all()
+      |> Repo.all(savepoint())
     else
       []
     end
@@ -58,19 +58,22 @@ defmodule Brando.ListingViews do
 
   @doc """
   Saves a view of `listing` of `schema` for `user`: `name`, `params` (see
-  `Brando.ListingViews.Params`) and `shared`.
+  `Brando.ListingViews.Params`) and `shared`. `{:error, :unavailable}` in an
+  environment that has not run the brando_215 migration.
   """
   @spec create_view(User.t(), module(), listing(), map()) ::
-          {:ok, View.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+          {:ok, View.t()} | {:error, :forbidden | :unavailable | Ecto.Changeset.t()}
   def create_view(%User{} = user, schema, listing, attrs) do
     if can_see?(user, schema) do
       %View{creator_id: user.id, schema: schema_name(schema), listing: to_string(listing)}
       |> View.changeset(attrs)
-      |> Repo.insert()
+      |> Repo.insert(savepoint())
       |> preload_creator()
     else
       {:error, :forbidden}
     end
+  rescue
+    error in Postgrex.Error -> missing_table(error, __STACKTRACE__, {:error, :unavailable})
   end
 
   @doc "Changes a view's name, parameters or sharing, when `user` may (`can_manage?/2`)."
@@ -120,7 +123,7 @@ defmodule Brando.ListingViews do
       schema
       |> visible(listing, user)
       |> join(:inner, [v], d in Default, on: d.view_id == v.id and d.user_id == ^user.id)
-      |> Repo.one()
+      |> Repo.one(savepoint())
     end
   rescue
     error in Postgrex.Error -> missing_table(error, __STACKTRACE__, nil)
@@ -178,6 +181,9 @@ defmodule Brando.ListingViews do
 
   defp preload_creator({:ok, view}), do: {:ok, Repo.preload(view, :creator)}
   defp preload_creator(error), do: error
+
+  # A failed query inside a transaction leaves the transaction usable
+  defp savepoint, do: if(Repo.repo().in_transaction?(), do: [mode: :savepoint], else: [])
 
   # An environment that has not run the brando_215 migration has no views
   defp missing_table(%Postgrex.Error{postgres: %{code: :undefined_table, message: message}} = error, stacktrace, empty) do

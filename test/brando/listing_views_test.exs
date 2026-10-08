@@ -169,6 +169,50 @@ defmodule Brando.ListingViewsTest do
     end
   end
 
+  describe "per site environment" do
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      :ok
+    end
+
+    test "a view belongs to the environment it was saved in" do
+      editor = user(:editor)
+
+      for prefix <- ["tenant_views-a_production", "tenant_views-b_production"] do
+        BrandoIntegration.Repo.query!(~s|CREATE SCHEMA "#{prefix}"|)
+
+        for table <- ~w(listing_views listing_view_defaults),
+            do: BrandoIntegration.Repo.query!(~s|CREATE TABLE "#{prefix}".#{table} (LIKE public.#{table} INCLUDING ALL)|)
+      end
+
+      Brando.Tenant.with_prefix("tenant_views-a_production", fn -> view!(editor, "In A", %{"shared" => true}) end)
+
+      Brando.Tenant.with_prefix("tenant_views-b_production", fn ->
+        assert ListingViews.list_views(editor, Article, :filters) == []
+      end)
+
+      Brando.Tenant.with_prefix("tenant_views-a_production", fn ->
+        assert names(ListingViews.list_views(editor, Article, :filters)) == ["In A"]
+      end)
+
+      assert ListingViews.list_views(editor, Article, :filters) == []
+    end
+
+    test "an environment without the brando_215 tables has no views, and saving one is refused" do
+      editor = user(:editor)
+      BrandoIntegration.Repo.query!(~s|CREATE SCHEMA "tenant_old_production"|)
+
+      Brando.Tenant.with_prefix("tenant_old_production", fn ->
+        assert ListingViews.list_views(editor, Article, :filters) == []
+        assert ListingViews.default_view(editor, Article, :filters) == nil
+        assert {:error, :unavailable} = ListingViews.create_view(editor, Article, :filters, %{"name" => "Old"})
+      end)
+
+      # The transaction carries on
+      assert ListingViews.list_views(editor, Article, :filters) == []
+    end
+  end
+
   describe "with group authorization" do
     setup do
       owner = user(:superuser)
