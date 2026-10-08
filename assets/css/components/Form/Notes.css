@@ -547,7 +547,10 @@
 }
 
 /* The field note button, moved to the field in use. It hugs the label and
-   is no taller than its line, so offering it never moves the field. */
+   takes no height in the label row: its 18px is taller than a 13px label's
+   line (about 17px), and the row grew to fit it, nudging the label and
+   pushing the field down by a pixel on every hover. The negative block
+   margins give it a margin box of no height, centred on the label. */
 .field-note-add {
   display: inline-flex;
   flex: none;
@@ -556,7 +559,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  margin: 0 auto 0 6px;
+  margin: -9px auto -9px 6px;
   padding: 0;
   border: 0;
   border-radius: 5px;
@@ -569,9 +572,15 @@
   &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
 }
 
-/* With a count on the label, the button sits between them. */
+/* With a count on the label, the button sits between them, in room the
+   label keeps for it, so the count does not move when it is offered. */
+.label-wrapper[data-note-count] > label {
+  margin-right: 24px;
+}
+
 .label-wrapper[data-note-count] > .field-note-add {
   margin-right: 0;
+  margin-left: -18px;
 }
 
 /* "Add note" over a text selection */
