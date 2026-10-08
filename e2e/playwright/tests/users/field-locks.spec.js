@@ -104,4 +104,31 @@ test.describe('Field locks', () => {
       await expect(secondUserPage.locator(`#project_${field}-media`)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 10000 })
     }
   })
+
+  // What B types while disconnected is B's newest edit: the reconnect keeps
+  // it, and A, who holds the older title, gets it. The socket is dropped and
+  // reconnected by LiveSocket, which rejoins and recovers the form; a real
+  // network partition reloads the page instead (see block-recovery.spec.js),
+  // and there is no form to recover.
+  test('typing done offline survives the reconnect', async ({ page, secondUserPage }) => {
+    const path = await openProject(page)
+    await secondUserPage.goto(path)
+    await syncLV(secondUserPage)
+
+    const aTitle = page.getByLabel('Title', { exact: true })
+    const bTitle = secondUserPage.getByLabel('Title', { exact: true })
+
+    await aTitle.fill('Test Project Beta, A')
+    await aTitle.blur()
+    await expect(bTitle).toHaveValue('Test Project Beta, A', { timeout: 5000 })
+
+    await secondUserPage.evaluate(() => window.liveSocket.disconnect())
+    await expect(secondUserPage.locator('.phx-connected').first()).toBeHidden({ timeout: 15000 })
+    await bTitle.fill('Test Project Beta, typed offline')
+    await secondUserPage.evaluate(() => window.liveSocket.connect())
+    await syncLV(secondUserPage, 30000)
+
+    await expect(bTitle).toHaveValue('Test Project Beta, typed offline')
+    await expect(aTitle).toHaveValue('Test Project Beta, typed offline', { timeout: 10000 })
+  })
 })

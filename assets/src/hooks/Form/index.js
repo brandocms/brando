@@ -203,6 +203,7 @@ export default (app) => ({
   },
 
   destroyed() {
+    this.trackOfflineEdits(false)
     this.follow?.destroy()
     this.notes?.destroy()
     this.el.removeEventListener('mouseover', this.onBlockNameHover)
@@ -242,8 +243,46 @@ export default (app) => ({
     this.stuckObserver.observe(sentinel)
   },
 
-  disconnected() { this.draftRecovery?.disconnected() },
-  reconnected() { this.draftRecovery?.reconnected() },
+  disconnected() {
+    this.draftRecovery?.disconnected()
+    this.trackOfflineEdits(true)
+  },
+  reconnected() {
+    this.draftRecovery?.reconnected()
+    this.trackOfflineEdits(false)
+  },
+
+  // The entry inputs typed into while the socket is down are listed in the
+  // form itself (`__offline_edits`), so LiveView's recovery of the form
+  // after the reconnect carries the list: the server takes those fields as
+  // fresh edits, and the rest of the recovered form as what it was
+  // (`recover_form` in form.ex).
+  trackOfflineEdits(on) {
+    if (this.onOfflineInput) {
+      this.$form.removeEventListener('input', this.onOfflineInput, true)
+      this.$form.removeEventListener('change', this.onOfflineInput, true)
+      this.onOfflineInput = null
+    }
+    if (!on) return
+
+    const edits = new Set()
+    this.$form.querySelector(':scope > input[name="__offline_edits"]')?.remove()
+    this.onOfflineInput = event => {
+      const name = event.target?.name
+      if (!name || name === '__offline_edits' || event.target.form !== this.$form) return
+      edits.add(name)
+      let list = this.$form.querySelector(':scope > input[name="__offline_edits"]')
+      if (!list) {
+        list = document.createElement('input')
+        list.type = 'hidden'
+        list.name = '__offline_edits'
+        this.$form.appendChild(list)
+      }
+      list.value = [...edits].join(' ')
+    }
+    this.$form.addEventListener('input', this.onOfflineInput, true)
+    this.$form.addEventListener('change', this.onOfflineInput, true)
+  },
 
   // ⇧⌘S saves and closes, ⌘S saves and stays. Ctrl stands in for ⌘ off a
   // Mac, and the key is compared in lower case so Caps Lock doesn't matter.
