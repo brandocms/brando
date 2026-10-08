@@ -31,8 +31,8 @@
 
   button, a {
     @fontsize xs/1;
-    color: var(--brando-color-dark); 
-    border: 1px solid var(--brando-color-dark);
+    color: var(--brando-ink); 
+    border: 1px solid var(--brando-ink);
     background-color: transparent;
     width: 100%;
     aspect-ratio: 1;
@@ -51,15 +51,15 @@
     }
 
     &.active {
-      background-color: var(--brando-color-dark); 
-      border-color: var(--brando-color-dark); 
-      color: var(--brando-color-peach);
+      background-color: var(--brando-ink); 
+      border-color: var(--brando-ink); 
+      color: var(--brando-surface-subform);
     }
 
     &:hover {
-      background-color: var(--brando-color-dark); 
-      border-color: var(--brando-color-dark); 
-      color: theme(colors.peach);
+      background-color: var(--brando-ink); 
+      border-color: var(--brando-ink); 
+      color: var(--brando-surface-subform);
     }
   }
 }

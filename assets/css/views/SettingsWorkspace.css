@@ -286,6 +286,21 @@
   .seo-redirects .seo-redirects-table > :is(thead, tbody) > tr > :is(th, td):first-child { padding-left: 0; }
   .seo-redirects .seo-redirects-table > :is(thead, tbody) > tr > :is(th, td):last-child { padding-right: 0; }
   .seo-redirects-table td small { display: block; margin-top: 2px; color: var(--workspace-muted); font-size: 11px; }
+  /* On a phone each suggestion is a block: the requested URL, its hits and the
+     destination on the left, Create redirect at the right (as MCP grants). */
+  @media (max-width: 700px) {
+    .seo-redirects-table {
+      > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      > tbody > tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 12px 0; border-bottom: 1px solid var(--brando-line-soft); }
+      > tbody > tr:last-child { border-bottom: 0; }
+      > tbody > tr > td, > tbody > tr > td:first-child, > tbody > tr > td:last-child { display: block; min-width: 0; padding: 0; border: 0; }
+      > tbody > tr > td.seo-redirect-url { overflow-wrap: anywhere; }
+      > tbody > tr > td.seo-redirect-action { grid-column: 2; grid-row: 1 / span 3; align-self: start; }
+      > tbody > tr > td.seo-redirect-hits { color: var(--workspace-muted); font-size: 12px; }
+      > tbody > tr > td.seo-redirect-hits::before { content: attr(data-label) ": "; }
+      > tbody > tr > td.seo-redirect-to small { overflow-wrap: anywhere; }
+    }
+  }
   .seo-duplicates { margin-top: 20px; display: grid; gap: 12px; }
   .seo-duplicates h3 { font-size: 13px; font-weight: 500; }
   /* A card per shared value, built like the check card: a wash header saying

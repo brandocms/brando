@@ -15,10 +15,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid color-mix(in srgb, var(--brando-color-dark) 26%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brando-ink) 26%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, white 80%, transparent);
-  color: var(--brando-color-dark);
+  color: var(--brando-ink);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -36,8 +36,8 @@
   }
 
   &:hover {
-    background: var(--brando-color-dark);
-    border-color: var(--brando-color-dark);
+    background: var(--brando-ink);
+    border-color: var(--brando-ink);
     color: white;
 
     [data-icon] {
@@ -50,7 +50,7 @@
   margin-top: 0.35rem;
   padding: 0.55rem 0.65rem;
   background: color-mix(in srgb, white 80%, transparent);
-  border: 1px solid color-mix(in srgb, var(--brando-color-dark) 17%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brando-ink) 17%, transparent);
   border-radius: 8px;
 }
 
@@ -64,21 +64,21 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, white);
+    color: color-mix(in srgb, var(--brando-ink) 62%, white);
   }
 
   input.text {
     @font mono;
     font-size: 12px;
     padding: 0.35rem 0.5rem;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 22%, transparent);
     border-radius: 6px;
     background: white;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     outline: none;
 
     &:focus {
-      border-color: var(--brando-color-blue);
+      border-color: var(--brando-accent);
     }
   }
 
@@ -99,8 +99,8 @@
   .spinner {
     width: 14px;
     height: 14px;
-    border: 2px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
-    border-top-color: var(--brando-color-dark);
+    border: 2px solid color-mix(in srgb, var(--brando-ink) 20%, transparent);
+    border-top-color: var(--brando-ink);
     border-radius: 999px;
     animation: spin 0.6s linear infinite;
   }
@@ -110,7 +110,7 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: color-mix(in srgb, var(--brando-color-dark) 58%, white);
+    color: color-mix(in srgb, var(--brando-ink) 58%, white);
   }
 }
 
@@ -135,14 +135,14 @@
 
   .progress-bar {
     height: 4px;
-    background: color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+    background: color-mix(in srgb, var(--brando-ink) 12%, transparent);
     border-radius: 999px;
     overflow: hidden;
   }
 
   .progress-fill {
     height: 100%;
-    background: var(--brando-color-blue);
+    background: var(--brando-accent);
     border-radius: 999px;
     transition: width 200ms ease;
   }
@@ -150,7 +150,7 @@
   .progress-text {
     @font mono;
     font-size: 10px;
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, white);
+    color: color-mix(in srgb, var(--brando-ink) 62%, white);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     display: block;
@@ -162,7 +162,7 @@
   margin-left: auto;
   flex-shrink: 0;
   display: inline-flex;
-  border: 1px solid color-mix(in srgb, var(--brando-color-dark) 26%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brando-ink) 26%, transparent);
   border-radius: 999px;
   overflow: hidden;
   background: color-mix(in srgb, white 74%, transparent);
@@ -175,7 +175,7 @@
     line-height: 30px;
     padding: 0 0.85rem;
     background: transparent;
-    color: color-mix(in srgb, var(--brando-color-dark) 84%, white);
+    color: color-mix(in srgb, var(--brando-ink) 84%, white);
     font-size: 12px;
     font-family: "Mono";
     text-transform: uppercase;
@@ -185,11 +185,11 @@
       color 150ms ease;
 
     &:hover {
-      background: color-mix(in srgb, var(--brando-color-peach) 22%, white);
+      background: color-mix(in srgb, var(--brando-surface-subform) 22%, white);
     }
 
     &.is-active {
-      background: var(--brando-color-dark);
+      background: var(--brando-ink);
       color: white;
     }
   }
@@ -207,7 +207,7 @@
     margin: 0;
     font-size: 12px;
     line-height: 1.25;
-    color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+    color: color-mix(in srgb, var(--brando-ink) 74%, white);
   }
 
   .video-picker-main-actions {
@@ -220,7 +220,7 @@
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: color-mix(in srgb, var(--brando-color-dark) 65%, white);
+      color: color-mix(in srgb, var(--brando-ink) 65%, white);
     }
   }
 }
@@ -231,14 +231,14 @@
   gap: 0.45rem;
   padding: 0.45rem 0.65rem;
   margin-bottom: 0.6rem;
-  background: color-mix(in srgb, var(--brando-color-peach) 16%, white);
-  border: 1px solid color-mix(in srgb, var(--brando-color-peach) 42%, white);
+  background: color-mix(in srgb, var(--brando-surface-subform) 16%, white);
+  border: 1px solid color-mix(in srgb, var(--brando-surface-subform) 42%, white);
   border-radius: 8px;
   font-family: "Mono";
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--brando-color-dark);
+  color: var(--brando-ink);
   user-select: none;
 
   [data-icon] {
@@ -248,15 +248,15 @@
   }
 
   .video-picker-organize-hint {
-    color: color-mix(in srgb, var(--brando-color-dark) 58%, white);
+    color: color-mix(in srgb, var(--brando-ink) 58%, white);
     margin-left: 0.25rem;
   }
 
   .video-picker-organize-clear {
     margin-left: auto;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 24%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 24%, transparent);
     background: color-mix(in srgb, white 80%, transparent);
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     border-radius: 999px;
     height: 24px;
     line-height: 24px;
@@ -270,8 +270,8 @@
       border-color 140ms ease;
 
     &:hover {
-      background: var(--brando-color-dark);
-      border-color: var(--brando-color-dark);
+      background: var(--brando-ink);
+      border-color: var(--brando-ink);
       color: white;
     }
   }
@@ -291,7 +291,7 @@
   text-align: center;
   padding: 0 12px;
   border-radius: 999px;
-  background: var(--brando-color-dark);
+  background: var(--brando-ink);
   color: white;
   font-family: "Mono";
   font-size: 14px;
@@ -320,7 +320,7 @@
     justify-content: center;
     box-shadow:
       0 0 0 2px color-mix(in srgb, white 88%, transparent),
-      0 1px 3px color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+      0 1px 3px color-mix(in srgb, var(--brando-ink) 18%, transparent);
 
     [data-icon] {
       width: 0.74rem;
@@ -333,12 +333,12 @@
   }
 
   .video-picker-empty {
-    border: 1px dashed color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--brando-ink) 30%, transparent);
     border-radius: 12px;
     padding: 2rem 1rem;
     text-align: center;
     font-family: "Mono";
-    color: color-mix(in srgb, var(--brando-color-dark) 72%, white);
+    color: color-mix(in srgb, var(--brando-ink) 72%, white);
     background: color-mix(in srgb, white 78%, transparent);
 
     [data-icon] {
@@ -352,13 +352,13 @@
     h4 {
       margin: 0;
       font-size: 15px;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
     }
 
     p {
       margin: 0.35rem 0 0;
       font-size: 12px;
-      color: color-mix(in srgb, var(--brando-color-dark) 67%, white);
+      color: color-mix(in srgb, var(--brando-ink) 67%, white);
     }
   }
 
@@ -398,16 +398,16 @@
       }
 
       &.organize-selected {
-        border-color: color-mix(in srgb, var(--brando-color-blue) 52%, var(--brando-color-peach));
-        box-shadow: 0 0 0 1px color-mix(in srgb, var(--brando-color-blue) 32%, transparent);
-        background-color: color-mix(in srgb, var(--brando-color-blue) 8%, white);
+        border-color: color-mix(in srgb, var(--brando-accent) 52%, var(--brando-surface-subform));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--brando-accent) 32%, transparent);
+        background-color: color-mix(in srgb, var(--brando-accent) 8%, white);
         user-select: none;
 
         &:hover {
           border-color: color-mix(
             in srgb,
-            var(--brando-color-blue) 72%,
-            var(--brando-color-peach)
+            var(--brando-accent) 72%,
+            var(--brando-surface-subform)
           );
         }
       }
@@ -468,11 +468,11 @@
       position: relative;
       cursor: pointer;
       min-height: 64px;
-      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brando-ink) 12%, transparent);
       border-radius: 8px;
       padding: 0.4rem 0.5rem;
       background: color-mix(in srgb, white 92%, transparent);
-      box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-color-dark) 4%, transparent);
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 4%, transparent);
       transition:
         border-color 150ms ease,
         background-color 150ms ease,
@@ -489,11 +489,11 @@
       }
 
       &.selected {
-        border-color: color-mix(in srgb, var(--brando-color-blue) 54%, white);
-        background: color-mix(in srgb, var(--brando-color-blue) 5%, white);
+        border-color: color-mix(in srgb, var(--brando-accent) 54%, white);
+        background: color-mix(in srgb, var(--brando-accent) 5%, white);
         box-shadow:
           inset 3px 0 0 var(--brando-accent),
-          0 1px 3px color-mix(in srgb, var(--brando-color-blue) 10%, transparent);
+          0 1px 3px color-mix(in srgb, var(--brando-accent) 10%, transparent);
 
         .video-picker__selected-indicator {
           visibility: visible;
@@ -501,31 +501,31 @@
         }
 
         &:hover {
-          border-color: color-mix(in srgb, var(--brando-color-blue) 78%, white);
-          background: color-mix(in srgb, var(--brando-color-blue) 10%, white);
+          border-color: color-mix(in srgb, var(--brando-accent) 78%, white);
+          background: color-mix(in srgb, var(--brando-accent) 10%, white);
         }
       }
 
       &.organize-selected {
-        border-color: color-mix(in srgb, var(--brando-color-blue) 52%, var(--brando-color-peach));
-        background: color-mix(in srgb, var(--brando-color-blue) 8%, white);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-color-blue) 32%, transparent);
+        border-color: color-mix(in srgb, var(--brando-accent) 52%, var(--brando-surface-subform));
+        background: color-mix(in srgb, var(--brando-accent) 8%, white);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-accent) 32%, transparent);
         user-select: none;
 
         &:hover {
           border-color: color-mix(
             in srgb,
-            var(--brando-color-blue) 72%,
-            var(--brando-color-peach)
+            var(--brando-accent) 72%,
+            var(--brando-surface-subform)
           );
-          background: color-mix(in srgb, var(--brando-color-blue) 12%, white);
+          background: color-mix(in srgb, var(--brando-accent) 12%, white);
         }
       }
 
       &:hover {
-        border-color: color-mix(in srgb, var(--brando-color-dark) 24%, transparent);
-        background: color-mix(in srgb, var(--brando-color-peach) 9%, white);
-        box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+        border-color: color-mix(in srgb, var(--brando-ink) 24%, transparent);
+        background: color-mix(in srgb, var(--brando-surface-subform) 9%, white);
+        box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-ink) 7%, transparent);
       }
 
       .video-preview {
@@ -596,7 +596,7 @@
         .video-picker__title {
           font-size: 13px;
           font-weight: 500;
-          color: var(--brando-color-dark);
+          color: var(--brando-ink);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -605,7 +605,7 @@
         .video-picker__source-url {
           @font mono;
           font-size: 10px;
-          color: color-mix(in srgb, var(--brando-color-dark) 50%, white);
+          color: color-mix(in srgb, var(--brando-ink) 50%, white);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -616,9 +616,9 @@
         .video-title-input {
           @font mono;
           background: color-mix(in srgb, white 92%, transparent);
-          border: 1px solid color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
+          border: 1px solid color-mix(in srgb, var(--brando-ink) 30%, transparent);
           border-radius: 6px;
-          color: var(--brando-color-dark);
+          color: var(--brando-ink);
           font-size: 13px;
           font-weight: 500;
           padding: 2px 6px;
@@ -626,14 +626,14 @@
           outline: none;
 
           &:focus {
-            border-color: var(--brando-color-blue);
+            border-color: var(--brando-accent);
           }
         }
 
         .video-picker__meta {
           @font mono;
           font-size: 11px;
-          color: color-mix(in srgb, var(--brando-color-dark) 72%, white);
+          color: color-mix(in srgb, var(--brando-ink) 72%, white);
           text-transform: uppercase;
           letter-spacing: 0.02em;
         }
@@ -648,7 +648,7 @@
           .video-picker-action-button {
             border: 0;
             background: transparent;
-            color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+            color: color-mix(in srgb, var(--brando-ink) 74%, white);
             width: 26px;
             height: 26px;
             border-radius: 999px;
@@ -666,8 +666,8 @@
             }
 
             &:hover {
-              background: color-mix(in srgb, var(--brando-color-peach) 30%, white);
-              color: var(--brando-color-dark);
+              background: color-mix(in srgb, var(--brando-surface-subform) 30%, white);
+              color: var(--brando-ink);
             }
           }
 
@@ -681,8 +681,8 @@
             padding: 0;
             list-style: none;
             border-radius: 8px;
-            border: 1px solid color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
-            background: color-mix(in srgb, white 95%, var(--brando-color-peach) 5%);
+            border: 1px solid color-mix(in srgb, var(--brando-ink) 30%, transparent);
+            background: color-mix(in srgb, white 95%, var(--brando-surface-subform) 5%);
             overflow: hidden;
 
             li {
@@ -692,7 +692,7 @@
 
               + li {
                 border-top: 1px solid
-                  color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
+                  color-mix(in srgb, var(--brando-ink) 14%, transparent);
               }
             }
 
@@ -703,7 +703,7 @@
               border: 0;
               border-radius: 0;
               background: transparent;
-              color: var(--brando-color-dark);
+              color: var(--brando-ink);
               font-size: 11px;
               text-transform: uppercase;
               display: flex;
@@ -719,7 +719,7 @@
               }
 
               &:hover {
-                background: var(--brando-color-dark);
+                background: var(--brando-ink);
                 color: white;
               }
 

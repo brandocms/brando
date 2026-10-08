@@ -28,16 +28,16 @@
   /* The dot is a cap-high status-dot inside the name's label (see base.css),
      like every other status in the admin */
   .status-dot circle {
-    fill: theme(colors.status.draft);
+    fill: var(--brando-status-draft);
     transition: fill 0.5s ease;
   }
 
   .online .status-dot circle {
-    fill: theme(colors.status.published);
+    fill: var(--brando-status-published);
   }
 
   .idle .status-dot circle {
-    fill: theme(colors.status.pending);
+    fill: var(--brando-status-pending);
   }
 
   .info {
@@ -74,7 +74,7 @@
       &::before {
         content: "↳" / "";
         flex: 0 0 17px;
-        color: theme(colors.status.draft);
+        color: var(--brando-status-draft);
       }
     }
 
@@ -137,7 +137,7 @@
     display: block;
     width: 30px;
     height: 30px;
-    border: 1px solid var(--brando-color-dark);
+    border: 1px solid var(--brando-ink);
     border-radius: 50%;
 
     &:after {
@@ -151,7 +151,7 @@
       height: 10px;
       position: absolute;
       opacity: 0;
-      background-color: theme(colors.status.published);
+      background-color: var(--brando-status-published);
       transition:
         opacity 1s ease,
         background-color 2s ease;
@@ -197,7 +197,7 @@
       }
 
       &:after {
-        background-color: theme(colors.status.published);
+        background-color: var(--brando-status-published);
         transition:
           opacity 1s ease,
           background-color 2s ease;
@@ -214,7 +214,7 @@
       }
 
       &:after {
-        background-color: theme(colors.status.pending);
+        background-color: var(--brando-status-pending);
         transition:
           opacity 1s ease,
           background-color 2s ease;

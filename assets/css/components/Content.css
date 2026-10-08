@@ -2,8 +2,8 @@ main {
   position: relative;
   width: 100%;
   min-height: 100vh;
-  background-color: var(--brando-color-content-background);
-  color: var(--brando-color-foreground);
+  background-color: var(--brando-surface);
+  color: var(--brando-ink);
   display: flex;
   flex-direction: column;
 
@@ -16,7 +16,7 @@ main {
   > .progress {
     @space container;
     z-index: 999999;
-    color: theme(colors.peach);
+    color: var(--brando-surface-subform);
     background-color: color-mix(in srgb, var(--brando-ink) 90%, transparent);
     height: auto;
     transform: translateY(-100%);
@@ -51,7 +51,7 @@ main {
     .bar {
       margin-top: 5px;
       height: 2px;
-      background-color: var(--brando-color-peach);
+      background-color: var(--brando-surface-subform);
       transition: width 0.75s ease;
     }
   }

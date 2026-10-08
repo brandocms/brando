@@ -410,3 +410,23 @@ svg {
     display: none;
   }
 }
+
+/* Where the open sidebar would cover the toolbar (phones and tablets), the
+   sidebar stops above it, so Done stays in reach. The toast shows over the
+   sidebar's lower edge for its two seconds. */
+@media (max-width: 900px) {
+  .fe-sidebar {
+    bottom: 76px;
+    overflow: hidden;
+    border-bottom-left-radius: var(--fe-radius);
+  }
+
+  :host(.is-docked-left) .fe-sidebar {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: var(--fe-radius);
+  }
+
+  .fe-toast {
+    z-index: 1;
+  }
+}

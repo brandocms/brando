@@ -28,7 +28,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 6px;
   background: var(--brando-surface);
-  color: var(--brando-color-dark);
+  color: var(--brando-ink);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--brando-ink) 8%, transparent), 0 1px 3px color-mix(in srgb, var(--brando-ink) 4%, transparent);
   font: 12px/20px "Main", sans-serif;
   overflow: clip;

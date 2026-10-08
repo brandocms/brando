@@ -9,7 +9,7 @@
   bottom: 15px;
   z-index: 1100;
   width: 320px;
-  background-color: var(--brando-color-input, var(--brando-surface));
+  background-color: var(--brando-surface);
   border: 1px solid var(--brando-ink);
   font-size: 14px;
 

@@ -1,8 +1,8 @@
 /* Admin colour tokens.
 
    The only stylesheet allowed to contain hex colours: every other file uses
-   these custom properties (or `theme(colors.*)`, which europa.config.js points
-   at them). `.github/scripts/check_css_colors.sh` enforces this in CI.
+   these custom properties. `.github/scripts/check_css_colors.sh` enforces this
+   in CI.
 
    Names describe a role, not a colour, so a role can change value (or gain a
    dark-mode value) without renaming its uses. See docs/admin-ui-design.md. */
@@ -123,14 +123,14 @@
   --brando-input-border: #e0e0e0;
   --brando-switch-on: #9cc79f;
   --brando-switch-off: #c0c0c0;
-  --brando-color-block-ref-background: #fcfcfc;
   --brando-tabbar-bg: #fcfcfd;
   --brando-chip-hover-bg: var(--brando-surface-hover);
   --brando-chip-active-bg: var(--brando-surface-selected);
   --brando-chip-active-fg: var(--brando-accent);
 
-  /* Legacy names, kept so existing rules follow the roles above. Prefer the
-     role names in new CSS. */
+  /* Deprecated: legacy names Brando's own stylesheets no longer use. They are
+     kept for applications whose admin CSS still refers to them, and will be
+     removed in a later release. Use the role names above. */
   --brando-color-background: var(--brando-surface-page);
   --brando-color-content-background: var(--brando-surface);
   --brando-color-foreground: var(--brando-ink);
@@ -141,5 +141,10 @@
   --brando-color-nav-background: var(--brando-surface-page);
   --brando-color-shaded: #fcfcfd;
   --brando-color-input: #ffffff;
+  --brando-color-white: #ffffff;
+  --brando-color-gray: #333333;
+  --brando-color-gray-light: #bcbcbc;
+  --brando-color-black: #000000;
   --brando-shaded-surface: var(--brando-surface-shaded);
+  --brando-color-block-ref-background: #fcfcfc;
 }

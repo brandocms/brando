@@ -18,7 +18,12 @@ module.exports = {
       $sm: '<=ipad_portrait',
     },
 
-    /* The legacy palette names point at the colour roles in css/tokens.css,
+    /* Deprecated: Brando's own stylesheets use the role tokens in
+       css/tokens.css, not these names. They are kept for applications whose
+       admin CSS still uses `theme(colors.*)` or `@color`, and will be removed
+       in a later release.
+
+       The legacy palette names point at the colour roles in css/tokens.css,
        so `theme(colors.dark)` and `@color fg dark` follow the tokens. EuropaCSS
        inserts these strings verbatim (no colour maths), so a `var()` is safe
        anywhere a colour is; `@color` splits on spaces, so keep values

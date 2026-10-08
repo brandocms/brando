@@ -3,7 +3,7 @@
    mixes the accent into white; warnings and errors use their own roles. */
 .alert {
   @font main;
-  --alert-accent: var(--brando-color-blue);
+  --alert-accent: var(--brando-accent);
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -13,8 +13,8 @@
   margin-bottom: 20px;
   padding: 13px 16px;
   border-radius: 10px;
-  background-color: color-mix(in srgb, var(--alert-accent) 8%, var(--brando-color-white));
-  color: var(--brando-color-dark);
+  background-color: color-mix(in srgb, var(--alert-accent) 8%, var(--brando-surface));
+  color: var(--brando-ink);
   font-size: 13px;
   line-height: 1.5;
 
@@ -41,7 +41,7 @@
     width: 17px;
     height: 17px;
     margin-top: 1px;
-    color: color-mix(in srgb, var(--alert-accent) 70%, var(--brando-color-dark));
+    color: color-mix(in srgb, var(--alert-accent) 70%, var(--brando-ink));
   }
 
   .icon,
@@ -81,7 +81,7 @@
       justify-content: center;
 
       &:hover {
-        background-color: var(--brando-color-dark);
+        background-color: var(--brando-ink);
 
         [data-icon] {
           color: white;

@@ -37,7 +37,7 @@
   background:
     radial-gradient(130% 42% at 62% -10%, rgba(120, 170, 135, 0.13) 0%, rgba(150, 196, 160, 0.06) 55%, rgba(150, 196, 160, 0) 100%),
     linear-gradient(100deg, rgba(150, 196, 160, 0) 25%, rgba(150, 196, 160, 0.06) 100%),
-    var(--brando-color-nav-background);
+    var(--brando-surface-page);
   flex-shrink: 0;
   flex-grow: 0;
   overflow-y: auto;
@@ -65,5 +65,5 @@
 }
 
 .dark-mode #navigation {
-  background: var(--brando-color-nav-background);
+  background: var(--brando-surface-page);
 }

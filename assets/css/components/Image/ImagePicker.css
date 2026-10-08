@@ -4,20 +4,20 @@
   gap: 0.45rem;
   padding: 0.62rem 0.7rem;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brando-ink) 12%, transparent);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, white 94%, var(--brando-color-peach)),
-    color-mix(in srgb, white 88%, var(--brando-color-peach))
+    color-mix(in srgb, white 94%, var(--brando-surface-subform)),
+    color-mix(in srgb, white 88%, var(--brando-surface-subform))
   );
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 5%, transparent);
 
   .image-picker-upload-callout {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 18%, transparent);
     background: color-mix(in srgb, white 70%, transparent);
     border-radius: 10px;
     padding: 0.5rem 0.65rem;
@@ -46,29 +46,29 @@
     .path-link {
       border: none;
       background: transparent;
-      color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+      color: color-mix(in srgb, var(--brando-ink) 74%, white);
       padding: 0;
       text-decoration: underline;
-      text-decoration-color: color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
+      text-decoration-color: color-mix(in srgb, var(--brando-ink) 30%, transparent);
       text-underline-offset: 2px;
       transition:
         color 120ms ease,
         text-decoration-color 120ms ease;
 
       &:hover {
-        color: var(--brando-color-dark);
-        text-decoration-color: var(--brando-color-dark);
+        color: var(--brando-ink);
+        text-decoration-color: var(--brando-ink);
       }
 
       &.active {
-        color: var(--brando-color-dark);
+        color: var(--brando-ink);
         text-decoration: none;
         font-weight: 600;
       }
     }
 
     .path-separator {
-      color: color-mix(in srgb, var(--brando-color-dark) 46%, white);
+      color: color-mix(in srgb, var(--brando-ink) 46%, white);
       user-select: none;
       pointer-events: none;
       margin: 0 0.2rem;
@@ -79,7 +79,7 @@
     margin-left: auto;
     flex-shrink: 0;
     display: inline-flex;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 20%, transparent);
     border-radius: 8px;
     overflow: hidden;
     background: color-mix(in srgb, white 74%, transparent);
@@ -92,7 +92,7 @@
       line-height: 28px;
       padding: 0 0.7rem;
       background: transparent;
-      color: color-mix(in srgb, var(--brando-color-dark) 84%, white);
+      color: color-mix(in srgb, var(--brando-ink) 84%, white);
       font-size: 12px;
       font-family: "Mono";
       text-transform: uppercase;
@@ -102,11 +102,11 @@
         color 150ms ease;
 
       &:hover {
-        background: color-mix(in srgb, var(--brando-color-peach) 22%, white);
+        background: color-mix(in srgb, var(--brando-surface-subform) 22%, white);
       }
 
       &.is-active {
-        background: var(--brando-color-dark);
+        background: var(--brando-ink);
         color: white;
       }
     }
@@ -123,15 +123,15 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       font-size: 11px;
-      color: color-mix(in srgb, var(--brando-color-dark) 64%, white);
+      color: color-mix(in srgb, var(--brando-ink) 64%, white);
       margin-right: 0.25rem;
     }
   }
 
   .folder-pill {
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 22%, transparent);
     background: color-mix(in srgb, white 74%, transparent);
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     border-radius: 999px;
     height: 24px;
     line-height: 24px;
@@ -145,13 +145,13 @@
       color 140ms ease;
 
     &:hover {
-      background: color-mix(in srgb, var(--brando-color-peach) 24%, white);
-      border-color: color-mix(in srgb, var(--brando-color-dark) 32%, transparent);
+      background: color-mix(in srgb, var(--brando-surface-subform) 24%, white);
+      border-color: color-mix(in srgb, var(--brando-ink) 32%, transparent);
     }
 
     &.active {
-      background: var(--brando-color-dark);
-      border-color: var(--brando-color-dark);
+      background: var(--brando-ink);
+      border-color: var(--brando-ink);
       color: white;
     }
 
@@ -168,11 +168,11 @@
   min-height: 60vh;
 
   .image-picker-folders {
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 12%, transparent);
     border-radius: 10px;
     padding: 0.75rem;
     background: color-mix(in srgb, white 88%, transparent);
-    box-shadow: 0 1px 3px color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--brando-ink) 5%, transparent);
     display: flex;
     flex-direction: column;
     align-self: flex-start;
@@ -191,13 +191,13 @@
       font-size: 15px;
       font-family: "Mono";
       text-transform: uppercase;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
     }
 
     p {
       margin: 0.2rem 0 0;
       font-size: 12px;
-      color: color-mix(in srgb, var(--brando-color-dark) 64%, white);
+      color: color-mix(in srgb, var(--brando-ink) 64%, white);
       line-height: 1.2;
     }
 
@@ -209,7 +209,7 @@
          off the last button ("ROOT" ran into the pill's rounded edge). The
          heading block wraps instead. */
       flex: none;
-      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 28%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brando-ink) 28%, transparent);
       border-radius: 999px;
       overflow: hidden;
       background: color-mix(in srgb, white 74%, transparent);
@@ -223,18 +223,18 @@
     }
 
     .folder-actions .folder-action + .folder-action {
-      border-left: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+      border-left: 1px solid color-mix(in srgb, var(--brando-ink) 20%, transparent);
     }
 
     .folder-actions .folder-action:hover {
-      background: color-mix(in srgb, var(--brando-color-peach) 24%, white);
+      background: color-mix(in srgb, var(--brando-surface-subform) 24%, white);
       border-color: transparent;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
     }
   }
 
   .folder-action {
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 28%, transparent);
     background: color-mix(in srgb, white 74%, transparent);
     border-radius: 999px;
     height: 28px;
@@ -244,7 +244,7 @@
     font-family: "Mono";
     text-transform: uppercase;
     white-space: nowrap;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     min-width: auto;
     transition:
       background-color 150ms ease,
@@ -268,8 +268,8 @@
     }
 
     &:hover {
-      background: var(--brando-color-dark);
-      border-color: var(--brando-color-dark);
+      background: var(--brando-ink);
+      border-color: var(--brando-ink);
       color: white;
     }
 
@@ -314,7 +314,7 @@
     display: inline-flex;
     align-items: stretch;
     align-self: stretch;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 25%, transparent);
     border-radius: 999px;
     overflow: hidden;
     background: color-mix(in srgb, white 75%, transparent);
@@ -325,9 +325,9 @@
     min-width: 34px;
     height: 34px;
     border-radius: 9px;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 25%, transparent);
     background: color-mix(in srgb, white 75%, transparent);
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -342,8 +342,8 @@
     }
 
     &:hover {
-      border-color: var(--brando-color-dark);
-      background: color-mix(in srgb, var(--brando-color-peach) 24%, white);
+      border-color: var(--brando-ink);
+      background: color-mix(in srgb, var(--brando-surface-subform) 24%, white);
     }
 
     &.confirm:hover {
@@ -365,7 +365,7 @@
   }
 
   .new-folder-actions .folder-icon-button + .folder-icon-button {
-    border-left: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+    border-left: 1px solid color-mix(in srgb, var(--brando-ink) 20%, transparent);
   }
 
   .new-folder-actions .folder-icon-button [data-icon],
@@ -380,10 +380,10 @@
     justify-content: center;
     gap: 0.3rem;
     width: fit-content;
-    border: 1px dashed color-mix(in srgb, var(--brando-color-dark) 26%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--brando-ink) 26%, transparent);
     border-radius: 8px;
     background: color-mix(in srgb, white 75%, transparent);
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     font-family: "Mono";
     font-size: 11px;
     text-transform: uppercase;
@@ -397,8 +397,8 @@
     }
 
     &:hover {
-      background: color-mix(in srgb, var(--brando-color-peach) 17%, white);
-      border-color: color-mix(in srgb, var(--brando-color-dark) 38%, transparent);
+      background: color-mix(in srgb, var(--brando-surface-subform) 17%, white);
+      border-color: color-mix(in srgb, var(--brando-ink) 38%, transparent);
     }
   }
 
@@ -412,7 +412,7 @@
 
     .empty {
       font-size: 11px;
-      color: color-mix(in srgb, var(--brando-color-dark) 62%, white);
+      color: color-mix(in srgb, var(--brando-ink) 62%, white);
       font-family: "Mono";
       padding: 0.5rem 0.15rem;
     }
@@ -427,7 +427,7 @@
     padding: 0.45rem 0.55rem;
     text-align: left;
     background: color-mix(in srgb, white 70%, transparent);
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     font-family: "Mono";
     font-size: 12px;
     transition:
@@ -450,14 +450,14 @@
     }
 
     &:hover {
-      background: color-mix(in srgb, var(--brando-color-peach) 18%, white);
-      border-color: color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+      background: color-mix(in srgb, var(--brando-surface-subform) 18%, white);
+      border-color: color-mix(in srgb, var(--brando-ink) 20%, transparent);
     }
 
     &.active {
-      background: var(--brando-color-dark);
+      background: var(--brando-ink);
       color: white;
-      border-color: var(--brando-color-dark);
+      border-color: var(--brando-ink);
 
       svg {
         opacity: 1;
@@ -465,10 +465,10 @@
     }
 
     &.drop-active {
-      background: color-mix(in srgb, var(--brando-color-blue) 18%, white);
-      border-color: color-mix(in srgb, var(--brando-color-blue) 52%, white);
-      color: var(--brando-color-dark);
-      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-color-blue) 38%, white);
+      background: color-mix(in srgb, var(--brando-accent) 18%, white);
+      border-color: color-mix(in srgb, var(--brando-accent) 52%, white);
+      color: var(--brando-ink);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-accent) 38%, white);
     }
   }
 
@@ -486,7 +486,7 @@
       .image-picker-main-hint {
         margin: 0; max-width: 60ch; overflow-wrap: anywhere;
         font: 12px/18px "Main", sans-serif;
-        color: color-mix(in srgb, var(--brando-color-dark) 55%, white);
+        color: color-mix(in srgb, var(--brando-ink) 55%, white);
       }
 
       h3 {
@@ -494,7 +494,7 @@
         margin: 0;
         font-size: 12px;
         line-height: 1.25;
-        color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+        color: color-mix(in srgb, var(--brando-ink) 74%, white);
       }
 
       span {
@@ -502,7 +502,7 @@
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: color-mix(in srgb, var(--brando-color-dark) 65%, white);
+        color: color-mix(in srgb, var(--brando-ink) 65%, white);
       }
 
       .image-picker-main-actions {
@@ -516,7 +516,7 @@
           display: inline-flex;
           flex-direction: column;
           gap: 0.15rem;
-          color: color-mix(in srgb, var(--brando-color-dark) 72%, white);
+          color: color-mix(in srgb, var(--brando-ink) 72%, white);
 
           span {
             font-size: 10px;
@@ -542,14 +542,14 @@
   gap: 0.45rem;
   padding: 0.45rem 0.65rem;
   margin-bottom: 0.6rem;
-  background: color-mix(in srgb, var(--brando-color-peach) 16%, white);
-  border: 1px solid color-mix(in srgb, var(--brando-color-peach) 42%, white);
+  background: color-mix(in srgb, var(--brando-surface-subform) 16%, white);
+  border: 1px solid color-mix(in srgb, var(--brando-surface-subform) 42%, white);
   border-radius: 8px;
   font-family: "Mono";
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--brando-color-dark);
+  color: var(--brando-ink);
   user-select: none;
 
   [data-icon] {
@@ -559,15 +559,15 @@
   }
 
   .image-picker-organize-hint {
-    color: color-mix(in srgb, var(--brando-color-dark) 58%, white);
+    color: color-mix(in srgb, var(--brando-ink) 58%, white);
     margin-left: 0.25rem;
   }
 
   .image-picker-organize-clear {
     margin-left: auto;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 24%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 24%, transparent);
     background: color-mix(in srgb, white 80%, transparent);
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     border-radius: 999px;
     height: 24px;
     line-height: 24px;
@@ -581,8 +581,8 @@
       border-color 140ms ease;
 
     &:hover {
-      background: var(--brando-color-dark);
-      border-color: var(--brando-color-dark);
+      background: var(--brando-ink);
+      border-color: var(--brando-ink);
       color: white;
     }
   }
@@ -602,7 +602,7 @@
   text-align: center;
   padding: 0 12px;
   border-radius: 999px;
-  background: var(--brando-color-dark);
+  background: var(--brando-ink);
   color: white;
   font-family: "Mono";
   font-size: 14px;
@@ -622,9 +622,9 @@
     position: absolute;
     inset: 0;
     z-index: 5;
-    border: 1px dashed color-mix(in srgb, var(--brando-color-blue) 45%, white);
+    border: 1px dashed color-mix(in srgb, var(--brando-accent) 45%, white);
     border-radius: 12px;
-    background: color-mix(in srgb, white 86%, var(--brando-color-blue) 14%);
+    background: color-mix(in srgb, white 86%, var(--brando-accent) 14%);
     display: none;
     align-items: center;
     justify-content: center;
@@ -651,13 +651,13 @@
     strong {
       font-family: "Main";
       font-size: 14px;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
       font-weight: 600;
     }
   }
 
   &.dragging {
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brando-color-blue) 45%, white);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brando-accent) 45%, white);
     border-radius: 12px;
 
     .folder-drop-indicator {
@@ -685,7 +685,7 @@
     justify-content: center;
     box-shadow:
       0 0 0 2px color-mix(in srgb, white 88%, transparent),
-      0 1px 3px color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+      0 1px 3px color-mix(in srgb, var(--brando-ink) 18%, transparent);
 
     [data-icon] {
       width: 0.74rem;
@@ -698,12 +698,12 @@
   }
 
   .image-picker-empty {
-    border: 1px dashed color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--brando-ink) 30%, transparent);
     border-radius: 12px;
     padding: 2rem 1rem;
     text-align: center;
     font-family: "Mono";
-    color: color-mix(in srgb, var(--brando-color-dark) 72%, white);
+    color: color-mix(in srgb, var(--brando-ink) 72%, white);
     background: color-mix(in srgb, white 78%, transparent);
 
     svg {
@@ -724,13 +724,13 @@
     h4 {
       margin: 0;
       font-size: 15px;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
     }
 
     p {
       margin: 0.35rem 0 0;
       font-size: 12px;
-      color: color-mix(in srgb, var(--brando-color-dark) 67%, white);
+      color: color-mix(in srgb, var(--brando-ink) 67%, white);
     }
   }
 
@@ -770,16 +770,16 @@
       }
 
       &.organize-selected {
-        border-color: color-mix(in srgb, var(--brando-color-blue) 52%, var(--brando-color-peach));
-        box-shadow: 0 0 0 1px color-mix(in srgb, var(--brando-color-blue) 32%, transparent);
-        background-color: color-mix(in srgb, var(--brando-color-blue) 8%, white);
+        border-color: color-mix(in srgb, var(--brando-accent) 52%, var(--brando-surface-subform));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--brando-accent) 32%, transparent);
+        background-color: color-mix(in srgb, var(--brando-accent) 8%, white);
         user-select: none;
 
         &:hover {
           border-color: color-mix(
             in srgb,
-            var(--brando-color-blue) 72%,
-            var(--brando-color-peach)
+            var(--brando-accent) 72%,
+            var(--brando-surface-subform)
           );
         }
       }
@@ -813,11 +813,11 @@
       position: relative;
       cursor: pointer;
       min-height: 64px;
-      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brando-ink) 12%, transparent);
       border-radius: 8px;
       padding: 0.4rem 0.5rem;
       background: color-mix(in srgb, white 92%, transparent);
-      box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-color-dark) 4%, transparent);
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 4%, transparent);
       transition:
         border-color 150ms ease,
         background-color 150ms ease,
@@ -832,7 +832,7 @@
         border-radius: 5px;
         margin: 0;
         object-fit: cover;
-        background: color-mix(in srgb, var(--brando-color-dark) 5%, white);
+        background: color-mix(in srgb, var(--brando-ink) 5%, white);
       }
 
       .image-picker__selected-indicator {
@@ -846,11 +846,11 @@
       }
 
       &.selected {
-        border-color: color-mix(in srgb, var(--brando-color-blue) 54%, white);
-        background: color-mix(in srgb, var(--brando-color-blue) 5%, white);
+        border-color: color-mix(in srgb, var(--brando-accent) 54%, white);
+        background: color-mix(in srgb, var(--brando-accent) 5%, white);
         box-shadow:
           inset 3px 0 0 var(--brando-accent),
-          0 1px 3px color-mix(in srgb, var(--brando-color-blue) 10%, transparent);
+          0 1px 3px color-mix(in srgb, var(--brando-accent) 10%, transparent);
 
         .image-picker__selected-indicator {
           visibility: visible;
@@ -858,31 +858,31 @@
         }
 
         &:hover {
-          border-color: color-mix(in srgb, var(--brando-color-blue) 68%, white);
-          background: color-mix(in srgb, var(--brando-color-blue) 7%, white);
+          border-color: color-mix(in srgb, var(--brando-accent) 68%, white);
+          background: color-mix(in srgb, var(--brando-accent) 7%, white);
         }
       }
 
       &.organize-selected {
-        border-color: color-mix(in srgb, var(--brando-color-blue) 52%, var(--brando-color-peach));
-        background: color-mix(in srgb, var(--brando-color-blue) 8%, white);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-color-blue) 32%, transparent);
+        border-color: color-mix(in srgb, var(--brando-accent) 52%, var(--brando-surface-subform));
+        background: color-mix(in srgb, var(--brando-accent) 8%, white);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-accent) 32%, transparent);
         user-select: none;
 
         &:hover {
           border-color: color-mix(
             in srgb,
-            var(--brando-color-blue) 72%,
-            var(--brando-color-peach)
+            var(--brando-accent) 72%,
+            var(--brando-surface-subform)
           );
-          background: color-mix(in srgb, var(--brando-color-blue) 12%, white);
+          background: color-mix(in srgb, var(--brando-accent) 12%, white);
         }
       }
 
       &:hover {
-        border-color: color-mix(in srgb, var(--brando-color-dark) 24%, transparent);
-        background: color-mix(in srgb, var(--brando-color-peach) 9%, white);
-        box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+        border-color: color-mix(in srgb, var(--brando-ink) 24%, transparent);
+        background: color-mix(in srgb, var(--brando-surface-subform) 9%, white);
+        box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-ink) 7%, transparent);
       }
 
       .image-picker__info {
@@ -900,7 +900,7 @@
         .image-picker__filename {
           font-size: 13px;
           font-weight: 600;
-          color: var(--brando-color-dark);
+          color: var(--brando-ink);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -911,7 +911,7 @@
         .image-picker__status {
           @font mono;
           font-size: 11px;
-          color: color-mix(in srgb, var(--brando-color-dark) 72%, white);
+          color: color-mix(in srgb, var(--brando-ink) 72%, white);
           text-transform: uppercase;
           letter-spacing: 0.02em;
         }
@@ -925,10 +925,10 @@
 
         .image-picker__status {
           justify-self: start;
-          border: 1px solid color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
+          border: 1px solid color-mix(in srgb, var(--brando-ink) 14%, transparent);
           border-radius: 999px;
           padding: 0.2rem 0.45rem;
-          background: color-mix(in srgb, var(--brando-color-dark) 3%, white);
+          background: color-mix(in srgb, var(--brando-ink) 3%, white);
         }
 
         .image-picker__status[data-status="processed"] {
@@ -948,7 +948,7 @@
           .image-picker-action-button {
             border: 0;
             background: transparent;
-            color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+            color: color-mix(in srgb, var(--brando-ink) 74%, white);
             width: 26px;
             height: 26px;
             border-radius: 999px;
@@ -966,8 +966,8 @@
             }
 
             &:hover {
-              background: color-mix(in srgb, var(--brando-color-peach) 30%, white);
-              color: var(--brando-color-dark);
+              background: color-mix(in srgb, var(--brando-surface-subform) 30%, white);
+              color: var(--brando-ink);
             }
           }
 
@@ -981,8 +981,8 @@
             padding: 0;
             list-style: none;
             border-radius: 8px;
-            border: 1px solid color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
-            background: color-mix(in srgb, white 95%, var(--brando-color-peach) 5%);
+            border: 1px solid color-mix(in srgb, var(--brando-ink) 30%, transparent);
+            background: color-mix(in srgb, white 95%, var(--brando-surface-subform) 5%);
             overflow: hidden;
 
             li {
@@ -992,7 +992,7 @@
 
               + li {
                 border-top: 1px solid
-                  color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
+                  color-mix(in srgb, var(--brando-ink) 14%, transparent);
               }
             }
 
@@ -1003,7 +1003,7 @@
               border: 0;
               border-radius: 0;
               background: transparent;
-              color: var(--brando-color-dark);
+              color: var(--brando-ink);
               font-size: 11px;
               text-transform: uppercase;
               display: flex;
@@ -1019,7 +1019,7 @@
               }
 
               &:hover {
-                background: var(--brando-color-dark);
+                background: var(--brando-ink);
                 color: white;
               }
 

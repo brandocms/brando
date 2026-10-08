@@ -5,26 +5,26 @@
     &.open {
       svg {
         .main-circle {
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
 
           &.inverted {
-            fill: var(--brando-color-peach);
+            fill: var(--brando-surface-subform);
           }
         }
         line {
           transition: stroke 0.3s ease;
-          stroke: var(--brando-color-peach);
+          stroke: var(--brando-surface-subform);
 
           &.inverted {
-            fill: var(--brando-color-dark);
+            fill: var(--brando-ink);
           }
         }
         circle {
           transition: fill 0.3s ease;
-          fill: var(--brando-color-peach);
+          fill: var(--brando-surface-subform);
 
           &.inverted {
-            fill: var(--brando-color-dark);
+            fill: var(--brando-ink);
           }
         }
       }
@@ -35,25 +35,25 @@
 
       line {
         transition: stroke 0.3s ease;
-        stroke: var(--brando-color-dark);
+        stroke: var(--brando-ink);
 
         &.inverted {
-          stroke: var(--brando-color-peach);
+          stroke: var(--brando-surface-subform);
         }
       }
 
       circle {
         transition: fill 0.3s ease;
-        fill: var(--brando-color-dark);
+        fill: var(--brando-ink);
       }
 
       .main-circle {
         transition: fill 0.3s ease;
-        stroke: var(--brando-color-transparent);
+        stroke: none;
         fill: transparent;
 
         &.inverted {
-          stroke: var(--brando-color-peach);
+          stroke: var(--brando-surface-subform);
         }
       }
     }
@@ -62,15 +62,15 @@
       svg {
         line {
           transition: stroke 0.3s ease;
-          stroke: var(--brando-color-peach);
+          stroke: var(--brando-surface-subform);
         }
         circle {
           transition: fill 0.3s ease;
-          fill: var(--brando-color-peach);
+          fill: var(--brando-surface-subform);
         }
         .main-circle {
           transition: fill 0.3s ease;
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
         }
       }
     }
@@ -93,7 +93,7 @@
     button {
       &:hover {
         .shortcut {
-          color: var(--brando-color-dark);
+          color: var(--brando-ink);
         }
       }
     }

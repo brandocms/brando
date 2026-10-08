@@ -16,7 +16,7 @@
     align-items: center;
     gap: 8px;
     padding: 9px 10px;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 22%, transparent);
     border-radius: 9px;
     cursor: pointer;
     list-style: none;
@@ -27,13 +27,13 @@
     }
 
     &:hover {
-      border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+      border-color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
     }
   }
 
   .tenant-switcher__label {
     flex-shrink: 0;
-    color: color-mix(in srgb, var(--brando-color-dark) 50%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 50%, transparent);
     font-size: 9px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -42,14 +42,14 @@
   .tenant-switcher__current {
     flex-grow: 1;
     overflow: hidden;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   /* Renders as "Production · live" without needing the separator in markup. */
   .tenant-switcher__state {
-    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
 
     &::before {
       content: " · ";
@@ -60,12 +60,12 @@
     flex-shrink: 0;
     width: 12px;
     height: 12px;
-    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
     transition: transform 150ms ease;
   }
 
   &[open] summary {
-    border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    border-color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
     border-bottom-right-radius: 0;
     border-bottom-left-radius: 0;
   }
@@ -76,24 +76,24 @@
 
   /* A non-live environment is easy to forget, so the trigger itself carries it. */
   &.working summary {
-    border-color: var(--brando-color-peach-darker);
-    background: var(--brando-color-peach);
+    border-color: var(--brando-surface-selected);
+    background: var(--brando-surface-subform);
   }
 
   .tenant-switcher__sheet {
     display: grid;
     gap: 3px;
     padding: 8px;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 45%, transparent);
     border-top: none;
     border-bottom-right-radius: 9px;
     border-bottom-left-radius: 9px;
-    background: var(--brando-color-white);
+    background: var(--brando-surface);
   }
 
   .tenant-switcher__heading {
     padding: 6px 8px 3px;
-    color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
     font-size: 9px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -107,7 +107,7 @@
   form + form {
     margin-top: 6px;
     padding-top: 6px;
-    border-top: 1px solid color-mix(in srgb, var(--brando-color-dark) 10%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--brando-ink) 10%, transparent);
   }
 
   .tenant-switcher__option {
@@ -125,18 +125,18 @@
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     font-size: 11px;
     text-align: left;
     cursor: pointer;
     transition: background-color 120ms ease;
 
     &:hover {
-      background: color-mix(in srgb, var(--brando-color-dark) 6%, transparent);
+      background: color-mix(in srgb, var(--brando-ink) 6%, transparent);
     }
 
     &.current {
-      background: color-mix(in srgb, var(--brando-color-dark) 9%, transparent);
+      background: color-mix(in srgb, var(--brando-ink) 9%, transparent);
       font-weight: 600;
     }
   }

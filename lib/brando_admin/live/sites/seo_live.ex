@@ -921,14 +921,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
           </thead>
           <tbody>
             <tr :for={suggestion <- @audit.redirect_suggestions}>
-              <td class="workspace-mono">{suggestion.url}</td>
-              <td>{suggestion.hits}</td>
-              <td>
+              <td class="workspace-mono seo-redirect-url">{suggestion.url}</td>
+              <td class="seo-redirect-hits" data-label={gettext("Hits")}>{suggestion.hits}</td>
+              <td class="seo-redirect-to">
                 <strong>{suggestion.title}</strong>
                 <small class="workspace-mono">{suggestion.to}</small>
                 <small :if={suggestion.confidence == :close}>{gettext("Close match — check before creating")}</small>
               </td>
-              <td>
+              <td class="seo-redirect-action">
                 <button
                   type="button"
                   class="seo-row-action"

@@ -8,7 +8,7 @@
   left: 0;
   overflow: hidden;
   border-top: 1px solid var(--brando-nav-rule);
-  background-color: color-mix(in srgb, var(--brando-color-nav-background) 86%, transparent);
+  background-color: color-mix(in srgb, var(--brando-surface-page) 86%, transparent);
   backdrop-filter: blur(6px);
   color: var(--brando-nav-ink);
 
