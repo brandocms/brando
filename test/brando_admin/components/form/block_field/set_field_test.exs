@@ -230,10 +230,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
 
     assert skeleton == [%{"sync_uid" => "r1"}, %{"sync_uid" => "r2"}]
 
-    # rows added or moved: the list is one field
+    # rows added or moved: the list is one field, sent as what changed in it
     moved = put_in(rows_before.table_rows, Enum.reverse(rows_before.table_rows))
 
-    assert {:ok, {:set_field, "t", ["table_rows"], [_, _], nil}} =
+    assert {:ok, {:set_field, "t", ["table_rows"], {:list, [_, _], [_, _]}, nil}} =
              Ops.field_op(Changeset.change(rows_before), Changeset.change(moved), "t")
   end
 
@@ -256,7 +256,97 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     assert {:ok, {:set_fields, _, [_, _], nil}} = Ops.field_op(theirs, mine, intro.block.uid)
 
     assert {:ok, {:set_field, _, ["block", "description"], "Mine", nil}} =
-             Ops.field_op(theirs, mine, intro.block.uid, shown)
+             Ops.field_op(theirs, mine, intro.block.uid, {shown, theirs})
+  end
+
+  # Round 3 #1: every field set back to its value before the replace was
+  # dropped, not only the ones the other editor's change touched. While
+  # someone types in the same block the form is replaced every moment, so a
+  # backspace, or a toggle set back, was lost.
+  test "a field the other editor did not touch counts when set back, a backspace or a toggle", c do
+    [intro | _] = rows(c.work)
+    text = ["block", "refs", "0", "data", "data", "text"]
+    cs = fn params -> Brando.Pages.Page.Blocks.changeset(intro, params, c.user.id) end
+    snapshot = intro |> Changeset.change() |> Params.snapshot()
+
+    # A had "abc" in the description; B's text replaced the form
+    stale = cs.(put_at(snapshot, ["block", "description"], "abc"))
+    replacing = cs.(snapshot |> put_at(["block", "description"], "abc") |> put_at(text, "<p>B typing</p>"))
+
+    # A types "d", then backspaces
+    typed = cs.(snapshot |> put_at(["block", "description"], "abcd") |> put_at(text, "<p>B typing</p>"))
+    back = cs.(snapshot |> put_at(["block", "description"], "abc") |> put_at(text, "<p>B typing</p>"))
+
+    assert {:ok, {:set_field, _, ["block", "description"], "abc", nil}} =
+             Ops.field_op(typed, back, intro.block.uid, {stale, replacing})
+
+    # a toggle set back
+    off =
+      cs.(
+        snapshot
+        |> put_at(["block", "description"], "abc")
+        |> put_at(text, "<p>B typing</p>")
+        |> put_at(["block", "active"], false)
+      )
+
+    assert {:ok, {:set_field, _, ["block", "active"], true, nil}} =
+             Ops.field_op(off, back, intro.block.uid, {stale, replacing})
+
+    # the field B's change touched, sent back as it was before: an echo
+    echo = cs.(snapshot |> put_at(["block", "description"], "abcd"))
+
+    assert {:ok, {:set_field, _, ["block", "description"], "abcd", nil}} =
+             Ops.field_op(replacing, echo, intro.block.uid, {stale, replacing})
+  end
+
+  # Round 3 #5: a list that gained, lost or reordered items was set whole,
+  # so of two editors each adding an item, one lost theirs.
+  test "two editors adding and removing list items both keep their change", c do
+    [_intro, multi] = rows = rows(c.work)
+    [alpha, beta | _] = multi.block.children
+    base = Ops.from_entry_blocks(rows)
+
+    list_op = fn block, change ->
+      before = Changeset.change(block)
+      snapshot = Params.snapshot(before)
+      changed = Block.block_changeset(block, Map.update!(snapshot, "refs", change), c.user.id)
+      {:ok, op} = Ops.field_op(before, changed, block.uid)
+      op
+    end
+
+    new_ref = fn name ->
+      %{
+        "uid" => Brando.Utils.generate_uid(),
+        "name" => name,
+        "data" => %{"type" => "text", "data" => %{"text" => "<p>#{name}</p>"}}
+      }
+    end
+
+    # A adds a ref to alpha, B adds another; A drops beta's clip, B edits its info
+    a_adds = list_op.(alpha, &(&1 ++ [new_ref.("by_a")]))
+    b_adds = list_op.(alpha, &(&1 ++ [new_ref.("by_b")]))
+    a_drops = list_op.(beta, &Enum.reject(&1, fn ref -> ref["name"] == "clip" end))
+    assert {:set_field, _, ["refs"], {:list, _, _}, _} = a_adds
+
+    b_edits = keystroke(beta, c.user, ["refs", "0", "data", "data", "text"], "<p>Beta, by B</p>")
+
+    one_way = Enum.reduce([a_adds, b_adds, a_drops, b_edits], base, &apply!(&2, &1))
+    other_way = Enum.reduce([b_adds, b_edits, a_adds, a_drops], base, &apply!(&2, &1))
+
+    # in either order, the same items (their order follows who came last)
+    names = fn state ->
+      {:ok, %{"block" => %{"children" => [alpha, beta | _]}}} = Ops.materialize_root(state, multi.block.uid)
+      {alpha["refs"] |> Enum.map(&(&1["name"] || &1["id"])) |> Enum.sort(), length(beta["refs"])}
+    end
+
+    assert names.(one_way) == names.(other_way)
+
+    save(c.work, rows, one_way, c.user)
+    [_intro, multi] = rows(c.work)
+    [alpha, beta | _] = multi.block.children
+    assert alpha.refs |> Enum.map(& &1.name) |> Enum.sort() == ~w(by_a by_b clip info)
+    assert Enum.map(beta.refs, & &1.name) == ["info"]
+    assert hd(beta.refs).data.data.text == "<p>Beta, by B</p>"
   end
 
   # #1: a field op made while a block was new names its rows by uid. Replayed

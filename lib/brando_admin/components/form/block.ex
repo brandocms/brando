@@ -524,7 +524,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
 
     socket
-    |> assign(:replaced, {socket.assigns[:form], System.monotonic_time(:millisecond)})
+    |> assign(:replaced, {socket.assigns[:form], form, System.monotonic_time(:millisecond)})
     |> assign(:form, form)
     |> assign_selected_identifiers()
     |> assign_hidden_block_fields()
@@ -2323,17 +2323,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
 
     with %{source: %Changeset{} = before} <- socket.assigns[:form],
-         {:ok, op} <- Ops.field_op(before, form.source, uid, stale_source(socket)) do
+         {:ok, op} <- Ops.field_op(before, form.source, uid, replaced(socket)) do
       op
     else
       _ -> {:update, uid, Ops.block_diff_params(form.source)}
     end
   end
 
-  defp stale_source(socket) do
+  # The form before the last replace and the one that replaced it: the
+  # fields where they differ are the ones the other editor's change touched.
+  defp replaced(socket) do
     case socket.assigns[:replaced] do
-      {%{source: %Changeset{} = source}, at} ->
-        if System.monotonic_time(:millisecond) - at < @stale_ms, do: source
+      {%{source: %Changeset{} = stale}, %{source: %Changeset{} = replacing}, at} ->
+        if System.monotonic_time(:millisecond) - at < @stale_ms, do: {stale, replacing}
 
       _ ->
         nil

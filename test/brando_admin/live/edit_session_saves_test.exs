@@ -423,6 +423,35 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert_receive {:edit_session, _, %{kind: :rebase}}, 2_000
   end
 
+  # Round 3 #1 (field ops): A backspaced in one field while B typed in
+  # another field of the same block, and A's edit was taken for an echo of
+  # the form before B's change, and dropped.
+  test "a backspace right after another editor typed elsewhere in the block is kept", c do
+    [first | _] = c.uids
+    desc = ["entry_block", "block", "description"]
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+
+    set = fn view, path, value ->
+      selector = "#entry_block_form-#{first}"
+      params = view |> render() |> form_params(selector) |> put_in(path, value) |> Map.put("_target", path)
+      view |> element(selector) |> render_change(params)
+    end
+
+    shown = fn view, path -> view |> render() |> form_params("#entry_block_form-#{first}") |> get_in(path) end
+
+    set.(a, desc, "abc")
+    await(fn -> shown.(b, desc) == "abc" end)
+    set.(b, text_path(), "<p>B typing</p>")
+    await(fn -> shown.(a, text_path()) == "<p>B typing</p>" end)
+    set.(a, desc, "abcd")
+    set.(a, desc, "abc")
+
+    await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abc" end)
+    await(fn -> shown.(b, desc) == "abc" end)
+    assert shown.(a, text_path()) == "<p>B typing</p>"
+  end
+
   # #10: refreshing a root for another editor's change also rewrote its seed
   # form, so the field re-rendered and the block was updated a second time.
   test "another editor's change updates only the block it changed", c do

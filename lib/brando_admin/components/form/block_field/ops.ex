@@ -1054,10 +1054,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   is one field, set whole. `"children"` is left out: the tree is the
   store's.
 
-  `stale` is the form this editor's browser showed before another editor's
-  change replaced it, when that happened a moment ago: the event can carry
-  the browser's old values for the fields that change touched. A field set
-  back to what `stale` held is that, not a change, and is left out.
+  `replaced` is `{stale, replacing}` when another editor's change replaced
+  the form a moment ago: the form the browser showed before, and the one
+  that replaced it. The event can carry the browser's old values for the
+  fields that change touched (where the two differ). A touched field set
+  back to its `stale` value is that, not a change, and is left out; every
+  other field counts, a backspace or a toggle set back included.
+
+  A list that gained, lost or reordered items is sent as `{:list, before,
+  after}` when its items have identities, so other editors' additions and
+  removals made meanwhile are kept (`merge_list/3`).
 
   ## Examples
 
@@ -1068,16 +1074,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       {:ok, {:set_field, "b", ["description"], "New", nil}}
 
   """
-  @spec field_op(Changeset.t(), Changeset.t(), uid(), Changeset.t() | nil) :: {:ok, op() | nil} | :error
-  def field_op(%Changeset{} = previous, %Changeset{} = changeset, uid, stale \\ nil) do
+  @spec field_op(Changeset.t(), Changeset.t(), uid(), {Changeset.t(), Changeset.t()} | nil) ::
+          {:ok, op() | nil} | :error
+  def field_op(%Changeset{} = previous, %Changeset{} = changeset, uid, replaced \\ nil) do
     before = fields_snapshot(previous)
     now = fields_snapshot(changeset)
-    stale = stale && fields_snapshot(stale)
 
     changes =
       before
       |> leaf_changes(now, [], [], :top)
-      |> Enum.reject(fn {raw, _path, value} -> stale && dom_get(stale, raw) == {:ok, value} end)
+      |> reject_stale(replaced)
 
     case changes do
       [] -> {:ok, nil}
@@ -1087,6 +1093,21 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   rescue
     _ -> :error
   end
+
+  defp reject_stale(changes, nil), do: changes
+
+  defp reject_stale(changes, {stale, replacing}) do
+    stale = fields_snapshot(stale)
+    replacing = fields_snapshot(replacing)
+
+    Enum.reject(changes, fn {raw, _path, value} ->
+      old = dom_get(stale, raw)
+      old != dom_get(replacing, raw) and old == {:ok, list_after(value)}
+    end)
+  end
+
+  defp list_after({:list, _before, after_list}), do: after_list
+  defp list_after(value), do: value
 
   # The block's own fields. Its children are left out before the snapshot
   # (they are other blocks, with their own forms): on a block with many
@@ -1135,23 +1156,35 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp key_changes(key, old, new, raw, acc, _level) when is_list(old) and is_list(new) do
     identities = Enum.map(new, &identity/1)
+    old_identities = Enum.map(old, &identity/1)
 
-    if :none in identities or identities != Enum.map(old, &identity/1) do
-      [{raw ++ [key], Enum.reverse([key | acc]), new}]
-    else
-      skeleton = Enum.map(identities, &identity_map/1)
+    cond do
+      # items without identities: the list, as this editor has it
+      :none in identities or :none in old_identities ->
+        [{raw ++ [key], Enum.reverse([key | acc]), new}]
 
-      [old, new, identities]
-      |> Enum.zip()
-      |> Enum.with_index()
-      |> Enum.flat_map(fn {{old_item, new_item, identity}, index} ->
-        item_raw = raw ++ [key, to_string(index)]
-        leaf_changes(old_item, new_item, item_raw, [{:at, key, identity, skeleton} | acc], :item)
-      end)
+      # items added, removed or moved: what changed, to merge with others'
+      identities != old_identities ->
+        [{raw ++ [key], Enum.reverse([key | acc]), {:list, old, new}}]
+
+      true ->
+        list_item_changes(key, old, new, identities, raw, acc)
     end
   end
 
   defp key_changes(key, _old, new, raw, acc, _level), do: [{raw ++ [key], Enum.reverse([key | acc]), new}]
+
+  defp list_item_changes(key, old, new, identities, raw, acc) do
+    skeleton = Enum.map(identities, &identity_map/1)
+
+    [old, new, identities]
+    |> Enum.zip()
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {{old_item, new_item, identity}, index} ->
+      item_raw = raw ++ [key, to_string(index)]
+      leaf_changes(old_item, new_item, item_raw, [{:at, key, identity, skeleton} | acc], :item)
+    end)
+  end
 
   defp dom_get(value, []), do: {:ok, value}
   defp dom_get(%{} = map, [key | rest]) when is_map_key(map, key), do: dom_get(Map.fetch!(map, key), rest)
@@ -1195,7 +1228,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
       diff =
         Enum.reduce(changes, diff, fn {path, value}, diff ->
-          put_path(diff, resolve_ids(path, root?, ids), value)
+          put_path(diff, resolve_ids(path, root?, ids), resolve_list_ids(value, path, ids))
         end)
 
       {:ok, %{state | diffs: Map.put(state.diffs, uid, diff)}}
@@ -1236,6 +1269,20 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
+  # A list set as what changed in it: merged with what the diff holds now.
+  # A diff without the list has it as the editor had it before.
+  defp put_path(map, [key], {:list, before, after_list}) when is_binary(key) do
+    map = as_map(map)
+
+    current =
+      case Map.get(map, key) do
+        list when is_list(list) -> list
+        _ -> before
+      end
+
+    Map.put(map, key, merge_list(before, after_list, current))
+  end
+
   defp put_path(map, [key], value) when is_binary(key), do: Map.put(as_map(map), key, value)
 
   defp put_path(map, [key | rest], value) when is_binary(key) do
@@ -1272,6 +1319,79 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
     Map.put(map, key, list)
   end
+
+  # The rows of a list op name them as the editor had them; after a save
+  # they have ids (`rel_ids`), so they meet the diff's by id.
+  defp resolve_list_ids({:list, before, after_list}, path, ids) when ids != %{} do
+    case path |> List.last() |> then(&List.keyfind(@rel_identities, &1, 0)) do
+      {key, field} ->
+        fill = &Enum.map(&1, fn row -> fill_rel_id(row, key, field, ids) end)
+        {:list, fill.(before), fill.(after_list)}
+
+      nil ->
+        {:list, before, after_list}
+    end
+  end
+
+  defp resolve_list_ids(value, _path, _ids), do: value
+
+  @doc """
+  Three-way merge of a list by item identity (`id`, `uid`, `key`,
+  `sync_uid`): `after_list` is what an editor made of `before`, `current`
+  what the list is now, with other editors' changes since.
+
+  The editor's order and its additions, removals and item changes win;
+  items it left as they were take their current version, items others
+  removed stay removed, and items others added are kept, after the item
+  they follow in `current`.
+
+  ## Examples
+
+      iex> alias BrandoAdmin.Components.Form.BlockField.Ops
+      iex> before = [%{"uid" => "a"}, %{"uid" => "b"}]
+      iex> mine = before ++ [%{"uid" => "c"}]
+      iex> theirs = before ++ [%{"uid" => "d"}]
+      iex> Ops.merge_list(before, mine, theirs) |> Enum.map(& &1["uid"])
+      ["a", "b", "d", "c"]
+
+  """
+  @spec merge_list([map()], [map()], [map()]) :: [map()]
+  def merge_list(before, after_list, current) do
+    kept =
+      Enum.flat_map(after_list, fn item ->
+        was = Enum.find(before, &same_row?(&1, item))
+        now = Enum.find(current, &same_row?(&1, item))
+
+        cond do
+          # added by this editor, or changed by it: its version
+          is_nil(was) or was != item -> [item]
+          # left as it was, and removed by someone else
+          is_nil(now) -> []
+          # left as it was: as it is now
+          true -> [now]
+        end
+      end)
+
+    current
+    |> Enum.with_index()
+    |> Enum.reject(fn {item, _} -> Enum.any?(before, &same_row?(&1, item)) or Enum.any?(kept, &same_row?(&1, item)) end)
+    |> Enum.reduce(kept, fn {item, index}, merged ->
+      preceding = current |> Enum.take(index) |> Enum.reverse()
+      at = Enum.find_value(preceding, 0, fn prev -> (i = Enum.find_index(merged, &same_row?(&1, prev))) && i + 1 end)
+      List.insert_at(merged, at, item)
+    end)
+  end
+
+  @row_identities ~w(id uid key sync_uid)
+  defp same_row?(%{} = a, %{} = b) do
+    Enum.any?(@row_identities, fn name ->
+      x = Map.get(a, name)
+      y = Map.get(b, name)
+      x not in [nil, ""] and y not in [nil, ""] and to_string(x) == to_string(y)
+    end)
+  end
+
+  defp same_row?(_a, _b), do: false
 
   defp as_map(%{} = map), do: map
   defp as_map(_), do: %{}

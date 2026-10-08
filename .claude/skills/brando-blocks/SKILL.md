@@ -620,11 +620,16 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   block's form before and after (`Ops.field_op/4`) and emits `{:set_field, uid, path,
   value, rev}` for one changed leaf, `{:set_fields, uid, [{path, value}], rev}` for
   several, nothing for none — never the whole diff, so another editor's in-flight change
-  to a different field survives. List items are named by `id`/`uid`/`key`/`sync_uid`; a
-  list whose items have none, or that gained, lost or reordered items, is set whole
-  (never by index). Within a second of a `replace_form` the event can carry the
-  browser's old values: leaves set back to the replaced form's values are dropped
-  (`@replaced`). A field op made while its rows were new names them by uid; the reducer
+  to a different field survives. List items are named by `id`/`uid`/`key`/`sync_uid`
+  (never by index). A list that gained, lost or reordered items goes as `{:list, before,
+  after}`, which the reducer merges by identity with the list as it is now
+  (`Ops.merge_list/3`), so two editors each adding an item both keep it; a list whose
+  items have no identity (a var's options) is set whole, last arrival wins. Within a
+  second of a `replace_form` the event can carry the browser's old values for what that
+  change touched: `@replaced` keeps the form before AND the one that replaced it, and a
+  leaf is dropped only where the two differ and the event sets it back to the old value
+  — never drop a field the remote change did not touch (a backspace, a toggle set back).
+  A field op made while its rows were new names them by uid; the reducer
   matches uid- and id-named items through `rel_ids`, so both land on one row. `{:update,
   ...}` remains only for forms that cannot be compared. Last arrival wins per field. The
   replica's pending ops keep this editor's value until the session confirms it. Other
