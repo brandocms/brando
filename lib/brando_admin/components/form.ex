@@ -820,16 +820,47 @@ defmodule BrandoAdmin.Components.Form do
     |> update(socket)
   end
 
-  def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry} = message, socket) do
+  # A revision loaded as a working copy (the revisions drawer): the form
+  # stays on the entry as it is saved now and takes the revision as unsaved
+  # changes, its fields here and its blocks in each block field, so Save
+  # writes them. The block fields leave the entry's edit session while it is
+  # shown (`EditSession.detach/2`).
+  def update(%{action: :load_working_copy, revision_entry: revision_entry}, socket) do
+    %{schema: schema, entry: entry, current_user: current_user, form_blueprint: blueprint} = socket.assigns
+    block_assocs = Enum.map(blueprint.blocks, &:"entry_#{&1.name}")
+    params = revision_entry |> Brando.Revisions.restore_params() |> Map.drop(block_assocs)
+
+    changeset =
+      entry
+      |> schema.changeset(params, current_user)
+      |> Map.put(:action, :validate)
+
+    for %{name: field} <- blueprint.blocks do
+      send_update(BlockField,
+        id: "#{socket.assigns.id}-blocks-#{field}",
+        event: "load_working_copy",
+        entry_blocks: Map.get(revision_entry, :"entry_#{field}", [])
+      )
+    end
+
+    socket
+    |> assign(:blocks_detached?, true)
+    |> put_form(to_form(changeset, []))
+    |> assign_entry_for_blocks()
+    |> clear_blocks_root_changesets()
+    |> force_svelte_remounts(:all)
+    |> Drafts.dirty()
+    |> then(&{:ok, &1})
+  end
+
+  def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry}, socket) do
     send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], 1000)
     send(self(), {:progress_popup, "Setting new block map..."})
 
-    # The block fields are mounted again from `updated_entry`. A previewed
-    # revision stays out of the entry's edit session until it is saved.
-    if Map.get(message, :detached, false), do: detach_edit_session(socket)
-
+    # The block fields are mounted again from `updated_entry`, in the entry's
+    # edit session.
     socket
-    |> assign(:blocks_detached?, Map.get(message, :detached, false))
+    |> assign(:blocks_detached?, false)
     |> assign(:entry, updated_entry)
     |> assign_refreshed_form()
     |> assign(:block_map, [])
@@ -5047,29 +5078,6 @@ defmodule BrandoAdmin.Components.Form do
     |> reload_all_blocks(:changed)
     |> refresh_translation(stale?)
   end
-
-  # A revision loaded as a working copy replaces what the block fields
-  # showed, unsaved work included. They leave the session marking that
-  # (`EditSession.detach/2`), so writing the working copy does not carry the
-  # replaced work back. Their replicas are let go first: a field being
-  # mounted again must not rejoin with the work it showed when the session
-  # stops (the hooks route a session's :DOWN to the field that monitored it).
-  defp detach_edit_session(%{assigns: %{entry: %{id: id} = entry, form_blueprint: blueprint}} = socket)
-       when not is_nil(id) do
-    fields = Map.new(blueprint.blocks, &{"#{socket.assigns.id}-blocks-#{&1.name}", &1.name})
-
-    for {{:brando_edit_session_monitor, ref} = key, component_id} <- Process.get(),
-        Map.has_key?(fields, component_id) do
-      Process.demonitor(ref, [:flush])
-      Process.delete(key)
-    end
-
-    if session = EditSession.whereis(EditSession.ref_for(entry)) do
-      for field <- Map.values(fields), do: EditSession.detach(session, field)
-    end
-  end
-
-  defp detach_edit_session(_socket), do: :ok
 
   defp maybe_refresh_revisions(socket, schema) do
     if schema.has_trait(Brando.Trait.Revisioned) do

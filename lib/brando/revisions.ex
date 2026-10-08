@@ -385,6 +385,13 @@ defmodule Brando.Revisions do
     end
   end
 
+  @doc """
+  The params that restore `revision_entry`, a decoded revision, onto the
+  entry as it is now: its fields and associations, without render output.
+  """
+  @spec restore_params(struct()) :: map()
+  def restore_params(revision_entry), do: prepare_restore_params(revision_entry, false)
+
   defp prepare_restore_params(target_entry, publish?) do
     params =
       target_entry

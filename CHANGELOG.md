@@ -1573,6 +1573,15 @@ production dump.
 
 #### Fixes
 
+- **Saving a revision loaded as a working copy writes it.** The revisions
+  drawer loaded a revision by making it the form's saved data, so the form
+  held no changes and Save wrote nothing, while the editor showed the
+  revision as restored. A loaded revision is now unsaved changes to the
+  entry as it is saved: its fields, its entry vars and its blocks, with
+  their refs and vars. Save writes them; blocks the revision lacks are
+  deleted, and blocks the entry has lost since come back as new ones. The
+  editor shows unsaved changes until then.
+
 - **Activating a revision loaded as a working copy keeps the working copy.**
   Loading a revision into the editor replaces its unsaved changes, but the
   entry's edit session still held them: when the revision was activated
