@@ -801,16 +801,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  # Other editors replay unsaved entry fields and their focus for a joiner
-  # (see `BrandoAdmin.LiveView.Form.Hooks`). Blocks need no replay: the
-  # session's state already holds them.
+  # Other editors show a joiner the block they are in once its blocks are
+  # there (see `BrandoAdmin.LiveView.Form.Hooks`). Blocks need no replay:
+  # the session's state already holds them. The entry fields' join is the
+  # Form's.
   defp announce_join(socket) do
     entry = socket.assigns.entry
 
     PubSub.broadcast(
       Brando.pubsub(),
       Brando.Tenant.Topic.entry("field_sync", entry.__struct__, entry.id),
-      {:editor_joined, %{user_id: socket.assigns.current_user.id}}
+      {:editor_joined, %{user_id: socket.assigns.current_user.id, tab: BrandoAdmin.Presence.tab(), part: :blocks}}
     )
 
     socket

@@ -13,17 +13,17 @@ defmodule BrandoAdmin.FormWithoutBlocksFieldTest do
         user
       )
 
-    {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/no-blocks", "article_no_blocks_form")
-    refute has_element?(view, "[id^='article_no_blocks_form-blocks-']")
+    {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/no-blocks", "article_form")
+    refute has_element?(view, "[id^='article_form-blocks-']")
 
     view
-    |> form("#article_no_blocks_form_form")
+    |> form("#article_form_form")
     |> render_submit(%{"article" => %{"title" => "Saved without blocks"}})
 
     assert_push_event(view, "b:submit", %{}, 2_000)
 
     view
-    |> form("#article_no_blocks_form_form")
+    |> form("#article_form_form")
     |> render_submit(%{"article" => %{"title" => "Saved without blocks"}})
 
     assert_redirect(view, 3_000)

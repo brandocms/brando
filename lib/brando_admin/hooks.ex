@@ -53,6 +53,8 @@ defmodule BrandoAdmin.Hooks do
         else
           Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("url:#{path}"))
           Brando.presence().track_url(path, user_id, socket.assigns[:presence_meta] || %{})
+          # A new meta has no active field (see `LiveView.Form.Hooks`).
+          Process.delete(:brando_active_field_written)
           assign_uri_presences(socket, path)
         end
 

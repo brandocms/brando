@@ -196,9 +196,11 @@ defmodule BrandoAdmin.SyncTest.ArticleNoBlocksFormLive do
 
   def render(assigns) do
     ~H"""
+    <%!-- The form hooks of `BrandoAdmin.LiveView.Form` reach the Form as
+          `<singular>_form`, whichever form it shows. --%>
     <.live_component
       module={Form}
-      id="article_no_blocks_form"
+      id="article_form"
       name={:no_blocks}
       entry_id={@entry_id}
       current_user={@current_user}

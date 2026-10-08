@@ -18,7 +18,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     a = open(conn, page)
     b = open(other_conn, page)
 
-    %{page: page, me: me, other: other, a: a, b: b}
+    %{page: page, me: me, other: other, other_conn: other_conn, a: a, b: b}
   end
 
   defp open(conn, page) do
@@ -27,24 +27,24 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
   end
 
   # The Form component, which takes the focus and blur of its fields.
-  defp form(view) do
-    cid =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.find("[data-phx-component]")
-      |> Enum.filter(&(Floki.find(&1, "#page_form-el") != []))
-      |> Enum.min_by(&(&1 |> Floki.raw_html() |> byte_size()))
-      |> Floki.attribute("data-phx-component")
-      |> hd()
-      |> String.to_integer()
+  defp form(view), do: with_target(view, cid_of(view, "#page_form-el"))
 
-    with_target(view, cid)
+  # The innermost component holding `selector`.
+  defp cid_of(view, selector) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find("[data-phx-component]")
+    |> Enum.filter(&(Floki.find(&1, selector) != []))
+    |> Enum.min_by(&(&1 |> Floki.raw_html() |> byte_size()))
+    |> Floki.attribute("data-phx-component")
+    |> hd()
+    |> String.to_integer()
   end
 
   defp focus(view, field), do: view |> form() |> render_hook("focus", %{"field" => "page[#{field}]"})
 
-  defp blur(view), do: view |> form() |> render_hook("blur", %{})
+  defp blur(view, field \\ "title"), do: view |> form() |> render_hook("blur", %{"field" => "page[#{field}]"})
 
   # A keystroke as the browser sends it: the whole form, from what the view
   # shows (or showed: `shown`), with one field changed and named.
@@ -223,6 +223,92 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     assert to_everyone == [:uri]
   end
 
+  # A value the form writes itself, with no browser event to follow, ships at
+  # once: AI text here, an image copy or an uploaded video likewise
+  # (`update_changeset/3,4`).
+  test "a value the form writes itself reaches the other editor", c do
+    Brando.AIStub.configure()
+    Brando.AIStub.reply("A description by A")
+
+    c.a
+    |> form()
+    |> render_hook("ai_generate_input", %{"field_name" => "page[meta_description]", "field_key" => "meta_description"})
+
+    await_shown(c.b, "meta_description", "A description by A")
+  end
+
+  # The reconnected tab's browser sends its old form (`recover_form`); the
+  # other editor changed the title meanwhile. The recovered title is not a
+  # change of B's and must not undo A's.
+  test "a reconnect doesn't ship the browser's old values", c do
+    edit(c.b, "title", "Om oss, B")
+    await_shown(c.a, "title", "Om oss, B")
+    before = render(c.b)
+    kill_live(c.b)
+
+    edit(c.a, "title", "Om oss, A")
+    b = open(c.other_conn, c.page)
+    await_shown(b, "title", "Om oss, A")
+
+    recovered = before |> form_params("#page_form_form") |> Map.put("_target", ["image_editor_upload"])
+    b |> form() |> render_hook("recover_form", recovered)
+    assert shown(b, "title") == "Om oss, A"
+
+    # After a reconnect the input can still have the focus, so a blur comes
+    # without a focus first, and still ships what was typed.
+    type(b, "uri", "om-oss-b")
+    blur(b, "uri")
+
+    await_shown(c.a, "uri", "om-oss-b")
+    assert_both(%{a: c.a, b: b}, %{"title" => "Om oss, A", "uri" => "om-oss-b"})
+  end
+
+  test "an editor of an entry without block fields who joins gets the unsaved fields", %{conn: conn, me: me} do
+    {:ok, article} =
+      Brando.SyncTest.create_article(
+        %{title: "No blocks", slug: "no-blocks-sync", language: "en", status: "published", year: 2020},
+        me
+      )
+
+    path = "/admin/articles/update/#{article.id}/no-blocks"
+    {a, _html} = live_form(conn, path, "article_form")
+    a_form = with_target(a, cid_of(a, "#article_form-el"))
+    a_form |> render_hook("focus", %{"field" => "article[title]"})
+
+    params =
+      a
+      |> render()
+      |> form_params("#article_form_form")
+      |> put_in(["article", "title"], "No blocks, typed by A")
+      |> Map.put("_target", ["article", "title"])
+
+    a |> element("#article_form_form") |> render_change(params)
+
+    other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    {b, _html} = live_form(log_in_user(Phoenix.ConnTest.build_conn(), other), path, "article_form")
+
+    await(fn ->
+      b |> render() |> form_params("#article_form_form") |> get_in(["article", "title"]) ==
+        "No blocks, typed by A"
+    end)
+  end
+
+  # Both send the title at once: each gets the other's value while still
+  # in the field, and leaving it, the one who typed ships theirs on top. The
+  # clocks make both end with the same title.
+  test "two editors leaving one field at once end with the same value", c do
+    focus(c.a, "title")
+    focus(c.b, "title")
+    type(c.a, "title", "Om oss, A")
+    type(c.b, "title", "Om oss, B")
+
+    blur(c.a)
+    blur(c.b)
+
+    settle(c.a) && settle(c.b)
+    assert shown(c.a, "title") == shown(c.b, "title")
+  end
+
   describe "field locks" do
     setup c do
       Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("active_field", Page, c.page.id))
@@ -240,6 +326,22 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       await(fn -> presence_meta(c.page, c.me).active_field == nil end)
     end
 
+    # Every presence write is a diff every editor's process handles. The
+    # meta only serves editors who join later, so moving between fields
+    # writes it once, after the moves settle.
+    test "moving between fields writes the tab's presence once", c do
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("url:/admin/pages/update/#{c.page.id}"))
+
+      focus(c.a, "title")
+      blur(c.a)
+      focus(c.a, "uri")
+      await(fn -> presence_meta(c.page, c.me).active_field == "page[uri]" end)
+      Process.sleep(400)
+
+      diffs = for %Phoenix.Socket.Broadcast{event: "presence_diff"} <- messages(), do: :diff
+      assert length(diffs) == 1
+    end
+
     test "leaving the entry releases the field", c do
       focus(c.a, "title")
       assert_push_event(c.b, "b:set_active_field", %{field: "page[title]"})
@@ -250,16 +352,41 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       assert_push_event(c.b, "b:clear_user_presence", %{user_id: ^user_id}, 2_000)
     end
 
-    test "an image field is locked while its drawer is open, and closing the drawer releases it", c do
+    test "an image field is locked while its drawer is open, and every way of closing it releases it", c do
       image = Factory.insert(:image, creator: c.me, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
       Repo.update_all(from(p in Page, where: p.id == ^c.page.id), set: [meta_image_id: image.id])
       a = open(c.conn, c.page)
 
-      a |> element("#page_meta_image-media button[phx-click*=open_image]") |> render_click()
-      assert_push_event(c.b, "b:set_active_field", %{field: "page[meta_image]"})
+      # ×, Done and the backdrop; Escape runs the drawer's `data-modal-close`,
+      # the same commands as ×.
+      for close <- [".drawer-close-button", ".drawer-footer .workspace-button.primary", "+ .media-drawer-backdrop"] do
+        a |> element("#page_meta_image-media button[phx-click*=open_image]") |> render_click()
+        assert_push_event(c.b, "b:set_active_field", %{field: "page[meta_image]"})
 
-      a |> element("#image-drawer .drawer-close-button") |> render_click()
-      assert_push_event(c.b, "b:set_active_field", %{field: nil})
+        # The drawer's own inputs are the image's, not the entry's: they
+        # neither take the lock nor release it.
+        a |> form() |> render_hook("focus", %{"field" => "image[alt][en]"})
+        a |> form() |> render_hook("blur", %{"field" => "image[alt][en]"})
+        refute_push_event(c.b, "b:set_active_field", %{field: nil}, 100)
+
+        a |> element("#image-drawer #{close}") |> render_click()
+        assert_push_event(c.b, "b:set_active_field", %{field: nil})
+      end
+
+      assert a |> element("#image-drawer") |> render() =~ ~s(data-modal-close=)
+      assert a |> element("#image-drawer") |> render() =~ "&quot;blur&quot;"
+    end
+
+    test "removing the image from its drawer ships the removal", c do
+      image = Factory.insert(:image, creator: c.me, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+      Repo.update_all(from(p in Page, where: p.id == ^c.page.id), set: [meta_image_id: image.id])
+      a = open(c.conn, c.page)
+      b = open(c.other_conn, c.page)
+
+      a |> element("#page_meta_image-media button[phx-click*=open_image]") |> render_click()
+      a |> element("#image-drawer button.destructive") |> render_click()
+
+      await_shown(b, "meta_image_id", "")
     end
 
     # One editor with the entry open in two tabs, each in its own field: the
