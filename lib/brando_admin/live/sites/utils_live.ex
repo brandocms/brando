@@ -23,6 +23,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> assign_info()
        |> assign(:loose_blocks, Brando.Content.BlockAudit.count_loose())
        |> assign_search_index()
+       |> subscribe_image_tasks()
        |> assign_image_tasks()
        |> assign_authorization_tools(params)
        |> start_system_check()}
@@ -54,6 +55,13 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
     state = if Brando.Search.rebuild_running?(), do: :queued, else: :idle
     assign(socket, :search_index, %{state: state, done: 0, total: 0, count: Brando.Search.count()})
+  end
+
+  # Recreate changed images reports how many images it kept and how many it
+  # recreated; the latest run's counts show under the tool.
+  defp subscribe_image_tasks(socket) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), Images.Processing.topic())
+    assign(socket, :image_run, nil)
   end
 
   defp assign_image_tasks(socket) do
@@ -210,6 +218,13 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               </small>
               <small :if={!@image_tasks["recreate_sizes"] && @changed_images == 0} class="utils-empty-status">
                 {gettext("All images match their settings")}
+              </small>
+              <small :if={@image_run} id="utils-image-run">
+                {ngettext(
+                  "%{count} image already matched its settings",
+                  "%{count} images already matched their settings",
+                  @image_run.adopted
+                )} · {ngettext("%{count} image recreated", "%{count} images recreated", @image_run.recreated)}
               </small>
             </div>
             <div class="utils-row-actions">
@@ -520,6 +535,11 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
   def handle_info({:search_index, %{state: state, done: done, total: total}}, socket) do
     {:noreply, update(socket, :search_index, &%{&1 | state: state, done: done, total: total})}
+  end
+
+  def handle_info({:image_maintenance, %{state: state} = run}, socket) do
+    socket = assign(socket, :image_run, run)
+    {:noreply, if(state == :done, do: assign_image_tasks(socket), else: socket)}
   end
 
   def handle_async(:system_check, {:ok, results}, socket) do

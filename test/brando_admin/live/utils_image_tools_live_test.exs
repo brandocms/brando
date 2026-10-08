@@ -48,6 +48,24 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
     refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
   end
 
+  test "keeps unrecorded images that already match and says how many it recreated", %{conn: conn} do
+    Brando.Repo.update_all(Brando.Images.Image, set: [config_fingerprint: "0123456789ab"])
+    matching = Brando.ImageFileFixtures.unrecorded_image("utils-match")
+    Factory.insert(:image, path: "images/avatars/27i97a.jpeg", config_fingerprint: "0123456789ab")
+
+    {:ok, view, _} = live(conn, "/admin/config/utils")
+    refute has_element?(view, "#utils-image-run")
+
+    view |> element("button", "Recreate changed images") |> render_click()
+
+    assert Brando.Repo.get!(Brando.Images.Image, matching.id).config_fingerprint ==
+             Brando.Images.Processing.current_fingerprint("default")
+
+    recreated = Brando.Repo.aggregate(Brando.Images.Image, :count) - 1
+    assert has_element?(view, "#utils-image-run", "1 image already matched its settings")
+    assert has_element?(view, "#utils-image-run", "#{recreated} images recreated")
+  end
+
   test "either recreate run blocks both buttons", %{conn: conn, current_user: user} do
     Oban.Testing.with_testing_mode(:manual, fn ->
       {:ok, _job} = Oban.insert(ImageMaintenance.new(%{task: "recreate_changed_sizes", user_id: user.id}))
