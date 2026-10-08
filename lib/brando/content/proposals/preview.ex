@@ -45,6 +45,20 @@ defmodule Brando.Content.Proposals.Preview do
     end
   end
 
+  @doc """
+  Render entry `id` of `schema` as it is saved, for an editor reviewing a
+  proposal: a draft has no public page to open. The editor must be able to
+  read the entry. Returns `{:ok, key}`, `{:error, :no_preview_target}` or
+  `{:error, message}`.
+  """
+  @spec render_saved(module(), integer(), term()) :: {:ok, String.t()} | {:error, atom() | String.t()}
+  def render_saved(schema, id, actor) do
+    with true <- LivePreview.has_live_preview_target(schema) || {:error, :no_preview_target},
+         {:ok, entry} <- Error.protect(fn -> Brando.Content.Transfer.Catalog.load!(schema, id, actor, :read) end) do
+      entry |> Ecto.Changeset.change() |> initialize(actor, nil)
+    end
+  end
+
   @doc "Remove the rendered HTML, cached assigns and authority of preview keys."
   @spec discard([String.t()]) :: :ok
   def discard(keys), do: Enum.each(keys, &LivePreview.cleanup_cache/1)

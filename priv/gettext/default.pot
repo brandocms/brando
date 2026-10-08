@@ -19155,3 +19155,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Moved %{keys}"
 msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open %{url} in a new tab"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Preview the saved page"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This page cannot be previewed."
+msgstr ""

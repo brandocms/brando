@@ -156,4 +156,55 @@ defmodule BrandoAdmin.AssistantAppliedLiveTest do
     assert length(multi.block.children) == 4
     assert has_element?(view, ".assistant-placement", placement)
   end
+
+  describe "the card's address" do
+    setup c do
+      draft = Brando.Factory.insert(:page, creator: c.user, title: "Draft", uri: "draft", status: :draft)
+      norsk = Brando.Factory.insert(:page, creator: c.user, title: "Norsk", uri: "norsk", language: :no)
+
+      ops =
+        for page <- [c.work, draft, norsk],
+            do: %Proposals.SetFields{target: {Page, page.id}, fields: %{"title" => "#{page.title}!"}}
+
+      Map.merge(c, %{draft: draft, norsk: norsk, ops: ops})
+    end
+
+    test "a published entry links to its public URL in its own language, a draft to its preview", c do
+      {view, _} = open(c, c.ops)
+      host = Brando.Utils.hostname()
+      work_url = Path.join(host, Brando.Blueprint.URL.resolve(c.work))
+
+      assert has_element?(view, card(c.work) <> ~s( a.assistant-address[href="#{work_url}"][target="_blank"]))
+      refute work_url =~ "/no/"
+      assert has_element?(view, card(c.norsk) <> ~s( a.assistant-address[href="#{host}/no/norsk"]))
+
+      refute has_element?(view, card(c.draft) <> " a.assistant-address")
+      assert has_element?(view, card(c.draft) <> " .assistant-draft")
+
+      # The test app's default Page view cannot render pages (see
+      # AssistantLiveTest's page preview): the editor is told. The E2E spec
+      # opens the preview.
+      Brando.endpoint().subscribe("user:#{c.current_user.id}")
+      view |> element(card(c.draft) <> " button.assistant-saved-preview") |> render_click()
+      assert_receive %{event: "toast", payload: %{payload: "The page could not be rendered: " <> _}}
+
+      # After apply, the card links to the page as it is now.
+      apply!(view)
+      assert has_element?(view, card(c.work) <> ~s( a.assistant-address[href="#{work_url}"]))
+      assert has_element?(view, card(c.draft) <> " button.assistant-saved-preview")
+    end
+
+    test "a draft published as it is applied links to its page", c do
+      {view, _} = open(c, c.ops)
+
+      view
+      |> element(~s(input[phx-click="toggle_publish"][phx-value-key="#{Proposals.Proposal.key({Page, c.draft.id})}"]))
+      |> render_click()
+
+      apply!(view)
+
+      assert has_element?(view, card(c.draft) <> ~s( a.assistant-address[href="#{Brando.Utils.hostname()}/en/draft"]))
+      refute has_element?(view, card(c.draft) <> " .assistant-draft")
+    end
+  end
 end

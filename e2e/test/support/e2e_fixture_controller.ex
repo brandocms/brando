@@ -52,6 +52,10 @@ defmodule E2EFixtureController do
 
         "mcp-proposals" ->
           create_mcp_proposals()
+
+        "assistant-applied-copy" ->
+          create_applied_copy_proposal()
+
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
@@ -320,6 +324,98 @@ defmodule E2EFixtureController do
     end
 
     user
+  end
+
+  # A proposal from a connected tool that copies "Project video VG" from the
+  # Identity page to the top of the team on Strategy (published), Strategi
+  # (published, Norwegian) and Branding (draft).
+  defp create_applied_copy_proposal do
+    import Ecto.Query, only: [from: 2]
+    alias Brando.Content.Proposals.Tools
+
+    user = get_admin_user()
+    section = Brando.Repo.one!(from(m in Brando.Content.Module, where: m.class == "team-section", limit: 1))
+    member = Brando.Repo.one!(from(m in Brando.Content.Module, where: m.parent_id == ^section.id, limit: 1))
+
+    {identity, [video | _]} =
+      team_page!(user, section, member, {"Identity", "projects/category/identity", "en", :published}, [
+        "Project video VG",
+        "Aker"
+      ])
+
+    targets =
+      for {page, members} <- [
+            {{"Strategy", "projects/category/strategy-and-positioning-for-growing-companies", "en", :published},
+             ["Sommerro", "Aker"]},
+            {{"Strategi", "prosjekter/kategori/strategi", "no", :published}, ["Sommerro", "Aker"]},
+            {{"Branding", "projects/category/branding", "en", :draft}, ["Sommerro"]}
+          ] do
+        team_page!(user, section, member, page, members)
+      end
+
+    ops =
+      for {page, [first | _]} <- targets do
+        %{
+          "op" => "copy_block",
+          "target" => %{"content_type" => "Brando.Pages.Page", "id" => identity.id},
+          "block_uid" => video,
+          "to" => %{"content_type" => "Brando.Pages.Page", "id" => page.id},
+          "placement" => %{"before" => first}
+        }
+      end
+
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+    summary = "Put the project video for VG first in the selected projects"
+    {:ok, %{applicable: true}} = Tools.call("prepare_proposal", %{"summary" => summary, "operations" => ops}, context)
+
+    user
+  end
+
+  defp team_page!(user, section, member, {title, uri, language, status}, members) do
+    {:ok, page} =
+      Brando.Pages.create_page(
+        %{title: title, uri: uri, language: language, template: "default.html", status: status},
+        user
+      )
+
+    team =
+      team_block!(user, section, nil, 0, [
+        %{"type" => "string", "key" => "section_title", "label" => "Section title", "value" => "Selected projects"}
+      ])
+
+    uids =
+      for {name, n} <- Enum.with_index(members) do
+        team_block!(user, member, team.id, n, [
+          %{"type" => "string", "key" => "member_name", "label" => "Name", "value" => name, "sequence" => 0},
+          %{"type" => "string", "key" => "member_role", "label" => "Role", "value" => "Case", "sequence" => 1}
+        ]).uid
+      end
+
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: team.id, sequence: 0}))
+    # The revision an undo goes back to holds the blocks too.
+    {:ok, _} =
+      Brando.Revisions.create_revision(Brando.Content.Transfer.Catalog.load!(Brando.Pages.Page, page.id, user), user)
+
+    {page, uids}
+  end
+
+  defp team_block!(user, module, parent_id, sequence, vars) do
+    %Brando.Content.Block{}
+    |> Brando.Content.Block.recursive_block_changeset(
+      %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => if(parent_id, do: "module_entry", else: "module"),
+        "module_id" => module.id,
+        "multi" => module.multi,
+        "parent_id" => parent_id,
+        "sequence" => sequence,
+        "creator_id" => user.id,
+        "source" => to_string(Brando.Pages.Page.Blocks),
+        "vars" => vars
+      },
+      user
+    )
+    |> Brando.Repo.insert!()
   end
 
   defp create_norwegian_admin_user do

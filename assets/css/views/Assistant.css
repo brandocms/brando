@@ -548,7 +548,7 @@
     font-size: 12px;
   }
 
-  footer span { display: inline-flex; align-items: center; gap: 6px; }
+  footer > span { display: inline-flex; align-items: center; gap: 6px; }
   footer [data-icon] { width: 14px; height: 14px; }
 }
 
@@ -607,8 +607,29 @@
 }
 
 .assistant-card-type { color: var(--assistant-muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-.assistant-card-url { margin-top: -8px; color: var(--assistant-muted); font-size: 12px; overflow-wrap: anywhere; }
-.assistant-live { color: var(--assistant-accent); }
+.assistant-live { flex: none; color: var(--assistant-accent); }
+
+/* The published page, cut in the middle when it does not fit: the host
+   leads and the end of the path stays. */
+.assistant-address {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--assistant-ink);
+  text-decoration: none;
+
+  &:hover .assistant-address-start,
+  &:hover .assistant-address-end { text-decoration: underline; text-underline-offset: 2px; }
+
+  [data-icon] { flex: none; margin-left: 6px; color: var(--assistant-muted); }
+}
+
+.assistant-address-start { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assistant-address-end { flex: none; white-space: nowrap; }
+
+.assistant-saved-preview { display: inline-flex; align-items: center; gap: 4px; }
+.assistant-card footer .assistant-saved-preview [data-icon] { width: 12px; height: 12px; }
 
 .assistant-badge {
   padding: 2px 8px;
