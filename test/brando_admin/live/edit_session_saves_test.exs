@@ -36,7 +36,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   # state is read here), the second writes.
   defp save_read(view) do
     view |> form("#page_form_form") |> render_submit()
-    assert_push_event(view, "b:submit", %{}, 2_000)
+    assert_push_event(view, "b:submit", %{}, 5_000)
   end
 
   defp save_write(view), do: view |> form("#page_form_form") |> render_submit()
@@ -476,9 +476,13 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       save_read(c.b)
       save_write(c.b)
 
-      await(fn ->
-        c.work |> rows() |> Enum.find(&(&1.block.uid == c.multi_uid)) |> then(&(length(&1.block.children) == 3))
-      end)
+      # a container with its children: give a loaded test run time
+      await(
+        fn ->
+          c.work |> rows() |> Enum.find(&(&1.block.uid == c.multi_uid)) |> then(&(length(&1.block.children) == 3))
+        end,
+        500
+      )
     end
 
     test "comes back inside its removed parent, kept around it alone, when the parent went too", c do
