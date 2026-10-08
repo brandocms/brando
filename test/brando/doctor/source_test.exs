@@ -118,8 +118,8 @@ defmodule Brando.Doctor.SourceTest do
     test "the default branch when the lock names none", %{source: source} do
       test = self()
 
-      runner = fn _cmd, args, _opts ->
-        send(test, {:ref, List.last(args)})
+      runner = fn _cmd, ["ls-remote", "--", _url, ref], _opts ->
+        send(test, {:ref, ref})
         {"#{@latest}\tHEAD\n", 0}
       end
 
