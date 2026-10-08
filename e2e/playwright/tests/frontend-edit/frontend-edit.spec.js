@@ -263,7 +263,19 @@ test('the toolbar and sidebar fit a phone', async ({ page }) => {
   expect(box.width).toBeLessThanOrEqual(390)
   expect(await editor.locator('body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
   await expect(editor.getByTestId('submit')).toBeInViewport()
+
+  // The open sidebar stops above the toolbar, so Done stays in reach: in the
+  // viewport, and the element a click there lands on (a trial click fails if
+  // the sidebar covers it). On a tablet too, where the two met.
+  const done = toolbar.locator('.fe-toolbar-done')
+  await expect(done).toBeInViewport({ ratio: 1 })
+  await done.click({ trial: true, timeout: 2000 })
   await shot(page, '14-phone-sidebar')
+
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await expect(done).toBeInViewport({ ratio: 1 })
+  await done.click({ trial: true, timeout: 2000 })
+  await expect(editor.getByTestId('submit')).toBeInViewport()
 })
 
 test.describe('entry fields', () => {
