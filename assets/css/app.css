@@ -202,7 +202,7 @@ html.moonwalk [data-moonwalk-run].moonwalked {
 }
 
 code {
-  background-color: var(--brando-color-peach);
+  background-color: var(--brando-surface-subform);
   font-size: 90%;
   padding: 2px;
 }
@@ -252,8 +252,8 @@ code {
   z-index: 10000;
 
   .tooltip-inner {
-    color: var(--brando-color-peach);
-    background-color: var(--brando-color-dark);
+    color: var(--brando-surface-subform);
+    background-color: var(--brando-ink);
     border-radius: 12px;
     padding: 5px 7px 5px;
   }
@@ -264,7 +264,7 @@ code {
     border-style: solid;
     position: absolute;
     margin: 5px;
-    border-color: var(--brando-color-dark);
+    border-color: var(--brando-ink);
     z-index: 1;
   }
 
@@ -338,7 +338,7 @@ code {
     }
 
     .popover-arrow {
-      border-color: theme(colors.villain.popover);
+      border-color: var(--brando-ink);
     }
   }
 
@@ -477,10 +477,6 @@ body {
   @fontsize base;
 
   /* Colour roles live in tokens.css. */
-  --brando-color-white: theme(colors.white);
-  --brando-color-gray: theme(colors.gray);
-  --brando-color-gray-light: theme(colors.grayLight);
-  --brando-color-black: theme(colors.black);
   --brando-input-radius: 8px;
   --brando-input-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
   --brando-input-focus-shadow: 0 0 0 2.5px color-mix(in srgb, var(--brando-accent) 16%, transparent);
@@ -494,8 +490,8 @@ body {
   --brando-chip-radius: 8px;
   --brando-chip-padding: 7px 14px;
 
-  background-color: var(--brando-color-background);
-  color: var(--brando-color-foreground);
+  background-color: var(--brando-surface-page);
+  color: var(--brando-ink);
 }
 
 .main-content .circle-dropdown.wrapper {
@@ -513,7 +509,7 @@ body {
 
 .toggle-menu {
   @fontsize xs/1;
-  border: 1px solid var(--brando-color-dark);
+  border: 1px solid var(--brando-ink);
   width: 50px;
   height: 50px;
   position: fixed;
@@ -529,8 +525,8 @@ body {
   transform-origin: center;
 
   &:hover {
-    background-color: var(--brando-color-dark);
-    color: var(--brando-color-peach);
+    background-color: var(--brando-ink);
+    color: var(--brando-surface-subform);
   }
 }
 
@@ -620,7 +616,7 @@ p:last-of-type {
 
 .bb-link {
   text-decoration: underline;
-  text-decoration-color: var(--brando-color-blue);
+  text-decoration-color: var(--brando-accent);
   transition: text-decoration-color 250ms ease;
 
   &:hover {
@@ -667,7 +663,7 @@ h3 {
   gap: 12px;
   padding: 12px 14px;
   border-radius: 10px;
-  background-color: var(--brando-color-shaded);
+  background-color: var(--brando-surface-shaded);
   box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.06);
 
   &:hover {
@@ -679,7 +675,7 @@ h3 {
     flex: none;
     padding: 4px 7px;
     border-radius: 5px;
-    background-color: var(--brando-color-peach);
+    background-color: var(--brando-surface-subform);
     @font mono;
     font-size: 10px;
     line-height: 1;
@@ -798,8 +794,8 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: var(--brando-color-dark);
-  border: 1px solid var(--brando-color-dark);
+  color: var(--brando-ink);
+  border: 1px solid var(--brando-ink);
   background-color: transparent;
   height: 60px;
   padding-bottom: 8px;
@@ -808,7 +804,7 @@ h3 {
   transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
-    background-color: var(--brando-color-peach);
+    background-color: var(--brando-surface-subform);
   }
 }
 
@@ -817,8 +813,8 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: var(--brando-color-dark);
-  border: 1px solid var(--brando-color-dark);
+  color: var(--brando-ink);
+  border: 1px solid var(--brando-ink);
   background-color: transparent;
   height: 40px;
   padding-bottom: 5px;
@@ -826,7 +822,7 @@ h3 {
   transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
-    background-color: var(--brando-color-peach);
+    background-color: var(--brando-surface-subform);
   }
 }
 
@@ -835,8 +831,8 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: var(--brando-color-dark);
-  border: 1px solid var(--brando-color-dark);
+  color: var(--brando-ink);
+  border: 1px solid var(--brando-ink);
   background-color: transparent;
   height: 60px;
   padding-bottom: 5px;
@@ -848,14 +844,14 @@ h3 {
   }
 
   &:hover {
-    background-color: var(--brando-color-peach);
+    background-color: var(--brando-surface-subform);
   }
 }
 
 .btn-outline-primary {
   padding-top: 5px;
-  color: var(--brando-color-dark);
-  border: 1px solid var(--brando-color-dark);
+  color: var(--brando-ink);
+  border: 1px solid var(--brando-ink);
   background-color: var(--brando-surface);
   height: 60px;
   border-radius: 30px;
@@ -865,27 +861,27 @@ h3 {
   transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
-    background-color: var(--brando-color-dark);
-    border-color: var(--brando-color-dark);
-    color: theme(colors.peach);
+    background-color: var(--brando-ink);
+    border-color: var(--brando-ink);
+    color: var(--brando-surface-subform);
   }
 
   &.inverted {
-    color: var(--brando-color-peach);
-    @color bg transparent;
-    border: 1px solid var(--brando-color-peach);
+    color: var(--brando-surface-subform);
+    background-color: transparent;
+    border: 1px solid var(--brando-surface-subform);
 
     &:hover {
-      color: var(--brando-color-dark);
-      background-color: var(--brando-color-peach);
-      border-color: theme(colors.peach);
+      color: var(--brando-ink);
+      background-color: var(--brando-surface-subform);
+      border-color: var(--brando-surface-subform);
     }
   }
 }
 
 .tippy-box {
-  background-color: var(--brando-color-dark);
-  color: var(--brando-color-peach);
+  background-color: var(--brando-ink);
+  color: var(--brando-surface-subform);
   font-size: 12px;
 }
 
@@ -899,7 +895,7 @@ h3 {
   img {
     max-width: 100%;
     width: 100%;
-    border: 5px solid theme(colors.peachDarkest);
+    border: 5px solid var(--brando-line);
   }
 }
 
@@ -1144,7 +1140,7 @@ h3 {
   height: 40px;
   border-radius: 20px;
   line-height: 1;
-  border: 1px solid var(--brando-color-dark);
+  border: 1px solid var(--brando-ink);
   font-family: theme(typography.families.mono);
   font-size: 14px;
   text-transform: uppercase;
@@ -1172,7 +1168,7 @@ h3 {
   }
 
   span {
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
   }
 }
 
@@ -1259,7 +1255,7 @@ h3 {
   }
 
   &.tiny {
-    background-color: var(--brando-color-input);
+    background-color: var(--brando-surface);
     border-radius: 0;
     font-size: 10px;
     border: none;
@@ -1283,9 +1279,9 @@ h3 {
 
   a {
     &:hover {
-      @color fg var(--brando-color-blue);
+      color: var(--brando-accent);
       svg {
-        stroke: var(--brando-color-blue);
+        stroke: var(--brando-accent);
       }
     }
   }
@@ -1304,7 +1300,7 @@ h3 {
 }
 
 .imported-module {
-  background-color: var(--brando-color-peach);
+  background-color: var(--brando-surface-subform);
   margin: 5px 0;
   padding: 12px;
   border: 1px dashed;

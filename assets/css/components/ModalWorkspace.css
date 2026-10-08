@@ -274,10 +274,10 @@
 .modal .modal-content .block-vars .variable :is(.brando-input > .field-wrapper, .brando-input > div > .field-wrapper) > .label-wrapper { margin: 0; }
 .modal .modal-content .block-vars .variable :is(.brando-input > .field-wrapper, .brando-input > div > .field-wrapper) > .label-wrapper .control-label,
 .modal .modal-content .block-vars .variable :is(.brando-input > .field-wrapper, .brando-input > div > .field-wrapper) > .label-wrapper .control-label > span { font: 12px/20px "Main", sans-serif; color: var(--vars-muted); text-transform: none; }
-.modal .modal-content .block-vars .variable.boolean .brando-input > .field-wrapper > .label-wrapper .control-label > span { color: var(--brando-color-foreground); }
+.modal .modal-content .block-vars .variable.boolean .brando-input > .field-wrapper > .label-wrapper .control-label > span { color: var(--brando-ink); }
 .modal .modal-content .block-vars .variable .brando-input > .field-wrapper > .field-base > .input-with-action > input.text { height: 30px; min-height: 30px; background: transparent !important; border-color: transparent !important; }
 .modal .modal-content .block-vars .variable .brando-input > .field-wrapper > .field-base > .input-with-action > input.text:hover { border-color: var(--vars-line) !important; }
-.modal .modal-content .block-vars .variable .brando-input > .field-wrapper > .field-base > .input-with-action > input.text:focus { background: var(--brando-color-input) !important; border-color: var(--brando-color-blue) !important; }
+.modal .modal-content .block-vars .variable .brando-input > .field-wrapper > .field-base > .input-with-action > input.text:focus { background: var(--brando-surface) !important; border-color: var(--brando-accent) !important; }
 .modal .modal-content .block-vars .variable .brando-input > div > .field-wrapper > .field-base > .multiselect { height: 30px; min-height: 30px; }
 button.link-preview { text-align: left; }
 

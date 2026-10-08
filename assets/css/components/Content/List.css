@@ -150,7 +150,7 @@
 
   .empty-list {
     @space padding-y 7vw;
-    background-color: var(--brando-color-peach);
+    background-color: var(--brando-surface-subform);
     border-radius: 33px;
 
     display: flex;
@@ -232,23 +232,23 @@
     button {
       width: 30px;
       height: 30px;
-      border: 1px solid var(--brando-color-dark);
+      border: 1px solid var(--brando-ink);
       border-radius: 50%;
       font-size: 13px;
       line-height: 1;
       transition: background-color 200ms ease;
 
       &.active {
-        background-color: var(--brando-color-dark);
-        color: var(--brando-color-peach);
+        background-color: var(--brando-ink);
+        color: var(--brando-surface-subform);
 
         &:hover {
-          color: var(--brando-color-dark);
+          color: var(--brando-ink);
         }
       }
 
       &:hover {
-        background-color: var(--brando-color-peach);
+        background-color: var(--brando-surface-subform);
       }
     }
 
@@ -310,7 +310,7 @@
     display: flex;
 
     > .statuses {
-      background-color: var(--brando-color-input);
+      background-color: var(--brando-surface);
       display: flex;
       height: 100%;
       margin-right: 5px;
@@ -331,7 +331,7 @@
         border: none;
 
         &.active {
-          background-color: theme(colors.peachDarker);
+          background-color: var(--brando-surface-selected);
         }
 
         /* No entries under the other filters: still there, quieter */
@@ -358,22 +358,22 @@
         @space margin-right 0 <=ipad_landscape;
 
         circle {
-          fill: theme(colors.status.published);
+          fill: var(--brando-status-published);
 
           &.draft {
-            fill: theme(colors.status.draft);
+            fill: var(--brando-status-draft);
           }
 
           &.pending {
-            fill: theme(colors.status.pending);
+            fill: var(--brando-status-pending);
           }
 
           &.published {
-            fill: theme(colors.status.published);
+            fill: var(--brando-status-published);
           }
 
           &.disabled {
-            fill: theme(colors.status.disabled);
+            fill: var(--brando-status-disabled);
           }
 
           &.deleted {
@@ -390,13 +390,13 @@
       height: 100%;
       display: flex;
       align-items: center;
-      background-color: var(--brando-color-input);
+      background-color: var(--brando-surface);
       border-left: 5px solid var(--brando-surface);
       transition: background-color 250ms ease;
     }
 
     .trash.trashSelected {
-      background-color: theme(colors.peachDarker);
+      background-color: var(--brando-surface-selected);
       transition: background-color 250ms ease;
     }
 
@@ -405,7 +405,7 @@
     }
 
     .filter {
-      background-color: var(--brando-color-input);
+      background-color: var(--brando-surface);
       height: 48px;
       display: flex;
       align-items: center;
@@ -445,15 +445,15 @@
         span {
           white-space: nowrap;
           padding: 2px 5px;
-          border: 1px solid theme(colors.blue);
+          border: 1px solid var(--brando-accent);
         }
       }
     }
 
     .selected {
       @space container;
-      background-color: var(--brando-color-dark);
-      color: var(--brando-color-peach);
+      background-color: var(--brando-ink);
+      color: var(--brando-surface-subform);
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -470,10 +470,10 @@
       .circle {
         margin-left: 15px;
         margin-right: 15px;
-        border: 1px solid var(--brando-color-peach);
+        border: 1px solid var(--brando-surface-subform);
 
         span {
-          color: var(--brando-color-peach);
+          color: var(--brando-surface-subform);
         }
       }
 
@@ -522,10 +522,10 @@
     span {
       width: 15px;
       height: 15px;
-      background-color: var(--brando-color-dark);
+      background-color: var(--brando-ink);
 
       &:hover {
-        background-color: var(--brando-color-blue);
+        background-color: var(--brando-accent);
       }
     }
   }
@@ -533,7 +533,7 @@
   a {
     border-bottom: none;
     position: relative;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
   }
 
   .list-header {
@@ -609,7 +609,7 @@
         transition: background-color 250ms ease;
 
         &:hover {
-          background-color: var(--brando-color-dark);
+          background-color: var(--brando-ink);
 
           span {
             background-color: white;
@@ -634,7 +634,7 @@
       line-height: 120%;
       border-bottom: none;
       position: relative;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
       text-decoration: none;
       text-decoration-color: transparent;
       transition: text-decoration-color 1s ease;
@@ -648,7 +648,7 @@
         content: "→";
         opacity: 0.2;
         right: 0;
-        color: var(--brando-color-dark);
+        color: var(--brando-ink);
         transform: translate(3px, 1px);
         transition: transform 250ms ease, opacity 250ms ease, color 250ms ease;
         display: inline-block;
@@ -657,7 +657,7 @@
       }
 
       &:hover {
-        text-decoration-color: var(--brando-color-blue);
+        text-decoration-color: var(--brando-accent);
 
         &:after {
           opacity: 1;
@@ -667,7 +667,7 @@
     }
 
     &.phx-click-loading {
-      background-color: theme(colors.peachDarker);
+      background-color: var(--brando-surface-selected);
     }
 
     &.selected {
@@ -677,7 +677,7 @@
           background-color: var(--brando-surface-shaded);
         }
       }
-      background-color: theme(colors.peachDarker);
+      background-color: var(--brando-surface-selected);
     }
 
     &.deleted {
@@ -714,7 +714,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: var(--brando-color-input);
+        background-color: var(--brando-surface);
         border-radius: 50%;
 
         &:before {
@@ -736,13 +736,13 @@
 
         &:hover {
           cursor: pointer;
-          border: 1px solid var(--brando-color-dark);
+          border: 1px solid var(--brando-ink);
         }
 
         .status-dropdown {
-          border: 1px solid var(--brando-color-dark);
+          border: 1px solid var(--brando-ink);
           position: absolute;
-          background-color: var(--brando-color-peach);
+          background-color: var(--brando-surface-subform);
           width: 200px;
           z-index: 1;
           margin-top: 5px;
@@ -766,22 +766,22 @@
 
         svg {
           circle {
-            fill: theme(colors.blue);
+            fill: var(--brando-accent);
 
             &.draft {
-              fill: theme(colors.status.draft);
+              fill: var(--brando-status-draft);
             }
 
             &.pending {
-              fill: theme(colors.status.pending);
+              fill: var(--brando-status-pending);
             }
 
             &.published {
-              fill: theme(colors.status.published);
+              fill: var(--brando-status-published);
             }
 
             &.disabled {
-              fill: theme(colors.status.disabled);
+              fill: var(--brando-status-disabled);
             }
 
             &.deleted {
@@ -838,7 +838,7 @@
 
     &:hover {
       .icon-wrapper {
-        background-color: var(--brando-color-dark);
+        background-color: var(--brando-ink);
       }
       [data-icon] {
         color: white;
@@ -861,7 +861,7 @@
   align-items: center;
   font-size: 14px;
   justify-content: flex-end;
-  background-color: var(--brando-color-input);
+  background-color: var(--brando-surface);
   margin-left: 5px;
   width: fit-content;
   padding: 0 12px;
@@ -870,7 +870,7 @@
   .circle-dropdown {
     margin-left: 8px;
     button svg .main-circle {
-      stroke: var(--brando-color-dark);
+      stroke: var(--brando-ink);
     }
   }
 }
@@ -925,7 +925,7 @@
   text-transform: uppercase;
 
   padding: 4px 6px;
-  border: 1px solid var(--brando-color-dark);
+  border: 1px solid var(--brando-ink);
   border-radius: 4px;
 
   background-color: transparent;
@@ -933,8 +933,8 @@
   transition: background-color 0.2s, color 0.2s;
 
   &:hover {
-    background-color: var(--brando-color-dark);
-    color: var(--brando-color-peach);
+    background-color: var(--brando-ink);
+    color: var(--brando-surface-subform);
   }
 }
 

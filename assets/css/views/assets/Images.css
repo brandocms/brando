@@ -41,7 +41,7 @@
       @space padding-x 1.5vw;
 
       &:nth-of-type(odd) {
-        @color bg peach;
+        background-color: var(--brando-surface-subform);
       }
 
       &__thumb {

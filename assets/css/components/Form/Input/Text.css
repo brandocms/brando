@@ -106,7 +106,6 @@ input.text {
   }
 
   &.invert {
-    @color fg input;
     color: var(--brando-ink);
   }
 }

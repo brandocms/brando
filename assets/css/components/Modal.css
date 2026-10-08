@@ -131,7 +131,7 @@
 
   h2 {
     @font mono;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     font-size: 14px;
     font-weight: 400;
     text-transform: uppercase;
@@ -139,7 +139,7 @@
   }
 
   .modal-close {
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     border: 0;
     position: absolute;
     top: 12px;
@@ -160,14 +160,14 @@
     }
 
     &:hover {
-      background-color: var(--brando-color-dark);
-      color: var(--brando-color-peach);
+      background-color: var(--brando-ink);
+      color: var(--brando-surface-subform);
     }
   }
 }
 
 .modal-content {
-  color: var(--brando-color-dark);
+  color: var(--brando-ink);
   background-color: var(--brando-surface);
   background-clip: padding-box;
   border: none;
@@ -196,22 +196,22 @@
   }
 
   textarea {
-    background-color: theme(colors.input) !important;
-    color: theme(colors.dark) !important;
+    background-color: var(--brando-surface) !important;
+    color: var(--brando-ink) !important;
     border: none !important;
   }
 
   /* Text-like inputs get the field frame; a file input is a button and a name */
   input:not([type="file"]) {
     background-color: transparent !important;
-    color: theme(colors.dark) !important;
+    color: var(--brando-ink) !important;
     border: 1px solid var(--brando-input-border) !important;
     border-radius: var(--brando-input-radius) !important;
     font-size: 14px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
     &:focus {
-      border-color: var(--brando-color-blue) !important;
+      border-color: var(--brando-accent) !important;
       box-shadow: var(--brando-input-focus-shadow);
     }
 
@@ -258,17 +258,17 @@
       }
 
       &:hover {
-        background-color: var(--brando-color-dark);
+        background-color: var(--brando-ink);
         color: white;
       }
 
       &.selected {
-        background-color: var(--brando-color-dark);
+        background-color: var(--brando-ink);
         color: white;
       }
 
       &.danger {
-        border: 1px solid var(--brando-color-dark);
+        border: 1px solid var(--brando-ink);
         color: var(--brando-error-ink);
         background-color: white;
 
@@ -446,7 +446,7 @@
 .transfer-content-modal {
   .help-text {
     font-size: 14px;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     opacity: 0.6;
     line-height: 1.4;
     margin-bottom: 30px;
@@ -459,7 +459,7 @@
     letter-spacing: 0.03em;
     margin-top: 1.5em;
     margin-bottom: 10px;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     opacity: 0.6;
   }
 
@@ -480,7 +480,7 @@
       padding: 8px 12px;
       border: none;
       background-color: white;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
       cursor: pointer;
       text-align: left;
 
@@ -512,7 +512,7 @@
       border: none;
       border-top: 1px solid var(--brando-line-soft);
       background-color: white;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
       cursor: pointer;
       transition: background-color 0.15s ease;
       text-align: left;
@@ -544,7 +544,7 @@
     width: 100%;
     height: 100%;
     background-color: var(--brando-badge-bg);
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -568,7 +568,7 @@
         letter-spacing: 0.05em;
         padding: 8px 12px;
         border-bottom: 1px solid var(--brando-line-soft);
-        color: var(--brando-color-dark);
+        color: var(--brando-ink);
         opacity: 0.5;
 
         &.right {
@@ -595,7 +595,7 @@
   .transfer-content-empty {
     p {
       font-size: 14px;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
       opacity: 0.5;
     }
   }
@@ -644,13 +644,13 @@
     padding: 24px 20px;
     border: 1px dashed var(--brando-input-border);
     border-radius: var(--brando-input-radius);
-    background-color: var(--brando-color-input);
+    background-color: var(--brando-surface);
     text-align: center;
     cursor: pointer;
     transition: border-color 0.2s ease, background-color 0.2s ease;
 
     &:hover {
-      border-color: var(--brando-color-blue);
+      border-color: var(--brando-accent);
     }
 
     /* A drop target: the selected surface and the strong line */
@@ -660,7 +660,7 @@
       cursor: cell;
 
       .replacement-prompt {
-        color: var(--brando-color-dark);
+        color: var(--brando-ink);
         opacity: 1;
       }
     }

@@ -10,13 +10,13 @@ button.delete.tiny {
   height: 18px;
   border-radius: 50%;
   color: var(--brando-ink);
-  background-color: var(--brando-color-peach);
+  background-color: var(--brando-surface-subform);
   transition:
     background-color 0.08s ease,
     color 0.08s ease;
 
   &:hover {
-    color: var(--brando-color-peach);
+    color: var(--brando-surface-subform);
   }
 
   :is(svg, [data-icon]) {
@@ -30,9 +30,9 @@ button.primary,
 a.primary {
   font-size: 15px;
   font-weight: 500;
-  color: theme(colors.peach);
-  border: 1px solid theme(colors.blue);
-  background-color: var(--brando-color-blue);
+  color: var(--brando-surface-subform);
+  border: 1px solid var(--brando-accent);
+  background-color: var(--brando-accent);
   border-radius: 22px;
   height: 50px;
   line-height: 48px;
@@ -49,23 +49,23 @@ a.primary {
   }
 
   &:focus {
-    box-shadow: 0px 0px 5px 2px var(--brando-color-blue);
+    box-shadow: 0px 0px 5px 2px var(--brando-accent);
   }
 
   &.dark {
-    background-color: var(--brando-color-dark);
-    border: 1px solid var(--brando-color-dark);
-    color: theme(colors.peach);
+    background-color: var(--brando-ink);
+    border: 1px solid var(--brando-ink);
+    color: var(--brando-surface-subform);
 
     &:hover {
       background-color: black;
-      color: theme(colors.peach);
+      color: var(--brando-surface-subform);
     }
   }
 
   &.loading {
-    background-color: theme(colors.gray);
-    border: 1px solid theme(colors.gray);
+    background-color: var(--brando-muted);
+    border: 1px solid var(--brando-muted);
 
     svg {
       margin: 0 auto;
@@ -75,8 +75,8 @@ a.primary {
   }
 
   &:hover {
-    background-color: var(--brando-color-dark);
-    border-color: var(--brando-color-dark);
+    background-color: var(--brando-ink);
+    border-color: var(--brando-ink);
   }
 
   &.small {
@@ -159,15 +159,15 @@ button.danger {
   }
 
   &:hover {
-    background-color: var(--brando-color-dark);
+    background-color: var(--brando-ink);
   }
 }
 
 %btnSecondary {
   font-size: 14px;
   white-space: nowrap;
-  color: var(--brando-color-dark);
-  border: 1px solid var(--brando-color-dark) !important;
+  color: var(--brando-ink);
+  border: 1px solid var(--brando-ink) !important;
   background-color: transparent;
   padding: 12px 22px;
   min-width: 180px;
@@ -201,7 +201,7 @@ button.danger {
   }
 
   &:hover {
-    background-color: var(--brando-color-peach);
+    background-color: var(--brando-surface-subform);
   }
 }
 
@@ -217,10 +217,10 @@ button.secondary {
 button.tertiary,
 a.tertiary {
   font-size: 14px;
-  color: var(--brando-color-dark);
+  color: var(--brando-ink);
   background-color: transparent;
   border: none;
-  border-bottom: 1px solid var(--brando-color-dark);
+  border-bottom: 1px solid var(--brando-ink);
   padding: 4px 0;
   min-width: auto;
   transition: opacity 0.2s ease;
@@ -233,7 +233,7 @@ a.tertiary {
 button.stealth {
   font-size: 16px;
   border: none;
-  border-bottom: 1px solid var(--brando-color-blue);
+  border-bottom: 1px solid var(--brando-accent);
   padding: 0;
   height: auto;
   align-self: center;
@@ -243,8 +243,8 @@ button.tiny,
 a.tiny {
   @font mono;
   border-radius: 5px;
-  border: 1px solid var(--brando-color-dark);
-  color: var(--brando-color-dark);
+  border: 1px solid var(--brando-ink);
+  color: var(--brando-ink);
   font-size: 11px;
   display: inline-block;
   text-transform: uppercase;
@@ -261,11 +261,11 @@ a.tiny {
   }
 
   &:hover {
-    background-color: var(--brando-color-dark);
-    color: theme(colors.peach);
+    background-color: var(--brando-ink);
+    color: var(--brando-surface-subform);
     path {
       &:nth-of-type(2) {
-        fill: var(--brando-color-peach);
+        fill: var(--brando-surface-subform);
       }
     }
   }

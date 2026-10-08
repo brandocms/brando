@@ -519,6 +519,18 @@ production dump.
 
 #### Improvements
 
+- **The admin's colours are role tokens** (#2981). Every admin stylesheet
+  uses the custom properties in `assets/css/tokens.css` (`--brando-ink`,
+  `--brando-accent`, `--brando-surface-*`, the status and success/error
+  roles); CI rejects new hex colours outside that file. Native checkboxes,
+  radios and range inputs take the accent. The legacy names are deprecated
+  and will be removed in a later release: the `--brando-color-*` custom
+  properties (`-dark`, `-blue`, `-peach`, `-input`, `-white` and the rest)
+  and the Europa palette behind `theme(colors.*)` and `@color` (`dark`,
+  `blue`, `peach`, `input`, `gray`, `villain.*`, ...). Brando no longer uses
+  them; if your `assets/backend` CSS does, move it to the role names listed
+  in `docs/admin-ui-design.md`.
+
 - **The entry editor heads itself with the entry.** The heading is the
   entry's title (or "New case" for a new one) under a breadcrumb with the
   content type, and its status is one compact control beside it instead of

@@ -211,13 +211,15 @@ export cards share `--brando-surface-shaded`. Screens don't keep tints of
 their own: a blue or lavender panel becomes a neutral surface, and an "OK",
 "added" or "active" state uses the success tokens.
 
-The legacy Europa colours in `assets/europa.config.js` point at these roles, so
+The legacy Europa colours in `assets/europa.config.js` are deprecated, and
+Brando's stylesheets no longer use them. They point at these roles, so
 `theme(colors.dark)` is `--brando-ink`, `blue` is `--brando-accent`, `peach` is
 `--brando-surface-subform`, `peachDarker` is `--brando-surface-selected` and
 `colors.status.*` are the status tokens. The old custom properties are aliases:
 `--brando-color-dark` → `--brando-ink`, `--brando-color-blue` →
-`--brando-accent`, `--brando-color-peach` → `--brando-surface-subform`. Use the
-role names in new CSS.
+`--brando-accent`, `--brando-color-peach` → `--brando-surface-subform`. They
+are kept, marked deprecated in `tokens.css`, only for applications whose own
+admin CSS still uses them. Use the role names.
 
 Do not add hex colours to admin stylesheets. CI runs
 `.github/scripts/check_css_colors.sh`, which fails when a file outside

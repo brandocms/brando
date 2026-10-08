@@ -108,7 +108,7 @@
     padding: 12px 14px;
     border: 1px solid var(--brando-input-border, var(--guidance-line));
     border-radius: var(--brando-input-radius, 5px);
-    background: var(--brando-color-input, var(--brando-surface));
+    background: var(--brando-surface);
     font-family: theme(typography.families.mono);
     font-size: 12px;
     line-height: 1.7;

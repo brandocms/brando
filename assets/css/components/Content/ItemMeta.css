@@ -65,22 +65,22 @@
         margin-top: 2px;
 
         circle {
-          fill: theme(colors.status.published);
+          fill: var(--brando-status-published);
 
           &.draft {
-            fill: theme(colors.status.draft);
+            fill: var(--brando-status-draft);
           }
 
           &.pending {
-            fill: theme(colors.status.pending);
+            fill: var(--brando-status-pending);
           }
 
           &.published {
-            fill: theme(colors.status.published);
+            fill: var(--brando-status-published);
           }
 
           &.disabled {
-            fill: theme(colors.status.disabled);
+            fill: var(--brando-status-disabled);
           }
 
           &.deleted {

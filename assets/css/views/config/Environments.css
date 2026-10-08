@@ -5,10 +5,10 @@
 
   .environment-notice,
   .environment-panel {
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 18%, transparent);
     border-radius: 16px;
-    background: var(--brando-color-white);
-    box-shadow: 0 2px 10px color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+    background: var(--brando-surface);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--brando-ink) 5%, transparent);
     padding: 26px;
   }
 
@@ -19,8 +19,8 @@
   }
 
   .environment-notice.warning {
-    border-color: color-mix(in srgb, var(--brando-color-dark) 26%, transparent);
-    background: var(--brando-color-peach);
+    border-color: color-mix(in srgb, var(--brando-ink) 26%, transparent);
+    background: var(--brando-surface-subform);
     box-shadow: none;
   }
 
@@ -36,7 +36,7 @@
       bottom: 0;
       left: 0;
       width: 4px;
-      background: var(--brando-color-peach-darker);
+      background: var(--brando-surface-selected);
       content: "";
     }
   }
@@ -71,7 +71,7 @@
     @font mono;
     display: block;
     margin-bottom: 6px;
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.08em;
@@ -99,7 +99,7 @@
   .environment-panel > p {
     max-width: 62ch;
     margin: 0;
-    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
     font-size: 13px;
     line-height: 1.55;
   }
@@ -122,7 +122,7 @@
 
   label > span {
     @font mono;
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.08em;
@@ -135,14 +135,14 @@
     min-height: 40px;
     padding: 8px 12px;
     font-size: 13px;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 22%, transparent);
     border-radius: 10px;
-    background: var(--brando-color-input);
+    background: var(--brando-surface);
     color: inherit;
     transition: border-color 150ms ease;
 
     &:focus {
-      border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+      border-color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
       outline: none;
     }
   }
@@ -166,13 +166,13 @@
     padding: 0 18px;
     border: none;
     border-radius: 999px;
-    background: var(--brando-color-dark);
-    color: var(--brando-color-peach);
+    background: var(--brando-ink);
+    color: var(--brando-surface-subform);
     font-size: 12px;
     transition: background-color 150ms ease;
 
     &:hover:not([disabled]) {
-      background: color-mix(in srgb, var(--brando-color-dark) 85%, var(--brando-color-blue));
+      background: color-mix(in srgb, var(--brando-ink) 85%, var(--brando-accent));
     }
   }
 
@@ -200,7 +200,7 @@
       font-weight: 400;
       letter-spacing: 0;
       text-transform: none;
-      color: color-mix(in srgb, var(--brando-color-dark) 72%, transparent);
+      color: color-mix(in srgb, var(--brando-ink) 72%, transparent);
     }
 
     input {
@@ -221,14 +221,14 @@
     align-self: end;
     height: 40px;
     padding: 0;
-    color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
   }
 
   /* A quieter variant of the shared .alert for the panel's helper lines. */
   .environment-hint {
     margin: 0;
-    background: color-mix(in srgb, var(--brando-color-blue) 6%, var(--brando-color-white));
-    color: color-mix(in srgb, var(--brando-color-dark) 72%, transparent);
+    background: color-mix(in srgb, var(--brando-accent) 6%, var(--brando-surface));
+    color: color-mix(in srgb, var(--brando-ink) 72%, transparent);
 
     span {
       max-width: 62ch;
@@ -324,7 +324,7 @@
 
   .environment-log .item-meta .time {
     @font mono;
-    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
     font-size: 11px;
   }
 
@@ -346,15 +346,15 @@
   /* Timestamps and states are data, not prose. */
   .environment-panel:not(.environment-overview) td:nth-child(2) {
     @font mono;
-    color: color-mix(in srgb, var(--brando-color-dark) 72%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 72%, transparent);
     font-size: 12px;
   }
 
   th {
     @font mono;
     padding: 0 10px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--brando-ink) 18%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.08em;
@@ -364,7 +364,7 @@
 
   td {
     padding: 14px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--brando-color-dark) 10%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--brando-ink) 10%, transparent);
     text-align: left;
     vertical-align: middle;
   }
@@ -381,8 +381,8 @@
     margin-left: 8px;
     padding: 2px 7px;
     border-radius: 6px;
-    background: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
-    color: color-mix(in srgb, var(--brando-color-dark) 70%, transparent);
+    background: color-mix(in srgb, var(--brando-ink) 7%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
     font-size: 10px;
     line-height: 1.4;
   }
@@ -398,12 +398,12 @@
     transition: border-color 150ms ease, background-color 150ms ease;
 
     &:hover:not(:disabled) {
-      border-color: color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+      border-color: color-mix(in srgb, var(--brando-ink) 18%, transparent);
     }
 
     &:focus {
-      border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
-      background: var(--brando-color-input);
+      border-color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
+      background: var(--brando-surface);
     }
 
     &:disabled {
@@ -411,7 +411,7 @@
     }
 
     &::placeholder {
-      color: color-mix(in srgb, var(--brando-color-dark) 35%, transparent);
+      color: color-mix(in srgb, var(--brando-ink) 35%, transparent);
     }
   }
 
@@ -423,8 +423,8 @@
     gap: 6px;
     padding: 5px 10px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
-    color: color-mix(in srgb, var(--brando-color-dark) 70%, transparent);
+    background: color-mix(in srgb, var(--brando-ink) 8%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
     font-size: 10px;
     letter-spacing: 0.06em;
     line-height: 1;
@@ -432,8 +432,8 @@
   }
 
   .environment-state.live {
-    background: color-mix(in srgb, var(--brando-color-blue) 12%, transparent);
-    color: var(--brando-color-blue);
+    background: color-mix(in srgb, var(--brando-accent) 12%, transparent);
+    color: var(--brando-accent);
 
     &::before {
       width: 6px;
@@ -464,9 +464,9 @@
   /* Destructive actions stay quiet until they are deliberately reached for. */
   .environment-actions button.danger,
   .environment-panel button.danger {
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 20%, transparent);
     background: transparent;
-    color: color-mix(in srgb, var(--brando-color-dark) 70%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
     transition: border-color 150ms ease, color 150ms ease;
 
     &:hover:not([disabled]) {
@@ -484,7 +484,7 @@
 
     p {
       margin: 0;
-      color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+      color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
     }
   }
 
@@ -494,13 +494,13 @@
     width: 46px;
     height: 46px;
     border-radius: 14px;
-    background: color-mix(in srgb, var(--brando-color-dark) 6%, transparent);
-    color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    background: color-mix(in srgb, var(--brando-ink) 6%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
 
     [data-icon] {
       width: 20px;
       height: 20px;
-      color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+      color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
     }
   }
 
@@ -520,7 +520,7 @@
     gap: 16px;
     padding: 11px 12px;
     border-radius: 10px;
-    background: color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+    background: color-mix(in srgb, var(--brando-ink) 5%, transparent);
     font-size: 11px;
   }
 
@@ -534,7 +534,7 @@
      schema name rather than as more identifier. */
   .environment-archive__note {
     @font main;
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
     font-size: 12px;
   }
 
@@ -561,7 +561,7 @@
 
   .environment-log__note {
     @font main;
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
     font-size: 13px;
     white-space: normal;
   }
