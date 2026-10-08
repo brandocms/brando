@@ -2837,6 +2837,7 @@ msgstr "Kan gjenopprettes fra papirkurven til %{date}"
 
 #: lib/brando_admin/components/assets/file_browser.ex
 #: lib/brando_admin/components/authorization_tools.ex
+#: lib/brando_admin/components/content/list/saved_views.ex
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/image_drawer.ex
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
@@ -4844,6 +4845,7 @@ msgstr "Deaktivert"
 msgid "Declare the reference at the top level with headless_ref and read it inside the condition. Saving is not blocked."
 msgstr "Deklarer referansen på toppnivå med headless_ref, og les den inne i betingelsen. Lagring blokkeres ikke."
 
+#: lib/brando_admin/components/content/list/saved_views.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Default"
@@ -5045,10 +5047,25 @@ msgstr "Slett versjon"
 msgid "Delete video"
 msgstr "Slett video"
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Delete view"
+msgstr "Slett visning"
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Delete webhook"
 msgstr "Slett webhook"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Delete “%{name}”?"
+msgstr "Slette «%{name}»?"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Delete “%{name}”…"
+msgstr "Slett «%{name}» …"
 
 #: lib/brando_admin/components/content/identifier.ex
 #: lib/brando_admin/components/content/list.ex
@@ -6502,6 +6519,11 @@ msgstr "Alle"
 msgid "Everyone this applies to already uses two-factor authentication."
 msgstr "Alle dette gjelder, bruker allerede tofaktorautentisering."
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone who can see this list loses this view."
+msgstr "Alle som kan se denne listen, mister visningen."
+
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Everything"
@@ -7192,6 +7214,11 @@ msgstr "Delbar link"
 #, elixir-autogen, elixir-format
 msgid "GitHub connections are configured by a developer in the project's runtime.exs. Ask them to add a repository and enable it for this environment. The connection will then appear here."
 msgstr "GitHub-tilkoblinger settes opp av en utvikler i prosjektets runtime.exs. Be utvikleren legge til et repositorium og aktivere det for dette miljøet. Tilkoblingen vil da vises her."
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Give the view a name"
+msgstr "Gi visningen et navn"
 
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
@@ -9558,6 +9585,7 @@ msgstr "Dempet"
 
 #: lib/brando/content/table_template.ex
 #: lib/brando_admin/components/authorization_tools.ex
+#: lib/brando_admin/components/content/list/saved_views.ex
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -10195,6 +10223,11 @@ msgstr "Ingen versjoner er lagret ennå."
 #, elixir-autogen, elixir-format
 msgid "No row in any table that points at blocks names a block of the tree:"
 msgstr "Ingen rad i noen tabell som peker på blokker nevner en blokk i treet:"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "No saved views yet"
+msgstr "Ingen lagrede visninger ennå"
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
@@ -11031,6 +11064,16 @@ msgstr "Åpne strukturerte data"
 #, elixir-autogen, elixir-format
 msgid "Open the entry"
 msgstr "Åpne oppføringen"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Open the list with this view"
+msgstr "Åpne listen med denne visningen"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Open the list without a view"
+msgstr "Åpne listen uten visning"
 
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
@@ -12614,6 +12657,21 @@ msgstr "Fjernet fra papirkurven etter %{days} dager"
 msgid "Rename"
 msgstr "Gi nytt navn"
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Rename view"
+msgstr "Gi nytt navn"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Rename “%{name}”…"
+msgstr "Gi «%{name}» nytt navn …"
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rename, update and delete the listing views other people share. Everyone manages their own without it."
+msgstr "Gi nytt navn til, oppdatere og slette listevisninger som andre deler. Egne visninger styrer alle uten denne tillatelsen."
+
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Rendered"
@@ -13466,6 +13524,11 @@ msgstr "Lagre som ny kopi"
 msgid "Save changes"
 msgstr "Lagre endringer"
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Save current view…"
+msgstr "Lagre gjeldende visning …"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save deployment settings"
@@ -13515,6 +13578,11 @@ msgstr "Lagre oppføringen for å se de strukturerte dataene siden gir søkemoto
 #, elixir-autogen, elixir-format
 msgid "Save these recovery codes somewhere safe, away from your phone, such as a password manager. Each one signs you in once if you lose your authenticator app. They are not shown again."
 msgstr "Lagre disse gjenopprettingskodene et trygt sted, ikke på telefonen, for eksempel i en passordbehandler. Hver kode logger deg inn én gang hvis du mister autentiseringsappen. De vises ikke igjen."
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Save view"
+msgstr "Lagre visning"
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -13571,6 +13639,21 @@ msgstr "Lagres i"
 #, elixir-autogen, elixir-format
 msgid "Saved version"
 msgstr "Lagret versjon"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Saved views"
+msgstr "Lagrede visninger"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Saved views: %{name}"
+msgstr "Lagrede visninger: %{name}"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Saved views: %{name}, changed"
+msgstr "Lagrede visninger: %{name}, endret"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -14344,6 +14427,12 @@ msgstr "Del for gjennomgang"
 msgid "Share preview"
 msgstr "Del forhåndsvisning"
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Share with everyone who can see this list"
+msgstr "Del med alle som kan se denne listen"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
 msgid "Shared"
@@ -14395,6 +14484,11 @@ msgstr "Felles bildeinnstillinger"
 #, elixir-autogen, elixir-format
 msgid "Shared library access updated."
 msgstr "Tilgangen til det delte biblioteket ble oppdatert."
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shared listing views"
+msgstr "Delte listevisninger"
 
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
@@ -14908,6 +15002,11 @@ msgstr "Slutt å følge"
 #, elixir-autogen, elixir-format
 msgid "Stop following the source? This translation keeps its content, its unsaved changes and its link to the other languages, and its structure becomes editable here. It is not published."
 msgstr "Slutte å følge kilden? Oversettelsen beholder innholdet, endringene som ikke er lagret og koblingen til de andre språkene, og strukturen kan redigeres her. Den publiseres ikke."
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Stop sharing"
+msgstr "Slutt å dele"
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -15682,6 +15781,21 @@ msgid_plural "The link works once and expires in %{count} minutes."
 msgstr[0] "Lenken virker én gang og utløper om %{count} minutt."
 msgstr[1] "Lenken virker én gang og utløper om %{count} minutter."
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "The list now opens with this view"
+msgstr "Listen åpnes nå med denne visningen"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "The list now opens without a view"
+msgstr "Listen åpnes nå uten visning"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "The list stays as it is."
+msgstr "Listen blir som den er."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
@@ -16386,6 +16500,11 @@ msgstr "Denne modulen er ikke tilgjengelig i denne samlingen."
 msgid "This module was changed by someone else while you were editing. Reload to see their version before saving yours."
 msgstr "Noen andre endret denne modulen mens du redigerte. Last inn på nytt for å se deres versjon før du lagrer din."
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "This name cannot be used"
+msgstr "Dette navnet kan ikke brukes"
+
 #: lib/brando_admin/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "This needs your password, a code from your authenticator app or a passkey, since you last gave one more than %{minutes} minutes ago."
@@ -16531,6 +16650,11 @@ msgstr "Denne videoen krever signert avspilling, som Brando ikke støtter."
 #, elixir-autogen, elixir-format
 msgid "This video upload strategy is not available."
 msgstr "Denne strategien for videoopplasting er ikke tilgjengelig."
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "This view could not be changed"
+msgstr "Denne visningen kunne ikke endres"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -17234,6 +17358,11 @@ msgstr "Oppdater identifikatorene som brukes til å referere til innhold."
 msgid "Update user"
 msgstr "Oppdater bruker"
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Update “%{name}”"
+msgstr "Oppdater «%{name}»"
+
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
@@ -17439,6 +17568,11 @@ msgstr "Bruk en autentiseringsapp, for eksempel 1Password, Google Authenticator 
 #, elixir-autogen, elixir-format
 msgid "Use an https:// address."
 msgstr "Bruk en https://-adresse."
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Use at most %{count} characters"
+msgstr "Bruk høyst %{count} tegn"
 
 #: lib/brando_admin/components/form/input/select.ex
 #, elixir-autogen, elixir-format
@@ -17773,20 +17907,55 @@ msgstr "Vis tilgang"
 msgid "View changes"
 msgstr "Vis endringer"
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "View deleted"
+msgstr "Visningen er slettet"
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "View full recovery data (JSON)"
 msgstr "Vis alle gjenopprettingsdata (JSON)"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "View no longer shared"
+msgstr "Visningen deles ikke lenger"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "View renamed"
+msgstr "Visningen har fått nytt navn"
 
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgid "View robots.txt"
 msgstr "Vis robots.txt"
 
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "View saved"
+msgstr "Visningen er lagret"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "View shared"
+msgstr "Visningen er delt"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "View updated"
+msgstr "Visningen er oppdatert"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Viewport"
 msgstr "Visning"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "Views"
+msgstr "Visninger"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -18186,6 +18355,11 @@ msgstr "I går"
 #, elixir-autogen, elixir-format
 msgid "You"
 msgstr "Du"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a view with this name on this list"
+msgstr "Du har allerede en visning med dette navnet i denne listen"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -18596,6 +18770,11 @@ msgstr "kan fjernes"
 
 msgid "can't be blank"
 msgstr "må fylles ut"
+
+#: lib/brando_admin/components/content/list/saved_views.ex
+#, elixir-autogen, elixir-format
+msgid "changed"
+msgstr "endret"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
