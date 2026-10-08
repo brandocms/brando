@@ -183,6 +183,21 @@ defmodule Brando.Images.AdoptionTest do
       assert Adoption.check(image, config()) == :match
     end
 
+    test "an original stored on its side matches by either orientation's size" do
+      # Stored as 1200×900 and upright as 900×1200. Processing now picks the
+      # portrait size, 400 tall; the older processors picked the landscape
+      # one, 700 wide, and made it upright.
+      config = %{config() | sizes: %{"medium" => %{"portrait" => %{"size" => "x400"}, "landscape" => %{"size" => "700"}}}}
+
+      for {name, dimensions} <- [{"now", {300, 400}}, {"before", {700, 933}}] do
+        image = unrecorded("sideways-#{name}", original: {1200, 900}, sizes: %{"medium" => dimensions})
+        assert Adoption.check(image, config) == :match, name
+      end
+
+      image = unrecorded("sideways-other", original: {1200, 900}, sizes: %{"medium" => {400, 300}})
+      assert Adoption.check(image, config) == {:differ, {:dimensions, "medium"}}
+    end
+
     test "records only: formats and size keys, without reading files" do
       image = unrecorded("records", write: [])
 

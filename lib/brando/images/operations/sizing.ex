@@ -59,7 +59,7 @@ defmodule Brando.Images.Operations.Sizing do
 
     File.mkdir_p!(image_dest_dir)
 
-    {width, height} = ensure_dims(width, height, image_src_path)
+    {width, height} = width |> ensure_dims(height, image_src_path) |> upright(image_src_path)
 
     conversion_parameters = %Images.ConversionParameters{
       image_id: image_id,
@@ -116,6 +116,19 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   defp ensure_dims(w, h, _), do: {w, h}
+
+  # The processor turns the image upright by its EXIF orientation before
+  # resizing, and the focal point is set on the upright image, so crops and
+  # the orientation pick are worked out on its upright dimensions. An image's
+  # recorded dimensions are those of the file as stored.
+  defp upright(dimensions, img_path) do
+    with {:ok, img} <- Image.open(img_path),
+         {:ok, orientation} when orientation in 5..8 <- Vix.Vips.Image.header_value(img, "orientation") do
+      {Image.height(img), Image.width(img)}
+    else
+      _ -> dimensions
+    end
+  end
 
   @doc """
   Check if `image_src_path` exists

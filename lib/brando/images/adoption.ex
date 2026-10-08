@@ -289,8 +289,7 @@ defmodule Brando.Images.Adoption do
   defp check_dimensions(image, key, file, size_cfg, _format) do
     with {:ok, original} <- original_dimensions(image),
          {:ok, actual} <- header_dimensions(file),
-         spec = Sizing.get_size_cfg_orientation(size_cfg, elem(original, 0), elem(original, 1)),
-         true <- fits?(spec, original, actual) or fits?(spec, swap(original), actual) do
+         true <- Enum.any?(candidates(size_cfg, original), fn {spec, dimensions} -> fits?(spec, dimensions, actual) end) do
       :ok
     else
       _ -> {:differ, {:dimensions, key}}
@@ -312,6 +311,22 @@ defmodule Brando.Images.Adoption do
   end
 
   defp swap({width, height}), do: {height, width}
+
+  # The spec and the dimensions processing may have worked from. Every
+  # processor makes the image upright by its EXIF orientation; processing
+  # today also picks a portrait or landscape spec, and crops, by the upright
+  # dimensions, where the older ones went by the stored ones.
+  defp candidates(size_cfg, original) do
+    upright = swap(original)
+
+    Enum.uniq([
+      {spec(size_cfg, original), original},
+      {spec(size_cfg, original), upright},
+      {spec(size_cfg, upright), upright}
+    ])
+  end
+
+  defp spec(size_cfg, {width, height}), do: Sizing.get_size_cfg_orientation(size_cfg, width, height)
 
   defp fits?(%{"size" => geometry} = spec, original, actual) do
     case Size.dimensions(geometry) do

@@ -131,6 +131,40 @@ defmodule Brando.Images.Processor.VixSizesTest do
     end
   end
 
+  test "an original stored on its side is sized and cropped upright", %{dir: dir} do
+    # Stored as 1200×900 with EXIF orientation 6, recorded so on upload, and
+    # shown upright as 900×1200 with a red band along the top.
+    band = Image.new!(900, 300, color: [255, 0, 0])
+    {:ok, upright} = Vix.Vips.Operation.join(band, Image.new!(900, 900, color: [0, 0, 255]), :VIPS_DIRECTION_VERTICAL)
+    {:ok, stored} = Vix.Vips.Operation.rot(upright, :VIPS_ANGLE_D270)
+    {:ok, stored} = Vix.Vips.Image.mutate(stored, &Vix.Vips.MutableImage.set(&1, "orientation", :gint, 6))
+    Image.write!(stored, Brando.Images.Utils.media_path("#{dir}/sideways.jpg"))
+
+    for {{size_cfg, expected}, index} <-
+          Enum.with_index([
+            {%{"size" => "700"}, {700, 933}},
+            {%{"size" => "800x800", "crop" => true}, {800, 800}},
+            {%{"size" => "1000x1000", "crop" => true}, {900, 900}},
+            {%{"size" => "x1000", "crop" => true, "ratio" => "3/4"}, {750, 1000}},
+            {%{"portrait" => %{"size" => "x400"}, "landscape" => %{"size" => "700"}}, {300, 400}}
+          ]) do
+      assert process(dir, "sideways", size_cfg, "sideways-#{index}", {1200, 900}) == expected, inspect(size_cfg)
+    end
+
+    # The focal point is on the upright image: at its top, the crop is the band.
+    for {focal_y, color} <- [{0, :red}, {100, :blue}] do
+      process(dir, "sideways", %{"size" => "900x300", "crop" => true}, "band-#{focal_y}", {1200, 900}, %{
+        x: 50,
+        y: focal_y
+      })
+
+      [r, _g, b] =
+        Image.get_pixel!(Image.open!(Brando.Images.Utils.media_path("#{dir}/out-band-#{focal_y}/sideways.jpg")), 450, 150)
+
+      assert if(color == :red, do: r > 200 and b < 50, else: b > 200 and r < 50)
+    end
+  end
+
   defp process(dir, original, size_cfg, index, dimensions \\ nil, focal \\ %{x: 50, y: 50}) do
     {width, height} = dimensions || @originals[original]
     path = "#{dir}/#{original}.jpg"
