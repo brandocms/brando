@@ -42,6 +42,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
        |> assign(:entry_type_options, entry_type_options())
        |> assign(:recipient_options, Routing.recipient_options())
        |> assign(:replace_url?, false)
+       |> assign(:submitted?, false)
        |> assign(:route, nil)
        |> assign(:deliveries, [])}
     else
@@ -64,6 +65,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
     socket
     |> assign(:page_title, gettext("New notification route"))
     |> assign(:route, nil)
+    |> assign(:submitted?, false)
     |> assign_form(Routing.change_route(%Route{kind: :slack}, %{}, resolve: false))
   end
 
@@ -73,6 +75,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
       |> assign(:page_title, gettext("Edit notification route"))
       |> assign(:route, route)
       |> assign(:replace_url?, false)
+      |> assign(:submitted?, false)
       |> assign_form(Routing.change_route(route, %{}, resolve: false))
     end)
   end
@@ -108,6 +111,9 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
 
   defp assign_form(socket, changeset), do: assign(socket, :form, to_form(changeset, as: :route))
 
+  # Errors show for the fields a person has used, and for all once they save
+  defp submitted(socket, changeset), do: socket |> assign(:submitted?, true) |> assign_form(changeset)
+
   ## Events
 
   def handle_event("validate", %{"route" => params}, socket) do
@@ -134,13 +140,14 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
          socket
          |> assign(:route, route)
          |> assign(:replace_url?, false)
+         |> assign(:submitted?, false)
          |> assign_form(Routing.change_route(route, %{}, resolve: false))
          |> then(
            &if(socket.assigns.route, do: &1, else: push_patch(&1, to: "/admin/config/notifications/#{route.id}/edit"))
          )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+        {:noreply, submitted(socket, changeset)}
 
       {:error, _} ->
         {:noreply, error(socket)}
@@ -397,7 +404,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
               maxlength="120"
               phx-debounce="300"
             />
-            <.field_errors field={@form[:name]} />
+            <.field_errors field={@form[:name]} show={@submitted? or used_input?(@form[:name])} />
           </div>
 
           <fieldset class="webhook-field">
@@ -445,7 +452,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
               phx-debounce="500"
             />
             <p class="webhook-hint">{url_hint(@kind)}</p>
-            <.field_errors field={@form[:url]} />
+            <.field_errors field={@form[:url]} show={@submitted? or used_input?(@form[:url])} />
           </div>
 
           <fieldset :if={@kind == :email} class="webhook-field" data-testid="notification-recipients">
@@ -455,7 +462,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
                 "Each gets an email in their own language, or their daily or weekly summary if they chose one in their profile. Notifications about an entry go only to those who may read it."
               )}
             </p>
-            <div class="webhook-checks">
+            <div class="webhook-checks webhook-checks-described">
               <input type="hidden" name="route[recipient_ids][]" value="" />
               <label :for={user <- @recipient_options} class="webhook-choice">
                 <input
@@ -467,12 +474,12 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
                 <span>{user.name} <small class="webhook-muted">{user.email}</small></span>
               </label>
             </div>
-            <.field_errors field={@form[:recipient_ids]} />
+            <.field_errors field={@form[:recipient_ids]} show={@submitted?} />
           </fieldset>
 
           <fieldset class="webhook-field" data-testid="notification-events">
             <legend>{gettext("Events")}</legend>
-            <div class="webhook-checks">
+            <div class="webhook-checks webhook-checks-described">
               <input type="hidden" name="route[events][]" value="" />
               <label :for={{label, value} <- @event_options} class="webhook-choice">
                 <input
@@ -484,7 +491,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
                 <span>{label} <small class="webhook-muted">{event_hint(value)}</small></span>
               </label>
             </div>
-            <.field_errors field={@form[:events]} />
+            <.field_errors field={@form[:events]} show={@submitted?} />
           </fieldset>
 
           <%!-- Chosen types this user may not read are kept as they are --%>
@@ -767,10 +774,11 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
   defp duration(ms), do: "#{Float.round(ms / 1000, 1)} s"
 
   attr :field, Phoenix.HTML.FormField, required: true
+  attr :show, :boolean, default: true
 
   defp field_errors(assigns) do
     ~H"""
-    <p :for={{_message, opts} <- @field.errors} :if={@field.errors != []} class="webhook-error" role="alert">
+    <p :for={{_message, opts} <- @field.errors} :if={@show and @field.errors != []} class="webhook-error" role="alert">
       {field_error(opts)}
     </p>
     """

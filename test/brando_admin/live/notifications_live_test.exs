@@ -88,6 +88,8 @@ defmodule BrandoAdmin.Sites.NotificationsLiveTest do
       html = view |> form("#notification-route-form", route: %{kind: "email"}) |> render_change()
       refute has_element?(view, "#route-url")
       assert html =~ "Kari Nordmann"
+      # Nothing chosen yet is not an error until the form is saved
+      refute html =~ "Choose at least one."
 
       view
       |> form("#notification-route-form",

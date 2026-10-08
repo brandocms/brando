@@ -85,6 +85,8 @@
   .webhook-modes { display: flex; flex-wrap: wrap; gap: 8px; }
   .webhook-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
   .webhook-checks-inline { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  /* Choices with a line of description: events, recipients */
+  .webhook-checks-described { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
   .webhook-modes + .webhook-checks { margin-top: 8px; }
   .webhook-choice {
     display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px;
@@ -129,6 +131,7 @@
     .integrations-group { padding: 12px 20px; }
     .webhook-fields { padding: 20px; }
     .webhook-checks { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .webhook-checks-described { grid-template-columns: minmax(0, 1fr); }
     .webhook-secret { padding: 20px; }
     .webhook-form-footer { padding: 16px 20px; }
 
