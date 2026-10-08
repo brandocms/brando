@@ -235,6 +235,10 @@
 .field-ai-actions > .ai-proposal {
   margin-top: 8px;
 
+  .ai-proposal-actions {
+    align-items: center;
+  }
+
   .field-ai-action-name {
     color: var(--brando-muted);
 
@@ -288,9 +292,9 @@
 }
 
 /* Accept is the form's primary action in the sage accent, Discard is
-   secondary; Try again is an `AIAction.button`. Above the global button
-   sizes. */
-.field-ai-button {
+   secondary; Try again is an `AIAction.button`. Scoped to outrank the global
+   `button.primary` (Button.css), whose 50px pill this is not. */
+.field-ai-actions button.field-ai-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
