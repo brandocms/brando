@@ -94,7 +94,7 @@ defmodule Brando.AI.Cassette do
   @doc "The function behind `use_cassette/3`."
   @spec with_cassette(String.t(), keyword(), (-> result)) :: result when result: term()
   def with_cassette(name, opts, fun) do
-    {:ok, server} = start(name, opts)
+    server = start!(name, opts)
 
     try do
       fun.()
@@ -110,12 +110,24 @@ defmodule Brando.AI.Cassette do
   @spec setup_tags(map()) :: :ok
   def setup_tags(%{cassette: name} = tags) when is_binary(name) do
     owner = self()
-    {:ok, server} = start(name, Map.get(tags, :cassette_opts, []))
+    server = start!(name, Map.get(tags, :cassette_opts, []))
     ExUnit.Callbacks.on_exit({__MODULE__, name}, fn -> check!(owner, server) end)
     :ok
   end
 
   def setup_tags(_tags), do: :ok
+
+  defp start!(name, opts) do
+    case start(name, opts) do
+      {:ok, server} ->
+        server
+
+      {:error, :already_active} ->
+        raise ArgumentError,
+              "cannot use cassette #{inspect(name)}: this process has a cassette or stub in use already. " <>
+                "Use one cassette per test"
+    end
+  end
 
   @doc """
   Start cassette `name` for the calling process and the processes it starts.

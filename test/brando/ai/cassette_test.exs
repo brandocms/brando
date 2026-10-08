@@ -322,6 +322,13 @@ defmodule Brando.AI.CassetteTest do
       assert_receive {"right", "Right"}, 2_000
     end
 
+    @tag cassette: "cassette_test/hello"
+    test "one cassette per test" do
+      assert_raise ArgumentError, ~r/has a cassette or stub in use already/, fn ->
+        use_cassette("cassette_test/hello", do: :ok)
+      end
+    end
+
     test "without a cassette the cassette client refuses" do
       refute Cassette.active?()
       assert {:error, %ArgumentError{message: message}} = Cassette.generate_text(@model, "Hello")
