@@ -470,8 +470,8 @@
     transition: border-color 150ms ease, color 150ms ease;
 
     &:hover:not([disabled]) {
-      border-color: #c0392b;
-      color: #c0392b;
+      border-color: var(--brando-error-ink);
+      color: var(--brando-error-ink);
     }
   }
 

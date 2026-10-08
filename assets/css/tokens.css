@@ -20,6 +20,9 @@
   --brando-line: #dce2dc;
   /* A border under the pointer or holding focus, and a drop target's outline */
   --brando-line-strong: #bacabd;
+  /* Dividers between the rows inside a framed list or table, a step lighter
+     than the frame around them */
+  --brando-line-soft: #ecf0ea;
 
   /* The one action colour: primary buttons, links, focus, progress */
   --brando-accent: #254e3f;
@@ -33,6 +36,9 @@
   --brando-surface-shaded: #fbfcfa;
   --brando-surface-hover: #f5f8f3;
   --brando-surface-selected: #eef3ea;
+  /* A sage tint that sets a panel apart from the white around it: a neutral
+     notice, a section header, an icon tile, a hovered secondary button */
+  --brando-surface-tint: #f1f5ef;
   --brando-overlay: rgb(30 43 37 / 30%);
 
   /* Badges: a sage pill with muted ink */
@@ -50,6 +56,12 @@
   --brando-attention: #fbefda;
   --brando-attention-line: #e4b866;
   --brando-attention-ink: #87662d;
+
+  /* Done or fine: a passed check, an added line, something active or
+     connected, a finished import. The tint, its border and its ink. */
+  --brando-success: #e8f2e9;
+  --brando-success-line: #d0e3d2;
+  --brando-success-ink: #2f6343;
 
   /* Errors: a failed save or upload, an invalid field, a destructive action.
      The tint, its border and its ink, as on Utilities and in toasts. */

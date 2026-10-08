@@ -178,6 +178,7 @@ value:
 | Placeholders, disabled text, counters | `--brando-faint` | `#9aa39c` |
 | Borders and dividers | `--brando-line` | `#dce2dc` |
 | Border on hover or focus, drop target outline | `--brando-line-strong` | `#bacabd` |
+| Dividers between rows inside a framed list or table | `--brando-line-soft` | `#ecf0ea` |
 | Main accent (actions, links, focus, progress) | `--brando-accent` | `#254e3f` |
 | Primary button on hover | `--brando-accent-hover` | `#1a3d30` |
 | Page ground | `--brando-surface-page` | `#fafbf9` |
@@ -187,9 +188,11 @@ value:
 | Table header and footer rows, shaded fieldsets | `--brando-surface-shaded` | `#fbfcfa` |
 | Row hover | `--brando-surface-hover` | `#f5f8f3` |
 | Selected item, drop target | `--brando-surface-selected` | `#eef3ea` |
+| Neutral notice, section header, icon tile, hovered secondary button | `--brando-surface-tint` | `#f1f5ef` |
 | Modal and loader backdrop | `--brando-overlay` | `rgb(30 43 37 / 30%)` |
 | Badge fill / ink | `--brando-badge-bg` / `--brando-badge-ink` | `#eef0eb` / `#566153` |
 | Needs attention (missing alt text, unsaved, warning badges): tint / rule / ink | `--brando-attention` / `--brando-attention-line` / `--brando-attention-ink` | `#fbefda` / `#e4b866` / `#87662d` |
+| Done or fine (passed check, added line, active or connected, finished import): tint / border / ink | `--brando-success` / `--brando-success-line` / `--brando-success-ink` | `#e8f2e9` / `#d0e3d2` / `#2f6343` |
 | Errors (failed save or upload, invalid field, destructive action): tint / border / ink | `--brando-error` / `--brando-error-line` / `--brando-error-ink` | `#fff1ed` / `#e8ccc4` / `#8c4232` |
 | Switch on / off | `--brando-switch-on` / `--brando-switch-off` | `#9cc79f` / `#c0c0c0` |
 | Status: published | `--brando-status-published` | `#3cb371` |
@@ -203,8 +206,10 @@ the neutral roles above; pink, emerald and peach use
 `--brando-module-<colour>-line`, `-tint`, `-ink` and `-dot` (the outline's
 dot), which keep those categories apart in the block editor.
 
-Utilities also uses screen-specific tints: the authorization header `#f1f5ef`,
-the export surface `#f8f9f5` and the import surface `#f8f8fc`.
+Utilities' authorization header uses `--brando-surface-tint`; its import and
+export cards share `--brando-surface-shaded`. Screens don't keep tints of
+their own: a blue or lavender panel becomes a neutral surface, and an "OK",
+"added" or "active" state uses the success tokens.
 
 The legacy Europa colours in `assets/europa.config.js` point at these roles, so
 `theme(colors.dark)` is `--brando-ink`, `blue` is `--brando-accent`, `peach` is

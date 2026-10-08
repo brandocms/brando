@@ -4,7 +4,7 @@
   h1 { font-size: 30px; line-height: 1.2; margin: 8px 0; font-weight: 500; }
   p { font-size: 13px; line-height: 1.6; color: var(--brando-muted); margin: 0; }
 }
-.markdown-source-notice { font-size: 13px; padding: 12px 16px; border: 1px solid var(--brando-line); border-radius: 5px; background: #f1f5ef; margin-top: 16px; max-width: 1120px; }
+.markdown-source-notice { font-size: 13px; padding: 12px 16px; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface-tint); margin-top: 16px; max-width: 1120px; }
 .markdown-sources-workspace {
   max-width: 1120px;
   display: grid;
@@ -52,7 +52,7 @@
     letter-spacing: 0; text-transform: none;
   }
   button.primary { color: white; background: var(--brando-accent); border-color: var(--brando-accent); }
-  button:hover:not(:disabled) { border-color: #8fa48e; }
+  button:hover:not(:disabled) { border-color: var(--brando-line-strong); }
   button:disabled { opacity: .48; cursor: not-allowed; }
   :is(button, a):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
   @media (pointer: coarse) { button { min-height: 40px; } }
@@ -80,21 +80,21 @@
 .admin-workspace.markdown-workspace {
   max-width: 1120px;
   .markdown-eyebrow { display: block; margin-bottom: 10px; color: var(--workspace-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .12em; }
-  .markdown-connection-notice { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px; margin-bottom: 24px; border: 1px solid #e1dfce; border-radius: 7px; background: #faf9f3; }
-  .markdown-connection-notice > [data-icon] { flex: 0 0 20px; width: 20px; height: 20px; color: #82754a; }
+  .markdown-connection-notice { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px; margin-bottom: 24px; border: 1px solid var(--brando-attention-line); border-radius: 7px; background: var(--brando-attention); }
+  .markdown-connection-notice > [data-icon] { flex: 0 0 20px; width: 20px; height: 20px; color: var(--brando-attention-ink); }
   .markdown-connection-notice h2 { font-size: 15px; margin-bottom: 8px; }
   .markdown-connection-notice p { max-width: 760px; font-size: 13px; color: var(--workspace-muted); line-height: 1.65; }
   .markdown-source-notice { margin: 0 0 24px; }
   .markdown-sources-workspace { margin-top: 0; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); }
   .markdown-source-panel { padding: 24px; }
-  .markdown-source-setup { background: #f8f9f5; }
+  .markdown-source-setup { background: var(--brando-surface-shaded); }
   .markdown-panel-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-  .markdown-panel-heading [data-icon] { flex: 0 0 18px; width: 18px; height: 18px; color: #5c7156; }
+  .markdown-panel-heading [data-icon] { flex: 0 0 18px; width: 18px; height: 18px; color: var(--brando-muted); }
   .markdown-panel-heading h2 { font-size: 18px; margin: 0; }
   .markdown-panel-heading .workspace-badge { margin-left: auto; }
   .markdown-documents { background: var(--brando-surface); }
   .markdown-documents .workspace-empty { padding: 32px 4px; }
-  .workspace-empty > [data-icon] { width: 28px; height: 28px; color: #85927f; margin-bottom: 8px; }
+  .workspace-empty > [data-icon] { width: 28px; height: 28px; color: var(--brando-faint); margin-bottom: 8px; }
   .markdown-source-row { display: grid; gap: 16px; }
   .markdown-document-info { display: grid; gap: 16px; }
   .markdown-document-title { display: grid; gap: 4px; }
@@ -108,7 +108,7 @@
   .markdown-source-field label { font-size: 13px; line-height: 20px; }
   .markdown-source-field p { font-size: 13px; line-height: 20px; }
   .markdown-source-field input, .markdown-source-field select { border-radius: 5px; color: var(--workspace-ink); }
-  .markdown-source-field :disabled { background-color: #f0f2ed; color: #7b8277; cursor: not-allowed; }
+  .markdown-source-field :disabled { background-color: var(--brando-surface-shaded); color: var(--brando-faint); cursor: not-allowed; }
   .markdown-source-checkbox { font-size: 13px; line-height: 20px; margin: 0; align-items: flex-start; }
   input[type="checkbox"] { flex: 0 0 15px; width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--workspace-accent); }
   .markdown-source-actions { padding-top: 8px; }
@@ -116,7 +116,7 @@
   .markdown-source-meta { gap: 16px 24px; margin: 0; }
   .markdown-source-meta dt { font-size: 12px; line-height: 18px; margin-bottom: 4px; }
   .markdown-source-meta dd { font-size: 13px; line-height: 20px; }
-  .markdown-source-errors { color: #95463b; font-size: 12px; padding-left: 16px; margin: 0; }
+  .markdown-source-errors { color: var(--brando-error-ink); font-size: 12px; padding-left: 16px; margin: 0; }
   .markdown-folder-files { display: grid; gap: 8px; margin: 0; max-height: 320px; overflow-y: auto; }
   .markdown-folder-files span { overflow-wrap: anywhere; min-width: 0; }
   .markdown-source-history { padding-left: 20px; }

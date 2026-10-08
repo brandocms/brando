@@ -25,16 +25,16 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #9aa39d;
+    background: var(--brando-faint);
   }
 
-  &.is-published i { background: #3f9a5b; }
-  &.is-created i { background: #7fae8b; }
-  &.is-updated i { background: #5d7fa6; }
-  &.is-restored i { background: #8a76b8; }
-  &.is-trashed i { background: #c4874a; }
+  &.is-published i { background: var(--brando-status-published); }
+  &.is-created i { background: var(--brando-accent); }
+  &.is-updated i { background: var(--brando-status-draft); }
+  &.is-restored i { background: var(--brando-status-pending); }
+  &.is-trashed i { background: var(--brando-status-disabled); }
   &.is-note i { background: var(--brando-note-line); }
-  &.is-deleted i { background: #b44a3a; }
+  &.is-deleted i { background: var(--brando-status-deleted); }
 }
 
 .activity-avatar {
@@ -46,22 +46,22 @@
   height: 26px;
   overflow: hidden;
   border-radius: 50%;
-  background: #e7efe6;
-  color: #3a5a43;
+  background: var(--brando-badge-bg);
+  color: var(--brando-badge-ink);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: .02em;
   line-height: 1;
 
   img { width: 100%; height: 100%; object-fit: cover; }
-  &.is-blue { background: #e4edf6; color: #36557a; }
-  &.is-sand { background: #f3ecdf; color: #6f5a35; }
+  &.is-blue { background: color-mix(in srgb, var(--brando-presence-0) 12%, var(--brando-surface)); color: var(--brando-presence-0); }
+  &.is-sand { background: var(--brando-attention); color: var(--brando-attention-ink); }
 
   &.is-source {
     border: 1px solid var(--activity-line);
     border-radius: 6px;
-    background: #f1f2ee;
-    color: #4f5852;
+    background: var(--brando-surface-tint);
+    color: var(--brando-muted);
 
     [data-icon] { width: 14px; height: 14px; }
   }
@@ -85,7 +85,7 @@ button.activity-revision {
 }
 
 .activity-detail {
-  margin: 0 !important;
+  margin: 0;
   color: var(--activity-muted);
   font-size: 12px;
   line-height: 1.5;
@@ -103,7 +103,7 @@ button.activity-revision {
     margin-bottom: 32px;
     border: 1px solid var(--activity-line);
     border-radius: 10px;
-    background: #f8f9f5;
+    background: var(--brando-surface-shaded);
 
     label { display: block; margin: 0; }
     select.admin-select { width: auto; max-width: 220px; }
@@ -185,7 +185,7 @@ button.activity-revision {
     gap: 16px;
     padding: 16px 20px;
 
-    & + .activity-row { border-top: 1px solid #e9ede8; }
+    & + .activity-row { border-top: 1px solid var(--brando-line-soft); }
 
     > time {
       padding-top: 4px;
@@ -227,7 +227,7 @@ button.activity-revision {
     flex-wrap: wrap;
     align-items: baseline;
     gap: 4px 10px;
-    margin: 0 !important;
+    margin: 0;
     font-size: 13px;
     line-height: 1.45;
   }
@@ -242,7 +242,7 @@ button.activity-revision {
   a.activity-entry,
   .activity-detail a {
     text-decoration: none;
-    border-bottom: 1px solid #c9d2c8;
+    border-bottom: 1px solid var(--brando-line-strong);
     color: var(--activity-ink);
 
     &:hover { border-color: var(--activity-green); }
@@ -251,7 +251,7 @@ button.activity-revision {
   .activity-entry.is-gone {
     color: var(--activity-muted);
     text-decoration: line-through;
-    text-decoration-color: #b9c0bb;
+    text-decoration-color: var(--brando-faint);
   }
 
   .activity-type { font-size: 11px; color: var(--activity-muted); }
@@ -387,7 +387,7 @@ button.activity-revision {
     }
   }
 
-  p { margin: 0 !important; font-size: 13px; line-height: 1.45; color: var(--activity-ink); }
+  p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--activity-ink); }
 
   .activity-meta {
     display: flex;
@@ -410,7 +410,7 @@ button.activity-revision {
     font-size: 12px;
     color: var(--activity-ink);
     text-decoration: underline;
-    text-decoration-color: #c9d2c8;
+    text-decoration-color: var(--brando-line-strong);
     text-underline-offset: 3px;
     cursor: pointer;
   }
@@ -435,7 +435,7 @@ button.activity-revision {
 }
 
 .activity-compare-empty {
-  margin: 0 !important;
+  margin: 0;
   color: var(--activity-muted);
   font-size: 13px;
 }

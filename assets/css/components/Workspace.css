@@ -7,7 +7,7 @@
   --workspace-ink: var(--brando-ink);
   --workspace-muted: var(--brando-muted);
   --workspace-line: var(--brando-line);
-  --workspace-wash: #f5f7f3;
+  --workspace-wash: var(--brando-surface-hover);
   --workspace-accent: var(--brando-accent);
   max-width: 1280px; width: 100%; padding: 38px 0 64px;
   color: var(--workspace-ink); font-size: 13px; line-height: 1.55;
@@ -40,13 +40,13 @@
     border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface);
     color: var(--workspace-ink); font-size: 12px; font-weight: 500; line-height: 18px;
     text-decoration: none; text-transform: none; letter-spacing: 0; white-space: nowrap; box-shadow: none; cursor: pointer;
-    &:hover:not(:disabled) { background: var(--workspace-wash); border-color: #aab9a5; }
+    &:hover:not(:disabled) { background: var(--workspace-wash); border-color: var(--brando-line-strong); }
     &:disabled { opacity: .45; cursor: not-allowed; }
     &.primary { background: var(--workspace-accent); border-color: var(--workspace-accent); color: var(--brando-ink-inverse); }
-    &.primary:hover:not(:disabled) { background: #163c2e; }
+    &.primary:hover:not(:disabled) { background: var(--brando-accent-hover); }
     &.quiet { border-color: transparent; background: transparent; }
-    &.destructive { color: #9d3430; }
-    &.destructive:hover:not(:disabled) { background: #fcf3f0; border-color: #e4ccc5; }
+    &.destructive { color: var(--brando-error-ink); }
+    &.destructive:hover:not(:disabled) { background: var(--brando-error); border-color: var(--brando-error-line); }
     svg { width: 14px; height: 14px; }
   }
   /* A header button that opens a short list of actions (<details>). */
@@ -58,7 +58,7 @@
     position: absolute; top: calc(100% + 4px); right: 0; z-index: 20;
     display: grid; min-width: 260px; padding: 4px;
     border: 1px solid var(--workspace-line); border-radius: 6px; background: var(--brando-surface);
-    box-shadow: 0 6px 20px #233d2e14;
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--brando-ink) 8%, transparent);
   }
   .workspace-menu-items button {
     display: grid; gap: 2px; padding: 8px 10px; border: 0; border-radius: 4px; background: none;
@@ -83,11 +83,11 @@
        would otherwise strip its borders and padding from the outside. */
     > :is(thead, tbody) > tr > :is(th, td) { text-align: left; vertical-align: middle; border: 0; }
     > thead > tr > th { font-size: 12px; color: var(--workspace-muted); font-weight: 400; padding: 10px 12px; border-bottom: 1px solid var(--workspace-line); white-space: nowrap; }
-    > tbody > tr > td { padding: 12px; border-bottom: 1px solid #ecf0ea; }
+    > tbody > tr > td { padding: 12px; border-bottom: 1px solid var(--brando-line-soft); }
     > :is(thead, tbody) > tr > :is(th, td):first-child { padding-left: 16px; }
     > :is(thead, tbody) > tr > :is(th, td):last-child { padding-right: 16px; }
     > tbody > tr:last-child > td { border: 0; }
-    > tbody > tr:hover { background: #fafbf8; }
+    > tbody > tr:hover { background: var(--brando-surface-hover); }
     code { font-family: theme(typography.families.mono); font-size: 12px; }
     > tbody > tr > td small { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: 12px; }
     .row-actions { width: 1%; text-align: right; white-space: nowrap; }
@@ -95,9 +95,9 @@
   code { background: transparent; padding: 0; border: 0; }
   .workspace-mono { font-family: theme(typography.families.mono); font-size: 12px; }
   .workspace-badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px; border-radius: 4px; font-size: 11px; line-height: 18px; font-weight: 400; white-space: nowrap; background: var(--brando-badge-bg); color: var(--brando-badge-ink); }
-  .workspace-badge.positive { background: #e9f2e9; color: #355e43; }
+  .workspace-badge.positive { background: var(--brando-success); color: var(--brando-success-ink); }
   .workspace-badge.warning { background: var(--brando-attention); color: var(--brando-attention-ink); }
-  .workspace-badge.negative { background: #fcf0eb; color: #914936; }
+  .workspace-badge.negative { background: var(--brando-error); color: var(--brando-error-ink); }
   .workspace-note { color: var(--workspace-muted); font-size: 12px; padding-top: 16px; }
   .workspace-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 

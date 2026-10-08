@@ -1,2 +1,2 @@
 .cache-workspace { max-width: 1120px; }
-.cache-workspace .cache-unavailable { color: #9ba59e; }
+.cache-workspace .cache-unavailable { color: var(--brando-faint); }
