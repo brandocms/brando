@@ -715,18 +715,27 @@ that migrates `public`, but they leave archives alone: an archive is a snapshot.
 An archive taken before such a migration ran therefore lacks what it added.
 Rollback brings it up to date as it restores it:
 
-- Before anything is created, it lists the public migrations that change every
-  environment and ran after the archive was taken (from `schema_migrations`
-  and the timestamp in the archive's name). Brando's `brando_2xx` ones are run
-  again in the restored schema only, and recorded in its `schema_migrations`.
-  Any other, such as Brando's older ones or the application's own, refuses the
-  restore with `{:error, {:archive_behind, {:migrations, names}}}`.
-- After the tenant migrations, the restored schema must have every table,
-  column and index the live environment has. If it does not, the restore is
+- Before anything is created, it accounts for every public migration that ran
+  after the archive was taken (from `schema_migrations` and the timestamp in
+  the archive's name), by finding its file under the migrations directory.
+  Brando's `brando_2xx` ones that change every environment are run again in the
+  restored schema only, and recorded in its `schema_migrations`. Ones that only
+  change `public` are left alone. Anything else refuses the restore with
+  `{:error, {:archive_behind, reason}}`: a migration that changes the
+  environments and cannot be run again (Brando's older ones, or the
+  application's own), a version without a file, or a migrations directory that
+  is not there. An application that keeps its migrations elsewhere, or in more
+  than one directory, sets `config :brando, :public_migrations_path` to a path
+  or a list of paths.
+- After the tenant migrations, the restored schema must have every table and
+  column (with its type, nullability and default), index, foreign key and
+  unique constraint the live environment has. If it does not, the restore is
   undone and returns `{:error, {:archive_behind, {:structure, missing}}}`.
 
-Either way, a refused or failed restore leaves no environment, schema or log
-entry behind, and the archive is unchanged.
+Either way, a refused or failed restore, including one where a step raises,
+leaves no environment, schema or log entry behind, and the archive is
+unchanged. The admin runs a restore in a task of its own, so closing the page
+does not stop it halfway.
 
 Only non-live environments can be deleted:
 

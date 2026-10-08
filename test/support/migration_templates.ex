@@ -64,25 +64,123 @@ defmodule Brando.MigrationTemplates do
   """
   def create_environment(prefix, tables \\ []) do
     query!(~s(CREATE SCHEMA "#{prefix}"))
-    Enum.each(tables, &copy_table("public", prefix, &1))
+    copy_tables("public", prefix, tables, false)
     prefix
   end
 
+  @doc "Copies one table's structure, as `copy_tables/4` does"
+  def copy_table(source, target, table), do: copy_tables(source, target, [table], false)
+
   @doc """
-  Copies a table's columns, defaults, checks and indexes, under their own
-  names as pg_dump keeps them (`LIKE ... INCLUDING INDEXES` renames them).
+  Copies tables from `source` into the existing `target` schema the way
+  pg_dump and the environment cloners do, inside the sandbox: columns,
+  defaults and checks; sequences of their own; primary keys, unique
+  constraints and indexes under their own names; foreign keys, those between
+  copied tables pointing into `target`; and, with `rows?`, the rows.
   """
-  def copy_table(source, target, table) do
+  def copy_tables(source, target, tables, rows?) do
+    # Definitions name every schema when the search path is empty
+    [[search_path]] = rows("SHOW search_path")
+    query!("SET search_path TO ''")
+
+    try do
+      Enum.each(tables, &create_table(source, target, &1))
+      if rows?, do: Enum.each(tables, &copy_rows(source, target, &1))
+
+      definitions = constraint_definitions(source, tables)
+
+      for {table, name, "p", definition} <- definitions, do: add_constraint(target, table, name, definition)
+      for {table, name, "u", definition} <- definitions, do: add_constraint(target, table, name, definition)
+      Enum.each(tables, &copy_indexes(source, target, &1))
+
+      for {table, name, "f", definition} <- definitions do
+        definition =
+          Regex.replace(
+            ~r/REFERENCES (?:"#{Regex.escape(source)}"|#{Regex.escape(source)})\.("?)(\w+)\1\(/,
+            definition,
+            fn
+              match, _quote, referenced ->
+                if referenced in tables, do: ~s{REFERENCES "#{target}"."#{referenced}"(}, else: match
+            end
+          )
+
+        add_constraint(target, table, name, definition)
+      end
+    after
+      query!("SELECT set_config('search_path', $1, false)", [search_path])
+    end
+
+    :ok
+  end
+
+  defp create_table(source, target, table) do
     query!(
       ~s{CREATE TABLE "#{target}"."#{table}" (LIKE "#{source}"."#{table}" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING IDENTITY INCLUDING GENERATED)}
     )
 
-    for [definition] <- rows("SELECT indexdef FROM pg_indexes WHERE schemaname = $1 AND tablename = $2", [source, table]) do
+    # A serial column gets a sequence of its own in the copy
+    for [column, default] <-
+          rows(
+            "SELECT column_name, column_default FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
+            [target, table]
+          ),
+        [_, sequence] <- [Regex.run(~r/^nextval\('(?:[^']*\.)?"?([\w-]+)"?'::regclass\)$/, default || "")] do
+      query!(~s{CREATE SEQUENCE IF NOT EXISTS "#{target}"."#{sequence}"})
+
+      query!(
+        ~s{ALTER TABLE "#{target}"."#{table}" ALTER COLUMN "#{column}" SET DEFAULT nextval('"#{target}"."#{sequence}"'::regclass)}
+      )
+    end
+  end
+
+  defp copy_rows(source, target, table) do
+    query!(~s{INSERT INTO "#{target}"."#{table}" SELECT * FROM "#{source}"."#{table}"})
+
+    for [column, default] <-
+          rows(
+            "SELECT column_name, column_default FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
+            [target, table]
+          ),
+        default && String.starts_with?(default, "nextval(") do
+      query!(
+        ~s{SELECT setval(pg_get_serial_sequence('"#{target}"."#{table}"', $1), coalesce((SELECT max("#{column}") FROM "#{target}"."#{table}"), 0) + 1, false)},
+        [column]
+      )
+    end
+  end
+
+  defp constraint_definitions(source, tables) do
+    """
+    SELECT rel.relname, c.conname, c.contype::text, pg_get_constraintdef(c.oid)
+    FROM pg_constraint c
+    JOIN pg_class rel ON rel.oid = c.conrelid
+    JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+    WHERE ns.nspname = $1 AND rel.relname = ANY($2) AND c.contype IN ('p', 'u', 'f')
+    """
+    |> rows([source, tables])
+    |> Enum.map(&List.to_tuple/1)
+  end
+
+  defp add_constraint(target, table, name, definition),
+    do: query!(~s{ALTER TABLE "#{target}"."#{table}" ADD CONSTRAINT "#{name}" #{definition}})
+
+  # Indexes that do not back a constraint, under their own names
+  defp copy_indexes(source, target, table) do
+    """
+    SELECT pg_get_indexdef(i.indexrelid)
+    FROM pg_index i
+    JOIN pg_class rel ON rel.oid = i.indrelid
+    JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+    WHERE ns.nspname = $1 AND rel.relname = $2
+      AND NOT EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = i.indexrelid)
+    """
+    |> rows([source, table])
+    |> Enum.each(fn [definition] ->
       definition
       |> String.replace(~s( ON "#{source}".), ~s( ON "#{target}".))
       |> String.replace(" ON #{source}.", ~s( ON "#{target}".))
       |> query!()
-    end
+    end)
   end
 
   def query!(sql, params \\ []), do: Repo.query!(sql, params)
@@ -247,13 +345,7 @@ defmodule Brando.MigrationTemplates do
   @doc "Copies every table of `source`, with its rows, into a new `target` schema"
   def copy_schema(source, target) do
     query!(~s(CREATE SCHEMA "#{target}"))
-
-    for table <- tables(source) do
-      copy_table(source, target, table)
-      query!(~s{INSERT INTO "#{target}"."#{table}" SELECT * FROM "#{source}"."#{table}"})
-    end
-
-    :ok
+    copy_tables(source, target, tables(source), true)
   end
 
   @doc "`{columns, indexes, references}` of each table"

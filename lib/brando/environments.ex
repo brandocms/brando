@@ -10,6 +10,8 @@ defmodule Brando.Environments do
 
   import Ecto.Query, only: [from: 2]
 
+  require Logger
+
   alias Brando.Environments.ArchiveUpgrade
   alias Brando.Environments.Environment
   alias Brando.Environments.OperationLog
@@ -570,28 +572,48 @@ defmodule Brando.Environments do
   # One that cannot be brought up to date is refused before anything is
   # created, or removed again (see `Brando.Environments.ArchiveUpgrade`).
   defp restore_archive(site, archive, opts) do
-    case ArchiveUpgrade.plan(archive.schema) do
+    case guarded(fn -> ArchiveUpgrade.plan(archive.schema) end) do
       {:ok, replays} -> restore_archive(site, archive, replays, opts)
       {:error, _reason} = error -> error
     end
   end
 
   defp restore_archive(site, archive, replays, opts) do
-    environment_key = next_rollback_key(site)
-
     attrs = %{
       name: "Rollback #{Calendar.strftime(DateTime.utc_now(), "%Y-%m-%d %H:%M:%S")}",
-      key: environment_key,
+      key: next_rollback_key(site),
       live: false
     }
 
-    with {:ok, environment} <- Registry.create_environment(site, attrs),
-         prefix = Tenant.prefix(site, environment),
-         :ok <- clone_archive_or_compensate(environment, archive.schema, prefix),
-         :ok <- replay_or_compensate(environment, prefix, replays),
-         {:ok, _versions} <- migrate_or_compensate(site, environment, prefix),
-         :ok <- up_to_date_or_compensate(site, environment, prefix),
-         :ok <- pause_webhooks_or_compensate(environment, prefix, opts) do
+    with {:ok, environment} <- Registry.create_environment(site, attrs) do
+      prefix = Tenant.prefix(site, environment)
+
+      guarded(fn -> restore_into(site, environment, prefix, archive, replays, opts) end)
+      |> restored(site, environment, prefix)
+    end
+  end
+
+  defp restored({:ok, environment}, site, _environment, _prefix) do
+    Cache.invalidate()
+    announce(site.id)
+    {:ok, environment}
+  end
+
+  defp restored({:error, _reason} = error, _site, environment, prefix) do
+    remove_restored(environment, prefix)
+    error
+  end
+
+  # Every step once the environment exists. An error from any of them, or an
+  # exception (see `guarded/1`), removes the environment again.
+  defp restore_into(site, environment, prefix, archive, replays, opts) do
+    with :ok <- step(schema_cloner().clone_schema(archive.schema, prefix), :archive_restore_failed),
+         :ok <- step(ArchiveUpgrade.replay(replays, prefix), :archive_upgrade_failed),
+         :ok <- step(migrator().migrate(site, environment), :migration_failed),
+         :ok <- up_to_date(site, environment, prefix),
+         # Restored as a new, non-live environment: its webhooks must not
+         # call the endpoints the live environment calls, as after a copy
+         :ok <- step(Brando.Webhooks.after_environment_copy(prefix, opts[:creator] || :system), :archive_restore_failed) do
       log_operation!(site.id, :rollback,
         target_environment_id: environment.id,
         creator_id: creator_id(opts),
@@ -599,66 +621,53 @@ defmodule Brando.Environments do
         note: opts[:note]
       )
 
-      Cache.invalidate()
-      announce(site.id)
       {:ok, environment}
     end
   end
 
-  # Restored as a new, non-live environment: its webhooks must not call the
-  # endpoints the live environment calls, as after a copy. If they cannot be
-  # paused, the restored environment is removed again.
-  defp pause_webhooks_or_compensate(environment, prefix, opts) do
-    case Brando.Webhooks.after_environment_copy(prefix, opts[:creator] || :system) do
-      :ok ->
-        :ok
+  defp step(:ok, _failure), do: :ok
+  defp step({:ok, _result}, _failure), do: :ok
+  defp step({:error, reason}, failure), do: {:error, {failure, reason}}
 
-      {:error, reason} ->
-        Schema.drop(prefix)
-        Registry.delete_environment(environment)
-        {:error, {:archive_restore_failed, reason}}
-    end
-  end
-
-  defp replay_or_compensate(environment, prefix, replays) do
-    case ArchiveUpgrade.replay(replays, prefix) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Schema.drop(prefix)
-        Registry.delete_environment(environment)
-        {:error, {:archive_upgrade_failed, reason}}
-    end
-  end
-
-  # Compared with the live environment, the restored one must have every
-  # table, column and index. Without a live environment there is nothing to
-  # compare with.
-  defp up_to_date_or_compensate(site, environment, prefix) do
+  # Compared with the live environment, the restored one must have
+  # everything it has (see `ArchiveUpgrade.missing/2`). Without a live
+  # environment there is nothing to compare with.
+  defp up_to_date(site, environment, prefix) do
     reference = Enum.find(Registry.list_environments(site), &(&1.live and &1.id != environment.id))
 
     case reference && ArchiveUpgrade.missing(prefix, Tenant.prefix(site, reference)) do
-      missing when missing in [nil, []] ->
-        :ok
-
-      missing ->
-        Schema.drop(prefix)
-        Registry.delete_environment(environment)
-        {:error, {:archive_behind, {:structure, missing}}}
+      missing when missing in [nil, []] -> :ok
+      missing -> {:error, {:archive_behind, {:structure, missing}}}
     end
   end
 
-  defp clone_archive_or_compensate(environment, archive_prefix, target_prefix) do
-    case schema_cloner().clone_schema(archive_prefix, target_prefix) do
-      :ok ->
-        :ok
+  # Turns an exception, throw or exit into an error, so the caller can undo
+  # what was done and the admin can say what went wrong
+  defp guarded(fun) do
+    fun.()
+  rescue
+    exception ->
+      Logger.error(
+        "[Brando.Environments] Restoring an archive failed: " <> Exception.format(:error, exception, __STACKTRACE__)
+      )
 
-      {:error, reason} ->
-        Schema.drop(target_prefix)
-        Registry.delete_environment(environment)
-        {:error, {:archive_restore_failed, reason}}
-    end
+      {:error, {:archive_restore_failed, {:exception, Exception.message(exception)}}}
+  catch
+    kind, reason ->
+      Logger.error(
+        "[Brando.Environments] Restoring an archive failed: " <> Exception.format(kind, reason, __STACKTRACE__)
+      )
+
+      {:error, {:archive_restore_failed, {kind, reason}}}
+  end
+
+  # Best effort: what cannot be removed is logged
+  defp remove_restored(environment, prefix) do
+    with {:error, reason} <- guarded(fn -> Schema.drop(prefix) end),
+         do: Logger.error("[Brando.Environments] Could not drop #{prefix}: #{inspect(reason)}")
+
+    with {:error, reason} <- guarded(fn -> Registry.delete_environment(environment) end),
+         do: Logger.error("[Brando.Environments] Could not remove environment #{environment.key}: #{inspect(reason)}")
   end
 
   defp with_site_lock(site, fun) do
