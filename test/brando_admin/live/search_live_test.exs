@@ -160,10 +160,10 @@ defmodule BrandoAdmin.SearchLiveTest do
     test "rebuilds the index and says how many entries it holds", %{conn: conn, current_user: user} do
       Factory.insert(:page, title: "Never indexed", creator: user)
       {:ok, view, _} = live(conn, "/admin/config/utils")
-      assert has_element?(view, "#utils-search-index [role=status]", "0 entries in the index")
+      assert has_element?(view, "#utils-search-index-state", "0 entries in the index")
 
       view |> element("#utils-search-index button", "Rebuild search index") |> render_click()
-      assert has_element?(view, "#utils-search-index [role=status]", "1 entry in the index")
+      assert has_element?(view, "#utils-search-index-state", "1 entry in the index")
       assert Repo.aggregate(from(d in Brando.Search.Document, where: d.title == "Never indexed"), :count) == 1
     end
   end

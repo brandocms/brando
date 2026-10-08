@@ -141,19 +141,20 @@ defmodule BrandoAdmin.Sites.UtilsLive do
                   "Index every entry again for the admin search. Saving keeps it up to date; rebuild after upgrading or importing content."
                 )}
               </p>
-              <small :if={@search_index.state == :queued} role="status">{gettext("Waiting to start")}</small>
-              <small :if={@search_index.state == :running} role="status">
-                {gettext("Indexing… %{done} of %{total} entries", done: @search_index.done, total: @search_index.total)}
-              </small>
-              <small :if={@search_index.state == :failed} role="status">
-                {gettext("The rebuild failed. Check the application logs.")}
-              </small>
-              <small :if={@search_index.state in [:idle, :done] and is_integer(@search_index.count)} role="status">
-                {ngettext("%{count} entry in the index", "%{count} entries in the index", @search_index.count)}
-              </small>
-              <small :if={@search_index.state in [:idle, :done] and is_nil(@search_index.count)} class="utils-empty-status">
-                {gettext("Not set up: the brando_212 migration has not run")}
-              </small>
+              <%!-- Progress is announced; the other rows' notes are not live regions. --%>
+              <span id="utils-search-index-state" aria-live="polite">
+                <small :if={@search_index.state == :queued}>{gettext("Waiting to start")}</small>
+                <small :if={@search_index.state == :running}>
+                  {gettext("Indexing… %{done} of %{total} entries", done: @search_index.done, total: @search_index.total)}
+                </small>
+                <small :if={@search_index.state == :failed}>{gettext("The rebuild failed. Check the application logs.")}</small>
+                <small :if={@search_index.state in [:idle, :done] and is_integer(@search_index.count)}>
+                  {ngettext("%{count} entry in the index", "%{count} entries in the index", @search_index.count)}
+                </small>
+                <small :if={@search_index.state in [:idle, :done] and is_nil(@search_index.count)} class="utils-empty-status">
+                  {gettext("Not set up: the brando_212 migration has not run")}
+                </small>
+              </span>
             </div>
             <button
               type="button"
