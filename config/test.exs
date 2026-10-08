@@ -52,8 +52,26 @@ config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 config :brando, Brando.Villain, extra_blocks: []
 config :brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser
 
+# A linked Git worktree (its `.git` is a file) gets its own database, named
+# after its directory, so worktrees on different branches never share a schema.
+# The main checkout, which is what CI runs, keeps `brando_test`.
+# `BRANDO_TEST_DATABASE_URL` overrides both. scripts/worktree-setup derives the
+# same name when it creates, migrates and seeds the database.
+test_database =
+  if File.regular?(Path.expand("../.git", __DIR__)) do
+    slug =
+      Path.expand("..", __DIR__)
+      |> Path.basename()
+      |> String.downcase(:ascii)
+      |> String.replace(~r/[^a-z0-9_]/, "_")
+
+    String.slice("brando_test_" <> slug, 0, 63)
+  else
+    "brando_test"
+  end
+
 config :brando, BrandoIntegration.Repo,
-  url: System.get_env("BRANDO_TEST_DATABASE_URL", "ecto://postgres:postgres@localhost/brando_test"),
+  url: System.get_env("BRANDO_TEST_DATABASE_URL", "ecto://postgres:postgres@localhost/#{test_database}"),
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
   # We don't run a server during test. If one is required,

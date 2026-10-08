@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+# Prepares a fresh checkout or Git worktree for unit tests, E2E tests and
+# `mix check`. Safe to rerun: every step skips or no-ops what is already done.
+#
+#   scripts/worktree-setup          slug from the worktree's directory name
+#   scripts/worktree-setup myslug   name the test database brando_test_myslug
+#
+# Steps: Elixir deps (offline from the Hex cache first), E2E deps, a test-env
+# compile, the unit-test database (create, migrate, seed once), pnpm installs
+# with pnpm 10, E2E asset builds when missing, Playwright's Chromium, and the
+# repository's Git hooks. Ends by printing the environment to use.
+#
+# Uses mise (`mise exec --`) for Elixir and Node when it is installed; otherwise
+# mix, node and npx must be on PATH. Works with macOS's bash 3.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+root="$(pwd -P)"
+
+sanitize() {
+  printf '%s' "$1" | tr 'A-Z' 'a-z' | LC_ALL=C tr -c 'a-z0-9_' '_' | cut -c 1-51
+}
+
+# The default matches config/test.exs: a linked worktree (`.git` is a file)
+# gets brando_test_<directory>, the main checkout keeps brando_test.
+if [ $# -gt 0 ] && [ -n "$1" ]; then
+  slug="$(sanitize "$1")"
+  test_db="brando_test_$slug"
+  explicit_slug=true
+else
+  slug="$(sanitize "$(basename "$root")")"
+  if [ -f "$root/.git" ]; then test_db="brando_test_$slug"; else test_db="brando_test"; fi
+  explicit_slug=false
+fi
+test_db_url="${BRANDO_TEST_DATABASE_URL:-ecto://postgres:postgres@localhost/$test_db}"
+[ "$explicit_slug" = true ] && test_db_url="ecto://postgres:postgres@localhost/$test_db"
+
+if command -v mise >/dev/null 2>&1; then
+  run=(mise exec --)
+elif [ -x "$HOME/.local/bin/mise" ]; then
+  run=("$HOME/.local/bin/mise" exec --)
+else
+  run=()
+fi
+
+# Bash 3 treats an empty array expansion as unbound under `set -u`.
+tool() {
+  if [ "${#run[@]}" -eq 0 ]; then "$@"; else "${run[@]}" "$@"; fi
+}
+
+log="$(mktemp "${TMPDIR:-/tmp}/brando-setup.XXXXXX")"
+trap 'rm -f "$log"' EXIT
+
+# step NAME COMMAND... — one line per step; the output only when it fails.
+step() {
+  local name="$1" started=$SECONDS
+  shift
+  if "$@" > "$log" 2>&1; then
+    printf 'setup: %-34s ok (%ss)\n' "$name" "$((SECONDS - started))"
+  else
+    cat "$log"
+    echo "setup: FAILED at \"$name\"" >&2
+    exit 1
+  fi
+}
+
+deps_get() {
+  HEX_OFFLINE=1 tool mix deps.get || tool mix deps.get
+}
+
+e2e_deps_get() {
+  (cd e2e && export MIX_ENV=e2e && deps_get)
+}
+
+test_compile() {
+  MIX_ENV=test tool mix compile
+}
+
+# Seeds once: priv/repo/seeds.exs inserts rows unconditionally.
+test_database() {
+  BRANDO_TEST_DATABASE_URL="$test_db_url" MIX_ENV=test tool mix do \
+    ecto.create --quiet + ecto.migrate --quiet + \
+    run -e 'BrandoIntegration.Repo.start_link()
+      if BrandoIntegration.Repo.aggregate(Brando.Sites.Identity, :count) == 0,
+        do: Code.eval_file("priv/repo/seeds.exs")'
+}
+
+# pnpm can leave a workspace file behind, which then captures later installs.
+remove_stray_workspace() {
+  if [ -f "$1/pnpm-workspace.yaml" ] && ! git ls-files --error-unmatch "$1/pnpm-workspace.yaml" >/dev/null 2>&1; then
+    rm -f "$1/pnpm-workspace.yaml"
+  fi
+}
+
+# pnpm 12 breaks these installs; CI pins 10 and installs a frozen lockfile.
+# @brandocms/europacss pins a dependency to an SSH Git remote; like CI, fetch
+# it over HTTPS (for this command only), so no GitHub SSH key is needed.
+pnpm_install() {
+  local dir="$1" status
+  remove_stray_workspace "$dir"
+  (
+    cd "$dir" &&
+      CI=true GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0='url.https://github.com/.insteadOf' \
+        GIT_CONFIG_VALUE_0='git@github.com:' tool npx -y pnpm@10 install --frozen-lockfile
+  )
+  status=$?
+  remove_stray_workspace "$dir"
+  return "$status"
+}
+
+backend_build() {
+  (cd e2e/assets/backend && CI=true tool npx -y pnpm@10 build)
+}
+
+# The frontend is a yarn 1 project (its packageManager field).
+frontend_build() {
+  (cd e2e/assets/frontend && tool npx -y yarn@1.22.22 install --frozen-lockfile && tool npx -y yarn@1.22.22 build)
+}
+
+playwright_browser() {
+  (cd e2e/playwright && CI=true tool npx -y pnpm@10 exec playwright install chromium)
+}
+
+echo "setup: $root (slug $slug)"
+step "deps" deps_get
+
+# The E2E app depends on brando_json_api and brando_graphql by path, next to
+# this checkout, as CI checks them out.
+parent="$(dirname "$root")"
+if [ -f "$parent/brando_json_api/mix.exs" ] && [ -f "$parent/brando_graphql/mix.exs" ]; then
+  step "E2E deps" e2e_deps_get
+  e2e_ready=true
+else
+  echo "setup: E2E deps skipped: clone brandocms/brando_json_api and brandocms/brando_graphql into $parent"
+  e2e_ready=false
+fi
+
+step "compile (MIX_ENV=test)" test_compile
+step "test database $(basename "$test_db_url")" test_database
+step "pnpm install assets" pnpm_install assets
+step "pnpm install e2e/assets/backend" pnpm_install e2e/assets/backend
+step "pnpm install e2e/playwright" pnpm_install e2e/playwright
+
+if [ -f e2e/priv/static/admin_manifest.json ]; then
+  echo "setup: E2E backend assets already built (rebuild after JS/CSS changes)"
+else
+  step "build E2E backend assets" backend_build
+fi
+if [ -f e2e/priv/static/manifest.json ]; then
+  echo "setup: E2E frontend assets already built"
+else
+  step "build E2E frontend assets" frontend_build
+fi
+step "Playwright Chromium" playwright_browser
+step "git hooks (core.hooksPath)" git config core.hooksPath .githooks
+
+# What .envrc derives for this worktree, or for the slug given.
+e2e_env="$(
+  cd e2e || exit 1
+  unset BRANDO_E2E_DATABASE BRANDO_E2E_PORT
+  [ "$explicit_slug" = true ] && export BRANDO_E2E_INSTANCE="$slug"
+  # shellcheck disable=SC1091
+  . ./.envrc
+  echo "$BRANDO_E2E_DATABASE on port $BRANDO_E2E_PORT"
+)"
+
+echo
+echo "Environment for this worktree:"
+if [ "$explicit_slug" = true ] || [ -n "${BRANDO_TEST_DATABASE_URL:-}" ]; then
+  echo "  export BRANDO_TEST_DATABASE_URL=$test_db_url"
+else
+  echo "  unit tests use $(basename "$test_db_url") by default (config/test.exs)"
+fi
+if [ "$explicit_slug" = true ]; then
+  echo "  export BRANDO_E2E_INSTANCE=$slug    # E2E: $e2e_env"
+else
+  echo "  E2E: e2e/.envrc derives $e2e_env from this path"
+fi
+if [ "${#run[@]}" -gt 0 ]; then
+  echo "  prefix mix with: ${run[*]}"
+fi
+echo "  Before pushing: mix check   (the pre-push hook runs mix check --fast)"
+[ "$e2e_ready" = true ] || echo "  E2E is not ready until its sibling repositories are cloned (see above)."

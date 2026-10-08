@@ -178,8 +178,20 @@ defmodule Brando.Mixfile do
       "ecto.seed": ["run priv/repo/seeds.exs"],
       # ExDoc writes its own llms.txt; ours replaces it with one that describes
       # each guide, and adds llms-full.txt.
-      docs: ["docs", "brando.docs.agents --only llms"]
+      docs: ["docs", "brando.docs.agents --only llms"],
+      check: &__MODULE__.check/1
     ]
+  end
+
+  # CI's fast gates, each in the MIX_ENV CI uses; see scripts/check. A function
+  # rather than `cmd` so a failing gate exits without a Mix stacktrace, and a
+  # remote capture because `Brando.Doctor.Checks.Versions` stores the project
+  # config in a module attribute, which cannot hold an anonymous function.
+  @doc false
+  def check(args) do
+    script = Path.expand("scripts/check", __DIR__)
+    {_, status} = System.cmd(script, args, into: IO.stream(), stderr_to_stdout: true)
+    if status != 0, do: exit({:shutdown, status})
   end
 
   defp package do

@@ -66,6 +66,17 @@ else
 fi
 
 unset NO_COLOR
+
+# Playwright starts the server; print one line when it answers HTTP. The app
+# would print the same line, so silence that copy. A server already on the
+# port is not ours: Playwright refuses it, so don't report it as ready.
+export BRANDO_E2E_QUIET_READY=1
+if ! curl -s -o /dev/null --max-time 2 "http://localhost:$BRANDO_E2E_PORT/"; then
+  ./server_ready.sh "$BRANDO_E2E_PORT" &
+  ready_pid=$!
+  trap 'kill "$ready_pid" 2>/dev/null || true' EXIT
+fi
+
 cd playwright
 
 # Bash 3 treats an empty array expansion as unbound under `set -u`.

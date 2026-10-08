@@ -1,6 +1,9 @@
 # Brando CMS - Agent Commands and Style Guide
 
 ## Build & Test Commands
+- Fresh worktree: `scripts/worktree-setup` (deps, private test DB, pnpm 10 installs, Git hooks; prints the env to use)
+- Before pushing: `mix check` (CI's fast gates; the pre-push hook runs `--fast`, `SKIP_CHECK=1` bypasses)
+- Wait for CI: `scripts/ci-wait <PR>` (background; silent until one summary line)
 - Start e2e project server (for use with MCP): `cd e2e && ./run_e2e.sh` - the server starts on port 4444
 - Run end to end tests: `cd e2e && source .envrc && ./test_e2e.sh --reset` (user will ask Claude to run these)
 - E2E login credentials: email `admin@brandocms.com`, password `brandocms`
