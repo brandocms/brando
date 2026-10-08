@@ -17921,3 +17921,65 @@ msgstr "Slik ser siden til denne oppføringen ut når den blir funnet i søk, de
 #, elixir-autogen, elixir-format
 msgid "Previews"
 msgstr "Forhåndsvisninger"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow"
+msgstr "IndexNow"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tells Bing, Copilot, Yandex and the search engines that use Bing's index when entries are published, changed, unpublished or deleted, so they visit those pages again soon. Google doesn't take part."
+msgstr "Sier fra til Bing, Copilot, Yandex og søkemotorene som bruker Bings indeks når oppføringer publiseres, endres, avpubliseres eller slettes, så de besøker sidene igjen snart. Google er ikke med."
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on"
+msgstr "Slå på"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Off in this deployment's configuration"
+msgstr "Av i konfigurasjonen for denne installasjonen"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "On, but this environment is not live, so it doesn't submit"
+msgstr "På, men dette miljøet er ikke live, så det sender ingenting"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last submission"
+msgstr "Siste innsending"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing submitted yet"
+msgstr "Ingenting sendt ennå"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Key file"
+msgstr "Nøkkelfil"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow is on"
+msgstr "IndexNow er på"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow is off"
+msgstr "IndexNow er av"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change IndexNow"
+msgstr "Kunne ikke endre IndexNow"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "one URL"
+msgid_plural "%{count} URLs"
+msgstr[0] "én URL"
+msgstr[1] "%{count} URL-er"

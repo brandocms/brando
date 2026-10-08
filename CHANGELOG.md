@@ -29,15 +29,20 @@ production dump.
   fails with a missing-column error. Nothing changes in robots.txt or the
   page head until an editor sets the new options.
 
-- **Modules have a `markdown_code` column.** It holds a module's optional
-  Markdown template. `brando_211` adds it to `content_modules` in every
-  environment; run it with `brando_210`.
+- **Modules have a `markdown_code` column, and IndexNow a table.**
+  `brando_211` adds `markdown_code` (a module's optional Markdown template)
+  to `content_modules` and creates `sites_indexnow` in every environment;
+  run it with `brando_210`. Until then, loading modules fails with a
+  missing-column error.
 
-- **Markdown alternates need a plug.** Add `plug Brando.Plug.Markdown` to the
-  endpoint, before the router (after `Brando.Plug.LivePreview`), to serve
-  entries as Markdown at their URL + `.md`. Without it, the page head still
-  names the Markdown URL, and requests for it are not found. See
-  [Markdown alternates](guides/markdown_alternates.md).
+- **Markdown alternates and IndexNow need two plugs.** Add
+  `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
+  endpoint, before the router (after `Brando.Plug.LivePreview`). The first
+  serves entries as Markdown at their URL + `.md`; without it, the page head
+  still names the Markdown URL, and requests for it are not found. The
+  second serves the IndexNow key file; without it, turning IndexNow on gets
+  `403` answers. See [Markdown alternates](guides/markdown_alternates.md) and
+  [IndexNow](guides/identity_and_seo.md#indexnow).
 
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
@@ -659,6 +664,16 @@ production dump.
   **Snippet length**, written as the page's robots meta tag (`nosnippet`,
   `max-snippet:N`). They are what keeps a page's text out of Google's AI
   Overviews. `put_robots/2` adds directives of your own to the same tag.
+- **IndexNow.** Configuration → SEO can turn on IndexNow, which tells Bing,
+  Copilot, Yandex and the other search engines that use Bing's index when an
+  entry is published, updated while published, unpublished or deleted
+  (Google doesn't take part). It is a content event subscriber
+  (`Brando.IndexNow`): URLs are gathered for a minute and sent as one request
+  per host, by `Brando.Worker.IndexNowSubmission` on the existing `:webhooks`
+  queue, so no new queue is needed. The site's key is served at
+  `/<key>.txt`; the last submission and its answer show under the toggle.
+  Off by default, and only the live environment submits; turn it off for a
+  whole deployment with `config :brando, Brando.IndexNow, enabled: false`.
 - **Previews in the meta drawer.** A Previews tab shows the entry as a
   search result, an Open Graph card and an X card, following the form as it
   is edited, with the image that is shared, cut the way it is shared and a

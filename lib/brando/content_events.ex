@@ -2,7 +2,8 @@ defmodule Brando.ContentEvents do
   @moduledoc """
   Content events: one normalised message for each change to an entry, for
   anything outside the save that has to react to it — outbound webhooks
-  (`Brando.Webhooks`) today, IndexNow and the search index next.
+  (`Brando.Webhooks`) and IndexNow (`Brando.IndexNow`) today, the search
+  index next.
 
   ## Events
 
@@ -62,12 +63,13 @@ defmodule Brando.ContentEvents do
   ## Subscribing
 
   A subscriber implements `Brando.ContentEvents.Subscriber` and is listed in
-  the configuration. Brando's own webhooks are always subscribed (unless
-  `config :brando, Brando.Webhooks, enabled: false`).
+  the configuration. Brando's own webhooks and IndexNow are always
+  subscribed (unless `config :brando, Brando.Webhooks, enabled: false` or
+  `config :brando, Brando.IndexNow, enabled: false`).
 
-      config :brando, Brando.ContentEvents, subscribers: [MyApp.IndexNow]
+      config :brando, Brando.ContentEvents, subscribers: [MyApp.Search]
 
-      defmodule MyApp.IndexNow do
+      defmodule MyApp.Search do
         @behaviour Brando.ContentEvents.Subscriber
 
         @impl true
@@ -78,7 +80,7 @@ defmodule Brando.ContentEvents do
           # One job per event: a retried dispatch finds it and adds none
           %{url: url, event_id: event.id}
           |> Brando.Tenant.Job.attach()
-          |> MyApp.Workers.SubmitUrl.new(unique: [keys: [:event_id], period: :infinity])
+          |> MyApp.Workers.IndexUrl.new(unique: [keys: [:event_id], period: :infinity])
           |> Oban.insert()
         end
 
@@ -136,10 +138,13 @@ defmodule Brando.ContentEvents do
   @spec debounce_seconds() :: non_neg_integer()
   def debounce_seconds, do: Keyword.get(config(), :debounce_seconds, @default_debounce)
 
-  @doc "The modules that receive every event: Brando's webhooks, then the configured subscribers."
+  @doc "The modules that receive every event: Brando's webhooks and IndexNow, then the configured subscribers."
   @spec subscribers() :: [module()]
   def subscribers do
-    builtin = if Brando.Webhooks.enabled?(), do: [Brando.Webhooks], else: []
+    builtin =
+      if(Brando.Webhooks.enabled?(), do: [Brando.Webhooks], else: []) ++
+        if(Brando.IndexNow.available?(), do: [Brando.IndexNow], else: [])
+
     builtin ++ Keyword.get(config(), :subscribers, [])
   end
 

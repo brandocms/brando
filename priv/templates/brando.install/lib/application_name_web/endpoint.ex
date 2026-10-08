@@ -63,6 +63,8 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Brando.Plug.LivePreview
   # Entries as Markdown at their URL + .md, or for Accept: text/markdown.
   plug Brando.Plug.Markdown
+  # The IndexNow key file, at /<key>.txt while IndexNow is on.
+  plug Brando.Plug.IndexNow
   plug Brando.Plug.Health
   plug <%= application_module %>Web.Router
 end

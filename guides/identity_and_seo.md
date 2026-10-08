@@ -186,6 +186,33 @@ them. Google's AI Overviews use Googlebot, not `Google-Extended`; keep a page
 out of them with the entry's **No snippet** and **Snippet length** settings
 ([Page metadata](meta.md#snippet-limits)).
 
+### IndexNow
+
+[IndexNow](https://www.indexnow.org) tells search engines that a page has
+appeared, changed or gone, so they visit it soon instead of waiting for
+their next crawl. Bing and the search engines and AI products that use its
+index (Copilot, DuckDuckGo, Yandex and others) take part; Google doesn't.
+
+**IndexNow**, under the SEO settings, turns it on for the site. That creates
+the site's key, served at `/<key>.txt` (`Brando.Plug.IndexNow`, in the
+endpoint before the router). From then on an entry's URL is submitted when
+the entry is published, saved while published, unpublished or deleted, by
+`Brando.IndexNow`, a [content event](webhooks.md) subscriber. Each language
+version is its own entry and is submitted when it changes. URLs are gathered
+for a minute and sent as one request per host, at most 10,000 URLs a request,
+by `Brando.Worker.IndexNowSubmission` on the `:webhooks` queue. The panel
+shows the last submission and the answer: `200` or `202` is accepted, `403`
+means the key file could not be read, `422` that a URL is not on the key's
+host.
+
+It is off by default. Only the live environment submits, so a staging copy
+never does. Without tenancy the deployment is the site; on a server that is
+not the public one, turn IndexNow off in its configuration:
+
+```elixir
+config :brando, Brando.IndexNow, enabled: false
+```
+
 ## Add a manual redirect
 
 In the SEO form's Redirects section, add a rule in the language of the incoming

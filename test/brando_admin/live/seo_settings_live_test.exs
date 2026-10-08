@@ -140,4 +140,23 @@ defmodule BrandoAdmin.SEOSettingsLiveTest do
     assert has_element?(view, ~s(#seo-crawlers tr[data-crawler="GPTBot"] input[value="block"][checked]))
     assert has_element?(view, ~s(#seo-crawlers .seo-crawler-signal input[value="no"][checked]))
   end
+
+  test "IndexNow is off until turned on, then shows its key file and last submission", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+
+    refute has_element?(view, "#seo-indexnow a[href$='.txt']")
+    view |> element("[data-testid=indexnow-toggle]") |> render_click()
+
+    %{key: key, enabled: true} = Brando.IndexNow.settings()
+    assert has_element?(view, ~s(#seo-indexnow a[href$="/#{key}.txt"]))
+
+    Req.Test.stub(Brando.IndexNow, &Plug.Conn.send_resp(&1, 202, ""))
+    :ok = Brando.IndexNow.submit(["http://localhost/about"])
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo")
+    assert view |> element("[data-testid=indexnow-response]") |> render() =~ "202 Accepted"
+
+    view |> element("[data-testid=indexnow-toggle]") |> render_click()
+    refute Brando.IndexNow.settings().enabled
+  end
 end

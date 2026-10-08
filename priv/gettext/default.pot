@@ -17926,3 +17926,65 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Previews"
 msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tells Bing, Copilot, Yandex and the search engines that use Bing's index when entries are published, changed, unpublished or deleted, so they visit those pages again soon. Google doesn't take part."
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Off in this deployment's configuration"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "On, but this environment is not live, so it doesn't submit"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Last submission"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing submitted yet"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Key file"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow is on"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "IndexNow is off"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change IndexNow"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "one URL"
+msgid_plural "%{count} URLs"
+msgstr[0] ""
+msgstr[1] ""

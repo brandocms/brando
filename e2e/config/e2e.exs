@@ -42,6 +42,12 @@ config :e2e_project, hmr: false
 # over http on localhost. Development and E2E only: never in production.
 config :brando, Brando.Webhooks, allow_localhost: true
 
+# IndexNow submits to the same receiver, under the `indexnow` inbox, instead
+# of api.indexnow.org.
+config :brando, Brando.IndexNow,
+  endpoint: "http://localhost:#{e2e_port}/e2e/webhook-receiver/indexnow",
+  req_options: []
+
 # Email sent while the tests run (form notifications, password reset links)
 # is kept in Swoosh's in-memory mailbox, where `/e2e/password-reset/mailbox`
 # reads it back for the browser.

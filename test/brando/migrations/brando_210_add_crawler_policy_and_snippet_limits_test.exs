@@ -32,6 +32,7 @@ defmodule Brando.Migrations.Brando210AddCrawlerPolicyAndSnippetLimitsTest do
     Repo.query!("ALTER TABLE sites_seos DROP COLUMN crawler_policy")
     Repo.query!("ALTER TABLE pages DROP COLUMN meta_nosnippet, DROP COLUMN meta_max_snippet")
     Repo.query!("ALTER TABLE content_modules DROP COLUMN markdown_code")
+    Repo.query!("DROP TABLE sites_indexnow")
     Repo.query!(~s(CREATE SCHEMA "#{@tenant}"))
 
     for table <- ~w(sites_seos pages content_modules) do
@@ -39,13 +40,14 @@ defmodule Brando.Migrations.Brando210AddCrawlerPolicyAndSnippetLimitsTest do
     end
 
     run_template("brando_210_add_crawler_policy_and_snippet_limits.exs")
-    run_template("brando_211_add_markdown_code_to_modules.exs")
+    run_template("brando_211_add_markdown_templates_and_indexnow.exs")
 
     for schema <- ["public", @tenant] do
       assert "crawler_policy" in columns(schema, "sites_seos")
       assert "meta_nosnippet" in columns(schema, "pages")
       assert "meta_max_snippet" in columns(schema, "pages")
       assert "markdown_code" in columns(schema, "content_modules")
+      assert "key" in columns(schema, "sites_indexnow")
     end
   end
 end

@@ -251,6 +251,14 @@ if Code.ensure_loaded?(Igniter) do
         "plug Brando.Plug.Markdown",
         before_router
       )
+      |> Source.ensure_call(
+        endpoint,
+        :plug,
+        [1, 2],
+        Brando.Plug.IndexNow,
+        "plug Brando.Plug.IndexNow",
+        before_router
+      )
       |> Source.ensure_call(endpoint, :plug, [1, 2], Brando.Plug.Health, "plug Brando.Plug.Health", before_router)
     end
 

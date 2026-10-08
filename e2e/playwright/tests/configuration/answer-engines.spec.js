@@ -85,3 +85,47 @@ test('a published entry is served as Markdown, a draft is not', async ({ page })
   await page.goto('/project/markdown-project')
   await expect(page.locator('link[rel="alternate"][type="text/markdown"]')).toHaveAttribute('href', /\/project\/markdown-project\.md$/)
 })
+
+// IndexNow submits to the E2E server's own receiver (`indexnow` inbox), and
+// Oban runs inline here, so the submission is made during the publish.
+test('with IndexNow on, publishing an entry submits its URL', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const client = await factory(page, 'E2eProject.Projects.Client', { name: 'IndexNow client', slug: 'indexnow-client', status: 'published', language: 'en' })
+  const project = await factory(page, 'E2eProject.Projects.Project', {
+    title: 'IndexNow project', slug: 'indexnow-project', client_id: client.id, status: 'draft', language: 'en', introduction: '<p>Intro</p>',
+  })
+
+  await page.goto('/admin/config/seo')
+  await syncLV(page)
+  const panel = page.locator('#seo-indexnow')
+  await panel.getByTestId('indexnow-toggle').click()
+  const keyLink = panel.locator('a[href$=".txt"]')
+  await expect(keyLink).toBeVisible()
+  const keyUrl = await keyLink.getAttribute('href')
+  const key = keyUrl.match(/([a-f0-9]{32})\.txt$/)[1]
+  expect(await (await page.request.get(`/${key}.txt`)).text()).toBe(key)
+
+  await page.goto(`/admin/projects/projects/update/${project.id}`)
+  await syncLV(page)
+  await setEntryStatus(page, 'published')
+  await page.getByTestId('submit').first().click()
+  await syncLV(page)
+
+  const submitted = async () => {
+    const { requests } = await (await page.request.get('/e2e/webhook-receiver/indexnow')).json()
+    return requests.map((r) => JSON.parse(r.body)).filter((body) => body.key === key)
+  }
+
+  await expect.poll(async () => (await submitted()).flatMap((body) => body.urlList)).toContain(new URL('/project/indexnow-project', page.url()).toString())
+  const [body] = await submitted()
+  expect(body.keyLocation).toBe(new URL(`/${key}.txt`, page.url()).toString())
+
+  // The answer is shown under the toggle.
+  await page.goto('/admin/config/seo')
+  await syncLV(page)
+  await expect(page.getByTestId('indexnow-response')).toContainText('200')
+
+  await page.locator('#seo-indexnow').getByTestId('indexnow-toggle').click()
+  await expect(page.locator('#seo-indexnow a[href$=".txt"]')).toBeVisible()
+  expect((await page.request.get(`/${key}.txt`)).status()).toBe(404)
+})

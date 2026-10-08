@@ -90,6 +90,8 @@ defmodule E2eProjectWeb.Endpoint do
   plug Brando.Plug.LivePreview
   # Entries as Markdown at their URL + .md, or for Accept: text/markdown.
   plug Brando.Plug.Markdown
+  # The IndexNow key file, at /<key>.txt while IndexNow is on.
+  plug Brando.Plug.IndexNow
   plug E2eProjectWeb.Router
 
   if Application.compile_env(:e2e_project, :sql_sandbox) do

@@ -27,6 +27,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
      |> assign_current_user(token)
      |> assign_entry_id()
      |> assign_404s()
+     |> assign_index_now()
      |> assign(:redirect_drafts, MapSet.new())
      |> assign_audit_defaults()
      |> assign(:page_title, gettext("SEO"))}
@@ -70,6 +71,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
           schema={@schema}
           layout={:settings}
         />
+
+        <.index_now settings={@index_now} live?={@index_now_live?} available?={@index_now_available?} />
 
         <section class="workspace-panel seo-not-found">
           <header class="workspace-panel-heading">
@@ -115,6 +118,89 @@ defmodule BrandoAdmin.Sites.SEOLive do
     </div>
     """
   end
+
+  attr :settings, :any, required: true
+  attr :live?, :boolean, required: true
+  attr :available?, :boolean, required: true
+
+  defp index_now(assigns) do
+    ~H"""
+    <section class="workspace-panel seo-indexnow" id="seo-indexnow">
+      <header class="workspace-panel-heading">
+        <div>
+          <h2>{gettext("IndexNow")}</h2>
+          <p>
+            {gettext(
+              "Tells Bing, Copilot, Yandex and the search engines that use Bing's index when entries are published, changed, unpublished or deleted, so they visit those pages again soon. Google doesn't take part."
+            )}
+          </p>
+        </div>
+        <div class="workspace-heading-actions">
+          <button
+            :if={@settings}
+            type="button"
+            class={["workspace-button", !@settings.enabled && "primary"]}
+            phx-click="toggle_indexnow"
+            disabled={!@available?}
+            data-testid="indexnow-toggle"
+          >
+            {if @settings.enabled, do: gettext("Turn off"), else: gettext("Turn on")}
+          </button>
+        </div>
+      </header>
+      <div :if={@settings} class="seo-indexnow-body">
+        <dl class="seo-indexnow-facts">
+          <div>
+            <dt>{gettext("Status")}</dt>
+            <dd data-testid="indexnow-status">
+              <%= cond do %>
+                <% !@available? -> %>
+                  {gettext("Off in this deployment's configuration")}
+                <% !@settings.enabled -> %>
+                  {gettext("Off")}
+                <% !@live? -> %>
+                  {gettext("On, but this environment is not live, so it doesn't submit")}
+                <% true -> %>
+                  {gettext("On")}
+              <% end %>
+            </dd>
+          </div>
+          <div>
+            <dt>{gettext("Last submission")}</dt>
+            <dd>
+              <%= if @settings.last_submitted_at do %>
+                {Brando.Utils.Datetime.format_datetime(@settings.last_submitted_at, "%d/%m/%y, %H:%M")} · {ngettext(
+                  "one URL",
+                  "%{count} URLs",
+                  @settings.last_url_count || 0
+                )}
+              <% else %>
+                {gettext("Nothing submitted yet")}
+              <% end %>
+            </dd>
+          </div>
+          <div :if={@settings.last_submitted_at}>
+            <dt>{gettext("Response")}</dt>
+            <dd class="workspace-mono" data-testid="indexnow-response">
+              {response_summary(@settings)}
+            </dd>
+          </div>
+          <div :if={@settings.key}>
+            <dt>{gettext("Key file")}</dt>
+            <dd>
+              <a class="workspace-mono" href={Brando.Utils.hostname("#{@settings.key}.txt")} target="_blank" rel="noopener">
+                /{@settings.key}.txt
+              </a>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+    """
+  end
+
+  defp response_summary(%{last_status: nil, last_response: response}), do: response
+  defp response_summary(%{last_status: status, last_response: response}), do: "#{status} #{response}"
 
   attr :items, :list, required: true
   attr :redirect_drafts, :any, required: true
@@ -940,6 +1026,21 @@ defmodule BrandoAdmin.Sites.SEOLive do
     {:noreply, push_patch(socket, to: Brando.routes().admin_live_path(socket, __MODULE__, tab: tab))}
   end
 
+  def handle_event("toggle_indexnow", _params, socket) do
+    result = if socket.assigns.index_now.enabled, do: Brando.IndexNow.disable(), else: Brando.IndexNow.enable()
+
+    case result do
+      {:ok, settings} ->
+        message = if settings.enabled, do: gettext("IndexNow is on"), else: gettext("IndexNow is off")
+        send(self(), {:toast, message})
+        {:noreply, assign(socket, :index_now, settings)}
+
+      {:error, _changeset} ->
+        send(self(), {:toast, gettext("Could not change IndexNow")})
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("toggle_schema", %{"schema" => schema}, socket) do
     schema = Enum.find(socket.assigns.audit_schemas, &(inspect(&1) == schema))
     selected = socket.assigns.selected_schemas
@@ -1226,6 +1327,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
     socket
     |> assign(:four_oh_fours, if(connected?(socket), do: Brando.Sites.FourOhFour.list(), else: []))
     |> assign(:four_oh_four_days, Brando.Sites.FourOhFour.retention_days())
+  end
+
+  # Read from the database, so only once the socket is connected.
+  defp assign_index_now(socket) do
+    socket
+    |> assign(:index_now, if(connected?(socket), do: Brando.IndexNow.settings()))
+    |> assign(:index_now_live?, Brando.IndexNow.live_environment?())
+    |> assign(:index_now_available?, Brando.IndexNow.available?())
   end
 
   defp assign_audit_defaults(socket) do

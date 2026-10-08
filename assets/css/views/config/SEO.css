@@ -186,3 +186,19 @@
 
   @media (pointer: coarse) { span { padding: 10px 14px; } }
 }
+
+/* Configuration → SEO: IndexNow (live/sites/seo_live.ex). */
+.admin-workspace.seo-workspace .seo-indexnow { margin-top: 32px; }
+
+.seo-indexnow-body { padding: 16px; }
+
+.seo-indexnow-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+
+  dt { color: var(--brando-muted); font-size: 12px; line-height: 18px; }
+  dd { margin: 4px 0 0; color: var(--brando-ink); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+  a { color: var(--brando-ink); text-underline-offset: 3px; }
+}
