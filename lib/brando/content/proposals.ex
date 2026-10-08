@@ -36,6 +36,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content
   alias Brando.Content.Blocks
   alias Brando.Content.BlockSlots
+  alias Brando.Content.Proposals.Baseline
   alias Brando.Content.Proposals.BlockTree
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Proposals.CopyBlock
@@ -2261,6 +2262,8 @@ defmodule Brando.Content.Proposals do
           into: %{},
           do: {target, load!(target, actor, action: action)}
 
+    entries = baseline(record, entries)
+
     proposal = %Proposal{
       id: record.id,
       scope: record.scope,
@@ -2278,6 +2281,25 @@ defmodule Brando.Content.Proposals do
     effects = decode_effects(record.effects, Map.keys(proposal.targets))
     with_record(%{proposal | effects: effects}, record)
   end
+
+  # An applied or undone proposal is reviewed against the entries as they
+  # were when it was applied, from its receipt. Against the entries as they
+  # are now, each change would show again on top of its own result. The
+  # entries are still loaded above: reading them is what authorizes the
+  # review.
+  defp baseline(%Record{status: status} = record, entries) when status in ~w(applied undone) do
+    case Repo.one(from(r in Receipt, where: r.id == ^record.id and r.scope == ^record.scope)) do
+      %Receipt{before: before} ->
+        Map.new(entries, fn {target, entry} ->
+          {target, Baseline.load(entry, get_in(before, [Proposal.key(target), "entry"]))}
+        end)
+
+      nil ->
+        entries
+    end
+  end
+
+  defp baseline(_record, entries), do: entries
 
   defp with_record(proposal, record) do
     %{
