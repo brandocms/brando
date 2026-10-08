@@ -261,13 +261,60 @@ button.btn-palette {
   }
 }
 
+/* A block's header: the switch, type and name on the left; on the right
+   the actions, at the same place on every block, with another editor's
+   presence label just before them. The name and the label give way, with an
+   ellipsis, before anything is pushed out of place; the label's title has it
+   whole, and so does the name's (see the Form hook). The header asks its
+   parents for no width of its own (`contain: inline-size`), so a long name
+   or label never widens the editor. On a phone the label and the actions
+   may take a row of their own. */
 .block-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0 10px;
   position: relative;
+  contain: inline-size;
+
+  > .block-description {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-right: auto;
+    overflow: hidden;
+
+    > * {
+      flex-shrink: 0;
+    }
+
+    > .block-name {
+      flex-shrink: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  > .block-presence {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 45%;
+  }
+
+  > .block-actions {
+    flex: none;
+  }
+
+  @media (max-width: 600px) {
+    flex-wrap: wrap;
+
+    > .block-presence {
+      max-width: 100%;
+    }
+  }
 }
 
 .block {
@@ -1986,10 +2033,12 @@ button.btn-palette {
   box-shadow: 0 0 0 2px var(--presence-ink, var(--brando-accent));
 }
 
-.block-toolbar[data-presence-tag]::after {
+.block-presence[data-presence-tag]::after {
   content: attr(data-presence-tag);
-  flex-shrink: 0;
-  margin-left: 8px;
+  min-width: 0;
+  overflow: hidden;
+  margin: 0 8px 0 12px;
+  text-overflow: ellipsis;
   padding: 0 6px;
   border-radius: 4px;
   background: var(--presence-ink, var(--brando-accent));
@@ -2000,12 +2049,11 @@ button.btn-palette {
   white-space: nowrap;
 }
 
-.block-toolbar[data-presence-label]::after {
+.block-presence[data-presence-label]::after {
   content: attr(data-presence-label);
-  flex-shrink: 0;
-  max-width: 40%;
+  min-width: 0;
   overflow: hidden;
-  margin-left: 12px;
+  margin: 0 8px 0 12px;
   padding: 0 8px 0 18px;
   border-radius: 999px;
   background:

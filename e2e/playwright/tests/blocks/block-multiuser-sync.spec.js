@@ -339,7 +339,7 @@ test.describe('Multi-user block sync', () => {
     const bBlockOne = secondUserPage.locator('.entry-block').nth(0).locator('.block').first()
     const bHeading = bBlockOne.locator('.ref_block').first()
     await expect(bHeading).toHaveAttribute('data-field-presence-user', /\d+/, { timeout: 5000 })
-    await expect(bBlockOne.locator('.block-toolbar').first()).toHaveAttribute('data-presence-label', /.+/)
+    await expect(bBlockOne.locator('.block-toolbar > .block-presence').first()).toHaveAttribute('data-presence-label', /.+/)
     await expect(bBlockOne).not.toHaveClass(/block-locked/)
 
     // A edits, then clicks elsewhere INSIDE the same block — B's block

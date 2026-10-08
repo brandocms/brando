@@ -40,9 +40,16 @@ function toolbarEl(uid) {
   return blockEl(uid)?.querySelector('.block-toolbar')
 }
 
+// Where a toolbar shows who is in the block, beside its actions.
+function presenceEl(toolbar) {
+  return toolbar?.querySelector(':scope > .block-presence')
+}
+
+const oneLine = text => (text || '').replace(/\s+/g, ' ').trim()
+
 const FIELD_ATTRS = ['data-field-presence-user', 'data-presence-name', 'data-presence-color-index']
 const BLOCK_ATTRS = ['data-block-presence-user', 'data-presence-color-index']
-const TOOLBAR_ATTRS = ['data-presence-label', 'data-presence-tag', 'data-presence-color-index', 'data-toolbar-presence-user']
+const TOOLBAR_ATTRS = ['data-presence-label', 'data-presence-tag', 'data-presence-color-index', 'data-toolbar-presence-user', 'title']
 
 function clear(js, el, attrs, classes = []) {
   if (classes.length) js.removeClass(el, classes)
@@ -85,9 +92,16 @@ export function setFieldPresence(js, { uid, user_id: userId, field, label, name 
 
   const toolbar = toolbarEl(uid)
   if (toolbar && firstName) {
-    js.setAttribute(toolbar, 'data-presence-label', label ? `${firstName} · ${label}` : firstName)
     js.setAttribute(toolbar, 'data-toolbar-presence-user', String(userId))
     js.setAttribute(toolbar, 'data-presence-color-index', colorIndex)
+    // The label truncates beside the actions; its title has it whole.
+    const text = label ? `${firstName} · ${oneLine(label)}` : firstName
+    const presence = presenceEl(toolbar)
+    if (presence) {
+      js.setAttribute(presence, 'data-presence-label', text)
+      js.setAttribute(presence, 'title', text)
+      js.setAttribute(presence, 'data-toolbar-presence-user', String(userId))
+    }
   }
 
   const fieldEl = field && document.getElementById(field)
@@ -100,9 +114,14 @@ export function setFieldPresence(js, { uid, user_id: userId, field, label, name 
     // over its edge.
     const refToolbar = fieldEl.classList.contains('ref_block') && fieldEl.querySelector('.block-toolbar')
     if (refToolbar && firstName) {
-      js.setAttribute(refToolbar, 'data-presence-tag', firstName)
       js.setAttribute(refToolbar, 'data-toolbar-presence-user', String(userId))
       js.setAttribute(refToolbar, 'data-presence-color-index', colorIndex)
+      const presence = presenceEl(refToolbar)
+      if (presence) {
+        js.setAttribute(presence, 'data-presence-tag', firstName)
+        js.setAttribute(presence, 'title', name || firstName)
+        js.setAttribute(presence, 'data-toolbar-presence-user', String(userId))
+      }
     }
   }
 
