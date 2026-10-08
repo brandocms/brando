@@ -622,15 +622,21 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   that editor as a new block (`<uid>-kept`, its refs with new uids) with a toast — keep
   conflicts explicit, never drop work silently. The session groups the conflicts by the
   top-most block the write removed (`group`) and asks ONE editor per group to bring back
-  everything under it in one copy (`rescues` in the rebase message): an editor here who
-  changed them (it keeps each editor's changed uids, `Ops.op_uids/1`, also after they
-  leave), else any editor here (`orphan?`) — never the origin of the rebase (its replica
-  moved on with the reply) nor a dead process. Every replica computes its payload; the
-  rescuer inserts and calls `EditSession.rescued/4`, the session broadcasts `:rescued`
-  and each editor toasts for its own work (`owners`) or an orphan's; no answer within
-  `rescue_timeout`, or the rescuer leaving, makes the session ask the next (`:rescue`),
-  who inserts its standby payload. Work only a rejoining editor held comes back from the
-  join's reply (`rescues` in `info`). Only the top-most removed block this
+  everything under it as one copy, `<group>-kept` (`rescues` in the rebase message): an
+  editor here who changed them (it keeps each editor's changed uids, `Ops.op_uids/1`, also
+  after they leave), else any editor here (`orphan?`). Excluded: a dead process, and the
+  caller whose replica moves on with the reply (a join, the replica's own
+  `EditSession.rebase(..., replica: true)`) — but NOT the process behind `sync_saved/1`,
+  whose block fields see the broadcast (activating a revision from one's own drawer).
+  Every replica computes its payload; the rescuer inserts, then calls
+  `EditSession.rescued/3`; the session confirms from its state (the copy is there,
+  whoever's insert put it there), broadcasts `:rescued`, and each editor toasts for its
+  own work (`owners`) or, if it was there at the removal (`present`), an orphan's. No copy
+  after the ack, no answer within `rescue_timeout`, or the rescuer leaving: the next is
+  asked (`:rescue`); with nobody left the session waits once more for a late insert, then
+  reports failure; with nobody able at all, failure is reported at once. A copy is never
+  made twice (no fresh uids). Work only a rejoining editor held comes back from the join's
+  reply (`rescues` in `info`). Only the top-most removed block this
   editor worked in comes back (a child added to a removed container brings the container
   back with it), and the toast says so only for blocks that did come back. A rescued child
   goes back under its nearest ancestor that is still there (`{:insert_child, ...}`); removed

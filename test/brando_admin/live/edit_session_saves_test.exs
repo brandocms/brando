@@ -457,6 +457,36 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert Enum.all?(kept_child["refs"], &(&1["uid"] not in Enum.map(refs, fn ref -> ref["uid"] end)))
   end
 
+  # Round 3: activating a revision from one's own drawer, with unsaved work
+  # in a block the revision lacks. The write came from the editor's own
+  # process, which was never asked to bring the work back: it was lost
+  # without a word.
+  test "work in a block an activated revision lacks comes back for the editor who activated it", c do
+    entry = Page |> Repo.get!(c.identity.id) |> Repo.preload(Brando.Blueprint.preloads_for(Page))
+    {:ok, _} = Brando.Revisions.create_revision(entry, c.user)
+    revision = revisions(c.identity)
+
+    # a block the revision does not have, saved, then changed and not saved
+    a = open(c.conn, c.identity)
+    stay(a)
+    insert_block(a, c, 0)
+    await(fn -> new_uid(a, c.uids) != nil end)
+    new = new_uid(a, c.uids)
+    save_read(a)
+    save_write(a)
+    await(fn -> block_count(new) == 1 and session_state(c.identity).statuses[new] == :persisted end)
+    type(a, new, "<p>Unsaved, in a block the revision lacks</p>")
+    await(fn -> session_state(c.identity).diffs[new] not in [nil, %{}] end)
+
+    Brando.endpoint().subscribe("user:#{c.me.id}")
+    drawer = cid_of(a, "#page_form-revisions-drawer-tab-activity")
+    a |> with_target(drawer) |> render_hook("activate_revision", %{"value" => revision})
+
+    kept = new <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end, 300)
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+  end
+
   # Follow-up, round 2: two editors' work in two children of one removed
   # container. Each brought back its own copy of the container under one
   # uid, and the session turned the second away: one editor's work was lost.

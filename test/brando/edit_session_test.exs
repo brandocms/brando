@@ -656,29 +656,59 @@ defmodule Brando.EditSessionTest do
       {ref, info.session, p1, p2}
     end
 
-    test "the editor who worked in the block is asked, and everyone hears when it is back" do
+    test "the editor who worked in the block is asked, and everyone hears once the copy is there" do
       {_ref, session, p1, _p2} = removed_with_work()
       {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
 
       assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [pending]}}
-      assert %{group: "b", uids: ["b"], rescuer: ^p1, owners: [^p1], orphan?: false} = pending
+      assert %{group: "b", kept: "b-kept", uids: ["b"], rescuer: ^p1, owners: [^p1], orphan?: false} = pending
 
-      :ok = GenServer.cast(session, {:rescued, p1, @field, "b", true})
+      send(p1, {:local, {:insert, "b-kept", :end, %{}}})
       assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true, owners: [^p1], orphan?: false}}
     end
 
-    test "an editor who does not answer in time is replaced by the next" do
+    test "an editor who says it is done without the copy there is replaced by the next" do
       {_ref, session, p1, p2} = removed_with_work()
       {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
       assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
 
+      # the insert was turned away (its parent went meanwhile, say)
+      :ok = GenServer.cast(session, {:rescued, p1, @field, "b"})
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 500
+    end
+
+    test "an editor who does not answer in time is replaced by the next" do
+      {ref, session, p1, p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+
+      # one who joins after the work was removed never saw it, and is not told
+      {late, _} = editor(ref, without_b())
+
       assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 1_000
-      :ok = GenServer.cast(session, {:rescued, p2, @field, "b", true})
-      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}
+      send(p2, {:local, {:insert, "b-kept", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true, present: present}}
+      assert Enum.sort(present) == Enum.sort([p1, p2])
+      refute late in present
+    end
+
+    test "a slow editor's copy landing after the next was asked counts, and no failure follows" do
+      {_ref, session, p1, p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+      assert_receive {:edit_session, @field, %{kind: :rescue, rescuer: ^p2}}, 1_000
+
+      # p2 has no copy to make; p1's insert lands late
+      :ok = GenServer.cast(session, {:rescued, p2, @field, "b"})
+      send(p1, {:local, {:insert, "b-kept", :end, %{}}})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}, 1_000
+      refute_receive {:edit_session, @field, %{kind: :rescued, ok?: false}}, 600
     end
 
     test "an editor who leaves is replaced at once, and with nobody left the work is reported lost" do
-      {_ref, session, p1, p2} = removed_with_work()
+      {ref, session, p1, p2} = removed_with_work()
+      # one who may only look keeps the session open, and cannot be asked
+      {_watcher, _} = editor(ref, rows(), read_only: true)
       {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
       assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
 
@@ -686,7 +716,37 @@ defmodule Brando.EditSessionTest do
       assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 500
 
       unlink_and_kill(p2)
-      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, orphan?: false}}, 500
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, orphan?: false}}, 1_000
+    end
+
+    # Round 3: the origin of an outside write was never asked, so the only
+    # editor, activating a revision from its own drawer, lost its work in a
+    # block the revision lacks without a word.
+    test "an editor whose own process wrote outside the editor is asked too" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      EditSession.submit(info.session, @field, anchor("b", "my work"), 1)
+      assert_receive {:edit_session, @field, %{kind: :op}}
+      me = self()
+
+      # what `sync_saved/1` does from the same process after the write
+      {:ok, _} = EditSession.rebase(info.session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{group: "b", rescuer: ^me}]}}
+    end
+
+    test "when nobody can bring the work back, those it concerns are told at once" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      EditSession.submit(info.session, @field, anchor("b", "my work"), 1)
+      assert_receive {:edit_session, @field, %{kind: :op}}
+      me = self()
+
+      # the replica's own rebase: it moves on with the reply, and is the only editor
+      {:ok, _} = EditSession.rebase(info.session, @field, without_b(), :carry, replica: true)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: []}}
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, owners: [^me]}}
     end
 
     test "the editor whose join removed the block is never asked: its replica moved on with the reply" do

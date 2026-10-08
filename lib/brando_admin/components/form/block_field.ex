@@ -886,9 +886,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       else: socket
   end
 
+  # How a rescue went, told to the editors whose work it was and, for work
+  # of an editor who has left, to those who were here when it was removed:
+  # not to one who joined after and never saw it.
   defp handle_session_message(socket, %{kind: :rescued} = message) do
     socket = update(socket, :rescue_standby, &Map.delete(&1, message.group))
-    tell_rescued(message.ok?, self() in message.owners, message.orphan?)
+    here? = self() in Map.get(message, :present, [])
+    tell_rescued(message.ok?, self() in message.owners, message.orphan? and here?)
     socket
   end
 
@@ -1027,9 +1031,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end)
   end
 
+  # The insert is cast to the session first; the session checks its state
+  # for the copy when it hears this editor is done (`EditSession.rescued/3`).
   defp rescue_group(%{assigns: %{edit_session: %Replica{session: session}}} = socket, group, payload) do
-    {socket, ok?} = reinsert_payload(socket, payload)
-    EditSession.rescued(session, socket.assigns.block_field, group, ok?)
+    {socket, _inserted?} = reinsert_payload(socket, payload)
+    EditSession.rescued(session, socket.assigns.block_field, group)
     update(socket, :rescue_standby, &Map.delete(&1, group))
   end
 
@@ -1037,7 +1043,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp reinsert_payload(socket, nil), do: {socket, false}
 
+  # A copy of the group that is already there (an insert of an editor asked
+  # before, landing late) is not made twice.
   defp reinsert_payload(socket, payload) do
+    if Ops.known?(socket.assigns.block_ops, kept_uid(nil, elem(payload, tuple_size(payload) - 1))),
+      do: {socket, true},
+      else: do_reinsert_payload(socket, payload)
+  end
+
+  defp do_reinsert_payload(socket, payload) do
     {socket, uid} = reinsert(socket, payload)
 
     if Ops.known?(socket.assigns.block_ops, uid),
@@ -1121,15 +1135,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp strip_row_ids(list) when is_list(list), do: Enum.map(list, &strip_row_ids/1)
   defp strip_row_ids(value), do: value
 
-  # The block comes back under a new uid: the removed rows can still hold
-  # the old one. `<uid>-kept` says where it came from, unless that is taken
-  # too (it was kept once before). Its refs, whose uids are unique as well,
-  # get new ones. Nothing else changes: a `"uid"` inside a ref's data is
-  # the data's own.
-  defp kept_uid(ops, uid) do
-    kept = uid <> "-kept"
-    if Ops.known?(ops, kept), do: Brando.Utils.generate_uid(), else: kept
-  end
+  # The block comes back under a new uid, `<uid>-kept`: the removed rows
+  # can still hold the old one. A copy that is already there is not made
+  # again (`reinsert/2`): a rescue brings a group back once. Its refs, whose
+  # uids are unique as well, get new ones. Nothing else changes: a `"uid"`
+  # inside a ref's data is the data's own.
+  defp kept_uid(_ops, uid), do: uid <> "-kept"
 
   defp rename_block(%{} = block, ops) do
     block
@@ -1233,7 +1244,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp rebase_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket, base) do
     mode = if socket.assigns[:save_rev], do: :own_save, else: :carry
 
-    case EditSession.rebase(session, socket.assigns.block_field, base, mode) do
+    case EditSession.rebase(session, socket.assigns.block_field, base, mode, replica: true) do
       {:ok, info} ->
         {replica, displayed} = Replica.reset(replica, info)
         {:ok, socket |> assign(:edit_session, replica) |> assign(:save_rev, nil), displayed}
