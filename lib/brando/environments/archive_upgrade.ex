@@ -97,20 +97,12 @@ defmodule Brando.Environments.ArchiveUpgrade do
       |> Enum.map(&hd/1)
       |> MapSet.new()
 
-    directory
-    |> Path.join("*.exs")
-    |> Path.wildcard()
-    |> Enum.flat_map(fn path ->
-      case Integer.parse(Path.basename(path, ".exs")) do
-        {version, "_" <> name} ->
-          if MapSet.member?(ran_since, version) and File.read!(path) =~ @environment_loop,
-            do: [{version, name}],
-            else: []
-
-        _ ->
-          []
-      end
-    end)
+    for path <- Path.wildcard(Path.join(directory, "*.exs")),
+        {version, "_" <> name} <- [Integer.parse(Path.basename(path, ".exs"))],
+        MapSet.member?(ran_since, version),
+        File.read!(path) =~ @environment_loop do
+      {version, name}
+    end
     |> Enum.sort()
   end
 
@@ -174,15 +166,15 @@ defmodule Brando.Environments.ArchiveUpgrade do
     tables_and_columns =
       want.columns
       |> Enum.sort()
-      |> Enum.flat_map(fn {table, columns} ->
-        case have.columns[table] do
-          nil -> [table]
-          present -> for {column, _type} = definition <- columns, definition not in present, do: "#{table}.#{column}"
-        end
-      end)
+      |> Enum.flat_map(fn {table, columns} -> missing_columns(table, columns, have.columns[table]) end)
 
     tables_and_columns ++ Enum.sort(MapSet.to_list(MapSet.difference(want.indexes, have.indexes)))
   end
+
+  defp missing_columns(table, _columns, nil), do: [table]
+
+  defp missing_columns(table, columns, present),
+    do: for({column, _type} = definition <- columns, definition not in present, do: "#{table}.#{column}")
 
   defp structure(schema) do
     columns =
