@@ -8,7 +8,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: white;
+    background-color: var(--brando-surface);
     background-image:
       linear-gradient(45deg, rgba(123, 140, 168, 0.1) 25%, transparent 0),
       linear-gradient(-45deg, rgba(123, 140, 168, 0.1) 25%, transparent 0),
@@ -65,23 +65,23 @@ figcaption.tiny {
   position: fixed;
   right: 0;
   top: 0;
-  background-color: #052753;
-  color: azure;
+  background-color: var(--brando-ink);
+  color: var(--brando-ink-inverse);
   overflow-x: hidden;
   overflow-y: scroll;
 
   &.dark {
-    background-color: #000000;
+    background-color: var(--brando-ink);
 
     input.text {
       background: transparent;
-      border: 1px solid white;
+      border: 1px solid var(--brando-surface);
     }
   }
 
   &.light {
-    background-color: #f6f2ea;
-    color: var(--brando-color-dark);
+    background-color: var(--brando-surface);
+    color: var(--brando-ink);
 
     .drawer-info {
       padding-top: 8px !important;
@@ -89,46 +89,46 @@ figcaption.tiny {
     }
 
     .drawer-header h2 {
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
     }
 
     .drawer-close-button {
-      color: var(--brando-color-dark);
-      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 35%, transparent);
-      background: color-mix(in srgb, white 90%, transparent);
+      color: var(--brando-ink);
+      border: 1px solid color-mix(in srgb, var(--brando-ink) 35%, transparent);
+      background: color-mix(in srgb, var(--brando-surface) 90%, transparent);
 
       &:hover {
-        background-color: var(--brando-color-dark);
-        color: white;
+        background-color: var(--brando-ink);
+        color: var(--brando-ink-inverse);
       }
     }
 
     .drawer-form {
       input,
       textarea {
-        color: var(--brando-color-dark);
-        border: 1px solid color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
-        background: white;
+        color: var(--brando-ink);
+        border: 1px solid color-mix(in srgb, var(--brando-ink) 30%, transparent);
+        background: var(--brando-surface);
       }
     }
 
     button.secondary {
-      color: var(--brando-color-dark);
-      border-color: color-mix(in srgb, var(--brando-color-dark) 35%, transparent) !important;
+      color: var(--brando-ink);
+      border-color: color-mix(in srgb, var(--brando-ink) 35%, transparent) !important;
 
       &:hover {
-        background-color: var(--brando-color-dark);
-        color: white;
+        background-color: var(--brando-ink);
+        color: var(--brando-ink-inverse);
       }
     }
 
     button.primary {
-      background-color: var(--brando-color-dark);
-      color: white;
-      border-color: var(--brando-color-dark) !important;
+      background-color: var(--brando-accent);
+      color: var(--brando-ink-inverse);
+      border-color: var(--brando-line) !important;
 
       &:hover {
-        background-color: color-mix(in srgb, var(--brando-color-dark) 85%, white);
+        background-color: color-mix(in srgb, var(--brando-ink) 85%, var(--brando-surface));
       }
     }
   }
@@ -152,7 +152,7 @@ figcaption.tiny {
     --drawer-left-offset: var(--navigation-width, 0px);
     right: auto;
     left: var(--drawer-left-offset);
-    border-right: 1px solid color-mix(in srgb, var(--brando-color-dark) 15%, transparent);
+    border-right: 1px solid color-mix(in srgb, var(--brando-ink) 15%, transparent);
     transition: left 0.4s;
   }
 
@@ -178,8 +178,8 @@ figcaption.tiny {
   }
 
   .drawer-close-button {
-    color: azure;
-    border: 1px solid azure;
+    color: var(--brando-ink-inverse);
+    border: 1px solid var(--brando-ink-inverse);
     padding: 10px 20px;
     border-radius: 25px;
     transition:
@@ -188,14 +188,14 @@ figcaption.tiny {
     font-size: 15px;
 
     &:hover {
-      background-color: azure;
-      color: #052753;
+      background-color: var(--brando-surface);
+      color: var(--brando-ink);
     }
   }
 
   .img-placeholder {
-    color: azure;
-    background-color: #f0ffff0f !important;
+    color: var(--brando-ink-inverse);
+    background-color: color-mix(in srgb, var(--brando-ink-inverse) 6%, transparent) !important;
     border-radius: 0;
 
     .instructions {
@@ -220,7 +220,7 @@ figcaption.tiny {
       circle {
         user-select: none;
         pointer-events: none;
-        fill: azure;
+        fill: var(--brando-ink-inverse);
       }
     }
   }
@@ -240,12 +240,12 @@ figcaption.tiny {
         @extend %btnSecondary;
         @fontsize input;
         text-align: center;
-        border: 1px solid azure !important;
-        color: azure;
+        border: 1px solid var(--brando-ink-inverse) !important;
+        color: var(--brando-ink-inverse);
 
         &:hover {
-          background-color: azure;
-          color: #052753;
+          background-color: var(--brando-surface);
+          color: var(--brando-ink);
           cursor: pointer;
         }
 
@@ -300,8 +300,8 @@ figcaption.tiny {
         display: block;
 
         &:hover {
-          background-color: azure;
-          color: #052753;
+          background-color: var(--brando-surface);
+          color: var(--brando-ink);
           cursor: pointer;
         }
       }
@@ -342,16 +342,16 @@ figcaption.tiny {
   }
 
   .input-image .image-wrapper-compact .image-info .btn-small:hover {
-    color: var(--brando-color-dark);
-    background-color: azure;
+    color: var(--brando-ink);
+    background-color: var(--brando-surface);
   }
 
   button.secondary {
-    color: azure;
-    border-color: azure !important;
+    color: var(--brando-ink-inverse);
+    border-color: var(--brando-ink-inverse) !important;
 
     &:hover {
-      color: #052753;
+      color: var(--brando-ink);
     }
   }
 
@@ -391,42 +391,42 @@ figcaption.tiny {
     input,
     textarea {
       background-color: transparent;
-      color: azure;
-      border: 1px solid azure;
+      color: var(--brando-ink-inverse);
+      border: 1px solid var(--brando-ink-inverse);
     }
 
     .multiselect {
       background-color: transparent;
-      color: azure;
-      border: 1px solid azure;
+      color: var(--brando-ink-inverse);
+      border: 1px solid var(--brando-ink-inverse);
 
       .button-edit {
         background-color: transparent;
-        color: azure;
-        border: 1px solid azure;
+        color: var(--brando-ink-inverse);
+        border: 1px solid var(--brando-ink-inverse);
       }
     }
 
     .character-count,
     .prefill-small {
-      border-color: azure !important;
+      border-color: var(--brando-ink-inverse) !important;
     }
 
     .input-image .image-wrapper-compact {
-      border: 1px solid azure;
+      border: 1px solid var(--brando-ink-inverse);
       background-color: transparent;
     }
 
     button.tiny {
-      color: azure;
-      border: 1px solid azure;
+      color: var(--brando-ink-inverse);
+      border: 1px solid var(--brando-ink-inverse);
       transition:
         background-color 250ms ease,
         color 250ms ease;
 
       &:hover {
-        background-color: azure;
-        color: #052753;
+        background-color: var(--brando-surface);
+        color: var(--brando-ink);
       }
     }
   }
@@ -437,7 +437,7 @@ figcaption.tiny {
     gap: 12px;
     padding: 20px;
     justify-content: center;
-    color: #666;
+    color: var(--brando-muted);
 
     .spinner {
       animation: spin 1s linear infinite;
@@ -451,30 +451,30 @@ figcaption.tiny {
     gap: 12px;
     padding: 20px;
     text-align: center;
-    color: #e53e3e;
+    color: var(--brando-error-ink);
   }
 
   .revision-preview-notice,
   .revisions-empty {
-    border: 1px solid azure;
+    border: 1px solid var(--brando-ink-inverse);
     margin: 12px 0;
     padding: 12px;
     font-size: 13px;
   }
 
   .revision-preview-notice {
-    background-color: azure;
-    color: #052753;
+    background-color: var(--brando-surface);
+    color: var(--brando-ink);
   }
 
   .current-schema-version {
-    color: azure;
+    color: var(--brando-ink-inverse);
     font-size: 14px;
 
     .version {
       @font mono;
-      background-color: azure;
-      color: black;
+      background-color: var(--brando-surface);
+      color: var(--brando-ink);
       padding: 1px 3px;
       margin-left: 3px;
       text-transform: uppercase;
@@ -498,7 +498,7 @@ figcaption.tiny {
     th {
       @font mono;
       padding: 6px 10px;
-      border: 1px solid azure;
+      border: 1px solid var(--brando-ink-inverse);
       font-size: 11px;
       text-align: left;
       text-transform: uppercase;
@@ -507,22 +507,22 @@ figcaption.tiny {
     .revisions-line {
       &.active {
         td {
-          background-color: azure;
-          color: #052753;
+          background-color: var(--brando-surface);
+          color: var(--brando-ink);
 
           button {
-            color: #052753;
-            border-color: #052753;
+            color: var(--brando-ink);
+            border-color: var(--brando-ink);
           }
 
           .datepicker-and-button {
             .input {
-              color: #052753;
-              border: 1px solid #052753;
+              color: var(--brando-ink);
+              border: 1px solid var(--brando-ink);
             }
 
             button {
-              border: 1px solid #052753 !important;
+              border: 1px solid var(--brando-ink) !important;
             }
           }
         }
@@ -530,23 +530,23 @@ figcaption.tiny {
         svg {
           path {
             &:nth-of-type(2) {
-              fill: var(--brando-color-dark);
+              fill: var(--brando-ink);
             }
           }
         }
 
         .circle-dropdown {
           .main-circle {
-            stroke: #052753;
+            stroke: var(--brando-ink);
           }
 
           line {
-            stroke: #052753;
+            stroke: var(--brando-ink);
           }
 
           &:hover {
             line {
-              stroke: azure;
+              stroke: var(--brando-ink-inverse);
             }
           }
         }
@@ -555,7 +555,7 @@ figcaption.tiny {
       svg {
         path {
           &:nth-of-type(2) {
-            fill: azure;
+            fill: var(--brando-ink-inverse);
           }
         }
       }
@@ -563,7 +563,7 @@ figcaption.tiny {
       td {
         @font mono;
         white-space: pre-line;
-        border: 1px solid azure;
+        border: 1px solid var(--brando-ink-inverse);
         padding: 3px 10px;
         font-size: 13px;
         transition:
@@ -646,16 +646,16 @@ figcaption.tiny {
 
         .circle-dropdown {
           .main-circle {
-            stroke: azure;
+            stroke: var(--brando-ink-inverse);
           }
 
           line {
-            stroke: azure;
+            stroke: var(--brando-ink-inverse);
           }
 
           &:hover {
             line {
-              stroke: azure;
+              stroke: var(--brando-ink-inverse);
             }
           }
 
@@ -691,17 +691,17 @@ figcaption.tiny {
   }
 
   .tiny-toggle-label {
-    color: azure;
+    color: var(--brando-ink-inverse);
   }
 
   .img-placeholder .placeholder-wrapper .lucide-video {
     width: 75px;
     height: 75px;
-    color: azure;
+    color: var(--brando-ink-inverse);
   }
 
   .switch .slider {
-    background-color: #f0ffff1f;
+    background-color: color-mix(in srgb, var(--brando-ink-inverse) 12%, transparent);
   }
 }
 
@@ -714,30 +714,30 @@ figcaption.tiny {
   min-height: 58px;
   margin: 0 0 7px;
   padding: 0.45rem 0.55rem;
-  border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brando-ink) 12%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, white 92%, transparent);
-  color: var(--brando-color-dark);
+  background: color-mix(in srgb, var(--brando-surface) 92%, transparent);
+  color: var(--brando-ink);
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-color-dark) 4%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 4%, transparent);
   transition:
     border-color 150ms ease,
     background-color 150ms ease,
     box-shadow 150ms ease;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--brando-color-dark) 24%, transparent);
-    background: color-mix(in srgb, var(--brando-color-peach) 9%, white);
-    box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+    border-color: color-mix(in srgb, var(--brando-ink) 24%, transparent);
+    background: color-mix(in srgb, var(--brando-surface-subform) 9%, var(--brando-surface));
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-ink) 7%, transparent);
   }
 
   &.selected {
-    border-color: color-mix(in srgb, var(--brando-color-blue) 54%, white);
-    background: color-mix(in srgb, var(--brando-color-blue) 5%, white);
+    border-color: color-mix(in srgb, var(--brando-accent) 54%, var(--brando-surface));
+    background: color-mix(in srgb, var(--brando-accent) 5%, var(--brando-surface));
     box-shadow:
-      inset 3px 0 0 color-mix(in srgb, var(--brando-color-blue) 82%, #0f2d59),
-      0 1px 3px color-mix(in srgb, var(--brando-color-blue) 10%, transparent);
+      inset 3px 0 0 color-mix(in srgb, var(--brando-accent) 82%, var(--brando-ink)),
+      0 1px 3px color-mix(in srgb, var(--brando-accent) 10%, transparent);
 
     .file-picker__selected-indicator {
       visibility: visible;
@@ -754,12 +754,12 @@ figcaption.tiny {
     justify-self: center;
     visibility: hidden;
     opacity: 0;
-    color: white;
-    background: color-mix(in srgb, var(--brando-color-blue) 88%, #0f2d59);
+    color: var(--brando-ink-inverse);
+    background: color-mix(in srgb, var(--brando-accent) 88%, var(--brando-ink));
     border-radius: 999px;
     box-shadow:
-      0 0 0 2px color-mix(in srgb, white 88%, transparent),
-      0 1px 3px color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+      0 0 0 2px color-mix(in srgb, var(--brando-surface) 88%, transparent),
+      0 1px 3px color-mix(in srgb, var(--brando-ink) 18%, transparent);
     transition: opacity 120ms ease;
 
     [data-icon] {
@@ -775,8 +775,8 @@ figcaption.tiny {
     align-items: center;
     justify-content: center;
     border-radius: 7px;
-    color: color-mix(in srgb, var(--brando-color-dark) 68%, white);
-    background: color-mix(in srgb, var(--brando-color-dark) 5%, white);
+    color: color-mix(in srgb, var(--brando-ink) 68%, var(--brando-ink-inverse));
+    background: color-mix(in srgb, var(--brando-ink) 5%, var(--brando-surface));
 
     [data-icon] {
       width: 1.1rem;
@@ -808,7 +808,7 @@ figcaption.tiny {
   .file-picker__size {
     @font mono;
     font-size: 10px;
-    color: color-mix(in srgb, var(--brando-color-dark) 62%, white);
+    color: color-mix(in srgb, var(--brando-ink) 62%, var(--brando-ink-inverse));
   }
 
   .file-picker__path {
@@ -820,8 +820,8 @@ figcaption.tiny {
 
   .file-picker__size {
     padding: 0.2rem 0.45rem;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 12%, transparent);
     border-radius: 999px;
-    background: color-mix(in srgb, var(--brando-color-dark) 3%, white);
+    background: color-mix(in srgb, var(--brando-ink) 3%, var(--brando-surface));
   }
 }

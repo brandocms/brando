@@ -175,8 +175,11 @@ value:
 | Main text | `--brando-ink` | `#272b2a` |
 | Secondary text | `--brando-muted` | `#626b66` |
 | Text and icons on a dark fill (accent buttons, checks, photos) | `--brando-ink-inverse` | `#ffffff` |
+| Placeholders, disabled text, counters | `--brando-faint` | `#9aa39c` |
 | Borders and dividers | `--brando-line` | `#dce2dc` |
+| Border on hover or focus, drop target outline | `--brando-line-strong` | `#bacabd` |
 | Main accent (actions, links, focus, progress) | `--brando-accent` | `#254e3f` |
+| Primary button on hover | `--brando-accent-hover` | `#1a3d30` |
 | Page ground | `--brando-surface-page` | `#fafbf9` |
 | Content, cards, inputs | `--brando-surface` | `#ffffff` |
 | Subform surface | `--brando-surface-subform` | `#f8fbf6` |
@@ -186,12 +189,19 @@ value:
 | Selected item, drop target | `--brando-surface-selected` | `#eef3ea` |
 | Modal and loader backdrop | `--brando-overlay` | `rgb(30 43 37 / 30%)` |
 | Badge fill / ink | `--brando-badge-bg` / `--brando-badge-ink` | `#eef0eb` / `#566153` |
-| Needs attention (missing alt text, unsaved, warning badges) / its ink | `--brando-attention` / `--brando-attention-ink` | `#fbefda` / `#87662d` |
+| Needs attention (missing alt text, unsaved, warning badges): tint / rule / ink | `--brando-attention` / `--brando-attention-line` / `--brando-attention-ink` | `#fbefda` / `#e4b866` / `#87662d` |
+| Errors (failed save or upload, invalid field, destructive action): tint / border / ink | `--brando-error` / `--brando-error-line` / `--brando-error-ink` | `#fff1ed` / `#e8ccc4` / `#8c4232` |
+| Switch on / off | `--brando-switch-on` / `--brando-switch-off` | `#9cc79f` / `#c0c0c0` |
 | Status: published | `--brando-status-published` | `#3cb371` |
 | Status: pending | `--brando-status-pending` | `#f1ac00` |
 | Status: draft | `--brando-status-draft` | `#636363` |
 | Status: deactivated | `--brando-status-disabled` | `#cd5c5c` |
 | Status: deleted | `--brando-status-deleted` | `#171a18` |
+
+Modules can be given a colour. Blue, the default, draws a block's chrome with
+the neutral roles above; pink, emerald and peach use
+`--brando-module-<colour>-line`, `-tint`, `-ink` and `-dot` (the outline's
+dot), which keep those categories apart in the block editor.
 
 Utilities also uses screen-specific tints: the authorization header `#f1f5ef`,
 the export surface `#f8f9f5` and the import surface `#f8f8fc`.
@@ -791,7 +801,7 @@ grid, so the empty cells of a short last row stay white. Five columns, six once
 the sheet is wider than about 905px (a grid formula; EuropaCSS reserves
 `@container`). Each square carries its position (a white 20px chip, top left), a
 "▶ Video" badge, and on hover the edit-image, configure and remove actions (top
-right) with a 2px `#c3d5c5` outline. Bottom left sit the caption icon (images and
+right) with a 2px `--brando-line-strong` outline. Bottom left sit the caption icon (images and
 videos) and the ALT chip (images only): white when set, faded for an empty caption
 — captions are optional — and amber (`--brando-attention`/`--brando-attention-ink`) for missing alt text.
 Hovering an icon shows its text in a dark peek; clicking it opens a popover under

@@ -1,7 +1,7 @@
 .variable {
   &.text {
     textarea.text {
-      background-color: #fafafa;
+      background-color: var(--brando-surface-shaded);
     }
   }
 
@@ -44,14 +44,14 @@
     gap: 16px;
     max-width: 400px;
     padding: 16px;
-    border: 1px solid var(--brando-color-dark);
+    border: 1px solid var(--brando-line);
     border-radius: 12px;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     text-decoration: none;
     transition: background-color 150ms ease;
 
     &:hover {
-      background-color: var(--brando-color-peach);
+      background-color: var(--brando-surface-subform);
     }
 
     .file-card__icon {
@@ -102,8 +102,8 @@
   }
 
   .empty {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
+    background-color: var(--brando-surface-subform);
+    color: var(--brando-ink);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;
@@ -126,7 +126,7 @@
         circle {
           user-select: none;
           pointer-events: none;
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
         }
       }
     }
@@ -146,7 +146,7 @@
 
   .upload-canvas {
     &.dragging {
-      background-color: theme(colors.peachDarker) !important;
+      background-color: var(--brando-surface-selected);
       cursor: plus;
 
       svg .plus {
@@ -157,8 +157,8 @@
 }
 
 .brando-input .link-preview .icon {
-  background-color: white;
-  border: 1px dashed #333;
+  background-color: var(--brando-surface);
+  border: 1px dashed var(--brando-muted);
 }
 
 /* What an entry link points at, e.g. "Side", after its title */
@@ -168,7 +168,7 @@
   padding: 0 6px;
   border-radius: 10px;
   background: var(--brando-badge-bg);
-  color: #5b6557;
+  color: var(--brando-muted);
   font-family: inherit;
   font-size: 11px;
   line-height: 16px;
@@ -180,7 +180,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background-color: #fafafa;
+  background-color: var(--brando-surface-shaded);
   width: fit-content;
   padding: 7px 15px 7px 7px;
   border-radius: 7px;
@@ -196,8 +196,8 @@
     flex-grow: 0;
     align-items: center;
     justify-content: center;
-    background-color: #f1f1f1;
-    color: var(--brando-color-dark);
+    background-color: var(--brando-surface-selected);
+    color: var(--brando-ink);
     border-radius: 50%;
 
     [data-icon] {
@@ -216,26 +216,26 @@
 
       svg {
         circle {
-          fill: theme(colors.status.published);
+          fill: var(--brando-status-published);
 
           &.draft {
-            fill: theme(colors.status.draft);
+            fill: var(--brando-status-draft);
           }
 
           &.pending {
-            fill: theme(colors.status.pending);
+            fill: var(--brando-status-pending);
           }
 
           &.published {
-            fill: theme(colors.status.published);
+            fill: var(--brando-status-published);
           }
 
           &.disabled {
-            fill: theme(colors.status.disabled);
+            fill: var(--brando-status-disabled);
           }
 
           &.deleted {
-            fill: #111;
+            fill: var(--brando-status-deleted);
           }
         }
       }

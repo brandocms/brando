@@ -1,9 +1,9 @@
 .draft-recovery {
-  --draft-ink: var(--brando-color-dark);
-  --draft-muted: #5d6b80;
-  --draft-line: #dde3ed;
-  --draft-accent: #1746cb;
-  --draft-tint: #f3f6ff;
+  --draft-ink: var(--brando-ink);
+  --draft-muted: var(--brando-muted);
+  --draft-line: var(--brando-line);
+  --draft-accent: var(--brando-accent);
+  --draft-tint: var(--brando-surface-shaded);
   /* The notice and the panel carry the spacing, so an editor without
      either leaves no gap under its heading. */
   margin-bottom: 0;
@@ -35,9 +35,9 @@
     min-height: 32px;
     margin: 0;
     padding: 5px 12px;
-    border: 1px solid #cbd4e2;
+    border: 1px solid var(--brando-line);
     border-radius: 5px;
-    background: white;
+    background: var(--brando-surface);
     color: var(--draft-ink);
     font: inherit;
     font-weight: 500;
@@ -48,8 +48,8 @@
     cursor: pointer;
 
     &:hover {
-      background: #f0f3f9;
-      border-color: #a7b5cc;
+      background: var(--brando-surface-hover);
+      border-color: var(--brando-line-strong);
     }
     &:disabled {
       opacity: 0.55;
@@ -60,12 +60,12 @@
   .draft-button-primary {
     border-color: var(--draft-accent);
     background: var(--draft-accent);
-    color: white;
-    box-shadow: 0 1px 2px #09275514;
+    color: var(--brando-ink-inverse);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 8%, transparent);
 
     &:hover {
-      background: #1037a6;
-      border-color: #1037a6;
+      background: var(--brando-accent-hover);
+      border-color: var(--brando-accent-hover);
     }
   }
 
@@ -83,12 +83,12 @@
   .draft-button-danger {
     border-color: transparent;
     background: transparent;
-    color: #984138;
+    color: var(--brando-error-ink);
 
     &:hover {
-      border-color: #efd8d3;
-      background: #fff2ee;
-      color: #7d2921;
+      border-color: var(--brando-error-line);
+      background: var(--brando-error);
+      color: var(--brando-error-ink);
     }
   }
 
@@ -135,8 +135,8 @@
     margin: 0 0 20px;
     border: 1px solid var(--draft-line);
     border-radius: 10px;
-    background: white;
-    box-shadow: 0 3px 6px #09275503, 0 12px 32px #09275506;
+    background: var(--brando-surface);
+    box-shadow: 0 3px 6px color-mix(in srgb, var(--brando-ink) 1%, transparent), 0 12px 32px color-mix(in srgb, var(--brando-ink) 2%, transparent);
   }
 
   .draft-recovery-notice {
@@ -171,9 +171,9 @@
     justify-content: center;
     width: 48px;
     height: 48px;
-    border: 1px solid #dce5fb;
+    border: 1px solid var(--brando-line);
     border-radius: 14px;
-    background: #edf2ff;
+    background: var(--brando-surface-selected);
     color: var(--draft-accent);
 
     .draft-icon {
@@ -189,7 +189,7 @@
     padding: 24px;
     border-bottom: 1px solid var(--draft-line);
     border-radius: 10px 10px 0 0;
-    background: linear-gradient(110deg, #f7f9ff, white 80%);
+    background: linear-gradient(110deg, var(--brando-surface-shaded), var(--brando-surface) 80%);
   }
 
   .draft-heading {
@@ -249,7 +249,7 @@
       position: sticky;
       top: 0;
       z-index: 1;
-      background: #f8f9fc;
+      background: var(--brando-surface-shaded);
       color: var(--draft-muted);
       font-size: 12px;
       font-weight: 500;
@@ -293,7 +293,7 @@
     cursor: pointer;
 
     &:hover {
-      background: #edf2fb;
+      background: var(--brando-surface-hover);
     }
     &:focus-visible {
       outline-offset: -3px;
@@ -313,9 +313,9 @@
     justify-content: center;
     flex: 0 0 22px;
     height: 22px;
-    border: 1px solid #b8c3d5;
+    border: 1px solid var(--brando-line);
     border-radius: 50%;
-    color: white;
+    color: var(--brando-ink-inverse);
 
     .draft-icon {
       width: 14px;
@@ -375,23 +375,23 @@
   }
   .draft-content-preview .text-diff-lines { max-height: none; overflow: visible; overscroll-behavior: auto; }
   .draft-order-diff {
-    border: 1px solid #dce4df;
+    border: 1px solid var(--brando-line);
     border-radius: 8px;
     overflow: hidden;
     color: var(--brando-ink);
     font: 13px/20px "Main", sans-serif;
-    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 16px; background: #f8faf8; border-bottom: 1px solid #e4e9e5; }
+    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 16px; background: var(--brando-surface-shaded); border-bottom: 1px solid var(--brando-line); }
     h4 { margin: 0; font: inherit; font-weight: 500; }
-    .draft-order-badge { padding: 3px 7px; border-radius: 4px; background: #edf2f6; color: #466176; font-size: 11px; }
+    .draft-order-badge { padding: 3px 7px; border-radius: 4px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 11px; }
     .draft-order-columns { display: flex; justify-content: space-between; gap: 16px; padding: 8px 16px; color: var(--brando-muted); font-size: 11px; }
     ol { list-style: none; padding: 0; margin: 0; }
-    li { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0; padding: 12px 16px; border-top: 1px solid #edf0ed; }
+    li { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0; padding: 12px 16px; border-top: 1px solid var(--brando-line); }
     .draft-order-item { display: flex; align-items: center; gap: 12px; min-width: 0; overflow-wrap: anywhere; }
     img { display: block; width: 64px; min-width: 0; max-width: 64px; height: auto; flex: 0 0 64px; border-radius: 4px; }
-    .draft-order-icon { display: grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; border-radius: 4px; background: #f1f5ef; color: #49634f; }
+    .draft-order-icon { display: grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; border-radius: 4px; background: var(--brando-surface-selected); color: var(--brando-badge-ink); }
     .draft-order-icon > [data-icon], .draft-order-icon svg { width: 14px; height: 14px; }
     .draft-order-positions { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--brando-muted); }
-    .draft-order-positions > span:last-child { background: #edf2f6; border-radius: 4px; padding: 3px 8px; color: #35566c; }
+    .draft-order-positions > span:last-child { background: var(--brando-badge-bg); border-radius: 4px; padding: 3px 8px; color: var(--brando-badge-ink); }
     @media (max-width: 600px) {
       header, li { padding: 12px; }
       li, .draft-order-item { gap: 8px; }
@@ -409,7 +409,7 @@
     font: 13px/20px "Main", sans-serif;
     cursor: pointer;
     input { appearance: auto; width: 16px; height: 16px; margin: 0; accent-color: var(--brando-accent); cursor: pointer; }
-    input:focus-visible { outline: 2px solid #47775d; outline-offset: 3px; }
+    input:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
   }
   .draft-content-preview[data-show-unchanged="false"] {
     .text-diff-line.is-eq:not(.is-change-heading),
@@ -473,7 +473,7 @@
     padding: 16px;
     border: 1px solid var(--draft-line);
     border-radius: 8px;
-    background: #f8f9fc;
+    background: var(--brando-surface-shaded);
     color: var(--draft-ink);
     font-size: 12px;
     line-height: 1.6;
@@ -497,10 +497,10 @@
   .draft-error, .draft-block-issue {
     margin-top: 20px;
     padding: 16px 18px;
-    border: 1px solid #edd8b2;
+    border: 1px solid var(--brando-attention-line);
     border-radius: 10px;
-    background: #fff9ef;
-    color: #754718;
+    background: var(--brando-attention);
+    color: var(--brando-attention-ink);
 
     h3 {
       display: flex;
@@ -529,7 +529,7 @@
     height: 18px;
   }
   .draft-block-issue summary {
-    color: #754718;
+    color: var(--brando-attention-ink);
   }
 
   .draft-panel-footer {
@@ -541,7 +541,7 @@
     padding: 16px 24px;
     border-top: 1px solid var(--draft-line);
     border-radius: 0 0 10px 10px;
-    background: #fafbfe;
+    background: var(--brando-surface-shaded);
 
     .draft-actions {
       justify-content: flex-end;

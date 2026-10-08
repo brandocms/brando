@@ -6,7 +6,7 @@
     align-items: center;
     gap: 10px;
     padding: 6px 15px;
-    background-color: var(--brando-color-input);
+    background-color: var(--brando-surface);
     margin-bottom: 1px;
     max-width: 550px;
   }
@@ -38,7 +38,7 @@
       padding: 4px 8px;
       font-size: 13px;
       font-family: theme(typography.families.mono);
-      background-color: var(--brando-color-input);
+      background-color: var(--brando-surface);
       border: 1px solid rgba(0, 0, 0, 0.1);
     }
 

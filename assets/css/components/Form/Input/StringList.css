@@ -8,7 +8,7 @@
   --list-hover: var(--brando-surface-hover);
   --list-ink: var(--brando-ink);
   --list-muted: var(--brando-muted);
-  --list-faint: #99a39b;
+  --list-faint: var(--brando-faint);
   --list-accent: var(--brando-accent);
 
   display: flex;
@@ -108,7 +108,7 @@
     border: 0;
     border-radius: 4px;
     background: transparent;
-    color: #707c73;
+    color: var(--brando-muted);
     opacity: 0;
     transition: opacity 120ms ease;
     cursor: pointer;
@@ -121,7 +121,7 @@
 
     &:hover,
     &:focus-visible {
-      background: #eef3ed;
+      background: var(--brando-surface-selected);
       color: var(--list-ink);
       opacity: 1;
     }

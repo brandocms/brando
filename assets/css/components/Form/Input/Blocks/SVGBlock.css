@@ -1,14 +1,14 @@
 .svg-block {
   &.dragging {
     .empty {
-      background-color: theme(colors.peachDarker) !important;
+      background-color: var(--brando-surface-selected);
       cursor: plus;
     }
   }
 
   .empty {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
+    background-color: var(--brando-surface-subform);
+    color: var(--brando-ink);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;
@@ -77,8 +77,8 @@
     }
 
     .img-placeholder {
-      background-color: var(--brando-color-peach);
-      color: var(--brando-color-dark);
+      background-color: var(--brando-surface-subform);
+      color: var(--brando-ink);
       padding: 2vw;
 
       .instructions {
@@ -97,7 +97,7 @@
         path:nth-of-type(2), .plus, circle {
           user-select: none;
           pointer-events: none;
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
         }
       }
     }

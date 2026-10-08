@@ -2,21 +2,21 @@
   width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) 22px;
   align-items: center; column-gap: 14px; text-align: left;
   padding: 20px 24px 20px 20px; margin: 12px 0;
-  border: 1px dashed color-mix(in srgb, var(--brando-color-dark) 26%, transparent);
-  border-radius: 10px; background: color-mix(in srgb, var(--brando-color-peach) 20%, white);
-  color: var(--brando-color-dark);
+  border: 1px dashed color-mix(in srgb, var(--brando-ink) 26%, transparent);
+  border-radius: 10px; background: color-mix(in srgb, var(--brando-surface-subform) 20%, var(--brando-surface));
+  color: var(--brando-ink);
   transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
   &:hover {
-    border-color: var(--brando-color-blue);
-    background: color-mix(in srgb, var(--brando-color-blue) 3%, white);
-    .block-region-icon { background: color-mix(in srgb, var(--brando-color-blue) 9%, white); }
+    border-color: var(--brando-accent);
+    background: color-mix(in srgb, var(--brando-accent) 3%, var(--brando-surface));
+    .block-region-icon { background: color-mix(in srgb, var(--brando-accent) 9%, var(--brando-surface)); }
     .block-region-arrow { transform: translate(2px, -2px); }
   }
-  &:focus-visible { outline: 2px solid var(--brando-color-blue); outline-offset: 4px; }
+  &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 4px; }
   .block-region-icon {
     width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
-    border-radius: 50%; background: color-mix(in srgb, var(--brando-color-dark) 5%, white);
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 9%, transparent);
+    border-radius: 50%; background: color-mix(in srgb, var(--brando-ink) 5%, var(--brando-surface));
+    border: 1px solid color-mix(in srgb, var(--brando-ink) 9%, transparent);
     transition: background 150ms ease;
     > span { width: 21px; height: 21px; }
   }
@@ -29,20 +29,20 @@
 .block-slot-drawer {
   display: none; position: fixed; inset: 0; z-index: 900;
   &.visible { display: block; }
-  .block-slot-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #05275230; backdrop-filter: blur(2px); }
-  .block-slot-panel { position: absolute; inset: 0 0 0 auto; width: min(680px, 92vw); display: flex; flex-direction: column; background: #fcf5f3; color: #052752; box-shadow: -12px 0 60px #05275224; }
+  .block-slot-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--brando-overlay); backdrop-filter: blur(2px); }
+  .block-slot-panel { position: absolute; inset: 0 0 0 auto; width: min(680px, 92vw); display: flex; flex-direction: column; background: var(--brando-surface-page); color: var(--brando-ink); box-shadow: -12px 0 60px color-mix(in srgb, var(--brando-ink) 14%, transparent); }
   .block-slot-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 30px 32px 20px; }
-  .block-slot-breadcrumb { margin: 0 0 9px; font-size: 12px; color: #5a6b80; }
+  .block-slot-breadcrumb { margin: 0 0 9px; font-size: 12px; color: var(--brando-muted); }
   .block-slot-header h2 { margin: 0; font-size: 29px; font-weight: 500; line-height: 1.2; overflow-wrap: anywhere; }
-  .block-slot-done { padding: 10px 19px; border: 1px solid #052752; border-radius: 7px; background: #052752; color: white; font-size: 14px; }
-  .block-slot-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 32px 18px; font-size: 12px; border-bottom: 1px solid #0527521f; }
-  .block-slot-set { padding: 4px 9px; border: 1px solid #05275224; border-radius: 5px; background: #ffffffb0; }
+  .block-slot-done { padding: 10px 19px; border: 1px solid var(--brando-accent); border-radius: 7px; background: var(--brando-accent); color: var(--brando-ink-inverse); font-size: 14px; }
+  .block-slot-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 32px 18px; font-size: 12px; border-bottom: 1px solid var(--brando-line); }
+  .block-slot-set { padding: 4px 9px; border: 1px solid var(--brando-line); border-radius: 5px; background: color-mix(in srgb, var(--brando-surface) 69%, transparent); }
   .block-slot-content { padding: 10px 30px 28px; overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
   .block-slot-empty { text-align: center; padding: 34px 20px 22px; }
-  .block-slot-empty [data-icon] { width: 32px; height: 32px; color: #738198; }
+  .block-slot-empty [data-icon] { width: 32px; height: 32px; color: var(--brando-muted); }
   .block-slot-empty h3 { font-size: 20px; margin: 14px 0 8px; font-weight: 500; }
-  .block-slot-empty p { font-size: 14px; color: #5a6b80; line-height: 1.6; max-width: 330px; margin: auto; }
-  .block-slot-footer { display: flex; align-items: center; gap: 10px; padding: 17px 32px; border-top: 1px solid #0527521f; background: #ffffff80; font-size: 12px; color: #5a6b80; }
+  .block-slot-empty p { font-size: 14px; color: var(--brando-muted); line-height: 1.6; max-width: 330px; margin: auto; }
+  .block-slot-footer { display: flex; align-items: center; gap: 10px; padding: 17px 32px; border-top: 1px solid var(--brando-line); background: color-mix(in srgb, var(--brando-surface) 50%, transparent); font-size: 12px; color: var(--brando-muted); }
   .block-slot-footer [data-icon] { width: 17px; height: 17px; }
   .base-block { margin: 0; max-width: 100%; }
   .block { border-radius: 9px; }
@@ -54,27 +54,27 @@
 .footnote-storage > .blocks-content { margin: 0; padding: 0; }
 
 .unused-collections {
-  margin: 12px 0 24px; padding: 18px 20px; border: 1px solid #ccad76;
-  border-radius: 9px; background: #fff9ed; color: #052752;
+  margin: 12px 0 24px; padding: 18px 20px; border: 1px solid var(--brando-attention-line);
+  border-radius: 9px; background: var(--brando-attention); color: var(--brando-ink);
   h3 { font-size: 15px; font-weight: 600; margin: 0 0 7px; span { margin-left: 6px; } }
   > p { font-size: 13px; line-height: 1.5; margin: 0 0 12px; }
   ul { list-style: none; padding: 0; margin: 0; }
   li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 10px 0; }
-  li + li { border-top: 1px solid #05275218; }
+  li + li { border-top: 1px solid var(--brando-line); }
   .unused-collection-label { display: grid; gap: 3px; min-width: 0; strong { overflow-wrap: anywhere; } > span { font-size: 12px; opacity: .7; } }
   .unused-collection-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  button { border: 1px solid #05275230; border-radius: 5px; padding: 7px 11px; background: white; color: inherit; font-size: 13px; }
-  button:hover { border-color: #052752; }
-  button:focus-visible, select:focus-visible { outline: 2px solid #0047e5; outline-offset: 3px; }
-  .region-remap-form { border-top: 1px solid #05275218; margin-top: 8px; padding-top: 14px; label { display: block; font-size: 13px; margin-bottom: 8px; } select { width: 100%; padding: 8px; margin-bottom: 12px; } button + button { margin-left: 8px; } }
+  button { border: 1px solid var(--brando-line); border-radius: 5px; padding: 7px 11px; background: var(--brando-surface); color: inherit; font-size: 13px; }
+  button:hover { border-color: var(--brando-line-strong); }
+  button:focus-visible, select:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
+  .region-remap-form { border-top: 1px solid var(--brando-line); margin-top: 8px; padding-top: 14px; label { display: block; font-size: 13px; margin-bottom: 8px; } select { width: 100%; padding: 8px; margin-bottom: 12px; } button + button { margin-left: 8px; } }
 }
 
 .tiptap .tiptap-footnote {
   display: inline-flex; align-items: center; justify-content: center; vertical-align: super;
   min-width: 21px; min-height: 21px; padding: 2px 5px; margin: 0 2px; border: 0;
-  border-radius: 4px; background: #e9efff; color: #0047e5; font-size: 11px; line-height: 1;
+  border-radius: 4px; background: var(--brando-surface-selected); color: var(--brando-accent); font-size: 11px; line-height: 1;
   cursor: pointer;
-  &:hover { background: #0047e5; color: white; }
+  &:hover { background: var(--brando-accent); color: var(--brando-ink-inverse); }
 }
 
 @media (max-width: 600px) {

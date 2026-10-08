@@ -24,7 +24,7 @@
   flex-direction: column;
   min-width: 0;
   border-radius: 14px;
-  background-color: var(--brando-color-white);
+  background-color: var(--brando-surface);
   box-shadow: 0 1px 2px rgba(5, 39, 82, 0.05), 0 0 0 1px rgba(5, 39, 82, 0.06);
   overflow: hidden;
 }
@@ -35,7 +35,7 @@
   justify-content: space-between;
   gap: 18px;
   padding: 18px 20px 16px;
-  border-bottom: 1px solid #f1ebe9;
+  border-bottom: 1px solid var(--brando-line);
 
   h2 {
     font-size: 18px;
@@ -68,7 +68,7 @@
 
   span {
     padding-bottom: 5px;
-    border-bottom: 1px solid #f1ebe9;
+    border-bottom: 1px solid var(--brando-line);
     @font mono;
     font-size: 9px;
     text-align: center;
@@ -88,7 +88,7 @@
   min-height: 80px;
   padding: 8px 8px 8px 34px;
   border-radius: 10px;
-  background-color: #fbf8f7;
+  background-color: var(--brando-surface-shaded);
 
   &.is-sorting {
     opacity: 0.4;
@@ -119,7 +119,7 @@
   border: none;
   border-radius: 4px;
   background-color: transparent;
-  color: #cfc5c1;
+  color: var(--brando-faint);
   cursor: grab;
   transition: color 120ms ease, background-color 120ms ease;
 
@@ -134,8 +134,8 @@
 }
 
 .var-layout-row:hover .var-row-handle {
-  background-color: #f1eae7;
-  color: #8d827d;
+  background-color: var(--brando-surface-selected);
+  color: var(--brando-muted);
 }
 
 /* used units over total, stacked like a written fraction */
@@ -151,7 +151,7 @@
     font-weight: 400;
 
     &.full {
-      color: theme(colors.status.published);
+      color: var(--brando-status-published);
     }
   }
 
@@ -167,7 +167,7 @@
   .flex-mark {
     display: block;
     margin-top: 5px;
-    color: var(--brando-color-blue);
+    color: var(--brando-accent);
 
     [data-icon] {
       width: 11px;
@@ -197,14 +197,14 @@
   gap: 7px;
   min-width: 0;
   padding: 8px 9px 7px;
-  border: 1px solid #e6dedb;
+  border: 1px solid var(--brando-line);
   border-radius: 8px;
-  background-color: var(--brando-color-white);
+  background-color: var(--brando-surface);
   cursor: grab;
   transition: box-shadow 120ms ease, border-color 120ms ease, opacity 120ms ease;
 
   &:hover {
-    border-color: #d8ceca;
+    border-color: var(--brando-line-strong);
     box-shadow: 0 1px 3px rgba(5, 39, 82, 0.08);
   }
 
@@ -272,7 +272,7 @@
   margin-left: auto;
   padding: 1px 6px;
   border-radius: 4px;
-  background-color: #f5f1ef;
+  background-color: var(--brando-surface-selected);
   @font mono;
   font-size: 9px;
   letter-spacing: 0.04em;
@@ -342,24 +342,24 @@
     padding: 0;
     border: none;
     border-radius: 5px;
-    background-color: #f5f1ef;
+    background-color: var(--brando-surface-selected);
     transition: background-color 0.2s ease;
 
     &:hover {
-      background-color: #e2dad6;
+      background-color: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected));
     }
 
     [data-icon] {
       width: 13px;
       height: 13px;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
     }
 
     &.var-chip-danger:hover {
-      background-color: #f6dcd8;
+      background-color: var(--brando-error);
 
       [data-icon] {
-        color: #8c2b1c;
+        color: var(--brando-error-ink);
       }
     }
   }
@@ -383,7 +383,7 @@
 .var-width-group {
   display: flex;
   overflow: hidden;
-  border: 1px solid #f1ebe9;
+  border: 1px solid var(--brando-line);
   border-radius: 5px;
 
   button {
@@ -391,9 +391,9 @@
        quarter-width chip before the footer wraps. */
     padding: 2px 4px;
     border: none;
-    border-right: 1px solid #f1ebe9;
+    border-right: 1px solid var(--brando-line);
     background-color: transparent;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     @font mono;
     font-size: 9.5px;
     opacity: 0.55;
@@ -424,7 +424,7 @@
   min-height: 46px;
   margin-top: 8px;
   padding: 14px;
-  border: 1px dashed #d8ceca;
+  border: 1px dashed var(--brando-line);
   border-radius: 10px;
   font-size: 12.5px;
   opacity: 0.6;
@@ -462,7 +462,7 @@
   margin-top: 18px;
   padding: 14px 16px 16px;
   border-radius: 10px;
-  background-color: var(--brando-color-shaded);
+  background-color: var(--brando-surface-shaded);
   box-shadow: var(--brando-card-shadow);
 }
 
@@ -496,9 +496,9 @@
   align-items: center;
   gap: 8px;
   padding: 5px 6px 5px 11px;
-  border: 1px solid #f1ebe9;
+  border: 1px solid var(--brando-line);
   border-radius: 999px;
-  background-color: var(--brando-color-white);
+  background-color: var(--brando-surface);
   @font mono;
   font-size: 11.5px;
 
@@ -506,13 +506,13 @@
     padding: 3px 9px;
     border: none;
     border-radius: 999px;
-    background-color: #f5f1ef;
+    background-color: var(--brando-surface-selected);
     font-family: inherit;
     font-size: 11px;
     transition: background-color 0.2s ease;
 
     &:hover {
-      background-color: #e2dad6;
+      background-color: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected));
     }
   }
 }
@@ -523,7 +523,7 @@
    block on a page, not as another panel. */
 .var-layout-preview-scroll {
   padding: 18px;
-  background-color: var(--brando-color-background);
+  background-color: var(--brando-surface-page);
 }
 
 /* Everything inside is the block editor's own markup, so Block.css styles it —
@@ -555,7 +555,7 @@
   width: 26px;
   height: 14px;
   border-radius: 999px;
-  background-color: #23b26a;
+  background-color: var(--brando-switch-on);
 
   i {
     position: absolute;
@@ -564,7 +564,7 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: var(--brando-color-white);
+    background-color: var(--brando-surface);
   }
 }
 
@@ -582,14 +582,14 @@
   display: grid;
   place-items: center;
   padding: 28px;
-  background: repeating-linear-gradient(-45deg, var(--brando-color-shaded) 0 6px, #f7f7f7 6px 12px);
+  background: repeating-linear-gradient(-45deg, var(--brando-surface-shaded) 0 6px, var(--brando-surface-hover) 6px 12px);
   font-size: 12px;
   opacity: 0.5;
 }
 
 .preview-empty {
   padding: 24px;
-  border: 1px dashed #d8ceca;
+  border: 1px dashed var(--brando-line);
   border-radius: 8px;
   font-size: 13px;
   text-align: center;
@@ -618,7 +618,7 @@
     [data-icon] {
       width: 15px;
       height: 15px;
-      color: var(--brando-color-dark);
+      color: var(--brando-ink);
     }
   }
 }

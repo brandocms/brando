@@ -1,7 +1,7 @@
 .block {
   .rendered-variable {
     @font mono;
-    background-color: #fafafa;
+    background-color: var(--brando-surface-shaded);
     padding: 14px 16px;
     width: fit-content;
     border-radius: 12px;
@@ -40,14 +40,14 @@
 
     width: 100%;
     border: none;
-    background-color: var(--brando-color-white);
+    background-color: var(--brando-surface);
     border-radius: 35px;
     padding: 1rem;
     transition: background-color 350ms ease, color 350ms ease;
 
     &.phx-click-loading {
-      background-color: var(--brando-color-dark);
-      color: var(--brando-color-peach);
+      background-color: var(--brando-ink);
+      color: var(--brando-ink-inverse);
     }
   }
 }

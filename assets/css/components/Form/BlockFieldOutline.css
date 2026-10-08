@@ -31,7 +31,7 @@
   border-radius: 6px;
   background: none;
   cursor: pointer;
-  color: #9ca3af;
+  color: var(--brando-faint);
   padding: 0;
 
   span {
@@ -40,8 +40,8 @@
   }
 
   &:hover {
-    color: var(--brando-color-dark);
-    background-color: color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+    color: var(--brando-ink);
+    background-color: color-mix(in srgb, var(--brando-ink) 5%, transparent);
   }
 }
 
@@ -75,7 +75,7 @@
 
 .outline-empty {
   padding: 16px 20px;
-  color: #9ca3af;
+  color: var(--brando-faint);
   font-size: 13px;
 }
 
@@ -93,7 +93,7 @@
   cursor: grab;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+    background-color: color-mix(in srgb, var(--brando-ink) 5%, transparent);
   }
 
   &:active {
@@ -106,22 +106,22 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  background-color: #93c5fd;
+  background-color: var(--brando-line-strong);
 
   &.color-blue {
-    background-color: #93c5fd;
+    background-color: var(--brando-line-strong);
   }
 
   &.color-emerald {
-    background-color: #6ee7b7;
+    background-color: var(--brando-module-emerald-dot);
   }
 
   &.color-pink {
-    background-color: #f9a8d4;
+    background-color: var(--brando-module-pink-dot);
   }
 
   &.color-peach {
-    background-color: #fdba74;
+    background-color: var(--brando-module-peach-dot);
   }
 }
 
@@ -140,9 +140,9 @@
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: black;
+  color: var(--brando-ink);
   flex-shrink: 0;
-  border: 1px solid black;
+  border: 1px solid var(--brando-muted);
   border-radius: 3px;
   padding: 2px 3px;
 }
@@ -158,7 +158,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #9ca3af;
+  color: var(--brando-faint);
   font-size: 12px;
 
   &::before {
@@ -180,7 +180,7 @@
 
 .outline-item.drag-item {
   opacity: 0.8;
-  background-color: white;
+  background-color: var(--brando-surface);
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
