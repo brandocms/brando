@@ -5,7 +5,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   use Brando.LiveCase
 
   import Brando.EditSessionEditors
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query, only: [from: 2, where: 3]
 
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.DeleteBlock
@@ -603,6 +603,28 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       end
     end
 
+    test "saving it writes the working copy, and another editor's later work stays", c do
+      Application.put_env(:brando, EditSession, grace_period: 30_000)
+      a = open(c.conn, c.identity)
+      b = open(c.other_conn, c.identity)
+      load_working_copy(a, c)
+      assert render(a) =~ ~r/draft-save-state" data-state="dirty"/
+
+      type(b, c.second, "<p>B, after the preview</p>")
+      await(fn -> inspect(session_state(c.identity).diffs) =~ "B, after the preview" end)
+
+      stay(a)
+      save_read(a)
+      save_write(a)
+      await(fn -> Map.new(texts(c.identity))[c.first] == "<p>Working-copy block</p>" end)
+      await_remount(a, c)
+
+      await(fn -> shown_text(b, c.first) == "<p>Working-copy block</p>" end)
+      assert shown_text(b, c.second) == "<p>B, after the preview</p>"
+      assert shown_text(a, c.first) == "<p>Working-copy block</p>"
+      refute inspect(session_state(c.identity).diffs) =~ "Discard this block"
+    end
+
     test "another editor's work after the preview loaded is kept when it is activated", c do
       Application.put_env(:brando, EditSession, grace_period: 30_000)
       a = open(c.conn, c.identity)
@@ -620,6 +642,101 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       assert shown_text(b, c.second) == "<p>B, after the preview</p>"
       assert shown_text(a, c.first) == "<p>Working-copy block</p>"
       assert shown_text(a, c.second) == "<p>B, after the preview</p>"
+    end
+  end
+
+  # Loading a revision as a working copy made the revision's rows the form's
+  # data, so the form held no changes and Save wrote nothing: the editor
+  # showed the revision restored while the database kept what it had.
+  describe "saving a revision loaded as a working copy" do
+    defp work_rows(page) do
+      Page
+      |> Repo.get!(page.id)
+      |> Repo.preload([entry_blocks: [block: [:refs, :vars, children: [:refs, :vars]]]], force: true)
+      |> Map.get(:entry_blocks)
+      |> Enum.sort_by(& &1.sequence)
+    end
+
+    defp content(page) do
+      page = Repo.get!(Page, page.id)
+
+      blocks =
+        Enum.map(work_rows(page), fn %{block: block} ->
+          %{
+            module_id: block.module_id,
+            refs: block.refs |> Enum.map(&{&1.name, get_in(&1.data.data, [Access.key(:text)])}) |> Enum.sort(),
+            children:
+              Enum.map(block.children, fn child ->
+                {child.refs |> Enum.map(&{&1.name, get_in(&1.data.data, [Access.key(:text)])}) |> Enum.sort(),
+                 Enum.map(child.vars, &{&1.key, &1.value})}
+              end)
+          }
+        end)
+
+      vars = Brando.Content.Var |> where([v], v.page_id == ^page.id) |> Repo.all() |> Enum.map(&{&1.key, &1.value})
+      {page.title, vars, blocks}
+    end
+
+    defp set_child(view, uid, path, value) do
+      selector = "#child_block_form-#{uid}"
+      params = view |> render() |> form_params(selector) |> put_in(path, value) |> Map.put("_target", path)
+      view |> element(selector) |> render_change(params)
+    end
+
+    test "writes the revision's fields, blocks and nested refs and vars", c do
+      c = Brando.ProposalFixtures.multi_context(c)
+      [alpha | _] = c.child_uids
+
+      var =
+        Repo.insert!(%Brando.Content.Var{
+          type: :string,
+          key: "subtitle",
+          label: "Subtitle",
+          value: "As in the revision",
+          page_id: c.work.id,
+          sequence: 0
+        })
+
+      entry = Page |> Repo.get!(c.work.id) |> Repo.preload(Brando.Blueprint.preloads_for(Page))
+      {:ok, _} = Brando.Revisions.create_revision(entry, c.user)
+      revision = revisions(c.work)
+      before = content(c.work)
+
+      # the entry moves on: fields (one an entry var), a nested ref and var,
+      # a block removed and one added
+      var |> Ecto.Changeset.change(value: "Moved on") |> Repo.update!()
+      a = open(c.conn, c.work)
+      stay(a)
+
+      a
+      |> form("#page_form_form")
+      |> render_change(%{"page" => %{"title" => "Moved on"}, "_target" => ["page", "title"]})
+
+      set_child(a, alpha, ["child_block", "refs", "0", "data", "data", "text"], "<p>Alpha, moved on</p>")
+      set_child(a, alpha, ["child_block", "vars", "0", "value"], "50")
+      Phoenix.LiveView.send_update(a.pid, BlockField, id: @block_field, event: "delete_block", uid: c.intro_uid)
+      insert_block(a, c, 1)
+      await(fn -> length(session_state(c.work).order) == 2 and c.intro_uid not in session_state(c.work).order end)
+      save_read(a)
+      save_write(a)
+      await(fn -> content(c.work) != before and elem(content(c.work), 0) == "Moved on" end)
+      moved_on = content(c.work)
+      assert moved_on != before
+
+      # the revision, loaded and saved
+      drawer = cid_of(a, "#page_form-revisions-drawer-tab-activity")
+      a |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision})
+      title = fn -> a |> render() |> form_params("#page_form_form") |> get_in(["page", "title"]) end
+      await(fn -> title.() == "Work" end)
+      # the editor says it has unsaved changes
+      assert render(a) =~ ~r/draft-save-state" data-state="dirty"/
+
+      stay(a)
+      save_read(a)
+      save_write(a)
+
+      await(fn -> content(c.work) == before end)
+      assert Process.alive?(a.pid)
     end
   end
 end

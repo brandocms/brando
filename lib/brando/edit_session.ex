@@ -293,8 +293,8 @@ defmodule Brando.EditSession do
 
   @impl true
   def handle_call({:join, pid, field, base, held, opts}, _from, session) do
-    detached? = detached?(session, field, pid)
-    {reply, session} = do_join(track(session, pid, field, opts), pid, field, base, held, opts, detached?)
+    how = if detached?(session, field, pid) and opts[:rebase] == true, do: :wrote_working_copy, else: :join
+    {reply, session} = do_join(track(session, pid, field, opts), pid, field, base, held, opts, how)
 
     # The mark of a working copy this editor left for (`detach/2`) goes with
     # the join, used by its rebase if it had one.
@@ -496,7 +496,20 @@ defmodule Brando.EditSession do
     end
   end
 
-  defp do_join(session, pid, field, base, held, opts, detached?) do
+  # An editor that left for a working copy (`detach/2`) and wrote it joins
+  # with the rows it wrote: they replace what the session held when it
+  # left, even when only their content changed (equal rows would join).
+  defp do_join(session, pid, field, base, held, opts, :wrote_working_copy) do
+    session =
+      session
+      # the rows were written: every replica reads them again
+      |> do_rebase(field, base, {:client, {:detached, pid}}, pid, :saved)
+      |> merge_held(field, held, opts[:held_base] || base, pid)
+
+    {{:ok, info(session, field, pid, false)}, session}
+  end
+
+  defp do_join(session, pid, field, base, held, opts, _how) do
     rebase? = opts[:rebase] == true
     # Someone who may not change the entry brings nothing into the session,
     # not even through a rejoin with work it holds.
@@ -513,13 +526,9 @@ defmodule Brando.EditSession do
         {{:ok, info(session, field, pid, false)}, session}
 
       {:mismatch, data} when rebase? ->
-        # rows this editor wrote from a working copy (`detach/2`) replace
-        # what it held when it left
-        mode = if detached?, do: {:client, {:detached, pid}}, else: :carry
-
         session =
           %{session | data: data}
-          |> do_rebase(field, base, mode, pid, :joined)
+          |> do_rebase(field, base, :carry, pid, :joined)
           |> merge_held(field, held, held_base, pid)
 
         {{:ok, info(session, field, pid, false)}, session}

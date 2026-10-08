@@ -242,6 +242,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # A revision loaded as a working copy (the revisions drawer): its blocks,
+  # as changes on top of the rows the entry has now, so a save writes them.
+  # The field leaves the edit session first (`EditSession.detach/2`): what
+  # it shows now is not what the others edit, and the unsaved work the
+  # session holds is what the working copy replaced.
+  def update(%{event: "load_working_copy", entry_blocks: revision_blocks}, socket) do
+    socket = detach_session(socket)
+    rows = socket.assigns.entry_blocks || []
+    {:ok, restore_draft(socket, working_copy_changesets(socket, revision_blocks, rows), rows)}
+  end
+
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
     if Map.get(message, :source) == :translation and joined_with_work?(socket) do
       # A synchronized translation's pending version, loaded by an editor who
@@ -1338,6 +1349,51 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:block_bin, [])
     end
   end
+
+  # Each of the revision's blocks as a change to the row it has now. A
+  # block the entry no longer has comes back as a new one: its old rows (a
+  # revision keeps them) still hold its uid and its refs' uids.
+  defp working_copy_changesets(socket, revision_blocks, rows) do
+    %{block_module: block_module, current_user: %{id: user_id}} = socket.assigns
+    by_uid = Map.new(rows, &{&1.block.uid, &1})
+
+    Enum.map(revision_blocks, fn entry_block ->
+      params =
+        block_module
+        |> to_change_form(entry_block, %{}, user_id)
+        |> Map.fetch!(:source)
+        |> Brando.Drafts.Params.snapshot()
+
+      case by_uid[entry_block.block.uid] do
+        nil ->
+          params = params |> strip_row_ids() |> Map.update!("block", &as_new_block/1)
+          block_module |> struct(%{}) |> Map.put(:block, empty_block()) |> block_module.changeset(params, user_id, true)
+
+        row ->
+          block_module.changeset(row, params, user_id, true)
+      end
+    end)
+  end
+
+  defp empty_block, do: %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
+
+  defp as_new_block(%{} = block) do
+    block
+    |> Map.put("uid", Brando.Utils.generate_uid())
+    |> Map.update("refs", [], fn refs -> Enum.map(refs, &Map.put(&1, "uid", Brando.Utils.generate_uid())) end)
+    |> Map.update("children", [], fn children -> Enum.map(children, &as_new_block/1) end)
+  end
+
+  # Leave the edit session to show something the others do not see. The
+  # replica is let go first, so the field never rejoins with what it showed.
+  defp detach_session(%{assigns: %{edit_session: %Replica{session: session, monitor: monitor}}} = socket) do
+    Process.demonitor(monitor, [:flush])
+    Process.delete({:brando_edit_session_monitor, monitor})
+    EditSession.detach(session, socket.assigns.block_field)
+    assign(socket, :edit_session, :detached)
+  end
+
+  defp detach_session(socket), do: assign(socket, :edit_session, :detached)
 
   defp next!(ops, op) do
     {:ok, next} = Ops.apply_op(ops, op)
