@@ -4,6 +4,19 @@ defmodule Brando.JSONLDTest do
   # puts in the app env (`put_test_env(Brando.JSONLDTest, products: [...])`),
   # for the site-wide structured data check, which may run in a task.
   def list_products(_args), do: {:ok, Keyword.get(Application.get_env(:brando, __MODULE__, []), :products, [])}
+
+  # Shelves are listed without their relations, as a context's list function
+  # returns them; their `vars` are loaded by whoever reads them.
+  def list_shelves(_args), do: {:ok, shelves()}
+
+  def get_shelf(%{matches: %{id: id}}) do
+    case Enum.find(shelves(), &(&1.id == id)) do
+      nil -> {:error, {:shelf, :not_found}}
+      shelf -> {:ok, shelf}
+    end
+  end
+
+  defp shelves, do: Keyword.get(Application.get_env(:brando, __MODULE__, []), :shelves, [])
 end
 
 defmodule Brando.JSONLDTest.Product do
@@ -191,4 +204,45 @@ defmodule Brando.JSONLDTest.BookReview do
     field :publisher, :identity
     field :url, :current_url
   end
+end
+
+defmodule Brando.JSONLDTest.Shelf do
+  @moduledoc false
+  # A mapping whose field function enumerates a relation, as a site's
+  # `keywords/1` lists an entry's categories. The relation borrows the pages'
+  # variables (`page_id`), so a shelf with a page's id has that page's rows.
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "JSONLDTest",
+    schema: "Shelf",
+    singular: "shelf",
+    plural: "shelves",
+    gettext_module: Brando.Gettext
+
+  alias Brando.JSONLD
+
+  identifier ~H"{@entry.title}"
+  absolute_url ~H"/shelves/{@entry.slug}"
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :title, :string, required: true
+    attribute :slug, :slug, required: true
+  end
+
+  relations do
+    relation :vars, :has_many, module: Brando.Content.Var, foreign_key: :page_id
+  end
+
+  json_ld_schema JSONLD.Schema.Article do
+    field :headline, :string, & &1.title
+    field :description, :string, &__MODULE__.describe/1
+    field :url, :current_url
+  end
+
+  # A shelf named "broken" stands for an entry the site's mapping can't
+  # describe: its field function raises.
+  def describe(%{slug: "broken"}), do: raise(ArgumentError, "the shelf has no description")
+  def describe(shelf), do: Enum.map_join(shelf.vars, ", ", & &1.key)
 end

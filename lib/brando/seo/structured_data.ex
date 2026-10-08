@@ -106,20 +106,43 @@ defmodule Brando.SEO.StructuredData do
     Code.ensure_loaded?(context) and function_exported?(context, :"list_#{schema.__naming__().plural}", 1)
   end
 
+  # Entries are read without relations, then loaded a page at a time with
+  # everything their mapping may read (`Inspector.preloads/2`): one query per
+  # relation per page, whatever the number of entries, and only a page of
+  # them fully loaded at once.
+  @page_size 250
+
   defp check_schema(schema, language) do
     sources = Inspector.sources(schema)
+    preloads = Inspector.preloads(schema, blocks: false)
 
     schema
     |> entries(language)
-    |> Enum.filter(&Brando.SEO.Audit.has_url?(schema, &1))
-    |> Enum.map(&check_entry(schema, &1, language, sources))
+    |> Enum.chunk_every(@page_size)
+    |> Enum.flat_map(fn page ->
+      case preload(page, preloads) do
+        {:ok, page} ->
+          page
+          |> Enum.filter(&has_url?(schema, &1))
+          |> Enum.map(&check_entry(schema, &1, language, sources))
+
+        {:error, reason} ->
+          Enum.map(page, &failed_row(schema, &1, reason))
+      end
+    end)
+  end
+
+  defp preload(page, preloads) do
+    {:ok, Brando.Repo.preload(page, preloads)}
+  rescue
+    exception -> {:error, exception |> Exception.message() |> String.split("\n", trim: true) |> List.first("")}
   end
 
   defp entries(schema, language) do
     context = schema.__modules__().context
     plural = schema.__naming__().plural
 
-    args = %{preload: Inspector.preloads(schema, blocks: false)}
+    args = %{}
     args = if schema.has_trait(Brando.Trait.Status), do: Map.put(args, :status, :published), else: args
     args = if schema.has_trait(Brando.Trait.Translatable), do: Map.put(args, :language, language), else: args
 
@@ -129,8 +152,29 @@ defmodule Brando.SEO.StructuredData do
     end
   end
 
+  # An entry whose graph can't be built (the site's mapping raises for it) is
+  # that entry's error, with a link to it; the rest of the site is still
+  # checked.
   defp check_entry(schema, entry, language, sources) do
-    inspection = Inspector.build(schema, entry, language: language, sources: sources)
+    case Inspector.safe_build(schema, entry, language: language, sources: sources) do
+      {:ok, inspection} -> entry_row(schema, entry, inspection)
+      {:error, {:build_failed, reason}} -> failed_row(schema, entry, reason)
+    end
+  end
+
+  defp failed_row(schema, entry, reason) do
+    %Row{
+      schema: schema,
+      id: entry.id,
+      title: title(schema, entry),
+      url: safe_path(schema, entry),
+      admin_url: admin_url(schema, entry.id),
+      errors: 1,
+      issues: [%{level: :error, kind: :build_failed, property: nil, reason: reason}]
+    }
+  end
+
+  defp entry_row(schema, entry, inspection) do
     issues = Inspector.entry_issues(inspection)
     main = Enum.find(inspection.nodes, &(&1.role == :main))
 
@@ -145,6 +189,20 @@ defmodule Brando.SEO.StructuredData do
       warnings: Enum.count(issues, &(&1.level == :warning)),
       issues: issues
     }
+  end
+
+  # An entry whose URL can't be worked out is checked, and fails there with
+  # the reason, rather than taking the check down here.
+  defp has_url?(schema, entry) do
+    Brando.SEO.Audit.has_url?(schema, entry)
+  rescue
+    _ -> true
+  end
+
+  defp safe_path(schema, entry) do
+    Graph.path(schema, entry)
+  rescue
+    _ -> nil
   end
 
   # The entry's form, opened on its Structured data tab. `nil` for a blueprint

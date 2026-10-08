@@ -42,6 +42,11 @@ defmodule BrandoAdmin.Components.Form.StructuredData do
 
         {:noreply, assign(socket, inspection: inspection, entry: entry, selected: selected, error: nil)}
 
+      # The site's mapping raised for this entry: say what broke, in the tab,
+      # rather than take the drawer down.
+      {:error, {:build_failed, reason}} ->
+        {:noreply, assign(socket, inspection: nil, error: {:build_failed, reason})}
+
       {:error, _reason} ->
         {:noreply, assign(socket, inspection: nil, error: :not_found)}
     end
@@ -67,6 +72,10 @@ defmodule BrandoAdmin.Components.Form.StructuredData do
         <% is_nil(@entry_id) -> %>
           <p class="structured-data-empty">
             {gettext("Save the entry to see the structured data its page gives search engines.")}
+          </p>
+        <% match?({:build_failed, _}, @error) -> %>
+          <p class="structured-data-empty" role="alert" data-testid="structured-data-build-failed">
+            {describe_issue(%{kind: :build_failed, reason: elem(@error, 1)})}
           </p>
         <% @error -> %>
           <p class="structured-data-empty">{gettext("The entry could not be read.")}</p>
@@ -348,6 +357,9 @@ defmodule BrandoAdmin.Components.Form.StructuredData do
   Google", "uploadDate: not an ISO 8601 date".
   """
   @spec describe_issue(map()) :: String.t()
+  def describe_issue(%{kind: :build_failed, reason: reason}),
+    do: gettext("Could not build structured data: %{reason}", reason: reason)
+
   def describe_issue(%{kind: :missing, level: :error, property: property}),
     do: gettext("%{property}: required by Google", property: String.replace(property, " | ", " / "))
 

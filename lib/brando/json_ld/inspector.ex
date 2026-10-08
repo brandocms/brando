@@ -18,6 +18,8 @@ defmodule Brando.JSONLD.Inspector do
   computes its value from them reads as computed.
   """
 
+  require Logger
+
   alias Brando.JSONLD
   alias Brando.JSONLD.Graph
   alias Brando.JSONLD.Rules
@@ -138,7 +140,11 @@ defmodule Brando.JSONLD.Inspector do
     case apply(context, :"get_#{singular}", [%{matches: %{id: id}}]) do
       {:ok, entry} ->
         entry = Brando.Repo.preload(entry, preloads(module), force: true)
-        {:ok, build(module, entry, opts), entry}
+
+        case safe_build(module, entry, opts) do
+          {:ok, inspection} -> {:ok, inspection, entry}
+          error -> error
+        end
 
       error ->
         error
@@ -146,10 +152,44 @@ defmodule Brando.JSONLD.Inspector do
   end
 
   @doc """
-  What `module`'s JSON-LD reads beyond the entry's columns: the associations
-  its mapping's callbacks read (a user's avatar, a video's thumbnail), its
-  video fields, the URL and identifier's own preloads and, unless
-  `blocks: false`, its blocks (for the videos in them).
+  `build/3`, with an error from the site's own mapping (a field function that
+  raises) returned as `{:error, {:build_failed, reason}}`, `reason` a short
+  message, instead of raised. The full error is logged.
+  """
+  @spec safe_build(module(), map(), keyword()) :: {:ok, t()} | {:error, {:build_failed, String.t()}}
+  def safe_build(module, entry, opts \\ []) do
+    {:ok, build(module, entry, opts)}
+  rescue
+    exception ->
+      Logger.warning(
+        "[Brando.JSONLD.Inspector] could not build structured data for #{inspect(module)} #{inspect(Map.get(entry, :id))}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, {:build_failed, short_reason(exception)}}
+  end
+
+  @reason_length 160
+
+  # The first line of the exception's message, cut short: enough to tell an
+  # editor what broke (a relation that isn't loaded, a nil date).
+  defp short_reason(exception) do
+    line = exception |> Exception.message() |> String.split("\n", trim: true) |> List.first("")
+    line = String.trim(line)
+
+    if String.length(line) > @reason_length,
+      do: String.slice(line, 0, @reason_length - 1) <> "…",
+      else: line
+  end
+
+  @doc """
+  What `module`'s JSON-LD reads beyond the entry's columns: the blueprint's
+  relations and assets one level deep, as the entry's form loads them
+  (`Brando.Blueprint.preloads_for/2`), since a field function may read any of
+  them (a `keywords/1` that lists the entry's categories); the user's avatar
+  and a video's thumbnail and file where its mapping reads them; its video
+  fields; the URL and identifier's own preloads and, unless `blocks: false`,
+  its blocks (for the videos in them).
   """
   @spec preloads(module(), keyword()) :: list()
   def preloads(module, opts \\ []) do
@@ -175,8 +215,46 @@ defmodule Brando.JSONLD.Inspector do
     url_preloads =
       if function_exported?(module, :__absolute_url_preloads__, 0), do: module.__absolute_url_preloads__(), else: []
 
-    Enum.uniq(mapped ++ videos ++ blocks ++ url_preloads ++ Brando.Content.Identifier.preloads_for(module))
+    module
+    |> Brando.Blueprint.preloads_for(skip_blocks: true)
+    |> merge_preloads(mapped ++ videos ++ blocks ++ url_preloads ++ Brando.Content.Identifier.preloads_for(module))
   end
+
+  # One entry per association: Ecto refuses an association named twice when
+  # one of them is a query. A bare name takes the nested preloads of another
+  # entry for it (`:author` and `author: [:avatar]` load the avatar); two
+  # nested lists are joined; a query (a sorted has_many) is kept as it is.
+  defp merge_preloads(base, extra) do
+    {order, specs} =
+      Enum.reduce(base ++ extra, {[], %{}}, fn preload, {order, specs} ->
+        {name, spec} = normalize_preload(preload)
+
+        case specs do
+          %{^name => existing} -> {order, Map.put(specs, name, merge_spec(existing, spec))}
+          _ -> {[name | order], Map.put(specs, name, spec)}
+        end
+      end)
+
+    order
+    |> Enum.reverse()
+    |> Enum.map(fn name ->
+      case Map.fetch!(specs, name) do
+        [] -> name
+        spec -> {name, spec}
+      end
+    end)
+  end
+
+  defp normalize_preload({name, spec}) when is_atom(name), do: {name, normalize_spec(spec)}
+  defp normalize_preload(name) when is_atom(name), do: {name, []}
+
+  defp normalize_spec(spec) when is_atom(spec), do: [spec]
+  defp normalize_spec(spec), do: spec
+
+  defp merge_spec([], spec), do: spec
+  defp merge_spec(existing, []), do: existing
+  defp merge_spec(existing, spec) when is_list(existing) and is_list(spec), do: Enum.uniq(existing ++ spec)
+  defp merge_spec(existing, _spec), do: existing
 
   defp association_preload(module, association) do
     case module.__schema__(:association, association) do
