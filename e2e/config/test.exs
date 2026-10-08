@@ -57,3 +57,7 @@ config :brando, Brando.AI.Agent,
   api_key: "e2e-scripted",
   client: E2eProject.AssistantModel,
   prices: [input: 5.0, output: 25.0]
+
+# Model calls in tests are answered by recorded cassettes (test/cassettes);
+# a call outside one fails instead of reaching a provider.
+config :brando, Brando.AI, client: Brando.AI.Cassette
