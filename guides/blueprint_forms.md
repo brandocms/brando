@@ -756,9 +756,11 @@ input :summary, :textarea,
 Each action takes:
 
 * `prompt` (required): the instruction sent to the model.
-* `from` (required): the fields it reads, one or a list. They are read from
+* `from` (required): the fields it reads, one or a list: the schema's own
+  values and its block fields, not associations or embeds. They are read from
   the form as the editor has it, saved or not. `:blocks` reads the block
-  editor's content. An action can read its own field, to shorten or rewrite it.
+  editor's content, up to 2000 characters per block field. An action can read
+  its own field, to shorten or rewrite it.
 * `label`: the menu label, translated through the Blueprint's Gettext domain.
   Without it the humanized action name is shown.
 * `max`: the longest result, in characters. The prompt asks for it and the
@@ -773,19 +775,25 @@ Each action takes:
 
 An action asks for nothing until an editor runs it, and its result is a
 suggestion: it appears under the field, where the editor can change it, and
-reaches the field only when they accept it, as unsaved input like typing. An
-action whose fields are all empty says so without asking the model. One
-action shows as a button beside the field's label, several as a menu. They
-show only on top-level inputs of an entry form, not in subforms or blocks,
-and only when `Brando.AI` is configured for the action's model; anyone who
+reaches the field only when they accept it, as unsaved input like typing. If
+the field changed after the action ran, by this editor or another, Accept
+asks before replacing it. A `:text` input gets the result on one line. A
+`:rich_text` input gets plain paragraphs, so the suggestion warns when the
+field's formatting, links or footnotes would be replaced. An action whose
+fields are all empty says so without asking the model.
+
+One action shows as a button beside the field's label, several as a menu.
+They show only on top-level inputs of an entry form, not in subforms or
+blocks, not on inputs that are `readonly` or `disabled` for the editor, and
+only when `Brando.AI` is configured for the action's model; anyone else who
 can edit the entry can run them. The prompt, the model and its key stay on
 the server.
 
 The options are checked when the Blueprint compiles: a missing prompt or
 `from`, an unknown option, a `max` that is not a positive integer, a name
 used twice, an input type without text or actions in `inputs_for` stop the
-compilation, and a field in `from` that the schema does not have is reported
-with the other form errors.
+compilation, and a field in `from` that the schema does not have, or that is
+an association or an embed, is reported with the other form errors.
 
 <!-- usage-rules:end -->
 

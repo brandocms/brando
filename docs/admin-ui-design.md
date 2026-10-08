@@ -448,7 +448,9 @@ item.
   action beside the label, several a "Write with AI" menu of AI items. The
   reply waits under the input as a panel with its text in an
   `.ai-proposal-field`, the action's name in the label, a count against the
-  action's `max`, and Accept, Discard and Try again.
+  action's `max`, and Accept, Discard and Try again. A line in the attention
+  ink warns when accepting drops rich text's formatting; when the field
+  changed since the action ran, Accept turns into Replace under an alert.
 - The assistant's proposals use the same tokens for new and changed blocks,
   and its list of proposals from connected tools marks those waiting for
   review with them.
