@@ -15,42 +15,8 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
   test.setTimeout(60000)
 
   test.describe('Basic Live Preview', () => {
-    test('can enable and disable live preview', async ({ page }) => {
-      // Navigate to Pages
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      // Create new page
-      await page.getByRole('link', { name: 'Create page' }).click()
-      await syncLV(page)
-
-      // Fill page basics
-      await page.getByLabel('Title', { exact: true }).fill('Live Preview Test Page')
-      await page.getByLabel('URI').fill('live-preview-test')
-
-      // Add a simple header block
-      await page.getByRole('button', { name: 'Add block' }).click()
-      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
-      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
-      await page.getByRole('button', { name: 'Styled Header' }).click()
-      await syncLV(page)
-
-      // Enable live preview
-      await toggleLivePreview(page)
-      await waitForPreviewReady(page)
-
-      // Verify preview is visible
-      await expect(page.locator('.live-preview-wrapper')).toBeVisible()
-      await expect(page.locator('.live-preview-wrapper iframe')).toBeVisible()
-
-      // Disable live preview
-      await toggleLivePreview(page)
-      await syncLV(page)
-
-      // Verify preview is hidden (extended timeout for loaded systems)
-      await expect(page.locator('.live-preview-wrapper')).not.toBeVisible({ timeout: 15000 })
-    })
+    // Opening and closing the preview: every test below opens it, and
+    // block-preview-targets.spec.js closes it.
 
     test('live preview restores after LiveSocket reconnect', async ({ page }) => {
       // Exercise the gap between the iframe HTTP load and its channel join.

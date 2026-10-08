@@ -36,6 +36,10 @@ defmodule BrandoAdmin.ListingCopyToLanguageTest do
     assert copy.uri == "index-2"
     assert_redirect(view, "/admin/pages/update/#{copy.id}", 1_000)
     assert Brando.Translations.alternate_languages(Page, c.en_index.id) == ["no"]
+
+    # The copy opens in the editor with its address in the other language
+    {_editor, html} = live_form(c.conn, "/admin/pages/update/#{copy.id}")
+    assert html =~ "/no/index-2"
   end
 
   test "a language the page already has is not offered, and is refused if asked for", c do

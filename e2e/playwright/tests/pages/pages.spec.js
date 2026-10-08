@@ -111,26 +111,7 @@ test('creates a simple page', async ({ page }) => {
   await expect(page.getByText('Hello from Playwright!')).toBeVisible()
 })
 
-test('duplicates to other language', async ({ page }) => {
-  await page.goto('/admin')
-  await page.getByRole('link', { name: 'Pages & Sections' }).click()
-  await page.getByRole('link', { name: 'Create page' }).click()
-  await syncLV(page)
-  await setEntryStatus(page, 'published')
-  await page.getByLabel('Title', { exact: true }).fill('Clients')
-  await page.getByLabel('URI').fill('clients')
-  await page.getByRole('button', { name: 'Add block' }).click()
-  await page.getByRole('button', { name: 'HEADERS' }).click()
-  await page.getByRole('button', { name: 'Heading', exact: true }).click()
-  await page.locator('textarea').filter({ hasText: 'Text' }).first().fill('Heading')
-  await page.getByTestId('submit').click()
-  await expect(page.locator('#nav-sections').getByRole('link', { name: 'Clients', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: '/clients' })).toBeVisible()
-  await page.locator('.list-row').nth(1).getByTestId('circle-dropdown-button').click()
-  await page.getByRole('button', { name: 'Duplicate to [NO]' }).click()
-  await expect(page.getByLabel('Title', { exact: true })).toBeVisible()
-  await expect(page.getByText('/no/clients')).toBeVisible()
-})
+// Duplicating to another language: listing_copy_to_language_test.exs
 
 test('creates meta information', async ({ page }) => {
   await page.goto('/admin')
@@ -220,20 +201,4 @@ test('creates meta information', async ({ page }) => {
   await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', 'Overridden description')
   const ogImage = await page.locator('meta[property="og:image"]').getAttribute('content')
   await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', ogImage)
-})
-
-// Norwegian already has its own Index page at "index". Copying the English one
-// into Norwegian used to hit the (uri, language) unique index and crash the
-// listing; the copy now gets a free URI and opens in the editor.
-test('duplicates the Index page to a language that already uses its URI', async ({ page }) => {
-  await page.goto('/admin/pages')
-  await syncLV(page)
-  const row = page.locator('.list-row').filter({ has: page.getByRole('link', { name: 'Index', exact: true }) })
-  const entryId = (await row.getAttribute('id')).replace('list-row-', '')
-  const duplicateToNo = page.locator(`#action_default_duplicate_entry_to_lang_${entryId}_lang_no`)
-
-  await row.getByTestId('circle-dropdown-button').click()
-  await duplicateToNo.click()
-  await expect(page).toHaveURL(/\/admin\/pages\/update\/\d+/)
-  await expect(page.getByLabel('URI')).toHaveValue('index-2')
 })

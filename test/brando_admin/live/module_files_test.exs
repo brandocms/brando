@@ -84,8 +84,9 @@ defmodule BrandoAdmin.ModuleFilesTest do
     c.module |> Changeset.change(class: "concurrent") |> Repo.update!()
     assert view |> element("#module-files-apply") |> render_click() =~ "target changed"
     assert Repo.get!(Module, c.module.id).class == "concurrent"
-    html = view |> form("#module-files-import-form", references: "") |> render_submit()
-    assert html =~ "Conflict"
+    # The uploaded file is still there to preview again, now as a conflict
+    view |> form("#module-files-import-form", references: "") |> render_submit()
+    assert has_element?(view, ".module-files-counts", "Conflict: 1")
     assert has_element?(view, "#module-files-apply[disabled]")
     assert Repo.get!(Module, c.module.id).class == "concurrent"
   end

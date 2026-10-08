@@ -125,42 +125,5 @@ test('export and import DSL bundles with review, updated baselines and responsiv
   await page.screenshot({ path: testInfo.outputPath('module-files-mobile.png') })
 })
 
-test('rejects malformed files and prevents a stale admin preview from overwriting changes', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 1100 })
-  await openFiles(page)
-  await page.locator('#module-files-import-form input[type=file]').setInputFiles({
-    name: 'broken.zip', mimeType: 'application/zip', buffer: Buffer.from('invalid'),
-  })
-  await page.getByRole('button', { name: 'Preview import', exact: true }).click()
-  await expect(page.locator('#module-files [role=alert]')).toContainText('expected a valid ZIP')
-  await preview(page, await fixtureZip())
-  let bundle = await apply(page)
-  await reset(page)
-  bundle = editZip(bundle, 'class "hero"', 'class "from-files"')
-  await preview(page, bundle)
-
-  const editor = await page.context().newPage()
-  await editor.goto('/admin/config/content/modules')
-  await editor.getByRole('link', { name: 'DSL Hero', exact: true }).click()
-  await syncLV(editor)
-  const overview = editor.getByRole('tab', { name: /^Overview/ })
-  await expect(async () => {
-    await overview.click()
-    await expect(overview).toHaveAttribute('aria-selected', 'true')
-  }).toPass()
-  await editor.locator('input[name="module[class]"]').fill('admin-change')
-  await editor.getByTestId('submit').click()
-  await expect(editor).toHaveURL('/admin/config/content/modules')
-
-  await page.getByRole('button', { name: 'Apply import', exact: true }).click()
-  await expect(page.locator('#module-files [role=alert]')).toContainText('target changed')
-  await expect(page.locator('#module-files-import-form')).toBeVisible()
-  await page.getByRole('button', { name: 'Preview import', exact: true }).click()
-  await expect(page.locator('.module-files-counts')).toContainText('Conflict: 1')
-  await expect(page.getByRole('button', { name: 'Apply import', exact: true })).toBeDisabled()
-  await page.screenshot({ path: testInfo.outputPath('module-files-conflict.png') })
-  await editor.getByRole('link', { name: 'DSL Hero', exact: true }).click()
-  await syncLV(editor)
-  await expect(editor.locator('input[name="module[class]"]')).toHaveValue('admin-change')
-  await editor.close()
-})
+// Malformed files and a stale preview against an admin edit:
+// module_files_test.exs.
