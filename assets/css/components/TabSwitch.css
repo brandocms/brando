@@ -13,7 +13,7 @@
    without a class of our own; its radios take the same look through
    `.link-picker-modes .radios-wrapper`. */
 :is(.pill-tabs, :where(.link-picker-modes) .radios-wrapper) {
-  --pill-ink: #272b2a;
+  --pill-ink: var(--brando-ink);
 
   display: inline-flex;
   flex: none;
@@ -87,7 +87,7 @@
   > .form-check > label:has(input:checked) {
     &,
     &:hover {
-      background-color: #fff;
+      background-color: var(--brando-surface);
       box-shadow: 0 1px 2px rgba(5, 39, 82, 0.08);
       color: var(--pill-ink);
       font-weight: 500;
@@ -121,8 +121,8 @@
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: rgba(39, 43, 42, 0.07);
-  color: var(--pill-ink, #272b2a);
+  background: color-mix(in srgb, var(--brando-ink) 7%, transparent);
+  color: var(--pill-ink, var(--brando-ink));
   font: 400 10.5px/1 "Mono", monospace;
   font-variant-numeric: tabular-nums;
 }

@@ -13,7 +13,7 @@
   padding: 6px;
   border: 1px solid #e3e7e3;
   border-radius: 10px;
-  background-color: #fff;
+  background-color: var(--brando-surface);
 }
 
 /* Small icon button for row-level actions — reference rows, select options.
@@ -750,7 +750,7 @@
 
 .module-sketches-intro {
   margin: 0;
-  color: var(--modal-muted, #626b66);
+  color: var(--modal-muted, var(--brando-muted));
 }
 
 .module-sketches-list {

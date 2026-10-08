@@ -7,7 +7,7 @@
 .field-wrapper.subform--vars .vars-list {
   border: 1px solid var(--table-line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--brando-surface);
   overflow: clip;
 
   .vars-list-body > .vars-row {
@@ -19,7 +19,7 @@
     padding: 0;
     border: 0;
     border-radius: 0;
-    background: #fff;
+    background: var(--brando-surface);
     box-shadow: none;
     transition: background-color 150ms ease;
 
@@ -33,12 +33,12 @@
 
     /* An open variable reads as one block, not a hovered line */
     &:has(> .variable .variable-content:not(.hidden)) {
-      background: #fff;
+      background: var(--brando-surface);
     }
 
     /* The line the new variable would go on */
     &:has(> .subform-tools > .subform-insert:is(:hover, :focus-visible)) {
-      border-top-color: #254e3f;
+      border-top-color: var(--brando-accent);
     }
   }
 

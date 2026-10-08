@@ -174,6 +174,7 @@ value:
 | --- | --- | --- |
 | Main text | `--brando-ink` | `#272b2a` |
 | Secondary text | `--brando-muted` | `#626b66` |
+| Text and icons on a dark fill (accent buttons, checks, photos) | `--brando-ink-inverse` | `#ffffff` |
 | Borders and dividers | `--brando-line` | `#dce2dc` |
 | Main accent (actions, links, focus, progress) | `--brando-accent` | `#254e3f` |
 | Page ground | `--brando-surface-page` | `#fafbf9` |
@@ -185,6 +186,7 @@ value:
 | Selected item, drop target | `--brando-surface-selected` | `#eef3ea` |
 | Modal and loader backdrop | `--brando-overlay` | `rgb(30 43 37 / 30%)` |
 | Badge fill / ink | `--brando-badge-bg` / `--brando-badge-ink` | `#eef0eb` / `#566153` |
+| Needs attention (missing alt text, unsaved, warning badges) / its ink | `--brando-attention` / `--brando-attention-ink` | `#fbefda` / `#87662d` |
 | Status: published | `--brando-status-published` | `#3cb371` |
 | Status: pending | `--brando-status-pending` | `#f1ac00` |
 | Status: draft | `--brando-status-draft` | `#636363` |
@@ -207,7 +209,9 @@ Do not add hex colours to admin stylesheets. CI runs
 `tokens.css` gains a hex literal. Files not yet converted are listed with their
 current count in `.github/css-color-allowlist.txt`; when you convert colours,
 lower the count (or remove the entry), which `--update` rewrites for you. A
-colour that has no role yet belongs in `tokens.css` under a role name.
+colour that has no role yet belongs in `tokens.css` under a role name. For a
+translucent version of a role, mix it with transparent:
+`color-mix(in srgb, var(--brando-ink) 8%, transparent)`.
 
 Keep tinted surfaces subtle, and check text and control contrast in the
 rendered interface. Status needs a textual label as well as color.
@@ -789,7 +793,7 @@ the sheet is wider than about 905px (a grid formula; EuropaCSS reserves
 "▶ Video" badge, and on hover the edit-image, configure and remove actions (top
 right) with a 2px `#c3d5c5` outline. Bottom left sit the caption icon (images and
 videos) and the ALT chip (images only): white when set, faded for an empty caption
-— captions are optional — and amber (`#fbefda`/`#87662d`) for missing alt text.
+— captions are optional — and amber (`--brando-attention`/`--brando-attention-ink`) for missing alt text.
 Hovering an icon shows its text in a dark peek; clicking it opens a popover under
 the square, flipped to the right edge near the sheet's end, with "Caption ·
 filename" or "Alt text · filename", the input, "Saved for this gallery only. Empty

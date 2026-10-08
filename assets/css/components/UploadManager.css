@@ -9,7 +9,7 @@
   bottom: 15px;
   z-index: 1100;
   width: 320px;
-  background-color: var(--brando-color-input, #fff);
+  background-color: var(--brando-color-input, var(--brando-surface));
   border: 1px solid var(--brando-color-dark, #000);
   font-size: 14px;
 
@@ -52,7 +52,7 @@
     padding: 8px 12px;
 
     + .upload-item {
-      border-top: 1px solid var(--brando-input-border, #e0e0e0);
+      border-top: 1px solid var(--brando-input-border);
     }
 
     .meta {
@@ -144,12 +144,12 @@
         padding: 3px 9px;
         border: 1px solid #e6d3a8;
         border-radius: 5px;
-        background: #fff;
-        color: #272b2a;
+        background: var(--brando-surface);
+        color: var(--brando-ink);
         font-size: 12px;
         cursor: pointer;
 
-        &:first-child { border-color: #cfdcce; background: #edf3e9; color: #254e3f; }
+        &:first-child { border-color: #cfdcce; background: #edf3e9; color: var(--brando-accent); }
         &:hover { filter: brightness(0.97); }
       }
     }

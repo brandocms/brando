@@ -15,10 +15,10 @@
    Follows the Utilities design: left-aligned, a question as the title, the
    explanation under it, and compact buttons on a shared right edge. */
 .admin-dialog {
-  --dialog-ink: #272b2a;
-  --dialog-muted: #626b66;
-  --dialog-line: #dce2dc;
-  --dialog-green: #254e3f;
+  --dialog-ink: var(--brando-ink);
+  --dialog-muted: var(--brando-muted);
+  --dialog-line: var(--brando-line);
+  --dialog-green: var(--brando-accent);
   --dialog-red: #a3352a;
 
   box-sizing: border-box;
@@ -28,7 +28,7 @@
   padding: 24px;
   border: 1px solid var(--dialog-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--brando-surface);
   color: var(--dialog-ink);
   box-shadow: 0 16px 40px rgb(22 28 25 / 18%);
   text-align: left;
@@ -106,7 +106,7 @@
   padding: 5px 12px;
   border: 1px solid var(--dialog-line);
   border-radius: 5px;
-  background: #fff;
+  background: var(--brando-surface);
   color: var(--dialog-ink);
   font: inherit;
   font-size: 12px;
@@ -130,7 +130,7 @@
   &.is-primary {
     border-color: var(--dialog-green);
     background: var(--dialog-green);
-    color: #fff;
+    color: var(--brando-ink-inverse);
 
     &:hover {
       background: #163c2e;
@@ -140,7 +140,7 @@
   &.is-danger {
     border-color: var(--dialog-red);
     background: var(--dialog-red);
-    color: #fff;
+    color: var(--brando-ink-inverse);
 
     &:hover {
       background: #8a2b22;

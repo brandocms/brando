@@ -4,7 +4,7 @@
   .content-list .list-tools-wrapper { margin-bottom: 20px; gap: 12px; }
   .content-list .list-tools { gap: 12px; }
   .content-list .list-tools .filters { width: 340px; max-width: 100%; }
-  .content-list .list-tools .filter { box-sizing: border-box; min-height: 38px; height: 38px; border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; }
+  .content-list .list-tools .filter { box-sizing: border-box; min-height: 38px; height: 38px; border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface); }
   .content-list .list-tools .filter input { min-width: 0; height: 36px; margin: 0; font-size: 13px; line-height: 20px; padding: 0 12px; color: var(--workspace-ink); }
   .content-list .list-tools .filter input::placeholder { opacity: 1; font-size: 13px; color: var(--workspace-muted); }
   .content-list .list-tools .filter .filter-key { display: inline-flex; align-items: center; align-self: stretch; justify-content: center; gap: 5px; margin: 0; padding: 0 12px; line-height: 20px; border-right: 1px solid var(--workspace-line); color: var(--workspace-muted); font-family: inherit; font-size: 12px; }
@@ -16,14 +16,14 @@
   .content-list .list-tools-wrapper.has-active-filters { margin-bottom: 8px; }
   .content-list .active-filters { margin: 0 0 20px; color: var(--workspace-muted); font-size: 12px; }
   .content-list .active-filters .filter { background: var(--workspace-wash); color: var(--workspace-accent); border: 1px solid var(--workspace-line); border-radius: 4px; font-size: 11px; padding: 4px 8px; }
-  .content-list .list-row { background: #fff; border-radius: 0; margin: 0; border-bottom: 1px solid var(--workspace-line); color: var(--workspace-ink); }
+  .content-list .list-row { background: var(--brando-surface); border-radius: 0; margin: 0; border-bottom: 1px solid var(--workspace-line); color: var(--workspace-ink); }
   .content-list .list-row:first-child { border-top: 1px solid var(--workspace-line); }
   .content-list .list-row:hover { background: #f8faf6; }
   .content-list .list-row.selected { background: #edf3ed; }
   /* Tiny badges (dates, categories) are white by default, which disappears on
      a white row: give them a green wash, and white where the row turns green */
   .content-list .list-row .badge.tiny { background: #eff4ec; }
-  .content-list .list-row:is(:hover, .selected) .badge.tiny { background: #fff; }
+  .content-list .list-row:is(:hover, .selected) .badge.tiny { background: var(--brando-surface); }
   .content-list .list-row .main-content > div:first-of-type { padding-left: 0; }
   .content-list .list-row .entry-link { color: var(--workspace-ink); font-size: 15px; line-height: 22px; font-weight: 500; overflow-wrap: anywhere; }
   .content-list .list-row .entry-link:hover, .content-list .list-row .entry-link:focus-visible { text-decoration: none; }
@@ -32,7 +32,7 @@
   .content-list .list-row .circle-dropdown { flex: 0 0 30px; margin: 0; }
   .content-list .list-row .circle-dropdown-button { display: grid; place-items: center; width: 30px; height: 30px; padding: 3px; color: var(--workspace-muted); }
   .content-list .list-row .circle-dropdown-button > svg { width: 20px; height: 20px; }
-  .content-list .circle-dropdown .dropdown-content { text-transform: none; font-family: inherit; font-size: 12px; border-color: var(--workspace-line); border-radius: 6px; background: #fff; }
+  .content-list .circle-dropdown .dropdown-content { text-transform: none; font-family: inherit; font-size: 12px; border-color: var(--workspace-line); border-radius: 6px; background: var(--brando-surface); }
   .content-list .workspace-empty { border: 1px solid var(--workspace-line); border-radius: 6px; background: #fafbf8; min-height: 180px; justify-content: center; }
   .content-list .pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-top: 16px; margin-top: 0; border-top: 0; color: var(--workspace-muted); }
   .content-list .pagination .pagination-entries { margin: 0; font-size: 12px; }
@@ -50,7 +50,7 @@
   .list-row .main-content > .user-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; }
   .user-avatar .image-content, .user-avatar .img-placeholder { width: 36px; height: 36px; }
   .user-avatar img { width: 36px; height: 36px; object-fit: cover; }
-  .list-row .main-content > .user-initials { display: flex; align-items: center; justify-content: center; flex: none; background: #edf0e9; color: #566153; font-size: 13px; line-height: 1; }
+  .list-row .main-content > .user-initials { display: flex; align-items: center; justify-content: center; flex: none; background: #edf0e9; color: var(--brando-badge-ink); font-size: 13px; line-height: 1; }
   .user-initials > span { display: block; line-height: 1; }
   /* `update_link` adds `col-4`, whose flex basis and max-width would hold the
      name to a quarter of the account column and wrap it */

@@ -12,21 +12,21 @@
   .drawer-form .label-wrapper { margin-bottom: 8px; }
   .drawer-form .control-label { color: var(--workspace-ink); font: 14px/20px "Main", sans-serif; }
   .drawer-form input.text, .drawer-form textarea, .drawer-form .multiselect {
-    background: #fff; color: var(--workspace-ink); border: 1px solid var(--workspace-line);
+    background: var(--brando-surface); color: var(--workspace-ink); border: 1px solid var(--workspace-line);
     border-radius: 5px; font: 14px/20px "Main", sans-serif;
   }
   .drawer-form input.text { height: 44px; padding: 0 12px; }
   .drawer-form textarea { padding: 10px 12px; }
   /* Keep text clear of the AI button in the field's top right corner. */
   .drawer-form :is(input.text, textarea).has-ai-action { padding-right: 46px; }
-  .drawer-form .datetime-wrapper > div { background: #fff; color: var(--workspace-ink); border-color: var(--workspace-line); border-radius: 5px; }
+  .drawer-form .datetime-wrapper > div { background: var(--brando-surface); color: var(--workspace-ink); border-color: var(--workspace-line); border-radius: 5px; }
   .drawer-form .character-count, .drawer-form .prefill-small { border-color: var(--workspace-line) !important; color: var(--workspace-muted); }
   .drawer-form .media-field { border-color: var(--workspace-line); }
   .drawer-form .media-button, button.secondary {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     height: auto; min-height: 34px; margin: 0; padding: 6px 12px;
     border: 1px solid var(--workspace-line) !important; border-radius: 5px;
-    background: #fff; color: var(--workspace-ink); font: 13px/20px "Main", sans-serif;
+    background: var(--brando-surface); color: var(--workspace-ink); font: 13px/20px "Main", sans-serif;
     &:hover { background: #edf3e9; color: var(--workspace-accent); }
   }
   /* A media field joins its actions into one segmented control, which the
@@ -57,13 +57,13 @@
   .revisions-table .created-column { width: 22%; }
   .revisions-table .actions-column { width: 44px; }
   .revisions-table th { padding: 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: #f5f7f3; color: var(--workspace-muted); font: 12px/18px "Main", sans-serif; text-transform: none; }
-  .revisions-table .revisions-line td { padding: 14px 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: #fff; color: var(--workspace-ink); font: 13px/20px "Main", sans-serif; text-align: left; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
+  .revisions-table .revisions-line td { padding: 14px 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: var(--brando-surface); color: var(--workspace-ink); font: 13px/20px "Main", sans-serif; text-align: left; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
   .revisions-table .revisions-line.active td { background: #eef4e9; color: var(--workspace-accent); }
   .revisions-table .revisions-line .revision-preview-button { padding: 0; font-weight: 500; }
   .revision-schema, .revision-time { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: 12px; line-height: 18px; }
   .revision-statuses { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  .revision-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid #e0e4df; border-radius: 5px; background: #f5f6f3; color: #626b66; font: 12px/18px "Main", sans-serif; white-space: nowrap; }
-  .revision-status.is-active { background: #e1ecd9; border-color: #cadcbe; color: #254e3f; }
+  .revision-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid #e0e4df; border-radius: 5px; background: #f5f6f3; color: var(--brando-muted); font: 12px/18px "Main", sans-serif; white-space: nowrap; }
+  .revision-status.is-active { background: #e1ecd9; border-color: #cadcbe; color: var(--brando-accent); }
   .revision-status.is-scheduled { background: #fbf4e5; border-color: #e9d9b5; color: #795b27; }
   .revision-protection { display: inline-flex; align-items: center; gap: 4px; color: var(--workspace-muted); font-size: 12px; white-space: nowrap; }
   .revision-statuses [data-icon] { width: 13px; height: 13px; flex-shrink: 0; }
@@ -72,10 +72,10 @@
     width: 24px; margin: 0;
     .circle-dropdown-button { width: 24px; height: 24px; padding: 0; }
     .circle-dropdown-button > svg { width: 24px; height: 24px; }
-    .main-circle { stroke: #626b66; }
-    line { stroke: #626b66; }
-    button:hover .main-circle { fill: #254e3f; stroke: #254e3f; }
-    button:hover line { stroke: #fff; }
+    .main-circle { stroke: var(--brando-muted); }
+    line { stroke: var(--brando-muted); }
+    button:hover .main-circle { fill: var(--brando-accent); stroke: var(--brando-accent); }
+    button:hover line { stroke: var(--brando-ink-inverse); }
   }
   .revisions-table .revisions-line td.revision-description { color: var(--workspace-muted); font-size: 12px; }
   .revisions-table .revisions-line td.revision-publish_at .datepicker-and-button { gap: 8px; }

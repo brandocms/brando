@@ -167,7 +167,7 @@
   margin-left: 6px;
   padding: 0 6px;
   border-radius: 10px;
-  background: #eef0eb;
+  background: var(--brando-badge-bg);
   color: #5b6557;
   font-family: inherit;
   font-size: 11px;

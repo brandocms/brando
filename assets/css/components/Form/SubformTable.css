@@ -15,18 +15,18 @@
 /* The variable list (Input.Vars, VarsList.css) shares the frame's colours and
    its grip, insert and remove buttons; its rows are not table rows. */
 :is(.field-wrapper.subform--table, .table-block, .vars-list) {
-  --table-line: #dce2dc;
-  --table-head: #fbfcfa;
-  --table-hover: #f5f8f3;
-  --table-ink: #272b2a;
-  --table-muted: #626b66;
+  --table-line: var(--brando-line);
+  --table-head: var(--brando-surface-shaded);
+  --table-hover: var(--brando-surface-hover);
+  --table-ink: var(--brando-ink);
+  --table-muted: var(--brando-muted);
   --table-faint: #99a39b;
   --table-focus: #a6bba8;
 
   .subform-table-frame {
     border: 1px solid var(--table-line);
     border-radius: 6px;
-    background: #fff;
+    background: var(--brando-surface);
     overflow: clip;
   }
 
@@ -107,7 +107,7 @@
     padding: 0;
     border: 0;
     border-radius: 0;
-    background: #fff;
+    background: var(--brando-surface);
     transition: background-color 150ms ease;
 
     &:hover {
@@ -169,7 +169,7 @@
     padding: 0;
     border: 1px solid var(--table-line);
     border-radius: 50%;
-    background: #fff;
+    background: var(--brando-surface);
     color: var(--table-muted);
     opacity: 0;
     transform: translateY(-50%);
@@ -184,9 +184,9 @@
 
     &:hover,
     &:focus-visible {
-      border-color: #254e3f;
-      background: #254e3f;
-      color: #fff;
+      border-color: var(--brando-accent);
+      background: var(--brando-accent);
+      color: var(--brando-ink-inverse);
       opacity: 1;
 
       [data-icon] {
@@ -202,7 +202,7 @@
   /* The line the new entry would go on */
   :is(.subform-entry, .table-row):has(> .subform-tools > .subform-insert:is(:hover, :focus-visible)) > :is(.subform-tools, .subform-row-end, .variable),
   .subform-entry:has(> .subform-tools > .subform-insert:is(:hover, :focus-visible)) > .subform-fields > .brando-input {
-    border-top-color: #254e3f;
+    border-top-color: var(--brando-accent);
   }
 
   .subform-table-row > .subform-row-end,
@@ -346,19 +346,19 @@
 
   .subform-entry:hover .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text) {
     border-color: var(--table-line);
-    background: #fff;
+    background: var(--brando-surface);
   }
 
   .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text):focus {
     border-color: var(--table-focus);
-    background: #fff;
+    background: var(--brando-surface);
     box-shadow: 0 0 0 2px #254e3f14;
     outline: none;
   }
 
   .subform-fields .brando-input:has(.field-error) :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], textarea.text) {
     border-color: #e5a29f;
-    background: #fff;
+    background: var(--brando-surface);
   }
 
   /* Minimum widths, so a busy row scrolls rather than crushing its fields */
@@ -427,7 +427,7 @@
 
   .subform-entry:hover .subform-fields .radios-wrapper.status.compact {
     border-color: var(--table-line);
-    background: #fff;
+    background: var(--brando-surface);
   }
 
   /* Link: one line, the title and then its destination, like a block
@@ -506,7 +506,7 @@
 
   .subform-entry:hover .subform-fields .link-preview {
     border-color: var(--table-line);
-    background: #fff;
+    background: var(--brando-surface);
   }
 
   /* A menu item's key: its quiet "Key: …" summary, opening into a field */
@@ -596,7 +596,7 @@
 
   .subform-entry:hover .subform-fields .multiselect {
     border-color: var(--table-line);
-    background-color: #fff;
+    background-color: var(--brando-surface);
   }
 
   /* Colour: the swatch and its hex */
@@ -678,7 +678,7 @@
 
   .subform-entry:hover .subform-fields .field-base > .datetime-wrapper > div {
     border-color: var(--table-line);
-    background: #fff;
+    background: var(--brando-surface);
 
     .clear-datetime {
       opacity: 1;
@@ -766,7 +766,7 @@
 
   .subform-entry:hover .subform-fields .media-field--line .media-action-menu > .media-button {
     border-color: var(--table-line);
-    background: #fff;
+    background: var(--brando-surface);
     color: var(--table-ink);
   }
 
@@ -827,7 +827,7 @@
 
   .subform-table-body > :is(.subform-entry, .table-row):is(:hover, :focus-within) .field-base > .tiptap-wrapper {
     border-color: var(--table-line);
-    background: #fff;
+    background: var(--brando-surface);
 
     &::after {
       border-color: var(--table-line);
@@ -835,7 +835,7 @@
 
     .tiptap-activate {
       border-color: var(--table-line);
-      background: #fff;
+      background: var(--brando-surface);
       opacity: 1;
     }
   }

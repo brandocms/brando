@@ -2,10 +2,10 @@
 .guidance-workspace {
   /* minmax(0, …) keeps a long, unwrapped excerpt from widening the page. */
   grid-template-columns: minmax(0, 1fr);
-  --guidance-ink: #272b2a;
-  --guidance-muted: #626b66;
-  --guidance-line: #dce2dc;
-  --guidance-green: #254e3f;
+  --guidance-ink: var(--brando-ink);
+  --guidance-muted: var(--brando-muted);
+  --guidance-line: var(--brando-line);
+  --guidance-green: var(--brando-accent);
   display: grid;
   gap: 24px;
   max-width: 1120px;
@@ -36,7 +36,7 @@
     text-transform: none;
     border: 1px solid var(--guidance-line);
     border-radius: 5px;
-    background: #fff;
+    background: var(--brando-surface);
     color: var(--guidance-ink);
     font-size: 12px;
     font-weight: 500;
@@ -46,7 +46,7 @@
 
     &:hover:not(:disabled) { border-color: #aab9a5; background: #f1f5ef; }
     &:disabled { opacity: .48; cursor: not-allowed; }
-    &.primary { border-color: var(--guidance-green); background: var(--guidance-green); color: #fff; }
+    &.primary { border-color: var(--guidance-green); background: var(--guidance-green); color: var(--brando-ink-inverse); }
     &.primary:hover:not(:disabled) { background: #163c2e; }
     &.quiet { border-color: transparent; background: transparent; }
   }
@@ -85,7 +85,7 @@
   padding: 24px;
   border: 1px solid var(--guidance-line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--brando-surface);
 }
 
 .guidance-card-heading {
@@ -108,7 +108,7 @@
     padding: 12px 14px;
     border: 1px solid var(--brando-input-border, var(--guidance-line));
     border-radius: var(--brando-input-radius, 5px);
-    background: var(--brando-color-input, #fff);
+    background: var(--brando-color-input, var(--brando-surface));
     font-family: theme(typography.families.mono);
     font-size: 12px;
     line-height: 1.7;

@@ -23,7 +23,7 @@
   .brando-form .field-wrapper { margin-bottom: 0; }
   .field-wrapper > .label-wrapper { margin-bottom: 8px; }
   .field-wrapper > .label-wrapper label { font-size: 13px; line-height: 20px; color: #46554c; }
-  .field-wrapper input.text, .field-wrapper input[type="email"], .field-wrapper input[type="tel"], .field-wrapper textarea, .field-wrapper .multiselect { border-color: var(--brando-line); border-radius: 6px; color: var(--workspace-ink); background: #fff; box-shadow: 0 1px 2px #233d2e05; font-size: 14px; }
+  .field-wrapper input.text, .field-wrapper input[type="email"], .field-wrapper input[type="tel"], .field-wrapper textarea, .field-wrapper .multiselect { border-color: var(--brando-line); border-radius: 6px; color: var(--workspace-ink); background: var(--brando-surface); box-shadow: 0 1px 2px #233d2e05; font-size: 14px; }
   .field-wrapper input.text { padding-inline: 12px; }
   .field-wrapper textarea { padding: 10px 12px; line-height: 1.6; }
   .field-wrapper .instructions { color: var(--workspace-muted); font-size: 12px; }
@@ -124,7 +124,7 @@
   .dashboard-heading { margin: 0 0 14px; font-size: 17px; line-height: 24px; font-weight: 500; }
   .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 
-  .dashboard-card { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--dash-line); border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgba(20, 30, 25, .04); transition: box-shadow .15s ease, border-color .15s ease; }
+  .dashboard-card { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--dash-line); border-radius: 12px; background: var(--brando-surface); box-shadow: 0 1px 2px rgba(20, 30, 25, .04); transition: box-shadow .15s ease, border-color .15s ease; }
   .dashboard-card.is-linked:hover { border-color: #d3dad3; box-shadow: 0 4px 14px rgba(20, 30, 25, .08); }
   .dashboard-card:focus-within { outline: 2px solid #758f75; outline-offset: 2px; }
   .dashboard-card-cover { display: grid; place-items: center; aspect-ratio: 16 / 10; background: #f2f4f0; color: #99a39b; overflow: hidden; }
@@ -238,7 +238,7 @@
   /* On a tinted tab a second pastel fill clashes with the tab's own; a white
      pill with a hairline in the level colour sits on any tab and still reads
      as good, fair or poor through its ink. */
-  .seo-tabs .seo-score-badge { background: #fff; box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 25%, transparent); }
+  .seo-tabs .seo-score-badge { background: var(--brando-surface); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 25%, transparent); }
 
   .seo-audit .workspace-panel-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
   .seo-audit-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 18px; border-bottom: 1px solid var(--workspace-line); }
@@ -250,7 +250,7 @@
     padding: 0 12px;
     border: 1px solid var(--workspace-line);
     border-radius: 15px;
-    background: #fff;
+    background: var(--brando-surface);
     color: var(--workspace-muted);
     font: inherit;
     font-size: 12px;
@@ -260,7 +260,7 @@
   /* A chip like its neighbours rather than a checkbox in a pill: one centering
      rule for the whole row. The box is drawn, so it holds the label's line. */
   .seo-chip-toggle { margin-left: auto; }
-  .seo-chip-toggle::before { content: ""; flex: 0 0 12px; height: 12px; border: 1px solid #c3cdc1; border-radius: 3px; background: #fff; }
+  .seo-chip-toggle::before { content: ""; flex: 0 0 12px; height: 12px; border: 1px solid #c3cdc1; border-radius: 3px; background: var(--brando-surface); }
   .seo-chip-toggle[aria-pressed="true"] { background: #e9f2e6; border-color: #c8dcc3; color: #3d5c48; }
   .seo-chip-toggle[aria-pressed="true"]::before { border-color: #446f4f; background: #446f4f; }
 
@@ -273,7 +273,7 @@
   /* A ruled grid: the box draws the outer frame, and each cell draws only its
      left and top rules, pulled one pixel out so the first column and row tuck
      under the frame's clipped edge. A short last row leaves no stray rules. */
-  .seo-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin: 0; border: 1px solid var(--workspace-line); border-radius: 6px; overflow: hidden; background: #fff; }
+  .seo-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin: 0; border: 1px solid var(--workspace-line); border-radius: 6px; overflow: hidden; background: var(--brando-surface); }
   .seo-stat { margin: -1px 0 0 -1px; padding: 12px 14px 14px; border-top: 1px solid var(--workspace-line); border-left: 1px solid var(--workspace-line); }
   .seo-stat dt { color: var(--workspace-muted); font-size: 11px; }
   .seo-stat dd { margin: 0; padding-top: 5px; font-size: 22px; letter-spacing: -.03em; }
@@ -290,7 +290,7 @@
   .seo-duplicates h3 { font-size: 13px; font-weight: 500; }
   /* A card per shared value, built like the check card: a wash header saying
      what is shared and by how many, the text, then one row per entry. */
-  .seo-duplicate { border: 1px solid var(--workspace-line); border-radius: 7px; background: #fff; overflow: hidden; }
+  .seo-duplicate { border: 1px solid var(--workspace-line); border-radius: 7px; background: var(--brando-surface); overflow: hidden; }
   .seo-duplicate > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; background: var(--workspace-wash); border-bottom: 1px solid var(--workspace-line); }
   .seo-duplicate > header h4 { margin: 0; font-size: 12px; font-weight: 500; }
   .seo-duplicate > blockquote { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--workspace-line); color: var(--workspace-muted); font-size: 13px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -326,7 +326,7 @@
   /* The toggle column hugs its button against the table's right edge. */
   .seo-audit-table > thead > tr > th:last-child,
   .seo-audit-table > tbody > .seo-audit-row > td:last-child { width: 1%; text-align: right; }
-  .seo-row-toggle, .seo-row-action { border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; padding: 4px 10px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+  .seo-row-toggle, .seo-row-action { border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface); padding: 4px 10px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
   .seo-row-toggle:hover, .seo-row-action:hover { background: #f4f7f2; }
   /* AI actions in these rows are the shared AI action (AI.css); the plain
      actions beside them share its 30px height. */
@@ -340,7 +340,7 @@
      through the table so it outranks the shared outer-cell padding. */
   .seo-audit-table > tbody > .seo-audit-details > td { padding: 16px 16px 20px; background: var(--workspace-wash); }
   .seo-audit-details-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 16px; align-items: start; }
-  .seo-check-card { border: 1px solid var(--workspace-line); border-radius: 7px; background: #fff; overflow: hidden; }
+  .seo-check-card { border: 1px solid var(--workspace-line); border-radius: 7px; background: var(--brando-surface); overflow: hidden; }
   .seo-check-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .seo-check-table th { padding: 8px 14px; border-bottom: 1px solid var(--workspace-line); background: var(--workspace-wash); color: var(--workspace-muted); font-size: 11px; font-weight: 400; text-align: left; }
   .seo-check-table th:last-child { text-align: right; }
@@ -356,10 +356,10 @@
      so eleven rows do not read as eleven alerts. */
   .seo-check-badge { display: inline-block; min-width: 68px; padding: 0 8px; border-radius: 4px; font-size: 11px; line-height: 20px; text-align: center; }
   .seo-check-badge.pass { background: #e6f1e7; color: #35603f; }
-  .seo-check-badge.warn { background: #fbefda; color: #85632c; }
+  .seo-check-badge.warn { background: var(--brando-attention); color: #85632c; }
   .seo-check-badge.fail { background: #fbeee9; color: #8f4834; }
   .seo-check-badge.skip { color: #9aa398; }
-  .seo-audit .seo-search-preview { max-width: none; border-radius: 7px; background: #fff; }
+  .seo-audit .seo-search-preview { max-width: none; border-radius: 7px; background: var(--brando-surface); }
   .seo-preview-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; }
 
   .seo-context-picker { padding: 14px 18px; border-bottom: 1px solid var(--workspace-line); font-size: 12px; }

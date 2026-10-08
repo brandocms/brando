@@ -5,10 +5,10 @@
 .activity-timeline,
 .activity-compare,
 .activity-drawer-compare {
-  --activity-ink: #272b2a;
-  --activity-muted: #626b66;
-  --activity-line: #dce2dc;
-  --activity-green: #254e3f;
+  --activity-ink: var(--brando-ink);
+  --activity-muted: var(--brando-muted);
+  --activity-line: var(--brando-line);
+  --activity-green: var(--brando-accent);
 }
 
 /* What happened: a label and a dot, never the dot alone. */
@@ -129,7 +129,7 @@ button.activity-revision {
       padding: 0 12px 0 36px;
       border: 1px solid var(--brando-input-border);
       border-radius: var(--brando-input-radius);
-      background: #fff;
+      background: var(--brando-surface);
       font-size: 13px;
       color: var(--activity-ink);
     }
@@ -175,7 +175,7 @@ button.activity-revision {
     list-style: none;
     border: 1px solid var(--activity-line);
     border-radius: 10px;
-    background: #fff;
+    background: var(--brando-surface);
   }
 
   .activity-row {

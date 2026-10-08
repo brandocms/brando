@@ -495,7 +495,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 12px;
   background-color: var(--brando-surface);
-  box-shadow: 0 1px 2px rgb(39 43 42 / 3%);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 3%, transparent);
 
   .form-tab-customs {
     flex: 0 1 auto;
@@ -520,7 +520,7 @@
       border: 0;
       background-color: var(--brando-surface-hover);
       color: var(--brando-muted);
-      box-shadow: 0 2px 7px rgb(39 43 42 / 12%), 0 1px 2px rgb(39 43 42 / 5%);
+      box-shadow: 0 2px 7px color-mix(in srgb, var(--brando-ink) 12%, transparent), 0 1px 2px color-mix(in srgb, var(--brando-ink) 5%, transparent);
 
       /* A quiet, static shadow replaces the toolbar's pulsing presence glow. */
       &::before {
