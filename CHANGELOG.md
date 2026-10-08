@@ -759,8 +759,9 @@ production dump.
   changes.
 
 - **Field presence and follow mode.** Two people can work in one block: a
-  keystroke reaches the edit session as the one field it changed, and the
-  last change to a field wins, so each keeps their own field. Blocks are no
+  keystroke, or any change in a block, reaches the edit session as the
+  fields it changed, and the last change to a field wins, so each keeps
+  their own field. Blocks are no
   longer locked while someone is in them; the field another editor is in
   shows their colour and first name, and the block's toolbar says "Ingrid ·
   Caption". The value someone is typing stays theirs until the session has

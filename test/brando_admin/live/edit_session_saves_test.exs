@@ -169,6 +169,42 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(row.block.refs) == 1
   end
 
+  # #1 (field ops): the same with a save that closes the editor. B's ops on
+  # the new block, replayed onto the saved rows, named its ref by uid; the
+  # next keystroke named it by id, and B's save inserted a second, nameless
+  # ref.
+  test "typing in a new block while another editor saves and closes, then saving, keeps one ref", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    new = added_block(a, b, c)
+
+    type(b, new, "<p>B first</p>")
+    await(fn -> shown_text(a, new) == "<p>B first</p>" end)
+
+    save_read(a)
+    type(b, new, "<p>B typed during A's save</p>")
+    # the keystroke reaches the session before A's save writes
+    await(fn -> inspect(session_state(c.identity).diffs[new]) =~ "during A's save" end)
+    save_write(a)
+
+    # B's form has the saved rows' ids: its next keystroke names the ref by
+    # id, where the replayed one named it by uid
+    await(fn ->
+      ref_id =
+        b |> render() |> form_params("#entry_block_form-#{new}") |> get_in(["entry_block", "block", "refs", "0", "id"])
+
+      ref_id not in [nil, ""]
+    end)
+
+    type(b, new, "<p>B after the save</p>")
+    save_read(b)
+    save_write(b)
+    await(fn -> Map.new(texts(c.identity))[new] == "<p>B after the save</p>" end)
+
+    [row] = Enum.filter(rows(c.identity), &(&1.block.uid == new))
+    assert length(row.block.refs) == 1
+  end
+
   test "an editor who types in a new block during their own save, then saves again, keeps it all", c do
     a = open(c.conn, c.identity)
     stay(a)

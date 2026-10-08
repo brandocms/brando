@@ -805,6 +805,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp keyed(%{assigns: %{edit_session: %Replica{rev: rev}}}, {:set_field, uid, path, value, nil}),
     do: {:set_field, uid, path, value, rev}
 
+  defp keyed(%{assigns: %{edit_session: %Replica{rev: rev}}}, {:set_fields, uid, changes, nil}),
+    do: {:set_fields, uid, changes, rev}
+
   defp keyed(%{assigns: %{edit_session: %Replica{}, block_ops: ops}}, op), do: Ops.keyed(ops, op)
   defp keyed(_socket, op), do: op
 
@@ -1020,7 +1023,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # An op turned away because another editor removed its block.
   defp report_rejection(socket, op, {:unknown_uid, _uid})
-       when elem(op, 0) in [:update, :insert_child, :reorder_children] do
+       when elem(op, 0) in [:update, :set_field, :set_fields, :insert_child, :reorder_children] do
     send(self(), {:toast, gettext("Another editor removed the block you were changing.")})
     socket
   end
@@ -1150,6 +1153,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # remove blocks compare every root.
   defp hint_uids({:update, uid, _params}), do: [uid]
   defp hint_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
+  defp hint_uids({:set_fields, uid, _changes, _rev}), do: [uid]
   defp hint_uids({:insert_child, parent_uid, _uid, _at, _params}), do: [parent_uid]
   defp hint_uids({:reorder_children, parent_uid, _uids}), do: [parent_uid]
   defp hint_uids({:move, _uid, _at}), do: []
@@ -1216,7 +1220,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The op is the one field and the store is right, but the block's own form
   # took the old values: show the root from the store again. Only a keystroke
   # that arrives within a round trip of the refresh can have crossed it.
-  defp recheck_after_race(socket, op) when elem(op, 0) in [:set_field, :update] do
+  defp recheck_after_race(socket, op) when elem(op, 0) in [:set_field, :set_fields, :update] do
     uid = elem(op, 1)
     ops = socket.assigns.block_ops
     root = Ops.known?(ops, uid) && Ops.root_of(ops, uid)

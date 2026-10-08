@@ -413,12 +413,12 @@ jobs:
           done
           echo "::warning::Continuing with the runner image's packages"
 
-      - name: Run fast rich-text regressions
+      - name: Run fast rich-text and block input regressions
         if: matrix.suite == 'legacy-1'
         working-directory: brando/e2e
         run: |
           source .envrc
-          node --test ../test/javascript/tiptap.test.mjs
+          node --test ../test/javascript/tiptap.test.mjs ../test/javascript/pending_inputs.test.mjs
           cd playwright
           pnpm exec playwright test --config tiptap.config.js
 

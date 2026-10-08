@@ -231,4 +231,72 @@ test.describe('Field presence', () => {
     await page.waitForTimeout(1000)
     expect(await page.evaluate(() => window.scrollY)).toBe(scrolled)
   })
+
+  // #2992 review: a field op on a block that was new when the save read the
+  // session, replayed after the save gave it rows, named those rows by uid
+  // only, and the next save failed or wrote a duplicate.
+  //
+  // LiveView blurs the focused input while a form submit is in flight
+  // (`submitForm` → `blurActiveElement`), so a key that lands in that moment
+  // is lost, on main as well. The test holds the editor, the other editor
+  // and the saved row to what the typist's own field ends up showing.
+  test('typing, saving with the keyboard and typing on in a new block keeps it all', async ({ page, secondUserPage }) => {
+    const url = await createPage(page, 'Presence Save While Typing', ['HEEx Parity'])
+    await open(page, url)
+    await open(secondUserPage, url)
+
+    await addModule(page, 'HEEx Parity')
+    await expect(page.locator('.entry-block')).toHaveCount(2, { timeout: 15000 })
+    await expect(secondUserPage.locator('.entry-block')).toHaveCount(2, { timeout: 15000 })
+
+    await headline(page, 1).click()
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('Before the save', { delay: 20 })
+    await page.keyboard.press('ControlOrMeta+s')
+    await page.keyboard.type(', and after it', { delay: 20 })
+    // the save has given the new block its row
+    await expect(block(page, 1)).toHaveAttribute('data-id', /\d+/, { timeout: 15000 })
+    await headline(page, 1).click()
+    await page.keyboard.press('End')
+    await page.keyboard.type(', and more', { delay: 20 })
+    await awaitBlockDebounce(page)
+
+    const typed = await headline(page, 1).inputValue()
+    expect(typed).toMatch(/^Before the save.*and more$/)
+    await expect(headline(secondUserPage, 1)).toHaveValue(typed, { timeout: 10000 })
+
+    await save(page)
+    await page.reload()
+    await syncLV(page)
+    await expect(page.locator('.entry-block')).toHaveCount(2, { timeout: 15000 })
+    await expect(headline(page, 1)).toHaveValue(typed, { timeout: 15000 })
+  })
+
+  // #2992 review: the server's answer to an earlier keystroke, arriving
+  // after the last one, was put back when the editor left the field.
+  test('a field typed into in bursts keeps every keystroke when the editor leaves it', async ({ page, secondUserPage }) => {
+    const url = await createPage(page, 'Presence Debounced Typing', ['HEEx Parity'])
+    await open(page, url)
+    await open(secondUserPage, url)
+
+    // a slow connection: the answer to a burst arrives after the next one
+    await page.evaluate(() => window.liveSocket.enableLatencySim(250))
+    try {
+      await headline(page).click()
+      await page.keyboard.press('ControlOrMeta+a')
+      await page.keyboard.type('Typed', { delay: 20 })
+      // the debounced change goes out…
+      await page.waitForTimeout(330)
+      // …and the next burst is typed before its answer is back
+      await page.keyboard.type(' in bursts', { delay: 10 })
+      await page.waitForTimeout(1500)
+      await page.keyboard.press('Tab')
+      await page.waitForTimeout(800)
+
+      await expect(headline(page)).toHaveValue('Typed in bursts')
+      await expect(headline(secondUserPage)).toHaveValue('Typed in bursts', { timeout: 5000 })
+    } finally {
+      await page.evaluate(() => window.liveSocket.disableLatencySim())
+    }
+  })
 })

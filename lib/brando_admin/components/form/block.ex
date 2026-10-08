@@ -524,6 +524,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
 
     socket
+    |> assign(:replaced, {socket.assigns[:form], System.monotonic_time(:millisecond)})
     |> assign(:form, form)
     |> assign_selected_identifiers()
     |> assign_hidden_block_fields()
@@ -2300,28 +2301,44 @@ defmodule BrandoAdmin.Components.Form.Block do
   render stamping (`rendered_html`/`rendered_at` only — materialization
   strips render artifacts anyway).
 
-  `target:` is the input a `validate_block` event names (`_target`). When it
-  is one field, the op is `{:set_field, ...}` for that field only.
+  What reaches the edit session is the fields the event changed
+  (`Ops.field_op/4`), so someone working in another field of the block
+  keeps their change.
   """
-  def assign_block_form(socket, form, opts \\ []) do
+  def assign_block_form(socket, form) do
+    op = form_op(socket, form)
+
     socket
     |> assign(:form, form)
     |> assign_hidden_block_fields()
-    |> emit_block_op(form_op(socket.assigns.uid, form, opts[:target], socket.assigns[:form]))
+    |> emit_block_op(op)
     |> assign_unused_collections()
   end
 
-  # A keystroke changes one field: it goes to the edit session as that field
-  # alone (`{:set_field, ...}`), so someone typing in another field of the
-  # block keeps their change. Anything else sends the block's whole diff.
-  defp form_op(uid, form, target, previous) when is_list(target) do
-    case Ops.field_op(form.source, uid, target, previous && previous.source) do
-      {:ok, op} -> op
-      :error -> {:update, uid, Ops.block_diff_params(form.source)}
+  # How long after another editor's change replaced this block's form an
+  # event can still carry the values the browser showed before it.
+  @stale_ms 1_000
+
+  defp form_op(socket, form) do
+    uid = socket.assigns.uid
+
+    with %{source: %Changeset{} = before} <- socket.assigns[:form],
+         {:ok, op} <- Ops.field_op(before, form.source, uid, stale_source(socket)) do
+      op
+    else
+      _ -> {:update, uid, Ops.block_diff_params(form.source)}
     end
   end
 
-  defp form_op(uid, form, _target, _previous), do: {:update, uid, Ops.block_diff_params(form.source)}
+  defp stale_source(socket) do
+    case socket.assigns[:replaced] do
+      {%{source: %Changeset{} = source}, at} ->
+        if System.monotonic_time(:millisecond) - at < @stale_ms, do: source
+
+      _ ->
+        nil
+    end
+  end
 
   @doc """
   Send a block op to the owning BlockField's reducer (see `Ops.apply_op/2`).
@@ -2329,6 +2346,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   Works from any nesting level — the BlockField component id is derived from
   `form_id` + `block_field`, which every block receives.
   """
+  def emit_block_op(socket, nil), do: socket
+
   def emit_block_op(socket, op) do
     send_update(BlockField,
       id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",

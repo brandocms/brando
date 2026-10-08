@@ -616,16 +616,23 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   session state, not a state replacement. Editors without `:update` on the entry join
   read-only (the session refuses their ops). Ops must stay pure: the session and every
   replica must reach the same state from the same ops.
-- **A keystroke is one field**: `validate_block` passes its `_target` to
-  `Block.assign_block_form/3`, which emits `{:set_field, uid, path, value, rev}`
-  (`Ops.field_op/3`: list items by `id`/`uid`/`key`, an embed's whole value as the
-  default when the diff has none) instead of the block's whole diff. Last arrival wins
-  per field, so two editors in one block keep both changes; anything that is not one
-  input still sends `{:update, ...}`. The replica's pending ops keep this editor's value
-  until the session confirms it. Other editors' changes refresh a root even while it is
-  in use (`remount_js: :skip_focused`); the input with the focus keeps its value
-  (LiveView, and `initializeLiveSocket.js` for rich text's hidden input) and takes the
-  session's value when the editor leaves it, if nobody typed there since.
+- **An event sends the fields it changed**: `Block.assign_block_form/2` compares the
+  block's form before and after (`Ops.field_op/4`) and emits `{:set_field, uid, path,
+  value, rev}` for one changed leaf, `{:set_fields, uid, [{path, value}], rev}` for
+  several, nothing for none — never the whole diff, so another editor's in-flight change
+  to a different field survives. List items are named by `id`/`uid`/`key`/`sync_uid`; a
+  list whose items have none, or that gained, lost or reordered items, is set whole
+  (never by index). Within a second of a `replace_form` the event can carry the
+  browser's old values: leaves set back to the replaced form's values are dropped
+  (`@replaced`). A field op made while its rows were new names them by uid; the reducer
+  matches uid- and id-named items through `rel_ids`, so both land on one row. `{:update,
+  ...}` remains only for forms that cannot be compared. Last arrival wins per field. The
+  replica's pending ops keep this editor's value until the session confirms it. Other
+  editors' changes refresh a root even while it is in use (`remount_js: :skip_focused`);
+  the input with the focus keeps its value (LiveView, and
+  `Presence/pendingInputs.js` for rich text's hidden input) and takes another editor's
+  value when the editor leaves it, if they did not type since. Server answers to this
+  editor's own earlier keystrokes are never noted (`test/javascript/pending_inputs.test.mjs`).
 - **Order is fractional keys in the session** (`BlockField.FractionalKey`, `Ops.keys`):
   local inserts and moves are rewritten to `{:key, key}` positions (`Ops.keyed/2`) so
   two inserts at one place both land there. Saves still write the integer `sequence`

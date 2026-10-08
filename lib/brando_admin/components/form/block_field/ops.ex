@@ -100,6 +100,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           | {:insert_child, parent :: uid(), uid(), position(), params()}
           | {:update, uid(), params()}
           | {:set_field, uid(), field_path(), term(), rev :: non_neg_integer() | nil}
+          | {:set_fields, uid(), [{field_path(), term()}], rev :: non_neg_integer() | nil}
           | {:move, uid(), position()}
           | {:reorder, [uid()]}
           | {:reorder_children, parent :: uid(), [uid()]}
@@ -313,13 +314,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # One field of one block, last arrival wins. The rest of the block's diff
   # is left alone, so two editors in different fields of one block both keep
   # their changes.
-  def apply_op(%__MODULE__{} = state, {:set_field, uid, path, value, _rev}) when is_list(path) and path != [] do
-    if known?(state, uid) do
-      {:ok, %{state | diffs: Map.put(state.diffs, uid, put_path(Map.get(state.diffs, uid, %{}), path, value))}}
-    else
-      {:error, {:unknown_uid, uid}}
-    end
-  end
+  def apply_op(%__MODULE__{} = state, {:set_field, uid, path, value, _rev}) when is_list(path) and path != [],
+    do: set_fields(state, uid, [{path, value}])
+
+  # The fields one event changed together (a widget that sets a value beside
+  # its own, rows moved by dragging), each set on its own.
+  def apply_op(%__MODULE__{} = state, {:set_fields, uid, changes, _rev}) when is_list(changes),
+    do: set_fields(state, uid, changes)
 
   def apply_op(%__MODULE__{} = state, {:move, uid, to}) do
     cond do
@@ -1038,57 +1039,93 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   ## Fields
 
-  @doc """
-  The `{:set_field, ...}` op for the input a block form just changed, or
-  `:error` when the input is not one field (a table row, a hidden helper).
+  @render_artifacts ~w(rendered_html rendered_at)
 
-  `changeset` is the block's new changeset and `target` the input's name as
-  LiveView sends it in `_target` (`["entry_block", "block", "refs", "0",
-  "data", "data", "text"]`). List items are named by identity (`id`, `uid`
-  or `key`) rather than index, and the value is read from the changeset's
-  applied state, so a field changed back to its saved value is set as well.
+  @doc """
+  The op for what one event changed in a block's form: `{:set_field, ...}`
+  for one field, `{:set_fields, ...}` for several, `nil` for nothing, or
+  `:error` when the forms cannot be compared (the caller sends the whole
+  block).
+
+  `previous` is the block's changeset before the event and `changeset` the
+  one after; every leaf that differs is a field. List items are named by
+  identity (`id`, `uid`, `key` or `sync_uid`) rather than index, and a list
+  whose items have none, or whose items were added, removed or reordered,
+  is one field, set whole. `"children"` is left out: the tree is the
+  store's.
+
+  `stale` is the form this editor's browser showed before another editor's
+  change replaced it, when that happened a moment ago: the event can carry
+  the browser's old values for the fields that change touched. A field set
+  back to what `stale` held is that, not a change, and is left out.
 
   ## Examples
 
       iex> alias BrandoAdmin.Components.Form.BlockField.Ops
-      iex> cs = Ecto.Changeset.change(%Brando.Content.Block{id: 1, uid: "b"}, %{description: "New"})
-      iex> {:ok, {:set_field, "b", ["description"], "New", nil}} = Ops.field_op(cs, "b", ["child_block", "description"])
+      iex> before = Ecto.Changeset.change(%Brando.Content.Block{id: 1, uid: "b"})
+      iex> cs = Ecto.Changeset.change(before, %{description: "New"})
+      iex> Ops.field_op(before, cs, "b")
+      {:ok, {:set_field, "b", ["description"], "New", nil}}
 
   """
-  @render_artifacts ~w(rendered_html rendered_at)
+  @spec field_op(Changeset.t(), Changeset.t(), uid(), Changeset.t() | nil) :: {:ok, op() | nil} | :error
+  def field_op(%Changeset{} = previous, %Changeset{} = changeset, uid, stale \\ nil) do
+    before = previous |> snapshot_params() |> drop_artifacts()
+    now = changeset |> snapshot_params() |> drop_artifacts()
+    stale = stale && stale |> snapshot_params() |> drop_artifacts()
 
-  @spec field_op(Changeset.t(), uid(), [String.t()], Changeset.t() | nil) :: {:ok, op()} | :error
-  def field_op(changeset, uid, target, previous \\ nil)
+    changes =
+      before
+      |> leaf_changes(now, [], [], :top)
+      |> Enum.reject(fn {raw, _path, value} -> stale && dom_get(stale, raw) == {:ok, value} end)
 
-  def field_op(%Changeset{} = changeset, uid, [_form_name | path], previous) when path != [] do
-    snapshot = changeset |> snapshot_params() |> drop_artifacts()
-
-    with true <- only_change?(previous, snapshot, path),
-         {:ok, field_path, value} <- field_path(snapshot, path, [], :top) do
-      {:ok, {:set_field, uid, field_path, value, nil}}
-    else
-      _ -> :error
+    case changes do
+      [] -> {:ok, nil}
+      [{_raw, path, value}] -> {:ok, {:set_field, uid, path, value, nil}}
+      changes -> {:ok, {:set_fields, uid, Enum.map(changes, fn {_raw, path, value} -> {path, value} end), nil}}
     end
   rescue
     _ -> :error
   end
 
-  def field_op(_changeset, _uid, _target, _previous), do: :error
+  # {path as the form names it (keys and indexes), field path, value} for
+  # every leaf that differs.
+  defp leaf_changes(%{} = before, %{} = now, raw, acc, level) do
+    (Map.keys(now) ++ Map.keys(before))
+    |> Enum.uniq()
+    |> Enum.reject(&(&1 in @render_artifacts or &1 == "children"))
+    |> Enum.flat_map(&key_changes(&1, Map.get(before, &1), Map.get(now, &1), raw, acc, level))
+  end
 
-  # The input is the one thing that changed since `previous` (the form
-  # before this event): a table row moved by dragging, or a value a widget
-  # sets beside the one it names, is more than one field and goes as the
-  # block's whole diff.
-  defp only_change?(nil, _snapshot, _path), do: true
+  defp key_changes(_key, same, same, _raw, _acc, _level), do: []
 
-  defp only_change?(%Changeset{} = previous, snapshot, path) do
-    with {:ok, value} <- dom_get(snapshot, path),
-         {:ok, before} <- previous |> snapshot_params() |> drop_artifacts() |> dom_put(path, value) do
-      before == snapshot
+  # The block of a root's entry-block diff is partial by nature (its rows
+  # are matched by id); a map below a list item is an embed and needs its
+  # whole value if the stored diff has none.
+  defp key_changes(key, %{} = old, %{} = new, raw, acc, level) when not is_struct(old) and not is_struct(new) do
+    segment = if level == :item, do: {:map, key, new}, else: key
+    leaf_changes(old, new, raw ++ [key], [segment | acc], :inner)
+  end
+
+  defp key_changes(key, old, new, raw, acc, _level) when is_list(old) and is_list(new) do
+    identities = Enum.map(new, &identity/1)
+
+    if :none in identities or identities != Enum.map(old, &identity/1) do
+      [{raw ++ [key], Enum.reverse([key | acc]), new}]
     else
-      _ -> false
+      skeleton = Enum.map(identities, &identity_map/1)
+
+      [old, new, identities]
+      |> Enum.zip()
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {{old_item, new_item, identity}, index} ->
+        item_raw = raw ++ [key, to_string(index)]
+        leaf_changes(old_item, new_item, item_raw, [{:at, key, identity, skeleton} | acc], :item)
+      end)
     end
   end
+
+  defp key_changes(key, _old, new, raw, acc, _level), do: [{raw ++ [key], Enum.reverse([key | acc]), new}]
 
   defp dom_get(value, []), do: {:ok, value}
   defp dom_get(%{} = map, [key | rest]) when is_map_key(map, key), do: dom_get(Map.fetch!(map, key), rest)
@@ -1102,65 +1139,76 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp dom_get(_value, _path), do: :error
 
-  defp dom_put(_value, [], new), do: {:ok, new}
-
-  defp dom_put(%{} = map, [key | rest], new) when is_map_key(map, key) do
-    with {:ok, value} <- dom_put(Map.fetch!(map, key), rest, new), do: {:ok, Map.put(map, key, value)}
-  end
-
-  defp dom_put(list, [index | rest], new) when is_list(list) do
-    with {i, ""} <- Integer.parse(index),
-         true <- i < length(list),
-         {:ok, value} <- dom_put(Enum.at(list, i), rest, new) do
-      {:ok, List.replace_at(list, i, value)}
-    else
-      _ -> :error
-    end
-  end
-
-  defp dom_put(_value, _path, _new), do: :error
-
   defp drop_artifacts(%{} = map) when not is_struct(map),
     do: map |> Map.drop(@render_artifacts) |> Map.new(fn {k, v} -> {k, drop_artifacts(v)} end)
 
   defp drop_artifacts(list) when is_list(list), do: Enum.map(list, &drop_artifacts/1)
   defp drop_artifacts(other), do: other
 
-  defp field_path(map, [key], acc, _level) when is_map(map) do
-    if Map.has_key?(map, key) and key not in @render_artifacts,
-      do: {:ok, Enum.reverse([key | acc]), Map.get(map, key)},
-      else: :error
+  # What names a list item whatever its index: its row id, its uid, its key
+  # (a var), its sync uid (a table row). An item with none of them (an
+  # embed's list) cannot be named, and its list is set whole.
+  defp identity(%{} = item) when not is_struct(item) do
+    Enum.find_value(~w(id uid key sync_uid), :none, fn name ->
+      case Map.get(item, name) do
+        value when value not in [nil, ""] -> {name, value}
+        _ -> nil
+      end
+    end)
   end
 
-  defp field_path(map, [key, index | rest], acc, _level) when is_map(map) and is_list(:erlang.map_get(key, map)) do
-    list = Map.fetch!(map, key)
+  defp identity(_item), do: :none
 
-    with {i, ""} <- Integer.parse(index),
-         %{} = element <- Enum.at(list, i) do
-      skeleton = list |> Enum.with_index() |> Enum.map(fn {item, n} -> identity_map(identity(item, n)) end)
-      field_path(element, rest, [{:at, key, identity(element, i), skeleton} | acc], :item)
+  defp identity_map({key, value}), do: %{key => value}
+
+  defp set_fields(state, uid, changes) do
+    if known?(state, uid) do
+      ids = Map.get(state.rel_ids, uid, %{})
+      root? = uid in state.order
+      diff = state.diffs |> Map.get(uid, %{}) |> fill_diff_ids(root?, ids)
+
+      diff =
+        Enum.reduce(changes, diff, fn {path, value}, diff ->
+          put_path(diff, resolve_ids(path, root?, ids), value)
+        end)
+
+      {:ok, %{state | diffs: Map.put(state.diffs, uid, diff)}}
     else
-      _ -> :error
+      {:error, {:unknown_uid, uid}}
     end
   end
 
-  # The block of a root's entry-block diff is partial by nature (its rows
-  # are matched by id); a map below a list item is an embed and needs its
-  # whole value if the stored diff has none.
-  defp field_path(map, [key | rest], acc, level) when is_map(map) and is_map(:erlang.map_get(key, map)) do
-    segment = if level == :item, do: {:map, key, Map.fetch!(map, key)}, else: key
-    field_path(Map.fetch!(map, key), rest, [segment | acc], :inner)
+  # A field op made while its rows were new names them by uid, key or sync
+  # uid; once a save gave them ids (`rel_ids`), the op and the diff it lands
+  # in name them by id as well, so both meet on one row however each was
+  # made — a second item for the same row would be saved as a new row.
+  defp fill_diff_ids(diff, _root?, ids) when ids == %{}, do: diff
+  defp fill_diff_ids(%{"block" => %{} = block} = diff, true, ids), do: Map.put(diff, "block", fill_rel_ids(block, ids))
+  defp fill_diff_ids(diff, true, _ids), do: diff
+  defp fill_diff_ids(diff, false, ids), do: fill_rel_ids(diff, ids)
+
+  defp resolve_ids(path, _root?, ids) when ids == %{}, do: path
+  defp resolve_ids(["block" | rest], true, ids), do: ["block" | resolve_ids(rest, false, ids)]
+
+  defp resolve_ids([{:at, key, identity, skeleton} | rest], false, ids) do
+    case List.keyfind(@rel_identities, key, 0) do
+      {^key, field} ->
+        skeleton = Enum.map(skeleton, &fill_rel_id(&1, key, field, ids))
+        [{:at, key, resolve_identity(identity, key, field, ids), skeleton} | rest]
+
+      nil ->
+        [{:at, key, identity, skeleton} | rest]
+    end
   end
 
-  defp field_path(_value, _path, _acc, _level), do: :error
+  defp resolve_ids(path, _root?, _ids), do: path
 
-  defp identity(%{"id" => id}, _index) when id not in [nil, ""], do: {"id", id}
-  defp identity(%{"uid" => uid}, _index) when uid not in [nil, ""], do: {"uid", uid}
-  defp identity(%{"key" => key}, _index) when key not in [nil, ""], do: {"key", key}
-  defp identity(_item, index), do: {:index, index}
-
-  defp identity_map({:index, _}), do: %{}
-  defp identity_map({key, value}), do: %{key => value}
+  defp resolve_identity({name, value} = identity, key, field, ids) do
+    case name == to_string(field) && Map.get(ids, {key, to_string(value)}) do
+      id when id not in [nil, false] -> {"id", id}
+      _ -> identity
+    end
+  end
 
   defp put_path(map, [key], value) when is_binary(key), do: Map.put(as_map(map), key, value)
 
@@ -1190,10 +1238,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         _ -> skeleton
       end
 
-    index = Enum.find_index(Enum.with_index(list), fn {item, n} -> same_item?(item, n, identity) end)
-
     list =
-      case index do
+      case Enum.find_index(list, &same_item?(&1, identity)) do
         nil -> list ++ [put_path(identity_map(identity), rest, value)]
         index -> List.update_at(list, index, &put_path(&1, rest, value))
       end
@@ -1204,9 +1250,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp as_map(%{} = map), do: map
   defp as_map(_), do: %{}
 
-  defp same_item?(_item, n, {:index, index}), do: n == index
-  defp same_item?(%{} = item, _n, {key, value}), do: to_string(Map.get(item, key)) == to_string(value)
-  defp same_item?(_item, _n, _identity), do: false
+  defp same_item?(%{} = item, {key, value}), do: to_string(Map.get(item, key)) == to_string(value)
+  defp same_item?(_item, _identity), do: false
 
   ## State plumbing
 

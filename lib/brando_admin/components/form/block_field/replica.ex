@@ -80,6 +80,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
   # The blocks an op changes, to know later whose work a lost block held.
   defp op_uids({kind, uid, _}) when kind in [:update, :move], do: [uid]
   defp op_uids({:insert, uid, _at, _params}), do: [uid]
+  defp op_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
+  defp op_uids({:set_fields, uid, _changes, _rev}), do: [uid]
   defp op_uids({:insert_child, parent, uid, _at, _params}), do: [parent, uid]
   defp op_uids({:move_to_parent, uid, parent, _at}), do: [uid, parent]
   defp op_uids({:remap_slot, uid, _destination, _params}), do: [uid]
