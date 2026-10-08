@@ -631,6 +631,99 @@ defmodule Brando.EditSessionTest do
     end
   end
 
+  # Follow-up, round 2: who brings back unsaved work in blocks a write
+  # removed. The session asks one editor per removed block, never the one
+  # whose own write or join caused the rebase, and asks the next one if it
+  # does not answer or leaves.
+  describe "rescues" do
+    setup do
+      previous = Application.get_env(:brando, EditSession, [])
+      Application.put_env(:brando, EditSession, Keyword.put(previous, :rescue_timeout, 200))
+      on_exit(fn -> Application.put_env(:brando, EditSession, previous) end)
+      :ok
+    end
+
+    defp without_b, do: Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11)])])
+
+    # `p1` worked in "b", `p2` is here too; then the rows lose "b".
+    defp removed_with_work do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {p1, info} = editor(ref)
+      {p2, _} = editor(ref)
+      send(p1, {:local, anchor("b", "p1's work")})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, _}}}
+      {ref, info.session, p1, p2}
+    end
+
+    test "the editor who worked in the block is asked, and everyone hears when it is back" do
+      {_ref, session, p1, _p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [pending]}}
+      assert %{group: "b", uids: ["b"], rescuer: ^p1, owners: [^p1], orphan?: false} = pending
+
+      :ok = GenServer.cast(session, {:rescued, p1, @field, "b", true})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true, owners: [^p1], orphan?: false}}
+    end
+
+    test "an editor who does not answer in time is replaced by the next" do
+      {_ref, session, p1, p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 1_000
+      :ok = GenServer.cast(session, {:rescued, p2, @field, "b", true})
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: true}}
+    end
+
+    test "an editor who leaves is replaced at once, and with nobody left the work is reported lost" do
+      {_ref, session, p1, p2} = removed_with_work()
+      {:ok, _} = EditSession.rebase(session, @field, without_b(), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [%{rescuer: ^p1}]}}
+
+      unlink_and_kill(p1)
+      assert_receive {:edit_session, @field, %{kind: :rescue, group: "b", rescuer: ^p2}}, 500
+
+      unlink_and_kill(p2)
+      assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, orphan?: false}}, 500
+    end
+
+    test "the editor whose join removed the block is never asked: its replica moved on with the reply" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      {other, _} = editor(ref)
+      {gone, _} = editor(ref)
+      send(gone, {:local, anchor("b", "work of an editor who left")})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^gone, _}}}
+      unlink_and_kill(gone)
+
+      # a joiner whose newer rows lack "b"
+      {joiner, _} = editor(ref, without_b(), rebase: true)
+      assert_receive {:edit_session, @field, %{kind: :rebase, origin: ^joiner, rescues: [pending]}}, 1_000
+      assert %{group: "b", rescuer: ^other, orphan?: true} = pending
+    end
+
+    test "work in two children of one removed block is one group, brought back by one editor" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      two = Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]), entry_block("b", 2, 20)])
+      {p1, info} = editor(ref, two)
+      {p2, _} = editor(ref, two)
+      send(p1, {:local, {:update, "a1", %{"description" => "p1"}}})
+      send(p2, {:local, {:update, "a2", %{"description" => "p2"}}})
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p1, _}}}
+      assert_receive {:edit_session, @field, %{kind: :op, origin: {^p2, _}}}
+
+      {:ok, _} = EditSession.rebase(info.session, @field, Ops.from_entry_blocks([entry_block("b", 2, 20)]), :carry)
+      assert_receive {:edit_session, @field, %{kind: :rebase, rescues: [pending]}}
+      assert %{group: "a", rescuer: rescuer, owners: owners} = pending
+      assert Enum.sort(pending.uids) == ["a1", "a2"]
+      assert Enum.sort(owners) == Enum.sort([p1, p2])
+      assert rescuer in [p1, p2]
+    end
+  end
+
   describe "tenancy" do
     setup do
       put_test_env(:tenancy_mode, :multi)

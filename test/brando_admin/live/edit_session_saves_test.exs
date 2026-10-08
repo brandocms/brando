@@ -457,6 +457,36 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert Enum.all?(kept_child["refs"], &(&1["uid"] not in Enum.map(refs, fn ref -> ref["uid"] end)))
   end
 
+  # Follow-up, round 2: two editors' work in two children of one removed
+  # container. Each brought back its own copy of the container under one
+  # uid, and the session turned the second away: one editor's work was lost.
+  test "work two editors had in two children of a removed container comes back in one copy", c do
+    c = Brando.ProposalFixtures.multi_context(c)
+    [x, y | _] = c.child_uids
+    a = open(c.conn, c.work)
+    b = open(c.other_conn, c.work)
+    Brando.endpoint().subscribe("user:#{c.me.id}")
+    Brando.endpoint().subscribe("user:#{c.other.id}")
+
+    set_child(a, x, ["child_block", "refs", "0", "data", "data", "text"], "<p>A's child work</p>")
+    set_child(b, y, ["child_block", "refs", "0", "data", "data", "text"], "<p>B's child work</p>")
+    await(fn -> session_state(c.work).diffs[x] != nil and session_state(c.work).diffs[y] != nil end)
+    delete_outside(c, c.multi_uid)
+
+    shell = c.multi_uid <> "-kept"
+    await(fn -> session_state(c.work).statuses[shell] == :inserted end)
+    state = session_state(c.work)
+    assert state.order == [c.intro_uid, shell]
+    assert state.child_order[shell] == [x <> "-kept", y <> "-kept"]
+    assert kept_text(state, x <> "-kept") == "<p>A's child work</p>"
+    assert kept_text(state, y <> "-kept") == "<p>B's child work</p>"
+
+    # each of them is told their work is back
+    assert_receive %Phoenix.Socket.Broadcast{topic: "user:" <> a_id, event: "toast"}, 2_000
+    assert_receive %Phoenix.Socket.Broadcast{topic: "user:" <> b_id, event: "toast"}, 2_000
+    assert Enum.sort([a_id, b_id]) == Enum.sort([to_string(c.me.id), to_string(c.other.id)])
+  end
+
   # Follow-up: the editor whose unsaved work a removed block held had left,
   # and nobody brought it back. An editor still here does now, and every
   # editor still here is told.

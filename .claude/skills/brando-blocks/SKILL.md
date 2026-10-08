@@ -620,11 +620,17 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   state/rebase, so `Replica.reset/2` drops pending ops it already folded in. A carry
   conflict (another save removed a block this editor had unsaved work in) comes back to
   that editor as a new block (`<uid>-kept`, its refs with new uids) with a toast — keep
-  conflicts explicit, never drop work silently. The session decides who brings each one
-  back (`rescuers` in the rebase message): an editor still here who changed it (it keeps
-  each editor's changed uids, `Ops.op_uids/1`, also after they leave), else any editor
-  still here when the ones who did have left (`orphans`, and every editor gets a toast) —
-  one editor per block, never two copies. Only the top-most removed block this
+  conflicts explicit, never drop work silently. The session groups the conflicts by the
+  top-most block the write removed (`group`) and asks ONE editor per group to bring back
+  everything under it in one copy (`rescues` in the rebase message): an editor here who
+  changed them (it keeps each editor's changed uids, `Ops.op_uids/1`, also after they
+  leave), else any editor here (`orphan?`) — never the origin of the rebase (its replica
+  moved on with the reply) nor a dead process. Every replica computes its payload; the
+  rescuer inserts and calls `EditSession.rescued/4`, the session broadcasts `:rescued`
+  and each editor toasts for its own work (`owners`) or an orphan's; no answer within
+  `rescue_timeout`, or the rescuer leaving, makes the session ask the next (`:rescue`),
+  who inserts its standby payload. Work only a rejoining editor held comes back from the
+  join's reply (`rescues` in `info`). Only the top-most removed block this
   editor worked in comes back (a child added to a removed container brings the container
   back with it), and the toast says so only for blocks that did come back. A rescued child
   goes back under its nearest ancestor that is still there (`{:insert_child, ...}`); removed

@@ -697,6 +697,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:remote_refresh, MapSet.new())
     |> assign(:remote_refresh_scheduled?, false)
     |> assign(:remote_preview_dirty?, false)
+    |> assign(:rescue_standby, %{})
     |> assign(:blocks_initialized, true)
     |> assign(:footnote_fields, assigns.opts[:footnote_fields] || %{})
     |> assign(:note_collection?, !!assigns.opts[:footnote_fields])
@@ -755,9 +756,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     case result do
       {:ok, info} ->
+        # Work only this editor held that the session could not take: blocks
+        # another write removed while it was away. It brings them back itself.
+        rescues = Map.get(info, :rescues, [])
+        payloads = rescue_payloads(socket, rescues, info.state, MapSet.new(Ops.edited(socket.assigns.block_ops)))
+
         socket
         |> assign(:session_base, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
         |> adopt_session(ref, info, opts)
+        |> rescue_own(rescues, payloads)
         |> announce_join()
 
       {:error, reason} ->
@@ -872,6 +879,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # The editor asked to bring a group back did not: this one is asked now.
+  defp handle_session_message(%{assigns: %{edit_session: %Replica{}}} = socket, %{kind: :rescue} = message) do
+    if message.rescuer == self(),
+      do: rescue_group(socket, message.group, Map.get(socket.assigns.rescue_standby, message.group)),
+      else: socket
+  end
+
+  defp handle_session_message(socket, %{kind: :rescued} = message) do
+    socket = update(socket, :rescue_standby, &Map.delete(&1, message.group))
+    tell_rescued(message.ok?, self() in message.owners, message.orphan?)
+    socket
+  end
+
   defp handle_session_message(socket, _message), do: socket
 
   # Someone saved, or the entry was written outside the editor: the session
@@ -879,10 +899,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # then show the session's state on top of them.
   defp apply_rebase(socket, replica, message) do
     old_rows = rows_by_uid(socket.assigns.entry_blocks)
-    # Blocks with unsaved work that the new rows no longer have, this
-    # editor's to bring back: taken from what it showed, before it moves on.
-    rescued = rescue_conflicts(socket, replica, message)
-    orphans = Map.get(message, :orphans, [])
+    # Blocks with unsaved work that the new rows no longer have: taken from
+    # what this editor showed, before it moves on, to bring back if the
+    # session asks it to (`rescues`).
+    rescues = Map.get(message, :rescues, [])
+    payloads = rescue_payloads(socket, rescues, message.state, Map.get(message, :worked, MapSet.new()))
 
     # The rows were written (by another editor's save, or outside the
     # editor): read them, as their content can change while their ids and
@@ -902,94 +923,84 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:session_base, message.base)
     |> assign(:block_bin, [])
     |> show_state(displayed, :all, also: rewritten, base: message.base)
-    |> reinsert_rescued(Enum.map(rescued, &{&1, rescued_bottom(&1) in orphans}))
-    |> tell_orphans(orphans)
-  end
-
-  # Work an editor who has left had in a block another write removed is
-  # brought back by one of the editors still here: they all hear of it.
-  defp tell_orphans(socket, []), do: socket
-
-  defp tell_orphans(socket, _orphans) do
-    send(
-      self(),
-      {:toast,
-       gettext(
-         "Unsaved changes an editor who has left made in a block another save removed are back at the end, as a new block."
-       )}
-    )
-
-    socket
+    |> perform_rescues(rescues, payloads)
   end
 
   defp rows_by_uid(entry_blocks), do: Map.new(entry_blocks || [], &{&1.block.uid, &1})
 
-  # Unsaved work on a block that another save removed cannot be carried onto
-  # the new rows. The editors who did that work bring the block back as a
-  # new one, with their changes, so nothing they typed is lost. The removed
-  # rows may live on unattached, so the copy takes new uids, derived from the
-  # old ones: if two editors bring the same block back, the second insert is
-  # turned away and the first one stands.
-  defp rescue_conflicts(socket, %Replica{}, %{state: %Ops{} = new} = message) do
+  # Unsaved work on a block that another write removed cannot be carried
+  # onto the new rows. It comes back as a new block, with its changes, so
+  # nothing is lost: the session names one editor per removed block
+  # (`group`, the top-most block the write removed) to bring back every
+  # block with work under it, in one copy (`Brando.EditSession`). Every
+  # editor takes what it would bring back from what it showed, before it
+  # moves on, in case the session asks it later. The removed rows may live
+  # on unattached, so the copy takes new uids, derived from the old ones.
+  defp rescue_payloads(socket, rescues, %Ops{} = new, worked) do
     old = socket.assigns.block_ops
+    Map.new(rescues, &{&1.group, rescue_payload(socket, old, new, &1.group, &1.uids, worked)})
+  end
 
-    # A block comes back inside the removed parents this editor worked in
-    # too (a child added to a container brings the container back), and a
-    # block inside another rescued block comes back with it, as part of its
-    # subtree: only the top-most ones are brought back on their own.
-    #
-    # The session says which editor brings back each block (`rescuers`):
-    # one who worked in it, or one still here when they have left.
-    rescuers = Map.get(message, :rescuers, %{})
-    worked = Map.get(message, :worked, MapSet.new())
-
-    candidates =
-      message
-      |> Map.get(:conflicts, [])
-      |> Enum.filter(&(Map.get(rescuers, &1) == self() and Ops.known?(old, &1)))
+  # What brings back the blocks `uids` under `group`: under the nearest
+  # ancestor of `group` that is still there, or as a root. Removed blocks
+  # this editor's session worked in come back whole (a child added to a
+  # container brings the container back); the others around them come back
+  # as `-kept` shells holding only the way to them: a child block is made
+  # for its parent (a multi module's entry, a container's child) and would
+  # not read, or render, as a root of its own.
+  defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, group, uids, worked) do
+    whole =
+      uids
+      |> Enum.filter(&Ops.known?(old, &1))
       |> Enum.map(fn uid ->
-        old
-        |> ancestors(uid)
-        |> Enum.take_while(&(MapSet.member?(worked, &1) and not Ops.known?(new, &1)))
+        # the removed blocks above it, up to and with `group`
+        {below, top} = old |> ancestors(uid) |> Enum.split_while(&(&1 != group))
+
+        (below ++ Enum.take(top, 1))
+        |> Enum.take_while(&MapSet.member?(worked, &1))
         |> Enum.reduce(uid, fn ancestor, _below -> ancestor end)
       end)
       |> Enum.uniq()
 
-    for uid <- candidates,
-        not Enum.any?(ancestors(old, uid), &(&1 in candidates)),
-        rescued = rescue_in_place(socket, old, new, uid) do
-      rescued
+    whole = Enum.reject(whole, fn uid -> Enum.any?(ancestors(old, uid), &(&1 in whole)) end)
+
+    with true <- whole != [] and Ops.known?(old, group),
+         %{} = block <- rescue_tree(socket, old, group, whole) do
+      surviving = old |> ancestors(group) |> Enum.find(&Ops.known?(new, &1))
+      place_rescued(socket, old, group, block, surviving)
+    else
+      _ -> nil
+    end
+  rescue
+    error ->
+      Logger.error("BlockField could not keep a removed block's unsaved work: " <> Exception.message(error))
+      nil
+  end
+
+  defp rescue_tree(socket, old, uid, whole) do
+    cond do
+      uid in whole ->
+        rescued_block(socket, old, uid)
+
+      block = rescued_block(socket, old, uid) ->
+        children =
+          old.child_order
+          |> Map.get(uid, [])
+          |> Enum.filter(fn child -> child in whole or Enum.any?(whole, &(child in ancestors(old, &1))) end)
+          |> Enum.map(&rescue_tree(socket, old, &1, whole))
+          |> Enum.reject(&is_nil/1)
+
+        Map.put(block, "children", children)
+
+      true ->
+        nil
     end
   end
 
-  # Where a rescued block goes back: under the nearest ancestor that is
-  # still there, at the end of its children, so it stays where the editor
-  # worked. Ancestors that went too come back around it as `-kept` blocks
-  # holding only it, up to that ancestor or the root: a child block is made
-  # for its parent (a multi module's entry, a container's child) and would
-  # not read, or render, as a root of its own.
-  defp rescue_in_place(socket, old, new, uid) do
-    {removed, surviving} = old |> ancestors(uid) |> Enum.split_while(&(not Ops.known?(new, &1)))
+  defp place_rescued(_socket, _old, group, block, parent) when is_binary(parent), do: {:child, parent, block, group}
 
-    with %{} = block <- rescued_block(socket, old, uid) do
-      block = Enum.reduce(removed, block, &shell_around(socket, old, &1, &2))
-      place_rescued(socket, old, uid, block, Enum.reduce(removed, uid, fn ancestor, _ -> ancestor end), surviving)
-    end
-  end
-
-  defp place_rescued(_socket, _old, uid, block, _top, [parent | _]), do: {:child, parent, block, uid}
-
-  defp place_rescued(socket, old, uid, block, top, []) do
-    with %{} = entry_block <- rescued_params(socket, old, top), do: {:root, Map.put(entry_block, "block", block), uid}
-  end
-
-  # The removed ancestor `uid` around `inner`: its own content, and only
-  # the child on the way to the rescued block.
-  defp shell_around(socket, old, uid, inner) do
-    case rescued_block(socket, old, uid) do
-      %{} = block -> Map.put(block, "children", [inner])
-      nil -> inner
-    end
+  defp place_rescued(socket, old, group, block, nil) do
+    with %{} = entry_block <- rescued_params(socket, old, group), do: {:root, Map.put(entry_block, "block", block), group}
   end
 
   defp rescued_block(socket, old, uid) do
@@ -1004,6 +1015,86 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       nil -> []
       parent -> [parent | ancestors(ops, parent)]
     end
+  end
+
+  # The session asked this editor to bring back the groups it names: the
+  # others keep theirs, in case it asks them later.
+  defp perform_rescues(socket, rescues, payloads) do
+    Enum.reduce(rescues, socket, fn %{group: group, rescuer: rescuer}, socket ->
+      if rescuer == self(),
+        do: rescue_group(socket, group, payloads[group]),
+        else: update(socket, :rescue_standby, &Map.put(&1, group, payloads[group]))
+    end)
+  end
+
+  defp rescue_group(%{assigns: %{edit_session: %Replica{session: session}}} = socket, group, payload) do
+    {socket, ok?} = reinsert_payload(socket, payload)
+    EditSession.rescued(session, socket.assigns.block_field, group, ok?)
+    update(socket, :rescue_standby, &Map.delete(&1, group))
+  end
+
+  defp rescue_group(socket, _group, _payload), do: socket
+
+  defp reinsert_payload(socket, nil), do: {socket, false}
+
+  defp reinsert_payload(socket, payload) do
+    {socket, uid} = reinsert(socket, payload)
+
+    if Ops.known?(socket.assigns.block_ops, uid),
+      do: {socket, true},
+      else: {update(socket, :seed_forms, &Map.delete(&1, uid)), false}
+  end
+
+  defp rescue_own(socket, rescues, payloads) do
+    Enum.reduce(rescues, socket, fn %{group: group}, socket ->
+      {socket, ok?} = reinsert_payload(socket, payloads[group])
+      tell_rescued(ok?, true, false)
+      socket
+    end)
+  end
+
+  # Every editor hears how the session's rescue went: one whose work it
+  # was, and everyone when the work was an editor's who has left.
+  defp tell_rescued(true, own?, orphan?) do
+    if own?,
+      do:
+        send(
+          self(),
+          {:toast,
+           gettext(
+             "A block you had unsaved changes in was removed by another save. It is back at the end, as a new block, with your changes."
+           )}
+        )
+
+    if orphan?,
+      do:
+        send(
+          self(),
+          {:toast,
+           gettext(
+             "Unsaved changes an editor who has left made in a block another save removed are back at the end, as a new block."
+           )}
+        )
+  end
+
+  defp tell_rescued(false, own?, orphan?) do
+    if own?,
+      do:
+        send(
+          self(),
+          {:toast,
+           gettext("A block you had unsaved changes in was removed by another save, and could not be brought back.")}
+        )
+
+    if orphan?,
+      do:
+        send(
+          self(),
+          {:toast,
+           gettext(
+             "Unsaved changes an editor who has left made in a block another save removed could not be brought back."
+           )}
+        )
   end
 
   defp rescued_params(socket, old, uid) do
@@ -1046,50 +1137,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> Map.update("refs", [], fn refs -> Enum.map(refs, &Map.put(&1, "uid", Brando.Utils.generate_uid())) end)
     |> Map.update("children", [], fn children -> Enum.map(children, &rename_block(&1, ops)) end)
   end
-
-  defp reinsert_rescued(socket, []), do: socket
-
-  # `{rescued, orphan?}`: an orphan is another editor's work, which
-  # `tell_orphans/2` reports to everyone.
-  defp reinsert_rescued(socket, rescued) do
-    {socket, kept, lost} =
-      Enum.reduce(rescued, {socket, 0, 0}, fn {rescued, orphan?}, {socket, kept, lost} ->
-        {socket, uid} = reinsert(socket, rescued)
-
-        cond do
-          not Ops.known?(socket.assigns.block_ops, uid) ->
-            {update(socket, :seed_forms, &Map.delete(&1, uid)), kept, lost + 1}
-
-          orphan? ->
-            {socket, kept, lost}
-
-          true ->
-            {socket, kept + 1, lost}
-        end
-      end)
-
-    if kept > 0 do
-      send(
-        self(),
-        {:toast,
-         gettext(
-           "A block you had unsaved changes in was removed by another save. It is back at the end, as a new block, with your changes."
-         )}
-      )
-    end
-
-    if lost > 0 do
-      send(
-        self(),
-        {:toast,
-         gettext("A block you had unsaved changes in was removed by another save, and could not be brought back.")}
-      )
-    end
-
-    socket
-  end
-
-  defp rescued_bottom(rescued), do: elem(rescued, tuple_size(rescued) - 1)
 
   defp reinsert(socket, {:root, params, _bottom}) do
     params = Map.update!(params, "block", &rename_block(&1, socket.assigns.block_ops))
