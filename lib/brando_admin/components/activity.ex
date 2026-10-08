@@ -514,6 +514,8 @@ defmodule BrandoAdmin.Components.Activity do
   defp lines(%{action: :updated, details: %{"undo_import" => true}}, _fields, _states),
     do: [gettext("Set back by undoing an import")]
 
+  defp lines(%{details: %{"stale_blocks" => resolved}}, _fields, _states), do: stale_blocks_lines(resolved)
+
   defp lines(%{action: :revision_restored, details: %{"replaced" => replaced}, revision: revision}, fields, _states)
        when replaced != revision,
        do: [gettext("Replaced revision #%{revision}", revision: replaced), also_changed(fields)]
@@ -538,6 +540,29 @@ defmodule BrandoAdmin.Components.Activity do
   end
 
   defp lines(_event, fields, _states), do: [fields_line(fields)]
+
+  # `Brando.Content.StaleBlocks`: leftovers dropped or moved, `kind:key` and
+  # `kind:key→target`.
+  defp stale_blocks_lines(resolved) do
+    count = length(resolved["blocks"] || [])
+
+    keys = fn list ->
+      Enum.map_join(list, ", ", &(&1 |> String.split(":", parts: 2) |> List.last() |> String.replace("→", " → ")))
+    end
+
+    [
+      ngettext(
+        "Brought %{count} %{module} block up to date",
+        "Brought %{count} %{module} blocks up to date",
+        count,
+        count: count,
+        module: resolved["module"]
+      ),
+      resolved["dropped"] not in [nil, []] && gettext("Dropped %{keys}", keys: keys.(resolved["dropped"])),
+      resolved["mapped"] not in [nil, []] && gettext("Moved %{keys}", keys: keys.(resolved["mapped"]))
+    ]
+    |> Enum.filter(& &1)
+  end
 
   defp status_saved(%{"status" => %{"to" => status}}),
     do: gettext("Saved as %{status}", status: status |> status_label() |> downcase_first())
