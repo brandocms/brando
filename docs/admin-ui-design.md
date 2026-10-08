@@ -146,9 +146,11 @@ button groups.
 - A track with one tab shows it as a plain caption.
 - The link pickers' `Input.radios` take the same look through
   `.link-picker-modes .radios-wrapper`.
-- A sticky bar that holds tabs and actions (an entry form's toolbar, the
-  module editor) is a white bar around the track. A tab bar's old class
-  (`.transfer-tabs`, `.activity-tabs`…) stays on it for layout and tests only.
+- A sticky bar that holds tabs and actions (the module editor) is a white bar
+  around the track. The entry form's toolbar is split instead: see
+  [Entry editor heading and settings screens](#entry-editor-heading-and-settings-screens).
+  A tab bar's old class (`.transfer-tabs`, `.activity-tabs`…) stays on it for
+  layout and tests only.
 
 Two things are not tab views and keep their own look: the small mono language
 pills on translatable fields (`.i18n-tabs`), and toggles and filters (Grid /
@@ -544,11 +546,31 @@ the entry form; choices the user may not save are disabled, following
 `EntryHeader.css` styles them. The heading follows the saved entry, so typing
 in the title costs no server work.
 
-The toolbar under it holds the sections and drawers (Content, Meta, History,
-Scheduled publishing) as `.pill-tabs--small`, then the editors present, the
-save state ("Saved 23:20", "Unsaved changes", with the recovery status as its
-title), the tools with icon and label, and Save. On a phone the tabs take a
-row of their own and scroll inside their track.
+The toolbar under it is split (approved October 2026) and keeps to one row.
+On the left, straight on the page, the sections and drawers (Content, Meta,
+History, Scheduled publishing) as `.pill-tabs--small`. On the right, in their
+own white group with the bar's border, radius and surface: the editors
+present as compact overlapping avatars (the count of editors is in their
+tooltip), the save state ("Saved 23:20", "Unsaved changes", with the recovery
+status as its title), Notes as an icon with a badge counting open notes,
+Preview with its label and menu, a "⋯" More menu (Languages, Share preview;
+an item that doesn't apply is left out, and an empty menu isn't drawn) and
+Save and close with its options. Under 1366px Preview and Save drop their
+icons to keep the row; when the tabs and tools still don't fit, the tabs
+scroll in their track, then the tools take a row of their own. On a phone the
+tabs take a row of their own and scroll inside their track.
+
+When the bar sticks, content scrolling under it would show between the two
+groups, so the stuck bar sits on a band of the page colour, faded at its
+foot. The Form hook watches a sentinel above the bar with an
+IntersectionObserver and sets `is-stuck` through sticky JS; no `:has()`.
+
+Following another editor (click their avatar) draws a 2px frame in their
+presence colour round the editing area, fixed to its edges on screen, and a
+chip under the toolbar, "Following Ingrid ×". The frame takes no clicks;
+the chip's ×, Escape, the avatar again, or your own scroll or click stop
+following. The followed avatar has a double ring. Nothing about following
+sits in the toolbar.
 
 A singleton settings screen (Identity, SEO) passes `layout={:settings}` to
 the form and puts `Workspace.header` above it: the eyebrow "Configuration",

@@ -46,6 +46,7 @@ export default (app) => ({
     }
     this.toolbarObserver = new ResizeObserver(this.updateToolbarOffset)
     this.updateToolbarOffset()
+    this.observeStuckToolbar()
 
     if (!this.skipKeydown) {
       window.addEventListener('keydown', this.submitListenerEvent, false)
@@ -171,6 +172,7 @@ export default (app) => ({
 
   updated() {
     this.updateToolbarOffset()
+    this.observeStuckToolbar()
     this.dirtyFields.apply()
     this.notes.apply()
   },
@@ -181,11 +183,37 @@ export default (app) => ({
     if (app.notes === this.notes) app.notes = null
     this.stopLocatingBlock?.()
     this.toolbarObserver?.disconnect()
+    this.stuckObserver?.disconnect()
     this.toolbarStyle?.remove()
     this.draftRecovery?.destroy()
     if (!this.skipKeydown) {
       window.removeEventListener('keydown', this.submitListenerEvent, false)
     }
+  },
+
+  // The entry toolbar is sticky. Once it sticks, content scrolls under the
+  // gap between its tabs and its tools, so the bar takes a page-coloured band
+  // (`is-stuck`, Form.css). The sentinel just above the bar crosses the bar's
+  // sticky `top` exactly when the bar sticks. The class goes through
+  // `this.js()` so LiveView patches keep it.
+  observeStuckToolbar() {
+    const sentinel = this.el.querySelector('.form-content > .form-tabs-sentinel')
+    if (sentinel === this.$stuckSentinel) return
+    this.stuckObserver?.disconnect()
+    this.$stuckSentinel = sentinel
+    const toolbar = sentinel?.nextElementSibling
+    if (!toolbar?.classList.contains('form-tabs')) return
+    const top = parseFloat(getComputedStyle(toolbar).top) || 0
+    this.stuckObserver = new IntersectionObserver(([entry]) => {
+      const bar = this.$stuckSentinel?.nextElementSibling
+      if (!bar) return
+      const line = entry.rootBounds ? entry.rootBounds.top : top + 1
+      const stuck = !entry.isIntersecting && entry.boundingClientRect.top < line
+      if (stuck === bar.classList.contains('is-stuck')) return
+      if (stuck) this.js().addClass(bar, 'is-stuck')
+      else this.js().removeClass(bar, 'is-stuck')
+    }, { rootMargin: `-${top + 1}px 0px 0px 0px` })
+    this.stuckObserver.observe(sentinel)
   },
 
   disconnected() { this.draftRecovery?.disconnected() },

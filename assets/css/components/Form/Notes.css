@@ -478,20 +478,29 @@
 
 /* --- In the editor --- */
 
-/* The toolbar's Notes tool and its count */
+/* The toolbar's Notes tool, an icon with a badge counting the open notes */
 .form-tabs .form-tab-builtins > .form-tool-notes {
   .form-tool-count {
-    color: var(--brando-muted);
+    position: absolute;
+    top: -2px;
+    right: -3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background-color: var(--brando-accent);
+    box-shadow: 0 0 0 2px var(--brando-surface);
+    color: var(--brando-ink-inverse);
+    font: 500 10px/16px "Main", sans-serif;
     font-variant-numeric: tabular-nums;
-    transform: translateY(1px);
+    text-align: center;
   }
 
   &[aria-expanded="true"] {
     background-color: var(--brando-surface-selected);
     color: var(--brando-accent);
 
-    [data-icon],
-    .form-tool-count { color: inherit; }
+    [data-icon] { color: inherit; }
   }
 }
 

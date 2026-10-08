@@ -18678,3 +18678,15 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Shown when this entry is shared, in place of its cover image."
 msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "More"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Notes, %{count} open"
+msgid_plural "Notes, %{count} open"
+msgstr[0] ""
+msgstr[1] ""

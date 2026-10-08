@@ -37,7 +37,7 @@
 
 /* A full toolbar must fit the content column on small phones. */
 @media (max-width: 600px) {
-  .brando-form .form-tabs { padding-inline: 8px; }
+  .brando-form .form-tabs:not(.form-tabs--split) { padding-inline: 8px; }
   .brando-form .form-tabs .form-tab-builtins { min-width: 0; gap: 4px; }
   .brando-form .form-tabs .form-tab-builtins > button { padding-inline: 8px; }
   .brando-form .form-tabs .preview-chooser-trigger { padding-inline: 8px; }

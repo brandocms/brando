@@ -553,68 +553,15 @@
         outline-offset: 2px;
       }
 
+      /* Followed: a double ring, above the avatars it overlaps */
+      &[aria-pressed="true"] {
+        position: relative;
+        z-index: 1;
+      }
+
       &[aria-pressed="true"] > .avatar {
         box-shadow: 0 0 0 2px var(--presence-ink), 0 0 0 4px var(--brando-surface), 0 0 0 6px var(--presence-ink);
       }
-    }
-  }
-
-  .presence-count {
-    color: var(--brando-muted);
-    font-size: 12px;
-    line-height: 18px;
-    white-space: nowrap;
-  }
-
-  /* "Following Kim": shown while this editor follows another one. */
-  .follow-bar {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 30px;
-    padding: 0 4px 0 10px;
-    border-radius: 999px;
-    background: var(--brando-surface-selected);
-    color: var(--brando-accent);
-    font-size: 12px;
-    line-height: 18px;
-    white-space: nowrap;
-
-    &[hidden] {
-      display: none;
-    }
-
-    [data-icon] {
-      width: 14px;
-      height: 14px;
-    }
-
-    .follow-bar-stop {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      background: none;
-      color: inherit;
-      cursor: pointer;
-
-      &:hover {
-        background: var(--brando-surface);
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--brando-accent);
-      }
-    }
-  }
-
-  @media (max-width: 600px) {
-    .presence-count {
-      display: none;
     }
   }
 
@@ -752,6 +699,262 @@
   @media (prefers-reduced-motion: reduce) {
     button {
       transition: none !important;
+    }
+  }
+}
+
+/**
+ * The entry editor's toolbar, split (approved October 2026): the sections as
+ * pill tabs straight on the page, the tools in their own white group at the
+ * right, on one row. When the bar is narrower than both, the tabs scroll in
+ * their track down to 240px, then the tools take a row of their own.
+ *
+ * Content scrolling under the stuck bar would show between the two groups,
+ * so it sits on a band of the page colour, faded at its foot. `is-stuck`
+ * comes from the Form hook, which watches `.form-tabs-sentinel` above the
+ * bar; it goes through LiveView's sticky JS, so patches keep it.
+ */
+.form-tabs-sentinel {
+  height: 1px;
+  margin-bottom: -1px;
+  pointer-events: none;
+}
+
+.form-tabs.form-tabs--split {
+  gap: 8px 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -5px -16px -12px;
+    z-index: -1;
+    background-color: var(--brando-surface-page);
+    mask-image: linear-gradient(to bottom, black calc(100% - 12px), transparent);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  &.is-stuck::before {
+    opacity: 1;
+  }
+
+  > .form-tab-customs {
+    flex: 1 1 240px;
+    max-width: max-content;
+  }
+
+  > .form-tab-builtins {
+    flex: 0 1 auto;
+    gap: 4px;
+    max-width: 100%;
+    margin-left: auto;
+    padding: 5px;
+    border: 1px solid var(--brando-line);
+    border-radius: 12px;
+    background-color: var(--brando-surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 3%, transparent);
+  }
+
+  /* The editors present take only their avatars' width, overlapping when
+     there are several; each avatar names its editor. */
+  .form-tab-builtins .page-presences {
+    flex: none;
+    flex-wrap: nowrap;
+    column-gap: 0;
+    margin: 0 4px 0 0;
+
+    > .user-presence + .user-presence {
+      margin-left: -6px;
+    }
+  }
+
+  /* An icon-only tool (Notes, More): square, named by its aria-label and
+     title. */
+  .form-tab-builtins .form-tool-icon {
+    position: relative;
+    width: 30px;
+    padding: 0;
+  }
+
+  /* Under 1366px the labels carry Preview and Save without their icons, and
+     the tabs close up a little, so Norwegian labels and a few editors still
+     fit one row at 1280. */
+  @media (max-width: 1365px) {
+    > .form-tab-customs > button {
+      padding-inline: 9px;
+    }
+
+    .form-tab-builtins :is(button.form-tool-preview, .preview-chooser-trigger, .form-tool-save-button) > [data-icon]:not(.dropdown-chevron) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    > .form-tab-customs {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
+
+    > .form-tab-builtins {
+      flex: 1 1 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::before {
+      transition: none;
+    }
+  }
+}
+
+/* The "⋯" menu: Languages and Share, in the top layer
+   (`Brando.FloatingDropdown` places it). */
+.form-tabs .form-tab-builtins > .form-tool-more {
+  position: relative;
+  display: flex;
+
+  > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    margin: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--brando-ink);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    [data-icon] {
+      display: block;
+      flex: none;
+      width: 15px;
+      height: 15px;
+      color: var(--brando-muted);
+    }
+
+    &:hover,
+    &[aria-expanded="true"] {
+      background-color: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.form-tool-more-menu {
+  @extend %admin_dropdown_panel;
+  position: fixed;
+  inset: auto;
+  min-width: 200px;
+
+  &:not(:popover-open) {
+    display: none;
+  }
+
+  > button > [data-icon] {
+    color: var(--brando-muted);
+  }
+}
+
+/* Follow mode (`follow_frame/1`, `Presence/follow.js`): a frame in the
+   followed editor's colour round the editing area, fixed to its edges on
+   screen, and a chip under the toolbar naming them, with × to stop. The frame
+   takes no clicks; the client measures its place into
+   `--follow-left`/`--follow-width` and the chip's into `--follow-chip-top`. */
+.follow-frame,
+.follow-chip {
+  display: none;
+}
+
+.follow-frame.is-following {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: var(--follow-left, 0px);
+  z-index: 50;
+  display: block;
+  width: var(--follow-width, 100vw);
+  border: 2px solid var(--presence-ink, var(--brando-accent));
+  pointer-events: none;
+}
+
+.follow-chip.is-following {
+  position: fixed;
+  top: var(--follow-chip-top, 8px);
+  left: calc(var(--follow-left, 0px) + var(--follow-width, 100vw) / 2);
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(var(--follow-width, 100vw) - 24px);
+  min-height: 28px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background-color: var(--presence-ink, var(--brando-accent));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brando-ink) 16%, transparent);
+  color: var(--brando-ink-inverse);
+  font: 500 12px/18px "Main", sans-serif;
+  white-space: nowrap;
+  transform: translateX(-50%);
+
+  > [data-icon] {
+    flex: none;
+    width: 14px;
+    height: 14px;
+  }
+
+  .follow-chip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .follow-chip-stop {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--brando-ink-inverse) 20%, transparent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-ink-inverse);
+      outline-offset: 1px;
+    }
+  }
+
+  @media (pointer: coarse) {
+    min-height: 36px;
+
+    .follow-chip-stop {
+      width: 32px;
+      height: 32px;
     }
   }
 }
@@ -1107,11 +1310,12 @@ html.not-mac .shortcut-other { display: inline; }
 .form-header:not(.brando-form .form-header) { @space margin-top sm; @space margin-bottom sm; }
 .form-header-badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 5px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
 
-/* Sharing takes a moment while the blocks are gathered: the share button
-   spins in place of its icon until the link is ready. */
-.form-tabs .form-tab-builtins .form-tool-share {
+/* Sharing takes a moment while the blocks are gathered: the More menu has
+   closed by then, so its trigger spins in place of its icon until the link
+   is ready. */
+.form-tabs .form-tab-builtins .form-tool-more-trigger {
   .form-tool-share-spinner { display: none; width: 14px; height: 14px; border: 1.5px solid var(--brando-line); border-top-color: var(--brando-accent); border-radius: 50%; animation: form-tool-share-spin 900ms linear infinite; }
-  &[aria-busy="true"] { cursor: progress; opacity: 1; }
+  &[aria-busy="true"] { cursor: progress; }
   &[aria-busy="true"] .form-tool-share-spinner { display: inline-block; }
   &[aria-busy="true"] > [data-icon] { display: none; }
 }

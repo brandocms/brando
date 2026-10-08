@@ -17,8 +17,13 @@ async function openInlineFields(page) {
   await syncLV(page)
 }
 
+// Waits for the row itself: the click's reply comes before the form sends
+// the subform its new rows, so a second click any sooner adds to the old
+// list and one of the two rows is lost.
 async function addRow(page) {
+  const count = await rows(page).count()
   await table(page).getByRole('button', { name: 'Add entry' }).click()
+  await expect(rows(page)).toHaveCount(count + 1)
   await syncLV(page)
 }
 
