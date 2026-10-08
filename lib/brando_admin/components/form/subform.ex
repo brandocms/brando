@@ -21,8 +21,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   # A row's own field (a multi select in it) changed: replace that row in the
   # form's latest list, not in the copy this subform last rendered with.
-  def update(%{action: :update_changeset, index: index, updated_changeset: updated_changeset}, socket) do
-    {:noreply, socket} = SubformHelpers.send_op(socket, {:replace, index, updated_changeset})
+  def update(%{action: :update_changeset, key: key, updated_changeset: updated_changeset}, socket) do
+    {:noreply, socket} = SubformHelpers.send_op(socket, {:replace, key, updated_changeset})
     {:ok, socket}
   end
 
@@ -129,10 +129,21 @@ defmodule BrandoAdmin.Components.Form.Subform do
                     ]}
                   >
                     <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
+                    <input
+                      :if={SubformHelpers.new_row_key(sub_form)}
+                      type="hidden"
+                      name={sub_form[:_key].name}
+                      value={SubformHelpers.new_row_key(sub_form)}
+                    />
                     <div class="subform-tools">
                       <.subentry_insert
                         :if={@table? && @subform.add_entry}
-                        on_click={JS.push("insert_subentry", value: %{index: sub_form.index}, target: @myself)}
+                        on_click={
+                          JS.push("insert_subentry",
+                            value: %{index: sub_form.index, key: SubformHelpers.row_key(sub_form)},
+                            target: @myself
+                          )
+                        }
                       />
                       <.subentry_sequence :if={@sequenced?} />
                       <.subentry_remove
@@ -309,21 +320,20 @@ defmodule BrandoAdmin.Components.Form.Subform do
     SubformHelpers.append_subentries(socket, new_entry(socket))
   end
 
-  def handle_event("insert_subentry", %{"index" => index}, socket) do
-    SubformHelpers.insert_subentry(socket, index, new_entry(socket))
+  def handle_event("insert_subentry", %{"index" => index} = params, socket) do
+    SubformHelpers.insert_subentry(socket, params["key"], index, new_entry(socket))
   end
 
-  def handle_event("remove_subentry", %{"index" => index}, socket) do
-    SubformHelpers.remove_subentry(socket, index)
+  def handle_event("remove_subentry", %{"key" => key}, socket) do
+    SubformHelpers.remove_subentry(socket, key)
   end
 
   def handle_event("force_validate", _, socket) do
     {:noreply, push_event(socket, "b:validate", %{})}
   end
 
-  def handle_event("sequenced_subform", %{"ids" => order_indices} = event_params, socket) do
-    seen = length(SubformHelpers.current_entries(socket.assigns.field.form.source, socket.assigns.subform.name))
-    SubformHelpers.send_op(socket, {:reorder, order_indices, seen, !event_params["embeds"]})
+  def handle_event("sequenced_subform", %{"ids" => keys} = event_params, socket) do
+    SubformHelpers.sequenced_subform(socket, keys, sequence: !event_params["embeds"])
   end
 
   # How the relation is sequenced, whether it embeds, and the names of its

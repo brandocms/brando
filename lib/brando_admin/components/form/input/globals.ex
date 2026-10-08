@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
@@ -29,7 +30,8 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:empty_subform, empty_subform)}
+     |> assign(:empty_subform, empty_subform)
+     |> assign(:row_keys, SubformHelpers.row_keys(assigns.field.form.source, assigns.subform.name))}
   end
 
   def render(assigns) do
@@ -42,14 +44,20 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
             <div class="subform-empty">&rarr; {gettext("No associated entries")}</div>
           <% else %>
             <Primitives.inputs_for_poly :let={var} field={@field}>
-              <div class="subform-entry flex-row" data-id={var.index}>
+              <div class="subform-entry flex-row" data-id={Enum.at(@row_keys, var.index)}>
+                <input
+                  :if={SubformHelpers.new_key?(Enum.at(@row_keys, var.index))}
+                  type="hidden"
+                  name={var[:_key].name}
+                  value={Enum.at(@row_keys, var.index)}
+                />
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">
                     <.icon name="move" />
                   </button>
                   <button
                     phx-click={JS.push("remove_subentry", target: @myself)}
-                    phx-value-index={var.index}
+                    phx-value-key={Enum.at(@row_keys, var.index)}
                     type="button"
                     class="subform-delete"
                   >
@@ -94,11 +102,11 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
 
     # Appended to the form's latest list, pending input kept, so two quick
     # adds both land (`SubformHelpers.send_op/3`).
-    BrandoAdmin.Components.Form.Input.SubformHelpers.append_subentries(socket, default)
+    SubformHelpers.append_subentries(socket, default)
   end
 
-  def handle_event("remove_subentry", %{"index" => index}, socket) do
-    BrandoAdmin.Components.Form.Input.SubformHelpers.remove_subentry(socket, index)
+  def handle_event("remove_subentry", %{"key" => key}, socket) do
+    SubformHelpers.remove_subentry(socket, key)
   end
 
   def handle_event("force_validate", _, socket) do
@@ -107,6 +115,6 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
-    BrandoAdmin.Components.Form.Input.SubformHelpers.sequenced_subform(socket, order_indices)
+    SubformHelpers.sequenced_subform(socket, order_indices)
   end
 end

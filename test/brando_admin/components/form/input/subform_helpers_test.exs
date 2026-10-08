@@ -157,33 +157,47 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
   describe "apply_op/2, applied by the form to its latest list" do
     # The form applies a subform's operation to its own changeset, which may
     # already hold an earlier click's result the subform has not seen yet.
+    # Rows are named by key: a saved row's id, a new row's `_key`.
+
+    defp row(key), do: %Var{key: key} |> Changeset.change() |> then(&%{&1 | params: %{"_key" => key}})
+    defp keys(entries), do: Enum.map(entries, &SubformHelpers.row_key/1)
 
     test "adds are cumulative: a second add lands after the first" do
-      assert ~w(a b) |> SubformHelpers.apply_op({:append, "c"}) |> SubformHelpers.apply_op({:append, "d"}) ==
-               ~w(a b c d)
-
-      assert SubformHelpers.apply_op(~w(a b), {:insert, 1, "x"}) == ~w(a x b)
-      assert SubformHelpers.apply_op(~w(a b), {:insert, 9, "x"}) == ~w(a b x)
+      entries = SubformHelpers.apply_op([row("a"), row("b")], {:append, [row("c")]})
+      assert keys(SubformHelpers.apply_op(entries, {:append, [row("d")]})) == ~w(a b c d)
     end
 
-    test "a removal applies only to the list the editor saw" do
-      assert SubformHelpers.apply_op(~w(a b c), {:delete, 1, 3}) == ~w(a c)
-
-      # a double click on ×: the second click names a list that is gone, and
-      # must not remove the row that moved into its place
-      assert SubformHelpers.apply_op(~w(a c), {:delete, 1, 3}) == :stale
-      assert SubformHelpers.apply_op(~w(a b), {:delete, 2, 2}) == :stale
+    test "an insert goes above the named row, wherever it is by then" do
+      # the editor clicked + above "b" while "a" was already being removed
+      assert keys(SubformHelpers.apply_op([row("b"), row("c")], {:insert, "b", 1, row("x")})) == ~w(x b c)
+      # a row without a key: at the position, past the end appending
+      assert keys(SubformHelpers.apply_op([row("a"), row("b")], {:insert, nil, 1, row("x")})) == ~w(a x b)
+      assert keys(SubformHelpers.apply_op([row("a")], {:insert, nil, 9, row("x")})) == ~w(a x)
     end
 
-    test "a reorder applies only to the list the editor saw, and never drops a row" do
-      assert SubformHelpers.apply_op(~w(a b c), {:reorder, [2, 0, 1], 3, false}) == ~w(c a b)
-      assert SubformHelpers.apply_op(~w(a b c d), {:reorder, [2, 0, 1], 3, false}) == :stale
-      assert SubformHelpers.apply_op(~w(a b c), {:reorder, [0, 0, 1], 3, false}) == :stale
+    test "a double click on × removes exactly one row" do
+      once = SubformHelpers.apply_op([row("a"), row("b"), row("c")], {:delete, "a"})
+      assert keys(once) == ~w(b c)
+      # the second click names a row that is gone, not the one in its place
+      assert SubformHelpers.apply_op(once, {:delete, "a"}) == :stale
+    end
+
+    test "an add and a removal queued together both apply" do
+      added = SubformHelpers.apply_op([row("a"), row("b")], {:append, [row("c")]})
+      assert keys(SubformHelpers.apply_op(added, {:delete, "a"})) == ~w(b c)
+    end
+
+    test "a reorder moves the named rows and keeps one added since" do
+      entries = [row("a"), row("b"), row("c"), row("new")]
+      assert keys(SubformHelpers.apply_op(entries, {:reorder, ~w(c a b), false})) == ~w(c a b new)
+      assert keys(SubformHelpers.apply_op(entries, {:reorder, ~w(gone c), false})) == ~w(c a b new)
+      assert SubformHelpers.apply_op(entries, {:reorder, ~w(gone), false}) == :stale
     end
 
     test "a reorder of a sequenced relation numbers the rows", %{pending: pending} do
       entries = SubformHelpers.current_entries(pending, :vars)
-      reordered = SubformHelpers.apply_op(entries, {:reorder, [1, 0], 2, true})
+      [one, two] = keys(entries)
+      reordered = SubformHelpers.apply_op(entries, {:reorder, [two, one], true})
 
       assert Enum.map(reordered, &Changeset.get_field(&1, :key)) == ["two", "one"]
       assert Enum.map(reordered, &Changeset.get_field(&1, :sequence)) == [0, 1]
@@ -192,9 +206,150 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
     end
 
     test "a replacement and a function both work on the latest list" do
-      assert SubformHelpers.apply_op(~w(a b), {:replace, 1, "B"}) == ~w(a B)
-      assert SubformHelpers.apply_op(~w(a), {:replace, 1, "B"}) == :stale
-      assert SubformHelpers.apply_op(~w(a b), {:update, &Enum.reverse/1}) == ~w(b a)
+      assert keys(SubformHelpers.apply_op([row("a"), row("b")], {:replace, "b", row("b2")})) == ~w(a b2)
+      assert SubformHelpers.apply_op([row("a")], {:replace, "b", row("b2")}) == :stale
+      assert keys(SubformHelpers.apply_op([row("a"), row("b")], {:update, &Enum.reverse/1})) == ~w(b a)
+    end
+  end
+
+  describe "rows the editor removed" do
+    # A saved row removed in the form (its × sets the drop param) stays in the
+    # relation as a changeset marked for removal. Written back, it raised
+    # "cannot replace related", so removing a saved row and then adding one
+    # crashed the LiveView, and it shifted every position after it.
+    setup %{block: block} do
+      [one, two] = Enum.sort_by(block.vars, & &1.key)
+
+      removed =
+        block
+        |> Changeset.change()
+        |> Changeset.put_assoc(:vars, [Changeset.change(two)])
+
+      assert Enum.any?(Changeset.get_assoc(removed, :vars), &(&1.action == :replace))
+      %{removed: removed, one: one, two: two}
+    end
+
+    test "are not current entries", %{removed: removed, two: two} do
+      assert SubformHelpers.row_keys(removed, :vars) == ["id-#{two.id}"]
+    end
+
+    test "an add after a removal is saved, and the removal too", %{removed: removed} do
+      new = SubformHelpers.new_row(%Var{type: :string, key: "three", label: "Three", value: "new", placement: :content})
+
+      updated =
+        removed
+        |> SubformHelpers.current_entries(:vars)
+        |> SubformHelpers.apply_op({:append, [new]})
+        |> then(&SubformHelpers.put_entries(removed, :vars, &1))
+
+      assert persisted_values(updated) == %{"two" => "orig2", "three" => "new"}
+    end
+
+    test "two saved rows removed one after the other", %{block: block, one: one, two: two} do
+      changeset = Changeset.change(block)
+
+      updated =
+        Enum.reduce(["id-#{one.id}", "id-#{two.id}"], changeset, fn key, changeset ->
+          changeset
+          |> SubformHelpers.current_entries(:vars)
+          |> SubformHelpers.apply_op({:delete, key})
+          |> then(&SubformHelpers.put_entries(changeset, :vars, &1))
+        end)
+
+      assert persisted_values(updated) == %{}
+    end
+
+    test "two new rows added one after the other are both saved", %{block: block} do
+      var = fn key ->
+        SubformHelpers.new_row(%Var{type: :string, key: key, label: key, value: key, placement: :content})
+      end
+
+      updated =
+        Enum.reduce(["three", "four"], Changeset.change(block), fn key, changeset ->
+          changeset
+          |> SubformHelpers.current_entries(:vars)
+          |> SubformHelpers.apply_op({:append, [var.(key)]})
+          |> then(&SubformHelpers.put_entries(changeset, :vars, &1))
+        end)
+
+      assert persisted_values(updated) == %{"one" => "orig1", "two" => "orig2", "three" => "three", "four" => "four"}
+    end
+  end
+
+  describe "PageVars and Globals" do
+    # Both name a row to remove by its key and append through the form. Each
+    # click is handled with the form as the component last rendered it; the
+    # form then applies the operation it sends to its latest changeset, which
+    # is what `apply_in_form/2` does here.
+    alias BrandoAdmin.Components.Form.Input.Globals
+    alias BrandoAdmin.Components.Pages.PageVars
+
+    defp socket(changeset) do
+      %Phoenix.LiveView.Socket{}
+      |> Phoenix.Component.assign(:field, Phoenix.Component.to_form(changeset, as: "block")[:vars])
+      |> Phoenix.Component.assign(:subform, %{name: :vars})
+    end
+
+    defp click(component, changeset, event, value) do
+      {:noreply, _} = component.handle_event(event, value, socket(changeset))
+      assert_received {:phoenix, :send_update, {{BrandoAdmin.Components.Form, _}, %{field: :vars, op: op}}}
+      op
+    end
+
+    defp var_keys(changeset),
+      do: changeset |> SubformHelpers.current_entries(:vars) |> Enum.map(&Changeset.get_field(&1, :key))
+
+    defp apply_in_form(changeset, op) do
+      case changeset |> SubformHelpers.current_entries(:vars) |> SubformHelpers.apply_op(op) do
+        :stale -> changeset
+        entries -> SubformHelpers.put_entries(changeset, :vars, entries)
+      end
+    end
+
+    for component <- [PageVars, Globals] do
+      test "#{inspect(component)}: two saved rows removed one after the other", %{block: block} do
+        changeset = Changeset.change(block)
+        [one, two] = SubformHelpers.row_keys(changeset, :vars)
+
+        changeset = apply_in_form(changeset, click(unquote(component), changeset, "remove_subentry", %{"key" => one}))
+        changeset = apply_in_form(changeset, click(unquote(component), changeset, "remove_subentry", %{"key" => two}))
+
+        assert persisted_values(changeset) == %{}
+      end
+
+      test "#{inspect(component)}: a double click on × removes exactly one row", %{block: block} do
+        changeset = Changeset.change(block)
+        [one, _two] = SubformHelpers.row_keys(changeset, :vars)
+
+        # both clicks are handled with the list as it was rendered
+        first = click(unquote(component), changeset, "remove_subentry", %{"key" => one})
+        second = click(unquote(component), changeset, "remove_subentry", %{"key" => one})
+
+        assert changeset |> apply_in_form(first) |> apply_in_form(second) |> persisted_values() == %{"two" => "orig2"}
+      end
+
+      test "#{inspect(component)}: an add and a removal queued together both apply", %{block: block} do
+        changeset = Changeset.change(block)
+        [one, _two] = SubformHelpers.row_keys(changeset, :vars)
+
+        add = click(unquote(component), changeset, "add_subentry", %{})
+        remove = click(unquote(component), changeset, "remove_subentry", %{"key" => one})
+
+        assert changeset |> apply_in_form(add) |> apply_in_form(remove) |> var_keys() == ["two", "key"]
+      end
+
+      test "#{inspect(component)}: an add after a saved row is removed", %{block: block} do
+        changeset = Changeset.change(block)
+        [one, _two] = SubformHelpers.row_keys(changeset, :vars)
+
+        changeset = apply_in_form(changeset, click(unquote(component), changeset, "remove_subentry", %{"key" => one}))
+        changeset = apply_in_form(changeset, click(unquote(component), changeset, "add_subentry", %{}))
+
+        # the new variable is filled in and validated through the form; that
+        # the removal and the new row go together is what crashed
+        assert var_keys(changeset) == ["two", "key"]
+        assert Enum.count(Changeset.get_assoc(changeset, :vars), &(&1.action == :replace)) == 1
+      end
     end
   end
 end

@@ -147,32 +147,55 @@ defmodule BrandoAdmin.NavigationLiveTest do
   # Two clicks on "Add entry" that both reach the server before the form has
   # re-rendered the subform. Each click is handled by the subform with the
   # form as it last rendered it; when each built the whole changeset from
-  # that copy, the second overwrote the first and one row was lost. The LiveView is
-  # held while both clicks are queued, so they are handled back to back,
-  # ahead of the form's update from the first.
+  # that copy, the second overwrote the first and one row was lost.
   test "two quick clicks on Add entry add two rows", %{conn: conn, menu: menu} do
     view = open(conn, menu)
     refute has_element?(view, "input[name='menu[items][3][key]']")
 
-    add = view |> element("#menu_form_form button", "Add entry") |> render()
-    [_, cid] = Regex.run(~r/&quot;target&quot;:(\d+)/, add)
-
-    click = fn ref ->
-      %Phoenix.Socket.Message{
-        topic: "lv:" <> view.id,
-        event: "event",
-        ref: ref,
-        payload: %{"type" => "click", "event" => "add_subentry", "value" => %{}, "cid" => String.to_integer(cid)}
-      }
-    end
-
-    :sys.suspend(view.pid)
-    send(view.pid, click.("add-race-1"))
-    send(view.pid, click.("add-race-2"))
-    :sys.resume(view.pid)
+    view |> element("#menu_form_form button", "Add entry") |> then(&queue_clicks(view, &1))
 
     assert has_element?(view, "input[name='menu[items][3][key]']")
     assert has_element?(view, "input[name='menu[items][4][key]']")
     refute has_element?(view, "input[name='menu[items][5][key]']")
+  end
+
+  # A saved item the editor removes stays in the changeset, marked for
+  # removal. Writing it back with the next add raised "cannot replace
+  # related" and took the LiveView down; it also shifted every position after
+  # it, so an insert landed one row off.
+  test "an item can be added and inserted after a saved one is removed", %{conn: conn, menu: menu} do
+    view = open(conn, menu)
+
+    view |> element("#menu_form_form") |> render_change(%{"menu" => %{"drop_items_ids" => ["0"]}})
+    refute has_element?(view, "input[name='menu[items][2][key]']")
+
+    view |> element("#menu_form_form button", "Add entry") |> render_click()
+    settle(view)
+    assert has_element?(view, "input[name='menu[items][1][key]'][value='guides']")
+    assert has_element?(view, "input[name='menu[items][2][key]']")
+    refute has_element?(view, "input[name='menu[items][3][key]']")
+
+    # + above "guides", the second row
+    view
+    |> element(~s(#menu_form_form button[phx-click*="insert_subentry"][phx-click*='"index":1']))
+    |> render_click()
+
+    settle(view)
+    assert has_element?(view, "input[name='menu[items][0][key]'][value='documentation']")
+    assert has_element?(view, "input[name='menu[items][2][key]'][value='guides']")
+    assert has_element?(view, "input[name='menu[items][3][key]']")
+  end
+
+  # An add changes the form without a round trip through the browser, so the
+  # form has to tell the other editors itself that the items have changed.
+  test "other editors are told the items changed after an add", %{conn: conn, menu: menu} do
+    view = open(conn, menu)
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("dirty_fields", Menu, menu.id))
+
+    view |> element("#menu_form_form button", "Add entry") |> render_click()
+    settle(view)
+
+    assert_receive {:dirty_fields, fields, _user_id}, 1_000
+    assert "menu[items]" in fields
   end
 end

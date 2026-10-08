@@ -995,6 +995,11 @@ defmodule BrandoAdmin.Components.Form do
   # A subform's add, insert, remove or reorder, applied to this form's own
   # changeset — always the latest — rather than to the copy the subform last
   # rendered with. Two quick adds both land. See `SubformHelpers.apply_op/2`.
+  #
+  # Whatever a change in the form does besides, this does too, without asking
+  # the browser for its fields (which could be a row behind): the other
+  # editors learn the field is changed, and the live preview and the website
+  # editor follow it.
   def update(%{action: :update_entries, field: field, op: op}, socket) do
     changeset = socket.assigns.form.source
 
@@ -1003,7 +1008,16 @@ defmodule BrandoAdmin.Components.Form do
         {:ok, socket}
 
       entries ->
-        update(%{action: :update_changeset, changeset: SubformHelpers.put_entries(changeset, field, entries)}, socket)
+        socket =
+          socket
+          |> put_form(to_form(SubformHelpers.put_entries(changeset, field, entries), []))
+          |> Drafts.dirty()
+          |> broadcast_dirty_fields()
+          |> tap(&FrontendEditor.field_changed/1)
+          |> maybe_invalidate_live_preview_assign([field])
+          |> maybe_fetch_root_blocks(:live_preview_update, 0)
+
+        {:ok, socket}
     end
   end
 

@@ -38,9 +38,18 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
     |> case do
       %Ecto.Association.NotLoaded{} -> []
       nil -> []
-      entries -> entries
+      entries when is_list(entries) -> Enum.reject(entries, &removed?/1)
+      entry -> entry
     end
   end
+
+  # A saved row the editor removed stays in the relation as a changeset
+  # marked for removal. It is not a row any more: the form doesn't show it,
+  # and writing it back with `put_assoc` raises ("cannot replace related").
+  # Leaving it out is enough, as `put_entries/3` derives the removal again
+  # from the relation's data.
+  defp removed?(%Changeset{action: action}) when action in [:replace, :delete], do: true
+  defp removed?(_entry), do: false
 
   @doc "Writes a rebuilt child list back onto the relation, assoc or embed."
   def put_entries(%Changeset{} = changeset, field_name, entries) do
@@ -54,27 +63,83 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
     if module.__schema__(:association, field_name), do: :assoc, else: :embed
   end
 
-  @doc "Removes a subentry at the given index from the subform field."
-  def remove_subentry(socket, index) do
-    index = if is_binary(index), do: String.to_integer(index), else: index
-    send_op(socket, {:delete, index, seen_count(socket)})
-  end
+  ## Rows by identity
+  #
+  # The browser names a row by its key, not its position: positions move
+  # under it when a row is added or removed before the click arrives. A saved
+  # row's key is its id. A new row's is a key given to it when it was added
+  # (`new_row/1`), which the row renders back as a hidden `_key` input
+  # (`new_row_key/1`), so it survives the form being rebuilt from the
+  # browser's fields.
 
-  @doc "Reorders subform entries according to the given index order."
-  def sequenced_subform(socket, order_indices) do
-    send_op(socket, {:reorder, order_indices, seen_count(socket), false})
-  end
+  @key "_key"
+
+  @doc "The row's key: `id-…` for a saved row, its `_key` for a new one, or nil."
+  def row_key(%Phoenix.HTML.Form{source: source}), do: row_key(source)
+  def row_key(%Changeset{data: data, params: params}), do: saved_key(data) || new_key(params)
+  def row_key(%{} = entry), do: saved_key(entry)
+  def row_key(_entry), do: nil
+
+  @doc """
+  The keys of the relation's rows, in the order the form renders them. For
+  rows rendered without their own changeset (`inputs_for_poly`), look the key
+  up by the row's index.
+  """
+  def row_keys(%Changeset{} = changeset, field_name),
+    do: changeset |> current_entries(field_name) |> Enum.map(&row_key/1)
+
+  @doc "Whether `key` is a new row's, which the row renders as its hidden `_key` input."
+  def new_key?("new-" <> _), do: true
+  def new_key?(_key), do: false
+
+  @doc "A new row's key, to render as its hidden `_key` input; nil for a saved row."
+  def new_row_key(%Phoenix.HTML.Form{source: %Changeset{data: data, params: params}}),
+    do: if(saved_key(data), do: nil, else: new_key(params))
+
+  def new_row_key(_form), do: nil
+
+  defp saved_key(%{id: id}) when not is_nil(id), do: "id-#{id}"
+  defp saved_key(_data), do: nil
+
+  defp new_key(%{@key => key}) when is_binary(key) and key != "", do: key
+  defp new_key(_params), do: nil
+
+  @doc """
+  A row to add: a changeset of `entry` (a struct or a changeset) with a key
+  of its own. A map of attributes is left as it is.
+  """
+  def new_row(%Changeset{} = changeset),
+    do: %{changeset | params: Map.put(changeset.params || %{}, @key, "new-" <> Brando.Utils.generate_uid())}
+
+  def new_row(%_{} = entry), do: entry |> Changeset.change() |> new_row()
+
+  # A map is the new row's attributes, cast by `put_assoc`/`put_embed`; it has
+  # nowhere to keep a key until the form is next validated.
+  def new_row(attrs), do: attrs
+
+  @doc "Removes the row with `key` from the subform field."
+  def remove_subentry(socket, key), do: send_op(socket, {:delete, key})
+
+  @doc "Puts the rows named by `keys` in that order."
+  def sequenced_subform(socket, keys, opts \\ []),
+    do: send_op(socket, {:reorder, Enum.map(keys, &to_string/1), Keyword.get(opts, :sequence, false)})
 
   @doc "Appends entries to the subform field, keeping pending sibling input."
   def append_subentries(socket, new_entries) do
-    send_op(socket, {:append, new_entries})
+    send_op(socket, {:append, Enum.map(List.wrap(new_entries), &new_row/1)})
   end
 
-  @doc "Inserts an entry at the given index, keeping pending sibling input."
-  def insert_subentry(socket, index, new_entry) do
+  @doc """
+  Inserts an entry above the row with `key`, or at `index` when the row has
+  no key, keeping pending sibling input.
+  """
+  def insert_subentry(socket, key, index, new_entry) do
     index = if is_binary(index), do: String.to_integer(index), else: index
-    send_op(socket, {:insert, index, new_entry})
+    send_op(socket, {:insert, blank_to_nil(key), index, new_row(new_entry)})
   end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(key), do: key
 
   ## Changing the list
   #
@@ -87,10 +152,9 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
   # always the latest (`BrandoAdmin.Components.Form`, `:update_entries`).
   #
   # Adds are cumulative: each one appends to whatever the list is by then.
-  # Removing and reordering name rows by position, so they apply only to the
-  # list the editor saw; when it has changed in between (a double click on ×
-  # whose first click already removed the row), they do nothing rather than
-  # remove or reorder the wrong rows.
+  # Removals, replacements and reorders name rows by key, so they reach the
+  # row the editor meant wherever it is by then; a row that is already gone (a
+  # double click on ×) is left alone rather than another removed in its place.
   #
   # The form doesn't ask the browser to validate afterwards. It used to, for
   # adds: the browser answered with the form's fields as it showed them, and
@@ -98,51 +162,62 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
   # fewer and the form, rebuilt from it, dropped the newest row again. The new
   # row is validated with the next change the editor makes, like any other.
 
-  @typedoc "An operation on a relation's list of entries."
+  @typedoc "An operation on a relation's list of entries. Rows are named by `row_key/1`."
   @type op ::
-          {:append, term() | [term()]}
-          | {:insert, non_neg_integer(), term()}
-          | {:replace, non_neg_integer(), term()}
-          | {:delete, non_neg_integer(), non_neg_integer()}
-          | {:reorder, [non_neg_integer()], non_neg_integer(), boolean()}
+          {:append, [term()]}
+          | {:insert, String.t() | nil, non_neg_integer(), term()}
+          | {:replace, String.t(), term()}
+          | {:delete, String.t()}
+          | {:reorder, [String.t()], boolean()}
           | {:update, ([term()] -> [term()])}
 
   @doc """
   Applies `op` to `entries`, the relation's current entries. Returns the new
-  list, or `:stale` when the operation names positions in a list that has
-  changed since the editor saw it.
+  list, or `:stale` when the row it names is not there any more.
   """
   @spec apply_op([term()], op()) :: [term()] | :stale
   def apply_op(entries, {:append, new_entries}), do: entries ++ List.wrap(new_entries)
 
-  # Past the end appends, as the list may have shrunk since
-  def apply_op(entries, {:insert, index, entry}), do: List.insert_at(entries, min(index, length(entries)), entry)
+  # Above the named row; without one, at the position, past the end appending
+  def apply_op(entries, {:insert, key, index, entry}) do
+    at = (key && find_row(entries, key)) || min(index, length(entries))
+    List.insert_at(entries, at, entry)
+  end
 
-  def apply_op(entries, {:replace, index, entry}),
-    do: if_seen(entries, index < length(entries), &List.replace_at(&1, index, entry))
+  def apply_op(entries, {:replace, key, entry}),
+    do: with_row(entries, key, &List.replace_at(entries, &1, entry))
 
-  def apply_op(entries, {:delete, index, seen}),
-    do: if_seen(entries, length(entries) == seen and index < seen, &List.delete_at(&1, index))
+  def apply_op(entries, {:delete, key}), do: with_row(entries, key, &List.delete_at(entries, &1))
 
-  def apply_op(entries, {:reorder, indices, seen, sequence?}) do
-    permutation? = length(entries) == seen and Enum.sort(indices) == Enum.to_list(0..(seen - 1)//1)
-    if_seen(entries, permutation?, &reorder(&1, indices, sequence?))
+  # Named rows in the given order; a row the browser didn't name (added since)
+  # keeps its place after them, and a name that matches nothing is skipped.
+  def apply_op(entries, {:reorder, keys, sequence?}) do
+    by_key = Map.new(entries, &{row_key(&1), &1})
+    named = keys |> Enum.map(&Map.get(by_key, &1)) |> Enum.reject(&is_nil/1)
+
+    if named == [] do
+      :stale
+    else
+      (named ++ Enum.reject(entries, &(&1 in named)))
+      |> Enum.with_index()
+      |> Enum.map(fn
+        {entry, idx} when sequence? -> Changeset.change(entry, %{sequence: idx})
+        {entry, _idx} -> entry
+      end)
+    end
   end
 
   def apply_op(entries, {:update, fun}) when is_function(fun, 1), do: fun.(entries)
   def apply_op(_entries, _op), do: :stale
 
-  defp if_seen(entries, true, fun), do: fun.(entries)
-  defp if_seen(_entries, false, _fun), do: :stale
+  defp find_row(_entries, nil), do: nil
+  defp find_row(entries, key), do: Enum.find_index(entries, &(row_key(&1) == key))
 
-  defp reorder(entries, indices, sequence?) do
-    indices
-    |> Enum.map(&Enum.at(entries, &1))
-    |> Enum.with_index()
-    |> Enum.map(fn
-      {entry, idx} when sequence? -> Changeset.change(entry, %{sequence: idx})
-      {entry, _idx} -> entry
-    end)
+  defp with_row(entries, key, fun) do
+    case find_row(entries, key) do
+      nil -> :stale
+      index -> fun.(index)
+    end
   end
 
   @doc """
@@ -162,12 +237,5 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
     )
 
     {:noreply, socket}
-  end
-
-  # How many entries the editor saw: the list as this subform last rendered it.
-  defp seen_count(socket) do
-    socket.assigns.field.form.source
-    |> current_entries(socket.assigns.subform.name)
-    |> length()
   end
 end

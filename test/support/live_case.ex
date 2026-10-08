@@ -201,6 +201,59 @@ defmodule Brando.LiveCase do
   end
 
   @doc """
+  Clicks `element` `times` times back to back, as a quick double click that
+  reaches the server before it has answered the first: the LiveView is
+  suspended while the clicks are queued, so it handles them one after the
+  other, ahead of anything the first one causes (a `send_update/2` to the
+  form). The clicks carry what the element's `phx-click` push carries. Then
+  waits for everything they caused, see `settle/1`.
+
+  A plain `render_click/1` cannot do this: it waits for the reply, and by then
+  the first click's `send_update/2` is ahead of the second click.
+  """
+  def queue_clicks(view, element, times \\ 2) do
+    [push] =
+      element
+      |> Phoenix.LiveViewTest.render()
+      |> Floki.parse_fragment!()
+      |> Floki.attribute("phx-click")
+
+    [["push", %{"event" => event, "target" => cid} = push]] = Jason.decode!(push)
+    value = Map.get(push, "value", %{})
+
+    messages =
+      for i <- 1..times do
+        %Phoenix.Socket.Message{
+          topic: "lv:" <> view.id,
+          event: "event",
+          ref: "queued-#{System.unique_integer([:positive])}-#{i}",
+          payload: %{"type" => "click", "event" => event, "value" => value, "cid" => cid}
+        }
+      end
+
+    :sys.suspend(view.pid)
+    Enum.each(messages, &send(view.pid, &1))
+    :sys.resume(view.pid)
+    settle(view)
+  end
+
+  @doc """
+  Waits until the LiveView has handled the events in its mailbox and the
+  updates they sent itself, and the client proxy has their diffs; returns the
+  rendered view.
+
+  A render syncs with a ping that queues behind the events. The
+  `send_update/2`s those events send queue behind that ping, so one render is
+  not enough: it can come back before the form has applied them. They are all
+  in the mailbox before the first ping returns, so a second render, whose ping
+  queues behind them, sees their result.
+  """
+  def settle(view) do
+    Phoenix.LiveViewTest.render(view)
+    Phoenix.LiveViewTest.render(view)
+  end
+
+  @doc """
   Mounts an entry form and waits for it to finish rendering, returning
   `{view, html}`.
 

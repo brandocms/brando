@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
@@ -55,13 +56,24 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
               <div class="subform-entry vars-row" data-id={var.index}>
                 <input type="hidden" name={var[:id].name} value={var[:id].value} />
                 <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
+                <input
+                  :if={SubformHelpers.new_row_key(var)}
+                  type="hidden"
+                  name={var[:_key].name}
+                  value={SubformHelpers.new_row_key(var)}
+                />
                 <input type="hidden" name={"#{@field.form.name}[sort_var_ids][]"} value={var.index} />
                 <div class="subform-tools">
                   <button
                     type="button"
                     class="subform-insert"
                     aria-label={gettext("Insert variable")}
-                    phx-click={JS.push("insert_subentry", value: %{index: var.index}, target: @myself)}
+                    phx-click={
+                      JS.push("insert_subentry",
+                        value: %{index: var.index, key: SubformHelpers.row_key(var)},
+                        target: @myself
+                      )
+                    }
                   >
                     <.icon name="plus" />
                   </button>
@@ -122,15 +134,15 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   end
 
   def handle_event("add_subentry", _, socket) do
-    BrandoAdmin.Components.Form.Input.SubformHelpers.append_subentries(socket, new_var())
+    SubformHelpers.append_subentries(socket, new_var())
   end
 
-  def handle_event("insert_subentry", %{"index" => index}, socket) do
-    BrandoAdmin.Components.Form.Input.SubformHelpers.insert_subentry(socket, index, new_var())
+  def handle_event("insert_subentry", %{"index" => index} = params, socket) do
+    SubformHelpers.insert_subentry(socket, params["key"], index, new_var())
   end
 
-  def handle_event("remove_subentry", %{"index" => index}, socket) do
-    BrandoAdmin.Components.Form.Input.SubformHelpers.remove_subentry(socket, index)
+  def handle_event("remove_subentry", %{"key" => key}, socket) do
+    SubformHelpers.remove_subentry(socket, key)
   end
 
   def handle_event("force_validate", _, socket) do
@@ -139,7 +151,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   end
 
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
-    BrandoAdmin.Components.Form.Input.SubformHelpers.sequenced_subform(socket, order_indices)
+    SubformHelpers.sequenced_subform(socket, order_indices)
   end
 
   defp new_var do

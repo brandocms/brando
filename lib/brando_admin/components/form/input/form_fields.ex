@@ -630,7 +630,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
                 type="button"
                 class="form-field-option-remove"
                 aria-label={gettext("Remove option %{value}", value: value)}
-                phx-click={JS.push("remove_option", value: %{uid: @entry.uid, index: index}, target: @target)}
+                phx-click={JS.push("remove_option", value: %{uid: @entry.uid, value: value}, target: @target)}
               >
                 <.icon name="x" />
               </button>
@@ -751,14 +751,15 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
      end)}
   end
 
-  def handle_event("remove_option", %{"uid" => uid, "index" => index}, socket) do
+  # By value, not position: a double click on × would otherwise remove the
+  # option that moved into the first one's place.
+  def handle_event("remove_option", %{"uid" => uid, "value" => value}, socket) do
     {:noreply,
      update_field(socket, uid, fn changeset ->
        values = Changeset.get_field(changeset, :option_values) || []
-       value = Enum.at(values, index)
        labels = Changeset.get_field(changeset, :option_labels) || %{}
 
-       %{option_values: List.delete_at(values, index), option_labels: Map.delete(labels, value)}
+       %{option_values: List.delete(values, value), option_labels: Map.delete(labels, value)}
      end)}
   end
 
