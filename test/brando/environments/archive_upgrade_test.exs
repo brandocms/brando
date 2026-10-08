@@ -140,6 +140,13 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
   defp loops(copied), do: Enum.filter(copied, fn {_, file} -> File.read!(path(file)) =~ "nspname ~ '^tenant_" end)
 
+  # The counts below follow the templates there are, so a new brando_2xx
+  # migration needs no edit here; these are some that must always be among
+  # them.
+  @known_loops [200, 201, 203, 209, 210, 211, 212]
+
+  defp loop_numbers(copied), do: copied |> loops() |> Enum.map(&number(elem(&1, 1))) |> Enum.sort()
+
   # The 2xx tables, with foreign keys to the environment's own tables named
   # `:own`, so two environments compare equal
   defp own_tables(schema) do
@@ -178,7 +185,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     copied: copied
   } do
     loops = Enum.map(loops(copied), &elem(&1, 0))
-    assert length(loops) == 10
+    assert @known_loops -- loop_numbers(copied) == []
 
     assert {:ok, %Environment{live: false} = restored} = Environments.rollback(site, archive_schema: archive)
     prefix = Tenant.prefix(site, restored)
@@ -222,7 +229,8 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
     # Every 2xx migration that loops over the environments can run in one;
     # the ones that only change public are left alone
-    assert length(copied) == 15
+    assert copied |> Enum.map(&number(elem(&1, 1))) |> Enum.sort() == Enum.map(brando_2xx(), &number/1)
+    assert @known_loops -- loop_numbers(copied) == []
     assert Enum.map(replays, & &1.name) == for({_, file} <- loops(copied), do: Path.basename(file, ".exs"))
 
     public = fingerprint("public")
@@ -427,7 +435,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
       ])
 
       assert {:ok, replays} = ArchiveUpgrade.plan(archive)
-      assert length(replays) == 10
+      assert length(replays) == length(loops(copied))
     end
 
     test "a version from the second it was taken counts as since", %{archive: archive} do
@@ -441,7 +449,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     end
 
     test "an older archive misses more", %{archive: archive, copied: copied} do
-      # Taken before brando_210 ran: 210, 211, 212, 214, 215, 216 and 217 were missed
+      # Taken before brando_210 ran: only the ones from 210 on were missed
       versions = Map.new(copied, fn {version, file} -> {number(file), version} end)
       taken_at = ArchiveUpgrade.taken_at(archive)
 
@@ -453,7 +461,9 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
           do: query!("UPDATE schema_migrations SET inserted_at = $1 WHERE version = $2", [ran_at.(number), version])
 
       assert {:ok, replays} = ArchiveUpgrade.plan(archive)
-      assert Enum.map(replays, &number(&1.name <> ".exs")) == [210, 211, 212, 214, 215, 216, 217]
+      missed = Enum.map(replays, &number(&1.name <> ".exs"))
+      assert missed == Enum.filter(loop_numbers(copied), &(&1 >= 210))
+      assert [210, 211, 212] -- missed == []
     end
   end
 
@@ -479,14 +489,14 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
       assert_nothing_restored(site, archive)
     end
 
-    test "but finds migrations in subdirectories", %{archive: archive, directory: directory} do
+    test "but finds migrations in subdirectories", %{archive: archive, directory: directory, copied: copied} do
       File.mkdir_p!(Path.join(directory, "brando"))
 
       for file <- Path.wildcard(Path.join(directory, "*_brando_21*.exs")),
           do: File.rename!(file, Path.join([directory, "brando", Path.basename(file)]))
 
       assert {:ok, replays} = ArchiveUpgrade.plan(archive)
-      assert length(replays) == 10
+      assert length(replays) == length(loops(copied))
     end
   end
 
@@ -510,7 +520,8 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
     # brando_212 was rolled back and not recorded; the others ran
     replayed = List.flatten(rows(~s(SELECT version FROM "#{prefix}".schema_migrations)))
-    assert length(replayed) == 9
+    assert length(replayed) == length(loops(copied)) - 1
+    refute Enum.any?(copied, fn {version, file} -> number(file) == 212 and version in replayed end)
   end
 
   describe "comparing with the live environment" do
@@ -546,13 +557,16 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
   # A replay runs a template's up/0 for one environment. Anything outside its
   # loop over prefixes() would run against public, or wherever it points.
-  test "every template with the replay hook does all its work inside the loop" do
+  test "every template with the replay hook does all its work inside the loop", %{copied: copied} do
     hooked =
       for template <- Path.wildcard(path("brando_*.exs")),
           File.read!(template) =~ ~r/case prefix\(\) do/,
           do: template
 
-    assert length(hooked) == 10
+    # The brando_2xx templates that change the environments, and only those
+    hooked_numbers = hooked |> Enum.map(&number(Path.basename(&1))) |> Enum.sort()
+    assert hooked_numbers == loop_numbers(copied)
+    assert @known_loops -- hooked_numbers == []
 
     for template <- hooked do
       {:ok, ast} = template |> File.read!() |> Code.string_to_quoted()

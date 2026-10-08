@@ -63,9 +63,10 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
     directory: directory,
     files: files
   } do
-    # Reserved and never used; the upgrade runs across the gaps
+    # Reserved and never used; the upgrade runs across the gaps. Up to 213
+    # only, so a later number merged out of order is no gap here.
     numbers = Enum.map(files, &number/1)
-    assert Enum.to_list(200..214) -- numbers == [206, 208]
+    assert Enum.to_list(200..213) -- numbers == [206, 208]
 
     expected_tables = table_set("public", environment_tables())
     expected_columns = column_set("public", environment_columns())
