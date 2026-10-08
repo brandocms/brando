@@ -933,8 +933,47 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     for uid <- candidates,
         not Enum.any?(ancestors(old, uid), &(&1 in candidates)),
-        params = rescued_params(socket, old, uid) do
-      {uid, params}
+        rescued = rescue_in_place(socket, old, new, uid) do
+      rescued
+    end
+  end
+
+  # Where a rescued block goes back: under the nearest ancestor that is
+  # still there, at the end of its children, so it stays where the editor
+  # worked. Ancestors that went too come back around it as `-kept` blocks
+  # holding only it, up to that ancestor or the root: a child block is made
+  # for its parent (a multi module's entry, a container's child) and would
+  # not read, or render, as a root of its own.
+  defp rescue_in_place(socket, old, new, uid) do
+    {removed, surviving} = old |> ancestors(uid) |> Enum.split_while(&(not Ops.known?(new, &1)))
+
+    with %{} = block <- rescued_block(socket, old, uid) do
+      block = Enum.reduce(removed, block, &shell_around(socket, old, &1, &2))
+      top = List.last(removed, uid)
+
+      case surviving do
+        [parent | _] ->
+          {:child, parent, block}
+
+        [] ->
+          with %{} = entry_block <- rescued_params(socket, old, top), do: {:root, Map.put(entry_block, "block", block)}
+      end
+    end
+  end
+
+  # The removed ancestor `uid` around `inner`: its own content, and only
+  # the child on the way to the rescued block.
+  defp shell_around(socket, old, uid, inner) do
+    case rescued_block(socket, old, uid) do
+      %{} = block -> Map.put(block, "children", [inner])
+      nil -> inner
+    end
+  end
+
+  defp rescued_block(socket, old, uid) do
+    case rescued_params(socket, old, uid) do
+      %{"block" => block} -> block
+      _ -> nil
     end
   end
 
@@ -990,21 +1029,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp reinsert_rescued(socket, rescued) do
     {socket, kept} =
-      Enum.reduce(rescued, {socket, 0}, fn {_uid, params}, {socket, kept} ->
-        params = Map.update!(params, "block", &rename_block(&1, socket.assigns.block_ops))
-        uid = params["block"]["uid"]
-
-        form =
-          socket
-          |> materialize_base_struct(uid)
-          |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
-          |> without_params()
-          |> to_form(as: "entry_block", id: "entry_block_form-#{uid}")
-
-        socket =
-          socket
-          |> put_seed_form(uid, form)
-          |> apply_block_op({:insert, uid, :end, params}, :replay)
+      Enum.reduce(rescued, {socket, 0}, fn rescued, {socket, kept} ->
+        {socket, uid} = reinsert(socket, rescued)
 
         if Ops.known?(socket.assigns.block_ops, uid),
           do: {socket, kept + 1},
@@ -1030,6 +1056,39 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
 
     socket
+  end
+
+  defp reinsert(socket, {:root, params}) do
+    params = Map.update!(params, "block", &rename_block(&1, socket.assigns.block_ops))
+    uid = params["block"]["uid"]
+
+    form =
+      socket
+      |> materialize_base_struct(uid)
+      |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+      |> without_params()
+      |> to_form(as: "entry_block", id: "entry_block_form-#{uid}")
+
+    socket =
+      socket
+      |> put_seed_form(uid, form)
+      |> apply_block_op({:insert, uid, :end, params}, :replay)
+
+    {socket, uid}
+  end
+
+  # Under a block that is still there: its root shows it once it has it.
+  defp reinsert(socket, {:child, parent, block}) do
+    block = rename_block(block, socket.assigns.block_ops)
+    uid = block["uid"]
+    socket = apply_block_op(socket, {:insert_child, parent, uid, :end, block}, :replay)
+
+    socket =
+      if Ops.known?(socket.assigns.block_ops, uid),
+        do: refresh_roots(socket, [Ops.root_of(socket.assigns.block_ops, uid)]),
+        else: socket
+
+    {socket, uid}
   end
 
   # An op turned away because another editor removed its block.

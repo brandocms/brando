@@ -379,6 +379,61 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert Enum.all?(kept_child["refs"], &(&1["uid"] not in Enum.map(refs, fn ref -> ref["uid"] end)))
   end
 
+  # Follow-up: a child with unsaved work, removed by another write, came
+  # back as a root block of its own: a multi module's entry outside its
+  # module. It now goes back where it was.
+  describe "a removed child with unsaved work" do
+    setup c do
+      c = Brando.ProposalFixtures.multi_context(c)
+      [alpha | _] = c.child_uids
+      b = open(c.other_conn, c.work)
+      set_child(b, alpha, ["child_block", "refs", "0", "data", "data", "text"], "<p>Alpha, by B</p>")
+      await(fn -> inspect(session_state(c.work).diffs[alpha]) =~ "Alpha, by B" end)
+      Map.merge(c, %{alpha: alpha, b: b})
+    end
+
+    defp delete_outside(c, uid) do
+      {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.work.id}, block_uid: uid}], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+    end
+
+    defp kept_text(state, uid),
+      do: get_in(state.diffs, [uid, "refs"]) |> Enum.find(&(&1["name"] == "info")) |> get_in(["data", "data", "text"])
+
+    test "comes back under its parent, when the parent is still there", c do
+      delete_outside(c, c.alpha)
+      kept = c.alpha <> "-kept"
+      await(fn -> session_state(c.work).statuses[kept] == :inserted end)
+
+      state = session_state(c.work)
+      assert state.parents[kept] == c.multi_uid
+      assert List.last(state.child_order[c.multi_uid]) == kept
+      refute kept in state.order
+      assert kept_text(state, kept) == "<p>Alpha, by B</p>"
+
+      stay(c.b)
+      save_read(c.b)
+      save_write(c.b)
+
+      await(fn ->
+        c.work |> rows() |> Enum.find(&(&1.block.uid == c.multi_uid)) |> then(&(length(&1.block.children) == 3))
+      end)
+    end
+
+    test "comes back inside its removed parent, kept around it alone, when the parent went too", c do
+      delete_outside(c, c.multi_uid)
+      kept = c.alpha <> "-kept"
+      shell = c.multi_uid <> "-kept"
+      await(fn -> session_state(c.work).statuses[kept] == :inserted end)
+
+      state = session_state(c.work)
+      assert state.order == [c.intro_uid, shell]
+      assert state.child_order[shell] == [kept]
+      assert kept_text(state, kept) == "<p>Alpha, by B</p>"
+    end
+  end
+
   # Round 3 #2: an Assistant proposal applied between a save collecting its
   # blocks and writing them. The rebase gave the form the new rows, the
   # save's blocks lacked the new one, and the write deleted it.

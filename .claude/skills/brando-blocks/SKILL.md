@@ -622,7 +622,11 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   that editor as a new block (`<uid>-kept`, its refs with new uids) with a toast — keep
   conflicts explicit, never drop work silently. Only the top-most removed block this
   editor worked in comes back (a child added to a removed container brings the container
-  back with it), and the toast says so only for blocks that did come back. Applying a recovery copy is a `{:carry, ops, base}` op over the
+  back with it), and the toast says so only for blocks that did come back. A rescued child
+  goes back under its nearest ancestor that is still there (`{:insert_child, ...}`); removed
+  ancestors in between come back as `-kept` shells holding only the path to it, and with no
+  surviving ancestor the top shell is a root — a child is never brought back as a root on
+  its own. Applying a recovery copy is a `{:carry, ops, base}` op over the
   session state, not a state replacement. Editors without `:update` on the entry join
   read-only (the session refuses their ops). Ops must stay pure: the session and every
   replica must reach the same state from the same ops.
